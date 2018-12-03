@@ -147,7 +147,7 @@ def sort_batch_by_length(tensor: torch.Tensor, sequence_lengths: torch.Tensor):
     sorted_sequence_lengths, permutation_index = sequence_lengths.sort(0, descending=True)
     sorted_tensor = tensor.index_select(0, permutation_index)
 
-    index_range = sequence_lengths.new_tensor(torch.arange(0, len(sequence_lengths)))
+    index_range = torch.arange(0, len(sequence_lengths), device=sequence_lengths.device)
     # This is the equivalent of zipping with index, sorting by the original
     # sequence lengths and returning the now sorted indices.
     _, reverse_mapping = permutation_index.sort(0, descending=False)
@@ -208,7 +208,7 @@ def get_dropout_mask(dropout_probability: float, tensor_for_masking: torch.Tenso
     This scaling ensures expected values and variances of the output of applying this mask
      and the original tensor are the same.
     """
-    binary_mask = tensor_for_masking.new_tensor(torch.rand(tensor_for_masking.size()) > dropout_probability)
+    binary_mask = (torch.rand(tensor_for_masking.size()) > dropout_probability).to(tensor_for_masking.device)
     # Scale mask by 1/keep_prob to preserve output statistics.
     dropout_mask = binary_mask.float().div(1.0 - dropout_probability)
     return dropout_mask

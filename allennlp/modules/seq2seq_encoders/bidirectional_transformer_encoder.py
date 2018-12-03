@@ -185,7 +185,7 @@ def make_model(num_layers: int = 6,
     # Initialize parameters with Glorot / fan_avg.
     for p in model.parameters():
         if p.dim() > 1:
-            torch.nn.init.xavier_uniform(p)
+            torch.nn.init.xavier_uniform_(p)
     return model
 
 
