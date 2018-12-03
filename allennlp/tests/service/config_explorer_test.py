@@ -2,12 +2,10 @@
 
 import json
 import os
-import pathlib
 import sys
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.service import config_explorer
-from allennlp.service.config_explorer import make_app, _HTML
+from allennlp.service.config_explorer import make_app
 
 
 class TestConfigExplorer(AllenNlpTestCase):
@@ -17,28 +15,6 @@ class TestConfigExplorer(AllenNlpTestCase):
         app = make_app()
         app.testing = True
         self.client = app.test_client()
-
-    def test_html(self):
-        """
-        The pip-installed version of allennlp (currently) requires the config explorer HTML
-        to be hardcoded into the server file. But when iterating on it, it's easier to use the
-        /debug/ endpoint, which points at `config_explorer.html`, so that you don't have to
-        restart the server every time you make a change.
-
-        This test just ensures that the two HTML versions are identical, to prevent you from
-        making a change to the standalone HTML but forgetting to change the corresponding
-        server HTML. There is certainly a better way to handle this.
-        """
-        config_explorer_dir = pathlib.Path(config_explorer.__file__).parent
-        config_explorer_file = config_explorer_dir / 'config_explorer.html'
-
-        if not config_explorer_file.exists():
-            print("standalone config_explorer.html does not exist, skipping test")
-        else:
-            with open(config_explorer_file) as f:
-                html = f.read()
-
-            assert html.strip() == _HTML.strip()
 
     def test_app(self):
         response = self.client.get('/')
