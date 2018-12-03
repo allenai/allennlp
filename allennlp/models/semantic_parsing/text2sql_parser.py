@@ -78,6 +78,7 @@ class Text2SqlParser(Model):
                  add_action_bias: bool = True,
                  dropout: float = 0.0,
                  entity_type_key: str = None,
+                 use_linked_action_embedding: bool = False,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
         super().__init__(vocab, regularizer)
@@ -86,6 +87,7 @@ class Text2SqlParser(Model):
         self._encoder = encoder
         self._max_decoding_steps = max_decoding_steps
         self._add_action_bias = add_action_bias
+        self._use_linked_action_embedding = use_linked_action_embedding
         self._dropout = torch.nn.Dropout(p=dropout)
 
         self._exact_match = Average()
@@ -163,6 +165,15 @@ class Text2SqlParser(Model):
         mask = util.get_text_field_mask(tokens).float()
         batch_size = embedded_utterance.size(0)
 
+        if self._entity_type_decoder_embedding is not None and self._use_linked_action_embedding:
+            entity_range = util.get_range_vector(linking_scores.size(1), util.get_device_of(linking_scores))
+            entity_range = entity_range.unsqueeze(0).unsqueeze(-1)
+            indices = linking_scores.long() * entity_range
+
+            entity_type_embeddings = self._entity_type_decoder_embedding(indices)
+            link_embedding = util.weighted_sum(entity_type_embeddings.transpose(1, 2),
+                                               linking_scores.transpose(1, 2))
+            embedded_utterance = torch.cat([link_embedding, embedded_utterance], 2)
         # (batch_size, num_tokens, encoder_output_dim)
         encoder_outputs = self._dropout(self._encoder(embedded_utterance, mask))
         initial_state = self._get_initial_state(encoder_outputs, mask, valid_actions, linking_scores)
