@@ -63,7 +63,7 @@ class BidafPlusPlus(Model):
                  span_end_encoder: Seq2SeqEncoder,
                  initializer: InitializerApplicator,
                  dropout: float = 0.2,
-                 multi_choice_answers: bool = False,
+                 multi_choice_answers: int = 0,
                  support_yesno: bool = False,
                  support_followup: bool = False,
                  num_context_answers: int = 0,
@@ -80,6 +80,10 @@ class BidafPlusPlus(Model):
         self._marker_embedding_dim = marker_embedding_dim
         self._encoding_dim = phrase_layer.get_output_dim()
         max_turn_length = 12
+
+        # see usage below for explanation
+        self._all_qa_count = 0
+        self._examples_used_frac = 1.0
 
         self._matrix_attention = LinearMatrixAttention(self._encoding_dim, self._encoding_dim, 'x,y,x*y')
         self._merge_atten = TimeDistributed(torch.nn.Linear(self._encoding_dim * 4, self._encoding_dim))
@@ -226,40 +230,11 @@ class BidafPlusPlus(Model):
         repeated_passage_mask = passage_mask.unsqueeze(1).repeat(1, max_qa_count, 1)
         repeated_passage_mask = repeated_passage_mask.view(total_qa_count, passage_length)
 
-        if self._num_context_answers > 0:
-            # Encode question turn number inside the dialog into question embedding.
-            question_num_ind = util.get_range_vector(max_qa_count, util.get_device_of(embedded_question))
-            question_num_ind = question_num_ind.unsqueeze(-1).repeat(1, max_q_len)
-            question_num_ind = question_num_ind.unsqueeze(0).repeat(batch_size, 1, 1)
-            question_num_ind = question_num_ind.reshape(total_qa_count, max_q_len)
-            question_num_marker_emb = self._question_num_marker(question_num_ind)
-            embedded_question = torch.cat([embedded_question, question_num_marker_emb], dim=-1)
-
-            # Encode the previous answers in passage embedding.
-            repeated_embedded_passage = embedded_passage.unsqueeze(1).repeat(1, max_qa_count, 1, 1). \
-                view(total_qa_count, passage_length, self._text_field_embedder.get_output_dim())
-            # batch_size * max_qa_count, passage_length, word_embed_dim
-            p1_answer_marker = p1_answer_marker.view(total_qa_count, passage_length)
-            p1_answer_marker_emb = self._prev_ans_marker(p1_answer_marker)
-            repeated_embedded_passage = torch.cat([repeated_embedded_passage, p1_answer_marker_emb], dim=-1)
-            if self._num_context_answers > 1:
-                p2_answer_marker = p2_answer_marker.view(total_qa_count, passage_length)
-                p2_answer_marker_emb = self._prev_ans_marker(p2_answer_marker)
-                repeated_embedded_passage = torch.cat([repeated_embedded_passage, p2_answer_marker_emb], dim=-1)
-                if self._num_context_answers > 2:
-                    p3_answer_marker = p3_answer_marker.view(total_qa_count, passage_length)
-                    p3_answer_marker_emb = self._prev_ans_marker(p3_answer_marker)
-                    repeated_embedded_passage = torch.cat([repeated_embedded_passage, p3_answer_marker_emb],
-                                                          dim=-1)
-
-            repeated_encoded_passage = self._variational_dropout(self._phrase_layer(repeated_embedded_passage,
-                                                                                    repeated_passage_mask))
-        else:
-            encoded_passage = self._variational_dropout(self._phrase_layer(embedded_passage, passage_mask))
-            repeated_encoded_passage = encoded_passage.unsqueeze(1).repeat(1, max_qa_count, 1, 1)
-            repeated_encoded_passage = repeated_encoded_passage.view(total_qa_count,
-                                                                     passage_length,
-                                                                     self._encoding_dim)
+        encoded_passage = self._variational_dropout(self._phrase_layer(embedded_passage, passage_mask))
+        repeated_encoded_passage = encoded_passage.unsqueeze(1).repeat(1, max_qa_count, 1, 1)
+        repeated_encoded_passage = repeated_encoded_passage.view(total_qa_count,
+                                                                 passage_length,
+                                                                 self._encoding_dim)
 
         encoded_question = self._variational_dropout(self._phrase_layer(embedded_question, question_mask))
 
@@ -342,6 +317,17 @@ class BidafPlusPlus(Model):
                                                        self._max_span_length)
 
         output_dict: Dict[str, Any] = {}
+
+        # Question Skipped
+        # NOTE (TODO) this is a workaround, we cannot save global information to be passed to the model yet
+        # (see https://github.com/allenai/allennlp/issues/1809) so we will save it every time it changes
+        # insuring that if we do a full pass on the validation set and take max for all_qa_count we will
+        # get the correct number (except if the last ones are skipped.... hopefully this is a small diff )
+        for inst_metadata in metadata:
+            if 'questions_skipped' in inst_metadata:
+                if inst_metadata['questions_skipped'][1] > self._all_qa_count:
+                    self._all_qa_count = inst_metadata['questions_skipped'][1]
+                    self._examples_used_frac = float(inst_metadata['questions_skipped'][0]) / inst_metadata['questions_skipped'][1]
 
         # Compute the loss.
         if span_start is not None:
@@ -503,14 +489,17 @@ class BidafPlusPlus(Model):
                     #'yesno': self._span_yesno_accuracy.get_metric(reset),
                     #'followup': self._span_followup_accuracy.get_metric(reset),
                     'f1': self._official_f1.get_metric(reset),
-                    'multichoice_acc': self._multichoice_accuracy.get_metric(reset)}
+                    'multichoice_acc': self._multichoice_accuracy.get_metric(reset) * self._examples_used_frac + \
+                                       (1- self._examples_used_frac) * 1.0 / self._multi_choice_answers,
+                    'examples_used_frac':self._examples_used_frac}
         else:
             return {'start_acc': self._span_start_accuracy.get_metric(reset),
                     'end_acc': self._span_end_accuracy.get_metric(reset),
                     'span_acc': self._span_accuracy.get_metric(reset),
                     #'yesno': self._span_yesno_accuracy.get_metric(reset),
                     #'followup': self._span_followup_accuracy.get_metric(reset),
-                    'f1': self._official_f1.get_metric(reset), }
+                    'f1': self._official_f1.get_metric(reset),
+                    'examples_used_frac': self._examples_used_frac}
 
 
     @staticmethod

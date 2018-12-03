@@ -186,9 +186,11 @@ class MultiQAReader(DatasetReader):
             # (This could happen if we used part of the context or in unfiltered context versions)
             if span_starts_list['answers'] == [[]]:
                 skipped_qa_count += len(context['qas'])
-                if context_ind % 20 == 0:
+                if skipped_qa_count % 20 == 0:
                     logger.info('Fraction of QA remaining = %f', ((all_qa_count - skipped_qa_count) / all_qa_count))
                 continue
+
+
 
             instance = self.text_to_instance(question_text_list,
                                              paragraph,
@@ -196,6 +198,12 @@ class MultiQAReader(DatasetReader):
                                              span_ends_list['answers'],
                                              tokenized_paragraph,
                                              metadata)
+
+            # NOTE (TODO) this is a workaround, we cannot save global information to be passed to the model yet
+            # (see https://github.com/allenai/allennlp/issues/1809) so we will save it every time it changes
+            # insuring that if we do a full pass on the validation set and take max for all_qa_count we will
+            # get the correct number (except if the last ones are skipped.... hopefully this is a small diff )
+            instance.fields['metadata'].metadata['questions_skipped'] = (all_qa_count - skipped_qa_count, all_qa_count)
 
             # passing the tokens of all gold answer instances (not just the "original answer"
             # as in the original quac dataset reader)
