@@ -483,22 +483,18 @@ class BidafPlusPlus(Model):
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         if self._multi_choice_answers:
-            return {'start_acc': self._span_start_accuracy.get_metric(reset),
-                    'end_acc': self._span_end_accuracy.get_metric(reset),
-                    'span_acc': self._span_accuracy.get_metric(reset),
-                    #'yesno': self._span_yesno_accuracy.get_metric(reset),
-                    #'followup': self._span_followup_accuracy.get_metric(reset),
-                    'f1': self._official_f1.get_metric(reset),
+            return {'start_acc': self._span_start_accuracy.get_metric(reset) * self._examples_used_frac,
+                    'end_acc': self._span_end_accuracy.get_metric(reset) * self._examples_used_frac,
+                    'span_acc': self._span_accuracy.get_metric(reset) * self._examples_used_frac,
+                    'f1': self._official_f1.get_metric(reset) * self._examples_used_frac,
                     'multichoice_acc': self._multichoice_accuracy.get_metric(reset) * self._examples_used_frac + \
                                        (1- self._examples_used_frac) * 1.0 / self._multi_choice_answers,
                     'examples_used_frac':self._examples_used_frac}
         else:
-            return {'start_acc': self._span_start_accuracy.get_metric(reset),
-                    'end_acc': self._span_end_accuracy.get_metric(reset),
-                    'span_acc': self._span_accuracy.get_metric(reset),
-                    #'yesno': self._span_yesno_accuracy.get_metric(reset),
-                    #'followup': self._span_followup_accuracy.get_metric(reset),
-                    'f1': self._official_f1.get_metric(reset),
+            return {'start_acc': self._span_start_accuracy.get_metric(reset) * self._examples_used_frac,
+                    'end_acc': self._span_end_accuracy.get_metric(reset) * self._examples_used_frac,
+                    'span_acc': self._span_accuracy.get_metric(reset) * self._examples_used_frac,
+                    'f1': self._official_f1.get_metric(reset) * self._examples_used_frac,
                     'examples_used_frac': self._examples_used_frac}
 
 
