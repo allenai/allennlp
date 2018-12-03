@@ -42,26 +42,28 @@
   "model": {
     "type": "simple_seq2seq",
     "source_embedder": {
-      "tokens": {
-        "type": "embedding",
-        "vocab_namespace": "source_tokens",
-        "embedding_dim": 25,
-        "trainable": true
-      },
-      "pos_tags": {
-        "type": "embedding",
-        "vocab_namespace": "pos",
-        "embedding_dim": 5
-      },
-      "ner_tags": {
-        "type": "embedding",
-        "vocab_namespace": "ner",
-        "embedding_dim": 7
-      },
-      "dependency_label": {
-        "type": "embedding",
-        "vocab_namespace": "dependencies",
-        "embedding_dim": 10
+      "token_embedders": {
+        "tokens": {
+          "type": "embedding",
+          "vocab_namespace": "source_tokens",
+          "embedding_dim": 25,
+          "trainable": true
+        },
+        "pos_tags": {
+          "type": "embedding",
+          "vocab_namespace": "pos",
+          "embedding_dim": 5
+        },
+        "ner_tags": {
+          "type": "embedding",
+          "vocab_namespace": "ner",
+          "embedding_dim": 7
+        },
+        "dependency_label": {
+          "type": "embedding",
+          "vocab_namespace": "dependencies",
+          "embedding_dim": 10
+        }
       }
     },
     "encoder": {

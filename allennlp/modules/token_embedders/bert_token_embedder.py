@@ -56,7 +56,7 @@ class BertEmbedder(TokenEmbedder):
         Parameters
         ----------
         input_ids : ``torch.LongTensor``
-            The (batch_size, max_sequence_length) tensor of wordpiece ids.
+            The (batch_size, ..., max_sequence_length) tensor of wordpiece ids.
         offsets : ``torch.LongTensor``, optional
             The BERT embeddings are one per wordpiece. However it's possible/likely
             you might want one per original token. In that case, ``offsets``
@@ -84,20 +84,31 @@ class BertEmbedder(TokenEmbedder):
 
         input_mask = (input_ids != 0).long()
 
-        all_encoder_layers, _ = self.bert_model(input_ids, input_mask, token_type_ids)
+        # input_ids may have extra dimensions, so we reshape down to 2-d
+        # before calling the BERT model and then reshape back at the end.
+        all_encoder_layers, _ = self.bert_model(util.combine_initial_dims(input_ids),
+                                                util.combine_initial_dims(input_mask),
+                                                util.combine_initial_dims(token_type_ids))
         if self._scalar_mix is not None:
             mix = self._scalar_mix(all_encoder_layers, input_mask)
         else:
             mix = all_encoder_layers[-1]
 
+        # At this point, mix is (batch_size * d1 * ... * dn, sequence_length, embedding_dim)
 
         if offsets is None:
-            return mix
+            # Resize to (batch_size, d1, ..., dn, sequence_length, embedding_dim)
+            return util.uncombine_initial_dims(mix, input_ids.size())
         else:
-            batch_size = input_ids.size(0)
-            range_vector = util.get_range_vector(batch_size,
+            # offsets is (batch_size, d1, ..., dn, orig_sequence_length)
+            offsets2d = util.combine_initial_dims(offsets)
+            # now offsets is (batch_size * d1 * ... * dn, orig_sequence_length)
+            range_vector = util.get_range_vector(offsets2d.size(0),
                                                  device=util.get_device_of(mix)).unsqueeze(1)
-            return mix[range_vector, offsets]
+            # selected embeddings is also (batch_size * d1 * ... * dn, orig_sequence_length)
+            selected_embeddings = mix[range_vector, offsets2d]
+
+            return util.uncombine_initial_dims(selected_embeddings, offsets.size())
 
 
 @TokenEmbedder.register("bert-pretrained")

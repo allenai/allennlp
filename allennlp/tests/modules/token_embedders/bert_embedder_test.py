@@ -5,7 +5,7 @@ from pytorch_pretrained_bert.modeling import BertConfig, BertModel
 
 from allennlp.common.testing import ModelTestCase
 from allennlp.data.dataset import Batch
-from allennlp.data.fields import TextField
+from allennlp.data.fields import TextField, ListField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers.wordpiece_indexer import PretrainedBertIndexer
 from allennlp.data.tokenizers import WordTokenizer
@@ -191,3 +191,49 @@ class TestBertEmbedder(ModelTestCase):
         tensor_dict = batch.as_tensor_dict(padding_lengths)
         tokens = tensor_dict["tokens"]
         embedder(tokens["bert"], tokens["bert-offsets"])
+
+    def test_end_to_end_with_higher_order_inputs(self):
+        tokenizer = WordTokenizer(word_splitter=BertBasicWordSplitter())
+
+        #            2   3    4   3     5     6   8      9    2   14   12
+        sentence1 = "the quickest quick brown fox jumped over the lazy dog"
+        tokens1 = tokenizer.tokenize(sentence1)
+        text_field1 = TextField(tokens1, {"bert": self.token_indexer})
+
+        #            2   3     5     6   8      9    2  15 10 11 14   1
+        sentence2 = "the quick brown fox jumped over the laziest lazy elmo"
+        tokens2 = tokenizer.tokenize(sentence2)
+        text_field2 = TextField(tokens2, {"bert": self.token_indexer})
+
+        #            2   5    15 10 11 6
+        sentence3 = "the brown laziest fox"
+        tokens3 = tokenizer.tokenize(sentence3)
+        text_field3 = TextField(tokens3, {"bert": self.token_indexer})
+
+        vocab = Vocabulary()
+
+        instance1 = Instance({"tokens": ListField([text_field1])})
+        instance2 = Instance({"tokens": ListField([text_field2, text_field3])})
+
+        batch = Batch([instance1, instance2])
+        batch.index_instances(vocab)
+
+        padding_lengths = batch.get_padding_lengths()
+        tensor_dict = batch.as_tensor_dict(padding_lengths, verbose=True)
+        tokens = tensor_dict["tokens"]
+
+        # No offsets, should get 12 vectors back.
+        bert_vectors = self.token_embedder(tokens["bert"])
+        assert list(bert_vectors.shape) == [2, 2, 12, 12]
+
+        # Offsets, should get 10 vectors back.
+        bert_vectors = self.token_embedder(tokens["bert"], offsets=tokens["bert-offsets"])
+        assert list(bert_vectors.shape) == [2, 2, 10, 12]
+
+        ## Now try top_layer_only = True
+        tlo_embedder = BertEmbedder(self.bert_model, top_layer_only=True)
+        bert_vectors = tlo_embedder(tokens["bert"])
+        assert list(bert_vectors.shape) == [2, 2, 12, 12]
+
+        bert_vectors = tlo_embedder(tokens["bert"], offsets=tokens["bert-offsets"])
+        assert list(bert_vectors.shape) == [2, 2, 10, 12]
