@@ -1,14 +1,15 @@
-# pylint: disable=invalid-name,no-self-use
+# pylint: disable=invalid-name,no-self-use,protected-access
+import argparse
 import os
+import json
 import sys
-from io import StringIO
 
-from allennlp.commands import main
+from allennlp.commands import main, configure as configure_command
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.service.config_explorer import make_app
 
 
 class TestConfigure(AllenNlpTestCase):
-
     def test_other_modules(self):
         # Create a new package in a temporary dir
         packagedir = self.TEST_DIR / 'configuretestpackage'
@@ -27,19 +28,26 @@ class TestConfigure(AllenNlpTestCase):
         with open(os.path.join(packagedir, 'predictor.py'), 'w') as f:
             f.write(code)
 
-        # Capture stdout
-        stdout_saved = sys.stdout
-        stdout_captured = StringIO()
-        sys.stdout = stdout_captured
+        app = None
+
+        # Monkeypatch the run function
+        def run_wizard(args: argparse.Namespace) -> None:
+            nonlocal app
+
+            app = make_app(args.include_package)
+            app.testing = True
+
+        configure_command._run_wizard = run_wizard
 
         sys.argv = ["run.py",      # executable
                     "configure",     # command
-                    "configuretestpackage.predictor.BidafPredictor"]
+                    "--include-package", "configuretestpackage.predictor"]
 
         main()
-        output = stdout_captured.getvalue()
-        assert "configure-test-predictor" in output
 
-        sys.stdout = stdout_saved
+        client = app.test_client()
 
-        sys.path.remove(str(self.TEST_DIR))
+        response = client.get('/api/config/?class=allennlp.predictors.predictor.Predictor&get_choices=true')
+        data = json.loads(response.get_data())
+        choices = data.get('choices', ())
+        assert 'configuretestpackage.predictor.BidafPredictor' in choices
