@@ -18,11 +18,50 @@
       "text_field_embedder": {
         "token_embedders": {
             "elmo": {
-                "type": "elmo_token_embedder",
+                "type": "bidirectional_token_embedder",
                 "dropout": 0.2,
-                "options_file": "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json",
-                "weight_file": "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5",
-                "do_layer_norm": false
+                "weight_file": "/home/brendanr/workbenches/calypso/sers/full_14/model_state_epoch_2.th"
+                "text_field_embedder": {
+                  # Note: This is because we only use the token_characters during embedding, not the tokens themselves.
+                  "allow_unmatched_keys": true,
+                  "token_embedders": {
+                    "token_characters": {
+                        "type": "character_encoding",
+                        "embedding": {
+                            "num_embeddings": 262,
+                            # TODO(brendanr): When used with an LSTM contextualizer this is 32. Okay at 16?
+                            "embedding_dim": 16
+                        },
+                        "encoder": {
+                            "type": "cnn-highway",
+                            "activation": "relu",
+                            "embedding_dim": 16,
+                            "filters": [
+                                [1, 32],
+                                [2, 32],
+                                [3, 64],
+                                [4, 128],
+                                [5, 256],
+                                [6, 512],
+                                [7, 1024]],
+                            "num_highway": 2,
+                            "projection_dim": 512,
+                            "projection_location": "after_highway",
+                            "do_layer_norm": true
+                        }
+                    }
+                  }
+                },
+                "contextualizer": {
+                    "type": "transformer",
+                    "input_dim": 512,
+                    "hidden_dim": 2048,
+                    "num_layers": 6,
+                    # TODO(brendanr): Does this need to be used?
+                    #"dropout": 0.1,
+                    # TODO(brendanr): Verify this dropout is applied in the same place as Calypso.
+                    "input_dropout": 0.1
+                }
             }
         }
       },

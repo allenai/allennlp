@@ -59,7 +59,6 @@ class BidirectionalTokenEmbedder(TokenEmbedder):
                  weight_file: str,
                  text_field_embedder: TextFieldEmbedder,
                  contextualizer: BidirectionalTransformerEncoder,
-                 scalar_mix: ScalarMix,
                  layer_norm: Optional[MaskedLayerNorm] = None,
                  dropout: float = None,
                  remove_bos_eos: bool = True,
@@ -84,7 +83,7 @@ class BidirectionalTokenEmbedder(TokenEmbedder):
             self._dropout = lambda x: x
 
         self._remove_bos_eos = remove_bos_eos
-        self._scalar_mix = scalar_mix
+        self._scalar_mix = ScalarMix(mixture_size=contextualizer.num_layers + 1, do_layer_norm=False, trainable=True)
 
         state_dict = torch.load(weight_file)
         self.load_state_dict(state_dict, strict=False)
