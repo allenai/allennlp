@@ -174,7 +174,7 @@ class PretrainedBertIndexer(WordpieceIndexer):
                  use_starting_offsets: bool = False,
                  do_lowercase: bool = True,
                  max_pieces: int = 512) -> None:
-        bert_tokenizer = BertTokenizer.from_pretrained(pretrained_model, do_lowercase)
+        bert_tokenizer = BertTokenizer.from_pretrained(pretrained_model, do_lower_case=do_lowercase)
         super().__init__(vocab=bert_tokenizer.vocab,
                          wordpiece_tokenizer=bert_tokenizer.wordpiece_tokenizer.tokenize,
                          namespace="bert",
