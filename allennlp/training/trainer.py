@@ -456,8 +456,11 @@ class Trainer(Registrable):
         Trains one epoch and returns metrics.
         """
         logger.info("Epoch %d/%d", epoch, self._num_epochs - 1)
-        logger.info(f"Peak CPU memory usage MB: {peak_memory_mb()}")
+        peak_cpu_usage = peak_memory_mb()
+        logger.info(f"Peak CPU memory usage MB: {peak_cpu_usage}")
+        gpu_usage = []
         for gpu, memory in gpu_memory_mb().items():
+            gpu_usage.append((gpu, memory))
             logger.info(f"GPU {gpu} memory usage MB: {memory}")
 
         train_loss = 0.0
@@ -552,7 +555,7 @@ class Trainer(Registrable):
                         '{0}.{1}'.format(epoch, time_to_str(int(last_save_time))), [], is_best=False
                 )
 
-        return self._get_metrics(train_loss, batches_this_epoch, reset=True)
+        return self._get_metrics(train_loss, batches_this_epoch, reset=True), peak_cpu_usage, gpu_usage
 
     def _should_stop_early(self, metric_history: List[float]) -> bool:
         """
@@ -749,10 +752,16 @@ class Trainer(Registrable):
         metrics: Dict[str, Any] = {}
         epochs_trained = 0
         training_start_time = time.time()
-
+        max_cpu_usage = 0
+        max_gpu_usage = {}
         for epoch in range(epoch_counter, self._num_epochs):
             epoch_start_time = time.time()
-            train_metrics = self._train_epoch(epoch)
+            train_metrics, peak_cpu_usage, gpu_usage_list = self._train_epoch(epoch)
+
+            # get max of cpu and gpu usage
+            max_cpu_usage = max(max_cpu_usage, peak_cpu_usage)
+            for (gpu_num, memory) in gpu_usage_list:
+                max_gpu_usage[gpu_num] = memory if gpu_num not in max_gpu_usage else max(memory, max_gpu_usage[gpu_num])
 
             if self._validation_data is not None:
                 with torch.no_grad():
@@ -820,6 +829,10 @@ class Trainer(Registrable):
 
             epochs_trained += 1
 
+        metrics['peak_cpu_memory_usage_MB'] = max_cpu_usage
+        for gpu_num in max_gpu_usage:
+            metrics['peak_gpu_' + str(gpu_num) + '_memory_usage_MB'] = max_gpu_usage[gpu_num]
+            
         return metrics
 
     def _is_best_so_far(self,
