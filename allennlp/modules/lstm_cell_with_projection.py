@@ -120,7 +120,7 @@ class LstmCellWithProjection(torch.nn.Module):
             ``memory`` has shape (1, batch_size, cell_size).
         """
         batch_size = inputs.size()[0]
-        total_timesteps = inputs.size()[1]
+        total_timesteps = batch_lengths.max()
 
         output_accumulator = inputs.new_zeros(batch_size, total_timesteps, self.hidden_size)
 
