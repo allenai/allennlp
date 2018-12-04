@@ -139,7 +139,7 @@ class MultiQAReader(DatasetReader):
 
             # Discarding context that are too long (when len is 0 that means we breaked from context loop)
             # TODO this is mainly relevant when we do not split large paragraphs.
-            #all_qa_count += len(context['qas'])
+            all_qa_count += len(context['qas'])
             #if len(tokenized_paragraph) > self._max_context_size or len(tokenized_paragraph) == 0:
             #    skipped_qa_count += len(context['qas'])
             #    if context_ind % 30 == 0:
