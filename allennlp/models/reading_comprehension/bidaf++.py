@@ -63,6 +63,7 @@ class BidafPlusPlus(Model):
                  span_end_encoder: Seq2SeqEncoder,
                  initializer: InitializerApplicator,
                  dropout: float = 0.2,
+                 frac_of_validation_used: float = 1.0,
                  multi_choice_answers: int = 0,
                  support_yesno: bool = False,
                  support_followup: bool = False,
@@ -84,6 +85,7 @@ class BidafPlusPlus(Model):
         # see usage below for explanation
         self._all_qa_count = 0
         self._examples_used_frac = 1.0
+        self._frac_of_validation_used = frac_of_validation_used
 
         self._matrix_attention = LinearMatrixAttention(self._encoding_dim, self._encoding_dim, 'x,y,x*y')
         self._merge_atten = TimeDistributed(torch.nn.Linear(self._encoding_dim * 4, self._encoding_dim))
@@ -318,16 +320,16 @@ class BidafPlusPlus(Model):
 
         output_dict: Dict[str, Any] = {}
 
-        # Question Skipped
+        # Fraction of Examples Used. (for True accuracy calculations)
         # NOTE (TODO) this is a workaround, we cannot save global information to be passed to the model yet
         # (see https://github.com/allenai/allennlp/issues/1809) so we will save it every time it changes
         # insuring that if we do a full pass on the validation set and take max for all_qa_count we will
         # get the correct number (except if the last ones are skipped.... hopefully this is a small diff )
         for inst_metadata in metadata:
-            if 'questions_skipped' in inst_metadata:
-                if inst_metadata['questions_skipped'][1] > self._all_qa_count:
-                    self._all_qa_count = inst_metadata['questions_skipped'][1]
-                    self._examples_used_frac = float(inst_metadata['questions_skipped'][0]) / inst_metadata['questions_skipped'][1]
+            if 'num_examples_used' in inst_metadata:
+                if inst_metadata['num_examples_used'][1] > self._all_qa_count:
+                    self._all_qa_count = inst_metadata['num_examples_used'][1]
+                    self._examples_used_frac = float(inst_metadata['num_examples_used'][0]) / inst_metadata['num_examples_used'][1]
 
         # Compute the loss.
         if span_start is not None:
@@ -483,19 +485,19 @@ class BidafPlusPlus(Model):
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         if self._multi_choice_answers:
-            return {'start_acc': self._span_start_accuracy.get_metric(reset) * self._examples_used_frac,
-                    'end_acc': self._span_end_accuracy.get_metric(reset) * self._examples_used_frac,
-                    'span_acc': self._span_accuracy.get_metric(reset) * self._examples_used_frac,
-                    'f1': self._official_f1.get_metric(reset) * self._examples_used_frac,
+            return {'start_acc': self._span_start_accuracy.get_metric(reset) * self._examples_used_frac * self._frac_of_validation_used,
+                    'end_acc': self._span_end_accuracy.get_metric(reset) * self._examples_used_frac * self._frac_of_validation_used,
+                    'span_acc': self._span_accuracy.get_metric(reset) * self._examples_used_frac * self._frac_of_validation_used,
+                    'f1': self._official_f1.get_metric(reset) * self._examples_used_frac * self._frac_of_validation_used,
                     'multichoice_acc': self._multichoice_accuracy.get_metric(reset) * self._examples_used_frac + \
-                                       (1- self._examples_used_frac) * 1.0 / self._multi_choice_answers,
-                    'examples_used_frac':self._examples_used_frac}
+                                       (1- self._examples_used_frac) * 1.0 / self._multi_choice_answers * self._frac_of_validation_used,
+                    'examples_used_frac':self._examples_used_frac * self._frac_of_validation_used}
         else:
-            return {'start_acc': self._span_start_accuracy.get_metric(reset) * self._examples_used_frac,
-                    'end_acc': self._span_end_accuracy.get_metric(reset) * self._examples_used_frac,
-                    'span_acc': self._span_accuracy.get_metric(reset) * self._examples_used_frac,
-                    'f1': self._official_f1.get_metric(reset) * self._examples_used_frac,
-                    'examples_used_frac': self._examples_used_frac}
+            return {'start_acc': self._span_start_accuracy.get_metric(reset) * self._examples_used_frac * self._frac_of_validation_used,
+                    'end_acc': self._span_end_accuracy.get_metric(reset) * self._examples_used_frac * self._frac_of_validation_used,
+                    'span_acc': self._span_accuracy.get_metric(reset) * self._examples_used_frac * self._frac_of_validation_used,
+                    'f1': self._official_f1.get_metric(reset) * self._examples_used_frac * self._frac_of_validation_used,
+                    'examples_used_frac': self._examples_used_frac * self._frac_of_validation_used}
 
 
     @staticmethod
