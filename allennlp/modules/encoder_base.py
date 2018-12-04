@@ -112,6 +112,8 @@ class _EncoderBase(torch.nn.Module):
         else:
             initial_states = self._get_initial_states(batch_size, num_valid, sorting_indices)
 
+        # Recommended by PyTorch to save memory.
+        module.flatten_parameters()
         # Actually call the module on the sorted PackedSequence.
         module_output, final_states = module(packed_sequence_input, initial_states)
 
