@@ -44,6 +44,7 @@ class MultiQAReader(DatasetReader):
                  lazy: bool = False,
                  max_context_docs: int = 10,
                  max_context_size: int = 400,
+                 num_context_answers: int = 0,
                  num_of_examples_to_sample: int = None,
                  use_document_titles:bool= False) -> None:
         super().__init__(lazy)
