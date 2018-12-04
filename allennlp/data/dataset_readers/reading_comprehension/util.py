@@ -298,6 +298,83 @@ def make_reading_comprehension_instance_multiqa_docqa(question_list_tokens: List
     fields['metadata'] = MetadataField(metadata)
     return Instance(fields)
 
+def make_reading_comprehension_instance_multiqa_multidoc(question_list_tokens: List[List[Token]],
+                                             tokenized_paragraphs: List[List[Token]],
+                                             token_indexers: Dict[str, TokenIndexer],
+                                             paragraphs: List[str],
+                                             token_span_lists: List[List[Tuple[int, int]]] = None,
+                                             additional_metadata: Dict[str, Any] = None) -> Instance:
+    """
+    Converts a question, a passage, and an optional answer (or answers) to an ``Instance`` for use
+    in a reading comprehension model.
+
+    Creates an ``Instance`` with at least these fields: ``question`` and ``passage``, both
+    ``TextFields``; and ``metadata``, a ``MetadataField``.  Additionally, if both ``answer_texts``
+    and ``char_span_starts`` are given, the ``Instance`` has ``span_start`` and ``span_end``
+    fields, which are both ``IndexFields``.
+
+    Parameters
+    ----------
+    question_list_tokens : ``List[List[Token]]``
+        An already-tokenized list of questions. Each dialog have multiple questions.
+    passage_tokens : ``List[Token]``
+        An already-tokenized passage that contains the answer to the given question.
+    token_indexers : ``Dict[str, TokenIndexer]``
+        Determines how the question and passage ``TextFields`` will be converted into tensors that
+        get input to a model.  See :class:`TokenIndexer`.
+    passage_text : ``str``
+        The original passage text.  We need this so that we can recover the actual span from the
+        original passage that the model predicts as the answer to the question.  This is used in
+        official evaluation scripts.
+    token_spans_lists : ``List[List[Tuple[int, int]]]``, optional
+        Indices into ``passage_tokens`` to use as the answer to the question for training.  This is
+        a list of list, first because there is multiple questions per dialog, and
+        because there might be several possible correct answer spans in the passage.
+        Currently, we just select the last span in this list (i.e., QuAC has multiple
+        annotations on the dev set; this will select the last span, which was given by the original annotator).
+    additional_metadata : ``Dict[str, Any]``, optional
+        The constructed ``metadata`` field will by default contain ``original_passage``,
+        ``token_offsets``, ``question_tokens``, ``passage_tokens``, and ``answer_texts`` keys.  If
+        you want any other metadata to be associated with each instance, you can pass that in here.
+        This dictionary will get added to the ``metadata`` dictionary we already construct.
+    """
+    additional_metadata = additional_metadata or {}
+    fields: Dict[str, Field] = {}
+
+    passage_offsets = [[(token.idx, token.idx + len(token.text)) for token in passage_tokens] for passage_tokens in tokenized_paragraphs]
+    # This is separate so we can reference it later with a known type.
+    passage_field = ListField([TextField(passage_tokens, token_indexers) for passage_tokens in tokenized_paragraphs])
+    fields['passage'] = passage_field
+    fields['question'] = ListField([TextField(q_tokens, token_indexers) for q_tokens in question_list_tokens])
+    metadata = {'original_passage': paragraphs,
+                'token_span_lists': token_span_lists,
+                'token_offsets': passage_offsets,
+                'question_tokens': [[token.text for token in question_tokens] \
+                                    for question_tokens in question_list_tokens],
+                'passage_tokens': [[token.text for token in passage_tokens] for passage_tokens in tokenized_paragraphs], }
+
+    # in prediction mode we won't have this... TODO: what will we do in multi-answer prediction?
+    if token_span_lists:
+        span_start_per_doc = []
+        span_end_per_doc = []
+        # Looping each <<answers>>.
+        for doc_index, doc_answer_span_lists in enumerate(token_span_lists['answers']):
+            span_start_list: List[Field] = []
+            span_end_list: List[Field] = []
+            for question_index, answer_span_lists in enumerate(doc_answer_span_lists):
+                span_start, span_end = answer_span_lists[-1]  # Last one is the original answer
+                span_start_list.append(IndexField(span_start, passage_field[doc_index]))
+                span_end_list.append(IndexField(span_end, passage_field[doc_index]))
+
+            span_start_per_doc.append(ListField(span_start_list))
+            span_end_per_doc.append(ListField(span_end_list))
+        fields['span_start'] = ListField(span_start_per_doc)
+        fields['span_end'] = ListField(span_end_per_doc)
+
+
+    metadata.update(additional_metadata)
+    fields['metadata'] = MetadataField(metadata)
+    return Instance(fields)
 
 def make_reading_comprehension_instance_multiqa(question_list_tokens: List[List[Token]],
                                              passage_tokens: List[Token],
