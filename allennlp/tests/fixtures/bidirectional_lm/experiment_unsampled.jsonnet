@@ -48,7 +48,8 @@
         "num_layers": 3,
         "input_size": 16,
         "hidden_size": 7,
-    }
+    },
+    "do_layer_norm": true
   },
   "iterator": {
     "type": "basic",
