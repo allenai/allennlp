@@ -170,6 +170,7 @@ class MultiQAReader(DatasetReader):
             # answer_starts_list is a tuple of (paragraph_number,answer_offset)
             span_starts_list = {'answers':[[] for qa in qas],'distractor_answers':[[] for qa in qas]}
             span_ends_list = {'answers':[[] for qa in qas],'distractor_answers':[[] for qa in qas]}
+
             for qa_ind, qa in enumerate(qas):
                 if qa['answer_type'] == 'multi_choice':
                     answer_types = ['answers','distractor_answers']
@@ -199,6 +200,8 @@ class MultiQAReader(DatasetReader):
                                         if (alias['text'] != \
                                                 paragraphs[answer_start_paragraph][answer_start_norm:answer_start_norm + len(alias['text'])]):
                                             raise ValueError("answers and paragraph not aligned!")
+
+            # Filtering the context documents
 
 
             # If answer was not found in this question do not yield an instance
