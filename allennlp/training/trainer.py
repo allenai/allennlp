@@ -554,8 +554,11 @@ class Trainer(Registrable):
                 self._save_checkpoint(
                         '{0}.{1}'.format(epoch, time_to_str(int(last_save_time))), [], is_best=False
                 )
-
-        return self._get_metrics(train_loss, batches_this_epoch, reset=True), peak_cpu_usage, gpu_usage
+        metrics = self._get_metrics(train_loss, batches_this_epoch, reset=True)
+        metrics['cpu_memory'] = peak_cpu_usage 
+        for (gpu_num, memory) in gpu_usage:
+            metrics['gpu_'+str(gpu_num)+'_memory'] = memory 
+        return metrics
 
     def _should_stop_early(self, metric_history: List[float]) -> bool:
         """
@@ -752,16 +755,17 @@ class Trainer(Registrable):
         metrics: Dict[str, Any] = {}
         epochs_trained = 0
         training_start_time = time.time()
-        max_cpu_usage = 0
-        max_gpu_usage = {}
+        
         for epoch in range(epoch_counter, self._num_epochs):
             epoch_start_time = time.time()
-            train_metrics, peak_cpu_usage, gpu_usage_list = self._train_epoch(epoch)
+            train_metrics = self._train_epoch(epoch)
 
-            # get max of cpu and gpu usage
-            max_cpu_usage = max(max_cpu_usage, peak_cpu_usage)
-            for (gpu_num, memory) in gpu_usage_list:
-                max_gpu_usage[gpu_num] = memory if gpu_num not in max_gpu_usage else max(memory, max_gpu_usage[gpu_num])
+            # get peak of memory usage
+            if 'cpu_memory' in train_metrics:
+                metrics['peak_cpu_memory_MB'] = max(metrics.get('peak_cpu_memory', 0), train_metrics['cpu_memory'])
+            for key, value in train_metrics.items():
+                if key.startswith('gpu_'):
+                    metrics["peak_"+key+"_MB"] = max(metrics.get(key, 0), value)
 
             if self._validation_data is not None:
                 with torch.no_grad():
@@ -784,7 +788,7 @@ class Trainer(Registrable):
                 is_best_so_far = True
                 val_metrics = {}
                 this_epoch_val_metric = None
-
+            
             self._metrics_to_tensorboard(epoch, train_metrics, val_metrics=val_metrics)
             self._metrics_to_console(train_metrics, val_metrics)
 
@@ -829,10 +833,6 @@ class Trainer(Registrable):
 
             epochs_trained += 1
 
-        metrics['peak_cpu_memory_usage_MB'] = max_cpu_usage
-        for gpu_num in max_gpu_usage:
-            metrics['peak_gpu_' + str(gpu_num) + '_memory_usage_MB'] = max_gpu_usage[gpu_num]
-            
         return metrics
 
     def _is_best_so_far(self,
