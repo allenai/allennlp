@@ -95,7 +95,7 @@ class Elmo(torch.nn.Module):
                  module: torch.nn.Module = None) -> None:
         super(Elmo, self).__init__()
 
-        logging.info("Initializing ELMo")
+        logger.info("Initializing ELMo")
         if module is not None:
             if options_file is not None or weight_file is not None:
                 raise ConfigurationError(

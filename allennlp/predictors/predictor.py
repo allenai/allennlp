@@ -23,7 +23,8 @@ DEFAULT_PREDICTORS = {
         'event2mind': 'event2mind',
         'simple_tagger': 'sentence-tagger',
         'srl': 'semantic-role-labeling',
-        'quarel_parser': 'quarel-parser'
+        'quarel_parser': 'quarel-parser',
+        'wikitables_mml_parser': 'wikitables-parser'
 }
 
 class Predictor(Registrable):

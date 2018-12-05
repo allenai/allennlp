@@ -42,7 +42,7 @@ GRAMMAR_DICTIONARY["where_conj"] = ['(ws "AND" wsp expr ws where_conj)', '(ws "A
 
 GRAMMAR_DICTIONARY["groupby_clause"] = ['(ws "GROUP" ws "BY" ws group_clause ws "HAVING" ws expr)',
                                         '(ws "GROUP" ws "BY" ws group_clause)']
-GRAMMAR_DICTIONARY["group_clause"] = ['(ws expr ws "," group_clause)', '(ws expr)']
+GRAMMAR_DICTIONARY["group_clause"] = ['(ws expr ws "," ws group_clause)', '(ws expr)']
 
 GRAMMAR_DICTIONARY["orderby_clause"] = ['ws "ORDER" ws "BY" ws order_clause']
 GRAMMAR_DICTIONARY["order_clause"] = ['(ordering_term ws "," ws order_clause)', 'ordering_term']

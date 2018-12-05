@@ -17,9 +17,11 @@ class ArchivalTest(AllenNlpTestCase):
                 "model": {
                         "type": "simple_tagger",
                         "text_field_embedder": {
-                                "tokens": {
-                                        "type": "embedding",
-                                        "embedding_dim": 5
+                                "token_embedders": {
+                                        "tokens": {
+                                                "type": "embedding",
+                                                "embedding_dim": 5
+                                        }
                                 }
                         },
                         "encoder": {

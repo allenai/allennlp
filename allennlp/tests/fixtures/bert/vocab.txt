@@ -1,0 +1,16 @@
+[PAD]
+[UNK]
+the
+quick
+##est
+brown
+fox
+##iest
+jumped
+over
+##zie
+##st
+dog
+.
+lazy
+la
