@@ -362,7 +362,12 @@ def make_reading_comprehension_instance_multiqa_multidoc(question_list_tokens: L
             span_start_list: List[Field] = []
             span_end_list: List[Field] = []
             for question_index, answer_span_lists in enumerate(doc_answer_span_lists):
-                span_start, span_end = answer_span_lists[-1]  # Last one is the original answer
+                # For a certain question and context document there may be a case where golden answer is not in
+                # this doc...
+                if len(answer_span_lists)>0:
+                    span_start, span_end = answer_span_lists[-1]  # Last one is the original answer TODO maybe change this?
+                else:
+                    span_start, span_end = -1,-1
                 span_start_list.append(IndexField(span_start, passage_field[doc_index]))
                 span_end_list.append(IndexField(span_end, passage_field[doc_index]))
 
