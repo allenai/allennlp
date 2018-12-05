@@ -108,8 +108,8 @@ class WordpieceIndexer(TokenIndexer[int]):
         offset = len(wordpiece_ids) if self.use_starting_offsets else len(wordpiece_ids) - 1
 
         for token in tokens:
-            token_wordpiece_ids = [self.vocab[token]
-                                   for token in self.wordpiece_tokenizer(token.text)]
+            token_wordpiece_ids = [self.vocab[wordpiece]
+                                   for wordpiece in self.wordpiece_tokenizer(token.text)]
             # If we have enough room to add these ids *and also* the end_token ids.
             if len(wordpiece_ids) + len(token_wordpiece_ids) + len(self._end_piece_ids) <= self.max_pieces:
                 # For initial offsets, the current value of ``offset`` is the start of
