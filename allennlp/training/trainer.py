@@ -461,7 +461,7 @@ class Trainer(Registrable):
         returns 0 otherwise.
         """
         if isinstance(batch, torch.Tensor):
-            return batch.size()[0] # type: ignore
+            return batch.size(0) # type: ignore
         elif isinstance(batch, Dict):
             return self._get_batch_size(next(iter(batch.values())))
         else:
@@ -501,12 +501,6 @@ class Trainer(Registrable):
         cumulative_batch_size = 0
         for batch in train_generator_tqdm:
             batches_this_epoch += 1
-            if self._log_batch_size_period:
-                cur_batch = self._get_batch_size(batch)
-                cumulative_batch_size += cur_batch
-                if (batches_this_epoch - 1) % self._log_batch_size_period == 0:
-                    average = cumulative_batch_size/batches_this_epoch
-                    logger.info(f"cur batch size: {cur_batch} average size: {average}")
             self._batch_num_total += 1
             batch_num_total = self._batch_num_total
 
@@ -565,6 +559,15 @@ class Trainer(Registrable):
 
             if self._log_histograms_this_batch:
                 self._histograms_to_tensorboard(batch_num_total, histogram_parameters)
+
+            if self._log_batch_size_period:
+                cur_batch = self._get_batch_size(batch)
+                cumulative_batch_size += cur_batch
+                if (batches_this_epoch - 1) % self._log_batch_size_period == 0:
+                    average = cumulative_batch_size/batches_this_epoch
+                    logger.info(f"cur batch size: {cur_batch} average size: {average}")
+                    self._tensorboard.add_train_scalar("mean_batch_size", average, batch_num_total)
+                    self._tensorboard.add_train_scalar("cur_batch_size", cur_batch, batch_num_total)
 
             # Save model if needed.
             if self._model_save_interval is not None and (

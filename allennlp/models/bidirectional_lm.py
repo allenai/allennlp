@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple, Union, Optional
+from typing import Dict, List, Tuple, Union, Optional, Callable
 
 import torch
 import numpy as np
@@ -91,7 +91,7 @@ class BidirectionalLanguageModel(Model):
                  vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
                  contextualizer: Seq2SeqEncoder,
-                 do_layer_norm: bool = False
+                 do_layer_norm: bool = False,
                  dropout: float = None,
                  loss_scale: Union[float, str] = 1.0,
                  remove_bos_eos: bool = True,
@@ -100,10 +100,15 @@ class BidirectionalLanguageModel(Model):
                  initializer: InitializerApplicator = None) -> None:
         super().__init__(vocab)
         self._text_field_embedder = text_field_embedder
-        self._layer_norm = layer_norm or (lambda tensor, mask: tensor)
 
         if not contextualizer.is_bidirectional():
             raise ConfigurationError("contextualizer must be bidirectional")
+
+        # And add a layer norm
+        if do_layer_norm:
+            self._layer_norm: Callable = MaskedLayerNorm(self._text_field_embedder.get_output_dim())
+        else:
+            self._layer_norm = lambda tensor, mask: tensor
 
         self._contextualizer = contextualizer
         # The dimension for making predictions just in the forward
