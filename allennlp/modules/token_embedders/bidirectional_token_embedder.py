@@ -86,7 +86,7 @@ class BidirectionalTokenEmbedder(TokenEmbedder):
         self._remove_bos_eos = remove_bos_eos
         self._scalar_mix = ScalarMix(mixture_size=contextualizer.num_layers + 1, do_layer_norm=False, trainable=True)
 
-        state_dict = torch.load(weight_file)
+        state_dict = torch.load(weight_file, map_location=util.device_mapping(-1))
         self.load_state_dict(state_dict, strict=False)
 
         for param in self._text_field_embedder.parameters():
