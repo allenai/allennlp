@@ -20,7 +20,7 @@
             "elmo": {
                 "type": "bidirectional_token_embedder",
                 "dropout": 0.2,
-                "weight_file": "/home/brendanr/workbenches/calypso/sers/full_14/model_state_epoch_2.th"
+                "weight_file": "/home/brendanr/workbenches/calypso/sers/full_14/model_state_epoch_2.th",
                 "text_field_embedder": {
                   # Note: This is because we only use the token_characters during embedding, not the tokens themselves.
                   "allow_unmatched_keys": true,
@@ -52,15 +52,16 @@
                     }
                   }
                 },
+                "remove_bos_eos": false,
                 "contextualizer": {
-                    "type": "transformer",
                     "input_dim": 512,
                     "hidden_dim": 2048,
                     "num_layers": 6,
                     # TODO(brendanr): Does this need to be used?
                     #"dropout": 0.1,
                     # TODO(brendanr): Verify this dropout is applied in the same place as Calypso.
-                    "input_dropout": 0.1
+                    "input_dropout": 0.1,
+		    "return_all_layers": true
                 }
             }
         }
@@ -110,7 +111,7 @@
       "grad_norm": 5.0,
       "patience": 20,
       "validation_metric": "+evalb_f1_measure",
-      "cuda_device": 0,
+      "cuda_device": -1,
       "optimizer": {
         "type": "adadelta",
         "lr": 1.0,

@@ -6,16 +6,17 @@ import numpy as np
 from allennlp.common.checks import ConfigurationError
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.model import Model
-from allennlp.modules import ScalarMix, TokenEmbedder
+from allennlp.modules import ScalarMix
 from allennlp.modules.masked_layer_norm import MaskedLayerNorm
 from allennlp.modules.text_field_embedders import TextFieldEmbedder
+from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 from allennlp.modules.sampled_softmax_loss import SampledSoftmaxLoss
 from allennlp.modules.seq2seq_encoders import Seq2SeqEncoder, BidirectionalTransformerEncoder
 from allennlp.nn.util import get_text_field_mask, remove_sentence_boundaries
 from allennlp.nn import InitializerApplicator, RegularizerApplicator, Activation
 
 
-@Model.register('bidirectional_token_embedder')
+@TokenEmbedder.register('bidirectional_token_embedder')
 class BidirectionalTokenEmbedder(TokenEmbedder):
     """
     The ``BidirectionalLanguageModel`` applies a bidirectional "contextualizing"
@@ -93,9 +94,11 @@ class BidirectionalTokenEmbedder(TokenEmbedder):
         for param in self._contextualizer.parameters():
             param.requires_grad = requires_grad
 
+    def get_output_dim(self) -> int:
+        return self._contextualizer.output_dim
 
     def forward(self,  # type: ignore
-                source: Dict[str, torch.LongTensor]) -> Dict[str, torch.Tensor]:
+                inputs: torch.LongTensor) -> Dict[str, torch.Tensor]:
         """
         Computes the averaged forward and backward LM loss from the batch.
 
@@ -128,19 +131,9 @@ class BidirectionalTokenEmbedder(TokenEmbedder):
             (batch_size, timesteps) mask for the embeddings
         """
         # pylint: disable=arguments-differ
+        source = {"token_characters": inputs}
         mask = get_text_field_mask(source)
-
-        # We must have token_ids so that we can compute targets
-        token_ids = source.get("tokens")
-        if token_ids is None:
-            raise ConfigurationError("Your data must have a 'tokens': SingleIdTokenIndexer() "
-                                     "in order to use the BidirectionalLM")
-
-        # Use token_ids to compute targets
-        forward_targets = torch.zeros_like(token_ids)
-        backward_targets = torch.zeros_like(token_ids)
-        forward_targets[:, 0:-1] = token_ids[:, 1:]
-        backward_targets[:, 1:] = token_ids[:, 0:-1]
+        #print(f"BRR: {source}")
 
         # shape (batch_size, sentence_length + 2, embedding_size)
         embeddings = self._text_field_embedder(source)
@@ -152,7 +145,7 @@ class BidirectionalTokenEmbedder(TokenEmbedder):
 
         # To match contextualized dimension.
         double_character_embeddings = torch.cat([embeddings, embeddings], -1)
-        if double_character_embeddings.size(-1) != contextual_embeddings.size(-1):
+        if double_character_embeddings.size(-1) != contextual_embeddings[0].size(-1):
             raise Exception("Incorrect sizes")
 
         contextual_embeddings.append(double_character_embeddings)
