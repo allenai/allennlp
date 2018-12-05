@@ -107,13 +107,9 @@ class WordpieceIndexer(TokenIndexer[int]):
         # offset is the last wordpiece of "tokens[-1]".
         offset = len(wordpiece_ids) if self.use_starting_offsets else len(wordpiece_ids) - 1
 
-        # We have a maximum allowed sequence length (including the start and end token wordpieces)
-        # so we have to do a little gymnastics to stay under the limit. We'll start by computing
-        # the wordpiece ids for every input token.
-        tokens_wordpiece_ids = [[self.vocab[token] for token in self.wordpiece_tokenizer(token.text)]
-                                for token in tokens]
-
-        for token_wordpiece_ids in tokens_wordpiece_ids:
+        for token in tokens:
+            token_wordpiece_ids = [self.vocab[token]
+                                   for token in self.wordpiece_tokenizer(token.text)]
             # If we have enough room to add these ids *and also* the end_token ids.
             if len(wordpiece_ids) + len(token_wordpiece_ids) + len(self._end_piece_ids) <= self.max_pieces:
                 # For initial offsets, the current value of ``offset`` is the start of
