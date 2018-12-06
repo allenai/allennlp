@@ -356,7 +356,7 @@ class BidafPlusPlus(Model):
 
                     # computing the max score of the correct answer
                     for j in range(num_of_docs):
-                        if j < len(inst_metadata["token_span_lists"]):
+                        if j < len(inst_metadata["token_span_lists"]['answers']):
                             for answer_start_end in inst_metadata['token_span_lists']['answers'][j][0]:
                                 score = span_start_logits_numpy[batch_ind * num_of_docs + j][answer_start_end[0]] \
                                         + span_end_logits_numpy[batch_ind * num_of_docs + j][answer_start_end[1]]
@@ -365,7 +365,7 @@ class BidafPlusPlus(Model):
 
                     # computing the max score of the incorrect answers
                     for j in range(num_of_docs):
-                        if j < len(inst_metadata["token_span_lists"]):
+                        if j < len(inst_metadata["token_span_lists"]['distractor_answers']):
                             for answer_start_end in inst_metadata['token_span_lists']['distractor_answers'][j][0]:
                                 score = span_start_logits_numpy[batch_ind * num_of_docs + j][answer_start_end[0]] \
                                         + span_end_logits_numpy[batch_ind * num_of_docs + j][answer_start_end[1]]
