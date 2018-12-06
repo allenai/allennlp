@@ -34,7 +34,7 @@ GRAMMAR_DICTIONARY["source_table"] = ['(table_name ws "AS" wsp name)', 'table_na
 GRAMMAR_DICTIONARY["source_subq"] = ['("(" ws query ws ")" ws "AS" ws name)', '("(" ws query ws ")")']
 GRAMMAR_DICTIONARY["limit"] = ['("LIMIT" ws "1")', '("LIMIT" ws number)']
 
-GRAMMAR_DICTIONARY["where_clause"] = ['(ws "WHERE" wsp expr ws where_conj)', '(ws "WHERE" wsp expr)']
+GRAMMAR_DICTIONARY["where_clause"] = ['(ws "WHERE" wsp "(" ws expr ws where_conj ws ")" ws where_conj ws )', '(ws "WHERE" wsp "(" ws expr ws where_conj ws ")")', '(ws "WHERE" wsp "(" ws expr ws  ")" ws where_conj)', '(ws "WHERE" wsp "(" ws expr ws ")")', '(ws "WHERE" wsp expr ws where_conj)', '(ws "WHERE" wsp expr)']
 GRAMMAR_DICTIONARY["where_conj"] = ['(ws "AND" wsp expr ws where_conj)', '(ws "AND" wsp expr)']
 
 GRAMMAR_DICTIONARY["groupby_clause"] = ['(ws "GROUP" ws "BY" ws group_clause ws "HAVING" ws expr)',
@@ -372,9 +372,13 @@ def update_grammar_with_typed_variables(grammar_dictionary: Dict[str, List[str]]
 
             if not variable in GLOBAL_DATASET_VALUES.get(dataset_name, []):
                 binary_ops.append(f'("{table}" ws "." ws "{column}" wsp binaryop wsp  "\'{variable}\'")')
+                if dataset_name == "atis":
+                    binary_ops.append(f'( ws "(" ws "{table}" ws "." ws "{column}" wsp binaryop wsp  "\'{variable}\'" ws ")" ws)')
             else:
                 binary_ops.append(f'("{table}" ws "." ws "{column}" wsp binaryop wsp  "{variable}")')
-
+                if dataset_name == "atis":
+                    binary_ops.append(f'( ws "(" ws "{table}" ws "." ws "{column}" wsp binaryop wsp  "{variable}" ws ")" ws )')
+ 
         # TODO update the signatures for binary, tertiary and in_exprs here.
         grammar_dictionary["value"] = [f'"\'{variable}\'"'] + grammar_dictionary["value"]
 
