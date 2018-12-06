@@ -333,7 +333,7 @@ class BidafPlusPlus(Model):
 
         # Compute the loss.
         if span_start is not None:
-            selected_inds = np.argwhere(span_start.view(-1).numpy()>0).squeeze()
+            selected_inds = np.argwhere(span_start.view(-1).cpu().numpy()>0).squeeze()
             # TODO filtering result with no golden answer for loss, should we not compute this at all to save time?
             loss = nll_loss(util.masked_log_softmax(span_start_logits[selected_inds], repeated_passage_mask[selected_inds]), \
                             span_start.view(-1)[selected_inds],ignore_index=-1)
