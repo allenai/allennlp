@@ -356,19 +356,21 @@ class BidafPlusPlus(Model):
 
                     # computing the max score of the correct answer
                     for j in range(num_of_docs):
-                        for answer_start_end in inst_metadata['token_span_lists']['answers'][j][0]:
-                            score = span_start_logits_numpy[batch_ind * num_of_docs + j][answer_start_end[0]] \
-                                    + span_end_logits_numpy[batch_ind * num_of_docs + j][answer_start_end[1]]
-                            if score>max_correct_answer:
-                                max_correct_answer = score
+                        if j < len(inst_metadata["token_span_lists"]):
+                            for answer_start_end in inst_metadata['token_span_lists']['answers'][j][0]:
+                                score = span_start_logits_numpy[batch_ind * num_of_docs + j][answer_start_end[0]] \
+                                        + span_end_logits_numpy[batch_ind * num_of_docs + j][answer_start_end[1]]
+                                if score>max_correct_answer:
+                                    max_correct_answer = score
 
                     # computing the max score of the incorrect answers
                     for j in range(num_of_docs):
-                        for answer_start_end in inst_metadata['token_span_lists']['distractor_answers'][j][0]:
-                            score = span_start_logits_numpy[batch_ind * num_of_docs + j][answer_start_end[0]] \
-                                    + span_end_logits_numpy[batch_ind * num_of_docs + j][answer_start_end[1]]
-                            if score > max_incorrect_answer:
-                                max_incorrect_answer = score
+                        if j < len(inst_metadata["token_span_lists"]):
+                            for answer_start_end in inst_metadata['token_span_lists']['distractor_answers'][j][0]:
+                                score = span_start_logits_numpy[batch_ind * num_of_docs + j][answer_start_end[0]] \
+                                        + span_end_logits_numpy[batch_ind * num_of_docs + j][answer_start_end[1]]
+                                if score > max_incorrect_answer:
+                                    max_incorrect_answer = score
 
                     # If max currect answer score is higher, then multi_choice accuracy bool accuracy is True.
                     self._multichoice_accuracy(torch.Tensor([(max_correct_answer > max_incorrect_answer) * 1]),torch.Tensor([1]))
