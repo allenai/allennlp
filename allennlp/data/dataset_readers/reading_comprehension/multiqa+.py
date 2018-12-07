@@ -197,8 +197,8 @@ class MultiQAReader(DatasetReader):
                                                  paragraphs[answer_start_paragraph][answer_start_norm:answer_start_norm + len(alias['text'])],
                                                  re.IGNORECASE)
                                     if x is None:
-                                        if (alias['text'] != \
-                                                paragraphs[answer_start_paragraph][answer_start_norm:answer_start_norm + len(alias['text'])]):
+                                        if (alias['text'].lower() != paragraphs[answer_start_paragraph][answer_start_norm:answer_start_norm \
+                                                                                                     + len(alias['text'])].lower()):
                                             raise ValueError("answers and paragraph not aligned!")
 
             # Filtering the context documents
