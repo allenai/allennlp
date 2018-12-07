@@ -49,7 +49,7 @@ def main(checks):
 
         if "check-large-files" in checks:
             print("Checking all added files have size <= 2MB", flush=True)
-            run("./scripts/check_files_sizes.sh", shell=True, check=True)
+            run("./scripts/check_files_sizes.sh 2", shell=True, check=True)
             print("check files' sizes passed")
 
     except CalledProcessError:
