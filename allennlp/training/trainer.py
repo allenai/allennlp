@@ -924,7 +924,7 @@ class Trainer(Registrable):
             pieces = epoch.split('.')
             if len(pieces) == 1:
                 # Just a single epoch without timestamp
-                int_epochs.append([int(pieces[0]), 0])
+                int_epochs.append([int(pieces[0]), '0'])
             else:
                 # has a timestamp
                 int_epochs.append([int(pieces[0]), pieces[1]])
