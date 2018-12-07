@@ -47,7 +47,7 @@ def main(checks):
             run("./scripts/check_requirements_and_setup.py", shell=True, check=True)
             print("check requirements passed")
 
-        if "check-files-sizes" in checks:
+        if "check-large-files" in checks:
             print("Checking all added files have size <= 2MB", flush=True)
             run("./scripts/check_files_sizes.sh", shell=True, check=True)
             print("check files' sizes passed")
@@ -57,7 +57,7 @@ def main(checks):
         sys.exit(1)
 
 if __name__ == "__main__":
-    checks = ['pytest', 'pylint', 'mypy', 'build-docs', 'check-docs', 'check-links', 'check-requirements', 'check-files-sizes']
+    checks = ['pytest', 'pylint', 'mypy', 'build-docs', 'check-docs', 'check-links', 'check-requirements', 'check-large-files']
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--checks', type=str, required=False, nargs='+', choices=checks)
