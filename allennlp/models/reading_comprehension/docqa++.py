@@ -210,9 +210,16 @@ class BidafPlusPlus(Model):
 
         # TODO this repeat is ugly ...
         batch_size,num_of_docs,_,_ = passage['token_characters'].size()
-        size1 = question['tokens'].size()
-        question['tokens'] = \
-            question['tokens'].unsqueeze(1).repeat(1,num_of_docs,1,1).reshape(batch_size * num_of_docs,size1[1],size1[2])
+
+        if 'tokens' in question:
+            size1 = question['tokens'].size()
+            question['tokens'] = \
+                question['tokens'].unsqueeze(1).repeat(1,num_of_docs,1,1).reshape(batch_size * num_of_docs,size1[1],size1[2])
+        elif 'elmo'in question:
+            size1 = question['elmo'].size()
+            question['elmo'] = \
+                question['elmo'].unsqueeze(1).repeat(1,num_of_docs,1,1,1).reshape(batch_size * num_of_docs, size1[1],size1[2],size1[3])
+
         size2 = question['token_characters'].size()
         question['token_characters'] = \
             question['token_characters'].unsqueeze(1).repeat(1,num_of_docs,1,1,1).reshape(batch_size * num_of_docs,size2[1],size2[2],size2[3])
@@ -229,8 +236,12 @@ class BidafPlusPlus(Model):
         # We need to concatinate all passages and answers, but remember which ones to used for the shared norm
         size1 = passage['token_characters'].size()
         passage['token_characters'] = passage['token_characters'].reshape(batch_size * num_of_docs, size1[2], size1[3])
-        size2 = passage['tokens'].size()
-        passage['tokens'] = passage['tokens'].reshape(batch_size * num_of_docs, size2[2])
+        if 'tokens' in passage:
+            size2 = passage['tokens'].size()
+            passage['tokens'] = passage['tokens'].reshape(batch_size * num_of_docs, size2[2])
+        elif 'elmo' in passage:
+            size2 = passage['elmo'].size()
+            passage['elmo'] = passage['elmo'].reshape(batch_size * num_of_docs, size2[2], size2[3])
 
         embedded_passage = self._variational_dropout(self._text_field_embedder(passage))
         passage_length = embedded_passage.size(1)
@@ -346,6 +357,7 @@ class BidafPlusPlus(Model):
 
             # support for multi choice answers:
             # TODO this does not handle prediction mode at all .....
+            # we iterate over document that do not contain the golden answer for validation and test setup.
             if self._multi_choice_answers:
                 span_start_logits_numpy = span_start_logits.data.cpu().numpy()
                 span_end_logits_numpy = span_end_logits.data.cpu().numpy()
