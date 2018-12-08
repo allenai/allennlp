@@ -37,7 +37,7 @@ class LanguageModelingReader(DatasetReader):
         We use this ``Tokenizer`` for the text.  See :class:`Tokenizer`.
     token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
         We use this to define the input representation for the text.  See :class:`TokenIndexer`.
-        Note that the `output` representation will always be single token IDs - if you've specified
+        Note that the `target` representation will always be single token IDs - if you've specified
         a ``SingleIdTokenIndexer`` here, we use the first one you specify.  Otherwise, we create
         one with default parameters.
     """
@@ -51,17 +51,17 @@ class LanguageModelingReader(DatasetReader):
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._tokens_per_instance = tokens_per_instance
 
-        # No matter how you want to represent the input, we'll always represent the output as a
+        # No matter how you want to represent the input, we'll always represent the target as a
         # single token id.  This code lets you learn a language model that concatenates word
         # embeddings with character-level encoders, in order to predict the word token that comes
         # next.
-        self._output_indexer: Dict[str, TokenIndexer] = None
+        self._target_indexer: Dict[str, TokenIndexer] = None
         for name, indexer in self._token_indexers.items():
             if isinstance(indexer, SingleIdTokenIndexer):
-                self._output_indexer = {name: indexer}
+                self._target_indexer = {name: indexer}
                 break
         else:
-            self._output_indexer = {"tokens": SingleIdTokenIndexer()}
+            self._target_indexer = {"tokens": SingleIdTokenIndexer()}
 
     @overrides
     def _read(self, file_path: str):
@@ -83,15 +83,15 @@ class LanguageModelingReader(DatasetReader):
             tokenized_strings = [self._tokenizer.tokenize(s) for s in instance_strings]
 
         for tokenized_string in tokenized_strings:
-            input_field = TextField(tokenized_string[:-1], self._token_indexers)
-            output_field = TextField(tokenized_string[1:], self._output_indexer)
-            yield Instance({'input_tokens': input_field,
-                            'output_tokens': output_field})
+            source_field = TextField(tokenized_string[:-1], self._token_indexers)
+            target_field = TextField(tokenized_string[1:], self._target_indexer)
+            yield Instance({'source_tokens': source_field,
+                            'target_tokens': target_field})
 
     @overrides
     def text_to_instance(self, sentence: str) -> Instance:  # type: ignore
         # pylint: disable=arguments-differ
         tokenized_string = self._tokenizer.tokenize(sentence)
-        input_field = TextField(tokenized_string[:-1], self._token_indexers)
-        output_field = TextField(tokenized_string[1:], self._output_indexer)
-        return Instance({'input_tokens': input_field, 'output_tokens': output_field})
+        source_field = TextField(tokenized_string[:-1], self._token_indexers)
+        target_field = TextField(tokenized_string[1:], self._target_indexer)
+        return Instance({'source_tokens': source_field, 'target_tokens': target_field})
