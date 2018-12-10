@@ -48,7 +48,7 @@ local BASE_ITERATOR = {
   // sampled during training. Not sampling on GPUs results in a certain OOM
   // given our large vocabulary. We'll need to evaluate against the test set
   // (when we'll want a full softmax) with the CPU.
-  "train_data_path": std.extVar("BIDIRECTIONAL_LM_TRAIN_PATH")
+  "train_data_path": std.extVar("BIDIRECTIONAL_LM_TRAIN_PATH"),
 
   "vocabulary": {
       // Use a prespecified vocabulary for efficiency.

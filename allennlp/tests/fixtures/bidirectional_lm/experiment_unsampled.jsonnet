@@ -8,14 +8,16 @@
       "token_characters": {
         "type": "characters"
       }
-    }
+    },
+    "start_tokens": ["<S>"],
+    "end_tokens": ["</S>"]
   },
   "train_data_path": "allennlp/tests/fixtures/bidirectional_lm/sentences.txt",
   "validation_data_path": "allennlp/tests/fixtures/bidirectional_lm/sentences.txt",
   "vocabulary": {
       "tokens_to_add": {
-          "tokens": ["<s>", "</s>"],
-          "token_characters": ["<>/s"]
+          "tokens": ["<S>", "</S>"],
+          "token_characters": ["<>/S"]
       },
   },
   "model": {
