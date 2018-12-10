@@ -21,7 +21,9 @@ local BASE_READER = {
             "type": "elmo_characters"
           }
         },
-        "max_sequence_length": 500
+        "max_sequence_length": 500,
+        "start_tokens": ["<S>"],
+        "end_tokens": ["</S>"]
 };
 
 local BASE_ITERATOR = {
