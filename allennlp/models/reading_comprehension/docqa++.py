@@ -243,6 +243,38 @@ class BidafPlusPlus(Model):
             size2 = passage['elmo'].size()
             passage['elmo'] = passage['elmo'].reshape(batch_size * num_of_docs, size2[2], size2[3])
 
+        # in document qa setup we usually use only training triplets (question, answer ,context) that
+        # contain the golden answer, to save tranining time.
+        golden_answer_triplets = np.argwhere(span_start.view(-1).cpu().numpy() >= 0).squeeze()
+
+        if self.training:
+            for type in question.keys():
+                question[type] = question[type][golden_answer_triplets]
+            for type in passage.keys():
+                passage[type] = passage[type][golden_answer_triplets]
+
+            total_qa_count = len(golden_answer_triplets)
+
+            selected_span_start = span_start.view(-1)[golden_answer_triplets]
+            selected_span_end = span_end.view(-1)[golden_answer_triplets]
+        else:
+            selected_span_start = span_start.view(-1)
+            selected_span_end = span_end.view(-1)
+
+        golden_answer_instance_triplets = []
+        golden_answer_offset = 0
+        for batch_ind, inst_metadata in enumerate(metadata):
+            golden_answer_instance_triplets.append([])
+            for ind in range(batch_ind * num_of_docs, (batch_ind + 1) * num_of_docs):
+                if ind in golden_answer_triplets:
+                    if self.training:
+                        golden_answer_instance_triplets[batch_ind].append(golden_answer_offset)
+                        golden_answer_offset += 1
+                    else:
+                        golden_answer_instance_triplets[batch_ind].append(ind)
+
+
+
         embedded_passage = self._variational_dropout(self._text_field_embedder(passage))
         passage_length = embedded_passage.size(1)
 
@@ -345,14 +377,10 @@ class BidafPlusPlus(Model):
         # Compute the loss.
         if span_start is not None:
             loss = 0
-            span_start_numpy = span_start.view(-1).cpu().numpy()
             for batch_ind, inst_metadata in enumerate(metadata):
 
                 # Could of wrote this shorter but it's clearer like this ...
-                curr_batch_inds = []
-                for ind in range(batch_ind * num_of_docs,(batch_ind+1) * num_of_docs):
-                    if span_start_numpy[ind]>=0:
-                        curr_batch_inds.append(ind)
+                curr_batch_inds = golden_answer_instance_triplets[batch_ind]
 
                 # TODO filtering result with no golden answer for loss, should we not compute this at all to save time?
                 span_start_logits_softmaxed = util.masked_log_softmax(\
@@ -364,15 +392,15 @@ class BidafPlusPlus(Model):
                 span_start_logits_softmaxed = span_start_logits_softmaxed.reshape(len(curr_batch_inds),span_start_logits.size(1))
                 span_end_logits_softmaxed = span_end_logits_softmaxed.reshape(len(curr_batch_inds), span_start_logits.size(1))
 
-                loss += nll_loss(span_start_logits_softmaxed, span_start.view(-1)[curr_batch_inds],ignore_index=-1)
-                loss += nll_loss(span_end_logits_softmaxed, span_end.view(-1)[curr_batch_inds], ignore_index=-1)
+                loss += nll_loss(span_start_logits_softmaxed, selected_span_start[curr_batch_inds], ignore_index=-1)
+                loss += nll_loss(span_end_logits_softmaxed, selected_span_end[curr_batch_inds], ignore_index=-1)
 
             loss /= batch_size
 
             # TODO these are not updates
-            self._span_start_accuracy(span_start_logits, span_start.view(-1))
-            self._span_end_accuracy(span_end_logits, span_end.view(-1))
-            self._span_accuracy(best_span[:, 0:2],torch.stack([span_start, span_end], -1).view(total_qa_count, 2))
+            #self._span_start_accuracy(span_start_logits, span_start.view(-1))
+            #self._span_end_accuracy(span_end_logits, span_end.view(-1))
+            #self._span_accuracy(best_span[:, 0:2],torch.stack([span_start, span_end], -1).view(total_qa_count, 2))
 
             # support for multi choice answers:
             # TODO this does not handle prediction mode at all .....
@@ -384,22 +412,25 @@ class BidafPlusPlus(Model):
                     max_correct_answer = -50
                     max_incorrect_answer = -50
 
+                    if self.train:
+                        instance_triplets = golden_answer_instance_triplets[batch_ind]
+                    else:
+                        instance_triplets = range(batch_ind * num_of_docs, (batch_ind + 1) * num_of_docs)
 
                     # computing the max score of the correct answer
-                    for j in range(num_of_docs):
+                    for j in range(len(instance_triplets)):
                         if j < len(inst_metadata["token_span_lists"]['answers']):
                             for answer_start_end in inst_metadata['token_span_lists']['answers'][j][0]:
-                                score = span_start_logits_numpy[batch_ind * num_of_docs + j][answer_start_end[0]] \
-                                        + span_end_logits_numpy[batch_ind * num_of_docs + j][answer_start_end[1]]
+                                score = span_start_logits_numpy[instance_triplets[j]][answer_start_end[0]] \
+                                        + span_end_logits_numpy[instance_triplets[j]][answer_start_end[1]]
                                 if score>max_correct_answer:
                                     max_correct_answer = score
 
-                    # computing the max score of the incorrect answers
-                    for j in range(num_of_docs):
+                        # computing the max score of the incorrect answers
                         if j < len(inst_metadata["token_span_lists"]['distractor_answers']):
                             for answer_start_end in inst_metadata['token_span_lists']['distractor_answers'][j][0]:
-                                score = span_start_logits_numpy[batch_ind * num_of_docs + j][answer_start_end[0]] \
-                                        + span_end_logits_numpy[batch_ind * num_of_docs + j][answer_start_end[1]]
+                                score = span_start_logits_numpy[instance_triplets[j]][answer_start_end[0]] \
+                                        + span_end_logits_numpy[instance_triplets[j]][answer_start_end[1]]
                                 if score > max_incorrect_answer:
                                     max_incorrect_answer = score
 
@@ -420,53 +451,63 @@ class BidafPlusPlus(Model):
 
         # best_span is a vector of more than one span
         best_span_cpu = best_span.detach().cpu().numpy()
-        for i in range(batch_size):
-            for j in range(num_of_docs):
 
-                # TODO we need to pass the actual number of documents per instance
-                if j >= len(metadata[i]["answer_texts_list"]) or metadata[i]['token_offsets'][j] == []:
-                    continue
+        # TODO we need to take the best span in shared norm setting!!
+        if False:
+            for i in range(batch_size):
+                for j in range(num_of_docs):
 
-                passage_str = metadata[i]['original_passage'][j]
-                offsets = metadata[i]['token_offsets'][j]
-                f1_score = 0.0
-                per_dialog_best_span_list = []
+                    # TODO we need to pass the actual number of documents per instance
+                    if j >= len(metadata[i]["answer_texts_list"]) or metadata[i]['token_offsets'][j] == []:
+                        continue
 
-                per_dialog_query_id_list = []
-                for per_dialog_query_index, (iid, gold_answer_texts) in enumerate(
-                        zip(metadata[i]["instance_id"], metadata[i]["answer_texts_list"][j])):
-                    predicted_span = tuple(best_span_cpu[(i * num_of_docs + j) * max_qa_count + per_dialog_query_index])
+                    passage_str = metadata[i]['original_passage'][j]
+                    offsets = metadata[i]['token_offsets'][j]
+                    f1_score = 0.0
+                    per_dialog_best_span_list = []
 
-                    start_offset = offsets[predicted_span[0]][0]
-                    end_offset = offsets[predicted_span[1]][1]
-
-                    per_dialog_query_id_list.append(iid)
-
-                    best_span_string = passage_str[start_offset:end_offset]
-                    per_dialog_best_span_list.append(best_span_string)
-                    if gold_answer_texts:
-                        if len(gold_answer_texts) > 1:
-                            t_f1 = []
-                            # Compute F1 over N-1 human references and averages the scores.
-                            # AT why N-1 and not N?
-                            for answer_index in range(len(gold_answer_texts)):
-                                idxes = list(range(len(gold_answer_texts)))
-
-                                # AT: Why are we poping one answer here??
-                                #idxes.pop(answer_index)
-
-                                refs = [gold_answer_texts[z] for z in idxes]
-                                t_f1.append(squad_eval.metric_max_over_ground_truths(squad_eval.f1_score,
-                                                                                     best_span_string,
-                                                                                     refs))
-                            f1_score = 1.0 * sum(t_f1) / len(t_f1)
+                    per_dialog_query_id_list = []
+                    for per_dialog_query_index, (iid, gold_answer_texts) in enumerate(
+                            zip(metadata[i]["instance_id"], metadata[i]["answer_texts_list"][j])):
+                        # TODO the triplet_ind calc appears in too many places...
+                        if batch_ind * num_of_docs + j in triplets_with_golden_answer:
+                            triplet_ind = list(triplets_with_golden_answer).index(batch_ind * num_of_docs + j)
                         else:
-                            f1_score = squad_eval.metric_max_over_ground_truths(squad_eval.f1_score,
-                                                                                best_span_string,
-                                                                                gold_answer_texts)
-                    self._official_f1(100 * f1_score)
-                output_dict['qid'].append(per_dialog_query_id_list)
-                output_dict['best_span_str'].append(per_dialog_best_span_list)
+                            continue
+
+
+                        predicted_span = tuple(best_span_cpu[(triplet_ind) * max_qa_count + per_dialog_query_index])
+
+                        start_offset = offsets[predicted_span[0]][0]
+                        end_offset = offsets[predicted_span[1]][1]
+
+                        per_dialog_query_id_list.append(iid)
+
+                        best_span_string = passage_str[start_offset:end_offset]
+                        per_dialog_best_span_list.append(best_span_string)
+                        if gold_answer_texts:
+                            if len(gold_answer_texts) > 1:
+                                t_f1 = []
+                                # Compute F1 over N-1 human references and averages the scores.
+                                # AT why N-1 and not N?
+                                for answer_index in range(len(gold_answer_texts)):
+                                    idxes = list(range(len(gold_answer_texts)))
+
+                                    # AT: Why are we poping one answer here??
+                                    #idxes.pop(answer_index)
+
+                                    refs = [gold_answer_texts[z] for z in idxes]
+                                    t_f1.append(squad_eval.metric_max_over_ground_truths(squad_eval.f1_score,
+                                                                                         best_span_string,
+                                                                                         refs))
+                                f1_score = 1.0 * sum(t_f1) / len(t_f1)
+                            else:
+                                f1_score = squad_eval.metric_max_over_ground_truths(squad_eval.f1_score,
+                                                                                    best_span_string,
+                                                                                    gold_answer_texts)
+                        self._official_f1(100 * f1_score)
+                    output_dict['qid'].append(per_dialog_query_id_list)
+                    output_dict['best_span_str'].append(per_dialog_best_span_list)
 
         return output_dict
 
@@ -482,10 +523,10 @@ class BidafPlusPlus(Model):
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         if self._multi_choice_answers:
-            return {'start_acc': self._span_start_accuracy.get_metric(reset) * self._examples_used_frac * self._frac_of_validation_used,
-                    'end_acc': self._span_end_accuracy.get_metric(reset) * self._examples_used_frac * self._frac_of_validation_used,
-                    'span_acc': self._span_accuracy.get_metric(reset) * self._examples_used_frac * self._frac_of_validation_used,
-                    'f1': self._official_f1.get_metric(reset) * self._examples_used_frac * self._frac_of_validation_used,
+            return {#'start_acc': self._span_start_accuracy.get_metric(reset) * self._examples_used_frac * self._frac_of_validation_used,
+                    #'end_acc': self._span_end_accuracy.get_metric(reset) * self._examples_used_frac * self._frac_of_validation_used,
+                    #'span_acc': self._span_accuracy.get_metric(reset) * self._examples_used_frac * self._frac_of_validation_used,
+                    #'f1': self._official_f1.get_metric(reset) * self._examples_used_frac * self._frac_of_validation_used,
                     'multichoice_acc': self._multichoice_accuracy.get_metric(reset) * self._examples_used_frac + \
                                        (1- self._examples_used_frac) * 1.0 / self._multi_choice_answers * self._frac_of_validation_used,
                     'examples_used_frac':self._examples_used_frac * self._frac_of_validation_used}
