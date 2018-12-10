@@ -27,10 +27,7 @@ class TestBertEmbedder(ModelTestCase):
 
     def test_without_offsets(self):
         input_ids = torch.LongTensor([[3, 5, 9, 1, 2], [1, 5, 0, 0, 0]])
-        input_mask = torch.LongTensor([[1, 1, 1, 1, 1], [1, 1, 0, 0, 0]])
-        token_type_ids = torch.LongTensor([[0, 0, 1, 1, 1], [0, 2, 0, 0, 0]])
-
-        result = self.token_embedder(input_ids, input_mask, token_type_ids)
+        result = self.token_embedder(input_ids)
 
         assert list(result.shape) == [2, 5, 12]
 
