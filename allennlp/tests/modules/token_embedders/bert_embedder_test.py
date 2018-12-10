@@ -65,19 +65,20 @@ class TestBertEmbedder(ModelTestCase):
         tensor_dict = batch.as_tensor_dict(padding_lengths)
         tokens = tensor_dict["tokens"]
 
+        # 16 = [CLS], 17 = [SEP]
         assert tokens["bert"].tolist() == [
-                [2, 3, 4, 3, 5, 6, 8, 9, 2, 14, 12, 0],
-                [2, 3, 5, 6, 8, 9, 2, 15, 10, 11, 14, 1]
+                [16, 2, 3, 4, 3, 5, 6, 8, 9, 2, 14, 12, 17, 0],
+                [16, 2, 3, 5, 6, 8, 9, 2, 15, 10, 11, 14, 1, 17]
         ]
 
         assert tokens["bert-offsets"].tolist() == [
-                [0, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-                [0, 1, 2, 3, 4, 5, 6, 9, 10, 11]
+                [1, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+                [1, 2, 3, 4, 5, 6, 7, 10, 11, 12]
         ]
 
-        # No offsets, should get 12 vectors back.
+        # No offsets, should get 14 vectors back ([CLS] + 12 token wordpieces + [SEP])
         bert_vectors = self.token_embedder(tokens["bert"])
-        assert list(bert_vectors.shape) == [2, 12, 12]
+        assert list(bert_vectors.shape) == [2, 14, 12]
 
         # Offsets, should get 10 vectors back.
         bert_vectors = self.token_embedder(tokens["bert"], offsets=tokens["bert-offsets"])
@@ -86,7 +87,7 @@ class TestBertEmbedder(ModelTestCase):
         ## Now try top_layer_only = True
         tlo_embedder = BertEmbedder(self.bert_model, top_layer_only=True)
         bert_vectors = tlo_embedder(tokens["bert"])
-        assert list(bert_vectors.shape) == [2, 12, 12]
+        assert list(bert_vectors.shape) == [2, 14, 12]
 
         bert_vectors = tlo_embedder(tokens["bert"], offsets=tokens["bert-offsets"])
         assert list(bert_vectors.shape) == [2, 10, 12]
@@ -110,11 +111,11 @@ class TestBertEmbedder(ModelTestCase):
         tokens = tensor_dict["tokens"]
 
         assert tokens["bert"].tolist() == [
-                [2, 3, 5, 6, 8, 9, 2, 14, 12]
+                [16, 2, 3, 5, 6, 8, 9, 2, 14, 12, 17]
         ]
 
         assert tokens["bert-offsets"].tolist() == [
-                [0, 1, 2, 3, 4, 5, 6, 7, 8]
+                [1, 2, 3, 4, 5, 6, 7, 8, 9]
         ]
 
 
@@ -222,9 +223,9 @@ class TestBertEmbedder(ModelTestCase):
         tensor_dict = batch.as_tensor_dict(padding_lengths, verbose=True)
         tokens = tensor_dict["tokens"]
 
-        # No offsets, should get 12 vectors back.
+        # No offsets, should get 14 vectors back ([CLS] + 12 wordpieces + [SEP])
         bert_vectors = self.token_embedder(tokens["bert"])
-        assert list(bert_vectors.shape) == [2, 2, 12, 12]
+        assert list(bert_vectors.shape) == [2, 2, 14, 12]
 
         # Offsets, should get 10 vectors back.
         bert_vectors = self.token_embedder(tokens["bert"], offsets=tokens["bert-offsets"])
@@ -233,7 +234,7 @@ class TestBertEmbedder(ModelTestCase):
         ## Now try top_layer_only = True
         tlo_embedder = BertEmbedder(self.bert_model, top_layer_only=True)
         bert_vectors = tlo_embedder(tokens["bert"])
-        assert list(bert_vectors.shape) == [2, 2, 12, 12]
+        assert list(bert_vectors.shape) == [2, 2, 14, 12]
 
         bert_vectors = tlo_embedder(tokens["bert"], offsets=tokens["bert-offsets"])
         assert list(bert_vectors.shape) == [2, 2, 10, 12]
