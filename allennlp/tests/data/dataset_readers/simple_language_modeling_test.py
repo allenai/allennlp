@@ -41,7 +41,11 @@ class TestSimpleLanguageModelingDatasetReader(AllenNlpTestCase):
 
     def test_max_sequence_length(self):
         prefix = os.path.join(self.FIXTURES, 'shards/shard0')
-        dataset = SimpleLanguageModelingDatasetReader(max_sequence_length=10, start_tokens=["<S>"], end_tokens=["</S>"])
+        dataset = SimpleLanguageModelingDatasetReader(
+                max_sequence_length=10,
+                start_tokens=["<S>"],
+                end_tokens=["</S>"]
+        )
         k = -1
         for k, _ in enumerate(dataset.read(prefix)):
             pass
