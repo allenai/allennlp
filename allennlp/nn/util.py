@@ -416,8 +416,6 @@ def viterbi_decode(tag_sequence: torch.Tensor,
             path_scores.append(tag_sequence[timestep, :] + scores.squeeze())
         path_indices.append(paths.squeeze())
 
-    print(path_scores)
-
     # Construct the most likely sequence backwards.
     viterbi_score, best_path = torch.max(path_scores[-1], 0)
     viterbi_path = [int(best_path.numpy())]
