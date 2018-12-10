@@ -39,13 +39,19 @@ class WordpieceIndexer(TokenIndexer[int]):
         maximum length for its input ids. Currently any inputs longer than this
         will be truncated. If this behavior is undesirable to you, you should
         consider filtering them out in your dataset reader.
+    start_tokens : ``List[str]``, optional (default=``None``)
+        These are prepended to the tokens provided to ``tokens_to_indices``.
+    end_tokens : ``List[str]``, optional (default=``None``)
+        These are appended to the tokens provided to ``tokens_to_indices``.
     """
     def __init__(self,
                  vocab: Dict[str, int],
                  wordpiece_tokenizer: Callable[[str], List[str]],
                  namespace: str = "wordpiece",
                  use_starting_offsets: bool = False,
-                 max_pieces: int = 512) -> None:
+                 max_pieces: int = 512,
+                 start_tokens: List[str] = None,
+                 end_tokens: List[str] = None) -> None:
         self.vocab = vocab
 
         # The BERT code itself does a two-step tokenization:
@@ -58,6 +64,14 @@ class WordpieceIndexer(TokenIndexer[int]):
         self._added_to_vocabulary = False
         self.max_pieces = max_pieces
         self.use_starting_offsets = use_starting_offsets
+
+        # Convert the start_tokens and end_tokens to wordpiece_ids
+        self._start_piece_ids = [vocab[wordpiece]
+                                 for token in (start_tokens or [])
+                                 for wordpiece in wordpiece_tokenizer(token)]
+        self._end_piece_ids = [vocab[wordpiece]
+                               for token in (end_tokens or [])
+                               for wordpiece in wordpiece_tokenizer(token)]
 
     @overrides
     def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):
@@ -79,40 +93,52 @@ class WordpieceIndexer(TokenIndexer[int]):
             self._add_encoding_to_vocabulary(vocabulary)
             self._added_to_vocabulary = True
 
-        text_tokens: List[int] = []
+        # The array of wordpiece_ids to return.
+        # Start with a copy of the start_piece_ids
+        wordpiece_ids: List[int] = self._start_piece_ids[:]
+
+        # offsets[i] will give us the index into wordpiece_ids
+        # for the wordpiece "corresponding to" the i-th input token.
         offsets = []
-        # For initial offsets, start at 0; otherwise, start at -1
-        offset = 0 if self.use_starting_offsets else -1
+
+        # If we're using initial offsets, we want to start at offset = len(text_tokens)
+        # so that the first offset is the index of the first wordpiece of tokens[0].
+        # Otherwise, we want to start at len(text_tokens) - 1, so that the "previous"
+        # offset is the last wordpiece of "tokens[-1]".
+        offset = len(wordpiece_ids) if self.use_starting_offsets else len(wordpiece_ids) - 1
 
         for token in tokens:
-            wordpieces = self.wordpiece_tokenizer(token.text)
-            wordpiece_ids = [self.vocab[token] for token in wordpieces]
-
-            # truncate and pray
-            if len(text_tokens) + len(wordpiece_ids) > self.max_pieces:
+            token_wordpiece_ids = [self.vocab[wordpiece]
+                                   for wordpiece in self.wordpiece_tokenizer(token.text)]
+            # If we have enough room to add these ids *and also* the end_token ids.
+            if len(wordpiece_ids) + len(token_wordpiece_ids) + len(self._end_piece_ids) <= self.max_pieces:
+                # For initial offsets, the current value of ``offset`` is the start of
+                # the current wordpiece, so add it to ``offsets`` and then increment it.
+                if self.use_starting_offsets:
+                    offsets.append(offset)
+                    offset += len(token_wordpiece_ids)
+                # For final offsets, the current value of ``offset`` is the end of
+                # the previous wordpiece, so increment it and then add it to ``offsets``.
+                else:
+                    offset += len(token_wordpiece_ids)
+                    offsets.append(offset)
+                # And add the token_wordpiece_ids to the output list.
+                wordpiece_ids.extend(token_wordpiece_ids)
+            else:
                 # TODO(joelgrus): figure out a better way to handle this
                 logger.warning(f"Too many wordpieces, truncating: {[token.text for token in tokens]}")
                 break
 
-            # For initial offsets, the current value of ``offset`` is the start of
-            # the current wordpiece, so add it to ``offsets`` and then increment it.
-            if self.use_starting_offsets:
-                offsets.append(offset)
-                offset += len(wordpiece_ids)
-            # For final offsets, the current value of ``offset`` is the end of
-            # the previous wordpiece, so increment it and then add it to ``offsets``.
-            else:
-                offset += len(wordpiece_ids)
-                offsets.append(offset)
-            text_tokens.extend(wordpiece_ids)
+        # By construction, we still have enough room to add the end_token ids.
+        wordpiece_ids.extend(self._end_piece_ids)
 
-        # add mask according to the original tokens,
+        # Our mask should correspond to the original tokens,
         # because calling util.get_text_field_mask on the
-        # "byte pair" tokens will produce the wrong shape
-        mask = [1 for _ in offsets]
+        # "wordpiece_id" tokens will produce the wrong shape.
+        mask = [1 for _ in tokens]
 
         return {
-                index_name: text_tokens,
+                index_name: wordpiece_ids,
                 f"{index_name}-offsets": offsets,
                 "mask": mask
         }
@@ -174,9 +200,11 @@ class PretrainedBertIndexer(WordpieceIndexer):
                  use_starting_offsets: bool = False,
                  do_lowercase: bool = True,
                  max_pieces: int = 512) -> None:
-        bert_tokenizer = BertTokenizer.from_pretrained(pretrained_model, do_lowercase)
+        bert_tokenizer = BertTokenizer.from_pretrained(pretrained_model, do_lower_case=do_lowercase)
         super().__init__(vocab=bert_tokenizer.vocab,
                          wordpiece_tokenizer=bert_tokenizer.wordpiece_tokenizer.tokenize,
                          namespace="bert",
                          use_starting_offsets=use_starting_offsets,
-                         max_pieces=max_pieces)
+                         max_pieces=max_pieces,
+                         start_tokens=["[CLS]"],
+                         end_tokens=["[SEP]"])
