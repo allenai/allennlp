@@ -68,6 +68,7 @@ class BidafPlusPlus(Model):
                  support_yesno: bool = False,
                  support_followup: bool = False,
                  num_context_answers: int = 0,
+                 max_qad_triplets: int = 0,
                  marker_embedding_dim: int = 10,
                  max_span_length: int = 30) -> None:
         super().__init__(vocab)
@@ -85,6 +86,7 @@ class BidafPlusPlus(Model):
         # see usage below for explanation
         self._all_qa_count = 0
         self._examples_used_frac = 1.0
+        self._max_qad_triplets = max_qad_triplets
         self._frac_of_validation_used = frac_of_validation_used
 
         self._matrix_attention = LinearMatrixAttention(self._encoding_dim, self._encoding_dim, 'x,y,x*y')
@@ -248,6 +250,12 @@ class BidafPlusPlus(Model):
         golden_answer_triplets = np.argwhere(span_start.view(-1).cpu().numpy() >= 0).squeeze()
         print(golden_answer_triplets.size)
 
+        if self._max_qad_triplets>0:
+            if golden_answer_triplets.size >= self._max_qad_triplets:
+                golden_answer_triplets = golden_answer_triplets[0:self._max_qad_triplets]
+
+        print(golden_answer_triplets.size)
+
         if self.training:
             for type in question.keys():
                 question[type] = question[type][golden_answer_triplets]
@@ -383,6 +391,9 @@ class BidafPlusPlus(Model):
                 # Could of wrote this shorter but it's clearer like this ...
                 curr_batch_inds = golden_answer_instance_triplets[batch_ind]
 
+                if len(curr_batch_inds)==0:
+                    continue
+
                 # TODO filtering result with no golden answer for loss, should we not compute this at all to save time?
                 span_start_logits_softmaxed = util.masked_log_softmax(\
                     torch.cat(tuple(span_start_logits[curr_batch_inds])).unsqueeze(0), \
@@ -417,6 +428,9 @@ class BidafPlusPlus(Model):
                         instance_triplets = golden_answer_instance_triplets[batch_ind]
                     else:
                         instance_triplets = range(batch_ind * num_of_docs, (batch_ind + 1) * num_of_docs)
+
+                    if len(instance_triplets) == 0:
+                        continue
 
                     # computing the max score of the correct answer
                     for j in range(len(instance_triplets)):
