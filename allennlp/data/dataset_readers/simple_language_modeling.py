@@ -34,9 +34,9 @@ class SimpleLanguageModelingDatasetReader(DatasetReader):
     max_sequence_length: ``int``, optional
         If specified, sentences with more than this number of tokens will be dropped.
     start_tokens : ``List[str]``, optional (default=``None``)
-        These are prepended to the tokens provided to ``tokens_to_indices``.
+        These are prepended to the tokens provided to the ``TextField``.
     end_tokens : ``List[str]``, optional (default=``None``)
-        These are appended to the tokens provided to ``tokens_to_indices``.
+        These are appended to the tokens provided to the ``TextField``.
     """
     def __init__(self,
                  tokenizer: Tokenizer = None,
