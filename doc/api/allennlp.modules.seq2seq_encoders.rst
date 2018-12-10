@@ -40,3 +40,8 @@ allennlp.modules.seq2seq_encoders
    :members:
    :undoc-members:
    :show-inheritance:
+
+.. automodule:: allennlp.modules.seq2seq_encoders.bidirectional_transformer_encoder
+   :members:
+   :undoc-members:
+   :show-inheritance:

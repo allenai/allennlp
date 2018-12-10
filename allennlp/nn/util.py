@@ -5,6 +5,7 @@ Assorted utilities for working with neural networks in AllenNLP.
 from collections import defaultdict
 from typing import Any, Dict, List, Optional, Sequence, Tuple, TypeVar
 import logging
+import copy
 import math
 import warnings
 
@@ -1284,3 +1285,36 @@ def add_positional_features(tensor: torch.Tensor,
         # to add a row of zeros to make up the difference.
         sinusoids = torch.cat([sinusoids, sinusoids.new_zeros(timesteps, 1)], 1)
     return tensor + sinusoids.unsqueeze(0)
+
+def clone(module: torch.nn.Module, num_copies: int) -> torch.nn.ModuleList:
+    "Produce N identical layers."
+    return torch.nn.ModuleList([copy.deepcopy(module) for _ in range(num_copies)])
+
+
+def combine_initial_dims(tensor: torch.Tensor) -> torch.Tensor:
+    """
+    Given a (possibly higher order) tensor of ids with shape
+    (d1, ..., dn, sequence_length)
+    Return a view that's (d1 * ... * dn, sequence_length).
+    If original tensor is 1-d or 2-d, return it as is.
+    """
+    if tensor.dim() <= 2:
+        return tensor
+    else:
+        return tensor.view(-1, tensor.size(-1))
+
+def uncombine_initial_dims(tensor: torch.Tensor, original_size: torch.Size) -> torch.Tensor:
+    """
+    Given a tensor of embeddings with shape
+    (d1 * ... * dn, sequence_length, embedding_dim)
+    and the original shape
+    (d1, ..., dn, sequence_length),
+    return the reshaped tensor of embeddings with shape
+    (d1, ..., dn, sequence_length, embedding_dim).
+    If original size is 1-d or 2-d, return it as is.
+    """
+    if len(original_size) <= 2:
+        return tensor
+    else:
+        view_args = list(original_size) + [tensor.size(-1)]
+        return tensor.view(*view_args)

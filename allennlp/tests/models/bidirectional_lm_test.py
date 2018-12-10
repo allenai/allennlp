@@ -9,6 +9,7 @@ class TestBidirectionalLM(ModelTestCase):
         self.set_up_model(self.FIXTURES_ROOT / 'bidirectional_lm' / 'experiment.jsonnet',
                           self.FIXTURES_ROOT / 'bidirectional_lm' / 'sentences.txt')
 
+    # pylint: disable=no-member
     def test_bidirectional_lm_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
 
@@ -30,3 +31,10 @@ class TestBidirectionalLM(ModelTestCase):
         backward_loss = result["backward_loss"].item()
 
         np.testing.assert_almost_equal(loss, (forward_loss + backward_loss) / 2, decimal=3)
+
+
+class TestBidirectionalLMUnsampled(TestBidirectionalLM):
+    def setUp(self):
+        super().setUp()
+        self.set_up_model(self.FIXTURES_ROOT / 'bidirectional_lm' / 'experiment_unsampled.jsonnet',
+                          self.FIXTURES_ROOT / 'bidirectional_lm' / 'sentences.txt')

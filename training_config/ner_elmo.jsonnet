@@ -19,7 +19,8 @@
         "lowercase_tokens": true
       },
       "token_characters": {
-        "type": "characters"
+        "type": "characters",
+        "min_padding_length": 3
       },
       "elmo": {
         "type": "elmo_characters"

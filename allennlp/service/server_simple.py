@@ -27,6 +27,7 @@ from flask_cors import CORS
 from gevent.pywsgi import WSGIServer
 
 from allennlp.common import JsonDict
+from allennlp.common.checks import check_for_gpu
 from allennlp.common.util import import_submodules
 from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor
@@ -114,6 +115,20 @@ def make_app(predictor: Predictor,
 
         return jsonify(prediction)
 
+    @app.route('/predict_batch', methods=['POST', 'OPTIONS'])
+    def predict_batch() -> Response:  # pylint: disable=unused-variable
+        """make a prediction using the specified model and return the results"""
+        if request.method == "OPTIONS":
+            return Response(response="", status=200)
+
+        data = request.get_json()
+
+        prediction = predictor.predict_batch_json(data)
+        if sanitizer is not None:
+            prediction = [sanitizer(p) for p in prediction]
+
+        return jsonify(prediction)
+
     @app.route('/<path:path>')
     def static_proxy(path: str) -> Response: # pylint: disable=unused-variable
         if static_dir is not None:
@@ -123,6 +138,14 @@ def make_app(predictor: Predictor,
 
     return app
 
+def _get_predictor(args: argparse.Namespace) -> Predictor:
+    check_for_gpu(args.cuda_device)
+    archive = load_archive(args.archive_path,
+                           weights_file=args.weights_file,
+                           cuda_device=args.cuda_device,
+                           overrides=args.overrides)
+
+    return Predictor.from_archive(archive, args.predictor)
 
 def main(args):
     # Executing this file with no extra options runs the simple service with the bidaf test fixture
@@ -135,6 +158,7 @@ def main(args):
     parser.add_argument('--predictor', type=str, required=True, help='name of predictor')
     parser.add_argument('--weights-file', type=str,
                         help='a path that overrides which weights file to use')
+    parser.add_argument('--cuda-device', type=int, default=-1, help='id of GPU to use (if any)')
     parser.add_argument('-o', '--overrides', type=str, default="",
                         help='a JSON structure used to override the experiment configuration')
     parser.add_argument('--static-dir', type=str, help='serve index.html from this directory')
@@ -155,8 +179,8 @@ def main(args):
     for package_name in args.include_package:
         import_submodules(package_name)
 
-    archive = load_archive(args.archive_path, weights_file=args.weights_file, overrides=args.overrides)
-    predictor = Predictor.from_archive(archive, args.predictor)
+    predictor = _get_predictor(args)
+
     field_names = args.field_name
 
     app = make_app(predictor=predictor,

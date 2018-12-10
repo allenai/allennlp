@@ -64,6 +64,7 @@ class SimpleSeq2SeqTest(ModelTestCase):
         assert numpy.equal(expected_loss.data.numpy(), actual_loss.data.numpy())
 
     def test_decode_runs_correctly(self):
+        self.model.eval()
         training_tensors = self.dataset.as_tensor_dict()
         output_dict = self.model(**training_tensors)
         decode_output_dict = self.model.decode(output_dict)
@@ -84,18 +85,19 @@ class SimpleSeq2SeqTest(ModelTestCase):
         training_tensors = self.dataset.as_tensor_dict()
 
         # Get greedy predictions from _forward_loop method of model.
-        state = self.model._init_encoded_state(training_tensors["source_tokens"])
+        state = self.model._encode(training_tensors["source_tokens"])
+        state = self.model._init_decoder_state(state)
         output_dict_greedy = self.model._forward_loop(state)
         output_dict_greedy = self.model.decode(output_dict_greedy)
 
         # Get greedy predictions from beam search (beam size = 1).
-        state = self.model._init_encoded_state(training_tensors["source_tokens"])
+        state = self.model._encode(training_tensors["source_tokens"])
+        state = self.model._init_decoder_state(state)
         batch_size = state["source_mask"].size()[0]
         start_predictions = state["source_mask"].new_full((batch_size,), fill_value=self.model._start_index)
-        all_top_k_predictions, log_probabilities = beam_search.search(
+        all_top_k_predictions, _ = beam_search.search(
                 start_predictions, state, self.model.take_step)
         output_dict_beam_search = {
-                "class_log_probabilities": log_probabilities,
                 "predictions": all_top_k_predictions,
         }
         output_dict_beam_search = self.model.decode(output_dict_beam_search)

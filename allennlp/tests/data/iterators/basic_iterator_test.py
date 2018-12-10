@@ -1,14 +1,22 @@
 # pylint: disable=no-self-use,invalid-name
-from typing import List
+from typing import List, Iterable, Dict, Union
 from collections import Counter
 
 from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Instance, Token, Vocabulary
+from allennlp.data.dataset import Batch
 from allennlp.data.dataset_readers.dataset_reader import _LazyInstances
 from allennlp.data.fields import TextField
 from allennlp.data.iterators import BasicIterator
 from allennlp.data.token_indexers import SingleIdTokenIndexer
+
+class LazyIterable:
+    def __init__(self, instances):
+        self._instances = instances
+
+    def __iter__(self):
+        return (instance for instance in self._instances)
 
 class IteratorTest(AllenNlpTestCase):
     def setUp(self):
@@ -31,17 +39,34 @@ class IteratorTest(AllenNlpTestCase):
                 self.create_instance(["sentence"]),
                 ]
 
-        class LazyIterable:
-            def __iter__(self):
-                return (instance for instance in instances)
-
         self.instances = instances
-        self.lazy_instances = LazyIterable()
+        self.lazy_instances = LazyIterable(instances)
 
     def create_instance(self, str_tokens: List[str]):
         tokens = [Token(t) for t in str_tokens]
         instance = Instance({'text': TextField(tokens, self.token_indexers)})
         return instance
+
+    def create_instances_from_token_counts(self, token_counts: List[int]) -> List[Instance]:
+        return [self.create_instance(["word"] * count) for count in token_counts]
+
+    def get_batches_stats(self, batches: Iterable[Batch]) -> Dict[str, Union[int, List[int]]]:
+        grouped_instances = [batch.instances for batch in batches]
+        group_lengths = [len(group) for group in grouped_instances]
+
+        sample_sizes = []
+        for batch in batches:
+            batch_sequence_length = max(
+                    [instance.get_padding_lengths()['text']['num_tokens']
+                     for instance in batch.instances]
+            )
+            sample_sizes.append(batch_sequence_length * len(batch.instances))
+
+        return {
+                "batch_lengths": group_lengths,
+                "total_instances": sum(group_lengths),
+                "sample_sizes": sample_sizes
+        }
 
     def assert_instances_are_correct(self, candidate_instances):
         # First we need to remove padding tokens from the candidates.
@@ -140,6 +165,41 @@ class TestBasicIterator(IteratorTest):
                                          [self.instances[1], self.instances[2]],
                                          [self.instances[3]]]
 
+
+    def test_epoch_tracking_when_one_epoch_at_a_time(self):
+        iterator = BasicIterator(batch_size=2, track_epoch=True)
+        iterator.index_with(self.vocab)
+        for epoch in range(10):
+            for batch in iterator(self.instances, num_epochs=1):
+                assert all(epoch_num == epoch for epoch_num in batch['epoch_num'])
+
+    def test_epoch_tracking_multiple_epochs(self):
+        iterator = BasicIterator(batch_size=2, track_epoch=True)
+        iterator.index_with(self.vocab)
+
+        all_batches = list(iterator(self.instances, num_epochs=10))
+        assert len(all_batches) == 10 * 3
+        for i, batch in enumerate(all_batches):
+            # Should have 3 batches per epoch
+            epoch = i // 3
+            assert all(epoch_num == epoch for epoch_num in batch['epoch_num'])
+
+
+    def test_epoch_tracking_forever(self):
+        iterator = BasicIterator(batch_size=2, track_epoch=True)
+        iterator.index_with(self.vocab)
+
+        it = iterator(self.instances, num_epochs=None)
+
+        all_batches = [next(it) for _ in range(30)]
+
+        assert len(all_batches) == 30
+        for i, batch in enumerate(all_batches):
+            # Should have 3 batches per epoch
+            epoch = i // 3
+            assert all(epoch_num == epoch for epoch_num in batch['epoch_num'])
+
+
     def test_shuffle(self):
         # pylint: disable=protected-access
         for test_instances in (self.instances, self.lazy_instances):
@@ -222,16 +282,34 @@ class TestBasicIterator(IteratorTest):
             )
             iterator.index_with(self.vocab)
             batches = list(iterator._create_batches(test_instances, shuffle=False))
+            stats = self.get_batches_stats(batches)
 
             # ensure all instances are in a batch
-            grouped_instances = [batch.instances for batch in batches]
-            num_instances = sum(len(group) for group in grouped_instances)
-            assert num_instances == len(self.instances)
+            assert stats['total_instances'] == len(self.instances)
 
-            # ensure all batches are sufficiently small
-            for batch in batches:
-                batch_sequence_length = max(
-                        [instance.get_padding_lengths()['text']['num_tokens']
-                         for instance in batch.instances]
-                )
-                assert batch_sequence_length * len(batch.instances) <= 9
+            # ensure correct batch sizes
+            assert stats['batch_lengths'] == [2, 1, 1, 1]
+
+            # ensure correct sample sizes (<= 9)
+            assert stats['sample_sizes'] == [8, 3, 9, 1]
+
+    def test_maximum_samples_per_batch_packs_tightly(self):
+        # pylint: disable=protected-access
+        token_counts = [10, 4, 3]
+        test_instances = self.create_instances_from_token_counts(token_counts)
+
+        iterator = BasicIterator(
+                batch_size=3, maximum_samples_per_batch=['num_tokens', 11]
+        )
+        iterator.index_with(self.vocab)
+        batches = list(iterator._create_batches(test_instances, shuffle=False))
+        stats = self.get_batches_stats(batches)
+
+        # ensure all instances are in a batch
+        assert stats['total_instances'] == len(token_counts)
+
+        # ensure correct batch sizes
+        assert stats['batch_lengths'] == [1, 2]
+
+        # ensure correct sample sizes (<= 11)
+        assert stats['sample_sizes'] == [10, 8]
