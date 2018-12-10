@@ -50,7 +50,7 @@ def main(checks):
         if "check-large-files" in checks:
             print("Checking all added files have size <= 2MB", flush=True)
             run("./scripts/check_large_files.sh 2", shell=True, check=True)
-            print("check files' sizes passed")
+            print("check large files passed")
 
     except CalledProcessError:
         # squelch the exception stacktrace
