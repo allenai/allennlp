@@ -392,9 +392,9 @@ class TestNnUtil(AllenNlpTestCase):
         _, argmax_indices = torch.max(sequence_logits, 1)
         assert indices == argmax_indices.data.squeeze().tolist()
 
-        # Test that pairwise potentials effect the sequence correctly and that
+        # Test that pairwise potentials affect the sequence correctly and that
         # viterbi_decode can handle -inf values.
-        sequence_logits = torch.FloatTensor([[0, 0, 0, 3, 4],
+        sequence_logits = torch.FloatTensor([[0, 0, 0, 3, 5],
                                              [0, 0, 0, 3, 4],
                                              [0, 0, 0, 3, 4],
                                              [0, 0, 0, 3, 4],
@@ -405,8 +405,7 @@ class TestNnUtil(AllenNlpTestCase):
         for i in range(5):
             transition_matrix[i, i] = float("-inf")
         indices, _ = util.viterbi_decode(sequence_logits, transition_matrix)
-        # Both of these sequences are equally likely
-        assert indices in ([4, 3, 4, 3, 4, 3], [3, 4, 3, 4, 3, 4])
+        assert indices == [4, 3, 4, 3, 4, 3]
 
         # Test that unbalanced pairwise potentials break ties
         # between paths with equal unary potentials.
