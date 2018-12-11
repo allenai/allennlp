@@ -1,5 +1,5 @@
 """
-The BidirectionalTransformerEncoder from calypso.
+The BidirectionalTransformerEncoder from Calypso.
 This is basically the transformer from http://nlp.seas.harvard.edu/2018/04/03/attention.html
 so credit to them.
 
@@ -189,7 +189,7 @@ def make_model(num_layers: int = 6,
     return model
 
 
-class BidirectionalTransformerEncoder(Seq2SeqEncoder):
+class BidirectionalLanguageModelTransformer(Seq2SeqEncoder):
     def __init__(self,
                  input_dim: int,
                  hidden_dim: int,
