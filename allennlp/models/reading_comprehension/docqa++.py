@@ -228,12 +228,6 @@ class BidafPlusPlus(Model):
         _, max_qa_count, max_q_len, _ = question['token_characters'].size()
         total_qa_count = batch_size * max_qa_count * num_of_docs
 
-        qa_mask = None
-        embedded_question = self._text_field_embedder(question, num_wrapping_dims=1)
-        embedded_question = embedded_question.reshape(total_qa_count, max_q_len,
-                                                      self._text_field_embedder.get_output_dim())
-        embedded_question = self._variational_dropout(embedded_question)
-
         # TODO temporary check
         # We need to concatinate all passages and answers, but remember which ones to used for the shared norm
         size1 = passage['token_characters'].size()
@@ -248,13 +242,11 @@ class BidafPlusPlus(Model):
         # in document qa setup we usually use only training triplets (question, answer ,context) that
         # contain the golden answer, to save tranining time.
         golden_answer_triplets = np.argwhere(span_start.view(-1).cpu().numpy() >= 0).squeeze()
-        #print(golden_answer_triplets.size)
+        # print(golden_answer_triplets.size)
 
-        if self._max_qad_triplets>0:
+        if self._max_qad_triplets > 0:
             if golden_answer_triplets.size >= self._max_qad_triplets:
                 golden_answer_triplets = golden_answer_triplets[0:self._max_qad_triplets]
-
-        #print(golden_answer_triplets.size)
 
         if self.training:
             for type in question.keys():
@@ -271,6 +263,13 @@ class BidafPlusPlus(Model):
         else:
             selected_span_start = span_start.view(-1)
             selected_span_end = span_end.view(-1)
+
+
+        embedded_question = self._text_field_embedder(question, num_wrapping_dims=1)
+        embedded_question = embedded_question.reshape(total_qa_count, max_q_len,
+                                                      self._text_field_embedder.get_output_dim())
+        embedded_question = self._variational_dropout(embedded_question)
+
 
         golden_answer_instance_triplets = []
         golden_answer_instance_offset = []
@@ -439,10 +438,14 @@ class BidafPlusPlus(Model):
                     if len(instance_triplets) == 0:
                         continue
 
+                    #print('---------------------------')
+                    #print(inst_metadata['question'])
                     # computing the max score of the correct answer
                     for offest,j in zip(golden_answer_instance_offset[batch_ind],range(len(instance_triplets))):
+
                         if offest < len(inst_metadata["token_span_lists"]['answers']):
                             for answer_start_end in inst_metadata['token_span_lists']['answers'][offest][0]:
+                                #print(inst_metadata['passage_tokens'][offest][answer_start_end[0]:answer_start_end[1]+1])
                                 score = span_start_logits_numpy[instance_triplets[j]][answer_start_end[0]] \
                                         + span_end_logits_numpy[instance_triplets[j]][answer_start_end[1]]
                                 if score>max_correct_answer:
@@ -451,6 +454,7 @@ class BidafPlusPlus(Model):
                         # computing the max score of the incorrect answers
                         if offest < len(inst_metadata["token_span_lists"]['distractor_answers']):
                             for answer_start_end in inst_metadata['token_span_lists']['distractor_answers'][offest][0]:
+                                #print(inst_metadata['passage_tokens'][offest][answer_start_end[0]:answer_start_end[1]+1])
                                 score = span_start_logits_numpy[instance_triplets[j]][answer_start_end[0]] \
                                         + span_end_logits_numpy[instance_triplets[j]][answer_start_end[1]]
                                 if score > max_incorrect_answer:
