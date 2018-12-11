@@ -15,10 +15,10 @@ echo "............................"
 SIZE=$1
 
 # Get the current branch.
-branch=$(git branch | grep \* | cut -d ' ' -f2)
+# branch=$(git branch | grep \* | cut -d ' ' -f2)
 declare -a large_files=()
 # Get all changed files (compared to master branch) 
-for path in $(git diff --name-only master "$branch" | sed -e 's/A[[:space:]]//'); 
+for path in $(git diff --name-only master | sed -e 's/A[[:space:]]//'); 
 do
      # Check to see if any sizes are greater than 2MB
     large_files+=($(du -m $path | awk -v size="$SIZE" '{if ($1 > size) print $2}'))
