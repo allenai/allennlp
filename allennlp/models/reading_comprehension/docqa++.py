@@ -273,16 +273,19 @@ class BidafPlusPlus(Model):
             selected_span_end = span_end.view(-1)
 
         golden_answer_instance_triplets = []
+        golden_answer_instance_offset = []
         golden_answer_offset = 0
         for batch_ind, inst_metadata in enumerate(metadata):
             golden_answer_instance_triplets.append([])
-            for ind in range(batch_ind * num_of_docs, (batch_ind + 1) * num_of_docs):
+            golden_answer_instance_offset.append([])
+            for instance_offset,ind in enumerate(range(batch_ind * num_of_docs, (batch_ind + 1) * num_of_docs)):
                 if ind in golden_answer_triplets:
                     if self.training:
                         golden_answer_instance_triplets[batch_ind].append(golden_answer_offset)
                         golden_answer_offset += 1
                     else:
                         golden_answer_instance_triplets[batch_ind].append(ind)
+                    golden_answer_instance_offset[batch_ind].append(instance_offset)
 
 
 
@@ -435,17 +438,17 @@ class BidafPlusPlus(Model):
                         continue
 
                     # computing the max score of the correct answer
-                    for j in range(len(instance_triplets)):
-                        if j < len(inst_metadata["token_span_lists"]['answers']):
-                            for answer_start_end in inst_metadata['token_span_lists']['answers'][j][0]:
+                    for offest,j in zip(golden_answer_instance_offset,range(len(instance_triplets))):
+                        if offest < len(inst_metadata["token_span_lists"]['answers']):
+                            for answer_start_end in inst_metadata['token_span_lists']['answers'][offest][0]:
                                 score = span_start_logits_numpy[instance_triplets[j]][answer_start_end[0]] \
                                         + span_end_logits_numpy[instance_triplets[j]][answer_start_end[1]]
                                 if score>max_correct_answer:
                                     max_correct_answer = score
 
                         # computing the max score of the incorrect answers
-                        if j < len(inst_metadata["token_span_lists"]['distractor_answers']):
-                            for answer_start_end in inst_metadata['token_span_lists']['distractor_answers'][j][0]:
+                        if offest < len(inst_metadata["token_span_lists"]['distractor_answers']):
+                            for answer_start_end in inst_metadata['token_span_lists']['distractor_answers'][offest][0]:
                                 score = span_start_logits_numpy[instance_triplets[j]][answer_start_end[0]] \
                                         + span_end_logits_numpy[instance_triplets[j]][answer_start_end[1]]
                                 if score > max_incorrect_answer:
