@@ -279,13 +279,15 @@ class BidafPlusPlus(Model):
             golden_answer_instance_triplets.append([])
             golden_answer_instance_offset.append([])
             for instance_offset,ind in enumerate(range(batch_ind * num_of_docs, (batch_ind + 1) * num_of_docs)):
-                if ind in golden_answer_triplets:
-                    if self.training:
+                if self.training:
+                    if ind in golden_answer_triplets:
                         golden_answer_instance_triplets[batch_ind].append(golden_answer_offset)
                         golden_answer_offset += 1
-                    else:
-                        golden_answer_instance_triplets[batch_ind].append(ind)
-                golden_answer_instance_offset[batch_ind].append(instance_offset)
+                        golden_answer_instance_offset[batch_ind].append(instance_offset)
+                else:
+                    golden_answer_instance_triplets[batch_ind].append(ind)
+                    golden_answer_instance_offset[batch_ind].append(instance_offset)
+
 
 
 
