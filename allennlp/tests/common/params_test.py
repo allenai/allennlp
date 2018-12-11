@@ -205,7 +205,10 @@ class TestParams(AllenNlpTestCase):
             'COREF_TRAIN_DATA_PATH', 'COREF_DEV_DATA_PATH', 'COREF_TEST_DATA_PATH',
 
             # ner
-            'NER_TRAIN_DATA_PATH', 'NER_TEST_A_PATH', 'NER_TEST_B_PATH'
+            'NER_TRAIN_DATA_PATH', 'NER_TEST_A_PATH', 'NER_TEST_B_PATH',
+
+            # bidirectional lm
+            'BIDIRECTIONAL_LM_TRAIN_PATH', 'BIDIRECTIONAL_LM_VOCAB_PATH'
         ]
 
         for var in forced_variables:

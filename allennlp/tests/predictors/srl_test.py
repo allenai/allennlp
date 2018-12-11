@@ -13,21 +13,28 @@ class TestSrlPredictor(AllenNlpTestCase):
         archive = load_archive(self.FIXTURES_ROOT / 'srl' / 'serialization' / 'model.tar.gz')
         predictor = Predictor.from_archive(archive, 'semantic-role-labeling')
 
-        result = predictor.predict_json(inputs)
+        result_json = predictor.predict_json(inputs)
+        self.assert_predict_result(result_json)
 
+        words = ["The", "squirrel", "wrote", "a", "unit", "test",
+                 "to", "make", "sure", "its", "nuts", "worked", "as", "designed", "."]
+
+        result_words = predictor.predict_tokenized(words)
+        self.assert_predict_result(result_words)
+
+    @staticmethod
+    def assert_predict_result(result):
         words = result.get("words")
         assert words == ["The", "squirrel", "wrote", "a", "unit", "test",
                          "to", "make", "sure", "its", "nuts", "worked", "as", "designed", "."]
-        num_words = len(words)
 
+        num_words = len(words)
         verbs = result.get("verbs")
         assert verbs is not None
         assert isinstance(verbs, list)
-
         assert any(v["verb"] == "wrote" for v in verbs)
         assert any(v["verb"] == "make" for v in verbs)
         assert any(v["verb"] == "worked" for v in verbs)
-
         for verb in verbs:
             tags = verb.get("tags")
             assert tags is not None

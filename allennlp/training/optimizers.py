@@ -21,6 +21,7 @@ import math
 from typing import List, Any, Dict
 
 import torch
+from pytorch_pretrained_bert.optimization import BertAdam
 
 from allennlp.common import Params, Registrable
 
@@ -133,6 +134,7 @@ Registrable._registry[Optimizer] = {   # pylint: disable=protected-access
         "rmsprop": torch.optim.RMSprop,
         "adamax": torch.optim.Adamax,
         "averaged_sgd": torch.optim.ASGD,
+        "bert_adam": BertAdam,
 }
 
 
