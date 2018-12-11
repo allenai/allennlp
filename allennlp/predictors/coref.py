@@ -14,12 +14,12 @@ class CorefPredictor(Predictor):
     """
     Predictor for the :class:`~allennlp.models.coreference_resolution.CoreferenceResolver` model.
     """
-    def __init__(self, model: Model, dataset_reader: DatasetReader) -> None:
+    def __init__(self, model: Model, dataset_reader: DatasetReader, language: str = 'en_core_web_sm') -> None:
         super().__init__(model, dataset_reader)
 
         # We have to use spacy to tokenise our document here, because we need
         # to also know sentence boundaries to propose valid mentions.
-        self._spacy = get_spacy_model("en_core_web_sm", pos_tags=True, parse=True, ner=False)
+        self._spacy = get_spacy_model(language, pos_tags=True, parse=True, ner=False)
 
     def predict(self, document: str) -> JsonDict:
         """
