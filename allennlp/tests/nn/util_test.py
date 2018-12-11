@@ -850,3 +850,15 @@ class TestNnUtil(AllenNlpTestCase):
                 }
             ]
         })
+
+    def test_combine_initial_dims(self):
+        tensor = torch.randn(4, 10, 20, 17, 5)
+
+        tensor2d = util.combine_initial_dims(tensor)
+        assert list(tensor2d.size()) == [4 * 10 * 20 * 17, 5]
+
+    def test_uncombine_initial_dims(self):
+        embedding2d = torch.randn(4 * 10 * 20 * 17 * 5, 12)
+
+        embedding = util.uncombine_initial_dims(embedding2d, torch.Size((4, 10, 20, 17, 5)))
+        assert list(embedding.size()) == [4, 10, 20, 17, 5, 12]

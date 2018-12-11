@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, Union, Iterable, Iterator, List, Optional, Tuple
+from typing import Dict, Union, Iterable, Iterator, List, Optional, Tuple, Deque
 from collections import defaultdict
 import itertools
 import math
@@ -49,10 +49,11 @@ class DataIterator(Registrable):
     track_epoch : ``bool``, optional, (default = False)
         If true, each instance will get a ``MetadataField`` containing the epoch number.
     maximum_samples_per_batch : ``Tuple[str, int]``, (default = None)
-        If specified, then is a tuple (padding_key, limit) and we will
-        shrink the batch size for very long sequences such that
-        batch_size * sequence_length <= limit where sequence_length is given
-        by the padding_key.
+        If specified, then is a tuple (padding_key, limit) and we will ensure
+        that every batch is such that batch_size * sequence_length <= limit
+        where sequence_length is given by the padding_key. This is done by
+        moving excess instances to the next batch (as opposed to dividing a
+        large batch evenly) and should result in a fairly tight packing.
     """
     default_implementation = 'bucket'
 
@@ -119,8 +120,6 @@ class DataIterator(Registrable):
             epochs = range(starting_epoch, starting_epoch + num_epochs)
 
         for epoch in epochs:
-            self._epochs[key] = epoch
-
             if self._cache_instances and key in self._cache:
                 # Serve the results from the cache.
                 tensor_dicts = self._cache[key]
@@ -156,6 +155,9 @@ class DataIterator(Registrable):
                         self._cache[key].append(tensor_dict)
 
                     yield tensor_dict
+
+            # Increment epoch tracker
+            self._epochs[key] = epoch + 1
 
     def _take_instances(self,
                         instances: Iterable[Instance],
@@ -225,19 +227,43 @@ class DataIterator(Registrable):
             yield list(iterator)
 
 
-    def _ensure_batch_is_sufficiently_small(self, batch_instances: Iterable[Instance]) -> List[List[Instance]]:
+    def _ensure_batch_is_sufficiently_small(
+            self,
+            batch_instances: Iterable[Instance],
+            excess: Deque[Instance]) -> List[List[Instance]]:
         """
-        If self._maximum_samples_per_batch is specified, then split the batch into smaller
-        sub-batches if it exceeds the maximum size.
+        If self._maximum_samples_per_batch is specified, then split the batch
+        into smaller sub-batches if it exceeds the maximum size.
+
+        Parameters
+        ----------
+        batch_instances : ``Iterable[Instance]``
+            A candidate batch.
+        excess : ``Deque[Instance]``
+            Instances that were not sufficient to form an entire batch
+            previously. They will be used as part of the first sub-batch. This
+            will be populated with instances from the end of batch_instances
+            that do not consist of more than self._maximum_samples_per_batch
+            samples or self._batch_size instances. It is the caller's
+            responsibility to place these in a batch too, which may, of course,
+            be done in part with subsequent calls to this method.
+
+            WARNING: Mutated in place!
         """
         if self._maximum_samples_per_batch is None:
+            assert not excess
             return [list(batch_instances)]
 
-        # check if we need to break into smaller chunks
         key, limit = self._maximum_samples_per_batch
+
+        batches: List[List[Instance]] = []
+        batch: List[Instance] = []
         padding_length = -1
-        list_batch_instances = list(batch_instances)
-        for instance in list_batch_instances:
+
+        excess.extend(batch_instances)
+        while excess:
+            instance = excess.popleft()
+
             if self.vocab is not None:
                 # we index here to ensure that shape information is available,
                 # as in some cases (with self._maximum_samples_per_batch)
@@ -251,20 +277,24 @@ class DataIterator(Registrable):
                 except KeyError:
                     pass
 
-        if padding_length * len(list_batch_instances) > limit:
-            # need to shrink
-            num_samples = padding_length * len(list_batch_instances)
-            num_shrunk_batches = math.ceil(num_samples / float(limit))
-            shrunk_batch_size = math.ceil(len(list_batch_instances) / num_shrunk_batches)
-            shrunk_batches = []
-            start = 0
-            while start < len(list_batch_instances):
-                end = start + shrunk_batch_size
-                shrunk_batches.append(list_batch_instances[start:end])
-                start = end
-            return shrunk_batches
-        else:
-            return [list_batch_instances]
+            proposed_batch_size = len(batch) + 1
+
+            # Adding the current instance would exceed the batch size or sample size.
+            if proposed_batch_size >= self._batch_size or padding_length * proposed_batch_size > limit:
+                # Output the already existing batch
+                batches.append(batch)
+
+                # Put the current instance back, reset state.
+                excess.appendleft(instance)
+                batch = []
+                padding_length = -1
+            else:
+                batch.append(instance)
+
+        # Keep the current batch as excess.
+        excess.extend(batch)
+
+        return batches
 
 
     def get_num_batches(self, instances: Iterable[Instance]) -> int:

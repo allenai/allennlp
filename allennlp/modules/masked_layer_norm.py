@@ -1,6 +1,11 @@
 import torch
 
 class MaskedLayerNorm(torch.nn.Module):
+    """
+    See LayerNorm for details.
+
+    Note, however, that unlike LayerNorm this norm includes a batch component.
+    """
     def __init__(self, size: int, gamma0: float = 0.1, eps: float = 1e-6) -> None:
         super().__init__()
         self.gamma = torch.nn.Parameter(torch.ones(1, 1, size) * gamma0)
