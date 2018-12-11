@@ -557,7 +557,7 @@ class Trainer(Registrable):
         metrics = self._get_metrics(train_loss, batches_this_epoch, reset=True)
         metrics['cpu_memory'] = peak_cpu_usage 
         for (gpu_num, memory) in gpu_usage:
-            metrics['gpu_'+str(gpu_num)+'_memory'] = memory 
+            metrics['gpu_'+str(gpu_num)+'_memory_MB'] = memory 
         return metrics
 
     def _should_stop_early(self, metric_history: List[float]) -> bool:
@@ -762,7 +762,7 @@ class Trainer(Registrable):
 
             # get peak of memory usage
             if 'cpu_memory' in train_metrics:
-                metrics['peak_cpu_memory_MB'] = max(metrics.get('peak_cpu_memory', 0), train_metrics['cpu_memory'])
+                metrics['peak_cpu_memory_MB'] = max(metrics.get('peak_cpu_memory_MB', 0), train_metrics['cpu_memory'])
             for key, value in train_metrics.items():
                 if key.startswith('gpu_'):
                     metrics["peak_"+key+"_MB"] = max(metrics.get(key, 0), value)
