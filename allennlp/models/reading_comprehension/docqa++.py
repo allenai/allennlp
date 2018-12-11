@@ -261,6 +261,8 @@ class BidafPlusPlus(Model):
                 question[type] = question[type][golden_answer_triplets]
             for type in passage.keys():
                 passage[type] = passage[type][golden_answer_triplets]
+                cut_offset = np.argwhere(passage[type].numpy().max(axis=0) > 0).squeeze().max()
+                passage[type] = passage[type][:, 0:cut_offset+1]
 
             total_qa_count = len(golden_answer_triplets)
 
