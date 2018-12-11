@@ -248,15 +248,15 @@ class BidafPlusPlus(Model):
         # in document qa setup we usually use only training triplets (question, answer ,context) that
         # contain the golden answer, to save tranining time.
         golden_answer_triplets = np.argwhere(span_start.view(-1).cpu().numpy() >= 0).squeeze()
-        print(golden_answer_triplets.size)
+        #print(golden_answer_triplets.size)
 
         if self._max_qad_triplets>0:
             if golden_answer_triplets.size >= self._max_qad_triplets:
                 golden_answer_triplets = golden_answer_triplets[0:self._max_qad_triplets]
 
-        print(golden_answer_triplets.size)
+        #print(golden_answer_triplets.size)
 
-        if self.training:
+        if False and self.training:
             for type in question.keys():
                 question[type] = question[type][golden_answer_triplets]
             for type in passage.keys():
@@ -276,7 +276,7 @@ class BidafPlusPlus(Model):
             golden_answer_instance_triplets.append([])
             for ind in range(batch_ind * num_of_docs, (batch_ind + 1) * num_of_docs):
                 if ind in golden_answer_triplets:
-                    if self.training:
+                    if False and self.training:
                         golden_answer_instance_triplets[batch_ind].append(golden_answer_offset)
                         golden_answer_offset += 1
                     else:
@@ -424,7 +424,7 @@ class BidafPlusPlus(Model):
                     max_correct_answer = -50
                     max_incorrect_answer = -50
 
-                    if self.training:
+                    if False and self.training:
                         instance_triplets = golden_answer_instance_triplets[batch_ind]
                     else:
                         instance_triplets = range(batch_ind * num_of_docs, (batch_ind + 1) * num_of_docs)
