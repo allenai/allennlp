@@ -256,7 +256,7 @@ class BidafPlusPlus(Model):
 
         #print(golden_answer_triplets.size)
 
-        if False and self.training:
+        if self.training:
             for type in question.keys():
                 question[type] = question[type][golden_answer_triplets]
             for type in passage.keys():
@@ -276,7 +276,7 @@ class BidafPlusPlus(Model):
             golden_answer_instance_triplets.append([])
             for ind in range(batch_ind * num_of_docs, (batch_ind + 1) * num_of_docs):
                 if ind in golden_answer_triplets:
-                    if False and self.training:
+                    if self.training:
                         golden_answer_instance_triplets[batch_ind].append(golden_answer_offset)
                         golden_answer_offset += 1
                     else:
@@ -424,7 +424,7 @@ class BidafPlusPlus(Model):
                     max_correct_answer = -50
                     max_incorrect_answer = -50
 
-                    if False and self.training:
+                    if self.training:
                         instance_triplets = golden_answer_instance_triplets[batch_ind]
                     else:
                         instance_triplets = range(batch_ind * num_of_docs, (batch_ind + 1) * num_of_docs)
