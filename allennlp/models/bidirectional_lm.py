@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple, Union, Optional
+from typing import Dict, List, Tuple, Union
 
 import torch
 import numpy as np
@@ -6,11 +6,11 @@ import numpy as np
 from allennlp.common.checks import ConfigurationError
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.model import Model
-from allennlp.modules.masked_layer_norm import MaskedLayerNorm
 from allennlp.modules.text_field_embedders import TextFieldEmbedder
 from allennlp.modules.sampled_softmax_loss import SampledSoftmaxLoss
 from allennlp.modules.seq2seq_encoders import Seq2SeqEncoder
 from allennlp.nn.util import get_text_field_mask, remove_sentence_boundaries
+from allennlp.nn import InitializerApplicator
 
 
 class _SoftmaxLoss(torch.nn.Module):
@@ -66,9 +66,6 @@ class BidirectionalLanguageModel(Model):
     contextualizer: ``Seq2SeqEncoder``
         Used to "contextualize" the embeddings. As described above,
         this encoder must not cheat by peeking ahead.
-    layer_norm: ``MaskedLayerNorm``, optional (default: None)
-        If provided, is applied to the noncontextualized embeddings
-        before they're fed to the contextualizer.
     dropout: ``float``, optional (default: None)
         If specified, dropout is applied to the contextualized embeddings.
     loss_scale: ``Union[float, str]``, optional (default: 1.0)
@@ -90,15 +87,14 @@ class BidirectionalLanguageModel(Model):
                  vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
                  contextualizer: Seq2SeqEncoder,
-                 layer_norm: Optional[MaskedLayerNorm] = None,
                  dropout: float = None,
                  loss_scale: Union[float, str] = 1.0,
                  remove_bos_eos: bool = True,
                  num_samples: int = None,
-                 sparse_embeddings: bool = False) -> None:
+                 sparse_embeddings: bool = False,
+                 initializer: InitializerApplicator = None) -> None:
         super().__init__(vocab)
         self._text_field_embedder = text_field_embedder
-        self._layer_norm = layer_norm or (lambda x: x)
 
         if not contextualizer.is_bidirectional():
             raise ConfigurationError("contextualizer must be bidirectional")
@@ -118,6 +114,7 @@ class BidirectionalLanguageModel(Model):
             self._softmax_loss = _SoftmaxLoss(num_words=vocab.get_vocab_size(),
                                               embedding_dim=self._forward_dim)
 
+        # TODO(brendanr): Output perplexity here. e^loss
         self.register_buffer('_last_average_loss', torch.zeros(1))
 
         if dropout:
@@ -127,6 +124,8 @@ class BidirectionalLanguageModel(Model):
 
         self._loss_scale = loss_scale
         self._remove_bos_eos = remove_bos_eos
+        if initializer is not None:
+            initializer(self)
 
     def _get_target_token_embedding(self,
                                     token_embeddings: torch.Tensor,
@@ -156,7 +155,11 @@ class BidirectionalLanguageModel(Model):
             mask = targets > 0
             # we need to subtract 1 to undo the padding id since the softmax
             # does not include a padding dimension
+
+            # shape (batch_size * timesteps, )
             non_masked_targets = targets.masked_select(mask) - 1
+
+            # shape (batch_size * timesteps, embedding_dim)
             non_masked_embedding = embedding.masked_select(
                     mask.unsqueeze(-1)
             ).view(-1, self._forward_dim)
@@ -227,10 +230,8 @@ class BidirectionalLanguageModel(Model):
         forward_targets[:, 0:-1] = token_ids[:, 1:]
         backward_targets[:, 1:] = token_ids[:, 0:-1]
 
+        # shape (batch_size, timesteps + 2, embedding_size)
         embeddings = self._text_field_embedder(source)
-
-        # Apply LayerNorm if appropriate.
-        embeddings = self._layer_norm(embeddings)
 
         contextual_embeddings = self._contextualizer(embeddings, mask)
 

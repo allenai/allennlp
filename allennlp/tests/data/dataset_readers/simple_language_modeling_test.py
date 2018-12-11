@@ -11,11 +11,11 @@ class TestSimpleLanguageModelingDatasetReader(AllenNlpTestCase):
     FIXTURES = AllenNlpTestCase.FIXTURES_ROOT / "language_modeling"
 
     def test_text_to_instance(self):
-        dataset = SimpleLanguageModelingDatasetReader()
+        dataset = SimpleLanguageModelingDatasetReader(start_tokens=["<S>"], end_tokens=["</S>"])
 
         instance = dataset.text_to_instance('The only sentence.')
         text = [t.text for t in cast(TextField, instance.fields["source"]).tokens]
-        self.assertEqual(text, ["The", "only", "sentence", "."])
+        self.assertEqual(text, ["<S>", "The", "only", "sentence", ".", "</S>"])
 
     def test_read_single_sentence(self):
         prefix = os.path.join(self.FIXTURES, 'single_sentence.txt')
@@ -41,8 +41,12 @@ class TestSimpleLanguageModelingDatasetReader(AllenNlpTestCase):
 
     def test_max_sequence_length(self):
         prefix = os.path.join(self.FIXTURES, 'shards/shard0')
-        dataset = SimpleLanguageModelingDatasetReader(max_sequence_length=10)
+        dataset = SimpleLanguageModelingDatasetReader(
+                max_sequence_length=10,
+                start_tokens=["<S>"],
+                end_tokens=["</S>"]
+        )
         k = -1
         for k, _ in enumerate(dataset.read(prefix)):
             pass
-        self.assertEqual(k, 11)
+        self.assertEqual(k, 7)
