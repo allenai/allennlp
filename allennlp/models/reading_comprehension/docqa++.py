@@ -65,6 +65,7 @@ class BidafPlusPlus(Model):
                  dropout: float = 0.2,
                  multi_choice_answers: int = 0,
                  frac_of_validation_used: float = 1.0,
+                 shared_norm: bool = True,
                  support_yesno: bool = False,
                  support_followup: bool = False,
                  num_context_answers: int = 0,
@@ -78,6 +79,7 @@ class BidafPlusPlus(Model):
         self._support_followup = support_followup
         self._max_span_length = max_span_length
         self._text_field_embedder = text_field_embedder
+        self._shared_norm = shared_norm
         self._phrase_layer = phrase_layer
         self._marker_embedding_dim = marker_embedding_dim
         self._encoding_dim = phrase_layer.get_output_dim()
@@ -391,29 +393,35 @@ class BidafPlusPlus(Model):
 
         # Compute the loss.
         if span_start is not None:
-            loss = 0
-            for batch_ind, inst_metadata in enumerate(metadata):
+            if self._shared_norm:
+                loss = 0
+                for batch_ind, inst_metadata in enumerate(metadata):
 
-                # Could of wrote this shorter but it's clearer like this ...
-                curr_batch_inds = golden_answer_instance_triplets[batch_ind]
+                    # Could of wrote this shorter but it's clearer like this ...
+                    curr_batch_inds = golden_answer_instance_triplets[batch_ind]
 
-                if len(curr_batch_inds)==0:
-                    continue
+                    if len(curr_batch_inds)==0:
+                        continue
 
-                # TODO filtering result with no golden answer for loss, should we not compute this at all to save time?
-                span_start_logits_softmaxed = util.masked_log_softmax(\
-                    torch.cat(tuple(span_start_logits[curr_batch_inds])).unsqueeze(0), \
-                    torch.cat(tuple(repeated_passage_mask[curr_batch_inds])).unsqueeze(0))
-                span_end_logits_softmaxed = util.masked_log_softmax(
-                    torch.cat(tuple(span_end_logits[curr_batch_inds])).unsqueeze(0), \
-                    torch.cat(tuple(repeated_passage_mask[curr_batch_inds])).unsqueeze(0))
-                span_start_logits_softmaxed = span_start_logits_softmaxed.reshape(len(curr_batch_inds),span_start_logits.size(1))
-                span_end_logits_softmaxed = span_end_logits_softmaxed.reshape(len(curr_batch_inds), span_start_logits.size(1))
+                    # TODO filtering result with no golden answer for loss, should we not compute this at all to save time?
 
-                loss += nll_loss(span_start_logits_softmaxed, selected_span_start[curr_batch_inds], ignore_index=-1)
-                loss += nll_loss(span_end_logits_softmaxed, selected_span_end[curr_batch_inds], ignore_index=-1)
+                    span_start_logits_softmaxed = util.masked_log_softmax(\
+                        torch.cat(tuple(span_start_logits[curr_batch_inds])).unsqueeze(0), \
+                        torch.cat(tuple(repeated_passage_mask[curr_batch_inds])).unsqueeze(0))
+                    span_end_logits_softmaxed = util.masked_log_softmax(
+                        torch.cat(tuple(span_end_logits[curr_batch_inds])).unsqueeze(0), \
+                        torch.cat(tuple(repeated_passage_mask[curr_batch_inds])).unsqueeze(0))
+                    span_start_logits_softmaxed = span_start_logits_softmaxed.reshape(len(curr_batch_inds),span_start_logits.size(1))
+                    span_end_logits_softmaxed = span_end_logits_softmaxed.reshape(len(curr_batch_inds), span_start_logits.size(1))
+                    loss += nll_loss(span_start_logits_softmaxed, selected_span_start[curr_batch_inds], ignore_index=-1)
+                    loss += nll_loss(span_end_logits_softmaxed, selected_span_end[curr_batch_inds], ignore_index=-1)
+                loss /= batch_size
+            else:
+                loss = nll_loss(util.masked_log_softmax(span_start_logits,
+                                                     repeated_passage_mask), selected_span_start, ignore_index=-1)
+                loss += nll_loss(util.masked_log_softmax(span_end_logits,
+                                                     repeated_passage_mask), selected_span_end, ignore_index=-1)
 
-            loss /= batch_size
 
             # TODO these are not updates
             #self._span_start_accuracy(span_start_logits, span_start.view(-1))
