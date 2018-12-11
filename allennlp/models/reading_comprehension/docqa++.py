@@ -438,7 +438,7 @@ class BidafPlusPlus(Model):
                         continue
 
                     # computing the max score of the correct answer
-                    for offest,j in zip(golden_answer_instance_offset,range(len(instance_triplets))):
+                    for offest,j in zip(golden_answer_instance_offset[batch_ind],range(len(instance_triplets))):
                         if offest < len(inst_metadata["token_span_lists"]['answers']):
                             for answer_start_end in inst_metadata['token_span_lists']['answers'][offest][0]:
                                 score = span_start_logits_numpy[instance_triplets[j]][answer_start_end[0]] \
