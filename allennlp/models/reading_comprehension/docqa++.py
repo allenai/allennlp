@@ -285,7 +285,7 @@ class BidafPlusPlus(Model):
                         golden_answer_offset += 1
                     else:
                         golden_answer_instance_triplets[batch_ind].append(ind)
-                    golden_answer_instance_offset[batch_ind].append(instance_offset)
+                golden_answer_instance_offset[batch_ind].append(instance_offset)
 
 
 
