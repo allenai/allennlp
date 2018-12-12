@@ -433,9 +433,11 @@ class BidafPlusPlus(Model):
             # support for multi choice answers:
             # TODO this does not handle prediction mode at all .....
             # we iterate over document that do not contain the golden answer for validation and test setup.
+            span_start_logits_numpy = span_start_logits.data.cpu().numpy()
+            span_end_logits_numpy = span_end_logits.data.cpu().numpy()
+
             if self._multi_choice_answers:
-                span_start_logits_numpy = span_start_logits.data.cpu().numpy()
-                span_end_logits_numpy = span_end_logits.data.cpu().numpy()
+
                 for batch_ind,inst_metadata in enumerate(metadata):
                     max_correct_answer = -50
                     max_incorrect_answer = -50
@@ -503,7 +505,7 @@ class BidafPlusPlus(Model):
                 continue
 
             best_span_ind = np.argmax(span_start_logits_numpy[instance_triplets, best_span_cpu[instance_triplets][:, 0]] +
-                      span_start_logits_numpy[instance_triplets, best_span_cpu[instance_triplets][:, 1]])
+                      span_end_logits_numpy[instance_triplets, best_span_cpu[instance_triplets][:, 1]])
 
             passage_str = inst_metadata['original_passage'][golden_answer_instance_offset[batch_ind][best_span_ind]]
             offsets = inst_metadata['token_offsets'][golden_answer_instance_offset[batch_ind][best_span_ind]]
@@ -519,7 +521,7 @@ class BidafPlusPlus(Model):
             per_dialog_query_id_list = []
             # TODO support only one QAS per quetion for now
             for per_dialog_query_index, (iid, gold_answer_texts) in enumerate(
-                    zip(metadata[batch_ind]["instance_id"], metadata[batch_ind]["answer_texts_list"][0])):
+                    zip(metadata[batch_ind]["instance_id"], metadata[batch_ind]["answer_texts_list"])):
 
                 per_dialog_query_id_list.append(iid)
 
@@ -570,9 +572,9 @@ class BidafPlusPlus(Model):
                                        (1- self._examples_used_frac) * 1.0 / self._multi_choice_answers * self._frac_of_validation_used,
                     'examples_used_frac':self._examples_used_frac * self._frac_of_validation_used}
         else:
-            return {'start_acc': self._span_start_accuracy.get_metric(reset) * self._examples_used_frac * self._frac_of_validation_used,
-                    'end_acc': self._span_end_accuracy.get_metric(reset) * self._examples_used_frac * self._frac_of_validation_used,
-                    'span_acc': self._span_accuracy.get_metric(reset) * self._examples_used_frac * self._frac_of_validation_used,
+            return {#'start_acc': self._span_start_accuracy.get_metric(reset) * self._examples_used_frac * self._frac_of_validation_used,
+                    #'end_acc': self._span_end_accuracy.get_metric(reset) * self._examples_used_frac * self._frac_of_validation_used,
+                    #'span_acc': self._span_accuracy.get_metric(reset) * self._examples_used_frac * self._frac_of_validation_used,
                     'f1': self._official_f1.get_metric(reset) * self._examples_used_frac * self._frac_of_validation_used,
                     'examples_used_frac': self._examples_used_frac * self._frac_of_validation_used}
 
