@@ -419,7 +419,8 @@ class BidafPlusPlus(Model):
                              enumerate(selected_span_start[curr_batch_inds])]
                     end_indexes = [ind + doc_num * passage_length for doc_num, ind in
                              enumerate(selected_span_end[curr_batch_inds])]
-                    dummy_target = torch.cuda.LongTensor([0]) if torch.cuda.is_available() else torch.LongTensor([0])
+                    dummy_target = torch.cuda.LongTensor([0],device=span_start_logits_softmaxed.device) \
+                        if torch.cuda.is_available() else torch.LongTensor([0])
                     loss += nll_loss(torch.log(torch.sum(span_start_logits_softmaxed[0,start_indexes])).unsqueeze(0).unsqueeze(0), \
                                      dummy_target, ignore_index=-1)
                     loss += nll_loss(torch.log(torch.sum(span_end_logits_softmaxed[0, end_indexes])).unsqueeze(0).unsqueeze(0), \
