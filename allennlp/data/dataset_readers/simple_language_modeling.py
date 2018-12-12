@@ -75,9 +75,16 @@ class SimpleLanguageModelingDatasetReader(DatasetReader):
     def _read(self, file_path: str) -> Iterable[Instance]:
         # pylint: disable=arguments-differ
         logger.info('Loading data from %s', file_path)
+        dropped_instances = 0
 
         with open(file_path) as file:
             for sentence in file:
                 instance = self.text_to_instance(sentence)
                 if instance.fields['source'].sequence_length() <= self._max_sequence_length:
                     yield instance
+                else:
+                    dropped_instances += 1
+        if not dropped_instances:
+            logger.info(f"No instances dropped from {file_path}.")
+        else:
+            logger.warning(f"Dropped {dropped_instances} instances from {file_path}.")

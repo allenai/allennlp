@@ -100,10 +100,27 @@ def evaluate(model: Model,
                                  shuffle=False)
         logger.info("Iterating over dataset")
         generator_tqdm = Tqdm.tqdm(iterator, total=data_iterator.get_num_batches(instances))
+
+        num_batches = 0
+        cumulative_loss = 0.0
+        has_loss = False
+
         for batch in generator_tqdm:
             batch = util.move_to_device(batch, cuda_device)
-            model(**batch)
+            output_dict = model(**batch)
+
+            if num_batches == 0:
+                # A model need not produce loss during evaluation, but it should be consistent.
+                has_loss = "loss" in output_dict
+            num_batches += 1
+
             metrics = model.get_metrics()
+
+            if has_loss:
+                loss = output_dict["loss"].item()
+                metrics["loss"] = loss
+                cumulative_loss += loss
+
             if (not _warned_tqdm_ignores_underscores and
                         any(metric_name.startswith("_") for metric_name in metrics)):
                 logger.warning("Metrics with names beginning with \"_\" will "
@@ -113,7 +130,11 @@ def evaluate(model: Model,
                                      in metrics.items() if not name.startswith("_")]) + " ||"
             generator_tqdm.set_description(description, refresh=False)
 
-        return model.get_metrics(reset=True)
+        final_metrics = model.get_metrics(reset=True)
+        if has_loss:
+            final_metrics["loss"] = cumulative_loss/num_batches
+
+        return final_metrics
 
 
 def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
