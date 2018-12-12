@@ -139,6 +139,7 @@ class BidafPlusPlus(Model):
         if self._multi_choice_answers:
             self._multichoice_accuracy = BooleanAccuracy()
         self._official_f1 = Average()
+        self._official_EM = Average()
         self._variational_dropout = InputVariationalDropout(dropout)
 
     def forward(self,  # type: ignore
@@ -516,6 +517,7 @@ class BidafPlusPlus(Model):
             best_span_string = passage_str[start_offset:end_offset]
 
             f1_score = 0.0
+            EM_score = 0.0
             per_dialog_best_span_list = []
 
             per_dialog_query_id_list = []
@@ -529,6 +531,7 @@ class BidafPlusPlus(Model):
                 if gold_answer_texts:
                     if len(gold_answer_texts) > 1:
                         t_f1 = []
+                        t_EM = []
                         # Compute F1 over N-1 human references and averages the scores.
                         # AT why N-1 and not N?
                         for answer_index in range(len(gold_answer_texts)):
@@ -538,15 +541,15 @@ class BidafPlusPlus(Model):
                             # idxes.pop(answer_index)
 
                             refs = [gold_answer_texts[z] for z in idxes]
-                            t_f1.append(squad_eval.metric_max_over_ground_truths(squad_eval.f1_score,
-                                                                                 best_span_string,
-                                                                                 refs))
+                            t_f1.append(squad_eval.metric_max_over_ground_truths(squad_eval.f1_score,best_span_string,refs))
+                            t_EM.append(squad_eval.metric_max_over_ground_truths(squad_eval.exact_match_score,best_span_string,refs))
                         f1_score = 1.0 * sum(t_f1) / len(t_f1)
+                        EM_score = 1.0 * sum(t_EM) / len(t_EM)
                     else:
-                        f1_score = squad_eval.metric_max_over_ground_truths(squad_eval.f1_score,
-                                                                            best_span_string,
-                                                                            gold_answer_texts)
+                        f1_score = squad_eval.metric_max_over_ground_truths(squad_eval.f1_score,best_span_string,gold_answer_texts)
+                        EM_score = squad_eval.metric_max_over_ground_truths(squad_eval.exact_match_score, best_span_string,gold_answer_texts)
                 self._official_f1(100 * f1_score)
+                self._official_EM(100 * EM_score)
         output_dict['qid'].append(per_dialog_query_id_list)
         output_dict['best_span_str'].append(per_dialog_best_span_list)
 
@@ -563,20 +566,26 @@ class BidafPlusPlus(Model):
         return output_dict
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
+
+        # calculating final accuracy considering fraction of examples used in dataset creation, and
+        # number used after data-reader filter namely "self._examples_used_frac"
+        frac_used = self._examples_used_frac * self._frac_of_validation_used
+
         if self._multi_choice_answers:
-            return {#'start_acc': self._span_start_accuracy.get_metric(reset) * self._examples_used_frac * self._frac_of_validation_used,
-                    #'end_acc': self._span_end_accuracy.get_metric(reset) * self._examples_used_frac * self._frac_of_validation_used,
-                    #'span_acc': self._span_accuracy.get_metric(reset) * self._examples_used_frac * self._frac_of_validation_used,
-                    'f1': self._official_f1.get_metric(reset) * self._examples_used_frac * self._frac_of_validation_used,
+            return {#'start_acc': self._span_start_accuracy.get_metric(reset) * frac_used,
+                    #'end_acc': self._span_end_accuracy.get_metric(reset) * frac_used,
+                    #'span_acc': self._span_accuracy.get_metric(reset) * frac_used,
+                    'f1': self._official_f1.get_metric(reset) * frac_used,
                     'multichoice_acc': self._multichoice_accuracy.get_metric(reset) * self._examples_used_frac + \
                                        (1- self._examples_used_frac) * 1.0 / self._multi_choice_answers * self._frac_of_validation_used,
-                    'examples_used_frac':self._examples_used_frac * self._frac_of_validation_used}
+                    'examples_used_frac':frac_used}
         else:
-            return {#'start_acc': self._span_start_accuracy.get_metric(reset) * self._examples_used_frac * self._frac_of_validation_used,
-                    #'end_acc': self._span_end_accuracy.get_metric(reset) * self._examples_used_frac * self._frac_of_validation_used,
-                    #'span_acc': self._span_accuracy.get_metric(reset) * self._examples_used_frac * self._frac_of_validation_used,
-                    'f1': self._official_f1.get_metric(reset) * self._examples_used_frac * self._frac_of_validation_used,
-                    'examples_used_frac': self._examples_used_frac * self._frac_of_validation_used}
+            return {#'start_acc': self._span_start_accuracy.get_metric(reset) * frac_used,
+                    #'end_acc': self._span_end_accuracy.get_metric(reset) * frac_used,
+                    #'span_acc': self._span_accuracy.get_metric(reset) * frac_used,
+                    'EM': self._official_EM.get_metric(reset) * frac_used,
+                    'f1': self._official_f1.get_metric(reset) * frac_used,
+                    'examples_used_frac': frac_used}
 
 
     @staticmethod
