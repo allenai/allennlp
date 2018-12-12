@@ -255,8 +255,10 @@ class BidafPlusPlus(Model):
                 question[type] = question[type][golden_answer_triplets]
             for type in passage.keys():
                 passage[type] = passage[type][golden_answer_triplets]
-                cut_offset = np.argwhere(passage[type].cpu().numpy().max(axis=0) > 0).squeeze().max()
-                passage[type] = passage[type][:, 0:cut_offset+1]
+
+                # TODO removing zero columns should be done in the data reader, or with a better method
+                # cut_offset = np.argwhere(passage[type].cpu().numpy().max(axis=0) > 0).squeeze().max()
+                # passage[type] = passage[type][:, 0:cut_offset+1]
 
             total_qa_count = len(golden_answer_triplets)
 
@@ -487,61 +489,64 @@ class BidafPlusPlus(Model):
         best_span_cpu = best_span.detach().cpu().numpy()
 
         # TODO we need to take the best span in shared norm setting!!
-        if False:
-            for i in range(batch_size):
-                for j in range(num_of_docs):
 
-                    # TODO we need to pass the actual number of documents per instance
-                    if j >= len(metadata[i]["answer_texts_list"]) or metadata[i]['token_offsets'][j] == []:
-                        continue
+        for batch_ind, inst_metadata in enumerate(metadata):
+            if self.training:
+                instance_triplets = golden_answer_instance_triplets[batch_ind]
+            else:
+                instance_triplets = range(batch_ind * num_of_docs, (batch_ind + 1) * num_of_docs)
 
-                    passage_str = metadata[i]['original_passage'][j]
-                    offsets = metadata[i]['token_offsets'][j]
-                    f1_score = 0.0
-                    per_dialog_best_span_list = []
+            # TODO we need to pass the actual number of documents per instance
+            #if j >= len(metadata[i]["answer_texts_list"]) or metadata[i]['token_offsets'][j] == []:
+            #    continue
+            if len(instance_triplets) == 0:
+                continue
 
-                    per_dialog_query_id_list = []
-                    for per_dialog_query_index, (iid, gold_answer_texts) in enumerate(
-                            zip(metadata[i]["instance_id"], metadata[i]["answer_texts_list"][j])):
-                        # TODO the triplet_ind calc appears in too many places...
-                        if batch_ind * num_of_docs + j in triplets_with_golden_answer:
-                            triplet_ind = list(triplets_with_golden_answer).index(batch_ind * num_of_docs + j)
-                        else:
-                            continue
+            best_span_ind = np.argmax(span_start_logits_numpy[instance_triplets, best_span_cpu[instance_triplets][:, 0]] +
+                      span_start_logits_numpy[instance_triplets, best_span_cpu[instance_triplets][:, 1]])
 
+            passage_str = inst_metadata['original_passage'][golden_answer_instance_offset[batch_ind][best_span_ind]]
+            offsets = inst_metadata['token_offsets'][golden_answer_instance_offset[batch_ind][best_span_ind]]
 
-                        predicted_span = tuple(best_span_cpu[(triplet_ind) * max_qa_count + per_dialog_query_index])
+            predicted_span = best_span_cpu[instance_triplets[best_span_ind]]
+            start_offset = offsets[predicted_span[0]][0]
+            end_offset = offsets[predicted_span[1]][1]
+            best_span_string = passage_str[start_offset:end_offset]
 
-                        start_offset = offsets[predicted_span[0]][0]
-                        end_offset = offsets[predicted_span[1]][1]
+            f1_score = 0.0
+            per_dialog_best_span_list = []
 
-                        per_dialog_query_id_list.append(iid)
+            per_dialog_query_id_list = []
+            # TODO support only one QAS per quetion for now
+            for per_dialog_query_index, (iid, gold_answer_texts) in enumerate(
+                    zip(metadata[batch_ind]["instance_id"], metadata[batch_ind]["answer_texts_list"][0])):
 
-                        best_span_string = passage_str[start_offset:end_offset]
-                        per_dialog_best_span_list.append(best_span_string)
-                        if gold_answer_texts:
-                            if len(gold_answer_texts) > 1:
-                                t_f1 = []
-                                # Compute F1 over N-1 human references and averages the scores.
-                                # AT why N-1 and not N?
-                                for answer_index in range(len(gold_answer_texts)):
-                                    idxes = list(range(len(gold_answer_texts)))
+                per_dialog_query_id_list.append(iid)
 
-                                    # AT: Why are we poping one answer here??
-                                    #idxes.pop(answer_index)
+                per_dialog_best_span_list.append(best_span_string)
+                if gold_answer_texts:
+                    if len(gold_answer_texts) > 1:
+                        t_f1 = []
+                        # Compute F1 over N-1 human references and averages the scores.
+                        # AT why N-1 and not N?
+                        for answer_index in range(len(gold_answer_texts)):
+                            idxes = list(range(len(gold_answer_texts)))
 
-                                    refs = [gold_answer_texts[z] for z in idxes]
-                                    t_f1.append(squad_eval.metric_max_over_ground_truths(squad_eval.f1_score,
-                                                                                         best_span_string,
-                                                                                         refs))
-                                f1_score = 1.0 * sum(t_f1) / len(t_f1)
-                            else:
-                                f1_score = squad_eval.metric_max_over_ground_truths(squad_eval.f1_score,
-                                                                                    best_span_string,
-                                                                                    gold_answer_texts)
-                        self._official_f1(100 * f1_score)
-                    output_dict['qid'].append(per_dialog_query_id_list)
-                    output_dict['best_span_str'].append(per_dialog_best_span_list)
+                            # AT: Why are we poping one answer here??
+                            # idxes.pop(answer_index)
+
+                            refs = [gold_answer_texts[z] for z in idxes]
+                            t_f1.append(squad_eval.metric_max_over_ground_truths(squad_eval.f1_score,
+                                                                                 best_span_string,
+                                                                                 refs))
+                        f1_score = 1.0 * sum(t_f1) / len(t_f1)
+                    else:
+                        f1_score = squad_eval.metric_max_over_ground_truths(squad_eval.f1_score,
+                                                                            best_span_string,
+                                                                            gold_answer_texts)
+                self._official_f1(100 * f1_score)
+        output_dict['qid'].append(per_dialog_query_id_list)
+        output_dict['best_span_str'].append(per_dialog_best_span_list)
 
         return output_dict
 
