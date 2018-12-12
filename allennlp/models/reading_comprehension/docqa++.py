@@ -420,9 +420,9 @@ class BidafPlusPlus(Model):
                     end_indexes = [ind + doc_num * passage_length for doc_num, ind in
                              enumerate(selected_span_end[curr_batch_inds])]
                     loss += nll_loss(torch.log(torch.sum(span_start_logits_softmaxed[0,start_indexes])).unsqueeze(0).unsqueeze(0),\
-                             torch.LongTensor([0]), ignore_index=-1)
+                             torch.cuda.LongTensor([0]), ignore_index=-1)
                     loss += nll_loss(torch.log(torch.sum(span_end_logits_softmaxed[0, end_indexes])).unsqueeze(0).unsqueeze(0), \
-                        torch.LongTensor([0]), ignore_index=-1)
+                        torch.cuda.LongTensor([0]), ignore_index=-1)
 
                     #span_start_logits_softmaxed = span_start_logits_softmaxed.reshape(len(curr_batch_inds),span_start_logits.size(1))
                     #span_end_logits_softmaxed = span_end_logits_softmaxed.reshape(len(curr_batch_inds), span_start_logits.size(1))
