@@ -225,6 +225,7 @@ class BidafPlusPlus(Model):
             question['elmo'] = \
                 question['elmo'].unsqueeze(1).repeat(1,num_of_docs,1,1,1).reshape(batch_size * num_of_docs, size1[1],size1[2],size1[3])
 
+        # Question dims = [batch size, number of documents, number of QAS, ... ]
         size2 = question['token_characters'].size()
         question['token_characters'] = \
             question['token_characters'].unsqueeze(1).repeat(1,num_of_docs,1,1,1).reshape(batch_size * num_of_docs,size2[1],size2[2],size2[3])
@@ -245,7 +246,6 @@ class BidafPlusPlus(Model):
         # in document qa setup we usually use only training triplets (question, answer ,context) that
         # contain the golden answer, to save tranining time.
         golden_answer_triplets = np.argwhere(span_start.view(-1).cpu().numpy() >= 0).squeeze()
-        # print(golden_answer_triplets.size)
 
         if self._max_qad_triplets > 0:
             if golden_answer_triplets.size >= self._max_qad_triplets:
@@ -269,20 +269,14 @@ class BidafPlusPlus(Model):
             selected_span_start = span_start.view(-1)
             selected_span_end = span_end.view(-1)
 
-
-        embedded_question = self._text_field_embedder(question, num_wrapping_dims=1)
-        embedded_question = embedded_question.reshape(total_qa_count, max_q_len,
-                                                      self._text_field_embedder.get_output_dim())
-        embedded_question = self._variational_dropout(embedded_question)
-
-
+        # building mappings between instances and (q,a,d) triplets
         golden_answer_instance_triplets = []
         golden_answer_instance_offset = []
         golden_answer_offset = 0
         for batch_ind, inst_metadata in enumerate(metadata):
             golden_answer_instance_triplets.append([])
             golden_answer_instance_offset.append([])
-            for instance_offset,ind in enumerate(range(batch_ind * num_of_docs, (batch_ind + 1) * num_of_docs)):
+            for instance_offset, ind in enumerate(range(batch_ind * num_of_docs, (batch_ind + 1) * num_of_docs)):
                 if self.training:
                     if ind in golden_answer_triplets:
                         golden_answer_instance_triplets[batch_ind].append(golden_answer_offset)
@@ -293,11 +287,17 @@ class BidafPlusPlus(Model):
                     golden_answer_instance_offset[batch_ind].append(instance_offset)
 
 
+        # questions embedding
+        embedded_question = self._text_field_embedder(question, num_wrapping_dims=1)
+        embedded_question = embedded_question.reshape(total_qa_count, max_q_len,
+                                                      self._text_field_embedder.get_output_dim())
+        embedded_question = self._variational_dropout(embedded_question)
 
-
+        # context embedding
         embedded_passage = self._variational_dropout(self._text_field_embedder(passage))
         passage_length = embedded_passage.size(1)
 
+        # context repeating (as the amount of qas)
         question_mask = util.get_text_field_mask(question, num_wrapping_dims=1).float()
         question_mask = question_mask.reshape(total_qa_count, max_q_len)
         passage_mask = util.get_text_field_mask(passage).float()
@@ -408,16 +408,26 @@ class BidafPlusPlus(Model):
 
                     # TODO filtering result with no golden answer for loss, should we not compute this at all to save time?
 
-                    span_start_logits_softmaxed = util.masked_log_softmax(\
+                    span_start_logits_softmaxed = util.masked_softmax(\
                         torch.cat(tuple(span_start_logits[curr_batch_inds])).unsqueeze(0), \
                         torch.cat(tuple(repeated_passage_mask[curr_batch_inds])).unsqueeze(0))
-                    span_end_logits_softmaxed = util.masked_log_softmax(
+                    span_end_logits_softmaxed = util.masked_softmax(
                         torch.cat(tuple(span_end_logits[curr_batch_inds])).unsqueeze(0), \
                         torch.cat(tuple(repeated_passage_mask[curr_batch_inds])).unsqueeze(0))
-                    span_start_logits_softmaxed = span_start_logits_softmaxed.reshape(len(curr_batch_inds),span_start_logits.size(1))
-                    span_end_logits_softmaxed = span_end_logits_softmaxed.reshape(len(curr_batch_inds), span_start_logits.size(1))
-                    loss += nll_loss(span_start_logits_softmaxed, selected_span_start[curr_batch_inds], ignore_index=-1)
-                    loss += nll_loss(span_end_logits_softmaxed, selected_span_end[curr_batch_inds], ignore_index=-1)
+
+                    start_indexes = [ind + doc_num * passage_length for doc_num, ind in
+                             enumerate(selected_span_start[curr_batch_inds])]
+                    end_indexes = [ind + doc_num * passage_length for doc_num, ind in
+                             enumerate(selected_span_end[curr_batch_inds])]
+                    loss += nll_loss(torch.log(torch.sum(span_start_logits_softmaxed[0,start_indexes])).unsqueeze(0).unsqueeze(0),\
+                             torch.LongTensor([0]), ignore_index=-1)
+                    loss += nll_loss(torch.log(torch.sum(span_end_logits_softmaxed[0, end_indexes])).unsqueeze(0).unsqueeze(0), \
+                        torch.LongTensor([0]), ignore_index=-1)
+
+                    #span_start_logits_softmaxed = span_start_logits_softmaxed.reshape(len(curr_batch_inds),span_start_logits.size(1))
+                    #span_end_logits_softmaxed = span_end_logits_softmaxed.reshape(len(curr_batch_inds), span_start_logits.size(1))
+                    #loss += nll_loss(span_start_logits_softmaxed,selected_span_start[curr_batch_inds], ignore_index=-1)
+                    #loss += nll_loss(span_end_logits_softmaxed, selected_span_end[curr_batch_inds], ignore_index=-1)
                 loss /= batch_size
             else:
                 loss = nll_loss(util.masked_log_softmax(span_start_logits,
