@@ -565,7 +565,7 @@ class BidafPlusPlus(Model):
             return {#'start_acc': self._span_start_accuracy.get_metric(reset) * self._examples_used_frac * self._frac_of_validation_used,
                     #'end_acc': self._span_end_accuracy.get_metric(reset) * self._examples_used_frac * self._frac_of_validation_used,
                     #'span_acc': self._span_accuracy.get_metric(reset) * self._examples_used_frac * self._frac_of_validation_used,
-                    #'f1': self._official_f1.get_metric(reset) * self._examples_used_frac * self._frac_of_validation_used,
+                    'f1': self._official_f1.get_metric(reset) * self._examples_used_frac * self._frac_of_validation_used,
                     'multichoice_acc': self._multichoice_accuracy.get_metric(reset) * self._examples_used_frac + \
                                        (1- self._examples_used_frac) * 1.0 / self._multi_choice_answers * self._frac_of_validation_used,
                     'examples_used_frac':self._examples_used_frac * self._frac_of_validation_used}
