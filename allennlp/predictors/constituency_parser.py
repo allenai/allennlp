@@ -62,9 +62,9 @@ class ConstituencyParserPredictor(Predictor):
     """
     Predictor for the :class:`~allennlp.models.SpanConstituencyParser` model.
     """
-    def __init__(self, model: Model, dataset_reader: DatasetReader) -> None:
+    def __init__(self, model: Model, dataset_reader: DatasetReader, language: str = 'en_core_web_sm') -> None:
         super().__init__(model, dataset_reader)
-        self._tokenizer = SpacyWordSplitter(language='en_core_web_sm', pos_tags=True)
+        self._tokenizer = SpacyWordSplitter(language=language, pos_tags=True)
 
     def predict(self, sentence: str) -> JsonDict:
         """
