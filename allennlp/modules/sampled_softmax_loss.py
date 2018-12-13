@@ -172,6 +172,7 @@ class SampledSoftmaxLoss(torch.nn.Module):
         long_targets.requires_grad_(False)
 
         # Get the softmax weights (so we can compute logits)
+        # shape (batch_size * max_sequence_length + num_samples)
         all_ids = torch.cat([long_targets, sampled_ids], dim=0)
 
         if self.sparse:
