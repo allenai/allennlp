@@ -82,6 +82,8 @@ class TestTrainer(AllenNlpTestCase):
         assert isinstance(metrics['best_validation_accuracy3'], float)
         assert 'best_epoch' in metrics
         assert isinstance(metrics['best_epoch'], int)
+        assert 'peak_cpu_memory_MB' in metrics
+        assert isinstance(metrics['peak_cpu_memory_MB'], float)
 
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="No CUDA device registered.")
     def test_trainer_can_run_cuda(self):
@@ -117,7 +119,13 @@ class TestTrainer(AllenNlpTestCase):
         trainer = Trainer(MetaDataCheckWrapper(self.model), self.optimizer,
                           multigpu_iterator, self.instances, num_epochs=2,
                           cuda_device=[0, 1])
-        trainer.train()
+        metrics = trainer.train()
+        assert 'peak_cpu_memory_MB' in metrics
+        assert isinstance(metrics['peak_cpu_memory_MB'], float)
+        assert 'peak_gpu_0_memory_MB' in metrics
+        assert isinstance(metrics['peak_gpu_0_memory_MB'], float)
+        assert 'peak_gpu_1_memory_MB' in metrics
+        assert isinstance(metrics['peak_gpu_1_memory_MB'], float)
 
     def test_trainer_can_resume_training(self):
         trainer = Trainer(self.model, self.optimizer,
