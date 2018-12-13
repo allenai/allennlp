@@ -408,10 +408,10 @@ class BidafPlusPlus(Model):
 
                     # TODO filtering result with no golden answer for loss, should we not compute this at all to save time?
 
-                    span_start_logits_softmaxed = util.masked_softmax(\
+                    span_start_logits_softmaxed = util.masked_log_softmax(\
                         torch.cat(tuple(span_start_logits[curr_batch_inds])).unsqueeze(0), \
                         torch.cat(tuple(repeated_passage_mask[curr_batch_inds])).unsqueeze(0))
-                    span_end_logits_softmaxed = util.masked_softmax(
+                    span_end_logits_softmaxed = util.masked_log_softmax(
                         torch.cat(tuple(span_end_logits[curr_batch_inds])).unsqueeze(0), \
                         torch.cat(tuple(repeated_passage_mask[curr_batch_inds])).unsqueeze(0))
 
