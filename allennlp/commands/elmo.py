@@ -95,7 +95,7 @@ class Elmo(Subcommand):
         # pylint: disable=protected-access
         description = '''Create word vectors using ELMo.'''
         subparser = parser.add_parser(
-                name, description=description, help='Use a trained model to make predictions.')
+                name, description=description, help='Create word vectors using a pretrained ELMo model.')
 
         subparser.add_argument('input_file', type=argparse.FileType('r'), help='The path to the input file.')
         subparser.add_argument('output_file', type=str, help='The path to the output file.')

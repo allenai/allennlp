@@ -21,7 +21,9 @@ local BASE_READER = {
             "type": "elmo_characters"
           }
         },
-        "max_sequence_length": 500
+        "max_sequence_length": 500,
+        "start_tokens": ["<S>"],
+        "end_tokens": ["</S>"]
 };
 
 local BASE_ITERATOR = {
@@ -46,11 +48,11 @@ local BASE_ITERATOR = {
   // sampled during training. Not sampling on GPUs results in a certain OOM
   // given our large vocabulary. We'll need to evaluate against the test set
   // (when we'll want a full softmax) with the CPU.
-  "train_data_path": std.extVar("BIDIRECTIONAL_LM_TRAIN_PATH")
+  "train_data_path": std.extVar("BIDIRECTIONAL_LM_TRAIN_PATH"),
 
   "vocabulary": {
       // Use a prespecified vocabulary for efficiency.
-      "directory_path": "/home/brendanr/workbenches/calypso/vocabulary"
+      "directory_path": std.extVar("BIDIRECTIONAL_LM_VOCAB_PATH")
       // Plausible config for generating the vocabulary.
       // "tokens_to_add": {
       //     "tokens": ["<S>", "</S>"],
@@ -62,18 +64,6 @@ local BASE_ITERATOR = {
     "type": "bidirectional-language-model",
     "num_samples": 8192,
     "sparse_embeddings": true,
-    // TODO(brendanr): Verify that this is unused and remove.
-    "initializer": [
-          [".*tag_projection_layer.*weight", {"type": "xavier_uniform"}], // Initialise the final projection before the softmax.
-          [".*tag_projection_layer.*bias", {"type": "zero"}],
-          [".*feedforward.*weight", {"type": "xavier_uniform"}], // Same initialisation for an auxilary FF layer. `xavier_uniform` is a better default than random normally.
-          [".*feedforward.*bias", {"type": "zero"}],
-          // This part is for the LSTM init.
-          [".*weight_ih.*", {"type": "xavier_uniform"}],
-          [".*weight_hh.*", {"type": "orthogonal"}],
-          [".*bias_ih.*", {"type": "zero"}],
-          [".*bias_hh.*", {"type": "lstm_hidden_bias"}]
-    ],
     "text_field_embedder": {
       // Note: This is because we only use the token_characters during embedding, not the tokens themselves.
       "allow_unmatched_keys": true,
@@ -82,7 +72,8 @@ local BASE_ITERATOR = {
             "type": "character_encoding",
             "embedding": {
                 "num_embeddings": 262,
-                // TODO(brendanr): When used with an LSTM contextualizer this is 32. Okay at 16?
+                // Same as the Transformer ELMo in Calypso. Matt reports that
+                // this matches the original LSTM ELMo as well.
                 "embedding_dim": 16
             },
             "encoder": {
@@ -110,13 +101,11 @@ local BASE_ITERATOR = {
     // Applies to the contextualized embeddings.
     "dropout": 0.1,
     "contextualizer": {
-        "type": "bidirectional_transformer",
+        "type": "bidirectional_language_model_transformer",
         "input_dim": 512,
         "hidden_dim": 2048,
         "num_layers": 6,
-        // TODO(brendanr): Does this need to be used?
-        // "dropout": 0.1,
-        // TODO(brendanr): Verify this dropout is applied in the same place as Calypso.
+        "dropout": 0.1,
         "input_dropout": 0.1
     }
   },

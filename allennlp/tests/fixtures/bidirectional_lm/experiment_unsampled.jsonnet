@@ -8,14 +8,16 @@
       "token_characters": {
         "type": "characters"
       }
-    }
+    },
+    "start_tokens": ["<S>"],
+    "end_tokens": ["</S>"]
   },
   "train_data_path": "allennlp/tests/fixtures/bidirectional_lm/sentences.txt",
   "validation_data_path": "allennlp/tests/fixtures/bidirectional_lm/sentences.txt",
   "vocabulary": {
       "tokens_to_add": {
-          "tokens": ["<s>", "</s>"],
-          "token_characters": ["<>/s"]
+          "tokens": ["<S>", "</S>"],
+          "token_characters": ["<>/S"]
       },
   },
   "model": {
@@ -48,8 +50,7 @@
         "num_layers": 3,
         "input_size": 16,
         "hidden_size": 7,
-    },
-    "do_layer_norm": true
+    }
   },
   "iterator": {
     "type": "basic",

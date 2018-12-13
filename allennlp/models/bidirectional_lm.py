@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple, Union, Optional, Callable
+from typing import Dict, List, Tuple, Union
 
 import torch
 import numpy as np
@@ -6,7 +6,6 @@ import numpy as np
 from allennlp.common.checks import ConfigurationError
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.model import Model
-from allennlp.modules.masked_layer_norm import MaskedLayerNorm
 from allennlp.modules.text_field_embedders import TextFieldEmbedder
 from allennlp.modules.sampled_softmax_loss import SampledSoftmaxLoss
 from allennlp.modules.seq2seq_encoders import Seq2SeqEncoder
@@ -67,9 +66,6 @@ class BidirectionalLanguageModel(Model):
     contextualizer: ``Seq2SeqEncoder``
         Used to "contextualize" the embeddings. As described above,
         this encoder must not cheat by peeking ahead.
-    do_layer_norm: bool, optional (default = False)
-        If True, we apply ``MaskedLayerNorm`` to the noncontextualized embeddings
-        before they're fed to the contextualizer.
     dropout: ``float``, optional (default: None)
         If specified, dropout is applied to the contextualized embeddings.
     loss_scale: ``Union[float, str]``, optional (default: 1.0)
@@ -91,7 +87,6 @@ class BidirectionalLanguageModel(Model):
                  vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
                  contextualizer: Seq2SeqEncoder,
-                 do_layer_norm: bool = False,
                  dropout: float = None,
                  loss_scale: Union[float, str] = 1.0,
                  remove_bos_eos: bool = True,
@@ -103,12 +98,6 @@ class BidirectionalLanguageModel(Model):
 
         if not contextualizer.is_bidirectional():
             raise ConfigurationError("contextualizer must be bidirectional")
-
-        # And add a layer norm
-        if do_layer_norm:
-            self._layer_norm: Callable = MaskedLayerNorm(self._text_field_embedder.get_output_dim())
-        else:
-            self._layer_norm = lambda tensor, mask: tensor
 
         self._contextualizer = contextualizer
         # The dimension for making predictions just in the forward
@@ -243,9 +232,6 @@ class BidirectionalLanguageModel(Model):
 
         # shape (batch_size, timesteps + 2, embedding_size)
         embeddings = self._text_field_embedder(source)
-
-        # Apply LayerNorm if appropriate.
-        embeddings = self._layer_norm(embeddings, mask)
 
         contextual_embeddings = self._contextualizer(embeddings, mask)
 
