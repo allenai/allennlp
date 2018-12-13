@@ -428,7 +428,7 @@ class EmbeddingsTextFile(Iterator[str]):
             extension = get_file_extension(main_file_uri)
             
             if ".bz2" in extension:
-	            import bz2 # import only when necessary
+	            import bz2  # import only when necessary
             
             package = {
                     '.txt': io,
