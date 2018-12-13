@@ -415,21 +415,21 @@ class BidafPlusPlus(Model):
                         torch.cat(tuple(span_end_logits[curr_batch_inds])).unsqueeze(0), \
                         torch.cat(tuple(repeated_passage_mask[curr_batch_inds])).unsqueeze(0))
 
-                    start_indexes = [ind + doc_num * passage_length for doc_num, ind in
-                             enumerate(selected_span_start[curr_batch_inds])]
-                    end_indexes = [ind + doc_num * passage_length for doc_num, ind in
-                             enumerate(selected_span_end[curr_batch_inds])]
-                    dummy_target = torch.cuda.LongTensor([0],device=span_start_logits_softmaxed.device) \
-                        if torch.cuda.is_available() else torch.LongTensor([0])
-                    loss += nll_loss(torch.log(torch.sum(span_start_logits_softmaxed[0,start_indexes])).unsqueeze(0).unsqueeze(0), \
-                                     dummy_target, ignore_index=-1)
-                    loss += nll_loss(torch.log(torch.sum(span_end_logits_softmaxed[0, end_indexes])).unsqueeze(0).unsqueeze(0), \
-                                     dummy_target, ignore_index=-1)
+                    #start_indexes = [ind + doc_num * passage_length for doc_num, ind in
+                    #         enumerate(selected_span_start[curr_batch_inds])]
+                    #end_indexes = [ind + doc_num * passage_length for doc_num, ind in
+                    #         enumerate(selected_span_end[curr_batch_inds])]
+                    #dummy_target = torch.cuda.LongTensor([0],device=span_start_logits_softmaxed.device) \
+                    #    if torch.cuda.is_available() else torch.LongTensor([0])
+                    #loss += nll_loss(torch.log(torch.sum(span_start_logits_softmaxed[0,start_indexes])).unsqueeze(0).unsqueeze(0), \
+                    #                 dummy_target, ignore_index=-1)
+                    #loss += nll_loss(torch.log(torch.sum(span_end_logits_softmaxed[0, end_indexes])).unsqueeze(0).unsqueeze(0), \
+                    #                 dummy_target, ignore_index=-1)
 
-                    #span_start_logits_softmaxed = span_start_logits_softmaxed.reshape(len(curr_batch_inds),span_start_logits.size(1))
-                    #span_end_logits_softmaxed = span_end_logits_softmaxed.reshape(len(curr_batch_inds), span_start_logits.size(1))
-                    #loss += nll_loss(span_start_logits_softmaxed,selected_span_start[curr_batch_inds], ignore_index=-1)
-                    #loss += nll_loss(span_end_logits_softmaxed, selected_span_end[curr_batch_inds], ignore_index=-1)
+                    span_start_logits_softmaxed = span_start_logits_softmaxed.reshape(len(curr_batch_inds),span_start_logits.size(1))
+                    span_end_logits_softmaxed = span_end_logits_softmaxed.reshape(len(curr_batch_inds), span_start_logits.size(1))
+                    loss += nll_loss(span_start_logits_softmaxed,selected_span_start[curr_batch_inds], ignore_index=-1)
+                    loss += nll_loss(span_end_logits_softmaxed, selected_span_end[curr_batch_inds], ignore_index=-1)
                 loss /= batch_size
             else:
                 loss = nll_loss(util.masked_log_softmax(span_start_logits,
