@@ -1,7 +1,6 @@
 import io
 import tarfile
 import zipfile
-import bz2
 import lzma
 import gzip
 import re
@@ -427,6 +426,10 @@ class EmbeddingsTextFile(Iterator[str]):
 
             # All the python packages for compressed files share the same interface of io.open
             extension = get_file_extension(main_file_uri)
+            
+            if ".bz2" in extension:
+	            import bz2 # import only when necessary
+            
             package = {
                     '.txt': io,
                     '.vec': io,
