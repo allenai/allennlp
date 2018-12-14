@@ -555,7 +555,7 @@ class Trainer(Registrable):
                         '{0}.{1}'.format(epoch, time_to_str(int(last_save_time))), [], is_best=False
                 )
         metrics = self._get_metrics(train_loss, batches_this_epoch, reset=True)
-        metrics['cpu_memory'] = peak_cpu_usage 
+        metrics['cpu_memory_MB'] = peak_cpu_usage 
         for (gpu_num, memory) in gpu_usage:
             metrics['gpu_'+str(gpu_num)+'_memory_MB'] = memory 
         return metrics
@@ -761,11 +761,11 @@ class Trainer(Registrable):
             train_metrics = self._train_epoch(epoch)
 
             # get peak of memory usage
-            if 'cpu_memory' in train_metrics:
-                metrics['peak_cpu_memory_MB'] = max(metrics.get('peak_cpu_memory_MB', 0), train_metrics['cpu_memory'])
+            if 'cpu_memory_MB' in train_metrics:
+                metrics['peak_cpu_memory_MB'] = max(metrics.get('peak_cpu_memory_MB', 0), train_metrics['cpu_memory_MB'])
             for key, value in train_metrics.items():
                 if key.startswith('gpu_'):
-                    metrics["peak_"+key+"_MB"] = max(metrics.get(key, 0), value)
+                    metrics["peak_"+key] = max(metrics.get("peak_"+key, 0), value)
 
             if self._validation_data is not None:
                 with torch.no_grad():
