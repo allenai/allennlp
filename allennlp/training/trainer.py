@@ -581,9 +581,9 @@ class Trainer(Registrable):
                         '{0}.{1}'.format(epoch, time_to_str(int(last_save_time))), [], is_best=False
                 )
         metrics = self._get_metrics(train_loss, batches_this_epoch, reset=True)
-        metrics['cpu_memory_MB'] = peak_cpu_usage 
+        metrics['cpu_memory_MB'] = peak_cpu_usage
         for (gpu_num, memory) in gpu_usage:
-            metrics['gpu_'+str(gpu_num)+'_memory_MB'] = memory 
+            metrics['gpu_'+str(gpu_num)+'_memory_MB'] = memory
         return metrics
 
     def _should_stop_early(self, metric_history: List[float]) -> bool:
@@ -781,14 +781,15 @@ class Trainer(Registrable):
         metrics: Dict[str, Any] = {}
         epochs_trained = 0
         training_start_time = time.time()
-        
+
         for epoch in range(epoch_counter, self._num_epochs):
             epoch_start_time = time.time()
             train_metrics = self._train_epoch(epoch)
 
             # get peak of memory usage
             if 'cpu_memory_MB' in train_metrics:
-                metrics['peak_cpu_memory_MB'] = max(metrics.get('peak_cpu_memory_MB', 0), train_metrics['cpu_memory_MB'])
+                metrics['peak_cpu_memory_MB'] = max(metrics.get('peak_cpu_memory_MB', 0),
+                                                    train_metrics['cpu_memory_MB'])
             for key, value in train_metrics.items():
                 if key.startswith('gpu_'):
                     metrics["peak_"+key] = max(metrics.get("peak_"+key, 0), value)
@@ -814,7 +815,7 @@ class Trainer(Registrable):
                 is_best_so_far = True
                 val_metrics = {}
                 this_epoch_val_metric = None
-            
+
             self._metrics_to_tensorboard(epoch, train_metrics, val_metrics=val_metrics)
             self._metrics_to_console(train_metrics, val_metrics)
 
