@@ -215,6 +215,9 @@ class ModelTestCase(AllenNlpTestCase):
                     # Loss is particularly unstable; we'll just be satisfied if everything else is
                     # close.
                     continue
+                if 'batch_weight' == key:
+                    # Batch weight, e.g., by the number of tokens, is dependent on the batch.
+                    continue
                 single_predicted = single_predicted[0]
                 batch_predicted = batch_predictions[key][i]
                 if isinstance(single_predicted, torch.Tensor):

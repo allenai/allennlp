@@ -20,7 +20,8 @@ class TestBidirectionalLM(ModelTestCase):
         training_tensors = self.dataset.as_tensor_dict()
         result = self.model(**training_tensors)
 
-        assert set(result) == {"loss", "forward_loss", "backward_loss", "lm_embeddings", "mask"}
+        assert set(result) == {"loss", "forward_loss", "backward_loss",
+                "lm_embeddings", "mask", "batch_weight"}
 
         # The model should have removed the BOS / EOS tokens.
         embeddings = result["lm_embeddings"]

@@ -262,7 +262,8 @@ class BidirectionalLanguageModel(Model):
             return_dict = {
                     'loss': average_loss * scale_factor,
                     'forward_loss': forward_loss * scale_factor / num_targets.float(),
-                    'backward_loss': backward_loss * scale_factor / num_targets.float()
+                    'backward_loss': backward_loss * scale_factor / num_targets.float(),
+                    'batch_weight': num_targets.float()
             }
         else:
             # average_loss zero tensor, return it for all

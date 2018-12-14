@@ -1,11 +1,36 @@
 # pylint: disable=invalid-name,no-self-use
 import argparse
 import json
+import torch
+from typing import Iterator, List, Dict
 
 from flaky import flaky
 
-from allennlp.commands.evaluate import evaluate_from_args, Evaluate
+from allennlp.commands.evaluate import evaluate_from_args, Evaluate, evaluate
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.data import DataIterator
+from allennlp.data.iterators.data_iterator import TensorDict
+from allennlp.models import Model
+
+
+class DummyIterator(DataIterator):
+    def __init__(self, count: int):
+        super().__init__()
+        self._count = count
+
+    def __call__(self, *args, **kwargs) -> Iterator[TensorDict]:
+        while self._count > 0:
+            self._count -= 1
+            yield {}
+
+
+class DummyModel(Model):
+    def __init__(self, outputs: List):
+        super().__init__(None) # type: ignore
+        self._outputs = outputs
+
+    def forward(self, *args, **kwargs) -> Dict[str, torch.Tensor]:  # pylint: disable=arguments-differ
+        return self._outputs.pop(0)
 
 
 class TestEvaluate(AllenNlpTestCase):
@@ -15,6 +40,24 @@ class TestEvaluate(AllenNlpTestCase):
         self.parser = argparse.ArgumentParser(description="Testing")
         subparsers = self.parser.add_subparsers(title='Commands', metavar='')
         Evaluate().add_subparser('evaluate', subparsers)
+
+    def test_evaluate_calculates_average_loss(self):
+        losses = [7.0, 9.0, 8.0]
+        outputs = [{"loss": torch.tensor(loss)} for loss in losses]
+        model = DummyModel(outputs)
+        iterator = DummyIterator(len(outputs))
+        metrics = evaluate(model, None, iterator, -1)
+        self.assertAlmostEqual(metrics["loss"], 8.0)
+
+    def test_evaluate_calculates_average_loss_with_weights(self):
+        losses = [7.0, 9.0, 8.0]
+        weights = [10, 2, 1.5]
+        inputs = zip(losses, weights)
+        outputs = [{"loss": torch.tensor(loss), "batch_weight": torch.tensor(weight)} for loss, weight in inputs]
+        model = DummyModel(outputs)
+        iterator = DummyIterator(len(outputs))
+        metrics = evaluate(model, None, iterator, -1)
+        self.assertAlmostEqual(metrics["loss"], (70 + 18 + 12)/13.5)
 
     @flaky
     def test_evaluate_from_args(self):
