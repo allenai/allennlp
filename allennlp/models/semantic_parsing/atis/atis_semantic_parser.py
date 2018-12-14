@@ -468,8 +468,7 @@ class AtisSemanticParser(Model):
 
             if global_actions:
                 global_action_tensors, global_action_ids = zip(*global_actions)
-                global_action_tensor = entity_types.new_tensor(torch.cat(global_action_tensors, dim=0),
-                                                               dtype=torch.long)
+                global_action_tensor = torch.cat(global_action_tensors, dim=0).to(entity_types.device).long()
                 global_input_embeddings = self._action_embedder(global_action_tensor)
                 global_output_embeddings = self._output_action_embedder(global_action_tensor)
                 translated_valid_actions[key]['global'] = (global_input_embeddings,
@@ -481,8 +480,9 @@ class AtisSemanticParser(Model):
                 entity_ids = [entity_map[entity] for entity in entities]
                 entity_linking_scores = linking_scores[entity_ids]
                 entity_type_tensor = entity_types[entity_ids]
-                entity_type_embeddings = self._entity_type_decoder_embedding(entity_type_tensor)
-                entity_type_embeddings = entity_types.new_tensor(entity_type_embeddings, dtype=torch.float)
+                entity_type_embeddings = (self._entity_type_decoder_embedding(entity_type_tensor)
+                                          .to(entity_types.device)
+                                          .float())
                 translated_valid_actions[key]['linked'] = (entity_linking_scores,
                                                            entity_type_embeddings,
                                                            list(linked_action_ids))

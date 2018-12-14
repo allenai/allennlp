@@ -950,12 +950,12 @@ class Trainer(Registrable):
             pieces = epoch.split('.')
             if len(pieces) == 1:
                 # Just a single epoch without timestamp
-                int_epochs.append([int(pieces[0]), 0])
+                int_epochs.append([int(pieces[0]), '0'])
             else:
                 # has a timestamp
                 int_epochs.append([int(pieces[0]), pieces[1]])
         last_epoch = sorted(int_epochs, reverse=True)[0]
-        if last_epoch[1] == 0:
+        if last_epoch[1] == '0':
             epoch_to_load = str(last_epoch[0])
         else:
             epoch_to_load = '{0}.{1}'.format(last_epoch[0], last_epoch[1])
