@@ -48,6 +48,8 @@ class DialogQA(Model):
         If greater than 0, the model will consider previous question answering context.
     max_span_length: ``int``, optional (default=0)
         Maximum token length of the output span.
+    max_turn_length: ``int``, optional (default=12)
+        Maximum length of an interaction.
     """
 
     def __init__(self, vocab: Vocabulary,
@@ -60,7 +62,8 @@ class DialogQA(Model):
                  dropout: float = 0.2,
                  num_context_answers: int = 0,
                  marker_embedding_dim: int = 10,
-                 max_span_length: int = 30) -> None:
+                 max_span_length: int = 30,
+                 max_turn_length: int = 12) -> None:
         super().__init__(vocab)
         self._num_context_answers = num_context_answers
         self._max_span_length = max_span_length
@@ -68,7 +71,6 @@ class DialogQA(Model):
         self._phrase_layer = phrase_layer
         self._marker_embedding_dim = marker_embedding_dim
         self._encoding_dim = phrase_layer.get_output_dim()
-        max_turn_length = 12
 
         self._matrix_attention = LinearMatrixAttention(self._encoding_dim, self._encoding_dim, 'x,y,x*y')
         self._merge_atten = TimeDistributed(torch.nn.Linear(self._encoding_dim * 4, self._encoding_dim))
