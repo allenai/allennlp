@@ -38,3 +38,27 @@ class TestBidirectionalLMUnsampled(TestBidirectionalLM):
         super().setUp()
         self.set_up_model(self.FIXTURES_ROOT / 'bidirectional_lm' / 'experiment_unsampled.jsonnet',
                           self.FIXTURES_ROOT / 'bidirectional_lm' / 'sentences.txt')
+
+class TestBidirectionalLMTransformer(TestBidirectionalLM):
+    def setUp(self):
+        super().setUp()
+        self.set_up_model(self.FIXTURES_ROOT / 'bidirectional_lm' / 'experiment_transformer.jsonnet',
+                          self.FIXTURES_ROOT / 'bidirectional_lm' / 'sentences.txt')
+
+    def test_forward_pass_runs_correctly(self):
+        training_tensors = self.dataset.as_tensor_dict()
+        result = self.model(**training_tensors)
+
+        assert set(result) == {"loss", "forward_loss", "backward_loss", "lm_embeddings", "mask"}
+
+        # The model should have removed the BOS / EOS tokens.
+        embeddings = result["lm_embeddings"]
+        # The BidirectionalLanguageModelTransformer uses input size * 2 as the output size unlike
+        # a bidirectional LSTM, which uses hidden size * 2.
+        assert tuple(embeddings.shape) == (2, 6, 32)
+
+        loss = result["loss"].item()
+        forward_loss = result["forward_loss"].item()
+        backward_loss = result["backward_loss"].item()
+
+        np.testing.assert_almost_equal(loss, (forward_loss + backward_loss) / 2, decimal=3)

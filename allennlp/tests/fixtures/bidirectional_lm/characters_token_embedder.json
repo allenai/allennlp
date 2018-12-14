@@ -1,0 +1,79 @@
+{
+    "dataset_reader": {
+      "type": "conll2003",
+      "tag_label": "ner",
+      "token_indexers": {
+        "tokens": {
+          "type": "single_id",
+          "lowercase_tokens": true
+        },
+        "elmo": {
+          "type": "elmo_characters"
+        }
+      }
+    },
+    "train_data_path": "allennlp/tests/fixtures/data/conll2003.txt",
+    "validation_data_path": "allennlp/tests/fixtures/data/conll2003.txt",
+    "model": {
+      "type": "crf_tagger",
+      "text_field_embedder": {
+        "token_embedders": {
+          "tokens": {
+            "type": "embedding",
+            "embedding_dim": 50
+          },
+          "elmo": {
+            "type": "bidirectional_token_embedder",
+            "weight_file": "allennlp/tests/fixtures/bidirectional_lm/lm_weights.th",
+            "text_field_embedder": {
+              "allow_unmatched_keys": true,
+              "token_embedders": {
+                "token_characters": {
+                  "type": "character_encoding",
+                  "embedding": {
+                    "num_embeddings": 262,
+                    "embedding_dim": 4
+                  },
+                  "encoder": {
+                    "type": "cnn-highway",
+                    "activation": "relu",
+                    "embedding_dim": 4,
+                    "filters": [[1, 4], [2, 8], [3, 16], [4, 32], [5, 64]],
+                    "num_highway": 2,
+                    "projection_dim": 16,
+                    "projection_location": "after_cnn"
+                  }
+                }
+              }
+            },
+            "remove_bos_eos": false,
+            "contextualizer": {
+              "return_all_layers": true,
+              "input_dim": 16,
+              "hidden_dim": 7,
+              "num_layers": 3,
+              "dropout": 0.1,
+              "input_dropout": 0.1
+            }
+          }
+        }
+      },
+      "encoder": {
+              "type": "gru",
+              "input_size": 82,
+              "hidden_size": 25,
+              "num_layers": 2,
+              "dropout": 0.5,
+              "bidirectional": true
+      },
+      "regularizer": [
+        ["transitions$", {"type": "l2", "alpha": 0.01}]
+      ]
+    },
+    "iterator": {"type": "basic", "batch_size": 32},
+    "trainer": {
+      "optimizer": "adam",
+      "num_epochs": 5,
+      "cuda_device": -1
+    }
+  }
