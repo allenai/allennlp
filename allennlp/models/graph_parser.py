@@ -121,8 +121,8 @@ class GraphParser(Model):
                                "arc representation dim", "arc feedforward output dim")
 
         self._unlabelled_f1 = F1Measure(positive_label=1)
-        self._arc_loss = torch.nn.BCEWithLogitsLoss(reduce=False)
-        self._tag_loss = torch.nn.CrossEntropyLoss(reduce=False)
+        self._arc_loss = torch.nn.BCEWithLogitsLoss(reduction='none')
+        self._tag_loss = torch.nn.CrossEntropyLoss(reduction='none')
         initializer(self)
 
     @overrides
