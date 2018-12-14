@@ -1,29 +1,18 @@
 # pylint: disable=no-self-use,invalid-name
-import filecmp
-import json
-import os
-import pathlib
-import tarfile
-
-import torch
-
-from allennlp.commands.train import train_model
-from allennlp.common import Params
 from allennlp.common.testing import ModelTestCase
 from allennlp.data.dataset import Batch
-from allennlp.modules.token_embedders import ElmoTokenEmbedder
 
 
-class TestElmoTokenEmbedder(ModelTestCase):
+class TestBidirectionalTokenEmbedder(ModelTestCase):
     def setUp(self):
         super().setUp()
         self.set_up_model(self.FIXTURES_ROOT / 'bidirectional_lm' / 'characters_token_embedder.json',
                           self.FIXTURES_ROOT / 'data' / 'conll2003.txt')
 
-    def test_tagger_with_elmo_token_embedder_can_train_save_and_load(self):
+    def test_tagger_with_bidirectional_token_embedder_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
 
-    def test_tagger_with_elmo_token_embedder_forward_pass_runs_correctly(self):
+    def test_tagger_with_bidirectional_token_embedder_forward_pass_runs_correctly(self):
         dataset = Batch(self.instances)
         dataset.index_instances(self.vocab)
         training_tensors = dataset.as_tensor_dict()
