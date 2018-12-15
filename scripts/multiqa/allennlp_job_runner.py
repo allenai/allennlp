@@ -33,7 +33,7 @@ while True:
         for proc in proc_running:
             # check if process still alive:
             try:
-                print('checcking if process alive ' + proc['pid'])
+                print('checcking if process alive '  + str(proc['pid']))
                 os.killpg(os.getpgid(proc['pid']), 0)
             except:
                 print('no')
