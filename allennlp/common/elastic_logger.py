@@ -2,6 +2,7 @@ import datetime
 from elasticsearch import Elasticsearch
 global logger
 import traceback
+import platform
 
 class ElasticLogger:
     """ A python singleton """
@@ -19,7 +20,7 @@ class ElasticLogger:
             self.LOG_INDEX = "multiqa_logs"
             self.bulk_data = []
             self.LOG_BULK_SIZE = 1
-            self.default_val_dict = {}
+            self.default_val_dict = {'host':platform.node()}
 
         def set_repeated_context_dict(self, run_tag, context_dict):
             self.default_val_dict['run_tag'] = run_tag

@@ -667,7 +667,7 @@ class Trainer(Registrable):
             elastic_train_metrics = {'training/' + k: v for k, v in elastic_train_metrics.items()}
             elastic_train_metrics.update({'epoch':epoch})
         else:
-            elastic_train_metrics.update({'batch_num_total': epoch})
+            elastic_train_metrics.update({'batch_num_total': epoch,'gpu':self._cuda_devices[0]})
         elastic_train_metrics.update({'experiment_name': '/'.join(self._serialization_dir.split('/')[-2:])})
 
 
@@ -679,7 +679,7 @@ class Trainer(Registrable):
 
             elastic_val_metrics = val_metrics.copy()
             elastic_val_metrics = {'validation/' + k: v for k, v in elastic_val_metrics.items()}
-            elastic_val_metrics.update({'epoch': epoch})
+            elastic_val_metrics.update({'epoch': epoch,'gpu':self._cuda_devices[0]})
             elastic_val_metrics.update({'experiment_name': '/'.join(self._serialization_dir.split('/')[-2:])})
             elastic_val_metrics.update(
                 {'optimizer': str(type(self.optimizer)), 'serialization_dir': self._serialization_dir, \
