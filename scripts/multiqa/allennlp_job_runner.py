@@ -41,7 +41,6 @@ while True:
             with open(proc['log_file'], 'r') as f:
                 log_data = f.readlines()
                 proc['log_snapshot'] = ' '.join(log_data[-100:])
-                print(proc['log_snapshot'])
 
             # Log time out handling TODO
             statbuf = os.stat(proc['log_file'])
@@ -52,14 +51,14 @@ while True:
                 # checking if process successfully completed task,
                 # TODO this is an ugly check, but because we are forking with nohup, python does not provide any good alternative...
                 if proc['log_snapshot'].find('Traceback (most recent call last):') > -1:
-                    ElasticLogger().write_log('INFO', "Job died", proc, push_bulk=True)
+                    ElasticLogger().write_log('INFO', "Job died", proc, push_bulk=True,print_log=True)
 
                     # Requeue
                     channel.basic_nack(proc['job_tag'])
                     proc_running.remove(proc)
                     break
                 else:
-                    ElasticLogger().write_log('INFO', "Job finished successfully", proc, push_bulk=True)
+                    ElasticLogger().write_log('INFO', "Job finished successfully", proc, push_bulk=True,print_log=True)
 
                     # ack
                     channel.basic_ack(proc['job_tag'])
@@ -98,7 +97,7 @@ while True:
                 proc['memory'] = psutil.Process(proc['pid']).memory_info()
 
             ElasticLogger().write_log('INFO', "GPU machine status", {'gpus':gpu_memory_mb(),'procs_running': proc_running,\
-                                                      'num_procs_running':len(proc_running),}, push_bulk=True)
+                                                      'num_procs_running':len(proc_running),}, push_bulk=True,print_log=True)
 
         time.sleep(2)
 
@@ -110,5 +109,5 @@ while True:
         # something went wrong
         time.sleep(3)
         print(traceback.format_exc())
-        ElasticLogger().write_log('INFO', "job runner exception", {'error_message': traceback.format_exc()}, push_bulk=True)
+        ElasticLogger().write_log('INFO', "job runner exception", {'error_message': traceback.format_exc()}, push_bulk=True,print_log=True)
         print('no internet connection? ')
