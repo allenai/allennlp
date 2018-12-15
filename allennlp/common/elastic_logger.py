@@ -27,7 +27,7 @@ class ElasticLogger:
             for key in context_dict:
                 self.default_val_dict[key] = context_dict[key]
 
-        def write_log(self, level, message, context_dict={},push_bulk=True):
+        def write_log(self, level, message, context_dict={},push_bulk=True,print_log=False):
             if level == 'DEBUG_NN':
                 LOG_INDEX = 'debug_nn'
             else:
@@ -42,9 +42,10 @@ class ElasticLogger:
 
                 additional_text = " ".join([key + ': ' + str(context_dict[key]) + ',' for key in fields_to_print])
 
-                #print(level + '|' + context_dict['log_timestamp'] + ': ' + message )
-                #if len(additional_text) > 0:
-                #    print(additional_text)
+                if print_log:
+                    print(level + '|' + context_dict['log_timestamp'] + ': ' + message )
+                    if len(additional_text) > 0:
+                        print(additional_text)
 
                 if level=='ERROR':
                     print(context_dict['stacktrace'])
