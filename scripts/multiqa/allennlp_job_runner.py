@@ -36,7 +36,6 @@ while True:
                 print('checcking if process alive '  + str(proc['pid']))
                 os.killpg(os.getpgid(proc['pid']), 0)
             except:
-                print('no')
                 proc['alive'] = False
 
             # Log snapshot
@@ -88,7 +87,7 @@ while True:
             wa_proc = Popen(command, shell=True, preexec_fn=os.setsid)
             proc_running.append({'job_tag':method_frame.delivery_tag,'command':command,'log_file':log_file, \
                                  'name':properties.headers['name'],'alive': True,\
-                                 'pid': wa_proc.pid, 'start_time': time.time()})
+                                 'pid': wa_proc.pid + 1, 'start_time': time.time()})
 
         if iter_count % 10 == 1:
             # Virtual memory usage
@@ -96,7 +95,10 @@ while True:
 
             # resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss
             for proc in proc_running:
-                proc['memory'] = psutil.Process(proc['pid']).memory_info()
+                try:
+                    proc['memory'] = psutil.Process(proc['pid']).memory_info()
+                except:
+                    proc['alive'] = False
 
             ElasticLogger().write_log('INFO', "GPU machine status", {'gpus':gpu_memory_mb(),'procs_running': proc_running,\
                                                       'num_procs_running':len(proc_running),}, push_bulk=True,print_log=True)
