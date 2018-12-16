@@ -20,11 +20,12 @@ class TestBidirectionalLM(ModelTestCase):
         training_tensors = self.dataset.as_tensor_dict()
         result = self.model(**training_tensors)
 
-        assert set(result) == {"loss", "forward_loss", "backward_loss", "lm_embeddings", "mask"}
+        assert set(result) == {"loss", "forward_loss", "backward_loss",
+                               "lm_embeddings", "character_embeddings", "mask"}
 
-        # The model should have removed the BOS / EOS tokens.
+        # The model should preserve the BOS / EOS tokens.
         embeddings = result["lm_embeddings"]
-        assert tuple(embeddings.shape) == (2, 6, 14)
+        assert tuple(embeddings.shape) == (2, 8, 14)
 
         loss = result["loss"].item()
         forward_loss = result["forward_loss"].item()
@@ -49,13 +50,14 @@ class TestBidirectionalLMTransformer(TestBidirectionalLM):
         training_tensors = self.dataset.as_tensor_dict()
         result = self.model(**training_tensors)
 
-        assert set(result) == {"loss", "forward_loss", "backward_loss", "lm_embeddings", "mask"}
+        assert set(result) == {"loss", "forward_loss", "backward_loss",
+                               "lm_embeddings", "character_embeddings", "mask"}
 
-        # The model should have removed the BOS / EOS tokens.
+        # The model should preserve the BOS / EOS tokens.
         embeddings = result["lm_embeddings"]
         # The BidirectionalLanguageModelTransformer uses input size * 2 as the output size unlike
         # a bidirectional LSTM, which uses hidden size * 2.
-        assert tuple(embeddings.shape) == (2, 6, 32)
+        assert tuple(embeddings.shape) == (2, 8, 32)
 
         loss = result["loss"].item()
         forward_loss = result["forward_loss"].item()
