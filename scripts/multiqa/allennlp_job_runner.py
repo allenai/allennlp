@@ -40,7 +40,7 @@ while True:
                 # Log snapshot
                 with open(proc['log_file'], 'r') as f:
                     log_data = f.readlines()
-                    proc['log_snapshot'] = ' '.join(log_data[-100:])
+                    proc['log_snapshot'] = ' '.join(log_data[-50:])
             except:
                 proc['alive'] = False
 
@@ -54,7 +54,7 @@ while True:
                 # checking if process successfully completed task,
                 # TODO this is an ugly check, but because we are forking with nohup, python does not provide any good alternative...
                 if proc['log_snapshot'].find('Traceback (most recent call last):') > -1 or \
-                    proc['log_snapshot'].find('error'):
+                    proc['log_snapshot'].find('error') > -1:
                     ElasticLogger().write_log('INFO', "Job died", proc, push_bulk=True,print_log=True)
 
                     # Requeue

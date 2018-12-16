@@ -239,6 +239,8 @@ class MultiQAReader(DatasetReader):
                     for key in answer_starts_offsets[doc_ind].keys():
                         if answer_starts_offsets[doc_ind][key][0] == old_ind:
                             filtered_answer_starts_offsets[doc_ind][key][0] = new_ind
+                        elif answer_starts_offsets[doc_ind][key][0] not in sorted_ix:
+                            filtered_answer_starts_offsets[doc_ind][key][0] = -1
             answer_starts_offsets = filtered_answer_starts_offsets
             paragraphs = filtered_paragraphs
 
@@ -294,6 +296,10 @@ class MultiQAReader(DatasetReader):
                                         (alias_start[1] != 'title' or self._use_document_titles):
                                     answer_start_norm = answer_starts_offsets[alias_start[0]][alias_start[1]][1] + alias_start[2]
                                     answer_start_paragraph = answer_starts_offsets[alias_start[0]][alias_start[1]][0]
+
+                                    # We could have pruned this paragraph
+                                    if answer_start_paragraph == -1:
+                                        continue
                                     span_starts_list[answer_type][qa_ind].append((answer_start_paragraph,answer_start_norm))
                                     span_ends_list[answer_type][qa_ind].append((answer_start_paragraph,answer_start_norm + len(alias['text'])))
 
