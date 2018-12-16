@@ -39,7 +39,7 @@ while True:
             # Log snapshot
             with open(proc['log_file'], 'r') as f:
                 log_data = f.readlines()
-                proc['log_snapshot'] = '\n'.join(log_data[-100:])
+                proc['log_snapshot'] = ' '.join(log_data[-100:])
 
             # Log time out handling TODO
             statbuf = os.stat(proc['log_file'])
@@ -84,7 +84,7 @@ while True:
                                  'log_file':log_file, \
                                  'name':properties.headers['name'],'alive': True,\
                                  'pid': wa_proc.pid+1, 'start_time': time.time()})
-            # we are not persistant for now ... 
+            # we are not persistant for now ...
             channel.basic_ack(proc['job_tag'])
             time.sleep(2)
 
