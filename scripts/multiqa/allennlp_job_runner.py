@@ -85,9 +85,10 @@ while True:
                 command = 'nohup ' + body.decode() + ' >& ' + log_file
 
             wa_proc = Popen(command, shell=True, preexec_fn=os.setsid)
-            proc_running.append({'job_tag':method_frame.delivery_tag,'command':command,'log_file':log_file, \
+            proc_running.append({'job_tag':method_frame.delivery_tag,'command':' '.join(psutil.Process(wa_proc.pid+1).cmdline()), \
+                                 'log_file':log_file, \
                                  'name':properties.headers['name'],'alive': True,\
-                                 'pid': wa_proc.pid + 1, 'start_time': time.time()})
+                                 'pid': wa_proc.pid+1, 'start_time': time.time()})
 
         if iter_count % 10 == 1:
             # Virtual memory usage
