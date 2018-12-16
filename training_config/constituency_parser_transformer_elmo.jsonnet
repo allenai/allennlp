@@ -18,7 +18,7 @@
       "text_field_embedder": {
         "token_embedders": {
             "elmo": {
-              "type": "bidirectional_token_embedder",
+              "type": "bidirectional_lm_token_embedder",
               "archive_file": std.extVar('BIDIRECTIONAL_LM_ARCHIVE_PATH'),
               "dropout": 0.2,
               "bos_eos_tokens": ["<S>", "</S>"],

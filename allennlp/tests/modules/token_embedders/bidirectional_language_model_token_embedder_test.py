@@ -3,7 +3,7 @@ from allennlp.common.testing import ModelTestCase
 from allennlp.data.dataset import Batch
 
 
-class TestBidirectionalTokenEmbedder(ModelTestCase):
+class TestBidirectionalLanguageModelTokenEmbedder(ModelTestCase):
     def setUp(self):
         super().setUp()
         self.set_up_model(self.FIXTURES_ROOT / 'bidirectional_lm' / 'characters_token_embedder.json',

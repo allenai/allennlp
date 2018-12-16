@@ -13,8 +13,8 @@ if TYPE_CHECKING:
     from allennlp.models.bidirectional_lm import BidirectionalLanguageModel
 
 
-@TokenEmbedder.register('bidirectional_token_embedder')
-class BidirectionalTokenEmbedder(TokenEmbedder):
+@TokenEmbedder.register('bidirectional_lm_token_embedder')
+class BidirectionalLanguageModelTokenEmbedder(TokenEmbedder):
     """
     Compute a single layer of representations from a bidirectional language model.
 
