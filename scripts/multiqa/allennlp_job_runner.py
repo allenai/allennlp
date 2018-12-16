@@ -46,8 +46,11 @@ while True:
 
 
             # Log time out handling TODO
-            statbuf = os.stat(proc['log_file'])
-            proc['log_update_diff'] = time.time() - statbuf.st_mtime
+            try:
+                statbuf = os.stat(proc['log_file'])
+                proc['log_update_diff'] = time.time() - statbuf.st_mtime
+            except:
+                print('file not found')
             #proc['log_update_diff'] > 2000:
 
             if not proc['alive']:
