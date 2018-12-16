@@ -102,7 +102,7 @@ A = TypeVar('A')
 
 def lazy_groups_of(iterator: Iterator[A], group_size: int) -> Iterator[List[A]]:
     """
-    Takes an iterator and batches the invididual instances into lists of the
+    Takes an iterator and batches the individual instances into lists of the
     specified size. The last list may be smaller if there are instances left over.
     """
     return iter(lambda: list(islice(iterator, 0, group_size)), [])
@@ -222,7 +222,7 @@ def prepare_global_logging(serialization_dir: str, file_friendly_logging: bool) 
     serializezation_dir : ``str``, required.
         The directory to stream logs to.
     file_friendly_logging : ``bool``, required.
-        Whether logs should clean the output to prevent carridge returns
+        Whether logs should clean the output to prevent carriage returns
         (used to update progress bars on a single terminal line). This
         option is typically only used if you are running in an environment
         without a terminal.
