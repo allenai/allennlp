@@ -85,7 +85,7 @@ while True:
                                  'name':properties.headers['name'],'alive': True,\
                                  'pid': wa_proc.pid+1, 'start_time': time.time()})
             # we are not persistant for now ...
-            channel.basic_ack(proc['job_tag'])
+            channel.basic_ack(method_frame.delivery_tag)
             time.sleep(2)
 
 
