@@ -33,13 +33,14 @@ while True:
             try:
                 print('checcking if process alive '  + str(proc['pid']))
                 os.killpg(os.getpgid(proc['pid']), 0)
+
+                # Log snapshot
+                with open(proc['log_file'], 'r') as f:
+                    log_data = f.readlines()
+                    proc['log_snapshot'] = ' '.join(log_data[-100:])
             except:
                 proc['alive'] = False
 
-            # Log snapshot
-            with open(proc['log_file'], 'r') as f:
-                log_data = f.readlines()
-                proc['log_snapshot'] = ' '.join(log_data[-100:])
 
             # Log time out handling TODO
             statbuf = os.stat(proc['log_file'])
