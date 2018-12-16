@@ -1,58 +1,98 @@
-from typing import Dict
+import json
+from typing import Dict, Tuple, TYPE_CHECKING
 
 import torch
 
-from allennlp.common.checks import ConfigurationError
+from allennlp.data import TokenIndexer, Vocabulary, Token
+from allennlp.models import load_archive
 from allennlp.modules import ScalarMix
-from allennlp.modules.text_field_embedders import TextFieldEmbedder
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
-from allennlp.modules.seq2seq_encoders import BidirectionalLanguageModelTransformer
-from allennlp.nn.util import device_mapping, get_text_field_mask, remove_sentence_boundaries
+from allennlp.nn.util import remove_sentence_boundaries, get_text_field_mask, add_sentence_boundary_token_ids
+
+if TYPE_CHECKING:
+    from allennlp.models import BidirectionalLanguageModel
 
 
 @TokenEmbedder.register('bidirectional_token_embedder')
 class BidirectionalTokenEmbedder(TokenEmbedder):
     """
-    Compute a single layer of representations from a bidirectional language model with a
-    transformer contextualizer.
+    Compute a single layer of representations from a bidirectional language model.
 
     Parameters
     ----------
-    weight_file : ``str``, required
-        An model weights file, e.g. best.th, from a BidirectionalLanguageModel trained using a
-        BidirectionalLanguageModelTransformer as a contextualizer.
-    text_field_embedder : ``TextFieldEmbedder``, required
-        Used to embed the character ids we get in ``forward``.
-    contextualizer : ``BidirectionalLanguageModelTransformer``, required
-        Used to "contextualize" the embeddings.
+    archive_file : ``str``, required
+        An archive file, typically model.tar.gz, from a BidirectionalLanguageModel. The
+        contextualizer used by the LM must satisfy two requirements:
+
+        1. It must have a num_layers field.
+        2. It must take a boolean return_all_layers parameter in its constructor.
+
+        See BidirectionalLanguageModelTransformer for their definitions.
+
     dropout : ``float``, optional.
         The dropout value to be applied to the representations.
+    bos_eos_tokens : ``Tuple[str, str]``, optional (default=``None``)
+        These will be indexed and placed around the indexed tokens. Necessary if the language model
+        was trained with them, but they were injected external to an indexer.
     remove_bos_eos: ``bool``, optional (default: True)
-        Typically the provided token indexes will be augmented with
-        begin-sentence and end-sentence tokens. If this flag is True
-        the corresponding embeddings will be removed from the return values.
+        Typically the provided token indexes will be augmented with begin-sentence and end-sentence
+        tokens. (Alternatively, you can pass bos_eos_tokens.) If this flag is True the
+        corresponding embeddings will be removed from the return values.
+
+        Warning: This only removes a single start and single end token!
     requires_grad : ``bool``, optional (default: False)
         If True, compute gradient of bidirectional language model parameters for fine tuning.
     """
     def __init__(self,
-                 weight_file: str,
-                 text_field_embedder: TextFieldEmbedder,
-                 contextualizer: BidirectionalLanguageModelTransformer,
+                 archive_file: str,
                  dropout: float = None,
+                 bos_eos_tokens: Tuple[str, str] = ("<S>", "</S>"),
                  remove_bos_eos: bool = True,
                  requires_grad: bool = False) -> None:
         super().__init__()
-        self._text_field_embedder = text_field_embedder
 
-        if not contextualizer.is_bidirectional():
-            raise ConfigurationError("contextualizer must be bidirectional")
-        if not contextualizer._return_all_layers:
-            raise ConfigurationError("contextualizer must return all layers")
+        overrides = {
+            "model": {
+                "contextualizer": {
+                    "return_all_layers": True
+                }
+            }
+        }
 
-        self._contextualizer = contextualizer
-        # The dimension for making predictions just in the forward
-        # (or backward) direction.
-        self._forward_dim = contextualizer.get_output_dim() // 2
+        # Load LM and the associated config.
+        archive = load_archive(archive_file, overrides=json.dumps(overrides))
+        self._lm: BidirectionalLanguageModel = archive.model
+        self._lm._softmax_loss = None
+        config = archive.config
+        dict_config = config.as_dict(quiet=True)
+
+        # Extract the name of the tokens that the LM was trained on.
+        token_names = list(dict_config["model"]["text_field_embedder"]["token_embedders"].keys())
+        if len(token_names) != 1:
+            # A TokenEmbedder embeds a single set of indices. If the LM was trained with multiple embedders, and
+            # thus indices, we won't be able to embed a single set of indices here.
+            #
+            # Note: We only care about embedded indices. This does not include "tokens" which is just used to
+            # compute the loss in BidirectionalLanguageModel.
+            raise RuntimeError(f"LM from {archive_file} trained with multiple embedders!")
+        self._token_name = token_names[0]
+
+        # TODO(brendanr): Remove this hack once we have proven we can train without using the
+        # ELMoTokenCharactersIndexer. For the equivalent hack in the ELMo embedder see
+        # https://github.com/allenai/allennlp/blob/master/allennlp/modules/elmo.py#L590.
+        if bos_eos_tokens:
+            dataset_reader_config = config.get("dataset_reader")
+            if dataset_reader_config.get("type") == "multiprocess":
+                dataset_reader_config = dataset_reader_config.get("base_reader")
+            token_indexer_config = dataset_reader_config.get("token_indexers").get(self._token_name)
+            token_indexer = TokenIndexer.from_params(token_indexer_config)
+            token_list = [Token(token) for token in bos_eos_tokens]
+            bos_eos_indices = token_indexer.tokens_to_indices(token_list, self._lm.vocab, "key")["key"]
+            self._bos_indices = torch.tensor(bos_eos_indices[0])
+            self._eos_indices = torch.tensor(bos_eos_indices[1])
+        else:
+            self._bos_indices = None
+            self._eos_indices = None
 
         if dropout:
             self._dropout = torch.nn.Dropout(dropout)
@@ -60,18 +100,14 @@ class BidirectionalTokenEmbedder(TokenEmbedder):
             self._dropout = lambda x: x
 
         self._remove_bos_eos = remove_bos_eos
-        self._scalar_mix = ScalarMix(mixture_size=contextualizer.num_layers + 1, do_layer_norm=False, trainable=True)
+        num_layers = self._lm._contextualizer.num_layers + 1
+        self._scalar_mix = ScalarMix(mixture_size=num_layers, do_layer_norm=False, trainable=True)
 
-        state_dict = torch.load(weight_file, map_location=device_mapping(-1))
-        self.load_state_dict(state_dict, strict=False)
-
-        for param in self._text_field_embedder.parameters():
-            param.requires_grad = requires_grad
-        for param in self._contextualizer.parameters():
+        for param in self._lm.parameters():
             param.requires_grad = requires_grad
 
     def get_output_dim(self) -> int:
-        return self._contextualizer.output_dim
+        return self._lm._contextualizer.output_dim
 
     def forward(self,  # type: ignore
                 inputs: torch.Tensor) -> Dict[str, torch.Tensor]:
@@ -79,7 +115,8 @@ class BidirectionalTokenEmbedder(TokenEmbedder):
         Parameters
         ----------
         inputs: ``torch.Tensor``
-            Shape ``(batch_size, timesteps, 50)`` of character ids representing the current batch.
+            Shape ``(batch_size, timesteps, ...)`` of token ids representing the current batch.
+            These must have been produced using the same indexer the LM was trained on.
 
         Returns
         -------
@@ -87,26 +124,38 @@ class BidirectionalTokenEmbedder(TokenEmbedder):
         ``(batch_size, timesteps, embedding_dim)``
         """
         # pylint: disable=arguments-differ
-        source = {"token_characters": inputs}
-        mask = get_text_field_mask(source)
+        if self._bos_indices is not None:
+            mask = get_text_field_mask({"": inputs})
+            inputs, _ = add_sentence_boundary_token_ids(
+                inputs, mask, self._bos_indices, self._eos_indices
+            )
 
-        # shape (batch_size, sentence_length + 2, embedding_size)
-        embeddings = self._text_field_embedder(source)
+        source = {self._token_name: inputs}
+        result_dict = self._lm(source)
 
-        contextual_embeddings = self._contextualizer(embeddings, mask)
+        # shape (batch_size, timesteps, embedding_size)
+        character_embeddings = result_dict["character_embeddings"]
+        contextual_embeddings = result_dict["lm_embeddings"]
 
-        # To match contextualized dimension.
-        double_character_embeddings = torch.cat([embeddings, embeddings], -1)
-        if double_character_embeddings.size(-1) != contextual_embeddings[0].size(-1):
-            raise Exception("Incorrect sizes")
+        character_dim = character_embeddings.size(-1)
+        contextual_dim = contextual_embeddings[0].size(-1)
 
-        contextual_embeddings.append(double_character_embeddings)
+        if not contextual_dim % character_dim == 0 or character_dim > contextual_dim:
+            raise RuntimeError(f"Contextual dimension {contextual_dim} " +
+                               f"not compatible with character dimension {character_dim}")
+        duplication_count = contextual_dim // character_dim
+
+        # Typically character embeddings are smaller than contextualized embeddings. Since we're
+        # averaging the character embeddings along with all the contextualized layers we need to
+        # make their dimensions match. Simply repeating the character embeddings is a crude, but
+        # effective, way to do this.
+        duplicated_character_embeddings = torch.cat([character_embeddings] * duplication_count, -1)
+        contextual_embeddings.append(duplicated_character_embeddings)
         averaged_embeddings = self._scalar_mix(contextual_embeddings)
 
-        # add dropout
+        # Add dropout
         averaged_embeddings = self._dropout(averaged_embeddings)
-
         if self._remove_bos_eos:
-            averaged_embeddings, mask = remove_sentence_boundaries(averaged_embeddings, mask)
+            averaged_embeddings, _ = remove_sentence_boundaries(averaged_embeddings, mask)
 
         return averaged_embeddings

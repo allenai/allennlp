@@ -18,49 +18,12 @@
       "text_field_embedder": {
         "token_embedders": {
             "elmo": {
-                "type": "bidirectional_token_embedder",
-                "dropout": 0.2,
-                "weight_file": std.extVar('BIDIRECTIONAL_LM_WEIGHTS_PATH'),
-                "text_field_embedder": {
-                  # Note: This is because we only use the token_characters
-                  # during embedding, not the tokens themselves.
-                  "allow_unmatched_keys": true,
-                  "token_embedders": {
-                    "token_characters": {
-                        "type": "character_encoding",
-                        "embedding": {
-                            "num_embeddings": 262,
-                            "embedding_dim": 16
-                        },
-                        "encoder": {
-                            "type": "cnn-highway",
-                            "activation": "relu",
-                            "embedding_dim": 16,
-                            "filters": [
-                                [1, 32],
-                                [2, 32],
-                                [3, 64],
-                                [4, 128],
-                                [5, 256],
-                                [6, 512],
-                                [7, 1024]],
-                            "num_highway": 2,
-                            "projection_dim": 512,
-                            "projection_location": "after_highway",
-                            "do_layer_norm": true
-                        }
-                    }
-                  }
-                },
-                "remove_bos_eos": false,
-                "contextualizer": {
-                    "input_dim": 512,
-                    "hidden_dim": 2048,
-                    "num_layers": 6,
-                    "dropout": 0.1,
-                    "input_dropout": 0.1,
-		            "return_all_layers": true
-                }
+              "type": "bidirectional_token_embedder",
+              "archive_file": std.extVar('BIDIRECTIONAL_LM_ARCHIVE_PATH'),
+              "dropout": 0.2,
+              "bos_eos_tokens": ["<S>", "</S>"],
+              "remove_bos_eos": true,
+              "requires_grad": true
             }
         }
       },

@@ -24,37 +24,11 @@
           },
           "elmo": {
             "type": "bidirectional_token_embedder",
-            "weight_file": "allennlp/tests/fixtures/bidirectional_lm/lm_weights.th",
-            "text_field_embedder": {
-              "allow_unmatched_keys": true,
-              "token_embedders": {
-                "token_characters": {
-                  "type": "character_encoding",
-                  "embedding": {
-                    "num_embeddings": 262,
-                    "embedding_dim": 4
-                  },
-                  "encoder": {
-                    "type": "cnn-highway",
-                    "activation": "relu",
-                    "embedding_dim": 4,
-                    "filters": [[1, 4], [2, 8], [3, 16], [4, 32], [5, 64]],
-                    "num_highway": 2,
-                    "projection_dim": 16,
-                    "projection_location": "after_cnn"
-                  }
-                }
-              }
-            },
-            "remove_bos_eos": false,
-            "contextualizer": {
-              "return_all_layers": true,
-              "input_dim": 16,
-              "hidden_dim": 7,
-              "num_layers": 3,
-              "dropout": 0.1,
-              "input_dropout": 0.1
-            }
+            "archive_file": "allennlp/tests/fixtures/bidirectional_lm/model.tar.gz",
+            "dropout": 0.2,
+            "bos_eos_tokens": ["<S>", "</S>"],
+            "remove_bos_eos": true,
+            "requires_grad": true
           }
         }
       },

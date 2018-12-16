@@ -9,7 +9,7 @@ from allennlp.models.model import Model
 from allennlp.modules.text_field_embedders import TextFieldEmbedder
 from allennlp.modules.sampled_softmax_loss import SampledSoftmaxLoss
 from allennlp.modules.seq2seq_encoders import Seq2SeqEncoder
-from allennlp.nn.util import get_text_field_mask, remove_sentence_boundaries
+from allennlp.nn.util import get_text_field_mask
 from allennlp.nn import InitializerApplicator
 
 
@@ -72,10 +72,6 @@ class BidirectionalLanguageModel(Model):
         This scaling factor is applied to the average language model loss.
         You can also specify ``"n_samples"`` in which case we compute total
         loss across all predictions.
-    remove_bos_eos: ``bool``, optional (default: True)
-        Typically the provided token indexes will be augmented with
-        begin-sentence and end-sentence tokens. If this flag is True
-        the corresponding embeddings will be removed from the return values.
     num_samples: ``int``, optional (default: None)
         If provided, the model will use ``SampledSoftmaxLoss``
         with the specified number of samples. Otherwise, it will use
@@ -89,7 +85,6 @@ class BidirectionalLanguageModel(Model):
                  contextualizer: Seq2SeqEncoder,
                  dropout: float = None,
                  loss_scale: Union[float, str] = 1.0,
-                 remove_bos_eos: bool = True,
                  num_samples: int = None,
                  sparse_embeddings: bool = False,
                  initializer: InitializerApplicator = None) -> None:
@@ -123,7 +118,6 @@ class BidirectionalLanguageModel(Model):
             self._dropout = lambda x: x
 
         self._loss_scale = loss_scale
-        self._remove_bos_eos = remove_bos_eos
         if initializer is not None:
             initializer(self)
 
@@ -218,65 +212,61 @@ class BidirectionalLanguageModel(Model):
         # pylint: disable=arguments-differ
         mask = get_text_field_mask(source)
 
-        # We must have token_ids so that we can compute targets
-        token_ids = source.get("tokens")
-        if token_ids is None:
-            raise ConfigurationError("Your data must have a 'tokens': SingleIdTokenIndexer() "
-                                     "in order to use the BidirectionalLM")
-
-        # Use token_ids to compute targets
-        forward_targets = torch.zeros_like(token_ids)
-        backward_targets = torch.zeros_like(token_ids)
-        forward_targets[:, 0:-1] = token_ids[:, 1:]
-        backward_targets[:, 1:] = token_ids[:, 0:-1]
-
-        # shape (batch_size, timesteps + 2, embedding_size)
+        # shape (batch_size, timesteps, embedding_size)
         embeddings = self._text_field_embedder(source)
-
         contextual_embeddings = self._contextualizer(embeddings, mask)
 
-        # add dropout
-        contextual_embeddings = self._dropout(contextual_embeddings)
+        return_dict = {}
 
-        # compute softmax loss
-        forward_loss, backward_loss = self._compute_loss(contextual_embeddings,
-                                                         embeddings,
-                                                         forward_targets,
-                                                         backward_targets)
+        # If we have target tokens, calculate the loss.
+        token_ids = source.get("tokens")
+        if token_ids is not None:
+            # Use token_ids to compute targets
+            forward_targets = torch.zeros_like(token_ids)
+            backward_targets = torch.zeros_like(token_ids)
+            forward_targets[:, 0:-1] = token_ids[:, 1:]
+            backward_targets[:, 1:] = token_ids[:, 0:-1]
 
-        num_targets = torch.sum((forward_targets > 0).long())
-        if num_targets > 0:
-            average_loss = 0.5 * (forward_loss + backward_loss) / num_targets.float()
-        else:
-            average_loss = torch.tensor(0.0).to(forward_targets.device)  # pylint: disable=not-callable
-        # this is stored to compute perplexity if needed
-        self._last_average_loss[0] = average_loss.detach().item()
+            # add dropout
+            contextual_embeddings = self._dropout(contextual_embeddings)
 
-        if num_targets > 0:
-            # loss is directly minimized
-            if self._loss_scale == 'n_samples':
-                scale_factor = num_targets.float()
+            # compute softmax loss
+            forward_loss, backward_loss = self._compute_loss(contextual_embeddings,
+                                                             embeddings,
+                                                             forward_targets,
+                                                             backward_targets)
+
+            num_targets = torch.sum((forward_targets > 0).long())
+            if num_targets > 0:
+                average_loss = 0.5 * (forward_loss + backward_loss) / num_targets.float()
             else:
-                scale_factor = self._loss_scale
+                average_loss = torch.tensor(0.0).to(forward_targets.device)  # pylint: disable=not-callable
+            # this is stored to compute perplexity if needed
+            self._last_average_loss[0] = average_loss.detach().item()
 
-            return_dict = {
-                    'loss': average_loss * scale_factor,
-                    'forward_loss': forward_loss * scale_factor / num_targets.float(),
-                    'backward_loss': backward_loss * scale_factor / num_targets.float()
-            }
-        else:
-            # average_loss zero tensor, return it for all
-            return_dict = {
+            if num_targets > 0:
+                # loss is directly minimized
+                if self._loss_scale == 'n_samples':
+                    scale_factor = num_targets.float()
+                else:
+                    scale_factor = self._loss_scale
+
+                return_dict.update({
+                        'loss': average_loss * scale_factor,
+                        'forward_loss': forward_loss * scale_factor / num_targets.float(),
+                        'backward_loss': backward_loss * scale_factor / num_targets.float()
+                })
+            else:
+                # average_loss zero tensor, return it for all
+                return_dict.update({
                     'loss': average_loss,
                     'forward_loss': average_loss,
                     'backward_loss': average_loss
-            }
-
-        if self._remove_bos_eos:
-            contextual_embeddings, mask = remove_sentence_boundaries(contextual_embeddings, mask)
+            })
 
         return_dict.update({
                 'lm_embeddings': contextual_embeddings,
+                'character_embeddings': embeddings,
                 'mask': mask
         })
 
