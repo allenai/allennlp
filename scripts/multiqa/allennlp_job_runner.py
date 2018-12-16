@@ -111,7 +111,7 @@ while True:
             for proc in proc_running:
                 try:
                     proc['memory'] = psutil.Process(proc['pid']).memory_info()
-                    proc['command'] = ' '.join(psutil.Process(wa_proc.pid+1).cmdline())
+                    #proc['command'] = ' '.join(psutil.Process(wa_proc.pid+1).cmdline())
                 except:
                     proc['alive'] = False
 
