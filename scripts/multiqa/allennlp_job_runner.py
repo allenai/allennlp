@@ -19,6 +19,8 @@ channel = connection.channel()
 parser = argparse.ArgumentParser()
 parser.add_argument("channel", type=str,
                         help="RabbitMQ channel")
+parser.add_argument("--shell", type=str, default="not_bash",
+                        help="RabbitMQ channel")
 args = parser.parse_args()
 
 proc_running = []
@@ -85,7 +87,10 @@ while True:
 
 
             log_file = properties.headers['name'] + '.txt'
-            command = 'nohup ' + body.decode() + ' >& ' + log_file
+            if args.shell == 'bash':
+                command = 'nohup ' + body.decode() + ' > ' + log_file + ' &'
+            else:
+                command = 'nohup ' + body.decode() + ' >& ' + log_file
 
             wa_proc = Popen(command, shell=True, preexec_fn=os.setsid)
             proc_running.append({'job_tag':method_frame.delivery_tag,'command':command, \
