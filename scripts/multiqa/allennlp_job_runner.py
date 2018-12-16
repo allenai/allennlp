@@ -82,7 +82,7 @@ while True:
 
             wa_proc = Popen(command, shell=True, preexec_fn=os.setsid)
             proc_running.append({'job_tag':method_frame.delivery_tag,'command':command, \
-                                 'log_file':log_file, \
+                                 'log_file':log_file, 'log_snapshot':'',\
                                  'name':properties.headers['name'],'alive': True,\
                                  'pid': wa_proc.pid+1, 'start_time': time.time()})
             # we are not persistant for now ...
