@@ -86,11 +86,11 @@ while True:
             print(body)
 
 
-            log_file = properties.headers['name'] + '.txt'
+            log_file = 'logs/' + properties.headers['name'] + '.txt'
             if args.shell == 'bash':
                 command = 'nohup ' + body.decode() + ' &'
             else:
-                command = 'nohup ' + body.decode() + ' & '
+                command = 'nohup ' + body.decode() + ' &'
             print(command)
             with open(log_file,'wb') as f:
                 wa_proc = Popen(command, shell=True, preexec_fn=os.setsid,stdout=f,stderr=f)
@@ -121,7 +121,7 @@ while True:
             ElasticLogger().write_log('INFO', "Machine Status", {'gpus':gpu_memory_mb(),\
                                                       'num_procs_running':len(proc_running),}, push_bulk=True,print_log=True)
 
-        time.sleep(5)
+        time.sleep(6)
 
 
     except:
