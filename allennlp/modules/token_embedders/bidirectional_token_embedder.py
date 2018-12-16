@@ -3,7 +3,7 @@ from typing import Dict, Tuple, TYPE_CHECKING
 
 import torch
 
-from allennlp.data import TokenIndexer, Vocabulary, Token
+from allennlp.data import TokenIndexer, Token
 from allennlp.models import load_archive
 from allennlp.modules import ScalarMix
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
@@ -52,16 +52,17 @@ class BidirectionalTokenEmbedder(TokenEmbedder):
         super().__init__()
 
         overrides = {
-            "model": {
-                "contextualizer": {
-                    "return_all_layers": True
+                "model": {
+                        "contextualizer": {
+                                "return_all_layers": True
+                        }
                 }
-            }
         }
 
         # Load LM and the associated config.
         archive = load_archive(archive_file, overrides=json.dumps(overrides))
         self._lm: BidirectionalLanguageModel = archive.model
+        # pylint: disable=protected-access
         self._lm._softmax_loss = None
         config = archive.config
         dict_config = config.as_dict(quiet=True)
@@ -88,8 +89,8 @@ class BidirectionalTokenEmbedder(TokenEmbedder):
             token_indexer = TokenIndexer.from_params(token_indexer_config)
             token_list = [Token(token) for token in bos_eos_tokens]
             bos_eos_indices = token_indexer.tokens_to_indices(token_list, self._lm.vocab, "key")["key"]
-            self._bos_indices = torch.tensor(bos_eos_indices[0])
-            self._eos_indices = torch.tensor(bos_eos_indices[1])
+            self._bos_indices = torch.Tensor(bos_eos_indices[0])
+            self._eos_indices = torch.Tensor(bos_eos_indices[1])
         else:
             self._bos_indices = None
             self._eos_indices = None
@@ -108,20 +109,20 @@ class BidirectionalTokenEmbedder(TokenEmbedder):
 
         if not contextual_dim % character_dim == 0 or character_dim > contextual_dim:
             raise RuntimeError(
-                "The output dimensions for the text_field_embedder " +
-                f"({character_dim}) and the contextualizer ({contextual_dim})" +
-                f" from the language model loaded from {archive_file} are " +
-                "not compatible. Please check the config used to train that " +
-                "model and ensure that the output dimension of the " +
-                "text_field_embedder divides the output dimension of the " +
-                "contextualizer.")
+                    "The output dimensions for the text_field_embedder " +
+                    f"({character_dim}) and the contextualizer ({contextual_dim})" +
+                    f" from the language model loaded from {archive_file} are " +
+                    "not compatible. Please check the config used to train that " +
+                    "model and ensure that the output dimension of the " +
+                    "text_field_embedder divides the output dimension of the " +
+                    "contextualizer.")
         self._character_embedding_duplication_count = contextual_dim // character_dim
 
         for param in self._lm.parameters():
             param.requires_grad = requires_grad
 
     def get_output_dim(self) -> int:
-        return self._lm._contextualizer.output_dim
+        return self._lm._contextualizer.get_output_dim() # pylint: disable=protected-access
 
     def forward(self,  # type: ignore
                 inputs: torch.Tensor) -> Dict[str, torch.Tensor]:
@@ -141,7 +142,7 @@ class BidirectionalTokenEmbedder(TokenEmbedder):
         if self._bos_indices is not None:
             mask = get_text_field_mask({"": inputs})
             inputs, _ = add_sentence_boundary_token_ids(
-                inputs, mask, self._bos_indices, self._eos_indices
+                    inputs, mask, self._bos_indices, self._eos_indices
             )
 
         source = {self._token_name: inputs}
@@ -156,7 +157,7 @@ class BidirectionalTokenEmbedder(TokenEmbedder):
         # make their dimensions match. Simply repeating the character embeddings is a crude, but
         # effective, way to do this.
         duplicated_character_embeddings = torch.cat(
-            [character_embeddings] * self._character_embedding_duplication_count, -1
+                [character_embeddings] * self._character_embedding_duplication_count, -1
         )
         contextual_embeddings.append(duplicated_character_embeddings)
         averaged_embeddings = self._scalar_mix(contextual_embeddings)
