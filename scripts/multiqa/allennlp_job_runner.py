@@ -33,7 +33,10 @@ while True:
             try:
                 print('checcking if process alive '  + str(proc['pid']))
                 os.killpg(os.getpgid(proc['pid']), 0)
+            except:
+                proc['alive'] = False
 
+            try:
                 # Log snapshot
                 with open(proc['log_file'], 'r') as f:
                     log_data = f.readlines()
