@@ -88,12 +88,12 @@ while True:
 
             log_file = properties.headers['name'] + '.txt'
             if args.shell == 'bash':
-                command = 'nohup ' + body.decode() + ' > ' + log_file + ' &'
+                command = 'nohup ' + body.decode() + ' &'
             else:
-                command = 'nohup ' + body.decode() + ' >& ' + log_file
+                command = 'nohup ' + body.decode() + ' & '
             print(command)
-
-            wa_proc = Popen(command, shell=True, preexec_fn=os.setsid)
+            with open(log_file,'wb') as f:
+                wa_proc = Popen(command, shell=True, preexec_fn=os.setsid,stdout=f,stderr=f)
             proc_running.append({'job_tag':method_frame.delivery_tag,'command':command, \
                                  'log_file':log_file, 'log_snapshot':'',\
                                  'name':properties.headers['name'],'alive': True,\
