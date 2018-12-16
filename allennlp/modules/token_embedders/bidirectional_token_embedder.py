@@ -4,13 +4,13 @@ from typing import Dict, Tuple, TYPE_CHECKING
 import torch
 
 from allennlp.data import TokenIndexer, Token
-from allennlp.models import load_archive
-from allennlp.modules import ScalarMix
+from allennlp.models.archival import load_archive
+from allennlp.modules.scalar_mix import ScalarMix
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 from allennlp.nn.util import remove_sentence_boundaries, get_text_field_mask, add_sentence_boundary_token_ids
 
 if TYPE_CHECKING:
-    from allennlp.models import BidirectionalLanguageModel
+    from allennlp.models.bidirectional_lm import BidirectionalLanguageModel
 
 
 @TokenEmbedder.register('bidirectional_token_embedder')
@@ -86,7 +86,7 @@ class BidirectionalTokenEmbedder(TokenEmbedder):
             if dataset_reader_config.get("type") == "multiprocess":
                 dataset_reader_config = dataset_reader_config.get("base_reader")
             token_indexer_config = dataset_reader_config.get("token_indexers").get(self._token_name)
-            token_indexer = TokenIndexer.from_params(token_indexer_config)
+            token_indexer: TokenIndexer = TokenIndexer.from_params(token_indexer_config)
             token_list = [Token(token) for token in bos_eos_tokens]
             bos_eos_indices = token_indexer.tokens_to_indices(token_list, self._lm.vocab, "key")["key"]
             self._bos_indices = torch.Tensor(bos_eos_indices[0])
