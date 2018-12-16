@@ -551,9 +551,9 @@ class WikiTablesVariableFreeExecutor:
         elif isinstance(expression_evaluation, str):
             filter_value = expression_evaluation
         else:
-            raise ExecutionError(f"Unexprected filter value for filter_in: {value_expression}")
+            raise ExecutionError(f"Unexpected filter value for filter_in: {value_expression}")
         if not isinstance(filter_value, str):
-            raise ExecutionError(f"Unexprected filter value for filter_in: {value_expression}")
+            raise ExecutionError(f"Unexpected filter value for filter_in: {value_expression}")
         # Assuming filter value has underscores for spaces. The cell values also have underscores
         # for spaces, so we do not need to replace them here.
         result_list = []
@@ -579,9 +579,9 @@ class WikiTablesVariableFreeExecutor:
         elif isinstance(expression_evaluation, str):
             filter_value = expression_evaluation
         else:
-            raise ExecutionError(f"Unexprected filter value for filter_in: {value_expression}")
+            raise ExecutionError(f"Unexpected filter value for filter_in: {value_expression}")
         if not isinstance(filter_value, str):
-            raise ExecutionError(f"Unexprected filter value for filter_in: {value_expression}")
+            raise ExecutionError(f"Unexpected filter value for filter_in: {value_expression}")
         # Assuming filter value has underscores for spaces. The cell values also have underscores
         # for spaces, so we do not need to replace them here.
         result_list = []
