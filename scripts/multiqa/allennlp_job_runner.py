@@ -107,7 +107,9 @@ while True:
                 except:
                     proc['alive'] = False
 
-            ElasticLogger().write_log('INFO', "GPU machine status", {'gpus':gpu_memory_mb(),'procs_running': proc_running,\
+                ElasticLogger().write_log('INFO', "Job Status",proc,push_bulk=True, print_log=True)
+
+            ElasticLogger().write_log('INFO', "Machine Status", {'gpus':gpu_memory_mb(),\
                                                       'num_procs_running':len(proc_running),}, push_bulk=True,print_log=True)
 
         time.sleep(5)
