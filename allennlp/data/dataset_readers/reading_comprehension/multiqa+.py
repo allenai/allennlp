@@ -1,7 +1,7 @@
 import json
 import logging
 from typing import Any, Dict, List, Tuple
-import zipfile,re
+import zipfile,re, copy
 
 from overrides import overrides
 
@@ -13,6 +13,88 @@ from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
 from allennlp.data.tokenizers import Token, Tokenizer, WordTokenizer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
+from sklearn.feature_extraction.text import TfidfVectorizer
+import numpy as np
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics import pairwise_distances
+from nltk.corpus import stopwords
+import string
+
+class NltkPlusStopWords():
+    """ Configurablable access to stop word """
+
+    def __init__(self, punctuation=False):
+        self._words = None
+        self.punctuation = punctuation
+
+    @property
+    def words(self):
+        if self._words is None:
+            self._words = set(stopwords.words('english'))
+            # Common question words we probably want to ignore, "de" was suprisingly common
+            # due to its appearance in person names
+            self._words.update(["many", "how", "de"])
+            if self.punctuation:
+                self._words.update(string.punctuation)
+                self._words.update(["£", "€", "¥", "¢", "₹", "\u2212",
+                                    "\u2014", "\u2013", "\ud01C", "\u2019", "\u201D", "\u2018", "\u00B0"])
+        return self._words
+
+
+class Paragraph_TfIdf_Scoring():
+    # Hard coded weight learned from a logistic regression classifier
+    TFIDF_W = 5.13365065
+    LOG_WORD_START_W = 0.46022765
+    FIRST_W = -0.08611607
+    LOWER_WORD_W = 0.0499123
+    WORD_W = -0.15537181
+
+    def __init__(self, n_to_select):
+        self.n_to_select = n_to_select
+        self._stop = NltkPlusStopWords(True).words
+        self._tfidf = TfidfVectorizer(strip_accents="unicode", stop_words=self._stop)
+
+    def score_paragraphs(self, question, paragraphs):
+        tfidf = self._tfidf
+        text = paragraphs
+        try:
+            para_features = tfidf.fit_transform(text)
+            q_features = tfidf.transform([" ".join(question)])
+        except ValueError:
+            return []
+
+        q_words = {x for x in question if x.lower() not in self._stop}
+        q_words_lower = {x.lower() for x in q_words}
+        word_matches_features = np.zeros((len(paragraphs), 2))
+        for para_ix, para in enumerate(paragraphs):
+            found = set()
+            found_lower = set()
+            for sent in para:
+                for word in sent:
+                    if word in q_words:
+                        found.add(word)
+                    elif word.lower() in q_words_lower:
+                        found_lower.add(word.lower())
+            word_matches_features[para_ix, 0] = len(found)
+            word_matches_features[para_ix, 1] = len(found_lower)
+
+        tfidf = pairwise_distances(q_features, para_features, "cosine").ravel()
+        # TODO 0 represents if this paragraph start a real paragraph (number > 0 represents the
+        # paragraph was split. when we split paragraphs we need to take care of this...
+        starts = np.array([0 for p in paragraphs])
+        log_word_start = np.log(starts/400.0 + 1)
+        first = starts == 0
+        scores = tfidf * self.TFIDF_W + self.LOG_WORD_START_W * log_word_start + self.FIRST_W * first +\
+                 self.LOWER_WORD_W * word_matches_features[:, 1] + self.WORD_W * word_matches_features[:, 0]
+        return scores
+
+    def prune(self, question, paragraphs):
+        scores = self.score_paragraphs(question, paragraphs)
+        sorted_ix = np.argsort(scores)
+
+        return [paragraphs[i] for i in sorted_ix[:self.n_to_select]]
+
 
 
 @DatasetReader.register("multiqa+")
@@ -54,10 +136,18 @@ class MultiQAReader(DatasetReader):
         self._max_context_size = max_context_size
         self._use_document_titles = use_document_titles
         self._num_of_examples_to_sample = num_of_examples_to_sample
+        self._para_tfidf_scoring = Paragraph_TfIdf_Scoring(15)
 
     @overrides
     def _read(self, file_path: str):
         logger.info("Reading the dataset")
+
+        # TODO, this is obviously very ugly, but we can't currently get which input is this
+        # from the AllenNLP environment
+        if file_path.find('_dev.json')>-1:
+            is_dev_set = True
+        else:
+            is_dev_set = False
 
         # supporting multi dataset training:
         contexts = []
@@ -100,9 +190,6 @@ class MultiQAReader(DatasetReader):
                 # Split when number of tokens is larger than _max_context_size.
                 tokens_to_add  = self._tokenizer.tokenize(text_to_add)
                 if len(temp_tokenized_paragraph) + len(tokens_to_add) > self._max_context_size:
-                    # stop adding paragraphs if reached _max_context_docs
-                    if curr_paragraph + 1 >= self._max_context_docs:
-                        break
 
                     ## Split Paragraphs ##
                     temp_tokenized_paragraph = []
@@ -135,7 +222,25 @@ class MultiQAReader(DatasetReader):
                 if offset != len(paragraphs[curr_paragraph]):
                     raise ValueError()
 
+            # scoring each paragraph, and pruning
+            # TODO only supporting one question for now
+            tokenized_question = self._tokenizer.tokenize(context['qas'][0]['question'])
+            tokenized_question_str = [str(token) for token in tokenized_question]
+            scores = self._para_tfidf_scoring.score_paragraphs(tokenized_question_str,paragraphs)
+            sorted_ix = np.argsort(scores)[:self._max_context_docs]
 
+            # TODO this is ugly
+            filtered_paragraphs = []
+            filtered_answer_starts_offsets = copy.deepcopy(answer_starts_offsets)
+            for new_ind,old_ind in enumerate(sorted_ix):
+                filtered_paragraphs.append(paragraphs[old_ind])
+
+                for doc_ind in range(len(answer_starts_offsets)):
+                    for key in answer_starts_offsets[doc_ind].keys():
+                        if answer_starts_offsets[doc_ind][key][0] == old_ind:
+                            filtered_answer_starts_offsets[doc_ind][key][0] = new_ind
+            answer_starts_offsets = filtered_answer_starts_offsets
+            paragraphs = filtered_paragraphs
 
             # Discarding context that are too long (when len is 0 that means we breaked from context loop)
             # TODO this is mainly relevant when we do not split large paragraphs.
@@ -202,6 +307,7 @@ class MultiQAReader(DatasetReader):
                                             raise ValueError("answers and paragraph not aligned!")
 
             # Filtering the context documents
+            # TODO add an option not to do this for validation sets,
 
 
             # If answer was not found in this question do not yield an instance
