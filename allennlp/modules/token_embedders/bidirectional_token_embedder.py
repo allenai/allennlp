@@ -103,6 +103,20 @@ class BidirectionalTokenEmbedder(TokenEmbedder):
         num_layers = self._lm._contextualizer.num_layers + 1
         self._scalar_mix = ScalarMix(mixture_size=num_layers, do_layer_norm=False, trainable=True)
 
+        character_dim = self._lm._text_field_embedder.get_output_dim()
+        contextual_dim = self._lm._contextualizer.get_output_dim()
+
+        if not contextual_dim % character_dim == 0 or character_dim > contextual_dim:
+            raise RuntimeError(
+                "The output dimensions for the text_field_embedder " +
+                f"({character_dim}) and the contextualizer ({contextual_dim})" +
+                f" from the language model loaded from {archive_file} are " +
+                "not compatible. Please check the config used to train that " +
+                "model and ensure that the output dimension of the " +
+                "text_field_embedder divides the output dimension of the " +
+                "contextualizer.")
+        self._character_embedding_duplication_count = contextual_dim // character_dim
+
         for param in self._lm.parameters():
             param.requires_grad = requires_grad
 
@@ -137,19 +151,13 @@ class BidirectionalTokenEmbedder(TokenEmbedder):
         character_embeddings = result_dict["character_embeddings"]
         contextual_embeddings = result_dict["lm_embeddings"]
 
-        character_dim = character_embeddings.size(-1)
-        contextual_dim = contextual_embeddings[0].size(-1)
-
-        if not contextual_dim % character_dim == 0 or character_dim > contextual_dim:
-            raise RuntimeError(f"Contextual dimension {contextual_dim} " +
-                               f"not compatible with character dimension {character_dim}")
-        duplication_count = contextual_dim // character_dim
-
         # Typically character embeddings are smaller than contextualized embeddings. Since we're
         # averaging the character embeddings along with all the contextualized layers we need to
         # make their dimensions match. Simply repeating the character embeddings is a crude, but
         # effective, way to do this.
-        duplicated_character_embeddings = torch.cat([character_embeddings] * duplication_count, -1)
+        duplicated_character_embeddings = torch.cat(
+            [character_embeddings] * self._character_embedding_duplication_count, -1
+        )
         contextual_embeddings.append(duplicated_character_embeddings)
         averaged_embeddings = self._scalar_mix(contextual_embeddings)
 
