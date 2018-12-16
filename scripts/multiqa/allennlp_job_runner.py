@@ -91,6 +91,7 @@ while True:
                 command = 'nohup ' + body.decode() + ' > ' + log_file + ' &'
             else:
                 command = 'nohup ' + body.decode() + ' >& ' + log_file
+            print(command)
 
             wa_proc = Popen(command, shell=True, preexec_fn=os.setsid)
             proc_running.append({'job_tag':method_frame.delivery_tag,'command':command, \
