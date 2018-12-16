@@ -1048,7 +1048,7 @@ class Trainer(Registrable):
         grad_clipping = params.pop_float("grad_clipping", None)
         lr_scheduler_params = params.pop("learning_rate_scheduler", None)
 
-        if cuda_device >= 0:
+        if isinstance(cuda_device, int) and cuda_device >= 0:
             model = model.cuda(cuda_device)
 
         parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
