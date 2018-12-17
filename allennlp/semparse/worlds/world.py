@@ -31,7 +31,7 @@ class ExecutionError(Exception):
     """
     This exception gets raised when you're trying to execute a logical form that your executor does
     not understand. This may be because your logical form contains a function with an invalid name
-    or a set of arguments whose types do not match those that the fuction expects.
+    or a set of arguments whose types do not match those that the function expects.
     """
     def __init__(self, message):
         super(ExecutionError, self).__init__()
@@ -258,7 +258,7 @@ class World:
         logical_form : ``str``
             Logical form to parse
         remove_var_function : ``bool`` (optional)
-            ``var`` is a special function that some languages use within lambda founctions to
+            ``var`` is a special function that some languages use within lambda functions to
             indicate the usage of a variable. If your language uses it, and you do not want to
             include it in the parsed expression, set this flag. You may want to do this if you are
             generating an action sequence from this parsed expression, because it is easier to let

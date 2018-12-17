@@ -68,7 +68,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         after which we should start decreasing the weight on checklist cost in favor of denotation
         cost, and the rate at which we should do it. We will decrease the weight in the following
         way - ``checklist_cost_weight = checklist_cost_weight - rate * checklist_cost_weight``
-        starting at the apropriate epoch.  The weight will remain constant if this is not provided.
+        starting at the appropriate epoch.  The weight will remain constant if this is not provided.
     penalize_non_agenda_actions : ``bool``, optional (default=False)
         Should we penalize the model for producing terminal actions that are outside the agenda?
     initial_mml_model_file : ``str`` , optional (default=None)
@@ -363,7 +363,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         """
         if not state.is_finished():
             raise RuntimeError("_get_state_cost() is not defined for unfinished states!")
-        instace_worlds = batch_worlds[state.batch_indices[0]]
+        instance_worlds = batch_worlds[state.batch_indices[0]]
         # Our checklist cost is a sum of squared error from where we want to be, making sure we
         # take into account the mask.
         checklist_balance = state.checklist_state[0].get_balance()
@@ -379,7 +379,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         # how many worlds the logical form is correct in?
         # extras being None happens when we are testing. We do not care about the cost
         # then.  TODO (pradeep): Make this cleaner.
-        if state.extras is None or all(self._check_state_denotations(state, instace_worlds)):
+        if state.extras is None or all(self._check_state_denotations(state, instance_worlds)):
             cost = checklist_cost
         else:
             cost = checklist_cost + (1 - self._checklist_cost_weight) * denotation_cost

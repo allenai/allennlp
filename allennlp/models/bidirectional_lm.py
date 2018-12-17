@@ -191,7 +191,7 @@ class BidirectionalLanguageModel(Model):
         entry that's the output of a ``SingleIdTokenIndexer``, which is used
         to compute the language model targets.
 
-        If the model was instantatiated with ``remove_bos_eos=True``,
+        If the model was instantiated with ``remove_bos_eos=True``,
         then it is expected that each of the input sentences was augmented with
         begin-sentence and end-sentence tokens.
 

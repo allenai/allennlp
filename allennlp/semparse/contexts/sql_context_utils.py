@@ -87,7 +87,7 @@ def format_action(nonterminal: str,
     is_number : ``bool``, optional, (default = False).
         Whether the production produces a string.
         If it does, it is formatted as ``nonterminal -> ['number']``
-    keywords_to_uppecase: ``List[str]``, optional, (default = None)
+    keywords_to_uppercase: ``List[str]``, optional, (default = None)
         Keywords in the grammar to uppercase. In the case of sql,
         this might be SELECT, MAX etc.
     """
@@ -144,7 +144,7 @@ class SqlVisitor(NodeVisitor):
     ----------
     grammar : ``Grammar``
         A Grammar object that we use to parse the text.
-    keywords_to_uppecase: ``List[str]``, optional, (default = None)
+    keywords_to_uppercase: ``List[str]``, optional, (default = None)
         Keywords in the grammar to uppercase. In the case of sql,
         this might be SELECT, MAX etc.
     """
