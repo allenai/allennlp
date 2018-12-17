@@ -10,9 +10,9 @@ from allennlp.models import Model
 
 @Predictor.register('dialog_qa')
 class DialogQAPredictor(Predictor):
-    def __init__(self, model: Model, dataset_reader: DatasetReader) -> None:
+    def __init__(self, model: Model, dataset_reader: DatasetReader, language: str = 'en_core_web_sm') -> None:
         super().__init__(model, dataset_reader)
-        self._tokenizer = SpacyWordSplitter(language='en_core_web_sm')
+        self._tokenizer = SpacyWordSplitter(language=language)
 
     def predict(self, jsonline: str) -> JsonDict:
         """

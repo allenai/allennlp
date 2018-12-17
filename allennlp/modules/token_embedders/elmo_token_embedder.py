@@ -32,7 +32,7 @@ class ElmoTokenEmbedder(TokenEmbedder):
     projection_dim : ``int``, optional
         If given, we will project the ELMo embedding down to this dimension.  We recommend that you
         try using ELMo with a lot of dropout and no projection first, but we have found a few cases
-        where projection helps (particulary where there is very limited training data).
+        where projection helps (particularly where there is very limited training data).
     vocab_to_cache : ``List[str]``, optional, (default = 0.5).
         A list of words to pre-compute and cache character convolutions
         for. If you use this option, the ElmoTokenEmbedder expects that you pass word
