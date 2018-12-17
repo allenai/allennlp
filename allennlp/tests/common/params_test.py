@@ -208,7 +208,7 @@ class TestParams(AllenNlpTestCase):
             'NER_TRAIN_DATA_PATH', 'NER_TEST_A_PATH', 'NER_TEST_B_PATH',
 
             # bidirectional lm
-            'BIDIRECTIONAL_LM_TRAIN_PATH', 'BIDIRECTIONAL_LM_VOCAB_PATH'
+            'BIDIRECTIONAL_LM_TRAIN_PATH', 'BIDIRECTIONAL_LM_VOCAB_PATH', 'BIDIRECTIONAL_LM_ARCHIVE_PATH'
         ]
 
         for var in forced_variables:

@@ -23,7 +23,7 @@
             "embedding_dim": 50
           },
           "elmo": {
-            "type": "bidirectional_token_embedder",
+            "type": "bidirectional_lm_token_embedder",
             "archive_file": "allennlp/tests/fixtures/bidirectional_lm/model.tar.gz",
             "dropout": 0.2,
             "bos_eos_tokens": ["<S>", "</S>"],

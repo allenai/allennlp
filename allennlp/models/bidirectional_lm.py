@@ -259,10 +259,10 @@ class BidirectionalLanguageModel(Model):
             else:
                 # average_loss zero tensor, return it for all
                 return_dict.update({
-                    'loss': average_loss,
-                    'forward_loss': average_loss,
-                    'backward_loss': average_loss
-            })
+                        'loss': average_loss,
+                        'forward_loss': average_loss,
+                        'backward_loss': average_loss
+                })
 
         return_dict.update({
                 'lm_embeddings': contextual_embeddings,
