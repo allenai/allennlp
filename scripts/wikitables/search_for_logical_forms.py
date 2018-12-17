@@ -84,7 +84,7 @@ if __name__ == "__main__":
     parser.add_argument("--use-agenda", dest="use_agenda", action="store_true")
     parser.add_argument("--output-separate-files", dest="output_separate_files",
                         action="store_true", help="""If set, the script will output gzipped
-                        files, one per example. You may want to do this if you;re making data to
+                        files, one per example. You may want to do this if you're making data to
                         train a parser.""")
     args = parser.parse_args()
     search(args.table_directory, args.data_file, args.output_path, args.max_path_length,

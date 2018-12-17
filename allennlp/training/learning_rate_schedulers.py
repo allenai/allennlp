@@ -291,7 +291,7 @@ class CosineWithRestarts(torch.optim.lr_scheduler._LRScheduler):  # pylint: disa
     """
     Cosine annealing with restarts.
 
-    This is decribed in the paper https://arxiv.org/abs/1608.03983.
+    This is described in the paper https://arxiv.org/abs/1608.03983.
 
     Parameters
     ----------
