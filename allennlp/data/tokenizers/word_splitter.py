@@ -163,8 +163,8 @@ class OpenAISplitter(WordSplitter):
     """
     For OpenAI transformer
     """
-    def __init__(self):
-        self.spacy = get_spacy_model('en_core_web_sm', False, False, False)
+    def __init__(self, language: str = 'en_core_web_sm') -> None:
+        self.spacy = get_spacy_model(language, False, False, False)
 
     @staticmethod
     def _standardize(text):

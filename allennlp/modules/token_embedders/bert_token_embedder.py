@@ -86,9 +86,9 @@ class BertEmbedder(TokenEmbedder):
 
         # input_ids may have extra dimensions, so we reshape down to 2-d
         # before calling the BERT model and then reshape back at the end.
-        all_encoder_layers, _ = self.bert_model(util.combine_initial_dims(input_ids),
-                                                util.combine_initial_dims(input_mask),
-                                                util.combine_initial_dims(token_type_ids))
+        all_encoder_layers, _ = self.bert_model(input_ids=util.combine_initial_dims(input_ids),
+                                                token_type_ids=util.combine_initial_dims(token_type_ids),
+                                                attention_mask=util.combine_initial_dims(input_mask))
         if self._scalar_mix is not None:
             mix = self._scalar_mix(all_encoder_layers, input_mask)
         else:

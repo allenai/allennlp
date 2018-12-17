@@ -47,10 +47,10 @@ class Pruner(torch.nn.Module):
         Returns
         -------
         top_embeddings : ``torch.FloatTensor``
-            The representations of the top-k scoring itemss.
+            The representations of the top-k scoring items.
             Has shape (batch_size, num_items_to_keep, embedding_size).
         top_mask : ``torch.LongTensor``
-            The coresponding mask for ``top_embeddings``.
+            The corresponding mask for ``top_embeddings``.
             Has shape (batch_size, num_items_to_keep).
         top_indices : ``torch.IntTensor``
             The indices of the top-k scoring items into the original ``embeddings``

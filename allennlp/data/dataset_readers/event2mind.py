@@ -56,7 +56,7 @@ class Event2MindDatasetReader(DatasetReader):
     dummy_instances_for_vocab_generation : ``bool`` (optional, default=False)
         Whether to generate instances that use each token of input precisely
         once. Normally we instead generate all combinations of Source, Xintent,
-        Xemotion and Otheremotion columns whichs distort the underlying token
+        Xemotion and Otheremotion columns which distorts the underlying token
         counts. This flag should be used exclusively with the ``dry-run``
         command as the instances generated will be nonsensical outside the
         context of vocabulary generation.

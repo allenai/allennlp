@@ -183,7 +183,8 @@ class Trainer(Registrable):
                  summary_interval: int = 100,
                  histogram_interval: int = None,
                  should_log_parameter_statistics: bool = True,
-                 should_log_learning_rate: bool = False) -> None:
+                 should_log_learning_rate: bool = False,
+                 log_batch_size_period: Optional[int] = None) -> None:
         """
         Parameters
         ----------
@@ -268,6 +269,8 @@ class Trainer(Registrable):
             of parameters and gradients) to tensorboard.
         should_log_learning_rate : ``bool``, optional, (default = False)
             Whether to send parameter specific learning rate to tensorboard.
+        log_batch_size_period : ``int``, optional, (default = ``None``)
+            If defined, how often to log the average batch size.
         """
         self.model = model
         self.iterator = iterator
@@ -326,6 +329,7 @@ class Trainer(Registrable):
         self._log_histograms_this_batch = False
         self._should_log_parameter_statistics = should_log_parameter_statistics
         self._should_log_learning_rate = should_log_learning_rate
+        self._log_batch_size_period = log_batch_size_period
 
         # We keep the total batch number as a class variable because it
         # is used inside a closure for the hook which logs activations in
@@ -454,6 +458,18 @@ class Trainer(Registrable):
 
         return metrics
 
+    def _get_batch_size(self, batch: Union[Dict, torch.Tensor]) -> int:
+        """
+        Returns the size of the batch dimension. Assumes a well-formed batch,
+        returns 0 otherwise.
+        """
+        if isinstance(batch, torch.Tensor):
+            return batch.size(0) # type: ignore
+        elif isinstance(batch, Dict):
+            return self._get_batch_size(next(iter(batch.values())))
+        else:
+            return 0
+
     def _train_epoch(self, epoch: int) -> Dict[str, float]:
         """
         Trains one epoch and returns metrics.
@@ -485,6 +501,7 @@ class Trainer(Registrable):
         logger.info("Training")
         train_generator_tqdm = Tqdm.tqdm(train_generator,
                                          total=num_training_batches)
+        cumulative_batch_size = 0
         for batch in train_generator_tqdm:
             batches_this_epoch += 1
             self._batch_num_total += 1
@@ -545,6 +562,15 @@ class Trainer(Registrable):
 
             if self._log_histograms_this_batch:
                 self._histograms_to_tensorboard(batch_num_total, histogram_parameters)
+
+            if self._log_batch_size_period:
+                cur_batch = self._get_batch_size(batch)
+                cumulative_batch_size += cur_batch
+                if (batches_this_epoch - 1) % self._log_batch_size_period == 0:
+                    average = cumulative_batch_size/batches_this_epoch
+                    logger.info(f"current batch size: {cur_batch} mean batch size: {average}")
+                    self._tensorboard.add_train_scalar("current_batch_size", cur_batch, batch_num_total)
+                    self._tensorboard.add_train_scalar("mean_batch_size", average, batch_num_total)
 
             # Save model if needed.
             if self._model_save_interval is not None and (
@@ -954,12 +980,12 @@ class Trainer(Registrable):
             pieces = epoch.split('.')
             if len(pieces) == 1:
                 # Just a single epoch without timestamp
-                int_epochs.append([int(pieces[0]), 0])
+                int_epochs.append([int(pieces[0]), '0'])
             else:
                 # has a timestamp
                 int_epochs.append([int(pieces[0]), pieces[1]])
         last_epoch = sorted(int_epochs, reverse=True)[0]
-        if last_epoch[1] == 0:
+        if last_epoch[1] == '0':
             epoch_to_load = str(last_epoch[0])
         else:
             epoch_to_load = '{0}.{1}'.format(last_epoch[0], last_epoch[1])
@@ -1068,6 +1094,7 @@ class Trainer(Registrable):
         histogram_interval = params.pop_int("histogram_interval", None)
         should_log_parameter_statistics = params.pop_bool("should_log_parameter_statistics", True)
         should_log_learning_rate = params.pop_bool("should_log_learning_rate", False)
+        log_batch_size_period = params.pop_int("log_batch_size_period", None)
 
         params.assert_empty(cls.__name__)
         return cls(model, optimizer, iterator,
@@ -1088,7 +1115,8 @@ class Trainer(Registrable):
                    summary_interval=summary_interval,
                    histogram_interval=histogram_interval,
                    should_log_parameter_statistics=should_log_parameter_statistics,
-                   should_log_learning_rate=should_log_learning_rate)
+                   should_log_learning_rate=should_log_learning_rate,
+                   log_batch_size_period=log_batch_size_period)
 
 
 Trainer.register("default")(Trainer)

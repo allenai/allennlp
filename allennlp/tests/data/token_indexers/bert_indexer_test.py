@@ -20,12 +20,13 @@ class TestBertIndexer(ModelTestCase):
 
         indexed_tokens = token_indexer.tokens_to_indices(tokens, vocab, "bert")
 
-        assert indexed_tokens["bert"] == [2, 3, 5, 6, 8, 9, 2, 15, 10, 11, 14, 1]
-        assert indexed_tokens["bert-offsets"] == [0, 1, 2, 3, 4, 5, 6, 9, 10, 11]
+        # 16 = [CLS], 17 = [SEP]
+        assert indexed_tokens["bert"] == [16, 2, 3, 5, 6, 8, 9, 2, 15, 10, 11, 14, 1, 17]
+        assert indexed_tokens["bert-offsets"] == [1, 2, 3, 4, 5, 6, 7, 10, 11, 12]
 
         token_indexer = PretrainedBertIndexer(str(vocab_path), use_starting_offsets=True)
 
         indexed_tokens = token_indexer.tokens_to_indices(tokens, vocab, "bert")
 
-        assert indexed_tokens["bert"] == [2, 3, 5, 6, 8, 9, 2, 15, 10, 11, 14, 1]
-        assert indexed_tokens["bert-offsets"] == [0, 1, 2, 3, 4, 5, 6, 7, 10, 11]
+        assert indexed_tokens["bert"] == [16, 2, 3, 5, 6, 8, 9, 2, 15, 10, 11, 14, 1, 17]
+        assert indexed_tokens["bert-offsets"] == [1, 2, 3, 4, 5, 6, 7, 8, 11, 12]

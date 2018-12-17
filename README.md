@@ -159,13 +159,13 @@ optional arguments:
   --version     show program's version number and exit
 
 Commands:
-  
+
     configure   Generate configuration stubs.
     train       Train a model
     evaluate    Evaluate the specified model + dataset
     predict     Use a trained model to make predictions.
     make-vocab  Create a vocabulary
-    elmo        Use a trained model to make predictions.
+    elmo        Create word vectors using a pretrained ELMo model.
     fine-tune   Continue training a model on a new dataset
     dry-run     Create a vocabulary, compute dataset statistics and other
                 training utilities.
