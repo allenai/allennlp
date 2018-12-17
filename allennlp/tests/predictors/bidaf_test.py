@@ -35,6 +35,26 @@ class TestBidafPredictor(AllenNlpTestCase):
             assert all(isinstance(x, float) for x in probs)
             assert sum(probs) == approx(1.0)
 
+    def test_model_internals(self):
+        archive = load_archive(self.FIXTURES_ROOT / 'bidaf' / 'serialization' / 'model.tar.gz')
+        predictor = Predictor.from_archive(archive, 'machine-comprehension', return_model_internals=True)
+
+        inputs = {
+                "question": "What kind of test succeeded on its first attempt?",
+                "passage": "One time I was writing a unit test, and it succeeded on the first attempt."
+        }
+
+        result = predictor.predict_json(inputs)
+        internals = result.get('_model_internals')
+        assert internals is not None
+        assert len(internals) == 25
+
+        linear_50_1 = internals[23]
+        assert "Linear(in_features=50, out_features=1, bias=True)" in linear_50_1["name"]
+        assert len(linear_50_1['output']) == 17
+        assert all(len(a) == 1 for a in linear_50_1['output'])
+
+
     def test_batch_prediction(self):
         inputs = [
                 {

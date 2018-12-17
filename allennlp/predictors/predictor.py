@@ -32,9 +32,13 @@ class Predictor(Registrable):
     a ``Predictor`` is a thin wrapper around an AllenNLP model that handles JSON -> JSON predictions
     that can be used for serving models through the web API or making predictions in bulk.
     """
-    def __init__(self, model: Model, dataset_reader: DatasetReader) -> None:
+    def __init__(self,
+                 model: Model,
+                 dataset_reader: DatasetReader,
+                 return_model_internals: bool = False) -> None:
         self._model = model
         self._dataset_reader = dataset_reader
+        self._return_model_internals = return_model_internals
 
     def load_line(self, line: str) -> JsonDict:  # pylint: disable=no-self-use
         """
@@ -55,7 +59,27 @@ class Predictor(Registrable):
         return self.predict_instance(instance)
 
     def predict_instance(self, instance: Instance) -> JsonDict:
+        model_internals = {}
+        hooks = []
+
+        if self._return_model_internals:
+            def add_output(idx: int):
+                def _add_output(mod, _, outputs):
+                    model_internals[idx] = {"name": str(mod), "output": outputs}
+                return _add_output
+
+            hooks = [module.register_forward_hook(add_output(i))
+                     for i, module in enumerate(self._model.modules())
+                     if module != self._model]
+
         outputs = self._model.forward_on_instance(instance)
+        if model_internals:
+            outputs['_model_internals'] = model_internals
+
+        # Remove hooks
+        for hook in hooks:
+            hook.remove()
+
         return sanitize(outputs)
 
     def _json_to_instance(self, json_dict: JsonDict) -> Instance:
@@ -89,7 +113,10 @@ class Predictor(Registrable):
         return instances
 
     @classmethod
-    def from_path(cls, archive_path: str, predictor_name: str = None) -> 'Predictor':
+    def from_path(cls,
+                  archive_path: str,
+                  predictor_name: str = None,
+                  return_model_internals: bool = False) -> 'Predictor':
         """
         Instantiate a :class:`Predictor` from an archive path.
 
@@ -104,10 +131,13 @@ class Predictor(Registrable):
         -------
         A Predictor instance.
         """
-        return Predictor.from_archive(load_archive(archive_path), predictor_name)
+        return Predictor.from_archive(load_archive(archive_path), predictor_name, return_model_internals)
 
     @classmethod
-    def from_archive(cls, archive: Archive, predictor_name: str = None) -> 'Predictor':
+    def from_archive(cls,
+                     archive: Archive,
+                     predictor_name: str = None,
+                     return_model_internals: bool = False) -> 'Predictor':
         """
         Instantiate a :class:`Predictor` from an :class:`~allennlp.models.archival.Archive`;
         that is, from the result of training a model. Optionally specify which `Predictor`
@@ -129,4 +159,4 @@ class Predictor(Registrable):
         model = archive.model
         model.eval()
 
-        return Predictor.by_name(predictor_name)(model, dataset_reader)
+        return Predictor.by_name(predictor_name)(model, dataset_reader, return_model_internals)
