@@ -413,7 +413,7 @@ class Trainer(Registrable):
         of torch.nn.parallel.data_parallel to support the allennlp model
         interface.
         """
-        assert len(batch_group) < len(self._cuda_devices)
+        assert len(batch_group) <= len(self._cuda_devices)
 
         inputs = [()] * len(batch_group)
         moved = [util.move_to_device(batch, device) for batch, device in zip(batch_group, self._cuda_devices)]
