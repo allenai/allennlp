@@ -1048,10 +1048,14 @@ class Trainer(Registrable):
         grad_clipping = params.pop_float("grad_clipping", None)
         lr_scheduler_params = params.pop("learning_rate_scheduler", None)
 
-        if isinstance(cuda_device, int) and cuda_device >= 0:
+        if isinstance(cuda_device, list):
+            model_device = cuda_device[0]
+        else:
+            model_device = cuda_device
+        if model_device >= 0:
             # Moving model to GPU here so that the optimizer state gets constructed on
             # the right device.
-            model = model.cuda(cuda_device)
+            model = model.cuda(model_device)
 
         parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
         optimizer = Optimizer.from_params(parameters, params.pop("optimizer"))
