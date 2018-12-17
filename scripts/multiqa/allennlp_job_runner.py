@@ -123,7 +123,13 @@ while True:
 
                 ElasticLogger().write_log('INFO', "Job Status",proc,push_bulk=True, print_log=True)
 
-            ElasticLogger().write_log('INFO', "Machine Status", {'gpus':gpu_memory_mb(),\
+            gpu_mem = gpu_memory_mb()
+            # Ugly patch for misconfigured GPUs...
+            if 'args' == 'rack-jonathan-g02':
+                gpu_mem = {(3 - key):val for key,val in gpu_mem.items()}
+            free_gpus = [i for i, gpu in enumerate(gpu_mem.keys()) if gpu_mem[gpu] > 1000]
+
+            ElasticLogger().write_log('INFO', "Machine Status", {'gpus':gpu_mem,'free_gpus':free_gpus,\
                                                       'num_procs_running':len(proc_running),}, push_bulk=True,print_log=True)
 
         time.sleep(6)
