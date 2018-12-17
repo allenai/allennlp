@@ -169,7 +169,7 @@ def get_final_encoder_states(encoder_outputs: torch.Tensor,
     Additionally, if ``bidirectional`` is ``True``, we will split the final dimension of the
     ``encoder_outputs`` into two and assume that the first half is for the forward direction of the
     encoder and the second half is for the backward direction.  We will concatenate the last state
-    for each encoder dimension, giving ``encoder_outputs[:, -1, :encoding_dim/2]`` concated with
+    for each encoder dimension, giving ``encoder_outputs[:, -1, :encoding_dim/2]`` concatenated with
     ``encoder_outputs[:, 0, encoding_dim/2:]``.
     """
     # These are the indices of the last words in the sequences (i.e. length sans padding - 1).  We
@@ -360,7 +360,7 @@ def viterbi_decode(tag_sequence: torch.Tensor,
     tag_observations : Optional[List[int]], optional, (default = None)
         A list of length ``sequence_length`` containing the class ids of observed
         elements in the sequence, with unobserved elements being set to -1. Note that
-        it is possible to provide evidence which results in degenerate labellings if
+        it is possible to provide evidence which results in degenerate labelings if
         the sequences of tags you provide as evidence cannot transition between each
         other, or those transitions are extremely unlikely. In this situation we log a
         warning, but the responsibility for providing self-consistent evidence ultimately
@@ -583,7 +583,7 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
         of losses per batch element.
     label_smoothing : ``float``, optional (default = None)
         Whether or not to apply label smoothing to the cross-entropy loss.
-        For example, with a label smoothing value of 0.2, a 4 class classifcation
+        For example, with a label smoothing value of 0.2, a 4 class classification
         target would look like ``[0.05, 0.05, 0.85, 0.05]`` if the 3rd class was
         the correct label.
 

@@ -14,7 +14,7 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
     """
     Represents spans from a bidirectional encoder as a concatenation of two different
     representations of the span endpoints, one for the forward direction of the encoder
-    and one from the backward direction. This type of representation encodes some subtelty,
+    and one from the backward direction. This type of representation encodes some subtlety,
     because when you consider the forward and backward directions separately, the end index
     of the span for the backward direction's representation is actually the start index.
 

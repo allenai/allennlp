@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 @Model.register("graph_parser")
 class GraphParser(Model):
     """
-    A Parser for arbitrary graph stuctures.
+    A Parser for arbitrary graph structures.
 
     Parameters
     ----------
@@ -297,13 +297,13 @@ class GraphParser(Model):
         """
         Decodes the head and head tag predictions by decoding the unlabeled arcs
         independently for each word and then again, predicting the head tags of
-        these greedily chosen arcs indpendently.
+        these greedily chosen arcs independently.
 
         Parameters
         ----------
         arc_scores : ``torch.Tensor``, required.
             A tensor of shape (batch_size, sequence_length, sequence_length) used to generate
-            a distribution over attachements of a given word to all other words.
+            a distribution over attachments of a given word to all other words.
         arc_tag_logits : ``torch.Tensor``, required.
             A tensor of shape (batch_size, sequence_length, sequence_length, num_tags) used to
             generate a distribution over tags for each arc.

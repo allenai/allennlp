@@ -280,7 +280,7 @@ class InitializerApplicator:
         of an initializer.  In addition, they may contain auxiliary named parameters which will be
         fed to the initializer itself. To determine valid auxiliary parameters, please refer to the
         torch.nn.init documentation. Only "prevent" is a special type which does not have corresponding
-        initializer. Any parameter matching its corresponding regex will be overriden to NOT initialize.
+        initializer. Any parameter matching its corresponding regex will be overridden to NOT initialize.
 
         Returns
         -------

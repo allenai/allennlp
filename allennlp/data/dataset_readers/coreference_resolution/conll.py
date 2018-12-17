@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 def canonicalize_clusters(clusters: DefaultDict[int, List[Tuple[int, int]]]) -> List[List[Tuple[int, int]]]:
     """
-    The CONLL 2012 data includes 2 annotatated spans which are identical,
+    The CONLL 2012 data includes 2 annotated spans which are identical,
     but have different ids. This checks all clusters for spans which are
     identical, and if it finds any, merges the clusters containing the
     identical spans.

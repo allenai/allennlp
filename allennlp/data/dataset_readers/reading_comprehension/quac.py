@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 @DatasetReader.register("quac")
 class QuACReader(DatasetReader):
     """
-    Reads a JSON-formatted Quesiton Answering in Context (QuAC) data file
+    Reads a JSON-formatted Question Answering in Context (QuAC) data file
     and returns a ``Dataset`` where the ``Instances`` have four fields: ``question``, a ``ListField``,
     ``passage``, another ``TextField``, and ``span_start`` and ``span_end``, both ``ListField`` composed of
     IndexFields`` into the ``passage`` ``TextField``.
