@@ -28,7 +28,7 @@ class BLEU(Metric):
 
     Notes
     -----
-    We chose to implement this from scratch intead of wrapping an existing implementation
+    We chose to implement this from scratch instead of wrapping an existing implementation
     (such as `nltk.translate.bleu_score`) for a two reasons. First, so that we could
     pass tensors directly to this metric instead of first converting the tensors to lists of strings.
     And second, because functions like `nltk.translate.bleu_score.corpus_bleu()` are

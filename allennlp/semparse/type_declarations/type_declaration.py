@@ -565,7 +565,7 @@ def _get_complex_type_production(complex_type: ComplexType,
     (perhaps each with multiple arguments) that produce the return values.  This method also takes
     care of ``MultiMatchNamedBasicTypes``. If one of the arguments or the return types is a multi
     match type, it gets all the substitutions of those types from ``multi_match_mapping`` and forms
-    a list with all possible combinations of sustitutions. If the complex type passed to this method
+    a list with all possible combinations of substitutions. If the complex type passed to this method
     has no ``MultiMatchNamedBasicTypes``, the returned list will contain a single tuple.  For
     example, if the complex is type ``<a,<<b,c>,d>>``, and ``a`` is a multi match type that matches
     ``e`` and ``f``, this gives the following list of tuples: ``[('d', 'd -> [<a,<<b,c>,d>, e,

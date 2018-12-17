@@ -51,7 +51,7 @@ class NlvrExecutor:
     that we compare against. The logic is that we execute the attribute function on `each` of
     the given boxes and return only those whose attribute value, in comparison with the target
     attribute, satisfies the filtering criterion (i.e., equal to the target, less than, greater
-    than etc.). The fitering function defines the comparison operator.  All the functions in
+    than etc.). The filtering function defines the comparison operator.  All the functions in
     this class with names ``filter_*`` belong to this category.
 
     5) Object Filtering Functions : These are of the form ``filter(set_of_objects)``. These are
