@@ -21,7 +21,7 @@ local BASE_READER = {
             "type": "elmo_characters"
           }
         },
-        "max_sequence_length": 500,
+        "max_sequence_length": 400,
         "start_tokens": ["<S>"],
         "end_tokens": ["</S>"]
 };
@@ -34,7 +34,7 @@ local BASE_ITERATOR = {
   // samples in every batch.
   "batch_size": 512 * NUM_GPUS,
   "sorting_keys": [["source", "num_tokens"]],
-  "maximum_samples_per_batch": ["num_tokens", NUM_GPUS * 1000]
+  "maximum_samples_per_batch": ["num_tokens", NUM_GPUS * 1500]
 };
 
 {
