@@ -25,3 +25,10 @@ class TestBidirectionalLanguageModelTokenEmbedder(ModelTestCase):
             for tag_id in example_tags:
                 tag = self.model.vocab.get_token_from_index(tag_id, namespace="labels")
                 assert tag in {'O', 'I-ORG', 'I-PER', 'I-LOC'}
+
+class TestBidirectionalLanguageModelTokenEmbedderWithoutBosEos(TestBidirectionalLanguageModelTokenEmbedder):
+    def setUp(self):
+        super().setUp()
+        self.set_up_model(self.FIXTURES_ROOT / 'bidirectional_lm' /
+                          'characters_token_embedder_without_bos_eos.jsonnet',
+                          self.FIXTURES_ROOT / 'data' / 'conll2003.txt')
