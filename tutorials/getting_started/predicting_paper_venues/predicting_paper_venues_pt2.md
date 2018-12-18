@@ -54,11 +54,6 @@ class PaperClassifierPredictor(Predictor):
         abstract = json_dict['paperAbstract']
         instance = self._dataset_reader.text_to_instance(title=title, abstract=abstract)
 
-        # label_dict will be like {0: "ACL", 1: "AI", ...}
-        label_dict = self._model.vocab.get_index_to_token_vocabulary('labels')
-        # Convert it to list ["ACL", "AI", ...]
-        all_labels = [label_dict[i] for i in range(len(label_dict))]
-
         return instance
 ```
 
