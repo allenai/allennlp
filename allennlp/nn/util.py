@@ -475,37 +475,6 @@ def get_text_field_mask(text_field_tensors: Dict[str, torch.Tensor],
         raise ValueError("Expected a tensor with dimension 2 or 3, found {}".format(smallest_dim))
 
 
-def last_dim_softmax(tensor: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:
-    """
-    Takes a tensor with 3 or more dimensions and does a masked softmax over the last dimension.  We
-    assume the tensor has shape ``(batch_size, ..., sequence_length)`` and that the mask (if given)
-    has shape ``(batch_size, sequence_length)``.
-
-    .. deprecated:: 0.6.1
-           ``last_dim_softmax`` was deprecated in favor of just using ``masked_softmax`` in version
-           0.6.1.  It will be removed in version 0.8.
-    """
-    warnings.warn("``last_dim_softmax`` was deprecated in favor of just using ``masked_softmax`` "
-                  "in version 0.6.1.  It will be removed in version 0.8.", DeprecationWarning)
-    return masked_softmax(tensor, mask, dim=-1)
-
-
-def last_dim_log_softmax(tensor: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:
-    """
-    Takes a tensor with 3 or more dimensions and does a masked log softmax over the last dimension.
-    We assume the tensor has shape ``(batch_size, ..., sequence_length)`` and that the mask (if given)
-    has shape ``(batch_size, sequence_length)``.
-
-    .. deprecated:: 0.6.1
-           ``last_dim_log_softmax`` was deprecated in favor of just using ``masked_log_softmax`` in
-           version 0.6.1.  It will be removed in version 0.8.
-    """
-    warnings.warn("``last_dim_log_softmax`` was deprecated in favor of just using "
-                  "``masked_log_softmax`` in version 0.6.1.  It will be removed in version 0.8.",
-                  DeprecationWarning)
-    return masked_log_softmax(tensor, mask, dim=-1)
-
-
 def weighted_sum(matrix: torch.Tensor, attention: torch.Tensor) -> torch.Tensor:
     """
     Takes a matrix of vectors and a set of weights over the rows in the matrix (which we call an
