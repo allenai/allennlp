@@ -1,16 +1,17 @@
 import logging
 
-from typing import Dict, List, Optional, Any
+from typing import Dict, List
 from overrides import overrides
 
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.instance import Instance
-from allennlp.data.fields import TextField, ListField, IndexField, MetadataField
+from allennlp.data.fields import Field, TextField, ListField, IndexField, MetadataField
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.tokenizers import Token
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
 
 @DatasetReader.register("babi")
 class BAbIReader(DatasetReader):
@@ -31,9 +32,9 @@ class BAbIReader(DatasetReader):
     """
 
     def __init__(self,
-                 keep_sentences: Optional[bool] = False,
-                 token_indexers: Optional[Dict[str, TokenIndexer]] = None,
-                 lazy: Optional[bool] = False) -> None:
+                 keep_sentences: bool = False,
+                 token_indexers: Dict[str, TokenIndexer] = None,
+                 lazy: bool = False) -> None:
 
         super().__init__(lazy)
         self._keep_sentences = keep_sentences
@@ -81,16 +82,14 @@ class BAbIReader(DatasetReader):
                                                      self._token_indexers)
                                            for line in context])
         else:
-            fields['context'] = ListField([TextField([Token(word) for line in context for word in line],
-                                                     self._token_indexers)])
+            fields['context'] = TextField([Token(word) for line in context for word in line],
+                                          self._token_indexers)
 
         fields['question'] = TextField([Token(word) for word in question], self._token_indexers)
         fields['answer'] = TextField([Token(answer)], self._token_indexers)
 
         if self._keep_sentences:
             fields['supports'] = ListField([IndexField(support, fields['context']) for support in supports])
-        else:
-            fields['supports'] = ListField([IndexField(0, fields['context'])])
 
         fields['metadata'] = MetadataField({'context': context, 'question': question, 'answer': answer})
 

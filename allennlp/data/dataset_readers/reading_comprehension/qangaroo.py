@@ -7,11 +7,12 @@ from overrides import overrides
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.instance import Instance
-from allennlp.data.fields import TextField, ListField, MetadataField, IndexField
+from allennlp.data.fields import Field, TextField, ListField, MetadataField, IndexField
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.tokenizers import Tokenizer, WordTokenizer
 
 logger = logging.getLogger(__name__) # pylint: disable=invalid-name
+
 
 @DatasetReader.register("qangaroo")
 class QangarooReader(DatasetReader):
@@ -54,13 +55,14 @@ class QangarooReader(DatasetReader):
         logger.info("Reading the dataset")
         for sample in dataset:
 
-            instance = self.text_to_instance(sample['candidates'], sample['query'], sample['supports'], 
+            instance = self.text_to_instance(sample['candidates'], sample['query'], sample['supports'],
                                              sample['id'], sample['answer'],
-                                             sample['annotations'] if 'annotations' in sample else None)
+                                             sample['annotations'] if 'annotations' in sample else [[]])
 
             yield instance
 
-    def text_to_instance(self,
+    @overrides
+    def text_to_instance(self, # type: ignore
                          candidates: List[str],
                          query: str,
                          supports: List[List[str]],
@@ -68,10 +70,9 @@ class QangarooReader(DatasetReader):
                          answer: str = None,
                          annotations: List[List[str]] = None) -> Instance:
 
-        fields = {}
-        metadata = {'annotations': annotations, 'id': _id}
+        fields: Dict[str, Field] = {}
 
-        fields['candidates'] = ListField([TextField(candidate, self._token_indexers) 
+        fields['candidates'] = ListField([TextField(candidate, self._token_indexers)
                                           for candidate in self._tokenizer.batch_tokenize(candidates)])
 
         fields['query'] = TextField(self._tokenizer.tokenize(query), self._token_indexers)
@@ -83,6 +84,6 @@ class QangarooReader(DatasetReader):
 
         fields['answer_idx'] = IndexField(candidates.index(answer), candidates)
 
-        fields['metadata'] = MetadataField(metadata)
+        fields['metadata'] = MetadataField({'annotations': annotations, 'id': _id})
 
         return Instance(fields)
