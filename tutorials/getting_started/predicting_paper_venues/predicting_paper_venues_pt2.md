@@ -178,7 +178,7 @@ allennlp predict \
 When you run this it will print the ten test inputs and their predictions, each of which looks like:
 
 ```
-prediction:  {"all_labels": ["AI", "ACL", "ML"], "logits": [0.008737504482269287, 0.22074833512306213, -0.005263201892375946], "class_probabilities": [0.31034138798713684, 0.38363200426101685, 0.3060266375541687], "label": "ACL"}
+prediction:  {"logits": [0.008737504482269287, 0.22074833512306213, -0.005263201892375946], "class_probabilities": [0.31034138798713684, 0.38363200426101685, 0.3060266375541687], "label": "ACL"}
 ```
 
 If you want your predictions to go to a file instead,
