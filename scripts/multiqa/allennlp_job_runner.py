@@ -101,7 +101,7 @@ while True:
                 wa_proc = Popen(command, shell=True, preexec_fn=os.setsid,stdout=f,stderr=f)
             proc_running.append({'job_tag':method_frame.delivery_tag,'command':command, \
                                  'log_file':log_file, 'log_snapshot':'',\
-                                 'name':properties.headers['name'],'alive': True,\
+                                 'experiment_name':properties.headers['name'], 'alive': True,\
                                  'pid': wa_proc.pid+1, 'start_time': time.time()})
             # we are not persistant for now ...
             channel.basic_ack(method_frame.delivery_tag)
@@ -127,7 +127,7 @@ while True:
             # Ugly patch for misconfigured GPUs...
             if args.channel == 'rack-jonathan-g02':
                 gpu_mem = {(3 - key):val for key,val in gpu_mem.items()}
-            free_gpus = [i for i, gpu in enumerate(gpu_mem.keys()) if gpu_mem[gpu] < 1000]
+            free_gpus = [i for i, gpu in enumerate(gpu_mem.keys()) if gpu_mem[gpu] < 1200]
 
             ElasticLogger().write_log('INFO', "Machine Status", {'gpus':gpu_mem,'free_gpus':free_gpus,\
                                                       'num_procs_running':len(proc_running),}, push_bulk=True,print_log=True)
