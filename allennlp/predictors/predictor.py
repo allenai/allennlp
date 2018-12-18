@@ -60,7 +60,7 @@ class Predictor(Registrable):
         return self.predict_instance(instance)
 
     def predict_instance(self, instance: Instance) -> JsonDict:
-        model_internals = {}
+        internal_module_results = {}
         hooks = []
 
         if self._return_model_internals:
@@ -68,7 +68,7 @@ class Predictor(Registrable):
 
             def add_output(idx: int):
                 def _add_output(mod, _, outputs):
-                    model_internals[idx] = {"name": str(mod), "output": outputs}
+                    internal_module_results[idx] = {"name": str(mod), "output": outputs}
                 return _add_output
 
             hooks = [module.register_forward_hook(add_output(i))
@@ -76,19 +76,23 @@ class Predictor(Registrable):
                      if module != self._model]
 
         outputs = self._model.forward_on_instance(instance)
-        if model_internals:
-            outputs['_internal_module_results'] = model_internals
 
         if self._return_model_internals:
+            # Collect results of modules
+            if internal_module_results:
+                outputs['_internal_module_results'] = internal_module_results
+
+            # Collect results of functions
             internal_function_results = getattr(self._model, '_stored_function_results', [])
             if internal_function_results:
                 outputs['_internal_function_results'] = internal_function_results[:]
+
+            # And clean up
             internal_function_results.clear()
             store_function_results(False)
 
-        # Remove hooks
-        for hook in hooks:
-            hook.remove()
+            for hook in hooks:
+                hook.remove()
 
         return sanitize(outputs)
 
