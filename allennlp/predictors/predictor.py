@@ -41,10 +41,6 @@ class Predictor(Registrable):
         self._dataset_reader = dataset_reader
         self._return_model_internals = return_model_internals
 
-        if return_model_internals:
-            # Set global flag
-            store_function_results(True)
-
     def load_line(self, line: str) -> JsonDict:  # pylint: disable=no-self-use
         """
         If your inputs are not in JSON-lines format (e.g. you have a CSV)
@@ -68,6 +64,8 @@ class Predictor(Registrable):
         hooks = []
 
         if self._return_model_internals:
+            store_function_results(True)
+
             def add_output(idx: int):
                 def _add_output(mod, _, outputs):
                     model_internals[idx] = {"name": str(mod), "output": outputs}
@@ -86,6 +84,7 @@ class Predictor(Registrable):
             if internal_function_results:
                 outputs['_internal_function_results'] = internal_function_results[:]
             internal_function_results.clear()
+            store_function_results(False)
 
         # Remove hooks
         for hook in hooks:

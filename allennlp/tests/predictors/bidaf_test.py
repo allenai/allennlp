@@ -37,7 +37,6 @@ class TestBidafPredictor(AllenNlpTestCase):
             assert sum(probs) == approx(1.0)
 
     def test_model_internals(self):
-        store_function_results(True)
         archive = load_archive(self.FIXTURES_ROOT / 'bidaf' / 'serialization' / 'model.tar.gz')
         predictor = Predictor.from_archive(archive, 'machine-comprehension', return_model_internals=True)
 
@@ -58,8 +57,6 @@ class TestBidafPredictor(AllenNlpTestCase):
 
         ifr = result.get('_internal_function_results')
         assert any(name == 'masked_softmax' for name, value in ifr)
-
-        store_function_results(False)
 
     def test_batch_prediction(self):
         inputs = [
