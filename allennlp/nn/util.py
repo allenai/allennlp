@@ -12,6 +12,7 @@ import warnings
 import torch
 
 from allennlp.common.checks import ConfigurationError
+from allennlp.common.introspection import store_result
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -213,7 +214,7 @@ def get_dropout_mask(dropout_probability: float, tensor_for_masking: torch.Tenso
     dropout_mask = binary_mask.float().div(1.0 - dropout_probability)
     return dropout_mask
 
-
+@store_result
 def masked_softmax(vector: torch.Tensor, mask: torch.Tensor, dim: int = -1) -> torch.Tensor:
     """
     ``torch.nn.functional.softmax(vector)`` does not work if some elements of ``vector`` should be

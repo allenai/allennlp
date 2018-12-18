@@ -3,6 +3,7 @@ import json
 
 from allennlp.common import Registrable
 from allennlp.common.checks import ConfigurationError
+from allennlp.common.introspection import store_function_results
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import DatasetReader, Instance
 from allennlp.models import Model
@@ -40,6 +41,10 @@ class Predictor(Registrable):
         self._dataset_reader = dataset_reader
         self._return_model_internals = return_model_internals
 
+        if return_model_internals:
+            # Set global flag
+            store_function_results(True)
+
     def load_line(self, line: str) -> JsonDict:  # pylint: disable=no-self-use
         """
         If your inputs are not in JSON-lines format (e.g. you have a CSV)
@@ -74,7 +79,13 @@ class Predictor(Registrable):
 
         outputs = self._model.forward_on_instance(instance)
         if model_internals:
-            outputs['_model_internals'] = model_internals
+            outputs['_internal_module_results'] = model_internals
+
+        if self._return_model_internals:
+            internal_function_results = getattr(self._model, '_stored_function_results', [])
+            if internal_function_results:
+                outputs['_internal_function_results'] = internal_function_results[:]
+            internal_function_results.clear()
 
         # Remove hooks
         for hook in hooks:

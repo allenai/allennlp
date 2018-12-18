@@ -1,6 +1,7 @@
 # pylint: disable=no-self-use,invalid-name
 from pytest import approx
 
+from allennlp.common.introspection import store_function_results
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor
@@ -36,6 +37,7 @@ class TestBidafPredictor(AllenNlpTestCase):
             assert sum(probs) == approx(1.0)
 
     def test_model_internals(self):
+        store_function_results(True)
         archive = load_archive(self.FIXTURES_ROOT / 'bidaf' / 'serialization' / 'model.tar.gz')
         predictor = Predictor.from_archive(archive, 'machine-comprehension', return_model_internals=True)
 
@@ -45,15 +47,19 @@ class TestBidafPredictor(AllenNlpTestCase):
         }
 
         result = predictor.predict_json(inputs)
-        internals = result.get('_model_internals')
-        assert internals is not None
-        assert len(internals) == 25
+        imr = result.get('_internal_module_results')
+        assert imr is not None
+        assert len(imr) == 25
 
-        linear_50_1 = internals[23]
+        linear_50_1 = imr[23]
         assert "Linear(in_features=50, out_features=1, bias=True)" in linear_50_1["name"]
         assert len(linear_50_1['output']) == 17
         assert all(len(a) == 1 for a in linear_50_1['output'])
 
+        ifr = result.get('_internal_function_results')
+        assert any(name == 'masked_softmax' for name, value in ifr)
+
+        store_function_results(False)
 
     def test_batch_prediction(self):
         inputs = [
