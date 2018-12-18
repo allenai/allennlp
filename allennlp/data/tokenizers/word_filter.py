@@ -6,6 +6,7 @@ from allennlp.common import Registrable
 from allennlp.data.tokenizers.token import Token
 from allennlp.common.file_utils import read_set_from_file
 
+__all__ = ["PassThroughWordFilter", "RegexFilter", "StopwordFilter"]
 
 class WordFilter(Registrable):
     """
