@@ -7,6 +7,7 @@ from allennlp.data.vocabulary import Vocabulary
 
 class TestBertIndexer(ModelTestCase):
 
+
     def test_starting_ending_offsets(self):
         tokenizer = WordTokenizer(word_splitter=BertBasicWordSplitter())
 
@@ -30,3 +31,29 @@ class TestBertIndexer(ModelTestCase):
 
         assert indexed_tokens["bert"] == [16, 2, 3, 5, 6, 8, 9, 2, 15, 10, 11, 14, 1, 17]
         assert indexed_tokens["bert-offsets"] == [1, 2, 3, 4, 5, 6, 7, 8, 11, 12]
+
+
+    def test_do_lowercase(self):
+        # Our default tokenizer doesn't handle lowercasing.
+        tokenizer = WordTokenizer()
+
+        # Quick is UNK because of capitalization
+        #           2   1     5     6   8      9    2  15 10 11 14   1
+        sentence = "the Quick brown fox jumped over the laziest lazy elmo"
+        tokens = tokenizer.tokenize(sentence)
+
+        vocab = Vocabulary()
+        vocab_path = self.FIXTURES_ROOT / 'bert' / 'vocab.txt'
+        token_indexer = PretrainedBertIndexer(str(vocab_path), do_lowercase=False)
+
+        indexed_tokens = token_indexer.tokens_to_indices(tokens, vocab, "bert")
+
+        # Quick should get 1 == OOV
+        assert indexed_tokens["bert"] == [16, 2, 1, 5, 6, 8, 9, 2, 15, 10, 11, 14, 1, 17]
+
+        # Does lowercasing by default
+        token_indexer = PretrainedBertIndexer(str(vocab_path))
+        indexed_tokens = token_indexer.tokens_to_indices(tokens, vocab, "bert")
+
+        # Now Quick should get indexed correctly as 3 ( == "quick")
+        assert indexed_tokens["bert"] == [16, 2, 3, 5, 6, 8, 9, 2, 15, 10, 11, 14, 1, 17]

@@ -39,6 +39,8 @@ class WordpieceIndexer(TokenIndexer[int]):
         maximum length for its input ids. Currently any inputs longer than this
         will be truncated. If this behavior is undesirable to you, you should
         consider filtering them out in your dataset reader.
+    do_lowercase : ``bool``, optional (default=``False``)
+        Should we lowercase the provided tokens before getting the indices?
     start_tokens : ``List[str]``, optional (default=``None``)
         These are prepended to the tokens provided to ``tokens_to_indices``.
     end_tokens : ``List[str]``, optional (default=``None``)
@@ -50,6 +52,7 @@ class WordpieceIndexer(TokenIndexer[int]):
                  namespace: str = "wordpiece",
                  use_starting_offsets: bool = False,
                  max_pieces: int = 512,
+                 do_lowercase: bool = False,
                  start_tokens: List[str] = None,
                  end_tokens: List[str] = None) -> None:
         self.vocab = vocab
@@ -64,6 +67,7 @@ class WordpieceIndexer(TokenIndexer[int]):
         self._added_to_vocabulary = False
         self.max_pieces = max_pieces
         self.use_starting_offsets = use_starting_offsets
+        self._do_lowercase = do_lowercase
 
         # Convert the start_tokens and end_tokens to wordpiece_ids
         self._start_piece_ids = [vocab[wordpiece]
@@ -108,8 +112,10 @@ class WordpieceIndexer(TokenIndexer[int]):
         offset = len(wordpiece_ids) if self.use_starting_offsets else len(wordpiece_ids) - 1
 
         for token in tokens:
+            # Lowercase if necessary
+            text = token.text.lower() if self._do_lowercase else token.text
             token_wordpiece_ids = [self.vocab[wordpiece]
-                                   for wordpiece in self.wordpiece_tokenizer(token.text)]
+                                   for wordpiece in self.wordpiece_tokenizer(text)]
             # If we have enough room to add these ids *and also* the end_token ids.
             if len(wordpiece_ids) + len(token_wordpiece_ids) + len(self._end_piece_ids) <= self.max_pieces:
                 # For initial offsets, the current value of ``offset`` is the start of
@@ -206,5 +212,6 @@ class PretrainedBertIndexer(WordpieceIndexer):
                          namespace="bert",
                          use_starting_offsets=use_starting_offsets,
                          max_pieces=max_pieces,
+                         do_lowercase=do_lowercase,
                          start_tokens=["[CLS]"],
                          end_tokens=["[SEP]"])
