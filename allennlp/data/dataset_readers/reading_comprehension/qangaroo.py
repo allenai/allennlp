@@ -72,8 +72,8 @@ class QangarooReader(DatasetReader):
 
         fields: Dict[str, Field] = {}
 
-        candidates = ListField([TextField(candidate, self._token_indexers)
-                                for candidate in self._tokenizer.batch_tokenize(candidates)])
+        candidates_field = ListField([TextField(candidate, self._token_indexers)
+                                      for candidate in self._tokenizer.batch_tokenize(candidates)])
 
         fields['query'] = TextField(self._tokenizer.tokenize(query), self._token_indexers)
 
@@ -82,9 +82,9 @@ class QangarooReader(DatasetReader):
 
         fields['answer'] = TextField(self._tokenizer.tokenize(answer), self._token_indexers)
 
-        fields['answer_idx'] = IndexField(candidates.index(answer), candidates)
+        fields['answer_idx'] = IndexField(candidates.index(answer), candidates_field)
 
-        fields['candidates'] = candidates
+        fields['candidates'] = candidates_field
 
         fields['metadata'] = MetadataField({'annotations': annotations, 'id': _id})
 
