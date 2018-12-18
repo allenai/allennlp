@@ -18,7 +18,7 @@ class TestBAbIReader:
             assert [t.text for t in instances[0].fields['context'][3].tokens[3:]] == ['of', 'wolves', '.']
             assert [t.sequence_index for t in instances[0].fields['supports']] == [0, 1]
         else:
-            assert [t.text for t in instances[0].fields['context'][0].tokens[7:9]] == ['afraid', 'of']
+            assert [t.text for t in instances[0].fields['context'].tokens[7:9]] == ['afraid', 'of']
             assert [t.sequence_index for t in instances[0].fields['supports']] == [0]
 
     def test_can_build_from_params(self):
