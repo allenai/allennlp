@@ -18,7 +18,7 @@ class TestQangarooReader:
         assert [t.text for t in instances[0].fields['query']] == ['country', 'sms', 'braunschweig']
         assert [t.text for t in instances[0].fields['supports'][0][:3]] == ['The', 'North', 'German']
         assert [t.text for t in instances[0].fields['answer']] == ['german', 'empire']
-        assert instances[0].fields['answer_idx'].sequence_index == 4
+        assert instances[0].fields['answer_index'].sequence_index == 4
 
     def test_can_build_from_params(self):
         reader = QangarooReader.from_params(Params({}))

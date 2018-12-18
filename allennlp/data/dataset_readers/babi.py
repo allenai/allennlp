@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 class BabiReader(DatasetReader):
     """
     Reads one single task in the bAbI tasks format as formulated in
-    Towards AI-Complete Question Answering: A Set of Prerequisite Toy Tasks 
+    Towards AI-Complete Question Answering: A Set of Prerequisite Toy Tasks
     (https://arxiv.org/abs/1502.05698). Since this class handle a single file,
     if one wants to load multiple tasks together it has to merge them into a
     single file and use this reader.
