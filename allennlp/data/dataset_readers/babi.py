@@ -81,15 +81,13 @@ class BAbIReader(DatasetReader):
             fields['context'] = ListField([TextField([Token(word) for word in line],
                                                      self._token_indexers)
                                            for line in context])
+            fields['supports'] = ListField([IndexField(support, fields['context']) for support in supports])
         else:
             fields['context'] = TextField([Token(word) for line in context for word in line],
                                           self._token_indexers)
 
         fields['question'] = TextField([Token(word) for word in question], self._token_indexers)
         fields['answer'] = TextField([Token(answer)], self._token_indexers)
-
-        if self._keep_sentences:
-            fields['supports'] = ListField([IndexField(support, fields['context']) for support in supports])
 
         fields['metadata'] = MetadataField({'context': context, 'question': question, 'answer': answer})
 

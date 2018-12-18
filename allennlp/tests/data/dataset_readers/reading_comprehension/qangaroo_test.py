@@ -10,7 +10,7 @@ from allennlp.common.testing import AllenNlpTestCase
 class TestQangarooReader:
     @pytest.mark.parametrize('lazy', (True, False))
     def test_read_from_file(self, lazy):
-        reader = BAbIReader(lazy=lazy)
+        reader = QangarooReader(lazy=lazy)
         instances = ensure_list(reader.read(AllenNlpTestCase.FIXTURES_ROOT / 'data' / 'qangaroo.json'))
         assert len(instances) == 2
 
@@ -21,6 +21,6 @@ class TestQangarooReader:
         assert instances[0].fields['answer_idx'].sequence_index == 4
 
     def test_can_build_from_params(self):
-        reader = BAbIReader.from_params(Params({}))
+        reader = QangarooReader.from_params(Params({}))
         # pylint: disable=protected-access
         assert reader._token_indexers['tokens'].__class__.__name__ == 'SingleIdTokenIndexer'

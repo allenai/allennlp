@@ -65,7 +65,7 @@ class QangarooReader(DatasetReader):
     def text_to_instance(self, # type: ignore
                          candidates: List[str],
                          query: str,
-                         supports: List[List[str]],
+                         supports: List[str],
                          _id: str = None,
                          answer: str = None,
                          annotations: List[List[str]] = None) -> Instance:
@@ -82,7 +82,7 @@ class QangarooReader(DatasetReader):
 
         fields['answer'] = TextField(self._tokenizer.tokenize(answer), self._token_indexers)
 
-        fields['answer_idx'] = IndexField(candidates.index(answer), candidates)
+        fields['answer_idx'] = IndexField(candidates.index(answer), fields['candidates'])
 
         fields['metadata'] = MetadataField({'annotations': annotations, 'id': _id})
 
