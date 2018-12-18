@@ -26,10 +26,10 @@ class _LazyInstances(Iterable):
         return instances
 
 
-class DatasetReader(Registrable):
+class DatabaseReader(Registrable):
     """
-    A ``DatasetReader`` knows how to turn a file containing a dataset into a collection
-    of ``Instance`` s.  To implement your own, just override the `_read(file_path)` method
+    A ``DatabaseReader`` knows how to turn a query into a collection
+    of ``Instance`` s.  To implement your own, just override the `_read(query)` method
     to return an ``Iterable`` of the instances. This could be a list containing the instances
     or a lazy generator that returns them one at a time.
 
@@ -46,7 +46,7 @@ class DatasetReader(Registrable):
     def __init__(self, lazy: bool = False) -> None:
         self.lazy = lazy
 
-    def read(self, file_path: str) -> Iterable[Instance]:
+    def read(self, url: str, query: str, *args) -> Iterable[Instance]:
         """
         Returns an ``Iterable`` containing all the instances
         in the specified dataset.
@@ -70,17 +70,16 @@ class DatasetReader(Registrable):
                            "did you forget to call the superclass constructor?")
 
         if lazy:
-            return _LazyInstances(lambda: iter(self._read(file_path)))
+            return _LazyInstances(lambda: iter(self._read(url=url, query=query, *args)))
         else:
-            instances = self._read(file_path)
+            instances = self._read(url=url, query=query, *args)
             if not isinstance(instances, list):
                 instances = [instance for instance in Tqdm.tqdm(instances)]
             if not instances:
-                raise ConfigurationError("No instances were read from the given filepath {}. "
-                                         "Is the path correct?".format(file_path))
+                raise ConfigurationError("")  # TODO: fix error
             return instances
 
-    def _read(self, file_path: str) -> Iterable[Instance]:
+    def _read(self, url: str, query: str, *args) -> Iterable[Instance]:
         """
         Reads the instances from the given file_path and returns them as an
         `Iterable` (which could be a list or could be a generator).
