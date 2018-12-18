@@ -6,7 +6,7 @@ from overrides import overrides
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.instance import Instance
-from allennlp.data.fields import Field, TextField, ListField, IndexField, MetadataField
+from allennlp.data.fields import Field, TextField, ListField, IndexField
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.tokenizers import Token
 
@@ -14,11 +14,13 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 @DatasetReader.register("babi")
-class BAbIReader(DatasetReader):
+class BabiReader(DatasetReader):
     """
-    Reads data in the bAbI tasks format as formulated in
-    Towards AI-Complete Question Answering: A Set of Prerequisite Toy Tasks.
-    (see https://arxiv.org/abs/1502.05698)
+    Reads one single task in the bAbI tasks format as formulated in
+    Towards AI-Complete Question Answering: A Set of Prerequisite Toy Tasks 
+    (https://arxiv.org/abs/1502.05698). Since this class handle a single file,
+    if one wants to load multiple tasks together it has to merge them into a
+    single file and use this reader.
 
     Parameters
     ----------
@@ -30,7 +32,6 @@ class BAbIReader(DatasetReader):
     lazy : ``bool``, optional, (default = ``False``)
         Whether or not instances can be consumed lazily.
     """
-
     def __init__(self,
                  keep_sentences: bool = False,
                  token_indexers: Dict[str, TokenIndexer] = None,
@@ -91,7 +92,5 @@ class BAbIReader(DatasetReader):
         fields['context'] = context_field_ks if self._keep_sentences else context_field
         fields['question'] = TextField([Token(word) for word in question], self._token_indexers)
         fields['answer'] = TextField([Token(answer)], self._token_indexers)
-
-        fields['metadata'] = MetadataField({'context': context, 'question': question, 'answer': answer})
 
         return Instance(fields)

@@ -3,14 +3,14 @@ import pytest
 
 from allennlp.common import Params
 from allennlp.common.util import ensure_list
-from allennlp.data.dataset_readers import BAbIReader
+from allennlp.data.dataset_readers import BabiReader
 from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestBAbIReader:
     @pytest.mark.parametrize('keep_sentences, lazy', [(False, False), (False, True), (True, False), (True, True)])
     def test_read_from_file(self, keep_sentences, lazy):
-        reader = BAbIReader(keep_sentences=keep_sentences, lazy=lazy)
+        reader = BabiReader(keep_sentences=keep_sentences, lazy=lazy)
         instances = ensure_list(reader.read(AllenNlpTestCase.FIXTURES_ROOT / 'data' / 'babi.txt'))
         assert len(instances) == 8
 
@@ -21,7 +21,7 @@ class TestBAbIReader:
             assert [t.text for t in instances[0].fields['context'].tokens[7:9]] == ['afraid', 'of']
 
     def test_can_build_from_params(self):
-        reader = BAbIReader.from_params(Params({'keep_sentences': True}))
+        reader = BabiReader.from_params(Params({'keep_sentences': True}))
         # pylint: disable=protected-access
         assert reader._keep_sentences
         assert reader._token_indexers['tokens'].__class__.__name__ == 'SingleIdTokenIndexer'

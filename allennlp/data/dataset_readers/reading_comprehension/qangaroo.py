@@ -16,13 +16,11 @@ logger = logging.getLogger(__name__) # pylint: disable=invalid-name
 
 @DatasetReader.register("qangaroo")
 class QangarooReader(DatasetReader):
-
     """
-    Reads a JSON-formatted Qangaroo file and returns a ``Dataset`` where the ``Instances`` have four
+    Reads a JSON-formatted Qangaroo file and returns a ``Dataset`` where the ``Instances`` have six
     fields: ``candidates``, a ``ListField[TextField]``, ``query``, a ``TextField``, ``supports``, a
-    ``ListField[TextField]``, ``answer``, a ``TextField``, and ``answer_idx``, a ``IndexField``.
-    and ``span_end``, both ``IndexFields`` into the ``passage`` ``TextField``.  We also add a
-    ``MetadataField`` that stores the instance's ID and annotations if they are present.
+    ``ListField[TextField]``, ``answer``, a ``TextField``, and ``answer_index``, a ``IndexField``.
+    We also add a ``MetadataField`` that stores the instance's ID and annotations if they are present.
 
     Parameters
     ----------
@@ -83,7 +81,7 @@ class QangarooReader(DatasetReader):
 
         fields['answer'] = TextField(self._tokenizer.tokenize(answer), self._token_indexers)
 
-        fields['answer_idx'] = IndexField(candidates.index(answer), candidates_field)
+        fields['answer_index'] = IndexField(candidates.index(answer), candidates_field)
 
         fields['candidates'] = candidates_field
 
