@@ -298,7 +298,7 @@ def make_reading_comprehension_instance_multiqa_docqa(question_list_tokens: List
     fields['metadata'] = MetadataField(metadata)
     return Instance(fields)
 
-def make_reading_comprehension_instance_multiqa_multidoc(question_list_tokens: List[List[Token]],
+def make_reading_comprehension_instance_multiqa_multidoc(question_tokens: List[Token],
                                              tokenized_paragraphs: List[List[Token]],
                                              token_indexers: Dict[str, TokenIndexer],
                                              paragraphs: List[str],
@@ -345,12 +345,11 @@ def make_reading_comprehension_instance_multiqa_multidoc(question_list_tokens: L
     # This is separate so we can reference it later with a known type.
     passage_field = ListField([TextField(passage_tokens, token_indexers) for passage_tokens in tokenized_paragraphs])
     fields['passage'] = passage_field
-    fields['question'] = ListField([TextField(q_tokens, token_indexers) for q_tokens in question_list_tokens])
+    fields['question'] = TextField(question_tokens, token_indexers)
     metadata = {'original_passage': paragraphs,
                 'token_span_lists': token_span_lists,
                 'token_offsets': passage_offsets,
-                'question_tokens': [[token.text for token in question_tokens] \
-                                    for question_tokens in question_list_tokens],
+                'question_tokens': [token.text for token in question_tokens],
                 'passage_tokens': [[token.text for token in passage_tokens] for passage_tokens in tokenized_paragraphs], }
 
     # in prediction mode we won't have this... TODO: what will we do in multi-answer prediction?
@@ -391,12 +390,10 @@ def make_reading_comprehension_instance_multiqa(question_list_tokens: List[List[
     """
     Converts a question, a passage, and an optional answer (or answers) to an ``Instance`` for use
     in a reading comprehension model.
-
     Creates an ``Instance`` with at least these fields: ``question`` and ``passage``, both
     ``TextFields``; and ``metadata``, a ``MetadataField``.  Additionally, if both ``answer_texts``
     and ``char_span_starts`` are given, the ``Instance`` has ``span_start`` and ``span_end``
     fields, which are both ``IndexFields``.
-
     Parameters
     ----------
     question_list_tokens : ``List[List[Token]]``
