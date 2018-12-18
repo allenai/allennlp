@@ -2,12 +2,10 @@
 
 import json
 import os
-import pathlib
 import sys
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.service import config_explorer
-from allennlp.service.config_explorer import make_app, _HTML
+from allennlp.service.config_explorer import make_app
 
 
 class TestConfigExplorer(AllenNlpTestCase):
@@ -17,28 +15,6 @@ class TestConfigExplorer(AllenNlpTestCase):
         app = make_app()
         app.testing = True
         self.client = app.test_client()
-
-    def test_html(self):
-        """
-        The pip-installed version of allennlp (currently) requires the config explorer HTML
-        to be hardcoded into the server file. But when iterating on it, it's easier to use the
-        /debug/ endpoint, which points at `config_explorer.html`, so that you don't have to
-        restart the server every time you make a change.
-
-        This test just ensures that the two HTML versions are identical, to prevent you from
-        making a change to the standalone HTML but forgetting to change the corresponding
-        server HTML. There is certainly a better way to handle this.
-        """
-        config_explorer_dir = pathlib.Path(config_explorer.__file__).parent
-        config_explorer_file = config_explorer_dir / 'config_explorer.html'
-
-        if not config_explorer_file.exists():
-            print("standalone config_explorer.html does not exist, skipping test")
-        else:
-            with open(config_explorer_file) as f:
-                html = f.read()
-
-            assert html.strip() == _HTML.strip()
 
     def test_app(self):
         response = self.client.get('/')
@@ -57,13 +33,14 @@ class TestConfigExplorer(AllenNlpTestCase):
         assert items[0] == {
                 "name": "dataset_reader",
                 "configurable": True,
+                "registrable": True,
                 "comment": "specify your dataset reader here",
                 "annotation": {'origin': "allennlp.data.dataset_readers.dataset_reader.DatasetReader"}
         }
 
 
     def test_choices(self):
-        response = self.client.get('/api/config/?class=allennlp.data.dataset_readers.dataset_reader.DatasetReader')
+        response = self.client.get('/api/config/?class=allennlp.data.dataset_readers.dataset_reader.DatasetReader&get_choices=true')
         data = json.loads(response.get_data())
 
         assert "allennlp.data.dataset_readers.reading_comprehension.squad.SquadReader" in data["choices"]
@@ -76,6 +53,28 @@ class TestConfigExplorer(AllenNlpTestCase):
         items = config['items']
         assert config['type'] == 'srl'
         assert items[0]["name"] == "token_indexers"
+
+    def test_instantiable_registrable(self):
+        response = self.client.get('/api/config/?class=allennlp.data.vocabulary.Vocabulary')
+        data = json.loads(response.get_data())
+        assert 'config' in data
+        assert 'choices' not in data
+
+        response = self.client.get('/api/config/?class=allennlp.data.vocabulary.Vocabulary&get_choices=true')
+        data = json.loads(response.get_data())
+        assert 'config' not in data
+        assert 'choices' in data
+
+    def test_get_choices_failover(self):
+        """
+        Tests that if we try to get_choices on a non-registrable class
+        it just fails back to the config.
+        """
+        response = self.client.get('/api/config/?class=allennlp.modules.feedforward.FeedForward&get_choices=true')
+        data = json.loads(response.get_data())
+        assert 'config' in data
+        assert 'choices' not in data
+
 
     def test_torch_class(self):
         response = self.client.get('/api/config/?class=torch.optim.rmsprop.RMSprop')
@@ -101,7 +100,7 @@ class TestConfigExplorer(AllenNlpTestCase):
         assert any(item["name"] == "batch_first" for item in items)
 
     def test_initializers(self):
-        response = self.client.get('/api/config/?class=allennlp.nn.initializers.Initializer')
+        response = self.client.get('/api/config/?class=allennlp.nn.initializers.Initializer&get_choices=true')
         data = json.loads(response.get_data())
 
         assert 'torch.nn.init.constant_' in data["choices"]
@@ -116,7 +115,7 @@ class TestConfigExplorer(AllenNlpTestCase):
         assert any(item["name"] == "a" for item in items)
 
     def test_regularizers(self):
-        response = self.client.get('/api/config/?class=allennlp.nn.regularizers.regularizer.Regularizer')
+        response = self.client.get('/api/config/?class=allennlp.nn.regularizers.regularizer.Regularizer&get_choices=true')
         data = json.loads(response.get_data())
 
         assert 'allennlp.nn.regularizers.regularizers.L1Regularizer' in data["choices"]
@@ -151,7 +150,7 @@ class TestConfigExplorer(AllenNlpTestCase):
         app = make_app()
         app.testing = True
         client = app.test_client()
-        response = client.get('/api/config/?class=allennlp.predictors.predictor.Predictor')
+        response = client.get('/api/config/?class=allennlp.predictors.predictor.Predictor&get_choices=true')
         data = json.loads(response.get_data())
         assert "allennlp.predictors.bidaf.BidafPredictor" in data["choices"]
         assert "configexplorer.predictor.BidafPredictor" not in data["choices"]
@@ -160,7 +159,7 @@ class TestConfigExplorer(AllenNlpTestCase):
         app = make_app(['configexplorer'])
         app.testing = True
         client = app.test_client()
-        response = client.get('/api/config/?class=allennlp.predictors.predictor.Predictor')
+        response = client.get('/api/config/?class=allennlp.predictors.predictor.Predictor&get_choices=true')
         data = json.loads(response.get_data())
         assert "allennlp.predictors.bidaf.BidafPredictor" in data["choices"]
         assert "configexplorer.predictor.BidafPredictor" in data["choices"]

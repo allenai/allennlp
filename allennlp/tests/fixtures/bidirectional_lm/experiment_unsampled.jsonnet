@@ -3,23 +3,21 @@
     "type": "simple_language_modeling",
     "token_indexers": {
       "tokens": {
-        "type": "single_id",
-        "start_tokens": ["<s>"],
-        "end_tokens": ["</s>"]
+        "type": "single_id"
       },
       "token_characters": {
-        "type": "characters",
-        "start_tokens": ["<s>"],
-        "end_tokens": ["</s>"]
+        "type": "characters"
       }
-    }
+    },
+    "start_tokens": ["<S>"],
+    "end_tokens": ["</S>"]
   },
   "train_data_path": "allennlp/tests/fixtures/bidirectional_lm/sentences.txt",
   "validation_data_path": "allennlp/tests/fixtures/bidirectional_lm/sentences.txt",
   "vocabulary": {
       "tokens_to_add": {
-          "tokens": ["<s>", "</s>"],
-          "token_characters": ["<>/s"]
+          "tokens": ["<S>", "</S>"],
+          "token_characters": ["<>/S"]
       },
   },
   "model": {
@@ -64,6 +62,7 @@
     "optimizer": {
       "type": "sgd",
       "lr": 0.01
-    }
+    },
+    "log_batch_size_period": 1
   }
 }

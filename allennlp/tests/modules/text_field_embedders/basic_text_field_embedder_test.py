@@ -44,12 +44,22 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
         assert self.token_embedder.get_output_dim() == 10
 
     def test_forward_asserts_input_field_match(self):
+        # Total mismatch
         self.inputs['words4'] = self.inputs['words3']
         del self.inputs['words3']
-        with pytest.raises(ConfigurationError):
+        with pytest.raises(ConfigurationError) as exc:
             self.token_embedder(self.inputs)
+        assert exc.match("Mismatched token keys")
+
         self.inputs['words3'] = self.inputs['words4']
+
+        # Text field has too many inputs
+        with pytest.raises(ConfigurationError) as exc:
+            self.token_embedder(self.inputs)
+        assert exc.match("is generating more keys")
+
         del self.inputs['words4']
+
 
     def test_forward_concats_resultant_embeddings(self):
         assert self.token_embedder(self.inputs).size() == (1, 4, 10)

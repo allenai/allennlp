@@ -109,10 +109,10 @@ Once you have [installed Docker](https://docs.docker.com/engine/installation/)
 just run the following command to get an environment that will run on either the cpu or gpu.
 
    ```bash
-   docker run -it -p 8000:8000 --rm allennlp/allennlp:v0.7.1
+   docker run -it -p 8000:8000 --rm allennlp/allennlp:v0.7.2
    ```
 
-You can test the Docker environment with `docker run -it -p 8000:8000 --rm allennlp/allennlp:v0.7.1 test-install`.
+You can test the Docker environment with `docker run -it -p 8000:8000 --rm allennlp/allennlp:v0.7.2 test-install`.
 
 ### Installing from source
 
@@ -159,13 +159,13 @@ optional arguments:
   --version     show program's version number and exit
 
 Commands:
-  
+
     configure   Generate configuration stubs.
     train       Train a model
     evaluate    Evaluate the specified model + dataset
     predict     Use a trained model to make predictions.
     make-vocab  Create a vocabulary
-    elmo        Use a trained model to make predictions.
+    elmo        Create word vectors using a pretrained ELMo model.
     fine-tune   Continue training a model on a new dataset
     dry-run     Create a vocabulary, compute dataset statistics and other
                 training utilities.
