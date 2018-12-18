@@ -6,7 +6,7 @@ from overrides import overrides
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.instance import Instance
-from allennlp.data.fields import TextField, ListField, MetadataField
+from allennlp.data.fields import TextField, ListField, IndexField, MetadataField
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.tokenizers import Token
 
@@ -24,8 +24,6 @@ class BAbIReader(DatasetReader):
     keep_sentences: ``bool``, optional, (default = ``False``)
         Whether to keep each sentence in the context or to concatenate them.
         Default is ``False`` that corresponds to concatenation.
-    subset: ``int`` , optional, (default = ``10000``)
-        How many stories to retrieve from the dataset.
     token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
         We use this to define the input representation for the text.  See :class:`TokenIndexer`.
     lazy : ``bool``, optional, (default = ``False``)
@@ -34,16 +32,10 @@ class BAbIReader(DatasetReader):
 
     def __init__(self,
                  keep_sentences: Optional[bool] = False,
-                 subset: Optional[int] = None,
                  token_indexers: Optional[Dict[str, TokenIndexer]] = None,
                  lazy: Optional[bool] = False) -> None:
 
         super().__init__(lazy)
-
-        assert subset is None or (isinstance(subset, int) and subset > 0), \
-            'Parameter subset has to be either None or an integer > 0, found {} of type {}.'.fomat(subset, type(subset))
-        self._subset = subset
-
         self._keep_sentences = keep_sentences
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
 
@@ -57,50 +49,46 @@ class BAbIReader(DatasetReader):
         with open(file_path) as dataset_file:
             dataset = dataset_file.readlines()
 
-        aggregated_dataset = []
-        for line in dataset:
-
-            if '?' in line:
-                question, answer = line.replace('?', ' ?').split('\t')[:-1]
-                new_line = (None, question.split()[1:], answer)
-            else:
-                new_line = line.replace('.', ' .').split()
-
-            if new_line[0] == '1':
-                aggregated_dataset.append([new_line[1:]])
-            else:
-                aggregated_dataset[-1].append(new_line[1:])
-
-        aggregated_stories_dataset: List = []
-        for story in aggregated_dataset:
-
-            substories: List[List] = [[]]
-            for line in story:
-                substories[-1].append(line)
-                if isinstance(line, tuple):
-                    substories.append(substories[-1][:-1])
-
-            aggregated_stories_dataset += substories[:-1]
-
         logger.info("Reading the dataset")
-        for story in aggregated_stories_dataset[:self._subset]:
-            yield self.text_to_instance(story[:-1], story[-1][0], story[-1][1])
+
+        for line in dataset:
+            if '?' in line:
+                question_str, answer, supports_str = line.replace('?', ' ?').split('\t')
+                question = question_str.split()[1:]
+                supports = [int(support) - 1 for support in supports_str.split()]
+
+                yield self.text_to_instance(context, question, answer, supports)
+            else:
+                new_entry = line.replace('.', ' .').split()[1:]
+
+                if line[0] == '1':
+                    context = [new_entry]
+                else:
+                    context.append(new_entry)
 
     def text_to_instance(self,
                          context: List[List[str]],
                          question: List[str],
-                         answer: str) -> Instance:
+                         answer: str,
+                         supports: List[int]) -> Instance:
 
         fields = {}
 
         if self._keep_sentences:
-            fields['context'] = ListField([TextField([Token(word) for word in line], self._token_indexers)
+            fields['context'] = ListField([TextField([Token(word) for word in line],
+                                                     self._token_indexers)
                                            for line in context])
         else:
-            fields['context'] = TextField([Token(word) for line in context for word in line], self._token_indexers)
+            fields['context'] = ListField([TextField([Token(word) for line in context for word in line],
+                                                     self._token_indexers)])
 
         fields['question'] = TextField([Token(word) for word in question], self._token_indexers)
         fields['answer'] = TextField([Token(answer)], self._token_indexers)
+
+        if self._keep_sentences:
+            fields['supports'] = ListField([IndexField(support, fields['context']) for support in supports])
+        else:
+            fields['supports'] = ListField([IndexField(0, fields['context'])])
 
         metadata = {'context': context, 'question': question, 'answer': answer}
 
