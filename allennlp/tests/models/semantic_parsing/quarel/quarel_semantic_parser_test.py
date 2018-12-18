@@ -8,7 +8,7 @@ class QuarelSemanticParserTest(ModelTestCase):
     def setUp(self):
 
         super(QuarelSemanticParserTest, self).setUp()
-        self.set_up_model(str(self.FIXTURES_ROOT / "semantic_parsing" / "quarel" / "experiment_parser.json"),
+        self.set_up_model(str(self.FIXTURES_ROOT / "semantic_parsing" / "quarel" / "experiment.json"),
                           str(self.FIXTURES_ROOT / "data" / "quarel.jsonl"))
         # No gradient for these if only one entity type
         self.ignore = {"_entity_type_encoder_embedding.weight", "_entity_type_decoder_embedding.weight"}
@@ -21,7 +21,7 @@ class QuarelSemanticParserTest(ModelTestCase):
         self.ensure_model_can_train_save_and_load(param_file, gradients_to_ignore=self.ignore)
 
     def test_zeroshot_model_can_train_save_and_load(self):
-        param_file = self.FIXTURES_ROOT / 'semantic_parsing' / 'quarel' / 'experiment_parser_zeroshot.json'
+        param_file = self.FIXTURES_ROOT / 'semantic_parsing' / 'quarel' / 'zeroshot' / 'experiment.json'
         self.ensure_model_can_train_save_and_load(param_file, gradients_to_ignore=self.ignore)
 
     def test_wdp_zeroshot_model_can_train_save_and_load(self):
@@ -49,7 +49,7 @@ class QuarelSemanticParserTest(ModelTestCase):
         self.ensure_model_can_train_save_and_load(param_file, gradients_to_ignore=self.ignore)
 
     def test_tagger_model_can_train_save_and_load(self):
-        param_file = self.FIXTURES_ROOT / 'semantic_parsing' / 'quarel' / 'experiment_tagger.json'
+        param_file = self.FIXTURES_ROOT / 'semantic_parsing' / 'quarel' / 'tagger' / 'experiment.json'
         self.ensure_model_can_train_save_and_load(param_file, gradients_to_ignore=self.ignore)
 
     # Misc util function tests

@@ -103,7 +103,7 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
                 A ListField containing all possible subspans of the
                 sentence.
             span_labels : ``SequenceLabelField``, optional.
-                The constiutency tags for each of the possible spans, with
+                The constituency tags for each of the possible spans, with
                 respect to a gold parse tree. If a span is not contained
                 within the tree, a span will have a ``NO-LABEL`` label.
             gold_tree : ``MetadataField(Tree)``
