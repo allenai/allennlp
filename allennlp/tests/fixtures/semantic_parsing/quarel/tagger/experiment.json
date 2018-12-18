@@ -26,10 +26,12 @@
     "dropout": 0.2,
     "include_start_end_transitions": false,
     "text_field_embedder": {
-      "tokens": {
-        "type": "embedding",
-        "embedding_dim": 25,
-        "trainable": false
+      "token_embedders": {
+        "tokens": {
+          "type": "embedding",
+          "embedding_dim": 25,
+          "trainable": false
+        }
       }
     },
     "encoder": {
@@ -49,7 +51,7 @@
       "type": "adam"
     },
     "validation_metric": "+f1-measure-overall",
-    "num_epochs": 10,
+    "num_epochs": 1,
     "grad_norm": 5.0,
     "patience": 25,
     "cuda_device": -1

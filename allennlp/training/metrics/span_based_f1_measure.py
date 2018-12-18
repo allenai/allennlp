@@ -29,7 +29,7 @@ class SpanBasedF1Measure(Metric):
     is not exactly the same as the perl script used to evaluate the CONLL 2005
     data - particularly, it does not consider continuations or reference spans
     as constituents of the original span. However, it is a close proxy, which
-    can be helpful for judging model peformance during training. This metric
+    can be helpful for judging model performance during training. This metric
     works properly when the spans are unlabeled (i.e., your labels are
     simply "B", "I", "O" if using the "BIO" label encoding).
 
@@ -190,10 +190,10 @@ class SpanBasedF1Measure(Metric):
         have a `C-` prepended to another valid tag) as part of the span that they are continuing.
         This is basically a massive hack to allow SRL models which produce a linear sequence of
         predictions to do something close to structured prediction. However, this means that to
-        compute the metric, these continutation spans need to be merged into the span to which
+        compute the metric, these continuation spans need to be merged into the span to which
         they refer. The way this is done is to simply consider the span for the continued argument
-        to start at the start index of the first occurence of the span and end at the end index
-        of the last occurence of the span. Handling this is important, because predicting continued
+        to start at the start index of the first occurrence of the span and end at the end index
+        of the last occurrence of the span. Handling this is important, because predicting continued
         spans is difficult and typically will effect overall average F1 score by ~ 2 points.
 
         Parameters

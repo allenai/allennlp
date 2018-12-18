@@ -65,7 +65,7 @@ class CrfTagger(Model):
         label_encoding is specified, this is set to ``True``.
         If ``None`` and label_encoding is not specified, it defaults
         to ``False``.
-    dropout:  ``float``, optional (detault=``None``)
+    dropout:  ``float``, optional (default=``None``)
     verbose_metrics : ``bool``, optional (default = False)
         If true, metrics will be returned per label class in addition
         to the overall statistics.

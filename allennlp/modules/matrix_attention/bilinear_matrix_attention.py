@@ -28,11 +28,11 @@ class BilinearMatrixAttention(MatrixAttention):
         activation.
     use_input_biases : ``bool``, optional (default = False)
         If True, we add biases to the inputs such that the final computation
-        is equivelent to the original bilinear matrix multiplication plus a
+        is equivalent to the original bilinear matrix multiplication plus a
         projection of both inputs.
     label_dim : ``int``, optional (default = 1)
         The number of output classes. Typically in an attention setting this will be one,
-        but this parameter allows this class to function as an equivelent to ``torch.nn.Bilinear``
+        but this parameter allows this class to function as an equivalent to ``torch.nn.Bilinear``
         for matrices, rather than vectors.
     """
     def __init__(self,
