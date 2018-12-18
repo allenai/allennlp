@@ -1,6 +1,6 @@
 import logging
 
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 from overrides import overrides
 
 from allennlp.common.file_utils import cached_path
@@ -51,6 +51,7 @@ class BAbIReader(DatasetReader):
 
         logger.info("Reading the dataset")
 
+        context: List[List[str]] = [[]]
         for line in dataset:
             if '?' in line:
                 question_str, answer, supports_str = line.replace('?', ' ?').split('\t')
@@ -66,13 +67,14 @@ class BAbIReader(DatasetReader):
                 else:
                     context.append(new_entry)
 
-    def text_to_instance(self,
+    @overrides
+    def text_to_instance(self, # type: ignore
                          context: List[List[str]],
                          question: List[str],
                          answer: str,
                          supports: List[int]) -> Instance:
 
-        fields = {}
+        fields: Dict[str, Field] = {}
 
         if self._keep_sentences:
             fields['context'] = ListField([TextField([Token(word) for word in line],
@@ -90,8 +92,6 @@ class BAbIReader(DatasetReader):
         else:
             fields['supports'] = ListField([IndexField(0, fields['context'])])
 
-        metadata = {'context': context, 'question': question, 'answer': answer}
-
-        fields['metadata'] = MetadataField(metadata)
+        fields['metadata'] = MetadataField({'context': context, 'question': question, 'answer': answer})
 
         return Instance(fields)
