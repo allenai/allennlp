@@ -1,2 +1,2 @@
-rule_labels
 denotations
+rule_labels
