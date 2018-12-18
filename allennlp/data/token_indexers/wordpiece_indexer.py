@@ -229,6 +229,13 @@ class PretrainedBertIndexer(WordpieceIndexer):
                  do_lowercase: bool = True,
                  never_lowercase: List[str] = None,
                  max_pieces: int = 512) -> None:
+        if pretrained_model.endswith("-cased") and do_lowercase:
+            logger.warning("Your BERT model appears to be cased, "
+                           "but your indexer is lowercasing tokens.")
+        elif pretrained_model.endswith("-uncased") and not do_lowercase:
+            logger.warning("Your BERT model appears to be uncased, "
+                           "but your indexer is not lowercasing tokens.")
+
         bert_tokenizer = BertTokenizer.from_pretrained(pretrained_model, do_lower_case=do_lowercase)
         super().__init__(vocab=bert_tokenizer.vocab,
                          wordpiece_tokenizer=bert_tokenizer.wordpiece_tokenizer.tokenize,
