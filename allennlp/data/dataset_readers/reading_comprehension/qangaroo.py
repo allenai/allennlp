@@ -7,9 +7,9 @@ from overrides import overrides
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.instance import Instance
+from allennlp.data.fields import TextField, ListField, MetadataField, IndexField
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.tokenizers import Tokenizer, WordTokenizer
-from allennlp.data.fields import TextField, IndexField, MetadataField, ListField
 
 logger = logging.getLogger(__name__) # pylint: disable=invalid-name
 
@@ -22,7 +22,7 @@ class QangarooReader(DatasetReader):
     ``ListField[TextField]``, ``answer``, a ``TextField``, and ``answer_idx``, a ``IndexField``.
     and ``span_end``, both ``IndexFields`` into the ``passage`` ``TextField``.  We also add a
     ``MetadataField`` that stores the instance's ID and annotations if they are present.
-    
+
     Parameters
     ----------
     tokenizer : ``Tokenizer``, optional (default=``WordTokenizer()``)
@@ -50,7 +50,7 @@ class QangarooReader(DatasetReader):
 
         with open(file_path) as dataset_file:
             dataset = json.load(dataset_file)
-        
+
         logger.info("Reading the dataset")
         for sample in dataset:
 
@@ -60,7 +60,6 @@ class QangarooReader(DatasetReader):
 
             yield instance
 
-    @overrides
     def text_to_instance(self,
                          candidates: List[str],
                          query: str,
@@ -71,19 +70,19 @@ class QangarooReader(DatasetReader):
 
         fields = {}
         metadata = {'annotations': annotations, 'id': _id}
-        
+
         fields['candidates'] = ListField([TextField(candidate, self._token_indexers) 
                                           for candidate in self._tokenizer.batch_tokenize(candidates)])
-        
+
         fields['query'] = TextField(self._tokenizer.tokenize(query), self._token_indexers)
-        
+
         fields['supports'] = ListField([TextField(support, self._token_indexers)
                                         for support in self._tokenizer.batch_tokenize(supports)])
-        
+
         fields['answer'] = TextField(self._tokenizer.tokenize(answer), self._token_indexers)
-        
+
         fields['answer_idx'] = IndexField(candidates.index(answer), candidates)
-        
+
         fields['metadata'] = MetadataField(metadata)
 
         return Instance(fields)

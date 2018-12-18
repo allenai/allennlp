@@ -1,12 +1,12 @@
-from typing import Dict, List
 import logging
 
+from typing import Dict, List, Optional
 from overrides import overrides
 
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.fields import Field, TextField
 from allennlp.data.instance import Instance
+from allennlp.data.fields import TextField, ListField, MetadataField
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.tokenizers import Token
 
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 @DatasetReader.register("babi")
 class BAbIReader(DatasetReader):
     """
-    Reads data in the bAbI tasks format as formulated in 
+    Reads data in the bAbI tasks format as formulated in
     Towards AI-Complete Question Answering: A Set of Prerequisite Toy Tasks.
     (see https://arxiv.org/abs/1502.05698)
 
@@ -33,16 +33,20 @@ class BAbIReader(DatasetReader):
     """
 
     def __init__(self,
-                 keep_sentences: bool = False,
-                 subset: int = 10000,
-                 token_indexers: Dict[str, TokenIndexer] = None,
-                 lazy: bool = False) -> None:
+                 keep_sentences: Optional[bool] = False,
+                 subset: Optional[int] = None,
+                 token_indexers: Optional[Dict[str, TokenIndexer]] = None,
+                 lazy: Optional[bool] = False) -> None:
 
         super().__init__(lazy)
+
+        assert subset is None or (isinstance(subset, int) and subset > 0), \
+            'Parameter subset has to be either None or an integer > 0, found {} of type {}.'.fomat(subset, type(subset))
         self._subset = subset
+
         self._keep_sentences = keep_sentences
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
-    
+
     @overrides
     def _read(self, file_path: str):
         # if `file_path` is a URL, redirect to the cache
@@ -52,38 +56,36 @@ class BAbIReader(DatasetReader):
 
         with open(file_path) as dataset_file:
             dataset = dataset_file.readlines()
-        
+
         aggregated_dataset = []
         for line in dataset:
 
             if '?' in line:
-                q, a = line.replace('?', '').split('\t')[:-1]
-                line = (None, q.split()[1:], a)
+                question, answer = line.replace('?', ' ?').split('\t')[:-1]
+                new_line = (None, question.split()[1:], answer)
             else:
-                line = line.replace('.', ' .').split()
+                new_line = line.replace('.', ' .').split()
 
-            if line[0] == '1':
-                aggregated_dataset.append([line[1:]])
+            if new_line[0] == '1':
+                aggregated_dataset.append([new_line[1:]])
             else:
-                aggregated_dataset[-1].append(line[1:])
+                aggregated_dataset[-1].append(new_line[1:])
 
-        aggregated_stories_dataset = []
-        for i in range(len(aggregated_dataset)):
-            story = aggregated_dataset[i]
+        aggregated_stories_dataset: List = []
+        for story in aggregated_dataset:
 
-            substories = [[]]
+            substories: List[List] = [[]]
             for line in story:
                 substories[-1].append(line)
                 if isinstance(line, tuple):
                     substories.append(substories[-1][:-1])
 
             aggregated_stories_dataset += substories[:-1]
-        
+
         logger.info("Reading the dataset")
         for story in aggregated_stories_dataset[:self._subset]:
             yield self.text_to_instance(story[:-1], story[-1][0], story[-1][1])
 
-    @overrides
     def text_to_instance(self,
                          context: List[List[str]],
                          question: List[str],
@@ -96,12 +98,12 @@ class BAbIReader(DatasetReader):
                                            for line in context])
         else:
             fields['context'] = TextField([Token(word) for line in context for word in line], self._token_indexers)
-            
+
         fields['question'] = TextField([Token(word) for word in question], self._token_indexers)
         fields['answer'] = TextField([Token(answer)], self._token_indexers)
-        
+
         metadata = {'context': context, 'question': question, 'answer': answer}
-        
+
         fields['metadata'] = MetadataField(metadata)
-        
+
         return Instance(fields)
