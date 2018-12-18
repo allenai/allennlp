@@ -215,20 +215,19 @@ class BidafPlusPlus(Model):
 
         # TODO this repeat is ugly ...
         batch_size,num_of_docs,_,_ = passage['token_characters'].size()
-
         if 'tokens' in question:
             size1 = question['tokens'].size()
             question['tokens'] = \
-                question['tokens'].unsqueeze(1).repeat(1,num_of_docs,1,1).reshape(batch_size * num_of_docs,size1[1],size1[2])
+                question['tokens'].unsqueeze(1).repeat(1,num_of_docs,1).reshape(batch_size * num_of_docs, 1, size1[1])
         elif 'elmo'in question:
             size1 = question['elmo'].size()
             question['elmo'] = \
-                question['elmo'].unsqueeze(1).repeat(1,num_of_docs,1,1,1).reshape(batch_size * num_of_docs, size1[1],size1[2],size1[3])
+                question['elmo'].unsqueeze(1).repeat(1,num_of_docs,1,1).reshape(batch_size * num_of_docs, 1, size1[1], size1[2])
 
         # Question dims = [batch size, number of documents, number of QAS, ... ]
         size2 = question['token_characters'].size()
         question['token_characters'] = \
-            question['token_characters'].unsqueeze(1).repeat(1,num_of_docs,1,1,1).reshape(batch_size * num_of_docs,size2[1],size2[2],size2[3])
+            question['token_characters'].unsqueeze(1).repeat(1,num_of_docs,1,1).reshape(batch_size * num_of_docs, 1, size2[1],size2[2])
         _, max_qa_count, max_q_len, _ = question['token_characters'].size()
         total_qa_count = batch_size * max_qa_count * num_of_docs
 
@@ -415,6 +414,13 @@ class BidafPlusPlus(Model):
                         torch.cat(tuple(span_end_logits[curr_batch_inds])).unsqueeze(0), \
                         torch.cat(tuple(repeated_passage_mask[curr_batch_inds])).unsqueeze(0))
 
+                    ## Log then Sum for share norm implementation
+                    #span_start_logits_softmaxed = util.masked_softmax( \
+                    #    torch.cat(tuple(span_start_logits[curr_batch_inds])).unsqueeze(0), \
+                    #    torch.cat(tuple(repeated_passage_mask[curr_batch_inds])).unsqueeze(0))
+                    #span_end_logits_softmaxed = util.masked_softmax(
+                    #    torch.cat(tuple(span_end_logits[curr_batch_inds])).unsqueeze(0), \
+                    #    torch.cat(tuple(repeated_passage_mask[curr_batch_inds])).unsqueeze(0))
                     #start_indexes = [ind + doc_num * passage_length for doc_num, ind in
                     #         enumerate(selected_span_start[curr_batch_inds])]
                     #end_indexes = [ind + doc_num * passage_length for doc_num, ind in

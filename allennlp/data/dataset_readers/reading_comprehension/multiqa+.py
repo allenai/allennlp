@@ -138,6 +138,82 @@ class MultiQAReader(DatasetReader):
         self._num_of_examples_to_sample = num_of_examples_to_sample
         self._para_tfidf_scoring = Paragraph_TfIdf_Scoring(15)
 
+    def build_context(self,context):
+        # Processing each document separatly
+        paragraphs = ['']
+        curr_paragraph = 0
+        answer_starts_offsets = []
+        temp_tokenized_paragraph = []  # Temporarily used to calculated the amount of tokens in a given paragraph
+        offset = 0
+        for doc_ind, document in enumerate(context['documents']):
+            # tokenizing the whole document (title + all snippets concatinated)
+            ## TODO add document['rank']
+            ## TODO change to <SEP>
+            ## TODO handle spliting paragraphs in the middle
+            # constracting single context by concatinating parts of the original context
+            if self._use_document_titles:
+                text_to_add = document['title'] + ' | ' + ' '.join(document['snippets']) + " || "
+            else:
+                text_to_add = ' '.join(document['snippets']) + " || "
+
+            # Split when number of tokens is larger than _max_context_size.
+            tokens_to_add = self._tokenizer.tokenize(text_to_add)
+            if len(temp_tokenized_paragraph) + len(tokens_to_add) > self._max_context_size:
+                ## Split Paragraphs ##
+                temp_tokenized_paragraph = []
+                paragraphs.append('')
+                curr_paragraph += 1
+                # the offset for calculating the answer starts are relative to each paragraphs
+                # so for a new paragraph we need to start a new offset.
+                offset = 0
+
+            temp_tokenized_paragraph += tokens_to_add
+            paragraphs[curr_paragraph] += text_to_add
+
+            # Computing answer_starts offsets:
+            if self._use_document_titles:
+                answer_starts_offsets.append({'title': [curr_paragraph, offset]})
+                offset += len(document['title']) + 3  # we add 3 for the separator ' | '
+            else:
+                answer_starts_offsets.append({})
+
+            for snippet_ind, snippet in enumerate(document['snippets']):
+                answer_starts_offsets[doc_ind][snippet_ind] = [curr_paragraph, offset]
+                offset += len(snippet)
+
+                # ' '. adds extra space between the snippets.
+                if len(document['snippets']) > 1 and snippet_ind < len(document['snippets']) - 1:
+                    offset += 1
+            offset += 4  # for " || "
+
+            # offset sanity check
+            if offset != len(paragraphs[curr_paragraph]):
+                raise ValueError()
+        return paragraphs , answer_starts_offsets
+
+    def rank_paragraphs(self, answer_starts_offsets, paragraphs, context):
+        tokenized_question = self._tokenizer.tokenize(context['qas'][0]['question'])
+        tokenized_question_str = [str(token) for token in tokenized_question]
+        scores = self._para_tfidf_scoring.score_paragraphs(tokenized_question_str, paragraphs)
+        sorted_ix = np.argsort(scores)[:self._max_context_docs]
+
+        # TODO this is ugly
+        filtered_paragraphs = []
+        filtered_answer_starts_offsets = copy.deepcopy(answer_starts_offsets)
+        for new_ind, old_ind in enumerate(sorted_ix):
+            filtered_paragraphs.append(paragraphs[old_ind])
+
+            for doc_ind in range(len(answer_starts_offsets)):
+                for key in answer_starts_offsets[doc_ind].keys():
+                    if answer_starts_offsets[doc_ind][key][0] == old_ind:
+                        filtered_answer_starts_offsets[doc_ind][key][0] = new_ind
+                    elif answer_starts_offsets[doc_ind][key][0] not in sorted_ix:
+                        filtered_answer_starts_offsets[doc_ind][key][0] = -1
+        answer_starts_offsets = filtered_answer_starts_offsets
+        paragraphs = filtered_paragraphs
+
+        return paragraphs, answer_starts_offsets
+
     @overrides
     def _read(self, file_path: str):
         logger.info("Reading the dataset")
@@ -164,128 +240,52 @@ class MultiQAReader(DatasetReader):
         skipped_qa_count = 0
         all_qa_count = 0
 
+        preprocessed_instances = []
+
         if self._num_of_examples_to_sample is not None:
             contexts = contexts[0:self._num_of_examples_to_sample]
 
         for context_ind,context in enumerate(contexts):
 
-            # Processing each document separatly
-            paragraphs = ['']
-            curr_paragraph = 0
-            answer_starts_offsets = []
-            temp_tokenized_paragraph = [] # Temporarily used to calculated the amount of tokens in a given paragraph
-            offset = 0
-            for doc_ind, document in enumerate(context['documents']):
-                # tokenizing the whole document (title + all snippets concatinated)
-                ## TODO add document['rank']
-                ## TODO change to <SEP>
-                ## TODO handle spliting paragraphs in the middle
-                # constracting single context by concatinating parts of the original context
-                if self._use_document_titles:
-                    text_to_add =  document['title'] + ' | ' + ' '.join(document['snippets']) + " || "
-                else:
-                    text_to_add = ' '.join(document['snippets']) + " || "
-
-
-                # Split when number of tokens is larger than _max_context_size.
-                tokens_to_add  = self._tokenizer.tokenize(text_to_add)
-                if len(temp_tokenized_paragraph) + len(tokens_to_add) > self._max_context_size:
-
-                    ## Split Paragraphs ##
-                    temp_tokenized_paragraph = []
-                    paragraphs.append('')
-                    curr_paragraph += 1
-                    # the offset for calculating the answer starts are relative to each paragraphs
-                    # so for a new paragraph we need to start a new offset.
-                    offset = 0
-
-                temp_tokenized_paragraph += tokens_to_add
-                paragraphs[curr_paragraph] += text_to_add
-
-                # Computing answer_starts offsets:
-                if self._use_document_titles:
-                    answer_starts_offsets.append({'title': [curr_paragraph,offset]})
-                    offset += len(document['title']) + 3  # we add 3 for the separator ' | '
-                else:
-                    answer_starts_offsets.append({})
-
-                for snippet_ind, snippet in enumerate(document['snippets']):
-                    answer_starts_offsets[doc_ind][snippet_ind] = [curr_paragraph,offset]
-                    offset += len(snippet)
-
-                    # ' '. adds extra space between the snippets.
-                    if len(document['snippets'])>1 and snippet_ind < len(document['snippets'])-1:
-                        offset += 1
-                offset += 4 # for " || "
-
-                # offset sanity check
-                if offset != len(paragraphs[curr_paragraph]):
-                    raise ValueError()
+            paragraphs, answer_starts_offsets = self.build_context(context)
 
             # scoring each paragraph, and pruning
-            # TODO only supporting one question for now
-            tokenized_question = self._tokenizer.tokenize(context['qas'][0]['question'])
-            tokenized_question_str = [str(token) for token in tokenized_question]
-            scores = self._para_tfidf_scoring.score_paragraphs(tokenized_question_str,paragraphs)
-            sorted_ix = np.argsort(scores)[:self._max_context_docs]
-
-            # TODO this is ugly
-            filtered_paragraphs = []
-            filtered_answer_starts_offsets = copy.deepcopy(answer_starts_offsets)
-            for new_ind,old_ind in enumerate(sorted_ix):
-                filtered_paragraphs.append(paragraphs[old_ind])
-
-                for doc_ind in range(len(answer_starts_offsets)):
-                    for key in answer_starts_offsets[doc_ind].keys():
-                        if answer_starts_offsets[doc_ind][key][0] == old_ind:
-                            filtered_answer_starts_offsets[doc_ind][key][0] = new_ind
-                        elif answer_starts_offsets[doc_ind][key][0] not in sorted_ix:
-                            filtered_answer_starts_offsets[doc_ind][key][0] = -1
-            answer_starts_offsets = filtered_answer_starts_offsets
-            paragraphs = filtered_paragraphs
+            paragraphs, answer_starts_offsets = self.rank_paragraphs(answer_starts_offsets, paragraphs, context)
 
             # Discarding context that are too long (when len is 0 that means we breaked from context loop)
             # TODO this is mainly relevant when we do not split large paragraphs.
             all_qa_count += len(context['qas'])
-            #if len(tokenized_paragraph) > self._max_context_size or len(tokenized_paragraph) == 0:
-            #    skipped_qa_count += len(context['qas'])
-            #    if context_ind % 30 == 0:
-            #        logger.info('Fraction of QA remaining = %f', ((all_qa_count - skipped_qa_count) / all_qa_count))
-            #    continue
 
             # we need to tokenize all the paragraph (again) because previous tokens start the offset count
             # from 0 for each document... # TODO find a better way to do this...
             tokenized_paragraphs = [self._tokenizer.tokenize(paragraph) for paragraph in paragraphs]
 
             # a list of question/answers
-            qas = context['qas']
+            for qa_ind, qa in enumerate(context['qas']):
 
-
-            # Adding Metadata
-            metadata = {}
-            metadata["instance_id"] = [qa['id'] for qa in qas]
-            question_text_list = [qa["question"].strip().replace("\n", "") for qa in qas]
-            answer_texts_list = [[] for qa in qas]
-            for qa_ind,qa in enumerate(qas):
+                # Adding Metadata
+                metadata = {}
+                metadata["instance_id"] = qa['id']
+                question_text = qa["question"].strip().replace("\n", "")
+                answer_texts_list = []
                 for answer in qa['answers']:
-                    answer_texts_list[qa_ind] += [alias['text'] for alias in answer['aliases']]
-            metadata["question"] = question_text_list
-            metadata['answer_texts_list'] = answer_texts_list
+                    answer_texts_list += [alias['text'] for alias in answer['aliases']]
+                metadata["question"] = question_text
+                metadata['answer_texts_list'] = answer_texts_list
 
 
-            # calculate new answer starts for the new combined document
-            # answer_starts_list is a tuple of (paragraph_number,answer_offset)
-            span_starts_list = {'answers':[[] for qa in qas],'distractor_answers':[[] for qa in qas]}
-            span_ends_list = {'answers':[[] for qa in qas],'distractor_answers':[[] for qa in qas]}
+                # calculate new answer starts for the new combined document
+                # answer_starts_list is a tuple of (paragraph_number,answer_offset)
+                span_starts_list = {'answers':[],'distractor_answers':[]}
+                span_ends_list = {'answers':[],'distractor_answers':[]}
 
-            for qa_ind, qa in enumerate(qas):
                 if qa['answer_type'] == 'multi_choice':
                     answer_types = ['answers','distractor_answers']
                 else:
                     answer_types = ['answers']
 
 
-                # span_starts_list is a list of dim [answer types, question num] each values is (paragraph num, answer start char offset)
+                # span_starts_list is a list of dim [answer types] each values is (paragraph num, answer start char offset)
                 for answer_type in answer_types:
                     for answer in qa[answer_type]:
                         for alias in answer['aliases']:
@@ -300,8 +300,9 @@ class MultiQAReader(DatasetReader):
                                     # We could have pruned this paragraph
                                     if answer_start_paragraph == -1:
                                         continue
-                                    span_starts_list[answer_type][qa_ind].append((answer_start_paragraph,answer_start_norm))
-                                    span_ends_list[answer_type][qa_ind].append((answer_start_paragraph,answer_start_norm + len(alias['text'])))
+                                    span_starts_list[answer_type].append((answer_start_paragraph,answer_start_norm))
+                                    span_ends_list[answer_type].append((answer_start_paragraph,answer_start_norm + len(alias['text'])))
+
 
                                     # Sanity check: the alias text should be equal the text in answer_start in the paragraph
                                     x = re.match(r'\b{0}\b'.format(re.escape(alias['text'])),
@@ -312,37 +313,43 @@ class MultiQAReader(DatasetReader):
                                                                                                      + len(alias['text'])].lower()):
                                             raise ValueError("answers and paragraph not aligned!")
 
-            # Filtering the context documents
-            # TODO add an option not to do this for validation sets,
+                # If answer was not found in this question do not yield an instance
+                # (This could happen if we used part of the context or in unfiltered context versions)
+                if span_starts_list['answers'] == []:
 
+                    skipped_qa_count += 1
+                    if context_ind % 30 == 0:
+                        logger.info('Fraction of QA remaining = %f', ((all_qa_count - skipped_qa_count) / all_qa_count))
+                    continue
 
-            # If answer was not found in this question do not yield an instance
-            # (This could happen if we used part of the context or in unfiltered context versions)
-            if span_starts_list['answers'] == [[]]:
+                # adding to cache
+                #preprocessed_instances.append({'question_text':question_text,'paragraphs':paragraphs,\
+                #                               'span_starts_list':span_starts_list,'span_ends_list':span_ends_list,'metadata':metadata})
 
-                skipped_qa_count += len(context['qas'])
-                if context_ind % 30 == 0:
-                    logger.info('Fraction of QA remaining = %f', ((all_qa_count - skipped_qa_count) / all_qa_count))
-                continue
+                instance = self.text_to_instance(question_text,
+                                                 paragraphs,
+                                                 span_starts_list,
+                                                 span_ends_list,
+                                                 tokenized_paragraphs,
+                                                 metadata)
 
-            instance = self.text_to_instance(question_text_list,
-                                             paragraphs,
-                                             span_starts_list,
-                                             span_ends_list,
-                                             tokenized_paragraphs,
-                                             metadata)
+                # NOTE (TODO) this is a workaround, we cannot save global information to be passed to the model yet
+                # (see https://github.com/allenai/allennlp/issues/1809) so we will save it every time it changes
+                # insuring that if we do a full pass on the validation set and take max for all_qa_count we will
+                # get the correct number (except if the last ones are skipped.... hopefully this is a small diff )
+                instance.fields['metadata'].metadata['num_examples_used'] = (all_qa_count - skipped_qa_count, all_qa_count)
 
-            # NOTE (TODO) this is a workaround, we cannot save global information to be passed to the model yet
-            # (see https://github.com/allenai/allennlp/issues/1809) so we will save it every time it changes
-            # insuring that if we do a full pass on the validation set and take max for all_qa_count we will
-            # get the correct number (except if the last ones are skipped.... hopefully this is a small diff )
-            instance.fields['metadata'].metadata['num_examples_used'] = (all_qa_count - skipped_qa_count, all_qa_count)
+                yield instance
 
-            yield instance
+        # saving cache
+        #preproc_dataset = {'num_examples_used':(all_qa_count - skipped_qa_count, all_qa_count),'preprocessed':True, \
+        #                   'preprocessed_instances':preprocessed_instances}
+        #with zipfile.ZipFile('cache.json.zip', "w", zipfile.ZIP_DEFLATED) as zip_file:
+        #    zip_file.writestr('cache.json.zip', json.dumps(preproc_dataset))
 
     @overrides
     def text_to_instance(self,  # type: ignore
-                         question_text_list: List[str],
+                         question_text: str,
                          paragraphs: List[str],
                          start_span_list: List[List[int]] = None,
                          end_span_list: List[List[int]] = None,
@@ -362,27 +369,27 @@ class MultiQAReader(DatasetReader):
                 passage_offsets = [(token.idx, token.idx + len(token.text)) for token in tokenized_paragraph]
 
                 para_answer_token_span_list = []
-                for question_start_list, question_end_list in zip(start_span_list[answer_type], end_span_list[answer_type]):
-                    token_spans: List[Tuple[int, int]] = []
-                    for char_span_start, char_span_end in zip(question_start_list, question_end_list):
-                        if char_span_start[0] == para_num and char_span_end[0]== para_num:
-                            (span_start, span_end), error = util.char_span_to_token_span(passage_offsets,
-                                                                                         (char_span_start[1], char_span_end[1]))
-                            if error:
-                                logger.debug("Passage: %s", paragraphs[para_num])
-                                logger.debug("Passage tokens: %s", tokenized_paragraphs[para_num])
-                                logger.debug("Answer span: (%d, %d)", char_span_start, char_span_end)
-                                logger.debug("Token span: (%d, %d)", span_start, span_end)
-                                logger.debug("Tokens in answer: %s", tokenized_paragraphs[para_num][span_start:span_end + 1])
-                                logger.debug("Answer: %s", paragraphs[para_num][char_span_start[1]:char_span_end[1]])
-                            token_spans.append((span_start, span_end))
-                    para_answer_token_span_list.append(token_spans)
+                #for question_start_list, question_end_list in zip(start_span_list[answer_type], end_span_list[answer_type]):
+                token_spans: List[Tuple[int, int]] = []
+                for char_span_start, char_span_end in zip(start_span_list[answer_type], end_span_list[answer_type]):
+                    if char_span_start[0] == para_num and char_span_end[0]== para_num:
+                        (span_start, span_end), error = util.char_span_to_token_span(passage_offsets,
+                                                                                     (char_span_start[1], char_span_end[1]))
+                        if error:
+                            logger.debug("Passage: %s", paragraphs[para_num])
+                            logger.debug("Passage tokens: %s", tokenized_paragraphs[para_num])
+                            logger.debug("Answer span: (%d, %d)", char_span_start, char_span_end)
+                            logger.debug("Token span: (%d, %d)", span_start, span_end)
+                            logger.debug("Tokens in answer: %s", tokenized_paragraphs[para_num][span_start:span_end + 1])
+                            logger.debug("Answer: %s", paragraphs[para_num][char_span_start[1]:char_span_end[1]])
+                        token_spans.append((span_start, span_end))
+                para_answer_token_span_list.append(token_spans)
 
                 answer_token_span_list[answer_type].append(para_answer_token_span_list)
 
-        question_list_tokens = [self._tokenizer.tokenize(q) for q in question_text_list]
+        question_tokens = self._tokenizer.tokenize(question_text)
 
-        return util.make_reading_comprehension_instance_multiqa_multidoc(question_list_tokens,
+        return util.make_reading_comprehension_instance_multiqa_multidoc(question_tokens,
                                                              tokenized_paragraphs,
                                                              self._token_indexers,
                                                              paragraphs,
