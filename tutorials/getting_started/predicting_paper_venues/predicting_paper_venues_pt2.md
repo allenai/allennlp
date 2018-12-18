@@ -59,24 +59,13 @@ class PaperClassifierPredictor(Predictor):
         # Convert it to list ["ACL", "AI", ...]
         all_labels = [label_dict[i] for i in range(len(label_dict))]
 
-        return instance, {"all_labels": all_labels}
+        return instance
 ```
 
 To create each `Instance` it just pulls the `"title"` and `"paperAbstract"` fields
 out of the input JSON and feeds them to `text_to_instance`.
 
-In this example we also would like to return the list of all possible labels
-(this will be useful later when we want to visualize the results).
-We first get the mapping from indices to labels, and then we convert
-it to a list where position 0 is label 0, and so on.
-
-`_json_to_instance` returns a tuple, where the first element is
-the `Instance` and the second element is a `dict` that the elements
-of `Model.forward_on_instance` will be added to. Anything that we want
-in our JSON output that's not produced by `forward()` goes in it.
-
-Here that's just the list of `all_labels`, so that's what we put in the `dict`.
-If we didn't need that, we'd just use an empty `dict` there.
+`_json_to_instance` returns the `Instance`.
 
 ## Testing the Predictor
 
@@ -307,7 +296,7 @@ var ctx = document.getElementById("myChart");
 var pieChart = new Chart(ctx, {
     type: 'pie',
     data: {
-        labels: response['all_labels'],
+        labels: [response['label']],
         datasets: [{
             data: response['class_probabilities'],
             backgroundColor: ['red', 'green', 'blue']
