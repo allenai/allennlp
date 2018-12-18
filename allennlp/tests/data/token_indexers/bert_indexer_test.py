@@ -1,7 +1,7 @@
 # pylint: disable=no-self-use,invalid-name
 from allennlp.common.testing import ModelTestCase
 from allennlp.data.token_indexers.wordpiece_indexer import PretrainedBertIndexer
-from allennlp.data.tokenizers import WordTokenizer
+from allennlp.data.tokenizers import WordTokenizer, Token
 from allennlp.data.tokenizers.word_splitter import BertBasicWordSplitter
 from allennlp.data.vocabulary import Vocabulary
 
@@ -57,3 +57,30 @@ class TestBertIndexer(ModelTestCase):
 
         # Now Quick should get indexed correctly as 3 ( == "quick")
         assert indexed_tokens["bert"] == [16, 2, 3, 5, 6, 8, 9, 2, 15, 10, 11, 14, 1, 17]
+
+
+    def test_never_lowercase(self):
+        # Our default tokenizer doesn't handle lowercasing.
+        tokenizer = WordTokenizer()
+
+        #            2 15 10 11  6
+        sentence = "the laziest fox"
+
+        tokens = tokenizer.tokenize(sentence)
+        tokens.append(Token("[PAD]"))  # have to do this b/c tokenizer splits it in three
+
+        vocab = Vocabulary()
+        vocab_path = self.FIXTURES_ROOT / 'bert' / 'vocab.txt'
+        token_indexer = PretrainedBertIndexer(str(vocab_path), do_lowercase=True)
+
+        indexed_tokens = token_indexer.tokens_to_indices(tokens, vocab, "bert")
+
+        # PAD should get recognized and not lowercased      # [PAD]
+        assert indexed_tokens["bert"] == [16, 2, 15, 10, 11, 6, 0, 17]
+
+        # Unless we manually override the never lowercases
+        token_indexer = PretrainedBertIndexer(str(vocab_path), do_lowercase=True, never_lowercase=())
+        indexed_tokens = token_indexer.tokens_to_indices(tokens, vocab, "bert")
+
+        # now PAD should get lowercased and be UNK          # [UNK]
+        assert indexed_tokens["bert"] == [16, 2, 15, 10, 11, 6, 1, 17]
