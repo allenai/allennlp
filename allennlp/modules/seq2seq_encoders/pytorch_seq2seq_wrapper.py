@@ -121,6 +121,6 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
 
         # Restore the original indices and return the sequence.
         if torch.cuda.is_available():
-            return unpacked_sequence_tensor.index_select(0, restoration_indices.type(torch.cuda.LongTensor))
+            return unpacked_sequence_tensor.index_select(0, restoration_indices.type(torch.cuda.LongTensor(device=restoration_indices.device)))
         else:
             return unpacked_sequence_tensor.index_select(0, restoration_indices.type(torch.LongTensor))
