@@ -523,11 +523,24 @@ class Trainer(Registrable):
 
             self.optimizer.zero_grad()
 
+            start = time.time()
             loss = self.batch_loss(batch_group, for_training=True)
+            end = time.time()
+            diff_forward = end - start
+
             if torch.isnan(loss):
                 raise ValueError("nan loss encountered")
 
+            start = time.time()
             loss.backward()
+            end = time.time()
+            diff_backward = end - start
+
+            one_batch = batch_group[0]
+            assert len(batch_group) == 1 # remove
+            sequence_length = one_batch["tokens"].size(1)
+            batch_size = one_batch["tokens"].size(0)
+            logger.info(f"batch: {batch_size} seq: {sequence_length} forward: {diff_forward} back: {diff_backward}")
 
             train_loss += loss.item()
 
