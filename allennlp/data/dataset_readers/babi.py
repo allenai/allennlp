@@ -75,6 +75,7 @@ class BAbIReader(DatasetReader):
                          answer: str,
                          supports: List[int]) -> Instance:
 
+        # pylint: disable=arguments-differ
         fields: Dict[str, Field] = {}
 
         if self._keep_sentences:

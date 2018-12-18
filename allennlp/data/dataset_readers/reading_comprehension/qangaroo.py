@@ -70,6 +70,7 @@ class QangarooReader(DatasetReader):
                          answer: str = None,
                          annotations: List[List[str]] = None) -> Instance:
 
+        # pylint: disable=arguments-differ
         fields: Dict[str, Field] = {}
 
         candidates_field = ListField([TextField(candidate, self._token_indexers)
