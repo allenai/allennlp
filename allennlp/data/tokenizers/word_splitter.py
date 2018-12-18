@@ -13,6 +13,8 @@ from allennlp.data.tokenizers.token import Token
 from allennlp.data.token_indexers.openai_transformer_byte_pair_indexer import text_standardize
 
 
+__all__ = ["WordSplitter", "SpacyWordSplitter", "SimpleWordSplitter", "JustSpacesWordSplitter", "BertBasicWordSplitter"]
+
 class WordSplitter(Registrable):
     """
     A ``WordSplitter`` splits strings into words.  This is typically called a "tokenizer" in NLP,
