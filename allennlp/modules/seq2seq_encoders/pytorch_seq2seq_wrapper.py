@@ -123,8 +123,7 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
         if torch.__version__ == '0.4.0':
             if torch.cuda.is_available():
                 with torch.cuda.device(restoration_indices.device.index):
-                    return unpacked_sequence_tensor.index_select(0, \
-                            restoration_indices.type(torch.cuda.LongTensor(device=restoration_indices.device)))
+                    return unpacked_sequence_tensor.index_select(0, restoration_indices.type(torch.cuda.LongTensor))
             else:
                 return unpacked_sequence_tensor.index_select(0, restoration_indices.type(torch.LongTensor))
         else:
