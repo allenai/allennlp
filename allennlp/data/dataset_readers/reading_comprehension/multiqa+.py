@@ -237,6 +237,9 @@ class MultiQAReader(DatasetReader):
                     dataset_json = json.load(myfile)
                     contexts += dataset_json['data']['contexts']
 
+
+
+
         skipped_qa_count = 0
         all_qa_count = 0
 
@@ -328,6 +331,9 @@ class MultiQAReader(DatasetReader):
 
                 for paragraph,tokenized_paragraph,span_starts,span_ends in \
                         zip(paragraphs,tokenized_paragraphs,span_ends_list,span_ends_list):
+
+                    if len(tokenized_paragraph) == 0:
+                        continue
                     # adding to cache
                     #preprocessed_instances.append({'question_text':question_text,'paragraphs':paragraphs,\
                     #                               'span_starts_list':span_starts_list,'span_ends_list':span_ends_list,'metadata':metadata})
