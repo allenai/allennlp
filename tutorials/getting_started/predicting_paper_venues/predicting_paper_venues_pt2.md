@@ -49,12 +49,12 @@ This means our predictor [can be very simple](https://github.com/allenai/allennl
 class PaperClassifierPredictor(Predictor):
     """Predictor wrapper for the AcademicPaperClassifier"""
     @overrides
-    def _json_to_instance(self, json_dict: JsonDict) -> Tuple[Instance, JsonDict]:
+    def predict_json(self, json_dict: JsonDict) -> JsonDict:
         title = json_dict['title']
         abstract = json_dict['paperAbstract']
         instance = self._dataset_reader.text_to_instance(title=title, abstract=abstract)
-        
-         # label_dict will be like {0: "ACL", 1: "AI", ...}
+
+        # label_dict will be like {0: "ACL", 1: "AI", ...}
         label_dict = self._model.vocab.get_index_to_token_vocabulary('labels')
         # Convert it to list ["ACL", "AI", ...]
         all_labels = [label_dict[i] for i in range(len(label_dict))]
@@ -70,7 +70,7 @@ In this example we also would like to return the list of all possible labels
 We first get the mapping from indices to labels, and then we convert
 it to a list where position 0 is label 0, and so on.
 
-`_json_to_instance` returns a tuple, where the first element is
+`predict_json` returns a dict, where the first element is
 the `Instance` and the second element is a `dict` that the elements
 of `Model.forward_on_instance` will be added to. Anything that we want
 in our JSON output that's not produced by `forward()` goes in it.
@@ -307,9 +307,9 @@ var ctx = document.getElementById("myChart");
 var pieChart = new Chart(ctx, {
     type: 'pie',
     data: {
-        labels: [response['label']],
+        labels: response['all_labels'],
         datasets: [{
-            data: response['class_probabilities'],
+            data: response['instance']['class_probabilities'],
             backgroundColor: ['red', 'green', 'blue']
         }]
     }
