@@ -265,7 +265,7 @@ class MultiQAReader(DatasetReader):
 
                 # Adding Metadata
                 metadata = {}
-                metadata["instance_id"] = qa['id']
+                metadata["question_id"] = qa['id']
                 question_text = qa["question"].strip().replace("\n", "")
                 answer_texts_list = []
                 for answer in qa['answers']:
@@ -276,8 +276,8 @@ class MultiQAReader(DatasetReader):
 
                 # calculate new answer starts for the new combined document
                 # answer_starts_list is a tuple of (paragraph_number,answer_offset)
-                span_starts_list = {'answers':[],'distractor_answers':[]}
-                span_ends_list = {'answers':[],'distractor_answers':[]}
+                span_starts_list = [{'answers':[],'distractor_answers':[]} for para in paragraphs]
+                span_ends_list = [{'answers':[],'distractor_answers':[]} for para in paragraphs]
 
                 if qa['answer_type'] == 'multi_choice':
                     answer_types = ['answers','distractor_answers']
@@ -286,6 +286,7 @@ class MultiQAReader(DatasetReader):
 
 
                 # span_starts_list is a list of dim [answer types] each values is (paragraph num, answer start char offset)
+                answer_found = False
                 for answer_type in answer_types:
                     for answer in qa[answer_type]:
                         for alias in answer['aliases']:
@@ -300,8 +301,11 @@ class MultiQAReader(DatasetReader):
                                     # We could have pruned this paragraph
                                     if answer_start_paragraph == -1:
                                         continue
-                                    span_starts_list[answer_type].append((answer_start_paragraph,answer_start_norm))
-                                    span_ends_list[answer_type].append((answer_start_paragraph,answer_start_norm + len(alias['text'])))
+
+                                    answer_found = True
+
+                                    span_starts_list[answer_start_paragraph][answer_type].append(answer_start_norm)
+                                    span_ends_list[answer_start_paragraph][answer_type].append(answer_start_norm + len(alias['text']))
 
 
                                     # Sanity check: the alias text should be equal the text in answer_start in the paragraph
@@ -315,31 +319,33 @@ class MultiQAReader(DatasetReader):
 
                 # If answer was not found in this question do not yield an instance
                 # (This could happen if we used part of the context or in unfiltered context versions)
-                if span_starts_list['answers'] == []:
+                if not answer_found:
 
                     skipped_qa_count += 1
                     if context_ind % 30 == 0:
                         logger.info('Fraction of QA remaining = %f', ((all_qa_count - skipped_qa_count) / all_qa_count))
                     continue
 
-                # adding to cache
-                #preprocessed_instances.append({'question_text':question_text,'paragraphs':paragraphs,\
-                #                               'span_starts_list':span_starts_list,'span_ends_list':span_ends_list,'metadata':metadata})
+                for paragraph,tokenized_paragraph,span_starts,span_ends in \
+                        zip(paragraphs,tokenized_paragraphs,span_ends_list,span_ends_list):
+                    # adding to cache
+                    #preprocessed_instances.append({'question_text':question_text,'paragraphs':paragraphs,\
+                    #                               'span_starts_list':span_starts_list,'span_ends_list':span_ends_list,'metadata':metadata})
 
-                instance = self.text_to_instance(question_text,
-                                                 paragraphs,
-                                                 span_starts_list,
-                                                 span_ends_list,
-                                                 tokenized_paragraphs,
+                    instance = self.text_to_instance(question_text,
+                                                 paragraph,
+                                                 span_starts,
+                                                 span_ends,
+                                                 tokenized_paragraph,
                                                  metadata)
 
-                # NOTE (TODO) this is a workaround, we cannot save global information to be passed to the model yet
-                # (see https://github.com/allenai/allennlp/issues/1809) so we will save it every time it changes
-                # insuring that if we do a full pass on the validation set and take max for all_qa_count we will
-                # get the correct number (except if the last ones are skipped.... hopefully this is a small diff )
-                instance.fields['metadata'].metadata['num_examples_used'] = (all_qa_count - skipped_qa_count, all_qa_count)
+                    # NOTE (TODO) this is a workaround, we cannot save global information to be passed to the model yet
+                    # (see https://github.com/allenai/allennlp/issues/1809) so we will save it every time it changes
+                    # insuring that if we do a full pass on the validation set and take max for all_qa_count we will
+                    # get the correct number (except if the last ones are skipped.... hopefully this is a small diff )
+                    instance.fields['metadata'].metadata['num_examples_used'] = (all_qa_count - skipped_qa_count, all_qa_count)
 
-                yield instance
+                    yield instance
 
         # saving cache
         #preproc_dataset = {'num_examples_used':(all_qa_count - skipped_qa_count, all_qa_count),'preprocessed':True, \
@@ -350,48 +356,43 @@ class MultiQAReader(DatasetReader):
     @overrides
     def text_to_instance(self,  # type: ignore
                          question_text: str,
-                         paragraphs: List[str],
-                         start_span_list: List[List[int]] = None,
-                         end_span_list: List[List[int]] = None,
-                         tokenized_paragraphs: List[List[Token]] = None,
+                         paragraph: List[str],
+                         span_starts: List[List[int]] = None,
+                         span_ends: List[List[int]] = None,
+                         tokenized_paragraph: List[List[Token]] = None,
                          additional_metadata: Dict[str, Any] = None) -> Instance:
         # pylint: disable=arguments-differ
         # We need to convert character indices in `passage_text` to token indices in
         # `passage_tokens`, as the latter is what we'll actually use for supervision.
 
-        tokenized_paragraphs = tokenized_paragraphs or []
+        tokenized_paragraph = tokenized_paragraph or []
 
         # Building answer_token_span_list shape: [answer_type, paragraph, questions , answer list]
         # Span_starts_list is a list of dim [answer types, question num] each values is (paragraph num, answer start char offset)
         answer_token_span_list = {'answers':[],'distractor_answers':[]}
         for answer_type in ['answers', 'distractor_answers']:
-            for para_num,tokenized_paragraph in enumerate(tokenized_paragraphs):
-                passage_offsets = [(token.idx, token.idx + len(token.text)) for token in tokenized_paragraph]
+            passage_offsets = [(token.idx, token.idx + len(token.text)) for token in tokenized_paragraph]
 
-                para_answer_token_span_list = []
-                #for question_start_list, question_end_list in zip(start_span_list[answer_type], end_span_list[answer_type]):
-                token_spans: List[Tuple[int, int]] = []
-                for char_span_start, char_span_end in zip(start_span_list[answer_type], end_span_list[answer_type]):
-                    if char_span_start[0] == para_num and char_span_end[0]== para_num:
-                        (span_start, span_end), error = util.char_span_to_token_span(passage_offsets,
-                                                                                     (char_span_start[1], char_span_end[1]))
-                        if error:
-                            logger.debug("Passage: %s", paragraphs[para_num])
-                            logger.debug("Passage tokens: %s", tokenized_paragraphs[para_num])
-                            logger.debug("Answer span: (%d, %d)", char_span_start, char_span_end)
-                            logger.debug("Token span: (%d, %d)", span_start, span_end)
-                            logger.debug("Tokens in answer: %s", tokenized_paragraphs[para_num][span_start:span_end + 1])
-                            logger.debug("Answer: %s", paragraphs[para_num][char_span_start[1]:char_span_end[1]])
-                        token_spans.append((span_start, span_end))
-                para_answer_token_span_list.append(token_spans)
+            token_spans: List[Tuple[int, int]] = []
+            for char_span_start, char_span_end in zip(span_starts[answer_type], span_ends[answer_type]):
+                (span_start, span_end), error = util.char_span_to_token_span(passage_offsets,
+                                                                             (char_span_start, char_span_end))
+                if error:
+                    logger.debug("Passage: %s", paragraph)
+                    logger.debug("Passage tokens: %s", tokenized_paragraph)
+                    logger.debug("Answer span: (%d, %d)", char_span_start, char_span_end)
+                    logger.debug("Token span: (%d, %d)", span_start, span_end)
+                    logger.debug("Tokens in answer: %s", tokenized_paragraph[span_start:span_end + 1])
+                    logger.debug("Answer: %s", paragraph[char_span_start:char_span_end])
+                token_spans.append((span_start, span_end))
 
-                answer_token_span_list[answer_type].append(para_answer_token_span_list)
+            answer_token_span_list[answer_type].append(token_spans)
 
         question_tokens = self._tokenizer.tokenize(question_text)
 
         return util.make_reading_comprehension_instance_multiqa_multidoc(question_tokens,
-                                                             tokenized_paragraphs,
+                                                             tokenized_paragraph,
                                                              self._token_indexers,
-                                                             paragraphs,
+                                                             paragraph,
                                                              answer_token_span_list,
                                                              additional_metadata)

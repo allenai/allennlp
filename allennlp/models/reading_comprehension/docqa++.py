@@ -213,77 +213,58 @@ class BidafPlusPlus(Model):
             A scalar loss to be optimised.
         """
 
-        # TODO this repeat is ugly ...
-        batch_size,num_of_docs,_,_ = passage['token_characters'].size()
-        if 'tokens' in question:
-            size1 = question['tokens'].size()
-            question['tokens'] = \
-                question['tokens'].unsqueeze(1).repeat(1,num_of_docs,1).reshape(batch_size * num_of_docs, 1, size1[1])
-        elif 'elmo'in question:
-            size1 = question['elmo'].size()
-            question['elmo'] = \
-                question['elmo'].unsqueeze(1).repeat(1,num_of_docs,1,1).reshape(batch_size * num_of_docs, 1, size1[1], size1[2])
+        # TODO this repeat is ugly ... (simulating 1 questions.. )
+        for key in question.keys():
+            question[key] = question[key].unsqueeze(1)
 
-        # Question dims = [batch size, number of documents, number of QAS, ... ]
-        size2 = question['token_characters'].size()
-        question['token_characters'] = \
-            question['token_characters'].unsqueeze(1).repeat(1,num_of_docs,1,1).reshape(batch_size * num_of_docs, 1, size2[1],size2[2])
-        _, max_qa_count, max_q_len, _ = question['token_characters'].size()
-        total_qa_count = batch_size * max_qa_count * num_of_docs
+        batch_size, max_qa_count, max_q_len, _ = question['token_characters'].size()
+        total_qa_count = batch_size * max_qa_count
 
-        # TODO temporary check
-        # We need to concatinate all passages and answers, but remember which ones to used for the shared norm
-        size1 = passage['token_characters'].size()
-        passage['token_characters'] = passage['token_characters'].reshape(batch_size * num_of_docs, size1[2], size1[3])
-        if 'tokens' in passage:
-            size2 = passage['tokens'].size()
-            passage['tokens'] = passage['tokens'].reshape(batch_size * num_of_docs, size2[2])
-        elif 'elmo' in passage:
-            size2 = passage['elmo'].size()
-            passage['elmo'] = passage['elmo'].reshape(batch_size * num_of_docs, size2[2], size2[3])
-
+        # NOTE we assume that the batch instances are sorted per question!
         # in document qa setup we usually use only training triplets (question, answer ,context) that
         # contain the golden answer, to save tranining time.
-        golden_answer_triplets = np.argwhere(span_start.view(-1).cpu().numpy() >= 0).squeeze()
+        intances_question_id = [insta_meta['question_id'] for insta_meta in metadata]
+        question_instances_split_inds = np.cumsum(np.unique(intances_question_id, return_counts=True)[1])[:-1]
+        per_question_inds = np.split(range(total_qa_count), question_instances_split_inds)
+        metadata = np.split(metadata, question_instances_split_inds)
 
-        if self._max_qad_triplets > 0:
-            if golden_answer_triplets.size >= self._max_qad_triplets:
-                golden_answer_triplets = golden_answer_triplets[0:self._max_qad_triplets]
+        ## TODO this should be in iterator
+        #if self._max_qad_triplets > 0:
+        #    if instaces_with_golden_answer.size >= self._max_qad_triplets:
+        #        instaces_with_golden_answer = instaces_with_golden_answer[0:self._max_qad_triplets]
 
-        if self.training:
-            for type in question.keys():
-                question[type] = question[type][golden_answer_triplets]
-            for type in passage.keys():
-                passage[type] = passage[type][golden_answer_triplets]
+        # Todo filtering instances with golden answer should be done in iterator
+        if False:
+            if self.training:
+                for type in question.keys():
+                    question[type] = question[type][instaces_with_golden_answer]
+                for type in passage.keys():
+                    passage[type] = passage[type][instaces_with_golden_answer]
 
-                # TODO removing zero columns should be done in the data reader, or with a better method
-                # cut_offset = np.argwhere(passage[type].cpu().numpy().max(axis=0) > 0).squeeze().max()
-                # passage[type] = passage[type][:, 0:cut_offset+1]
+                total_qa_count = len(instaces_with_golden_answer)
 
-            total_qa_count = len(golden_answer_triplets)
+                selected_span_start = span_start.view(-1)[instaces_with_golden_answer]
+                selected_span_end = span_end.view(-1)[instaces_with_golden_answer]
+            else:
+                selected_span_start = span_start.view(-1)
+                selected_span_end = span_end.view(-1)
 
-            selected_span_start = span_start.view(-1)[golden_answer_triplets]
-            selected_span_end = span_end.view(-1)[golden_answer_triplets]
-        else:
-            selected_span_start = span_start.view(-1)
-            selected_span_end = span_end.view(-1)
-
-        # building mappings between instances and (q,a,d) triplets
-        golden_answer_instance_triplets = []
-        golden_answer_instance_offset = []
-        golden_answer_offset = 0
-        for batch_ind, inst_metadata in enumerate(metadata):
-            golden_answer_instance_triplets.append([])
-            golden_answer_instance_offset.append([])
-            for instance_offset, ind in enumerate(range(batch_ind * num_of_docs, (batch_ind + 1) * num_of_docs)):
-                if self.training:
-                    if ind in golden_answer_triplets:
-                        golden_answer_instance_triplets[batch_ind].append(golden_answer_offset)
-                        golden_answer_offset += 1
+            # building mappings between instances and (q,a,d) triplets
+            golden_answer_instance_triplets = []
+            golden_answer_instance_offset = []
+            golden_answer_offset = 0
+            for batch_ind, inst_metadata in enumerate(metadata):
+                golden_answer_instance_triplets.append([])
+                golden_answer_instance_offset.append([])
+                for instance_offset, ind in enumerate(range(batch_ind * num_of_docs, (batch_ind + 1) * num_of_docs)):
+                    if self.training:
+                        if ind in instaces_with_golden_answer:
+                            golden_answer_instance_triplets[batch_ind].append(golden_answer_offset)
+                            golden_answer_offset += 1
+                            golden_answer_instance_offset[batch_ind].append(instance_offset)
+                    else:
+                        golden_answer_instance_triplets[batch_ind].append(ind)
                         golden_answer_instance_offset[batch_ind].append(instance_offset)
-                else:
-                    golden_answer_instance_triplets[batch_ind].append(ind)
-                    golden_answer_instance_offset[batch_ind].append(instance_offset)
 
 
         # questions embedding
@@ -397,34 +378,42 @@ class BidafPlusPlus(Model):
         if span_start is not None:
             if self._shared_norm:
                 loss = 0
-                for batch_ind, inst_metadata in enumerate(metadata):
+
+                # For every context/question
+                for question_inds, metadata_list in zip(per_question_inds,metadata):
 
                     # Could of wrote this shorter but it's clearer like this ...
-                    curr_batch_inds = golden_answer_instance_triplets[batch_ind]
-
-                    if len(curr_batch_inds)==0:
+                    if len(question_inds)==0:
                         continue
+
+                    inds_with_gold_answer = np.argwhere(span_start.view(-1)[question_inds].cpu().numpy() >= 0)
+                    inds_with_gold_answer = inds_with_gold_answer.squeeze() if len(
+                        inds_with_gold_answer) > 1 else inds_with_gold_answer
+
+                    if len(inds_with_gold_answer)==0:
+                        continue
+
 
                     # TODO filtering result with no golden answer for loss, should we not compute this at all to save time?
 
                     span_start_logits_softmaxed = util.masked_log_softmax(\
-                        torch.cat(tuple(span_start_logits[curr_batch_inds])).unsqueeze(0), \
-                        torch.cat(tuple(repeated_passage_mask[curr_batch_inds])).unsqueeze(0))
+                        torch.cat(tuple(span_start_logits[question_inds])).unsqueeze(0), \
+                        torch.cat(tuple(repeated_passage_mask[question_inds])).unsqueeze(0))
                     span_end_logits_softmaxed = util.masked_log_softmax(
-                        torch.cat(tuple(span_end_logits[curr_batch_inds])).unsqueeze(0), \
-                        torch.cat(tuple(repeated_passage_mask[curr_batch_inds])).unsqueeze(0))
+                        torch.cat(tuple(span_end_logits[question_inds])).unsqueeze(0), \
+                        torch.cat(tuple(repeated_passage_mask[question_inds])).unsqueeze(0))
 
                     ## Log then Sum for share norm implementation
                     #span_start_logits_softmaxed = util.masked_softmax( \
-                    #    torch.cat(tuple(span_start_logits[curr_batch_inds])).unsqueeze(0), \
-                    #    torch.cat(tuple(repeated_passage_mask[curr_batch_inds])).unsqueeze(0))
+                    #    torch.cat(tuple(span_start_logits[question_inds])).unsqueeze(0), \
+                    #    torch.cat(tuple(repeated_passage_mask[question_inds])).unsqueeze(0))
                     #span_end_logits_softmaxed = util.masked_softmax(
-                    #    torch.cat(tuple(span_end_logits[curr_batch_inds])).unsqueeze(0), \
-                    #    torch.cat(tuple(repeated_passage_mask[curr_batch_inds])).unsqueeze(0))
+                    #    torch.cat(tuple(span_end_logits[question_inds])).unsqueeze(0), \
+                    #    torch.cat(tuple(repeated_passage_mask[question_inds])).unsqueeze(0))
                     #start_indexes = [ind + doc_num * passage_length for doc_num, ind in
-                    #         enumerate(selected_span_start[curr_batch_inds])]
+                    #         enumerate(selected_span_start[question_inds])]
                     #end_indexes = [ind + doc_num * passage_length for doc_num, ind in
-                    #         enumerate(selected_span_end[curr_batch_inds])]
+                    #         enumerate(selected_span_end[question_inds])]
                     #dummy_target = torch.cuda.LongTensor([0],device=span_start_logits_softmaxed.device) \
                     #    if torch.cuda.is_available() else torch.LongTensor([0])
                     #loss += nll_loss(torch.log(torch.sum(span_start_logits_softmaxed[0,start_indexes])).unsqueeze(0).unsqueeze(0), \
@@ -432,16 +421,26 @@ class BidafPlusPlus(Model):
                     #loss += nll_loss(torch.log(torch.sum(span_end_logits_softmaxed[0, end_indexes])).unsqueeze(0).unsqueeze(0), \
                     #                 dummy_target, ignore_index=-1)
 
-                    span_start_logits_softmaxed = span_start_logits_softmaxed.reshape(len(curr_batch_inds),span_start_logits.size(1))
-                    span_end_logits_softmaxed = span_end_logits_softmaxed.reshape(len(curr_batch_inds), span_start_logits.size(1))
-                    loss += nll_loss(span_start_logits_softmaxed,selected_span_start[curr_batch_inds], ignore_index=-1)
-                    loss += nll_loss(span_end_logits_softmaxed, selected_span_end[curr_batch_inds], ignore_index=-1)
+                    span_start_logits_softmaxed = span_start_logits_softmaxed.reshape(len(question_inds),span_start_logits.size(1))
+                    span_end_logits_softmaxed = span_end_logits_softmaxed.reshape(len(question_inds), span_start_logits.size(1))
+
+                    # computing loss only for indexes with answers
+                    loss += nll_loss(span_start_logits_softmaxed[inds_with_gold_answer], \
+                                     span_start.view(-1)[question_inds[inds_with_gold_answer]], ignore_index=-1)
+                    loss += nll_loss(span_end_logits_softmaxed[inds_with_gold_answer], \
+                                     span_start.view(-1)[question_inds[inds_with_gold_answer]], ignore_index=-1)
                 loss /= batch_size
             else:
-                loss = nll_loss(util.masked_log_softmax(span_start_logits,
-                                                     repeated_passage_mask), selected_span_start, ignore_index=-1)
-                loss += nll_loss(util.masked_log_softmax(span_end_logits,
-                                                     repeated_passage_mask), selected_span_end, ignore_index=-1)
+                # Per instance loss
+                inds_with_gold_answer = np.argwhere(span_start.view(-1).cpu().numpy() >= 0)
+                inds_with_gold_answer = inds_with_gold_answer.squeeze() if len(inds_with_gold_answer) > 1 else inds_with_gold_answer
+
+                loss = nll_loss(util.masked_log_softmax(span_start_logits[inds_with_gold_answer], \
+                                                     repeated_passage_mask[inds_with_gold_answer]),\
+                                span_start.view(-1)[inds_with_gold_answer], ignore_index=-1)
+                loss += nll_loss(util.masked_log_softmax(span_end_logits[inds_with_gold_answer], \
+                                                     repeated_passage_mask[inds_with_gold_answer]),\
+                                 span_start.view(-1)[inds_with_gold_answer], ignore_index=-1)
 
 
             # TODO these are not updates
@@ -455,7 +454,7 @@ class BidafPlusPlus(Model):
             span_start_logits_numpy = span_start_logits.data.cpu().numpy()
             span_end_logits_numpy = span_end_logits.data.cpu().numpy()
 
-            if self._multi_choice_answers:
+            if False and self._multi_choice_answers:
 
                 for batch_ind,inst_metadata in enumerate(metadata):
                     max_correct_answer = -50
@@ -509,67 +508,47 @@ class BidafPlusPlus(Model):
         # best_span is a vector of more than one span
         best_span_cpu = best_span.detach().cpu().numpy()
 
-        # TODO we need to take the best span in shared norm setting!!
+        # Iterating over every question (which may contain multiple instances, one per document)
 
-        for batch_ind, inst_metadata in enumerate(metadata):
-            if self.training:
-                instance_triplets = golden_answer_instance_triplets[batch_ind]
-            else:
-                instance_triplets = range(batch_ind * num_of_docs, (batch_ind + 1) * num_of_docs)
-
-            # TODO we need to pass the actual number of documents per instance
-            #if j >= len(metadata[i]["answer_texts_list"]) or metadata[i]['token_offsets'][j] == []:
-            #    continue
-            if len(instance_triplets) == 0:
+        for question_inds, question_instances_metadata in zip(per_question_inds, metadata):
+            if len(question_inds) == 0:
                 continue
 
-            best_span_ind = np.argmax(span_start_logits_numpy[instance_triplets, best_span_cpu[instance_triplets][:, 0]] +
-                      span_end_logits_numpy[instance_triplets, best_span_cpu[instance_triplets][:, 1]])
+            # We need to perform softmax here !!
 
-            passage_str = inst_metadata['original_passage'][golden_answer_instance_offset[batch_ind][best_span_ind]]
-            offsets = inst_metadata['token_offsets'][golden_answer_instance_offset[batch_ind][best_span_ind]]
+            best_span_ind = np.argmax(span_start_logits_numpy[question_inds, best_span_cpu[question_inds][:, 0]] +
+                      span_end_logits_numpy[question_inds, best_span_cpu[question_inds][:, 1]])
 
-            predicted_span = best_span_cpu[instance_triplets[best_span_ind]]
+            passage_str = question_instances_metadata[best_span_ind]['original_passage']
+            offsets = question_instances_metadata[best_span_ind]['token_offsets']
+
+            predicted_span = best_span_cpu[question_inds[best_span_ind]]
             start_offset = offsets[predicted_span[0]][0]
             end_offset = offsets[predicted_span[1]][1]
             best_span_string = passage_str[start_offset:end_offset]
 
             f1_score = 0.0
             EM_score = 0.0
-            per_dialog_best_span_list = []
+            gold_answer_texts = question_instances_metadata[best_span_ind]['answer_texts_list']
+            if gold_answer_texts:
+                if len(gold_answer_texts) > 1:
+                    t_f1 = []
+                    t_EM = []
+                    for answer_index in range(len(gold_answer_texts)):
+                        idxes = list(range(len(gold_answer_texts)))
 
-            per_dialog_query_id_list = []
-            # TODO support only one QAS per quetion for now
-            for per_dialog_query_index, (iid, gold_answer_texts) in enumerate(
-                    zip(metadata[batch_ind]["instance_id"], metadata[batch_ind]["answer_texts_list"])):
-
-                per_dialog_query_id_list.append(iid)
-
-                per_dialog_best_span_list.append(best_span_string)
-                if gold_answer_texts:
-                    if len(gold_answer_texts) > 1:
-                        t_f1 = []
-                        t_EM = []
-                        # Compute F1 over N-1 human references and averages the scores.
-                        # AT why N-1 and not N?
-                        for answer_index in range(len(gold_answer_texts)):
-                            idxes = list(range(len(gold_answer_texts)))
-
-                            # AT: Why are we poping one answer here??
-                            # idxes.pop(answer_index)
-
-                            refs = [gold_answer_texts[z] for z in idxes]
-                            t_f1.append(squad_eval.metric_max_over_ground_truths(squad_eval.f1_score,best_span_string,refs))
-                            t_EM.append(squad_eval.metric_max_over_ground_truths(squad_eval.exact_match_score,best_span_string,refs))
-                        f1_score = 1.0 * sum(t_f1) / len(t_f1)
-                        EM_score = 1.0 * sum(t_EM) / len(t_EM)
-                    else:
-                        f1_score = squad_eval.metric_max_over_ground_truths(squad_eval.f1_score,best_span_string,gold_answer_texts)
-                        EM_score = squad_eval.metric_max_over_ground_truths(squad_eval.exact_match_score, best_span_string,gold_answer_texts)
-                self._official_f1(100 * f1_score)
-                self._official_EM(100 * EM_score)
-        output_dict['qid'].append(per_dialog_query_id_list)
-        output_dict['best_span_str'].append(per_dialog_best_span_list)
+                        refs = [gold_answer_texts[z] for z in idxes]
+                        t_f1.append(squad_eval.metric_max_over_ground_truths(squad_eval.f1_score,best_span_string,refs))
+                        t_EM.append(squad_eval.metric_max_over_ground_truths(squad_eval.exact_match_score,best_span_string,refs))
+                    f1_score = 1.0 * sum(t_f1) / len(t_f1)
+                    EM_score = 1.0 * sum(t_EM) / len(t_EM)
+                else:
+                    f1_score = squad_eval.metric_max_over_ground_truths(squad_eval.f1_score,best_span_string,gold_answer_texts)
+                    EM_score = squad_eval.metric_max_over_ground_truths(squad_eval.exact_match_score, best_span_string,gold_answer_texts)
+            self._official_f1(100 * f1_score)
+            self._official_EM(100 * EM_score)
+        #output_dict['qid'].append(per_dialog_query_id_list)
+        #output_dict['best_span_str'].append(per_dialog_best_span_list)
 
         return output_dict
 

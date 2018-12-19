@@ -299,9 +299,9 @@ def make_reading_comprehension_instance_multiqa_docqa(question_list_tokens: List
     return Instance(fields)
 
 def make_reading_comprehension_instance_multiqa_multidoc(question_tokens: List[Token],
-                                             tokenized_paragraphs: List[List[Token]],
+                                             tokenized_paragraph: List[List[Token]],
                                              token_indexers: Dict[str, TokenIndexer],
-                                             paragraphs: List[str],
+                                             paragraph: List[str],
                                              token_span_lists: List[List[Tuple[int, int]]] = None,
                                              additional_metadata: Dict[str, Any] = None) -> Instance:
     """
@@ -341,37 +341,38 @@ def make_reading_comprehension_instance_multiqa_multidoc(question_tokens: List[T
     additional_metadata = additional_metadata or {}
     fields: Dict[str, Field] = {}
 
-    passage_offsets = [[(token.idx, token.idx + len(token.text)) for token in passage_tokens] for passage_tokens in tokenized_paragraphs]
+    passage_offsets = [(token.idx, token.idx + len(token.text)) for token in tokenized_paragraph]
     # This is separate so we can reference it later with a known type.
-    passage_field = ListField([TextField(passage_tokens, token_indexers) for passage_tokens in tokenized_paragraphs])
+    passage_field = TextField(tokenized_paragraph, token_indexers)
     fields['passage'] = passage_field
     fields['question'] = TextField(question_tokens, token_indexers)
-    metadata = {'original_passage': paragraphs,
+    metadata = {'original_passage': paragraph,
                 'token_span_lists': token_span_lists,
                 'token_offsets': passage_offsets,
                 'question_tokens': [token.text for token in question_tokens],
-                'passage_tokens': [[token.text for token in passage_tokens] for passage_tokens in tokenized_paragraphs], }
+                'passage_tokens': [token.text for token in tokenized_paragraph]}
 
     # in prediction mode we won't have this... TODO: what will we do in multi-answer prediction?
     if token_span_lists:
         span_start_per_doc = []
         span_end_per_doc = []
         # Looping each <<answers>>.
-        for doc_index, doc_answer_span_lists in enumerate(token_span_lists['answers']):
-            span_start_list: List[Field] = []
-            span_end_list: List[Field] = []
-            for question_index, answer_span_lists in enumerate(doc_answer_span_lists):
-                # For a certain question and context document there may be a case where golden answer is not in
-                # this doc...
-                if len(answer_span_lists)>0:
-                    span_start, span_end = answer_span_lists[-1]  # Last one is the original answer TODO maybe change this?
-                else:
-                    span_start, span_end = -1,-1
-                span_start_list.append(IndexField(span_start, passage_field[doc_index]))
-                span_end_list.append(IndexField(span_end, passage_field[doc_index]))
+        span_start_list: List[Field] = []
+        span_end_list: List[Field] = []
+        for question_index, answer_span_lists in enumerate(token_span_lists['answers']):
 
-            span_start_per_doc.append(ListField(span_start_list))
-            span_end_per_doc.append(ListField(span_end_list))
+            # TODO change this to all the answer, not just one...
+            # For a certain question and context document there may be a case where golden answer is not in
+            # this doc...
+            if len(answer_span_lists)>0:
+                span_start, span_end = answer_span_lists[-1]  # Last one is the original answer TODO maybe change this?
+            else:
+                span_start, span_end = -1,-1
+            span_start_list.append(IndexField(span_start, passage_field))
+            span_end_list.append(IndexField(span_end, passage_field))
+
+        span_start_per_doc.append(ListField(span_start_list))
+        span_end_per_doc.append(ListField(span_end_list))
         fields['span_start'] = ListField(span_start_per_doc)
         fields['span_end'] = ListField(span_end_per_doc)
 
