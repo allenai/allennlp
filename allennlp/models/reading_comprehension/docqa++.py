@@ -515,9 +515,14 @@ class BidafPlusPlus(Model):
                 continue
 
             # We need to perform softmax here !!
-
             best_span_ind = np.argmax(span_start_logits_numpy[question_inds, best_span_cpu[question_inds][:, 0]] +
                       span_end_logits_numpy[question_inds, best_span_cpu[question_inds][:, 1]])
+
+            # TODO this shouldent happen - we should consider spans from passages not taken...
+            if span_start.view(-1)[question_inds[best_span_ind]] == -1:
+                self._official_f1(100 * 0.0)
+                self._official_EM(100 * 0.0)
+                continue
 
             passage_str = question_instances_metadata[best_span_ind]['original_passage']
             offsets = question_instances_metadata[best_span_ind]['token_offsets']
