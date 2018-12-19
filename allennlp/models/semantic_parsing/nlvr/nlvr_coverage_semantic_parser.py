@@ -1,7 +1,7 @@
 import logging
 import os
 from functools import partial
-from typing import Callable, List, Dict, Tuple, Union
+from typing import Any, Callable, List, Dict, Tuple, Union
 
 from overrides import overrides
 
@@ -185,7 +185,8 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                 agenda: torch.LongTensor,
                 identifier: List[str] = None,
                 labels: torch.LongTensor = None,
-                epoch_num: List[int] = None) -> Dict[str, torch.Tensor]:
+                epoch_num: List[int] = None,
+                metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
         Decoder logic for producing type constrained target sequences that maximize coverage of
@@ -235,6 +236,8 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                                       possible_actions=actions,
                                       extras=label_strings,
                                       checklist_state=initial_checklist_states)
+        if not self.training:
+            initial_state.debug_info = [[] for _ in range(batch_size)]
 
         agenda_data = [agenda_[:, 0].cpu().data for agenda_ in agenda_list]
         outputs = self._decoder_trainer.decode(initial_state,  # type: ignore
@@ -257,8 +260,18 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                                  agenda_data=agenda_data)
         else:
             # We're testing.
+            if metadata is not None:
+                outputs["sentence_tokens"] = [x["sentence_tokens"] for x in metadata]
+            outputs['debug_info'] = []
+            for i in range(batch_size):
+                outputs['debug_info'].append(best_final_states[i][0].debug_info[0])  # type: ignore
             outputs["best_action_strings"] = batch_action_strings
             outputs["denotations"] = batch_denotations
+            action_mapping = {}
+            for batch_index, batch_actions in enumerate(actions):
+                for action_index, action in enumerate(batch_actions):
+                    action_mapping[(batch_index, action_index)] = action[0]
+            outputs['action_mapping'] = action_mapping
         return outputs
 
     def _get_checklist_info(self,
