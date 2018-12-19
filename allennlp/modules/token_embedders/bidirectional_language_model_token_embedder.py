@@ -114,6 +114,8 @@ class BidirectionalLanguageModelTokenEmbedder(TokenEmbedder):
 
         self._remove_bos_eos = remove_bos_eos
         num_layers = self._lm.num_layers()
+        # TODO(brendanr): Consider passing our LM as a custom module to `Elmo` instead.
+        # See https://github.com/allenai/allennlp/blob/master/allennlp/modules/elmo.py#L76
         self._scalar_mix = ScalarMix(mixture_size=num_layers, do_layer_norm=False, trainable=True)
 
         character_dim = self._lm._text_field_embedder.get_output_dim()
