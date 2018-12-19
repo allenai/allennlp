@@ -244,7 +244,7 @@ class BidirectionalLanguageModel(Model):
         # If we have target tokens, calculate the loss.
         token_ids = source.get("tokens")
         if token_ids is not None:
-            assert type(contextual_embeddings) == torch.Tensor
+            assert isinstance(contextual_embeddings, torch.Tensor)
 
             # Use token_ids to compute targets
             forward_targets = torch.zeros_like(token_ids)

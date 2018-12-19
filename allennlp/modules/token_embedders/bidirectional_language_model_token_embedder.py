@@ -118,6 +118,7 @@ class BidirectionalLanguageModelTokenEmbedder(TokenEmbedder):
         # See https://github.com/allenai/allennlp/blob/master/allennlp/modules/elmo.py#L76
         self._scalar_mix = ScalarMix(mixture_size=num_layers, do_layer_norm=False, trainable=True)
 
+        # pylint: disable=protected-access
         character_dim = self._lm._text_field_embedder.get_output_dim()
         contextual_dim = self._lm._contextualizer.get_output_dim()
 
