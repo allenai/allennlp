@@ -21,7 +21,7 @@ class TestBidirectionalLM(ModelTestCase):
         result = self.model(**training_tensors)
 
         assert set(result) == {"loss", "forward_loss", "backward_loss",
-                               "lm_embeddings", "character_embeddings", "mask"}
+                               "lm_embeddings", "noncontextual_token_embeddings", "mask"}
 
         # The model should preserve the BOS / EOS tokens.
         embeddings = result["lm_embeddings"]
@@ -51,7 +51,7 @@ class TestBidirectionalLMTransformer(TestBidirectionalLM):
         result = self.model(**training_tensors)
 
         assert set(result) == {"loss", "forward_loss", "backward_loss",
-                               "lm_embeddings", "character_embeddings", "mask"}
+                               "lm_embeddings", "noncontextual_token_embeddings", "mask"}
 
         # The model should preserve the BOS / EOS tokens.
         embeddings = result["lm_embeddings"]

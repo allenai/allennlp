@@ -67,7 +67,8 @@ class BidirectionalLanguageModel(Model):
         Used to "contextualize" the embeddings. As described above,
         this encoder must not cheat by peeking ahead.
     dropout: ``float``, optional (default: None)
-        If specified, dropout is applied to the contextualized embeddings.
+        If specified, dropout is applied to the contextualized embeddings before computation of
+        the softmax. The contextualized embeddings themselves are returned without dropout.
     loss_scale: ``Union[float, str]``, optional (default: 1.0)
         This scaling factor is applied to the average language model loss.
         You can also specify ``"n_samples"`` in which case we compute total
@@ -176,6 +177,24 @@ class BidirectionalLanguageModel(Model):
 
         return losses[0], losses[1]
 
+    def delete_softmax(self) -> None:
+        """
+        Remove the softmax weights. Useful for saving memory when calculating the loss
+        is not necessary, e.g. in an embedder.
+        """
+        self._softmax_loss = None
+
+    def num_layers(self) -> int:
+        """
+        Returns the depth of this LM. That is, how many layers the contextualizer has plus one for
+        the non-contextual layer.
+        """
+        if hasattr(self._contextualizer, 'num_layers'):
+            return self._contextualizer.num_layers + 1
+        else:
+            raise NotImplementedError(f"Contextualizer of type {type(self._contextualizer)} " +
+                                      "does not report how many layers it has.")
+
     def forward(self,  # type: ignore
                 source: Dict[str, torch.LongTensor]) -> Dict[str, torch.Tensor]:
         """
@@ -184,10 +203,6 @@ class BidirectionalLanguageModel(Model):
         By convention, the input dict is required to have at least a ``"tokens"``
         entry that's the output of a ``SingleIdTokenIndexer``, which is used
         to compute the language model targets.
-
-        If the model was instantiated with ``remove_bos_eos=True``,
-        then it is expected that each of the input sentences was augmented with
-        begin-sentence and end-sentence tokens.
 
         Parameters
         ----------
@@ -204,8 +219,12 @@ class BidirectionalLanguageModel(Model):
             forward direction negative log likelihood
         ``'backward_loss'``: ``torch.Tensor``
             backward direction negative log likelihood
-        ``'lm_embeddings'``: ``torch.Tensor``
-            (batch_size, timesteps, embed_dim) tensor of top layer contextual representations
+        ``'lm_embeddings'``: ``Union[torch.Tensor, List[torch.Tensor]]``
+            (batch_size, timesteps, embed_dim) tensor of top layer contextual representations or
+            list of all layers. No dropout applied.
+        ``'noncontextual_token_embeddings'``: ``torch.Tensor``
+            (batch_size, timesteps, token_embed_dim) tensor of bottom layer noncontextual
+            representations
         ``'mask'``: ``torch.Tensor``
             (batch_size, timesteps) mask for the embeddings
         """
@@ -214,13 +233,19 @@ class BidirectionalLanguageModel(Model):
 
         # shape (batch_size, timesteps, embedding_size)
         embeddings = self._text_field_embedder(source)
-        contextual_embeddings = self._contextualizer(embeddings, mask)
+
+        # Either the top layer or all layers.
+        contextual_embeddings: Union[torch.Tensor, List[torch.Tensor]] = self._contextualizer(
+                embeddings, mask
+        )
 
         return_dict = {}
 
         # If we have target tokens, calculate the loss.
         token_ids = source.get("tokens")
         if token_ids is not None:
+            assert type(contextual_embeddings) == torch.Tensor
+
             # Use token_ids to compute targets
             forward_targets = torch.zeros_like(token_ids)
             backward_targets = torch.zeros_like(token_ids)
@@ -228,10 +253,10 @@ class BidirectionalLanguageModel(Model):
             backward_targets[:, 1:] = token_ids[:, 0:-1]
 
             # add dropout
-            contextual_embeddings = self._dropout(contextual_embeddings)
+            contextual_embeddings_with_dropout = self._dropout(contextual_embeddings)
 
             # compute softmax loss
-            forward_loss, backward_loss = self._compute_loss(contextual_embeddings,
+            forward_loss, backward_loss = self._compute_loss(contextual_embeddings_with_dropout,
                                                              embeddings,
                                                              forward_targets,
                                                              backward_targets)
@@ -265,8 +290,9 @@ class BidirectionalLanguageModel(Model):
                 })
 
         return_dict.update({
+                # Note: These embeddings do not have dropout applied.
                 'lm_embeddings': contextual_embeddings,
-                'character_embeddings': embeddings,
+                'noncontextual_token_embeddings': embeddings,
                 'mask': mask
         })
 
