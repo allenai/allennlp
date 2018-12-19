@@ -53,14 +53,30 @@ class PaperClassifierPredictor(Predictor):
         title = json_dict['title']
         abstract = json_dict['paperAbstract']
         instance = self._dataset_reader.text_to_instance(title=title, abstract=abstract)
+        
+         # label_dict will be like {0: "ACL", 1: "AI", ...}
+        label_dict = self._model.vocab.get_index_to_token_vocabulary('labels')
+        # Convert it to list ["ACL", "AI", ...]
+        all_labels = [label_dict[i] for i in range(len(label_dict))]
 
-        return instance
+        return {"instance": self.predict_instance(instance), "all_labels": all_labels}
 ```
 
 To create each `Instance` it just pulls the `"title"` and `"paperAbstract"` fields
 out of the input JSON and feeds them to `text_to_instance`.
 
-`_json_to_instance` returns the `Instance`.
+In this example we also would like to return the list of all possible labels
+(this will be useful later when we want to visualize the results).
+We first get the mapping from indices to labels, and then we convert
+it to a list where position 0 is label 0, and so on.
+
+`_json_to_instance` returns a tuple, where the first element is
+the `Instance` and the second element is a `dict` that the elements
+of `Model.forward_on_instance` will be added to. Anything that we want
+in our JSON output that's not produced by `forward()` goes in it.
+
+Here that's just the list of `all_labels`, so that's what we put in the `dict`.
+If we didn't need that, we'd just use an empty `dict` there.
 
 ## Testing the Predictor
 
@@ -109,7 +125,7 @@ class TestPaperClassifierPredictor(TestCase):
 
         result = predictor.predict_json(inputs)
 
-        label = result.get("label")
+        label = result.get("all_labels")
         assert label in ['AI', 'ML', 'ACL']
 
         class_probabilities = result.get("class_probabilities")
@@ -173,7 +189,7 @@ allennlp predict \
 When you run this it will print the ten test inputs and their predictions, each of which looks like:
 
 ```
-prediction:  {"logits": [0.008737504482269287, 0.22074833512306213, -0.005263201892375946], "class_probabilities": [0.31034138798713684, 0.38363200426101685, 0.3060266375541687], "label": "ACL"}
+prediction:  {"instance": {"logits": [0.008737504482269287, 0.22074833512306213, -0.005263201892375946], "class_probabilities": [0.31034138798713684, 0.38363200426101685, 0.3060266375541687], "label": "ACL"}, "all_labels": ["AI", "ACL", "ML"]}
 ```
 
 If you want your predictions to go to a file instead,
