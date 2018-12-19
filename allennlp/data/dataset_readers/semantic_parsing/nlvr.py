@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Any, Dict, List
 import json
 import logging
 
