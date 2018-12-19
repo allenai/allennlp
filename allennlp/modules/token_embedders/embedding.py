@@ -1,9 +1,6 @@
 import io
 import tarfile
 import zipfile
-import bz2
-import lzma
-import gzip
 import re
 import logging
 import warnings
@@ -427,13 +424,21 @@ class EmbeddingsTextFile(Iterator[str]):
 
             # All the python packages for compressed files share the same interface of io.open
             extension = get_file_extension(main_file_uri)
-            package = {
-                    '.txt': io,
-                    '.vec': io,
-                    '.gz': gzip,
-                    '.bz2': bz2,
-                    '.lzma': lzma,
-                    }.get(extension, None)
+
+            # Some systems don't have support for all of these libraries, so we import them only
+            # when necessary.
+            package = None
+            if extension in ['.txt', '.vec']:
+                package = io
+            elif extension == '.gz':
+                import gzip
+                package = gzip
+            elif extension == ".bz2":
+                import bz2
+                package = bz2
+            elif extension == ".lzma":
+                import lzma
+                package = lzma
 
             if package is None:
                 logger.warning('The embeddings file has an unknown file extension "%s". '

@@ -15,6 +15,10 @@ logger = logging.getLogger(__name__)
 
 # TODO(joelgrus): Figure out how to generate token_type_ids out of this token indexer.
 
+# This is the default list of tokens that should not be lowercased.
+_NEVER_LOWERCASE = ['[UNK]', '[SEP]', '[PAD]', '[CLS]', '[MASK]']
+
+
 class WordpieceIndexer(TokenIndexer[int]):
     """
     A token indexer that does the wordpiece-tokenization (e.g. for BERT embeddings).
@@ -39,6 +43,14 @@ class WordpieceIndexer(TokenIndexer[int]):
         maximum length for its input ids. Currently any inputs longer than this
         will be truncated. If this behavior is undesirable to you, you should
         consider filtering them out in your dataset reader.
+    do_lowercase : ``bool``, optional (default=``False``)
+        Should we lowercase the provided tokens before getting the indices?
+        You would need to do this if you are using an -uncased BERT model
+        but your DatasetReader is not lowercasing tokens (which might be the
+        case if you're also using other embeddings based on cased tokens).
+    never_lowercase: ``List[str]``, optional
+        Tokens that should never be lowercased. Default is
+        ['[UNK]', '[SEP]', '[PAD]', '[CLS]', '[MASK]'].
     start_tokens : ``List[str]``, optional (default=``None``)
         These are prepended to the tokens provided to ``tokens_to_indices``.
     end_tokens : ``List[str]``, optional (default=``None``)
@@ -50,6 +62,8 @@ class WordpieceIndexer(TokenIndexer[int]):
                  namespace: str = "wordpiece",
                  use_starting_offsets: bool = False,
                  max_pieces: int = 512,
+                 do_lowercase: bool = False,
+                 never_lowercase: List[str] = None,
                  start_tokens: List[str] = None,
                  end_tokens: List[str] = None) -> None:
         self.vocab = vocab
@@ -64,6 +78,13 @@ class WordpieceIndexer(TokenIndexer[int]):
         self._added_to_vocabulary = False
         self.max_pieces = max_pieces
         self.use_starting_offsets = use_starting_offsets
+        self._do_lowercase = do_lowercase
+
+        if never_lowercase is None:
+            # Use the defaults
+            self._never_lowercase = set(_NEVER_LOWERCASE)
+        else:
+            self._never_lowercase = set(never_lowercase)
 
         # Convert the start_tokens and end_tokens to wordpiece_ids
         self._start_piece_ids = [vocab[wordpiece]
@@ -108,8 +129,12 @@ class WordpieceIndexer(TokenIndexer[int]):
         offset = len(wordpiece_ids) if self.use_starting_offsets else len(wordpiece_ids) - 1
 
         for token in tokens:
+            # Lowercase if necessary
+            text = (token.text.lower()
+                    if self._do_lowercase and token.text not in self._never_lowercase
+                    else token.text)
             token_wordpiece_ids = [self.vocab[wordpiece]
-                                   for wordpiece in self.wordpiece_tokenizer(token.text)]
+                                   for wordpiece in self.wordpiece_tokenizer(text)]
             # If we have enough room to add these ids *and also* the end_token ids.
             if len(wordpiece_ids) + len(token_wordpiece_ids) + len(self._end_piece_ids) <= self.max_pieces:
                 # For initial offsets, the current value of ``offset`` is the start of
@@ -189,6 +214,9 @@ class PretrainedBertIndexer(WordpieceIndexer):
         they will instead correspond to the first wordpiece in each word.
     do_lowercase: ``bool``, optional (default = True)
         Whether to lowercase the tokens before converting to wordpiece ids.
+    never_lowercase: ``List[str]``, optional
+        Tokens that should never be lowercased. Default is
+        ['[UNK]', '[SEP]', '[PAD]', '[CLS]', '[MASK]'].
     max_pieces: int, optional (default: 512)
         The BERT embedder uses positional embeddings and so has a corresponding
         maximum length for its input ids. Currently any inputs longer than this
@@ -199,12 +227,22 @@ class PretrainedBertIndexer(WordpieceIndexer):
                  pretrained_model: str,
                  use_starting_offsets: bool = False,
                  do_lowercase: bool = True,
+                 never_lowercase: List[str] = None,
                  max_pieces: int = 512) -> None:
+        if pretrained_model.endswith("-cased") and do_lowercase:
+            logger.warning("Your BERT model appears to be cased, "
+                           "but your indexer is lowercasing tokens.")
+        elif pretrained_model.endswith("-uncased") and not do_lowercase:
+            logger.warning("Your BERT model appears to be uncased, "
+                           "but your indexer is not lowercasing tokens.")
+
         bert_tokenizer = BertTokenizer.from_pretrained(pretrained_model, do_lower_case=do_lowercase)
         super().__init__(vocab=bert_tokenizer.vocab,
                          wordpiece_tokenizer=bert_tokenizer.wordpiece_tokenizer.tokenize,
                          namespace="bert",
                          use_starting_offsets=use_starting_offsets,
                          max_pieces=max_pieces,
+                         do_lowercase=do_lowercase,
+                         never_lowercase=never_lowercase,
                          start_tokens=["[CLS]"],
                          end_tokens=["[SEP]"])

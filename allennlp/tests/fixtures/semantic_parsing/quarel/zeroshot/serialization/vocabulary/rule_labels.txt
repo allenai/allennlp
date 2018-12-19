@@ -1,0 +1,14 @@
+@@UNKNOWN@@
+<a,<a,<a,n>>> -> infer
+<a,<a,a>> -> and
+<r,<w,a>> -> placeholder
+@start@ -> n
+a -> [<a,<a,a>>, a, a]
+a -> [<r,<w,a>>, r, w]
+n -> [<a,<a,<a,n>>>, a, a, a]
+r -> high
+r -> higher
+r -> low
+r -> lower
+w -> world1
+w -> world2
