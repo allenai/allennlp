@@ -100,6 +100,8 @@ class BidirectionalLanguageModelTokenEmbedder(TokenEmbedder):
             token_indexer_config = dataset_reader_config.get("token_indexers").get(self._token_name)
             token_indexer: TokenIndexer = TokenIndexer.from_params(token_indexer_config)
             token_list = [Token(token) for token in bos_eos_tokens]
+            # TODO(brendanr): Obtain these indices from the vocab once the
+            # ELMoTokenCharactersIndexer adds the mappings.
             bos_eos_indices = token_indexer.tokens_to_indices(token_list, self._lm.vocab, "key")["key"]
             self._bos_indices = torch.Tensor(bos_eos_indices[0])
             self._eos_indices = torch.Tensor(bos_eos_indices[1])
