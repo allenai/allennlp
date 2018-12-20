@@ -2,6 +2,7 @@ from collections import deque
 from typing import Iterable, Deque
 import logging
 import random
+import numpy as np
 from overrides import overrides
 
 from allennlp.common.util import lazy_groups_of
@@ -12,6 +13,7 @@ from allennlp.data.dataset import Batch
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
+
 @DataIterator.register("multiqa")
 class BasicIterator(DataIterator):
     """
@@ -20,27 +22,45 @@ class BasicIterator(DataIterator):
     It takes the same parameters as :class:`allennlp.data.iterators.DataIterator`
     """
 
+
     def __init__(self,
+                 all_question_instances_in_batch = False,
                  shuffle: bool = True,
                  batch_size: int = 32) -> None:
         super().__init__(batch_size=batch_size)
         self._shuffle = shuffle
         self._batch_size = batch_size
+        self._all_question_instances_in_batch = all_question_instances_in_batch
 
     @overrides
     def _create_batches(self, instances: Iterable[Instance], shuffle: bool) -> Iterable[Batch]:
-        # First break the dataset into memory-sized lists:
-        for instance_list in self._memory_sized_lists(instances):
-            if self._shuffle:
-                random.shuffle(instance_list)
-            iterator = iter(instance_list)
-            excess: Deque[Instance] = deque()
-            # Then break each memory-sized list into batches.
-            for batch_instances in lazy_groups_of(iterator, self._batch_size):
-                for possibly_smaller_batches in self._ensure_batch_is_sufficiently_small(batch_instances, excess):
-                    possibly_smaller_batches = sorted(possibly_smaller_batches, key=lambda x: x.fields['metadata'].metadata['question_id'])
-                    batch = Batch(possibly_smaller_batches)
-                    yield batch
-            if excess:
-                excess = sorted(excess,key=lambda x: x.fields['metadata'].metadata['question_id'])
-                yield Batch(excess)
+
+        instances = sorted(instances,key=lambda x: x.fields['metadata'].metadata['question_id'])
+        intances_question_id = [instance.fields['metadata'].metadata['question_id'] for instance in instances]
+        split_inds = [0] + list(np.cumsum(np.unique(intances_question_id, return_counts=True)[1]))
+        per_question_instances = [instances[split_inds[ind]:split_inds[ind+1]] for ind in range(len(split_inds)-1)]
+        if self._shuffle:
+            random.shuffle(per_question_instances)
+
+        batch = []
+        for question_instances in per_question_instances:
+            if self._all_question_instances_in_batch:
+                instances_to_add = question_instances
+            else:
+                # choose at most 2 instances from the same question:
+                if len(question_instances) > 2:
+                    instances_to_add = random.sample(question_instances,2)
+                else:
+                    instances_to_add = question_instances
+
+            # enforcing batch size
+            # (for docqa we assume the amount of doucments per question is smaller than batch size)
+            if len(batch) + len(instances_to_add) > self._batch_size:
+                yield Batch(batch)
+                batch = instances_to_add
+            else:
+                batch += instances_to_add
+
+
+
+
