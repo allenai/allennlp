@@ -109,10 +109,10 @@ Once you have [installed Docker](https://docs.docker.com/engine/installation/)
 just run the following command to get an environment that will run on either the cpu or gpu.
 
    ```bash
-   docker run -it -p 8000:8000 --rm allennlp/allennlp:v0.7.2
+   docker run -it -p 8000:8000 --rm allennlp/allennlp:v0.8.0
    ```
 
-You can test the Docker environment with `docker run -it -p 8000:8000 --rm allennlp/allennlp:v0.7.2 test-install`.
+You can test the Docker environment with `docker run -it -p 8000:8000 --rm allennlp/allennlp:v0.8.0 test-install`.
 
 ### Installing from source
 

@@ -31,7 +31,7 @@
   "validation_data_path": std.extVar("NER_TEST_A_PATH"),
   "model": {
     "type": "crf_tagger",
-    "constraint_type": "BIOUL",
+    "label_encoding": "BIOUL",
     "dropout": 0.5,
     "include_start_end_transitions": false,
     "text_field_embedder": {
