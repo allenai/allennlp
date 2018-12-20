@@ -127,7 +127,7 @@ while True:
             # Ugly patch for misconfigured GPUs...
             if args.channel == 'rack-jonathan-g02':
                 gpu_mem = {(3 - key):val for key,val in gpu_mem.items()}
-            free_gpus = [i for i, gpu in enumerate(gpu_mem.keys()) if gpu_mem[gpu] < 1200]
+            free_gpus = [i for i, gpu in enumerate(gpu_mem.keys()) if gpu_mem[gpu] < 1700]
 
             ElasticLogger().write_log('INFO', "Machine Status", {'gpus':gpu_mem,'free_gpus':free_gpus,\
                                                       'num_procs_running':len(proc_running),}, push_bulk=True,print_log=True)
