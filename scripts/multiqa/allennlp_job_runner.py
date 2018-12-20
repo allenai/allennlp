@@ -136,13 +136,24 @@ while True:
 
 
     except:
-
-
         # something went wrong
         time.sleep(3)
         print(traceback.format_exc())
-        ElasticLogger().write_log('INFO', "job runner exception", {'error_message': traceback.format_exc()}, push_bulk=True,print_log=True)
-        print('no internet connection? ')
+        ElasticLogger().write_log('INFO', "job runner exception", {'error_message': traceback.format_exc()},
+                                  push_bulk=True, print_log=True)
+
+        # maybe this is a connection error:
+        try:
+            channel.close()
+            connection.close()
+            connection_params = pika.URLParameters(
+                'amqp://imfgrmdk:Xv_s9oF_pDdrd0LlF0k6ogGBOqzewbqU@barnacle.rmq.cloudamqp.com/imfgrmdk')
+            connection = pika.BlockingConnection(connection_params)
+            channel = connection.channel()
+            print('reconnected')
+        except:
+            print('reconnected failed')
+
 
 channel.close()
 connection.close()
