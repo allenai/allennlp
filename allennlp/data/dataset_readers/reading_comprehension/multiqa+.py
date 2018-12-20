@@ -330,9 +330,10 @@ class MultiQAReader(DatasetReader):
                     continue
 
                 for paragraph,tokenized_paragraph,span_starts,span_ends in \
-                        zip(paragraphs,tokenized_paragraphs,span_ends_list,span_ends_list):
+                        zip(paragraphs,tokenized_paragraphs,span_starts_list,span_ends_list):
 
                     if len(tokenized_paragraph) == 0:
+                        x=1
                         continue
                     # adding to cache
                     #preprocessed_instances.append({'question_text':question_text,'paragraphs':paragraphs,\
