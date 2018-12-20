@@ -2,6 +2,7 @@ from collections import deque
 from typing import Iterable, Deque
 import logging
 import random
+from overrides import overrides
 
 from allennlp.common.util import lazy_groups_of
 from allennlp.data.instance import Instance
@@ -18,10 +19,19 @@ class BasicIterator(DataIterator):
 
     It takes the same parameters as :class:`allennlp.data.iterators.DataIterator`
     """
+
+    def __init__(self,
+                 shuffle: bool = True,
+                 batch_size: int = 32) -> None:
+        super().__init__(batch_size=batch_size)
+        self._shuffle = shuffle
+        self._batch_size = batch_size
+
+    @overrides
     def _create_batches(self, instances: Iterable[Instance], shuffle: bool) -> Iterable[Batch]:
         # First break the dataset into memory-sized lists:
         for instance_list in self._memory_sized_lists(instances):
-            if shuffle:
+            if self._shuffle:
                 random.shuffle(instance_list)
             iterator = iter(instance_list)
             excess: Deque[Instance] = deque()
