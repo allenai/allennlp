@@ -428,7 +428,7 @@ class BidafPlusPlus(Model):
                     loss += nll_loss(span_start_logits_softmaxed[inds_with_gold_answer], \
                                      span_start.view(-1)[question_inds[inds_with_gold_answer]], ignore_index=-1)
                     loss += nll_loss(span_end_logits_softmaxed[inds_with_gold_answer], \
-                                     span_start.view(-1)[question_inds[inds_with_gold_answer]], ignore_index=-1)
+                                     span_end.view(-1)[question_inds[inds_with_gold_answer]], ignore_index=-1)
                 loss /= batch_size
             else:
                 # Per instance loss
@@ -440,7 +440,7 @@ class BidafPlusPlus(Model):
                                 span_start.view(-1)[inds_with_gold_answer], ignore_index=-1)
                 loss += nll_loss(util.masked_log_softmax(span_end_logits[inds_with_gold_answer], \
                                                      repeated_passage_mask[inds_with_gold_answer]),\
-                                 span_start.view(-1)[inds_with_gold_answer], ignore_index=-1)
+                                 span_end.view(-1)[inds_with_gold_answer], ignore_index=-1)
 
 
             # TODO these are not updates
