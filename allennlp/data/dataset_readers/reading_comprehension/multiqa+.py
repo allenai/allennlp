@@ -126,7 +126,7 @@ class MultiQAReader(DatasetReader):
                  lazy: bool = False,
                  max_context_docs: int = 10,
                  max_context_size: int = 400,
-                 num_context_answers: int = 0,
+                 save_cache_in_path: string = '',
                  num_of_examples_to_sample: int = None,
                  use_document_titles:bool= False) -> None:
         super().__init__(lazy)
@@ -136,7 +136,8 @@ class MultiQAReader(DatasetReader):
         self._max_context_size = max_context_size
         self._use_document_titles = use_document_titles
         self._num_of_examples_to_sample = num_of_examples_to_sample
-        self._para_tfidf_scoring = Paragraph_TfIdf_Scoring(15)
+        self._para_tfidf_scoring = Paragraph_TfIdf_Scoring(max_context_docs)
+        self._save_cache_in_path = save_cache_in_path
 
     def build_context(self,context):
         # Processing each document separatly
@@ -235,7 +236,19 @@ class MultiQAReader(DatasetReader):
             with zipfile.ZipFile(single_file_path, 'r') as myzip:
                 with myzip.open(myzip.namelist()[0]) as myfile:
                     dataset_json = json.load(myfile)
-                    contexts += dataset_json['data']['contexts']
+
+            if 'preprocessed' in dataset_json and dataset_json['preprocessed']:
+                for inst in dataset_json['preprocessed_instances']:
+                    tokenized_paragraph = self._tokenizer.tokenize(inst['paragraph'])
+                    instance = self.text_to_instance(inst['question_text'], inst['paragraph'], \
+                                                     inst['span_starts'], inst['span_ends'], \
+                                                     tokenized_paragraph, inst['metadata'])
+
+                    instance.fields['metadata'].metadata['num_examples_used'] = dataset_json['num_examples_used']
+
+                    yield instance
+            else:
+                contexts += dataset_json['data']['contexts']
 
 
 
@@ -338,8 +351,9 @@ class MultiQAReader(DatasetReader):
                     metadata['rank'] = rank
 
                     # adding to cache
-                    #preprocessed_instances.append({'question_text':question_text,'paragraphs':paragraphs,\
-                    #                               'span_starts_list':span_starts_list,'span_ends_list':span_ends_list,'metadata':metadata})
+                    if self._save_cache_in_path != '':
+                        preprocessed_instances.append({'question_text':question_text,'paragraph':paragraph,\
+                                                   'span_starts':span_starts,'span_ends':span_ends,'metadata':metadata})
 
                     instance = self.text_to_instance(question_text,
                                                  paragraph,
@@ -357,10 +371,12 @@ class MultiQAReader(DatasetReader):
                     yield instance
 
         # saving cache
-        #preproc_dataset = {'num_examples_used':(all_qa_count - skipped_qa_count, all_qa_count),'preprocessed':True, \
-        #                   'preprocessed_instances':preprocessed_instances}
-        #with zipfile.ZipFile('cache.json.zip', "w", zipfile.ZIP_DEFLATED) as zip_file:
-        #    zip_file.writestr('cache.json.zip', json.dumps(preproc_dataset))
+        if self._save_cache_in_path != '':
+            preproc_dataset = {'num_examples_used':(all_qa_count - skipped_qa_count, all_qa_count),'preprocessed':True, \
+                               'preprocessed_instances':preprocessed_instances}
+            filename = 'cached_' + str(self._max_context_docs) +'docs_' + str(self._max_context_size) +'tokens_' + file_path.split('/')[-1]
+            with zipfile.ZipFile(self._save_cache_in_path + filename, "w", zipfile.ZIP_DEFLATED) as zip_file:
+                zip_file.writestr(filename, json.dumps(preproc_dataset))
 
     @overrides
     def text_to_instance(self,  # type: ignore
