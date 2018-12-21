@@ -12,7 +12,6 @@ from typing import Tuple, Callable
 import math
 import warnings
 
-import numpy as np
 import torch
 import torch.nn.functional as F
 
@@ -37,16 +36,16 @@ def attention(query: torch.Tensor,
         p_attn = dropout(p_attn)
     return torch.matmul(p_attn, value), p_attn
 
+
 def subsequent_mask(size: int, device: str = 'cpu') -> torch.Tensor:
     """Mask out subsequent positions."""
-    attn_shape = (1, size, size)
-    mask = np.triu(np.ones(attn_shape), k=1).astype('uint8')
-    mask = (torch.from_numpy(mask) == 0)
-    return mask.to(device)
+    mask = torch.tril(torch.ones(size, size, device=device, dtype=torch.int32)).unsqueeze(0)
+    return mask
 
 
 class PositionalEncoding(torch.nn.Module):
     "Implement the Positional Encoding function."
+
     def __init__(self, input_dim: int, max_len: int = 5000) -> None:
         super().__init__()
 
@@ -66,6 +65,7 @@ class PositionalEncoding(torch.nn.Module):
 
 class PositionwiseFeedForward(torch.nn.Module):
     "Implements FFN equation."
+
     def __init__(self, input_dim: int, ff_dim: int, dropout: float = 0.1) -> None:
         super().__init__()
         self.w_1 = torch.nn.Linear(input_dim, ff_dim)
@@ -79,6 +79,7 @@ class PositionwiseFeedForward(torch.nn.Module):
 
 class TransformerEncoder(torch.nn.Module):
     "Core encoder is a stack of N layers"
+
     def __init__(self, layer: torch.nn.Module, num_layers: int, return_all_layers: bool = False) -> None:
         super().__init__()
         self.layers = util.clone(layer, num_layers)
@@ -104,6 +105,7 @@ class SublayerConnection(torch.nn.Module):
     A residual connection followed by a layer norm.
     Note for code simplicity the norm is first as opposed to last.
     """
+
     def __init__(self, size: int, dropout: float) -> None:
         super().__init__()
         self.norm = LayerNorm(size)
@@ -116,6 +118,7 @@ class SublayerConnection(torch.nn.Module):
 
 class EncoderLayer(torch.nn.Module):
     "Encoder is made up of self-attn and feed forward (defined below)"
+
     def __init__(self,
                  size: int,
                  self_attn: torch.nn.Module,
@@ -170,8 +173,8 @@ class MultiHeadedAttention(torch.nn.Module):
 
 
 def make_model(num_layers: int = 6,
-               input_size: int = 512, # Attention size
-               hidden_size: int = 2048, # FF layer size
+               input_size: int = 512,  # Attention size
+               hidden_size: int = 2048,  # FF layer size
                heads: int = 8,
                dropout: float = 0.1,
                return_all_layers: bool = False) -> TransformerEncoder:
@@ -241,7 +244,7 @@ class BidirectionalLanguageModelTransformer(Seq2SeqEncoder):
         # Forward case:
         timesteps = mask.size(1)
         # Shape (1, timesteps, timesteps)
-        subsequent = subsequent_mask(timesteps, device).int()
+        subsequent = subsequent_mask(timesteps, device)
         # Broadcasted logical and - we want zero
         # elements where either we have padding from the mask,
         # or we aren't allowed to use the timesteps.
