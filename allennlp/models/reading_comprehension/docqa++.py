@@ -7,7 +7,6 @@ import torch
 import torch.nn.functional as F
 from torch.nn.functional import nll_loss
 import inspect
-import time
 
 from allennlp.common.checks import check_dimensions_match
 from allennlp.data import Vocabulary
@@ -214,7 +213,6 @@ class BidafPlusPlus(Model):
             A scalar loss to be optimised.
         """
 
-        start_time = time.time()
         # TODO this repeat is ugly ... (simulating 1 questions.. )
         for key in question.keys():
             question[key] = question[key].unsqueeze(1)
@@ -315,7 +313,6 @@ class BidafPlusPlus(Model):
         tiled_question_passage_vector = question_passage_vector.unsqueeze(1).expand(total_qa_count,
                                                                                     passage_length,
                                                                                     self._encoding_dim)
-        print("316 --- %s seconds ---" % str(time.time() - start_time))
 
         # Shape: (batch_size * max_qa_count, passage_length, encoding_dim * 4)
         final_merged_passage = torch.cat([repeated_encoded_passage,
@@ -375,7 +372,7 @@ class BidafPlusPlus(Model):
                     self._all_qa_count = inst_metadata['num_examples_used'][1]
                     self._examples_used_frac = float(inst_metadata['num_examples_used'][0]) / inst_metadata['num_examples_used'][1]
 
-        print("375 --- %s seconds ---" % str(time.time() - start_time))
+
 
         # Compute the loss.
         if span_start is not None:
@@ -503,7 +500,6 @@ class BidafPlusPlus(Model):
         # Compute F1 and preparing the output dictionary.
         output_dict['best_span_str'] = []
         output_dict['qid'] = []
-        print("502 --- %s seconds ---" % str(time.time() - start_time))
 
         ## TODO UGLY PATCH FOR TESTING
         #new_metadata = []
@@ -561,7 +557,6 @@ class BidafPlusPlus(Model):
         #output_dict['qid'].append(per_dialog_query_id_list)
         #output_dict['best_span_str'].append(per_dialog_best_span_list)
 
-        print("560 --- %s seconds ---" % str(time.time() - start_time))
         return output_dict
 
     @overrides

@@ -509,19 +509,16 @@ class Trainer(Registrable):
 
             self._log_histograms_this_batch = self._histogram_interval is not None and (
                     batch_num_total % self._histogram_interval == 0)
-            print(datetime.datetime.now().time())
-            start_time = time.time()
+
             self.optimizer.zero_grad()
-            print("Train 514 --- %s seconds ---" % str(time.time() - start_time))
+
             loss = self.batch_loss(batch, for_training=True)
-            print("Train 516 --- %s seconds ---" % str(time.time() - start_time))
             if torch.isnan(loss):
                 raise ValueError("nan loss encountered")
 
             loss.backward()
 
             train_loss += loss.item()
-            print("Train 523 --- %s seconds ---" % str(time.time() - start_time))
 
             batch_grad_norm = self.rescale_gradients()
 
@@ -529,7 +526,6 @@ class Trainer(Registrable):
             # LRScheduler which doesn't update per batch.
             if self._learning_rate_scheduler:
                 self._learning_rate_scheduler.step_batch(batch_num_total)
-            print("Train 531 --- %s seconds ---" % str(time.time() - start_time))
 
             if self._log_histograms_this_batch:
                 # get the magnitude of parameter updates for logging
