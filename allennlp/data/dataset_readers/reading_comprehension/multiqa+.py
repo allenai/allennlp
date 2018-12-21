@@ -338,8 +338,8 @@ class MultiQAReader(DatasetReader):
                     metadata['rank'] = rank
 
                     # adding to cache
-                    preprocessed_instances.append({'question_text':question_text,'paragraphs':paragraphs,\
-                                                   'span_starts_list':span_starts_list,'span_ends_list':span_ends_list,'metadata':metadata})
+                    #preprocessed_instances.append({'question_text':question_text,'paragraphs':paragraphs,\
+                    #                               'span_starts_list':span_starts_list,'span_ends_list':span_ends_list,'metadata':metadata})
 
                     instance = self.text_to_instance(question_text,
                                                  paragraph,
@@ -357,10 +357,10 @@ class MultiQAReader(DatasetReader):
                     yield instance
 
         # saving cache
-        preproc_dataset = {'num_examples_used':(all_qa_count - skipped_qa_count, all_qa_count),'preprocessed':True, \
-                           'preprocessed_instances':preprocessed_instances}
-        with zipfile.ZipFile('cache.json.zip', "w", zipfile.ZIP_DEFLATED) as zip_file:
-            zip_file.writestr('cache.json.zip', json.dumps(preproc_dataset))
+        #preproc_dataset = {'num_examples_used':(all_qa_count - skipped_qa_count, all_qa_count),'preprocessed':True, \
+        #                   'preprocessed_instances':preprocessed_instances}
+        #with zipfile.ZipFile('cache.json.zip', "w", zipfile.ZIP_DEFLATED) as zip_file:
+        #    zip_file.writestr('cache.json.zip', json.dumps(preproc_dataset))
 
     @overrides
     def text_to_instance(self,  # type: ignore
