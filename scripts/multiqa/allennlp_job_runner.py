@@ -161,13 +161,18 @@ while True:
         try:
             channel.close()
             connection.close()
+        except:
+            print('close failed')
+
+        try:
             connection_params = pika.URLParameters(
                 'amqp://imfgrmdk:Xv_s9oF_pDdrd0LlF0k6ogGBOqzewbqU@barnacle.rmq.cloudamqp.com/imfgrmdk')
             connection = pika.BlockingConnection(connection_params)
             channel = connection.channel()
             print('reconnected')
         except:
-            print('reconnected failed')
+            print('reconnecting failed')
+
 
 
 channel.close()
