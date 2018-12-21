@@ -39,7 +39,7 @@ def attention(query: torch.Tensor,
 
 def subsequent_mask(size: int, device: str = 'cpu') -> torch.Tensor:
     """Mask out subsequent positions."""
-    mask = torch.tril(torch.ones(size, size, device=device)).unsqueeze(0)
+    mask = torch.tril(torch.ones(size, size, device=device, dtype=torch.int32)).unsqueeze(0)
     return mask
 
 
@@ -239,7 +239,7 @@ class BidirectionalLanguageModelTransformer(Seq2SeqEncoder):
         # Forward case:
         timesteps = mask.size(1)
         # Shape (1, timesteps, timesteps)
-        subsequent = subsequent_mask(timesteps, device).int()
+        subsequent = subsequent_mask(timesteps, device)
         # Broadcasted logical and - we want zero
         # elements where either we have padding from the mask,
         # or we aren't allowed to use the timesteps.
