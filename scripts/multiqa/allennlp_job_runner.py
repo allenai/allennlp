@@ -92,7 +92,7 @@ while True:
             if properties.headers['name'] == 'kill job':
                 print('kill job!')
                 try:
-                    pid_to_kill = [proc['pid'] for proc in proc_running if proc['experiment_name'] == body.decode()]
+                    pid_to_kill = [proc['pid'] for proc in proc_running if proc['experiment_name'] == body]
                     body = 'kill ' + str(pid_to_kill[0])
                 except:
                     ElasticLogger().write_log('INFO', "job runner exception", {'error_message': traceback.format_exc()},
