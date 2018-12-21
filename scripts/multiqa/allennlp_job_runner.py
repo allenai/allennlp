@@ -81,6 +81,7 @@ while True:
         if body is not None:
 
             # Display the message parts
+            body = body.decode()
             print(method_frame)
             print(properties)
             print(body)
@@ -89,37 +90,37 @@ while True:
                 #os.execl(path, arg0, arg1, ...)
             # supporting process kill command:
             if properties.headers['name'] == 'kill job':
+                print('kill job!')
                 try:
-                    print('kill job!')
-                    print(proc_running)
-                    print(body)
                     pid_to_kill = [proc['pid'] for proc in proc_running if proc['experiment_name'] == body.decode()]
-                    os.kill(os.getpgid(pid_to_kill[0]), 0)
+                    body = 'kill ' + str(pid_to_kill[0])
                 except:
                     ElasticLogger().write_log('INFO', "job runner exception", {'error_message': traceback.format_exc()},
                                               push_bulk=True, print_log=True)
-                channel.basic_ack(method_frame.delivery_tag)
-            else:
-                log_file = 'logs/' + properties.headers['name'] + '.txt'
-                if args.shell == 'bash':
-                    command = 'nohup ' + body.decode() + ' &'
-                else:
-                    command = 'nohup ' + body.decode() + ' &'
-                print(command)
-                log_dir_part = log_file.split('/')
-                for dir_depth in range(len(log_dir_part)-1):
-                    if not os.path.isdir('/'.join(log_dir_part[0:dir_depth+1])):
-                        os.mkdir('/'.join(log_dir_part[0:dir_depth+1]))
+                    channel.basic_ack(method_frame.delivery_tag)
+                    time.sleep(2)
 
-                with open(log_file,'wb') as f:
-                    wa_proc = Popen(command, shell=True, preexec_fn=os.setsid,stdout=f,stderr=f)
-                proc_running.append({'job_tag':method_frame.delivery_tag,'command':command, \
-                                     'log_file':log_file, 'log_snapshot':'',\
-                                     'experiment_name':properties.headers['name'], 'alive': True,\
-                                     'pid': wa_proc.pid+1, 'start_time': time.time()})
-                # we are not persistant for now ...
-                channel.basic_ack(method_frame.delivery_tag)
-                time.sleep(2)
+
+            log_file = 'logs/' + properties.headers['name'] + '.txt'
+            if args.shell == 'bash':
+                command = 'nohup ' + body + ' &'
+            else:
+                command = 'nohup ' + body + ' &'
+            print(command)
+            log_dir_part = log_file.split('/')
+            for dir_depth in range(len(log_dir_part)-1):
+                if not os.path.isdir('/'.join(log_dir_part[0:dir_depth+1])):
+                    os.mkdir('/'.join(log_dir_part[0:dir_depth+1]))
+
+            with open(log_file,'wb') as f:
+                wa_proc = Popen(command, shell=True, preexec_fn=os.setsid,stdout=f,stderr=f)
+            proc_running.append({'job_tag':method_frame.delivery_tag,'command':command, \
+                                 'log_file':log_file, 'log_snapshot':'',\
+                                 'experiment_name':properties.headers['name'], 'alive': True,\
+                                 'pid': wa_proc.pid+1, 'start_time': time.time()})
+            # we are not persistant for now ...
+            channel.basic_ack(method_frame.delivery_tag)
+            time.sleep(2)
 
 
 
