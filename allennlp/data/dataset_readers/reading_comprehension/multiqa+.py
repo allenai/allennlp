@@ -374,8 +374,8 @@ class MultiQAReader(DatasetReader):
         if self._save_cache_in_path != '':
             preproc_dataset = {'num_examples_used':(all_qa_count - skipped_qa_count, all_qa_count),'preprocessed':True, \
                                'preprocessed_instances':preprocessed_instances}
-            filename = 'cached_' + str(self._max_context_docs) +'docs_' + str(self._max_context_size) +'tokens_' + file_path.split('/')[-1]
-            with zipfile.ZipFile(self._save_cache_in_path + filename, "w", zipfile.ZIP_DEFLATED) as zip_file:
+            filename = file_path.split('/')[-1]
+            with zipfile.ZipFile(self._save_cache_in_path + '/' + filename, "w", zipfile.ZIP_DEFLATED) as zip_file:
                 zip_file.writestr(filename, json.dumps(preproc_dataset))
 
     @overrides
