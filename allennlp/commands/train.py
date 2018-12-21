@@ -122,7 +122,7 @@ def train_model_from_file(parameter_filename: str,
 
     Parameters
     ----------
-    param_path : ``str``
+    parameter_filename : ``str``
         A json parameter file specifying an AllenNLP experiment.
     serialization_dir : ``str``
         The directory in which to save results and logs. We just pass this along to
@@ -136,6 +136,8 @@ def train_model_from_file(parameter_filename: str,
         If ``True``, we will try to recover a training run from an existing serialization
         directory.  This is only intended for use when something actually crashed during the middle
         of a run.  For continuing training a model on new data, see the ``fine-tune`` command.
+    force : ``bool``, optional (default=False)
+        If ``True`` and a serialization directory exists, we will overwrite the output directory.
     """
     # Load the experiment config from a file and pass it to ``train_model``.
     params = Params.from_file(parameter_filename, overrides)
@@ -192,6 +194,8 @@ def create_serialization_dir(
     recover: ``bool``
         If ``True``, we will try to recover from an existing serialization directory, and crash if
         the directory doesn't exist, or doesn't match the configuration we're given.
+    force: ``bool``
+        If ``True`` and a serialization directory exists, we will overwrite the output directory.
     """
     if recover and force:
         raise ConfigurationError("Illegal arguments: both force and recover are true.")
@@ -264,6 +268,8 @@ def train_model(params: Params,
         If ``True``, we will try to recover a training run from an existing serialization
         directory.  This is only intended for use when something actually crashed during the middle
         of a run.  For continuing training a model on new data, see the ``fine-tune`` command.
+    force : ``bool``, optional (default=False)
+        If ``True`` and a serialization directory exists, we will overwrite the output directory.
 
     Returns
     -------
