@@ -85,10 +85,15 @@ while True:
             print(properties)
             print(body)
 
+            #if properties.headers['name'] == 'restart':
+                #os.execl(path, arg0, arg1, ...)
             # supporting process kill command:
             if properties.headers['name'] == 'kill job':
                 try:
-                    pid_to_kill = [proc['pid'] for proc in proc_running if proc['experiment_name'] == body]
+                    print('kill job!')
+                    print(proc_running)
+                    print(body)
+                    pid_to_kill = [proc['pid'] for proc in proc_running if proc['experiment_name'] == body.decode()]
                     os.kill(os.getpgid(pid_to_kill[0]), 0)
                 except:
                     ElasticLogger().write_log('INFO', "job runner exception", {'error_message': traceback.format_exc()},
