@@ -3,12 +3,14 @@ from typing import Dict, Tuple, TYPE_CHECKING
 
 import torch
 
+from allennlp.common.checks import ConfigurationError
 from allennlp.data import TokenIndexer, Token
 from allennlp.models.archival import load_archive
 from allennlp.modules.scalar_mix import ScalarMix
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 from allennlp.nn.util import remove_sentence_boundaries, get_text_field_mask, add_sentence_boundary_token_ids
 
+# Importing at runtime results in a circular dependency.
 if TYPE_CHECKING:
     from allennlp.models.bidirectional_lm import BidirectionalLanguageModel
 
@@ -16,7 +18,9 @@ if TYPE_CHECKING:
 @TokenEmbedder.register('bidirectional_lm_token_embedder')
 class BidirectionalLanguageModelTokenEmbedder(TokenEmbedder):
     """
-    Compute a single layer of representations from a bidirectional language model.
+    Compute a single layer of representations from a bidirectional language model. This is done
+    by computing a learned scalar average of the layers from the LM. Typically the LM's weights
+    will be fixed, but they can be fine tuned by setting ``requires_grad``.
 
     Parameters
     ----------
@@ -31,7 +35,7 @@ class BidirectionalLanguageModelTokenEmbedder(TokenEmbedder):
 
     dropout : ``float``, optional.
         The dropout value to be applied to the representations.
-    bos_eos_tokens : ``Tuple[str, str]``, optional (default=``None``)
+    bos_eos_tokens : ``Tuple[str, str]``, optional (default=``("<S>", "</S>")``)
         These will be indexed and placed around the indexed tokens. Necessary if the language model
         was trained with them, but they were injected external to an indexer.
     remove_bos_eos: ``bool``, optional (default: True)
@@ -62,25 +66,33 @@ class BidirectionalLanguageModelTokenEmbedder(TokenEmbedder):
         # Load LM and the associated config.
         archive = load_archive(archive_file, overrides=json.dumps(overrides))
         self._lm: BidirectionalLanguageModel = archive.model
-        # pylint: disable=protected-access
-        self._lm._softmax_loss = None
+        self._lm.delete_softmax()
         config = archive.config
         dict_config = config.as_dict(quiet=True)
 
         # Extract the name of the tokens that the LM was trained on.
-        token_names = list(dict_config["model"]["text_field_embedder"]["token_embedders"].keys())
+        text_field_embedder = dict_config["model"]["text_field_embedder"]
+        token_names = list(text_field_embedder["token_embedders"].keys())
         if len(token_names) != 1:
-            # A TokenEmbedder embeds a single set of indices. If the LM was trained with multiple embedders, and
-            # thus indices, we won't be able to embed a single set of indices here.
+            # We don't currently support embedding with language models trained with multiple
+            # embedded indices.
             #
-            # Note: We only care about embedded indices. This does not include "tokens" which is just used to
-            # compute the loss in BidirectionalLanguageModel.
-            raise RuntimeError(f"LM from {archive_file} trained with multiple embedders!")
+            # Note: We only care about embedded indices. This does not include "tokens" which
+            # is just used to compute the loss in BidirectionalLanguageModel.
+            raise ConfigurationError(f"LM from {archive_file} trained with multiple embedders!")
+        if "embedder_to_indexer_map" in text_field_embedder:
+            # Similarly we don't support multiple indexers per embedder.
+            raise ConfigurationError(f"LM from {archive_file} trained with embedder_to_indexer_map!")
         self._token_name = token_names[0]
 
-        # TODO(brendanr): Remove this hack once we have proven we can train without using the
-        # ELMoTokenCharactersIndexer. For the equivalent hack in the ELMo embedder see
-        # https://github.com/allenai/allennlp/blob/master/allennlp/modules/elmo.py#L590.
+        # TODO(brendanr): Find a way to remove this hack. The issue fundamentally is that the
+        # BasicTextFieldEmbedder concatenates multiple embedded representations. When a
+        # downstream model uses both, tokens and token characters, say, and only adds bos/eos
+        # tokens to the token characters, the dimensions don't match. See:
+        # https://github.com/allenai/allennlp/blob/eff25a3085aa9976a7650d30d8961c3626ddc411/allennlp/modules/text_field_embedders/basic_text_field_embedder.py#L109
+        #
+        # For the equivalent hack in the ELMo embedder see:
+        # https://github.com/allenai/allennlp/blob/eff25a3085aa9976a7650d30d8961c3626ddc411/allennlp/modules/elmo.py#L590
         if bos_eos_tokens:
             dataset_reader_config = config.get("dataset_reader")
             if dataset_reader_config.get("type") == "multiprocess":
@@ -88,6 +100,8 @@ class BidirectionalLanguageModelTokenEmbedder(TokenEmbedder):
             token_indexer_config = dataset_reader_config.get("token_indexers").get(self._token_name)
             token_indexer: TokenIndexer = TokenIndexer.from_params(token_indexer_config)
             token_list = [Token(token) for token in bos_eos_tokens]
+            # TODO(brendanr): Obtain these indices from the vocab once the
+            # ELMoTokenCharactersIndexer adds the mappings.
             bos_eos_indices = token_indexer.tokens_to_indices(token_list, self._lm.vocab, "key")["key"]
             self._bos_indices = torch.Tensor(bos_eos_indices[0])
             self._eos_indices = torch.Tensor(bos_eos_indices[1])
@@ -101,14 +115,17 @@ class BidirectionalLanguageModelTokenEmbedder(TokenEmbedder):
             self._dropout = lambda x: x
 
         self._remove_bos_eos = remove_bos_eos
-        num_layers = self._lm._contextualizer.num_layers + 1
+        num_layers = self._lm.num_layers()
+        # TODO(brendanr): Consider passing our LM as a custom module to `Elmo` instead.
+        # See https://github.com/allenai/allennlp/blob/master/allennlp/modules/elmo.py#L76
         self._scalar_mix = ScalarMix(mixture_size=num_layers, do_layer_norm=False, trainable=True)
 
+        # pylint: disable=protected-access
         character_dim = self._lm._text_field_embedder.get_output_dim()
         contextual_dim = self._lm._contextualizer.get_output_dim()
 
-        if not contextual_dim % character_dim == 0 or character_dim > contextual_dim:
-            raise RuntimeError(
+        if contextual_dim % character_dim != 0:
+            raise ConfigurationError(
                     "The output dimensions for the text_field_embedder " +
                     f"({character_dim}) and the contextualizer ({contextual_dim})" +
                     f" from the language model loaded from {archive_file} are " +
@@ -141,7 +158,7 @@ class BidirectionalLanguageModelTokenEmbedder(TokenEmbedder):
         # pylint: disable=arguments-differ
         if self._bos_indices is not None:
             mask = get_text_field_mask({"": inputs})
-            inputs, _ = add_sentence_boundary_token_ids(
+            inputs, mask = add_sentence_boundary_token_ids(
                     inputs, mask, self._bos_indices, self._eos_indices
             )
 
@@ -149,22 +166,24 @@ class BidirectionalLanguageModelTokenEmbedder(TokenEmbedder):
         result_dict = self._lm(source)
 
         # shape (batch_size, timesteps, embedding_size)
-        character_embeddings = result_dict["character_embeddings"]
+        noncontextual_token_embeddings = result_dict["noncontextual_token_embeddings"]
         contextual_embeddings = result_dict["lm_embeddings"]
 
-        # Typically character embeddings are smaller than contextualized embeddings. Since we're
-        # averaging the character embeddings along with all the contextualized layers we need to
-        # make their dimensions match. Simply repeating the character embeddings is a crude, but
-        # effective, way to do this.
+        # Typically the non-contextual embeddings are smaller than the contextualized embeddings.
+        # Since we're averaging all the layers we need to make their dimensions match. Simply
+        # repeating the non-contextual embeddings is a crude, but effective, way to do this.
         duplicated_character_embeddings = torch.cat(
-                [character_embeddings] * self._character_embedding_duplication_count, -1
+                [noncontextual_token_embeddings] * self._character_embedding_duplication_count, -1
         )
-        contextual_embeddings.append(duplicated_character_embeddings)
-        averaged_embeddings = self._scalar_mix(contextual_embeddings)
+        averaged_embeddings = self._scalar_mix(
+                [duplicated_character_embeddings] + contextual_embeddings
+        )
 
         # Add dropout
         averaged_embeddings = self._dropout(averaged_embeddings)
         if self._remove_bos_eos:
-            averaged_embeddings, _ = remove_sentence_boundaries(averaged_embeddings, mask)
+            averaged_embeddings, _ = remove_sentence_boundaries(
+                    averaged_embeddings, result_dict["mask"]
+            )
 
         return averaged_embeddings

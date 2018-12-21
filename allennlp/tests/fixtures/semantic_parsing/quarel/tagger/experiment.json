@@ -22,7 +22,7 @@
   "validation_data_path": "allennlp/tests/fixtures/data/quarel.jsonl",
   "model": {
     "type": "crf_tagger",
-    "constraint_type": "BIO",
+    "label_encoding": "BIO",
     "dropout": 0.2,
     "include_start_end_transitions": false,
     "text_field_embedder": {
