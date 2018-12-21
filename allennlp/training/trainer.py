@@ -30,7 +30,7 @@ from allennlp.common.util import dump_metrics, gpu_memory_mb, parse_cuda_device,
     lazy_groups_of
 from allennlp.common.tqdm import Tqdm
 from allennlp.data.instance import Instance
-from allennlp.data.iterators.data_iterator import DataIterator
+from allennlp.data.iterators.data_iterator import DataIterator, TensorDict
 from allennlp.models.model import Model
 from allennlp.nn import util
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
@@ -407,7 +407,7 @@ class Trainer(Registrable):
             return sparse_clip_norm(parameters_to_clip, self._grad_norm)
         return None
 
-    def _data_parallel(self, batch_group):
+    def _data_parallel(self, batch_group: List[TensorDict]):
         """
         Do the forward pass using multiple GPUs.  This is a simplification
         of torch.nn.parallel.data_parallel to support the allennlp model
@@ -427,9 +427,9 @@ class Trainer(Registrable):
         losses = gather([output['loss'].unsqueeze(0) for output in outputs], used_device_ids[0], 0)
         return {'loss': losses.mean()}
 
-    def batch_loss(self, batch_group, for_training: bool) -> torch.Tensor:
+    def batch_loss(self, batch_group: List[TensorDict], for_training: bool) -> torch.Tensor:
         """
-        Does a forward pass on the given batch and returns the ``loss`` value in the result.
+        Does a forward pass on the given batches and returns the ``loss`` value in the result.
         If ``for_training`` is `True` also applies regularization penalty.
         """
         if self._multiple_gpu:
@@ -523,24 +523,12 @@ class Trainer(Registrable):
 
             self.optimizer.zero_grad()
 
-            start = time.time()
             loss = self.batch_loss(batch_group, for_training=True)
-            end = time.time()
-            diff_forward = end - start
 
             if torch.isnan(loss):
                 raise ValueError("nan loss encountered")
 
-            start = time.time()
             loss.backward()
-            end = time.time()
-            diff_backward = end - start
-
-            one_batch = batch_group[0]
-            assert len(batch_group) == 1 # remove
-            sequence_length = one_batch["source"]["tokens"].size(1)
-            batch_size = one_batch["source"]["tokens"].size(0)
-            logger.info(f"batch: {batch_size} seq: {sequence_length} forward: {diff_forward} back: {diff_backward}")
 
             train_loss += loss.item()
 
@@ -593,7 +581,9 @@ class Trainer(Registrable):
                 if (batches_this_epoch - 1) % self._log_batch_size_period == 0:
                     average = cumulative_batch_size/batches_this_epoch
                     logger.info(f"current batch size: {cur_batch} mean batch size: {average}")
-                    self._tensorboard.add_train_scalar("current_batch_size", cur_batch, batch_num_total)
+                    self._tensorboard.add_train_scalar(
+                        "current_batch_size", cur_batch, batch_num_total
+                    )
                     self._tensorboard.add_train_scalar("mean_batch_size", average, batch_num_total)
 
             # Save model if needed.
@@ -756,18 +746,20 @@ class Trainer(Registrable):
         else:
             val_iterator = self.iterator
 
-        val_generator = val_iterator(self._validation_data,
-                                     num_epochs=1,
-                                     shuffle=False)
-        num_validation_batches = val_iterator.get_num_batches(self._validation_data)
+        num_gpus = len(self._cuda_devices)
+
+        raw_val_generator = val_iterator(self._validation_data,
+                                         num_epochs=1,
+                                         shuffle=False)
+        val_generator = lazy_groups_of(raw_val_generator, num_gpus)
+        num_validation_batches = math.ceil(val_iterator.get_num_batches(self._validation_data)/num_gpus)
         val_generator_tqdm = Tqdm.tqdm(val_generator,
                                        total=num_validation_batches)
         batches_this_epoch = 0
         val_loss = 0
-        for batch in val_generator_tqdm:
+        for batch_group in val_generator_tqdm:
 
-            # TODO(brendanr): Fix
-            loss = self.batch_loss([batch], for_training=False)
+            loss = self.batch_loss(batch_group, for_training=False)
             if loss is not None:
                 # You shouldn't necessarily have to compute a loss for validation, so we allow for
                 # `loss` to be None.  We need to be careful, though - `batches_this_epoch` is
