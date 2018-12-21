@@ -39,10 +39,8 @@ def attention(query: torch.Tensor,
 
 def subsequent_mask(size: int, device: str = 'cpu') -> torch.Tensor:
     """Mask out subsequent positions."""
-    attn_shape = (1, size, size)
-    mask = np.triu(np.ones(attn_shape), k=1).astype('uint8')
-    mask = (torch.from_numpy(mask) == 0)
-    return mask.to(device)
+    mask = torch.tril(torch.ones(size, size, device=device)).unsqueeze(0)
+    return mask
 
 
 class PositionalEncoding(torch.nn.Module):
