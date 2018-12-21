@@ -62,7 +62,7 @@ class BooleanAccuracy(Metric):
         # so .eq -> .prod will be 1 if every element of the instance prediction is correct
         # and 0 if at least one element of the instance prediction is wrong.
         # Because of how we're handling masking, masked positions are automatically "correct".
-        correct = predictions.eq(gold_labels).prod(dim=1).float()
+        correct = predictions.eq(gold_labels).prod(dim=1)
 
         # Since masked positions are correct, we need to explicitly exclude instance predictions
         # where the entire prediction is masked (because they look "correct").
