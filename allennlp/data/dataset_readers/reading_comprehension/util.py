@@ -213,7 +213,7 @@ def make_reading_comprehension_instance(question_tokens: List[Token],
     fields['metadata'] = MetadataField(metadata)
     return Instance(fields)
 
-
+# TODO REMOVE THIS
 def make_reading_comprehension_instance_multiqa_docqa(question_list_tokens: List[List[Token]],
                                             tokenized_documents_list: List[List[Token]],
                                             token_indexers: Dict[str, TokenIndexer],
@@ -354,8 +354,6 @@ def make_reading_comprehension_instance_multiqa_multidoc(question_tokens: List[T
 
     # in prediction mode we won't have this... TODO: what will we do in multi-answer prediction?
     if token_span_lists:
-        span_start_per_doc = []
-        span_end_per_doc = []
         # Looping each <<answers>>.
         span_start_list: List[Field] = []
         span_end_list: List[Field] = []
@@ -371,10 +369,8 @@ def make_reading_comprehension_instance_multiqa_multidoc(question_tokens: List[T
             span_start_list.append(IndexField(span_start, passage_field))
             span_end_list.append(IndexField(span_end, passage_field))
 
-        span_start_per_doc.append(ListField(span_start_list))
-        span_end_per_doc.append(ListField(span_end_list))
-        fields['span_start'] = ListField(span_start_per_doc)
-        fields['span_end'] = ListField(span_end_per_doc)
+        fields['span_start'] = ListField(span_start_list)
+        fields['span_end'] = ListField(span_end_list)
 
 
     metadata.update(additional_metadata)

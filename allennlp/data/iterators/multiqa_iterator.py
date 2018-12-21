@@ -44,12 +44,17 @@ class BasicIterator(DataIterator):
 
         batch = []
         for question_instances in per_question_instances:
+            # sorting question_instances by rank, we should get them sorted already, but just in case.
+            question_instances = sorted(question_instances, key=lambda x: x.fields['metadata'].metadata['rank'])
+
             if self._all_question_instances_in_batch:
                 instances_to_add = question_instances
             else:
                 # choose at most 2 instances from the same question:
                 if len(question_instances) > 2:
-                    instances_to_add = random.sample(question_instances,2)
+                    # This idea is inspired by Clark and Gardner, 17 - over sample the high ranking documents
+                    instances_to_add = random.sample(question_instances[0:2], 1)
+                    instances_to_add += random.sample(question_instances[2:], 1)
                 else:
                     instances_to_add = question_instances
 
