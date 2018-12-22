@@ -3,12 +3,7 @@
 {
     "dataset_reader":{
         "type":"ptb_trees",
-        "use_pos_tags": true,
-        "token_indexers": {
-          "elmo": {
-            "type": "elmo_characters"
-          }
-        }
+        "use_pos_tags": true
     },
     "train_data_path": std.extVar('PTB_TRAIN_PATH'),
     "validation_data_path": std.extVar('PTB_DEV_PATH'),
@@ -17,13 +12,11 @@
       "type": "constituency_parser",
       "text_field_embedder": {
         "token_embedders": {
-            "elmo": {
-                "type": "elmo_token_embedder",
-                "dropout": 0.2,
-                "options_file": "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json",
-                "weight_file": "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5",
-                "do_layer_norm": false
-            }
+          "tokens": {
+            "type": "embedding",
+            "embedding_dim": 100,
+            "trainable": true
+          }
         }
       },
       "pos_tag_embedding":{
@@ -38,7 +31,7 @@
       ],
       "encoder": {
         "type": "lstm",
-        "input_size": 1074,
+        "input_size": 150,
         "hidden_size": 250,
         "num_layers": 2,
         "bidirectional": true,

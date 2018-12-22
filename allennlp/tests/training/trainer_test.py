@@ -4,6 +4,7 @@ import json
 import os
 import re
 import time
+from typing import Dict
 
 import torch
 import pytest
@@ -17,6 +18,7 @@ from allennlp.common.params import Params
 from allennlp.models.simple_tagger import SimpleTagger
 from allennlp.data.iterators import BasicIterator
 from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
+from allennlp.models.model import Model
 
 
 class TestTrainer(AllenNlpTestCase):
@@ -27,9 +29,11 @@ class TestTrainer(AllenNlpTestCase):
         self.vocab = vocab
         self.model_params = Params({
                 "text_field_embedder": {
-                        "tokens": {
-                                "type": "embedding",
-                                "embedding_dim": 5
+                        "token_embedders": {
+                                "tokens": {
+                                        "type": "embedding",
+                                        "embedding_dim": 5
+                                        }
                                 }
                         },
                 "encoder": {
@@ -78,6 +82,9 @@ class TestTrainer(AllenNlpTestCase):
         assert isinstance(metrics['best_validation_accuracy3'], float)
         assert 'best_epoch' in metrics
         assert isinstance(metrics['best_epoch'], int)
+        assert 'peak_cpu_memory_MB' in metrics
+        assert isinstance(metrics['peak_cpu_memory_MB'], float)
+        assert metrics['peak_cpu_memory_MB'] > 0
 
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="No CUDA device registered.")
     def test_trainer_can_run_cuda(self):
@@ -89,12 +96,38 @@ class TestTrainer(AllenNlpTestCase):
     @pytest.mark.skipif(torch.cuda.device_count() < 2,
                         reason="Need multiple GPUs.")
     def test_trainer_can_run_multiple_gpu(self):
+
+        class MetaDataCheckWrapper(Model):
+            """
+            Checks that the metadata field has been correctly split across the batch dimension
+            when running on multiple gpus.
+            """
+            def __init__(self, model):
+                super().__init__(model.vocab)
+                self.model = model
+
+            def forward(self, **kwargs) -> Dict[str, torch.Tensor]:  # type: ignore # pylint: disable=arguments-differ
+                assert 'metadata' in kwargs and 'tags' in kwargs, \
+                    f'tokens and metadata must be provided. Got {kwargs.keys()} instead.'
+                batch_size = kwargs['tokens']['tokens'].size()[0]
+                assert len(kwargs['metadata']) == batch_size, \
+                    f'metadata must be split appropriately. Expected {batch_size} elements, ' \
+                    f"got {len(kwargs['metadata'])} elements."
+                return self.model.forward(**kwargs)
+
         multigpu_iterator = BasicIterator(batch_size=4)
         multigpu_iterator.index_with(self.vocab)
-        trainer = Trainer(self.model, self.optimizer,
+        trainer = Trainer(MetaDataCheckWrapper(self.model), self.optimizer,
                           multigpu_iterator, self.instances, num_epochs=2,
                           cuda_device=[0, 1])
-        trainer.train()
+        metrics = trainer.train()
+        assert 'peak_cpu_memory_MB' in metrics
+        assert isinstance(metrics['peak_cpu_memory_MB'], float)
+        assert metrics['peak_cpu_memory_MB'] > 0
+        assert 'peak_gpu_0_memory_MB' in metrics
+        assert isinstance(metrics['peak_gpu_0_memory_MB'], float)
+        assert 'peak_gpu_1_memory_MB' in metrics
+        assert isinstance(metrics['peak_gpu_1_memory_MB'], float)
 
     def test_trainer_can_resume_training(self):
         trainer = Trainer(self.model, self.optimizer,

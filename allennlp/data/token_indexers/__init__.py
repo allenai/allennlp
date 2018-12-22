@@ -10,3 +10,4 @@ from allennlp.data.token_indexers.token_characters_indexer import TokenCharacter
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
 from allennlp.data.token_indexers.elmo_indexer import ELMoTokenCharactersIndexer
 from allennlp.data.token_indexers.openai_transformer_byte_pair_indexer import OpenaiTransformerBytePairIndexer
+from allennlp.data.token_indexers.wordpiece_indexer import WordpieceIndexer, PretrainedBertIndexer

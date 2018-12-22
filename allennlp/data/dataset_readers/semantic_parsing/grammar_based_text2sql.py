@@ -6,7 +6,6 @@ import os
 import sqlite3
 
 from overrides import overrides
-from parsimonious.exceptions import ParseError
 
 from allennlp.common.file_utils import cached_path
 from allennlp.common.checks import ConfigurationError
@@ -33,7 +32,7 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
     ----------
     schema_path : ``str``, required.
         The path to the database schema.
-    database_path : ``str``, required.
+    database_path : ``str``, optional (default = None)
         The path to a database.
     use_all_sql : ``bool``, optional (default = False)
         Whether to use all of the sql queries which have identical semantics,
@@ -43,6 +42,8 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
         are not required.
     use_prelinked_entities : ``bool``, (default = True)
         Whether or not to use the pre-linked entities in the text2sql data.
+    use_untyped_entities : ``bool``, (default = True)
+        Whether or not to attempt to infer the pre-linked entity types.
     token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
         We use this to define the input representation for the text.  See :class:`TokenIndexer`.
         Note that the `output` tags will always correspond to single token IDs based on how they
@@ -51,21 +52,26 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
         Some of the text2sql datasets are very small, so you may need to do cross validation.
         Here, you can specify a integer corresponding to a split_{int}.json file not to include
         in the training set.
+    keep_if_unparsable : ``bool``, optional (default = True)
+        Whether or not to keep examples that we can't parse using the grammar.
     """
     def __init__(self,
                  schema_path: str,
-                 database_file: str,
+                 database_file: str = None,
                  use_all_sql: bool = False,
                  remove_unneeded_aliases: bool = True,
                  use_prelinked_entities: bool = True,
+                 use_untyped_entities: bool = True,
                  token_indexers: Dict[str, TokenIndexer] = None,
                  cross_validation_split_to_exclude: int = None,
+                 keep_if_unparseable: bool = True,
                  lazy: bool = False) -> None:
         super().__init__(lazy)
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         self._use_all_sql = use_all_sql
         self._remove_unneeded_aliases = remove_unneeded_aliases
         self._use_prelinked_entities = use_prelinked_entities
+        self._keep_if_unparsable = keep_if_unparseable
 
         if not self._use_prelinked_entities:
             raise ConfigurationError("The grammar based text2sql dataset reader "
@@ -73,12 +79,18 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
 
         self._cross_validation_split_to_exclude = str(cross_validation_split_to_exclude)
 
-        self._database_file = cached_path(database_file)
-        self._connection = sqlite3.connect(self._database_file)
-        self._cursor = self._connection.cursor()
+        if database_file is not None:
+            database_file = cached_path(database_file)
+            connection = sqlite3.connect(database_file)
+            self._cursor = connection.cursor()
+        else:
+            self._cursor = None
 
         self._schema_path = schema_path
-        self._world = Text2SqlWorld(schema_path, self._cursor, use_prelinked_entities=use_prelinked_entities)
+        self._world = Text2SqlWorld(schema_path,
+                                    self._cursor,
+                                    use_prelinked_entities=use_prelinked_entities,
+                                    use_untyped_entities=use_untyped_entities)
 
     @overrides
     def _read(self, file_path: str):
@@ -108,7 +120,7 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
                                                             remove_unneeded_aliases=self._remove_unneeded_aliases,
                                                             schema=schema):
                 linked_entities = sql_data.sql_variables if self._use_prelinked_entities else None
-                instance = self.text_to_instance(sql_data.text, linked_entities, sql_data.sql)
+                instance = self.text_to_instance(sql_data.text_with_variables, linked_entities, sql_data.sql)
                 if instance is not None:
                     yield instance
 
@@ -123,10 +135,12 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
         fields["tokens"] = tokens
 
         if sql is not None:
-            try:
-                action_sequence, all_actions = self._world.get_action_sequence_and_all_actions(sql,
-                                                                                               prelinked_entities)
-            except ParseError:
+            action_sequence, all_actions = self._world.get_action_sequence_and_all_actions(sql,
+                                                                                           prelinked_entities)
+            if action_sequence is None and self._keep_if_unparsable:
+                print("Parse error")
+                action_sequence = []
+            elif action_sequence is None:
                 return None
 
         index_fields: List[Field] = []
@@ -148,6 +162,8 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
 
         for production_rule in action_sequence:
             index_fields.append(IndexField(action_map[production_rule], valid_actions_field))
+        if not action_sequence:
+            index_fields = [IndexField(-1, valid_actions_field)]
 
         action_sequence_field = ListField(index_fields)
         fields["action_sequence"] = action_sequence_field

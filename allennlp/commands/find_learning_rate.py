@@ -6,12 +6,15 @@ which to write the results.
 .. code-block:: bash
 
    $ allennlp find-lr --help
-   usage: allennlp train [-h] -s SERIALIZATION_DIR [-o OVERRIDES]
-                         [--start-lr START_LR] [--end-lr END_LR]
-                         [--num-batches NUM_BATCHES] [--linear]
-                         param_path
+   usage: allennlp find-lr [-h] -s SERIALIZATION_DIR [-o OVERRIDES]
+                           [--start-lr START_LR] [--end-lr END_LR]
+                           [--num-batches NUM_BATCHES] [--linear]
+                           [--stopping-factor STOPPING_FACTOR] [--linear]
+                           [--include-package INCLUDE_PACKAGE]
+                           param_path
 
-   Train the specified model on the specified dataset.
+   Find a learning rate range where the loss decreases quickly for the specified
+   model and dataset.
 
    positional arguments:
    param_path            path to parameter file describing the model to be
@@ -21,24 +24,33 @@ which to write the results.
    -h, --help              show this help message and exit
    -s SERIALIZATION_DIR, --serialization-dir SERIALIZATION_DIR
                            directory in which to save Learning rate vs loss
+   -f, --force             overwrite the output directory if it exists
    -o OVERRIDES, --overrides OVERRIDES
                            a JSON structure used to override the experiment
-                           configuration
+                           configuration.
    --start-lr START_LR
-                           Learning rate to start the search.
+                           learning rate to start the search.
    --end-lr END_LR
-                           Learning rate up to which search is done.
+                           learning rate up to which search is done.
    --num-batches NUM_BATCHES
-                           Number of mini-batches to run Learning rate finder
-   --linear                Increase learning rate linearly instead of exponential increase
-
+                           number of mini-batches to run Learning rate finder.
+   --stopping-factor STOPPING_FACTOR
+                           stop the search when the current loss exceeds the best
+                           loss recorded by multiple of stopping factor
+   --linear                increase learning rate linearly instead of exponential
+                           increase
+   --include-package INCLUDE_PACKAGE
+                           additional packages to include
 """
-from typing import List, Optional, Tuple
+
+from typing import List, Tuple
 import argparse
 import re
 import os
 import math
 import logging
+import shutil
+
 import matplotlib; matplotlib.use('Agg') # pylint: disable=multiple-statements,wrong-import-position
 import matplotlib.pyplot as plt # pylint: disablewrong-import-position
 
@@ -69,7 +81,6 @@ class FindLearningRate(Subcommand):
                                required=True,
                                type=str,
                                help='The directory in which to save results.')
-
         subparser.add_argument('-o', '--overrides',
                                type=str,
                                default="",
@@ -77,23 +88,27 @@ class FindLearningRate(Subcommand):
         subparser.add_argument('--start-lr',
                                type=float,
                                default=1e-5,
-                               help='Learning rate to start the search.')
+                               help='learning rate to start the search')
         subparser.add_argument('--end-lr',
                                type=float,
                                default=10,
-                               help='Learning rate up to which search is done.')
+                               help='learning rate up to which search is done')
         subparser.add_argument('--num-batches',
                                type=int,
                                default=100,
-                               help='Number of mini-batches to run Learning rate finder')
+                               help='number of mini-batches to run Learning rate finder')
         subparser.add_argument('--stopping-factor',
                                type=float,
-                               default=4.0,
-                               help='Stop the search when the current loss exceeds the best loss recorded by '
+                               default=None,
+                               help='stop the search when the current loss exceeds the best loss recorded by '
                                     'multiple of stopping factor')
         subparser.add_argument('--linear',
                                action='store_true',
-                               help='Increase learning rate linearly instead of exponential increase')
+                               help='increase learning rate linearly instead of exponential increase')
+        subparser.add_argument('-f', '--force',
+                               action='store_true',
+                               required=False,
+                               help='overwrite the output directory if it exists')
 
         subparser.set_defaults(func=find_learning_rate_from_args)
 
@@ -105,16 +120,20 @@ def find_learning_rate_from_args(args: argparse.Namespace) -> None:
     """
     params = Params.from_file(args.param_path, args.overrides)
     find_learning_rate_model(params, args.serialization_dir,
-                             args.start_lr, args.end_lr,
-                             args.num_batches, args.linear, args.stopping_factor)
+                             start_lr=args.start_lr,
+                             end_lr=args.end_lr,
+                             num_batches=args.num_batches,
+                             linear_steps=args.linear,
+                             stopping_factor=args.stopping_factor,
+                             force=args.force)
 
-def find_learning_rate_model(params: Params,
-                             serialization_dir: str,
-                             start_lr: float,
-                             end_lr: float,
-                             num_batches: int,
-                             linear_steps: bool,
-                             stopping_factor: Optional[float]) -> None:
+def find_learning_rate_model(params: Params, serialization_dir: str,
+                             start_lr: float = 1e-5,
+                             end_lr: float = 10,
+                             num_batches: int = 100,
+                             linear_steps: bool = False,
+                             stopping_factor: float = None,
+                             force: bool = False) -> None:
     """
     Runs learning rate search for given `num_batches` and saves the results in ``serialization_dir``
 
@@ -136,16 +155,27 @@ def find_learning_rate_model(params: Params,
     stopping_factor: ``float``
         Stop the search when the current loss exceeds the best loss recorded by
         multiple of stopping factor. If ``None`` search proceeds till the ``end_lr``
+    force: ``bool``
+        If True and the serialization directory already exists, everything in it will
+        be removed prior to finding the learning rate.
     """
+    if os.path.exists(serialization_dir) and force:
+        shutil.rmtree(serialization_dir)
 
     if os.path.exists(serialization_dir) and os.listdir(serialization_dir):
         raise ConfigurationError(f'Serialization directory {serialization_dir} already exists and is '
                                  f'not empty.')
+    else:
+        os.makedirs(serialization_dir, exist_ok=True)
 
     prepare_environment(params)
-    os.makedirs(serialization_dir, exist_ok=True)
 
-    check_for_gpu(params.get('trainer').get('cuda_device', -1))
+    cuda_device = params.params.get('trainer').get('cuda_device', -1)
+    if isinstance(cuda_device, list):
+        for device in cuda_device:
+            check_for_gpu(device)
+    else:
+        check_for_gpu(cuda_device)
 
     all_datasets = datasets_from_params(params)
     datasets_for_vocab_creation = set(params.pop("datasets_for_vocab_creation", all_datasets))
@@ -184,9 +214,12 @@ def find_learning_rate_model(params: Params,
                                   validation_iterator=None)
 
     logger.info(f'Starting learning rate search from {start_lr} to {end_lr} in {num_batches} iterations.')
-    learning_rates, losses = search_learning_rate(trainer, start_lr,
-                                                  end_lr, num_batches,
-                                                  linear_steps, stopping_factor)
+    learning_rates, losses = search_learning_rate(trainer,
+                                                  start_lr=start_lr,
+                                                  end_lr=end_lr,
+                                                  num_batches=num_batches,
+                                                  linear_steps=linear_steps,
+                                                  stopping_factor=stopping_factor)
     logger.info(f'Finished learning rate search.')
     losses = _smooth(losses, 0.98)
 
@@ -197,7 +230,7 @@ def search_learning_rate(trainer: Trainer,
                          end_lr: float = 10,
                          num_batches: int = 100,
                          linear_steps: bool = False,
-                         stopping_factor: Optional[float] = 4.0) -> Tuple[List[float], List[float]]:
+                         stopping_factor: float = None) -> Tuple[List[float], List[float]]:
     """
     Runs training loop on the model using :class:`~allennlp.training.trainer.Trainer`
     increasing learning rate from ``start_lr`` to ``end_lr`` recording the losses.
@@ -283,6 +316,7 @@ def _smooth(values: List[float], beta: float) -> List[float]:
         avg_value = beta * avg_value + (1 - beta) * value
         smoothed.append(avg_value / (1 - beta ** (i + 1)))
     return smoothed
+
 
 def _save_plot(learning_rates: List[float], losses: List[float], save_path: str):
     plt.ylabel('loss')

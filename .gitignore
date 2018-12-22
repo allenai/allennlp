@@ -11,6 +11,7 @@ dist/
 
 .envrc
 .python-version
+.idea
 
 
 # jupyter notebooks
@@ -23,6 +24,7 @@ dist/
 .cache/
 allennlp/tools/EVALB/evalb.dSYM/
 doc/_build/
+*.swp
 
 
 # python

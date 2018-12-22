@@ -1,7 +1,7 @@
 import logging
 import os
 from functools import partial
-from typing import Callable, List, Dict, Tuple, Union
+from typing import Any, Callable, List, Dict, Tuple, Union
 
 from overrides import overrides
 
@@ -68,7 +68,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         after which we should start decreasing the weight on checklist cost in favor of denotation
         cost, and the rate at which we should do it. We will decrease the weight in the following
         way - ``checklist_cost_weight = checklist_cost_weight - rate * checklist_cost_weight``
-        starting at the apropriate epoch.  The weight will remain constant if this is not provided.
+        starting at the appropriate epoch.  The weight will remain constant if this is not provided.
     penalize_non_agenda_actions : ``bool``, optional (default=False)
         Should we penalize the model for producing terminal actions that are outside the agenda?
     initial_mml_model_file : ``str`` , optional (default=None)
@@ -185,7 +185,8 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                 agenda: torch.LongTensor,
                 identifier: List[str] = None,
                 labels: torch.LongTensor = None,
-                epoch_num: List[int] = None) -> Dict[str, torch.Tensor]:
+                epoch_num: List[int] = None,
+                metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
         Decoder logic for producing type constrained target sequences that maximize coverage of
@@ -235,6 +236,8 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                                       possible_actions=actions,
                                       extras=label_strings,
                                       checklist_state=initial_checklist_states)
+        if not self.training:
+            initial_state.debug_info = [[] for _ in range(batch_size)]
 
         agenda_data = [agenda_[:, 0].cpu().data for agenda_ in agenda_list]
         outputs = self._decoder_trainer.decode(initial_state,  # type: ignore
@@ -257,8 +260,18 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                                  agenda_data=agenda_data)
         else:
             # We're testing.
+            if metadata is not None:
+                outputs["sentence_tokens"] = [x["sentence_tokens"] for x in metadata]
+            outputs['debug_info'] = []
+            for i in range(batch_size):
+                outputs['debug_info'].append(best_final_states[i][0].debug_info[0])  # type: ignore
             outputs["best_action_strings"] = batch_action_strings
             outputs["denotations"] = batch_denotations
+            action_mapping = {}
+            for batch_index, batch_actions in enumerate(actions):
+                for action_index, action in enumerate(batch_actions):
+                    action_mapping[(batch_index, action_index)] = action[0]
+            outputs['action_mapping'] = action_mapping
         return outputs
 
     def _get_checklist_info(self,
@@ -363,7 +376,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         """
         if not state.is_finished():
             raise RuntimeError("_get_state_cost() is not defined for unfinished states!")
-        instace_worlds = batch_worlds[state.batch_indices[0]]
+        instance_worlds = batch_worlds[state.batch_indices[0]]
         # Our checklist cost is a sum of squared error from where we want to be, making sure we
         # take into account the mask.
         checklist_balance = state.checklist_state[0].get_balance()
@@ -379,7 +392,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         # how many worlds the logical form is correct in?
         # extras being None happens when we are testing. We do not care about the cost
         # then.  TODO (pradeep): Make this cleaner.
-        if state.extras is None or all(self._check_state_denotations(state, instace_worlds)):
+        if state.extras is None or all(self._check_state_denotations(state, instance_worlds)):
             cost = checklist_cost
         else:
             cost = checklist_cost + (1 - self._checklist_cost_weight) * denotation_cost

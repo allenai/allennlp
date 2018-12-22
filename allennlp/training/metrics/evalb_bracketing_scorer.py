@@ -1,5 +1,5 @@
-
 from typing import List
+import logging
 import os
 import tempfile
 import subprocess
@@ -10,6 +10,8 @@ from nltk import Tree
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.training.metrics.metric import Metric
+
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 DEFAULT_EVALB_DIR = os.path.abspath(os.path.join(
         os.path.dirname(os.path.realpath(__file__)), os.pardir, os.pardir, "tools", "EVALB"))
@@ -26,7 +28,7 @@ class EvalbBracketingScorer(Metric):
     will compile.
 
     AllenNLP contains the EVALB software, but you will need to compile it yourself
-    before using it because the binary it generates is system depenedent. To build it,
+    before using it because the binary it generates is system dependent. To build it,
     run ``make`` inside the ``allennlp/tools/EVALB`` directory.
 
     Note that this metric reads and writes from disk quite a bit. You probably don't
@@ -68,11 +70,17 @@ class EvalbBracketingScorer(Metric):
             A list of gold NLTK Trees to use as a reference.
         """
         if not os.path.exists(self._evalb_program_path):
-            compile_command = ("python -c 'from allennlp.training.metrics import EvalbBracketingScorer; "
-                               "EvalbBracketingScorer.compile_evalb()'")
-            raise ConfigurationError("You must compile the EVALB scorer before using it."
-                                     " Run 'make' in the '{}' directory or run: {}".format(
-                                             self._evalb_program_path, compile_command))
+            logger.warning(f"EVALB not found at {self._evalb_program_path}.  Attempting to compile it.")
+            EvalbBracketingScorer.compile_evalb(self._evalb_directory_path)
+
+            # If EVALB executable still doesn't exist, raise an error.
+            if not os.path.exists(self._evalb_program_path):
+                compile_command = (f"python -c 'from allennlp.training.metrics import EvalbBracketingScorer; "
+                                   f"EvalbBracketingScorer.compile_evalb(\"{self._evalb_directory_path}\")'")
+                raise ConfigurationError(f"EVALB still not found at {self._evalb_program_path}. "
+                                         "You must compile the EVALB scorer before using it."
+                                         " Run 'make' in the '{}' directory or run: {}".format(
+                                                 self._evalb_program_path, compile_command))
         tempdir = tempfile.mkdtemp()
         gold_path = os.path.join(tempdir, "gold.txt")
         predicted_path = os.path.join(tempdir, "predicted.txt")
@@ -124,6 +132,7 @@ class EvalbBracketingScorer(Metric):
 
     @staticmethod
     def compile_evalb(evalb_directory_path: str = DEFAULT_EVALB_DIR):
+        logger.info(f"Compiling EVALB by running make in {evalb_directory_path}.")
         os.system("cd {} && make && cd ../../../".format(evalb_directory_path))
 
     @staticmethod

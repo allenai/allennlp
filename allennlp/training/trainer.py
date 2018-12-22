@@ -20,12 +20,12 @@ from typing import Dict, Optional, List, Tuple, Union, Iterable, Any, Set
 import torch
 import torch.optim.lr_scheduler
 from torch.nn.parallel import replicate, parallel_apply
-from torch.nn.parallel.scatter_gather import scatter_kwargs, gather
+from torch.nn.parallel.scatter_gather import gather
 from tensorboardX import SummaryWriter
 
 from allennlp.common import Params, Registrable
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.util import peak_memory_mb, gpu_memory_mb, dump_metrics
+from allennlp.common.util import dump_metrics, gpu_memory_mb, parse_cuda_device, peak_memory_mb, scatter_kwargs
 from allennlp.common.tqdm import Tqdm
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator
@@ -181,7 +181,8 @@ class Trainer(Registrable):
                  summary_interval: int = 100,
                  histogram_interval: int = None,
                  should_log_parameter_statistics: bool = True,
-                 should_log_learning_rate: bool = False) -> None:
+                 should_log_learning_rate: bool = False,
+                 log_batch_size_period: Optional[int] = None) -> None:
         """
         Parameters
         ----------
@@ -266,6 +267,8 @@ class Trainer(Registrable):
             of parameters and gradients) to tensorboard.
         should_log_learning_rate : ``bool``, optional, (default = False)
             Whether to send parameter specific learning rate to tensorboard.
+        log_batch_size_period : ``int``, optional, (default = ``None``)
+            If defined, how often to log the average batch size.
         """
         self.model = model
         self.iterator = iterator
@@ -324,6 +327,7 @@ class Trainer(Registrable):
         self._log_histograms_this_batch = False
         self._should_log_parameter_statistics = should_log_parameter_statistics
         self._should_log_learning_rate = should_log_learning_rate
+        self._log_batch_size_period = log_batch_size_period
 
         # We keep the total batch number as a class variable because it
         # is used inside a closure for the hook which logs activations in
@@ -408,6 +412,7 @@ class Trainer(Registrable):
         interface.
         """
         inputs, module_kwargs = scatter_kwargs((), batch, self._cuda_devices, 0)
+
         used_device_ids = self._cuda_devices[:len(inputs)]
         replicas = replicate(self.model, used_device_ids)
         outputs = parallel_apply(replicas, inputs, module_kwargs, used_device_ids)
@@ -450,13 +455,28 @@ class Trainer(Registrable):
         metrics["loss"] = float(total_loss / num_batches) if num_batches > 0 else 0.0
         return metrics
 
+    def _get_batch_size(self, batch: Union[Dict, torch.Tensor]) -> int:
+        """
+        Returns the size of the batch dimension. Assumes a well-formed batch,
+        returns 0 otherwise.
+        """
+        if isinstance(batch, torch.Tensor):
+            return batch.size(0) # type: ignore
+        elif isinstance(batch, Dict):
+            return self._get_batch_size(next(iter(batch.values())))
+        else:
+            return 0
+
     def _train_epoch(self, epoch: int) -> Dict[str, float]:
         """
         Trains one epoch and returns metrics.
         """
         logger.info("Epoch %d/%d", epoch, self._num_epochs - 1)
-        logger.info(f"Peak CPU memory usage MB: {peak_memory_mb()}")
+        peak_cpu_usage = peak_memory_mb()
+        logger.info(f"Peak CPU memory usage MB: {peak_cpu_usage}")
+        gpu_usage = []
         for gpu, memory in gpu_memory_mb().items():
+            gpu_usage.append((gpu, memory))
             logger.info(f"GPU {gpu} memory usage MB: {memory}")
 
         train_loss = 0.0
@@ -481,6 +501,7 @@ class Trainer(Registrable):
         logger.info("Training")
         train_generator_tqdm = Tqdm.tqdm(train_generator,
                                          total=num_training_batches)
+        cumulative_batch_size = 0
         for batch in train_generator_tqdm:
             batches_this_epoch += 1
             self._batch_num_total += 1
@@ -492,6 +513,9 @@ class Trainer(Registrable):
             self.optimizer.zero_grad()
 
             loss = self.batch_loss(batch, for_training=True)
+            if torch.isnan(loss):
+                raise ValueError("nan loss encountered")
+
             loss.backward()
 
             train_loss += loss.item()
@@ -539,6 +563,15 @@ class Trainer(Registrable):
             if self._log_histograms_this_batch:
                 self._histograms_to_tensorboard(batch_num_total, histogram_parameters)
 
+            if self._log_batch_size_period:
+                cur_batch = self._get_batch_size(batch)
+                cumulative_batch_size += cur_batch
+                if (batches_this_epoch - 1) % self._log_batch_size_period == 0:
+                    average = cumulative_batch_size/batches_this_epoch
+                    logger.info(f"current batch size: {cur_batch} mean batch size: {average}")
+                    self._tensorboard.add_train_scalar("current_batch_size", cur_batch, batch_num_total)
+                    self._tensorboard.add_train_scalar("mean_batch_size", average, batch_num_total)
+
             # Save model if needed.
             if self._model_save_interval is not None and (
                     time.time() - last_save_time > self._model_save_interval
@@ -547,8 +580,11 @@ class Trainer(Registrable):
                 self._save_checkpoint(
                         '{0}.{1}'.format(epoch, time_to_str(int(last_save_time))), [], is_best=False
                 )
-
-        return self._get_metrics(train_loss, batches_this_epoch, reset=True)
+        metrics = self._get_metrics(train_loss, batches_this_epoch, reset=True)
+        metrics['cpu_memory_MB'] = peak_cpu_usage
+        for (gpu_num, memory) in gpu_usage:
+            metrics['gpu_'+str(gpu_num)+'_memory_MB'] = memory
+        return metrics
 
     def _should_stop_early(self, metric_history: List[float]) -> bool:
         """
@@ -750,6 +786,14 @@ class Trainer(Registrable):
             epoch_start_time = time.time()
             train_metrics = self._train_epoch(epoch)
 
+            # get peak of memory usage
+            if 'cpu_memory_MB' in train_metrics:
+                metrics['peak_cpu_memory_MB'] = max(metrics.get('peak_cpu_memory_MB', 0),
+                                                    train_metrics['cpu_memory_MB'])
+            for key, value in train_metrics.items():
+                if key.startswith('gpu_'):
+                    metrics["peak_"+key] = max(metrics.get("peak_"+key, 0), value)
+
             if self._validation_data is not None:
                 with torch.no_grad():
                     # We have a validation set, so compute all the metrics on it.
@@ -920,12 +964,12 @@ class Trainer(Registrable):
             pieces = epoch.split('.')
             if len(pieces) == 1:
                 # Just a single epoch without timestamp
-                int_epochs.append([int(pieces[0]), 0])
+                int_epochs.append([int(pieces[0]), '0'])
             else:
                 # has a timestamp
                 int_epochs.append([int(pieces[0]), pieces[1]])
         last_epoch = sorted(int_epochs, reverse=True)[0]
-        if last_epoch[1] == 0:
+        if last_epoch[1] == '0':
             epoch_to_load = str(last_epoch[0])
         else:
             epoch_to_load = '{0}.{1}'.format(last_epoch[0], last_epoch[1])
@@ -1013,13 +1057,20 @@ class Trainer(Registrable):
         validation_metric = params.pop("validation_metric", "-loss")
         shuffle = params.pop_bool("shuffle", True)
         num_epochs = params.pop_int("num_epochs", 20)
-        cuda_device = params.pop_int("cuda_device", -1)
+        cuda_device = parse_cuda_device(params.pop("cuda_device", -1))
         grad_norm = params.pop_float("grad_norm", None)
         grad_clipping = params.pop_float("grad_clipping", None)
         lr_scheduler_params = params.pop("learning_rate_scheduler", None)
 
-        if cuda_device >= 0:
-            model = model.cuda(cuda_device)
+        if isinstance(cuda_device, list):
+            model_device = cuda_device[0]
+        else:
+            model_device = cuda_device
+        if model_device >= 0:
+            # Moving model to GPU here so that the optimizer state gets constructed on
+            # the right device.
+            model = model.cuda(model_device)
+
         parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
         optimizer = Optimizer.from_params(parameters, params.pop("optimizer"))
 
@@ -1036,6 +1087,7 @@ class Trainer(Registrable):
         histogram_interval = params.pop_int("histogram_interval", None)
         should_log_parameter_statistics = params.pop_bool("should_log_parameter_statistics", True)
         should_log_learning_rate = params.pop_bool("should_log_learning_rate", False)
+        log_batch_size_period = params.pop_int("log_batch_size_period", None)
 
         params.assert_empty(cls.__name__)
         return cls(model, optimizer, iterator,
@@ -1056,7 +1108,8 @@ class Trainer(Registrable):
                    summary_interval=summary_interval,
                    histogram_interval=histogram_interval,
                    should_log_parameter_statistics=should_log_parameter_statistics,
-                   should_log_learning_rate=should_log_learning_rate)
+                   should_log_learning_rate=should_log_learning_rate,
+                   log_batch_size_period=log_batch_size_period)
 
 
 Trainer.register("default")(Trainer)

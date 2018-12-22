@@ -114,7 +114,7 @@ $ ipython
 
 > import scipy
 > vectors2 = elmo.embed_sentence(["I", "ate", "a", "carrot", "for", "breakfast"])
-> scipy.spatial.distance.cosine(vectors[2][3], vectors2[2][3]) # cosine distance between "ate" and "carrot" in the last layer
+> scipy.spatial.distance.cosine(vectors[2][3], vectors2[2][3]) # cosine distance between "apple" and "carrot" in the last layer
 0.18020617961883545
 ```
 

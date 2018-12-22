@@ -4,8 +4,8 @@ import torch
 import numpy as np
 
 from allennlp.common.checks import ConfigurationError
+from allennlp.modules.layer_norm import LayerNorm
 from allennlp.modules.highway import Highway
-from allennlp.modules.masked_layer_norm import MaskedLayerNorm
 from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
 
 _VALID_PROJECTION_LOCATIONS = {'after_cnn', 'after_highway', None}
@@ -29,13 +29,9 @@ class CnnHighwayEncoder(Seq2VecEncoder):
         The output dimension of the projection layer.
     activation: str, optional (default = 'relu')
         The activation function for the convolutional layers.
-    max_characters_per_token: int, optional (default = 50)
-        The maximum length of any token.
     projection_location: str, optional (default = 'after_highway')
         Where to apply the projection layer. Valid values are
         'after_highway', 'after_cnn', and None.
-    do_layer_norm: bool, optional (default = False)
-        If True, we apply ``MaskedLayerNorm`` to the final encoded result.
     """
     def __init__(self,
                  embedding_dim: int,
@@ -95,35 +91,31 @@ class CnnHighwayEncoder(Seq2VecEncoder):
 
         # And add a layer norm
         if do_layer_norm:
-            self._layer_norm: Callable = MaskedLayerNorm(self.output_dim, gamma0=0.1)
+            self._layer_norm: Callable = LayerNorm(self.output_dim)
         else:
-            self._layer_norm = lambda tensor, mask: tensor
+            self._layer_norm = lambda tensor: tensor
 
-    def forward(self,
-                inputs: torch.Tensor,
-                mask: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def forward(self, inputs: torch.Tensor, mask: torch.Tensor) -> Dict[str, torch.Tensor]: # pylint: disable=unused-argument
         """
         Compute context insensitive token embeddings for ELMo representations.
 
         Parameters
         ----------
         inputs:
-            Shape ``(batch_size, num_tokens, embedding_dim)``
-            of character embeddings representing the current batch.
+            Shape ``(batch_size, num_characters, embedding_dim)``
+            Character embeddings representing the current batch.
         mask:
-            Shape ``(batch_size, num_tokens)``
-            mask for the current batch.
+            Shape ``(batch_size, num_characters)``
+            Currently unused. The mask for characters is implicit. See TokenCharactersEncoder.forward.
 
         Returns
         -------
         ``encoding``:
-            Shape ``(batch_size, sequence_length, embedding_dim2)`` tensor
-            with context-insensitive token representations. If bos_characters and eos_characters
-            are being added, the second dimension will be ``sequence_length + 2``.
+            Shape ``(batch_size, projection_dim)`` tensor with context-insensitive token representations.
         """
         # pylint: disable=arguments-differ
 
-        # convolutions want (batch_size, embedding_dim, num_tokens)
+        # convolutions want (batch_size, embedding_dim, num_characters)
         inputs = inputs.transpose(1, 2)
 
         convolutions = []
@@ -146,11 +138,11 @@ class CnnHighwayEncoder(Seq2VecEncoder):
         token_embedding = self._highways(token_embedding)
 
         if self._projection_location == 'after_highway':
-            # final projection  (batch_size, embedding_dim)
+            # final projection  (batch_size, projection_dim)
             token_embedding = self._projection(token_embedding)
 
         # Apply layer norm if appropriate
-        token_embedding = self._layer_norm(token_embedding, mask)
+        token_embedding = self._layer_norm(token_embedding)
 
         return token_embedding
 

@@ -15,7 +15,8 @@
           "byte_encoding": "utf-8",
           "start_tokens": [259],
           "end_tokens": [260]
-        }
+        },
+        "min_padding_length": 5
       }
     }
   },

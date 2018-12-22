@@ -56,20 +56,20 @@ class Elmo(torch.nn.Module):
         The number of ELMo representation layers to output.
     requires_grad: ``bool``, optional
         If True, compute gradient of ELMo parameters for fine tuning.
-    do_layer_norm : ``bool``, optional, (default=False).
+    do_layer_norm : ``bool``, optional, (default = False).
         Should we apply layer normalization (passed to ``ScalarMix``)?
     dropout : ``float``, optional, (default = 0.5).
         The dropout to be applied to the ELMo representations.
-    vocab_to_cache : ``List[str]``, optional, (default = 0.5).
+    vocab_to_cache : ``List[str]``, optional, (default = None).
         A list of words to pre-compute and cache character convolutions
         for. If you use this option, Elmo expects that you pass word
         indices of shape (batch_size, timesteps) to forward, instead
         of character indices. If you use this option and pass a word which
         wasn't pre-cached, this will break.
-    keep_sentence_boundaries : ``bool``, optional, (default=False)
+    keep_sentence_boundaries : ``bool``, optional, (default = False)
         If True, the representation of the sentence boundary tokens are
         not removed.
-    scalar_mix_parameters : ``List[int]``, optional, (default=None)
+    scalar_mix_parameters : ``List[int]``, optional, (default = None)
         If not ``None``, use these scalar mix parameters to weight the representations
         produced by different layers. These mixing weights are not updated during
         training.
@@ -95,7 +95,7 @@ class Elmo(torch.nn.Module):
                  module: torch.nn.Module = None) -> None:
         super(Elmo, self).__init__()
 
-        logging.info("Initializing ELMo")
+        logger.info("Initializing ELMo")
         if module is not None:
             if options_file is not None or weight_file is not None:
                 raise ConfigurationError(
@@ -212,6 +212,7 @@ class Elmo(torch.nn.Module):
         do_layer_norm = params.pop_bool('do_layer_norm', False)
         keep_sentence_boundaries = params.pop_bool('keep_sentence_boundaries', False)
         dropout = params.pop_float('dropout', 0.5)
+        scalar_mix_parameters = params.pop('scalar_mix_parameters', None)
         params.assert_empty(cls.__name__)
 
         return cls(options_file=options_file,
@@ -220,7 +221,8 @@ class Elmo(torch.nn.Module):
                    requires_grad=requires_grad,
                    do_layer_norm=do_layer_norm,
                    keep_sentence_boundaries=keep_sentence_boundaries,
-                   dropout=dropout)
+                   dropout=dropout,
+                   scalar_mix_parameters=scalar_mix_parameters)
 
 
 def batch_to_ids(batch: List[List[str]]) -> torch.Tensor:
@@ -272,7 +274,7 @@ class _ElmoCharacterEncoder(torch.nn.Module):
         ELMo JSON options file
     weight_file : ``str``
         ELMo hdf5 weight file
-    requires_grad: ``bool``, optional
+    requires_grad: ``bool``, optional, (default = False).
         If True, compute gradient of ELMo parameters for fine tuning.
 
     The relevant section of the options file is something like:
@@ -489,7 +491,7 @@ class _ElmoCharacterEncoder(torch.nn.Module):
 
 class _ElmoBiLm(torch.nn.Module):
     """
-    Run a pre-trained bidirectional language model, outputing the activations at each
+    Run a pre-trained bidirectional language model, outputting the activations at each
     layer for weighting together into an ELMo representation (with
     ``allennlp.modules.seq2seq_encoders.Elmo``).  This is a lower level class, useful
     for advanced uses, but most users should use ``allennlp.modules.seq2seq_encoders.Elmo``
@@ -501,9 +503,9 @@ class _ElmoBiLm(torch.nn.Module):
         ELMo JSON options file
     weight_file : ``str``
         ELMo hdf5 weight file
-    requires_grad: ``bool``, optional
+    requires_grad: ``bool``, optional, (default = False).
         If True, compute gradient of ELMo parameters for fine tuning.
-    vocab_to_cache : ``List[str]``, optional, (default = 0.5).
+    vocab_to_cache : ``List[str]``, optional, (default = None).
         A list of words to pre-compute and cache character convolutions
         for. If you use this option, _ElmoBiLm expects that you pass word
         indices of shape (batch_size, timesteps) to forward, instead

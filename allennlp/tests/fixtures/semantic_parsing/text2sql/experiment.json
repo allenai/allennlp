@@ -9,10 +9,12 @@
   "model": {
     "type": "text2sql_parser",
     "utterance_embedder": {
-      "tokens": {
-        "type": "embedding",
-        "embedding_dim": 5,
-        "trainable": true
+      "token_embedders": {
+        "tokens": {
+          "type": "embedding",
+          "embedding_dim": 5,
+          "trainable": true
+        }
       }
     },
     "action_embedding_dim": 10,
@@ -28,8 +30,7 @@
     },
     "max_decoding_steps": 10,
     "input_attention": {"type": "dot_product"},
-    "dropout": 0.5,
-    "database_file": "allennlp/tests/fixtures/data/text2sql/restaurants.db"
+    "dropout": 0.5
   },
   "iterator": {
     "type": "basic",
