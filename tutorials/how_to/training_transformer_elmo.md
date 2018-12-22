@@ -29,7 +29,7 @@ This document describes how to train and use a transformer-based version of ELMo
     bin/allennlp evaluate --cuda-device 0 -o '{"iterator": {"base_iterator": {"maximum_samples_per_batch": ["num_tokens", 500] }}}' $PATH_TO_SERIALIZATION_DIR/model.tar.gz $BIDIRECTIONAL_LM_DATA_PATH/heldout-monolingual.tokenized.shuffled/news.en-00000-of-00100
     ```
 
-A model trained for 4 epochs gives:
+    A model trained for 4 epochs gives:
     ```
     2018-12-12 05:42:53,711 - INFO - allennlp.commands.evaluate - loss: 3.745238332322373
 
