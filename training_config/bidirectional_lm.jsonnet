@@ -34,7 +34,7 @@ local BASE_ITERATOR = {
   // samples in every batch.
   "batch_size": 512 * NUM_GPUS,
   "sorting_keys": [["source", "num_tokens"]],
-  "maximum_samples_per_batch": ["num_tokens", 2000]
+  "maximum_samples_per_batch": ["num_tokens", 4000]
 };
 
 {
@@ -113,7 +113,7 @@ local BASE_ITERATOR = {
     "type": "multiprocess",
     "base_iterator": BASE_ITERATOR,
     "num_workers": NUM_THREADS,
-    // Note: It seems like this requires a higher ulimit. Why is unclear. I used `ulimit -n 4096`. Could use tuning.
+    // Note: It seems like this requires a higher ulimit. Why is unclear. I used `ulimit -n 8192`. Could use tuning.
     "output_queue_size": 500
   },
   "trainer": {
