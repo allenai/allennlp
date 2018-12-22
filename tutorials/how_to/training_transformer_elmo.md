@@ -55,7 +55,7 @@ The one exception is that inside the `text_field_embedder` block in your trainin
       "dropout": 0.5
     }
   }
-}
+},
 ```
 
 with
