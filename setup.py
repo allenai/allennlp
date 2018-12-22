@@ -135,7 +135,11 @@ setup(name='allennlp',
           'sqlparse==0.2.4',
           'pytorch-pretrained-bert==0.3.0',
       ],
-      scripts=["bin/allennlp"],
+      entry_points={
+          'console_scripts': [
+              "allennlp=allennlp.run:run"
+          ]
+      },
       setup_requires=setup_requirements,
       tests_require=[
           'pytest',
