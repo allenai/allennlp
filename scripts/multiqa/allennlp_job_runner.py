@@ -38,11 +38,12 @@ while True:
             except:
                 proc['alive'] = False
 
+            log_data = []
             try:
                 # Log snapshot
                 with open(proc['log_file'], 'r') as f:
                     log_data = f.readlines()
-                    proc['log_snapshot'] = ' '.join(log_data[-50:])
+                    proc['log_snapshot'] = ' '.join(log_data[-30:])
             except:
                 proc['alive'] = False
 
@@ -57,6 +58,10 @@ while True:
 
             if not proc['alive']:
                 # checking if process successfully completed task,
+                # printing longer log
+                if len(log_data) > 100:
+                    proc['log_snapshot'] = ' '.join(log_data[-100:])
+
                 # TODO this is an ugly check, but because we are forking with nohup, python does not provide any good alternative...
                 if proc['log_snapshot'].find('Traceback (most recent call last):') > -1 or \
                     proc['log_snapshot'].find('error') > -1:
