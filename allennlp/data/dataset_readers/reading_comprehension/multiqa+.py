@@ -331,7 +331,8 @@ class MultiQAReader(DatasetReader):
                                     if x is None:
                                         if (alias['text'].lower() != paragraphs[answer_start_paragraph][answer_start_norm:answer_start_norm \
                                                                                                      + len(alias['text'])].lower()):
-                                            raise ValueError("answers and paragraph not aligned!")
+                                            print("answers and paragraph not aligned!")
+                                            #raise ValueError("answers and paragraph not aligned!")
 
                 # If answer was not found in this question do not yield an instance
                 # (This could happen if we used part of the context or in unfiltered context versions)
