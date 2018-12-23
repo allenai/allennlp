@@ -93,7 +93,6 @@ class TestElmoTokenEmbedder(ModelTestCase):
         embedded = embedding_layer(input_tensor).data.numpy()
         assert embedded.shape == (1, 2, 20)
         
-
         input_tensor = torch.LongTensor([[[word1]]])
         embedded = embedding_layer(input_tensor).data.numpy()
         assert embedded.shape == (1, 1, 1, 20)
