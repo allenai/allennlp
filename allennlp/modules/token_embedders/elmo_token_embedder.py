@@ -69,7 +69,7 @@ class ElmoTokenEmbedder(TokenEmbedder):
             self._projection = None
 
     def get_output_dim(self):
-        return self._elmo.get_output_dim()
+        return self._projection.out_features
 
     def forward(self, # pylint: disable=arguments-differ
                 inputs: torch.Tensor,
