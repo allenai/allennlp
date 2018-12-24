@@ -15,7 +15,7 @@ class CopyNetTest(ModelTestCase):
 
     def setUp(self):
         super().setUp()
-        self.set_up_model(self.FIXTURES_ROOT / "encoder_decoder" / "copynet" / "experiment.json",
+        self.set_up_model(self.FIXTURES_ROOT / "encoder_decoder" / "copynet_seq2seq" / "experiment.json",
                           self.FIXTURES_ROOT / "data" / "copynet" / "copyover.tsv")
 
     def test_model_can_train_save_load_predict(self):
