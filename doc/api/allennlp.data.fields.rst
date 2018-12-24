@@ -104,3 +104,9 @@ allennlp.data.fields
    :members:
    :undoc-members:
    :show-inheritance:
+
+.. _copy-map-field:
+.. automodule:: allennlp.data.fields.copy_map_field
+   :members:
+   :undoc-members:
+   :show-inheritance:
