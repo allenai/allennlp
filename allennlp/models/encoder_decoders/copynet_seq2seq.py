@@ -264,7 +264,7 @@ class CopyNetSeq2Seq(Model):
         # shape: (batch_size, target_sequence_length)
         mask = (oov & copied).long()
         # shape: (batch_size, target_sequence_length)
-        _, first_match = matches.max(-1)
+        first_match = ((matches.cumsum(-1) == 1) * matches).argmax(-1)
         # shape: (batch_size, target_sequence_length)
         new_target_tokens = target_tokens * (1 - mask) + (first_match.long() + self._target_vocab_size) * mask
         return new_target_tokens
