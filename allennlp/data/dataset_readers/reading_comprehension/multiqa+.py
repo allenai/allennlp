@@ -343,7 +343,7 @@ class MultiQAReader(DatasetReader):
                 for rank, (paragraph,tokenized_paragraph,span_starts,span_ends) in \
                         enumerate(zip(paragraphs,tokenized_paragraphs,span_starts_list,span_ends_list)):
 
-                    if len(tokenized_paragraph) == 0 or span_starts['answers'] == []:
+                    if len(tokenized_paragraph) == 0:
                         continue
 
                     metadata['rank'] = rank
