@@ -275,8 +275,7 @@ class MultiQAReader(DatasetReader):
             # we need to tokenize all the paragraph (again) because previous tokens start the offset count
             # from 0 for each document... # TODO find a better way to do this...
             tokenized_paragraphs = [self._tokenizer.tokenize(paragraph) for paragraph in paragraphs]
-            tokenized_paragraphs = [[str(token) for token in paragraph] for paragraph in tokenized_paragraphs]
-
+            
             # a list of question/answers
             for qa_ind, qa in enumerate(context['qas']):
 
