@@ -41,7 +41,7 @@ class SimpleSeq2Seq(Model):
         The encoder of the "encoder/decoder" model
     max_decoding_steps : ``int``
         Maximum length of decoded sequences.
-    target_namespace : ``str``, optional (default = 'target_tokens')
+    target_namespace : ``str``, optional (default = 'tokens')
         If the target side vocabulary is different from the source side's, you need to specify the
         target's namespace here. If not, we'll assume it is "tokens", which is also the default
         choice for the source side, and this might cause them to share vocabularies.
@@ -228,7 +228,7 @@ class SimpleSeq2Seq(Model):
                 top_k_predictions = output_dict["predictions"]
                 # shape: (batch_size, max_predicted_sequence_length)
                 best_predictions = top_k_predictions[:, 0, :]
-                self._bleu(best_predictions, target_tokens["tokens"])
+                self._bleu(best_predictions, target_tokens[self._target_namespace])
 
         return output_dict
 
@@ -307,7 +307,7 @@ class SimpleSeq2Seq(Model):
 
         if target_tokens:
             # shape: (batch_size, max_target_sequence_length)
-            targets = target_tokens["tokens"]
+            targets = target_tokens[self._target_namespace]
 
             _, target_sequence_length = targets.size()
 
