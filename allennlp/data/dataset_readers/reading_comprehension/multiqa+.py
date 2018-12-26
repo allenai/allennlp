@@ -130,8 +130,7 @@ class MultiQAReader(DatasetReader):
                  num_of_examples_to_sample: int = None,
                  use_document_titles:bool= False) -> None:
         super().__init__(lazy)
-        #self._tokenizer = tokenizer or WordTokenizer()
-        self._tokenizer = MosesTokenizer()
+        self._tokenizer = tokenizer or WordTokenizer()
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         self._max_context_docs = max_context_docs
         self._max_context_size = max_context_size
@@ -276,6 +275,7 @@ class MultiQAReader(DatasetReader):
             # we need to tokenize all the paragraph (again) because previous tokens start the offset count
             # from 0 for each document... # TODO find a better way to do this...
             tokenized_paragraphs = [self._tokenizer.tokenize(paragraph) for paragraph in paragraphs]
+            tokenized_paragraphs = [[str(token) for token in paragraph] for paragraph in tokenized_paragraphs]
 
             # a list of question/answers
             for qa_ind, qa in enumerate(context['qas']):
