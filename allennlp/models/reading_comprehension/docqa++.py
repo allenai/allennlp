@@ -366,11 +366,12 @@ class BidafPlusPlus(Model):
         # (see https://github.com/allenai/allennlp/issues/1809) so we will save it every time it changes
         # insuring that if we do a full pass on the validation set and take max for all_qa_count we will
         # get the correct number (except if the last ones are skipped.... hopefully this is a small diff )
-        for inst_metadata in metadata:
-            if 'num_examples_used' in inst_metadata:
-                if inst_metadata['num_examples_used'][1] > self._all_qa_count:
-                    self._all_qa_count = inst_metadata['num_examples_used'][1]
-                    self._examples_used_frac = float(inst_metadata['num_examples_used'][0]) / inst_metadata['num_examples_used'][1]
+        for per_question_metadata in metadata:
+            for inst_metadata in per_question_metadata:
+                if 'num_examples_used' in inst_metadata:
+                    if inst_metadata['num_examples_used'][1] > self._all_qa_count:
+                        self._all_qa_count = inst_metadata['num_examples_used'][1]
+                        self._examples_used_frac = float(inst_metadata['num_examples_used'][0]) / inst_metadata['num_examples_used'][1]
 
 
 
@@ -521,10 +522,10 @@ class BidafPlusPlus(Model):
                       span_end_logits_numpy[question_inds, best_span_cpu[question_inds][:, 1]])
 
             # TODO this shouldent happen - we should consider spans from passages not taken...
-            if span_start.view(-1)[question_inds[best_span_ind]] == -1:
-                self._official_f1(100 * 0.0)
-                self._official_EM(100 * 0.0)
-                continue
+            #if span_start.view(-1)[question_inds[best_span_ind]] == -1:
+            #    self._official_f1(100 * 0.0)
+            #    self._official_EM(100 * 0.0)
+            #    continue
 
             passage_str = question_instances_metadata[best_span_ind]['original_passage']
             offsets = question_instances_metadata[best_span_ind]['token_offsets']
