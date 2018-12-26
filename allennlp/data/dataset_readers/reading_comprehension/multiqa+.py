@@ -3,9 +3,6 @@ import logging
 from typing import Any, Dict, List, Tuple
 import zipfile,re, copy
 
-import gzip
-import pickle
-
 from overrides import overrides
 
 from allennlp.common.file_utils import cached_path
@@ -133,7 +130,8 @@ class MultiQAReader(DatasetReader):
                  num_of_examples_to_sample: int = None,
                  use_document_titles:bool= False) -> None:
         super().__init__(lazy)
-        self._tokenizer = tokenizer or WordTokenizer()
+        #self._tokenizer = tokenizer or WordTokenizer()
+        self._tokenizer = MosesTokenizer()
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         self._max_context_docs = max_context_docs
         self._max_context_size = max_context_size
@@ -236,17 +234,24 @@ class MultiQAReader(DatasetReader):
             single_file_path = cached_path(single_file_path)
             logger.info("Reading file at %s", single_file_path)
 
-            try:
-                with zipfile.ZipFile(single_file_path, 'r') as myzip:
-                    with myzip.open(myzip.namelist()[0]) as myfile:
-                        dataset_json = json.load(myfile)
-                contexts += dataset_json['data']['contexts']
-            except:
-                with gzip.GzipFile(single_file_path, 'r') as f:
-                    dataset_json = pickle.load(f)
+            with zipfile.ZipFile(single_file_path, 'r') as myzip:
+                with myzip.open(myzip.namelist()[0]) as myfile:
+                    dataset_json = json.load(myfile)
+
+            if 'preprocessed' in dataset_json and dataset_json['preprocessed']:
                 for inst in dataset_json['preprocessed_instances']:
-                    yield inst
-                return
+                    tokenized_paragraph = self._tokenizer.tokenize(inst['paragraph'])
+                    instance = self.text_to_instance(inst['question_text'], inst['paragraph'], \
+                                                     inst['span_starts'], inst['span_ends'], \
+                                                     tokenized_paragraph, inst['metadata'])
+
+                    instance.fields['metadata'].metadata['num_examples_used'] = dataset_json['num_examples_used']
+
+                    yield instance
+            else:
+                contexts += dataset_json['data']['contexts']
+
+
 
 
         skipped_qa_count = 0
@@ -272,7 +277,6 @@ class MultiQAReader(DatasetReader):
             # from 0 for each document... # TODO find a better way to do this...
             tokenized_paragraphs = [self._tokenizer.tokenize(paragraph) for paragraph in paragraphs]
 
-            tokenized_paragraphs = [[Token(text=t.text, idx=t.idx) for t in tokens] for tokens in tokenized_paragraphs]
             # a list of question/answers
             for qa_ind, qa in enumerate(context['qas']):
 
@@ -348,6 +352,11 @@ class MultiQAReader(DatasetReader):
 
                     metadata['rank'] = rank
 
+                    # adding to cache
+                    if self._save_cache_in_path != '':
+                        preprocessed_instances.append({'question_text':question_text,'paragraph':paragraph,\
+                                                   'span_starts':span_starts,'span_ends':span_ends,'metadata':metadata})
+
                     instance = self.text_to_instance(question_text,
                                                  paragraph,
                                                  span_starts,
@@ -361,10 +370,6 @@ class MultiQAReader(DatasetReader):
                     # get the correct number (except if the last ones are skipped.... hopefully this is a small diff )
                     instance.fields['metadata'].metadata['num_examples_used'] = (all_qa_count - skipped_qa_count, all_qa_count)
 
-                    # adding to cache
-                    if self._save_cache_in_path != '':
-                        preprocessed_instances.append(instance)
-
                     yield instance
 
         # saving cache
@@ -372,14 +377,8 @@ class MultiQAReader(DatasetReader):
             preproc_dataset = {'num_examples_used':(all_qa_count - skipped_qa_count, all_qa_count),'preprocessed':True, \
                                'preprocessed_instances':preprocessed_instances}
             filename = file_path.split('/')[-1]
-
-            # sys.getsizeof(pickle.dumps([(token.idx,token.text) for token in preprocessed_instances[0].fields['passage']]))
-            # size 4597 vs 13845, of 20393 bytes total per instance
-
-            with gzip.GzipFile(self._save_cache_in_path + '/' + filename, 'w') as f:
-                pickle.dump(preproc_dataset, f)
-            #with zipfile.ZipFile(self._save_cache_in_path + '/' + filename, "w", zipfile.ZIP_DEFLATED) as zip_file:
-            #    zip_file.writestr(filename, json.dumps(preproc_dataset))
+            with zipfile.ZipFile(self._save_cache_in_path + '/' + filename, "w", zipfile.ZIP_DEFLATED) as zip_file:
+                zip_file.writestr(filename, json.dumps(preproc_dataset))
 
     @overrides
     def text_to_instance(self,  # type: ignore
@@ -400,7 +399,6 @@ class MultiQAReader(DatasetReader):
         answer_token_span_list = {'answers':[],'distractor_answers':[]}
         for answer_type in ['answers', 'distractor_answers']:
             passage_offsets = [(token.idx, token.idx + len(token.text)) for token in tokenized_paragraph]
-            #passage_offsets = [(token.idx, token.idx + len(token.text)) for token in tokenized_paragraph]
 
             token_spans: List[Tuple[int, int]] = []
             for char_span_start, char_span_end in zip(span_starts[answer_type], span_ends[answer_type]):
@@ -418,7 +416,6 @@ class MultiQAReader(DatasetReader):
             answer_token_span_list[answer_type].append(token_spans)
 
         question_tokens = self._tokenizer.tokenize(question_text)
-        question_tokens = [Token(text=t.text, idx=t.idx) for t in question_tokens]
 
         return util.make_reading_comprehension_instance_multiqa_multidoc(question_tokens,
                                                              tokenized_paragraph,
