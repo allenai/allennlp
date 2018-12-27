@@ -375,7 +375,7 @@ class MultiQAReader(DatasetReader):
 
         # saving cache
         if self._save_cache_in_path != '':
-            mkdir
+            #mkdir
             preproc_dataset = {'num_examples_used':(all_qa_count - skipped_qa_count, all_qa_count),'preprocessed':True,  'preprocessed_instances':preprocessed_instances}
             filename = file_path.split('/')[-1]
             with zipfile.ZipFile(self._save_cache_in_path + '/' + filename, "w", zipfile.ZIP_DEFLATED) as zip_file:
