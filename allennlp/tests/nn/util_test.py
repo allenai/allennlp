@@ -533,7 +533,8 @@ class TestNnUtil(AllenNlpTestCase):
 
         loss = util.sequence_cross_entropy_with_logits(tensor, targets, weights, average="token")
 
-        vector_loss = util.sequence_cross_entropy_with_logits(tensor, targets, weights, batch_average=False)
+        vector_loss = util.sequence_cross_entropy_with_logits(tensor, targets, weights,
+                                                              average=None)
         total_token_loss = (vector_loss * weights.float().sum(dim=-1)).sum()
         average_token_loss = (total_token_loss / weights.float().sum()).detach()
         assert_almost_equal(loss.detach().item(), average_token_loss.item())
