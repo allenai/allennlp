@@ -111,20 +111,20 @@ assert spans == [(0, 1), (0, 2), (1, 2), (1, 3), (2, 3)]
 There are other helpful functions in `allennlp.data.dataset_readers.dataset_utils.span_utils`,
 such as a function to convert between BIO labelings and span-based representations.
 
-### Use a SpanPruner
+### Use a Pruner
 
 It's not always possible to prune spans before they enter your model. AllenNLP contains
-a [`SpanPruner`](https://github.com/allenai/allennlp/blob/741ea01e50cfbda2d890110adea41e9141ed46f7/allennlp/modules/span_pruner.py#L8), which allows you to prune spans based on a parameterized function which
+a [`Pruner`](https://github.com/allenai/allennlp/blob/3f0953d19de3676ea82e642659fc96d90690e34d/allennlp/modules/pruner.py#L8), which allows you to prune spans based on a parameterized function which
 is trained end-to-end with the rest of your model.
 
 ```python
 import torch
 from torch.autograd import Variable
-from allennlp.modules import SpanPruner
+from allennlp.modules import Pruner
 
 # Create a linear layer which will score our spans.
 linear_scorer = torch.nn.Linear(5, 1)
-pruner = SpanPruner(scorer=linear_scorer)
+pruner = Pruner(scorer=linear_scorer)
 
 # Here we'll create some spans from a random tensor of shape
 # (batch_size, num_spans, embedding_size). Typically this would
@@ -138,7 +138,7 @@ mask = Variable(torch.ones([3, 4]))
 pruned_embeddings, pruned_mask, pruned_indices, pruned_scores = pruner(spans, mask, num_spans_to_keep=3)
 ```
 
-A `SpanPruner` has four return values:
+A `Pruner` has four return values:
 
 1. First, we've got our `pruned_embeddings`. 
 These are of shape `(batch_size, num_spans_to_keep, embedding_size)`
@@ -148,7 +148,7 @@ function for your model won't be a function of the discarded spans!
 
 2. Secondly, we've got the `pruned_mask`, which has shape `(batch_size, num_spans_to_keep)`.
 In 99% of cases, this will be all ones. However, if you have masked spans in a 
-batch element, and you request that the `SpanPruner` keeps more than the number
+batch element, and you request that the `Pruner` keeps more than the number
 of non-masked spans, there will be some masked elements in the returned spans.
 
 3. Thirdly, we have the `pruned_indices` which has shape `(batch_size, num_spans_to_keep)` which are the indices of the top k scoring spans in the original ``spans`` tensor. 
