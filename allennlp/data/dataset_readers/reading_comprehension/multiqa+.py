@@ -239,6 +239,7 @@ class MultiQAReader(DatasetReader):
 
             if 'preprocessed' in dataset_json and dataset_json['preprocessed']:
                 for inst in dataset_json['preprocessed_instances']:
+                    tokenized_paragraph = [Token(text=t[0], idx=t[1]) for t in inst['tokenized_paragraph']]
                     tokenized_paragraph = self._tokenizer.tokenize(inst['paragraph'])
                     instance = self.text_to_instance(inst['question_text'], inst['paragraph'], \
                                                      inst['span_starts'], inst['span_ends'], \
@@ -247,6 +248,7 @@ class MultiQAReader(DatasetReader):
                     instance.fields['metadata'].metadata['num_examples_used'] = dataset_json['num_examples_used']
 
                     yield instance
+                return
             else:
                 contexts += dataset_json['data']['contexts']
 
@@ -275,7 +277,7 @@ class MultiQAReader(DatasetReader):
             # we need to tokenize all the paragraph (again) because previous tokens start the offset count
             # from 0 for each document... # TODO find a better way to do this...
             tokenized_paragraphs = [self._tokenizer.tokenize(paragraph) for paragraph in paragraphs]
-            
+
             # a list of question/answers
             for qa_ind, qa in enumerate(context['qas']):
 
@@ -353,8 +355,8 @@ class MultiQAReader(DatasetReader):
 
                     # adding to cache
                     if self._save_cache_in_path != '':
-                        preprocessed_instances.append({'question_text':question_text,'paragraph':paragraph,\
-                                                   'span_starts':span_starts,'span_ends':span_ends,'metadata':metadata})
+                        preprocessed_instances.append({'question_text':question_text, 'paragraph':paragraph, 
+                                                   'span_starts':span_starts, 'span_ends':span_ends, 'metadata':metadata, 'tokenized_paragraph':[(t.text, t.idx) for t in tokenized_paragraph]})
 
                     instance = self.text_to_instance(question_text,
                                                  paragraph,
@@ -373,8 +375,7 @@ class MultiQAReader(DatasetReader):
 
         # saving cache
         if self._save_cache_in_path != '':
-            preproc_dataset = {'num_examples_used':(all_qa_count - skipped_qa_count, all_qa_count),'preprocessed':True, \
-                               'preprocessed_instances':preprocessed_instances}
+            preproc_dataset = {'num_examples_used':(all_qa_count - skipped_qa_count, all_qa_count),'preprocessed':True,  'preprocessed_instances':preprocessed_instances}
             filename = file_path.split('/')[-1]
             with zipfile.ZipFile(self._save_cache_in_path + '/' + filename, "w", zipfile.ZIP_DEFLATED) as zip_file:
                 zip_file.writestr(filename, json.dumps(preproc_dataset))
