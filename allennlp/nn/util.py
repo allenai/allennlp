@@ -7,7 +7,6 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple, TypeVar
 import logging
 import copy
 import math
-import warnings
 
 import torch
 
