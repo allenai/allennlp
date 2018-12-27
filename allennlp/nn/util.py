@@ -517,7 +517,6 @@ def weighted_sum(matrix: torch.Tensor, attention: torch.Tensor) -> torch.Tensor:
 def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
                                        targets: torch.LongTensor,
                                        weights: torch.FloatTensor,
-                                       batch_average: bool = None,
                                        average: str = "batch",
                                        label_smoothing: float = None) -> torch.FloatTensor:
     """
@@ -537,15 +536,6 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
         index of the true class for each corresponding step.
     weights : ``torch.FloatTensor``, required.
         A ``torch.FloatTensor`` of size (batch, sequence_length)
-    batch_average : bool, optional, (default = None).
-        A bool indicating whether the loss should be averaged across the batch,
-        or returned as a vector of losses per batch element.
-
-        .. deprecated:: 0.6.2
-           ``batch_average`` was deprecated and replaced with
-           the more general ``average`` in version 0.6.2. It will be removed
-           in version 0.8.
-
     average: str, optional (default = "batch")
         If "batch", average the loss across the batches. If "token", average
         the loss across each item in the input. If ``None``, return a vector
@@ -563,18 +553,6 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
     If ``average is None``, the returned loss is a vector of shape (batch_size,).
 
     """
-    if batch_average is not None:
-        # Maintain old behavior
-        if batch_average:
-            warnings.warn("batch_average=True was deprecated and replaced "
-                          "with average='batch' in version 0.6.2. It will be "
-                          "removed in version 0.8.", DeprecationWarning)
-            average = "batch"
-        else:
-            warnings.warn("batch_average=False was deprecated and replaced "
-                          "with average=None in version 0.6.2. It will be "
-                          "removed in version 0.8.", DeprecationWarning)
-            average = None
     if average not in {None, "token", "batch"}:
         raise ValueError("Got average f{average}, expected one of "
                          "None, 'token', or 'batch'")
