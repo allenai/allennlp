@@ -69,7 +69,7 @@ class ElmoTokenEmbedder(TokenEmbedder):
         else:
             self._projection = None
             self.output_dim = self._elmo.get_output_dim()
-        
+
     def get_output_dim(self) -> int:
         return self.output_dim
 
