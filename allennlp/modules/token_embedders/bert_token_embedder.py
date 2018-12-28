@@ -117,7 +117,7 @@ class PretrainedBertEmbedder(BertEmbedder):
     """
     Parameters
     ----------
-    pretrained_model_name: ``str``
+    pretrained_model: ``str``
         Either the name of the pretrained model to use (e.g. 'bert-base-uncased'),
         or the path to the .tar.gz file with the model weights.
 
