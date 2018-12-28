@@ -145,8 +145,8 @@ while True:
 
             gpu_mem = gpu_memory_mb()
             # Ugly patch for misconfigured GPUs...
-            if args.channel == 'rack-jonathan-g02':
-                gpu_mem = {(3 - key):val for key,val in gpu_mem.items()}
+            #if args.channel == 'rack-jonathan-g02':
+            #    gpu_mem = {(3 - key):val for key,val in gpu_mem.items()}
             free_gpus = [i for i, gpu in enumerate(gpu_mem.keys()) if gpu_mem[gpu] < 1700]
 
             ElasticLogger().write_log('INFO', "Machine Status", {'gpus':gpu_mem,'free_gpus':free_gpus,\
