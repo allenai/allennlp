@@ -53,7 +53,9 @@ class Elmo(torch.nn.Module):
     weight_file : ``str``, required.
         ELMo hdf5 weight file
     num_output_representations: ``int``, required.
-        The number of ELMo representation layers to output.
+        The number of ELMo representation to output with
+        different linear weighted combination of the 3 layers (i.e.,
+        character-convnet output, 1st lstm output, 2nd lstm output).
     requires_grad: ``bool``, optional
         If True, compute gradient of ELMo parameters for fine tuning.
     do_layer_norm : ``bool``, optional, (default = False).
