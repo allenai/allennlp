@@ -240,7 +240,7 @@ class MultiQAReader(DatasetReader):
             if 'preprocessed' in dataset_json and dataset_json['preprocessed']:
                 for inst in dataset_json['preprocessed_instances']:
                     tokenized_paragraph = [Token(text=t[0], idx=t[1]) for t in inst['tokenized_paragraph']]
-                    tokenized_paragraph = self._tokenizer.tokenize(inst['paragraph'])
+                    #tokenized_paragraph = self._tokenizer.tokenize(inst['paragraph'])
                     instance = self.text_to_instance(inst['question_text'], inst['paragraph'], \
                                                      inst['span_starts'], inst['span_ends'], \
                                                      tokenized_paragraph, inst['metadata'])
