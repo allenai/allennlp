@@ -135,28 +135,28 @@ mask = Variable(torch.ones([3, 4]))
 
 # There's quite a bit to unpack here.
 # See below for a full explanation.
-pruned_embeddings, pruned_mask, pruned_indices, pruned_scores = pruner(spans, mask, num_spans_to_keep=3)
+pruned_embeddings, pruned_mask, pruned_indices, pruned_scores = pruner(spans, mask, num_items_to_keep=3)
 ```
 
 A `Pruner` has four return values:
 
 1. First, we've got our `pruned_embeddings`. 
-These are of shape `(batch_size, num_spans_to_keep, embedding_size)`
+These are of shape `(batch_size, num_items_to_keep, embedding_size)`
 The spans we kept correspond to the top k with respect to the parameterized
 span scorer. The other spans just get discarded, and your eventual loss
 function for your model won't be a function of the discarded spans!
 
-2. Secondly, we've got the `pruned_mask`, which has shape `(batch_size, num_spans_to_keep)`.
+2. Secondly, we've got the `pruned_mask`, which has shape `(batch_size, num_items_to_keep)`.
 In 99% of cases, this will be all ones. However, if you have masked spans in a 
 batch element, and you request that the `Pruner` keeps more than the number
 of non-masked spans, there will be some masked elements in the returned spans.
 
-3. Thirdly, we have the `pruned_indices` which has shape `(batch_size, num_spans_to_keep)` which are the indices of the top k scoring spans in the original ``spans`` tensor. 
+3. Thirdly, we have the `pruned_indices` which has shape `(batch_size, num_items_to_keep)` which are the indices of the top k scoring spans in the original ``spans`` tensor. 
 This is returned because it can be useful to retain pointers to the original spans,
 if each span is being scored by multiple distinct scorers, such as in the co-reference
 model, for instance.
 
-4. Finally, we have the `pruned_scores`, which has shape `(batch_size, num_spans_to_keep, 1)`.
+4. Finally, we have the `pruned_scores`, which has shape `(batch_size, num_items_to_keep, 1)`.
 This is returned so that you can incorporate the scores of the spans into some loss function.
 
 ## Existing AllenNLP examples for generating `SpanFields`
