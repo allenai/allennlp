@@ -432,7 +432,9 @@ class BidafPlusPlus(Model):
                     loss += nll_loss(span_end_logits_softmaxed[inds_with_gold_answer], \
                                      span_end.view(-1)[question_inds[inds_with_gold_answer]], ignore_index=-1)
                     loss_steps += 1
-                loss /= loss_steps
+                if loss_steps > 0:
+                    loss /= loss_steps
+                    output_dict["loss"] = loss
             else:
                 # Per instance loss
                 inds_with_gold_answer = np.argwhere(span_start.view(-1).cpu().numpy() >= 0)
@@ -444,6 +446,7 @@ class BidafPlusPlus(Model):
                 loss += nll_loss(util.masked_log_softmax(span_end_logits[inds_with_gold_answer], \
                                                      repeated_passage_mask[inds_with_gold_answer]),\
                                  span_end.view(-1)[inds_with_gold_answer], ignore_index=-1)
+                output_dict["loss"] = loss
 
 
             # TODO these are not updates
@@ -496,7 +499,7 @@ class BidafPlusPlus(Model):
                     # If max currect answer score is higher, then multi_choice accuracy bool accuracy is True.
                     self._multichoice_accuracy(torch.Tensor([(max_correct_answer > max_incorrect_answer) * 1]),torch.Tensor([1]))
 
-            output_dict["loss"] = loss
+            
 
         # Compute F1 and preparing the output dictionary.
         output_dict['best_span_str'] = []
