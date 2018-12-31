@@ -197,7 +197,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         if self._dynamic_cost_rate is not None:
             if self.training and instance_epoch_num is None:
                 raise RuntimeError("If you want a dynamic cost weight, use the "
-                                   "EpochTrackingBucketIterator!")
+                                   "BucketIterator with track_epoch=True.")
             if instance_epoch_num != self._last_epoch_in_forward:
                 if instance_epoch_num >= self._dynamic_cost_wait_epochs:
                     decrement = self._checklist_cost_weight * self._dynamic_cost_rate
