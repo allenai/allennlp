@@ -28,7 +28,7 @@ class EvalbBracketingScorer(Metric):
     will compile.
 
     AllenNLP contains the EVALB software, but you will need to compile it yourself
-    before using it because the binary it generates is system depenedent. To build it,
+    before using it because the binary it generates is system dependent. To build it,
     run ``make`` inside the ``allennlp/tools/EVALB`` directory.
 
     Note that this metric reads and writes from disk quite a bit. You probably don't

@@ -1,3 +1,5 @@
+# pylint: disable=no-self-use,invalid-name
+import json
 import os
 
 from allennlp.common.testing import AllenNlpTestCase
@@ -46,3 +48,44 @@ class TestNlvrParserPredictor(AllenNlpTestCase):
         # result['denotations'] is a list corresponding to k-best logical forms, where k is 1 by
         # default.
         assert len(result['denotations'][0]) == 2  # Because there are two worlds in the input.
+
+    def test_predictor_with_string_input(self):
+        archive_dir = self.FIXTURES_ROOT / 'semantic_parsing' / 'nlvr_coverage_semantic_parser' / 'serialization'
+        archive = load_archive(os.path.join(archive_dir, 'model.tar.gz'))
+        predictor = Predictor.from_archive(archive, 'nlvr-parser')
+
+        self.inputs['worlds'] = json.dumps(self.inputs['worlds'])
+        result = predictor.predict_json(self.inputs)
+        assert 'logical_form' in result
+        assert 'denotations' in result
+        # result['denotations'] is a list corresponding to k-best logical forms, where k is 1 by
+        # default.
+        assert len(result['denotations'][0]) == 2  # Because there are two worlds in the input.
+
+    def test_predictor_with_single_world(self):
+        archive_dir = self.FIXTURES_ROOT / 'semantic_parsing' / 'nlvr_coverage_semantic_parser' / 'serialization'
+        archive = load_archive(os.path.join(archive_dir, 'model.tar.gz'))
+        predictor = Predictor.from_archive(archive, 'nlvr-parser')
+
+        self.inputs['structured_rep'] = self.inputs['worlds'][0]
+        del self.inputs['worlds']
+        result = predictor.predict_json(self.inputs)
+        assert 'logical_form' in result
+        assert 'denotations' in result
+        # result['denotations'] is a list corresponding to k-best logical forms, where k is 1 by
+        # default.
+        assert len(result['denotations'][0]) == 1  # Because there is one world in the input.
+
+    def test_predictor_with_single_world_and_string_input(self):
+        archive_dir = self.FIXTURES_ROOT / 'semantic_parsing' / 'nlvr_coverage_semantic_parser' / 'serialization'
+        archive = load_archive(os.path.join(archive_dir, 'model.tar.gz'))
+        predictor = Predictor.from_archive(archive, 'nlvr-parser')
+
+        self.inputs['structured_rep'] = json.dumps(self.inputs['worlds'][0])
+        del self.inputs['worlds']
+        result = predictor.predict_json(self.inputs)
+        assert 'logical_form' in result
+        assert 'denotations' in result
+        # result['denotations'] is a list corresponding to k-best logical forms, where k is 1 by
+        # default.
+        assert len(result['denotations'][0]) == 1  # Because there is one world in the input.

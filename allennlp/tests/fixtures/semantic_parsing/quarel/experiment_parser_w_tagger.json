@@ -4,7 +4,7 @@
     "lazy": false,
     "replace_world_entities": true,
     "align_world_extractions": true,
-    "world_extraction_model": "allennlp/tests/fixtures/semantic_parsing/quarel/serialization_tagger/model.tar.gz",
+    "world_extraction_model": "allennlp/tests/fixtures/semantic_parsing/quarel/tagger/serialization/model.tar.gz",
     "lf_syntax": "quarel_v1",
     "question_token_indexers": {
       "tokens": {
@@ -21,10 +21,12 @@
   "model": {
     "type": "quarel_parser",
     "question_embedder": {
-      "tokens": {
-        "type": "embedding",
-        "embedding_dim": 25,
-        "trainable": false
+      "token_embedders": {
+        "tokens": {
+          "type": "embedding",
+          "embedding_dim": 25,
+          "trainable": false
+        }
       }
     },
     "action_embedding_dim": 20,

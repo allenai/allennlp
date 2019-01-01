@@ -8,8 +8,24 @@ from torch.multiprocessing import Manager, Process, Queue, log_to_stderr
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.instance import Instance
 
-logger = log_to_stderr()  # pylint: disable=invalid-name
-logger.setLevel(logging.INFO)
+class logger:
+    """
+    multiprocessing.log_to_stderr causes some output in the logs
+    even when we don't use this dataset reader. This is a small hack
+    to instantiate the stderr logger lazily only when it's needed
+    (which is only when using the MultiprocessDatasetReader)
+    """
+    _logger = None
+
+    @classmethod
+    def info(cls, message: str) -> None:
+        # pylint: disable=no-self-use
+        if cls._logger is None:
+            cls._logger = log_to_stderr()
+            cls._logger.setLevel(logging.INFO)
+
+        cls._logger.info(message)
+
 
 def _worker(reader: DatasetReader,
             input_queue: Queue,

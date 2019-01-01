@@ -9,7 +9,7 @@ class ChecklistStatelet:
     """
     This class keeps track of checklist related variables that are used while training a coverage
     based semantic parser (or any other kind of transition based constrained decoder). This is
-    inteded to be used within a ``State``.
+    intended to be used within a ``State``.
 
     Parameters
     ----------

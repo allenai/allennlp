@@ -3,6 +3,7 @@ Helper functions for archiving models and restoring archived models.
 """
 
 from typing import NamedTuple, Dict, Any
+import atexit
 import json
 import logging
 import os
@@ -109,7 +110,6 @@ def load_archive(archive_file: str,
     else:
         logger.info(f"loading archive file {archive_file} from cache at {resolved_archive_file}")
 
-    tempdir = None
     if os.path.isdir(resolved_archive_file):
         serialization_dir = resolved_archive_file
     else:
@@ -118,6 +118,9 @@ def load_archive(archive_file: str,
         logger.info(f"extracting archive file {resolved_archive_file} to temp dir {tempdir}")
         with tarfile.open(resolved_archive_file, 'r:gz') as archive:
             archive.extractall(tempdir)
+        # Postpone cleanup until exit in case the unarchived contents are needed outside
+        # this function.
+        atexit.register(_cleanup_archive_dir, tempdir)
 
         serialization_dir = tempdir
 
@@ -152,8 +155,10 @@ def load_archive(archive_file: str,
                        serialization_dir=serialization_dir,
                        cuda_device=cuda_device)
 
-    if tempdir:
-        # Clean up temp dir
-        shutil.rmtree(tempdir)
-
     return Archive(model=model, config=config)
+
+
+def _cleanup_archive_dir(path: str):
+    if os.path.exists(path):
+        logger.info("removing temporary unarchived model dir at %s", path)
+        shutil.rmtree(path)

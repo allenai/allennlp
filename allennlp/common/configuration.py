@@ -22,7 +22,7 @@ from allennlp.modules.seq2seq_encoders import _Seq2SeqWrapper
 from allennlp.modules.seq2vec_encoders import _Seq2VecWrapper
 from allennlp.modules.token_embedders import Embedding
 from allennlp.nn.activations import Activation
-from allennlp.nn.initializers import Initializer
+from allennlp.nn.initializers import Initializer, PretrainedModelInitializer
 from allennlp.nn.regularizers import Regularizer
 from allennlp.training.optimizers import Optimizer as AllenNLPOptimizer
 from allennlp.training.trainer import Trainer
@@ -39,7 +39,7 @@ def full_name(cla55: Optional[type]) -> str:
     if cla55 is None:
         return "?"
 
-    if issubclass(cla55, Initializer) and cla55 != Initializer:
+    if issubclass(cla55, Initializer) and cla55 not in [Initializer, PretrainedModelInitializer]:
         init_fn = cla55()._init_function
         return f"{init_fn.__module__}.{init_fn.__name__}"
 
