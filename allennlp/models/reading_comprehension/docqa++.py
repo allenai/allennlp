@@ -368,13 +368,9 @@ class BidafPlusPlus(Model):
         # (see https://github.com/allenai/allennlp/issues/1809) so we will save it every time it changes
         # insuring that if we do a full pass on the validation set and take max for all_qa_count we will
         # get the correct number (except if the last ones are skipped.... hopefully this is a small diff )
-        for per_question_metadata in metadata:
-            for inst_metadata in per_question_metadata:
-                if 'num_examples_used' in inst_metadata:
-                    if inst_metadata['num_examples_used'][1] > self._all_qa_count:
-                        self._all_qa_count = inst_metadata['num_examples_used'][1]
-                        self._examples_used_frac = float(inst_metadata['num_examples_used'][0]) / inst_metadata['num_examples_used'][1]
-
+        self._all_qa_count = inst_metadata['num_examples_used'][1]
+        self._examples_used_frac = float(inst_metadata['num_examples_used'][0]) / inst_metadata['num_examples_used'][1]
+        print(self._examples_used_frac)
 
 
         # Compute the loss.
@@ -583,7 +579,8 @@ class BidafPlusPlus(Model):
             frac_used = self._examples_used_frac * self._frac_of_training_used
         else:
             frac_used = self._examples_used_frac * self._frac_of_validation_used
-
+        print(frac_used, self._examples_used_frac, self._frac_of_training_used, self._frac_of_training_used)
+        
         return {'EM': self._official_EM.get_metric(reset) * frac_used,
                 'f1': self._official_f1.get_metric(reset) * frac_used,
                 'examples_used_frac': frac_used}

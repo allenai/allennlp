@@ -358,12 +358,11 @@ def make_reading_comprehension_instance_multiqa_multidoc(question_tokens: List[T
         span_end_list: List[Field] = []
         if token_span_lists == []:
             span_start, span_end = -1,-1
-            span_start_list.append(IndexField(span_start, passage_field))
-            span_end_list.append(IndexField(span_end, passage_field))
         else:
             span_start, span_end, text = token_span_lists[0]
-            span_start_list.append(IndexField(span_start, passage_field))
-            span_end_list.append(IndexField(span_end, passage_field))   
+        
+        span_start_list.append(IndexField(span_start, passage_field))
+        span_end_list.append(IndexField(span_end, passage_field))   
             
         fields['span_start'] = ListField(span_start_list)
         fields['span_end'] = ListField(span_end_list)
