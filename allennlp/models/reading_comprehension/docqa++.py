@@ -368,8 +368,9 @@ class BidafPlusPlus(Model):
         # (see https://github.com/allenai/allennlp/issues/1809) so we will save it every time it changes
         # insuring that if we do a full pass on the validation set and take max for all_qa_count we will
         # get the correct number (except if the last ones are skipped.... hopefully this is a small diff )
-        self._all_qa_count = inst_metadata['num_examples_used'][1]
-        self._examples_used_frac = float(inst_metadata['num_examples_used'][0]) / inst_metadata['num_examples_used'][1]
+        
+        self._all_qa_count = metadata[0][0]['num_examples_used'][1]
+        self._examples_used_frac = float(metadata[0][0]['num_examples_used'][0]) / metadata[0][0]['num_examples_used'][1]
         print(self._examples_used_frac)
 
 
