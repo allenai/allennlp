@@ -108,11 +108,17 @@ class MultiQAIterator(DataIterator):
                 else:
                     # choose at most 2 instances from the same question:
                     if len(question_instances) > 2:
-                        # This idea is inspired by Clark and Gardner, 17 - over sample the high ranking documents
+                        # This part is inspired by Clark and Gardner, 17 - over sample the high ranking documents
+                        
                         instances_to_add = random.sample(question_instances[0:2], 1)
                         instances_to_add += random.sample(question_instances[2:], 1)
+
                     else:
                         instances_to_add = question_instances
+                    
+                    # Require at least one answer:
+                    if not any(inst.fields['metadata'].metadata['token_span_lists'] != [] for inst in instances_to_add):
+                        continue
 
                 # enforcing batch size
                 # (for docqa we assume the amount of doucments per question is smaller than batch size)

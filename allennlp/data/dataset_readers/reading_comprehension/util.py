@@ -353,25 +353,20 @@ def make_reading_comprehension_instance_multiqa_multidoc(question_tokens: List[T
                 'passage_tokens': [token.text for token in tokenized_paragraph]}
 
     # in prediction mode we won't have this... TODO: what will we do in multi-answer prediction?
-    if token_span_lists:
-        # Looping each <<answers>>.
+    if token_span_lists is not None:
         span_start_list: List[Field] = []
         span_end_list: List[Field] = []
-        for question_index, answer_span_lists in enumerate(token_span_lists['answers']):
-
-            # TODO change this to all the answer, not just one...
-            # For a certain question and context document there may be a case where golden answer is not in
-            # this doc...
-            if len(answer_span_lists)>0:
-                span_start, span_end = answer_span_lists[-1]  # Last one is the original answer TODO maybe change this?
-            else:
-                span_start, span_end = -1,-1
+        if token_span_lists == []:
+            span_start, span_end = -1,-1
             span_start_list.append(IndexField(span_start, passage_field))
             span_end_list.append(IndexField(span_end, passage_field))
-
+        else:
+            span_start, span_end, text = token_span_lists[0]
+            span_start_list.append(IndexField(span_start, passage_field))
+            span_end_list.append(IndexField(span_end, passage_field))   
+            
         fields['span_start'] = ListField(span_start_list)
         fields['span_end'] = ListField(span_end_list)
-
 
     metadata.update(additional_metadata)
     fields['metadata'] = MetadataField(metadata)

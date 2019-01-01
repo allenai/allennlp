@@ -1,7 +1,7 @@
 import json
 import logging
 from typing import Any, Dict, List, Tuple
-import zipfile,re, copy
+import zipfile,re, copy, random
 
 from overrides import overrides
 
@@ -41,9 +41,11 @@ class MultiQAReader(DatasetReader):
     def __init__(self,
                  tokenizer: Tokenizer = None,
                  token_indexers: Dict[str, TokenIndexer] = None,
-                 lazy: bool = False) -> None:
+                 lazy: bool = False,
+                 sample_size: int = -1) -> None:
         super().__init__(lazy)
         self._tokenizer = tokenizer or WordTokenizer()
+        self._sample_size = sample_size
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         
     @overrides
@@ -62,11 +64,22 @@ class MultiQAReader(DatasetReader):
                     dataset_json = json.load(myfile)
 
             if 'preprocessed' in dataset_json and dataset_json['preprocessed']:
+                # sampling
+                if self._sample_size > -1:
+                    random.seed(1)
+                    dataset_json['preprocessed_instances'] = \
+                        random.sample(dataset_json['preprocessed_instances'], self._sample_size) 
+
                 for inst in dataset_json['preprocessed_instances']:
-                    tokenized_paragraph = [Token(text=t[0], idx=t[1]) for t in inst['tokenized_paragraph']]
-                    instance = self.text_to_instance(inst['question_text'], inst['paragraph'], \
-                                                     inst['span_starts'], inst['span_ends'], \
-                                                     tokenized_paragraph, inst['metadata'])
+                    tokenized_paragraph = [Token(text=t[0], idx=t[1]) for t in inst['tokens']]
+                    question_tokens = [Token(text=t[0], idx=t[1]) for t in inst['question_tokens']]
+
+                    instance = util.make_reading_comprehension_instance_multiqa_multidoc(question_tokens,
+                                                             tokenized_paragraph,
+                                                             self._token_indexers,
+                                                             inst['text'],
+                                                             inst['answers'],
+                                                             inst['metadata'])
 
                     instance.fields['metadata'].metadata['num_examples_used'] = dataset_json['num_examples_used']
 
