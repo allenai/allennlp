@@ -65,6 +65,7 @@ class BidafPlusPlus(Model):
                  dropout: float = 0.2,
                  multi_choice_answers: int = 0,
                  frac_of_validation_used: float = 1.0,
+                 frac_of_training_used: float = 1.0,
                  shared_norm: bool = True,
                  support_yesno: bool = False,
                  support_followup: bool = False,
@@ -90,6 +91,7 @@ class BidafPlusPlus(Model):
         self._examples_used_frac = 1.0
         self._max_qad_triplets = max_qad_triplets
         self._frac_of_validation_used = frac_of_validation_used
+        self._frac_of_training_used = frac_of_training_used
 
         self._matrix_attention = LinearMatrixAttention(self._encoding_dim, self._encoding_dim, 'x,y,x*y')
         self._merge_atten = TimeDistributed(torch.nn.Linear(self._encoding_dim * 4, self._encoding_dim))
@@ -577,23 +579,14 @@ class BidafPlusPlus(Model):
 
         # calculating final accuracy considering fraction of examples used in dataset creation, and
         # number used after data-reader filter namely "self._examples_used_frac"
-        frac_used = self._examples_used_frac * self._frac_of_validation_used
-
-        if self._multi_choice_answers:
-            return {#'start_acc': self._span_start_accuracy.get_metric(reset) * frac_used,
-                    #'end_acc': self._span_end_accuracy.get_metric(reset) * frac_used,
-                    #'span_acc': self._span_accuracy.get_metric(reset) * frac_used,
-                    'f1': self._official_f1.get_metric(reset) * frac_used,
-                    'multichoice_acc': self._multichoice_accuracy.get_metric(reset) * self._examples_used_frac + \
-                                       (1- self._examples_used_frac) * 1.0 / self._multi_choice_answers * self._frac_of_validation_used,
-                    'examples_used_frac':frac_used}
+        if self.training:
+            frac_used = self._examples_used_frac * self._frac_of_training_used
         else:
-            return {#'start_acc': self._span_start_accuracy.get_metric(reset) * frac_used,
-                    #'end_acc': self._span_end_accuracy.get_metric(reset) * frac_used,
-                    #'span_acc': self._span_accuracy.get_metric(reset) * frac_used,
-                    'EM': self._official_EM.get_metric(reset) * frac_used,
-                    'f1': self._official_f1.get_metric(reset) * frac_used,
-                    'examples_used_frac': frac_used}
+            frac_used = self._examples_used_frac * self._frac_of_validation_used
+
+        return {'EM': self._official_EM.get_metric(reset) * frac_used,
+                'f1': self._official_f1.get_metric(reset) * frac_used,
+                'examples_used_frac': frac_used}
 
 
     @staticmethod
