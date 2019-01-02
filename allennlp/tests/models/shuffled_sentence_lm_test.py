@@ -40,19 +40,11 @@ class TestBidirectionalLMUnsampled(TestBidirectionalLM):
         self.set_up_model(self.FIXTURES_ROOT / 'shuffled_sentence_lm' / 'experiment_unsampled.jsonnet',
                           self.FIXTURES_ROOT / 'shuffled_sentence_lm' / 'sentences.txt')
 
-    # pylint: disable=no-member
-    def test_bidirectional_shuffled_sentence_lm_unsampled_can_train_save_and_load(self):
-        self.ensure_model_can_train_save_and_load(self.param_file)
-
 class TestBidirectionalLMTransformer(TestBidirectionalLM):
     def setUp(self):
         super().setUp()
         self.set_up_model(self.FIXTURES_ROOT / 'shuffled_sentence_lm' / 'experiment_transformer.jsonnet',
                           self.FIXTURES_ROOT / 'shuffled_sentence_lm' / 'sentences.txt')
-
-    # pylint: disable=no-member
-    def test_bidirectional_shuffled_sentence_lm_transformer_can_train_save_and_load(self):
-        self.ensure_model_can_train_save_and_load(self.param_file)
 
     def test_forward_pass_runs_correctly(self):
         training_tensors = self.dataset.as_tensor_dict()
