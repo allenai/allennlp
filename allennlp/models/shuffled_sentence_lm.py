@@ -52,18 +52,19 @@ class ShuffledSentenceLanguageModel(Model):
     ``Seq2SeqEncoder`` to uncontextualized embeddings, using a ``SoftmaxLoss``
     module (defined above) to compute the language modeling loss.
 
-    If bidirectional is True, the contextualizer is bidirectional and the language
-    model is trained to predict the next and previous tokens for each token in the
-    input. If bidirectional is False, the contextualizer is unidirectional and the
-    language model is trained to only predict the next token for each token in
-    the input.
+    If bidirectional is True,  the language model is trained to predict the next and
+    previous tokens for each token in the input. In this case, the contextualizer must
+    be bidirectional. If bidirectional is False, the language model is trained to only
+    predict the next token for each token in the input; the contextualizer should also
+    be unidirectional.
 
     If your language model is bidirectional, it is IMPORTANT that your bidirectional
-    ``Seq2SeqEncoder`` does not do any "peeking ahead". That is, for its forward
-    direction it should only consider embeddings at previous timesteps, and for its
-    backward direction only embeddings at subsequent timesteps. Similarly, if your
-    language model is unidirectional, the contextualizer should only consider embeddings
-    at previous timesteps. If this condition is not met, your language model is cheating.
+    ``Seq2SeqEncoder`` contextualizer does not do any "peeking ahead". That is, for its
+    forward direction it should only consider embeddings at previous timesteps, and for
+    its backward direction only embeddings at subsequent timesteps. Similarly, if your
+    language model is unidirectional, the unidirectional contextualizer should only
+    consider embeddings at previous timesteps. If this condition is not met, your
+    language model is cheating.
 
     Parameters
     ----------
