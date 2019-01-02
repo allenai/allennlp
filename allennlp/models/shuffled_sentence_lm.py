@@ -117,7 +117,10 @@ class ShuffledSentenceLanguageModel(Model):
 
         # The dimension for making predictions just in the forward
         # (or backward) direction.
-        self._forward_dim = contextualizer.get_output_dim() // 2
+        if self._bidirectional:
+            self._forward_dim = contextualizer.get_output_dim() // 2
+        else:
+            self._forward_dim = contextualizer.get_output_dim()
 
         # TODO(joelgrus): more sampled softmax configuration options, as needed.
         if num_samples is not None:
@@ -175,6 +178,7 @@ class ShuffledSentenceLanguageModel(Model):
                 # Embeddings / targets are not defined (e.g., the backward embeddings
                 # and targets in the unidirectional case). Thus, append "None" to the
                 # loss and skip this iteration.
+                losses.append(None)
                 continue
             mask = targets > 0
             # we need to subtract 1 to undo the padding id since the softmax
