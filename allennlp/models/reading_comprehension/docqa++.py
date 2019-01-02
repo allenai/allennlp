@@ -437,14 +437,14 @@ class BidafPlusPlus(Model):
                 # Per instance loss
                 inds_with_gold_answer = np.argwhere(span_start.view(-1).cpu().numpy() >= 0)
                 inds_with_gold_answer = inds_with_gold_answer.squeeze() if len(inds_with_gold_answer) > 1 else inds_with_gold_answer
-
-                loss = nll_loss(util.masked_log_softmax(span_start_logits[inds_with_gold_answer], \
-                                                     repeated_passage_mask[inds_with_gold_answer]),\
-                                span_start.view(-1)[inds_with_gold_answer], ignore_index=-1)
-                loss += nll_loss(util.masked_log_softmax(span_end_logits[inds_with_gold_answer], \
-                                                     repeated_passage_mask[inds_with_gold_answer]),\
-                                 span_end.view(-1)[inds_with_gold_answer], ignore_index=-1)
-                output_dict["loss"] = loss
+                if len(inds_with_gold_answer)>0:
+                    loss = nll_loss(util.masked_log_softmax(span_start_logits[inds_with_gold_answer], \
+                                                        repeated_passage_mask[inds_with_gold_answer]),\
+                                    span_start.view(-1)[inds_with_gold_answer], ignore_index=-1)
+                    loss += nll_loss(util.masked_log_softmax(span_end_logits[inds_with_gold_answer], \
+                                                        repeated_passage_mask[inds_with_gold_answer]),\
+                                    span_end.view(-1)[inds_with_gold_answer], ignore_index=-1)
+                    output_dict["loss"] = loss
 
 
             # TODO these are not updates
