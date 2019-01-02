@@ -6,6 +6,8 @@ import zipfile,re, copy, random, math
 import sys, os
 import boto3
 from typing import TypeVar,Iterable
+from multiprocessing import Pool
+        
 
 T = TypeVar('T')
 
@@ -524,10 +526,9 @@ def main():
         
         skipped_qa_count = 0
         all_qa_count = 0
-        from multiprocessing import Pool
         with Pool(args.n_processes) as pool:
             chunks = split(contexts, args.n_processes)
-            chunks = flatten_iterable(group(c, 500) for c in chunks)
+            chunks = flatten_iterable(group(c, 200) for c in chunks)
             pbar = Tqdm.tqdm(total=len(chunks), ncols=80,smoothing=0.0)
             for preproc_inst, all_count, s_count in pool.imap_unordered(_preprocess_t,\
                     [[c, args.ndocs, args.docsize, args.titles, args.use_rank, \
