@@ -45,18 +45,25 @@ class _SoftmaxLoss(torch.nn.Module):
         return torch.nn.functional.nll_loss(probs, targets.long(), reduction="sum")
 
 
-@Model.register('bidirectional-language-model')
-class BidirectionalLanguageModel(Model):
+@Model.register('shuffled_sentence_language_model')
+class ShuffledSentenceLanguageModel(Model):
     """
-    The ``BidirectionalLanguageModel`` applies a bidirectional "contextualizing"
+    The ``ShuffledSentenceLanguageModel`` applies a "contextualizing"
     ``Seq2SeqEncoder`` to uncontextualized embeddings, using a ``SoftmaxLoss``
     module (defined above) to compute the language modeling loss.
 
-    It is IMPORTANT that your bidirectional ``Seq2SeqEncoder`` does not do any
-    "peeking ahead". That is, for its forward direction it should only consider
-    embeddings at previous timesteps, and for its backward direction only embeddings
-    at subsequent timesteps. If this condition is not met, your language model is
-    cheating.
+    If bidirectional is True, the contextualizer is bidirectional and the language
+    model is trained to predict the next and previous tokens for each token in the
+    input. If bidirectional is False, the contextualizer is unidirectional and the
+    language model is trained to only predict the next token for each token in
+    the input.
+
+    If your language model is bidirectional, it is IMPORTANT that your bidirectional
+    ``Seq2SeqEncoder`` does not do any "peeking ahead". That is, for its forward
+    direction it should only consider embeddings at previous timesteps, and for its
+    backward direction only embeddings at subsequent timesteps. Similarly, if your
+    language model is unidirectional, the contextualizer should only consider embeddings
+    at previous timesteps. If this condition is not met, your language model is cheating.
 
     Parameters
     ----------
@@ -79,6 +86,10 @@ class BidirectionalLanguageModel(Model):
         the full ``_SoftmaxLoss`` defined above.
     sparse_embeddings: ``bool``, optional (default: False)
         Passed on to ``SampledSoftmaxLoss`` if True.
+    bidirectional: ``bool``, optional (default: False)
+        Train a bidirectional language model, where the contextualizer
+        is used to predict the next and previous token for each input token.
+        If True, the contextualizer must be bidirectional.
     """
     def __init__(self,
                  vocab: Vocabulary,
@@ -88,14 +99,21 @@ class BidirectionalLanguageModel(Model):
                  loss_scale: Union[float, str] = 1.0,
                  num_samples: int = None,
                  sparse_embeddings: bool = False,
+                 bidirectional: bool = False,
                  initializer: InitializerApplicator = None) -> None:
         super().__init__(vocab)
         self._text_field_embedder = text_field_embedder
 
-        if not contextualizer.is_bidirectional():
-            raise ConfigurationError("contextualizer must be bidirectional")
+        if contextualizer.is_bidirectional() is not bidirectional:
+            raise ConfigurationError(
+                f"Bidirectionality of contextualizer must match bidirectionality of "
+                "language model. "
+                "Contextualizer bidirectional: {contextualizer.is_bidirectional()}, "
+                "language model bidirectional: {bidirectional}")
 
         self._contextualizer = contextualizer
+        self._bidirectional = bidirectional
+
         # The dimension for making predictions just in the forward
         # (or backward) direction.
         self._forward_dim = contextualizer.get_output_dim() // 2
@@ -139,14 +157,24 @@ class BidirectionalLanguageModel(Model):
                       lm_embeddings: torch.Tensor,
                       token_embeddings: torch.Tensor,
                       forward_targets: torch.Tensor,
-                      backward_targets: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        # lm_embeddings is shape (batch_size, timesteps, dim * 2)
-        # forward_targets, backward_targets are shape (batch_size, timesteps)
-        # masked with 0
-        forward_embeddings, backward_embeddings = lm_embeddings.chunk(2, -1)
+                      backward_targets: torch.Tensor = None) -> Tuple[torch.Tensor, torch.Tensor]:
+        # If bidirectional, lm_embeddings is shape (batch_size, timesteps, dim * 2)
+        # If unidirectional, lm_embeddings is shape (batch_size, timesteps, dim)
+        # forward_targets, backward_targets (None in the unidirectional case) are
+        # shape (batch_size, timesteps) masked with 0
+        if self._bidirectional:
+            forward_embeddings, backward_embeddings = lm_embeddings.chunk(2, -1)
+        else:
+            forward_embeddings = lm_embeddings
+            backward_embeddings = None
         losses: List[torch.Tensor] = []
         for idx, embedding, targets in ((0, forward_embeddings, forward_targets),
                                         (1, backward_embeddings, backward_targets)):
+            if embedding is None and targets is None:
+                # Embeddings / targets are not defined (e.g., the backward embeddings
+                # and targets in the unidirectional case). Thus, append "None" to the
+                # loss and skip this iteration.
+                continue
             mask = targets > 0
             # we need to subtract 1 to undo the padding id since the softmax
             # does not include a padding dimension
@@ -198,7 +226,8 @@ class BidirectionalLanguageModel(Model):
     def forward(self,  # type: ignore
                 source: Dict[str, torch.LongTensor]) -> Dict[str, torch.Tensor]:
         """
-        Computes the averaged forward and backward LM loss from the batch.
+        Computes the averaged forward (and backward, if language model is bidirectional)
+        LM loss from the batch.
 
         By convention, the input dict is required to have at least a ``"tokens"``
         entry that's the output of a ``SingleIdTokenIndexer``, which is used
@@ -214,11 +243,13 @@ class BidirectionalLanguageModel(Model):
         Dict with keys:
 
         ``'loss'``: ``torch.Tensor``
-            averaged forward/backward negative log likelihood
+            forward negative log likelihood, or the average of forward/backward
+            if language model is bidirectional
         ``'forward_loss'``: ``torch.Tensor``
             forward direction negative log likelihood
-        ``'backward_loss'``: ``torch.Tensor``
-            backward direction negative log likelihood
+        ``'backward_loss'``: ``torch.Tensor`` or ``None``
+            backward direction negative log likelihood. If language model is not
+            bidirectional, this is ``None``.
         ``'lm_embeddings'``: ``Union[torch.Tensor, List[torch.Tensor]]``
             (batch_size, timesteps, embed_dim) tensor of top layer contextual representations or
             list of all layers. No dropout applied.
@@ -248,9 +279,13 @@ class BidirectionalLanguageModel(Model):
 
             # Use token_ids to compute targets
             forward_targets = torch.zeros_like(token_ids)
-            backward_targets = torch.zeros_like(token_ids)
             forward_targets[:, 0:-1] = token_ids[:, 1:]
-            backward_targets[:, 1:] = token_ids[:, 0:-1]
+
+            if self._bidirectional:
+                backward_targets = torch.zeros_like(token_ids)
+                backward_targets[:, 1:] = token_ids[:, 0:-1]
+            else:
+                backward_targets = None
 
             # add dropout
             contextual_embeddings_with_dropout = self._dropout(contextual_embeddings)
@@ -263,7 +298,10 @@ class BidirectionalLanguageModel(Model):
 
             num_targets = torch.sum((forward_targets > 0).long())
             if num_targets > 0:
-                average_loss = 0.5 * (forward_loss + backward_loss) / num_targets.float()
+                if self._bidirectional:
+                    average_loss = 0.5 * (forward_loss + backward_loss) / num_targets.float()
+                else:
+                    average_loss = forward_loss / num_targets.float()
             else:
                 average_loss = torch.tensor(0.0).to(forward_targets.device)  # pylint: disable=not-callable
             # this is stored to compute perplexity if needed
@@ -279,7 +317,7 @@ class BidirectionalLanguageModel(Model):
                 return_dict.update({
                         'loss': average_loss * scale_factor,
                         'forward_loss': forward_loss * scale_factor / num_targets.float(),
-                        'backward_loss': backward_loss * scale_factor / num_targets.float()
+                        'backward_loss': backward_loss * scale_factor / num_targets.float() if backward_loss is not None else None
                 })
             else:
                 # average_loss zero tensor, return it for all

@@ -5,7 +5,7 @@ import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.modules.sampled_softmax_loss import _choice, SampledSoftmaxLoss
-from allennlp.models.bidirectional_lm import _SoftmaxLoss
+from allennlp.models.shuffled_sentence_lm import _SoftmaxLoss
 
 
 class TestSampledSoftmaxLoss(AllenNlpTestCase):
