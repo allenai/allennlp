@@ -122,7 +122,7 @@ def train_model_from_file(parameter_filename: str,
 
     Parameters
     ----------
-    param_path : ``str``
+    parameter_filename : ``str``
         A json parameter file specifying an AllenNLP experiment.
     serialization_dir : ``str``
         The directory in which to save results and logs. We just pass this along to
@@ -136,6 +136,8 @@ def train_model_from_file(parameter_filename: str,
         If ``True``, we will try to recover a training run from an existing serialization
         directory.  This is only intended for use when something actually crashed during the middle
         of a run.  For continuing training a model on new data, see the ``fine-tune`` command.
+    force : ``bool``, optional (default=False)
+        If ``True``, we will overwrite the serialization directory if it already exists.
     """
     # Load the experiment config from a file and pass it to ``train_model``.
     params = Params.from_file(parameter_filename, overrides)
@@ -192,6 +194,8 @@ def create_serialization_dir(
     recover: ``bool``
         If ``True``, we will try to recover from an existing serialization directory, and crash if
         the directory doesn't exist, or doesn't match the configuration we're given.
+    force: ``bool``
+        If ``True``, we will overwrite the serialization directory if it already exists.
     """
     if recover and force:
         raise ConfigurationError("Illegal arguments: both force and recover are true.")
@@ -264,6 +268,8 @@ def train_model(params: Params,
         If ``True``, we will try to recover a training run from an existing serialization
         directory.  This is only intended for use when something actually crashed during the middle
         of a run.  For continuing training a model on new data, see the ``fine-tune`` command.
+    force : ``bool``, optional (default=False)
+        If ``True``, we will overwrite the serialization directory if it already exists.
 
     Returns
     -------
@@ -293,12 +299,16 @@ def train_model(params: Params,
 
     logger.info("From dataset instances, %s will be considered for vocabulary creation.",
                 ", ".join(datasets_for_vocab_creation))
-    vocab = Vocabulary.from_params(
-            params.pop("vocabulary", {}),
-            (instance for key, dataset in all_datasets.items()
-             for instance in dataset
-             if key in datasets_for_vocab_creation)
-    )
+
+    if recover and os.path.exists(os.path.join(serialization_dir, "vocabulary")):
+        vocab = Vocabulary.from_files(os.path.join(serialization_dir, "vocabulary"))
+    else:
+        vocab = Vocabulary.from_params(
+                params.pop("vocabulary", {}),
+                (instance for key, dataset in all_datasets.items()
+                 for instance in dataset
+                 if key in datasets_for_vocab_creation)
+        )
 
     model = Model.from_params(vocab=vocab, params=params.pop('model'))
 
