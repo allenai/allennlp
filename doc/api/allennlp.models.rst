@@ -12,7 +12,6 @@ allennlp.models
   allennlp.models.archival
   allennlp.models.biaffine_dependency_parser
   allennlp.models.biattentive_classification_network
-  allennlp.models.shuffled_sentence_lm
   allennlp.models.bimpm
   allennlp.models.constituency_parser
   allennlp.models.coreference_resolution
@@ -26,4 +25,5 @@ allennlp.models
   allennlp.models.reading_comprehension
   allennlp.models.semantic_parsing
   allennlp.models.semantic_role_labeler
+  allennlp.models.shuffled_sentence_lm
   allennlp.models.simple_tagger
