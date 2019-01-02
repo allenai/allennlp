@@ -300,7 +300,7 @@ def train_model(params: Params,
     logger.info("From dataset instances, %s will be considered for vocabulary creation.",
                 ", ".join(datasets_for_vocab_creation))
 
-    if os.path.exists(os.path.join(serialization_dir, "vocabulary")):
+    if recover and os.path.exists(os.path.join(serialization_dir, "vocabulary")):
         vocab = Vocabulary.from_files(os.path.join(serialization_dir, "vocabulary"))
     else:
         vocab = Vocabulary.from_params(
