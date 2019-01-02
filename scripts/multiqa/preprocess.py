@@ -4,6 +4,7 @@ import logging
 from typing import Any, Dict, List, Tuple
 import zipfile,re, copy, random, math
 import sys, os
+import boto3
 from typing import TypeVar,Iterable
 
 T = TypeVar('T')
@@ -238,7 +239,8 @@ class MultiQAPreprocess():
                     part_num, part_text, part_tokens)
 
     def score_documents(self, tokenized_question, documents):
-        documents_text = [' '.join([part['text'] for part in doc['parts']]) for doc in documents]
+        #documents_text = [' '.join([part['text'] for part in doc['parts']]) for doc in documents]
+        documents_text = [doc['text'] for doc in documents]
         tokenized_question_text = [token[0] for token in tokenized_question]
         return self._para_tfidf_scoring.score_paragraphs(tokenized_question_text, documents_text)
 
@@ -302,15 +304,14 @@ class MultiQAPreprocess():
                     self._answers_removed += 1
         return updated_answers
 
-    def merge_documents(self, documents, qa, document_scores):
-        sorted_ix = np.argsort(document_scores)
+    def merge_documents(self, documents, qa, ordered_inds): 
 
         merged_documents = []
         new_doc = {'num_of_tokens':0, 'tokens':[], 'text':'', 'answers':[]}
         curr_doc_ind = 0
         token_idx_char_offest = 0
         token_idx_offest = 0
-        for doc_ind in sorted_ix:
+        for doc_ind in ordered_inds:
             # spliting to new document, Note we assume we are after split documents and each
             # document number of tokens is less than _max_doc_size
             if new_doc['num_of_tokens'] + documents[doc_ind]['num_of_tokens'] > self._max_doc_size:
@@ -385,11 +386,14 @@ class MultiQAPreprocess():
                 tokenized_question = [(t.text, t.idx) for t in tokenized_question]
         
                 # scoring each paragraph for the current question 
-                document_scores = self.score_documents(tokenized_question, context['documents'])
+                #document_scores = self.score_documents(tokenized_question, context['documents'])
+                merged_documents = self.merge_documents(context['documents'], qa, \
+                    np.random.permutation(len(context['documents'])))
 
                 # merge paragraphs if needed until we reach max amount of documents... 
                 # (merge is done via tf-idf doc ranking)
-                merged_documents = self.merge_documents(context['documents'], qa, document_scores)
+                document_scores = self.score_documents(tokenized_question, merged_documents)
+                #merged_documents = self.merge_documents(context['documents'], qa, np.argsort(document_scores))
 
                 # filtering the merged documents
                 merged_documents = merged_documents[0: self._max_num_docs]
@@ -480,8 +484,8 @@ def str2bool(v):
 
 def main():
     parse = argparse.ArgumentParser("Pre-process for DocumentQA/MultiQA model and datareader")
-    parse.add_argument("input_file", type=str, help="and input file in MultiQA format (s3 also supported)")
-    parse.add_argument("output_dir", type=str, help="output directory to save file (will be save with the same name)")
+    parse.add_argument("input_file", type=str, help="and input file in MultiQA format (s3 supported)")
+    parse.add_argument("output_file", type=str, help="output name and dir to save file (s3 supported)")
     # This is slow, using more processes is recommended
     parse.add_argument("--ndocs", type=int, default=10, help="Number of documents to create")
     parse.add_argument("--docsize", type=int, default=400, help="Max size of each document")
@@ -494,9 +498,7 @@ def main():
     
     args = parse.parse_args()
     
-    if not os.path.exists(args.output_dir):
-        os.makedirs(args.output_dir)
-
+    
     # reading file
     contexts = []
     # if `file_path` is a URL, redirect to the cache
@@ -555,9 +557,23 @@ def main():
     print('all_qa_count = %d' % all_qa_count)
     print('skipped_qa_count = %d' % skipped_qa_count)
     preproc_dataset = {'num_examples_used':(all_qa_count - skipped_qa_count, all_qa_count) ,'preprocessed':True,  'preprocessed_instances':preprocessed_instances}
-    filename = args.input_file.split('/')[-1]
-    with zipfile.ZipFile(args.output_dir + '/' + filename, "w", zipfile.ZIP_DEFLATED) as zip_file:
-        zip_file.writestr(filename, json.dumps(preproc_dataset))
+    
+    if args.output_file.startswith('s3://'):
+        temp_name = 'temp.json.zip'
+        output_file = args.output_file.replace('s3://','')
+        bucketName = output_file.split('/')[0]
+        outPutname = '/'.join(output_file.split('/')[1:])
+        with zipfile.ZipFile(temp_name, "w", zipfile.ZIP_DEFLATED) as zip_file:
+            zip_file.writestr(temp_name, json.dumps(preproc_dataset))
+        s3 = boto3.client('s3')
+        s3.upload_file(temp_name, bucketName, outPutname)
+    else:
+        output_dir = '/'.join(args.output_file.split('/')[0:-1])
+        filename = args.output_file.split('/')[-1]
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+        with zipfile.ZipFile(args.output_file, "w", zipfile.ZIP_DEFLATED) as zip_file:
+            zip_file.writestr(filename, json.dumps(preproc_dataset))
 
 if __name__ == "__main__":
     main()
