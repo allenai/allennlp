@@ -3,7 +3,7 @@ import numpy as np
 
 from allennlp.common.testing import ModelTestCase
 
-class TestBidirectionalLM(ModelTestCase):
+class TestBidirectionalShuffledSentenceLM(ModelTestCase):
     def setUp(self):
         super().setUp()
         self.set_up_model(self.FIXTURES_ROOT / 'shuffled_sentence_lm' / 'experiment.jsonnet',
@@ -34,13 +34,13 @@ class TestBidirectionalLM(ModelTestCase):
         np.testing.assert_almost_equal(loss, (forward_loss + backward_loss) / 2, decimal=3)
 
 
-class TestBidirectionalLMUnsampled(TestBidirectionalLM):
+class TestBidirectionalShuffledSentenceLMUnsampled(TestBidirectionalShuffledSentenceLM):
     def setUp(self):
         super().setUp()
         self.set_up_model(self.FIXTURES_ROOT / 'shuffled_sentence_lm' / 'experiment_unsampled.jsonnet',
                           self.FIXTURES_ROOT / 'shuffled_sentence_lm' / 'sentences.txt')
 
-class TestBidirectionalLMTransformer(TestBidirectionalLM):
+class TestBidirectionalShuffledSentenceLMTransformer(TestBidirectionalShuffledSentenceLM):
     def setUp(self):
         super().setUp()
         self.set_up_model(self.FIXTURES_ROOT / 'shuffled_sentence_lm' / 'experiment_transformer.jsonnet',
