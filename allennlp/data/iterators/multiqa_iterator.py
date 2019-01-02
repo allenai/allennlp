@@ -117,8 +117,8 @@ class MultiQAIterator(DataIterator):
                         instances_to_add = question_instances
                     
                     # Require at least one answer:
-                    if not any(inst.fields['metadata'].metadata['token_span_lists'] != [] for inst in instances_to_add):
-                        continue
+                    #if not any(inst.fields['metadata'].metadata['token_span_lists'] != [] for inst in instances_to_add):
+                    #    continue
 
                 # enforcing batch size
                 # (for docqa we assume the amount of doucments per question is smaller than batch size)
