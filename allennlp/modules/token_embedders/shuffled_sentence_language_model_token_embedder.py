@@ -11,21 +11,22 @@ from allennlp.nn.util import remove_sentence_boundaries, get_text_field_mask, ad
 
 # Importing at runtime results in a circular dependency.
 if TYPE_CHECKING:
-    from allennlp.models.bidirectional_lm import BidirectionalLanguageModel
+    from allennlp.models.shuffled_sentence_lm import ShuffledSentenceLanguageModel
 
 
-@TokenEmbedder.register('bidirectional_lm_token_embedder')
-class BidirectionalLanguageModelTokenEmbedder(TokenEmbedder):
+@TokenEmbedder.register('shuffled_sentence_lm_token_embedder')
+class ShuffledSentenceLanguageModelTokenEmbedder(TokenEmbedder):
     """
-    Compute a single layer of representations from a bidirectional language model. This is done
-    by computing a learned scalar average of the layers from the LM. Typically the LM's weights
+    Compute a single layer of representations from a (optionally bidirectional)
+    shuffled sentence language model. This is done by computing a learned scalar
+    average of the layers from the LM. Typically the LM's weights
     will be fixed, but they can be fine tuned by setting ``requires_grad``.
 
     Parameters
     ----------
     archive_file : ``str``, required
-        An archive file, typically model.tar.gz, from a BidirectionalLanguageModel. The
-        contextualizer used by the LM must satisfy two requirements:
+        An archive file, typically model.tar.gz, from a ShuffledSentenceLanguageModel.
+        The contextualizer used by the LM must satisfy two requirements:
 
         1. It must have a num_layers field.
         2. It must take a boolean return_all_layers parameter in its constructor.
@@ -66,7 +67,7 @@ class BidirectionalLanguageModelTokenEmbedder(TokenEmbedder):
         from allennlp.models.archival import load_archive
         # Load LM and the associated config.
         archive = load_archive(archive_file, overrides=json.dumps(overrides))
-        self._lm: BidirectionalLanguageModel = archive.model
+        self._lm: ShuffledSentenceLanguageModel = archive.model
         self._lm.delete_softmax()
         config = archive.config
         dict_config = config.as_dict(quiet=True)
@@ -79,7 +80,7 @@ class BidirectionalLanguageModelTokenEmbedder(TokenEmbedder):
             # embedded indices.
             #
             # Note: We only care about embedded indices. This does not include "tokens" which
-            # is just used to compute the loss in BidirectionalLanguageModel.
+            # is just used to compute the loss in ShuffledSentenceLanguageModel.
             raise ConfigurationError(f"LM from {archive_file} trained with multiple embedders!")
         if "embedder_to_indexer_map" in text_field_embedder:
             # Similarly we don't support multiple indexers per embedder.
