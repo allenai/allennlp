@@ -6,7 +6,7 @@
         "type": "single_id"
       },
       "token_characters": {
-        "type": "characters"
+        "type": "elmo_characters"
       }
     },
     "start_tokens": ["<S>"],

@@ -67,7 +67,7 @@ class Pruner(torch.nn.Module):
         scores = self._scorer(embeddings)
 
         if scores.size(-1) != 1 or scores.dim() != 3:
-            raise ValueError(f"The scorer passed to SpanPruner must produce a tensor of shape"
+            raise ValueError(f"The scorer passed to Pruner must produce a tensor of shape"
                              f"(batch_size, num_items, 1), but found shape {scores.size()}")
         # Make sure that we don't select any masked items by setting their scores to be very
         # negative.  These are logits, typically, so -1e20 should be plenty negative.
