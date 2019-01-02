@@ -48,13 +48,15 @@ class TestUnidirectionalShuffledSentenceLM(ModelTestCase):
 class TestUnidirectionalShuffledSentenceLMUnsampled(TestUnidirectionalShuffledSentenceLM):
     def setUp(self):
         super().setUp()
-        self.set_up_model(self.FIXTURES_ROOT / 'shuffled_sentence_lm' / 'experiment_unidirectional_unsampled.jsonnet',
+        self.set_up_model(self.FIXTURES_ROOT / 'shuffled_sentence_lm' /
+                          'experiment_unidirectional_unsampled.jsonnet',
                           self.FIXTURES_ROOT / 'shuffled_sentence_lm' / 'sentences.txt')
 
 class TestUnidirectionalShuffledSentenceLMTransformer(TestUnidirectionalShuffledSentenceLM):
     def setUp(self):
         super().setUp()
-        self.set_up_model(self.FIXTURES_ROOT / 'shuffled_sentence_lm' / 'experiment_unidirectional_transformer.jsonnet',
+        self.set_up_model(self.FIXTURES_ROOT / 'shuffled_sentence_lm' /
+                          'experiment_unidirectional_transformer.jsonnet',
                           self.FIXTURES_ROOT / 'shuffled_sentence_lm' / 'sentences.txt')
 
     # pylint: disable=no-member
@@ -62,9 +64,9 @@ class TestUnidirectionalShuffledSentenceLMTransformer(TestUnidirectionalShuffled
         # Ignore layer 0 feedforward layer norm parameters, since
         # they are not used.
         self.ensure_model_can_train_save_and_load(
-            self.param_file, gradients_to_ignore = {
-                "_contextualizer.feedforward_layer_norm_0.gamma",
-                "_contextualizer.feedforward_layer_norm_0.beta"})
+                self.param_file, gradients_to_ignore={
+                        "_contextualizer.feedforward_layer_norm_0.gamma",
+                        "_contextualizer.feedforward_layer_norm_0.beta"})
 
     def test_forward_pass_runs_correctly(self):
         training_tensors = self.dataset.as_tensor_dict()
