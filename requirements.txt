@@ -149,3 +149,9 @@ pypandoc
 
 # Pypi uploads
 twine==1.11.0
+
+
+# MultiQA speicifc 
+psutil
+elasticsearch
+pika
