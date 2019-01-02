@@ -1,7 +1,11 @@
 # pylint: disable=invalid-name,arguments-differ,abstract-method
 import numpy as np
+import pytest
 
 from allennlp.common.testing import ModelTestCase
+from allennlp.common.checks import ConfigurationError
+from allennlp.common.params import Params
+from allennlp.models import Model
 
 class TestBidirectionalShuffledSentenceLM(ModelTestCase):
     def setUp(self):
@@ -32,6 +36,14 @@ class TestBidirectionalShuffledSentenceLM(ModelTestCase):
         backward_loss = result["backward_loss"].item()
 
         np.testing.assert_almost_equal(loss, (forward_loss + backward_loss) / 2, decimal=3)
+
+    def test_mismatching_contextualizer_bidirectionality_throws_configuration_error(self):
+        params = Params.from_file(self.param_file)
+        # Make the contextualizer bidirectionality wrong - it should be
+        # true to match the language model.
+        params["model"]["contextualizer"]["bidirectional"] = False
+        with pytest.raises(ConfigurationError):
+            Model.from_params(vocab=self.vocab, params=params.get("model"))
 
 
 class TestBidirectionalShuffledSentenceLMUnsampled(TestBidirectionalShuffledSentenceLM):
