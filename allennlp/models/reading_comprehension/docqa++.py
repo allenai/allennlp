@@ -371,8 +371,7 @@ class BidafPlusPlus(Model):
         
         self._all_qa_count = metadata[0][0]['num_examples_used'][1]
         self._examples_used_frac = float(metadata[0][0]['num_examples_used'][0]) / metadata[0][0]['num_examples_used'][1]
-        print(self._examples_used_frac)
-
+        
 
         # Compute the loss.
         if span_start is not None:
@@ -473,14 +472,11 @@ class BidafPlusPlus(Model):
                     if len(instance_triplets) == 0:
                         continue
 
-                    #print('---------------------------')
-                    #print(inst_metadata['question'])
                     # computing the max score of the correct answer
                     for offest,j in zip(golden_answer_instance_offset[batch_ind],range(len(instance_triplets))):
 
                         if offest < len(inst_metadata["token_span_lists"]['answers']):
                             for answer_start_end in inst_metadata['token_span_lists']['answers'][offest][0]:
-                                #print(inst_metadata['passage_tokens'][offest][answer_start_end[0]:answer_start_end[1]+1])
                                 score = span_start_logits_numpy[instance_triplets[j]][answer_start_end[0]] \
                                         + span_end_logits_numpy[instance_triplets[j]][answer_start_end[1]]
                                 if score>max_correct_answer:
@@ -580,7 +576,6 @@ class BidafPlusPlus(Model):
             frac_used = self._examples_used_frac * self._frac_of_training_used
         else:
             frac_used = self._examples_used_frac * self._frac_of_validation_used
-        print(frac_used, self._examples_used_frac, self._frac_of_training_used, self._frac_of_training_used)
         
         return {'EM': self._official_EM.get_metric(reset) * frac_used,
                 'f1': self._official_f1.get_metric(reset) * frac_used,

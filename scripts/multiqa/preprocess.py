@@ -125,15 +125,15 @@ class MultiQAPreprocess():
         self._total_answers = 0
 
         # we chose "^..^" because the tokenizer splits the standard "<..>" chars
-        self._SEP = '^SEP^ '
-        self._PARA_SEP = '^PARA^ '
-        self._KNOWN_SEP = {'rank':'^RANK^ ', 'title':'^TITLE_SEP^ '}
+        self._SEP = ' ^SEP^ '
+        self._PARA_SEP = ' ^PARA^ '
+        self._KNOWN_SEP = {'rank':' ', 'title':' ^TITLE_SEP^ '}
         
     def iterate_doc_parts(self,document):
         part_num = 0
 
         if self._use_rank:
-            yield (part_num,'rank',str(document['rank']))
+            yield (part_num,'rank','^RANK^' + str(document['rank']))
             part_num += 1
 
         if self._use_document_titles:
@@ -157,14 +157,15 @@ class MultiQAPreprocess():
                         if alias_start[0] == doc_ind and alias_start[1] == part_type:
                             char_span_start = alias_start[2]
                             char_span_end = char_span_start + len(alias['text'])
+                            if 'token_answer_starts' not in alias:
+                                    alias['token_answer_starts'] = []
                             try:
                                 (span_start, span_end), error = util.char_span_to_token_span(part_offsets,
                                                                             (char_span_start, char_span_end))
-                                if 'token_answer_starts' not in alias:
-                                    alias['token_answer_starts'] = []
                                 alias['token_answer_starts'].append((doc_ind, part_num,span_start,span_end))
                             except:
-                                print('char_span_to_token_span failed.')
+                                self._answers_removed += 1
+                                self._total_answers += 1
         return qas
     
     def update_answer_docid(self,new_qas, qas, curr_doc_ind, org_doc_ind ,part_num, org_part_num):
@@ -235,60 +236,6 @@ class MultiQAPreprocess():
                 # computing token_answer_starts (the answer_starts positions in tokens)
                 context['qas'] = self.compute_token_answer_starts(context['qas'], doc_ind, part_type, \
                     part_num, part_text, part_tokens)
-        
-    def build_context(self,context):
-        paragraphs = ['']
-        curr_paragraph = 0
-        answer_starts_offsets = []
-        temp_tokenized_paragraph = []  # Temporarily used to calculated the amount of tokens in a given paragraph
-        offset = 0
-        # Processing each document separatly
-        
-        for doc_ind, document in enumerate(context['documents']):
-            # tokenizing the whole document (title + all snippets concatinated)
-            ## TODO add document['rank']
-            ## TODO change to <SEP>
-            ## TODO handle spliting paragraphs in the middle
-            # constracting single context by concatinating parts of the original context
-            if self._use_document_titles:
-                text_to_add = document['title'] + ' | ' + ' '.join(document['snippets']) + " || "
-            else:
-                text_to_add = ' '.join(document['snippets']) + " || "
-
-            # Split when number of tokens is larger than _max_context_size.
-            tokens_to_add = self._tokenizer.tokenize(text_to_add)
-            if len(temp_tokenized_paragraph) + len(tokens_to_add) > self._max_context_size:
-                ## Split Paragraphs ##
-                temp_tokenized_paragraph = []
-                paragraphs.append('')
-                curr_paragraph += 1
-                # the offset for calculating the answer starts are relative to each paragraphs
-                # so for a new paragraph we need to start a new offset.
-                offset = 0
-
-            temp_tokenized_paragraph += tokens_to_add
-            paragraphs[curr_paragraph] += text_to_add
-
-            # Computing answer_starts offsets:
-            if self._use_document_titles:
-                answer_starts_offsets.append({'title': [curr_paragraph, offset]})
-                offset += len(document['title']) + 3  # we add 3 for the separator ' | '
-            else:
-                answer_starts_offsets.append({})
-
-            for snippet_ind, snippet in enumerate(document['snippets']):
-                answer_starts_offsets[doc_ind][snippet_ind] = [curr_paragraph, offset]
-                offset += len(snippet)
-
-                # ' '. adds extra space between the snippets.
-                if len(document['snippets']) > 1 and snippet_ind < len(document['snippets']) - 1:
-                    offset += 1
-            offset += 4  # for " || "
-
-            # offset sanity check
-            if offset != len(paragraphs[curr_paragraph]):
-                raise ValueError()
-        return paragraphs , answer_starts_offsets
 
     def score_documents(self, tokenized_question, documents):
         documents_text = [' '.join([part['text'] for part in doc['parts']]) for doc in documents]
@@ -318,8 +265,8 @@ class MultiQAPreprocess():
                 SEP = self._KNOWN_SEP[part['part']]
 
             # updating text
-            text += SEP + part['text']
-            part_offset = token_idx_char_offest + len(SEP)
+            text += SEP + part['text'] 
+            part_offset = len(SEP) + token_idx_char_offest
             
             # updating tokens
             tokens.append((SEP, token_idx_char_offest))
@@ -332,8 +279,6 @@ class MultiQAPreprocess():
             # NOTE we are currently only handling correct answers ... 
             norm_answers_list += self.extract_answers_with_token_idx(doc_id,part_ind, answers,\
                  part_token_idx_offset)
-
-            pass
             
         return tokens, text, norm_answers_list, token_idx_char_offest, token_idx_offest
 
@@ -366,7 +311,8 @@ class MultiQAPreprocess():
         token_idx_char_offest = 0
         token_idx_offest = 0
         for doc_ind in sorted_ix:
-            # spliting to new document
+            # spliting to new document, Note we assume we are after split documents and each
+            # document number of tokens is less than _max_doc_size
             if new_doc['num_of_tokens'] + documents[doc_ind]['num_of_tokens'] > self._max_doc_size:
                 # Sanity check: the alias text should be equal the text in answer_start in the paragraph
                 # sometimes the original extraction was bad, or the tokenizer makes mistakes... 
@@ -384,6 +330,11 @@ class MultiQAPreprocess():
             new_doc['tokens'] += tokens
             new_doc['text'] += text
             new_doc['answers'] += norm_answers_list
+
+        # adding the remainer document
+        if new_doc['num_of_tokens'] > 0:
+            new_doc['answers'] = self.sanity_check_answers(new_doc)
+            merged_documents.append(new_doc)
         
         return merged_documents
 
@@ -474,7 +425,7 @@ class MultiQAPreprocess():
                     instance.update(document)
                     preprocessed_instances.append(instance)
 
-        print('% of answer that were filtered %f' % (self._answers_removed / self._total_answers))
+        print("\nFraction of answer that were filtered %f" % (float(self._answers_removed) / self._total_answers))
 
         return preprocessed_instances, all_qa_count, skipped_qa_count
 
