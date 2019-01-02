@@ -106,10 +106,10 @@ class ShuffledSentenceLanguageModel(Model):
 
         if contextualizer.is_bidirectional() is not bidirectional:
             raise ConfigurationError(
-                f"Bidirectionality of contextualizer must match bidirectionality of "
-                "language model. "
-                "Contextualizer bidirectional: {contextualizer.is_bidirectional()}, "
-                "language model bidirectional: {bidirectional}")
+                    f"Bidirectionality of contextualizer must match bidirectionality of "
+                    "language model. "
+                    "Contextualizer bidirectional: {contextualizer.is_bidirectional()}, "
+                    "language model bidirectional: {bidirectional}")
 
         self._contextualizer = contextualizer
         self._bidirectional = bidirectional
@@ -317,7 +317,8 @@ class ShuffledSentenceLanguageModel(Model):
                 return_dict.update({
                         'loss': average_loss * scale_factor,
                         'forward_loss': forward_loss * scale_factor / num_targets.float(),
-                        'backward_loss': backward_loss * scale_factor / num_targets.float() if backward_loss is not None else None
+                        'backward_loss': (backward_loss * scale_factor / num_targets.float()
+                                          if backward_loss is not None else None)
                 })
             else:
                 # average_loss zero tensor, return it for all
