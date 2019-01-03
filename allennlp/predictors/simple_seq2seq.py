@@ -14,4 +14,4 @@ class SimpleSeq2SeqPredictor(Seq2SeqPredictor):
     def __init__(self, model: Model, dataset_reader: DatasetReader) -> None:
         super().__init__(model, dataset_reader)
         warnings.warn("The 'simple_seq2seq' predictor has been deprecated in favor of "
-                      "the 'seq2seq' predictor.", DeprecationWarning)
+                      "the 'seq2seq' predictor. This will be removed in version 0.10.", DeprecationWarning)
