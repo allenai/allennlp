@@ -85,7 +85,7 @@ class CopyNetSeq2Seq(Model):
                  target_namespace: str = "target_tokens",
                  tensor_based_metric: Metric = None,
                  token_based_metric: Metric = None) -> None:
-        super(CopyNetSeq2Seq, self).__init__(vocab)
+        super().__init__(vocab)
         self._source_namespace = source_namespace
         self._target_namespace = target_namespace
         self._src_start_index = self.vocab.get_token_index(START_SYMBOL, self._source_namespace)
@@ -124,7 +124,8 @@ class CopyNetSeq2Seq(Model):
         # weighted sum of the encoder hidden state called the "selective read".
         # While the weights for the attentive read are calculated by an `Attention` module,
         # the weights for the selective read are simply the predicted probabilities
-        # corresponding to each token in the source sentence from the previous timestep.
+        # corresponding to each token in the source sentence that matches the target
+        # token from the previous timestep.
         self._target_embedder = Embedding(target_vocab_size, target_embedding_dim)
         self._attention = attention
         self._input_projection_layer = Linear(
@@ -171,11 +172,13 @@ class CopyNetSeq2Seq(Model):
             Tensor containing vocab index of each source token with respect to the
             target vocab namespace. Shape: `(batch_size, trimmed_source_length)`.
         metadata : ``List[Dict[str, Any]]``, required
-            Metadata field that contains the original source tokens ('source_tokens')
-            and any other meta fields.
+            Metadata field that contains the original source tokens with key 'source_tokens'
+            and any other meta fields. When 'target_tokens' is also passed, the metadata
+            should also contain the original target tokens with key 'target_tokens'.
         target_tokens : ``Dict[str, torch.LongTensor]``, optional (default = None)
             Output of `Textfield.as_array()` applied on target `TextField`. We assume that the
-            target tokens are also represented as a `TextField`.
+            target tokens are also represented as a `TextField` which must contain a "tokens"
+            key that uses single ids.
         target_token_ids : ``torch.Tensor``, optional (default = None)
             A tensor of shape `(batch_size, target_sequence_length)` which indicates which
             tokens in the target sequence match tokens in the source sequence.
@@ -184,7 +187,9 @@ class CopyNetSeq2Seq(Model):
         -------
         Dict[str, torch.Tensor]
         """
-        state = self._encode(source_tokens, source_token_ids, source_to_target)
+        state = self._encode(source_tokens)
+        state["source_token_ids"] = source_token_ids
+        state["source_to_target"] = source_to_target
 
         if target_tokens:
             state = self._init_decoder_state(state)
@@ -289,10 +294,7 @@ class CopyNetSeq2Seq(Model):
 
         return state
 
-    def _encode(self,
-                source_tokens: Dict[str, torch.Tensor],
-                source_token_ids: torch.Tensor,
-                source_to_target: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def _encode(self, source_tokens: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
         Encode source input sentences.
         """
@@ -302,27 +304,22 @@ class CopyNetSeq2Seq(Model):
         source_mask = util.get_text_field_mask(source_tokens)
         # shape: (batch_size, max_input_sequence_length, encoder_output_dim)
         encoder_outputs = self._encoder(embedded_input, source_mask)
-        return {
-                "source_mask": source_mask,
-                "encoder_outputs": encoder_outputs,
-                "source_token_ids": source_token_ids,
-                "source_to_target": source_to_target,
-        }
+        return {"source_mask": source_mask, "encoder_outputs": encoder_outputs}
 
     def _decoder_step(self,
                       last_predictions: torch.Tensor,
                       selective_weights: torch.Tensor,
                       state: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
-        # shape: (batch_size, max_input_sequence_length, encoder_output_dim)
+        # shape: (group_size, max_input_sequence_length, encoder_output_dim)
         encoder_outputs_mask = state["source_mask"].float()
         # shape: (group_size, target_embedding_dim)
         embedded_input = self._target_embedder(last_predictions)
-        # shape: (batch_size, max_input_sequence_length)
+        # shape: (group_size, max_input_sequence_length)
         attentive_weights = self._attention(
                 state["decoder_hidden"], state["encoder_outputs"], encoder_outputs_mask)
-        # shape: (batch_size, encoder_output_dim)
+        # shape: (group_size, encoder_output_dim)
         attentive_read = util.weighted_sum(state["encoder_outputs"], attentive_weights)
-        # shape: (batch_size, encoder_output_dim)
+        # shape: (group_size, encoder_output_dim)
         selective_read = util.weighted_sum(state["encoder_outputs"][:, 1:-1], selective_weights)
         # shape: (group_size, target_embedding_dim + encoder_output_dim * 2)
         decoder_input = torch.cat((embedded_input, attentive_read, selective_read), -1)
@@ -350,6 +347,7 @@ class CopyNetSeq2Seq(Model):
 
     def _get_ll_contrib(self,
                         generation_scores: torch.Tensor,
+                        generation_scores_mask: torch.Tensor,
                         copy_scores: torch.Tensor,
                         target_tokens: torch.Tensor,
                         target_to_source: torch.Tensor,
@@ -361,6 +359,8 @@ class CopyNetSeq2Seq(Model):
         ----------
         generation_scores : ``torch.Tensor``
             Shape: `(batch_size, target_vocab_size)`
+        generation_scores_mask : ``torch.Tensor``
+            Shape: `(batch_size, target_vocab_size)`. This is just a tensor of 1's.
         copy_scores : ``torch.Tensor``
             Shape: `(batch_size, trimmed_source_length)`
         target_tokens : ``torch.Tensor``
@@ -382,7 +382,7 @@ class CopyNetSeq2Seq(Model):
         # of the generation scores and the copy scores to normalize the scores
         # correctly during the softmax.
         # shape: (batch_size, target_vocab_size + trimmed_source_length)
-        mask = torch.cat((generation_scores.new_full(generation_scores.size(), 1.0), copy_mask), dim=-1)
+        mask = torch.cat((generation_scores_mask, copy_mask), dim=-1)
         # shape: (batch_size, target_vocab_size + trimmed_source_length)
         all_scores = torch.cat((generation_scores, copy_scores), dim=-1)
         # Normalize generation and copy scores.
@@ -396,6 +396,8 @@ class CopyNetSeq2Seq(Model):
         # a selective read state.
         # shape: (batch_size, trimmed_source_length)
         copy_log_probs = log_probs[:, target_size:] + (target_to_source.float() + 1e-45).log()
+        # Since `log_probs[:, target_size]` gives us the raw copy log probabilities,
+        # we use a non-log softmax to get the normalized non-log copy probabilities.
         selective_weights = util.masked_softmax(log_probs[:, target_size:], target_to_source)
         # This mask ensures that item in the batch has a non-zero generation probabilities
         # for this timestep only when the gold target token is not OOV or there are no
@@ -444,6 +446,11 @@ class CopyNetSeq2Seq(Model):
         # shape: (batch_size, trimmed_source_length)
         target_to_source = state["source_token_ids"].new_zeros(copy_mask.size())
 
+        # This is just a tensor of ones which we use repeatedly in `self._get_ll_contrib`,
+        # so we create it once here to avoid doing it over-and-over.
+        generation_scores_mask = state["decoder_hidden"].new_full((batch_size, self._target_vocab_size),
+                                                                  fill_value=1.0)
+
         step_log_likelihoods = []
         for timestep in range(num_decoding_steps):
             # shape: (batch_size,)
@@ -473,6 +480,7 @@ class CopyNetSeq2Seq(Model):
             step_target_tokens = target_tokens["tokens"][:, timestep + 1]
             step_log_likelihood, selective_weights = self._get_ll_contrib(
                     generation_scores,
+                    generation_scores_mask,
                     copy_scores,
                     step_target_tokens,
                     target_to_source,

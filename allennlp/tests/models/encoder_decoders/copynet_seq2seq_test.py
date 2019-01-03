@@ -105,7 +105,9 @@ class CopyNetTest(ModelTestCase):
                 np.exp([2.0, float("-inf"), 3.0]) / (np.exp(2.0) + np.exp(3.0)),
         ])
 
+        generation_scores_mask = generation_scores.new_full(generation_scores.size(), 1.0)
         ll_actual, selective_weights_actual = self.model._get_ll_contrib(generation_scores,
+                                                                         generation_scores_mask,
                                                                          copy_scores,
                                                                          target_tokens,
                                                                          target_to_source,
