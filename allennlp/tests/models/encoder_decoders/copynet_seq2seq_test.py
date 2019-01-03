@@ -4,7 +4,7 @@ import json
 
 import numpy as np
 import pytest
-from scipy.misc import logsumexp
+from scipy.special import logsumexp
 import torch
 
 from allennlp.common.checks import ConfigurationError

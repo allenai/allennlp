@@ -33,11 +33,13 @@
   "model": {
     "type": "copynet_seq2seq",
     "source_embedder": {
-      "tokens": {
-        "type": "embedding",
-        "vocab_namespace": "source_tokens",
-        "embedding_dim": 25,
-        "trainable": true
+      "token_embedders": {
+        "tokens": {
+          "type": "embedding",
+          "vocab_namespace": "source_tokens",
+          "embedding_dim": 25,
+          "trainable": true
+        }
       }
     },
     "encoder": {
