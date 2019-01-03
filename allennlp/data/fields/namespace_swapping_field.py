@@ -9,9 +9,9 @@ from allennlp.data.tokenizers.token import Token
 from allennlp.data.fields.field import Field
 
 
-class CopyMapField(Field[torch.Tensor]):
+class NamespaceSwappingField(Field[torch.Tensor]):
     """
-    A `CopyMapField` is used to map tokens in one namespace to tokens in another namespace.
+    A ``NamespaceSwappingField`` is used to map tokens in one namespace to tokens in another namespace.
     It is used by seq2seq models with a copy mechanism that copies tokens from the source
     sentence into the target sentence.
 
@@ -47,5 +47,5 @@ class CopyMapField(Field[torch.Tensor]):
         return tensor
 
     @overrides
-    def empty_field(self) -> 'CopyMapField':
-        return CopyMapField([], self._target_namespace)
+    def empty_field(self) -> 'NamespaceSwappingField':
+        return NamespaceSwappingField([], self._target_namespace)

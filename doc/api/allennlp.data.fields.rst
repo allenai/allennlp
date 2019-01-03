@@ -105,8 +105,8 @@ allennlp.data.fields
    :undoc-members:
    :show-inheritance:
 
-.. _copy-map-field:
-.. automodule:: allennlp.data.fields.copy_map_field
+.. _namespace-swapping-field:
+.. automodule:: allennlp.data.fields.namespace_swapping_field
    :members:
    :undoc-members:
    :show-inheritance:

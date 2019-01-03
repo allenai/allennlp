@@ -8,7 +8,7 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
 from allennlp.common.util import START_SYMBOL, END_SYMBOL
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.fields import TextField, ArrayField, MetadataField, CopyMapField
+from allennlp.data.fields import TextField, ArrayField, MetadataField, NamespaceSwappingField
 from allennlp.data.instance import Instance
 from allennlp.data.tokenizers import Token, Tokenizer, WordTokenizer
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
@@ -39,7 +39,7 @@ class CopyNetDatasetReader(DatasetReader):
       have no correlation with the token indices from the corresponding
       vocabulary namespaces.
 
-    - ``source_to_target``: a ``CopyMapField`` that keeps track of the index
+    - ``source_to_target``: a ``NamespaceSwappingField`` that keeps track of the index
       of the target token that matches each token in the source sentence.
       When there is no matching target token, the OOV index is used.
       This will result in a tensor of shape ``(batch_size, trimmed_source_length)``.
@@ -62,7 +62,7 @@ class CopyNetDatasetReader(DatasetReader):
     ----------
     target_namespace : ``str``, required
         The vocab namespace for the targets. This needs to be passed to the dataset reader
-        in order to construct the CopyMapField.
+        in order to construct the NamespaceSwappingField.
     source_tokenizer : ``Tokenizer``, optional
         Tokenizer to use to split the input sequences into words or other kinds of tokens. Defaults
         to ``WordTokenizer()``.
@@ -164,7 +164,7 @@ class CopyNetDatasetReader(DatasetReader):
 
         # For each token in the source sentence, we keep track of the matching token
         # in the target sentence (which will be the OOV symbol if there is no match).
-        source_to_target_field = CopyMapField(tokenized_source[1:-1], self._target_namespace)
+        source_to_target_field = NamespaceSwappingField(tokenized_source[1:-1], self._target_namespace)
 
         meta_fields = {"source_tokens": [x.text for x in tokenized_source[1:-1]]}
         fields_dict = {
