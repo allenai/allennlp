@@ -113,7 +113,11 @@ local BASE_ITERATOR = {
     "type": "multiprocess",
     "base_iterator": BASE_ITERATOR,
     "num_workers": NUM_THREADS,
-    // Note: It seems like this requires a higher ulimit. Why is unclear. I used `ulimit -n 4096`. Could use tuning.
+    // The multiprocess dataset reader and iterator use many file descriptors,
+    // so we need to increase the ulimit depending on the size of this queue.
+    // See https://pytorch.org/docs/stable/multiprocessing.html#file-descriptor-file-descriptor
+    // for a description of the underlying issue. `ulimit -n 4096` has sufficed,
+    // but that number could use tuning.
     "output_queue_size": 500
   },
   "trainer": {
