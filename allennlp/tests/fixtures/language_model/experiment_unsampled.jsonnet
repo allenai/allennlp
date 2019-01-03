@@ -22,7 +22,6 @@
   },
   "model": {
     "type": "language_model",
-    "num_samples": 10,
     "bidirectional": true,
     "text_field_embedder": {
       "allow_unmatched_keys": true,
