@@ -25,6 +25,11 @@ class BidirectionalLanguageModel(ShuffledSentenceLanguageModel):
     embeddings at previous timesteps, and for its backward direction only embeddings
     at subsequent timesteps. If this condition is not met, your language model is
     cheating.
+
+    .. deprecated:: 0.8
+        ``BidirectionalLanguageModel`` was deprecated in version 0.8
+        and will be removed in version 0.10 .
+
     Parameters
     ----------
     vocab: ``Vocabulary``

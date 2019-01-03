@@ -22,6 +22,10 @@ class BidirectionalLanguageModelTokenEmbedder(TokenEmbedder):
     by computing a learned scalar average of the layers from the LM. Typically the LM's weights
     will be fixed, but they can be fine tuned by setting ``requires_grad``.
 
+    .. deprecated:: 0.8
+        ``BidirectionalLanguageModelTokenEmbedder`` was deprecated in version 0.8
+        and will be removed in version 0.10 .
+
     Parameters
     ----------
     archive_file : ``str``, required
