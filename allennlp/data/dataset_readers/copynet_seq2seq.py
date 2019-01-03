@@ -113,7 +113,9 @@ class CopyNetDatasetReader(DatasetReader):
                 not isinstance(self._source_token_indexers["tokens"], SingleIdTokenIndexer):
             raise ConfigurationError("CopyNetDatasetReader expects 'source_token_indexers' to contain "
                                      "a 'single_id' token indexer called 'tokens'.")
-        self._target_token_indexers = {"tokens": SingleIdTokenIndexer(namespace=self._target_namespace)}
+        self._target_token_indexers: Dict[str, TokenIndexer] = {
+                "tokens": SingleIdTokenIndexer(namespace=self._target_namespace)
+        }
 
     @overrides
     def _read(self, file_path):
