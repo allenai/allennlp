@@ -241,8 +241,8 @@ class MultiQAPreprocess():
                     part_num, part_text, part_tokens)
 
     def score_documents(self, tokenized_question, documents):
-        #documents_text = [' '.join([part['text'] for part in doc['parts']]) for doc in documents]
-        documents_text = [doc['text'] for doc in documents]
+        documents_text = [' '.join([part['text'] for part in doc['parts']]) for doc in documents]
+        #documents_text = [doc['text'] for doc in documents]
         tokenized_question_text = [token[0] for token in tokenized_question]
         return self._para_tfidf_scoring.score_paragraphs(tokenized_question_text, documents_text)
 
@@ -388,14 +388,14 @@ class MultiQAPreprocess():
                 tokenized_question = [(t.text, t.idx) for t in tokenized_question]
         
                 # scoring each paragraph for the current question 
-                #document_scores = self.score_documents(tokenized_question, context['documents'])
-                merged_documents = self.merge_documents(context['documents'], qa, \
-                    np.random.permutation(len(context['documents'])))
+                document_scores = self.score_documents(tokenized_question, context['documents'])
+                #merged_documents = self.merge_documents(context['documents'], qa, \
+                #    np.random.permutation(len(context['documents'])))
 
                 # merge paragraphs if needed until we reach max amount of documents... 
                 # (merge is done via tf-idf doc ranking)
-                document_scores = self.score_documents(tokenized_question, merged_documents)
-                #merged_documents = self.merge_documents(context['documents'], qa, np.argsort(document_scores))
+                #document_scores = self.score_documents(tokenized_question, merged_documents)
+                merged_documents = self.merge_documents(context['documents'], qa, np.argsort(document_scores))
 
                 # filtering the merged documents
                 merged_documents = merged_documents[0: self._max_num_docs]
