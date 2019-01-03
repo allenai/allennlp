@@ -1,22 +1,12 @@
-import json
-from typing import Dict, Tuple, TYPE_CHECKING
+from typing import Tuple
 import warnings
 
-import torch
-
-from allennlp.common.checks import ConfigurationError
-from allennlp.data import TokenIndexer, Token
-from allennlp.modules.scalar_mix import ScalarMix
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
-from allennlp.nn.util import remove_sentence_boundaries, get_text_field_mask, add_sentence_boundary_token_ids
-
-# Importing at runtime results in a circular dependency.
-if TYPE_CHECKING:
-    from allennlp.models.bidirectional_lm import BidirectionalLanguageModel
 
 
 @TokenEmbedder.register('bidirectional_lm_token_embedder')
 class BidirectionalLanguageModelTokenEmbedder(TokenEmbedder):
+    # pylint: disable=abstract-method
     """
     Compute a single layer of representations from a bidirectional language model. This is done
     by computing a learned scalar average of the layers from the LM. Typically the LM's weights
@@ -57,12 +47,12 @@ class BidirectionalLanguageModelTokenEmbedder(TokenEmbedder):
                  bos_eos_tokens: Tuple[str, str] = ("<S>", "</S>"),
                  remove_bos_eos: bool = True,
                  requires_grad: bool = False) -> None:
-                warnings.warn('BidirectionalLanguageModelTokenEmbedder is deprecated, '
-                              'please use the ShuffledSentenceLanguageModelTokenEmbedder '
-                              '(registered under "shuffled_sentence_lm_token_embedder").',
+        warnings.warn('BidirectionalLanguageModelTokenEmbedder is deprecated, '
+                      'please use the ShuffledSentenceLanguageModelTokenEmbedder '
+                      '(registered under "shuffled_sentence_lm_token_embedder").',
                       DeprecationWarning)
-                super().__init__(archive_file=archive_file,
-                                 dropout=dropout,
-                                 bos_eos_tokens=bos_eos_tokens,
-                                 remove_bos_eos=remove_bos_eos,
-                                 requires_grad=requires_grad)
+        super().__init__(archive_file=archive_file,
+                         dropout=dropout,
+                         bos_eos_tokens=bos_eos_tokens,
+                         remove_bos_eos=remove_bos_eos,
+                         requires_grad=requires_grad)
