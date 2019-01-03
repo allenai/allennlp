@@ -143,6 +143,7 @@ class MultiQAIterator(DataIterator):
                     estimated_tensor_size = calc_tensor_size(batch + instances_to_add,
                          self._sorting_keys,
                          self.vocab)
+                    logger.info("tensor_size = %d", estimated_tensor_size)
                     if estimated_tensor_size > temp_max_tensor_size:
                         temp_max_tensor_size = estimated_tensor_size
                         logger.info("temp_max_tensor_size = %d",temp_max_tensor_size)
