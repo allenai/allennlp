@@ -141,7 +141,7 @@ class MultiQAIterator(DataIterator):
                 # (for docqa we assume the amount of doucments per question is smaller than batch size)
                 if self._maximum_tensor_size is not None:
                     estimated_tensor_size = calc_tensor_size(batch + instances_to_add,
-                         self._sorting_keys, 
+                         self._sorting_keys,
                          self.vocab)
                     if estimated_tensor_size > temp_max_tensor_size:
                         temp_max_tensor_size = estimated_tensor_size
