@@ -145,12 +145,13 @@ class MultiQAIterator(DataIterator):
                          self.vocab)
                     if estimated_tensor_size > temp_max_tensor_size:
                         temp_max_tensor_size = estimated_tensor_size
-                        logger.info("temp_max_tensor_size = %d",temp_max_tensor_size)
+                        #logger.info("temp_max_tensor_size = %d",temp_max_tensor_size)
 
                 if len(batch) + len(instances_to_add) > self._batch_size or \
                     (self._maximum_tensor_size is not None and estimated_tensor_size > self._maximum_tensor_size):
+                    #logger.info("batch size is = %d", len(batch))
                     yield Batch(batch)
-                    logger.info("batch size is = %d", len(batch))
+
                     batch = instances_to_add
                 else:
                     batch += instances_to_add
