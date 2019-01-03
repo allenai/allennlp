@@ -20,6 +20,7 @@ class BidirectionalLanguageModel(LanguageModel):
     The ``BidirectionalLanguageModel`` applies a bidirectional "contextualizing"
     ``Seq2SeqEncoder`` to uncontextualized embeddings, using a ``SoftmaxLoss``
     module (defined above) to compute the language modeling loss.
+
     It is IMPORTANT that your bidirectional ``Seq2SeqEncoder`` does not do any
     "peeking ahead". That is, for its forward direction it should only consider
     embeddings at previous timesteps, and for its backward direction only embeddings
