@@ -48,7 +48,21 @@ def sort_by_padding(instances: List[Instance],
     instances_with_lengths.sort(key=lambda x: x[0])
     return [instance_with_lengths[-1] for instance_with_lengths in instances_with_lengths]
 
+def calc_tensor_size(instances: List[Instance],
+        sorting_keys: List[Tuple[str, str]],  # pylint: disable=invalid-sequence-index
+        vocab: Vocabulary):
+    estimated_tensor_size = 0
+    for instance in instances:
+        instance_tensor_size = 1
+        instance.index_fields(vocab)
+        padding_lengths = cast(Dict[str, Dict[str, float]], instance.get_padding_lengths())
+        for (field_name, padding_key) in sorting_keys:
+            instance_tensor_size *= padding_lengths[field_name][padding_key]
+        if instance_tensor_size > estimated_tensor_size:
+            estimated_tensor_size =  instance_tensor_size
 
+    return estimated_tensor_size * len(instances) 
+    
 
 @DataIterator.register("multiqa")
 class MultiQAIterator(DataIterator):
@@ -67,6 +81,7 @@ class MultiQAIterator(DataIterator):
                  cache_instances: bool = False,
                  track_epoch: bool = False,
                  all_question_instances_in_batch=False,
+                 maximum_tensor_size: int = None,
                  maximum_samples_per_batch: Tuple[str, int] = None) -> None:
         if not sorting_keys:
             raise ConfigurationError("BucketIterator requires sorting_keys to be specified")
@@ -80,11 +95,13 @@ class MultiQAIterator(DataIterator):
         self._sorting_keys = sorting_keys
         self._padding_noise = padding_noise
         self._biggest_batch_first = biggest_batch_first
+        self._maximum_tensor_size = maximum_tensor_size
         self._all_question_instances_in_batch = all_question_instances_in_batch
 
 
     @overrides
     def _create_batches(self, instances: Iterable[Instance], shuffle: bool) -> Iterable[Batch]:
+        temp_max_tensor_size = 0
         for instance_list in self._memory_sized_lists(instances):
             instance_list = sorted(instance_list,key=lambda x: x.fields['metadata'].metadata['question_id'])
             intances_question_id = [instance.fields['metadata'].metadata['question_id'] for instance in instance_list]
@@ -122,7 +139,16 @@ class MultiQAIterator(DataIterator):
 
                 # enforcing batch size
                 # (for docqa we assume the amount of doucments per question is smaller than batch size)
-                if len(batch) + len(instances_to_add) > self._batch_size:
+                if self._maximum_tensor_size is not None:
+                    estimated_tensor_size = calc_tensor_size(batch + instances_to_add,
+                         self._sorting_keys, 
+                         self.vocab)
+                    if estimated_tensor_size > temp_max_tensor_size:
+                        temp_max_tensor_size = estimated_tensor_size
+                        logger.info("temp_max_tensor_size = %d",temp_max_tensor_size)
+
+                if len(batch) + len(instances_to_add) > self._batch_size or \
+                    (self._maximum_tensor_size is not None and estimated_tensor_size > self._maximum_tensor_size):
                     yield Batch(batch)
                     batch = instances_to_add
                 else:
