@@ -150,6 +150,7 @@ class MultiQAIterator(DataIterator):
                 if len(batch) + len(instances_to_add) > self._batch_size or \
                     (self._maximum_tensor_size is not None and estimated_tensor_size > self._maximum_tensor_size):
                     yield Batch(batch)
+                    logger.info("batch size is = %d", len(batch))
                     batch = instances_to_add
                 else:
                     batch += instances_to_add
