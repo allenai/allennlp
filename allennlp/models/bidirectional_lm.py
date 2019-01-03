@@ -45,7 +45,12 @@ class _SoftmaxLoss(torch.nn.Module):
         return torch.nn.functional.nll_loss(probs, targets.long(), reduction="sum")
 
 
-@Model.register('bidirectional-language-model')
+@Model.register('bidirectional-language-model',
+                deprecation_message=('The "bidirectional-language-model" name was '
+                                     'deprecated in version 0.8 and will be removed'
+                                     'in version 0.10 . '
+                                     'Use "bidirectional_language_model" instead.'))
+@Model.register('bidirectional_language_model')
 class BidirectionalLanguageModel(Model):
     """
     The ``BidirectionalLanguageModel`` applies a bidirectional "contextualizing"
