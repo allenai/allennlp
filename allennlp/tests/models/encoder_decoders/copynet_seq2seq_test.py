@@ -22,6 +22,7 @@ class CopyNetTest(ModelTestCase):
         assert vocab.get_vocab_size(self.model._target_namespace) == 8
         assert "hello" not in vocab._token_to_index[self.model._target_namespace]
         assert "world" not in vocab._token_to_index[self.model._target_namespace]
+        assert "@COPY@" in vocab._token_to_index["target_tokens"]
 
     def test_train_instances(self):
         inputs = self.instances[0].as_tensor_dict()

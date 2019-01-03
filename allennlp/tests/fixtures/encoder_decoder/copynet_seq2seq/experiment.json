@@ -23,10 +23,7 @@
       "source_tokens": "allennlp/tests/fixtures/data/copynet/source_vocab.txt",
       "target_tokens": "allennlp/tests/fixtures/data/copynet/target_vocab.txt"
     },
-    "only_include_pretrained_words": true,
-    "tokens_to_add": {
-      "target_tokens": ["@COPY@"]
-    }
+    "only_include_pretrained_words": true
   },
   "train_data_path": "allennlp/tests/fixtures/data/copynet/copyover.tsv",
   "validation_data_path": "allennlp/tests/fixtures/data/copynet/copyover.tsv",
