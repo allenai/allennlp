@@ -6,28 +6,35 @@ This document describes how to train and use a transformer-based version of ELMo
 
 1. Obtain training data from http://www.statmt.org/lm-benchmark/1-billion-word-language-modeling-benchmark-r13output.tar.gz.
     ```
-    export BIDIRECTIONAL_LM_DATA_PATH='/your/path/to/1-billion-word-language-modeling-benchmark-r13output'
+    export BIDIRECTIONAL_LM_DATA_PATH=$PWD'/1-billion-word-language-modeling-benchmark-r13output'
     export BIDIRECTIONAL_LM_TRAIN_PATH=$BIDIRECTIONAL_LM_DATA_PATH'/training-monolingual.tokenized.shuffled/*'
     ```
 2. Obtain vocab.
     ```
-    mkdir /your/path/to/vocabulary
-    export BIDIRECTIONAL_LM_VOCAB_PATH=/your/path/to/vocabulary
+    mkdir vocabulary
+    export BIDIRECTIONAL_LM_VOCAB_PATH=$PWD'/vocabulary'
     cd $BIDIRECTIONAL_LM_VOCAB_PATH
     aws --no-sign-request s3 cp s3://allennlp/models/elmo/vocab-2016-09-10.txt .
     cat vocab-2016-09-10.txt | sed 's/<UNK>/@@UNKNOWN@@/' > tokens.txt
+    # Avoid creating garbage namespace.
     rm vocab-2016-09-10.txt
     echo '*labels\n*tags' > non_padded_namespaces.txt
     ```
-3. Run training.
+3. Run training. Note: `training_config` refers to [this directory](../../training_config).
     ```
+    # The multiprocess dataset reader and iterator use many file descriptors,
+    # so we increase the relevant ulimit here to help.
+    # See https://pytorch.org/docs/stable/multiprocessing.html#file-descriptor-file-descriptor
+    # for a description of the underlying issue.
     ulimit -n 4096
-    bin/allennlp train training_config/bidirectional_lm.jsonnet --serialization-dir $PATH_TO_SERIALIZATION_DIR
+    # Location of repo for training_config.
+    cd allennlp
+    allennlp train training_config/bidirectional_lm.jsonnet --serialization-dir output_path
     ```
 4. Wait. This will take days. (Example results here are from a model trained for just 4 epochs.)
 5. Evaluate. There is one gotcha here, which is that we discard 3 sentences for being too long (otherwise we'd exhaust GPU memory). If we wanted to report this number formally (in a paper or similar), we'd need to handle this differently.
     ```
-    bin/allennlp evaluate --cuda-device 0 -o '{"iterator": {"base_iterator": {"maximum_samples_per_batch": ["num_tokens", 500] }}}' $PATH_TO_SERIALIZATION_DIR/model.tar.gz $BIDIRECTIONAL_LM_DATA_PATH/heldout-monolingual.tokenized.shuffled/news.en-00000-of-00100
+    allennlp evaluate --cuda-device 0 -o '{"iterator": {"base_iterator": {"maximum_samples_per_batch": ["num_tokens", 500] }}}' output_path/model.tar.gz $BIDIRECTIONAL_LM_DATA_PATH/heldout-monolingual.tokenized.shuffled/news.en-00000-of-00100
     ```
 
     A model trained for 4 epochs gives:
