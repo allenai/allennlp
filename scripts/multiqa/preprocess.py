@@ -431,7 +431,7 @@ class MultiQAPreprocess():
                     instance.update(document)
                     preprocessed_instances.append(instance)
 
-        print("\nFraction of answer that were filtered %f" % (float(self._answers_removed) / self._total_answers))
+        #print("\nFraction of answer that were filtered %f" % (float(self._answers_removed) / self._total_answers))
 
         return preprocessed_instances, all_qa_count, skipped_qa_count
 
@@ -567,7 +567,7 @@ def main():
         with zipfile.ZipFile(temp_name, "w", zipfile.ZIP_DEFLATED) as zip_file:
             zip_file.writestr(temp_name, json.dumps(preproc_dataset))
         s3 = boto3.client('s3')
-        s3.upload_file(temp_name, bucketName, outPutname)
+        s3.upload_file(temp_name, bucketName, outPutname, ExtraArgs={'ACL':'public-read'})
     else:
         output_dir = '/'.join(args.output_file.split('/')[0:-1])
         filename = args.output_file.split('/')[-1]
