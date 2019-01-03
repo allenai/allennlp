@@ -27,10 +27,6 @@ class BidirectionalLanguageModel(LanguageModel):
     at subsequent timesteps. If this condition is not met, your language model is
     cheating.
 
-    .. deprecated:: 0.8
-        ``BidirectionalLanguageModel`` was deprecated in version 0.8
-        and will be removed in version 0.10 .
-
     Parameters
     ----------
     vocab: ``Vocabulary``
@@ -62,10 +58,6 @@ class BidirectionalLanguageModel(LanguageModel):
                  num_samples: int = None,
                  sparse_embeddings: bool = False,
                  initializer: InitializerApplicator = None) -> None:
-        warnings.warn('BidirectionalLanguageModel is deprecated, '
-                      'please use the LanguageModel (registered under '
-                      '"language_model") with bidirectional=True, ',
-                      DeprecationWarning)
         super().__init__(vocab=vocab,
                          text_field_embedder=text_field_embedder,
                          contextualizer=contextualizer,
