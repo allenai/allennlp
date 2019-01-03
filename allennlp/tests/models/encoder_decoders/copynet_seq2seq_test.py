@@ -1,13 +1,9 @@
 # pylint: disable=protected-access,not-callable
 
-import json
-
 import numpy as np
-import pytest
 from scipy.special import logsumexp
 import torch
 
-from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import ModelTestCase
 
 
@@ -26,11 +22,6 @@ class CopyNetTest(ModelTestCase):
         assert vocab.get_vocab_size(self.model._target_namespace) == 8
         assert "hello" not in vocab._token_to_index[self.model._target_namespace]
         assert "world" not in vocab._token_to_index[self.model._target_namespace]
-
-    def test_missing_copy_token_raises(self):
-        param_overrides = json.dumps({"vocabulary": {"tokens_to_add": None}})
-        with pytest.raises(ConfigurationError):
-            self.ensure_model_can_train_save_and_load(self.param_file, overrides=param_overrides)
 
     def test_train_instances(self):
         inputs = self.instances[0].as_tensor_dict()

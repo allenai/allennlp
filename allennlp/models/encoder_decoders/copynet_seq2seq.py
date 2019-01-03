@@ -7,7 +7,6 @@ import torch
 from torch.nn.modules.linear import Linear
 from torch.nn.modules.rnn import LSTMCell
 
-from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import START_SYMBOL, END_SYMBOL
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.model import Model
@@ -94,11 +93,7 @@ class CopyNetSeq2Seq(Model):
         self._end_index = self.vocab.get_token_index(END_SYMBOL, self._target_namespace)
         self._oov_index = self.vocab.get_token_index(self.vocab._oov_token, self._target_namespace)  # pylint: disable=protected-access
         self._pad_index = self.vocab.get_token_index(self.vocab._padding_token, self._target_namespace)  # pylint: disable=protected-access
-        self._copy_index = self.vocab.get_token_index(copy_token, self._target_namespace)
-        if self._copy_index == self._oov_index:
-            raise ConfigurationError(f"Special copy token {copy_token} missing from target vocab namespace. "
-                                     f"You can ensure this token is added to the target namespace with the "
-                                     f"vocabulary parameter 'tokens_to_add'.")
+        self._copy_index = self.vocab.add_token_to_namespace(copy_token, self._target_namespace)
 
         self._tensor_based_metric = tensor_based_metric or \
             BLEU(exclude_indices={self._pad_index, self._end_index, self._start_index})
