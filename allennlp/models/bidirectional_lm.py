@@ -1,5 +1,4 @@
 from typing import Union
-import warnings
 
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.language_model import LanguageModel
