@@ -543,11 +543,11 @@ def main():
     
     # rearranging instances for iterator (we don't use padding noise here, it will be use in the multiqa iterator.)
     ## TODO change question_text to question_tokens
-    if False:
-        sorting_keys = ['question_text','tokenized_paragraph']
+    if True:
+        sorting_keys = ['question_tokens','tokens']
         instances_with_lengths = []
         for instance in preprocessed_instances:
-            padding_lengths = {key:len(instance[key]) for key in instance.keys()}
+            padding_lengths = {key:len(instance[key]) for key in sorting_keys}
             instance_with_lengths = ([padding_lengths[field_name] for field_name in sorting_keys], instance)
             instances_with_lengths.append(instance_with_lengths)
         instances_with_lengths.sort(key=lambda x: x[0])
