@@ -13,7 +13,7 @@ allennlp.modules.token_embedders
 * :ref:`ELMoTokenEmbedder<elmo-token-embedder>`
 * :ref:`OpenaiTransformerEmbedder<openai-transformer-embedder>`
 * :ref:`BertTokenEmbedder<bert-token-embedder>`
-* :ref:`ShuffledSentenceLanguageModelTokenEmbedder<shuffled-sentence-language-model-token-embedder>`
+* :ref:`LanguageModelTokenEmbedder<language-model-token-embedder>`
 
 .. _token-embedder:
 .. automodule:: allennlp.modules.token_embedders.token_embedder
@@ -51,8 +51,8 @@ allennlp.modules.token_embedders
    :undoc-members:
    :show-inheritance:
 
-.. _shuffled-sentence-language-model-token-embedder:
-.. automodule:: allennlp.modules.token_embedders.shuffled_sentence_language_model_token_embedder
+.. _language-model-token-embedder:
+.. automodule:: allennlp.modules.token_embedders.language_model_token_embedder
    :members:
    :undoc-members:
    :show-inheritance:

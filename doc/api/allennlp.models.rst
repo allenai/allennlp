@@ -25,5 +25,5 @@ allennlp.models
   allennlp.models.reading_comprehension
   allennlp.models.semantic_parsing
   allennlp.models.semantic_role_labeler
-  allennlp.models.shuffled_sentence_lm
+  allennlp.models.language_model
   allennlp.models.simple_tagger

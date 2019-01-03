@@ -61,7 +61,7 @@ local BASE_ITERATOR = {
       // "min_count": {"source_tokens": 3}
   },
   "model": {
-    "type": "shuffled_sentence_language_model",
+    "type": "language_model",
     "bidirectional": true,
     "num_samples": 8192,
     "sparse_embeddings": true,
