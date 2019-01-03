@@ -2,7 +2,7 @@ from typing import Union
 import warnings
 
 from allennlp.data.vocabulary import Vocabulary
-from allennlp.models.shuffled_sentence_lm import ShuffledSentenceLanguageModel
+from allennlp.models.language_model import LanguageModel
 from allennlp.models.model import Model
 from allennlp.modules.text_field_embedders import TextFieldEmbedder
 from allennlp.modules.seq2seq_encoders import Seq2SeqEncoder
@@ -15,7 +15,7 @@ from allennlp.nn import InitializerApplicator
                                      'in version 0.10 . '
                                      'Use "bidirectional_language_model" instead.'))
 @Model.register('bidirectional_language_model')
-class BidirectionalLanguageModel(ShuffledSentenceLanguageModel):
+class BidirectionalLanguageModel(LanguageModel):
     """
     The ``BidirectionalLanguageModel`` applies a bidirectional "contextualizing"
     ``Seq2SeqEncoder`` to uncontextualized embeddings, using a ``SoftmaxLoss``
@@ -62,8 +62,8 @@ class BidirectionalLanguageModel(ShuffledSentenceLanguageModel):
                  sparse_embeddings: bool = False,
                  initializer: InitializerApplicator = None) -> None:
         warnings.warn('BidirectionalLanguageModel is deprecated, '
-                      'please use the ShuffledSentenceLanguageModel (registered under '
-                      '"shuffled_sentence_language_model") with bidirectional=True, ',
+                      'please use the LanguageModel (registered under '
+                      '"language_model") with bidirectional=True, ',
                       DeprecationWarning)
         super().__init__(vocab=vocab,
                          text_field_embedder=text_field_embedder,

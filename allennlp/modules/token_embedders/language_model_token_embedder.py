@@ -11,21 +11,21 @@ from allennlp.nn.util import remove_sentence_boundaries, get_text_field_mask, ad
 
 # Importing at runtime results in a circular dependency.
 if TYPE_CHECKING:
-    from allennlp.models.shuffled_sentence_lm import ShuffledSentenceLanguageModel
+    from allennlp.models.language_model import LanguageModel
 
 
-@TokenEmbedder.register('shuffled_sentence_lm_token_embedder')
-class ShuffledSentenceLanguageModelTokenEmbedder(TokenEmbedder):
+@TokenEmbedder.register('language_model_token_embedder')
+class LanguageModelTokenEmbedder(TokenEmbedder):
     """
     Compute a single layer of representations from a (optionally bidirectional)
-    shuffled sentence language model. This is done by computing a learned scalar
+    language model. This is done by computing a learned scalar
     average of the layers from the LM. Typically the LM's weights
     will be fixed, but they can be fine tuned by setting ``requires_grad``.
 
     Parameters
     ----------
     archive_file : ``str``, required
-        An archive file, typically model.tar.gz, from a ShuffledSentenceLanguageModel.
+        An archive file, typically model.tar.gz, from a LanguageModel.
         The contextualizer used by the LM must satisfy two requirements:
 
         1. It must have a num_layers field.
@@ -67,7 +67,7 @@ class ShuffledSentenceLanguageModelTokenEmbedder(TokenEmbedder):
         from allennlp.models.archival import load_archive
         # Load LM and the associated config.
         archive = load_archive(archive_file, overrides=json.dumps(overrides))
-        self._lm: ShuffledSentenceLanguageModel = archive.model
+        self._lm: LanguageModel = archive.model
         self._lm.delete_softmax()
         config = archive.config
         dict_config = config.as_dict(quiet=True)
@@ -80,7 +80,7 @@ class ShuffledSentenceLanguageModelTokenEmbedder(TokenEmbedder):
             # embedded indices.
             #
             # Note: We only care about embedded indices. This does not include "tokens" which
-            # is just used to compute the loss in ShuffledSentenceLanguageModel.
+            # is just used to compute the loss in LanguageModel.
             raise ConfigurationError(f"LM from {archive_file} trained with multiple embedders!")
         if "embedder_to_indexer_map" in text_field_embedder:
             # Similarly we don't support multiple indexers per embedder.

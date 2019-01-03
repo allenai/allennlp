@@ -45,10 +45,10 @@ class _SoftmaxLoss(torch.nn.Module):
         return torch.nn.functional.nll_loss(probs, targets.long(), reduction="sum")
 
 
-@Model.register('shuffled_sentence_language_model')
-class ShuffledSentenceLanguageModel(Model):
+@Model.register('language_model')
+class LanguageModel(Model):
     """
-    The ``ShuffledSentenceLanguageModel`` applies a "contextualizing"
+    The ``LanguageModel`` applies a "contextualizing"
     ``Seq2SeqEncoder`` to uncontextualized embeddings, using a ``SoftmaxLoss``
     module (defined above) to compute the language modeling loss.
 

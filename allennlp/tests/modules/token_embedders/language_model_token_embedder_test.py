@@ -3,16 +3,16 @@ from allennlp.common.testing import ModelTestCase
 from allennlp.data.dataset import Batch
 
 
-class TestShuffledSentenceLanguageModelTokenEmbedder(ModelTestCase):
+class TestLanguageModelTokenEmbedder(ModelTestCase):
     def setUp(self):
         super().setUp()
-        self.set_up_model(self.FIXTURES_ROOT / 'shuffled_sentence_lm' / 'characters_token_embedder.json',
+        self.set_up_model(self.FIXTURES_ROOT / 'language_model' / 'characters_token_embedder.json',
                           self.FIXTURES_ROOT / 'data' / 'conll2003.txt')
 
-    def test_tagger_with_shuffled_sentence_lm_token_embedder_can_train_save_and_load(self):
+    def test_tagger_with_language_model_token_embedder_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
 
-    def test_tagger_with_shuffled_sentence_lm_token_embedder_forward_pass_runs_correctly(self):
+    def test_tagger_with_language_model_token_embedder_forward_pass_runs_correctly(self):
         dataset = Batch(self.instances)
         dataset.index_instances(self.vocab)
         training_tensors = dataset.as_tensor_dict()
@@ -26,9 +26,9 @@ class TestShuffledSentenceLanguageModelTokenEmbedder(ModelTestCase):
                 tag = self.model.vocab.get_token_from_index(tag_id, namespace="labels")
                 assert tag in {'O', 'I-ORG', 'I-PER', 'I-LOC'}
 
-class TestShuffledSentenceLanguageModelTokenEmbedderWithoutBosEos(TestShuffledSentenceLanguageModelTokenEmbedder):
+class TestLanguageModelTokenEmbedderWithoutBosEos(TestLanguageModelTokenEmbedder):
     def setUp(self):
         super().setUp()
-        self.set_up_model(self.FIXTURES_ROOT / 'shuffled_sentence_lm' /
+        self.set_up_model(self.FIXTURES_ROOT / 'language_model' /
                           'characters_token_embedder_without_bos_eos.jsonnet',
                           self.FIXTURES_ROOT / 'data' / 'conll2003.txt')

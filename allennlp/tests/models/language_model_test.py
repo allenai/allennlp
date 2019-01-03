@@ -7,14 +7,14 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.models import Model
 
-class TestUnidirectionalShuffledSentenceLM(ModelTestCase):
+class TestUnidirectionalLanguageModel(ModelTestCase):
     def setUp(self):
         super().setUp()
-        self.set_up_model(self.FIXTURES_ROOT / 'shuffled_sentence_lm' / 'experiment_unidirectional.jsonnet',
-                          self.FIXTURES_ROOT / 'shuffled_sentence_lm' / 'sentences.txt')
+        self.set_up_model(self.FIXTURES_ROOT / 'language_model' / 'experiment_unidirectional.jsonnet',
+                          self.FIXTURES_ROOT / 'language_model' / 'sentences.txt')
 
     # pylint: disable=no-member
-    def test_unidirectional_shuffled_sentence_lm_can_train_save_and_load(self):
+    def test_unidirectional_language_model_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
 
     def test_batch_predictions_are_consistent(self):
@@ -45,22 +45,22 @@ class TestUnidirectionalShuffledSentenceLM(ModelTestCase):
         with pytest.raises(ConfigurationError):
             Model.from_params(vocab=self.vocab, params=params.get("model"))
 
-class TestUnidirectionalShuffledSentenceLMUnsampled(TestUnidirectionalShuffledSentenceLM):
+class TestUnidirectionalLanguageModelUnsampled(TestUnidirectionalLanguageModel):
     def setUp(self):
         super().setUp()
-        self.set_up_model(self.FIXTURES_ROOT / 'shuffled_sentence_lm' /
+        self.set_up_model(self.FIXTURES_ROOT / 'language_model' /
                           'experiment_unidirectional_unsampled.jsonnet',
-                          self.FIXTURES_ROOT / 'shuffled_sentence_lm' / 'sentences.txt')
+                          self.FIXTURES_ROOT / 'language_model' / 'sentences.txt')
 
-class TestUnidirectionalShuffledSentenceLMTransformer(TestUnidirectionalShuffledSentenceLM):
+class TestUnidirectionalLanguageModelTransformer(TestUnidirectionalLanguageModel):
     def setUp(self):
         super().setUp()
-        self.set_up_model(self.FIXTURES_ROOT / 'shuffled_sentence_lm' /
+        self.set_up_model(self.FIXTURES_ROOT / 'language_model' /
                           'experiment_unidirectional_transformer.jsonnet',
-                          self.FIXTURES_ROOT / 'shuffled_sentence_lm' / 'sentences.txt')
+                          self.FIXTURES_ROOT / 'language_model' / 'sentences.txt')
 
     # pylint: disable=no-member
-    def test_unidirectional_shuffled_sentence_lm_can_train_save_and_load(self):
+    def test_unidirectional_language_model_can_train_save_and_load(self):
         # Ignore layer 0 feedforward layer norm parameters, since
         # they are not used.
         self.ensure_model_can_train_save_and_load(
@@ -85,14 +85,14 @@ class TestUnidirectionalShuffledSentenceLMTransformer(TestUnidirectionalShuffled
         np.testing.assert_almost_equal(loss, forward_loss, decimal=3)
         assert result["backward_loss"] is None
 
-class TestBidirectionalShuffledSentenceLM(ModelTestCase):
+class TestBidirectionalLanguageModel(ModelTestCase):
     def setUp(self):
         super().setUp()
-        self.set_up_model(self.FIXTURES_ROOT / 'shuffled_sentence_lm' / 'experiment.jsonnet',
-                          self.FIXTURES_ROOT / 'shuffled_sentence_lm' / 'sentences.txt')
+        self.set_up_model(self.FIXTURES_ROOT / 'language_model' / 'experiment.jsonnet',
+                          self.FIXTURES_ROOT / 'language_model' / 'sentences.txt')
 
     # pylint: disable=no-member
-    def test_bidirectional_shuffled_sentence_lm_can_train_save_and_load(self):
+    def test_bidirectional_language_model_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
 
     def test_batch_predictions_are_consistent(self):
@@ -124,17 +124,17 @@ class TestBidirectionalShuffledSentenceLM(ModelTestCase):
             Model.from_params(vocab=self.vocab, params=params.get("model"))
 
 
-class TestBidirectionalShuffledSentenceLMUnsampled(TestBidirectionalShuffledSentenceLM):
+class TestBidirectionalLanguageModelUnsampled(TestBidirectionalLanguageModel):
     def setUp(self):
         super().setUp()
-        self.set_up_model(self.FIXTURES_ROOT / 'shuffled_sentence_lm' / 'experiment_unsampled.jsonnet',
-                          self.FIXTURES_ROOT / 'shuffled_sentence_lm' / 'sentences.txt')
+        self.set_up_model(self.FIXTURES_ROOT / 'language_model' / 'experiment_unsampled.jsonnet',
+                          self.FIXTURES_ROOT / 'language_model' / 'sentences.txt')
 
-class TestBidirectionalShuffledSentenceLMTransformer(TestBidirectionalShuffledSentenceLM):
+class TestBidirectionalLanguageModelTransformer(TestBidirectionalLanguageModel):
     def setUp(self):
         super().setUp()
-        self.set_up_model(self.FIXTURES_ROOT / 'shuffled_sentence_lm' / 'experiment_transformer.jsonnet',
-                          self.FIXTURES_ROOT / 'shuffled_sentence_lm' / 'sentences.txt')
+        self.set_up_model(self.FIXTURES_ROOT / 'language_model' / 'experiment_transformer.jsonnet',
+                          self.FIXTURES_ROOT / 'language_model' / 'sentences.txt')
 
     def test_forward_pass_runs_correctly(self):
         training_tensors = self.dataset.as_tensor_dict()

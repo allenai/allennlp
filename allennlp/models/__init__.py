@@ -27,4 +27,4 @@ from allennlp.models.esim import ESIM
 from allennlp.models.bimpm import BiMpm
 from allennlp.models.graph_parser import GraphParser
 from allennlp.models.bidirectional_lm import BidirectionalLanguageModel
-from allennlp.models.shuffled_sentence_lm import ShuffledSentenceLanguageModel
+from allennlp.models.language_model import LanguageModel

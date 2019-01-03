@@ -12,8 +12,8 @@
     "start_tokens": ["<S>"],
     "end_tokens": ["</S>"]
   },
-  "train_data_path": "allennlp/tests/fixtures/shuffled_sentence_lm/sentences.txt",
-  "validation_data_path": "allennlp/tests/fixtures/shuffled_sentence_lm/sentences.txt",
+  "train_data_path": "allennlp/tests/fixtures/language_model/sentences.txt",
+  "validation_data_path": "allennlp/tests/fixtures/language_model/sentences.txt",
   "vocabulary": {
       "tokens_to_add": {
           "tokens": ["<S>", "</S>"],
@@ -21,7 +21,7 @@
       },
   },
   "model": {
-    "type": "shuffled_sentence_language_model",
+    "type": "language_model",
     "num_samples": 10,
     "bidirectional": true,
     "text_field_embedder": {

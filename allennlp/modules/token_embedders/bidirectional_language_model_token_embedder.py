@@ -48,8 +48,8 @@ class BidirectionalLanguageModelTokenEmbedder(TokenEmbedder):
                  remove_bos_eos: bool = True,
                  requires_grad: bool = False) -> None:
         warnings.warn('BidirectionalLanguageModelTokenEmbedder is deprecated, '
-                      'please use the ShuffledSentenceLanguageModelTokenEmbedder '
-                      '(registered under "shuffled_sentence_lm_token_embedder").',
+                      'please use the LanguageModelTokenEmbedder '
+                      '(registered under "language_model_token_embedder").',
                       DeprecationWarning)
         super().__init__(archive_file=archive_file,
                          dropout=dropout,

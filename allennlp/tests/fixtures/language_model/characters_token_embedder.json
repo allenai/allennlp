@@ -23,8 +23,8 @@
             "embedding_dim": 50
           },
           "elmo": {
-            "type": "shuffled_sentence_lm_token_embedder",
-            "archive_file": "allennlp/tests/fixtures/shuffled_sentence_lm/model.tar.gz",
+            "type": "language_model_token_embedder",
+            "archive_file": "allennlp/tests/fixtures/language_model/model.tar.gz",
             "dropout": 0.2,
             "bos_eos_tokens": ["<S>", "</S>"],
             "remove_bos_eos": true,

@@ -11,5 +11,5 @@ from allennlp.modules.token_embedders.openai_transformer_embedder import OpenaiT
 from allennlp.modules.token_embedders.bert_token_embedder import BertEmbedder, PretrainedBertEmbedder
 from allennlp.modules.token_embedders.bidirectional_language_model_token_embedder import \
         BidirectionalLanguageModelTokenEmbedder
-from allennlp.modules.token_embedders.shuffled_sentence_language_model_token_embedder import \
-        ShuffledSentenceLanguageModelTokenEmbedder
+from allennlp.modules.token_embedders.language_model_token_embedder import \
+        LanguageModelTokenEmbedder
