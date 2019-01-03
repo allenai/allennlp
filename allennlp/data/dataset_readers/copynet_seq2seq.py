@@ -56,6 +56,8 @@ class CopyNetDatasetReader(DatasetReader):
     - ``target_token_ids``: an ``ArrayField`` of size ``(batch_size, target_length)``.
       This is calculated in the same way as ``source_token_ids``.
 
+    See the "Notes" section below for a description of how these fields are used.
+
     Parameters
     ----------
     target_namespace : ``str``, required
@@ -87,6 +89,13 @@ class CopyNetDatasetReader(DatasetReader):
 
     In the context where there is a ``batch_size`` dimension, the above refer
     to the maximum of their individual values across the batch.
+
+    In regards to the fields in an ``Instance`` produced by this dataset reader,
+    ``source_token_ids`` and ``target_token_ids`` are primarily used during training
+    to determine whether a target token is copied from a source token (or multiple matching
+    source tokens), while ``source_to_target`` is primarily used during prediction
+    to combine the copy scores of source tokens with the generation scores for matching
+    tokens in the target namespace.
     """
 
     def __init__(self,
@@ -94,14 +103,17 @@ class CopyNetDatasetReader(DatasetReader):
                  source_tokenizer: Tokenizer = None,
                  target_tokenizer: Tokenizer = None,
                  source_token_indexers: Dict[str, TokenIndexer] = None,
-                 target_token_indexers: Dict[str, TokenIndexer] = None,
                  lazy: bool = False) -> None:
         super().__init__(lazy)
         self._target_namespace = target_namespace
         self._source_tokenizer = source_tokenizer or WordTokenizer()
         self._target_tokenizer = target_tokenizer or self._source_tokenizer
         self._source_token_indexers = source_token_indexers or {"tokens": SingleIdTokenIndexer()}
-        self._target_token_indexers = target_token_indexers or self._source_token_indexers
+        if "tokens" not in self._source_token_indexers or \
+                not isinstance(self._source_token_indexers["tokens"], SingleIdTokenIndexer):
+            raise ConfigurationError("CopyNetDatasetReader expects 'source_token_indexers' to contain "
+                                     "a 'single_id' token indexer called 'tokens'.")
+        self._target_token_indexers = {"tokens": SingleIdTokenIndexer(namespace=self._target_namespace)}
 
     @overrides
     def _read(self, file_path):
@@ -113,7 +125,7 @@ class CopyNetDatasetReader(DatasetReader):
                     continue
                 line_parts = line.split('\t')
                 if len(line_parts) != 2:
-                    raise ConfigurationError("Invalid line format: %s (line number %d)" % (line, line_num + 1))
+                    raise RuntimeError("Invalid line format: %s (line number %d)" % (line, line_num + 1))
                 source_sequence, target_sequence = line_parts
                 if not source_sequence:
                     continue

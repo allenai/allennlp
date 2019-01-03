@@ -16,12 +16,6 @@
         "type": "single_id",
         "namespace": "source_tokens"
       }
-    },
-    "target_token_indexers": {
-      "tokens": {
-        "type": "single_id",
-        "namespace": "target_tokens"
-      }
     }
   },
   "vocabulary": {
