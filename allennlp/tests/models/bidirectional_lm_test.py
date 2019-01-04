@@ -6,6 +6,9 @@ from allennlp.common.testing import ModelTestCase
 class TestBidirectionalLanguageModel(ModelTestCase):
     def setUp(self):
         super().setUp()
+
+        self.expected_embedding_shape = (2, 8, 14)
+
         self.set_up_model(self.FIXTURES_ROOT / 'language_model' / 'experiment_bidirectional.jsonnet',
                           self.FIXTURES_ROOT / 'language_model' / 'sentences.txt')
 
@@ -24,13 +27,13 @@ class TestBidirectionalLanguageModel(ModelTestCase):
 
         # The model should preserve the BOS / EOS tokens.
         embeddings = result["lm_embeddings"]
-        assert tuple(embeddings.shape) == (2, 8, 14)
+        assert tuple(embeddings.shape) == self.expected_embedding_shape
 
         loss = result["loss"].item()
         forward_loss = result["forward_loss"].item()
         backward_loss = result["backward_loss"].item()
-
-        np.testing.assert_almost_equal(loss, (forward_loss + backward_loss) / 2, decimal=3)
+        np.testing.assert_almost_equal(loss, (forward_loss + backward_loss) / 2,
+                                       decimal=3)
 
 class TestBidirectionalLanguageModelUnsampled(TestBidirectionalLanguageModel):
     def setUp(self):
