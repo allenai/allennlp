@@ -6,8 +6,8 @@ from allennlp.common.testing import ModelTestCase
 class TestBidirectionalLM(ModelTestCase):
     def setUp(self):
         super().setUp()
-        self.set_up_model(self.FIXTURES_ROOT / 'bidirectional_lm' / 'experiment.jsonnet',
-                          self.FIXTURES_ROOT / 'bidirectional_lm' / 'sentences.txt')
+        self.set_up_model(self.FIXTURES_ROOT / 'language_model' / 'experiment_bidirectional.jsonnet',
+                          self.FIXTURES_ROOT / 'language_model' / 'sentences.txt')
 
     def test_bidirectional_lm_can_train_save_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)

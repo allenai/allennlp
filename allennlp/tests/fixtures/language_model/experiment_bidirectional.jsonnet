@@ -1,4 +1,4 @@
-local config = import "experiment_unsampled.jsonnet";
+local config = import "experiment_bidirectional_unsampled.jsonnet";
 
 config + {
   "model"+: {
