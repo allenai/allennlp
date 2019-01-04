@@ -55,13 +55,13 @@ import matplotlib; matplotlib.use('Agg') # pylint: disable=multiple-statements,w
 import matplotlib.pyplot as plt # pylint: disablewrong-import-position
 
 from allennlp.commands.subcommand import Subcommand # pylint: disablewrong-import-position
-from allennlp.commands.train import datasets_from_params # pylint: disablewrong-import-position
 from allennlp.common.checks import ConfigurationError, check_for_gpu # pylint: disablewrong-import-position
 from allennlp.common import Params, Tqdm # pylint: disablewrong-import-position
 from allennlp.common.util import prepare_environment # pylint: disablewrong-import-position
 from allennlp.data import Vocabulary, DataIterator # pylint: disablewrong-import-position
 from allennlp.models import Model # pylint: disablewrong-import-position
 from allennlp.training import Trainer # pylint: disablewrong-import-position
+from allennlp.training.util import datasets_from_params # pylint: disablewrong-import-position
 
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name

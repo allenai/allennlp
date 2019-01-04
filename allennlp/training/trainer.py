@@ -24,136 +24,19 @@ from torch.nn.parallel.scatter_gather import gather
 from tensorboardX import SummaryWriter
 
 from allennlp.common import Params, Registrable
-from allennlp.common.checks import ConfigurationError
-from allennlp.common.util import dump_metrics, gpu_memory_mb, parse_cuda_device, peak_memory_mb, scatter_kwargs
+from allennlp.common.checks import ConfigurationError, check_for_gpu
+from allennlp.common.util import dump_metrics, gpu_memory_mb, parse_cuda_device, peak_memory_mb, scatter_kwargs, get_frozen_and_tunable_parameter_names
 from allennlp.common.tqdm import Tqdm
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator
+from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.model import Model
 from allennlp.nn import util
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
 from allennlp.training.optimizers import Optimizer
+from allennlp.training.util import TensorboardWriter, sparse_clip_norm, time_to_str, move_optimizer_to_cuda, datasets_from_params
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
-
-
-def is_sparse(tensor):
-    return tensor.is_sparse
-
-
-def sparse_clip_norm(parameters, max_norm, norm_type=2) -> float:
-    """Clips gradient norm of an iterable of parameters.
-
-    The norm is computed over all gradients together, as if they were
-    concatenated into a single vector. Gradients are modified in-place.
-    Supports sparse gradients.
-
-    Parameters
-    ----------
-    parameters : ``(Iterable[torch.Tensor])``
-        An iterable of Tensors that will have gradients normalized.
-    max_norm : ``float``
-        The max norm of the gradients.
-    norm_type : ``float``
-        The type of the used p-norm. Can be ``'inf'`` for infinity norm.
-
-    Returns
-    -------
-    Total norm of the parameters (viewed as a single vector).
-    """
-    # pylint: disable=invalid-name,protected-access
-    parameters = list(filter(lambda p: p.grad is not None, parameters))
-    max_norm = float(max_norm)
-    norm_type = float(norm_type)
-    if norm_type == float('inf'):
-        total_norm = max(p.grad.data.abs().max() for p in parameters)
-    else:
-        total_norm = 0
-        for p in parameters:
-            if is_sparse(p.grad):
-                # need to coalesce the repeated indices before finding norm
-                grad = p.grad.data.coalesce()
-                param_norm = grad._values().norm(norm_type)
-            else:
-                param_norm = p.grad.data.norm(norm_type)
-            total_norm += param_norm ** norm_type
-        total_norm = total_norm ** (1. / norm_type)
-    clip_coef = max_norm / (total_norm + 1e-6)
-    if clip_coef < 1:
-        for p in parameters:
-            if is_sparse(p.grad):
-                p.grad.data._values().mul_(clip_coef)
-            else:
-                p.grad.data.mul_(clip_coef)
-    return total_norm
-
-
-def move_optimizer_to_cuda(optimizer):
-    """
-    Move the optimizer state to GPU, if necessary.
-    After calling, any parameter specific state in the optimizer
-    will be located on the same device as the parameter.
-    """
-    for param_group in optimizer.param_groups:
-        for param in param_group['params']:
-            if param.is_cuda:
-                param_state = optimizer.state[param]
-                for k in param_state.keys():
-                    if isinstance(param_state[k], torch.Tensor):
-                        param_state[k] = param_state[k].cuda(device=param.get_device())
-
-
-class TensorboardWriter:
-    """
-    Wraps a pair of ``SummaryWriter`` instances but is a no-op if they're ``None``.
-    Allows Tensorboard logging without always checking for Nones first.
-    """
-    def __init__(self, train_log: SummaryWriter = None, validation_log: SummaryWriter = None) -> None:
-        self._train_log = train_log
-        self._validation_log = validation_log
-
-    @staticmethod
-    def _item(value: Any):
-        if hasattr(value, 'item'):
-            val = value.item()
-        else:
-            val = value
-        return val
-
-    def add_train_scalar(self, name: str, value: float, global_step: int) -> None:
-        # get the scalar
-        if self._train_log is not None:
-            self._train_log.add_scalar(name, self._item(value), global_step)
-
-    def add_train_histogram(self, name: str, values: torch.Tensor, global_step: int) -> None:
-        if self._train_log is not None:
-            if isinstance(values, torch.Tensor):
-                values_to_write = values.cpu().data.numpy().flatten()
-                self._train_log.add_histogram(name, values_to_write, global_step)
-
-    def add_validation_scalar(self, name: str, value: float, global_step: int) -> None:
-
-        if self._validation_log is not None:
-            self._validation_log.add_scalar(name, self._item(value), global_step)
-
-
-def time_to_str(timestamp: int) -> str:
-    """
-    Convert seconds past Epoch to human readable string.
-    """
-    datetimestamp = datetime.datetime.fromtimestamp(timestamp)
-    return '{:04d}-{:02d}-{:02d}-{:02d}-{:02d}-{:02d}'.format(
-            datetimestamp.year, datetimestamp.month, datetimestamp.day,
-            datetimestamp.hour, datetimestamp.minute, datetimestamp.second
-    )
-
-
-def str_to_time(time_str: str) -> datetime.datetime:
-    """
-    Convert human readable string to datetime.datetime.
-    """
-    pieces: Any = [int(piece) for piece in time_str.split('-')]
-    return datetime.datetime(*pieces)
 
 
 class Trainer(Registrable):
@@ -270,6 +153,10 @@ class Trainer(Registrable):
         log_batch_size_period : ``int``, optional, (default = ``None``)
             If defined, how often to log the average batch size.
         """
+        # If you used commands/train.py, this check has already been run,
+        # but here we run it again just in case.
+        check_for_gpu(cuda_device)
+
         self.model = model
         self.iterator = iterator
         self._validation_iterator = validation_iterator
@@ -343,6 +230,7 @@ class Trainer(Registrable):
         else:
             self._tensorboard = TensorboardWriter()
         self._warned_tqdm_ignores_underscores = False
+
 
     def _enable_gradient_clipping(self) -> None:
         if self._grad_clipping is not None:
@@ -616,7 +504,7 @@ class Trainer(Registrable):
                                                epoch)
             self._tensorboard.add_train_scalar("parameter_std/" + name, param.data.std(), epoch)
             if param.grad is not None:
-                if is_sparse(param.grad):
+                if param.grad.is_sparse:
                     # pylint: disable=protected-access
                     grad_data = param.grad.data._values()
                 else:
@@ -1045,22 +933,77 @@ class Trainer(Registrable):
     # Requires custom from_params.
     @classmethod
     def from_params(cls,  # type: ignore
-                    model: Model,
-                    serialization_dir: str,
-                    iterator: DataIterator,
-                    train_data: Iterable[Instance],
-                    validation_data: Optional[Iterable[Instance]],
                     params: Params,
-                    validation_iterator: DataIterator = None) -> 'Trainer':
+                    serialization_dir: str,
+                    recover: bool = False) -> 'Trainer':
+                    # ,
+                    #model: Model,
+                    # iterator: DataIterator,
+                    # train_data: Iterable[Instance],
+                    # validation_data: Optional[Iterable[Instance]],
+                    # params: Params,
+                    # validation_iterator: DataIterator = None) -> 'Trainer':
         # pylint: disable=arguments-differ
-        patience = params.pop_int("patience", None)
-        validation_metric = params.pop("validation_metric", "-loss")
-        shuffle = params.pop_bool("shuffle", True)
-        num_epochs = params.pop_int("num_epochs", 20)
-        cuda_device = parse_cuda_device(params.pop("cuda_device", -1))
-        grad_norm = params.pop_float("grad_norm", None)
-        grad_clipping = params.pop_float("grad_clipping", None)
-        lr_scheduler_params = params.pop("learning_rate_scheduler", None)
+        all_datasets = datasets_from_params(params)
+        datasets_for_vocab_creation = set(params.pop("datasets_for_vocab_creation", all_datasets))
+
+        for dataset in datasets_for_vocab_creation:
+            if dataset not in all_datasets:
+                raise ConfigurationError(f"invalid 'dataset_for_vocab_creation' {dataset}")
+
+        logger.info("From dataset instances, %s will be considered for vocabulary creation.",
+                    ", ".join(datasets_for_vocab_creation))
+
+        if recover and os.path.exists(os.path.join(serialization_dir, "vocabulary")):
+            vocab = Vocabulary.from_files(os.path.join(serialization_dir, "vocabulary"))
+        else:
+            vocab = Vocabulary.from_params(
+                    params.pop("vocabulary", {}),
+                    (instance for key, dataset in all_datasets.items()
+                     for instance in dataset
+                     if key in datasets_for_vocab_creation)
+            )
+
+        model = Model.from_params(vocab=vocab, params=params.pop('model'))
+
+        # Initializing the model can have side effect of expanding the vocabulary
+        vocab.save_to_files(os.path.join(serialization_dir, "vocabulary"))
+
+        iterator = DataIterator.from_params(params.pop("iterator"))
+        iterator.index_with(vocab)
+        validation_iterator_params = params.pop("validation_iterator", None)
+        if validation_iterator_params:
+            validation_iterator = DataIterator.from_params(validation_iterator_params)
+            validation_iterator.index_with(vocab)
+        else:
+            validation_iterator = None
+
+        train_data = all_datasets['train']
+        validation_data = all_datasets.get('validation')
+
+        trainer_params = params.pop("trainer")
+        no_grad_regexes = trainer_params.pop("no_grad", ())
+        for name, parameter in model.named_parameters():
+            if any(re.search(regex, name) for regex in no_grad_regexes):
+                parameter.requires_grad_(False)
+
+        frozen_parameter_names, tunable_parameter_names = \
+                    get_frozen_and_tunable_parameter_names(model)
+        logger.info("Following parameters are Frozen  (without gradient):")
+        for name in frozen_parameter_names:
+            logger.info(name)
+        logger.info("Following parameters are Tunable (with gradient):")
+        for name in tunable_parameter_names:
+            logger.info(name)
+
+        patience = trainer_params.pop_int("patience", None)
+        validation_metric = trainer_params.pop("validation_metric", "-loss")
+        shuffle = trainer_params.pop_bool("shuffle", True)
+        num_epochs = trainer_params.pop_int("num_epochs", 20)
+        cuda_device = parse_cuda_device(trainer_params.pop("cuda_device", -1))
+        grad_norm = trainer_params.pop_float("grad_norm", None)
+        grad_clipping = trainer_params.pop_float("grad_clipping", None)
+        lr_scheduler_params = trainer_params.pop("learning_rate_scheduler", None)
 
         if isinstance(cuda_device, list):
             model_device = cuda_device[0]
@@ -1072,22 +1015,22 @@ class Trainer(Registrable):
             model = model.cuda(model_device)
 
         parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
-        optimizer = Optimizer.from_params(parameters, params.pop("optimizer"))
+        optimizer = Optimizer.from_params(parameters, trainer_params.pop("optimizer"))
 
         if lr_scheduler_params:
             scheduler = LearningRateScheduler.from_params(optimizer, lr_scheduler_params)
         else:
             scheduler = None
 
-        num_serialized_models_to_keep = params.pop_int("num_serialized_models_to_keep", 20)
-        keep_serialized_model_every_num_seconds = params.pop_int(
+        num_serialized_models_to_keep = trainer_params.pop_int("num_serialized_models_to_keep", 20)
+        keep_serialized_model_every_num_seconds = trainer_params.pop_int(
                 "keep_serialized_model_every_num_seconds", None)
-        model_save_interval = params.pop_float("model_save_interval", None)
-        summary_interval = params.pop_int("summary_interval", 100)
-        histogram_interval = params.pop_int("histogram_interval", None)
-        should_log_parameter_statistics = params.pop_bool("should_log_parameter_statistics", True)
-        should_log_learning_rate = params.pop_bool("should_log_learning_rate", False)
-        log_batch_size_period = params.pop_int("log_batch_size_period", None)
+        model_save_interval = trainer_params.pop_float("model_save_interval", None)
+        summary_interval = trainer_params.pop_int("summary_interval", 100)
+        histogram_interval = trainer_params.pop_int("histogram_interval", None)
+        should_log_parameter_statistics = trainer_params.pop_bool("should_log_parameter_statistics", True)
+        should_log_learning_rate = trainer_params.pop_bool("should_log_learning_rate", False)
+        log_batch_size_period = trainer_params.pop_int("log_batch_size_period", None)
 
         params.assert_empty(cls.__name__)
         return cls(model, optimizer, iterator,

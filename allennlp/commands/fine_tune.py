@@ -14,8 +14,8 @@ import re
 
 from allennlp.commands.evaluate import evaluate
 from allennlp.commands.subcommand import Subcommand
-from allennlp.commands.train import datasets_from_params
 from allennlp.common import Params
+from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import prepare_environment, prepare_global_logging, \
                                  get_frozen_and_tunable_parameter_names
 from allennlp.data.iterators.data_iterator import DataIterator
@@ -23,7 +23,7 @@ from allennlp.models import load_archive, archive_model
 from allennlp.models.archival import CONFIG_NAME
 from allennlp.models.model import Model, _DEFAULT_WEIGHTS
 from allennlp.training.trainer import Trainer
-from allennlp.common.checks import ConfigurationError
+from allennlp.training.util import datasets_from_params
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 

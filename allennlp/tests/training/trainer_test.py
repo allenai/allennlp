@@ -11,8 +11,9 @@ import pytest
 from allennlp.common.checks import ConfigurationError
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.training.trainer import Trainer, sparse_clip_norm, is_sparse
+from allennlp.training.trainer import Trainer
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
+from allennlp.training.util import sparse_clip_norm
 from allennlp.data import Vocabulary
 from allennlp.common.params import Params
 from allennlp.models.simple_tagger import SimpleTagger
@@ -425,7 +426,7 @@ class TestSparseClipGrad(AllenNlpTestCase):
         ids[:5] = 5
         loss = embedding(ids).sum()
         loss.backward()
-        assert is_sparse(embedding.weight.grad)
+        assert embedding.weight.grad.is_sparse
 
         # Now try to clip the gradients.
         _ = sparse_clip_norm([embedding.weight], 1.5)
