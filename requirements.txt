@@ -7,7 +7,9 @@
 
 # This installs Pytorch for CUDA 8 only. If you are using a newer version,
 # please visit http://pytorch.org/ and install the relevant version.
-torch>=0.4.1,<0.5.0
+# For now AllenNLP works with both PyTorch 1.0 and 0.4.1. Expect that in
+# the future only >=1.0 will be supported.
+torch>=0.4.1
 
 # Parameter parsing (but not on Windows).
 jsonnet==0.10.0 ; sys.platform != 'win32'
@@ -68,7 +70,7 @@ sqlparse==0.2.4
 ftfy
 
 # To use the BERT model
-pytorch-pretrained-bert==0.1.2
+pytorch-pretrained-bert==0.3.0
 
 #### ESSENTIAL LIBRARIES USED IN SCRIPTS ####
 

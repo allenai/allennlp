@@ -14,7 +14,7 @@ class TestQuarelParserPredictor(AllenNlpTestCase):
                 'entitycues': 'smoothness: smoother\nspeed:faster'
         }
 
-        archive_path = self.FIXTURES_ROOT / 'semantic_parsing' / 'quarel' / 'serialization_parser_zeroshot' / 'model.tar.gz'  # pylint: disable=line-too-long
+        archive_path = self.FIXTURES_ROOT / 'semantic_parsing' / 'quarel' / 'zeroshot' / 'serialization' / 'model.tar.gz'  # pylint: disable=line-too-long
         archive = load_archive(archive_path)
         predictor = Predictor.from_archive(archive, 'quarel-parser')
 

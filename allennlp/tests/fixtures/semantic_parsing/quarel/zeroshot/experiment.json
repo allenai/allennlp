@@ -5,9 +5,8 @@
     "replace_world_entities": true,
     "gold_world_extractions": true,
     "align_world_extractions": true,
-    "entity_types": ["world"],
-    "tagger_only": true,
-    "lf_syntax": "quarel_v1",
+    "lf_syntax": "quarel_v1_attr_entities",
+    "lexical_cues": ["synonyms", "values"],
     "question_token_indexers": {
       "tokens": {
         "type": "single_id",
@@ -21,37 +20,44 @@
   "train_data_path": "allennlp/tests/fixtures/data/quarel.jsonl",
   "validation_data_path": "allennlp/tests/fixtures/data/quarel.jsonl",
   "model": {
-    "type": "crf_tagger",
-    "constraint_type": "BIO",
-    "dropout": 0.2,
-    "include_start_end_transitions": false,
-    "text_field_embedder": {
-      "tokens": {
-        "type": "embedding",
-        "embedding_dim": 25,
-        "trainable": false
+    "type": "quarel_parser",
+    "use_entities": true,
+    "num_linking_features": 0,
+    "question_embedder": {
+      "token_embedders": {
+        "tokens": {
+          "type": "embedding",
+          "embedding_dim": 25,
+          "trainable": false
+        }
       }
     },
+    "action_embedding_dim": 20,
     "encoder": {
       "type": "lstm",
       "input_size": 25,
       "hidden_size": 20,
-      "bidirectional": true,
+      "bidirectional": false,
       "num_layers": 1
-    }
+    },
+    "decoder_beam_search": {
+      "beam_size": 5
+    },
+    "max_decoding_steps": 30,
+    "attention": {"type": "dot_product"},
+    "dropout": 0.2
   },
   "iterator": {
     "type": "basic",
-    "batch_size": 2
+    "batch_size" : 2
   },
   "trainer": {
+    "num_epochs": 2,
+    "patience": 10,
+    "validation_metric": "+parse_acc",
+    "cuda_device": -1,
     "optimizer": {
       "type": "adam"
-    },
-    "validation_metric": "+f1-measure-overall",
-    "num_epochs": 10,
-    "grad_norm": 5.0,
-    "patience": 25,
-    "cuda_device": -1
+    }
   }
 }

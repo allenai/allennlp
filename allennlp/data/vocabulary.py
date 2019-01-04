@@ -186,12 +186,12 @@ class Vocabulary(Registrable):
         Words which appear in the pretrained embedding file but not in the data are NOT included
         in the Vocabulary.
     min_pretrained_embeddings : ``Dict[str, int]``, optional
-        If provided, specifies for each namespace a mininum number of lines (typically the
+        If provided, specifies for each namespace a minimum number of lines (typically the
         most common words) to keep from pretrained embedding files, even for words not
         appearing in the data.
     only_include_pretrained_words : ``bool``, optional (default=False)
-        This defines the stategy for using any pretrained embedding files which may have been
-        specified in ``pretrained_files``. If False, an inclusive stategy is used: and words
+        This defines the strategy for using any pretrained embedding files which may have been
+        specified in ``pretrained_files``. If False, an inclusive strategy is used: and words
         which are in the ``counter`` and in the pretrained file are added to the ``Vocabulary``,
         regardless of whether their count exceeds ``min_count`` or not. If True, we use an
         exclusive strategy: words are only included in the Vocabulary if they are in the pretrained
@@ -561,7 +561,7 @@ class Vocabulary(Registrable):
 
     def is_padded(self, namespace: str) -> bool:
         """
-        Returns whether or not there are padding and OOV tokens added to the given namepsace.
+        Returns whether or not there are padding and OOV tokens added to the given namespace.
         """
         return self._index_to_token[namespace][0] == self._padding_token
 

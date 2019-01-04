@@ -47,7 +47,7 @@ def neural_coreference_resolution_lee_2017() -> predictors.CorefPredictor:
     return model.predictor() # type: ignore
 
 def named_entity_recognition_with_elmo_peters_2018() -> predictors.SentenceTaggerPredictor:
-    model = PretrainedModel('https://s3-us-west-2.amazonaws.com/allennlp/models/ner-model-2018.04.30.tar.gz',
+    model = PretrainedModel('https://s3-us-west-2.amazonaws.com/allennlp/models/ner-model-2018.12.18.tar.gz',
                             'sentence-tagger')
     return model.predictor() # type: ignore
 
