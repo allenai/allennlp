@@ -144,10 +144,10 @@ class LanguageModel(Model):
         if initializer is not None:
             initializer(self)
 
-    def _get_target_token_embedding(self,
-                                    token_embeddings: torch.Tensor,
-                                    mask: torch.Tensor,
-                                    direction: int) -> torch.Tensor:
+    def _get_target_token_embeddings(self,
+                                     token_embeddings: torch.Tensor,
+                                     mask: torch.Tensor,
+                                     direction: int) -> torch.Tensor:
         # Need to shift the mask in the correct direction
         zero_col = token_embeddings.new_zeros(mask.size(0), 1).byte()
         if direction == 0:
@@ -168,47 +168,46 @@ class LanguageModel(Model):
         # shape (batch_size, timesteps) masked with 0
         if self._bidirectional:
             forward_embeddings, backward_embeddings = lm_embeddings.chunk(2, -1)
+            backward_loss = self._loss_helper(1, backward_embeddings, backward_targets, token_embeddings)
         else:
             forward_embeddings = lm_embeddings
-            backward_embeddings = None
-        losses: List[torch.Tensor] = []
-        for idx, embedding, targets in ((0, forward_embeddings, forward_targets),
-                                        (1, backward_embeddings, backward_targets)):
-            if embedding is None and targets is None:
-                # Embeddings / targets are not defined (e.g., the backward embeddings
-                # and targets in the unidirectional case). Thus, append "None" to the
-                # loss and skip this iteration.
-                losses.append(None)
-                continue
-            mask = targets > 0
-            # we need to subtract 1 to undo the padding id since the softmax
-            # does not include a padding dimension
+            backward_loss = None
 
-            # shape (batch_size * timesteps, )
-            non_masked_targets = targets.masked_select(mask) - 1
+        forward_loss = self._loss_helper(0, forward_embeddings, forward_targets, token_embeddings)
+        return forward_loss, backward_loss
 
-            # shape (batch_size * timesteps, embedding_dim)
-            non_masked_embedding = embedding.masked_select(
-                    mask.unsqueeze(-1)
-            ).view(-1, self._forward_dim)
-            # note: need to return average loss across forward and backward
-            # directions, but total sum loss across all batches.
-            # Assuming batches include full sentences, forward and backward
-            # directions have the same number of samples, so sum up loss
-            # here then divide by 2 just below
-            if not self._softmax_loss.tie_embeddings or not self._use_character_inputs:
-                losses.append(self._softmax_loss(non_masked_embedding, non_masked_targets))
-            else:
-                # we also need the token embeddings corresponding to the
-                # the targets
-                raise NotImplementedError("This requires SampledSoftmaxLoss, which isn't implemented yet.")
-                # pylint: disable=unreachable
-                non_masked_token_embedding = self._get_target_token_embedding(token_embeddings, mask, idx)
-                losses.append(self._softmax(non_masked_embedding,
-                                            non_masked_targets,
-                                            non_masked_token_embedding))
+    def _loss_helper(self,  # pylint: disable=inconsistent-return-statements
+                     direction: int,
+                     direction_embeddings: torch.Tensor,
+                     direction_targets: torch.Tensor,
+                     token_embeddings: torch.Tensor) -> Tuple[int, int]:
+        mask = direction_targets > 0
+        # we need to subtract 1 to undo the padding id since the softmax
+        # does not include a padding dimension
 
-        return losses[0], losses[1]
+        # shape (batch_size * timesteps, )
+        non_masked_targets = direction_targets.masked_select(mask) - 1
+
+        # shape (batch_size * timesteps, embedding_dim)
+        non_masked_embeddings = direction_embeddings.masked_select(
+                mask.unsqueeze(-1)
+        ).view(-1, self._forward_dim)
+        # note: need to return average loss across forward and backward
+        # directions, but total sum loss across all batches.
+        # Assuming batches include full sentences, forward and backward
+        # directions have the same number of samples, so sum up loss
+        # here then divide by 2 just below
+        if not self._softmax_loss.tie_embeddings or not self._use_character_inputs:
+            return self._softmax_loss(non_masked_embeddings, non_masked_targets)
+        else:
+            # we also need the token embeddings corresponding to the
+            # the targets
+            raise NotImplementedError("This requires SampledSoftmaxLoss, which isn't implemented yet.")
+            # pylint: disable=unreachable
+            non_masked_token_embeddings = self._get_target_token_embeddings(token_embeddings, mask, direction)
+            return self._softmax(non_masked_embeddings,
+                                 non_masked_targets,
+                                 non_masked_token_embeddings)
 
     def delete_softmax(self) -> None:
         """
