@@ -50,7 +50,7 @@ from allennlp.data.iterators import DataIterator
 from allennlp.models.archival import archive_model, CONFIG_NAME
 from allennlp.models.model import Model, _DEFAULT_WEIGHTS
 from allennlp.training.trainer import Trainer
-from allennlp.training.util import create_serialization_dir
+from allennlp.training.util import create_serialization_dir, datasets_from_params
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -212,12 +212,8 @@ def train_model(params: Params,
     if evaluate_on_test and "test_data_path" in orig_params:
         logger.info("The model will be evaluated using the best epoch weights.")
 
-        reader_params = orig_params.get("validation_dataset_reader", orig_params.get("dataset_reader"))
-        iterator_params = orig_params.get("validation_iterator", orig_params.get("iterator"))
-        reader = DatasetReader.from_params(reader_params)
-        iterator = DataIterator.from_params(iterator_params)
-        test_data_path = orig_params.get("test_data_path")
-        test_data = reader.read(test_data_path)
+        test_data = datasets_from_params(orig_params, ('test',))['test']
+        iterator = trainer._validation_iterator or trainer.iterator
 
         test_metrics = evaluate(
                 best_model, test_data, iterator,
