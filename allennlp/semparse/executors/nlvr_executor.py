@@ -4,9 +4,9 @@ import operator
 import logging
 
 from allennlp.semparse import util as semparse_util
-from allennlp.semparse.worlds.world import ExecutionError
-from allennlp.semparse.worlds.nlvr_object import Object
-from allennlp.semparse.worlds.nlvr_box import Box
+from allennlp.semparse.executors.executor import ExecutionError
+from allennlp.semparse.executors.nlvr_object import Object
+from allennlp.semparse.executors.nlvr_box import Box
 
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name

@@ -4,7 +4,7 @@ import json
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.semparse.worlds.world import ExecutionError
 from allennlp.semparse.executors import NlvrExecutor
-from allennlp.semparse.worlds.nlvr_box import Box
+from allennlp.semparse.executors.nlvr_box import Box
 
 
 class TestNlvrExecutor(AllenNlpTestCase):
