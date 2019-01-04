@@ -1,11 +1,7 @@
 # pylint: disable=invalid-name,arguments-differ,abstract-method
 import numpy as np
-import pytest
 
 from allennlp.common.testing import ModelTestCase
-from allennlp.common.checks import ConfigurationError
-from allennlp.common.params import Params
-from allennlp.models import Model
 
 class TestBidirectionalLM(ModelTestCase):
     def setUp(self):
