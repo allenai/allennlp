@@ -1,8 +1,8 @@
 from typing import Optional, Tuple
 
 from overrides import overrides
-import torch
 from torch.nn import Linear
+import torch
 
 from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
 from allennlp.nn import Activation
@@ -11,8 +11,10 @@ from allennlp.nn.util import masked_softmax
 
 class SelfAttentiveSentenceEncoder(torch.nn.Module):
     """
-        The Self Attentive Sentence Encoder which is based on the paper. The implementation also has an optional
-        mask feature which normalizes the attention weights after assigning zeros to the padding tokens.
+        The Self Attentive Sentence Encoder which is based on the paper https://arxiv.org/abs/1703.03130.
+        This basically generates the encoded representation of the sentence by attending to different words
+        in the sentence. The implementation also has an optional mask feature which normalizes the attention 
+        weights after assigning zeros to the padding tokens.
 
     Parameters
     ----------
