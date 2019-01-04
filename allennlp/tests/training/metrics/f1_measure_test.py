@@ -30,7 +30,8 @@ class F1MeasureTest(AllenNlpTestCase):
         f1_measure(predictions, targets)
         precision, recall, f1 = f1_measure.get_metric()
         assert f1_measure._true_positives == 1.0
-        assert f1_measure._true_negatives == 3.
+        # do not support `_false_negatives`
+        # assert f1_measure._true_negatives == 3.
         assert f1_measure._false_positives == 0.0
         assert f1_measure._false_negatives == 2.0
         f1_measure.reset()
@@ -43,7 +44,8 @@ class F1MeasureTest(AllenNlpTestCase):
         f1_measure(predictions, targets, mask)
         precision, recall, f1 = f1_measure.get_metric()
         assert f1_measure._true_positives == 1.0
-        assert f1_measure._true_negatives == 2.0
+        # do not support `_false_negatives`
+        # assert f1_measure._true_negatives == 2.0
         assert f1_measure._false_positives == 0.0
         assert f1_measure._false_negatives == 1.0
         f1_measure.reset()
@@ -66,7 +68,8 @@ class F1MeasureTest(AllenNlpTestCase):
         f1_measure(predictions, targets)
         precision, recall, f1 = f1_measure.get_metric()
         assert f1_measure._true_positives == 2.0
-        assert f1_measure._true_negatives == 6.0
+        # do not support `_false_negatives`
+        # assert f1_measure._true_negatives == 6.0
         assert f1_measure._false_positives == 0.0
         assert f1_measure._false_negatives == 4.0
         f1_measure.reset()
@@ -74,7 +77,8 @@ class F1MeasureTest(AllenNlpTestCase):
         numpy.testing.assert_almost_equal(recall, 0.333333333)
         numpy.testing.assert_almost_equal(f1, 0.499999999)
         assert f1_measure._true_positives == 0.0
-        assert f1_measure._true_negatives == 0.0
+        # do not support `_false_negatives`
+        # assert f1_measure._true_negatives == 0.0
         assert f1_measure._false_positives == 0.0
         assert f1_measure._false_negatives == 0.0
 
@@ -93,7 +97,8 @@ class F1MeasureTest(AllenNlpTestCase):
         f1_measure(predictions, targets)
         precision, recall, f1 = f1_measure.get_metric()
         assert f1_measure._true_positives == 2.0
-        assert f1_measure._true_negatives == 3.0
+        # do not support `_false_negatives`
+        # assert f1_measure._true_negatives == 3.0
         assert f1_measure._false_positives == 0.0
         assert f1_measure._false_negatives == 1.0
         f1_measure.reset()
@@ -107,7 +112,8 @@ class F1MeasureTest(AllenNlpTestCase):
         f1_measure(predictions, targets, mask)
         precision, recall, f1 = f1_measure.get_metric()
         assert f1_measure._true_positives == 1.0
-        assert f1_measure._true_negatives == 2.0
+        # do not support `_false_negatives`
+        # assert f1_measure._true_negatives == 2.0
         assert f1_measure._false_positives == 0.0
         assert f1_measure._false_negatives == 1.0
         numpy.testing.assert_almost_equal(precision, 1.0)
