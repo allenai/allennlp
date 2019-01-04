@@ -1,0 +1,110 @@
+import json
+import pika
+import datetime
+
+def dispatch():
+
+    Operation = "train"
+    Operation = "Preprocess"
+    #Operation = "Recover"
+    #Operation = "kill job"
+    #Operation = "git pull"
+    
+    ## HOST
+    #host = 'rack-gamir-g03'
+    #host = 'rack-gamir-g05'
+    #host = 'rack-gamir-g04'
+    #host = 'savant'
+    host = 'rack-jonathan-g04'
+    #host = 'rack-jonathan-g02'
+    
+    if Operation == "Preprocess":
+        host = 'z-rack-jonathan-02'
+    #host = 'z-rack-jonathan-02'
+    
+    if host in ['savant', 'rack-gamir-g03', 'rack-gamir-g04', 'rack-gamir-g05']:
+        model_dir = '/home/joberant/home/alontalmor/models/'
+    else:
+        model_dir = '../models/'
+
+    # CONFIG PARAMS
+
+    config_path = '/Users/alontalmor/Dropbox/Backup/QAResearch/MultiQA/configs/'
+    #config_json = 'HotpotQA-O.json'
+    #config_json = 'ComplexWebQuestions-G.json'
+    config_json = 'TriviaQA-G.json'
+    with open(config_path + config_json, 'r') as f:
+        dataset_specific_config = json.load(f)
+
+    # Dataset name:
+    name = dataset_specific_config['train_data_path'].split('/')[-1].replace('_train.json.zip', '') + '/'
+    name += 'GloVe_'
+    name += '10docs_400tokens_'
+    #name += str(dataset_specific_config['dataset_reader']['max_context_docs']) + 'docs_'
+    #name += str(dataset_specific_config['dataset_reader']['max_context_size']) + 'tokens_'
+    name += str(dataset_specific_config['trainer']['optimizer']['type']) + '_'
+    name += 'LR_' + str(dataset_specific_config['trainer']['optimizer']['lr']) + '_'
+    name += 'L2_' + str(dataset_specific_config['trainer']['optimizer']['weight_decay'])  + '_'
+    #name += 'shared_' + str(dataset_specific_config['model']['shared_norm'])  + '_'
+    name += datetime.datetime.now().strftime("%m%d_%H%M")
+
+    # Command
+    command = 'python -m allennlp.run train ' 
+    #command = 'python -m allennlp.run make-vocab ' 
+    #command = 'python -m allennlp.run dry-run '
+    # base configuration file (mainly for model and tokenization)
+    command += 's3://multiqa/config/MultiQA_GloVe_rand_iter.json '
+    command += '--s ' + model_dir + name + ' '
+
+    # Building the python command with arguments
+    command += '-o "' + str(dataset_specific_config).replace('True', 'true').replace('False', 'false') + '"' 
+
+
+    ## RECOVERS
+    if Operation == "Recover":
+        name = 'TriviaQA-G_1-2/GloVe_10docs_250tokens_adam_LR_0.001_L2_0.0001_shared_False_0103_1024'
+        command = '''python -m allennlp.run train s3://multiqa/config/MultiQA_GloVe_rand_iter.json --recover --s ../models/TriviaQA-G_1-2/GloVe_10docs_250tokens_adam_LR_0.001_L2_0.0001_shared_False_0103_1024 -o "{'dataset_reader': {'type': 'multiqa+', 'lazy': true}, 'iterator': {'type': 'multiqa', 'batch_size': 90, 'max_instances_in_memory': 10000, 'sorting_keys': [['question', 'num_tokens'], ['passage', 'num_tokens']]}, 'model': {'type': 'docqa++', 'frac_of_validation_used': 0.967, 'frac_of_training_used': 0.8345, 'shared_norm': false}, 'trainer': {'cuda_device': 0, 'learning_rate_scheduler': {'type': 'reduce_on_plateau', 'factor': 0.4, 'mode': 'max', 'patience': 6}, 'num_epochs': 100, 'optimizer': {'type': 'adam', 'lr': 0.001, 'weight_decay': 0.0001}, 'patience': 10, 'validation_metric': '+f1'}, 'validation_iterator': {'type': 'multiqa', 'batch_size': 60, 'max_instances_in_memory': 10000, 'all_question_instances_in_batch': true, 'sorting_keys': [['question', 'num_tokens'], ['passage', 'num_tokens']]}, 'train_data_path': 's3://multiqa/preproc/TriviaQA-G_1-2_train.json.zip', 'validation_data_path': 's3://multiqa/preproc/TriviaQA-G_1-2_dev.json.zip'}"'''
+
+     # Packages
+    command += ' --include-package allennlp.models.reading_comprehension.docqa++ \
+        --include-package allennlp.data.iterators.multiqa_iterator \
+        --include-package allennlp.data.dataset_readers.reading_comprehension.multiqa+ '
+    #command += ' -f'
+
+    # preprocess
+    if Operation == "Preprocess":
+        set = 'train'
+        dataset = 'HotpotQA'
+        name = "preprocess_" + dataset + "_400_" + set + "_" + datetime.datetime.now().strftime("%m%d_%H%M")
+        command = "python scripts/multiqa/preprocess.py s3://multiqa/" + dataset + "_" + set + ".json.zip s3://multiqa/preproc/" + dataset + "_400_" + set + ".json.zip --n_processes 10 --ndocs 10 --docsize 400 --titles True --use_rank False --require_answer_in_doc False --sample_size -1  "
+        if set == "train":
+            command += "--require_answer_in_question True"
+        else:
+            command += "--require_answer_in_question False"
+
+    if Operation == "git pull":
+        name = "gitpull"
+        command = "git pull origin master"
+    
+    if Operation == "kill job":
+        name = "kill job"
+        command = "preprocess_TriviaQA-G_400_train_0103_2247"
+    
+    print('\n')
+    print(host)
+    print(command)
+    
+    connection_params = pika.URLParameters('amqp://imfgrmdk:Xv_s9oF_pDdrd0LlF0k6ogGBOqzewbqU@barnacle.rmq.cloudamqp.com/imfgrmdk')
+    connection = pika.BlockingConnection(connection_params)
+    channel = connection.channel()
+    channel.basic_publish(exchange='',
+                        properties=pika.BasicProperties(
+                            headers={'name':name}),
+                        routing_key=host,
+                        body=command)
+    connection.close()
+
+dispatch()
+
+
+

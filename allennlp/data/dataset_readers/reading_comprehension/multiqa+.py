@@ -66,9 +66,11 @@ class MultiQAReader(DatasetReader):
             if 'preprocessed' in dataset_json and dataset_json['preprocessed']:
                 # sampling
                 if self._sample_size > -1:
-                    random.seed(1)
+                    #random.seed(1)
+                    #dataset_json['preprocessed_instances'] = \
+                    #    random.sample(dataset_json['preprocessed_instances'], self._sample_size)
                     dataset_json['preprocessed_instances'] = \
-                        random.sample(dataset_json['preprocessed_instances'], self._sample_size) 
+                        dataset_json['preprocessed_instances'][0:self._sample_size]
 
                 for inst in dataset_json['preprocessed_instances']:
                     tokenized_paragraph = [Token(text=t[0], idx=t[1]) for t in inst['tokens']]

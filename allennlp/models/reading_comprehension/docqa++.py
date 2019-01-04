@@ -230,45 +230,6 @@ class BidafPlusPlus(Model):
         per_question_inds = np.split(range(total_qa_count), question_instances_split_inds)
         metadata = np.split(metadata, question_instances_split_inds)
 
-        ## TODO this should be in iterator
-        #if self._max_qad_triplets > 0:
-        #    if instaces_with_golden_answer.size >= self._max_qad_triplets:
-        #        instaces_with_golden_answer = instaces_with_golden_answer[0:self._max_qad_triplets]
-
-        # Todo filtering instances with golden answer should be done in iterator
-        if False:
-            if self.training:
-                for type in question.keys():
-                    question[type] = question[type][instaces_with_golden_answer]
-                for type in passage.keys():
-                    passage[type] = passage[type][instaces_with_golden_answer]
-
-                total_qa_count = len(instaces_with_golden_answer)
-
-                selected_span_start = span_start.view(-1)[instaces_with_golden_answer]
-                selected_span_end = span_end.view(-1)[instaces_with_golden_answer]
-            else:
-                selected_span_start = span_start.view(-1)
-                selected_span_end = span_end.view(-1)
-
-            # building mappings between instances and (q,a,d) triplets
-            golden_answer_instance_triplets = []
-            golden_answer_instance_offset = []
-            golden_answer_offset = 0
-            for batch_ind, inst_metadata in enumerate(metadata):
-                golden_answer_instance_triplets.append([])
-                golden_answer_instance_offset.append([])
-                for instance_offset, ind in enumerate(range(batch_ind * num_of_docs, (batch_ind + 1) * num_of_docs)):
-                    if self.training:
-                        if ind in instaces_with_golden_answer:
-                            golden_answer_instance_triplets[batch_ind].append(golden_answer_offset)
-                            golden_answer_offset += 1
-                            golden_answer_instance_offset[batch_ind].append(instance_offset)
-                    else:
-                        golden_answer_instance_triplets[batch_ind].append(ind)
-                        golden_answer_instance_offset[batch_ind].append(instance_offset)
-
-
         # questions embedding
         embedded_question = self._text_field_embedder(question, num_wrapping_dims=1)
         embedded_question = embedded_question.reshape(total_qa_count, max_q_len,
