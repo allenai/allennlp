@@ -97,7 +97,11 @@ class ELMoTokenCharactersIndexer(TokenIndexer[List[int]]):
                           tokens: List[Token],
                           vocabulary: Vocabulary,
                           index_name: str) -> Dict[str, List[List[int]]]:
+        # TODO(brendanr): Retain the token to index mappings in the vocabulary and remove this
+        # pylint pragma. See:
+        # https://github.com/allenai/allennlp/blob/master/allennlp/data/token_indexers/wordpiece_indexer.py#L113
         # pylint: disable=unused-argument
+
         texts = [token.text for token in tokens]
 
         if any(text is None for text in texts):

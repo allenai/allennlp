@@ -6,7 +6,7 @@
         "type": "single_id"
       },
       "token_characters": {
-        "type": "characters"
+        "type": "elmo_characters"
       }
     },
     "start_tokens": ["<S>"],
@@ -21,7 +21,7 @@
       },
   },
   "model": {
-    "type": "bidirectional-language-model",
+    "type": "bidirectional_language_model",
     "num_samples": 10,
     "text_field_embedder": {
       "allow_unmatched_keys": true,
