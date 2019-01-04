@@ -55,6 +55,8 @@ class WordpieceIndexer(TokenIndexer[int]):
         These are prepended to the tokens provided to ``tokens_to_indices``.
     end_tokens : ``List[str]``, optional (default=``None``)
         These are appended to the tokens provided to ``tokens_to_indices``.
+    separator_token : ``str``, optional (default=``[SEP]``)
+        This token indicates the segments in the sequence.
     """
     def __init__(self,
                  vocab: Dict[str, int],
@@ -65,7 +67,8 @@ class WordpieceIndexer(TokenIndexer[int]):
                  do_lowercase: bool = False,
                  never_lowercase: List[str] = None,
                  start_tokens: List[str] = None,
-                 end_tokens: List[str] = None) -> None:
+                 end_tokens: List[str] = None,
+                 separator_token: str = "[SEP]") -> None:
         self.vocab = vocab
 
         # The BERT code itself does a two-step tokenization:
@@ -93,6 +96,9 @@ class WordpieceIndexer(TokenIndexer[int]):
         self._end_piece_ids = [vocab[wordpiece]
                                for token in (end_tokens or [])
                                for wordpiece in wordpiece_tokenizer(token)]
+
+        # Convert the separator_token to wordpiece_ids
+        self._separator_ids = wordpiece_tokenizer(separator_token)
 
     @overrides
     def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):
@@ -156,6 +162,9 @@ class WordpieceIndexer(TokenIndexer[int]):
 
         # By construction, we still have enough room to add the end_token ids.
         wordpiece_ids.extend(self._end_piece_ids)
+        # Constructing `token_type_ids` by `self._separator`
+        token_type_ids = _get_token_type_ids(wordpiece_ids,
+                                             self._separator_ids)
 
         # Our mask should correspond to the original tokens,
         # because calling util.get_text_field_mask on the
@@ -163,9 +172,10 @@ class WordpieceIndexer(TokenIndexer[int]):
         mask = [1 for _ in tokens]
 
         return {
-                index_name: wordpiece_ids,
-                f"{index_name}-offsets": offsets,
-                "mask": mask
+            index_name: wordpiece_ids,
+            f"{index_name}-offsets": offsets,
+            f"{index_name}-type-ids": token_type_ids,
+            "mask": mask
         }
 
     @overrides
@@ -246,3 +256,23 @@ class PretrainedBertIndexer(WordpieceIndexer):
                          never_lowercase=never_lowercase,
                          start_tokens=["[CLS]"],
                          end_tokens=["[SEP]"])
+
+
+def _get_token_type_ids(wordpiece_ids: List[int],
+                        separator_ids: List[int]) -> List[int]:
+    length_wordpiece = len(wordpiece_ids)
+    length_end_pieces = len(separator_ids)
+    token_type_ids = [0] * length_wordpiece
+    type_id = 0
+    cursor = 0
+    while cursor < len(wordpiece_ids):
+        if separator_ids[0] != wordpiece_ids[cursor]:
+            cursor += 1
+        else:
+            if separator_ids == wordpiece_ids[cursor:cursor+length_end_pieces]:
+                type_id += 1
+                cursor += length_end_pieces
+                token_type_ids[cursor:] = [type_id] * (length_wordpiece - cursor)
+            else:
+                cursor += length_end_pieces
+    return token_type_ids

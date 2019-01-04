@@ -93,8 +93,9 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
         for key in keys:
             # If we pre-specified a mapping explictly, use that.
             if self._embedder_to_indexer_map is not None:
-                tensors = [text_field_input[indexer_key] for
-                           indexer_key in self._embedder_to_indexer_map[key]]
+                # If `indexer_key` is None, we map it to `None`.
+                tensors = [(text_field_input[indexer_key] if indexer_key is not None else None)
+                           for indexer_key in self._embedder_to_indexer_map[key]]
             else:
                 # otherwise, we assume the mapping between indexers and embedders
                 # is bijective and just use the key directly.
