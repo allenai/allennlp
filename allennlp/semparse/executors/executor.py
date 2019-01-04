@@ -1,7 +1,13 @@
-from typing import Any, Callable, Dict, Type
+from typing import Any, Callable, Dict, List, Set, Type
+import inspect
 import types
+import typing
+
+from nltk.sem.logic import Type as NltkType
 
 from allennlp.semparse import util
+from allennlp.semparse.type_declarations.type_declaration import (ComplexType, NamedBasicType,
+                                                                  NameMapper, get_valid_actions)
 
 
 class ParsingError(Exception):
@@ -40,21 +46,73 @@ def predicate(function: Callable) -> Callable:  # pylint: disable=invalid-name
 
 class Executor:
     def __init__(self):
+        self._type_map: Dict[Type, NltkType] = {}
         self._functions = {}
+        self._name_mapper = NameMapper()
+        self.start_types: Set[Type] = None
         for name in dir(self):
             if isinstance(getattr(self, name), types.MethodType):
                 function = getattr(self, name)
                 if hasattr(function, 'is_predicate') and function.is_predicate:
                     self._add_predicate(name, function)
 
-    def _add_predicate(self, name: str, function: types.MethodType):
-        self._functions[name] = function
-        # TODO(matt): inspect the type annotations of the function, add function to grammar.
-
     def execute(self, logical_form: str):
         logical_form = logical_form.replace(",", " ")
         expression_as_list = util.lisp_to_nested_expression(logical_form)
         return self._handle_expression(expression_as_list)
+
+    def get_valid_actions(self) -> Dict[str, List[str]]:
+        basic_types = [nltk_type for nltk_type in self._type_map.values()
+                       if isinstance(nltk_type, NamedBasicType)]
+        if self.start_types:
+            start_types = set([self.get_basic_nltk_type(type_) for type_ in self.start_types])
+        else:
+            start_types = None
+        return get_valid_actions(self._name_mapper.common_name_mapping,
+                                 self._name_mapper.common_type_signature,
+                                 basic_types,
+                                 valid_starting_types=start_types)
+
+    def _add_predicate(self, name: str, function: types.MethodType):
+        self._functions[name] = function
+        signature = inspect.signature(function)
+        argument_types = [param.annotation for param in signature.parameters.values()]
+        return_type = signature.return_annotation
+        argument_nltk_types = [self.get_basic_nltk_type(arg_type) for arg_type in argument_types]
+        return_nltk_type = self.get_basic_nltk_type(return_type)
+        function_nltk_type = self.get_function_type(argument_nltk_types, return_nltk_type)
+        self._name_mapper.map_name_with_signature(name, function_nltk_type)
+        # TODO(mattg): figure out what to do about the `curried_functions` stuff.
+
+    def get_basic_nltk_type(self, type_: Type) -> NltkType:
+        if type_ not in self._type_map:
+            if isinstance(type_, typing.GenericMeta):
+                # This is something like List[int].  type_.__name__ will only give 'List', though, so
+                # we need to do some magic here.
+                origin = type_.__origin__
+                args = type_.__args__
+                name = '_'.join([origin.__name__] + [arg.__name__ for arg in args])
+                # TODO(mattg): we probably need to add a grammar rule in here too, somehow, so we
+                # can actually _produce_ a list of things.
+            else:
+                name = type_.__name__
+            self._type_map[type_] = NamedBasicType(name.upper())
+        return self._type_map[type_]
+
+    def get_function_type(self, arg_types: List[NltkType], return_type: NltkType) -> NltkType:
+        if not arg_types:
+            # Functions with no arguments are basically constants whose type match their return
+            # type.
+            return return_type
+
+        # NLTK's logic classes _curry_ multi-argument functions.  A `ComplexType` is a
+        # single-argument function, and you nest these for multi-argument functions.  This for loop
+        # does the nesting for multi-argument functions.
+        right_argument = return_type
+        for arg_type in reversed(arg_types):
+            final_type = ComplexType(arg_type, right_argument)
+            right_argument = final_type
+        return final_type
 
     def _handle_expression(self, expression: Any):
         if isinstance(expression, (list, tuple)):
