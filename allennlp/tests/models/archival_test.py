@@ -1,5 +1,6 @@
 # pylint: disable=invalid-name
 import copy
+import os
 
 import torch
 
@@ -17,9 +18,11 @@ class ArchivalTest(AllenNlpTestCase):
                 "model": {
                         "type": "simple_tagger",
                         "text_field_embedder": {
-                                "tokens": {
-                                        "type": "embedding",
-                                        "embedding_dim": 5
+                                "token_embedders": {
+                                        "tokens": {
+                                                "type": "embedding",
+                                                "embedding_dim": 5
+                                        }
                                 }
                         },
                         "encoder": {
@@ -90,6 +93,10 @@ class ArchivalTest(AllenNlpTestCase):
         # The param in the data should have been replaced with a temporary path
         # (which we don't know, but we know what it ends with).
         assert params.get('train_data_path').endswith('/fta/train_data_path')
+
+        # The temporary path should be accessible even after the load_archive
+        # function returns.
+        assert os.path.exists(params.get('train_data_path'))
 
         # The validation data path should be the same though.
         assert params.get('validation_data_path') == str(self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv')

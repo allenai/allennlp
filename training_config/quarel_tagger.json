@@ -23,7 +23,7 @@
   "validation_data_path": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/quarel/quarel-v1-dev.jsonl",
   "model": {
     "type": "crf_tagger",
-    "constraint_type": "BIO",
+    "label_encoding": "BIO",
     "dropout": 0.2,
     "include_start_end_transitions": false,
     "text_field_embedder": {

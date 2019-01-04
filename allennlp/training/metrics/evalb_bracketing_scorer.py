@@ -28,7 +28,7 @@ class EvalbBracketingScorer(Metric):
     will compile.
 
     AllenNLP contains the EVALB software, but you will need to compile it yourself
-    before using it because the binary it generates is system depenedent. To build it,
+    before using it because the binary it generates is system dependent. To build it,
     run ``make`` inside the ``allennlp/tools/EVALB`` directory.
 
     Note that this metric reads and writes from disk quite a bit. You probably don't
@@ -71,12 +71,12 @@ class EvalbBracketingScorer(Metric):
         """
         if not os.path.exists(self._evalb_program_path):
             logger.warning(f"EVALB not found at {self._evalb_program_path}.  Attempting to compile it.")
-            EvalbBracketingScorer.compile_evalb()
+            EvalbBracketingScorer.compile_evalb(self._evalb_directory_path)
 
             # If EVALB executable still doesn't exist, raise an error.
             if not os.path.exists(self._evalb_program_path):
-                compile_command = ("python -c 'from allennlp.training.metrics import EvalbBracketingScorer; "
-                                   "EvalbBracketingScorer.compile_evalb()'")
+                compile_command = (f"python -c 'from allennlp.training.metrics import EvalbBracketingScorer; "
+                                   f"EvalbBracketingScorer.compile_evalb(\"{self._evalb_directory_path}\")'")
                 raise ConfigurationError(f"EVALB still not found at {self._evalb_program_path}. "
                                          "You must compile the EVALB scorer before using it."
                                          " Run 'make' in the '{}' directory or run: {}".format(

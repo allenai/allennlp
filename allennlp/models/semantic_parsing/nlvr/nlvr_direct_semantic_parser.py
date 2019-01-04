@@ -1,5 +1,5 @@
 import logging
-from typing import List, Dict
+from typing import Any, List, Dict
 
 from overrides import overrides
 
@@ -83,7 +83,8 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
                 actions: List[List[ProductionRule]],
                 identifier: List[str] = None,
                 target_action_sequences: torch.LongTensor = None,
-                labels: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
+                labels: torch.LongTensor = None,
+                metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
         Decoder logic for producing type constrained target sequences, trained to maximize marginal
@@ -122,6 +123,7 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
                                                    self._decoder_step,
                                                    (target_action_sequences, target_mask))
         if not self.training:
+            initial_state.debug_info = [[] for _ in range(batch_size)]
             best_final_states = self._decoder_beam_search.search(self._max_decoding_steps,
                                                                  initial_state,
                                                                  self._decoder_step,
@@ -141,8 +143,18 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
                                      worlds=worlds,
                                      label_strings=label_strings)
             else:
+                if metadata is not None:
+                    outputs["sentence_tokens"] = [x["sentence_tokens"] for x in metadata]
+                outputs['debug_info'] = []
+                for i in range(batch_size):
+                    outputs['debug_info'].append(best_final_states[i][0].debug_info[0])  # type: ignore
                 outputs["best_action_strings"] = batch_action_strings
                 outputs["denotations"] = batch_denotations
+                action_mapping = {}
+                for batch_index, batch_actions in enumerate(actions):
+                    for action_index, action in enumerate(batch_actions):
+                        action_mapping[(batch_index, action_index)] = action[0]
+                outputs['action_mapping'] = action_mapping
         return outputs
 
     def _update_metrics(self,
