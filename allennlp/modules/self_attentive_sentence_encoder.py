@@ -1,11 +1,9 @@
-from typing import Optional, Tuple
+# pylint: disable=no-self-use,invalid-name
+from typing import Optional, Dict
 
-from overrides import overrides
-from torch.nn import Linear
+
 import torch
 
-from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
-from allennlp.nn import Activation
 from allennlp.nn.util import masked_softmax
 
 
@@ -13,7 +11,7 @@ class SelfAttentiveSentenceEncoder(torch.nn.Module):
     """
         The Self Attentive Sentence Encoder which is based on the paper https://arxiv.org/abs/1703.03130.
         This basically generates the encoded representation of the sentence by attending to different words
-        in the sentence. The implementation also has an optional mask feature which normalizes the attention 
+        in the sentence. The implementation also has an optional mask feature which normalizes the attention
         weights after assigning zeros to the padding tokens.
 
     Parameters
@@ -34,7 +32,7 @@ class SelfAttentiveSentenceEncoder(torch.nn.Module):
                  num_attention_heads: int,
                  input_dim: int,
                  forbenius_regularization: Optional[bool] = False,
-                 regularization_coeffecient: Optional[float] = 0.01):
+                 regularization_coeffecient: Optional[float] = 0.01) -> None:
 
         super(SelfAttentiveSentenceEncoder, self).__init__()
         self._attention_size = attention_size
@@ -51,9 +49,9 @@ class SelfAttentiveSentenceEncoder(torch.nn.Module):
         self.linear_first.weight.data.uniform_(-initrange, initrange)
         self.linear_second.weight.data.uniform_(-initrange, initrange)
 
-    def forward(self,
+    def forward(self, # pylint: disable=arguments-differ
                 inputs: torch.Tensor,
-                mask: torch.Tensor = None):
+                mask: torch.Tensor = None) -> Dict[str, torch.Tensor]:
         """
         Parameters
         ----------
@@ -91,10 +89,10 @@ class SelfAttentiveSentenceEncoder(torch.nn.Module):
             attention_transpose = attention.transpose(1, 2)
 
             # Done to ensure that constant identity matrix is also created on the device model is running
-            if isinstance(attention, torch.cuda.FloatTensor):
-                identity = torch.eye(attention.size(1)).cuda()
-            else:
+            if isinstance(attention, torch.FloatTensor):
                 identity = torch.eye(attention.size(1))
+            else:
+                identity = torch.eye(attention.size(1)).cuda()
 
             # Shape (batch_size, timesteps, timesteps)
             identity = identity.unsqueeze(0).expand(batch_size, attention.size(1), attention.size(1))
@@ -109,7 +107,7 @@ class SelfAttentiveSentenceEncoder(torch.nn.Module):
         return outputs
 
     def l2_matrix_norm(self,
-                       matrix: torch.Tensor):
+                       matrix: torch.Tensor) -> float:
         """
         Parameters
         ----------

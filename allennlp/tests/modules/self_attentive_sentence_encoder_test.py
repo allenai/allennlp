@@ -1,5 +1,6 @@
-import torch
+# pylint: disable=no-self-use,invalid-name
 import numpy
+import torch
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.modules.self_attentive_sentence_encoder import SelfAttentiveSentenceEncoder
@@ -48,5 +49,6 @@ class TestSelfAttentiveSentenceEncoder(AllenNlpTestCase):
         attention_unmasked = encoder_output_without_mask["attention"][0, :, :].detach().cpu().numpy()
 
         numpy.testing.assert_almost_equal(attention, attention_unmasked)
-        numpy.testing.assert_almost_equal(encoder_output_with_mask["representation"],
-                                          encoder_output_without_mask["representation"])
+        numpy.testing.assert_almost_equal(encoder_output_with_mask["representation"].detach().cpu().numpy(),
+                                          encoder_output_without_mask["representation"].detach().cpu().numpy(),
+                                          decimal=6)
