@@ -13,9 +13,10 @@ parts of our models need fixing.
 
 ## Pre-requisites
 
-1. You need to have a text in / text out demo of your model already running using our simple
-   server.  See the [tutorial on creating a
-demo](../getting_started/making_predictions_and_creating_a_demo.md) for how to do this.
+1. You need to have a text-in-json-out demo of your model already running using our simple
+   server. This demo server will act as a backend with which the react server will interact and produce results.
+   See the [tutorial on creating a
+demo](../getting_started/predicting_paper_venues/predicting_paper_venues_pt2.md) for how to do this.
 2. We'll be using a React app to generate HTML and javascript for the fancier demo, so you need to
    have `npm` and `node.js` installed.  There are plenty of guides for how to install these on the
 web, sometimes with one-line shell commands.  On MacOS with homebrew, you can just run `brew

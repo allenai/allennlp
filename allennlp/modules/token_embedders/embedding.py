@@ -1,9 +1,6 @@
 import io
 import tarfile
 import zipfile
-import bz2
-import lzma
-import gzip
 import re
 import logging
 import warnings
@@ -24,6 +21,7 @@ from allennlp.common.file_utils import get_file_extension, cached_path
 from allennlp.data import Vocabulary
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 from allennlp.modules.time_distributed import TimeDistributed
+from allennlp.nn import util
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -119,17 +117,22 @@ class Embedding(TokenEmbedder):
 
     @overrides
     def forward(self, inputs):  # pylint: disable=arguments-differ
-        original_inputs = inputs
-        if original_inputs.dim() > 2:
-            inputs = inputs.view(-1, inputs.size(-1))
+        # inputs may have extra dimensions (batch_size, d1, ..., dn, sequence_length),
+        # but embedding expects (batch_size, sequence_length), so pass inputs to
+        # util.combine_initial_dims (which is a no-op if there are no extra dimensions).
+        # Remember the original size.
+        original_size = inputs.size()
+        inputs = util.combine_initial_dims(inputs)
+
         embedded = embedding(inputs, self.weight,
                              max_norm=self.max_norm,
                              norm_type=self.norm_type,
                              scale_grad_by_freq=self.scale_grad_by_freq,
                              sparse=self.sparse)
-        if original_inputs.dim() > 2:
-            view_args = list(original_inputs.size()) + [embedded.size(-1)]
-            embedded = embedded.view(*view_args)
+
+        # Now (if necessary) add back in the extra dimensions.
+        embedded = util.uncombine_initial_dims(embedded, original_size)
+
         if self._projection:
             projection = self._projection
             for _ in range(embedded.dim() - 2):
@@ -421,13 +424,21 @@ class EmbeddingsTextFile(Iterator[str]):
 
             # All the python packages for compressed files share the same interface of io.open
             extension = get_file_extension(main_file_uri)
-            package = {
-                    '.txt': io,
-                    '.vec': io,
-                    '.gz': gzip,
-                    '.bz2': bz2,
-                    '.lzma': lzma,
-                    }.get(extension, None)
+
+            # Some systems don't have support for all of these libraries, so we import them only
+            # when necessary.
+            package = None
+            if extension in ['.txt', '.vec']:
+                package = io
+            elif extension == '.gz':
+                import gzip
+                package = gzip
+            elif extension == ".bz2":
+                import bz2
+                package = bz2
+            elif extension == ".lzma":
+                import lzma
+                package = lzma
 
             if package is None:
                 logger.warning('The embeddings file has an unknown file extension "%s". '

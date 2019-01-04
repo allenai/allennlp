@@ -15,8 +15,13 @@ class NlvrParserPredictor(Predictor):
         if 'worlds' in json_dict:
             # This is grouped data
             worlds = json_dict['worlds']
+            if isinstance(worlds, str):
+                worlds = json.loads(worlds)
         else:
-            worlds = [json_dict['structured_rep']]
+            structured_rep = json_dict['structured_rep']
+            if isinstance(structured_rep, str):
+                structured_rep = json.loads(structured_rep)
+            worlds = [structured_rep]
         identifier = json_dict['identifier'] if 'identifier' in json_dict else None
         instance = self._dataset_reader.text_to_instance(sentence=sentence,  # type: ignore
                                                          structured_representations=worlds,

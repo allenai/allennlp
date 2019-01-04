@@ -56,7 +56,7 @@ class Event2MindDatasetReader(DatasetReader):
     dummy_instances_for_vocab_generation : ``bool`` (optional, default=False)
         Whether to generate instances that use each token of input precisely
         once. Normally we instead generate all combinations of Source, Xintent,
-        Xemotion and Otheremotion columns whichs distort the underlying token
+        Xemotion and Otheremotion columns which distorts the underlying token
         counts. This flag should be used exclusively with the ``dry-run``
         command as the instances generated will be nonsensical outside the
         context of vocabulary generation.
@@ -104,14 +104,15 @@ class Event2MindDatasetReader(DatasetReader):
                                 )
                 # Generate instances where each token of input appears once.
                 else:
-                    # To the extent that sources are duplicated in the dataset
-                    # (which appears common), we will duplicate them here.
-                    yield self.text_to_instance(source_sequence, "none", "none", "none")
                     for xintent in xintents:
+                        # NOTE: source_sequence should really be broken out and deduplicated. We're
+                        # adding it here to ensure we generate the same vocabulary as the model at
+                        # https://s3-us-west-2.amazonaws.com/allennlp/models/event2mind-2018.10.05.tar.gz
+                        # was trained against.
+                        yield self.text_to_instance(source_sequence, xintent, "none", "none")
+                    for xreact in xreacts:
                         # Since "none" is a special token we don't mind it
                         # appearing a disproportionate number of times.
-                        yield self.text_to_instance("none", xintent, "none", "none")
-                    for xreact in xreacts:
                         yield self.text_to_instance("none", "none", xreact, "none")
                     for oreact in oreacts:
                         yield self.text_to_instance("none", "none", "none", oreact)

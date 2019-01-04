@@ -17,7 +17,8 @@
                     "start_tokens": [
                         259
                     ]
-                }
+                },
+                "min_padding_length": 5
             }
         }
     },

@@ -19,11 +19,11 @@ class NerTagIndexer(TokenIndexer[int]):
 
     Parameters
     ----------
-    namespace : ``str``, optional (default=``ner_tags``)
+    namespace : ``str``, optional (default=``ner_tokens``)
         We will use this namespace in the :class:`Vocabulary` to map strings to indices.
     """
     # pylint: disable=no-self-use
-    def __init__(self, namespace: str = 'ner_tags') -> None:
+    def __init__(self, namespace: str = 'ner_tokens') -> None:
         self._namespace = namespace
 
     @overrides
@@ -38,7 +38,7 @@ class NerTagIndexer(TokenIndexer[int]):
                           tokens: List[Token],
                           vocabulary: Vocabulary,
                           index_name: str) -> Dict[str, List[int]]:
-        tags = ['NONE' if token.ent_type_ is None else token.ent_type_ for token in tokens]
+        tags = ['NONE' if not token.ent_type_ else token.ent_type_ for token in tokens]
 
         return {index_name: [vocabulary.get_token_index(tag, self._namespace) for tag in tags]}
 

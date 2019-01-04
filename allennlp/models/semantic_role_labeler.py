@@ -20,7 +20,7 @@ from allennlp.training.metrics import SpanBasedF1Measure
 class SemanticRoleLabeler(Model):
     """
     This model performs semantic role labeling using BIO tags using Propbank semantic roles.
-    Specifically, it is an implmentation of `Deep Semantic Role Labeling - What works
+    Specifically, it is an implementation of `Deep Semantic Role Labeling - What works
     and what's next <https://homes.cs.washington.edu/~luheng/files/acl2017_hllz.pdf>`_ .
 
     This implementation is effectively a series of stacked interleaved LSTMs with highway
