@@ -43,7 +43,7 @@ scikit-learn
 tensorboardX==1.2
 
 # Required by torch.utils.ffi
-cffi==1.11.5
+cffi>=1.11.0
 
 # aws commandline tools for running on Docker remotely.
 # second requirement is to get botocore < 1.11, to avoid the below bug
