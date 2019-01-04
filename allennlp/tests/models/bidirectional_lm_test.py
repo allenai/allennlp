@@ -3,7 +3,7 @@ import numpy as np
 
 from allennlp.common.testing import ModelTestCase
 
-class TestBidirectionalLM(ModelTestCase):
+class TestBidirectionalLanguageModel(ModelTestCase):
     def setUp(self):
         super().setUp()
         self.set_up_model(self.FIXTURES_ROOT / 'language_model' / 'experiment_bidirectional.jsonnet',
@@ -31,3 +31,10 @@ class TestBidirectionalLM(ModelTestCase):
         backward_loss = result["backward_loss"].item()
 
         np.testing.assert_almost_equal(loss, (forward_loss + backward_loss) / 2, decimal=3)
+
+class TestBidirectionalLanguageModelUnsampled(TestBidirectionalLanguageModel):
+    def setUp(self):
+        super().setUp()
+        self.set_up_model(self.FIXTURES_ROOT / 'language_model' /
+                          'experiment_bidirectional_unsampled.jsonnet',
+                          self.FIXTURES_ROOT / 'language_model' / 'sentences.txt')
