@@ -90,7 +90,7 @@ class LanguageModel(Model):
     bidirectional: ``bool``, optional (default: False)
         Train a bidirectional language model, where the contextualizer
         is used to predict the next and previous token for each input token.
-        If True, the contextualizer must be bidirectional.
+        This must match the bidirectionality of the contextualizer.
     """
     def __init__(self,
                  vocab: Vocabulary,
@@ -107,10 +107,10 @@ class LanguageModel(Model):
 
         if contextualizer.is_bidirectional() is not bidirectional:
             raise ConfigurationError(
-                    f"Bidirectionality of contextualizer must match bidirectionality of "
+                    "Bidirectionality of contextualizer must match bidirectionality of "
                     "language model. "
-                    "Contextualizer bidirectional: {contextualizer.is_bidirectional()}, "
-                    "language model bidirectional: {bidirectional}")
+                    f"Contextualizer bidirectional: {contextualizer.is_bidirectional()}, "
+                    f"language model bidirectional: {bidirectional}")
 
         self._contextualizer = contextualizer
         self._bidirectional = bidirectional
