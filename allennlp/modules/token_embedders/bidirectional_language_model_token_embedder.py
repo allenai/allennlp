@@ -2,11 +2,11 @@ from typing import Tuple
 import warnings
 
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
+from allennlp.modules.token_embedders.language_model_token_embedder import LanguageModelTokenEmbedder
 
 
 @TokenEmbedder.register('bidirectional_lm_token_embedder')
-class BidirectionalLanguageModelTokenEmbedder(TokenEmbedder):
-    # pylint: disable=abstract-method
+class BidirectionalLanguageModelTokenEmbedder(LanguageModelTokenEmbedder):
     """
     Compute a single layer of representations from a bidirectional language model. This is done
     by computing a learned scalar average of the layers from the LM. Typically the LM's weights
