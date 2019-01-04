@@ -935,8 +935,7 @@ class Trainer(Registrable):
     def from_params(cls,  # type: ignore
                     params: Params,
                     serialization_dir: str,
-                    recover: bool = False,
-                    extend_vocab: bool = False) -> 'Trainer':
+                    recover: bool = False) -> 'Trainer':
                     # ,
                     #model: Model,
                     # iterator: DataIterator,
