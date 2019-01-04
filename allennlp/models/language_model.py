@@ -330,7 +330,7 @@ class LanguageModel(Model):
                 return_dict.update({
                         'loss': average_loss,
                         'forward_loss': average_loss,
-                        'backward_loss': average_loss
+                        'backward_loss': average_loss if backward_loss is not None else None
                 })
 
         return_dict.update({
