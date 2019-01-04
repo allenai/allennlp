@@ -44,7 +44,7 @@ class SelfAttentiveSentenceEncoder(torch.nn.Module):
         self._linear_inner = torch.nn.Linear(input_dim, attention_size, bias=False)
         self._linear_outer = torch.nn.Linear(attention_size, num_attention_heads, bias=False)
 
-    def init_weights(self):
+    def init_weights(self) -> None:
         initrange = 0.1
         self.linear_first.weight.data.uniform_(-initrange, initrange)
         self.linear_second.weight.data.uniform_(-initrange, initrange)

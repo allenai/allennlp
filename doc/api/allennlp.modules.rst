@@ -36,3 +36,4 @@ allennlp.modules
    allennlp.modules.bimpm_matching
    allennlp.modules.masked_layer_norm
    allennlp.modules.sampled_softmax_loss
+   allennlp.modules.self_attentive_sentence_encoder
