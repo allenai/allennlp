@@ -1,5 +1,4 @@
 from typing import Tuple
-import warnings
 
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 from allennlp.modules.token_embedders.language_model_token_embedder import LanguageModelTokenEmbedder
