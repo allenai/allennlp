@@ -47,10 +47,6 @@ class BidirectionalLanguageModelTokenEmbedder(LanguageModelTokenEmbedder):
                  bos_eos_tokens: Tuple[str, str] = ("<S>", "</S>"),
                  remove_bos_eos: bool = True,
                  requires_grad: bool = False) -> None:
-        warnings.warn('BidirectionalLanguageModelTokenEmbedder is deprecated, '
-                      'please use the LanguageModelTokenEmbedder '
-                      '(registered under "language_model_token_embedder").',
-                      DeprecationWarning)
         super().__init__(archive_file=archive_file,
                          dropout=dropout,
                          bos_eos_tokens=bos_eos_tokens,
