@@ -151,9 +151,9 @@ class FBetaMeasure(Metric):
         true_sum = self._true_sum
 
         if self._average == 'micro':
-            tp_sum = tp_sum.sum()
-            pred_sum = pred_sum.sum()
-            true_sum = true_sum.sum()
+            tp_sum = tp_sum.sum()  # type: ignore
+            pred_sum = pred_sum.sum()  # type: ignore
+            true_sum = true_sum.sum()  # type: ignore
 
         beta2 = self._beta ** 2
         # Finally, we have all our sufficient statistics.
