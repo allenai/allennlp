@@ -201,7 +201,7 @@ class WordpieceIndexer(TokenIndexer[int]):
         We need to override this because the indexer generates multiple keys.
         """
         # pylint: disable=no-self-use
-        return [index_name, f"{index_name}-offsets", "mask"]
+        return [index_name, f"{index_name}-offsets", f"{index_name}-type-ids", "mask"]
 
 
 @TokenIndexer.register("bert-pretrained")
