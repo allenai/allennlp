@@ -153,6 +153,17 @@ class ExecutorTest(AllenNlpTestCase):
                                    'i -> 2',
                                    'i -> 3']
 
+    def test_action_sequence_to_logical_form(self):
+        logical_form = '(add 2 3)'
+        action_sequence = self.executor.logical_form_to_action_sequence(logical_form)
+        recovered_logical_form = self.executor.action_sequence_to_logical_form(action_sequence)
+        assert recovered_logical_form == logical_form
+
+        logical_form = '(halve (multiply (divide 9 three) (power 2 3)))'
+        action_sequence = self.executor.logical_form_to_action_sequence(logical_form)
+        recovered_logical_form = self.executor.action_sequence_to_logical_form(action_sequence)
+        assert recovered_logical_form == logical_form
+
     def test_logical_form_parsing_fails_on_bad_inputs(self):
         # We don't catch all type inconsistencies in the code, but we _do_ catch some.  If we add
         # more that we catch, this is a good place to test for them.

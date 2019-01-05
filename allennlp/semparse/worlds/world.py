@@ -8,26 +8,10 @@ from nltk.sem.logic import ApplicationExpression, Expression, LambdaExpression, 
 
 from allennlp.semparse.type_declarations import type_declaration as types
 from allennlp.semparse.executors import ParsingError, ExecutionError
+from allennlp.semparse.executors.executor import nltk_tree_to_logical_form
 from allennlp.semparse import util as semparse_util
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
-
-
-def nltk_tree_to_logical_form(tree: Tree) -> str:
-    """
-    Given an ``nltk.Tree`` representing the syntax tree that generates a logical form, this method
-    produces the actual (lisp-like) logical form, with all of the non-terminal symbols converted
-    into the correct number of parentheses.
-    """
-    # nltk.Tree actually inherits from `list`, so you use `len()` to get the number of children.
-    # We're going to be explicit about checking length, instead of using `if tree:`, just to avoid
-    # any funny business nltk might have done (e.g., it's really odd if `if tree:` evaluates to
-    # `False` if there's a single leaf node with no children).
-    if len(tree) == 0:  # pylint: disable=len-as-condition
-        return tree.label()
-    if len(tree) == 1:
-        return tree[0].label()
-    return '(' + ' '.join(nltk_tree_to_logical_form(child) for child in tree) + ')'
 
 
 class World:

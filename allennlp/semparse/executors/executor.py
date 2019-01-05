@@ -4,6 +4,7 @@ import logging
 import types
 import typing
 
+from nltk import Tree
 from nltk.sem.logic import Type as NltkType
 
 from allennlp.semparse import util
@@ -45,6 +46,23 @@ class ExecutionError(Exception):
 def predicate(function: Callable) -> Callable:  # pylint: disable=invalid-name
     function.is_predicate = True
     return function
+
+
+def nltk_tree_to_logical_form(tree: Tree) -> str:
+    """
+    Given an ``nltk.Tree`` representing the syntax tree that generates a logical form, this method
+    produces the actual (lisp-like) logical form, with all of the non-terminal symbols converted
+    into the correct number of parentheses.
+    """
+    # nltk.Tree actually inherits from `list`, so you use `len()` to get the number of children.
+    # We're going to be explicit about checking length, instead of using `if tree:`, just to avoid
+    # any funny business nltk might have done (e.g., it's really odd if `if tree:` evaluates to
+    # `False` if there's a single leaf node with no children).
+    if len(tree) == 0:  # pylint: disable=len-as-condition
+        return tree.label()
+    if len(tree) == 1:
+        return tree[0].label()
+    return '(' + ' '.join(nltk_tree_to_logical_form(child) for child in tree) + ')'
 
 
 class Executor:
@@ -94,18 +112,34 @@ class Executor:
         return transitions
 
     def action_sequence_to_logical_form(self, action_sequence: List[str]) -> str:
-        pass
+        """
+        Takes an action sequence and constructs a logical form from it.
 
-    def _add_predicate(self, name: str, function: types.MethodType):
-        self._functions[name] = function
-        signature = inspect.signature(function)
-        argument_types = [param.annotation for param in signature.parameters.values()]
-        return_type = signature.return_annotation
-        argument_nltk_types = [self.get_basic_nltk_type(arg_type) for arg_type in argument_types]
-        return_nltk_type = self.get_basic_nltk_type(return_type)
-        function_nltk_type = self.get_function_type(argument_nltk_types, return_nltk_type)
-        self._function_types[name] = (argument_nltk_types, return_nltk_type)
-        self._name_mapper.map_name_with_signature(name, function_nltk_type)
+        Parameters
+        ----------
+        action_sequence : ``List[str]``
+            The sequence of actions as strings (eg.: ``['{START_SYMBOL} -> t', 't -> <e,t>', ...]``).
+        """
+        # Basic outline: we assume that the bracketing that we get in the RHS of each action is the
+        # correct bracketing for reconstructing the logical form.  This is true when there is no
+        # currying in the action sequence.  Given this assumption, we just need to construct a tree
+        # from the action sequence, then output all of the leaves in the tree, with brackets around
+        # the children of all non-terminal nodes.
+
+        remaining_actions = [action.split(" -> ") for action in action_sequence]
+        tree = Tree(remaining_actions[0][1], [])
+
+        try:
+            remaining_actions = self._construct_node_from_actions(tree, remaining_actions[1:])
+        except ParsingError:
+            logger.error("Error parsing action sequence: %s", action_sequence)
+            raise
+
+        if remaining_actions:
+            logger.error("Error parsing action sequence: %s", action_sequence)
+            logger.error("Remaining actions were: %s", remaining_actions)
+            raise ParsingError("Extra actions in action sequence")
+        return nltk_tree_to_logical_form(tree)
 
     def get_basic_nltk_type(self, type_: Type) -> NltkType:
         if type_ not in self._type_map:
@@ -136,6 +170,37 @@ class Executor:
             final_type = ComplexType(arg_type, right_argument)
             right_argument = final_type
         return final_type
+
+    def _add_predicate(self, name: str, function: types.MethodType):
+        self._functions[name] = function
+        signature = inspect.signature(function)
+        argument_types = [param.annotation for param in signature.parameters.values()]
+        return_type = signature.return_annotation
+        argument_nltk_types = [self.get_basic_nltk_type(arg_type) for arg_type in argument_types]
+        return_nltk_type = self.get_basic_nltk_type(return_type)
+        function_nltk_type = self.get_function_type(argument_nltk_types, return_nltk_type)
+        self._function_types[name] = (argument_nltk_types, return_nltk_type)
+        self._name_mapper.map_name_with_signature(name, function_nltk_type)
+
+    def _is_terminal(self, name: str) -> bool:
+        if name in self._functions:
+            return True
+        if name[0] == '"' and name[-1] == "'":
+            return True
+        if name[0] == "'" and name[-1] == '"':
+            return True
+        try:
+            int(name)
+            return True
+        except ValueError:
+            pass
+        try:
+            float(name)
+            return True
+        except ValueError:
+            pass
+        return False
+
 
     def _handle_expression(self, expression: Any):
         if isinstance(expression, (list, tuple)):
@@ -201,3 +266,55 @@ class Executor:
                 raise ParsingError('Constant expressions not implemented yet')
         else:
             raise ParsingError('Not sure how you got here.  Raise an issue on github with details')
+
+    def _construct_node_from_actions(self,
+                                     current_node: Tree,
+                                     remaining_actions: List[List[str]]) -> List[List[str]]:
+        """
+        Given a current node in the logical form tree, and a list of actions in an action sequence,
+        this method fills in the children of the current node from the action sequence, then
+        returns whatever actions are left.
+
+        For example, we could get a node with type ``c``, and an action sequence that begins with
+        ``c -> [<r,c>, r]``.  This method will add two children to the input node, consuming
+        actions from the action sequence for nodes of type ``<r,c>`` (and all of its children,
+        recursively) and ``r`` (and all of its children, recursively).  This method assumes that
+        action sequences are produced `depth-first`, so all actions for the subtree under ``<r,c>``
+        appear before actions for the subtree under ``r``.  If there are any actions in the action
+        sequence after the ``<r,c>`` and ``r`` subtrees have terminated in leaf nodes, they will be
+        returned.
+        """
+        if not remaining_actions:
+            logger.error("No actions left to construct current node: %s", current_node)
+            raise ParsingError("Incomplete action sequence")
+        left_side, right_side = remaining_actions.pop(0)
+        if left_side != current_node.label():
+            mismatch = True
+            multi_match_mapping = {str(key): [str(value) for value in values] for key,
+                                   values in self.get_multi_match_mapping().items()}
+            current_label = current_node.label()
+            if current_label in multi_match_mapping and left_side in multi_match_mapping[current_label]:
+                mismatch = False
+            if mismatch:
+                logger.error("Current node: %s", current_node)
+                logger.error("Next action: %s -> %s", left_side, right_side)
+                logger.error("Remaining actions were: %s", remaining_actions)
+                raise ParsingError("Current node does not match next action")
+        if right_side[0] == '[':
+            # This is a non-terminal expansion, with more than one child node.
+            for child_type in right_side[1:-1].split(', '):
+                child_node = Tree(child_type, [])
+                current_node.append(child_node)  # you add a child to an nltk.Tree with `append`
+                if not self._is_terminal(child_type):
+                    remaining_actions = self._construct_node_from_actions(child_node,
+                                                                          remaining_actions)
+        elif self._is_terminal(right_side):
+            # The current node is a pre-terminal; we'll add a single terminal child.
+            current_node.append(Tree(right_side, []))  # you add a child to an nltk.Tree with `append`
+        else:
+            # The only way this can happen is if you have a unary non-terminal production rule.
+            # That is almost certainly not what you want with this kind of grammar, so we'll crash.
+            # If you really do want this, open a PR with a valid use case.
+            raise ParsingError(f"Found a unary production rule: {left_side} -> {right_side}. "
+                               "Are you sure you want a unary production rule in your grammar?")
+        return remaining_actions
