@@ -33,11 +33,11 @@ class Arithmetic(DomainLanguage):
 
     @predicate
     def divide(self, num1: int, num2: int) -> int:
-        return num1 / num2
+        return num1 // num2
 
     @predicate
     def halve(self, num1: int) -> int:
-        return num1 / 2
+        return num1 // 2
 
     @predicate
     def three(self) -> int:

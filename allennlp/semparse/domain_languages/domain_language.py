@@ -43,7 +43,7 @@ class ExecutionError(Exception):
 
 
 def predicate(function: Callable) -> Callable:  # pylint: disable=invalid-name
-    function.is_predicate = True
+    function.is_predicate = True  # type: ignore
     return function
 
 
@@ -140,8 +140,8 @@ class DomainLanguage:
 
     def get_valid_actions(self) -> Dict[str, List[str]]:
         if not self._valid_actions:
-            basic_types = [nltk_type for nltk_type in self._type_map.values()
-                           if isinstance(nltk_type, NamedBasicType)]
+            basic_types = set([nltk_type for nltk_type in self._type_map.values()
+                               if isinstance(nltk_type, NamedBasicType)])
             if self.start_types:
                 # Not sure why pylint misses this...
                 # pylint: disable=not-an-iterable
@@ -228,7 +228,7 @@ class DomainLanguage:
             right_argument = final_type
         return final_type
 
-    def _add_predicate(self, name: str, function: types.MethodType):
+    def _add_predicate(self, name: str, function: Callable):
         self._functions[name] = function
         signature = inspect.signature(function)
         argument_types = [param.annotation for param in signature.parameters.values()]
