@@ -17,7 +17,7 @@ Our 2018 EMNLP tutorial is available at https://github.com/allenai/writing-code-
 * [Part 2 - Configuring Experiments](getting_started/walk_through_allennlp/configuration.md)
 * [Part 3 - Creating a Model](getting_started/walk_through_allennlp/creating_a_model.md)
 
-#### A Complete Example: Predicitng Paper Venues
+#### A Complete Example: Predicting Paper Venues
 
 * [Part 1 - Datasets and Models](getting_started/predicting_paper_venues/predicting_paper_venues_pt1.md)
 * [Part 2 - Predictions and Demos](getting_started/predicting_paper_venues/predicting_paper_venues_pt2.md)
