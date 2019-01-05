@@ -7,8 +7,8 @@ from nltk import Tree
 from nltk.sem.logic import ApplicationExpression, Expression, LambdaExpression, BasicType, Type
 
 from allennlp.semparse.type_declarations import type_declaration as types
-from allennlp.semparse.executors import ParsingError, ExecutionError
-from allennlp.semparse.executors.executor import nltk_tree_to_logical_form
+from allennlp.semparse.domain_languages.domain_language import ParsingError, ExecutionError
+from allennlp.semparse.domain_languages.domain_language import nltk_tree_to_logical_form
 from allennlp.semparse import util as semparse_util
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name

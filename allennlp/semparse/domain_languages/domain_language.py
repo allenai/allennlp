@@ -22,7 +22,7 @@ class ParsingError(Exception):
     this occurs.
     """
     def __init__(self, message):
-        super(ParsingError, self).__init__()
+        super().__init__()
         self.message = message
 
     def __str__(self):
@@ -36,7 +36,7 @@ class ExecutionError(Exception):
     or a set of arguments whose types do not match those that the function expects.
     """
     def __init__(self, message):
-        super(ExecutionError, self).__init__()
+        super().__init__()
         self.message = message
 
     def __str__(self):
@@ -65,7 +65,7 @@ def nltk_tree_to_logical_form(tree: Tree) -> str:
     return '(' + ' '.join(nltk_tree_to_logical_form(child) for child in tree) + ')'
 
 
-class Executor:
+class DomainLanguage:
     def __init__(self):
         self._type_map: Dict[Type, NltkType] = {}
         self._functions: Dict[str, Callable] = {}

@@ -4,7 +4,7 @@ import operator
 import logging
 
 from allennlp.semparse import util as semparse_util
-from allennlp.semparse.executors.executor import ExecutionError
+from allennlp.semparse.domain_languages.domain_language import ExecutionError
 from allennlp.semparse.executors.nlvr_object import Object
 from allennlp.semparse.executors.nlvr_box import Box
 

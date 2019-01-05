@@ -3,7 +3,7 @@ from collections import defaultdict
 import logging
 
 from allennlp.semparse import util as semparse_util
-from allennlp.semparse.executors.executor import ExecutionError
+from allennlp.semparse.domain_languages.domain_language import ExecutionError
 from allennlp.semparse.contexts.table_question_knowledge_graph import MONTH_NUMBERS
 from allennlp.semparse.contexts import TableQuestionContext
 from allennlp.tools import wikitables_evaluator as evaluator
