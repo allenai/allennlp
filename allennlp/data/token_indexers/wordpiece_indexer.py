@@ -173,10 +173,10 @@ class WordpieceIndexer(TokenIndexer[int]):
         mask = [1 for _ in tokens]
 
         return {
-            index_name: wordpiece_ids,
-            f"{index_name}-offsets": offsets,
-            f"{index_name}-type-ids": token_type_ids,
-            "mask": mask
+                index_name: wordpiece_ids,
+                f"{index_name}-offsets": offsets,
+                f"{index_name}-type-ids": token_type_ids,
+                "mask": mask
         }
 
     @overrides

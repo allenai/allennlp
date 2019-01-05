@@ -124,21 +124,21 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
         options_file = str(elmo_fixtures_path / 'options.json')
         weight_file = str(elmo_fixtures_path / 'lm_weights.hdf5')
         params = Params({
-            "token_embedders": {
-                "elmo": {
-                    "type": "elmo_token_embedder",
-                    "options_file": options_file,
-                    "weight_file": weight_file
+                "token_embedders": {
+                        "elmo": {
+                                "type": "elmo_token_embedder",
+                                "options_file": options_file,
+                                "weight_file": weight_file
+                        },
                 },
-            },
-            "embedder_to_indexer_map": {
-                # ignore `word_inputs` in `ElmoTokenEmbedder.forward`
-                "elmo": ["elmo", None]
-            }
+                "embedder_to_indexer_map": {
+                        # ignore `word_inputs` in `ElmoTokenEmbedder.forward`
+                        "elmo": ["elmo", None]
+                }
         })
         token_embedder = BasicTextFieldEmbedder.from_params(self.vocab, params)
         inputs = {
-            'elmo': (torch.rand(3, 6, 50) * 15).long(),
+                'elmo': (torch.rand(3, 6, 50) * 15).long(),
         }
         token_embedder(inputs)
 
@@ -147,31 +147,31 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
         options_file = str(elmo_fixtures_path / 'options.json')
         weight_file = str(elmo_fixtures_path / 'lm_weights.hdf5')
         params = Params({
-            "token_embedders": {
-                "words": {
-                    "type": "embedding",
-                    "num_embeddings": 20,
-                    "embedding_dim": 2,
+                "token_embedders": {
+                        "words": {
+                                "type": "embedding",
+                                "num_embeddings": 20,
+                                "embedding_dim": 2,
+                        },
+                        "elmo": {
+                                "type": "elmo_token_embedder",
+                                "options_file": options_file,
+                                "weight_file": weight_file
+                        },
                 },
-                "elmo": {
-                    "type": "elmo_token_embedder",
-                    "options_file": options_file,
-                    "weight_file": weight_file
-                },
-            },
-            "embedder_to_indexer_map": {
-                # pass arguments to `ElmoTokenEmbedder.forward` by dict
-                "elmo": {
-                    "inputs": "elmo",
-                    "word_inputs": "words"
-                },
-                "words": ["words"]
-            }
+                "embedder_to_indexer_map": {
+                        # pass arguments to `ElmoTokenEmbedder.forward` by dict
+                        "elmo": {
+                                "inputs": "elmo",
+                                "word_inputs": "words"
+                        },
+                        "words": ["words"]
+                }
         })
         token_embedder = BasicTextFieldEmbedder.from_params(self.vocab, params)
         inputs = {
-            'words': (torch.rand(3, 6) * 20).long(),
-            'elmo': (torch.rand(3, 6, 50) * 15).long(),
+                'words': (torch.rand(3, 6) * 20).long(),
+                'elmo': (torch.rand(3, 6, 50) * 15).long(),
         }
         token_embedder(inputs)
 

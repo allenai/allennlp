@@ -101,8 +101,8 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
                                for indexer_key in indexer_map]
                 elif isinstance(indexer_map, collections.abc.Mapping):
                     tensors = {
-                        name: text_field_input[argument]
-                        for name, argument in indexer_map.items()
+                            name: text_field_input[argument]
+                            for name, argument in indexer_map.items()
                     }
                 else:
                     raise NotImplementedError

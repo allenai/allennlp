@@ -124,4 +124,4 @@ class TestBertIndexer(ModelTestCase):
         indexed_tokens = token_indexer.tokens_to_indices(tokens, vocab, "bert")
 
         #                                                [CLS] 2, 15, 10, 11, 6, 17, 2  15, 10, 11, 6, [SEP]
-        assert indexed_tokens["bert-type-ids"] == [0,    0, 0,  0,  0,  0, 0,  1, 1,  1,  1,  1, 1]
+        assert indexed_tokens["bert-type-ids"] == [0,    0, 0,  0,  0,  0, 0,  1, 1,  1,  1,  1, 1]  #pylint: disable=bad-whitespace
