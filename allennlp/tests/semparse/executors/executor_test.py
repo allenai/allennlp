@@ -4,7 +4,7 @@ from typing import List
 import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.semparse import Executor, ExecutionError, predicate
+from allennlp.semparse import Executor, ExecutionError, ParsingError, predicate
 from allennlp.semparse.type_declarations.type_declaration import ComplexType, NamedBasicType
 
 class ArithmeticExecutor(Executor):
@@ -119,3 +119,50 @@ class ExecutorTest(AllenNlpTestCase):
                                 ['sum'])
         check_productions_match(valid_actions['i'],
                                 ['[<i,<i,i>>, i, i]', '[<i,i>, i]', '[<l,i>, l]', 'three'])
+
+    def test_logical_form_to_action_sequence(self):
+        action_sequence = self.executor.logical_form_to_action_sequence('(add 2 3)')
+        assert action_sequence == ['@start@ -> i',
+                                   'i -> [<i,<i,i>>, i, i]',
+                                   '<i,<i,i>> -> add',
+                                   'i -> 2',
+                                   'i -> 3']
+
+        action_sequence = self.executor.logical_form_to_action_sequence('(halve (subtract 8 three))')
+        assert action_sequence == ['@start@ -> i',
+                                   'i -> [<i,i>, i]',
+                                   '<i,i> -> halve',
+                                   'i -> [<i,<i,i>>, i, i]',
+                                   '<i,<i,i>> -> subtract',
+                                   'i -> 8',
+                                   'i -> three']
+
+        logical_form = '(halve (multiply (divide 9 three) (power 2 3)))'
+        action_sequence = self.executor.logical_form_to_action_sequence(logical_form)
+        assert action_sequence == ['@start@ -> i',
+                                   'i -> [<i,i>, i]',
+                                   '<i,i> -> halve',
+                                   'i -> [<i,<i,i>>, i, i]',
+                                   '<i,<i,i>> -> multiply',
+                                   'i -> [<i,<i,i>>, i, i]',
+                                   '<i,<i,i>> -> divide',
+                                   'i -> 9',
+                                   'i -> three',
+                                   'i -> [<i,<i,i>>, i, i]',
+                                   '<i,<i,i>> -> power',
+                                   'i -> 2',
+                                   'i -> 3']
+
+    def test_logical_form_parsing_fails_on_bad_inputs(self):
+        # We don't catch all type inconsistencies in the code, but we _do_ catch some.  If we add
+        # more that we catch, this is a good place to test for them.
+        with pytest.raises(ParsingError, match='Wrong number of arguments'):
+            self.executor.logical_form_to_action_sequence('(halve 2 3)')
+        with pytest.raises(ParsingError, match='Wrong number of arguments'):
+            self.executor.logical_form_to_action_sequence('(add 3)')
+        with pytest.raises(ParsingError, match='Constant expressions not implemented yet'):
+            self.executor.logical_form_to_action_sequence('add')
+        with pytest.raises(ParsingError, match='Bare lists not implemented yet'):
+            self.executor.logical_form_to_action_sequence('(sum (3 2))')
+        with pytest.raises(ParsingError, match='did not have expected type'):
+            self.executor.logical_form_to_action_sequence('(sum (add 2 3))')
