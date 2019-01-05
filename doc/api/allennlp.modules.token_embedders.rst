@@ -49,3 +49,9 @@ allennlp.modules.token_embedders
    :members:
    :undoc-members:
    :show-inheritance:
+
+.. _bidirectional-language-model-token-embedder:
+.. automodule:: allennlp.modules.token_embedders.bidirectional_language_model_token_embedder
+   :members:
+   :undoc-members:
+   :show-inheritance:

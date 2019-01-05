@@ -1,7 +1,7 @@
 local config = import "experiment_unsampled.jsonnet";
 
 config + {
-  "model": config["model"] + {
+  "model"+: {
     "num_samples": 10,
     "sparse_embeddings": true
   }
