@@ -1,8 +1,7 @@
-from typing import Any, Callable, Dict, List, Set, Type
+from typing import Any, Callable, Dict, GenericMeta, List, Set, Tuple, Type
 import inspect
 import logging
 import types
-import typing
 
 from nltk import Tree
 from nltk.sem.logic import Type as NltkType
@@ -53,6 +52,9 @@ def nltk_tree_to_logical_form(tree: Tree) -> str:
     Given an ``nltk.Tree`` representing the syntax tree that generates a logical form, this method
     produces the actual (lisp-like) logical form, with all of the non-terminal symbols converted
     into the correct number of parentheses.
+
+    This is used in the logic that converts action sequences back into logical forms.  It's very
+    unlikely that you will need this anywhere else.
     """
     # nltk.Tree actually inherits from `list`, so you use `len()` to get the number of children.
     # We're going to be explicit about checking length, instead of using `if tree:`, just to avoid
@@ -66,6 +68,57 @@ def nltk_tree_to_logical_form(tree: Tree) -> str:
 
 
 class DomainLanguage:
+    """
+    A ``DomainLanguage`` specifies the functions available to use for a semantic parsing task.  You
+    write execution code for these functions, and we will automatically induce a grammar from those
+    functions and give you a lisp interpreter that can use those functions.  For example:
+
+    .. code-block:: python
+
+        class Arithmetic(DomainLanguage):
+            @predicate
+            def add(self, num1: int, num2: int) -> int:
+                return num1 + num2
+
+            @predicate
+            def halve(self, num: int) -> int:
+                return num / 2
+
+            ...
+
+    Instantiating this class now gives you a language object that can parse and execute logical
+    forms, can convert logical forms to action sequences (linearized abstract syntax trees) and
+    back again, and can list all valid production rules in a grammar induced from the specified
+    functions.
+
+    .. code-block:: python
+
+        >>> l = Arithmetic()
+        >>> l.execute("(add 2 3)")
+        5
+        >>> l.execute("(halve (add 12 4))")
+        8
+        >>> l.logical_form_to_action_sequence("(add 2 3)")
+        ['@start@ -> i', 'i -> [<i,<i,i>>, i, i]', '<i,<i,i>> -> add', 'i -> 2', 'i -> 3']
+        >>> l.action_sequence_to_logical_form(l.logical_form_to_action_sequence('(add 2 3)'))
+        '(add 2 3)'
+        >>> l.get_valid_actions()
+        {'<i,<i,i>>': ['add', 'divide', 'multiply', 'subtract'], '<i,i>': ['halve'], ...}
+
+    This is done with some reflection magic, with the help of the ``@predicate`` decorator and type
+    annotations.  For a predicate to be included in the language, it *must* be decorated with
+    ``@predicate``, and it *must* have type annotations on all arguments and on its return type.
+
+    For type annotations, we currently support ``int``, ``float``, ``str``, and similar
+    non-collection built in types, as well as any non-generic type you define yourself.  Generic
+    types (things like ``List[str]``) are not currently supported very well - you will likely be
+    able to execute logical forms that use them, but the grammar induction won't know how to create
+    a ``List[str]``, and so we also won't produce a correct action sequence for them.
+
+    The language we construct is also purely functional - no defining variables or using lambda
+    functions, or anything like that.  If you would like to extend this code to handle more complex
+    languages, open an issue on github.
+    """
     def __init__(self):
         self._type_map: Dict[Type, NltkType] = {}
         self._functions: Dict[str, Callable] = {}
@@ -90,7 +143,10 @@ class DomainLanguage:
             basic_types = [nltk_type for nltk_type in self._type_map.values()
                            if isinstance(nltk_type, NamedBasicType)]
             if self.start_types:
+                # Not sure why pylint misses this...
+                # pylint: disable=not-an-iterable
                 start_types = set([self.get_basic_nltk_type(type_) for type_ in self.start_types])
+                # pylint: enable=not-an-iterable
             else:
                 start_types = None
             self._valid_actions = type_declaration.get_valid_actions(self._name_mapper.name_mapping,
@@ -143,7 +199,7 @@ class DomainLanguage:
 
     def get_basic_nltk_type(self, type_: Type) -> NltkType:
         if type_ not in self._type_map:
-            if isinstance(type_, typing.GenericMeta):
+            if isinstance(type_, GenericMeta):
                 # This is something like List[int].  type_.__name__ will only give 'List', though, so
                 # we need to do some magic here.
                 origin = type_.__origin__
@@ -156,7 +212,8 @@ class DomainLanguage:
             self._type_map[type_] = NamedBasicType(name.upper())
         return self._type_map[type_]
 
-    def get_function_type(self, arg_types: List[NltkType], return_type: NltkType) -> NltkType:
+    @staticmethod
+    def get_function_type(arg_types: List[NltkType], return_type: NltkType) -> NltkType:
         if not arg_types:
             # Functions with no arguments are basically constants whose type match their return
             # type.
@@ -201,8 +258,8 @@ class DomainLanguage:
             pass
         return False
 
-
     def _handle_expression(self, expression: Any):
+        # pylint: disable=too-many-return-statements
         if isinstance(expression, (list, tuple)):
             if expression[0] in self._functions:
                 function = self._functions[expression[0]]
@@ -210,7 +267,7 @@ class DomainLanguage:
                 try:
                     return function(*arguments)
                 except (TypeError, ValueError) as error:
-                    raise ExecutionError("Error executing expression {expression}: {error}")
+                    raise ExecutionError(f"Error executing expression {expression}: {error}")
             else:
                 return [self._handle_expression(item) for item in expression]
         elif isinstance(expression, str):
@@ -221,8 +278,8 @@ class DomainLanguage:
             if expression in self._functions:
                 try:
                     return self._functions[expression]()
-                except (TypeError, ValueError):
-                    raise ExecutionError("Error executing expression {expression}: {error}")
+                except (TypeError, ValueError) as error:
+                    raise ExecutionError(f"Error executing expression {expression}: {error}")
             try:
                 int_value = int(expression)
                 return int_value
@@ -289,17 +346,10 @@ class DomainLanguage:
             raise ParsingError("Incomplete action sequence")
         left_side, right_side = remaining_actions.pop(0)
         if left_side != current_node.label():
-            mismatch = True
-            multi_match_mapping = {str(key): [str(value) for value in values] for key,
-                                   values in self.get_multi_match_mapping().items()}
-            current_label = current_node.label()
-            if current_label in multi_match_mapping and left_side in multi_match_mapping[current_label]:
-                mismatch = False
-            if mismatch:
-                logger.error("Current node: %s", current_node)
-                logger.error("Next action: %s -> %s", left_side, right_side)
-                logger.error("Remaining actions were: %s", remaining_actions)
-                raise ParsingError("Current node does not match next action")
+            logger.error("Current node: %s", current_node)
+            logger.error("Next action: %s -> %s", left_side, right_side)
+            logger.error("Remaining actions were: %s", remaining_actions)
+            raise ParsingError("Current node does not match next action")
         if right_side[0] == '[':
             # This is a non-terminal expansion, with more than one child node.
             for child_type in right_side[1:-1].split(', '):

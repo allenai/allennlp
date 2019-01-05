@@ -5,7 +5,6 @@ import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.semparse import DomainLanguage, ExecutionError, ParsingError, predicate
-from allennlp.semparse.type_declarations.type_declaration import ComplexType, NamedBasicType
 
 class Arithmetic(DomainLanguage):
     def __init__(self):
@@ -78,7 +77,7 @@ class DomainLanguageTest(AllenNlpTestCase):
 
     def test_not_all_functions_are_predicates(self):
         # This should not execute to 5, but instead be treated as a constant.
-        self.language.execute('not_a_predicate') == 'not_a_predicate'
+        assert self.language.execute('not_a_predicate') == 'not_a_predicate'
 
     def test_basic_logical_form(self):
         assert self.language.execute('three') == 3

@@ -2,7 +2,7 @@
 import json
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.semparse.worlds.world import ExecutionError
+from allennlp.semparse.domain_languages.domain_language import ExecutionError
 from allennlp.semparse.executors import NlvrExecutor
 from allennlp.semparse.executors.nlvr_box import Box
 
