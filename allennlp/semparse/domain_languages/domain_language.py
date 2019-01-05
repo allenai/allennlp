@@ -129,23 +129,32 @@ class DomainLanguage:
             if isinstance(getattr(self, name), types.MethodType):
                 function = getattr(self, name)
                 if hasattr(function, 'is_predicate') and function.is_predicate:
-                    self._add_predicate(name, function)
+                    self.add_predicate(name, function)
         # Caching this to avoid recompting it every time `get_valid_actions` is called.
         self._valid_actions: Dict[str, List[str]] = None
 
     def execute(self, logical_form: str):
+        """Executes a logical form, using whatever predicates you have defined."""
         logical_form = logical_form.replace(",", " ")
-        expression_as_list = util.lisp_to_nested_expression(logical_form)
-        return self._handle_expression(expression_as_list)
+        expression = util.lisp_to_nested_expression(logical_form)
+        return self._execute_expression(expression)
 
     def get_valid_actions(self) -> Dict[str, List[str]]:
+        """
+        Induces a grammar from the defined collection of predicates in this language.  This
+        includes terminal productions implied by each predicate as well as productions for the
+        `return type` of each defined predicate.  For example, defining a "multiply" predicate adds
+        a "<i,<i,i>> -> multiplty" terminal production to the grammar, and `also` a "i ->
+        [<i,<i,i>>, i, i]" non-terminal production, because I can use the "multiply" predicate to
+        produce an integer.
+        """
         if not self._valid_actions:
             basic_types = set([nltk_type for nltk_type in self._type_map.values()
                                if isinstance(nltk_type, NamedBasicType)])
             if self.start_types:
                 # Not sure why pylint misses this...
                 # pylint: disable=not-an-iterable
-                start_types = set([self.get_basic_nltk_type(type_) for type_ in self.start_types])
+                start_types = set([self._get_basic_nltk_type(type_) for type_ in self.start_types])
                 # pylint: enable=not-an-iterable
             else:
                 start_types = None
@@ -156,6 +165,12 @@ class DomainLanguage:
         return self._valid_actions
 
     def logical_form_to_action_sequence(self, logical_form: str) -> List[str]:
+        """
+        Converts a logical form into a linearization of the production rules from its abstract
+        syntax tree.  For example, the logical form ``(add 2 3)`` would be translated to something
+        like ``['i -> [<i,<i,i>>, i, i]', '<i,<i,i>> -> add', 'i -> 2', 'i -> 3']``.  The
+        linearization is top-down, depth-first.
+        """
         expression = util.lisp_to_nested_expression(logical_form)
         try:
             transitions = self._get_transitions(expression, expected_type=None)
@@ -169,12 +184,9 @@ class DomainLanguage:
 
     def action_sequence_to_logical_form(self, action_sequence: List[str]) -> str:
         """
-        Takes an action sequence and constructs a logical form from it.
-
-        Parameters
-        ----------
-        action_sequence : ``List[str]``
-            The sequence of actions as strings (eg.: ``['{START_SYMBOL} -> t', 't -> <e,t>', ...]``).
+        Takes an action sequence as produced by :func:`logical_form_to_action_sequence`, which is a
+        linearization of an abstract syntax tree, and reconstructs the logical form defined by that
+        abstract syntax tree.
         """
         # Basic outline: we assume that the bracketing that we get in the RHS of each action is the
         # correct bracketing for reconstructing the logical form.  This is true when there is no
@@ -197,7 +209,29 @@ class DomainLanguage:
             raise ParsingError("Extra actions in action sequence")
         return nltk_tree_to_logical_form(tree)
 
-    def get_basic_nltk_type(self, type_: Type) -> NltkType:
+    def add_predicate(self, name: str, function: Callable):
+        """
+        Adds a predicate to this domain language.  Typically you do this with the ``@predicate``
+        decorator on the methods in your class.  But, if you need to for whatever reason, you can
+        also call this function yourself with a (type-annotated) function to add it to your
+        language.
+        """
+        self._functions[name] = function
+        signature = inspect.signature(function)
+        argument_types = [param.annotation for param in signature.parameters.values()]
+        return_type = signature.return_annotation
+        argument_nltk_types = [self._get_basic_nltk_type(arg_type) for arg_type in argument_types]
+        return_nltk_type = self._get_basic_nltk_type(return_type)
+        function_nltk_type = self._get_function_type(argument_nltk_types, return_nltk_type)
+        self._function_types[name] = (argument_nltk_types, return_nltk_type)
+        self._name_mapper.map_name_with_signature(name, function_nltk_type)
+
+    def _get_basic_nltk_type(self, type_: Type) -> NltkType:
+        """
+        Constructs an NLTK ``NamedBasicType`` representing the given type.  This is typically a
+        simple class, like int, string, Point, or Box.  It could also be a Tuple[int, string] or a
+        List[str].  This is `not` for functional types, however.
+        """
         if type_ not in self._type_map:
             if isinstance(type_, GenericMeta):
                 # This is something like List[int].  type_.__name__ will only give 'List', though, so
@@ -213,7 +247,11 @@ class DomainLanguage:
         return self._type_map[type_]
 
     @staticmethod
-    def get_function_type(arg_types: List[NltkType], return_type: NltkType) -> NltkType:
+    def _get_function_type(arg_types: List[NltkType], return_type: NltkType) -> NltkType:
+        """
+        Constructs an NLTK ``ComplexType`` representing a function with the given argument and
+        return types.
+        """
         if not arg_types:
             # Functions with no arguments are basically constants whose type match their return
             # type.
@@ -228,18 +266,12 @@ class DomainLanguage:
             right_argument = final_type
         return final_type
 
-    def _add_predicate(self, name: str, function: Callable):
-        self._functions[name] = function
-        signature = inspect.signature(function)
-        argument_types = [param.annotation for param in signature.parameters.values()]
-        return_type = signature.return_annotation
-        argument_nltk_types = [self.get_basic_nltk_type(arg_type) for arg_type in argument_types]
-        return_nltk_type = self.get_basic_nltk_type(return_type)
-        function_nltk_type = self.get_function_type(argument_nltk_types, return_nltk_type)
-        self._function_types[name] = (argument_nltk_types, return_nltk_type)
-        self._name_mapper.map_name_with_signature(name, function_nltk_type)
-
     def _is_terminal(self, name: str) -> bool:
+        """
+        This is used to know when we should recurse when converting action sequences to logical
+        forms.  If a piece of the right-hand-side of a production rule is a terminal, we don't
+        recurse on it.
+        """
         if name in self._functions:
             return True
         if name[0] == '"' and name[-1] == "'":
@@ -258,18 +290,24 @@ class DomainLanguage:
             pass
         return False
 
-    def _handle_expression(self, expression: Any):
+    def _execute_expression(self, expression: Any):
+        """
+        This does the bulk of the work of executing a logical form, recursively executing a single
+        expression.  Basically, if the expression is a function we know about, we evaluate its
+        arguments then call the function.  If it's a list, we evaluate all elements of the list.
+        If it's a constant (or a zero-argument function), we evaluate the constant.
+        """
         # pylint: disable=too-many-return-statements
         if isinstance(expression, (list, tuple)):
             if expression[0] in self._functions:
                 function = self._functions[expression[0]]
-                arguments = [self._handle_expression(arg) for arg in expression[1:]]
+                arguments = [self._execute_expression(arg) for arg in expression[1:]]
                 try:
                     return function(*arguments)
                 except (TypeError, ValueError) as error:
                     raise ExecutionError(f"Error executing expression {expression}: {error}")
             else:
-                return [self._handle_expression(item) for item in expression]
+                return [self._execute_expression(item) for item in expression]
         elif isinstance(expression, str):
             if expression[0] == '"' and expression[-1] == '"':
                 return expression[1:-1]
@@ -293,6 +331,11 @@ class DomainLanguage:
         return expression
 
     def _get_transitions(self, expression: Any, expected_type: NltkType) -> List[str]:
+        """
+        This is used when converting a logical form into an action sequence.  This piece
+        recursively translates a lisp expression into an action sequence, making sure we match the
+        expected type (or using the expected type to get the right type for constant expressions).
+        """
         if isinstance(expression, (list, tuple)):
             if expression[0] in self._functions:
                 name = expression[0]
@@ -316,7 +359,7 @@ class DomainLanguage:
             # top-level constant expressions).
             # TODO(mattg): this could also possibly cause problems with inconsistent handling of
             # quotation marks.  We should probably pull the constant handling out into its own
-            # function in both `_get_transitions` and `_handle_expression`.
+            # function in both `_get_transitions` and `_execute_expression`.
             if expected_type:
                 return [f'{expected_type} -> {expression}']
             else:
