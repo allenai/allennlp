@@ -115,7 +115,7 @@ class NlvrExecutor:
         expression_as_list = semparse_util.lisp_to_nested_expression(logical_form)
         # Expression list has an additional level of
         # nesting at the top.
-        result = self._handle_expression(expression_as_list[0])
+        result = self._handle_expression(expression_as_list)
         return result
 
     def _handle_expression(self, expression_list) -> bool:

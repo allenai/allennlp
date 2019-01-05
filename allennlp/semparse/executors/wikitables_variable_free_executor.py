@@ -90,14 +90,7 @@ class WikiTablesVariableFreeExecutor:
             logical_form = f"({logical_form})"
         logical_form = logical_form.replace(",", " ")
         expression_as_list = semparse_util.lisp_to_nested_expression(logical_form)
-        # Expression list has an additional level of
-        # nesting at the top. For example, if the
-        # logical form is
-        # "(select all_rows fb:row.row.league)",
-        # the expression list will be
-        # [['select', 'all_rows', 'fb:row.row.league']].
-        # Removing the top most level of nesting.
-        result = self._handle_expression(expression_as_list[0])
+        result = self._handle_expression(expression_as_list)
         return result
 
     def evaluate_logical_form(self, logical_form: str, target_list: List[str]) -> bool:
