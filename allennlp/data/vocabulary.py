@@ -615,7 +615,14 @@ class Vocabulary(Registrable):
         namespaces = [f"\tNamespace: {name}, Size: {self.get_vocab_size(name)} \n"
                       for name in self._index_to_token]
         return " ".join([base_string, non_padded_namespaces] + namespaces)
-    __repr__ = __str__
+
+    def __repr__(self) -> str:
+        # This is essentially the same as __str__, but with no newlines
+        base_string = f"Vocabulary with namespaces: "
+        namespaces = [f"{name}, Size: {self.get_vocab_size(name)} ||"
+                      for name in self._index_to_token]
+        non_padded_namespaces = f"Non Padded Namespaces: {self._non_padded_namespaces}"
+        return " ".join([base_string] + namespaces + [non_padded_namespaces])
 
     def print_statistics(self) -> None:
         if self._retained_counter:
