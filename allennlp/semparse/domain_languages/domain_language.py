@@ -43,6 +43,12 @@ class ExecutionError(Exception):
 
 
 def predicate(function: Callable) -> Callable:  # pylint: disable=invalid-name
+    """
+    This is intended to be used as a decorator when you are implementing your ``DomainLanguage``.
+    This marks a function on a ``DomainLanguage`` subclass as a predicate that can be used in the
+    language.  See the :class:`DomainLanguage` docstring for an example usage, and for what using
+    this does.
+    """
     function.is_predicate = True  # type: ignore
     return function
 
@@ -99,6 +105,7 @@ class DomainLanguage:
         >>> l.execute("(halve (add 12 4))")
         8
         >>> l.logical_form_to_action_sequence("(add 2 3)")
+        # See the docstring for this function for an description of what these strings mean.
         ['@start@ -> i', 'i -> [<i,<i,i>>, i, i]', '<i,<i,i>> -> add', 'i -> 2', 'i -> 3']
         >>> l.action_sequence_to_logical_form(l.logical_form_to_action_sequence('(add 2 3)'))
         '(add 2 3)'
@@ -167,7 +174,23 @@ class DomainLanguage:
     def logical_form_to_action_sequence(self, logical_form: str) -> List[str]:
         """
         Converts a logical form into a linearization of the production rules from its abstract
-        syntax tree.  For example, the logical form ``(add 2 3)`` would be translated to something
+        syntax tree.
+
+        Each production rule is formatted as "LHS -> RHS", where "LHS" is a single non-terminal
+        type, and RHS is either a terminal or a list of non-terminals (other possible values for
+        RHS in a more general context-free grammar are not produced by our grammar induction
+        logic).
+
+        Non-terminals are `types` in the grammar, either basic types (like ``int``, ``str``, or
+        some class that you define, represented as strings with just their first letter), or
+        functional types, represented with angle brackets.  For example, ``<i,i>`` is a function
+        that takes an integer and returns an integer.  Multi-argument functions are represented as
+        `curried types`, meaning they are written as a series of nested functions, each taking a
+        single argument.  Thus ``<i,<i,i>>`` is a function that takes two integer arguments and
+        returns an integer (or, technically, a higher-order function that takes one integer and
+        returns a function from integers to integers, though these are not yet supported).
+
+        For example, the logical form ``(add 2 3)`` would be translated to something
         like ``['i -> [<i,<i,i>>, i, i]', '<i,<i,i>> -> add', 'i -> 2', 'i -> 3']``.  The
         linearization is top-down, depth-first.
         """
@@ -265,30 +288,6 @@ class DomainLanguage:
             final_type = ComplexType(arg_type, right_argument)
             right_argument = final_type
         return final_type
-
-    def _is_terminal(self, name: str) -> bool:
-        """
-        This is used to know when we should recurse when converting action sequences to logical
-        forms.  If a piece of the right-hand-side of a production rule is a terminal, we don't
-        recurse on it.
-        """
-        if name in self._functions:
-            return True
-        if name[0] == '"' and name[-1] == "'":
-            return True
-        if name[0] == "'" and name[-1] == '"':
-            return True
-        try:
-            int(name)
-            return True
-        except ValueError:
-            pass
-        try:
-            float(name)
-            return True
-        except ValueError:
-            pass
-        return False
 
     def _execute_expression(self, expression: Any):
         """
@@ -398,16 +397,13 @@ class DomainLanguage:
             for child_type in right_side[1:-1].split(', '):
                 child_node = Tree(child_type, [])
                 current_node.append(child_node)  # you add a child to an nltk.Tree with `append`
-                if not self._is_terminal(child_type):
-                    remaining_actions = self._construct_node_from_actions(child_node,
-                                                                          remaining_actions)
-        elif self._is_terminal(right_side):
-            # The current node is a pre-terminal; we'll add a single terminal child.
-            current_node.append(Tree(right_side, []))  # you add a child to an nltk.Tree with `append`
+                # For now, we assume that all children in a list like this are non-terminals, so we
+                # recurse on them.  I'm pretty sure that will always be true for the way our
+                # grammar induction works.  We can revisit this later if we need to.
+                remaining_actions = self._construct_node_from_actions(child_node, remaining_actions)
         else:
-            # The only way this can happen is if you have a unary non-terminal production rule.
-            # That is almost certainly not what you want with this kind of grammar, so we'll crash.
-            # If you really do want this, open a PR with a valid use case.
-            raise ParsingError(f"Found a unary production rule: {left_side} -> {right_side}. "
-                               "Are you sure you want a unary production rule in your grammar?")
+            # The current node is a pre-terminal; we'll add a single terminal child.  By
+            # construction, the right-hand side of our production rules are only ever terminal
+            # productions or lists of non-terminals.
+            current_node.append(Tree(right_side, []))  # you add a child to an nltk.Tree with `append`
         return remaining_actions
