@@ -127,7 +127,7 @@ class LstmTagger(Model):
     #### Next we need to implement <code>forward</code>, which is where the actual computation happens. Each <code>Instance</code> in your dataset will get (batched with other instances and) fed into <code>forward</code>. The <code>forward</code> method expects dicts of tensors as input, and it expects their names to be the names of the fields in your <code>Instance</code>. In this case we have a sentence field and (possibly) a labels field, so we'll construct our <code>forward</code> accordingly:
     def forward(self,
                 sentence: Dict[str, torch.Tensor],
-                labels: torch.Tensor = None) -> torch.Tensor:
+                labels: torch.Tensor = None) -> Dict[str, torch.Tensor]:
         #### AllenNLP is designed to operate on batched inputs, but different input sequences have different lengths. Behind the scenes AllenNLP is padding the shorter inputs so that the batch has uniform shape, which means our computations need to use a mask to exclude the padding. Here we just use the utility function <code>get_text_field_mask</code>, which returns a tensor of 0s and 1s corresponding to the padded and unpadded locations.
         mask = get_text_field_mask(sentence)
         #### We start by passing the <code>sentence</code> tensor (each sentence a sequence of token ids) to the <code>word_embeddings</code> module, which converts each sentence into a sequence of embedded tensors.
