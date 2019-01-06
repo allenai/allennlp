@@ -58,7 +58,7 @@ local BASE_ITERATOR = {
       //     "tokens": ["<S>", "</S>"],
       //     "token_characters": ["<>/S"]
       // },
-      // "min_count": {"source_tokens": 3}
+      // "min_count": {"tokens": 3}
   },
   "model": {
     "type": "language_model",
