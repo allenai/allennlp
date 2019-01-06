@@ -615,6 +615,7 @@ class Vocabulary(Registrable):
         namespaces = [f"\tNamespace: {name}, Size: {self.get_vocab_size(name)} \n"
                       for name in self._index_to_token]
         return " ".join([base_string, non_padded_namespaces] + namespaces)
+    __repr__ = __str__
 
     def print_statistics(self) -> None:
         if self._retained_counter:
