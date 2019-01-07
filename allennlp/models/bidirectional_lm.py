@@ -8,10 +8,7 @@ from allennlp.modules.seq2seq_encoders import Seq2SeqEncoder
 from allennlp.nn import InitializerApplicator
 
 
-@Model.register('bidirectional-language-model',
-                deprecation_message=('The "bidirectional-language-model" name was '
-                                     'deprecated in version 0.8. Use '
-                                     '"bidirectional_language_model" instead.'))
+@Model.register('bidirectional-language-model')
 @Model.register('bidirectional_language_model')
 class BidirectionalLanguageModel(LanguageModel):
     """
