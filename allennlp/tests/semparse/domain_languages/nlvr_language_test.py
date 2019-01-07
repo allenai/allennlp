@@ -68,8 +68,8 @@ class TestNlvrLanguage(AllenNlpTestCase):
     def test_logical_form_with_not_executes_correctly(self):
         executor = self.languages[2]
         # Utterance is "There are at most two medium triangles not touching a wall." and label is "True".
-        logical_form = ("(object_count_lesser_equals ((negate_filter touch_wall) \
-                                                                     (medium (triangle (all_objects)))) 2)")
+        logical_form = ("(object_count_lesser_equals (negate_filter touch_wall "
+                        "(medium (triangle (all_objects)))) 2)")
         assert executor.execute(logical_form) is True
 
     def test_logical_form_with_color_comparison_executes_correctly(self):

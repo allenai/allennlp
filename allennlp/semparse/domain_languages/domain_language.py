@@ -360,10 +360,19 @@ class DomainLanguage:
         elif isinstance(expression, str):
             if expression not in self._functions:
                 raise ExecutionError(f"Unrecognized constant: {expression}")
-            try:
+            # This is a bit of a quirk in how we represent constants and zero-argument functions.
+            # For consistency, constants are wrapped in a zero-argument lambda.  So both constants
+            # and zero-argument functions are callable in `self._functions`, and are `BasicTypes`
+            # in `self._function_types`.  For these, we want to return
+            # `self._functions[expression]()` _calling_ the zero-argument function.  If we get a
+            # `FunctionType` in here, that means we're referring to the function as a first-class
+            # object, instead of calling it (maybe as an argument to a higher-order function).  In
+            # that case, we return the function _without_ calling it.
+            if isinstance(self._function_types[expression], FunctionType):
+                return self._functions[expression]
+            else:
                 return self._functions[expression]()
-            except (TypeError, ValueError) as error:
-                raise ExecutionError(f"Error executing expression {expression}: {error}")
+            return self._functions[expression]
         else:
             raise ExecutionError("Not sure how you got here. Please open a github issue with details.")
 

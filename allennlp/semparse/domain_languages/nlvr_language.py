@@ -80,35 +80,40 @@ class Box:
 class Color(NamedTuple):
     color: str
 
-BLUE = Color('blue')
-YELLOW = Color('yellow')
-BLACK = Color('black')
-
 
 class Shape(NamedTuple):
     shape: str
-
-TRIANGLE = Shape('triangle')
-SQUARE = Shape('square')
-CIRCLE = Shape('circle')
 
 
 class NlvrLanguage(DomainLanguage):
     # pylint: disable=no-self-use
     def __init__(self, boxes: Set[Box]) -> None:
-        super().__init__()
         self.boxes = boxes
         self.objects: Set[Object] = set()
         for box in self.boxes:
             self.objects.update(box.objects)
-
-    @predicate
-    def all_objects(self) -> Set[Object]:
-        return self.objects
-
-    @predicate
-    def all_boxes(self) -> Set[Box]:
-        return self.boxes
+        allowed_constants = {
+                'all_boxes': self.boxes,
+                'all_objects': self.objects,
+                'color_blue': Color('blue'),
+                'color_black': Color('black'),
+                'color_yellow': Color('yellow'),
+                'shape_triangle': Shape('triangle'),
+                'shape_square': Shape('square'),
+                'shape_circle': Shape('circle'),
+                '0': 0,
+                '1': 1,
+                '2': 2,
+                '3': 3,
+                '4': 4,
+                '5': 5,
+                '6': 6,
+                '7': 7,
+                '8': 8,
+                '9': 9,
+                '10': 10,
+                }
+        super().__init__(start_types={bool}, allowed_constants=allowed_constants)
 
     @predicate
     def box_exists(self, boxes: Set[Box]) -> bool:
@@ -117,30 +122,6 @@ class NlvrLanguage(DomainLanguage):
     @predicate
     def object_exists(self, objects: Set[Object]) -> bool:
         return len(objects) > 0
-
-    @predicate
-    def color_blue(self) -> Color:
-        return BLUE
-
-    @predicate
-    def color_black(self) -> Color:
-        return BLACK
-
-    @predicate
-    def color_yellow(self) -> Color:
-        return YELLOW
-
-    @predicate
-    def shape_triangle(self) -> Shape:
-        return TRIANGLE
-
-    @predicate
-    def shape_square(self) -> Shape:
-        return SQUARE
-
-    @predicate
-    def shape_circle(self) -> Shape:
-        return CIRCLE
 
     @predicate
     def object_in_box(self, box: Set[Box]) -> Set[Object]:
@@ -547,8 +528,9 @@ class NlvrLanguage(DomainLanguage):
     def member_color_different(self, boxes: Set[Box]) -> Set[Box]:
         return [box for box in boxes if self.object_color_count_not_equals(box.objects, 1)]
 
-    #@predicate
-    def negate_filter(self, filter_function: Callable[[Set[Object]], Set[Object]],
+    @predicate
+    def negate_filter(self,
+                      filter_function: Callable[[Set[Object]], Set[Object]],
                       objects: Set[Object]) -> Set[Object]:
         # Negate an object filter.
         return objects.difference(filter_function(objects))
