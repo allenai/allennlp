@@ -1,16 +1,87 @@
-from typing import Any, Callable, Dict, GenericMeta, List, Set, Tuple, Type
+from collections import defaultdict
+from typing import Any, Callable, Dict, GenericMeta, List, Set, Tuple, Type, Union
 import inspect
 import logging
 import types
 
 from nltk import Tree
-from nltk.sem.logic import Type as NltkType
 
+from allennlp.common.util import START_SYMBOL
 from allennlp.semparse import util
-from allennlp.semparse.type_declarations import type_declaration
-from allennlp.semparse.type_declarations.type_declaration import ComplexType, NamedBasicType, NameMapper
 
 logger = logging.getLogger(__name__)
+
+class PredicateType:
+    """
+    A base class for `types` in a domain language.  This serves much the same purpose as
+    ``typing.Type``, but we add a few conveniences to these types, so we construct separate classes
+    for them and group them together under ``PredicateType`` to have a good type annotation for
+    these types.
+    """
+    @staticmethod
+    def get_function_type(arg_types: List['PredicateType'], return_type: 'PredicateType') -> 'PredicateType':
+        """
+        Constructs an NLTK ``ComplexType`` representing a function with the given argument and
+        return types.
+        """
+        # TODO(mattg): We might need to generalize this to just `get_type`, so we can handle
+        # functions as arguments correctly in the logic below.
+        if not arg_types:
+            # Functions with no arguments are basically constants whose type match their return
+            # type.
+            return return_type
+        return FunctionType(arg_types, return_type)
+
+
+class BasicType(PredicateType):
+    """
+    A ``PredicateType`` representing a zero-argument predicate (which could technically be a
+    function with no arguments or a function; both are treated the same here).
+    """
+    def __init__(self, type_: Type) -> None:
+        self.type_ = type_
+        if isinstance(type_, GenericMeta):
+            # This is something like List[int].  type_.__name__ will only give 'List', though, so
+            # we need to do some magic here.
+            origin = type_.__origin__
+            args = type_.__args__
+            self.name = f'{origin.__name__}[{",".join(arg.__name__ for arg in args)}]'
+        else:
+            self.name = type_.__name__
+
+    def __str__(self):
+        return self.name
+    __repr__ = __str__
+
+    def __hash__(self):
+        return hash(self.name)
+
+    def __eq__(self, other):
+        if isinstance(self, other.__class__):
+            return self.name == other.name
+        return NotImplemented
+
+
+class FunctionType(PredicateType):
+    """
+    A ``PredicateType`` representing a function with arguments.
+    """
+    def __init__(self, argument_types: List[PredicateType], return_type: PredicateType) -> None:
+        self.argument_types = argument_types
+        self.return_type = return_type
+        self.name = f'<{",".join(str(arg) for arg in argument_types)}:{return_type}>'
+
+    def __str__(self):
+        return self.name
+    __repr__ = __str__
+
+    def __hash__(self):
+        return hash(self.name)
+
+    def __eq__(self, other):
+        if isinstance(self, other.__class__):
+            return self.name == other.name
+        return NotImplemented
 
 
 class ParsingError(Exception):
@@ -106,42 +177,43 @@ class DomainLanguage:
         8
         >>> l.logical_form_to_action_sequence("(add 2 3)")
         # See the docstring for this function for an description of what these strings mean.
-        ['@start@ -> i', 'i -> [<i,<i,i>>, i, i]', '<i,<i,i>> -> add', 'i -> 2', 'i -> 3']
+        ['@start@ -> int', 'int -> [<int,int:int>, int, int]', '<int,int:int> -> add',
+         'int -> 2', 'int -> 3']
         >>> l.action_sequence_to_logical_form(l.logical_form_to_action_sequence('(add 2 3)'))
         '(add 2 3)'
         >>> l.get_valid_actions()
-        {'<i,<i,i>>': ['add', 'divide', 'multiply', 'subtract'], '<i,i>': ['halve'], ...}
+        {'<int,int:int>': ['add', 'divide', 'multiply', 'subtract'], '<int:int>': ['halve'], ...}
 
     This is done with some reflection magic, with the help of the ``@predicate`` decorator and type
-    annotations.  For a predicate to be included in the language, it *must* be decorated with
-    ``@predicate``, and it *must* have type annotations on all arguments and on its return type.
+    annotations.  For a method you define on a ``DomainLanguage`` subclass to be included in the
+    language, it *must* be decorated with ``@predicate``, and it *must* have type annotations on
+    all arguments and on its return type.  You can also add predicates and constants to the
+    language using the :func:`add_predicate` and :func:`add_constant` functions, if you choose.
 
-    For type annotations, we currently support ``int``, ``float``, ``str``, and similar
-    non-collection built in types, as well as any non-generic type you define yourself.  Generic
-    types (things like ``List[str]``) are not currently supported very well - you will likely be
-    able to execute logical forms that use them, but the grammar induction won't know how to create
-    a ``List[str]``, and so we also won't produce a correct action sequence for them.
-
-    The language we construct is also purely functional - no defining variables or using lambda
+    The language we construct is purely functional - no defining variables or using lambda
     functions, or anything like that.  If you would like to extend this code to handle more complex
     languages, open an issue on github.
     """
-    def __init__(self):
-        self._type_map: Dict[Type, NltkType] = {}
+    def __init__(self,
+                 allowed_constants: Dict[str, Any] = None,
+                 start_types: Set[Type] = None):
         self._functions: Dict[str, Callable] = {}
-        self._function_types: Dict[str, Tuple[List[NltkType], NltkType]] = {}
-        self._name_mapper = NameMapper()
-        self.start_types: Set[Type] = None
+        self._function_types: Dict[str, PredicateType] = {}
+        self._start_types = set([BasicType(type_) for type_ in start_types])
         for name in dir(self):
             if isinstance(getattr(self, name), types.MethodType):
                 function = getattr(self, name)
                 if hasattr(function, 'is_predicate') and function.is_predicate:
                     self.add_predicate(name, function)
+        for name, value in allowed_constants.items():
+            self.add_constant(name, value)
         # Caching this to avoid recompting it every time `get_valid_actions` is called.
         self._valid_actions: Dict[str, List[str]] = None
 
     def execute(self, logical_form: str):
         """Executes a logical form, using whatever predicates you have defined."""
+        if not hasattr(self, '_functions'):
+            raise RuntimeError("You must call super().__init__() in your Language constructor")
         logical_form = logical_form.replace(",", " ")
         expression = util.lisp_to_nested_expression(logical_form)
         return self._execute_expression(expression)
@@ -151,30 +223,35 @@ class DomainLanguage:
         Induces a grammar from the defined collection of predicates in this language.  This
         includes terminal productions implied by each predicate as well as productions for the
         `return type` of each defined predicate.  For example, defining a "multiply" predicate adds
-        a "<i,<i,i>> -> multiplty" terminal production to the grammar, and `also` a "i ->
-        [<i,<i,i>>, i, i]" non-terminal production, because I can use the "multiply" predicate to
-        produce an integer.
+        a "<int,int:int> -> multiplty" terminal production to the grammar, and `also` a "int ->
+        [<int,int:int>, int, int]" non-terminal production, because I can use the "multiply"
+        predicate to produce an int.
         """
         if not self._valid_actions:
-            basic_types = set([nltk_type for nltk_type in self._type_map.values()
-                               if isinstance(nltk_type, NamedBasicType)])
-            if self.start_types:
-                # Not sure why pylint misses this...
-                # pylint: disable=not-an-iterable
-                start_types = set([self._get_basic_nltk_type(type_) for type_ in self.start_types])
-                # pylint: enable=not-an-iterable
+            actions = defaultdict(list)
+            if self._start_types:
+                for start_type in self._start_types:
+                    actions[START_SYMBOL].append(f'{START_SYMBOL} -> {start_type}')
             else:
-                start_types = None
-            self._valid_actions = type_declaration.get_valid_actions(self._name_mapper.name_mapping,
-                                                                     self._name_mapper.type_signatures,
-                                                                     basic_types,
-                                                                     valid_starting_types=start_types)
+                # If you didn't give us a set of valid start types, we'll assume all types we know
+                # about (including functional types) are valid start types.
+                for type_ in self._function_types.values():
+                    actions[START_SYMBOL].append(f"{START_SYBMOL} -> {type_}")
+            for name in self._functions:
+                function_type = self._function_types[name]
+                actions[str(function_type)].append(f"{function_type} -> {name}")
+                if isinstance(function_type, FunctionType):
+                    return_type = function_type.return_type
+                    arg_types = function_type.argument_types
+                    right_side = f"[{function_type}, {', '.join(str(arg_type) for arg_type in arg_types)}]"
+                    actions[str(return_type)].append(f"{return_type} -> {right_side}")
+            self._valid_actions = dict(actions)
         return self._valid_actions
 
     def logical_form_to_action_sequence(self, logical_form: str) -> List[str]:
         """
         Converts a logical form into a linearization of the production rules from its abstract
-        syntax tree.
+        syntax tree.  The linearization is top-down, depth-first.
 
         Each production rule is formatted as "LHS -> RHS", where "LHS" is a single non-terminal
         type, and RHS is either a terminal or a list of non-terminals (other possible values for
@@ -182,26 +259,25 @@ class DomainLanguage:
         logic).
 
         Non-terminals are `types` in the grammar, either basic types (like ``int``, ``str``, or
-        some class that you define, represented as strings with just their first letter), or
-        functional types, represented with angle brackets.  For example, ``<i,i>`` is a function
-        that takes an integer and returns an integer.  Multi-argument functions are represented as
-        `curried types`, meaning they are written as a series of nested functions, each taking a
-        single argument.  Thus ``<i,<i,i>>`` is a function that takes two integer arguments and
-        returns an integer (or, technically, a higher-order function that takes one integer and
-        returns a function from integers to integers, though these are not yet supported).
+        some class that you define), or functional types, represented with angle brackets with a
+        colon separating arguments from the return type.  Multi-argument functions have commas
+        separating their argument types.  For example, ``<int:int>`` is a function that takes an
+        integer and returns an integer, and ``<int,int:int>`` is a function that takes two integer
+        arguments and returns an integer.
 
-        For example, the logical form ``(add 2 3)`` would be translated to something
-        like ``['i -> [<i,<i,i>>, i, i]', '<i,<i,i>> -> add', 'i -> 2', 'i -> 3']``.  The
-        linearization is top-down, depth-first.
+        As an example translation from logical form to complete action sequence, the logical form
+        ``(add 2 3)`` would be translated to ``['@start@ -> int', 'int -> [<int,int:int>, int, int]',
+        '<int,int:int> -> add', 'int -> 2', 'int -> 3']``.
         """
         expression = util.lisp_to_nested_expression(logical_form)
         try:
-            transitions = self._get_transitions(expression, expected_type=None)
+            transitions, start_type = self._get_transitions(expression, expected_type=None)
+            print(transitions, start_type)
+            if self._start_types and start_type not in self._start_types:
+                raise ParsingError(f"Expression had unallowed start type of {start_type}: {expression}")
         except ParsingError:
             logger.error(f'Error parsing logical form: {logical_form}')
             raise
-        # TODO(mattg): we _could_ check that the start_type here is one of self.start_types.
-        start_type = transitions[0].split(' -> ')[0]
         transitions.insert(0, f'@start@ -> {start_type}')
         return transitions
 
@@ -239,55 +315,31 @@ class DomainLanguage:
         also call this function yourself with a (type-annotated) function to add it to your
         language.
         """
-        self._functions[name] = function
         signature = inspect.signature(function)
         argument_types = [param.annotation for param in signature.parameters.values()]
         return_type = signature.return_annotation
-        argument_nltk_types = [self._get_basic_nltk_type(arg_type) for arg_type in argument_types]
-        return_nltk_type = self._get_basic_nltk_type(return_type)
-        function_nltk_type = self._get_function_type(argument_nltk_types, return_nltk_type)
-        self._function_types[name] = (argument_nltk_types, return_nltk_type)
-        self._name_mapper.map_name_with_signature(name, function_nltk_type)
+        # TODO(mattg): this might need to just call PredicateType.get_type, or something - what if
+        # one of these is a function?
+        argument_nltk_types = [BasicType(arg_type) for arg_type in argument_types]
+        return_nltk_type = BasicType(return_type)
+        function_nltk_type = PredicateType.get_function_type(argument_nltk_types, return_nltk_type)
+        self._functions[name] = function
+        self._function_types[name] = function_nltk_type
 
-    def _get_basic_nltk_type(self, type_: Type) -> NltkType:
+    def add_constant(self, name: str, value: Any):
         """
-        Constructs an NLTK ``NamedBasicType`` representing the given type.  This is typically a
-        simple class, like int, string, Point, or Box.  It could also be a Tuple[int, string] or a
-        List[str].  This is `not` for functional types, however.
-        """
-        if type_ not in self._type_map:
-            if isinstance(type_, GenericMeta):
-                # This is something like List[int].  type_.__name__ will only give 'List', though, so
-                # we need to do some magic here.
-                origin = type_.__origin__
-                args = type_.__args__
-                name = '_'.join([origin.__name__] + [arg.__name__ for arg in args])
-                # TODO(mattg): we probably need to add a grammar rule in here too, somehow, so we
-                # can actually _produce_ a list of things.
-            else:
-                name = type_.__name__
-            self._type_map[type_] = NamedBasicType(name.upper())
-        return self._type_map[type_]
+        Adds a constant to this domain language.  You would typically just pass in a list of
+        constants to the ``super().__init__()`` call in your constructor, but you can also call
+        this method to add constants if it is more convenient.
 
-    @staticmethod
-    def _get_function_type(arg_types: List[NltkType], return_type: NltkType) -> NltkType:
+        Because we construct a grammar over this language for you, in order for the grammar to be
+        finite we cannot allow arbitrary constants.  Having a finite grammar is important when
+        you're doing semantic parsing - we need to be able to search over this space, and compute
+        normalized probability distributions.
         """
-        Constructs an NLTK ``ComplexType`` representing a function with the given argument and
-        return types.
-        """
-        if not arg_types:
-            # Functions with no arguments are basically constants whose type match their return
-            # type.
-            return return_type
-
-        # NLTK's logic classes _curry_ multi-argument functions.  A `ComplexType` is a
-        # single-argument function, and you nest these for multi-argument functions.  This for loop
-        # does the nesting for multi-argument functions.
-        right_argument = return_type
-        for arg_type in reversed(arg_types):
-            final_type = ComplexType(arg_type, right_argument)
-            right_argument = final_type
-        return final_type
+        constant_type = BasicType(type(value))
+        self._functions[name] = lambda: value
+        self._function_types[name] = constant_type
 
     def _execute_expression(self, expression: Any):
         """
@@ -297,74 +349,88 @@ class DomainLanguage:
         If it's a constant (or a zero-argument function), we evaluate the constant.
         """
         # pylint: disable=too-many-return-statements
-        if isinstance(expression, (list, tuple)):
-            if expression[0] in self._functions:
+        if isinstance(expression, list):
+            if isinstance(expression[0], list):
+                function = self._execute_expression(expression[0])
+            elif expression[0] in self._functions:
                 function = self._functions[expression[0]]
-                arguments = [self._execute_expression(arg) for arg in expression[1:]]
-                try:
-                    return function(*arguments)
-                except (TypeError, ValueError) as error:
-                    raise ExecutionError(f"Error executing expression {expression}: {error}")
             else:
-                return [self._execute_expression(item) for item in expression]
+                if isinstance(expression[0], str):
+                    raise ExecutionError(f"Unrecognized function: {expression[0]}")
+                else:
+                    raise ExecutionError(f"Unsupported expression type: {expression}")
+            arguments = [self._execute_expression(arg) for arg in expression[1:]]
+            try:
+                return function(*arguments)
+            except (TypeError, ValueError) as error:
+                raise ExecutionError(f"Error executing expression {expression}: {error}")
         elif isinstance(expression, str):
-            if expression[0] == '"' and expression[-1] == '"':
-                return expression[1:-1]
-            if expression[0] == "'" and expression[-1] == "'":
-                return expression[1:-1]
-            if expression in self._functions:
-                try:
-                    return self._functions[expression]()
-                except (TypeError, ValueError) as error:
-                    raise ExecutionError(f"Error executing expression {expression}: {error}")
+            if expression not in self._functions:
+                raise ExecutionError(f"Unrecognized constant: {expression}")
             try:
-                int_value = int(expression)
-                return int_value
-            except ValueError:
-                pass
-            try:
-                float_value = float(expression)
-                return float_value
-            except ValueError:
-                pass
-        return expression
+                return self._functions[expression]()
+            except (TypeError, ValueError) as error:
+                raise ExecutionError(f"Error executing expression {expression}: {error}")
+        else:
+            raise ExecutionError("Not sure how you got here. Please open a github issue with details.")
 
-    def _get_transitions(self, expression: Any, expected_type: NltkType) -> List[str]:
+    def _get_transitions(self, expression: Any, expected_type: PredicateType) -> Tuple[List[str], PredicateType]:
         """
         This is used when converting a logical form into an action sequence.  This piece
         recursively translates a lisp expression into an action sequence, making sure we match the
         expected type (or using the expected type to get the right type for constant expressions).
         """
         if isinstance(expression, (list, tuple)):
-            if expression[0] in self._functions:
-                name = expression[0]
-                argument_types, return_type = self._function_types[name]
-                function_type = self._name_mapper.get_signature(name)
-                if expected_type and expected_type != return_type:
-                    raise ParsingError(f'{expression} did not have expected type {expected_type}')
-                right_side = f'[{function_type}, {", ".join(str(arg) for arg in argument_types)}]'
-                first_transition = f'{return_type} -> {right_side}'
-                second_transition = f'{function_type} -> {name}'
-                argument_transitions = []
-                if len(argument_types) != len(expression[1:]):
-                    raise ParsingError(f'Wrong number of arguments for function in {expression}')
-                for argument_type, subexpression in zip(argument_types, expression[1:]):
-                    argument_transitions.extend(self._get_transitions(subexpression, argument_type))
-                return [first_transition, second_transition] + argument_transitions
-            else:
-                raise ParsingError('Bare lists not implemented yet')
+            transitions = []
+            function_transitions, return_type, argument_types = self._get_function_transitions(expression[0],
+                                                                                               expected_type)
+            argument_transitions = []
+            if len(argument_types) != len(expression[1:]):
+                raise ParsingError(f'Wrong number of arguments for function in {expression}')
+            for argument_type, subexpression in zip(argument_types, expression[1:]):
+                argument_transitions.extend(self._get_transitions(subexpression, argument_type)[0])
+            return function_transitions + argument_transitions, return_type
         elif isinstance(expression, str):
-            # TODO(mattg): do type inference on constants, and check for matches (and allow
-            # top-level constant expressions).
-            # TODO(mattg): this could also possibly cause problems with inconsistent handling of
-            # quotation marks.  We should probably pull the constant handling out into its own
-            # function in both `_get_transitions` and `_execute_expression`.
-            if expected_type:
-                return [f'{expected_type} -> {expression}']
-            else:
-                raise ParsingError('Constant expressions not implemented yet')
+            if expression not in self._functions:
+                raise ParsingError(f"Unrecognized constant: {expression}")
+            constant_type = self._function_types[expression]
+            if expected_type and expected_type != constant_type:
+                raise ParsingError(f'{expression} did not have expected type {expected_type}')
+            return [f'{constant_type} -> {expression}'], constant_type
         else:
-            raise ParsingError('Not sure how you got here.  Raise an issue on github with details')
+            raise ParsingError('Not sure how you got here. Please open an issue on github with details.')
+
+    def _get_function_transitions(self,
+                                  expression: Union[str, List],
+                                  expected_type: PredicateType) -> Tuple[List[str],
+                                                                         PredicateType,
+                                                                         List[PredicateType]]:
+        if isinstance(expression, list):
+            # This is a higher-order function.  TODO(mattg): we'll just ignore type checking on
+            # higher-order functions, for now.
+            transitions, function_type = self._get_transitions(expression[0], None)
+            # TODO(mattg): finish this...
+            raise NotImplementedError
+
+        elif expression in self._functions:
+            name = expression
+            function_type = self._function_types[name]
+            if not isinstance(function_type, FunctionType):
+                raise ParsingError(f'Zero-arg function or constant called with arguments: {name}')
+            argument_types = function_type.argument_types
+            return_type = function_type.return_type
+            right_side = f'[{function_type}, {", ".join(str(arg) for arg in argument_types)}]'
+            first_transition = f'{return_type} -> {right_side}'
+            second_transition = f'{function_type} -> {name}'
+            transitions = [first_transition, second_transition]
+        else:
+            if isinstance(expression, str):
+                raise ParsingError(f"Unrecognized function: {expression[0]}")
+            else:
+                raise ParsingError(f"Unsupported expression type: {expression}")
+        if expected_type and expected_type != return_type:
+            raise ParsingError(f'{expression} did not have expected type {expected_type}')
+        return transitions, return_type, argument_types
 
     def _construct_node_from_actions(self,
                                      current_node: Tree,
