@@ -292,7 +292,7 @@ class TestNnUtil(AllenNlpTestCase):
         tensor = torch.FloatTensor([[[6, 6, 6], [1, 1, 1], [2, 2, 2], [0, 0, 0]],
                                     [[3, 3, 3], [4, 4, 4], [5, 5, 5], [1, 2, 3]]])
         solution = torch.FloatTensor([[[2, 2, 2], [1, 1, 1], [6, 6, 6], [0, 0, 0]],
-                                 [[1, 2, 3], [5, 5, 5], [4, 4, 4], [3, 3, 3]]])
+                                      [[1, 2, 3], [5, 5, 5], [4, 4, 4], [3, 3, 3]]])
         response = util.masked_flip(tensor, [3, 4])
         self.assertEqual(solution.size(), response.size())
         self.assertEqual(torch.sum(torch.abs(solution - response)), 0)
