@@ -135,7 +135,7 @@ class MultiQAPreprocess():
     def iterate_doc_parts(self,document):
         part_num = 0
 
-        if self._use_rank:
+        if self._use_rank and 'rank' in document:
             yield (part_num,'rank','^RANK^' + str(document['rank']))
             part_num += 1
 
@@ -497,7 +497,7 @@ def main():
     parse.add_argument("--require_answer_in_question", type=str2bool, default=False, help="Add only instance that contain an answer")
     parse.add_argument("-n", "--n_processes", type=int, default=1, help="Number of processes to use")
     parse.add_argument("--sample_size", type=int, default=-1, help="enable sampling")
-    
+    parse.add_argument("--sorting_keys", type=int, default=-1, help="sorting keys")
     args = parse.parse_args()
     
     
@@ -543,8 +543,8 @@ def main():
     
     # rearranging instances for iterator (we don't use padding noise here, it will be use in the multiqa iterator.)
     ## TODO change question_text to question_tokens
-    if True:
-        sorting_keys = ['question_tokens','tokens']
+    if False:
+        sorting_keys = ['tokens','question_tokens']
         instances_with_lengths = []
         for instance in preprocessed_instances:
             padding_lengths = {key:len(instance[key]) for key in sorting_keys}
