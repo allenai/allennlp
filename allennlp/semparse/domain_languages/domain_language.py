@@ -229,7 +229,7 @@ class DomainLanguage:
             actions: Dict[str, List[str]] = defaultdict(list)
             # If you didn't give us a set of valid start types, we'll assume all types we know
             # about (including functional types) are valid start types.
-            start_types = self._start_types or set(self._function_types.values())
+            start_types = self._start_types or set(list(self._function_types.values()))
             for start_type in start_types:
                 actions[START_SYMBOL].append(f"{START_SYMBOL} -> {start_type}")
             for name, function_type in self._function_types.items():
