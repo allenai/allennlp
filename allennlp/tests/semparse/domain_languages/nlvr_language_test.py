@@ -121,3 +121,66 @@ class TestNlvrLanguage(AllenNlpTestCase):
         # There is a circle in the box with objects of different shapes.
         assert self.custom_language.execute("(object_shape_any_equals (object_in_box "
                                             "(member_shape_different all_boxes)) shape_circle)") is True
+
+    def test_get_action_sequence_handles_multi_arg_functions(self):
+        language = self.languages[0]
+        # box_color_filter
+        logical_form = "(box_exists (member_color_all_equals all_boxes color_blue))"
+        action_sequence = language.logical_form_to_action_sequence(logical_form)
+        assert 'Set[Box] -> [<Set[Box],Color:Set[Box]>, Set[Box], Color]' in action_sequence
+
+        # box_shape_filter
+        logical_form = "(box_exists (member_shape_all_equals all_boxes shape_square))"
+        action_sequence = language.logical_form_to_action_sequence(logical_form)
+        assert 'Set[Box] -> [<Set[Box],Shape:Set[Box]>, Set[Box], Shape]' in action_sequence
+
+        # box_count_filter
+        logical_form = "(box_exists (member_count_equals all_boxes 3))"
+        action_sequence = language.logical_form_to_action_sequence(logical_form)
+        assert 'Set[Box] -> [<Set[Box],int:Set[Box]>, Set[Box], int]' in action_sequence
+
+        # assert_color
+        logical_form = "(object_color_all_equals all_objects color_blue)"
+        action_sequence = language.logical_form_to_action_sequence(logical_form)
+        assert 'bool -> [<Set[Object],Color:bool>, Set[Object], Color]' in action_sequence
+
+        # assert_shape
+        logical_form = "(object_shape_all_equals all_objects shape_square)"
+        action_sequence = language.logical_form_to_action_sequence(logical_form)
+        assert 'bool -> [<Set[Object],Shape:bool>, Set[Object], Shape]' in action_sequence
+
+        # assert_box_count
+        logical_form = "(box_count_equals all_boxes 1)"
+        action_sequence = language.logical_form_to_action_sequence(logical_form)
+        assert 'bool -> [<Set[Box],int:bool>, Set[Box], int]' in action_sequence
+
+        # assert_object_count
+        logical_form = "(object_count_equals all_objects 1)"
+        action_sequence = language.logical_form_to_action_sequence(logical_form)
+        assert 'bool -> [<Set[Object],int:bool>, Set[Object], int]' in action_sequence
+
+    def test_logical_form_with_object_filter_returns_correct_action_sequence(self):
+        language = self.languages[0]
+        logical_form = "(object_color_all_equals (circle (touch_wall all_objects)) color_black)"
+        action_sequence = language.logical_form_to_action_sequence(logical_form)
+        assert action_sequence == ['@start@ -> bool',
+                                   'bool -> [<Set[Object],Color:bool>, Set[Object], Color]',
+                                   '<Set[Object],Color:bool> -> object_color_all_equals',
+                                   'Set[Object] -> [<Set[Object]:Set[Object]>, Set[Object]]',
+                                   '<Set[Object]:Set[Object]> -> circle',
+                                   'Set[Object] -> [<Set[Object]:Set[Object]>, Set[Object]]',
+                                   '<Set[Object]:Set[Object]> -> touch_wall',
+                                   'Set[Object] -> all_objects',
+                                   'Color -> color_black']
+
+    def test_logical_form_with_box_filter_returns_correct_action_sequence(self):
+        language = self.languages[0]
+        logical_form = "(box_exists (member_color_none_equals all_boxes color_blue))"
+        action_sequence = language.logical_form_to_action_sequence(logical_form)
+        assert action_sequence == ['@start@ -> bool',
+                                   'bool -> [<Set[Box]:bool>, Set[Box]]',
+                                   '<Set[Box]:bool> -> box_exists',
+                                   'Set[Box] -> [<Set[Box],Color:Set[Box]>, Set[Box], Color]',
+                                   '<Set[Box],Color:Set[Box]> -> member_color_none_equals',
+                                   'Set[Box] -> all_boxes',
+                                   'Color -> color_blue']

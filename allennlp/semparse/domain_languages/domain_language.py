@@ -186,7 +186,10 @@ class DomainLanguage:
     annotations.  For a method you define on a ``DomainLanguage`` subclass to be included in the
     language, it *must* be decorated with ``@predicate``, and it *must* have type annotations on
     all arguments and on its return type.  You can also add predicates and constants to the
-    language using the :func:`add_predicate` and :func:`add_constant` functions, if you choose.
+    language using the :func:`add_predicate` and :func:`add_constant` functions, if you choose
+    (minor point: constants with generic types (like ``Set[int]``) must currently be specified as
+    predicates, as the ``allowed_constants`` dictionary doesn't pass along the generic type
+    information).
 
     The language we construct is purely functional - no defining variables or using lambda
     functions, or anything like that.  If you would like to extend this code to handle more complex
@@ -396,7 +399,8 @@ class DomainLanguage:
                 raise ParsingError(f"Unrecognized constant: {expression}")
             constant_type = self._function_types[expression]
             if expected_type and expected_type != constant_type:
-                raise ParsingError(f'{expression} did not have expected type {expected_type}')
+                raise ParsingError(f'{expression} did not have expected type {expected_type} '
+                                   f'(found {constant_type})')
             return [f'{constant_type} -> {expression}'], constant_type
         else:
             raise ParsingError('Not sure how you got here. Please open an issue on github with details.')
@@ -437,7 +441,8 @@ class DomainLanguage:
             else:
                 raise ParsingError(f"Unsupported expression type: {expression}")
         if expected_type and expected_type != return_type:
-            raise ParsingError(f'{expression} did not have expected type {expected_type}')
+            raise ParsingError(f'{expression} did not have expected type {expected_type} '
+                               f'(found {return_type})')
         return transitions, return_type, argument_types
 
     def _construct_node_from_actions(self,

@@ -93,8 +93,6 @@ class NlvrLanguage(DomainLanguage):
         for box in self.boxes:
             self.objects.update(box.objects)
         allowed_constants = {
-                'all_boxes': self.boxes,
-                'all_objects': self.objects,
                 'color_blue': Color('blue'),
                 'color_black': Color('black'),
                 'color_yellow': Color('yellow'),
@@ -114,6 +112,14 @@ class NlvrLanguage(DomainLanguage):
                 '10': 10,
                 }
         super().__init__(start_types={bool}, allowed_constants=allowed_constants)
+
+    @predicate
+    def all_boxes(self) -> Set[Box]:
+        return self.boxes
+
+    @predicate
+    def all_objects(self) -> Set[Object]:
+        return self.objects
 
     @predicate
     def box_exists(self, boxes: Set[Box]) -> bool:
