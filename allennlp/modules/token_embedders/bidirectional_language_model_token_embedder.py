@@ -5,7 +5,6 @@ import torch
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.data import TokenIndexer, Token
-from allennlp.models.archival import load_archive
 from allennlp.modules.scalar_mix import ScalarMix
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 from allennlp.nn.util import remove_sentence_boundaries, get_text_field_mask, add_sentence_boundary_token_ids
@@ -63,6 +62,8 @@ class BidirectionalLanguageModelTokenEmbedder(TokenEmbedder):
                 }
         }
 
+        # Import here to avoid circular dependency.
+        from allennlp.models.archival import load_archive
         # Load LM and the associated config.
         archive = load_archive(archive_file, overrides=json.dumps(overrides))
         self._lm: BidirectionalLanguageModel = archive.model

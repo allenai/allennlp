@@ -109,7 +109,7 @@ class MultiLabelField(Field[torch.Tensor]):
     def as_tensor(self, padding_lengths: Dict[str, int]) -> torch.Tensor:
         # pylint: disable=unused-argument
 
-        tensor = torch.zeros(self._num_labels)  # vector of zeros
+        tensor = torch.zeros(self._num_labels, dtype=torch.long)  # vector of zeros
         if self._label_ids:
             tensor.scatter_(0, torch.LongTensor(self._label_ids), 1)
 
