@@ -45,9 +45,9 @@ class BasicType(PredicateType):
             # we need to do some magic here.
             origin = type_.__origin__
             args = type_.__args__
-            self.name = f'{origin.__name__}[{",".join(arg.__name__ for arg in args)}]'
+            self.name: str = f'{origin.__name__}[{",".join(arg.__name__ for arg in args)}]'
         else:
-            self.name = type_.__name__
+            self.name: str = type_.__name__
 
     def __str__(self):
         return self.name
@@ -196,7 +196,7 @@ class DomainLanguage:
     """
     def __init__(self,
                  allowed_constants: Dict[str, Any] = None,
-                 start_types: Set[Type] = None):
+                 start_types: Set[Type] = None) -> None:
         self._functions: Dict[str, Callable] = {}
         self._function_types: Dict[str, PredicateType] = {}
         self._start_types = set([BasicType(type_) for type_ in start_types])
@@ -228,7 +228,7 @@ class DomainLanguage:
         predicate to produce an int.
         """
         if not self._valid_actions:
-            actions = defaultdict(list)
+            actions: Dict[str, List[str]] = defaultdict(list)
             if self._start_types:
                 for start_type in self._start_types:
                     actions[START_SYMBOL].append(f'{START_SYMBOL} -> {start_type}')
@@ -236,7 +236,7 @@ class DomainLanguage:
                 # If you didn't give us a set of valid start types, we'll assume all types we know
                 # about (including functional types) are valid start types.
                 for type_ in self._function_types.values():
-                    actions[START_SYMBOL].append(f"{START_SYBMOL} -> {type_}")
+                    actions[START_SYMBOL].append(f"{START_SYMBOL} -> {type_}")
             for name in self._functions:
                 function_type = self._function_types[name]
                 actions[str(function_type)].append(f"{function_type} -> {name}")
@@ -320,7 +320,7 @@ class DomainLanguage:
         return_type = signature.return_annotation
         # TODO(mattg): this might need to just call PredicateType.get_type, or something - what if
         # one of these is a function?
-        argument_nltk_types = [BasicType(arg_type) for arg_type in argument_types]
+        argument_nltk_types: List[PredicateType] = [BasicType(arg_type) for arg_type in argument_types]
         return_nltk_type = BasicType(return_type)
         function_nltk_type = PredicateType.get_function_type(argument_nltk_types, return_nltk_type)
         self._functions[name] = function
@@ -381,12 +381,11 @@ class DomainLanguage:
         expected type (or using the expected type to get the right type for constant expressions).
         """
         if isinstance(expression, (list, tuple)):
-            transitions = []
             function_transitions, return_type, argument_types = self._get_function_transitions(expression[0],
                                                                                                expected_type)
-            argument_transitions = []
             if len(argument_types) != len(expression[1:]):
                 raise ParsingError(f'Wrong number of arguments for function in {expression}')
+            argument_transitions = []
             for argument_type, subexpression in zip(argument_types, expression[1:]):
                 argument_transitions.extend(self._get_transitions(subexpression, argument_type)[0])
             return function_transitions + argument_transitions, return_type
