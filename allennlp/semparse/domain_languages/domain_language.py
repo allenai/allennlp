@@ -36,7 +36,7 @@ class PredicateType:
 class BasicType(PredicateType):
     """
     A ``PredicateType`` representing a zero-argument predicate (which could technically be a
-    function with no arguments or a function; both are treated the same here).
+    function with no arguments or a constant; both are treated the same here).
     """
     def __init__(self, type_: Type) -> None:
         self.type_ = type_
@@ -49,9 +49,8 @@ class BasicType(PredicateType):
         else:
             self.name: str = type_.__name__
 
-    def __str__(self):
+    def __repr__(self):
         return self.name
-    __repr__ = __str__
 
     def __hash__(self):
         return hash(self.name)
@@ -71,9 +70,8 @@ class FunctionType(PredicateType):
         self.return_type = return_type
         self.name = f'<{",".join(str(arg) for arg in argument_types)}:{return_type}>'
 
-    def __str__(self):
+    def __repr__(self):
         return self.name
-    __repr__ = __str__
 
     def __hash__(self):
         return hash(self.name)
@@ -120,7 +118,7 @@ def predicate(function: Callable) -> Callable:  # pylint: disable=invalid-name
     language.  See the :class:`DomainLanguage` docstring for an example usage, and for what using
     this does.
     """
-    function.is_predicate = True  # type: ignore
+    setattr(function, '_is_predicate', True)
     return function
 
 
@@ -203,11 +201,11 @@ class DomainLanguage:
         for name in dir(self):
             if isinstance(getattr(self, name), types.MethodType):
                 function = getattr(self, name)
-                if hasattr(function, 'is_predicate') and function.is_predicate:
+                if getattr(function, '_is_predicate', False):
                     self.add_predicate(name, function)
         for name, value in allowed_constants.items():
             self.add_constant(name, value)
-        # Caching this to avoid recompting it every time `get_valid_actions` is called.
+        # Caching this to avoid recomputing it every time `get_valid_actions` is called.
         self._valid_actions: Dict[str, List[str]] = None
 
     def execute(self, logical_form: str):
@@ -223,22 +221,18 @@ class DomainLanguage:
         Induces a grammar from the defined collection of predicates in this language.  This
         includes terminal productions implied by each predicate as well as productions for the
         `return type` of each defined predicate.  For example, defining a "multiply" predicate adds
-        a "<int,int:int> -> multiplty" terminal production to the grammar, and `also` a "int ->
+        a "<int,int:int> -> multiply" terminal production to the grammar, and `also` a "int ->
         [<int,int:int>, int, int]" non-terminal production, because I can use the "multiply"
         predicate to produce an int.
         """
         if not self._valid_actions:
             actions: Dict[str, List[str]] = defaultdict(list)
-            if self._start_types:
-                for start_type in self._start_types:
-                    actions[START_SYMBOL].append(f'{START_SYMBOL} -> {start_type}')
-            else:
-                # If you didn't give us a set of valid start types, we'll assume all types we know
-                # about (including functional types) are valid start types.
-                for type_ in self._function_types.values():
-                    actions[START_SYMBOL].append(f"{START_SYMBOL} -> {type_}")
-            for name in self._functions:
-                function_type = self._function_types[name]
+            # If you didn't give us a set of valid start types, we'll assume all types we know
+            # about (including functional types) are valid start types.
+            start_types = self._start_types or set(self._function_types.values())
+            for start_type in start_types:
+                actions[START_SYMBOL].append(f"{START_SYMBOL} -> {start_type}")
+            for name, function_type in self._function_types.items():
                 actions[str(function_type)].append(f"{function_type} -> {name}")
                 if isinstance(function_type, FunctionType):
                     return_type = function_type.return_type
@@ -272,7 +266,6 @@ class DomainLanguage:
         expression = util.lisp_to_nested_expression(logical_form)
         try:
             transitions, start_type = self._get_transitions(expression, expected_type=None)
-            print(transitions, start_type)
             if self._start_types and start_type not in self._start_types:
                 raise ParsingError(f"Expression had unallowed start type of {start_type}: {expression}")
         except ParsingError:
@@ -404,6 +397,13 @@ class DomainLanguage:
                                   expected_type: PredicateType) -> Tuple[List[str],
                                                                          PredicateType,
                                                                          List[PredicateType]]:
+        """
+        A helper method for ``_get_transitions``.  This gets the transitions for the predicate
+        itself in a function call.  If we only had simple functions (e.g., "(add 2 3)"), this would
+        be pretty straightforward and we wouldn't need a separate method to handle it.  We split it
+        out into its own method because handling higher-order functions is complicated (e.g.,
+        something like "((negate add) 2 3)").
+        """
         if isinstance(expression, list):
             # This is a higher-order function.  TODO(mattg): we'll just ignore type checking on
             # higher-order functions, for now.
