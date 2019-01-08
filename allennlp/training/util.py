@@ -1,18 +1,22 @@
 """
 Helper functions for Trainers
 """
-from typing import Any, Union, Dict, Iterable, Sequence
+from typing import Any, Union, Dict, Iterable, Sequence, List, Optional
 import datetime
 import logging
 import os
 import shutil
 
 import torch
+from torch.nn.parallel import replicate, parallel_apply
+from torch.nn.parallel.scatter_gather import gather
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
+from allennlp.common.util import scatter_kwargs
 from allennlp.data.dataset_readers import DatasetReader
 from allennlp.data.instance import Instance
+from allennlp.models.model import Model
 from allennlp.models.archival import CONFIG_NAME
 
 logger = logging.getLogger(__name__)
@@ -205,3 +209,49 @@ def create_serialization_dir(
             raise ConfigurationError(f"--recover specified but serialization_dir ({serialization_dir}) "
                                      "does not exist.  There is nothing to recover from.")
         os.makedirs(serialization_dir, exist_ok=True)
+
+def data_parallel(batch, model: Model, cuda_devices: List) -> Dict[str, torch.Tensor]:
+    """
+    Performs a forward pass using multiple GPUs.  This is a simplification
+    of torch.nn.parallel.data_parallel to support the allennlp model
+    interface.
+    """
+    inputs, module_kwargs = scatter_kwargs((), batch, cuda_devices, 0)
+
+    used_device_ids = cuda_devices[:len(inputs)]
+    replicas = replicate(model, used_device_ids)
+    outputs = parallel_apply(replicas, inputs, module_kwargs, used_device_ids)
+
+    # Only the 'loss' is needed.
+    # a (num_gpu, ) tensor with loss on each GPU
+    losses = gather([output['loss'].unsqueeze(0) for output in outputs], used_device_ids[0], 0)
+    return {'loss': losses.mean()}
+
+
+def enable_gradient_clipping(model: Model, grad_clipping: Optional[float]) -> None:
+    if grad_clipping is not None:
+        clip_function = lambda grad: grad.clamp(-grad_clipping, grad_clipping)
+        for parameter in model.parameters():
+            if parameter.requires_grad:
+                parameter.register_hook(clip_function)
+
+
+def rescale_gradients(model: Model, grad_norm: Optional[float] = None) -> Optional[float]:
+    """
+    Performs gradient rescaling. Is a no-op if gradient rescaling is not enabled.
+    """
+    if grad_norm:
+        parameters_to_clip = [p for p in model.parameters()
+                              if p.grad is not None]
+        return sparse_clip_norm(parameters_to_clip, grad_norm)
+    return None
+
+def get_metrics(model: Model, total_loss: float, num_batches: int, reset: bool = False) -> Dict[str, float]:
+    """
+    Gets the metrics but sets ``"loss"`` to
+    the total loss divided by the ``num_batches`` so that
+    the ``"loss"`` metric is "average loss per batch".
+    """
+    metrics = model.get_metrics(reset=reset)
+    metrics["loss"] = float(total_loss / num_batches) if num_batches > 0 else 0.0
+    return metrics

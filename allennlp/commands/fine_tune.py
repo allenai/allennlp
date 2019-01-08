@@ -18,7 +18,7 @@ from allennlp.common.util import prepare_environment, prepare_global_logging
 from allennlp.models import load_archive, archive_model
 from allennlp.models.archival import CONFIG_NAME
 from allennlp.models.model import Model, _DEFAULT_WEIGHTS
-from allennlp.training.supervised_trainer import SupervisedTrainer
+from allennlp.training.single_task_trainer import SingleTaskTrainer
 from allennlp.training.util import create_serialization_dir
 from allennlp.common.checks import ConfigurationError
 
@@ -148,9 +148,6 @@ def fine_tune_model(model: Model,
         If ``True``, we add newlines to tqdm output, even on an interactive terminal, and we slow
         down tqdm's output to only once every 10 seconds.
     """
-    # Save original params to use later
-    orig_params = params.duplicate()
-
     prepare_environment(params)
     create_serialization_dir(params, serialization_dir, recover=False, force=False)
     prepare_global_logging(serialization_dir, file_friendly_logging)
@@ -187,7 +184,7 @@ def fine_tune_model(model: Model,
 
     vocab.save_to_files(os.path.join(serialization_dir, "vocabulary"))
 
-    trainer = SupervisedTrainer.for_model(model, all_datasets, serialization_dir, params)
+    trainer = SingleTaskTrainer.for_model(model, all_datasets, serialization_dir, params)
 
     evaluate_on_test = params.pop_bool("evaluate_on_test", False)
     params.assert_empty('base train command')

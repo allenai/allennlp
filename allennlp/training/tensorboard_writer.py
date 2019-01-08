@@ -1,5 +1,6 @@
-from typing import Any, Set
+from typing import Any, Set, Optional
 import logging
+import os
 
 from tensorboardX import SummaryWriter
 import torch
@@ -17,6 +18,15 @@ class TensorboardWriter:
     def __init__(self, train_log: SummaryWriter = None, validation_log: SummaryWriter = None) -> None:
         self._train_log = train_log
         self._validation_log = validation_log
+
+    @staticmethod
+    def create(serialization_dir: Optional[str]) -> 'TensorboardWriter':
+        if serialization_dir is not None:
+            train_log = SummaryWriter(os.path.join(serialization_dir, "log", "train"))
+            validation_log = SummaryWriter(os.path.join(serialization_dir, "log", "validation"))
+            return TensorboardWriter(train_log, validation_log)
+        else:
+            return TensorboardWriter()
 
     @staticmethod
     def _item(value: Any):

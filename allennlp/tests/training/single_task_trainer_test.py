@@ -11,7 +11,7 @@ import pytest
 from allennlp.common.checks import ConfigurationError
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.training.supervised_trainer import SupervisedTrainer
+from allennlp.training.single_task_trainer import SingleTaskTrainer
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
 from allennlp.training.util import sparse_clip_norm
 from allennlp.data import Vocabulary
@@ -22,7 +22,7 @@ from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
 from allennlp.models.model import Model
 
 
-class TestSupervisedTrainer(AllenNlpTestCase):
+class TestSingleTaskTrainer(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
         self.instances = SequenceTaggingDatasetReader().read(self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv')
@@ -50,7 +50,7 @@ class TestSupervisedTrainer(AllenNlpTestCase):
         self.iterator.index_with(vocab)
 
     def test_trainer_can_run(self):
-        trainer = SupervisedTrainer(model=self.model,
+        trainer = SingleTaskTrainer(model=self.model,
                                     optimizer=self.optimizer,
                                     iterator=self.iterator,
                                     train_dataset=self.instances,
@@ -67,7 +67,7 @@ class TestSupervisedTrainer(AllenNlpTestCase):
         assert isinstance(metrics['best_epoch'], int)
 
         # Making sure that both increasing and decreasing validation metrics work.
-        trainer = SupervisedTrainer(model=self.model,
+        trainer = SingleTaskTrainer(model=self.model,
                                     optimizer=self.optimizer,
                                     iterator=self.iterator,
                                     train_dataset=self.instances,
@@ -89,7 +89,7 @@ class TestSupervisedTrainer(AllenNlpTestCase):
 
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="No CUDA device registered.")
     def test_trainer_can_run_cuda(self):
-        trainer = SupervisedTrainer(self.model, self.optimizer,
+        trainer = SingleTaskTrainer(self.model, self.optimizer,
                                     self.iterator, self.instances, num_epochs=2,
                                     cuda_device=0)
         trainer.train()
@@ -118,7 +118,7 @@ class TestSupervisedTrainer(AllenNlpTestCase):
 
         multigpu_iterator = BasicIterator(batch_size=4)
         multigpu_iterator.index_with(self.vocab)
-        trainer = SupervisedTrainer(MetaDataCheckWrapper(self.model), self.optimizer,
+        trainer = SingleTaskTrainer(MetaDataCheckWrapper(self.model), self.optimizer,
                                     multigpu_iterator, self.instances, num_epochs=2,
                                     cuda_device=[0, 1])
         metrics = trainer.train()
@@ -131,12 +131,12 @@ class TestSupervisedTrainer(AllenNlpTestCase):
         assert isinstance(metrics['peak_gpu_1_memory_MB'], int)
 
     def test_trainer_can_resume_training(self):
-        trainer = SupervisedTrainer(self.model, self.optimizer,
+        trainer = SingleTaskTrainer(self.model, self.optimizer,
                                     self.iterator, self.instances,
                                     validation_dataset=self.instances,
                                     num_epochs=1, serialization_dir=self.TEST_DIR)
         trainer.train()
-        new_trainer = SupervisedTrainer(self.model, self.optimizer,
+        new_trainer = SingleTaskTrainer(self.model, self.optimizer,
                                         self.iterator, self.instances,
                                         validation_dataset=self.instances,
                                         num_epochs=3, serialization_dir=self.TEST_DIR)
@@ -150,7 +150,7 @@ class TestSupervisedTrainer(AllenNlpTestCase):
 
     def test_metric_only_considered_best_so_far_when_strictly_better_than_those_before_it_increasing_metric(
             self):
-        new_trainer = SupervisedTrainer(self.model, self.optimizer,
+        new_trainer = SingleTaskTrainer(self.model, self.optimizer,
                                         self.iterator, self.instances,
                                         validation_dataset=self.instances,
                                         num_epochs=3, serialization_dir=self.TEST_DIR,
@@ -165,7 +165,7 @@ class TestSupervisedTrainer(AllenNlpTestCase):
         assert not new_trainer._is_best_so_far(.0013, [.3, .3, .3, .2, .5, .1])  # pylint: disable=protected-access
 
     def test_metric_only_considered_best_so_far_when_strictly_better_than_those_before_it_decreasing_metric(self):
-        new_trainer = SupervisedTrainer(self.model, self.optimizer,
+        new_trainer = SingleTaskTrainer(self.model, self.optimizer,
                                         self.iterator, self.instances,
                                         validation_dataset=self.instances,
                                         num_epochs=3, serialization_dir=self.TEST_DIR,
@@ -180,7 +180,7 @@ class TestSupervisedTrainer(AllenNlpTestCase):
         assert not new_trainer._is_best_so_far(13.00, [.3, .3, .3, .2, .5, .1])  # pylint: disable=protected-access
 
     def test_should_stop_early_with_increasing_metric(self):
-        new_trainer = SupervisedTrainer(self.model, self.optimizer,
+        new_trainer = SingleTaskTrainer(self.model, self.optimizer,
                                         self.iterator, self.instances,
                                         validation_dataset=self.instances,
                                         num_epochs=3, serialization_dir=self.TEST_DIR,
@@ -190,23 +190,23 @@ class TestSupervisedTrainer(AllenNlpTestCase):
 
     def test_should_stop_early_with_flat_lining_metric(self):
         flatline = [.2] * 6
-        assert SupervisedTrainer(self.model, self.optimizer,  # pylint: disable=protected-access
+        assert SingleTaskTrainer(self.model, self.optimizer,  # pylint: disable=protected-access
                                  self.iterator, self.instances,
                                  validation_dataset=self.instances,
                                  num_epochs=3,
                                  serialization_dir=self.TEST_DIR,
                                  patience=5,
                                  validation_metric="+test")._should_stop_early(flatline)  # pylint: disable=protected-access
-        assert SupervisedTrainer(self.model, self.optimizer,  # pylint: disable=protected-access
-                       self.iterator, self.instances,
-                       validation_dataset=self.instances,
-                       num_epochs=3,
-                       serialization_dir=self.TEST_DIR,
-                       patience=5,
-                       validation_metric="-test")._should_stop_early(flatline)  # pylint: disable=protected-access
+        assert SingleTaskTrainer(self.model, self.optimizer,  # pylint: disable=protected-access
+                                 self.iterator, self.instances,
+                                 validation_dataset=self.instances,
+                                 num_epochs=3,
+                                 serialization_dir=self.TEST_DIR,
+                                 patience=5,
+                                 validation_metric="-test")._should_stop_early(flatline)  # pylint: disable=protected-access
 
     def test_should_stop_early_with_decreasing_metric(self):
-        new_trainer = SupervisedTrainer(self.model, self.optimizer,
+        new_trainer = SingleTaskTrainer(self.model, self.optimizer,
                                         self.iterator, self.instances,
                                         validation_dataset=self.instances,
                                         num_epochs=3, serialization_dir=self.TEST_DIR,
@@ -217,14 +217,14 @@ class TestSupervisedTrainer(AllenNlpTestCase):
 
     def test_should_stop_early_with_early_stopping_disabled(self):
         # Increasing metric
-        trainer = SupervisedTrainer(self.model, self.optimizer, self.iterator, self.instances,
+        trainer = SingleTaskTrainer(self.model, self.optimizer, self.iterator, self.instances,
                                     validation_dataset=self.instances, num_epochs=100,
                                     patience=None, validation_metric="+test")
         decreasing_history = [float(i) for i in reversed(range(20))]
         assert not trainer._should_stop_early(decreasing_history)  # pylint: disable=protected-access
 
         # Decreasing metric
-        trainer = SupervisedTrainer(self.model, self.optimizer, self.iterator, self.instances,
+        trainer = SingleTaskTrainer(self.model, self.optimizer, self.iterator, self.instances,
                                     validation_dataset=self.instances, num_epochs=100,
                                     patience=None, validation_metric="-test")
         increasing_history = [float(i) for i in range(20)]
@@ -234,14 +234,14 @@ class TestSupervisedTrainer(AllenNlpTestCase):
         for patience in [0, -1, -2, 1.5, 'None']:
             with pytest.raises(ConfigurationError,
                                message='No ConfigurationError for patience={}'.format(patience)):
-                SupervisedTrainer(self.model, self.optimizer, self.iterator, self.instances,
+                SingleTaskTrainer(self.model, self.optimizer, self.iterator, self.instances,
                                   validation_dataset=self.instances, num_epochs=100,
                                   patience=patience, validation_metric="+test")
 
     def test_trainer_can_run_with_lr_scheduler(self):
         lr_params = Params({"type": "reduce_on_plateau"})
         lr_scheduler = LearningRateScheduler.from_params(self.optimizer, lr_params)
-        trainer = SupervisedTrainer(model=self.model,
+        trainer = SingleTaskTrainer(model=self.model,
                                     optimizer=self.optimizer,
                                     iterator=self.iterator,
                                     learning_rate_scheduler=lr_scheduler,
@@ -255,7 +255,7 @@ class TestSupervisedTrainer(AllenNlpTestCase):
         # pylint: disable=protected-access
         lr_scheduler = LearningRateScheduler.from_params(
                 self.optimizer, Params({"type": "exponential", "gamma": 0.5}))
-        trainer = SupervisedTrainer(model=self.model,
+        trainer = SingleTaskTrainer(model=self.model,
                                     optimizer=self.optimizer,
                                     iterator=self.iterator,
                                     learning_rate_scheduler=lr_scheduler,
@@ -266,7 +266,7 @@ class TestSupervisedTrainer(AllenNlpTestCase):
 
         new_lr_scheduler = LearningRateScheduler.from_params(
                 self.optimizer, Params({"type": "exponential", "gamma": 0.5}))
-        new_trainer = SupervisedTrainer(model=self.model,
+        new_trainer = SingleTaskTrainer(model=self.model,
                                         optimizer=self.optimizer,
                                         iterator=self.iterator,
                                         learning_rate_scheduler=new_lr_scheduler,
@@ -283,7 +283,7 @@ class TestSupervisedTrainer(AllenNlpTestCase):
             def forward(self, **kwargs):  # pylint: disable=arguments-differ,unused-argument
                 return {}
         with pytest.raises(RuntimeError):
-            trainer = SupervisedTrainer(FakeModel(), self.optimizer,
+            trainer = SingleTaskTrainer(FakeModel(), self.optimizer,
                                         self.iterator, self.instances,
                                         num_epochs=2, serialization_dir=self.TEST_DIR)
             trainer.train()
@@ -293,14 +293,14 @@ class TestSupervisedTrainer(AllenNlpTestCase):
         for module in self.model.modules():
             module.should_log_activations = True
 
-        trainer = SupervisedTrainer(self.model, self.optimizer,
+        trainer = SingleTaskTrainer(self.model, self.optimizer,
                                     self.iterator, self.instances, num_epochs=3,
                                     serialization_dir=self.TEST_DIR,
                                     histogram_interval=2)
         trainer.train()
 
     def test_trainer_respects_num_serialized_models_to_keep(self):
-        trainer = SupervisedTrainer(self.model, self.optimizer,
+        trainer = SingleTaskTrainer(self.model, self.optimizer,
                                     self.iterator, self.instances, num_epochs=5,
                                     serialization_dir=self.TEST_DIR,
                                     num_serialized_models_to_keep=3)
@@ -314,7 +314,7 @@ class TestSupervisedTrainer(AllenNlpTestCase):
             assert sorted(epochs) == [2, 3, 4]
 
     def test_trainer_saves_metrics_every_epoch(self):
-        trainer = SupervisedTrainer(model=self.model,
+        trainer = SingleTaskTrainer(model=self.model,
                                     optimizer=self.optimizer,
                                     iterator=self.iterator,
                                     train_dataset=self.instances,
@@ -348,7 +348,7 @@ class TestSupervisedTrainer(AllenNlpTestCase):
         iterator = WaitingIterator(batch_size=2)
         iterator.index_with(self.vocab)
 
-        trainer = SupervisedTrainer(self.model, self.optimizer,
+        trainer = SingleTaskTrainer(self.model, self.optimizer,
                                     iterator, self.instances, num_epochs=6,
                                     serialization_dir=self.TEST_DIR,
                                     num_serialized_models_to_keep=2,
@@ -367,7 +367,7 @@ class TestSupervisedTrainer(AllenNlpTestCase):
         iterator = BasicIterator(batch_size=4)
         iterator.index_with(self.vocab)
 
-        trainer = SupervisedTrainer(self.model, self.optimizer,
+        trainer = SingleTaskTrainer(self.model, self.optimizer,
                                     iterator, self.instances, num_epochs=2,
                                     serialization_dir=self.TEST_DIR,
                                     should_log_learning_rate=True,
@@ -379,7 +379,7 @@ class TestSupervisedTrainer(AllenNlpTestCase):
         iterator = BasicIterator(batch_size=4)
         iterator.index_with(self.vocab)
 
-        trainer = SupervisedTrainer(self.model, self.optimizer,
+        trainer = SingleTaskTrainer(self.model, self.optimizer,
                                     iterator, self.instances, num_epochs=2,
                                     serialization_dir=self.TEST_DIR,
                                     model_save_interval=0.0001)
@@ -405,7 +405,7 @@ class TestSupervisedTrainer(AllenNlpTestCase):
             os.remove(os.path.join(self.TEST_DIR, 'training_state_epoch_{}.th'.format(k)))
         os.remove(os.path.join(self.TEST_DIR, 'best.th'))
 
-        restore_trainer = SupervisedTrainer(self.model, self.optimizer,
+        restore_trainer = SingleTaskTrainer(self.model, self.optimizer,
                                             self.iterator, self.instances, num_epochs=2,
                                             serialization_dir=self.TEST_DIR,
                                             model_save_interval=0.0001)

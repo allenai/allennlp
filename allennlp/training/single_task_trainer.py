@@ -20,17 +20,17 @@ from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.model import Model
-from allennlp.nn import util
+from allennlp.nn import util as nn_util
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
 from allennlp.training.optimizers import Optimizer
 from allennlp.training.trainer import Trainer
-from allennlp.training.util import time_to_str, move_optimizer_to_cuda, datasets_from_params
+from allennlp.training import util as training_util
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-@Trainer.register("default")
-class SupervisedTrainer(Trainer):
+@Trainer.register("single_task")
+class SingleTaskTrainer(Trainer):
     def __init__(self,
                  model: Model,
                  optimizer: torch.optim.Optimizer,
@@ -274,7 +274,7 @@ class SupervisedTrainer(Trainer):
 
             train_loss += loss.item()
 
-            batch_grad_norm = self._rescale_gradients(self._grad_norm)
+            batch_grad_norm = training_util.rescale_gradients(self.model, self._grad_norm)
 
             # This does nothing if batch_num_total is None or you are using an
             # LRScheduler which doesn't update per batch.
@@ -299,7 +299,7 @@ class SupervisedTrainer(Trainer):
                 self.optimizer.step()
 
             # Update the description with the latest metrics
-            metrics = self._get_metrics(train_loss, batches_this_epoch)
+            metrics = training_util.get_metrics(self.model, train_loss, batches_this_epoch)
             description = self._description_from_metrics(metrics)
 
             train_generator_tqdm.set_description(description, refresh=False)
@@ -321,7 +321,7 @@ class SupervisedTrainer(Trainer):
                 self._tensorboard.log_histograms(self.model, batch_num_total, histogram_parameters)
 
             if self._log_batch_size_period:
-                cur_batch = self._get_batch_size(batch)
+                cur_batch = training_util.get_batch_size(batch)
                 cumulative_batch_size += cur_batch
                 if (batches_this_epoch - 1) % self._log_batch_size_period == 0:
                     average = cumulative_batch_size/batches_this_epoch
@@ -335,9 +335,9 @@ class SupervisedTrainer(Trainer):
             ):
                 last_save_time = time.time()
                 self._save_checkpoint(
-                        '{0}.{1}'.format(epoch, time_to_str(int(last_save_time))), [], is_best=False
+                        '{0}.{1}'.format(epoch, training_util.time_to_str(int(last_save_time))), [], is_best=False
                 )
-        metrics = self._get_metrics(train_loss, batches_this_epoch, reset=True)
+        metrics = training_util.get_metrics(self.model, train_loss, batches_this_epoch, reset=True)
         metrics['cpu_memory_MB'] = peak_cpu_usage
         for (gpu_num, memory) in gpu_usage:
             metrics['gpu_'+str(gpu_num)+'_memory_MB'] = memory
@@ -394,7 +394,7 @@ class SupervisedTrainer(Trainer):
                 val_loss += loss.detach().cpu().numpy()
 
             # Update the description with the latest metrics
-            val_metrics = self._get_metrics(val_loss, batches_this_epoch)
+            val_metrics = training_util.get_metrics(self.model, val_loss, batches_this_epoch)
             description = self._description_from_metrics(val_metrics)
             val_generator_tqdm.set_description(description, refresh=False)
 
@@ -412,7 +412,7 @@ class SupervisedTrainer(Trainer):
                                      "a different serialization directory or delete the existing serialization "
                                      "directory?")
 
-        self._enable_gradient_clipping(self._grad_clipping)
+        training_util.enable_gradient_clipping(self.model, self._grad_clipping)
         self._enable_activation_logging()
 
         logger.info("Beginning training.")
@@ -439,7 +439,7 @@ class SupervisedTrainer(Trainer):
                 with torch.no_grad():
                     # We have a validation set, so compute all the metrics on it.
                     val_loss, num_batches = self._validation_loss()
-                    val_metrics = self._get_metrics(val_loss, num_batches, reset=True)
+                    val_metrics = training_util.get_metrics(self.model, val_loss, num_batches, reset=True)
 
                     # Check validation metric for early stopping
                     this_epoch_val_metric = val_metrics[self._validation_metric]
@@ -512,15 +512,6 @@ class SupervisedTrainer(Trainer):
             return this_epoch_val_metric < min(validation_metric_per_epoch)
         else:
             return this_epoch_val_metric > max(validation_metric_per_epoch)
-
-    def _description_from_metrics(self, metrics: Dict[str, float]) -> str:
-        if (not self._warned_tqdm_ignores_underscores and
-                    any(metric_name.startswith("_") for metric_name in metrics)):
-            logger.warning("Metrics with names beginning with \"_\" will "
-                           "not be logged to the tqdm progress bar.")
-            self._warned_tqdm_ignores_underscores = True
-        return ', '.join(["%s: %.4f" % (name, value) for name, value in
-                          metrics.items() if not name.startswith("_")]) + " ||"
 
     def _save_checkpoint(self,
                          epoch: Union[int, str],
@@ -652,14 +643,14 @@ class SupervisedTrainer(Trainer):
         # This avoids potential OOM on GPU for large models that
         # load parameters onto GPU then make a new GPU copy into the parameter
         # buffer. The GPU transfer happens implicitly in load_state_dict.
-        model_state = torch.load(model_path, map_location=util.device_mapping(-1))
-        training_state = torch.load(training_state_path, map_location=util.device_mapping(-1))
+        model_state = torch.load(model_path, map_location=nn_util.device_mapping(-1))
+        training_state = torch.load(training_state_path, map_location=nn_util.device_mapping(-1))
         self.model.load_state_dict(model_state)
         self.optimizer.load_state_dict(training_state["optimizer"])
         if self._learning_rate_scheduler is not None and "learning_rate_scheduler" in training_state:
             self._learning_rate_scheduler.lr_scheduler.load_state_dict(
                     training_state["learning_rate_scheduler"])
-        move_optimizer_to_cuda(self.optimizer)
+        training_util.move_optimizer_to_cuda(self.optimizer)
 
         # We didn't used to save `validation_metric_per_epoch`, so we can't assume
         # that it's part of the trainer state. If it's not there, an empty list is all
@@ -690,7 +681,7 @@ class SupervisedTrainer(Trainer):
                   serialization_dir: str,
                   params: Params):
         """
-        Returns a ``SupervisedTrainer`` instance for training an existing model.
+        Returns a ``SingleTaskTrainer`` instance for training an existing model.
         This could either be a model loaded from an archive (if you're fine-tuning),
         or a "blank" model that was just instantiated from_params.
         """
@@ -779,16 +770,14 @@ class SupervisedTrainer(Trainer):
                    should_log_learning_rate=should_log_learning_rate,
                    log_batch_size_period=log_batch_size_period)
 
-
-
     # Requires custom from_params.
     @classmethod
     def from_params(cls,  # type: ignore
                     params: Params,
                     serialization_dir: str,
-                    recover: bool = False) -> 'SupervisedTrainer':
+                    recover: bool = False) -> 'SingleTaskTrainer':
         # pylint: disable=arguments-differ
-        all_datasets = datasets_from_params(params)
+        all_datasets = training_util.datasets_from_params(params)
         datasets_for_vocab_creation = set(params.pop("datasets_for_vocab_creation", all_datasets))
 
         for dataset in datasets_for_vocab_creation:

@@ -9,7 +9,7 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.data.iterators import BasicIterator
 from allennlp.models import Model
-from allennlp.training.supervised_trainer import SupervisedTrainer
+from allennlp.training.single_task_trainer import SingleTaskTrainer
 
 class SimpleTaggerTest(ModelTestCase):
     def setUp(self):
@@ -53,7 +53,7 @@ class SimpleTaggerTest(ModelTestCase):
         assert penalty == 0
 
         iterator = BasicIterator(batch_size=32)
-        trainer = SupervisedTrainer(self.model,
+        trainer = SingleTaskTrainer(self.model,
                                     None,  # optimizer,
                                     iterator,
                                     self.instances)
@@ -78,7 +78,7 @@ class SimpleTaggerRegularizationTest(ModelTestCase):
                           self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv')
         params = Params.from_file(param_file)
 
-        self.trainer = SupervisedTrainer.from_params(params, self.TEST_DIR)
+        self.trainer = SingleTaskTrainer.from_params(params, self.TEST_DIR)
 
         self.iterator = self.trainer.iterator
 
