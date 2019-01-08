@@ -426,7 +426,7 @@ class TestSparseClipGrad(AllenNlpTestCase):
         ids[:5] = 5
         loss = embedding(ids).sum()
         loss.backward()
-        assert embedding.weight.grad.is_sparse
+        assert embedding.weight.grad.is_sparse  # pylint: disable=no-member
 
         # Now try to clip the gradients.
         _ = sparse_clip_norm([embedding.weight], 1.5)
