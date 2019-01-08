@@ -4,8 +4,9 @@ import torch
 from torch.nn.parameter import Parameter
 
 from allennlp.common import Params
-from modules.seq2vec_encoders.han_attention import HanAttention
+from allennlp.modules.seq2vec_encoders.han_attention import HanAttention
 from allennlp.common.testing import AllenNlpTestCase
+
 
 class TestHanAttention(AllenNlpTestCase):
     def test_forward(self):

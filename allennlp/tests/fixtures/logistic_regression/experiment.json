@@ -10,8 +10,8 @@
         },
     },
   "datasets_for_vocab_creation": ["train"],
-  "train_data_path": "/home/ubuntu/doc_classifiers/tests/fixtures/data/ag.jsonl",
-  "validation_data_path": "/home/ubuntu/doc_classifiers/tests/fixtures/data/ag.jsonl",
+  "train_data_path": "allennlp/tests/fixtures/data/textcat/ag.jsonl",
+  "validation_data_path": "allennlp/tests/fixtures/data/textcat/ag.jsonl",
     "model": {
         "type": "logistic_regression",
         "onehot_embedder": {

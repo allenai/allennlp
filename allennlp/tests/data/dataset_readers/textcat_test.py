@@ -10,9 +10,7 @@ class TestTextCatReader():
     @pytest.mark.parametrize("lazy", (True, False))
     def test_read_from_file_ag(self, lazy):
         reader = TextCatReader(lazy=lazy)
-        self.FIXTURES_ROOT = "/home/ubuntu/doc_classifiers/tests/fixtures/"
         instances = reader.read(self.FIXTURES_ROOT + 'data/ag.jsonl')
-        # instances = reader.read(AllenNlpTestCase.FIXTURES_ROOT / 'data' / 'ag.jsonl')
         instances = ensure_list(instances)
 
         instance1 = {"tokens": ['Memphis', 'Rout', 'Still', 'Stings', 'for', 'No', '.', '14',

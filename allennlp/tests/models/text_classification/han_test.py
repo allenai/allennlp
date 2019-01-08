@@ -9,7 +9,6 @@ from allennlp.common.testing import ModelTestCase
 class TestHAN(ModelTestCase):
     def setUp(self):
         super(TestHAN, self).setUp()
-        self.FIXTURES_ROOT = "/home/ubuntu/doc_classifiers/tests/fixtures/"
         self.set_up_model(self.FIXTURES_ROOT + 'han/experiment.json',
                           self.FIXTURES_ROOT + 'data/ag.jsonl')
 
