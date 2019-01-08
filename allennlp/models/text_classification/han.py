@@ -115,14 +115,16 @@ class HierarchicalAttentionNetwork(Model):
         embedded_words = embedded_words.view(batch_size * max_num_sents, embedded_words.size(2), -1)
         tokens_ = tokens_.view(batch_size * max_num_sents, -1)
 
-        # we encode each sentence with a seq2seq encoder on its words, then seq2vec encoder incorporating attention
+        # we encode words with a seq2seq encoder
+        # then apply attention to get sentence-level representation
         mask = get_text_field_mask({"tokens": tokens_}).float()
         embedded_words = self._word_dropout(embedded_words)
         encoded_words = self._word_encoder(embedded_words, mask)
         sentence_repr = self._word_attention(encoded_words, mask)
         sentence_repr = sentence_repr.view(batch_size, max_num_sents, -1)
 
-        # we encode each document with a seq2seq encoder on its sentences, then seq2vec encoder incorporating attention
+        # we encode sentences with a seq2seq encoder
+        # then apply attention to get document-level representation
         sentence_repr = self._sentence_dropout(sentence_repr)
         encoded_sents = self._sentence_encoder(sentence_repr, sentence_level_mask)
         document_repr = self._sentence_attention(encoded_sents, sentence_level_mask)
