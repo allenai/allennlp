@@ -342,7 +342,7 @@ def masked_mean(vector: torch.Tensor,
 def masked_flip(padded_sequence: torch.Tensor,
                 sequence_lengths: List[int]) -> torch.Tensor:
     """
-        To flip a padded tensor along the time dimension without affecting masked entries.
+        Flips a padded tensor along the time dimension without affecting masked entries.
 
         Parameters
         ----------

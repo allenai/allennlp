@@ -284,60 +284,57 @@ class TestNnUtil(AllenNlpTestCase):
 
     def test_masked_flip(self):
         tensor = torch.FloatTensor([[[6, 6, 6], [1, 1, 1], [2, 2, 2]], [[3, 3, 3], [4, 4, 4], [5, 5, 5]]])
-        solution = torch.FloatTensor([[[6, 6, 6], [0, 0, 0]], [[4, 4, 4], [3, 3, 3]]])
+        solution = [[[6, 6, 6], [0, 0, 0]], [[4, 4, 4], [3, 3, 3]]]
         response = util.masked_flip(tensor, [1, 2])
-        self.assertEqual(solution.size(), response.size())
-        self.assertEqual(torch.sum(torch.abs(solution - response)), 0)
+        assert_almost_equal(response, solution)
 
         tensor = torch.FloatTensor([[[6, 6, 6], [1, 1, 1], [2, 2, 2], [0, 0, 0]],
                                     [[3, 3, 3], [4, 4, 4], [5, 5, 5], [1, 2, 3]]])
-        solution = torch.FloatTensor([[[2, 2, 2], [1, 1, 1], [6, 6, 6], [0, 0, 0]],
-                                      [[1, 2, 3], [5, 5, 5], [4, 4, 4], [3, 3, 3]]])
+        solution = [[[2, 2, 2], [1, 1, 1], [6, 6, 6], [0, 0, 0]],
+                    [[1, 2, 3], [5, 5, 5], [4, 4, 4], [3, 3, 3]]]
         response = util.masked_flip(tensor, [3, 4])
-        self.assertEqual(solution.size(), response.size())
-        self.assertEqual(torch.sum(torch.abs(solution - response)), 0)
+        assert_almost_equal(response, solution)
 
         tensor = torch.FloatTensor([[[6, 6, 6], [1, 1, 1], [2, 2, 2], [0, 0, 0]],
                                     [[3, 3, 3], [4, 4, 4], [5, 5, 5], [1, 2, 3]],
                                     [[1, 1, 1], [2, 2, 2], [0, 0, 0], [0, 0, 0]]])
-        solution = torch.FloatTensor([[[2, 2, 2], [1, 1, 1], [6, 6, 6], [0, 0, 0]],
-                                      [[1, 2, 3], [5, 5, 5], [4, 4, 4], [3, 3, 3]],
-                                      [[2, 2, 2], [1, 1, 1], [0, 0, 0], [0, 0, 0]]])
+        solution = [[[2, 2, 2], [1, 1, 1], [6, 6, 6], [0, 0, 0]],
+                    [[1, 2, 3], [5, 5, 5], [4, 4, 4], [3, 3, 3]],
+                    [[2, 2, 2], [1, 1, 1], [0, 0, 0], [0, 0, 0]]]
         response = util.masked_flip(tensor, [3, 4, 2])
-        self.assertEqual(solution.size(), response.size())
-        self.assertEqual(torch.sum(torch.abs(solution - response)), 0)
+        assert_almost_equal(response, solution)
 
     def test_get_text_field_mask_returns_a_correct_mask(self):
         text_field_tensors = {
-                "tokens": torch.LongTensor([[3, 4, 5, 0, 0], [1, 2, 0, 0, 0]]),
-                "token_characters": torch.LongTensor([[[1, 2], [3, 0], [2, 0], [0, 0], [0, 0]],
-                                                      [[5, 0], [4, 6], [0, 0], [0, 0], [0, 0]]])
-                }
+            "tokens": torch.LongTensor([[3, 4, 5, 0, 0], [1, 2, 0, 0, 0]]),
+            "token_characters": torch.LongTensor([[[1, 2], [3, 0], [2, 0], [0, 0], [0, 0]],
+                                                  [[5, 0], [4, 6], [0, 0], [0, 0], [0, 0]]])
+        }
         assert_almost_equal(util.get_text_field_mask(text_field_tensors).numpy(),
                             [[1, 1, 1, 0, 0], [1, 1, 0, 0, 0]])
 
     def test_get_text_field_mask_returns_a_correct_mask_character_only_input(self):
         text_field_tensors = {
-                "token_characters": torch.LongTensor([[[1, 2, 3], [3, 0, 1], [2, 1, 0], [0, 0, 0]],
-                                                      [[5, 5, 5], [4, 6, 0], [0, 0, 0], [0, 0, 0]]])
-                }
+            "token_characters": torch.LongTensor([[[1, 2, 3], [3, 0, 1], [2, 1, 0], [0, 0, 0]],
+                                                  [[5, 5, 5], [4, 6, 0], [0, 0, 0], [0, 0, 0]]])
+        }
         assert_almost_equal(util.get_text_field_mask(text_field_tensors).numpy(),
                             [[1, 1, 1, 0], [1, 1, 0, 0]])
 
     def test_get_text_field_mask_returns_a_correct_mask_list_field(self):
         text_field_tensors = {
-                "list_tokens": torch.LongTensor([[[1, 2], [3, 0], [2, 0], [0, 0], [0, 0]],
-                                                 [[5, 0], [4, 6], [0, 0], [0, 0], [0, 0]]])
-                }
+            "list_tokens": torch.LongTensor([[[1, 2], [3, 0], [2, 0], [0, 0], [0, 0]],
+                                             [[5, 0], [4, 6], [0, 0], [0, 0], [0, 0]]])
+        }
         actual_mask = util.get_text_field_mask(text_field_tensors, num_wrapping_dims=1).numpy()
         expected_mask = (text_field_tensors['list_tokens'].numpy() > 0).astype('int32')
         assert_almost_equal(actual_mask, expected_mask)
 
     def test_get_text_field_mask_returns_mask_key(self):
         text_field_tensors = {
-                "tokens": torch.LongTensor([[3, 4, 5, 0, 0], [1, 2, 0, 0, 0]]),
-                "mask": torch.LongTensor([[0, 0, 1]])
-                }
+            "tokens": torch.LongTensor([[3, 4, 5, 0, 0], [1, 2, 0, 0, 0]]),
+            "mask": torch.LongTensor([[0, 0, 1]])
+        }
         assert_almost_equal(util.get_text_field_mask(text_field_tensors).numpy(),
                             [[0, 0, 1]])
 
@@ -521,7 +518,7 @@ class TestNnUtil(AllenNlpTestCase):
             prediction = torch.nn.functional.log_softmax(prediction, dim=-1)
             correct_loss += prediction[label] * 0.9
             # incorrect elements
-            correct_loss += prediction.sum() * 0.1/4
+            correct_loss += prediction.sum() * 0.1 / 4
         # Average over sequence.
         correct_loss = - correct_loss / 3
         numpy.testing.assert_array_almost_equal(loss.data.numpy(), correct_loss.data.numpy())
@@ -672,12 +669,12 @@ class TestNnUtil(AllenNlpTestCase):
 
     def test_add_sentence_boundary_token_ids_handles_3D_input(self):
         tensor = torch.from_numpy(
-                numpy.array([[[1, 2, 3, 4],
-                              [5, 5, 5, 5],
-                              [6, 8, 1, 2]],
-                             [[4, 3, 2, 1],
-                              [8, 7, 6, 5],
-                              [0, 0, 0, 0]]]))
+            numpy.array([[[1, 2, 3, 4],
+                          [5, 5, 5, 5],
+                          [6, 8, 1, 2]],
+                         [[4, 3, 2, 1],
+                          [8, 7, 6, 5],
+                          [0, 0, 0, 0]]]))
         mask = ((tensor > 0).sum(dim=-1) > 0).type(torch.LongTensor)
         bos = torch.from_numpy(numpy.array([9, 9, 9, 9]))
         eos = torch.from_numpy(numpy.array([10, 10, 10, 10]))
@@ -698,12 +695,12 @@ class TestNnUtil(AllenNlpTestCase):
     def test_remove_sentence_boundaries(self):
         tensor = torch.from_numpy(numpy.random.rand(3, 5, 7))
         mask = torch.from_numpy(
-                # The mask with two elements is to test the corner case
-                # of an empty sequence, so here we are removing boundaries
-                # from  "<S> </S>"
-                numpy.array([[1, 1, 0, 0, 0],
-                             [1, 1, 1, 1, 1],
-                             [1, 1, 1, 1, 0]])).long()
+            # The mask with two elements is to test the corner case
+            # of an empty sequence, so here we are removing boundaries
+            # from  "<S> </S>"
+            numpy.array([[1, 1, 0, 0, 0],
+                         [1, 1, 1, 1, 1],
+                         [1, 1, 1, 1, 0]])).long()
         new_tensor, new_mask = util.remove_sentence_boundaries(tensor, mask)
 
         expected_new_tensor = torch.zeros(3, 3, 7)
@@ -712,9 +709,9 @@ class TestNnUtil(AllenNlpTestCase):
         assert_array_almost_equal(new_tensor.data.numpy(), expected_new_tensor.data.numpy())
 
         expected_new_mask = torch.from_numpy(
-                numpy.array([[0, 0, 0],
-                             [1, 1, 1],
-                             [1, 1, 0]])).long()
+            numpy.array([[0, 0, 0],
+                         [1, 1, 1],
+                         [1, 1, 0]])).long()
         assert (new_mask.data.numpy() == expected_new_mask.data.numpy()).all()
 
     def test_add_positional_features(self):
@@ -823,8 +820,8 @@ class TestNnUtil(AllenNlpTestCase):
         result = util.combine_tensors_and_multiply(combination, [t1.unsqueeze(2), t2.unsqueeze(1)], weight)
 
         assert_almost_equal(
-                result.size(),
-                [1, seq_len_1, seq_len_2]
+            result.size(),
+            [1, seq_len_1, seq_len_2]
         )
 
     def test_combine_tensors_and_multiply_with_batch_size_one_and_seq_len_one(self):
@@ -841,8 +838,8 @@ class TestNnUtil(AllenNlpTestCase):
         result = util.combine_tensors_and_multiply(combination, [t1.unsqueeze(2), t2.unsqueeze(1)], weight)
 
         assert_almost_equal(
-                result.size(),
-                [1, seq_len_1, seq_len_2]
+            result.size(),
+            [1, seq_len_1, seq_len_2]
         )
 
     def test_has_tensor(self):
