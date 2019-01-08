@@ -1,6 +1,8 @@
 # pylint: disable=no-self-use,invalid-name
 from collections import defaultdict
 
+import warnings
+
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Token, Vocabulary
 from allennlp.data.token_indexers import TokenCharactersIndexer
@@ -96,3 +98,12 @@ class CharacterTokenIndexerTest(AllenNlpTestCase):
                                    [9, 10, 0, 0, 0, 0, 0, 0, 0, 0],
                                    [11, 12, 4, 10, 13, 14, 4, 0, 0, 0],
                                    [15, 0, 0, 0, 0, 0, 0, 0, 0, 0]]}
+
+    def test_warn_min_padding_length(self):
+        with warnings.catch_warnings(record=True) as warn:
+            # Cause all warnings to always be triggered.
+            warnings.simplefilter("always")
+            TokenCharactersIndexer("characters")
+            # Verify some things
+            assert len(warn) == 1
+            assert issubclass(warn[0].category, FutureWarning)
