@@ -9,7 +9,7 @@ from allennlp.common.testing import AllenNlpTestCase
 from allennlp.modules.stacked_alternating_lstm import StackedAlternatingLstm
 
 
-@pytest.mark.skip(reason="Custom HighwayLSTM was broken with PyTorch 0.4 upgrade.")
+@pytest.mark.skip(reason="AlternatingHighwayLSTM was broken with PyTorch 0.4 upgrade.")
 class TestCustomHighwayLSTM(AllenNlpTestCase):
 
     def test_small_model(self):
