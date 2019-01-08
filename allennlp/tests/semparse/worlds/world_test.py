@@ -93,7 +93,7 @@ class TestWorld(AllenNlpTestCase):
     def test_get_action_sequence_removes_currying(self):
         world = self.wikitables_world
         logical_form = ("(argmax (number 1) (number 1) (fb:row.row.division fb:cell.2) "
-                        "(reverse (lambda x ((reverse fb:row.row.index) (var x))))")
+                        "(reverse (lambda x ((reverse fb:row.row.index) (var x)))))")
         parsed_logical_form = world.parse_logical_form(logical_form)
         action_sequence = world.get_action_sequence(parsed_logical_form)
         assert 'r -> [<n,<n,<#1,<<#2,#1>,#1>>>>, n, n, r, <n,r>]' in action_sequence
