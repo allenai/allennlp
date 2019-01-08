@@ -1,0 +1,128 @@
+from typing import Dict, List
+import logging
+import numpy as np
+import re
+from overrides import overrides
+import json
+from allennlp.common.file_utils import cached_path
+from allennlp.data.dataset_readers.dataset_reader import DatasetReader
+from allennlp.data.fields import LabelField, TextField, Field, ListField
+from allennlp.data.instance import Instance
+from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
+from allennlp.data.tokenizers import Token
+from allennlp.common.checks import ConfigurationError
+from allennlp.data.tokenizers import Tokenizer, WordTokenizer
+from allennlp.data.tokenizers.sentence_splitter import SpacySentenceSplitter
+from allennlp.data.tokenizers.word_filter import StopwordFilter
+
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
+
+@DatasetReader.register("textcat")
+class TextCatReader(DatasetReader):
+    """
+    Reads tokens and their labels from a labeled text classification dataset.
+    Expects a "tokens" field and a "category" field in JSON format.
+
+    The output of ``read`` is a list of ``Instance`` s with the fields:
+        tokens: ``TextField`` and
+        category: ``LabelField``
+
+    Parameters
+    ----------
+    token_indexers : ``Dict[str, TokenIndexer]``,
+        optional (default=``{"tokens": SingleIdTokenIndexer()}``)
+        We use this to define the input representation for the text.
+        See :class:`TokenIndexer`.
+    lazy : ``bool``, optional, (default = ``False``)
+        Whether or not instances can be read lazily.
+    """
+    def __init__(self,
+                 token_indexers: Dict[str, TokenIndexer]=None,
+                 word_tokenizer: Tokenizer=None,
+                 segment_sentences: bool=False,
+                 sequence_length: int=None,
+                 debug: bool=False,
+                 lazy: bool=False) -> None:
+        super().__init__(lazy=lazy)
+        self.debug = debug
+        self._word_tokenizer = word_tokenizer or WordTokenizer()
+        self._segment_sentences = segment_sentences
+        self._sequence_length = sequence_length
+        self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
+        if self._segment_sentences:
+            self._sentence_segmenter = SpacySentenceSplitter()
+
+    @overrides
+    def _read(self, file_path):
+        with open(cached_path(file_path), "r") as data_file:
+            if self.debug:
+                lines = np.random.choice(data_file.readlines(), 100)
+            else:
+                lines = data_file.readlines()
+        for line in lines:
+            if not line:
+                continue
+            items = json.loads(line)
+            tokens = items["tokens"]
+            category = str(items["category"])
+            instance = self.text_to_instance(tokens=tokens,
+                                             category=category)
+            if instance is not None:
+                yield instance
+
+    @overrides
+    def text_to_instance(self,
+                         tokens: List[str],
+                         category: str = None) -> Instance:  # type: ignore
+        """
+        We take `pre-tokenized` input here, because we don't
+        have a tokenizer in this class.
+
+        Parameters
+        ----------
+        tokens : ``List[str]``, required.
+            The tokens in a given sentence.
+        category ``str``, optional, (default = None).
+            The category for this sentence.
+
+        Returns
+        -------
+        An ``Instance`` containing the following fields:
+            tokens : ``TextField``
+                The tokens in the sentence or phrase.
+            label : ``LabelField``
+                The category label of the sentence or phrase.
+        """
+        # pylint: disable=arguments-differ
+        fields: Dict[str, Field] = {}
+        text_fields = []
+        if self._segment_sentences:
+            sentence_tokens = self._sentence_segmenter.split_sentences(tokens)
+            if not sentence_tokens:
+                return None
+            for sentence in sentence_tokens:
+                word_tokens = self._word_tokenizer.tokenize(sentence)
+                if self._sequence_length is not None:
+                    if len(word_tokens) > self._sequence_length:
+                        word_tokens = word_tokens[:self._sequence_length]
+                    else:
+                        padding = [Token("@@PADDING")] * (self._sequence_length - len(word_tokens))
+                        word_tokens = word_tokens + padding
+                text_fields.append(TextField(word_tokens, self._token_indexers))
+            fields['tokens'] = ListField(text_fields)
+        else:
+            tokens_ = self._word_tokenizer.tokenize(tokens)
+            if not tokens_:
+                return None
+            if self._sequence_length is not None:
+                if len(tokens_) > self._sequence_length:
+                    tokens_ = tokens_[:self._sequence_length]
+                else:
+                    padding = [Token("@@PADDING")] * (self._sequence_length - len(tokens_))
+                    tokens_ = tokens_ + padding
+            fields['tokens'] = TextField(tokens_,
+                                         self._token_indexers)
+        if category is not None:
+            fields['label'] = LabelField(category)
+        return Instance(fields)
