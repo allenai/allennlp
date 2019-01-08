@@ -52,6 +52,9 @@ COPY .pylintrc .pylintrc
 COPY tutorials/ tutorials/
 COPY training_config training_config/
 COPY setup.py setup.py
+COPY README.md README.md
+
+RUN python setup.py install
 
 # Compile EVALB - required for parsing evaluation.
 # EVALB produces scary looking c-level output which we don't
