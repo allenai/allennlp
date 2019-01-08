@@ -17,7 +17,7 @@ class TestNnUtil(AllenNlpTestCase):
                                         [1, 0, 0, 0, 0, 0]])
         lengths = util.get_lengths_from_binary_sequence_mask(binary_mask)
         numpy.testing.assert_array_equal(lengths.numpy(), numpy.array([3, 2, 6, 1]))
-
+    
     def test_get_mask_from_sequence_lengths(self):
         sequence_lengths = torch.LongTensor([4, 3, 1, 4, 2])
         mask = util.get_mask_from_sequence_lengths(sequence_lengths, 5).data.numpy()
