@@ -38,7 +38,7 @@ from allennlp.common.util import prepare_environment, get_frozen_and_tunable_par
 from allennlp.data import Vocabulary
 from allennlp.data.dataset import Batch
 from allennlp.models import Model
-from allennlp.trainer.util import datasets_from_params
+from allennlp.training.util import datasets_from_params
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 

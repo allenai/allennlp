@@ -5,7 +5,7 @@ from allennlp.common.params import Params
 from allennlp.models.simple_tagger import SimpleTagger
 from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
 from allennlp.training.optimizers import Optimizer
-from allennlp.training.trainer import Trainer
+from allennlp.training.supervised_trainer import SupervisedTrainer
 from allennlp.data.iterators import BasicIterator
 
 
@@ -108,4 +108,4 @@ class TestDenseSparseAdam(AllenNlpTestCase):
         optimizer = Optimizer.from_params(parameters, optimizer_params)
         iterator = BasicIterator(2)
         iterator.index_with(self.vocab)
-        Trainer(self.model, optimizer, iterator, self.instances).train()
+        SupervisedTrainer(self.model, optimizer, iterator, self.instances).train()

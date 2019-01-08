@@ -45,7 +45,6 @@ from allennlp.commands.subcommand import Subcommand
 from allennlp.common.checks import check_for_gpu
 from allennlp.common import Params
 from allennlp.common.util import prepare_environment, prepare_global_logging, dump_metrics
-from allennlp.data.dataset_readers import DatasetReader
 from allennlp.data.iterators import DataIterator
 from allennlp.models.archival import archive_model, CONFIG_NAME
 from allennlp.models.model import Model, _DEFAULT_WEIGHTS
@@ -213,7 +212,9 @@ def train_model(params: Params,
         logger.info("The model will be evaluated using the best epoch weights.")
 
         test_data = datasets_from_params(orig_params, ('test',))['test']
-        iterator = trainer._validation_iterator or trainer.iterator
+        iterator_params = orig_params.pop("validation_iterator", orig_params.pop("iterator"))
+        iterator = DataIterator.from_params(iterator_params)
+        iterator.index_with(trainer.model.vocab)
 
         test_metrics = evaluate(
                 best_model, test_data, iterator,

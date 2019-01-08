@@ -2,29 +2,25 @@
 The ``fine-tune`` subcommand is used to continue training (or `fine-tune`) a model on a `different
 dataset` than the one it was originally trained on.  It requires a saved model archive file, a path
 to the data you will continue training with, and a directory in which to write the results.
-
 Run ``allennlp fine-tune --help`` for detailed usage information.
 """
 import argparse
 import json
 import logging
 import os
-from copy import deepcopy
-import re
 
 from allennlp.commands.evaluate import evaluate
 from allennlp.commands.subcommand import Subcommand
+from allennlp.commands.train import datasets_from_params
 from allennlp.common import Params
-from allennlp.common.checks import ConfigurationError
-from allennlp.common.util import prepare_environment, prepare_global_logging, \
-                                 get_frozen_and_tunable_parameter_names
-from allennlp.data.iterators.data_iterator import DataIterator
+from allennlp.common.checks import check_for_gpu
+from allennlp.common.util import prepare_environment, prepare_global_logging
 from allennlp.models import load_archive, archive_model
 from allennlp.models.archival import CONFIG_NAME
 from allennlp.models.model import Model, _DEFAULT_WEIGHTS
-from allennlp.training.trainer import Trainer
-from allennlp.training.fine_tune_trainer import FineTuneTrainer
-from allennlp.training.util import datasets_from_params
+from allennlp.training.supervised_trainer import SupervisedTrainer
+from allennlp.training.util import create_serialization_dir
+from allennlp.common.checks import ConfigurationError
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -96,7 +92,6 @@ def fine_tune_model_from_file_paths(model_archive_path: str,
                                     file_friendly_logging: bool = False) -> Model:
     """
     A wrapper around :func:`fine_tune_model` which loads the model archive from a file.
-
     Parameters
     ----------
     model_archive_path : ``str``
@@ -134,11 +129,9 @@ def fine_tune_model(model: Model,
     Fine tunes the given model, using a set of parameters that is largely identical to those used
     for :func:`~allennlp.commands.train.train_model`, except that the ``model`` section is ignored,
     if it is present (as we are already given a ``Model`` here).
-
     The main difference between the logic done here and the logic done in ``train_model`` is that
     here we do not worry about vocabulary construction or creating the model object.  Everything
     else is the same.
-
     Parameters
     ----------
     archive : ``Archive``
@@ -159,22 +152,42 @@ def fine_tune_model(model: Model,
     orig_params = params.duplicate()
 
     prepare_environment(params)
-    if os.path.exists(serialization_dir) and os.listdir(serialization_dir):
-        raise ConfigurationError(f"Serialization directory ({serialization_dir}) "
-                                 f"already exists and is not empty.")
-
-    os.makedirs(serialization_dir, exist_ok=True)
+    create_serialization_dir(params, serialization_dir, recover=False, force=False)
     prepare_global_logging(serialization_dir, file_friendly_logging)
 
-    serialization_params = deepcopy(params).as_dict(quiet=True)
-    with open(os.path.join(serialization_dir, CONFIG_NAME), "w") as param_file:
-        json.dump(serialization_params, param_file, indent=4)
+    cuda_device = params.params.get('trainer').get('cuda_device', -1)
+    check_for_gpu(cuda_device)
+
+    params.to_file(os.path.join(serialization_dir, CONFIG_NAME))
 
     if params.pop('model', None):
         logger.warning("You passed parameters for the model in your configuration file, but we "
                        "are ignoring them, using instead the model parameters in the archive.")
 
-    trainer = FineTuneTrainer.from_params(model, params, serialization_dir, extend_vocab)
+    vocabulary_params = params.pop('vocabulary', {})
+    if vocabulary_params.get('directory_path', None):
+        logger.warning("You passed `directory_path` in parameters for the vocabulary in "
+                       "your configuration file, but it will be ignored. ")
+
+    all_datasets = datasets_from_params(params)
+    vocab = model.vocab
+
+    if extend_vocab:
+        datasets_for_vocab_creation = set(params.pop("datasets_for_vocab_creation", all_datasets))
+
+        for dataset in datasets_for_vocab_creation:
+            if dataset not in all_datasets:
+                raise ConfigurationError(f"invalid 'dataset_for_vocab_creation' {dataset}")
+
+        logger.info("Extending model vocabulary using %s data.", ", ".join(datasets_for_vocab_creation))
+        vocab.extend_from_instances(vocabulary_params,
+                                    (instance for key, dataset in all_datasets.items()
+                                     for instance in dataset
+                                     if key in datasets_for_vocab_creation))
+
+    vocab.save_to_files(os.path.join(serialization_dir, "vocabulary"))
+
+    trainer = SupervisedTrainer.for_model(model, all_datasets, serialization_dir, params)
 
     evaluate_on_test = params.pop_bool("evaluate_on_test", False)
     params.assert_empty('base train command')
@@ -191,12 +204,15 @@ def fine_tune_model(model: Model,
     # Now tar up results
     archive_model(serialization_dir, files_to_archive=params.files_to_archive)
 
-    if test_data and evaluate_on_test:
-        test_metrics = evaluate(model, test_data, iterator, cuda_device=trainer._cuda_devices[0])  # pylint: disable=protected-access
+    if "test" in all_datasets and evaluate_on_test:
+        test_metrics = evaluate(model,
+                                all_datasets['test'],
+                                trainer.iterator,
+                                cuda_device=trainer._cuda_devices[0])  # pylint: disable=protected-access
         for key, value in test_metrics.items():
             metrics["test_" + key] = value
 
-    elif test_data:
+    elif "test" in all_datasets:
         logger.info("To evaluate on the test set after training, pass the "
                     "'evaluate_on_test' flag, or use the 'allennlp evaluate' command.")
 

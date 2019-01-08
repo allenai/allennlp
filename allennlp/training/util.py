@@ -8,13 +8,12 @@ import os
 import shutil
 
 import torch
-from tensorboardX import SummaryWriter
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.data.dataset_readers import DatasetReader
 from allennlp.data.instance import Instance
-from allennlp.models.archival import archive_model, CONFIG_NAME
+from allennlp.models.archival import CONFIG_NAME
 
 logger = logging.getLogger(__name__)
 
@@ -92,40 +91,6 @@ def get_batch_size(batch: Union[Dict, torch.Tensor]) -> int:
         return get_batch_size(next(iter(batch.values())))
     else:
         return 0
-
-
-class TensorboardWriter:
-    """
-    Wraps a pair of ``SummaryWriter`` instances but is a no-op if they're ``None``.
-    Allows Tensorboard logging without always checking for Nones first.
-    """
-    def __init__(self, train_log: SummaryWriter = None, validation_log: SummaryWriter = None) -> None:
-        self._train_log = train_log
-        self._validation_log = validation_log
-
-    @staticmethod
-    def _item(value: Any):
-        if hasattr(value, 'item'):
-            val = value.item()
-        else:
-            val = value
-        return val
-
-    def add_train_scalar(self, name: str, value: float, global_step: int) -> None:
-        # get the scalar
-        if self._train_log is not None:
-            self._train_log.add_scalar(name, self._item(value), global_step)
-
-    def add_train_histogram(self, name: str, values: torch.Tensor, global_step: int) -> None:
-        if self._train_log is not None:
-            if isinstance(values, torch.Tensor):
-                values_to_write = values.cpu().data.numpy().flatten()
-                self._train_log.add_histogram(name, values_to_write, global_step)
-
-    def add_validation_scalar(self, name: str, value: float, global_step: int) -> None:
-
-        if self._validation_log is not None:
-            self._validation_log.add_scalar(name, self._item(value), global_step)
 
 
 def time_to_str(timestamp: int) -> str:

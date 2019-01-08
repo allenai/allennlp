@@ -2,9 +2,7 @@
 The ``find-lr`` subcommand can be used to find a good learning rate for a model.
 It requires a configuration file and a directory in
 which to write the results.
-
 .. code-block:: bash
-
    $ allennlp find-lr --help
    usage: allennlp find-lr [-h] -s SERIALIZATION_DIR [-o OVERRIDES]
                            [--start-lr START_LR] [--end-lr END_LR]
@@ -12,14 +10,11 @@ which to write the results.
                            [--stopping-factor STOPPING_FACTOR] [--linear]
                            [--include-package INCLUDE_PACKAGE]
                            param_path
-
    Find a learning rate range where the loss decreases quickly for the specified
    model and dataset.
-
    positional arguments:
    param_path            path to parameter file describing the model to be
                            trained
-
    optional arguments:
    -h, --help              show this help message and exit
    -s SERIALIZATION_DIR, --serialization-dir SERIALIZATION_DIR
@@ -45,23 +40,19 @@ which to write the results.
 
 from typing import List, Tuple
 import argparse
-import re
 import os
 import math
 import logging
-import shutil
 
 import matplotlib; matplotlib.use('Agg') # pylint: disable=multiple-statements,wrong-import-position
-import matplotlib.pyplot as plt # pylint: disablewrong-import-position
+import matplotlib.pyplot as plt # pylint: disable=wrong-import-position
 
-from allennlp.commands.subcommand import Subcommand # pylint: disablewrong-import-position
-from allennlp.common.checks import ConfigurationError, check_for_gpu # pylint: disablewrong-import-position
-from allennlp.common import Params, Tqdm # pylint: disablewrong-import-position
-from allennlp.common.util import prepare_environment # pylint: disablewrong-import-position
-from allennlp.data import Vocabulary, DataIterator # pylint: disablewrong-import-position
-from allennlp.models import Model # pylint: disablewrong-import-position
-from allennlp.training import Trainer # pylint: disablewrong-import-position
-from allennlp.training.util import datasets_from_params # pylint: disablewrong-import-position
+from allennlp.commands.subcommand import Subcommand # pylint: disable=wrong-import-position
+from allennlp.common.checks import ConfigurationError, check_for_gpu # pylint: disable=wrong-import-position
+from allennlp.common import Params, Tqdm # pylint: disable=wrong-import-position
+from allennlp.common.util import prepare_environment # pylint: disable=wrong-import-position
+from allennlp.training.supervised_trainer import SupervisedTrainer # pylint: disable=wrong-import-position
+from allennlp.training.util import create_serialization_dir
 
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -72,7 +63,9 @@ class FindLearningRate(Subcommand):
         # pylint: disable=protected-access
         description = '''Find a learning rate range where loss decreases quickly
                          for the specified model and dataset.'''
-        subparser = parser.add_parser(name, description=description, help='Train a model')
+        subparser = parser.add_parser(name,
+                                      description=description,
+                                      help='Find a learning rate range.')
 
         subparser.add_argument('param_path',
                                type=str,
@@ -127,7 +120,8 @@ def find_learning_rate_from_args(args: argparse.Namespace) -> None:
                              stopping_factor=args.stopping_factor,
                              force=args.force)
 
-def find_learning_rate_model(params: Params, serialization_dir: str,
+def find_learning_rate_model(params: Params,
+                             serialization_dir: str,
                              start_lr: float = 1e-5,
                              end_lr: float = 10,
                              num_batches: int = 100,
@@ -136,7 +130,6 @@ def find_learning_rate_model(params: Params, serialization_dir: str,
                              force: bool = False) -> None:
     """
     Runs learning rate search for given `num_batches` and saves the results in ``serialization_dir``
-
     Parameters
     ----------
     trainer: :class:`~allennlp.common.registrable.Registrable`
@@ -159,59 +152,15 @@ def find_learning_rate_model(params: Params, serialization_dir: str,
         If True and the serialization directory already exists, everything in it will
         be removed prior to finding the learning rate.
     """
-    if os.path.exists(serialization_dir) and force:
-        shutil.rmtree(serialization_dir)
-
-    if os.path.exists(serialization_dir) and os.listdir(serialization_dir):
-        raise ConfigurationError(f'Serialization directory {serialization_dir} already exists and is '
-                                 f'not empty.')
-    else:
-        os.makedirs(serialization_dir, exist_ok=True)
+    orig_params = params.duplicate()
 
     prepare_environment(params)
+    create_serialization_dir(params, serialization_dir, force=force, recover=False)
 
     cuda_device = params.params.get('trainer').get('cuda_device', -1)
-    if isinstance(cuda_device, list):
-        for device in cuda_device:
-            check_for_gpu(device)
-    else:
-        check_for_gpu(cuda_device)
+    check_for_gpu(cuda_device)
 
-    all_datasets = datasets_from_params(params)
-    datasets_for_vocab_creation = set(params.pop("datasets_for_vocab_creation", all_datasets))
-
-    for dataset in datasets_for_vocab_creation:
-        if dataset not in all_datasets:
-            raise ConfigurationError(f"invalid 'dataset_for_vocab_creation' {dataset}")
-
-    logger.info("From dataset instances, %s will be considered for vocabulary creation.",
-                ", ".join(datasets_for_vocab_creation))
-    vocab = Vocabulary.from_params(
-            params.pop("vocabulary", {}),
-            (instance for key, dataset in all_datasets.items()
-             for instance in dataset
-             if key in datasets_for_vocab_creation)
-    )
-
-    model = Model.from_params(vocab=vocab, params=params.pop('model'))
-    iterator = DataIterator.from_params(params.pop("iterator"))
-    iterator.index_with(vocab)
-
-    train_data = all_datasets['train']
-
-    trainer_params = params.pop("trainer")
-    no_grad_regexes = trainer_params.pop("no_grad", ())
-    for name, parameter in model.named_parameters():
-        if any(re.search(regex, name) for regex in no_grad_regexes):
-            parameter.requires_grad_(False)
-
-    trainer = Trainer.from_params(model,
-                                  serialization_dir,
-                                  iterator,
-                                  train_data,
-                                  params=trainer_params,
-                                  validation_data=None,
-                                  validation_iterator=None)
+    trainer = SupervisedTrainer.from_params(params, serialization_dir, recover=False)
 
     logger.info(f'Starting learning rate search from {start_lr} to {end_lr} in {num_batches} iterations.')
     learning_rates, losses = search_learning_rate(trainer,
@@ -225,7 +174,7 @@ def find_learning_rate_model(params: Params, serialization_dir: str,
 
     _save_plot(learning_rates, losses, os.path.join(serialization_dir, 'lr-losses.png'))
 
-def search_learning_rate(trainer: Trainer,
+def search_learning_rate(trainer: SupervisedTrainer,
                          start_lr: float = 1e-5,
                          end_lr: float = 10,
                          num_batches: int = 100,
@@ -234,10 +183,9 @@ def search_learning_rate(trainer: Trainer,
     """
     Runs training loop on the model using :class:`~allennlp.training.trainer.Trainer`
     increasing learning rate from ``start_lr`` to ``end_lr`` recording the losses.
-
     Parameters
     ----------
-    trainer: :class:`~allennlp.training.trainer.Trainer`
+    trainer: :class:`~allennlp.training.supervised_trainer.SupervisedTrainer`
     start_lr: ``float``
         The learning rate to start the search.
     end_lr: ``float``
@@ -249,7 +197,6 @@ def search_learning_rate(trainer: Trainer,
     stopping_factor: ``float``
         Stop the search when the current loss exceeds the best loss recorded by
         multiple of stopping factor. If ``None`` search proceeds till the ``end_lr``
-
     Returns
     -------
     (learning_rates, losses): ``Tuple[List[float], List[float]]``
@@ -293,7 +240,7 @@ def search_learning_rate(trainer: Trainer,
             logger.info(f'Loss ({loss}) exceeds stopping_factor * lowest recorded loss.')
             break
 
-        trainer.rescale_gradients()
+        trainer._rescale_gradients()  # pylint: disable=protected-access
         trainer.optimizer.step()
 
         learning_rates.append(current_lr)

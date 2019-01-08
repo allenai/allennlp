@@ -6,14 +6,11 @@ import pytest
 import torch
 
 from allennlp.common import Params
-from allennlp.data import Vocabulary, DataIterator
-from allennlp.models import Model
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.commands.train import Trainer
 from allennlp.commands.find_learning_rate import search_learning_rate, \
     find_learning_rate_from_args, find_learning_rate_model, FindLearningRate
-from allennlp.training.util import datasets_from_params
 
 
 class TestFindLearningRate(AllenNlpTestCase):
@@ -168,26 +165,10 @@ class TestSearchLearningRate(AllenNlpTestCase):
                     "optimizer": "adam"
                 }
             })
-        all_datasets = datasets_from_params(params)
-        vocab = Vocabulary.from_params(
-            params.pop("vocabulary", {}),
-            (instance for dataset in all_datasets.values()
-             for instance in dataset)
-        )
-        model = Model.from_params(vocab=vocab, params=params.pop('model'))
-        iterator = DataIterator.from_params(params.pop("iterator"))
-        iterator.index_with(vocab)
-        train_data = all_datasets['train']
-        trainer_params = params.pop("trainer")
         serialization_dir = os.path.join(self.TEST_DIR, 'test_search_learning_rate')
 
-        self.trainer = Trainer.from_params(model,
-                                           serialization_dir,
-                                           iterator,
-                                           train_data,
-                                           params=trainer_params,
-                                           validation_data=None,
-                                           validation_iterator=None)
+        self.trainer = Trainer.from_params(params,
+                                           serialization_dir)
 
     def test_search_learning_rate_with_num_batches_less_than_ten(self):
         with pytest.raises(ConfigurationError):
