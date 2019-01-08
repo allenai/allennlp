@@ -49,12 +49,12 @@
            "hidden_size": 50,
         },
         "word_attention": {
-            "type": "han_attention",
+            "type": "attention_encoder",
             "input_dim": 100,
             "context_vector_dim": 100
         },
         "sentence_attention": {
-            "type": "han_attention",
+            "type": "attention_encoder",
             "input_dim": 100,
             "context_vector_dim": 100
         },

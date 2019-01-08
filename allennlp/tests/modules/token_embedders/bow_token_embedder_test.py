@@ -7,7 +7,7 @@ import torch
 from allennlp.common import Params
 from allennlp.data import Vocabulary
 from allennlp.modules import Seq2VecEncoder
-from modules.token_embedders import BagOfWordsTokenEmbedder
+from allennlp.modules.token_embedders import BagOfWordsTokenEmbedder
 from allennlp.nn import InitializerApplicator, Initializer
 from allennlp.common.testing import AllenNlpTestCase
 

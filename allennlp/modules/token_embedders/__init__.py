@@ -13,3 +13,4 @@ from allennlp.modules.token_embedders.bidirectional_language_model_token_embedde
         BidirectionalLanguageModelTokenEmbedder
 from allennlp.modules.token_embedders.language_model_token_embedder import \
         LanguageModelTokenEmbedder
+from allennlp.modules.token_embedders.bow_token_embedder import BagOfWordsTokenEmbedder

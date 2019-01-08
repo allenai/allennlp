@@ -1,16 +1,18 @@
 # pylint: disable=no-self-use,invalid-name
 import pytest
 
-from dataset_readers import TextCatReader
+from allennlp.data.dataset_readers import TextCatReader
 from allennlp.common.util import ensure_list
 from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestTextCatReader():
+    
     @pytest.mark.parametrize("lazy", (True, False))
     def test_read_from_file_ag(self, lazy):
         reader = TextCatReader(lazy=lazy)
-        instances = reader.read(self.FIXTURES_ROOT + 'data/ag.jsonl')
+        ag_path = AllenNlpTestCase.FIXTURES_ROOT / "data" / "textcat" / "ag.jsonl"
+        instances = reader.read(ag_path)
         instances = ensure_list(instances)
 
         instance1 = {"tokens": ['Memphis', 'Rout', 'Still', 'Stings', 'for', 'No', '.', '14',
