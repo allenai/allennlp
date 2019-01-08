@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Callable, Tuple
 
 import pytest
 from allennlp.common.testing import AllenNlpTestCase
@@ -30,7 +30,7 @@ class QuaRelType():
 
 class QuaRel(DomainLanguage):
     def __init__(self):
-        super().__init__(start_types={Number, QuaRelType}, allowed_constants={'world1': World(1),
+        super().__init__(start_types={Number}, allowed_constants={'world1': World(1),
                                                                   'world2': World(2),
                                                                   'higher': Direction(1),
                                                                   'lower': Direction(-1)})
@@ -46,15 +46,19 @@ class QuaRel(DomainLanguage):
             {"flexibility": 1, "breakability": -1},
             {"distance": 1, "loudness": -1, "brightness": -1, "apparentSize": -1},
             {"exerciseIntensity": 1, "amountSweat": 1}]
+
+        for prop in ["friction", "speed", "distance", "heat", "smoothness", "acceleration", "amountSweat", "apparentSize", "breakability",
+                     "brightness", "exerciseIntensity", "flexibility", "gravity", "loudness", "mass", "strength", "thickness", "time"
+                     "weight"]:
+            func = self.make_property_predicate(prop)
+            self.add_predicate(prop, func)
+
+
+    def make_property_predicate(self, property_name: str) -> Callable[[Direction, World], QuaRelType]:
+        def property_function(direction: Direction, world: World) -> QuaRelType:
+            return QuaRelType(Property(property_name), direction, world)
+        return property_function
     
-    @predicate
-    def speed(self, direction: Direction, world: World) -> QuaRelType:
-        return QuaRelType(Property('speed'), direction, world)
-
-    @predicate
-    def friction(self, direction: Direction, world: World) -> QuaRelType:
-        return QuaRelType(Property('friction'), direction, world)
-
     @predicate
     def infer(self, question: QuaRelType, answer_1: QuaRelType, answer_2: QuaRelType) -> Number:
         for theory in self.default_theories:
