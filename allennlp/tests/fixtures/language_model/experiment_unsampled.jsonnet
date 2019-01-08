@@ -12,8 +12,8 @@
     "start_tokens": ["<S>"],
     "end_tokens": ["</S>"]
   },
-  "train_data_path": "allennlp/tests/fixtures/bidirectional_lm/sentences.txt",
-  "validation_data_path": "allennlp/tests/fixtures/bidirectional_lm/sentences.txt",
+  "train_data_path": "allennlp/tests/fixtures/language_model/sentences.txt",
+  "validation_data_path": "allennlp/tests/fixtures/language_model/sentences.txt",
   "vocabulary": {
       "tokens_to_add": {
           "tokens": ["<S>", "</S>"],
@@ -21,8 +21,8 @@
       },
   },
   "model": {
-    "type": "bidirectional_language_model",
-    "num_samples": 10,
+    "type": "language_model",
+    "bidirectional": true,
     "text_field_embedder": {
       "allow_unmatched_keys": true,
       "token_embedders": {

@@ -58,10 +58,11 @@ local BASE_ITERATOR = {
       //     "tokens": ["<S>", "</S>"],
       //     "token_characters": ["<>/S"]
       // },
-      // "min_count": {"source_tokens": 3}
+      // "min_count": {"tokens": 3}
   },
   "model": {
-    "type": "bidirectional_language_model",
+    "type": "language_model",
+    "bidirectional": true,
     "num_samples": 8192,
     "sparse_embeddings": true,
     "text_field_embedder": {
