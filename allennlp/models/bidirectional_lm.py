@@ -46,6 +46,7 @@ class _SoftmaxLoss(torch.nn.Module):
 
 
 @Model.register('bidirectional-language-model')
+@Model.register('bidirectional_language_model')
 class BidirectionalLanguageModel(Model):
     """
     The ``BidirectionalLanguageModel`` applies a bidirectional "contextualizing"
