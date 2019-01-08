@@ -30,6 +30,11 @@ MODULES_THAT_NEED_NO_DOCS: Set[str] = {
         'allennlp.data.dataset_readers.atis',
         'allennlp.data.dataset_readers.nlvr',
         'allennlp.data.dataset_readers.wikitables',
+        # Deprecated in favor of allennlp.models.language_model
+        'allennlp.models.bidirectional_lm',
+        # Deprecated in favor of
+        # allennlp.modules.token_embedders.language_model_token_embedder
+        'allennlp.modules.token_embedders.bidirectional_language_model_token_embedder',
         # Deprecated in favor of allennlp.predictors.
         'allennlp.service.predictors.*',
 }
