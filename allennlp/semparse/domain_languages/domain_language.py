@@ -197,7 +197,7 @@ class DomainLanguage:
                  start_types: Set[Type] = None) -> None:
         self._functions: Dict[str, Callable] = {}
         self._function_types: Dict[str, PredicateType] = {}
-        self._start_types = set([BasicType(type_) for type_ in start_types])
+        self._start_types: Set[PredicateType] = set([BasicType(type_) for type_ in start_types])
         for name in dir(self):
             if isinstance(getattr(self, name), types.MethodType):
                 function = getattr(self, name)
@@ -229,7 +229,7 @@ class DomainLanguage:
             actions: Dict[str, List[str]] = defaultdict(list)
             # If you didn't give us a set of valid start types, we'll assume all types we know
             # about (including functional types) are valid start types.
-            start_types = self._start_types or set(list(self._function_types.values()))
+            start_types = self._start_types or set(self._function_types.values())
             for start_type in start_types:
                 actions[START_SYMBOL].append(f"{START_SYMBOL} -> {start_type}")
             for name, function_type in self._function_types.items():
