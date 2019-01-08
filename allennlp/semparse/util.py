@@ -20,4 +20,4 @@ def lisp_to_nested_expression(lisp_string: str) -> List:
         while token[-1] == ')':
             current_expression = stack.pop()
             token = token[:-1]
-    return current_expression
+    return current_expression[0]
