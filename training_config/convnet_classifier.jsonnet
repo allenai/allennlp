@@ -12,8 +12,8 @@
         },
     },
   "datasets_for_vocab_creation": ["train"],
-  "train_data_path": "s3://suching-dev/ag/train.jsonl",
-  "validation_data_path": "s3://suching-dev/ag/test.jsonl",
+"train_data_path": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/ag-news/train.jsonl",
+  "validation_data_path": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/ag-news/dev.jsonl",
     "model": {
         "type": "seq2vec_classifier",
         "text_field_embedder": {

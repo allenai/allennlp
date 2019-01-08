@@ -26,14 +26,23 @@ class TextCatReader(DatasetReader):
 
     The output of ``read`` is a list of ``Instance`` s with the fields:
         tokens: ``TextField`` and
-        category: ``LabelField``
+        label: ``LabelField``
 
     Parameters
     ----------
-    token_indexers : ``Dict[str, TokenIndexer]``,
+    token_indexers : ``Dict[str, TokenIndexer]``, optional
         optional (default=``{"tokens": SingleIdTokenIndexer()}``)
         We use this to define the input representation for the text.
         See :class:`TokenIndexer`.
+    word_tokenizer : ``Tokenizer``, optional (default = ``{"tokens": WordTokenizer()}``)
+        Tokenizer to use to split the input text into words or other kinds of tokens.
+    segment_sentences: ``bool``, optional (default = ``False``)
+        If true, we will first segment the text into sentences using Spacy and then tokenize words.
+        Necessary for some models that require pre-segmentation of sentences, like the Hierarchical Attention Network.
+    sequence_length: ``int``, optional (default = ``None``)
+        If specified, will truncate tokens to specified maximum length.
+    debug : ``bool``, optional (default = ``False``)
+        If true, will only read 100 instances from file(s), so data can be read quickly during debugging.
     lazy : ``bool``, optional, (default = ``False``)
         Whether or not instances can be read lazily.
     """
@@ -65,16 +74,16 @@ class TextCatReader(DatasetReader):
                 continue
             items = json.loads(line)
             tokens = items["tokens"]
-            category = str(items["category"])
+            label = str(items["label"])
             instance = self.text_to_instance(tokens=tokens,
-                                             category=category)
+                                             label=label)
             if instance is not None:
                 yield instance
 
     @overrides
     def text_to_instance(self,
                          tokens: List[str],
-                         category: str = None) -> Instance:  # type: ignore
+                         label: str = None) -> Instance:  # type: ignore
         """
         We take `pre-tokenized` input here, because we don't
         have a tokenizer in this class.
@@ -82,9 +91,9 @@ class TextCatReader(DatasetReader):
         Parameters
         ----------
         tokens : ``List[str]``, required.
-            The tokens in a given sentence.
-        category ``str``, optional, (default = None).
-            The category for this sentence.
+            The tokens in a given text.
+        label ``str``, optional, (default = None).
+            The label for this text.
 
         Returns
         -------
@@ -92,7 +101,7 @@ class TextCatReader(DatasetReader):
             tokens : ``TextField``
                 The tokens in the sentence or phrase.
             label : ``LabelField``
-                The category label of the sentence or phrase.
+                The label label of the sentence or phrase.
         """
         # pylint: disable=arguments-differ
         fields: Dict[str, Field] = {}
@@ -123,6 +132,6 @@ class TextCatReader(DatasetReader):
                     tokens_ = tokens_ + padding
             fields['tokens'] = TextField(tokens_,
                                          self._token_indexers)
-        if category is not None:
-            fields['label'] = LabelField(category)
+        if label is not None:
+            fields['label'] = LabelField(label)
         return Instance(fields)

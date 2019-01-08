@@ -5,20 +5,20 @@
         "token_indexers": {
             "tokens": {
                 "type": "single_id",
-                "lowercase_tokens": true
+                "lowercase_tokens": true,
+                "end_tokens": ["@@PADDING@@", "@@PADDING@@"],
+                "start_tokens": ["@@PADDING@@", "@@PADDING@@"]
             },
             "elmo": {
-		    "type": "elmo_characters",
-		    }
-        },
-        
+            "type": "elmo_characters",
+            }
+        }, 
     },
   "datasets_for_vocab_creation": ["train"],
-  "train_data_path": "s3://suching-dev/ag/train.jsonl",
-  "validation_data_path": "s3://suching-dev/ag/test.jsonl",
+"train_data_path": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/ag-news/train.jsonl",
+  "validation_data_path": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/ag-news/dev.jsonl",
     "model": {
         "type": "seq2vec_classifier",
-        "dropout": 0.5,
         "text_field_embedder": {
             "token_embedders": {
                 "tokens": {
@@ -32,26 +32,26 @@
                     "weight_file": "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5",
                     "do_layer_norm": false,
                     "dropout": 0.2
-                }
-            },
-            
+                }   
+		    }
         },
         "encoder": {
-            "type": "boe",
-            "embedding_dim": 300,
-            "averaged": true,
+           "type": "cnn",
+           "num_filters": 100,
+           "embedding_dim": 300,
+           "output_dim": 512, 
         },
         "output_feedforward": {
-            "input_dim": 1324,
+            "input_dim": 512,
             "num_layers": 1,
-            "hidden_dims": 300,
+            "hidden_dims": 128,
             "activations": "relu",
             "dropout": 0.5
         },
         "classification_layer": {
-            "input_dim": 300,
+            "input_dim": 128,
             "num_layers": 1,
-            "hidden_dims": 4,
+            "hidden_dims": 32,
             "activations": "linear"
         },
         "initializer": [
@@ -65,7 +65,7 @@
     },
     "iterator": {
         "type": "bucket",
-        "sorting_keys": [["tokens", "num_tokens"]],
+        "sorting_keys": [["tokens", "elmo"]],
         "batch_size": 32
     },
     "trainer": {

@@ -2,17 +2,20 @@
     "dataset_reader": {
         "type": "textcat",
         "debug": false,
-
         "token_indexers": {
             "tokens": {
                 "type": "single_id",
                 "lowercase_tokens": true
             },
+            "elmo": {
+		    "type": "elmo_characters",
+		    }
         },
+        
     },
   "datasets_for_vocab_creation": ["train"],
-  "train_data_path": "s3://suching-dev/ag/train.jsonl",
-  "validation_data_path": "s3://suching-dev/ag/test.jsonl",
+"train_data_path": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/ag-news/train.jsonl",
+  "validation_data_path": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/ag-news/dev.jsonl",
     "model": {
         "type": "seq2vec_classifier",
         "dropout": 0.5,
@@ -22,8 +25,16 @@
                     "type": "embedding",
                     "embedding_dim": 300,
                     "trainable": true
+                },
+                "elmo": {
+                    "type": "elmo_token_embedder",
+                    "options_file": "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json",
+                    "weight_file": "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5",
+                    "do_layer_norm": false,
+                    "dropout": 0.2
                 }
-            }
+            },
+            
         },
         "encoder": {
             "type": "boe",
@@ -31,7 +42,7 @@
             "averaged": true,
         },
         "output_feedforward": {
-            "input_dim": 300,
+            "input_dim": 1324,
             "num_layers": 1,
             "hidden_dims": 300,
             "activations": "relu",
@@ -40,7 +51,7 @@
         "classification_layer": {
             "input_dim": 300,
             "num_layers": 1,
-            "hidden_dims": 6,
+            "hidden_dims": 4,
             "activations": "linear"
         },
         "initializer": [

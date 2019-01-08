@@ -1,23 +1,22 @@
 {
     "dataset_reader": {
         "type": "textcat",
-        "segment_sentences": true,
         "debug": false,
         "token_indexers": {
             "tokens": {
                 "type": "single_id",
                 "lowercase_tokens": true
             },
-            "elmo": {
-		    "type": "elmo_characters",
+	        "elmo": {
+		        "type": "elmo_characters",
 		    }
         },
     },
   "datasets_for_vocab_creation": ["train"],
-  "train_data_path": "s3://suching-dev/ag/train.jsonl",
-  "validation_data_path": "s3://suching-dev/ag/test.jsonl",
+  "train_data_path": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/ag-news/train.jsonl",
+  "validation_data_path": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/ag-news/dev.jsonl",
     "model": {
-        "type": "han",
+        "type": "seq2seq_classifier",
         "text_field_embedder": {
             "token_embedders": {
                 "tokens": {
@@ -25,7 +24,7 @@
                     "embedding_dim": 300,
                     "trainable": true
                 },
-                 "elmo": {
+                "elmo": {
                     "type": "elmo_token_embedder",
                     "options_file": "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json",
                     "weight_file": "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5",
@@ -34,35 +33,25 @@
                 }
             }
         },
-        "word_encoder": {
-           "type": "gru",
+        "encoder": {
+           "type": "lstm",
            "num_layers": 1,
            "bidirectional": true,
-	       "input_size": 300,
-           "hidden_size": 50,
+	       "input_size": 1324,
+           "hidden_size": 128, 
         },
-         "sentence_encoder": {
-           "type": "gru",
-           "num_layers": 1,
-           "bidirectional": true,
-	       "input_size": 100,
-           "hidden_size": 50,
-        },
-        "word_attention": {
-            "type": "attention_encoder",
-            "input_dim": 100,
-            "context_vector_dim": 100
-        },
-        "sentence_attention": {
-            "type": "attention_encoder",
-            "input_dim": 100,
-            "context_vector_dim": 100
+        "aggregations": ["maxpool", "final_state"],
+        "output_feedforward": {
+            "input_dim": 256,
+            "num_layers": 1,
+            "hidden_dims": 512,
+            "activations": "relu",
+            "dropout": 0.5
         },
         "classification_layer": {
-            "input_dim": 100,
+            "input_dim": 512,
             "num_layers": 1,
             "hidden_dims": 4,
-            "dropout": 0.2457355626352195,
             "activations": "linear"
         },
         "initializer": [
@@ -76,10 +65,10 @@
     },
     "iterator": {
         "type": "bucket",
-        "sorting_keys": [["tokens", "list_num_tokens"]],
+        "sorting_keys": [["tokens", "num_tokens"]],
         "batch_size": 32
     },
-     "trainer": {
+    "trainer": {
         "optimizer": {
             "type": "adam",
             "lr": 0.0004
@@ -98,3 +87,4 @@
         }
     }
 }
+

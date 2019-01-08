@@ -10,8 +10,8 @@
         },
     },
   "datasets_for_vocab_creation": ["train"],
-  "train_data_path": "/home/ubuntu/data/ag/ag_sample.jsonl",
-  "validation_data_path": "/home/ubuntu/data/ag/test.jsonl",
+  "train_data_path": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/ag-news/train.jsonl",
+  "validation_data_path": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/ag-news/dev.jsonl",
     "model": {
         "type": "seq2seq_classifier",
         "text_field_embedder": {

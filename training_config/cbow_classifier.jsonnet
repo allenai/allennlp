@@ -2,56 +2,45 @@
     "dataset_reader": {
         "type": "textcat",
         "debug": false,
+
         "token_indexers": {
             "tokens": {
                 "type": "single_id",
                 "lowercase_tokens": true
             },
-	        "elmo": {
-		        "type": "elmo_characters",
-		    }
         },
     },
   "datasets_for_vocab_creation": ["train"],
-  "train_data_path": "s3://suching-dev/ag/train.jsonl",
-  "validation_data_path": "s3://suching-dev/ag/test.jsonl",
+"train_data_path": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/ag-news/train.jsonl",
+  "validation_data_path": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/ag-news/dev.jsonl",
     "model": {
-        "type": "seq2seq_classifier",
+        "type": "seq2vec_classifier",
+        "dropout": 0.5,
         "text_field_embedder": {
             "token_embedders": {
                 "tokens": {
                     "type": "embedding",
                     "embedding_dim": 300,
                     "trainable": true
-                },
-                "elmo": {
-                    "type": "elmo_token_embedder",
-                    "options_file": "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json",
-                    "weight_file": "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5",
-                    "do_layer_norm": false,
-                    "dropout": 0.2
                 }
             }
         },
         "encoder": {
-           "type": "lstm",
-           "num_layers": 1,
-           "bidirectional": true,
-	       "input_size": 1324,
-           "hidden_size": 128, 
+            "type": "boe",
+            "embedding_dim": 300,
+            "averaged": true,
         },
-        "aggregations": ["maxpool", "final_state"],
         "output_feedforward": {
-            "input_dim": 256,
+            "input_dim": 300,
             "num_layers": 1,
-            "hidden_dims": 512,
+            "hidden_dims": 300,
             "activations": "relu",
             "dropout": 0.5
         },
         "classification_layer": {
-            "input_dim": 512,
+            "input_dim": 300,
             "num_layers": 1,
-            "hidden_dims": 4,
+            "hidden_dims": 6,
             "activations": "linear"
         },
         "initializer": [
