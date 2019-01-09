@@ -1,23 +1,15 @@
-"""
-This module defines classes Object and Box (the two entities in the NLVR domain) and an NlvrWorld,
-which mainly contains an execution method and related helper methods.
-"""
 from typing import List, Dict, Set
 import logging
 
-from nltk.sem.logic import Type
 from overrides import overrides
 
 from allennlp.common.util import JsonDict
-from allennlp.semparse.type_declarations import nlvr_type_declaration as types
-from allennlp.semparse.executors.nlvr_box import Box
-from allennlp.semparse.worlds.world import World
-from allennlp.semparse.executors import NlvrExecutor
+from allennlp.semparse.domain_languages.nlvr_language import Box, NlvrLanguage
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-class NlvrWorld(World):
+class NlvrWorld:
     """
     Class defining the world representation of NLVR. Defines an execution logic for logical forms
     in NLVR.  We just take the structured_rep from the JSON file to initialize this.
@@ -27,55 +19,28 @@ class NlvrWorld(World):
     world_representation : ``JsonDict``
         structured_rep from the JSON file.
     """
-    # pylint: disable=too-many-public-methods
-
-    # When we're converting from logical forms to action sequences, this set tells us which
-    # functions in the logical form are curried functions, and how many arguments the function
-    # actually takes.  This is necessary because NLTK curries all multi-argument functions to a
-    # series of one-argument function applications.  See `world._get_transitions` for more info.
-    curried_functions = {
-            types.BOX_COLOR_FILTER_TYPE: 2,
-            types.BOX_SHAPE_FILTER_TYPE: 2,
-            types.BOX_COUNT_FILTER_TYPE: 2,
-            types.ASSERT_COLOR_TYPE: 2,
-            types.ASSERT_SHAPE_TYPE: 2,
-            types.ASSERT_BOX_COUNT_TYPE: 2,
-            types.ASSERT_OBJECT_COUNT_TYPE: 2,
-            }
 
     # TODO(pradeep): Define more spatial relationship methods: left_of, right_of..
     # They should be defined for objects within the same box.
     def __init__(self, world_representation: List[List[JsonDict]]) -> None:
-        super(NlvrWorld, self).__init__(global_type_signatures=types.COMMON_TYPE_SIGNATURE,
-                                        global_name_mapping=types.COMMON_NAME_MAPPING,
-                                        num_nested_lambdas=0)
         boxes = set([Box(object_list, box_id) for box_id, object_list in
                      enumerate(world_representation)])
-        self._executor = NlvrExecutor(boxes)
+        self._language = NlvrLanguage(boxes)
 
         # Mapping from terminal strings to productions that produce them.
         # Eg.: "yellow" -> "<o,o> -> yellow", "<b,<<b,e>,<e,b>>> -> filter_greater" etc.
         self.terminal_productions: Dict[str, str] = {}
-        for constant in types.COMMON_NAME_MAPPING:
-            alias = types.COMMON_NAME_MAPPING[constant]
-            if alias in types.COMMON_TYPE_SIGNATURE:
-                constant_type = types.COMMON_TYPE_SIGNATURE[alias]
-                self.terminal_productions[constant] = "%s -> %s" % (constant_type, constant)
+        for name, type_ in self._language._function_types.items():  # pylint: disable=protected-access
+            self.terminal_productions[name] = "%s -> %s" % (type_, name)
 
-    @overrides
-    def get_basic_types(self) -> Set[Type]:
-        return types.BASIC_TYPES
+    def get_valid_actions(self):
+        return self._language.get_nonterminal_productions()
 
-    @overrides
-    def get_valid_starting_types(self) -> Set[Type]:
-        return {types.TRUTH_TYPE}
+    def all_possible_actions(self):
+        return self._language.all_possible_productions()
 
-    def _get_curried_functions(self) -> Dict[Type, int]:
-        return NlvrWorld.curried_functions
-
-    @overrides
-    def _map_name(self, name: str, keep_mapping: bool = False) -> str:
-        return types.COMMON_NAME_MAPPING[name] if name in types.COMMON_NAME_MAPPING else name
+    def get_logical_form(self, action_sequence: List[str]) -> str:
+        return self._language.action_sequence_to_logical_form(action_sequence)
 
     def get_agenda_for_sentence(self,
                                 sentence: str,
@@ -100,7 +65,7 @@ class NlvrWorld(World):
         elif sentence.startswith("there is a "):
             agenda.append(self.terminal_productions["object_exists"])
 
-        if "<b,t> -> box_exists" not in agenda:
+        if "<Set[Box]:bool> -> box_exists" not in agenda:
             # These are object filters and do not apply if we have a box_exists at the top.
             if "touch" in sentence:
                 if "top" in sentence:
@@ -136,7 +101,7 @@ class NlvrWorld(World):
                 # We already dealt with top, bottom, touch_top and touch_bottom above.
                 continue
             if constant in sentence:
-                if "<o,o> ->" in production and "<b,t> -> box_exists" in agenda:
+                if "<Set[Object]:Set[Object]> ->" in production and "<Set[Box]:bool> -> box_exists" in agenda:
                     if constant in ["square", "circle", "triangle"]:
                         agenda.append(self.terminal_productions[f"shape_{constant}"])
                     elif constant in ["yellow", "blue", "black"]:
@@ -174,9 +139,9 @@ class NlvrWorld(World):
         numbers = number_strings.values()
         for token in tokens:
             if token in numbers:
-                number_productions.append(f"e -> {token}")
+                number_productions.append(f"int -> {token}")
             elif token in number_strings:
-                number_productions.append(f"e -> {number_strings[token]}")
+                number_productions.append(f"int -> {number_strings[token]}")
         return number_productions
 
     def _add_nonterminal_productions(self, agenda: List[str]) -> List[str]:
@@ -194,4 +159,4 @@ class NlvrWorld(World):
         return new_agenda
 
     def execute(self, logical_form: str) -> bool:
-        return self._executor.execute(logical_form)
+        return self._language.execute(logical_form)

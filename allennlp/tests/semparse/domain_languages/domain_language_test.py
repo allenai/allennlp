@@ -144,8 +144,8 @@ class DomainLanguageTest(AllenNlpTestCase):
     def test_higher_order_logical_form(self):
         assert self.language.execute('((three_less add) 2 (subtract 4 2))') == 1
 
-    def test_get_valid_actions(self):
-        valid_actions = self.language.get_valid_actions()
+    def test_get_nonterminal_productions(self):
+        valid_actions = self.language.get_nonterminal_productions()
         assert set(valid_actions.keys()) == {
                 '@start@',
                 'int',

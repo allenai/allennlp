@@ -188,7 +188,7 @@ class DomainLanguage:
          'int -> 2', 'int -> 3']
         >>> l.action_sequence_to_logical_form(l.logical_form_to_action_sequence('(add 2 3)'))
         '(add 2 3)'
-        >>> l.get_valid_actions()
+        >>> l.get_nonterminal_productions()
         {'<int,int:int>': ['add', 'divide', 'multiply', 'subtract'], '<int:int>': ['halve'], ...}
 
     This is done with some reflection magic, with the help of the ``@predicate`` decorator and type
@@ -217,8 +217,8 @@ class DomainLanguage:
                     self.add_predicate(name, function)
         for name, value in allowed_constants.items():
             self.add_constant(name, value)
-        # Caching this to avoid recomputing it every time `get_valid_actions` is called.
-        self._valid_actions: Dict[str, List[str]] = None
+        # Caching this to avoid recomputing it every time `get_nonterminal_productions` is called.
+        self._nonterminal_productions: Dict[str, List[str]] = None
 
     def execute(self, logical_form: str):
         """Executes a logical form, using whatever predicates you have defined."""
@@ -228,16 +228,18 @@ class DomainLanguage:
         expression = util.lisp_to_nested_expression(logical_form)
         return self._execute_expression(expression)
 
-    def get_valid_actions(self) -> Dict[str, List[str]]:
+    def get_nonterminal_productions(self) -> Dict[str, List[str]]:
         """
-        Induces a grammar from the defined collection of predicates in this language.  This
-        includes terminal productions implied by each predicate as well as productions for the
+        Induces a grammar from the defined collection of predicates in this language and returns
+        all productions in that grammar, keyed by the non-terminal they are expanding.
+
+        This includes terminal productions implied by each predicate as well as productions for the
         `return type` of each defined predicate.  For example, defining a "multiply" predicate adds
         a "<int,int:int> -> multiply" terminal production to the grammar, and `also` a "int ->
         [<int,int:int>, int, int]" non-terminal production, because I can use the "multiply"
         predicate to produce an int.
         """
-        if not self._valid_actions:
+        if not self._nonterminal_productions:
             actions: Dict[str, List[str]] = defaultdict(list)
             # If you didn't give us a set of valid start types, we'll assume all types we know
             # about (including functional types) are valid start types.
@@ -251,8 +253,18 @@ class DomainLanguage:
                     arg_types = function_type.argument_types
                     right_side = f"[{function_type}, {', '.join(str(arg_type) for arg_type in arg_types)}]"
                     actions[str(return_type)].append(f"{return_type} -> {right_side}")
-            self._valid_actions = dict(actions)
-        return self._valid_actions
+            self._nonterminal_productions = dict(actions)
+        return self._nonterminal_productions
+
+    def all_possible_productions(self) -> List[str]:
+        """
+        Returns a sorted list of all production rules in the grammar induced by
+        :func:`get_nonterminal_productions`.
+        """
+        all_actions = set()
+        for action_set in self.get_nonterminal_productions().values():
+            all_actions.update(action_set)
+        return sorted(all_actions)
 
     def logical_form_to_action_sequence(self, logical_form: str) -> List[str]:
         """
