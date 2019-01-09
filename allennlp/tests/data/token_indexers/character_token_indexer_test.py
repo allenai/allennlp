@@ -1,8 +1,6 @@
 # pylint: disable=no-self-use,invalid-name
 from collections import defaultdict
 
-import warnings
-
 import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
