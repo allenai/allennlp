@@ -22,6 +22,14 @@ class QuaRelLanguageTest(AllenNlpTestCase):
         assert self.language.execute(('(infer (speed higher world2) (friction higher world1) '
                                       '(friction lower world1))')) == 0
 
+        # Both answer options are correct.
+        assert self.language.execute(('(infer (speed higher world2) (friction higher world1) '
+                                      '(friction higher world1))')) == -2
+
+        # Neither answer option is correct.
+        assert self.language.execute(('(infer (speed higher world2) (friction higher world2) '
+                                      '(friction higher world2))')) == -1
+
         assert self.language.logical_form_to_action_sequence(('(infer (speed higher world1) '
                                                               '(friction higher world1) '
                                                               '(friction lower world1))')) == \
