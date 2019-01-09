@@ -322,7 +322,8 @@ class LanguageModel(Model):
                         'loss': average_loss * scale_factor,
                         'forward_loss': forward_loss * scale_factor / num_targets.float(),
                         'backward_loss': (backward_loss * scale_factor / num_targets.float()
-                                          if backward_loss is not None else None)
+                                          if backward_loss is not None else None),
+                        'batch_weight': num_targets.float()
                 })
             else:
                 # average_loss zero tensor, return it for all
