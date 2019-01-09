@@ -33,10 +33,6 @@ class BidirectionalLanguageModel(LanguageModel):
     dropout: ``float``, optional (default: None)
         If specified, dropout is applied to the contextualized embeddings before computation of
         the softmax. The contextualized embeddings themselves are returned without dropout.
-    loss_scale: ``Union[float, str]``, optional (default: 1.0)
-        This scaling factor is applied to the average language model loss.
-        You can also specify ``"n_samples"`` in which case we compute total
-        loss across all predictions.
     num_samples: ``int``, optional (default: None)
         If provided, the model will use ``SampledSoftmaxLoss``
         with the specified number of samples. Otherwise, it will use
@@ -49,7 +45,6 @@ class BidirectionalLanguageModel(LanguageModel):
                  text_field_embedder: TextFieldEmbedder,
                  contextualizer: Seq2SeqEncoder,
                  dropout: float = None,
-                 loss_scale: Union[float, str] = 1.0,
                  num_samples: int = None,
                  sparse_embeddings: bool = False,
                  initializer: InitializerApplicator = None) -> None:
@@ -57,7 +52,6 @@ class BidirectionalLanguageModel(LanguageModel):
                          text_field_embedder=text_field_embedder,
                          contextualizer=contextualizer,
                          dropout=dropout,
-                         loss_scale=loss_scale,
                          num_samples=num_samples,
                          sparse_embeddings=sparse_embeddings,
                          bidirectional=True,
