@@ -18,8 +18,8 @@ class Direction():
         self.number = number
 
 class QuaRelType():
-    def __init__(self, prop: Property, direction: Direction, world: World):
-        self.prop = prop
+    def __init__(self, quarel_property: Property, direction: Direction, world: World):
+        self.quarel_property = quarel_property 
         self.direction = direction
         self.world = world
 
@@ -52,11 +52,11 @@ class QuaRel(DomainLanguage):
                                  {"distance": 1, "loudness": -1, "brightness": -1, "apparentSize": -1},
                                  {"exerciseIntensity": 1, "amountSweat": 1}]
 
-        for prop in ["friction", "speed", "distance", "heat", "smoothness", "acceleration",
+        for quarel_property in ["friction", "speed", "distance", "heat", "smoothness", "acceleration",
                      "amountSweat", "apparentSize", "breakability", "brightness", "exerciseIntensity",
                      "flexibility", "gravity", "loudness", "mass", "strength", "thickness", "time", "weight"]:
-            func = make_property_predicate(prop)
-            self.add_predicate(prop, func)
+            func = make_property_predicate(quarel_property)
+            self.add_predicate(quarel_property, func)
 
         # ``and`` is a reserved word, so we add it as a predicate here instead of using the decorator.
         def and_function(quarel_0: QuaRelType, quarel_1: QuaRelType) -> QuaRelType:
@@ -69,10 +69,10 @@ class QuaRel(DomainLanguage):
 
     def _check_quarels_compatible(self, quarel_0: QuaRelType, quarel_1: QuaRelType) -> bool:
         for theory in self.default_theories:
-            if quarel_0.prop.name in theory and quarel_1.prop.name in theory:
+            if quarel_0.quarel_property.name in theory and quarel_1.quarel_property.name in theory:
                 world_same = 1 if quarel_0.world.number == quarel_1.world.number else -1
                 direction_same = 1 if quarel_0.direction.number == quarel_1.direction.number else -1
-                if theory[quarel_0.prop.name] * theory[quarel_1.prop.name] * world_same * direction_same == 1:
+                if theory[quarel_0.quarel_property.name] * theory[quarel_1.quarel_property.name] * world_same * direction_same == 1:
                     return True
                 else:
                     return False
