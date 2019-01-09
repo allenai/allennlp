@@ -38,8 +38,8 @@ class BagOfWordsTokenEmbedder(TokenEmbedder):
         """
         Compute a bag of words representation with size batch_size x vocab_size
 
-        Params
-        ______
+        Parameters
+        __________
         tokens : ``Dict[str, torch.Tensor]``
             tokens to compute bag of words representation of
         """
