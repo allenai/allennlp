@@ -1,5 +1,5 @@
 import copy
-from typing import Any, Dict, Set, Union
+from typing import Any, Dict, Set, Union, List
 
 from numpy.testing import assert_allclose
 import torch
@@ -197,7 +197,18 @@ class ModelTestCase(AllenNlpTestCase):
                 print(f"Parameter: {name} had incorrect gradient: {grad}")
             raise Exception("Incorrect gradients found. See stdout for more info.")
 
-    def ensure_batch_predictions_are_consistent(self):
+    def ensure_batch_predictions_are_consistent(
+            self,
+            keys_to_ignore: List[str] = []):
+        """
+        Ensures that the model performs the same on a batch of instances as on individual instances.
+        Ignores metrics matching the regexp .*loss.* and those specified explicitly.
+
+        Parameters
+        ----------
+        keys_to_ignore : ``List[str]``, optional (default=[])
+            Names of metrics that should not be taken into account, e.g. "batch_weight".
+        """
         self.model.eval()
         single_predictions = []
         for i, instance in enumerate(self.instances):
@@ -215,8 +226,7 @@ class ModelTestCase(AllenNlpTestCase):
                     # Loss is particularly unstable; we'll just be satisfied if everything else is
                     # close.
                     continue
-                if 'batch_weight' == key:
-                    # Batch weight, e.g., by the number of tokens, is dependent on the batch.
+                if key in keys_to_ignore:
                     continue
                 single_predicted = single_predicted[0]
                 batch_predicted = batch_predictions[key][i]
