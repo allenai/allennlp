@@ -91,7 +91,8 @@ class StackedBidirectionalLstm(torch.nn.Module):
                                      initial_state[1].split(1, 0)))
 
         output_sequence = inputs
-        final_states = []
+        final_h = []
+        final_c = []
         for i, state in enumerate(hidden_states):
             forward_layer = getattr(self, 'forward_layer_{}'.format(i))
             backward_layer = getattr(self, 'backward_layer_{}'.format(i))
@@ -104,8 +105,11 @@ class StackedBidirectionalLstm(torch.nn.Module):
 
             output_sequence = torch.cat([forward_output, backward_output], -1)
             output_sequence = pack_padded_sequence(output_sequence, lengths, batch_first=True)
-            final_states.append((torch.cat(both_direction_states, -1) for both_direction_states
-                                 in zip(final_forward_state, final_backward_state)))
 
-        final_state_tuple = (torch.cat(state_list, 0) for state_list in zip(*final_states))
+            final_h.extend([final_forward_state[0], final_backward_state[0]])
+            final_c.extend([final_forward_state[1], final_backward_state[1]])
+        
+        final_h = torch.cat(final_h, dim=0)
+        final_c = torch.cat(final_c, dim=0)
+        final_state_tuple = (final_h, final_c)
         return output_sequence, final_state_tuple
