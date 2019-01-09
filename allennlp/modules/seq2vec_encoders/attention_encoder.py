@@ -17,11 +17,11 @@ class AttentionEncoder(Seq2VecEncoder):
     by Yang et. al, 2016.
 
     As outlined in that paper, to compute a sentence representation, we first apply a linear transformation to each
-    encoded word representation (projecting to `` context_vector_dim ``), and then apply a non-linearity to each
+    encoded word representation (projecting to ``context_vector_dim``), and then apply a non-linearity to each
     dimension of the resulting vectors.
 
     To get the attention weights, we then take the dot product of each of those word vectors with a learned
-    context vector u_w (also of dimension `` context_vector_dim ``), and subsequently normalize.
+    context vector u_w (also of dimension ``context_vector_dim``), and subsequently normalize.
 
     Finally, we perform a weighted sum between each attention weight and its corresponding word vector.
 
