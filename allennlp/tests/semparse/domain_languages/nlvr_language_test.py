@@ -1,10 +1,7 @@
 # pylint: disable=no-self-use,invalid-name
 import json
 
-import pytest
-
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.semparse.domain_languages.domain_language import ExecutionError
 from allennlp.semparse.domain_languages import NlvrLanguage
 from allennlp.semparse.domain_languages.nlvr_language import Box
 
@@ -254,7 +251,7 @@ class TestNlvrLanguage(AllenNlpTestCase):
         assert "Shape -> shape_triangle" in agenda
         assert "<Set[Object]:Set[Object]> -> touch_top" not in agenda
         agenda = language.get_agenda_for_sentence("there are exactly two yellow triangles touching the"
-                                               " top edge")
+                                                  " top edge")
         assert "<Set[Object]:Set[Object]> -> yellow" in agenda
         assert "Color -> color_yellow" not in agenda
         assert "<Set[Object]:Set[Object]> -> triangle" in agenda

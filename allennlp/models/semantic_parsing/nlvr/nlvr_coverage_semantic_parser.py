@@ -103,7 +103,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                                          max_num_finished_states=max_num_finished_states)
 
         # Instantiating an empty NlvrLanguage just to get the number of terminals.
-        self._terminal_productions = set(NlvrLanguage([]).terminal_productions.values())
+        self._terminal_productions = set(NlvrLanguage(set()).terminal_productions.values())
         self._decoder_step = CoverageTransitionFunction(encoder_output_dim=self._encoder.get_output_dim(),
                                                         action_embedding_dim=action_embedding_dim,
                                                         input_attention=attention,

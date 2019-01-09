@@ -86,7 +86,7 @@ class Shape(NamedTuple):
 
 
 class NlvrLanguage(DomainLanguage):
-    # pylint: disable=no-self-use
+    # pylint: disable=no-self-use,too-many-public-methods
     def __init__(self, boxes: Set[Box]) -> None:
         self.boxes = boxes
         self.objects: Set[Object] = set()
@@ -119,12 +119,10 @@ class NlvrLanguage(DomainLanguage):
         for name, type_ in self._function_types.items():
             self.terminal_productions[name] = "%s -> %s" % (type_, name)
 
-    # These first three methods are about getting an "agenda", which, given an input utterance,
+    # These first two methods are about getting an "agenda", which, given an input utterance,
     # tries to guess what production rules should be needed in the logical form.
 
-    def get_agenda_for_sentence(self,
-                                sentence: str,
-                                add_paths_to_agenda: bool = False) -> List[str]:
+    def get_agenda_for_sentence(self, sentence: str) -> List[str]:
         """
         Given a ``sentence``, returns a list of actions the sentence triggers as an ``agenda``. The
         ``agenda`` can be used while by a parser to guide the decoder.  sequences as possible. This
@@ -134,9 +132,6 @@ class NlvrLanguage(DomainLanguage):
         ----------
         sentence : ``str``
             The sentence for which an agenda will be produced.
-        add_paths_to_agenda : ``bool`` , optional
-            If set, the agenda will also include nonterminal productions that lead to the terminals
-            from the root node (default = False).
         """
         agenda = []
         sentence = sentence.lower()
@@ -201,8 +196,6 @@ class NlvrLanguage(DomainLanguage):
                 agenda.append(self.terminal_productions["all_boxes"])
             else:
                 agenda.append(self.terminal_productions["all_objects"])
-        if add_paths_to_agenda:
-            agenda = self._add_nonterminal_productions(agenda)
         return agenda
 
     @staticmethod
@@ -223,20 +216,6 @@ class NlvrLanguage(DomainLanguage):
             elif token in number_strings:
                 number_productions.append(f"int -> {number_strings[token]}")
         return number_productions
-
-    def _add_nonterminal_productions(self, agenda: List[str]) -> List[str]:
-        """
-        Given a partially populated agenda with (mostly) terminal productions, this method adds the
-        nonterminal productions that lead from the root to the terminal productions.
-        """
-        nonterminal_productions = set(agenda)
-        for action in agenda:
-            paths = self.get_paths_to_root(action, max_num_paths=5)
-            for path in paths:
-                for path_action in path:
-                    nonterminal_productions.add(path_action)
-        new_agenda = list(nonterminal_productions)
-        return new_agenda
 
     def __eq__(self, other):
         if isinstance(self, other.__class__):
@@ -555,115 +534,115 @@ class NlvrLanguage(DomainLanguage):
 
     @predicate
     def member_count_equals(self, boxes: Set[Box], count: int) -> Set[Box]:
-        return [box for box in boxes if len(box.objects) == count]
+        return set([box for box in boxes if len(box.objects) == count])
 
     @predicate
     def member_count_not_equals(self, boxes: Set[Box], count: int) -> Set[Box]:
-        return [box for box in boxes if len(box.objects) != count]
+        return set([box for box in boxes if len(box.objects) != count])
 
     @predicate
     def member_count_greater(self, boxes: Set[Box], count: int) -> Set[Box]:
-        return [box for box in boxes if len(box.objects) > count]
+        return set([box for box in boxes if len(box.objects) > count])
 
     @predicate
     def member_count_greater_equals(self, boxes: Set[Box], count: int) -> Set[Box]:
-        return [box for box in boxes if len(box.objects) >= count]
+        return set([box for box in boxes if len(box.objects) >= count])
 
     @predicate
     def member_count_lesser(self, boxes: Set[Box], count: int) -> Set[Box]:
-        return [box for box in boxes if len(box.objects) < count]
+        return set([box for box in boxes if len(box.objects) < count])
 
     @predicate
     def member_count_lesser_equals(self, boxes: Set[Box], count: int) -> Set[Box]:
-        return [box for box in boxes if len(box.objects) <= count]
+        return set([box for box in boxes if len(box.objects) <= count])
 
     @predicate
     def member_color_count_equals(self, boxes: Set[Box], count: int) -> Set[Box]:
-        return [box for box in boxes if len(box.colors) == count]
+        return set([box for box in boxes if len(box.colors) == count])
 
     @predicate
     def member_color_count_not_equals(self, boxes: Set[Box], count: int) -> Set[Box]:
-        return [box for box in boxes if len(box.colors) != count]
+        return set([box for box in boxes if len(box.colors) != count])
 
     @predicate
     def member_color_count_greater(self, boxes: Set[Box], count: int) -> Set[Box]:
-        return [box for box in boxes if len(box.colors) > count]
+        return set([box for box in boxes if len(box.colors) > count])
 
     @predicate
     def member_color_count_greater_equals(self, boxes: Set[Box], count: int) -> Set[Box]:
-        return [box for box in boxes if len(box.colors) >= count]
+        return set([box for box in boxes if len(box.colors) >= count])
 
     @predicate
     def member_color_count_lesser(self, boxes: Set[Box], count: int) -> Set[Box]:
-        return [box for box in boxes if len(box.colors) < count]
+        return set([box for box in boxes if len(box.colors) < count])
 
     @predicate
     def member_color_count_lesser_equals(self, boxes: Set[Box], count: int) -> Set[Box]:
-        return [box for box in boxes if len(box.colors) <= count]
+        return set([box for box in boxes if len(box.colors) <= count])
 
     @predicate
     def member_shape_count_equals(self, boxes: Set[Box], count: int) -> Set[Box]:
-        return [box for box in boxes if len(box.shapes) == count]
+        return set([box for box in boxes if len(box.shapes) == count])
 
     @predicate
     def member_shape_count_not_equals(self, boxes: Set[Box], count: int) -> Set[Box]:
-        return [box for box in boxes if len(box.shapes) != count]
+        return set([box for box in boxes if len(box.shapes) != count])
 
     @predicate
     def member_shape_count_greater(self, boxes: Set[Box], count: int) -> Set[Box]:
-        return [box for box in boxes if len(box.shapes) > count]
+        return set([box for box in boxes if len(box.shapes) > count])
 
     @predicate
     def member_shape_count_greater_equals(self, boxes: Set[Box], count: int) -> Set[Box]:
-        return [box for box in boxes if len(box.shapes) >= count]
+        return set([box for box in boxes if len(box.shapes) >= count])
 
     @predicate
     def member_shape_count_lesser(self, boxes: Set[Box], count: int) -> Set[Box]:
-        return [box for box in boxes if len(box.shapes) < count]
+        return set([box for box in boxes if len(box.shapes) < count])
 
     @predicate
     def member_shape_count_lesser_equals(self, boxes: Set[Box], count: int) -> Set[Box]:
-        return [box for box in boxes if len(box.shapes) <= count]
+        return set([box for box in boxes if len(box.shapes) <= count])
 
     @predicate
     def member_color_all_equals(self, boxes: Set[Box], color: Color) -> Set[Box]:
-        return [box for box in boxes if self.object_color_all_equals(box.objects, color)]
+        return set([box for box in boxes if self.object_color_all_equals(box.objects, color)])
 
     @predicate
     def member_color_any_equals(self, boxes: Set[Box], color: Color) -> Set[Box]:
-        return [box for box in boxes if self.object_color_any_equals(box.objects, color)]
+        return set([box for box in boxes if self.object_color_any_equals(box.objects, color)])
 
     @predicate
     def member_color_none_equals(self, boxes: Set[Box], color: Color) -> Set[Box]:
-        return [box for box in boxes if self.object_color_none_equals(box.objects, color)]
+        return set([box for box in boxes if self.object_color_none_equals(box.objects, color)])
 
     @predicate
     def member_shape_all_equals(self, boxes: Set[Box], shape: Shape) -> Set[Box]:
-        return [box for box in boxes if self.object_shape_all_equals(box.objects, shape)]
+        return set([box for box in boxes if self.object_shape_all_equals(box.objects, shape)])
 
     @predicate
     def member_shape_any_equals(self, boxes: Set[Box], shape: Shape) -> Set[Box]:
-        return [box for box in boxes if self.object_shape_any_equals(box.objects, shape)]
+        return set([box for box in boxes if self.object_shape_any_equals(box.objects, shape)])
 
     @predicate
     def member_shape_none_equals(self, boxes: Set[Box], shape: Shape) -> Set[Box]:
-        return [box for box in boxes if self.object_shape_none_equals(box.objects, shape)]
+        return set([box for box in boxes if self.object_shape_none_equals(box.objects, shape)])
 
     @predicate
     def member_shape_same(self, boxes: Set[Box]) -> Set[Box]:
-        return [box for box in boxes if self.object_shape_count_equals(box.objects, 1)]
+        return set([box for box in boxes if self.object_shape_count_equals(box.objects, 1)])
 
     @predicate
     def member_color_same(self, boxes: Set[Box]) -> Set[Box]:
-        return [box for box in boxes if self.object_color_count_equals(box.objects, 1)]
+        return set([box for box in boxes if self.object_color_count_equals(box.objects, 1)])
 
     @predicate
     def member_shape_different(self, boxes: Set[Box]) -> Set[Box]:
-        return [box for box in boxes if self.object_shape_count_not_equals(box.objects, 1)]
+        return set([box for box in boxes if self.object_shape_count_not_equals(box.objects, 1)])
 
     @predicate
     def member_color_different(self, boxes: Set[Box]) -> Set[Box]:
-        return [box for box in boxes if self.object_color_count_not_equals(box.objects, 1)]
+        return set([box for box in boxes if self.object_color_count_not_equals(box.objects, 1)])
 
     @predicate
     def negate_filter(self, filter_function: Callable[[Set[Object]], Set[Object]]) -> Callable[[Set[Object]],

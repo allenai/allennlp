@@ -206,7 +206,7 @@ class NlvrSemanticParser(Model):
         """
         best_action_strings = output_dict["best_action_strings"]
         # Instantiating an empty world for getting logical forms.
-        world = NlvrLanguage([])
+        world = NlvrLanguage(set())
         logical_forms = []
         for instance_action_sequences in best_action_strings:
             instance_logical_forms = []

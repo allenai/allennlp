@@ -195,7 +195,7 @@ class NlvrDatasetReader(DatasetReader):
         elif self._output_agendas:
             # TODO(pradeep): Assuming every world gives the same agenda for a sentence. This is true
             # now, but may change later too.
-            agenda = worlds[0].get_agenda_for_sentence(sentence, add_paths_to_agenda=False)
+            agenda = worlds[0].get_agenda_for_sentence(sentence)
             assert agenda, "No agenda found for sentence: %s" % sentence
             # agenda_field contains indices into actions.
             agenda_field = ListField([IndexField(instance_action_ids[action], action_field)

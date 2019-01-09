@@ -1,6 +1,4 @@
 # pylint: disable=no-self-use,invalid-name,protected-access
-import json
-
 from overrides import overrides
 
 from allennlp.common.testing import AllenNlpTestCase

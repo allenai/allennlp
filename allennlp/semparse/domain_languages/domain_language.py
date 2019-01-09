@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Any, Callable, CallableMeta, Dict, GenericMeta, List, Set, Tuple, Type, Union
+from typing import Any, Callable, CallableMeta, Dict, GenericMeta, List, Set, Tuple, Type, Union  # type: ignore
 import inspect
 import logging
 import types
