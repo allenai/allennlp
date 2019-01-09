@@ -28,6 +28,10 @@ Our 2018 EMNLP tutorial is available at https://github.com/allenai/writing-code-
 * [Using pre-trained ELMo representations](how_to/elmo.md)
 * [How to train a model with lazy data](how_to/laziness.md)
 * [How to visualize model internals (BETA)](how_to/visualizing_model_internals.md)
+* [Create your own Configuration File](how_to/create_a_configuration.md)
+* [How to use a Debugger](how_to/using_a_debugger.md)
+* [How to Train and use a Transformer ELMo](how_to/training_transformer_elmo.md)
+
 
 ## Deeper Dives
 
