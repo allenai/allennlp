@@ -535,11 +535,11 @@ class NlvrLanguage(DomainLanguage):
         return [box for box in boxes if self.object_color_count_not_equals(box.objects, 1)]
 
     @predicate
-    def negate_filter(self,
-                      filter_function: Callable[[Set[Object]], Set[Object]],
-                      objects: Set[Object]) -> Set[Object]:
-        # Negate an object filter.
-        return objects.difference(filter_function(objects))
+    def negate_filter(self, filter_function: Callable[[Set[Object]], Set[Object]]) -> Callable[[Set[Object]],
+                                                                                               Set[Object]]:
+        def negated_filter(objects: Set[Object]) -> Set[Object]:
+            return objects.difference(filter_function(objects))
+        return negated_filter
 
     def _objects_touch_each_other(self, object1: Object, object2: Object) -> bool:
         """

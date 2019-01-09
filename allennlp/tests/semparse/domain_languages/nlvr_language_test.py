@@ -68,7 +68,7 @@ class TestNlvrLanguage(AllenNlpTestCase):
     def test_logical_form_with_not_executes_correctly(self):
         executor = self.languages[2]
         # Utterance is "There are at most two medium triangles not touching a wall." and label is "True".
-        logical_form = ("(object_count_lesser_equals (negate_filter touch_wall "
+        logical_form = ("(object_count_lesser_equals ((negate_filter touch_wall) "
                         "(medium (triangle (all_objects)))) 2)")
         assert executor.execute(logical_form) is True
 
@@ -172,6 +172,22 @@ class TestNlvrLanguage(AllenNlpTestCase):
                                    '<Set[Object]:Set[Object]> -> touch_wall',
                                    'Set[Object] -> all_objects',
                                    'Color -> color_black']
+
+    def test_logical_form_with_negate_filter_returns_correct_action_sequence(self):
+        language = self.languages[0]
+        logical_form = "(object_exists ((negate_filter touch_wall) all_objects))"
+        action_sequence = language.logical_form_to_action_sequence(logical_form)
+        negate_filter_production = ('<Set[Object]:Set[Object]> -> '
+                                    '[<<Set[Object]:Set[Object]>:<Set[Object]:Set[Object]>>, '
+                                    '<Set[Object]:Set[Object]>]')
+        assert action_sequence == ['@start@ -> bool',
+                                   'bool -> [<Set[Object]:bool>, Set[Object]]',
+                                   '<Set[Object]:bool> -> object_exists',
+                                   'Set[Object] -> [<Set[Object]:Set[Object]>, Set[Object]]',
+                                   negate_filter_production,
+                                   '<<Set[Object]:Set[Object]>:<Set[Object]:Set[Object]>> -> negate_filter',
+                                   '<Set[Object]:Set[Object]> -> touch_wall',
+                                   'Set[Object] -> all_objects']
 
     def test_logical_form_with_box_filter_returns_correct_action_sequence(self):
         language = self.languages[0]
