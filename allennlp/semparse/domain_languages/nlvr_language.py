@@ -581,3 +581,8 @@ class NlvrLanguage(DomainLanguage):
         if len(objects_of_attribute[most_frequent_attribute]) <= 1:
             return set()
         return objects_of_attribute[most_frequent_attribute]
+
+    def __eq__(self, other):
+        if isinstance(self, other.__class__):
+            return self.boxes == other.boxes and self.objects == other.objects
+        return NotImplemented

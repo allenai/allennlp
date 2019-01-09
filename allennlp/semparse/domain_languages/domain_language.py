@@ -518,8 +518,3 @@ class DomainLanguage:
             # productions or lists of non-terminals.
             current_node.append(Tree(right_side, []))  # you add a child to an nltk.Tree with `append`
         return remaining_actions
-
-    def __eq__(self, other):
-        if isinstance(self, other.__class__):
-            return self.__dict__ == other.__dict__
-        return NotImplemented

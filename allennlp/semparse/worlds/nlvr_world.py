@@ -163,3 +163,8 @@ class NlvrWorld:
 
     def execute(self, logical_form: str) -> bool:
         return self._language.execute(logical_form)
+
+    def __eq__(self, other):
+        if isinstance(self, other.__class__):
+            return self.__dict__ == other.__dict__
+        return NotImplemented
