@@ -507,10 +507,18 @@ def main():
     single_file_path = cached_path(args.input_file)
     logger.info("Reading file at %s", args.input_file)
 
+
+
     with zipfile.ZipFile(single_file_path, 'r') as myzip:
-        with myzip.open(myzip.namelist()[0]) as myfile:
-            dataset_json = json.load(myfile)
-        contexts += dataset_json['data']['contexts']
+        if myzip.namelist()[0].find('jsonl')>0:
+            contexts = []
+            with myzip.open(myzip.namelist()[0]) as myfile:
+                for example in myfile:
+                    contexts.append(json.loads(example))
+        else:
+            with myzip.open(myzip.namelist()[0]) as myfile:
+                dataset_json = json.load(myfile)
+            contexts += dataset_json['data']['contexts']
 
     # sampling
     if args.sample_size > -1:
