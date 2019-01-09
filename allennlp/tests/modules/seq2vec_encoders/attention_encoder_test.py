@@ -19,6 +19,6 @@ class TestAttentionEncoder(AllenNlpTestCase):
         han_attention._context_dot_product.weight = Parameter(torch.FloatTensor([[-.3, .5]]))
         matrix = torch.FloatTensor([[[1.0, 1.0], [1.0, 0.0]], [[1.0, 1.0], [1.0, 0.0]]])
         matrix_mask = torch.FloatTensor([[1.0, 1.0], [1.0, 0.0]])
-        result = han_attention(matrix, matrix_mask).detach().numpy()        
+        result = han_attention(matrix, matrix_mask).detach().numpy()
         assert result.shape == (2, 2)
         assert_almost_equal(result, [[1.0, 0.4423617], [1.0, 1.0]])

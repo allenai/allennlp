@@ -1,9 +1,8 @@
 
 import torch
-from typing import Dict
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 from allennlp.data import Vocabulary
-from allennlp.common import Params, Tqdm
+from allennlp.common import Params
 from allennlp.nn.util import get_text_field_mask
 
 

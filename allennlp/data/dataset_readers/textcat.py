@@ -1,19 +1,16 @@
 from typing import Dict, List
 import logging
-import numpy as np
-import re
-from overrides import overrides
 import json
+import numpy as np
+from overrides import overrides
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import LabelField, TextField, Field, ListField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.tokenizers import Token
-from allennlp.common.checks import ConfigurationError
 from allennlp.data.tokenizers import Tokenizer, WordTokenizer
 from allennlp.data.tokenizers.sentence_splitter import SpacySentenceSplitter
-from allennlp.data.tokenizers.word_filter import StopwordFilter
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -38,7 +35,8 @@ class TextCatReader(DatasetReader):
         Tokenizer to use to split the input text into words or other kinds of tokens.
     segment_sentences: ``bool``, optional (default = ``False``)
         If true, we will first segment the text into sentences using Spacy and then tokenize words.
-        Necessary for some models that require pre-segmentation of sentences, like the Hierarchical Attention Network.
+        Necessary for some models that require pre-segmentation of sentences,
+        like the Hierarchical Attention Network.
     sequence_length: ``int``, optional (default = ``None``)
         If specified, will truncate tokens to specified maximum length.
     debug : ``bool``, optional (default = ``False``)
@@ -47,12 +45,12 @@ class TextCatReader(DatasetReader):
         Whether or not instances can be read lazily.
     """
     def __init__(self,
-                 token_indexers: Dict[str, TokenIndexer]=None,
-                 word_tokenizer: Tokenizer=None,
-                 segment_sentences: bool=False,
-                 sequence_length: int=None,
-                 debug: bool=False,
-                 lazy: bool=False) -> None:
+                 token_indexers: Dict[str, TokenIndexer] = None,
+                 word_tokenizer: Tokenizer = None,
+                 segment_sentences: bool = False,
+                 sequence_length: int = None,
+                 debug: bool = False,
+                 lazy: bool = False) -> None:
         super().__init__(lazy=lazy)
         self.debug = debug
         self._word_tokenizer = word_tokenizer or WordTokenizer()

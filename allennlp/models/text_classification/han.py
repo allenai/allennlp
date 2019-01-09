@@ -1,6 +1,5 @@
 from typing import Dict, Optional, List, Any
 import torch
-import overrides
 from allennlp.data import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import FeedForward
@@ -9,7 +8,7 @@ from allennlp.modules import Seq2SeqEncoder
 from allennlp.modules import Seq2VecEncoder
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
 from allennlp.training.metrics import CategoricalAccuracy
-from allennlp.nn.util import get_text_field_mask, masked_softmax
+from allennlp.nn.util import get_text_field_mask
 
 
 @Model.register("han")
@@ -77,9 +76,9 @@ class HierarchicalAttentionNetwork(Model):
 
     def forward(self,  # type: ignore
                 tokens: Dict[str, torch.LongTensor],
-                label: torch.IntTensor=None,
-                metadata: List[Dict[str, Any]]=None  # pylint:disable=unused-argument
-                ) -> Dict[str, torch.Tensor]:
+                label: torch.IntTensor = None,
+                metadata: List[Dict[str, Any]] = None  # pylint:disable=unused-argument
+               ) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
         Parameters
@@ -111,7 +110,7 @@ class HierarchicalAttentionNetwork(Model):
         sentence_level_mask = ((tokens_ == self._pad_idx).all(dim=2) == 0).float()
 
         embedded_words = self._text_field_embedder(tokens)
-        batch_size, max_sents, _, _ = embedded_words.size()
+        batch_size, _, _, _ = embedded_words.size()
         embedded_words = embedded_words.view(batch_size * max_num_sents, embedded_words.size(2), -1)
         tokens_ = tokens_.view(batch_size * max_num_sents, -1)
 

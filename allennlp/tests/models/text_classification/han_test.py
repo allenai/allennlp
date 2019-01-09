@@ -1,8 +1,4 @@
 # pylint: disable=invalid-name,no-self-use,protected-access
-import numpy
-from numpy.testing import assert_almost_equal
-from allennlp.models import HierarchicalAttentionNetwork
-from allennlp.modules.seq2vec_encoders import AttentionEncoder
 from allennlp.common.testing import ModelTestCase
 
 

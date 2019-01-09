@@ -7,7 +7,7 @@ from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestTextCatReader():
-    
+
     @pytest.mark.parametrize("lazy", (True, False))
     def test_read_from_file_ag(self, lazy):
         reader = TextCatReader(lazy=lazy)
