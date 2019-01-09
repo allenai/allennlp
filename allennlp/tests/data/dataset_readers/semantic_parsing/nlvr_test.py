@@ -1,7 +1,7 @@
 # pylint: disable=no-self-use,invalid-name
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.dataset_readers import NlvrDatasetReader
-from allennlp.semparse.worlds import NlvrWorld
+from allennlp.semparse.domain_languages import NlvrLanguage
 
 
 class TestNlvrDatasetReader(AllenNlpTestCase):
@@ -26,7 +26,7 @@ class TestNlvrDatasetReader(AllenNlpTestCase):
                                            '<Set[Object]:bool> -> object_exists',
                                            '<Set[Object]:Set[Object]> -> touch_corner'])
         worlds = [world_field.as_tensor({}) for world_field in instance.fields["worlds"].field_list]
-        assert isinstance(worlds[0], NlvrWorld)
+        assert isinstance(worlds[0], NlvrLanguage)
         label = instance.fields["labels"].field_list[0].label
         assert label == "true"
 
@@ -68,7 +68,7 @@ class TestNlvrDatasetReader(AllenNlpTestCase):
                                            '<Set[Object]:bool> -> object_exists'
                                           ])
         worlds = [world_field.as_tensor({}) for world_field in instance.fields["worlds"].field_list]
-        assert all([isinstance(world, NlvrWorld) for world in worlds])
+        assert all([isinstance(world, NlvrLanguage) for world in worlds])
         labels = [label.label for label in instance.fields["labels"].field_list]
         assert labels == ["true", "false", "true", "false"]
 
