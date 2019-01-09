@@ -43,7 +43,7 @@ class TestNlvrDatasetReader(AllenNlpTestCase):
         actions = [action.rule for action in instance.fields["actions"].field_list]
         agenda_actions = [actions[i] for i in agenda]
         world = instance.fields["worlds"].field_list[0].as_tensor({})
-        expected_agenda_actions = world.get_agenda_for_sentence(sentence, add_paths_to_agenda=False)
+        expected_agenda_actions = world.get_agenda_for_sentence(sentence)
         assert expected_agenda_actions == agenda_actions
 
     def test_reader_reads_grouped_data(self):
