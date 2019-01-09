@@ -92,7 +92,7 @@ def uniform_unit_scaling(tensor: torch.Tensor, nonlinearity: str = "linear"):
     activation_scaling = torch.nn.init.calculate_gain(nonlinearity, tensor)
     max_value = math.sqrt(3 / size) * activation_scaling
 
-    return tensor.uniform_(-max_value, max_value)
+    return tensor.data.uniform_(-max_value, max_value)
 
 
 def block_orthogonal(tensor: torch.Tensor,

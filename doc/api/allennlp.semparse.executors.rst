@@ -25,3 +25,13 @@ allennlp.semparse.executors
    :members:
    :undoc-members:
    :show-inheritance:
+
+.. automodule:: allennlp.semparse.executors.nlvr_box
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: allennlp.semparse.executors.nlvr_object
+   :members:
+   :undoc-members:
+   :show-inheritance:
