@@ -348,13 +348,11 @@ class Trainer(Registrable):
         if self._grad_clipping is not None:
             # Pylint is unable to tell that we're in the case that _grad_clipping is not None...
             # pylint: disable=invalid-unary-operand-type
-            def clip_function(grad):
-                # Sparse tensors do not have a clamp method.
-                if not grad.is_sparse:
-                    grad.clamp(-self._grad_clipping, self._grad_clipping)
             for parameter in self.model.parameters():
                 if parameter.requires_grad:
-                    parameter.register_hook(clip_function)
+                    parameter.register_hook(lambda grad: util.clamp_tensor(grad,
+                                                                           minimum=-self._grad_clipping,
+                                                                           maximum=self._grad_clipping))
 
     def _enable_activation_logging(self) -> None:
         """
