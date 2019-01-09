@@ -23,6 +23,7 @@ allennlp.models
   allennlp.models.event2mind
   allennlp.models.graph_parser
   allennlp.models.reading_comprehension
+  allennlp.models.text_classification
   allennlp.models.semantic_parsing
   allennlp.models.semantic_role_labeler
   allennlp.models.language_model
