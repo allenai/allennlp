@@ -62,14 +62,12 @@ class BagOfWordsTokenEmbedder(TokenEmbedder):
         return bow_output
 
     @classmethod
-    def from_params(cls,
-                    vocab: Vocabulary,
-                    params: Params) -> 'Embedding':  # type: ignore
+    def from_params(cls, vocab: Vocabulary, params: Params) -> 'BagOfWordsTokenEmbedder':  # type: ignore
+        # pylint: disable=arguments-differ
         """
         we look for a ``vocab_namespace`` key in the parameter dictionary
         to know which vocabulary to use.
         """
-        # pylint: disable=arguments-differ
         vocab_namespace = params.pop("vocab_namespace", "tokens")
         vocab_size = vocab.get_vocab_size(vocab_namespace)
         projection_dim = params.pop_int("projection_dim", None)

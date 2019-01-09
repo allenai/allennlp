@@ -71,25 +71,20 @@ class TextCatReader(DatasetReader):
             if not line:
                 continue
             items = json.loads(line)
-            tokens = items["tokens"]
+            text = items["text"]
             label = str(items["label"])
-            instance = self.text_to_instance(tokens=tokens,
-                                             label=label)
+            instance = self.text_to_instance(text=text, label=label)
             if instance is not None:
                 yield instance
 
     @overrides
-    def text_to_instance(self,
-                         tokens: List[str],
-                         label: str = None) -> Instance:  # type: ignore
+    def text_to_instance(self, text: str, label: str = None) -> Instance:  # type: ignore
         """
-        We take `pre-tokenized` input here, because we don't
-        have a tokenizer in this class.
 
         Parameters
         ----------
-        tokens : ``List[str]``, required.
-            The tokens in a given text.
+        text : ``str``, required.
+            The text to classify
         label ``str``, optional, (default = None).
             The label for this text.
 
@@ -103,9 +98,9 @@ class TextCatReader(DatasetReader):
         """
         # pylint: disable=arguments-differ
         fields: Dict[str, Field] = {}
-        text_fields = []
+        text_fields: List[Field] = []
         if self._segment_sentences:
-            sentence_tokens = self._sentence_segmenter.split_sentences(tokens)
+            sentence_tokens = self._sentence_segmenter.split_sentences(text)
             if not sentence_tokens:
                 return None
             for sentence in sentence_tokens:
@@ -119,17 +114,16 @@ class TextCatReader(DatasetReader):
                 text_fields.append(TextField(word_tokens, self._token_indexers))
             fields['tokens'] = ListField(text_fields)
         else:
-            tokens_ = self._word_tokenizer.tokenize(tokens)
-            if not tokens_:
+            tokens = self._word_tokenizer.tokenize(text)
+            if not tokens:
                 return None
             if self._sequence_length is not None:
-                if len(tokens_) > self._sequence_length:
-                    tokens_ = tokens_[:self._sequence_length]
+                if len(tokens) > self._sequence_length:
+                    tokens = tokens[:self._sequence_length]
                 else:
-                    padding = [Token("@@PADDING")] * (self._sequence_length - len(tokens_))
-                    tokens_ = tokens_ + padding
-            fields['tokens'] = TextField(tokens_,
-                                         self._token_indexers)
+                    padding = [Token("@@PADDING")] * (self._sequence_length - len(tokens))
+                    tokens = tokens + padding
+            fields['tokens'] = TextField(tokens, self._token_indexers)
         if label is not None:
             fields['label'] = LabelField(label)
         return Instance(fields)
