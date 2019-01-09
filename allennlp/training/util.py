@@ -1,7 +1,7 @@
 """
 Helper functions for Trainers
 """
-from typing import Any, Union, Dict, Iterable, Sequence, List, Optional
+from typing import Any, Union, Dict, Iterable, List, Optional
 import datetime
 import logging
 import os
@@ -11,7 +11,7 @@ import torch
 from torch.nn.parallel import replicate, parallel_apply
 from torch.nn.parallel.scatter_gather import gather
 
-from allennlp.common.checks import ConfigurationError
+from allennlp.common.checks import ConfigurationError, check_for_data_path
 from allennlp.common.params import Params
 from allennlp.common.util import scatter_kwargs
 from allennlp.data.dataset_readers import DatasetReader

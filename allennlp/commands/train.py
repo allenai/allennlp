@@ -39,11 +39,7 @@ import logging
 import os
 
 from allennlp.commands.subcommand import Subcommand
-<<<<<<< HEAD
 from allennlp.common.checks import check_for_gpu
-=======
-from allennlp.common.checks import ConfigurationError, check_for_gpu, check_for_data_path
->>>>>>> master
 from allennlp.common import Params
 from allennlp.common.util import prepare_environment, prepare_global_logging, dump_metrics
 from allennlp.models.archival import archive_model, CONFIG_NAME
@@ -137,116 +133,6 @@ def train_model_from_file(parameter_filename: str,
     params = Params.from_file(parameter_filename, overrides)
     return train_model(params, serialization_dir, file_friendly_logging, recover, force)
 
-
-<<<<<<< HEAD
-=======
-def datasets_from_params(params: Params) -> Dict[str, Iterable[Instance]]:
-    """
-    Load all the datasets specified by the config.
-    """
-    for data_name in ["train_data_path", "validation_data_path", "test_data_path"]:
-        data_path = params.get(data_name, None)
-        if data_path is not None:
-            check_for_data_path(data_path, data_name)
-
-    dataset_reader = DatasetReader.from_params(params.pop('dataset_reader'))
-    validation_dataset_reader_params = params.pop("validation_dataset_reader", None)
-
-    validation_and_test_dataset_reader: DatasetReader = dataset_reader
-    if validation_dataset_reader_params is not None:
-        logger.info("Using a separate dataset reader to load validation and test data.")
-        validation_and_test_dataset_reader = DatasetReader.from_params(validation_dataset_reader_params)
-
-    train_data_path = params.pop('train_data_path')
-    logger.info("Reading training data from %s", train_data_path)
-    train_data = dataset_reader.read(train_data_path)
-
-    datasets: Dict[str, Iterable[Instance]] = {"train": train_data}
-
-    validation_data_path = params.pop('validation_data_path', None)
-    if validation_data_path is not None:
-        logger.info("Reading validation data from %s", validation_data_path)
-        validation_data = validation_and_test_dataset_reader.read(validation_data_path)
-        datasets["validation"] = validation_data
-
-    test_data_path = params.pop("test_data_path", None)
-    if test_data_path is not None:
-        logger.info("Reading test data from %s", test_data_path)
-        test_data = validation_and_test_dataset_reader.read(test_data_path)
-        datasets["test"] = test_data
-
-    return datasets
-
-def create_serialization_dir(
-        params: Params,
-        serialization_dir: str,
-        recover: bool,
-        force: bool) -> None:
-    """
-    This function creates the serialization directory if it doesn't exist.  If it already exists
-    and is non-empty, then it verifies that we're recovering from a training with an identical configuration.
-
-    Parameters
-    ----------
-    params: ``Params``
-        A parameter object specifying an AllenNLP Experiment.
-    serialization_dir: ``str``
-        The directory in which to save results and logs.
-    recover: ``bool``
-        If ``True``, we will try to recover from an existing serialization directory, and crash if
-        the directory doesn't exist, or doesn't match the configuration we're given.
-    force: ``bool``
-        If ``True``, we will overwrite the serialization directory if it already exists.
-    """
-    if recover and force:
-        raise ConfigurationError("Illegal arguments: both force and recover are true.")
-
-    if os.path.exists(serialization_dir) and force:
-        shutil.rmtree(serialization_dir)
-
-    if os.path.exists(serialization_dir) and os.listdir(serialization_dir):
-        if not recover:
-            raise ConfigurationError(f"Serialization directory ({serialization_dir}) already exists and is "
-                                     f"not empty. Specify --recover to recover training from existing output.")
-
-        logger.info(f"Recovering from prior training at {serialization_dir}.")
-
-        recovered_config_file = os.path.join(serialization_dir, CONFIG_NAME)
-        if not os.path.exists(recovered_config_file):
-            raise ConfigurationError("The serialization directory already exists but doesn't "
-                                     "contain a config.json. You probably gave the wrong directory.")
-        else:
-            loaded_params = Params.from_file(recovered_config_file)
-
-            # Check whether any of the training configuration differs from the configuration we are
-            # resuming.  If so, warn the user that training may fail.
-            fail = False
-            flat_params = params.as_flat_dict()
-            flat_loaded = loaded_params.as_flat_dict()
-            for key in flat_params.keys() - flat_loaded.keys():
-                logger.error(f"Key '{key}' found in training configuration but not in the serialization "
-                             f"directory we're recovering from.")
-                fail = True
-            for key in flat_loaded.keys() - flat_params.keys():
-                logger.error(f"Key '{key}' found in the serialization directory we're recovering from "
-                             f"but not in the training config.")
-                fail = True
-            for key in flat_params.keys():
-                if flat_params.get(key, None) != flat_loaded.get(key, None):
-                    logger.error(f"Value for '{key}' in training configuration does not match that the value in "
-                                 f"the serialization directory we're recovering from: "
-                                 f"{flat_params[key]} != {flat_loaded[key]}")
-                    fail = True
-            if fail:
-                raise ConfigurationError("Training configuration does not match the configuration we're "
-                                         "recovering from.")
-    else:
-        if recover:
-            raise ConfigurationError(f"--recover specified but serialization_dir ({serialization_dir}) "
-                                     "does not exist.  There is nothing to recover from.")
-        os.makedirs(serialization_dir, exist_ok=True)
-
->>>>>>> master
 
 def train_model(params: Params,
                 serialization_dir: str,
