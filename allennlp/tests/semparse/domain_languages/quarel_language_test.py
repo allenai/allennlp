@@ -1,28 +1,30 @@
-from typing import List, Callable, Tuple
+from typing import Callable
 
-import pytest
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.semparse import DomainLanguage, ExecutionError, ParsingError, predicate
-
-from pprint import pprint
+from allennlp.semparse import DomainLanguage, predicate
 
 class Property():
-    def __init__(self, name):
-        self.name = name 
+    def __init__(self, name: str) -> None:
+        self.name = name
 
 class World():
-    def __init__(self, number):
+    def __init__(self, number: int) -> None:
         self.number = number
 
 class Direction():
-    def __init__(self, number):
-        self.number = number 
+    def __init__(self, number: int) -> None:
+        self.number = number
 
 class QuaRelType():
-    def __init__(self, prop: Property, direction, world):
-        self.prop = prop 
+    def __init__(self, prop: Property, direction: Direction, world: World):
+        self.prop = prop
         self.direction = direction
         self.world = world
+
+def make_property_predicate(property_name: str) -> Callable[[Direction, World], QuaRelType]:
+    def property_function(direction: Direction, world: World) -> QuaRelType:
+        return QuaRelType(Property(property_name), direction, world)
+    return property_function
 
 class QuaRel(DomainLanguage):
     def __init__(self):
@@ -32,38 +34,31 @@ class QuaRel(DomainLanguage):
                                                                'lower': Direction(-1),
                                                                'high': Direction(1),
                                                                'low': Direction(-1)})
-        self.default_theories = [
-            {"friction": 1, "speed": -1, "smoothness": -1, "distance": -1, "heat": 1},
-            {"speed": 1, "time": -1},
-            {"speed": 1, "distance": 1},
-            {"time": 1, "distance": 1},
-            {"weight": 1, "acceleration": -1},
-            {"strength": 1, "distance": 1},
-            {"strength": 1, "thickness": 1},
-            {"mass": 1, "gravity": 1},
-            {"flexibility": 1, "breakability": -1},
-            {"distance": 1, "loudness": -1, "brightness": -1, "apparentSize": -1},
-            {"exerciseIntensity": 1, "amountSweat": 1}]
+        self.default_theories = [{"friction": 1, "speed": -1, "smoothness": -1, "distance": -1, "heat": 1},
+                                 {"speed": 1, "time": -1},
+                                 {"speed": 1, "distance": 1},
+                                 {"time": 1, "distance": 1},
+                                 {"weight": 1, "acceleration": -1},
+                                 {"strength": 1, "distance": 1},
+                                 {"strength": 1, "thickness": 1},
+                                 {"mass": 1, "gravity": 1},
+                                 {"flexibility": 1, "breakability": -1},
+                                 {"distance": 1, "loudness": -1, "brightness": -1, "apparentSize": -1},
+                                 {"exerciseIntensity": 1, "amountSweat": 1}]
 
-        for prop in ["friction", "speed", "distance", "heat", "smoothness", "acceleration", "amountSweat", "apparentSize", "breakability",
-                     "brightness", "exerciseIntensity", "flexibility", "gravity", "loudness", "mass", "strength", "thickness", "time"
-                     "weight"]:
-            func = self.make_property_predicate(prop)
+        for prop in ["friction", "speed", "distance", "heat", "smoothness", "acceleration",
+                     "amountSweat", "apparentSize", "breakability", "brightness", "exerciseIntensity",
+                     "flexibility", "gravity", "loudness", "mass", "strength", "thickness", "time", "weight"]:
+            func = make_property_predicate(prop)
             self.add_predicate(prop, func)
-        
-        # ``and`` is a reserved word, so we add it as a predicate here instead of using the decorator. 
-        def and_function(quaval_1: QuaRelType, quaval_2: QuaRelType) -> QuaRelType:
-            if self._check_compatible(quaval_1, quaval_2):
-                return quaval_1
+
+        # ``and`` is a reserved word, so we add it as a predicate here instead of using the decorator.
+        def and_function(quarel_0: QuaRelType, quarel_1: QuaRelType) -> QuaRelType:
+            if self._check_compatible(quarel_0, quarel_1):
+                return quarel_0
             else:
                 return None
         self.add_predicate('and', and_function)
-
-
-    def make_property_predicate(self, property_name: str) -> Callable[[Direction, World], QuaRelType]:
-        def property_function(direction: Direction, world: World) -> QuaRelType:
-            return QuaRelType(Property(property_name), direction, world)
-        return property_function
 
     def _check_compatible(self, quarel_0: QuaRelType, quarel_1: QuaRelType) -> bool:
         for theory in self.default_theories:
@@ -74,7 +69,8 @@ class QuaRel(DomainLanguage):
                     return True
                 else:
                     return False
-    
+        return False
+
     @predicate
     def infer(self, question: QuaRelType, answer_0: QuaRelType, answer_1: QuaRelType) -> int:
         if self._check_compatible(question, answer_0):
@@ -88,27 +84,65 @@ class QuaRel(DomainLanguage):
         else:
             return -1
 
-
 class QuaRelLanguageTest(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
         self.language = QuaRel()
-    
-    def test_constant_logical_form(self):
-        print('execute', self.language.execute('world1'))
-            
-    def test_infer_quarel(self):
-        assert self.language.execute('(infer (speed higher world1) (friction higher world1) (friction lower world1))') == 1
-        print(self.language.logical_form_to_action_sequence('(infer (speed higher world1) (friction higher world1) (friction lower world1))'))
 
-        assert self.language.execute('(infer (speed higher world2) (friction higher world1) (friction lower world1))') == 0
+    def test_infer_quarel(self):
+        assert self.language.execute(('(infer (speed higher world1) (friction higher world1) '
+                                      '(friction lower world1))')) == 1
+        assert self.language.logical_form_to_action_sequence(('(infer (speed higher world1) '
+                                                              '(friction higher world1) '
+                                                              '(friction lower world1))')) == \
+                ['@start@ -> int',
+                 'int -> [<QuaRelType,QuaRelType,QuaRelType:int>, QuaRelType, QuaRelType, '
+                 'QuaRelType]',
+                 '<QuaRelType,QuaRelType,QuaRelType:int> -> infer',
+                 'QuaRelType -> [<Direction,World:QuaRelType>, Direction, World]',
+                 '<Direction,World:QuaRelType> -> speed',
+                 'Direction -> higher',
+                 'World -> world1',
+                 'QuaRelType -> [<Direction,World:QuaRelType>, Direction, World]',
+                 '<Direction,World:QuaRelType> -> friction',
+                 'Direction -> higher',
+                 'World -> world1',
+                 'QuaRelType -> [<Direction,World:QuaRelType>, Direction, World]',
+                 '<Direction,World:QuaRelType> -> friction',
+                 'Direction -> lower',
+                 'World -> world1']
+
+        assert self.language.execute(('(infer (speed higher world2) (friction higher world1) '
+                                      '(friction lower world1))')) == 0
 
     def test_infer_quaval(self):
-        assert self.language.execute('(infer (and (thickness low world1) (thickness high world2)) (strength lower world1) (strength lower world2))') == 0
-        print(self.language.logical_form_to_action_sequence('(infer (and (thickness low world1) (thickness high world2)) (strength lower world1) (strength lower world2))'))
-
-
-
-
-
-
+        assert self.language.execute(('(infer (and (thickness low world1) '
+                                      '(thickness high world2)) '
+                                      '(strength lower world1) '
+                                      '(strength lower world2))')) == 0
+        assert self.language.logical_form_to_action_sequence(('(infer (and (thickness low world1) '
+                                                              '(thickness high world2)) '
+                                                              '(strength lower world1) '
+                                                              '(strength lower world2))')) == \
+                ['@start@ -> int',
+                 'int -> [<QuaRelType,QuaRelType,QuaRelType:int>, QuaRelType, QuaRelType, '
+                 'QuaRelType]',
+                 '<QuaRelType,QuaRelType,QuaRelType:int> -> infer',
+                 'QuaRelType -> [<QuaRelType,QuaRelType:QuaRelType>, QuaRelType, QuaRelType]',
+                 '<QuaRelType,QuaRelType:QuaRelType> -> and',
+                 'QuaRelType -> [<Direction,World:QuaRelType>, Direction, World]',
+                 '<Direction,World:QuaRelType> -> thickness',
+                 'Direction -> low',
+                 'World -> world1',
+                 'QuaRelType -> [<Direction,World:QuaRelType>, Direction, World]',
+                 '<Direction,World:QuaRelType> -> thickness',
+                 'Direction -> high',
+                 'World -> world2',
+                 'QuaRelType -> [<Direction,World:QuaRelType>, Direction, World]',
+                 '<Direction,World:QuaRelType> -> strength',
+                 'Direction -> lower',
+                 'World -> world1',
+                 'QuaRelType -> [<Direction,World:QuaRelType>, Direction, World]',
+                 '<Direction,World:QuaRelType> -> strength',
+                 'Direction -> lower',
+                 'World -> world2']
