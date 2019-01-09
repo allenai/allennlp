@@ -115,29 +115,40 @@ def str_to_time(time_str: str) -> datetime.datetime:
     pieces: Any = [int(piece) for piece in time_str.split('-')]
     return datetime.datetime(*pieces)
 
-_DEFAULT_DATASETS = ('train', 'validation', 'test')
+def datasets_from_params(params: Params) -> Dict[str, Iterable[Instance]]:
+    """
+    Load all the datasets specified by the config.
+    """
+    for data_name in ["train_data_path", "validation_data_path", "test_data_path"]:
+        data_path = params.get(data_name, None)
+        if data_path is not None:
+            check_for_data_path(data_path, data_name)
 
-def datasets_from_params(params: Params,
-                         datasets_to_load: Sequence[str] = _DEFAULT_DATASETS) -> Dict[str, Iterable[Instance]]:
-    """
-    Loads the train / validation / test datasets specified by the config.
-    """
-    train_reader = DatasetReader.from_params(params.pop('dataset_reader'))
-    if "validation_dataset_reader" in params:
+    dataset_reader = DatasetReader.from_params(params.pop('dataset_reader'))
+    validation_dataset_reader_params = params.pop("validation_dataset_reader", None)
+
+    validation_and_test_dataset_reader: DatasetReader = dataset_reader
+    if validation_dataset_reader_params is not None:
         logger.info("Using a separate dataset reader to load validation and test data.")
-        validation_reader = DatasetReader.from_params(params.pop('validation_dataset_reader'))
-    else:
-        validation_reader = train_reader
+        validation_and_test_dataset_reader = DatasetReader.from_params(validation_dataset_reader_params)
 
-    datasets: Dict[str, Iterable[Instance]] = {}
-    for reader, name, key in zip([train_reader, validation_reader, validation_reader],
-                                 ['train', 'validation', 'test'],
-                                 ['train_data_path', 'validation_data_path', 'test_data_path']):
-        data_path = params.pop(key, None)
-        if name in datasets_to_load and data_path is not None:
-            logger.info(f"reading {name} data from {key} {data_path}")
+    train_data_path = params.pop('train_data_path')
+    logger.info("Reading training data from %s", train_data_path)
+    train_data = dataset_reader.read(train_data_path)
 
-            datasets[name] = reader.read(data_path)
+    datasets: Dict[str, Iterable[Instance]] = {"train": train_data}
+
+    validation_data_path = params.pop('validation_data_path', None)
+    if validation_data_path is not None:
+        logger.info("Reading validation data from %s", validation_data_path)
+        validation_data = validation_and_test_dataset_reader.read(validation_data_path)
+        datasets["validation"] = validation_data
+
+    test_data_path = params.pop("test_data_path", None)
+    if test_data_path is not None:
+        logger.info("Reading test data from %s", test_data_path)
+        test_data = validation_and_test_dataset_reader.read(test_data_path)
+        datasets["test"] = test_data
 
     return datasets
 
