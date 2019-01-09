@@ -12,6 +12,7 @@ class LogisticRegression(Model):
     """
     This ``Model`` implements a basic logistic regression classifier
     on a onehot embedding of text.
+
     Parameters
     ----------
     vocab : ``Vocabulary``
@@ -55,6 +56,7 @@ class LogisticRegression(Model):
             From a ``LabelField``
         metadata : ``List[Dict[str, Any]]``, optional, (default = None)
             Metadata on tokens to persist
+
         Returns
         -------
         An output dictionary consisting of:
