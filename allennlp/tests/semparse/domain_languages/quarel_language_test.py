@@ -1,15 +1,27 @@
+import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.semparse.domain_languages.quarel_domain_language import QuaRel
+from allennlp.tests.semparse.domain_languages.domain_language_test import check_productions_match
+from allennlp.semparse import ExecutionError
 
 class QuaRelLanguageTest(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
         self.language = QuaRel()
 
+    def test_constant_logical_form(self):
+        assert self.language.execute('world2').number == 2
+        with pytest.raises(ExecutionError, match='Unrecognized constant'):
+            self.language.execute('"and"')
+
     def test_infer_quarel(self):
         assert self.language.execute(('(infer (speed higher world1) (friction higher world1) '
                                       '(friction lower world1))')) == 1
+
+        assert self.language.execute(('(infer (speed higher world2) (friction higher world1) '
+                                      '(friction lower world1))')) == 0
+
         assert self.language.logical_form_to_action_sequence(('(infer (speed higher world1) '
                                                               '(friction higher world1) '
                                                               '(friction lower world1))')) == \
@@ -30,14 +42,17 @@ class QuaRelLanguageTest(AllenNlpTestCase):
                  'Direction -> lower',
                  'World -> world1']
 
-        assert self.language.execute(('(infer (speed higher world2) (friction higher world1) '
-                                      '(friction lower world1))')) == 0
-
     def test_infer_quaval(self):
         assert self.language.execute(('(infer (and (thickness low world1) '
                                       '(thickness high world2)) '
                                       '(strength lower world1) '
                                       '(strength lower world2))')) == 0
+
+        assert self.language.execute(('(infer (and (thickness low world1) '
+                                      '(thickness high world2)) '
+                                      '(strength lower world2) '
+                                      '(strength lower world1))')) == 1
+
         assert self.language.logical_form_to_action_sequence(('(infer (and (thickness low world1) '
                                                               '(thickness high world2)) '
                                                               '(strength lower world1) '
@@ -64,3 +79,32 @@ class QuaRelLanguageTest(AllenNlpTestCase):
                  '<Direction,World:QuaRelType> -> strength',
                  'Direction -> lower',
                  'World -> world2']
+
+    def test_get_valid_actions(self):
+        valid_actions = self.language.get_valid_actions()
+        assert set(valid_actions.keys()) == {
+                'QuaRelType',
+                '@start@',
+                'World',
+                'Direction',
+                '<QuaRelType,QuaRelType:QuaRelType>',
+                'int',
+                '<QuaRelType,QuaRelType,QuaRelType:int>',
+                '<Direction,World:QuaRelType>'}
+
+        check_productions_match(valid_actions['@start@'],
+                                ['int'])
+        check_productions_match(valid_actions['World'],
+                                ['world1', 'world2'])
+
+        check_productions_match(valid_actions['Direction'],
+                                ['higher', 'lower',
+                                 'high', 'low'])
+        check_productions_match(valid_actions['int'],
+                                ['[<QuaRelType,QuaRelType,QuaRelType:int>, QuaRelType, QuaRelType, QuaRelType]'])
+        check_productions_match(valid_actions['<QuaRelType,QuaRelType,QuaRelType:int>'], ['infer'])
+        check_productions_match(valid_actions['<Direction,World:QuaRelType>'],
+                                ["friction", "speed", "distance", "heat", "smoothness", "acceleration",
+                                 "amountSweat", "apparentSize", "breakability", "brightness", "exerciseIntensity",
+                                 "flexibility", "gravity", "loudness", "mass", "strength", "thickness",
+                                 "time", "weight"])

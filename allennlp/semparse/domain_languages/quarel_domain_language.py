@@ -81,7 +81,7 @@ class QuaRel(DomainLanguage):
     @predicate
     def infer(self, question: QuaRelType, answer_0: QuaRelType, answer_1: QuaRelType) -> int:
         """
-        Take the question and check if it is compatible with either of the answer choices. 
+        Take the question and check if it is compatible with either of the answer choices.
         """
         if self._check_quarels_compatible(question, answer_0):
             if self._check_quarels_compatible(question, answer_1):
