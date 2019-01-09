@@ -1,7 +1,6 @@
-from typing import Optional, List
+from typing import Dict, List, Optional, Union
 
 import torch
-
 from overrides import overrides
 
 from allennlp.common.checks import ConfigurationError
@@ -134,7 +133,7 @@ class FBetaMeasure(Metric):
 
     @overrides
     def get_metric(self,
-                   reset: bool = False):
+                   reset: bool = False) -> Dict[str, Union[float, List[float]]]:
         """
         Returns
         -------
@@ -142,40 +141,55 @@ class FBetaMeasure(Metric):
         precisions : List[float]
         recalls : List[float]
         f1-measures : List[float]
+
+        If ``self.average`` is not None, you will get ``float`` instead of ``List[float]``.
         """
         if self._tp_sum is None:
-            return [], [], []
+            raise RuntimeError("You never call this metric before.")
 
         tp_sum = self._tp_sum
         pred_sum = self._pred_sum
         true_sum = self._true_sum
 
         if self._average == 'micro':
-            tp_sum = tp_sum.sum()  # type: ignore
-            pred_sum = pred_sum.sum()  # type: ignore
-            true_sum = true_sum.sum()  # type: ignore
+            tp_sum = tp_sum.sum()
+            pred_sum = pred_sum.sum()
+            true_sum = true_sum.sum()
 
         beta2 = self._beta ** 2
         # Finally, we have all our sufficient statistics.
         precision = _prf_divide(tp_sum, pred_sum)
         recall = _prf_divide(tp_sum, true_sum)
-        f_score = ((1 + beta2) * precision * recall /
-                   (beta2 * precision + recall))
-        f_score[tp_sum == 0] = 0.0
+        fscore = ((1 + beta2) * precision * recall /
+                  (beta2 * precision + recall))
+        fscore[tp_sum == 0] = 0.0
 
         if self._average == 'macro':
             precision = precision.mean()
             recall = recall.mean()
-            f_score = f_score.mean()
+            fscore = fscore.mean()
 
         if reset:
             self.reset()
 
-        if self._labels is None:
-            return precision.tolist(), recall.tolist(), f_score.tolist()
-        else:
+        if self._labels is not None:
             # Retain only selected labels and order them
-            return precision[self._labels].tolist(), recall[self._labels].tolist(), f_score[self._labels].tolist()
+            precision = precision[self._labels]
+            recall = recall[self._labels]
+            fscore = fscore[self._labels]
+
+        if self._average is None:
+            return {
+                    "precision": precision.tolist(),
+                    "recall": recall.tolist(),
+                    "fscore": fscore.tolist()
+            }
+        else:
+            return {
+                    "precision": precision.item(),
+                    "recall": recall.item(),
+                    "fscore": fscore.item()
+            }
 
     @overrides
     def reset(self) -> None:

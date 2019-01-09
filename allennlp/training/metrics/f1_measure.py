@@ -1,3 +1,5 @@
+from typing import Dict, Tuple
+
 from allennlp.training.metrics.metric import Metric
 from allennlp.training.metrics.fbeta_measure import FBetaMeasure
 
@@ -15,7 +17,7 @@ class F1Measure(FBetaMeasure):
                          labels=[positive_label])
 
     def get_metric(self,
-                   reset: bool = False):
+                   reset: bool = False) -> Tuple[float, float, float]:
         """
         Returns
         -------
@@ -24,8 +26,8 @@ class F1Measure(FBetaMeasure):
         recall : float
         f1-measure : float
         """
-        precisions, recalls, f_measures = super().get_metric(reset=reset)
-        return precisions[0], recalls[0], f_measures[0]
+        metric = super().get_metric(reset=reset)
+        return metric['precision'], metric['recall'], metric['fscore']
 
     @property
     def _true_positives(self):
