@@ -2,6 +2,8 @@ from typing import Dict
 import argparse
 import logging
 
+from overrides import overrides
+
 from allennlp import __version__
 from allennlp.commands.configure import Configure
 from allennlp.commands.elmo import Elmo
@@ -35,6 +37,7 @@ class ArgumentParserWithDefaults(argparse.ArgumentParser):
             return not bool(default)
         return False
 
+    @overrides
     def add_argument(self, *args, **kwargs):
         # pylint: disable=arguments-differ
         # Add default value to the help message when the default is meaningful.
