@@ -240,20 +240,20 @@ class DomainLanguage:
         predicate to produce an int.
         """
         if not self._nonterminal_productions:
-            actions: Dict[str, List[str]] = defaultdict(list)
+            actions: Dict[str, Set[str]] = defaultdict(set)
             # If you didn't give us a set of valid start types, we'll assume all types we know
             # about (including functional types) are valid start types.
             start_types = self._start_types or set(self._function_types.values())
             for start_type in start_types:
-                actions[START_SYMBOL].append(f"{START_SYMBOL} -> {start_type}")
+                actions[START_SYMBOL].add(f"{START_SYMBOL} -> {start_type}")
             for name, function_type in self._function_types.items():
-                actions[str(function_type)].append(f"{function_type} -> {name}")
+                actions[str(function_type)].add(f"{function_type} -> {name}")
                 if isinstance(function_type, FunctionType):
                     return_type = function_type.return_type
                     arg_types = function_type.argument_types
                     right_side = f"[{function_type}, {', '.join(str(arg_type) for arg_type in arg_types)}]"
-                    actions[str(return_type)].append(f"{return_type} -> {right_side}")
-            self._nonterminal_productions = dict(actions)
+                    actions[str(return_type)].add(f"{return_type} -> {right_side}")
+            self._nonterminal_productions = {key: sorted(value) for key, value in actions.items()}
         return self._nonterminal_productions
 
     def all_possible_productions(self) -> List[str]:
