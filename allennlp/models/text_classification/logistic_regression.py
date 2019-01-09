@@ -42,9 +42,9 @@ class LogisticRegression(Model):
 
     def forward(self,  # type: ignore
                 tokens: Dict[str, torch.LongTensor],
-                label: torch.IntTensor=None,
-                metadata: List[Dict[str, Any]]=None  # pylint:disable=unused-argument
-                ) -> Dict[str, torch.Tensor]:
+                label: torch.IntTensor = None,
+                metadata: List[Dict[str, Any]] = None  # pylint:disable=unused-argument
+               ) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
         Parameters
