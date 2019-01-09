@@ -1,7 +1,7 @@
 import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.semparse.domain_languages.quarel_domain_language import QuaRel
+from allennlp.semparse.domain_languages.quarel_language import QuaRel
 from allennlp.tests.semparse.domain_languages.domain_language_test import check_productions_match
 from allennlp.semparse import ExecutionError
 
