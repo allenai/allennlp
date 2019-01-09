@@ -121,9 +121,13 @@ class Optimizer(Registrable):
             else:
                 num_parameters += parameter_group.numel()
         logger.info("Number of trainable parameters: %s", num_parameters)
+
+        # By default we cast things that e.g. look like floats to floats before handing them
+        # to the Optimizer constructor, but if you want to disable that behavior you could add a
+        #       "infer_type_and_cast": false
+        # key to your "trainer" config.
         infer_type_and_cast = params.pop_bool("infer_type_and_cast", True)
         params_as_dict = params.as_dict(infer_type_and_cast=infer_type_and_cast)
-        print(infer_type_and_cast, params_as_dict)
         return Optimizer.by_name(optimizer)(parameter_groups, **params_as_dict) # type: ignore
 
 # We just use the Pytorch optimizers, so here we force them into
