@@ -32,7 +32,6 @@ Our 2018 EMNLP tutorial is available at https://github.com/allenai/writing-code-
 * [How to use a Debugger](how_to/using_a_debugger.md)
 * [How to Train and use a Transformer ELMo](how_to/training_transformer_elmo.md)
 
-
 ## Deeper Dives
 
 * [Datasets, Instances, and Fields](notebooks/data_pipeline.ipynb)
