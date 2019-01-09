@@ -80,6 +80,15 @@ class QuaRelLanguageTest(AllenNlpTestCase):
                  'Direction -> lower',
                  'World -> world2']
 
+    def test_action_sequence_to_logical_form(self):
+        logical_form = ('(infer (and (thickness low world1) '
+                        '(thickness high world2)) '
+                        '(strength lower world1) '
+                        '(strength lower world2))')
+        action_sequence = self.language.logical_form_to_action_sequence(logical_form)
+        recovered_logical_form = self.language.action_sequence_to_logical_form(action_sequence)
+        assert recovered_logical_form == logical_form
+
     def test_get_valid_actions(self):
         valid_actions = self.language.get_valid_actions()
         assert set(valid_actions.keys()) == {
