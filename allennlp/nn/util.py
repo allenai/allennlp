@@ -59,6 +59,7 @@ def clamp_tensor(tensor, minimum, maximum):
     """
     if tensor.is_sparse:
         coalesced_tensor = tensor.coalesce()
+        # pylint: disable=protected-access
         coalesced_tensor._values().clamp_(minimum, maximum)
         return coalesced_tensor
     else:
