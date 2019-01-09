@@ -14,23 +14,20 @@ from allennlp.models import Model
 
 
 class DummyIterator(DataIterator):
-    def __init__(self, count: int):
+    def __init__(self, outputs: List[TensorDict]):
         super().__init__()
-        self._count = count
+        self._outputs = outputs
 
     def __call__(self, *args, **kwargs) -> Iterator[TensorDict]:
-        while self._count > 0:
-            self._count -= 1
-            yield {}
+        yield from self._outputs
 
 
 class DummyModel(Model):
-    def __init__(self, outputs: List):
+    def __init__(self):
         super().__init__(None) # type: ignore
-        self._outputs = outputs
 
-    def forward(self, *args, **kwargs) -> Dict[str, torch.Tensor]:  # pylint: disable=arguments-differ
-        return self._outputs.pop(0)
+    def forward(self, **kwargs) -> Dict[str, torch.Tensor]:  # pylint: disable=arguments-differ
+        return kwargs
 
 
 class TestEvaluate(AllenNlpTestCase):
@@ -44,9 +41,8 @@ class TestEvaluate(AllenNlpTestCase):
     def test_evaluate_calculates_average_loss(self):
         losses = [7.0, 9.0, 8.0]
         outputs = [{"loss": torch.tensor(loss)} for loss in losses]
-        model = DummyModel(outputs)
-        iterator = DummyIterator(len(outputs))
-        metrics = evaluate(model, None, iterator, -1, "")
+        iterator = DummyIterator(outputs)
+        metrics = evaluate(DummyModel(), None, iterator, -1, "")
         self.assertAlmostEqual(metrics["loss"], 8.0)
 
     def test_evaluate_calculates_average_loss_with_weights(self):
@@ -54,9 +50,8 @@ class TestEvaluate(AllenNlpTestCase):
         weights = [10, 2, 1.5]
         inputs = zip(losses, weights)
         outputs = [{"loss": torch.tensor(loss), "batch_weight": torch.tensor(weight)} for loss, weight in inputs]
-        model = DummyModel(outputs)
-        iterator = DummyIterator(len(outputs))
-        metrics = evaluate(model, None, iterator, -1, "batch_weight")
+        iterator = DummyIterator(outputs)
+        metrics = evaluate(DummyModel(), None, iterator, -1, "batch_weight")
         self.assertAlmostEqual(metrics["loss"], (70 + 18 + 12)/13.5)
 
     @flaky
