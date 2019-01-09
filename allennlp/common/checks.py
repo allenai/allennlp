@@ -71,11 +71,10 @@ def check_for_java() -> bool:
         return False
 
 
-def check_for_file_path(file_path: str, dataset_name: str):
-    file_path = cached_path(file_path)
-    if not os.path.exists(file_path):
+def check_for_data_path(data_path: str, dataset_name: str):
+    data_path = cached_path(data_path)
+    if not os.path.exists(data_path):
         raise ConfigurationError(f"Experiment specified {dataset_name}, "
-                                 f"but {file_path} doesn't exist.")
-    if not os.path.isfile(file_path):
-        raise ConfigurationError(f"Experiment specified {dataset_name}, "
-                                 f"but {file_path} is not a file.")
+                                 f"but {data_path} doesn't exist.")
+    # We should not check whether `data_path` is a file or not.
+    # Because a directory is also allowed.
