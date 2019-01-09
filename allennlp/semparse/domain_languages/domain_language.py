@@ -20,6 +20,16 @@ class PredicateType:
     """
     @staticmethod
     def get_type(type_: Type) -> 'PredicateType':
+        """
+        Converts a python ``Type`` (as you might get from a type annotation) into a
+        ``PredicateType``.  If the ``Type`` is callable, this will return a ``FunctionType``;
+        otherwise, it will return a ``BasicType``.
+
+        ``BasicTypes`` have a single ``name`` parameter - we typically get this from
+        ``type_.__name__``.  This doesn't work for generic types (like ``List[str]``), so we handle
+        those specially, so that the ``name`` for the ``BasicType`` remains ``List[str]``, as you
+        would expect.
+        """
         if isinstance(type_, CallableMeta):
             callable_args = type_.__args__
             argument_types = [PredicateType.get_type(t) for t in callable_args[:-1]]
@@ -72,7 +82,10 @@ class BasicType(PredicateType):
 
 class FunctionType(PredicateType):
     """
-    A ``PredicateType`` representing a function with arguments.
+    A ``PredicateType`` representing a function with arguments.  When seeing this as a string, it
+    will be in angle brackets, with argument types separated by commas, and the return type
+    separated from argument types with a colon.  For example, ``def f(a: str) -> int:`` would look
+    like ``<str:int>``, and ``def g(a: int, b: int) -> int`` would look like ``<int,int:int>``.
     """
     def __init__(self, argument_types: List[PredicateType], return_type: PredicateType) -> None:
         self.argument_types = argument_types
