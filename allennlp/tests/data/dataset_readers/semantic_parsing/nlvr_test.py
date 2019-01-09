@@ -22,9 +22,9 @@ class TestNlvrDatasetReader(AllenNlpTestCase):
         assert len(actions) == 115
         agenda = [item.sequence_index for item in instance.fields["agenda"].field_list]
         agenda_strings = [actions[rule_id] for rule_id in agenda]
-        assert set(agenda_strings) == set(['<o,o> -> circle',
-                                           '<o,t> -> object_exists',
-                                           '<o,o> -> touch_corner'])
+        assert set(agenda_strings) == set(['<Set[Object]:Set[Object]> -> circle',
+                                           '<Set[Object]:bool> -> object_exists',
+                                           '<Set[Object]:Set[Object]> -> touch_corner'])
         worlds = [world_field.as_tensor({}) for world_field in instance.fields["worlds"].field_list]
         assert isinstance(worlds[0], NlvrWorld)
         label = instance.fields["labels"].field_list[0].label
@@ -63,9 +63,9 @@ class TestNlvrDatasetReader(AllenNlpTestCase):
         assert len(actions) == 115
         agenda = [item.sequence_index for item in instance.fields["agenda"].field_list]
         agenda_strings = [actions[rule_id] for rule_id in agenda]
-        assert set(agenda_strings) == set(['<o,o> -> circle',
-                                           '<o,o> -> touch_corner',
-                                           '<o,t> -> object_exists'
+        assert set(agenda_strings) == set(['<Set[Object]:Set[Object]> -> circle',
+                                           '<Set[Object]:Set[Object]> -> touch_corner',
+                                           '<Set[Object]:bool> -> object_exists'
                                           ])
         worlds = [world_field.as_tensor({}) for world_field in instance.fields["worlds"].field_list]
         assert all([isinstance(world, NlvrWorld) for world in worlds])
@@ -89,11 +89,11 @@ class TestNlvrDatasetReader(AllenNlpTestCase):
                                    all_action_sequence_indices[0].field_list]
         actions = [action.rule for action in instance.fields["actions"].field_list]
         action_sequence = [actions[rule_id] for rule_id in action_sequence_indices]
-        assert action_sequence == ['@start@ -> t',
-                                   't -> [<o,t>, o]',
-                                   '<o,t> -> object_exists',
-                                   'o -> [<o,o>, o]',
-                                   '<o,o> -> touch_corner',
-                                   'o -> [<o,o>, o]',
-                                   '<o,o> -> circle',
-                                   'o -> all_objects']
+        assert action_sequence == ['@start@ -> bool',
+                                   'bool -> [<Set[Object]:bool>, Set[Object]]',
+                                   '<Set[Object]:bool> -> object_exists',
+                                   'Set[Object] -> [<Set[Object]:Set[Object]>, Set[Object]]',
+                                   '<Set[Object]:Set[Object]> -> touch_corner',
+                                   'Set[Object] -> [<Set[Object]:Set[Object]>, Set[Object]]',
+                                   '<Set[Object]:Set[Object]> -> circle',
+                                   'Set[Object] -> all_objects']

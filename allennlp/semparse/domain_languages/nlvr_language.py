@@ -99,7 +99,6 @@ class NlvrLanguage(DomainLanguage):
                 'shape_triangle': Shape('triangle'),
                 'shape_square': Shape('square'),
                 'shape_circle': Shape('circle'),
-                '0': 0,
                 '1': 1,
                 '2': 2,
                 '3': 3,
@@ -109,7 +108,6 @@ class NlvrLanguage(DomainLanguage):
                 '7': 7,
                 '8': 8,
                 '9': 9,
-                '10': 10,
                 }
         super().__init__(start_types={bool}, allowed_constants=allowed_constants)
 

@@ -30,7 +30,7 @@ class TestNlvrLanguage(AllenNlpTestCase):
         # Utterance is "There is a circle closely touching a corner of a box." and label is "True".
         logical_form_true = "(object_count_greater_equals (touch_corner (circle (all_objects))) 1)"
         assert executor.execute(logical_form_true) is True
-        logical_form_false = "(object_count_equals (touch_corner (circle (all_objects))) 0)"
+        logical_form_false = "(object_count_equals (touch_corner (circle (all_objects))) 9)"
         assert executor.execute(logical_form_false) is False
 
     def test_logical_form_with_box_filter_executes_correctly(self):
