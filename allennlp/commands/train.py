@@ -380,7 +380,9 @@ def train_model(params: Params,
         logger.info("The model will be evaluated using the best epoch weights.")
         test_metrics = evaluate(
                 best_model, test_data, validation_iterator or iterator,
-                cuda_device=trainer._cuda_devices[0] # pylint: disable=protected-access
+                cuda_device=trainer._cuda_devices[0], # pylint: disable=protected-access,
+                # TODO(brendanr): Pass in an arg following Joel's trainer refactor.
+                batch_weight_key=""
         )
         for key, value in test_metrics.items():
             metrics["test_" + key] = value

@@ -46,7 +46,7 @@ class TestEvaluate(AllenNlpTestCase):
         outputs = [{"loss": torch.tensor(loss)} for loss in losses]
         model = DummyModel(outputs)
         iterator = DummyIterator(len(outputs))
-        metrics = evaluate(model, None, iterator, -1)
+        metrics = evaluate(model, None, iterator, -1, "")
         self.assertAlmostEqual(metrics["loss"], 8.0)
 
     def test_evaluate_calculates_average_loss_with_weights(self):
@@ -56,7 +56,7 @@ class TestEvaluate(AllenNlpTestCase):
         outputs = [{"loss": torch.tensor(loss), "batch_weight": torch.tensor(weight)} for loss, weight in inputs]
         model = DummyModel(outputs)
         iterator = DummyIterator(len(outputs))
-        metrics = evaluate(model, None, iterator, -1)
+        metrics = evaluate(model, None, iterator, -1, "batch_weight")
         self.assertAlmostEqual(metrics["loss"], (70 + 18 + 12)/13.5)
 
     @flaky
