@@ -25,6 +25,12 @@ class StackedBidirectionalLstm(torch.nn.Module):
         The dropout probability to be used in a dropout scheme as stated in
         `A Theoretically Grounded Application of Dropout in Recurrent Neural Networks
         <https://arxiv.org/abs/1512.05287>`_ .
+    use_highway: bool, optional (default = True)
+        Whether or not to use highway connections between layers. This effectively involves
+        reparameterising the normal output of an LSTM as::
+
+            gate = sigmoid(W_x1 * x_t + W_h * h_t)
+            output = gate * h_t  + (1 - gate) * (W_x2 * x_t)
     """
     def __init__(self,
                  input_size: int,
