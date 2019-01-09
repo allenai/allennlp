@@ -27,7 +27,7 @@ class BiattentiveClassificationNetwork(Model):
     At a high level, the model starts by embedding the tokens and running them through
     a feed-forward neural net (``pre_encode_feedforward``). Then, we encode these
     representations with a ``Seq2SeqEncoder`` (``encoder``). We run biattention
-    on the encoder output represenatations (self-attention in this case, since
+    on the encoder output representations (self-attention in this case, since
     the two representations that typically go into biattention are identical) and
     get out an attentive vector representation of the text. We combine this text
     representation with the encoder outputs computed earlier, and then run this through

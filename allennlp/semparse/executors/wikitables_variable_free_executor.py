@@ -3,7 +3,7 @@ from collections import defaultdict
 import logging
 
 from allennlp.semparse import util as semparse_util
-from allennlp.semparse.worlds.world import ExecutionError
+from allennlp.semparse.domain_languages.domain_language import ExecutionError
 from allennlp.semparse.contexts.table_question_knowledge_graph import MONTH_NUMBERS
 from allennlp.semparse.contexts import TableQuestionContext
 from allennlp.tools import wikitables_evaluator as evaluator
@@ -90,14 +90,7 @@ class WikiTablesVariableFreeExecutor:
             logical_form = f"({logical_form})"
         logical_form = logical_form.replace(",", " ")
         expression_as_list = semparse_util.lisp_to_nested_expression(logical_form)
-        # Expression list has an additional level of
-        # nesting at the top. For example, if the
-        # logical form is
-        # "(select all_rows fb:row.row.league)",
-        # the expression list will be
-        # [['select', 'all_rows', 'fb:row.row.league']].
-        # Removing the top most level of nesting.
-        result = self._handle_expression(expression_as_list[0])
+        result = self._handle_expression(expression_as_list)
         return result
 
     def evaluate_logical_form(self, logical_form: str, target_list: List[str]) -> bool:
@@ -551,9 +544,9 @@ class WikiTablesVariableFreeExecutor:
         elif isinstance(expression_evaluation, str):
             filter_value = expression_evaluation
         else:
-            raise ExecutionError(f"Unexprected filter value for filter_in: {value_expression}")
+            raise ExecutionError(f"Unexpected filter value for filter_in: {value_expression}")
         if not isinstance(filter_value, str):
-            raise ExecutionError(f"Unexprected filter value for filter_in: {value_expression}")
+            raise ExecutionError(f"Unexpected filter value for filter_in: {value_expression}")
         # Assuming filter value has underscores for spaces. The cell values also have underscores
         # for spaces, so we do not need to replace them here.
         result_list = []
@@ -579,9 +572,9 @@ class WikiTablesVariableFreeExecutor:
         elif isinstance(expression_evaluation, str):
             filter_value = expression_evaluation
         else:
-            raise ExecutionError(f"Unexprected filter value for filter_in: {value_expression}")
+            raise ExecutionError(f"Unexpected filter value for filter_in: {value_expression}")
         if not isinstance(filter_value, str):
-            raise ExecutionError(f"Unexprected filter value for filter_in: {value_expression}")
+            raise ExecutionError(f"Unexpected filter value for filter_in: {value_expression}")
         # Assuming filter value has underscores for spaces. The cell values also have underscores
         # for spaces, so we do not need to replace them here.
         result_list = []

@@ -1,22 +1,17 @@
-from overrides import overrides
+import warnings
 
-from allennlp.common.util import JsonDict
-from allennlp.data import Instance
+from allennlp.data import DatasetReader
+from allennlp.models import Model
 from allennlp.predictors.predictor import Predictor
+from allennlp.predictors.seq2seq import Seq2SeqPredictor
+
 
 @Predictor.register('simple_seq2seq')
-class SimpleSeq2SeqPredictor(Predictor):
+class SimpleSeq2SeqPredictor(Seq2SeqPredictor):
     """
     Predictor for the :class:`~allennlp.models.encoder_decoder.simple_seq2seq` model.
     """
-
-    def predict(self, source: str) -> JsonDict:
-        return self.predict_json({"source" : source})
-
-    @overrides
-    def _json_to_instance(self, json_dict: JsonDict) -> Instance:
-        """
-        Expects JSON that looks like ``{"source": "..."}``.
-        """
-        source = json_dict["source"]
-        return self._dataset_reader.text_to_instance(source)
+    def __init__(self, model: Model, dataset_reader: DatasetReader) -> None:
+        super().__init__(model, dataset_reader)
+        warnings.warn("The 'simple_seq2seq' predictor has been deprecated in favor of "
+                      "the 'seq2seq' predictor. This will be removed in version 0.10.", DeprecationWarning)

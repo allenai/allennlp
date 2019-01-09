@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Any, Dict, List
 import json
 import logging
 
@@ -168,9 +168,11 @@ class NlvrDatasetReader(DatasetReader):
             production_rule_fields.append(field)
         action_field = ListField(production_rule_fields)
         worlds_field = ListField([MetadataField(world) for world in worlds])
+        metadata: Dict[str, Any] = {"sentence_tokens": [x.text for x in tokenized_sentence]}
         fields: Dict[str, Field] = {"sentence": sentence_field,
                                     "worlds": worlds_field,
-                                    "actions": action_field}
+                                    "actions": action_field,
+                                    "metadata": MetadataField(metadata)}
         if identifier is not None:
             fields["identifier"] = MetadataField(identifier)
         # Depending on the type of supervision used for training the parser, we may want either

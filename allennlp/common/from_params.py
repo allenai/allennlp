@@ -247,6 +247,9 @@ class FromParams:
         if params is None:
             return None
 
+        if isinstance(params, str):
+            params = Params({"type": params})
+
         registered_subclasses = Registrable._registry.get(cls)
 
         if registered_subclasses is not None:

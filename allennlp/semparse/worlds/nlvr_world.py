@@ -10,7 +10,7 @@ from overrides import overrides
 
 from allennlp.common.util import JsonDict
 from allennlp.semparse.type_declarations import nlvr_type_declaration as types
-from allennlp.semparse.worlds.nlvr_box import Box
+from allennlp.semparse.executors.nlvr_box import Box
 from allennlp.semparse.worlds.world import World
 from allennlp.semparse.executors import NlvrExecutor
 

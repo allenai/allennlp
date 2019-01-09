@@ -20,6 +20,11 @@ allennlp.data.dataset_readers.reading_comprehension
    :members:
    :undoc-members:
    :show-inheritance:
+   
+.. automodule:: allennlp.data.dataset_readers.reading_comprehension.qangaroo
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 .. automodule:: allennlp.data.dataset_readers.reading_comprehension.util
    :members:

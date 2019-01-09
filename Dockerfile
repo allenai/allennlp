@@ -1,4 +1,4 @@
-FROM python:3.6.3-jessie
+FROM python:3.6.8-jessie
 
 ENV LC_ALL=C.UTF-8
 ENV LANG=C.UTF-8

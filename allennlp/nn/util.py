@@ -7,7 +7,6 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple, TypeVar
 import logging
 import copy
 import math
-import warnings
 
 import torch
 
@@ -169,7 +168,7 @@ def get_final_encoder_states(encoder_outputs: torch.Tensor,
     Additionally, if ``bidirectional`` is ``True``, we will split the final dimension of the
     ``encoder_outputs`` into two and assume that the first half is for the forward direction of the
     encoder and the second half is for the backward direction.  We will concatenate the last state
-    for each encoder dimension, giving ``encoder_outputs[:, -1, :encoding_dim/2]`` concated with
+    for each encoder dimension, giving ``encoder_outputs[:, -1, :encoding_dim/2]`` concatenated with
     ``encoder_outputs[:, 0, encoding_dim/2:]``.
     """
     # These are the indices of the last words in the sequences (i.e. length sans padding - 1).  We
@@ -340,6 +339,31 @@ def masked_mean(vector: torch.Tensor,
     return value_sum / value_count.clamp(min=eps)
 
 
+def masked_flip(padded_sequence: torch.Tensor,
+                sequence_lengths: List[int]) -> torch.Tensor:
+    """
+        Flips a padded tensor along the time dimension without affecting masked entries.
+
+        Parameters
+        ----------
+        padded_sequence : ``torch.Tensor``
+            The tensor to flip along the time dimension.
+            Assumed to be of dimensions (batch size, num timesteps, ...)
+        sequence_lengths : ``torch.Tensor``
+            A list containing the lengths of each unpadded sequence in the batch.
+
+        Returns
+        -------
+        A ``torch.Tensor`` of the same shape as padded_sequence.
+        """
+    assert padded_sequence.size(0) == len(sequence_lengths), \
+        f'sequence_lengths length ${len(sequence_lengths)} does not match batch size ${padded_sequence.size(0)}'
+    num_timesteps = padded_sequence.size(1)
+    flipped_padded_sequence = torch.flip(padded_sequence, [1])
+    sequences = [flipped_padded_sequence[i, num_timesteps - length:] for i, length in enumerate(sequence_lengths)]
+    return torch.nn.utils.rnn.pad_sequence(sequences, batch_first=True)
+
+
 def viterbi_decode(tag_sequence: torch.Tensor,
                    transition_matrix: torch.Tensor,
                    tag_observations: Optional[List[int]] = None):
@@ -360,7 +384,7 @@ def viterbi_decode(tag_sequence: torch.Tensor,
     tag_observations : Optional[List[int]], optional, (default = None)
         A list of length ``sequence_length`` containing the class ids of observed
         elements in the sequence, with unobserved elements being set to -1. Note that
-        it is possible to provide evidence which results in degenerate labellings if
+        it is possible to provide evidence which results in degenerate labelings if
         the sequences of tags you provide as evidence cannot transition between each
         other, or those transitions are extremely unlikely. In this situation we log a
         warning, but the responsibility for providing self-consistent evidence ultimately
@@ -475,37 +499,6 @@ def get_text_field_mask(text_field_tensors: Dict[str, torch.Tensor],
         raise ValueError("Expected a tensor with dimension 2 or 3, found {}".format(smallest_dim))
 
 
-def last_dim_softmax(tensor: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:
-    """
-    Takes a tensor with 3 or more dimensions and does a masked softmax over the last dimension.  We
-    assume the tensor has shape ``(batch_size, ..., sequence_length)`` and that the mask (if given)
-    has shape ``(batch_size, sequence_length)``.
-
-    .. deprecated:: 0.6.1
-           ``last_dim_softmax`` was deprecated in favor of just using ``masked_softmax`` in version
-           0.6.1.  It will be removed in version 0.8.
-    """
-    warnings.warn("``last_dim_softmax`` was deprecated in favor of just using ``masked_softmax`` "
-                  "in version 0.6.1.  It will be removed in version 0.8.", DeprecationWarning)
-    return masked_softmax(tensor, mask, dim=-1)
-
-
-def last_dim_log_softmax(tensor: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:
-    """
-    Takes a tensor with 3 or more dimensions and does a masked log softmax over the last dimension.
-    We assume the tensor has shape ``(batch_size, ..., sequence_length)`` and that the mask (if given)
-    has shape ``(batch_size, sequence_length)``.
-
-    .. deprecated:: 0.6.1
-           ``last_dim_log_softmax`` was deprecated in favor of just using ``masked_log_softmax`` in
-           version 0.6.1.  It will be removed in version 0.8.
-    """
-    warnings.warn("``last_dim_log_softmax`` was deprecated in favor of just using "
-                  "``masked_log_softmax`` in version 0.6.1.  It will be removed in version 0.8.",
-                  DeprecationWarning)
-    return masked_log_softmax(tensor, mask, dim=-1)
-
-
 def weighted_sum(matrix: torch.Tensor, attention: torch.Tensor) -> torch.Tensor:
     """
     Takes a matrix of vectors and a set of weights over the rows in the matrix (which we call an
@@ -548,7 +541,6 @@ def weighted_sum(matrix: torch.Tensor, attention: torch.Tensor) -> torch.Tensor:
 def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
                                        targets: torch.LongTensor,
                                        weights: torch.FloatTensor,
-                                       batch_average: bool = None,
                                        average: str = "batch",
                                        label_smoothing: float = None) -> torch.FloatTensor:
     """
@@ -568,22 +560,13 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
         index of the true class for each corresponding step.
     weights : ``torch.FloatTensor``, required.
         A ``torch.FloatTensor`` of size (batch, sequence_length)
-    batch_average : bool, optional, (default = None).
-        A bool indicating whether the loss should be averaged across the batch,
-        or returned as a vector of losses per batch element.
-
-        .. deprecated:: 0.6.2
-           ``batch_average`` was deprecated and replaced with
-           the more general ``average`` in version 0.6.2. It will be removed
-           in version 0.8.
-
     average: str, optional (default = "batch")
         If "batch", average the loss across the batches. If "token", average
         the loss across each item in the input. If ``None``, return a vector
         of losses per batch element.
     label_smoothing : ``float``, optional (default = None)
         Whether or not to apply label smoothing to the cross-entropy loss.
-        For example, with a label smoothing value of 0.2, a 4 class classifcation
+        For example, with a label smoothing value of 0.2, a 4 class classification
         target would look like ``[0.05, 0.05, 0.85, 0.05]`` if the 3rd class was
         the correct label.
 
@@ -594,18 +577,6 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
     If ``average is None``, the returned loss is a vector of shape (batch_size,).
 
     """
-    if batch_average is not None:
-        # Maintain old behavior
-        if batch_average:
-            warnings.warn("batch_average=True was deprecated and replaced "
-                          "with average='batch' in version 0.6.2. It will be "
-                          "removed in version 0.8.", DeprecationWarning)
-            average = "batch"
-        else:
-            warnings.warn("batch_average=False was deprecated and replaced "
-                          "with average=None in version 0.6.2. It will be "
-                          "removed in version 0.8.", DeprecationWarning)
-            average = None
     if average not in {None, "token", "batch"}:
         raise ValueError("Got average f{average}, expected one of "
                          "None, 'token', or 'batch'")
@@ -1286,6 +1257,7 @@ def add_positional_features(tensor: torch.Tensor,
         sinusoids = torch.cat([sinusoids, sinusoids.new_zeros(timesteps, 1)], 1)
     return tensor + sinusoids.unsqueeze(0)
 
+
 def clone(module: torch.nn.Module, num_copies: int) -> torch.nn.ModuleList:
     "Produce N identical layers."
     return torch.nn.ModuleList([copy.deepcopy(module) for _ in range(num_copies)])
@@ -1302,6 +1274,7 @@ def combine_initial_dims(tensor: torch.Tensor) -> torch.Tensor:
         return tensor
     else:
         return tensor.view(-1, tensor.size(-1))
+
 
 def uncombine_initial_dims(tensor: torch.Tensor, original_size: torch.Size) -> torch.Tensor:
     """

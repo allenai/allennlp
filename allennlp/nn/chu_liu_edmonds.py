@@ -12,7 +12,7 @@ def decode_mst(energy: numpy.ndarray,
     spanning tree.
 
     Decode the optimal MST tree with the Chu-Liu-Edmonds algorithm for
-    maximum spanning arboresences on graphs.
+    maximum spanning arborescences on graphs.
 
     Parameters
     ----------

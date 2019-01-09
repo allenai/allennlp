@@ -4,9 +4,9 @@ import operator
 import logging
 
 from allennlp.semparse import util as semparse_util
-from allennlp.semparse.worlds.world import ExecutionError
-from allennlp.semparse.worlds.nlvr_object import Object
-from allennlp.semparse.worlds.nlvr_box import Box
+from allennlp.semparse.domain_languages.domain_language import ExecutionError
+from allennlp.semparse.executors.nlvr_object import Object
+from allennlp.semparse.executors.nlvr_box import Box
 
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -51,7 +51,7 @@ class NlvrExecutor:
     that we compare against. The logic is that we execute the attribute function on `each` of
     the given boxes and return only those whose attribute value, in comparison with the target
     attribute, satisfies the filtering criterion (i.e., equal to the target, less than, greater
-    than etc.). The fitering function defines the comparison operator.  All the functions in
+    than etc.). The filtering function defines the comparison operator.  All the functions in
     this class with names ``filter_*`` belong to this category.
 
     5) Object Filtering Functions : These are of the form ``filter(set_of_objects)``. These are
@@ -115,7 +115,7 @@ class NlvrExecutor:
         expression_as_list = semparse_util.lisp_to_nested_expression(logical_form)
         # Expression list has an additional level of
         # nesting at the top.
-        result = self._handle_expression(expression_as_list[0])
+        result = self._handle_expression(expression_as_list)
         return result
 
     def _handle_expression(self, expression_list) -> bool:

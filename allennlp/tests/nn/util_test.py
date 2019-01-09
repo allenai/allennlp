@@ -282,12 +282,35 @@ class TestNnUtil(AllenNlpTestCase):
         matrix_mean = util.masked_mean(matrix, mask, dim=1).data.numpy()
         assert_array_almost_equal(matrix_mean, numpy.array([[3.0, 0.5], [-1.5, -1.75]]))
 
+    def test_masked_flip(self):
+        tensor = torch.FloatTensor([[[6, 6, 6], [1, 1, 1], [2, 2, 2]], [[3, 3, 3], [4, 4, 4], [5, 5, 5]]])
+        solution = [[[6, 6, 6], [0, 0, 0]], [[4, 4, 4], [3, 3, 3]]]
+        response = util.masked_flip(tensor, [1, 2])
+        assert_almost_equal(response, solution)
+
+        tensor = torch.FloatTensor([[[6, 6, 6], [1, 1, 1], [2, 2, 2], [0, 0, 0]],
+                                    [[3, 3, 3], [4, 4, 4], [5, 5, 5], [1, 2, 3]]])
+        solution = [[[2, 2, 2], [1, 1, 1], [6, 6, 6], [0, 0, 0]],
+                    [[1, 2, 3], [5, 5, 5], [4, 4, 4], [3, 3, 3]]]
+        response = util.masked_flip(tensor, [3, 4])
+        assert_almost_equal(response, solution)
+
+        tensor = torch.FloatTensor([[[6, 6, 6], [1, 1, 1], [2, 2, 2], [0, 0, 0]],
+                                    [[3, 3, 3], [4, 4, 4], [5, 5, 5], [1, 2, 3]],
+                                    [[1, 1, 1], [2, 2, 2], [0, 0, 0], [0, 0, 0]]])
+        solution = [[[2, 2, 2], [1, 1, 1], [6, 6, 6], [0, 0, 0]],
+                    [[1, 2, 3], [5, 5, 5], [4, 4, 4], [3, 3, 3]],
+                    [[2, 2, 2], [1, 1, 1], [0, 0, 0], [0, 0, 0]]]
+        response = util.masked_flip(tensor, [3, 4, 2])
+        assert_almost_equal(response, solution)
+
     def test_get_text_field_mask_returns_a_correct_mask(self):
         text_field_tensors = {
                 "tokens": torch.LongTensor([[3, 4, 5, 0, 0], [1, 2, 0, 0, 0]]),
                 "token_characters": torch.LongTensor([[[1, 2], [3, 0], [2, 0], [0, 0], [0, 0]],
                                                       [[5, 0], [4, 6], [0, 0], [0, 0], [0, 0]]])
-                }
+        }
+
         assert_almost_equal(util.get_text_field_mask(text_field_tensors).numpy(),
                             [[1, 1, 1, 0, 0], [1, 1, 0, 0, 0]])
 
@@ -295,7 +318,7 @@ class TestNnUtil(AllenNlpTestCase):
         text_field_tensors = {
                 "token_characters": torch.LongTensor([[[1, 2, 3], [3, 0, 1], [2, 1, 0], [0, 0, 0]],
                                                       [[5, 5, 5], [4, 6, 0], [0, 0, 0], [0, 0, 0]]])
-                }
+        }
         assert_almost_equal(util.get_text_field_mask(text_field_tensors).numpy(),
                             [[1, 1, 1, 0], [1, 1, 0, 0]])
 
@@ -303,7 +326,7 @@ class TestNnUtil(AllenNlpTestCase):
         text_field_tensors = {
                 "list_tokens": torch.LongTensor([[[1, 2], [3, 0], [2, 0], [0, 0], [0, 0]],
                                                  [[5, 0], [4, 6], [0, 0], [0, 0], [0, 0]]])
-                }
+        }
         actual_mask = util.get_text_field_mask(text_field_tensors, num_wrapping_dims=1).numpy()
         expected_mask = (text_field_tensors['list_tokens'].numpy() > 0).astype('int32')
         assert_almost_equal(actual_mask, expected_mask)
@@ -312,7 +335,7 @@ class TestNnUtil(AllenNlpTestCase):
         text_field_tensors = {
                 "tokens": torch.LongTensor([[3, 4, 5, 0, 0], [1, 2, 0, 0, 0]]),
                 "mask": torch.LongTensor([[0, 0, 1]])
-                }
+        }
         assert_almost_equal(util.get_text_field_mask(text_field_tensors).numpy(),
                             [[0, 0, 1]])
 
@@ -496,7 +519,7 @@ class TestNnUtil(AllenNlpTestCase):
             prediction = torch.nn.functional.log_softmax(prediction, dim=-1)
             correct_loss += prediction[label] * 0.9
             # incorrect elements
-            correct_loss += prediction.sum() * 0.1/4
+            correct_loss += prediction.sum() * 0.1 / 4
         # Average over sequence.
         correct_loss = - correct_loss / 3
         numpy.testing.assert_array_almost_equal(loss.data.numpy(), correct_loss.data.numpy())
@@ -533,7 +556,8 @@ class TestNnUtil(AllenNlpTestCase):
 
         loss = util.sequence_cross_entropy_with_logits(tensor, targets, weights, average="token")
 
-        vector_loss = util.sequence_cross_entropy_with_logits(tensor, targets, weights, batch_average=False)
+        vector_loss = util.sequence_cross_entropy_with_logits(tensor, targets, weights,
+                                                              average=None)
         total_token_loss = (vector_loss * weights.float().sum(dim=-1)).sum()
         average_token_loss = (total_token_loss / weights.float().sum()).detach()
         assert_almost_equal(loss.detach().item(), average_token_loss.item())
@@ -837,20 +861,20 @@ class TestNnUtil(AllenNlpTestCase):
         assert not has_tensor(3)
 
         assert has_tensor({
-            "x": [
-                0,
-                {
-                    "inside": {
-                        "double_inside": [
-                            3,
-                            [
-                                10,
-                                tensor
-                            ]
-                        ]
-                    }
-                }
-            ]
+                "x": [
+                        0,
+                        {
+                                "inside": {
+                                        "double_inside": [
+                                                3,
+                                                [
+                                                        10,
+                                                        tensor
+                                                ]
+                                        ]
+                                }
+                        }
+                ]
         })
 
     def test_combine_initial_dims(self):
