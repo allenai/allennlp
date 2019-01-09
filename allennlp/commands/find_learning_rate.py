@@ -98,7 +98,7 @@ class FindLearningRate(Subcommand):
         subparser.add_argument('--num-batches',
                                type=int,
                                default=100,
-                               help='number of mini-batches to run Learning rate finder')
+                               help='number of mini-batches to run learning rate finder')
         subparser.add_argument('--stopping-factor',
                                type=float,
                                default=None,
