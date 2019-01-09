@@ -38,18 +38,14 @@ import argparse
 import logging
 import os
 
-import torch
-
-from allennlp.commands.evaluate import evaluate
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.checks import check_for_gpu
 from allennlp.common import Params
 from allennlp.common.util import prepare_environment, prepare_global_logging, dump_metrics
-from allennlp.data.iterators import DataIterator
 from allennlp.models.archival import archive_model, CONFIG_NAME
 from allennlp.models.model import Model, _DEFAULT_WEIGHTS
 from allennlp.training.trainer import Trainer
-from allennlp.training.util import create_serialization_dir, datasets_from_params
+from allennlp.training.util import create_serialization_dir
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -169,9 +165,6 @@ def train_model(params: Params,
     best_model: ``Model``
         The model with the best epoch weights.
     """
-    # Save original params to use later
-    orig_params = params.duplicate()
-
     prepare_environment(params)
     create_serialization_dir(params, serialization_dir, recover, force)
     prepare_global_logging(serialization_dir, file_friendly_logging)
@@ -180,8 +173,6 @@ def train_model(params: Params,
     check_for_gpu(cuda_device)
 
     params.to_file(os.path.join(serialization_dir, CONFIG_NAME))
-
-    evaluate_on_test = params.pop_bool("evaluate_on_test", False)
 
     trainer = Trainer.from_params(params, serialization_dir, recover)
 
@@ -199,34 +190,7 @@ def train_model(params: Params,
 
     # Now tar up results
     archive_model(serialization_dir, files_to_archive=params.files_to_archive)
-
-    logger.info("Loading the best epoch weights.")
-    best_model_state_path = os.path.join(serialization_dir, 'best.th')
-    best_model_state = torch.load(best_model_state_path)
-    best_model = trainer.model
-    best_model.load_state_dict(best_model_state)
-
-    # Hack to get the test dataset loaded for evaluation, since now only
-    # Trainer.from_params knows about it.
-    if evaluate_on_test and "test_data_path" in orig_params:
-        logger.info("The model will be evaluated using the best epoch weights.")
-
-        test_data = datasets_from_params(orig_params, ('test',))['test']
-        iterator_params = orig_params.pop("validation_iterator", orig_params.pop("iterator"))
-        iterator = DataIterator.from_params(iterator_params)
-        iterator.index_with(trainer.model.vocab)
-
-        test_metrics = evaluate(
-                best_model, test_data, iterator,
-                cuda_device=trainer._cuda_devices[0] # pylint: disable=protected-access
-        )
-        for key, value in test_metrics.items():
-            metrics["test_" + key] = value
-
-    elif "test_data_path" in orig_params:
-        logger.info("To evaluate on the test set after training, pass the "
-                    "'evaluate_on_test' flag, or use the 'allennlp evaluate' command.")
-
     dump_metrics(os.path.join(serialization_dir, "metrics.json"), metrics, log=True)
 
-    return best_model
+    # We count on the trainer to have the model with best weights
+    return trainer.model

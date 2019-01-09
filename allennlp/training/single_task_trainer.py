@@ -11,6 +11,7 @@ from typing import Dict, Optional, List, Tuple, Union, Iterable, Any
 import torch
 import torch.optim.lr_scheduler
 
+from allennlp.commands.evaluate import evaluate
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import (dump_metrics, gpu_memory_mb, parse_cuda_device, peak_memory_mb,
@@ -54,7 +55,8 @@ class SingleTaskTrainer(Trainer):
                  histogram_interval: int = None,
                  should_log_parameter_statistics: bool = True,
                  should_log_learning_rate: bool = False,
-                 log_batch_size_period: Optional[int] = None) -> None:
+                 log_batch_size_period: Optional[int] = None,
+                 evaluation_dataset: Iterable[Instance] = None) -> None:
         """
         This is what used to be called just ``Trainer``. It just takes a labeled dataset
         and a ``DataIterator``, and uses the supplied ``Optimizer`` to learn the weights
@@ -146,6 +148,8 @@ class SingleTaskTrainer(Trainer):
             Whether to send parameter specific learning rate to tensorboard.
         log_batch_size_period : ``int``, optional, (default = ``None``)
             If defined, how often to log the average batch size.
+        evaluation_dataset : ``Iterable[Instance]``, optional (default = None)
+            If defined, we'll evaluate on this after training.
         """
         super().__init__(model, serialization_dir, cuda_device)
 
@@ -191,6 +195,8 @@ class SingleTaskTrainer(Trainer):
         self._should_log_parameter_statistics = should_log_parameter_statistics
         self._should_log_learning_rate = should_log_learning_rate
         self._log_batch_size_period = log_batch_size_period
+
+        self._evaluation_dataset = evaluation_dataset
 
         # We keep the total batch number as a class variable because it
         # is used inside a closure for the hook which logs activations in
@@ -501,7 +507,32 @@ class SingleTaskTrainer(Trainer):
 
             epochs_trained += 1
 
-        return metrics
+        self._load_best_weights()
+        return {**metrics, **self._test_metrics()}
+
+    def _load_best_weights(self):
+        if self._serialization_dir:
+            logger.info("loading best weights")
+            best_model_state_path = os.path.join(self._serialization_dir, 'best.th')
+            best_model_state = torch.load(best_model_state_path)
+            self.model.load_state_dict(best_model_state)
+        else:
+            logger.info("cannot load best weights without `serialization_dir`, "
+                        "so you're just getting the last weights")
+
+    def _test_metrics(self) -> Dict:
+        if self._evaluation_dataset is not None:
+            logger.info("The model will be evaluated using the best epoch weights.")
+            iterator = self._validation_iterator or self.iterator
+
+            test_metrics = evaluate(
+                    self.model, self._evaluation_dataset, iterator,
+                    cuda_device=self._cuda_devices[0]
+            )
+
+            return {f"test_{name}": value for name, value in test_metrics.items()}
+        else:
+            return {}
 
     def _is_best_so_far(self,
                         this_epoch_val_metric: float,
@@ -748,6 +779,17 @@ class SingleTaskTrainer(Trainer):
         should_log_learning_rate = trainer_params.pop_bool("should_log_learning_rate", False)
         log_batch_size_period = trainer_params.pop_int("log_batch_size_period", None)
 
+        evaluate_on_test = params.pop("evaluate_on_test", False)
+
+        if 'test' in all_datasets and evaluate_on_test:
+            evaluation_dataset = all_datasets['test']
+        elif 'test' in all_datasets:
+            logger.info("To evaluate on the test set after training, pass the "
+                        "'evaluate_on_test' flag, or use the 'allennlp evaluate' command.")
+            evaluation_dataset = None
+        else:
+            evaluation_dataset = None
+
         params.assert_empty(cls.__name__)
         return cls(model, optimizer, iterator,
                    train_data, validation_data,
@@ -768,7 +810,8 @@ class SingleTaskTrainer(Trainer):
                    histogram_interval=histogram_interval,
                    should_log_parameter_statistics=should_log_parameter_statistics,
                    should_log_learning_rate=should_log_learning_rate,
-                   log_batch_size_period=log_batch_size_period)
+                   log_batch_size_period=log_batch_size_period,
+                   evaluation_dataset=evaluation_dataset)
 
     # Requires custom from_params.
     @classmethod

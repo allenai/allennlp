@@ -26,8 +26,9 @@ logger = logging.getLogger(__name__)
 
 class Trainer(Registrable):
     """
-    The base class for an AllenNLP trainer.
-    The only method you *have* to implement is ``train``.
+    The base class for an AllenNLP trainer. It can do pretty much
+    anything you want. Your subclass should implement ``train``
+    and also probably ``from_params``.
     """
     default_implementation = "single_task"
 
@@ -59,6 +60,7 @@ class Trainer(Registrable):
         if self._cuda_devices[0] != -1:
             self.model = self.model.cuda(self._cuda_devices[0])
 
+        # Keep track of whether we've warned
         self._warned_tqdm_ignores_underscores = False
 
     def train(self) -> Dict[str, Any]:
@@ -96,10 +98,14 @@ class Trainer(Registrable):
                     serialization_dir: str,
                     recover: bool = False):
         # pylint: disable=arguments-differ
-        typ3 = params.pop("type", cls.default_implementation)
+        typ3 = params.get("trainer", {}).pop("type", cls.default_implementation)
         return Trainer.by_name(typ3).from_params(params, serialization_dir, recover)
 
     def _description_from_metrics(self, metrics: Dict[str, float]) -> str:
+        """
+        This is only an instance method so that it can read and set the
+        _warned_tqdm_ignores_underscores flag.
+        """
         if (not self._warned_tqdm_ignores_underscores and
                     any(metric_name.startswith("_") for metric_name in metrics)):
             logger.warning("Metrics with names beginning with \"_\" will "

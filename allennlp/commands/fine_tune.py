@@ -11,7 +11,6 @@ import os
 
 from allennlp.commands.evaluate import evaluate
 from allennlp.commands.subcommand import Subcommand
-from allennlp.commands.train import datasets_from_params
 from allennlp.common import Params
 from allennlp.common.checks import check_for_gpu
 from allennlp.common.util import prepare_environment, prepare_global_logging
@@ -19,7 +18,7 @@ from allennlp.models import load_archive, archive_model
 from allennlp.models.archival import CONFIG_NAME
 from allennlp.models.model import Model, _DEFAULT_WEIGHTS
 from allennlp.training.single_task_trainer import SingleTaskTrainer
-from allennlp.training.util import create_serialization_dir
+from allennlp.training.util import create_serialization_dir, datasets_from_params
 from allennlp.common.checks import ConfigurationError
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
