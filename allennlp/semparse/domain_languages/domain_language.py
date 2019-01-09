@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Any, Callable, Dict, GenericMeta, List, Set, Tuple, Type, Union
+from typing import Any, Callable, CallableMeta, Dict, GenericMeta, List, Set, Tuple, Type, Union
 import inspect
 import logging
 import types
@@ -18,6 +18,23 @@ class PredicateType:
     for them and group them together under ``PredicateType`` to have a good type annotation for
     these types.
     """
+    @staticmethod
+    def get_type(type_: Type) -> 'PredicateType':
+        if isinstance(type_, CallableMeta):
+            callable_args = type_.__args__
+            argument_types = [PredicateType.get_type(t) for t in callable_args[:-1]]
+            return_type = PredicateType.get_type(callable_args[-1])
+            return FunctionType(argument_types, return_type)
+        elif isinstance(type_, GenericMeta):
+            # This is something like List[int].  type_.__name__ will only give 'List', though, so
+            # we need to do some magic here.
+            origin = type_.__origin__
+            args = type_.__args__
+            name = f'{origin.__name__}[{",".join(arg.__name__ for arg in args)}]'
+        else:
+            name = type_.__name__
+        return BasicType(name)
+
     @staticmethod
     def get_function_type(arg_types: List['PredicateType'], return_type: 'PredicateType') -> 'PredicateType':
         """
@@ -38,16 +55,8 @@ class BasicType(PredicateType):
     A ``PredicateType`` representing a zero-argument predicate (which could technically be a
     function with no arguments or a constant; both are treated the same here).
     """
-    def __init__(self, type_: Type) -> None:
-        self.type_ = type_
-        if isinstance(type_, GenericMeta):
-            # This is something like List[int].  type_.__name__ will only give 'List', though, so
-            # we need to do some magic here.
-            origin = type_.__origin__
-            args = type_.__args__
-            self.name: str = f'{origin.__name__}[{",".join(arg.__name__ for arg in args)}]'
-        else:
-            self.name: str = type_.__name__
+    def __init__(self, name: str) -> None:
+        self.name = name
 
     def __repr__(self):
         return self.name
@@ -200,7 +209,7 @@ class DomainLanguage:
                  start_types: Set[Type] = None) -> None:
         self._functions: Dict[str, Callable] = {}
         self._function_types: Dict[str, PredicateType] = {}
-        self._start_types: Set[PredicateType] = set([BasicType(type_) for type_ in start_types])
+        self._start_types: Set[PredicateType] = set([PredicateType.get_type(type_) for type_ in start_types])
         for name in dir(self):
             if isinstance(getattr(self, name), types.MethodType):
                 function = getattr(self, name)
@@ -316,8 +325,9 @@ class DomainLanguage:
         return_type = signature.return_annotation
         # TODO(mattg): this might need to just call PredicateType.get_type, or something - what if
         # one of these is a function?
-        argument_nltk_types: List[PredicateType] = [BasicType(arg_type) for arg_type in argument_types]
-        return_nltk_type = BasicType(return_type)
+        argument_nltk_types: List[PredicateType] = [PredicateType.get_type(arg_type)
+                                                    for arg_type in argument_types]
+        return_nltk_type = PredicateType.get_type(return_type)
         function_nltk_type = PredicateType.get_function_type(argument_nltk_types, return_nltk_type)
         self._functions[name] = function
         self._function_types[name] = function_nltk_type
@@ -333,7 +343,7 @@ class DomainLanguage:
         you're doing semantic parsing - we need to be able to search over this space, and compute
         normalized probability distributions.
         """
-        constant_type = BasicType(type(value))
+        constant_type = PredicateType.get_type(type(value))
         self._functions[name] = lambda: value
         self._function_types[name] = constant_type
 
@@ -417,29 +427,32 @@ class DomainLanguage:
         out into its own method because handling higher-order functions is complicated (e.g.,
         something like "((negate add) 2 3)").
         """
+        # This first block handles getting the transitions and function type (and some error
+        # checking) _just for the function itself_.  If this is a simple function, this is easy; if
+        # it's a higher-order function, it involves some recursion.
         if isinstance(expression, list):
             # This is a higher-order function.  TODO(mattg): we'll just ignore type checking on
             # higher-order functions, for now.
-            transitions, function_type = self._get_transitions(expression[0], None)
-            # TODO(mattg): finish this...
-            raise NotImplementedError
-
+            transitions, function_type = self._get_transitions(expression, None)
         elif expression in self._functions:
             name = expression
-            function_type = self._function_types[name]
-            if not isinstance(function_type, FunctionType):
-                raise ParsingError(f'Zero-arg function or constant called with arguments: {name}')
-            argument_types = function_type.argument_types
-            return_type = function_type.return_type
-            right_side = f'[{function_type}, {", ".join(str(arg) for arg in argument_types)}]'
-            first_transition = f'{return_type} -> {right_side}'
-            second_transition = f'{function_type} -> {name}'
-            transitions = [first_transition, second_transition]
+            function_type = self._function_types[expression]
+            transitions = [f'{function_type} -> {name}']
         else:
             if isinstance(expression, str):
                 raise ParsingError(f"Unrecognized function: {expression[0]}")
             else:
                 raise ParsingError(f"Unsupported expression type: {expression}")
+        if not isinstance(function_type, FunctionType):
+            raise ParsingError(f'Zero-arg function or constant called with arguments: {name}')
+
+        # Now that we have the transitions for the function itself, and the function's type, we can
+        # get argument types and do the rest of the transitions.
+        argument_types = function_type.argument_types
+        return_type = function_type.return_type
+        right_side = f'[{function_type}, {", ".join(str(arg) for arg in argument_types)}]'
+        first_transition = f'{return_type} -> {right_side}'
+        transitions.insert(0, first_transition)
         if expected_type and expected_type != return_type:
             raise ParsingError(f'{expression} did not have expected type {expected_type} '
                                f'(found {return_type})')
