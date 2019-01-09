@@ -48,7 +48,7 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
                           f"which can cause some subtle bugs (more info see {url}). "
                           "Strongly recommend to set a value, usually the maximum size "
                           "of the convolutional layer size when using CnnEncoder.",
-                          FutureWarning)
+                          UserWarning)
         self._min_padding_length = min_padding_length
         self._namespace = namespace
         self._character_tokenizer = character_tokenizer

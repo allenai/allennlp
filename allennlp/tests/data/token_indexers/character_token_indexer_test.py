@@ -3,6 +3,8 @@ from collections import defaultdict
 
 import warnings
 
+import pytest
+
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Token, Vocabulary
 from allennlp.data.token_indexers import TokenCharactersIndexer
@@ -100,10 +102,5 @@ class CharacterTokenIndexerTest(AllenNlpTestCase):
                                    [15, 0, 0, 0, 0, 0, 0, 0, 0, 0]]}
 
     def test_warn_min_padding_length(self):
-        with warnings.catch_warnings(record=True) as warn:
-            # Cause all warnings to always be triggered.
-            warnings.simplefilter("always")
+        with pytest.warns(UserWarning, match=r"using the default value \(0\) of `min_padding_length`"):
             TokenCharactersIndexer("characters")
-            # Verify some things
-            assert len(warn) == 1
-            assert issubclass(warn[0].category, FutureWarning)
