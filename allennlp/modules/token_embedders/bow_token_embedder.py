@@ -15,13 +15,13 @@ class BagOfWordsTokenEmbedder(TokenEmbedder):
     in the document. This embedding serves as a strong baseline for document-level
     representation learning.
 
-        Parameters
-        ----------
-        vocab_size: int
-            size of vocabulary
-        projection_dim : int, optional (default = None)
-            if specified, will project the resulting bag of words representation
-            to specified dimension.
+    Parameters
+    ----------
+    vocab_size: int
+        size of vocabulary
+    projection_dim : int, optional (default = None)
+        if specified, will project the resulting bag of words representation
+        to specified dimension.
     """
     def __init__(self, vocab_size: int, projection_dim: int = None) -> None:
         super(BagOfWordsTokenEmbedder, self).__init__()
@@ -55,6 +55,18 @@ class BagOfWordsTokenEmbedder(TokenEmbedder):
 
     def forward(self,  # pylint: disable=arguments-differ
                 inputs: torch.Tensor) -> torch.Tensor:
+        """
+        Parameters
+        ----------
+        inputs: ``torch.Tensor``
+            Shape ``(batch_size, timesteps, sequence_length)`` of word ids
+            representing the current batch.
+
+        Returns
+        -------
+        The bag-of-words representations for the input sequence, shape
+        ``(batch_size, vocab_size)``
+        """
         bow_output = self.compute_bow(inputs)
         if self._projection:
             projection = self._projection
