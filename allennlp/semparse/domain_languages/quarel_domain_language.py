@@ -1,3 +1,7 @@
+"""
+This module defines a domain language for the QualRel dataset, a simple domain theory for reasoning
+about quantitative relations.
+"""
 from typing import Callable
 from allennlp.semparse import DomainLanguage, predicate
 
@@ -25,6 +29,9 @@ def make_property_predicate(property_name: str) -> Callable[[Direction, World], 
     return property_function
 
 class QuaRel(DomainLanguage):
+    """
+    Domain language for the QuaRel dataset.
+    """
     def __init__(self):
         super().__init__(start_types={int}, allowed_constants={'world1': World(1),
                                                                'world2': World(2),
@@ -32,6 +39,7 @@ class QuaRel(DomainLanguage):
                                                                'lower': Direction(-1),
                                                                'high': Direction(1),
                                                                'low': Direction(-1)})
+
         self.default_theories = [{"friction": 1, "speed": -1, "smoothness": -1, "distance": -1, "heat": 1},
                                  {"speed": 1, "time": -1},
                                  {"speed": 1, "distance": 1},
@@ -52,13 +60,14 @@ class QuaRel(DomainLanguage):
 
         # ``and`` is a reserved word, so we add it as a predicate here instead of using the decorator.
         def and_function(quarel_0: QuaRelType, quarel_1: QuaRelType) -> QuaRelType:
-            if self._check_compatible(quarel_0, quarel_1):
+            # If the two relations are compatible, then we can return either of them.
+            if self._check_quarels_compatible(quarel_0, quarel_1):
                 return quarel_0
             else:
                 return None
         self.add_predicate('and', and_function)
 
-    def _check_compatible(self, quarel_0: QuaRelType, quarel_1: QuaRelType) -> bool:
+    def _check_quarels_compatible(self, quarel_0: QuaRelType, quarel_1: QuaRelType) -> bool:
         for theory in self.default_theories:
             if quarel_0.prop.name in theory and quarel_1.prop.name in theory:
                 world_same = 1 if quarel_0.world.number == quarel_1.world.number else -1
@@ -71,13 +80,16 @@ class QuaRel(DomainLanguage):
 
     @predicate
     def infer(self, question: QuaRelType, answer_0: QuaRelType, answer_1: QuaRelType) -> int:
-        if self._check_compatible(question, answer_0):
-            if self._check_compatible(question, answer_1):
+        """
+        Take the question and check if it is compatible with either of the answer choices. 
+        """
+        if self._check_quarels_compatible(question, answer_0):
+            if self._check_quarels_compatible(question, answer_1):
                 # Found two answers
                 return -2
             else:
                 return 0
-        elif self._check_compatible(question, answer_1):
+        elif self._check_quarels_compatible(question, answer_1):
             return 1
         else:
             return -1
