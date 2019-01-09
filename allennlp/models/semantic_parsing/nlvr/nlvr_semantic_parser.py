@@ -10,8 +10,7 @@ from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder, Embedding
 from allennlp.nn import util
-from allennlp.semparse.type_declarations import type_declaration
-from allennlp.semparse.type_declarations.type_declaration import START_SYMBOL
+from allennlp.semparse.domain_languages.domain_language import START_SYMBOL
 from allennlp.semparse.worlds import NlvrWorld
 from allennlp.state_machines.states import GrammarBasedState, GrammarStatelet, RnnStatelet
 from allennlp.training.metrics import Average
@@ -197,7 +196,7 @@ class NlvrSemanticParser(Model):
                                                        list(global_action_ids))
         return GrammarStatelet([START_SYMBOL],
                                translated_valid_actions,
-                               type_declaration.is_nonterminal)
+                               world.is_nonterminal)
 
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:

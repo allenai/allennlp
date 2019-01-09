@@ -359,6 +359,13 @@ class DomainLanguage:
         self._functions[name] = lambda: value
         self._function_types[name] = constant_type
 
+    def is_nonterminal(self, symbol: str) -> bool:
+        """
+        Determines whether an input symbol is a valid non-terminal in the grammar.
+        """
+        nonterminal_productions = self.get_nonterminal_productions()
+        return symbol in nonterminal_productions
+
     def _execute_expression(self, expression: Any):
         """
         This does the bulk of the work of executing a logical form, recursively executing a single
@@ -511,3 +518,8 @@ class DomainLanguage:
             # productions or lists of non-terminals.
             current_node.append(Tree(right_side, []))  # you add a child to an nltk.Tree with `append`
         return remaining_actions
+
+    def __eq__(self, other):
+        if isinstance(self, other.__class__):
+            return self.__dict__ == other.__dict__
+        return NotImplemented

@@ -42,6 +42,9 @@ class NlvrWorld:
     def get_logical_form(self, action_sequence: List[str]) -> str:
         return self._language.action_sequence_to_logical_form(action_sequence)
 
+    def is_nonterminal(self, symbol: str) -> bool:
+        return self._language.is_nonterminal(symbol)
+
     def get_agenda_for_sentence(self,
                                 sentence: str,
                                 add_paths_to_agenda: bool = False) -> List[str]:
