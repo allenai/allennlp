@@ -114,7 +114,7 @@ class StackedBidirectionalLstm(torch.nn.Module):
 
             final_h.extend([final_forward_state[0], final_backward_state[0]])
             final_c.extend([final_forward_state[1], final_backward_state[1]])
-        
+
         final_h = torch.cat(final_h, dim=0)
         final_c = torch.cat(final_c, dim=0)
         final_state_tuple = (final_h, final_c)
