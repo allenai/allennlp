@@ -7,7 +7,7 @@ from collections import OrderedDict
 
 import pytest
 
-from allennlp.common.params import Params, unflatten, with_fallback, parse_overrides
+from allennlp.common.params import Params, unflatten, with_fallback, parse_overrides, infer_and_cast
 from allennlp.common.testing import AllenNlpTestCase
 
 
@@ -314,3 +314,27 @@ class TestParams(AllenNlpTestCase):
         assert json.dumps(expected_ordered_params_dict) == json.dumps(ordered_params_dict)
         # check without preference orders doesn't give error
         params.to_file(file_path)
+
+    def test_infer_and_cast(self):
+        lots_of_strings = {
+                "a": ["10", "1.3", "true"],
+                "b": {"x": 10, "y": "20.1", "z": "other things"},
+                "c": "just a string"
+        }
+
+        casted = {
+                "a": [10, 1.3, True],
+                "b": {"x": 10, "y": 20.1, "z": "other things"},
+                "c": "just a string"
+        }
+
+        assert infer_and_cast(lots_of_strings) == casted
+
+        contains_bad_data = {"x": 10, "y": int}
+        with pytest.raises(ValueError, match="cannot infer type"):
+            infer_and_cast(contains_bad_data)
+
+        params = Params(lots_of_strings)
+
+        assert params.as_dict() == lots_of_strings
+        assert params.as_dict(infer_type_and_cast=True) == casted

@@ -70,6 +70,11 @@ class FineTune(Subcommand):
                                default=False,
                                help='outputs tqdm status on separate lines and slows tqdm refresh rate')
 
+        subparser.add_argument('--batch-weight-key',
+                               type=str,
+                               default="",
+                               help='If non-empty, name of metric used to weight the loss on a per-batch basis.')
+
         subparser.set_defaults(func=fine_tune_model_from_args)
 
         return subparser
@@ -84,7 +89,8 @@ def fine_tune_model_from_args(args: argparse.Namespace):
                                     serialization_dir=args.serialization_dir,
                                     overrides=args.overrides,
                                     extend_vocab=args.extend_vocab,
-                                    file_friendly_logging=args.file_friendly_logging)
+                                    file_friendly_logging=args.file_friendly_logging,
+                                    batch_weight_key=args.batch_weight_key)
 
 
 def fine_tune_model_from_file_paths(model_archive_path: str,
@@ -92,7 +98,8 @@ def fine_tune_model_from_file_paths(model_archive_path: str,
                                     serialization_dir: str,
                                     overrides: str = "",
                                     extend_vocab: bool = False,
-                                    file_friendly_logging: bool = False) -> Model:
+                                    file_friendly_logging: bool = False,
+                                    batch_weight_key: str = "") -> Model:
     """
     A wrapper around :func:`fine_tune_model` which loads the model archive from a file.
 
@@ -121,14 +128,16 @@ def fine_tune_model_from_file_paths(model_archive_path: str,
                            params=params,
                            serialization_dir=serialization_dir,
                            extend_vocab=extend_vocab,
-                           file_friendly_logging=file_friendly_logging)
+                           file_friendly_logging=file_friendly_logging,
+                           batch_weight_key=batch_weight_key)
 
 
 def fine_tune_model(model: Model,
                     params: Params,
                     serialization_dir: str,
                     extend_vocab: bool = False,
-                    file_friendly_logging: bool = False) -> Model:
+                    file_friendly_logging: bool = False,
+                    batch_weight_key: str = "") -> Model:
     """
     Fine tunes the given model, using a set of parameters that is largely identical to those used
     for :func:`~allennlp.commands.train.train_model`, except that the ``model`` section is ignored,
@@ -248,7 +257,13 @@ def fine_tune_model(model: Model,
     archive_model(serialization_dir, files_to_archive=params.files_to_archive)
 
     if test_data and evaluate_on_test:
-        test_metrics = evaluate(model, test_data, iterator, cuda_device=trainer._cuda_devices[0])  # pylint: disable=protected-access
+        test_metrics = evaluate(
+                model,
+                test_data,
+                iterator,
+                cuda_device=trainer._cuda_devices[0], # pylint: disable=protected-access
+                batch_weight_key=batch_weight_key
+        )
         for key, value in test_metrics.items():
             metrics["test_" + key] = value
 
