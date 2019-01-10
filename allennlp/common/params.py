@@ -31,6 +31,7 @@ from allennlp.common.file_utils import cached_path
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
+# pylint: disable=inconsistent-return-statements
 def infer_and_cast(value: Any):
     """
     In some cases we'll be feeding params dicts to functions we don't own;
@@ -69,6 +70,7 @@ def infer_and_cast(value: Any):
                 return value
     else:
         raise ValueError(f"cannot infer type of {value}")
+# pylint: enable=inconsistent-return-statements
 
 def unflatten(flat_dict: Dict[str, Any]) -> Dict[str, Any]:
     """
