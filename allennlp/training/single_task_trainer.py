@@ -197,34 +197,13 @@ class SingleTaskTrainer(Trainer):
 
         self._evaluation_dataset = evaluation_dataset
 
-        # We keep the total batch number as a class variable because it
+        # We keep the total batch number as an instance variable because it
         # is used inside a closure for the hook which logs activations in
         # ``_enable_activation_logging``.
         self._batch_num_total = 0
 
         self._last_log = 0.0  # time of last logging
 
-    def _enable_activation_logging(self) -> None:
-        """
-        Log activations to tensorboard
-        """
-        if self._histogram_interval is not None:
-            # To log activation histograms to the forward pass, we register
-            # a hook on forward to capture the output tensors.
-            # This uses a closure on self._log_histograms_this_batch to
-            # determine whether to send the activations to tensorboard,
-            # since we don't want them on every call.
-            for _, module in self.model.named_modules():
-                if not getattr(module, 'should_log_activations', False):
-                    # skip it
-                    continue
-
-                def hook(module_, inputs, outputs):
-                    # pylint: disable=unused-argument,cell-var-from-loop
-                    log_prefix = 'activation_histogram/{0}'.format(module_.__class__)
-                    if self._log_histograms_this_batch:
-                        self._tensorboard.log_activation_histogram(outputs, log_prefix, self._batch_num_total)
-                module.register_forward_hook(hook)
 
     def _train_epoch(self, epoch: int) -> Dict[str, float]:
         """
@@ -402,7 +381,14 @@ class SingleTaskTrainer(Trainer):
                                      "directory?")
 
         training_util.enable_gradient_clipping(self.model, self._grad_clipping)
-        self._enable_activation_logging()
+
+        # Enable activation logging. Need to use a closure to capture current values
+        # of local variables.
+        if self._histogram_interval is not None:
+            get_batch_num_total = lambda: (self._batch_num_total
+                                           if self._log_histograms_this_batch
+                                           else None)
+            self._tensorboard.enable_activation_logging(self.model, get_batch_num_total)
 
         logger.info("Beginning training.")
 
@@ -646,11 +632,14 @@ class SingleTaskTrainer(Trainer):
                     training_state["learning_rate_scheduler"])
         training_util.move_optimizer_to_cuda(self.optimizer)
 
+        # Currently the ``training_state`` contains a serialized ``MetricTracker``.
         if "metric_tracker" in training_state:
             self._metric_tracker.load_state_dict(training_state["metric_tracker"])
+        # It used to be the case that we tracked ``val_metrics_per_epoch``.
         elif "val_metric_per_epoch" in training_state:
             self._metric_tracker.clear()
             self._metric_tracker.add_metrics(training_state["val_metrics_per_epoch"])
+        # And before that we didn't track anything.
         else:
             self._metric_tracker.clear()
 

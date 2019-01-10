@@ -1,4 +1,4 @@
-from typing import Any, Set, Optional
+from typing import Any, Set, Optional, Callable
 import logging
 import os
 
@@ -163,6 +163,25 @@ class TensorboardWriter:
                 logger.info(no_train_message_template, name.ljust(name_length), "N/A", val_metric)
             elif log_to_console and train_metric is not None:
                 logger.info(no_val_message_template, name.ljust(name_length), train_metric, "N/A")
+
+
+    def enable_activation_logging(self, model: Model, get_batch_num_total: Callable[[], Optional[int]]) -> None:
+        # To log activation histograms to the forward pass, we register
+        # a hook on forward to capture the output tensors.
+        # This uses a closure to determine whether to log the activations,
+        # since we don't want them on every call.
+        for _, module in model.named_modules():
+            if not getattr(module, 'should_log_activations', False):
+                # skip it
+                continue
+
+            def hook(module_, inputs, outputs):
+                # pylint: disable=unused-argument,cell-var-from-loop
+                log_prefix = 'activation_histogram/{0}'.format(module_.__class__)
+                batch_num_total = get_batch_num_total()
+                if batch_num_total is not None:
+                    self.log_activation_histogram(outputs, log_prefix, batch_num_total)
+            module.register_forward_hook(hook)
 
     def log_activation_histogram(self, outputs, log_prefix: str, batch_num_total: int) -> None:
         if isinstance(outputs, torch.Tensor):

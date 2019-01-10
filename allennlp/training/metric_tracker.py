@@ -6,6 +6,20 @@ class MetricTracker:
     """
     This class tracks a metric for the dual purposes of early stopping
     and for knowing whether the current value is the best so far.
+
+    Parameters
+    ----------
+    patience : int, optional (default = None)
+        If provided, then `should_stop_early()` returns True if we go this
+        many epochs without seeing a new best value.
+    metric_name : str, optional (default = None)
+        If provided, it's used to infer whether we expect the metric values to
+        increase (if it starts with "+") or decrease (if it starts with "-").
+        It's an error if it doesn't start with one of those. If it's not provided,
+        you should specify ``should_decrease`` instead.
+    should_decrease : str, optional (default = None)
+        If ``metric_name`` isn't provided (in which case we can't infer ``should_decrease``),
+        then you have to specify it here.
     """
     def __init__(self,
                  patience: Optional[int] = None,
@@ -88,6 +102,9 @@ class MetricTracker:
             self.add_metric(metric)
 
     def should_stop_early(self) -> bool:
+        """
+        Returns true if improvement has stopped for long enough.
+        """
         if self._patience is None:
             return False
         else:
