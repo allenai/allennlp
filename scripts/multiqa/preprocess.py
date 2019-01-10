@@ -551,16 +551,28 @@ def main():
     
     # rearranging instances for iterator (we don't use padding noise here, it will be use in the multiqa iterator.)
     ## TODO change question_text to question_tokens
-    if False:
-        sorting_keys = ['tokens','question_tokens']
+    if True:
+        # bucketing by QuestionID
+        instance_list = preprocessed_instances
+        instance_list = sorted(instance_list, key=lambda x: x['metadata']['question_id'])
+        intances_question_id = [instance['metadata']['question_id'] for instance in instance_list]
+        split_inds = [0] + list(np.cumsum(np.unique(intances_question_id, return_counts=True)[1]))
+        per_question_instances = [instance_list[split_inds[ind]:split_inds[ind + 1]] for ind in
+                                  range(len(split_inds) - 1)]
+
+        # sorting
+        sorting_keys = ['question_tokens', 'tokens']
         instances_with_lengths = []
-        for instance in preprocessed_instances:
-            padding_lengths = {key:len(instance[key]) for key in sorting_keys}
+        for instance in per_question_instances:
+            padding_lengths = {key: len(instance[0][key]) for key in sorting_keys}
             instance_with_lengths = ([padding_lengths[field_name] for field_name in sorting_keys], instance)
             instances_with_lengths.append(instance_with_lengths)
         instances_with_lengths.sort(key=lambda x: x[0])
-        preprocessed_instances =  [instance_with_lengths[-1] for instance_with_lengths in instances_with_lengths]
-    
+        per_question_instances = [instance_with_lengths[-1] for instance_with_lengths in instances_with_lengths]
+        preprocessed_instances = []
+        for question_instances in per_question_instances:
+            preprocessed_instances += question_instances
+
 
     # saving cache
     print('all_qa_count = %d' % all_qa_count)
