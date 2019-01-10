@@ -15,7 +15,7 @@ from allennlp.models import Model
 
 
 class DummyIterator(DataIterator):
-    def __init__(self, outputs: List[TensorDict]):
+    def __init__(self, outputs: List[TensorDict]) -> None:
         super().__init__()
         self._outputs = outputs
 
@@ -30,10 +30,10 @@ class DummyIterator(DataIterator):
 
 
 class DummyModel(Model):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(None) # type: ignore
 
-    def forward(self, **kwargs) -> Dict[str, torch.Tensor]:  # pylint: disable=arguments-differ
+    def forward(self, **kwargs) -> Dict[str, torch.Tensor]:  # type: ignore # pylint: disable=arguments-differ
         return kwargs
 
 
@@ -47,7 +47,7 @@ class TestEvaluate(AllenNlpTestCase):
 
     def test_evaluate_calculates_average_loss(self):
         losses = [7.0, 9.0, 8.0]
-        outputs = [{"loss": torch.Tensor(loss)} for loss in losses]
+        outputs = [{"loss": torch.Tensor([loss])} for loss in losses]
         iterator = DummyIterator(outputs)
         metrics = evaluate(DummyModel(), None, iterator, -1, "")
         self.assertAlmostEqual(metrics["loss"], 8.0)
@@ -56,7 +56,8 @@ class TestEvaluate(AllenNlpTestCase):
         losses = [7.0, 9.0, 8.0]
         weights = [10, 2, 1.5]
         inputs = zip(losses, weights)
-        outputs = [{"loss": torch.Tensor(loss), "batch_weight": torch.Tensor(weight)} for loss, weight in inputs]
+        outputs = [{"loss": torch.Tensor([loss]), "batch_weight": torch.Tensor([weight])}
+                   for loss, weight in inputs]
         iterator = DummyIterator(outputs)
         metrics = evaluate(DummyModel(), None, iterator, -1, "batch_weight")
         self.assertAlmostEqual(metrics["loss"], (70 + 18 + 12)/13.5)
