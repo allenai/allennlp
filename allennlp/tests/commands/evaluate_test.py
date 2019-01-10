@@ -1,14 +1,15 @@
 # pylint: disable=invalid-name,no-self-use
 import argparse
 import json
-import torch
-from typing import Iterator, List, Dict
+from typing import Iterator, List, Dict, Iterable
 
+import torch
 from flaky import flaky
 
 from allennlp.commands.evaluate import evaluate_from_args, Evaluate, evaluate
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data import DataIterator
+from allennlp.data import DataIterator, Instance
+from allennlp.data.dataset import Batch
 from allennlp.data.iterators.data_iterator import TensorDict
 from allennlp.models import Model
 
@@ -18,8 +19,14 @@ class DummyIterator(DataIterator):
         super().__init__()
         self._outputs = outputs
 
-    def __call__(self, *args, **kwargs) -> Iterator[TensorDict]:
+    def __call__(self,
+                 instances: Iterable[Instance],
+                 num_epochs: int = None,
+                 shuffle: bool = True) -> Iterator[TensorDict]:
         yield from self._outputs
+
+    def _create_batches(self, instances: Iterable[Instance], shuffle: bool) -> Iterable[Batch]:
+        raise NotImplementedError
 
 
 class DummyModel(Model):
@@ -40,7 +47,7 @@ class TestEvaluate(AllenNlpTestCase):
 
     def test_evaluate_calculates_average_loss(self):
         losses = [7.0, 9.0, 8.0]
-        outputs = [{"loss": torch.tensor(loss)} for loss in losses]
+        outputs = [{"loss": torch.Tensor(loss)} for loss in losses]
         iterator = DummyIterator(outputs)
         metrics = evaluate(DummyModel(), None, iterator, -1, "")
         self.assertAlmostEqual(metrics["loss"], 8.0)
@@ -49,7 +56,7 @@ class TestEvaluate(AllenNlpTestCase):
         losses = [7.0, 9.0, 8.0]
         weights = [10, 2, 1.5]
         inputs = zip(losses, weights)
-        outputs = [{"loss": torch.tensor(loss), "batch_weight": torch.tensor(weight)} for loss, weight in inputs]
+        outputs = [{"loss": torch.Tensor(loss), "batch_weight": torch.Tensor(weight)} for loss, weight in inputs]
         iterator = DummyIterator(outputs)
         metrics = evaluate(DummyModel(), None, iterator, -1, "batch_weight")
         self.assertAlmostEqual(metrics["loss"], (70 + 18 + 12)/13.5)
