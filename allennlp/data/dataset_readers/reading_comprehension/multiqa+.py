@@ -2,6 +2,7 @@ import json
 import logging
 from typing import Any, Dict, List, Tuple
 import zipfile,re, copy, random
+import numpy as np
 
 from overrides import overrides
 
@@ -54,7 +55,7 @@ class MultiQAReader(DatasetReader):
 
         # supporting multi dataset training:
         contexts = []
-        for single_file_path in file_path.split(','):
+        for ind, single_file_path in enumerate(file_path.split(',')):
             # if `file_path` is a URL, redirect to the cache
             single_file_path = cached_path(single_file_path)
             logger.info("Reading file at %s", single_file_path)
@@ -63,32 +64,77 @@ class MultiQAReader(DatasetReader):
                 with myzip.open(myzip.namelist()[0]) as myfile:
                     dataset_json = json.load(myfile)
 
-            if 'preprocessed' in dataset_json and dataset_json['preprocessed']:
-                # sampling
-                if self._sample_size > -1:
-                    #random.seed(1)
-                    #dataset_json['preprocessed_instances'] = \
-                    #    random.sample(dataset_json['preprocessed_instances'], self._sample_size)
-                    dataset_json['preprocessed_instances'] = \
-                        dataset_json['preprocessed_instances'][0:self._sample_size]
+            if ind == 0:
+                num_examples_used = dataset_json['num_examples_used']
 
-                for inst in dataset_json['preprocessed_instances']:
-                    tokenized_paragraph = [Token(text=t[0], idx=t[1]) for t in inst['tokens']]
-                    question_tokens = [Token(text=t[0], idx=t[1]) for t in inst['question_tokens']]
+            contexts += dataset_json['preprocessed_instances']
 
-                    instance = util.make_reading_comprehension_instance_multiqa_multidoc(question_tokens,
-                                                             tokenized_paragraph,
-                                                             self._token_indexers,
-                                                             inst['text'],
-                                                             inst['answers'],
-                                                             inst['metadata'])
+        # sampling
+        if self._sample_size > -1:
+            #random.seed(1)
+            #dataset_json['preprocessed_instances'] = \
+            #    random.sample(dataset_json['preprocessed_instances'], self._sample_size)
+            contexts = contexts[0:self._sample_size]
 
-                    instance.fields['metadata'].metadata['num_examples_used'] = dataset_json['num_examples_used']
 
-                    yield instance
-                return
+
+        # bucketing by QuestionID
+        instance_list = contexts
+        instance_list = sorted(instance_list, key=lambda x: x['metadata']['question_id'])
+        intances_question_id = [instance['metadata']['question_id'] for instance in instance_list]
+        split_inds = [0] + list(np.cumsum(np.unique(intances_question_id, return_counts=True)[1]))
+        per_question_instances = [instance_list[split_inds[ind]:split_inds[ind + 1]] for ind in
+                                  range(len(split_inds) - 1)]
+
+        # sorting
+        sorting_keys = ['question_tokens','tokens']
+        instances_with_lengths = []
+        for instance in per_question_instances:
+            padding_lengths = {key: len(instance[0][key]) for key in sorting_keys}
+            instance_with_lengths = ([padding_lengths[field_name] for field_name in sorting_keys], instance)
+            instances_with_lengths.append(instance_with_lengths)
+        instances_with_lengths.sort(key=lambda x: x[0])
+        per_question_instances = [instance_with_lengths[-1] for instance_with_lengths in instances_with_lengths]
+
+        # selecting instaces to add
+        instances = []
+        for question_instances in per_question_instances:
+            if False and file_path.find('_dev.')>-1:
+                instances_to_add = question_instances
             else:
-                raise ValueError('only preprocessed data supported at this point. ')
+                # choose at most 2 instances from the same question:
+                if len(question_instances) > 2:
+                    # This part is inspired by Clark and Gardner, 17 - over sample the high ranking documents
+
+                    instances_to_add = random.sample(question_instances[0:2], 1)
+                    instances_to_add += random.sample(question_instances[2:], 1)
+
+                else:
+                    instances_to_add = question_instances
+
+                # Require at least one answer:
+                if not any(inst['answers'] != [] for inst in instances_to_add):
+                    continue
+
+            instances += instances_to_add
+
+        for inst in instances:
+            tokenized_paragraph = [Token(text=t[0], idx=t[1]) for t in inst['tokens']]
+            question_tokens = [Token(text=t[0], idx=t[1]) for t in inst['question_tokens']]
+
+            instance = util.make_reading_comprehension_instance_multiqa_multidoc(question_tokens,
+                                                     tokenized_paragraph,
+                                                     self._token_indexers,
+                                                     inst['text'],
+                                                     inst['answers'],
+                                                     inst['metadata'])
+
+            instance.fields['metadata'].metadata['num_examples_used'] = num_examples_used
+
+            yield instance
+        return
+
+
 
     @overrides
     def text_to_instance(self,  # type: ignore
