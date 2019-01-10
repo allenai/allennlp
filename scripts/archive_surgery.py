@@ -25,17 +25,21 @@ from allennlp.models.archival import CONFIG_NAME
 logger = logging.getLogger()
 logger.setLevel(logging.ERROR)
 
-def main():
-    parser = argparse.ArgumentParser(description="Perform surgery on a model.tar.gz archive")
 
-    parser.add_argument("--input-file", required=True)
-    parser.add_argument("--output-file", required=True)
-    parser.add_argument("--editor")
+def main():
+    parser = argparse.ArgumentParser(description="Perform surgery on a model.tar.gz archive",
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
+    parser.add_argument("--input-file", required=True,
+                        help="path to input file")
+    parser.add_argument("--output-file", required=True,
+                        help="path to output file")
+    parser.add_argument("--editor", default=os.environ.get("EDITOR"),
+                        help="editor to launch, whose default value is environment vaiable `$EDITOR`")
 
     args = parser.parse_args()
 
-    editor = args.editor or os.environ.get("EDITOR")
-    if editor is None:
+    if args.editor is None:
         raise RuntimeError("please specify an editor or set the $EDITOR environment variable")
 
     if os.path.exists(args.output_file):
@@ -52,7 +56,7 @@ def main():
     atexit.register(lambda: shutil.rmtree(tempdir))
 
     config_path = os.path.join(tempdir, CONFIG_NAME)
-    subprocess.run([editor, config_path])
+    subprocess.run([args.editor, config_path])
 
     with tarfile.open(args.output_file, "w:gz") as tar:
         tar.add(tempdir, arcname=os.path.sep)
