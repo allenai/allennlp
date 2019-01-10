@@ -334,11 +334,11 @@ class TestSingleTaskTrainer(AllenNlpTestCase):
         new_trainer.train()
 
     def test_trainer_raises_on_model_with_no_loss_key(self):
-        class FakeModel(torch.nn.Module):
+        class FakeModel(Model):
             def forward(self, **kwargs):  # pylint: disable=arguments-differ,unused-argument
                 return {}
         with pytest.raises(RuntimeError):
-            trainer = SingleTaskTrainer(FakeModel(), self.optimizer,
+            trainer = SingleTaskTrainer(FakeModel(None), self.optimizer,
                                         self.iterator, self.instances,
                                         num_epochs=2, serialization_dir=self.TEST_DIR)
             trainer.train()

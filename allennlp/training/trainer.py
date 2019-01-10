@@ -18,7 +18,6 @@ from allennlp.common import Params, Registrable
 from allennlp.common.checks import ConfigurationError, check_for_gpu
 from allennlp.models.model import Model
 from allennlp.nn import util as nn_util
-from allennlp.training.tensorboard_writer import TensorboardWriter
 from allennlp.training import util as training_util
 
 logger = logging.getLogger(__name__)
@@ -40,9 +39,6 @@ class Trainer(Registrable):
 
         self.model = model
         self._serialization_dir = serialization_dir
-
-        # Set up tensorboard
-        self._tensorboard = TensorboardWriter.create(serialization_dir)
 
         # Configure GPUs:
         if not isinstance(cuda_device, int) and not isinstance(cuda_device, list):

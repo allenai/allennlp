@@ -25,6 +25,7 @@ from allennlp.nn import util as nn_util
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
 from allennlp.training.metric_tracker import MetricTracker
 from allennlp.training.optimizers import Optimizer
+from allennlp.training.tensorboard_writer import TensorboardWriter
 from allennlp.training.trainer import Trainer
 from allennlp.training import util as training_util
 
@@ -187,22 +188,29 @@ class SingleTaskTrainer(Trainer):
 
         self._learning_rate_scheduler = learning_rate_scheduler
 
-        self._log_interval = 10  # seconds
-        self._summary_interval = summary_interval
-        self._histogram_interval = histogram_interval
-        self._log_histograms_this_batch = False
-        self._should_log_parameter_statistics = should_log_parameter_statistics
-        self._should_log_learning_rate = should_log_learning_rate
-        self._log_batch_size_period = log_batch_size_period
-
-        self._evaluation_dataset = evaluation_dataset
-
         # We keep the total batch number as an instance variable because it
         # is used inside a closure for the hook which logs activations in
         # ``_enable_activation_logging``.
         self._batch_num_total = 0
 
+        self._tensorboard = TensorboardWriter(
+                get_batch_num_total=lambda: self._batch_num_total,
+                serialization_dir=serialization_dir,
+                summary_interval=summary_interval,
+                histogram_interval=histogram_interval,
+                should_log_parameter_statistics=should_log_parameter_statistics,
+                should_log_learning_rate=should_log_learning_rate
+        )
+
+        self._log_batch_size_period = log_batch_size_period
+
+        self._evaluation_dataset = evaluation_dataset
+
         self._last_log = 0.0  # time of last logging
+
+        # Enable activation logging.
+        if histogram_interval is not None:
+            self._tensorboard.enable_activation_logging(self.model)
 
 
     def _train_epoch(self, epoch: int) -> Dict[str, float]:
@@ -233,8 +241,7 @@ class SingleTaskTrainer(Trainer):
         if self._batch_num_total is None:
             self._batch_num_total = 0
 
-        if self._histogram_interval is not None:
-            histogram_parameters = set(self.model.get_parameters_for_histogram_tensorboard_logging())
+        histogram_parameters = set(self.model.get_parameters_for_histogram_tensorboard_logging())
 
         logger.info("Training")
         train_generator_tqdm = Tqdm.tqdm(train_generator,
@@ -244,9 +251,6 @@ class SingleTaskTrainer(Trainer):
             batches_this_epoch += 1
             self._batch_num_total += 1
             batch_num_total = self._batch_num_total
-
-            self._log_histograms_this_batch = self._histogram_interval is not None and (
-                    batch_num_total % self._histogram_interval == 0)
 
             self.optimizer.zero_grad()
 
@@ -265,7 +269,7 @@ class SingleTaskTrainer(Trainer):
             if self._learning_rate_scheduler:
                 self._learning_rate_scheduler.step_batch(batch_num_total)
 
-            if self._log_histograms_this_batch:
+            if self._tensorboard.should_log_histograms_this_batch():
                 # get the magnitude of parameter updates for logging
                 # We need a copy of current parameters to compute magnitude of updates,
                 # and copy them to CPU so large models won't go OOM on the GPU.
@@ -277,8 +281,7 @@ class SingleTaskTrainer(Trainer):
                     update_norm = torch.norm(param_updates[name].view(-1, ))
                     param_norm = torch.norm(param.view(-1, )).cpu()
                     self._tensorboard.add_train_scalar("gradient_update/" + name,
-                                                       update_norm / (param_norm + 1e-7),
-                                                       batch_num_total)
+                                                       update_norm / (param_norm + 1e-7))
             else:
                 self.optimizer.step()
 
@@ -289,20 +292,15 @@ class SingleTaskTrainer(Trainer):
             train_generator_tqdm.set_description(description, refresh=False)
 
             # Log parameter values to Tensorboard
-            if batch_num_total % self._summary_interval == 0:
-                if self._should_log_parameter_statistics:
-                    self._tensorboard.log_parameter_and_gradient_statistics(
-                            self.model,
-                            batch_num_total,
-                            batch_grad_norm)
-                if self._should_log_learning_rate:
-                    self._tensorboard.log_learning_rates(self.model, self.optimizer, batch_num_total)
-                self._tensorboard.add_train_scalar("loss/loss_train", metrics["loss"], batch_num_total)
-                self._tensorboard.log_metrics(batch_num_total,
-                                              {"epoch_metrics/" + k: v for k, v in metrics.items()})
+            if self._tensorboard.should_log_this_batch():
+                self._tensorboard.log_parameter_and_gradient_statistics(self.model, batch_grad_norm)
+                self._tensorboard.log_learning_rates(self.model, self.optimizer)
 
-            if self._log_histograms_this_batch:
-                self._tensorboard.log_histograms(self.model, batch_num_total, histogram_parameters)
+                self._tensorboard.add_train_scalar("loss/loss_train", metrics["loss"])
+                self._tensorboard.log_metrics({"epoch_metrics/" + k: v for k, v in metrics.items()})
+
+            if self._tensorboard.should_log_histograms_this_batch():
+                self._tensorboard.log_histograms(self.model, histogram_parameters)
 
             if self._log_batch_size_period:
                 cur_batch = training_util.get_batch_size(batch)
@@ -310,8 +308,8 @@ class SingleTaskTrainer(Trainer):
                 if (batches_this_epoch - 1) % self._log_batch_size_period == 0:
                     average = cumulative_batch_size/batches_this_epoch
                     logger.info(f"current batch size: {cur_batch} mean batch size: {average}")
-                    self._tensorboard.add_train_scalar("current_batch_size", cur_batch, batch_num_total)
-                    self._tensorboard.add_train_scalar("mean_batch_size", average, batch_num_total)
+                    self._tensorboard.add_train_scalar("current_batch_size", cur_batch)
+                    self._tensorboard.add_train_scalar("mean_batch_size", average)
 
             # Save model if needed.
             if self._model_save_interval is not None and (
@@ -382,14 +380,6 @@ class SingleTaskTrainer(Trainer):
 
         training_util.enable_gradient_clipping(self.model, self._grad_clipping)
 
-        # Enable activation logging. Need to use a closure to capture current values
-        # of local variables.
-        if self._histogram_interval is not None:
-            get_batch_num_total = lambda: (self._batch_num_total
-                                           if self._log_histograms_this_batch
-                                           else None)
-            self._tensorboard.enable_activation_logging(self.model, get_batch_num_total)
-
         logger.info("Beginning training.")
 
         train_metrics: Dict[str, float] = {}
@@ -425,7 +415,7 @@ class SingleTaskTrainer(Trainer):
                         logger.info("Ran out of patience.  Stopping training.")
                         break
 
-            self._tensorboard.log_metrics(epoch, train_metrics, val_metrics=val_metrics)
+            self._tensorboard.log_metrics(train_metrics, val_metrics=val_metrics)
 
             # Create overall metrics dict
             training_elapsed_time = time.time() - training_start_time
