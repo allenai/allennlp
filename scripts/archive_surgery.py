@@ -35,7 +35,7 @@ def main():
     parser.add_argument("--output-file", required=True,
                         help="path to output file")
     parser.add_argument("--editor", default=os.environ.get("EDITOR"),
-                        help="editor to launch, whose default value is environment vaiable `$EDITOR`")
+                        help="editor to launch, whose default value is `$EDITOR` the environment variable")
 
     args = parser.parse_args()
 
