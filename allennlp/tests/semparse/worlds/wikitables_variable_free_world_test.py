@@ -239,13 +239,13 @@ class TestWikiTablesVariableFreeWorld(AllenNlpTestCase):
 
     @staticmethod
     def _get_alias(types_, name) -> str:
-        if name in types_.generic_name_mapper.common_name_mapping:
+        if name in types_.generic_name_mapper.name_mapping:
             return types_.generic_name_mapper.get_alias(name)
-        elif name in types_.string_column_name_mapper.common_name_mapping:
+        elif name in types_.string_column_name_mapper.name_mapping:
             return types_.string_column_name_mapper.get_alias(name)
-        elif name in types_.number_column_name_mapper.common_name_mapping:
+        elif name in types_.number_column_name_mapper.name_mapping:
             return types_.number_column_name_mapper.get_alias(name)
-        elif name in types_.date_column_name_mapper.common_name_mapping:
+        elif name in types_.date_column_name_mapper.name_mapping:
             return types_.date_column_name_mapper.get_alias(name)
         else:
             return types_.comparable_column_name_mapper.get_alias(name)
