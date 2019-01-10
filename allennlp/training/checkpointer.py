@@ -79,8 +79,7 @@ class Checkpointer:
         # int (for end of epoch files) or with epoch and timestamp for
         # within epoch checkpoints, e.g. 5.2018-02-02-15-33-42
         found_epochs = [
-                # pylint: disable=anomalous-backslash-in-string
-                re.search("model_state_epoch_([0-9\.\-]+)\.th", x).group(1)
+                re.search(r"model_state_epoch_([0-9\.\-]+)\.th", x).group(1)
                 for x in model_checkpoints
         ]
         int_epochs: Any = []

@@ -77,10 +77,6 @@ class LanguageModel(Model):
     dropout: ``float``, optional (default: None)
         If specified, dropout is applied to the contextualized embeddings before computation of
         the softmax. The contextualized embeddings themselves are returned without dropout.
-    loss_scale: ``Union[float, str]``, optional (default: 1.0)
-        This scaling factor is applied to the average language model loss.
-        You can also specify ``"n_samples"`` in which case we compute total
-        loss across all predictions.
     num_samples: ``int``, optional (default: None)
         If provided, the model will use ``SampledSoftmaxLoss``
         with the specified number of samples. Otherwise, it will use
@@ -97,7 +93,6 @@ class LanguageModel(Model):
                  text_field_embedder: TextFieldEmbedder,
                  contextualizer: Seq2SeqEncoder,
                  dropout: float = None,
-                 loss_scale: Union[float, str] = 1.0,
                  num_samples: int = None,
                  sparse_embeddings: bool = False,
                  bidirectional: bool = False,
@@ -140,7 +135,6 @@ class LanguageModel(Model):
         else:
             self._dropout = lambda x: x
 
-        self._loss_scale = loss_scale
         if initializer is not None:
             initializer(self)
 
@@ -312,17 +306,12 @@ class LanguageModel(Model):
             self._last_average_loss[0] = average_loss.detach().item()
 
             if num_targets > 0:
-                # loss is directly minimized
-                if self._loss_scale == 'n_samples':
-                    scale_factor = num_targets.float()
-                else:
-                    scale_factor = self._loss_scale
-
                 return_dict.update({
-                        'loss': average_loss * scale_factor,
-                        'forward_loss': forward_loss * scale_factor / num_targets.float(),
-                        'backward_loss': (backward_loss * scale_factor / num_targets.float()
-                                          if backward_loss is not None else None)
+                        'loss': average_loss,
+                        'forward_loss': forward_loss / num_targets.float(),
+                        'backward_loss': (backward_loss / num_targets.float()
+                                          if backward_loss is not None else None),
+                        'batch_weight': num_targets.float()
                 })
             else:
                 # average_loss zero tensor, return it for all

@@ -466,8 +466,10 @@ class SingleTaskTrainer(Trainer):
             logger.info("The model will be evaluated using the best epoch weights.")
             iterator = self._validation_iterator or self.iterator
 
+            # TODO(brendanr): make batch_weight_key configurable
             test_metrics = evaluate(self.model, self._evaluation_dataset, iterator,
-                                    cuda_device=self._cuda_devices[0])
+                                    cuda_device=self._cuda_devices[0],
+                                    batch_weight_key="")
 
             return {f"test_{name}": value for name, value in test_metrics.items()}
         else:
