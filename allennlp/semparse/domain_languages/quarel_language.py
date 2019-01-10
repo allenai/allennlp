@@ -77,16 +77,17 @@ class QuaRelLanguage(DomainLanguage):
         self.add_predicate('and', and_function)
 
     def _check_quarels_compatible(self, quarel_0: QuaRelType, quarel_1: QuaRelType) -> bool:
-        for theory in self.default_theories:
-            if quarel_0.quarel_property.name in theory and quarel_1.quarel_property.name in theory:
-                world_same = 1 if quarel_0.world.number == quarel_1.world.number else -1
-                direction_same = 1 if quarel_0.direction.number == quarel_1.direction.number else -1
-                is_compatible = theory[quarel_0.quarel_property.name] * theory[quarel_1.quarel_property.name] \
-                        * world_same * direction_same
-                if is_compatible == 1: # pylint: disable=simplifiable-if-statement
-                    return True
-                else:
-                    return False
+        if quarel_0 and quarel_1:
+            for theory in self.default_theories:
+                if quarel_0.quarel_property.name in theory and quarel_1.quarel_property.name in theory:
+                    world_same = 1 if quarel_0.world.number == quarel_1.world.number else -1
+                    direction_same = 1 if quarel_0.direction.number == quarel_1.direction.number else -1
+                    is_compatible = theory[quarel_0.quarel_property.name] * theory[quarel_1.quarel_property.name] \
+                            * world_same * direction_same
+                    if is_compatible == 1: # pylint: disable=simplifiable-if-statement
+                        return True
+                    else:
+                        return False
         return False
 
     @predicate
