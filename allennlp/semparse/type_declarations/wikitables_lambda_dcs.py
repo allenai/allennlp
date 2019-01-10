@@ -244,5 +244,5 @@ name_mapper.map_name_with_signature("sum", UNARY_NUM_OP_TYPE)
 name_mapper.map_name_with_signature("avg", UNARY_NUM_OP_TYPE)
 name_mapper.map_name_with_signature("-", BINARY_NUM_OP_TYPE)  # subtraction
 
-COMMON_NAME_MAPPING = name_mapper.common_name_mapping
-COMMON_TYPE_SIGNATURE = name_mapper.common_type_signature
+COMMON_NAME_MAPPING = name_mapper.name_mapping
+COMMON_TYPE_SIGNATURE = name_mapper.type_signatures

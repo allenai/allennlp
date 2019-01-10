@@ -4,9 +4,8 @@ any base class with a named registry for its subclasses and a decorator
 for registering them.
 """
 from collections import defaultdict
-from typing import TypeVar, Type, Dict, List, Optional
+from typing import TypeVar, Type, Dict, List
 import logging
-import warnings
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.from_params import FromParams
@@ -40,9 +39,7 @@ class Registrable(FromParams):
     default_implementation: str = None
 
     @classmethod
-    def register(cls: Type[T], name: str, deprecation_message: Optional[str] = None):
-        if deprecation_message is not None:
-            warnings.warn(deprecation_message, DeprecationWarning)
+    def register(cls: Type[T], name: str):
         registry = Registrable._registry[cls]
         def add_subclass_to_registry(subclass: Type[T]):
             # Add to registry, raise an error if key has already been used.
