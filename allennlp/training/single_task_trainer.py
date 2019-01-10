@@ -1,7 +1,6 @@
 
 import logging
 import os
-import shutil
 import time
 import re
 import datetime
@@ -21,7 +20,7 @@ from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.model import Model
-from allennlp.nn import util as nn_util
+from allennlp.training.checkpointer import Checkpointer
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
 from allennlp.training.metric_tracker import MetricTracker
 from allennlp.training.optimizers import Optimizer
@@ -177,10 +176,10 @@ class SingleTaskTrainer(Trainer):
 
         self._num_epochs = num_epochs
 
-        self._num_serialized_models_to_keep = num_serialized_models_to_keep
-        self._keep_serialized_model_every_num_seconds = keep_serialized_model_every_num_seconds
-        self._serialized_paths: List[Any] = []
-        self._last_permanent_saved_checkpoint_time = time.time()
+        self._checkpointer = Checkpointer(serialization_dir,
+                                          keep_serialized_model_every_num_seconds,
+                                          num_serialized_models_to_keep)
+
         self._model_save_interval = model_save_interval
 
         self._grad_norm = grad_norm
@@ -199,8 +198,7 @@ class SingleTaskTrainer(Trainer):
                 summary_interval=summary_interval,
                 histogram_interval=histogram_interval,
                 should_log_parameter_statistics=should_log_parameter_statistics,
-                should_log_learning_rate=should_log_learning_rate
-        )
+                should_log_learning_rate=should_log_learning_rate)
 
         self._log_batch_size_period = log_batch_size_period
 
@@ -211,7 +209,6 @@ class SingleTaskTrainer(Trainer):
         # Enable activation logging.
         if histogram_interval is not None:
             self._tensorboard.enable_activation_logging(self.model)
-
 
     def _train_epoch(self, epoch: int) -> Dict[str, float]:
         """
@@ -458,35 +455,25 @@ class SingleTaskTrainer(Trainer):
 
             epochs_trained += 1
 
-        self._load_best_weights()
+        self._checkpointer.load_best_weights(self.model)
         return {**metrics, **self._test_metrics()}
 
-    def _load_best_weights(self):
-        if self._serialization_dir:
-            logger.info("loading best weights")
-            best_model_state_path = os.path.join(self._serialization_dir, 'best.th')
-            best_model_state = torch.load(best_model_state_path)
-            self.model.load_state_dict(best_model_state)
-        else:
-            logger.info("cannot load best weights without `serialization_dir`, "
-                        "so you're just getting the last weights")
-
     def _test_metrics(self) -> Dict:
+        """
+        Evaluate on `evaluation_dataset` and return the generated metrics.
+        """
         if self._evaluation_dataset is not None:
             logger.info("The model will be evaluated using the best epoch weights.")
             iterator = self._validation_iterator or self.iterator
 
-            test_metrics = evaluate(
-                    self.model, self._evaluation_dataset, iterator,
-                    cuda_device=self._cuda_devices[0]
-            )
+            test_metrics = evaluate(self.model, self._evaluation_dataset, iterator,
+                                    cuda_device=self._cuda_devices[0])
 
             return {f"test_{name}": value for name, value in test_metrics.items()}
         else:
             return {}
 
-    def _save_checkpoint(self,
-                         epoch: Union[int, str]) -> None:
+    def _save_checkpoint(self, epoch: Union[int, str]) -> None:
         """
         Saves a checkpoint of the model to self._serialization_dir.
         Is a no-op if self._serialization_dir is None.
@@ -496,98 +483,31 @@ class SingleTaskTrainer(Trainer):
         epoch : Union[int, str], required.
             The epoch of training.  If the checkpoint is saved in the middle
             of an epoch, the parameter is a string with the epoch and timestamp.
-        is_best: bool, optional (default = None)
-            A flag which causes the model weights at the given epoch to
-            be copied to a "best.th" file. The value of this flag should
-            be based on some validation metric computed by your model.
         """
-        if self._serialization_dir is not None:
-            model_path = os.path.join(self._serialization_dir, "model_state_epoch_{}.th".format(epoch))
-            model_state = self.model.state_dict()
-            torch.save(model_state, model_path)
+        # These are the training states we need to persist.
+        training_states = {
+                "metric_tracker": self._metric_tracker.state_dict(),
+                "optimizer": self.optimizer.state_dict(),
+                "batch_num_total": self._batch_num_total
+        }
 
-            training_state = {'epoch': epoch,
-                              'metric_tracker': self._metric_tracker.state_dict(),
-                              'optimizer': self.optimizer.state_dict(),
-                              'batch_num_total': self._batch_num_total}
-            if self._learning_rate_scheduler is not None:
-                training_state["learning_rate_scheduler"] = \
+        # If we have a learning rate scheduler, we should persist that too.
+        if self._learning_rate_scheduler is not None:
+            training_states["learning_rate_scheduler"] = (
                     self._learning_rate_scheduler.lr_scheduler.state_dict()
-            training_path = os.path.join(self._serialization_dir,
-                                         "training_state_epoch_{}.th".format(epoch))
-            torch.save(training_state, training_path)
-            if self._metric_tracker.is_best_so_far:
-                logger.info("Best validation performance so far. "
-                            "Copying weights to '%s/best.th'.", self._serialization_dir)
-                shutil.copyfile(model_path, os.path.join(self._serialization_dir, "best.th"))
+            )
 
-            if self._num_serialized_models_to_keep and self._num_serialized_models_to_keep >= 0:
-                self._serialized_paths.append([time.time(), model_path, training_path])
-                if len(self._serialized_paths) > self._num_serialized_models_to_keep:
-                    paths_to_remove = self._serialized_paths.pop(0)
-                    # Check to see if we should keep this checkpoint, if it has been longer
-                    # then self._keep_serialized_model_every_num_seconds since the last
-                    # kept checkpoint.
-                    remove_path = True
-                    if self._keep_serialized_model_every_num_seconds is not None:
-                        save_time = paths_to_remove[0]
-                        time_since_checkpoint_kept = save_time - self._last_permanent_saved_checkpoint_time
-                        if time_since_checkpoint_kept > self._keep_serialized_model_every_num_seconds:
-                            # We want to keep this checkpoint.
-                            remove_path = False
-                            self._last_permanent_saved_checkpoint_time = save_time
-                    if remove_path:
-                        for fname in paths_to_remove[1:]:
-                            os.remove(fname)
-
-    def find_latest_checkpoint(self) -> Tuple[str, str]:
-        """
-        Return the location of the latest model and training state files.
-        If there isn't a valid checkpoint then return None.
-        """
-        have_checkpoint = (self._serialization_dir is not None and
-                           any("model_state_epoch_" in x for x in os.listdir(self._serialization_dir)))
-
-        if not have_checkpoint:
-            return None
-
-        serialization_files = os.listdir(self._serialization_dir)
-        model_checkpoints = [x for x in serialization_files if "model_state_epoch" in x]
-        # Get the last checkpoint file.  Epochs are specified as either an
-        # int (for end of epoch files) or with epoch and timestamp for
-        # within epoch checkpoints, e.g. 5.2018-02-02-15-33-42
-        found_epochs = [
-                # pylint: disable=anomalous-backslash-in-string
-                re.search("model_state_epoch_([0-9\.\-]+)\.th", x).group(1)
-                for x in model_checkpoints
-        ]
-        int_epochs: Any = []
-        for epoch in found_epochs:
-            pieces = epoch.split('.')
-            if len(pieces) == 1:
-                # Just a single epoch without timestamp
-                int_epochs.append([int(pieces[0]), '0'])
-            else:
-                # has a timestamp
-                int_epochs.append([int(pieces[0]), pieces[1]])
-        last_epoch = sorted(int_epochs, reverse=True)[0]
-        if last_epoch[1] == '0':
-            epoch_to_load = str(last_epoch[0])
-        else:
-            epoch_to_load = '{0}.{1}'.format(last_epoch[0], last_epoch[1])
-
-        model_path = os.path.join(self._serialization_dir,
-                                  "model_state_epoch_{}.th".format(epoch_to_load))
-        training_state_path = os.path.join(self._serialization_dir,
-                                           "training_state_epoch_{}.th".format(epoch_to_load))
-
-        return (model_path, training_state_path)
+        self._checkpointer.save_checkpoint(
+                model=self.model,
+                epoch=epoch,
+                training_states=training_states,
+                is_best_so_far=self._metric_tracker.is_best_so_far)
 
     def _restore_checkpoint(self) -> int:
         """
-        Restores a model from a serialization_dir to the last saved checkpoint.
+        Restores the model and training state from the last saved checkpoint.
         This includes an epoch count and optimizer state, which is serialized separately
-        from  model parameters. This function should only be used to continue training -
+        from model parameters. This function should only be used to continue training -
         if you wish to load a model for inference/load parts of a model into a new
         computation graph, you should use the native Pytorch functions:
         `` model.load_state_dict(torch.load("/path/to/model/weights.th"))``
@@ -601,25 +521,15 @@ class SingleTaskTrainer(Trainer):
             The epoch at which to resume training, which should be one after the epoch
             in the saved training state.
         """
-        latest_checkpoint = self.find_latest_checkpoint()
+        training_state = self._checkpointer.restore_checkpoint(self.model)
 
-        if latest_checkpoint is None:
+        if not training_state:
             # No checkpoint to restore, start at 0
             return 0
 
-        model_path, training_state_path = latest_checkpoint
-
-        # Load the parameters onto CPU, then transfer to GPU.
-        # This avoids potential OOM on GPU for large models that
-        # load parameters onto GPU then make a new GPU copy into the parameter
-        # buffer. The GPU transfer happens implicitly in load_state_dict.
-        model_state = torch.load(model_path, map_location=nn_util.device_mapping(-1))
-        training_state = torch.load(training_state_path, map_location=nn_util.device_mapping(-1))
-        self.model.load_state_dict(model_state)
         self.optimizer.load_state_dict(training_state["optimizer"])
         if self._learning_rate_scheduler is not None and "learning_rate_scheduler" in training_state:
-            self._learning_rate_scheduler.lr_scheduler.load_state_dict(
-                    training_state["learning_rate_scheduler"])
+            self._learning_rate_scheduler.lr_scheduler.load_state_dict(training_state["learning_rate_scheduler"])
         training_util.move_optimizer_to_cuda(self.optimizer)
 
         # Currently the ``training_state`` contains a serialized ``MetricTracker``.
