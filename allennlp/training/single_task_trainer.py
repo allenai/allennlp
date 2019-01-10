@@ -23,6 +23,7 @@ from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.model import Model
 from allennlp.nn import util as nn_util
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
+from allennlp.training.metric_tracker import MetricTracker
 from allennlp.training.optimizers import Optimizer
 from allennlp.training.trainer import Trainer
 from allennlp.training import util as training_util
@@ -167,7 +168,12 @@ class SingleTaskTrainer(Trainer):
         elif (not isinstance(patience, int)) or patience <= 0:
             raise ConfigurationError('{} is an invalid value for "patience": it must be a positive integer '
                                      'or None (if you want to disable early stopping)'.format(patience))
-        self._patience = patience
+
+        # For tracking is_best_so_far and should_stop_early
+        self._metric_tracker = MetricTracker(patience, validation_metric)
+        # Get rid of + or -
+        self._validation_metric = validation_metric[1:]
+
         self._num_epochs = num_epochs
 
         self._num_serialized_models_to_keep = num_serialized_models_to_keep
@@ -180,13 +186,6 @@ class SingleTaskTrainer(Trainer):
         self._grad_clipping = grad_clipping
 
         self._learning_rate_scheduler = learning_rate_scheduler
-
-        increase_or_decrease = validation_metric[0]
-        if increase_or_decrease not in ["+", "-"]:
-            raise ConfigurationError("Validation metrics must specify whether they should increase "
-                                     "or decrease by pre-pending the metric name with a +/-.")
-        self._validation_metric = validation_metric[1:]
-        self._validation_metric_decreases = increase_or_decrease == "-"
 
         self._log_interval = 10  # seconds
         self._summary_interval = summary_interval
@@ -341,29 +340,13 @@ class SingleTaskTrainer(Trainer):
             ):
                 last_save_time = time.time()
                 self._save_checkpoint(
-                        '{0}.{1}'.format(epoch, training_util.time_to_str(int(last_save_time))), [], is_best=False
+                        '{0}.{1}'.format(epoch, training_util.time_to_str(int(last_save_time)))
                 )
         metrics = training_util.get_metrics(self.model, train_loss, batches_this_epoch, reset=True)
         metrics['cpu_memory_MB'] = peak_cpu_usage
         for (gpu_num, memory) in gpu_usage:
             metrics['gpu_'+str(gpu_num)+'_memory_MB'] = memory
         return metrics
-
-    def _should_stop_early(self, metric_history: List[float]) -> bool:
-        """
-        uses patience and the validation metric to determine if training should stop early
-        """
-        if self._patience and self._patience < len(metric_history):
-            # Pylint can't figure out that in this branch `self._patience` is an int.
-            # pylint: disable=invalid-unary-operand-type
-
-            # Is the best score in the past N epochs worse than or equal the best score overall?
-            if self._validation_metric_decreases:
-                return min(metric_history[-self._patience:]) >= min(metric_history[:-self._patience])
-            else:
-                return max(metric_history[-self._patience:]) <= max(metric_history[:-self._patience])
-
-        return False
 
 
     def _validation_loss(self) -> Tuple[float, int]:
@@ -411,7 +394,7 @@ class SingleTaskTrainer(Trainer):
         Trains the supplied model with the supplied parameters.
         """
         try:
-            epoch_counter, validation_metric_per_epoch = self._restore_checkpoint()
+            epoch_counter = self._restore_checkpoint()
         except RuntimeError:
             traceback.print_exc()
             raise ConfigurationError("Could not recover training from the checkpoint.  Did you mean to output to "
@@ -425,6 +408,7 @@ class SingleTaskTrainer(Trainer):
 
         train_metrics: Dict[str, float] = {}
         val_metrics: Dict[str, float] = {}
+        this_epoch_val_metric: float = None
         metrics: Dict[str, Any] = {}
         epochs_trained = 0
         training_start_time = time.time()
@@ -449,20 +433,11 @@ class SingleTaskTrainer(Trainer):
 
                     # Check validation metric for early stopping
                     this_epoch_val_metric = val_metrics[self._validation_metric]
+                    self._metric_tracker.add_metric(this_epoch_val_metric)
 
-                    # Check validation metric to see if it's the best so far
-                    is_best_so_far = self._is_best_so_far(this_epoch_val_metric, validation_metric_per_epoch)
-                    validation_metric_per_epoch.append(this_epoch_val_metric)
-                    if self._should_stop_early(validation_metric_per_epoch):
+                    if self._metric_tracker.should_stop_early():
                         logger.info("Ran out of patience.  Stopping training.")
                         break
-
-            else:
-                # No validation set, so just assume it's the best so far.
-                is_best_so_far = True
-                val_metrics = {}
-                this_epoch_val_metric = None
-
 
             self._tensorboard.log_metrics(epoch, train_metrics, val_metrics=val_metrics)
 
@@ -478,7 +453,7 @@ class SingleTaskTrainer(Trainer):
             for key, value in val_metrics.items():
                 metrics["validation_" + key] = value
 
-            if is_best_so_far:
+            if self._metric_tracker.is_best_so_far:
                 # Update all the best_ metrics.
                 # (Otherwise they just stay the same as they were.)
                 metrics['best_epoch'] = epoch
@@ -493,7 +468,7 @@ class SingleTaskTrainer(Trainer):
                 # if it doesn't, the validation metric passed here is ignored.
                 self._learning_rate_scheduler.step(this_epoch_val_metric, epoch)
 
-            self._save_checkpoint(epoch, validation_metric_per_epoch, is_best=is_best_so_far)
+            self._save_checkpoint(epoch)
 
             epoch_elapsed_time = time.time() - epoch_start_time
             logger.info("Epoch duration: %s", time.strftime("%H:%M:%S", time.gmtime(epoch_elapsed_time)))
@@ -534,20 +509,8 @@ class SingleTaskTrainer(Trainer):
         else:
             return {}
 
-    def _is_best_so_far(self,
-                        this_epoch_val_metric: float,
-                        validation_metric_per_epoch: List[float]):
-        if not validation_metric_per_epoch:
-            return True
-        elif self._validation_metric_decreases:
-            return this_epoch_val_metric < min(validation_metric_per_epoch)
-        else:
-            return this_epoch_val_metric > max(validation_metric_per_epoch)
-
     def _save_checkpoint(self,
-                         epoch: Union[int, str],
-                         val_metric_per_epoch: List[float],
-                         is_best: Optional[bool] = None) -> None:
+                         epoch: Union[int, str]) -> None:
         """
         Saves a checkpoint of the model to self._serialization_dir.
         Is a no-op if self._serialization_dir is None.
@@ -568,7 +531,7 @@ class SingleTaskTrainer(Trainer):
             torch.save(model_state, model_path)
 
             training_state = {'epoch': epoch,
-                              'val_metric_per_epoch': val_metric_per_epoch,
+                              'metric_tracker': self._metric_tracker.state_dict(),
                               'optimizer': self.optimizer.state_dict(),
                               'batch_num_total': self._batch_num_total}
             if self._learning_rate_scheduler is not None:
@@ -577,7 +540,7 @@ class SingleTaskTrainer(Trainer):
             training_path = os.path.join(self._serialization_dir,
                                          "training_state_epoch_{}.th".format(epoch))
             torch.save(training_state, training_path)
-            if is_best:
+            if self._metric_tracker.is_best_so_far:
                 logger.info("Best validation performance so far. "
                             "Copying weights to '%s/best.th'.", self._serialization_dir)
                 shutil.copyfile(model_path, os.path.join(self._serialization_dir, "best.th"))
@@ -644,7 +607,7 @@ class SingleTaskTrainer(Trainer):
 
         return (model_path, training_state_path)
 
-    def _restore_checkpoint(self) -> Tuple[int, List[float]]:
+    def _restore_checkpoint(self) -> int:
         """
         Restores a model from a serialization_dir to the last saved checkpoint.
         This includes an epoch count and optimizer state, which is serialized separately
@@ -666,7 +629,7 @@ class SingleTaskTrainer(Trainer):
 
         if latest_checkpoint is None:
             # No checkpoint to restore, start at 0
-            return 0, []
+            return 0
 
         model_path, training_state_path = latest_checkpoint
 
@@ -683,14 +646,13 @@ class SingleTaskTrainer(Trainer):
                     training_state["learning_rate_scheduler"])
         training_util.move_optimizer_to_cuda(self.optimizer)
 
-        # We didn't used to save `validation_metric_per_epoch`, so we can't assume
-        # that it's part of the trainer state. If it's not there, an empty list is all
-        # we can do.
-        if "val_metric_per_epoch" not in training_state:
-            logger.warning("trainer state `val_metric_per_epoch` not found, using empty list")
-            val_metric_per_epoch: List[float] = []
+        if "metric_tracker" in training_state:
+            self._metric_tracker.load_state_dict(training_state["metric_tracker"])
+        elif "val_metric_per_epoch" in training_state:
+            self._metric_tracker.clear()
+            self._metric_tracker.add_metrics(training_state["val_metrics_per_epoch"])
         else:
-            val_metric_per_epoch = training_state["val_metric_per_epoch"]
+            self._metric_tracker.clear()
 
         if isinstance(training_state["epoch"], int):
             epoch_to_return = training_state["epoch"] + 1
@@ -703,7 +665,7 @@ class SingleTaskTrainer(Trainer):
         if batch_num_total is not None:
             self._batch_num_total = batch_num_total
 
-        return epoch_to_return, val_metric_per_epoch
+        return epoch_to_return
 
     @classmethod
     def for_model(cls,
