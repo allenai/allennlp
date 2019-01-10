@@ -125,7 +125,7 @@ class Optimizer(Registrable):
         # By default we cast things that e.g. look like floats to floats before handing them
         # to the Optimizer constructor, but if you want to disable that behavior you could add a
         #       "infer_type_and_cast": false
-        # key to your "trainer" config.
+        # key to your "trainer.optimizer" config.
         infer_type_and_cast = params.pop_bool("infer_type_and_cast", True)
         params_as_dict = params.as_dict(infer_type_and_cast=infer_type_and_cast)
         return Optimizer.by_name(optimizer)(parameter_groups, **params_as_dict) # type: ignore

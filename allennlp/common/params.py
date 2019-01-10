@@ -56,16 +56,17 @@ def infer_and_cast(value: Any):
         elif value.lower() == "false":
             return False
         else:
-            # See if it could be an int
+            # See if it could be an int.
             try:
                 return int(value)
             except ValueError:
-                # See if it could be a float.
-                try:
-                    return float(value)
-                except ValueError:
-                    # Just return it as a string.
-                    return value
+                pass
+            # See if it could be a float.
+            try:
+                return float(value)
+            except ValueError:
+                # Just return it as a string.
+                return value
     else:
         raise ValueError(f"cannot infer type of {value}")
 
