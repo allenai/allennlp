@@ -1,5 +1,3 @@
-from typing import Union
-
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.language_model import LanguageModel
 from allennlp.models.model import Model

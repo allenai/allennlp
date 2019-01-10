@@ -1,5 +1,5 @@
 import copy
-from typing import Any, Dict, Set, Union, List
+from typing import Any, Dict, Set, Union, Iterable
 
 from numpy.testing import assert_allclose
 import torch
@@ -199,14 +199,14 @@ class ModelTestCase(AllenNlpTestCase):
 
     def ensure_batch_predictions_are_consistent(
             self,
-            keys_to_ignore: List[str] = []):
+            keys_to_ignore: Iterable[str] = ()):
         """
         Ensures that the model performs the same on a batch of instances as on individual instances.
         Ignores metrics matching the regexp .*loss.* and those specified explicitly.
 
         Parameters
         ----------
-        keys_to_ignore : ``List[str]``, optional (default=[])
+        keys_to_ignore : ``Iterable[str]``, optional (default=())
             Names of metrics that should not be taken into account, e.g. "batch_weight".
         """
         self.model.eval()
