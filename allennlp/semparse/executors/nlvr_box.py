@@ -1,7 +1,7 @@
 from typing import List
 
 from allennlp.common.util import JsonDict
-from allennlp.semparse.worlds.nlvr_object import Object
+from allennlp.semparse.executors.nlvr_object import Object
 
 
 class Box:

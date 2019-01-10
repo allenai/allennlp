@@ -1,7 +1,7 @@
 # pylint: disable=no-self-use,invalid-name,too-many-public-methods
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.tokenizers import WordTokenizer
-from allennlp.semparse.worlds.world import ExecutionError
+from allennlp.semparse.domain_languages.domain_language import ExecutionError
 from allennlp.semparse.contexts import TableQuestionContext
 from allennlp.semparse.executors import WikiTablesVariableFreeExecutor
 from allennlp.semparse.executors.wikitables_variable_free_executor import Date

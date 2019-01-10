@@ -339,6 +339,31 @@ def masked_mean(vector: torch.Tensor,
     return value_sum / value_count.clamp(min=eps)
 
 
+def masked_flip(padded_sequence: torch.Tensor,
+                sequence_lengths: List[int]) -> torch.Tensor:
+    """
+        Flips a padded tensor along the time dimension without affecting masked entries.
+
+        Parameters
+        ----------
+        padded_sequence : ``torch.Tensor``
+            The tensor to flip along the time dimension.
+            Assumed to be of dimensions (batch size, num timesteps, ...)
+        sequence_lengths : ``torch.Tensor``
+            A list containing the lengths of each unpadded sequence in the batch.
+
+        Returns
+        -------
+        A ``torch.Tensor`` of the same shape as padded_sequence.
+        """
+    assert padded_sequence.size(0) == len(sequence_lengths), \
+        f'sequence_lengths length ${len(sequence_lengths)} does not match batch size ${padded_sequence.size(0)}'
+    num_timesteps = padded_sequence.size(1)
+    flipped_padded_sequence = torch.flip(padded_sequence, [1])
+    sequences = [flipped_padded_sequence[i, num_timesteps - length:] for i, length in enumerate(sequence_lengths)]
+    return torch.nn.utils.rnn.pad_sequence(sequences, batch_first=True)
+
+
 def viterbi_decode(tag_sequence: torch.Tensor,
                    transition_matrix: torch.Tensor,
                    tag_observations: Optional[List[int]] = None):
@@ -1232,6 +1257,7 @@ def add_positional_features(tensor: torch.Tensor,
         sinusoids = torch.cat([sinusoids, sinusoids.new_zeros(timesteps, 1)], 1)
     return tensor + sinusoids.unsqueeze(0)
 
+
 def clone(module: torch.nn.Module, num_copies: int) -> torch.nn.ModuleList:
     "Produce N identical layers."
     return torch.nn.ModuleList([copy.deepcopy(module) for _ in range(num_copies)])
@@ -1248,6 +1274,7 @@ def combine_initial_dims(tensor: torch.Tensor) -> torch.Tensor:
         return tensor
     else:
         return tensor.view(-1, tensor.size(-1))
+
 
 def uncombine_initial_dims(tensor: torch.Tensor, original_size: torch.Size) -> torch.Tensor:
     """

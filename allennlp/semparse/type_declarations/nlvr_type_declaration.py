@@ -170,5 +170,5 @@ for num in range(1, 10):
     name_mapper.map_name_with_signature(name=num_string, signature=NUM_TYPE, alias=num_string)
 
 
-COMMON_NAME_MAPPING = name_mapper.common_name_mapping
-COMMON_TYPE_SIGNATURE = name_mapper.common_type_signature
+COMMON_NAME_MAPPING = name_mapper.name_mapping
+COMMON_TYPE_SIGNATURE = name_mapper.type_signatures
