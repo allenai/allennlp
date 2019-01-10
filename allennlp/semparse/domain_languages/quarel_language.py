@@ -1,23 +1,27 @@
 """
-This module defines a domain language for the QualRel dataset, a simple domain theory for reasoning
-about quantitative relations.
+This module defines a domain language for the QuaRel dataset, a simple domain theory for reasoning
+about qualitative relations.
 """
 from typing import Callable
-from allennlp.semparse import DomainLanguage, predicate
 
-class Property():
+from allennlp.semparse.domain_languages.domain_language import DomainLanguage, predicate
+
+class Property:
     def __init__(self, name: str) -> None:
         self.name = name
 
-class World():
+
+class World:
     def __init__(self, number: int) -> None:
         self.number = number
 
-class Direction():
+
+class Direction:
     def __init__(self, number: int) -> None:
         self.number = number
 
-class QuaRelType():
+
+class QuaRelType:
     def __init__(self,
                  quarel_property: Property,
                  direction: Direction,
@@ -26,12 +30,13 @@ class QuaRelType():
         self.direction = direction
         self.world = world
 
+
 def make_property_predicate(property_name: str) -> Callable[[Direction, World], QuaRelType]:
     def property_function(direction: Direction, world: World) -> QuaRelType:
         return QuaRelType(Property(property_name), direction, world)
     return property_function
 
-class QuaRel(DomainLanguage):
+class QuaRelLanguage(DomainLanguage):
     """
     Domain language for the QuaRel dataset.
     """
@@ -85,17 +90,17 @@ class QuaRel(DomainLanguage):
         return False
 
     @predicate
-    def infer(self, question: QuaRelType, answer_0: QuaRelType, answer_1: QuaRelType) -> int:
+    def infer(self, setup: QuaRelType, answer_0: QuaRelType, answer_1: QuaRelType) -> int:
         """
         Take the question and check if it is compatible with either of the answer choices.
         """
-        if self._check_quarels_compatible(question, answer_0):
-            if self._check_quarels_compatible(question, answer_1):
+        if self._check_quarels_compatible(setup, answer_0):
+            if self._check_quarels_compatible(setup, answer_1):
                 # Found two answers
                 return -2
             else:
                 return 0
-        elif self._check_quarels_compatible(question, answer_1):
+        elif self._check_quarels_compatible(setup, answer_1):
             return 1
         else:
             return -1

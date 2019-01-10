@@ -1,19 +1,12 @@
-import pytest
-
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.semparse.domain_languages.quarel_language import QuaRel
+
+from allennlp.semparse.domain_languages import QuaRelLanguage
 from allennlp.tests.semparse.domain_languages.domain_language_test import check_productions_match
-from allennlp.semparse import ExecutionError
 
 class QuaRelLanguageTest(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
-        self.language = QuaRel()
-
-    def test_constant_logical_form(self):
-        assert self.language.execute('world2').number == 2
-        with pytest.raises(ExecutionError, match='Unrecognized constant'):
-            self.language.execute('"and"')
+        self.language = QuaRelLanguage()
 
     def test_infer_quarel(self):
         assert self.language.execute(('(infer (speed higher world1) (friction higher world1) '
@@ -34,8 +27,7 @@ class QuaRelLanguageTest(AllenNlpTestCase):
                                                               '(friction higher world1) '
                                                               '(friction lower world1))')) == \
                 ['@start@ -> int',
-                 'int -> [<QuaRelType,QuaRelType,QuaRelType:int>, QuaRelType, QuaRelType, '
-                 'QuaRelType]',
+                 'int -> [<QuaRelType,QuaRelType,QuaRelType:int>, QuaRelType, QuaRelType, QuaRelType]',
                  '<QuaRelType,QuaRelType,QuaRelType:int> -> infer',
                  'QuaRelType -> [<Direction,World:QuaRelType>, Direction, World]',
                  '<Direction,World:QuaRelType> -> speed',
@@ -108,15 +100,17 @@ class QuaRelLanguageTest(AllenNlpTestCase):
                 'int',
                 '<QuaRelType,QuaRelType,QuaRelType:int>',
                 '<Direction,World:QuaRelType>'}
-
+        check_productions_match(valid_actions['QuaRelType'],
+                                ['[<QuaRelType,QuaRelType:QuaRelType>, QuaRelType, QuaRelType]',
+                                 '[<Direction,World:QuaRelType>, Direction, World]'])
         check_productions_match(valid_actions['@start@'],
                                 ['int'])
         check_productions_match(valid_actions['World'],
                                 ['world1', 'world2'])
-
         check_productions_match(valid_actions['Direction'],
                                 ['higher', 'lower',
                                  'high', 'low'])
+        check_productions_match(valid_actions['<QuaRelType,QuaRelType:QuaRelType>'], ['and'])
         check_productions_match(valid_actions['int'],
                                 ['[<QuaRelType,QuaRelType,QuaRelType:int>, QuaRelType, QuaRelType, QuaRelType]'])
         check_productions_match(valid_actions['<QuaRelType,QuaRelType,QuaRelType:int>'], ['infer'])
