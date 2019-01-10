@@ -6,6 +6,7 @@ from typing import Callable
 
 from allennlp.semparse.domain_languages.domain_language import DomainLanguage, predicate
 
+
 class Property:
     def __init__(self, name: str) -> None:
         self.name = name
@@ -35,6 +36,7 @@ def make_property_predicate(property_name: str) -> Callable[[Direction, World], 
     def property_function(direction: Direction, world: World) -> QuaRelType:
         return QuaRelType(Property(property_name), direction, world)
     return property_function
+
 
 class QuaRelLanguage(DomainLanguage):
     """
