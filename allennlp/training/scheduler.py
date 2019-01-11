@@ -44,6 +44,7 @@ class Scheduler:
                     raise KeyError(f"{self._initial_param_group_field} missing from param_groups[{i}]")
         self.base_values = [group[self._initial_param_group_field] for group in self.optimizer.param_groups]
         self.step(epoch=last_epoch)
+        self.last_epoch = last_epoch
 
     def state_dict(self) -> Dict[str, Any]:
         """
