@@ -11,7 +11,7 @@ class Scheduler:
     not just the learning rate.
 
     During training using the AllenNLP `Trainer`, this is the API and calling
-    sequence for ``step`` and ``step_batch``.
+    sequence for ``step`` and ``step_batch``::
 
        scheduler = ... # creates scheduler, calls self.step(epoch=-1) in __init__
 

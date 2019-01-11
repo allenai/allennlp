@@ -6,6 +6,7 @@ for training AllenNLP models.
 
 .. toctree::
 
+   allennlp.training.scheduler
    allennlp.training.learning_rate_schedulers
    allennlp.training.metrics
    allennlp.training.optimizers
