@@ -348,8 +348,6 @@ class DomainLanguage:
         signature = inspect.signature(function)
         argument_types = [param.annotation for param in signature.parameters.values()]
         return_type = signature.return_annotation
-        # TODO(mattg): this might need to just call PredicateType.get_type, or something - what if
-        # one of these is a function?
         argument_nltk_types: List[PredicateType] = [PredicateType.get_type(arg_type)
                                                     for arg_type in argument_types]
         return_nltk_type = PredicateType.get_type(return_type)
