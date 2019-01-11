@@ -1,3 +1,4 @@
+from overrides import overrides
 import torch
 
 from allennlp.training.learning_rate_schedulers.learning_rate_scheduler import LearningRateScheduler
@@ -31,6 +32,7 @@ class NoamLR(LearningRateScheduler):
         self.model_size = model_size
         super().__init__(optimizer, last_epoch=last_epoch)
 
+    @overrides
     def step(self, metric: float = None, epoch: int = None) -> None:
         pass
 
@@ -39,10 +41,10 @@ class NoamLR(LearningRateScheduler):
             self.last_epoch += 1  # type: ignore
         else:
             self.last_epoch = batch_num_total
-        for param_group, learning_rate in zip(self.optimizer.param_groups, self.get_lr()):
+        for param_group, learning_rate in zip(self.optimizer.param_groups, self.get_values()):
             param_group['lr'] = learning_rate
 
-    def get_lr(self):
+    def get_values(self):
         step = max(self.last_epoch, 1)
         scale = self.factor *  (self.model_size ** (-0.5) *
                                 min(step ** (-0.5), step * self.warmup_steps ** (-1.5)))

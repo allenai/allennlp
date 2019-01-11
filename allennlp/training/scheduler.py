@@ -63,8 +63,17 @@ class Scheduler:
         """
         self.__dict__.update(state_dict)
 
-    def step(self, metric: float = None, epoch: int = None) -> None:
+    def get_values(self):
         raise NotImplementedError
+
+    def step(self, metric: float = None, epoch: int = None) -> None:
+        if epoch is None:
+            self.last_epoch += 1  # type: ignore
+        else:
+            self.last_epoch = epoch
+        self.metric = metric
+        for param_group, value in zip(self.optimizer.param_groups, self.get_values()):
+            param_group[self.param_group_field] = value
 
     def step_batch(self, batch_num_total: int = None) -> None:
         """

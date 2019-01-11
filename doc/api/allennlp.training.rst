@@ -8,6 +8,7 @@ for training AllenNLP models.
 
    allennlp.training.scheduler
    allennlp.training.learning_rate_schedulers
+   allennlp.training.momentum_schedulers
    allennlp.training.metrics
    allennlp.training.optimizers
    allennlp.training.trainer

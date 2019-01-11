@@ -16,7 +16,7 @@ class LearningRateScheduler(Scheduler, Registrable):
                  last_epoch: int = -1) -> None:
         super().__init__(optimizer, "lr", last_epoch)
 
-    def step(self, metric: float = None, epoch: int = None) -> None:
+    def get_values(self) -> None:
         raise NotImplementedError
 
     # Requires custom from_params so we can wrap the PyTorch LR schedulers.
@@ -38,6 +38,10 @@ class _PyTorchLearningRateSchedulerWrapper(LearningRateScheduler):
     def __init__(self, lr_scheduler: torch.optim.lr_scheduler._LRScheduler) -> None:  # pylint: disable=protected-access,super-init-not-called
         self.lr_scheduler = lr_scheduler
 
+    def get_values(self):
+        return self.lr_scheduler.get_lr()
+
+    @overrides
     def step(self, metric: float = None, epoch: int = None) -> None:
         # PyTorch LR schedulers are implemented slightly differently because they expect `step()`
         # to be called before each epoch, whereas we call `step()` after each epoch.

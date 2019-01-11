@@ -1,6 +1,7 @@
 import logging
 from typing import List
 
+from overrides import overrides
 import torch
 
 from allennlp.training.learning_rate_schedulers.learning_rate_scheduler import LearningRateScheduler
@@ -83,6 +84,7 @@ class SlantedTriangular(LearningRateScheduler):
         self.last_batch_num_total = -1
         self.step_batch(0)
 
+    @overrides
     def step(self, metric: float = None, epoch: int = None) -> None:
         if len(self.batch_num_total_epoch_end) == 0: # pylint: disable=len-as-condition
             self.batch_num_total_epoch_end.append(0)
@@ -114,10 +116,10 @@ class SlantedTriangular(LearningRateScheduler):
         if batch_num_total is None:
             batch_num_total = self.last_batch_num_total + 1
         self.last_batch_num_total = batch_num_total
-        for param_group, learning_rate in zip(self.optimizer.param_groups, self.get_lr()):
+        for param_group, learning_rate in zip(self.optimizer.param_groups, self.get_values()):
             param_group['lr'] = learning_rate
 
-    def get_lr(self):
+    def get_values(self):
         # get the actual number of batches per epoch seen in training
         if len(self.batch_num_total_epoch_end) > 1:
             # have finished an epoch

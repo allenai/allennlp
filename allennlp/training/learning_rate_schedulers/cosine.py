@@ -14,7 +14,8 @@ class CosineWithRestarts(LearningRateScheduler):
     """
     Cosine annealing with restarts.
 
-    This is described in the paper https://arxiv.org/abs/1608.03983.
+    This is described in the paper https://arxiv.org/abs/1608.03983. Note that early
+    stopping should typically be avoided when using this schedule.
 
     Parameters
     ----------
@@ -55,7 +56,7 @@ class CosineWithRestarts(LearningRateScheduler):
         self._n_restarts: int = 0
         super().__init__(optimizer, last_epoch)
 
-    def get_lr(self):
+    def get_values(self):
         """Get updated learning rate."""
         if self.last_epoch == -1:
             return self.base_values
@@ -79,11 +80,3 @@ class CosineWithRestarts(LearningRateScheduler):
         ]
 
         return lrs
-
-    def step(self, metric: float = None, epoch: int = None) -> None:
-        if epoch is None:
-            self.last_epoch += 1  # type: ignore
-        else:
-            self.last_epoch = epoch
-        for param_group, learning_rate in zip(self.optimizer.param_groups, self.get_lr()):
-            param_group['lr'] = learning_rate
