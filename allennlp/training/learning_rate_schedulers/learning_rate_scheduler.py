@@ -16,6 +16,7 @@ class LearningRateScheduler(Scheduler, Registrable):
     def step(self, metric: float = None, epoch: int = None) -> None:
         raise NotImplementedError
 
+    # Requires custom from_params so we can wrap the PyTorch LR schedulers.
     @classmethod
     def from_params(cls, optimizer: torch.optim.Optimizer, params: Params):  # type: ignore
         # pylint: disable=arguments-differ
