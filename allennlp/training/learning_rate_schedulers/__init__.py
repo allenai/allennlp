@@ -10,8 +10,9 @@ The available learning rate schedulers from PyTorch are
 * `"exponential" <http://pytorch.org/docs/master/optim.html#torch.optim.lr_scheduler.ExponentialLR>`_
 * `"reduce_on_plateau" <http://pytorch.org/docs/master/optim.html#torch.optim.lr_scheduler.ReduceLROnPlateau>`_
 
-In addition, AllenNLP also provides a Noam schedule and `cosine with restarts
-<https://arxiv.org/abs/1608.03983>`_, which are registered as "noam" and "cosine", respectively.
+In addition, AllenNLP also provides `cosine with restarts <https://arxiv.org/abs/1608.03983>`_,
+a Noam schedule, and a slanted triangular schedule, which are registered as
+"cosine", "noam", and "slanted_triangular", respectively.
 """
 
 from allennlp.training.learning_rate_schedulers.learning_rate_scheduler import LearningRateScheduler
