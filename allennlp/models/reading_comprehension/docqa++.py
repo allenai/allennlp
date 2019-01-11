@@ -222,6 +222,8 @@ class BidafPlusPlus(Model):
         batch_size, max_qa_count, max_q_len, _ = question['token_characters'].size()
         total_qa_count = batch_size * max_qa_count
 
+        # debug log
+
         # NOTE we assume that the batch instances are sorted per question!
         # in document qa setup we usually use only training triplets (question, answer ,context) that
         # contain the golden answer, to save tranining time.
@@ -239,6 +241,9 @@ class BidafPlusPlus(Model):
         # context embedding
         embedded_passage = self._variational_dropout(self._text_field_embedder(passage))
         passage_length = embedded_passage.size(1)
+
+        ElasticLogger().write_log('INFO', 'docqa++', \
+            context_dict={'batch_size': batch_size, "max_q_len": max_q_len,'passage_length':passage_length})
 
         # context repeating (as the amount of qas)
         question_mask = util.get_text_field_mask(question, num_wrapping_dims=1).float()
@@ -391,6 +396,7 @@ class BidafPlusPlus(Model):
                     loss += nll_loss(span_end_logits_softmaxed[inds_with_gold_answer], \
                                      span_end.view(-1)[question_inds[inds_with_gold_answer]], ignore_index=-1)
                     loss_steps += 1
+
                 if loss_steps > 0:
                     loss /= loss_steps
                     output_dict["loss"] = loss
