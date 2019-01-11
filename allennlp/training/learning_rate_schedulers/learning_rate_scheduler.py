@@ -1,3 +1,6 @@
+from typing import Dict, Any
+
+from overrides import overrides
 import torch
 
 from allennlp.common.checks import ConfigurationError
@@ -25,12 +28,12 @@ class LearningRateScheduler(Scheduler, Registrable):
         if isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
             return PyTorchLearningRateSchedulerWithMetricsWrapper(scheduler)
         elif isinstance(scheduler, torch.optim.lr_scheduler._LRScheduler):  # pylint: disable=protected-access
-            return PyTorchLearningRateSchedulerWithoutMetricsWrapper(scheduler)
+            return PyTorchLearningRateSchedulerWrapper(scheduler)
         else:
             return scheduler
 
 
-class PyTorchLearningRateSchedulerWithoutMetricsWrapper(LearningRateScheduler):
+class PyTorchLearningRateSchedulerWrapper(LearningRateScheduler):
 
     def __init__(self, lr_scheduler: torch.optim.lr_scheduler._LRScheduler) -> None:  # pylint: disable=protected-access,super-init-not-called
         self.lr_scheduler = lr_scheduler
@@ -43,12 +46,18 @@ class PyTorchLearningRateSchedulerWithoutMetricsWrapper(LearningRateScheduler):
             epoch += 1
         self.lr_scheduler.step(epoch)
 
+    @overrides
+    def state_dict(self) -> Dict[str, Any]:
+        return self.lr_scheduler.state_dict()
 
-class PyTorchLearningRateSchedulerWithMetricsWrapper(LearningRateScheduler):
+    @overrides
+    def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
+        self.lr_scheduler.load_state_dict(state_dict)
 
-    def __init__(self, lr_scheduler: torch.optim.lr_scheduler._LRScheduler) -> None:  # pylint: disable=protected-access,super-init-not-called
-        self.lr_scheduler = lr_scheduler
 
+class PyTorchLearningRateSchedulerWithMetricsWrapper(PyTorchLearningRateSchedulerWrapper):
+
+    @overrides
     def step(self, metric: float = None, epoch: int = None) -> None:
         if metric is None:
             raise ConfigurationError("This learning rate scheduler requires "

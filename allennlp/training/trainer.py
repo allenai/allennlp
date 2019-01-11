@@ -904,13 +904,12 @@ class Trainer(Registrable):
             model_state = self.model.state_dict()
             torch.save(model_state, model_path)
 
-            training_state = {'epoch': epoch,
-                              'val_metric_per_epoch': val_metric_per_epoch,
-                              'optimizer': self.optimizer.state_dict(),
-                              'batch_num_total': self._batch_num_total}
+            training_state: Dict[str, Any] = {'epoch': epoch,
+                                              'val_metric_per_epoch': val_metric_per_epoch,
+                                              'optimizer': self.optimizer.state_dict(),
+                                              'batch_num_total': self._batch_num_total}
             if self._learning_rate_scheduler is not None:
-                training_state["learning_rate_scheduler"] = \
-                    self._learning_rate_scheduler.lr_scheduler.state_dict()
+                training_state["learning_rate_scheduler"] = self._learning_rate_scheduler.state_dict()
             training_path = os.path.join(self._serialization_dir,
                                          "training_state_epoch_{}.th".format(epoch))
             torch.save(training_state, training_path)
@@ -1016,7 +1015,7 @@ class Trainer(Registrable):
         self.model.load_state_dict(model_state)
         self.optimizer.load_state_dict(training_state["optimizer"])
         if self._learning_rate_scheduler is not None and "learning_rate_scheduler" in training_state:
-            self._learning_rate_scheduler.lr_scheduler.load_state_dict(
+            self._learning_rate_scheduler.load_state_dict(
                     training_state["learning_rate_scheduler"])
         move_optimizer_to_cuda(self.optimizer)
 
