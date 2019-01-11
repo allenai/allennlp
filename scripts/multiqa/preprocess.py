@@ -143,13 +143,20 @@ class MultiQAPreprocess():
             yield (part_num, 'title',document['title'])
             part_num += 1
 
-        for ind,snippet in enumerate(document['paragraphs']):
-            # using the special character "«" to indicate newline (new paragraph)
-            # so that the spacy tokenizer will split paragraphs with a special token of length 1. 
-            # (this preserves the all the answer_starts within a snippet...)
-            snippet = snippet.replace("\n","«")
-            yield (part_num, ind, snippet)
-            part_num += 1
+        if 'paragraphs' in document:
+            for ind,snippet in enumerate(document['paragraphs']):
+                # using the special character "«" to indicate newline (new paragraph)
+                # so that the spacy tokenizer will split paragraphs with a special token of length 1.
+                # (this preserves the all the answer_starts within a snippet...)
+                snippet = snippet.replace("\n","«")
+                yield (part_num, ind, snippet)
+                part_num += 1
+        else:
+            for ind,snippet in enumerate(document['snippets']):
+                snippet = snippet.replace("\n","«")
+                yield (part_num, ind, snippet)
+                part_num += 1
+
 
     def compute_token_answer_starts(self, qas, doc_ind, part_type,part_num, part_text, part_tokens):
         part_offsets = [(token[1], token[1] + len(token[0])) for token in part_tokens]
