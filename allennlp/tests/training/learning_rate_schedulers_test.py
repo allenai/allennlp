@@ -20,10 +20,7 @@ class LearningRateSchedulersTest(AllenNlpTestCase):
             LearningRateScheduler.from_params(Optimizer.from_params(model.named_parameters(),
                                                                     Params({"type": "adam"})),
                                               Params({"type": "reduce_on_plateau"})).step(None, None)
-
-        self.assertTrue(
-                'The reduce_on_plateau learning rate scheduler requires a validation metric'
-                in str(context.exception))
+        assert "learning rate scheduler requires a validation metric" in str(context.exception)
 
     def test_reduce_on_plateau_works_when_metrics_exist(self):
         model = torch.nn.Sequential(torch.nn.Linear(10, 10))
@@ -161,10 +158,10 @@ class CosineWithRestartsTest(AllenNlpTestCase):
     def test_from_params(self):
         """Make sure ``from_params`` initializes an instance properly."""
         optim = self._get_optimizer()
-        sched = LearningRateScheduler.from_params(optim, Params({"type": "cosine", "t_initial": 5})).lr_scheduler
+        sched = LearningRateScheduler.from_params(optim, Params({"type": "cosine", "t_initial": 5}))
 
         assert sched.t_initial == 5
-        assert sched._initialized is True
+        assert sched.last_epoch == -1
 
         # Learning should be unchanged after initializing scheduler.
         assert optim.param_groups[0]["lr"] == 1.0
@@ -178,14 +175,14 @@ class CosineWithRestartsTest(AllenNlpTestCase):
         for epochs, params, lr_checks, _ in self.cosine_schedule_cases:
             optimizer = self._get_optimizer()
             params["type"] = "cosine"
-            scheduler = LearningRateScheduler.from_params(optimizer, Params(params)).lr_scheduler
+            scheduler = LearningRateScheduler.from_params(optimizer, Params(params))
             lrs = [optimizer.param_groups[0]["lr"]]
             for epoch in range(epochs):
                 scheduler.step(epoch)
                 lrs.append(optimizer.param_groups[0]["lr"])
 
             for it, lr in lr_checks:
-                assert lrs[it] == lr
+                assert lrs[it] == lr, f"Iteration {it}: {lrs[it]} != {lr}"
 
     def test_schedules_with_save_and_resume(self):
         """Make sure scheduler will resume with the right state."""
@@ -200,13 +197,13 @@ class CosineWithRestartsTest(AllenNlpTestCase):
             params["type"] = "cosine"
             scheduler = LearningRateScheduler.from_params(optimizer, Params(params))
             if state_dict is not None:
-                scheduler.lr_scheduler.load_state_dict(state_dict)
+                scheduler.load_state_dict(state_dict)
             return scheduler
 
         for epochs, params, lr_checks, checkpoints in self.cosine_schedule_cases:
             optimizer = self._get_optimizer()
             scheduler = init_and_restore_scheduler(optimizer, params)
-            state = scheduler.lr_scheduler.state_dict()
+            state = scheduler.state_dict()
 
             lrs = [optimizer.param_groups[0]["lr"]]
             for epoch in range(epochs):
@@ -219,10 +216,10 @@ class CosineWithRestartsTest(AllenNlpTestCase):
                 lrs.append(optimizer.param_groups[0]["lr"])
 
                 # Save state again.
-                state = scheduler.lr_scheduler.state_dict()
+                state = scheduler.state_dict()
 
             for it, lr in lr_checks:
-                assert lrs[it] == lr
+                assert lrs[it] == lr, f"Iteration {it}: {lrs[it]} != {lr}"
 
 
 def is_hat_shaped(learning_rates: List[float]):
@@ -285,7 +282,7 @@ class SlantedTriangularTest(AllenNlpTestCase):
                             for param_group in optimizer.param_groups[:2]])
                 scheduler.step_batch(batch_num_total)
                 if params.get("gradual_unfreezing") and epoch == 0:
-                    assert scheduler.lr_scheduler.freezing_current
+                    assert scheduler.freezing_current
             # step() takes two arguments: validation metric and epoch
             scheduler.step(None, epoch)
 
@@ -309,7 +306,7 @@ class SlantedTriangularTest(AllenNlpTestCase):
                                "num_steps_per_epoch": 10,
                                "gradual_unfreezing": True,
                                "discriminative_fine_tuning": True,
-                               "decay_factor": 0.5})).lr_scheduler
+                               "decay_factor": 0.5}))
 
         assert sched.num_epochs == 5
         assert sched.num_steps_per_epoch == 10
@@ -330,7 +327,7 @@ class SlantedTriangularTest(AllenNlpTestCase):
                     Params({"type": "slanted_triangular", "num_steps_epochs": 10}))
 
     def test_schedules(self):
-        slanted_triangular_cases: List[Tuple[Dict[str, Any], List[Tuple[int, float]]]] = [
+        slanted_triangular_cases: List[Tuple[Dict[str, Any], List[Tuple[int, int, float]]]] = [
                 (
                         {"num_epochs": 5,
                          "num_steps_per_epoch": 10,

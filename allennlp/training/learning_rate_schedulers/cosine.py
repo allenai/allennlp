@@ -53,17 +53,11 @@ class CosineWithRestarts(LearningRateScheduler):
         self._cycle_counter: int = 0
         self._cycle_len: int = t_initial
         self._n_restarts: int = 0
-        self._initialized: bool = False
         super().__init__(optimizer, last_epoch)
 
     def get_lr(self):
         """Get updated learning rate."""
-        # HACK: We need to check if this is the first time ``self.get_lr()`` was called,
-        # since ``torch.optim.lr_scheduler._LRScheduler`` will call ``self.get_lr()``
-        # when first initialized, but the learning rate should remain unchanged
-        # for the first epoch.
-        if not self._initialized:
-            self._initialized = True
+        if self.last_epoch == -1:
             return self.base_values
 
         step = self.last_epoch + 1

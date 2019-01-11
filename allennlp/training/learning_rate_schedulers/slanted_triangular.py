@@ -9,6 +9,7 @@ from allennlp.training.learning_rate_schedulers.learning_rate_scheduler import L
 logger = logging.getLogger(__name__)
 
 
+@LearningRateScheduler.register("slanted_triangular")
 class SlantedTriangular(LearningRateScheduler):
     """
     Implements the Slanted Triangular Learning Rate schedule with optional gradual
@@ -90,13 +91,15 @@ class SlantedTriangular(LearningRateScheduler):
 
         if self.gradual_unfreezing:
             # the method is called once when initialising before the
-            # first epoch (epoch 0) and then always at the end of each
-            # epoch; so the first time, with epoch id 0, we want to set
-            # up for epoch #1; the second time, still with epoch id 0,
+            # first epoch (epoch -1) and then always at the end of each
+            # epoch; so the first time, with epoch id -1, we want to set
+            # up for epoch #1; the second time, with epoch id 0,
             # we want to set up for epoch #2, etc.
-            num_layers_to_unfreeze = epoch + 1 if self.is_first_epoch else epoch + 2
             if self.is_first_epoch:
+                num_layers_to_unfreeze = 1
                 self.is_first_epoch = False
+            else:
+                num_layers_to_unfreeze = epoch + 2
             if num_layers_to_unfreeze >= len(self.optimizer.param_groups)-1:
                 logger.info('Gradual unfreezing finished. Training all layers.')
                 self.freezing_current = False

@@ -3,6 +3,7 @@ import torch
 from allennlp.training.learning_rate_schedulers.learning_rate_scheduler import LearningRateScheduler
 
 
+@LearningRateScheduler.register("noam")
 class NoamLR(LearningRateScheduler):
     """
     Implements the Noam Learning rate schedule. This corresponds to increasing the learning rate
