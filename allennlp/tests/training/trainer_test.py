@@ -274,7 +274,7 @@ class TestTrainer(AllenNlpTestCase):
                               num_epochs=4, serialization_dir=self.TEST_DIR)
         epoch, _ = new_trainer._restore_checkpoint()
         assert epoch == 2
-        assert new_trainer._learning_rate_scheduler.lr_scheduler.last_epoch == 1
+        assert new_trainer._learning_rate_scheduler.lr_scheduler.last_epoch == 2
         new_trainer.train()
 
     def test_trainer_raises_on_model_with_no_loss_key(self):
