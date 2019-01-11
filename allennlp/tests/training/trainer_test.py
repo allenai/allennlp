@@ -12,7 +12,7 @@ import pytest
 from allennlp.common.checks import ConfigurationError
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.training.single_task_trainer import SingleTaskTrainer
+from allennlp.training import Trainer
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
 from allennlp.training.util import sparse_clip_norm
 from allennlp.data import Vocabulary
@@ -23,7 +23,7 @@ from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
 from allennlp.models.model import Model
 
 
-class TestSingleTaskTrainer(AllenNlpTestCase):
+class TestTrainer(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
         self.instances = SequenceTaggingDatasetReader().read(self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv')
@@ -51,12 +51,12 @@ class TestSingleTaskTrainer(AllenNlpTestCase):
         self.iterator.index_with(vocab)
 
     def test_trainer_can_run(self):
-        trainer = SingleTaskTrainer(model=self.model,
-                                    optimizer=self.optimizer,
-                                    iterator=self.iterator,
-                                    train_dataset=self.instances,
-                                    validation_dataset=self.instances,
-                                    num_epochs=2)
+        trainer = Trainer(model=self.model,
+                          optimizer=self.optimizer,
+                          iterator=self.iterator,
+                          train_dataset=self.instances,
+                          validation_dataset=self.instances,
+                          num_epochs=2)
         metrics = trainer.train()
         assert 'best_validation_loss' in metrics
         assert isinstance(metrics['best_validation_loss'], float)
@@ -68,13 +68,13 @@ class TestSingleTaskTrainer(AllenNlpTestCase):
         assert isinstance(metrics['best_epoch'], int)
 
         # Making sure that both increasing and decreasing validation metrics work.
-        trainer = SingleTaskTrainer(model=self.model,
-                                    optimizer=self.optimizer,
-                                    iterator=self.iterator,
-                                    train_dataset=self.instances,
-                                    validation_dataset=self.instances,
-                                    validation_metric='+loss',
-                                    num_epochs=2)
+        trainer = Trainer(model=self.model,
+                          optimizer=self.optimizer,
+                          iterator=self.iterator,
+                          train_dataset=self.instances,
+                          validation_dataset=self.instances,
+                          validation_metric='+loss',
+                          num_epochs=2)
         metrics = trainer.train()
         assert 'best_validation_loss' in metrics
         assert isinstance(metrics['best_validation_loss'], float)
@@ -90,9 +90,9 @@ class TestSingleTaskTrainer(AllenNlpTestCase):
 
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="No CUDA device registered.")
     def test_trainer_can_run_cuda(self):
-        trainer = SingleTaskTrainer(self.model, self.optimizer,
-                                    self.iterator, self.instances, num_epochs=2,
-                                    cuda_device=0)
+        trainer = Trainer(self.model, self.optimizer,
+                          self.iterator, self.instances, num_epochs=2,
+                          cuda_device=0)
         trainer.train()
 
     @pytest.mark.skipif(torch.cuda.device_count() < 2,
@@ -119,9 +119,9 @@ class TestSingleTaskTrainer(AllenNlpTestCase):
 
         multigpu_iterator = BasicIterator(batch_size=4)
         multigpu_iterator.index_with(self.vocab)
-        trainer = SingleTaskTrainer(MetaDataCheckWrapper(self.model), self.optimizer,
-                                    multigpu_iterator, self.instances, num_epochs=2,
-                                    cuda_device=[0, 1])
+        trainer = Trainer(MetaDataCheckWrapper(self.model), self.optimizer,
+                          multigpu_iterator, self.instances, num_epochs=2,
+                          cuda_device=[0, 1])
         metrics = trainer.train()
         assert 'peak_cpu_memory_MB' in metrics
         assert isinstance(metrics['peak_cpu_memory_MB'], float)
@@ -132,15 +132,15 @@ class TestSingleTaskTrainer(AllenNlpTestCase):
         assert isinstance(metrics['peak_gpu_1_memory_MB'], int)
 
     def test_trainer_can_resume_training(self):
-        trainer = SingleTaskTrainer(self.model, self.optimizer,
-                                    self.iterator, self.instances,
-                                    validation_dataset=self.instances,
-                                    num_epochs=1, serialization_dir=self.TEST_DIR)
+        trainer = Trainer(self.model, self.optimizer,
+                          self.iterator, self.instances,
+                          validation_dataset=self.instances,
+                          num_epochs=1, serialization_dir=self.TEST_DIR)
         trainer.train()
-        new_trainer = SingleTaskTrainer(self.model, self.optimizer,
-                                        self.iterator, self.instances,
-                                        validation_dataset=self.instances,
-                                        num_epochs=3, serialization_dir=self.TEST_DIR)
+        new_trainer = Trainer(self.model, self.optimizer,
+                              self.iterator, self.instances,
+                              validation_dataset=self.instances,
+                              num_epochs=3, serialization_dir=self.TEST_DIR)
 
         epoch = new_trainer._restore_checkpoint()  # pylint: disable=protected-access
         assert epoch == 1
@@ -153,11 +153,11 @@ class TestSingleTaskTrainer(AllenNlpTestCase):
 
     def test_metric_only_considered_best_so_far_when_strictly_better_than_those_before_it_increasing_metric(
             self):
-        new_trainer = SingleTaskTrainer(self.model, self.optimizer,
-                                        self.iterator, self.instances,
-                                        validation_dataset=self.instances,
-                                        num_epochs=3, serialization_dir=self.TEST_DIR,
-                                        patience=5, validation_metric="+test")
+        new_trainer = Trainer(self.model, self.optimizer,
+                              self.iterator, self.instances,
+                              validation_dataset=self.instances,
+                              num_epochs=3, serialization_dir=self.TEST_DIR,
+                              patience=5, validation_metric="+test")
         tracker = new_trainer._metric_tracker  # pylint: disable=protected-access
 
         # when it is the only metric it should be considered the best
@@ -182,11 +182,11 @@ class TestSingleTaskTrainer(AllenNlpTestCase):
 
 
     def test_metric_only_considered_best_so_far_when_strictly_better_than_those_before_it_decreasing_metric(self):
-        new_trainer = SingleTaskTrainer(self.model, self.optimizer,
-                                        self.iterator, self.instances,
-                                        validation_dataset=self.instances,
-                                        num_epochs=3, serialization_dir=self.TEST_DIR,
-                                        patience=5, validation_metric="-test")
+        new_trainer = Trainer(self.model, self.optimizer,
+                              self.iterator, self.instances,
+                              validation_dataset=self.instances,
+                              num_epochs=3, serialization_dir=self.TEST_DIR,
+                              patience=5, validation_metric="-test")
         tracker = new_trainer._metric_tracker  # pylint: disable=protected-access
 
         # when it is the only metric it should be considered the best
@@ -209,11 +209,11 @@ class TestSingleTaskTrainer(AllenNlpTestCase):
         new_tracker.add_metrics([.3, .3, .3, .2, .5, .1, 13])
 
     def test_should_stop_early_with_increasing_metric(self):
-        new_trainer = SingleTaskTrainer(self.model, self.optimizer,
-                                        self.iterator, self.instances,
-                                        validation_dataset=self.instances,
-                                        num_epochs=3, serialization_dir=self.TEST_DIR,
-                                        patience=5, validation_metric="+test")
+        new_trainer = Trainer(self.model, self.optimizer,
+                              self.iterator, self.instances,
+                              validation_dataset=self.instances,
+                              num_epochs=3, serialization_dir=self.TEST_DIR,
+                              patience=5, validation_metric="+test")
 
         tracker = new_trainer._metric_tracker  # pylint: disable=protected-access
 
@@ -228,32 +228,32 @@ class TestSingleTaskTrainer(AllenNlpTestCase):
     def test_should_stop_early_with_flat_lining_metric(self):
         # pylint: disable=protected-access
         flatline = [.2] * 6
-        tracker = SingleTaskTrainer(self.model, self.optimizer,
-                                    self.iterator, self.instances,
-                                    validation_dataset=self.instances,
-                                    num_epochs=3,
-                                    serialization_dir=self.TEST_DIR,
-                                    patience=5,
-                                    validation_metric="+test")._metric_tracker
+        tracker = Trainer(self.model, self.optimizer,
+                          self.iterator, self.instances,
+                          validation_dataset=self.instances,
+                          num_epochs=3,
+                          serialization_dir=self.TEST_DIR,
+                          patience=5,
+                          validation_metric="+test")._metric_tracker
         tracker.add_metrics(flatline)
         assert tracker.should_stop_early
 
-        tracker = SingleTaskTrainer(self.model, self.optimizer,
-                                    self.iterator, self.instances,
-                                    validation_dataset=self.instances,
-                                    num_epochs=3,
-                                    serialization_dir=self.TEST_DIR,
-                                    patience=5,
-                                    validation_metric="-test")._metric_tracker
+        tracker = Trainer(self.model, self.optimizer,
+                          self.iterator, self.instances,
+                          validation_dataset=self.instances,
+                          num_epochs=3,
+                          serialization_dir=self.TEST_DIR,
+                          patience=5,
+                          validation_metric="-test")._metric_tracker
         tracker.add_metrics(flatline)
         assert tracker.should_stop_early
 
     def test_should_stop_early_with_decreasing_metric(self):
-        new_trainer = SingleTaskTrainer(self.model, self.optimizer,
-                                        self.iterator, self.instances,
-                                        validation_dataset=self.instances,
-                                        num_epochs=3, serialization_dir=self.TEST_DIR,
-                                        patience=5, validation_metric="-test")
+        new_trainer = Trainer(self.model, self.optimizer,
+                              self.iterator, self.instances,
+                              validation_dataset=self.instances,
+                              num_epochs=3, serialization_dir=self.TEST_DIR,
+                              patience=5, validation_metric="-test")
         tracker = new_trainer._metric_tracker  # pylint: disable=protected-access
 
         new_tracker = copy.deepcopy(tracker)
@@ -270,17 +270,17 @@ class TestSingleTaskTrainer(AllenNlpTestCase):
 
     def test_should_stop_early_with_early_stopping_disabled(self):
         # Increasing metric
-        trainer = SingleTaskTrainer(self.model, self.optimizer, self.iterator, self.instances,
-                                    validation_dataset=self.instances, num_epochs=100,
-                                    patience=None, validation_metric="+test")
+        trainer = Trainer(self.model, self.optimizer, self.iterator, self.instances,
+                          validation_dataset=self.instances, num_epochs=100,
+                          patience=None, validation_metric="+test")
         tracker = trainer._metric_tracker  # pylint: disable=protected-access
         tracker.add_metrics([float(i) for i in reversed(range(20))])
         assert not tracker.should_stop_early()
 
         # Decreasing metric
-        trainer = SingleTaskTrainer(self.model, self.optimizer, self.iterator, self.instances,
-                                    validation_dataset=self.instances, num_epochs=100,
-                                    patience=None, validation_metric="-test")
+        trainer = Trainer(self.model, self.optimizer, self.iterator, self.instances,
+                          validation_dataset=self.instances, num_epochs=100,
+                          patience=None, validation_metric="-test")
         tracker = trainer._metric_tracker  # pylint: disable=protected-access
         tracker.add_metrics([float(i) for i in range(20)])
         assert not tracker.should_stop_early()
@@ -289,45 +289,45 @@ class TestSingleTaskTrainer(AllenNlpTestCase):
         for patience in [0, -1, -2, 1.5, 'None']:
             with pytest.raises(ConfigurationError,
                                message='No ConfigurationError for patience={}'.format(patience)):
-                SingleTaskTrainer(self.model, self.optimizer, self.iterator, self.instances,
-                                  validation_dataset=self.instances, num_epochs=100,
-                                  patience=patience, validation_metric="+test")
+                Trainer(self.model, self.optimizer, self.iterator, self.instances,
+                        validation_dataset=self.instances, num_epochs=100,
+                        patience=patience, validation_metric="+test")
 
     def test_trainer_can_run_with_lr_scheduler(self):
         lr_params = Params({"type": "reduce_on_plateau"})
         lr_scheduler = LearningRateScheduler.from_params(self.optimizer, lr_params)
-        trainer = SingleTaskTrainer(model=self.model,
-                                    optimizer=self.optimizer,
-                                    iterator=self.iterator,
-                                    learning_rate_scheduler=lr_scheduler,
-                                    validation_metric="-loss",
-                                    train_dataset=self.instances,
-                                    validation_dataset=self.instances,
-                                    num_epochs=2)
+        trainer = Trainer(model=self.model,
+                          optimizer=self.optimizer,
+                          iterator=self.iterator,
+                          learning_rate_scheduler=lr_scheduler,
+                          validation_metric="-loss",
+                          train_dataset=self.instances,
+                          validation_dataset=self.instances,
+                          num_epochs=2)
         trainer.train()
 
     def test_trainer_can_resume_with_lr_scheduler(self):
         # pylint: disable=protected-access
         lr_scheduler = LearningRateScheduler.from_params(
                 self.optimizer, Params({"type": "exponential", "gamma": 0.5}))
-        trainer = SingleTaskTrainer(model=self.model,
-                                    optimizer=self.optimizer,
-                                    iterator=self.iterator,
-                                    learning_rate_scheduler=lr_scheduler,
-                                    train_dataset=self.instances,
-                                    validation_dataset=self.instances,
-                                    num_epochs=2, serialization_dir=self.TEST_DIR)
+        trainer = Trainer(model=self.model,
+                          optimizer=self.optimizer,
+                          iterator=self.iterator,
+                          learning_rate_scheduler=lr_scheduler,
+                          train_dataset=self.instances,
+                          validation_dataset=self.instances,
+                          num_epochs=2, serialization_dir=self.TEST_DIR)
         trainer.train()
 
         new_lr_scheduler = LearningRateScheduler.from_params(
                 self.optimizer, Params({"type": "exponential", "gamma": 0.5}))
-        new_trainer = SingleTaskTrainer(model=self.model,
-                                        optimizer=self.optimizer,
-                                        iterator=self.iterator,
-                                        learning_rate_scheduler=new_lr_scheduler,
-                                        train_dataset=self.instances,
-                                        validation_dataset=self.instances,
-                                        num_epochs=4, serialization_dir=self.TEST_DIR)
+        new_trainer = Trainer(model=self.model,
+                              optimizer=self.optimizer,
+                              iterator=self.iterator,
+                              learning_rate_scheduler=new_lr_scheduler,
+                              train_dataset=self.instances,
+                              validation_dataset=self.instances,
+                              num_epochs=4, serialization_dir=self.TEST_DIR)
         epoch = new_trainer._restore_checkpoint()
         assert epoch == 2
         assert new_trainer._learning_rate_scheduler.lr_scheduler.last_epoch == 1
@@ -338,9 +338,9 @@ class TestSingleTaskTrainer(AllenNlpTestCase):
             def forward(self, **kwargs):  # pylint: disable=arguments-differ,unused-argument
                 return {}
         with pytest.raises(RuntimeError):
-            trainer = SingleTaskTrainer(FakeModel(None), self.optimizer,
-                                        self.iterator, self.instances,
-                                        num_epochs=2, serialization_dir=self.TEST_DIR)
+            trainer = Trainer(FakeModel(None), self.optimizer,
+                              self.iterator, self.instances,
+                              num_epochs=2, serialization_dir=self.TEST_DIR)
             trainer.train()
 
     def test_trainer_can_log_histograms(self):
@@ -348,17 +348,17 @@ class TestSingleTaskTrainer(AllenNlpTestCase):
         for module in self.model.modules():
             module.should_log_activations = True
 
-        trainer = SingleTaskTrainer(self.model, self.optimizer,
-                                    self.iterator, self.instances, num_epochs=3,
-                                    serialization_dir=self.TEST_DIR,
-                                    histogram_interval=2)
+        trainer = Trainer(self.model, self.optimizer,
+                          self.iterator, self.instances, num_epochs=3,
+                          serialization_dir=self.TEST_DIR,
+                          histogram_interval=2)
         trainer.train()
 
     def test_trainer_respects_num_serialized_models_to_keep(self):
-        trainer = SingleTaskTrainer(self.model, self.optimizer,
-                                    self.iterator, self.instances, num_epochs=5,
-                                    serialization_dir=self.TEST_DIR,
-                                    num_serialized_models_to_keep=3)
+        trainer = Trainer(self.model, self.optimizer,
+                          self.iterator, self.instances, num_epochs=5,
+                          serialization_dir=self.TEST_DIR,
+                          num_serialized_models_to_keep=3)
         trainer.train()
 
         # Now check the serialized files
@@ -369,14 +369,14 @@ class TestSingleTaskTrainer(AllenNlpTestCase):
             assert sorted(epochs) == [2, 3, 4]
 
     def test_trainer_saves_metrics_every_epoch(self):
-        trainer = SingleTaskTrainer(model=self.model,
-                                    optimizer=self.optimizer,
-                                    iterator=self.iterator,
-                                    train_dataset=self.instances,
-                                    validation_dataset=self.instances,
-                                    num_epochs=5,
-                                    serialization_dir=self.TEST_DIR,
-                                    num_serialized_models_to_keep=3)
+        trainer = Trainer(model=self.model,
+                          optimizer=self.optimizer,
+                          iterator=self.iterator,
+                          train_dataset=self.instances,
+                          validation_dataset=self.instances,
+                          num_epochs=5,
+                          serialization_dir=self.TEST_DIR,
+                          num_serialized_models_to_keep=3)
         trainer.train()
 
         for epoch in range(5):
@@ -403,11 +403,11 @@ class TestSingleTaskTrainer(AllenNlpTestCase):
         iterator = WaitingIterator(batch_size=2)
         iterator.index_with(self.vocab)
 
-        trainer = SingleTaskTrainer(self.model, self.optimizer,
-                                    iterator, self.instances, num_epochs=6,
-                                    serialization_dir=self.TEST_DIR,
-                                    num_serialized_models_to_keep=2,
-                                    keep_serialized_model_every_num_seconds=5)
+        trainer = Trainer(self.model, self.optimizer,
+                          iterator, self.instances, num_epochs=6,
+                          serialization_dir=self.TEST_DIR,
+                          num_serialized_models_to_keep=2,
+                          keep_serialized_model_every_num_seconds=5)
         trainer.train()
 
         # Now check the serialized files
@@ -422,11 +422,11 @@ class TestSingleTaskTrainer(AllenNlpTestCase):
         iterator = BasicIterator(batch_size=4)
         iterator.index_with(self.vocab)
 
-        trainer = SingleTaskTrainer(self.model, self.optimizer,
-                                    iterator, self.instances, num_epochs=2,
-                                    serialization_dir=self.TEST_DIR,
-                                    should_log_learning_rate=True,
-                                    summary_interval=2)
+        trainer = Trainer(self.model, self.optimizer,
+                          iterator, self.instances, num_epochs=2,
+                          serialization_dir=self.TEST_DIR,
+                          should_log_learning_rate=True,
+                          summary_interval=2)
 
         trainer.train()
 
@@ -434,10 +434,10 @@ class TestSingleTaskTrainer(AllenNlpTestCase):
         iterator = BasicIterator(batch_size=4)
         iterator.index_with(self.vocab)
 
-        trainer = SingleTaskTrainer(self.model, self.optimizer,
-                                    iterator, self.instances, num_epochs=2,
-                                    serialization_dir=self.TEST_DIR,
-                                    model_save_interval=0.0001)
+        trainer = Trainer(self.model, self.optimizer,
+                          iterator, self.instances, num_epochs=2,
+                          serialization_dir=self.TEST_DIR,
+                          model_save_interval=0.0001)
 
         trainer.train()
 
@@ -460,10 +460,10 @@ class TestSingleTaskTrainer(AllenNlpTestCase):
             os.remove(os.path.join(self.TEST_DIR, 'training_state_epoch_{}.th'.format(k)))
         os.remove(os.path.join(self.TEST_DIR, 'best.th'))
 
-        restore_trainer = SingleTaskTrainer(self.model, self.optimizer,
-                                            self.iterator, self.instances, num_epochs=2,
-                                            serialization_dir=self.TEST_DIR,
-                                            model_save_interval=0.0001)
+        restore_trainer = Trainer(self.model, self.optimizer,
+                                  self.iterator, self.instances, num_epochs=2,
+                                  serialization_dir=self.TEST_DIR,
+                                  model_save_interval=0.0001)
         epoch = restore_trainer._restore_checkpoint()  # pylint: disable=protected-access
         assert epoch == 2
         # One batch per epoch.

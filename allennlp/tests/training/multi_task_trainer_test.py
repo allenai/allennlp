@@ -30,7 +30,7 @@ from allennlp.data.tokenizers import WordTokenizer
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.models import Model
 from allennlp.training.optimizers import Optimizer
-from allennlp.training.trainer import Trainer
+from allennlp.training.trainer_base import TrainerBase
 
 @DatasetReader.register("multi-task-test")
 class MyReader(DatasetReader):
@@ -167,8 +167,8 @@ class MyModel(Model):
         return {"loss": loss}
 
 
-@Trainer.register("multi-task-test")
-class MultiTaskTrainer(Trainer):
+@TrainerBase.register("multi-task-test")
+class MultiTaskTrainer(TrainerBase):
     """
     A simple trainer that works in our multi-task setup.
     Really the main thing that makes this task not fit into our
@@ -278,7 +278,7 @@ class MultiTaskTest(AllenNlpTestCase):
             }
         })
 
-        self.trainer = Trainer.from_params(params, self.TEST_DIR)
+        self.trainer = TrainerBase.from_params(params, self.TEST_DIR)
 
     def test_training(self):
         self.trainer.train()

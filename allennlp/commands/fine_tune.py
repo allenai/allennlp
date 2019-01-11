@@ -8,17 +8,19 @@ import argparse
 import json
 import logging
 import os
+from copy import deepcopy
+import re
 
-from allennlp.commands.evaluate import evaluate
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common import Params
-from allennlp.common.checks import check_for_gpu
-from allennlp.common.util import prepare_environment, prepare_global_logging
+from allennlp.common.util import prepare_environment, prepare_global_logging, \
+                                 get_frozen_and_tunable_parameter_names
+from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.models import load_archive, archive_model
 from allennlp.models.archival import CONFIG_NAME
 from allennlp.models.model import Model, _DEFAULT_WEIGHTS
-from allennlp.training.single_task_trainer import SingleTaskTrainer
-from allennlp.training.util import create_serialization_dir, datasets_from_params
+from allennlp.training.trainer import Trainer
+from allennlp.training.util import datasets_from_params
 from allennlp.common.checks import ConfigurationError
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -157,13 +159,16 @@ def fine_tune_model(model: Model,
         down tqdm's output to only once every 10 seconds.
     """
     prepare_environment(params)
-    create_serialization_dir(params, serialization_dir, recover=False, force=False)
+    if os.path.exists(serialization_dir) and os.listdir(serialization_dir):
+        raise ConfigurationError(f"Serialization directory ({serialization_dir}) "
+                                 f"already exists and is not empty.")
+
+    os.makedirs(serialization_dir, exist_ok=True)
     prepare_global_logging(serialization_dir, file_friendly_logging)
 
-    cuda_device = params.params.get('trainer').get('cuda_device', -1)
-    check_for_gpu(cuda_device)
-
-    params.to_file(os.path.join(serialization_dir, CONFIG_NAME))
+    serialization_params = deepcopy(params).as_dict(quiet=True)
+    with open(os.path.join(serialization_dir, CONFIG_NAME), "w") as param_file:
+        json.dump(serialization_params, param_file, indent=4)
 
     if params.pop('model', None):
         logger.warning("You passed parameters for the model in your configuration file, but we "
@@ -192,9 +197,47 @@ def fine_tune_model(model: Model,
 
     vocab.save_to_files(os.path.join(serialization_dir, "vocabulary"))
 
-    trainer = SingleTaskTrainer.for_model(model, all_datasets, serialization_dir, params)
+    iterator = DataIterator.from_params(params.pop("iterator"))
+    iterator.index_with(model.vocab)
+    validation_iterator_params = params.pop("validation_iterator", None)
+    if validation_iterator_params:
+        validation_iterator = DataIterator.from_params(validation_iterator_params)
+        validation_iterator.index_with(vocab)
+    else:
+        validation_iterator = None
 
-    evaluate_on_test = params.pop_bool("evaluate_on_test", False)
+    train_data = all_datasets['train']
+    validation_data = all_datasets.get('validation')
+    test_data = all_datasets.get('test')
+
+    trainer_params = params.pop("trainer")
+    no_grad_regexes = trainer_params.pop("no_grad", ())
+    for name, parameter in model.named_parameters():
+        if any(re.search(regex, name) for regex in no_grad_regexes):
+            parameter.requires_grad_(False)
+
+    frozen_parameter_names, tunable_parameter_names = \
+                   get_frozen_and_tunable_parameter_names(model)
+    logger.info("Following parameters are Frozen  (without gradient):")
+    for name in frozen_parameter_names:
+        logger.info(name)
+    logger.info("Following parameters are Tunable (with gradient):")
+    for name in tunable_parameter_names:
+        logger.info(name)
+
+    trainer_choice = trainer_params.pop("type", "default")
+    if trainer_choice != "default":
+        raise ConfigurationError("currently fine-tune only works with the default Trainer")
+    trainer = Trainer.from_params(model=model,
+                                  serialization_dir=serialization_dir,
+                                  iterator=iterator,
+                                  train_data=train_data,
+                                  validation_data=validation_data,
+                                  params=trainer_params,
+                                  validation_iterator=validation_iterator,
+                                  test_data=test_data,
+                                  batch_weight_key=batch_weight_key)
+
     params.assert_empty('base train command')
     try:
         metrics = trainer.train()
@@ -208,19 +251,6 @@ def fine_tune_model(model: Model,
 
     # Now tar up results
     archive_model(serialization_dir, files_to_archive=params.files_to_archive)
-
-    if "test" in all_datasets and evaluate_on_test:
-        test_metrics = evaluate(model,
-                                all_datasets['test'],
-                                trainer.iterator,
-                                cuda_device=trainer._cuda_devices[0],  # pylint: disable=protected-access
-                                batch_weight_key=batch_weight_key)
-        for key, value in test_metrics.items():
-            metrics["test_" + key] = value
-
-    elif "test" in all_datasets:
-        logger.info("To evaluate on the test set after training, pass the "
-                    "'evaluate_on_test' flag, or use the 'allennlp evaluate' command.")
 
     metrics_json = json.dumps(metrics, indent=2)
     with open(os.path.join(serialization_dir, "metrics.json"), "w") as metrics_file:

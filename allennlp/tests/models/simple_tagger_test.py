@@ -7,9 +7,10 @@ import torch
 from allennlp.common.testing import ModelTestCase
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
-from allennlp.data.iterators import BasicIterator
+from allennlp.data.dataset_readers import DatasetReader
+from allennlp.data.iterators import DataIterator, BasicIterator
 from allennlp.models import Model
-from allennlp.training.single_task_trainer import SingleTaskTrainer
+from allennlp.training import Trainer
 
 class SimpleTaggerTest(ModelTestCase):
     def setUp(self):
@@ -53,10 +54,10 @@ class SimpleTaggerTest(ModelTestCase):
         assert penalty == 0
 
         iterator = BasicIterator(batch_size=32)
-        trainer = SingleTaskTrainer(self.model,
-                                    None,  # optimizer,
-                                    iterator,
-                                    self.instances)
+        trainer = Trainer(self.model,
+                          None,  # optimizer,
+                          iterator,
+                          self.instances)
 
         # You get a RuntimeError if you call `model.forward` twice on the same inputs.
         # The data and config are such that the whole dataset is one batch.
@@ -77,14 +78,20 @@ class SimpleTaggerRegularizationTest(ModelTestCase):
         self.set_up_model(param_file,
                           self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv')
         params = Params.from_file(param_file)
-
-        self.trainer = SingleTaskTrainer.from_params(params, self.TEST_DIR)
-
-        self.iterator = self.trainer.iterator
+        self.reader = DatasetReader.from_params(params['dataset_reader'])
+        self.iterator = DataIterator.from_params(params['iterator'])
+        self.trainer = Trainer.from_params(
+                self.model,
+                self.TEST_DIR,
+                self.iterator,
+                self.dataset,
+                None,
+                params.get('trainer')
+        )
 
 
     def test_regularization(self):
-        penalty = self.trainer.model.get_regularization_penalty().data
+        penalty = self.model.get_regularization_penalty().data
         assert (penalty > 0).all()
 
         penalty2 = 0
@@ -94,7 +101,7 @@ class SimpleTaggerRegularizationTest(ModelTestCase):
         #     ["weight$", {"type": "l2", "alpha": 10}],
         #     ["bias$", {"type": "l1", "alpha": 5}]
         #   ]
-        for name, parameter in self.trainer.model.named_parameters():
+        for name, parameter in self.model.named_parameters():
             if name.endswith("weight"):
                 weight_penalty = 10 * torch.sum(torch.pow(parameter, 2))
                 penalty2 += weight_penalty
@@ -103,21 +110,17 @@ class SimpleTaggerRegularizationTest(ModelTestCase):
                 penalty2 += bias_penalty
 
         assert (penalty == penalty2.data).all()
-        print("pp", penalty, penalty2)
 
         # You get a RuntimeError if you call `model.forward` twice on the same inputs.
         # The data and config are such that the whole dataset is one batch.
-        training_batch = next(self.trainer.iterator(self.instances, num_epochs=1))
-        validation_batch = next(self.trainer.iterator(self.instances, num_epochs=1))
+        training_batch = next(self.iterator(self.instances, num_epochs=1))
+        validation_batch = next(self.iterator(self.instances, num_epochs=1))
 
         training_loss = self.trainer.batch_loss(training_batch, for_training=True).data
         validation_loss = self.trainer.batch_loss(validation_batch, for_training=False).data
 
         # Training loss should have the regularization penalty, but validation loss should not.
         assert (training_loss != validation_loss).all()
-
-        print(training_loss, validation_loss, penalty)
-
 
         # Training loss should equal the validation loss plus the penalty.
         penalized = validation_loss + penalty

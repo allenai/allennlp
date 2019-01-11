@@ -44,7 +44,8 @@ from allennlp.common import Params
 from allennlp.common.util import prepare_environment, prepare_global_logging, dump_metrics
 from allennlp.models.archival import archive_model, CONFIG_NAME
 from allennlp.models.model import Model, _DEFAULT_WEIGHTS
-from allennlp.training.trainer import Trainer
+from allennlp.training.trainer import Trainer, TrainerPieces
+from allennlp.training.trainer_base import TrainerBase
 from allennlp.training.util import create_serialization_dir
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -173,7 +174,26 @@ def train_model(params: Params,
 
     params.to_file(os.path.join(serialization_dir, CONFIG_NAME))
 
-    trainer = Trainer.from_params(params, serialization_dir, recover)
+    evaluate_on_test = params.pop_bool("evaluate_on_test", False)
+
+    trainer_type = params.get("trainer", {}).get("type", "default")
+
+    if trainer_type == "default":
+        # Special logic to instantiate backward-compatible trainer.
+        pieces = TrainerPieces.from_params(params, serialization_dir, recover)  # pylint: disable=no-member
+        trainer = Trainer.from_params(
+                model=pieces.model,
+                serialization_dir=serialization_dir,
+                iterator=pieces.iterator,
+                train_data=pieces.train_dataset,
+                validation_data=pieces.validation_dataset,
+                params=pieces.params,
+                validation_iterator=pieces.validation_iterator,
+                test_data=pieces.test_dataset,
+                evaluate_on_test=evaluate_on_test)
+
+    else:
+        trainer = TrainerBase.from_params(params, serialization_dir, recover)
 
     params.assert_empty('base train command')
 

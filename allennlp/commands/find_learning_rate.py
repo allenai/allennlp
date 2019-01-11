@@ -2,9 +2,7 @@
 The ``find-lr`` subcommand can be used to find a good learning rate for a model.
 It requires a configuration file and a directory in
 which to write the results.
-
 .. code-block:: bash
-
    $ allennlp find-lr --help
    usage: allennlp find-lr [-h] -s SERIALIZATION_DIR [-o OVERRIDES]
                            [--start-lr START_LR] [--end-lr END_LR]
@@ -12,14 +10,11 @@ which to write the results.
                            [--stopping-factor STOPPING_FACTOR] [--linear]
                            [--include-package INCLUDE_PACKAGE]
                            param_path
-
    Find a learning rate range where the loss decreases quickly for the specified
    model and dataset.
-
    positional arguments:
-   param_path              path to parameter file describing the model to be
+   param_path            path to parameter file describing the model to be
                            trained
-
    optional arguments:
    -h, --help              show this help message and exit
    -s SERIALIZATION_DIR, --serialization-dir SERIALIZATION_DIR
@@ -45,9 +40,11 @@ which to write the results.
 
 from typing import List, Tuple
 import argparse
+import re
 import os
 import math
 import logging
+import shutil
 
 # pylint: disable=multiple-statements,wrong-import-position
 import matplotlib; matplotlib.use('Agg')
@@ -57,9 +54,12 @@ from allennlp.commands.subcommand import Subcommand
 from allennlp.common.checks import ConfigurationError, check_for_gpu
 from allennlp.common import Params, Tqdm
 from allennlp.common.util import prepare_environment
-from allennlp.training.single_task_trainer import SingleTaskTrainer
-from allennlp.training.util import create_serialization_dir, rescale_gradients
+from allennlp.data import Vocabulary, DataIterator
+from allennlp.models import Model
+from allennlp.training import Trainer
+from allennlp.training.util import datasets_from_params, rescale_gradients
 # pylint: enable=multiple-statements,wrong-import-position
+
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -126,8 +126,7 @@ def find_learning_rate_from_args(args: argparse.Namespace) -> None:
                              stopping_factor=args.stopping_factor,
                              force=args.force)
 
-def find_learning_rate_model(params: Params,
-                             serialization_dir: str,
+def find_learning_rate_model(params: Params, serialization_dir: str,
                              start_lr: float = 1e-5,
                              end_lr: float = 10,
                              num_batches: int = 100,
@@ -158,13 +157,64 @@ def find_learning_rate_model(params: Params,
         If True and the serialization directory already exists, everything in it will
         be removed prior to finding the learning rate.
     """
+    if os.path.exists(serialization_dir) and force:
+        shutil.rmtree(serialization_dir)
+
+    if os.path.exists(serialization_dir) and os.listdir(serialization_dir):
+        raise ConfigurationError(f'Serialization directory {serialization_dir} already exists and is '
+                                 f'not empty.')
+    else:
+        os.makedirs(serialization_dir, exist_ok=True)
+
     prepare_environment(params)
-    create_serialization_dir(params, serialization_dir, force=force, recover=False)
 
     cuda_device = params.params.get('trainer').get('cuda_device', -1)
-    check_for_gpu(cuda_device)
+    if isinstance(cuda_device, list):
+        for device in cuda_device:
+            check_for_gpu(device)
+    else:
+        check_for_gpu(cuda_device)
 
-    trainer = SingleTaskTrainer.from_params(params, serialization_dir, recover=False)
+    all_datasets = datasets_from_params(params)
+    datasets_for_vocab_creation = set(params.pop("datasets_for_vocab_creation", all_datasets))
+
+    for dataset in datasets_for_vocab_creation:
+        if dataset not in all_datasets:
+            raise ConfigurationError(f"invalid 'dataset_for_vocab_creation' {dataset}")
+
+    logger.info("From dataset instances, %s will be considered for vocabulary creation.",
+                ", ".join(datasets_for_vocab_creation))
+    vocab = Vocabulary.from_params(
+            params.pop("vocabulary", {}),
+            (instance for key, dataset in all_datasets.items()
+             for instance in dataset
+             if key in datasets_for_vocab_creation)
+    )
+
+    model = Model.from_params(vocab=vocab, params=params.pop('model'))
+    iterator = DataIterator.from_params(params.pop("iterator"))
+    iterator.index_with(vocab)
+
+    train_data = all_datasets['train']
+
+    trainer_params = params.pop("trainer")
+    no_grad_regexes = trainer_params.pop("no_grad", ())
+    for name, parameter in model.named_parameters():
+        if any(re.search(regex, name) for regex in no_grad_regexes):
+            parameter.requires_grad_(False)
+
+
+    trainer_choice = trainer_params.pop("type", "default")
+    if trainer_choice != "default":
+        raise ConfigurationError("currently find-learning-rate only works with the default Trainer")
+    trainer = Trainer.from_params(model=model,
+                                  serialization_dir=serialization_dir,
+                                  iterator=iterator,
+                                  train_data=train_data,
+                                  validation_data=None,
+                                  params=trainer_params,
+                                  validation_iterator=None,
+                                  test_data=None)
 
     logger.info(f'Starting learning rate search from {start_lr} to {end_lr} in {num_batches} iterations.')
     learning_rates, losses = search_learning_rate(trainer,
@@ -178,7 +228,7 @@ def find_learning_rate_model(params: Params,
 
     _save_plot(learning_rates, losses, os.path.join(serialization_dir, 'lr-losses.png'))
 
-def search_learning_rate(trainer: SingleTaskTrainer,
+def search_learning_rate(trainer: Trainer,
                          start_lr: float = 1e-5,
                          end_lr: float = 10,
                          num_batches: int = 100,
@@ -189,7 +239,7 @@ def search_learning_rate(trainer: SingleTaskTrainer,
     increasing learning rate from ``start_lr`` to ``end_lr`` recording the losses.
     Parameters
     ----------
-    trainer: :class:`~allennlp.training.single_task_trainer.SingleTaskTrainer`
+    trainer: :class:`~allennlp.training.trainer.Trainer`
     start_lr: ``float``
         The learning rate to start the search.
     end_lr: ``float``
