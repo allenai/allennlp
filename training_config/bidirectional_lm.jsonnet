@@ -134,6 +134,8 @@ local BASE_ITERATOR = {
       // See https://github.com/allenai/calypso/blob/master/bin/train_transformer_lm1b.py#L51.
       // Adjusted based on our sample size relative to Calypso's.
       "warmup_steps": 6000
-    }
+    },
+    "should_log_parameter_statistics": true,
+    "should_log_learning_rate": true
   }
 }
