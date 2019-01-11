@@ -35,7 +35,7 @@ class AugmentedLstm(torch.nn.Module):
         `A Theoretically Grounded Application of Dropout in Recurrent Neural Networks
         <https://arxiv.org/abs/1512.05287>`_ . Implementation wise, this simply
         applies a fixed dropout mask per sequence to the recurrent connection of the
-        LSTM. Dropout is not applied to the output sequence nor the last hidden 
+        LSTM. Dropout is not applied to the output sequence nor the last hidden
         state that is returned, it is only applied to all previous hidden states.
     use_highway: bool, optional (default = True)
         Whether or not to use highway connections between layers. This effectively involves
