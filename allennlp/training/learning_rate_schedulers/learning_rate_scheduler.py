@@ -26,14 +26,14 @@ class LearningRateScheduler(Scheduler, Registrable):
         scheduler_type = params.pop_choice("type", LearningRateScheduler.list_available())
         scheduler = LearningRateScheduler.by_name(scheduler_type)(optimizer, **params.as_dict())  # type: ignore
         if isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
-            return PyTorchLearningRateSchedulerWithMetricsWrapper(scheduler)
+            return _PyTorchLearningRateSchedulerWithMetricsWrapper(scheduler)
         elif isinstance(scheduler, torch.optim.lr_scheduler._LRScheduler):  # pylint: disable=protected-access
-            return PyTorchLearningRateSchedulerWrapper(scheduler)
+            return _PyTorchLearningRateSchedulerWrapper(scheduler)
         else:
             return scheduler
 
 
-class PyTorchLearningRateSchedulerWrapper(LearningRateScheduler):
+class _PyTorchLearningRateSchedulerWrapper(LearningRateScheduler):
 
     def __init__(self, lr_scheduler: torch.optim.lr_scheduler._LRScheduler) -> None:  # pylint: disable=protected-access,super-init-not-called
         self.lr_scheduler = lr_scheduler
@@ -55,7 +55,7 @@ class PyTorchLearningRateSchedulerWrapper(LearningRateScheduler):
         self.lr_scheduler.load_state_dict(state_dict)
 
 
-class PyTorchLearningRateSchedulerWithMetricsWrapper(PyTorchLearningRateSchedulerWrapper):
+class _PyTorchLearningRateSchedulerWithMetricsWrapper(_PyTorchLearningRateSchedulerWrapper):
 
     @overrides
     def step(self, metric: float = None, epoch: int = None) -> None:
