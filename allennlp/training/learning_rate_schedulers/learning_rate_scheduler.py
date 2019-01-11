@@ -36,6 +36,11 @@ class PyTorchLearningRateSchedulerWithoutMetricsWrapper(LearningRateScheduler):
         self.lr_scheduler = lr_scheduler
 
     def step(self, metric: float = None, epoch: int = None) -> None:
+        # PyTorch LR schedulers are implemented slightly differently because they expect `step()`
+        # to be called before each epoch, whereas we call `step()` after each epoch.
+        # So in order for the scheduler to work properly, we need to pass epoch+1.
+        if epoch is not None:
+            epoch += 1
         self.lr_scheduler.step(epoch)
 
 
@@ -49,6 +54,11 @@ class PyTorchLearningRateSchedulerWithMetricsWrapper(LearningRateScheduler):
             raise ConfigurationError("This learning rate scheduler requires "
                                      "a validation metric to compute the schedule and therefore "
                                      "must be used with a validation dataset.")
+        # PyTorch LR schedulers are implemented slightly differently because they expect `step()`
+        # to be called before each epoch, whereas we call `step()` after each epoch.
+        # So in order for the scheduler to work properly, we need to pass epoch+1.
+        if epoch is not None:
+            epoch += 1
         self.lr_scheduler.step(metric, epoch)
 
 
