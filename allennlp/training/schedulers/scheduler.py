@@ -9,6 +9,21 @@ class Scheduler:
 
     A scheduler can be used to update any field in an optimizer's parameter groups,
     not just the learning rate.
+
+    During training using the AllenNLP `Trainer`, this is the API and calling
+    sequence for ``step`` and ``step_batch``.
+
+       scheduler = ... # creates scheduler, calls self.step(epoch=-1) in __init__
+
+       batch_num_total = 0
+       for epoch in range(num_epochs):
+           for batch in batchs_in_epoch:
+               # compute loss, update parameters with current learning rates
+               # call step_batch AFTER updating parameters
+               batch_num_total += 1
+               scheduler.step_batch(batch_num_total)
+           # call step() at the END of each epoch
+           scheduler.step(validation_metrics, epoch)
     """
 
     def __init__(self,
@@ -28,8 +43,7 @@ class Scheduler:
                 if self._initial_param_group_field not in group:
                     raise KeyError(f"{self._initial_param_group_field} missing from param_groups[{i}]")
         self.base_values = [group[self._initial_param_group_field] for group in self.optimizer.param_groups]
-        self.step(last_epoch + 1)
-        self.last_epoch = last_epoch
+        self.step(epoch=last_epoch)
 
     def state_dict(self) -> Dict[str, Any]:
         """
@@ -48,10 +62,10 @@ class Scheduler:
         """
         self.__dict__.update(state_dict)
 
-    def step(self, metric: float, epoch: int = None) -> None:
+    def step(self, metric: float = None, epoch: int = None) -> None:
         raise NotImplementedError
 
-    def step_batch(self, batch_num_total: Optional[int]) -> None:
+    def step_batch(self, batch_num_total: int = None) -> None:
         """
         By default, a scheduler is assumed to only update every epoch, not every batch.
         So this does nothing unless it's overriden.
