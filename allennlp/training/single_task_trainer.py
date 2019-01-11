@@ -455,10 +455,14 @@ class SingleTaskTrainer(Trainer):
 
             epochs_trained += 1
 
-        self._checkpointer.load_best_weights(self.model)
-        return {**metrics, **self._test_metrics()}
+        # Load the best model state before generating the evaluation metrics.
+        best_model_state = self._checkpointer.best_model_state()
+        if best_model_state:
+            self.model.load_state_dict(best_model_state)
 
-    def _test_metrics(self) -> Dict:
+        return {**metrics, **self._evaluation_metrics()}
+
+    def _evaluation_metrics(self) -> Dict:
         """
         Evaluate on `evaluation_dataset` and return the generated metrics.
         """
@@ -500,7 +504,7 @@ class SingleTaskTrainer(Trainer):
             )
 
         self._checkpointer.save_checkpoint(
-                model=self.model,
+                model_state=self.model.state_dict(),
                 epoch=epoch,
                 training_states=training_states,
                 is_best_so_far=self._metric_tracker.is_best_so_far)
@@ -523,12 +527,13 @@ class SingleTaskTrainer(Trainer):
             The epoch at which to resume training, which should be one after the epoch
             in the saved training state.
         """
-        training_state = self._checkpointer.restore_checkpoint(self.model)
+        model_state, training_state = self._checkpointer.restore_checkpoint()
 
         if not training_state:
             # No checkpoint to restore, start at 0
             return 0
 
+        self.model.load_state_dict(model_state)
         self.optimizer.load_state_dict(training_state["optimizer"])
         if self._learning_rate_scheduler is not None and "learning_rate_scheduler" in training_state:
             self._learning_rate_scheduler.lr_scheduler.load_state_dict(training_state["learning_rate_scheduler"])

@@ -8,7 +8,6 @@ import time
 
 import torch
 
-from allennlp.models import Model
 from allennlp.nn import util as nn_util
 
 logger = logging.getLogger(__name__)
@@ -26,13 +25,12 @@ class Checkpointer:
         self._serialized_paths: List[Tuple[float, str, str]] = []
 
     def save_checkpoint(self,
-                        model: Model,
                         epoch: Union[int, str],
+                        model_state: Dict[str, Any],
                         training_states: Dict[str, Any],
                         is_best_so_far: bool) -> None:
         if self._serialization_dir is not None:
             model_path = os.path.join(self._serialization_dir, "model_state_epoch_{}.th".format(epoch))
-            model_state = model.state_dict()
             torch.save(model_state, model_path)
             training_path = os.path.join(self._serialization_dir,
                                          "training_state_epoch_{}.th".format(epoch))
@@ -104,8 +102,7 @@ class Checkpointer:
 
         return (model_path, training_state_path)
 
-
-    def restore_checkpoint(self, model: Model) -> Dict[str, Any]:
+    def restore_checkpoint(self) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """
         Restores a model from a serialization_dir to the last saved checkpoint.
         This includes an epoch count and optimizer state, which is serialized separately
@@ -119,15 +116,14 @@ class Checkpointer:
 
         Returns
         -------
-        epoch: int
-            The epoch at which to resume training, which should be one after the epoch
-            in the saved training state.
+        states: Tuple[Dict[str, Any], Dict[str, Any]]
+            The model state and the trainer state.
         """
         latest_checkpoint = self.find_latest_checkpoint()
 
         if latest_checkpoint is None:
             # No checkpoint to restore, start at 0
-            return {}
+            return {}, {}
 
         model_path, training_state_path = latest_checkpoint
 
@@ -136,17 +132,15 @@ class Checkpointer:
         # load parameters onto GPU then make a new GPU copy into the parameter
         # buffer. The GPU transfer happens implicitly in load_state_dict.
         model_state = torch.load(model_path, map_location=nn_util.device_mapping(-1))
-        model.load_state_dict(model_state)
-
         training_state = torch.load(training_state_path, map_location=nn_util.device_mapping(-1))
-        return training_state
+        return model_state, training_state
 
-    def load_best_weights(self, model: Model) -> None:
+    def best_model_state(self) -> Dict[str, Any]:
         if self._serialization_dir:
             logger.info("loading best weights")
             best_model_state_path = os.path.join(self._serialization_dir, 'best.th')
-            best_model_state = torch.load(best_model_state_path)
-            model.load_state_dict(best_model_state)
+            return torch.load(best_model_state_path)
         else:
             logger.info("cannot load best weights without `serialization_dir`, "
                         "so you're just getting the last weights")
+            return {}
