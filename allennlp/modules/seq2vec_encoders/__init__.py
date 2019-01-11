@@ -12,6 +12,7 @@ The available Seq2Vec encoders are
 * :class:`"cnn" <allennlp.modules.seq2vec_encoders.cnn_encoder.CnnEncoder>`
 * :class:`"augmented_lstm" <allennlp.modules.augmented_lstm.AugmentedLstm>`
 * :class:`"alternating_lstm" <allennlp.modules.stacked_alternating_lstm.StackedAlternatingLstm>`
+* :class:`"stacked_bidirectional_lstm" <allennlp.modules.stacked_bidirectional_lstm.StackedBidirectionalLstm>`
 """
 
 from typing import Type
