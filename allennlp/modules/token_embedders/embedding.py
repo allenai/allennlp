@@ -371,7 +371,7 @@ class EmbeddingsFileURI(NamedTuple):
 
 
 def parse_embeddings_file_uri(uri: str) -> 'EmbeddingsFileURI':
-    match = re.fullmatch('\((.*)\)#(.*)', uri)      # pylint: disable=anomalous-backslash-in-string
+    match = re.fullmatch(r'\((.*)\)#(.*)', uri)
     if match:
         fields = cast(Tuple[str, str], match.groups())
         return EmbeddingsFileURI(*fields)
