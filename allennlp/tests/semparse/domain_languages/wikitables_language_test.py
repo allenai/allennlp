@@ -1,4 +1,6 @@
 # pylint: disable=no-self-use,invalid-name,too-many-public-methods
+from typing import List
+
 import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
@@ -7,6 +9,7 @@ from allennlp.data.tokenizers import WordTokenizer
 from allennlp.semparse.contexts import TableQuestionContext
 from allennlp.semparse.domain_languages.domain_language import ExecutionError
 from allennlp.semparse.domain_languages.wikitables_language import Date, WikiTablesLanguage
+from allennlp.tests.semparse.domain_languages.domain_language_test import check_productions_match
 
 
 class TestWikiTablesLanguage(AllenNlpTestCase):
@@ -20,6 +23,11 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
         self.table_file = self.FIXTURES_ROOT / 'data' / 'wikitables' / 'sample_table.tagged'
         self.table_context = TableQuestionContext.read_from_file(self.table_file, question_tokens)
         self.language = WikiTablesLanguage(self.table_context)
+
+    def _get_world_with_question_tokens(self, tokens: List[Token]) -> WikiTablesLanguage:
+        table_context = TableQuestionContext.read_from_file(self.table_file, tokens)
+        world = WikiTablesLanguage(table_context)
+        return world
 
     def test_execute_fails_with_unknown_function(self):
         logical_form = "(unknown_function all_rows string_column:league)"
@@ -371,3 +379,313 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
                            string_column:league)"""
         assert not self.language.evaluate_logical_form(logical_form, ["USL A-League",
                                                                       "USL First Division"])
+
+    def test_get_nonterminal_productions_all_column_types(self):
+        # This test is long, but worth it.  These are all of the valid actions in the grammar, and
+        # we want to be sure they are what we expect.
+        productions = self.language.get_nonterminal_productions()
+        assert set(productions.keys()) == {
+                "@start@",
+                "<List[Row],Column:List[str]>",
+                "<List[Row],NumberColumn,Number:List[Row]>",
+                "<List[Row],ComparableColumn:List[Row]>",
+                "<List[Row],Column:List[Row]>",
+                "<List[Row],List[Row],NumberColumn:Number>",
+                "<List[Row],StringColumn,str:List[Row]>",
+                "<Number,Number,Number:Date>",
+                "<List[Row],DateColumn,Date:List[Row]>",
+                "<List[Row],NumberColumn:Number>",
+                "<List[Row]:List[Row]>",
+                "<List[Row]:Number>",
+                "List[str]",
+                "List[Row]",
+                "Date",
+                "Number",
+                "Column",
+                "StringColumn",
+                "ComparableColumn",
+                "NumberColumn",
+                "DateColumn",
+                "str",
+                }
+
+        check_productions_match(productions['@start@'],
+                                ['Date', 'Number', 'List[str]'])
+
+        check_productions_match(productions['<List[Row],Column:List[str]>'],
+                                ['mode', 'select'])
+
+        check_productions_match(productions['<List[Row],NumberColumn,Number:List[Row]>'],
+                                ['filter_number_equals', 'filter_number_greater',
+                                 'filter_number_greater_equals', 'filter_number_lesser',
+                                 'filter_number_lesser_equals', 'filter_number_not_equals'])
+
+        check_productions_match(productions['<List[Row],ComparableColumn:List[Row]>'],
+                                ['argmax', 'argmin'])
+
+        check_productions_match(productions['<List[Row],Column:List[Row]>'],
+                                ['same_as'])
+
+        check_productions_match(productions['<List[Row],List[Row],NumberColumn:Number>'],
+                                ['diff'])
+
+        check_productions_match(productions['<List[Row],StringColumn,str:List[Row]>'],
+                                ['filter_in', 'filter_not_in'])
+
+        check_productions_match(productions['<Number,Number,Number:Date>'],
+                                ['date'])
+
+        check_productions_match(productions['<List[Row],DateColumn,Date:List[Row]>'],
+                                ['filter_date_equals', 'filter_date_greater',
+                                 'filter_date_greater_equals', 'filter_date_lesser',
+                                 'filter_date_lesser_equals', 'filter_date_not_equals'])
+
+        check_productions_match(productions['<List[Row],NumberColumn:Number>'],
+                                ['average', 'max', 'min', 'sum'])
+
+        check_productions_match(productions['<List[Row]:List[Row]>'],
+                                ['first', 'last', 'next', 'previous'])
+
+        check_productions_match(productions['<List[Row]:Number>'],
+                                ['count'])
+
+        check_productions_match(productions['List[str]'],
+                                ['[<List[Row],Column:List[str]>, List[Row], Column]'])
+
+        check_productions_match(productions['List[Row]'],
+                                ['all_rows',
+                                 '[<List[Row],DateColumn,Date:List[Row]>, List[Row], DateColumn, Date]',
+                                 '[<List[Row],Column:List[Row]>, List[Row], Column]',
+                                 '[<List[Row],ComparableColumn:List[Row]>, List[Row], ComparableColumn]',
+                                 '[<List[Row],NumberColumn,Number:List[Row]>, List[Row], NumberColumn, Number]',
+                                 '[<List[Row],StringColumn,str:List[Row]>, List[Row], StringColumn, str]',
+                                 '[<List[Row]:List[Row]>, List[Row]]'])
+
+        check_productions_match(productions['Date'],
+                                ['[<Number,Number,Number:Date>, Number, Number, Number]'])
+
+        # Some of the number productions are instance-specific, and some of them are from the
+        # grammar.
+        check_productions_match(productions['Number'],
+                                ['2001',
+                                 '2002',
+                                 '2005',
+                                 '2010',
+                                 '2013',
+                                 '-1',
+                                 '1',
+                                 '2',
+                                 '23',
+                                 '8000',
+                                 '[<List[Row],NumberColumn:Number>, List[Row], NumberColumn]',
+                                 '[<List[Row],List[Row],NumberColumn:Number>, List[Row], List[Row], NumberColumn]',
+                                 '[<List[Row]:Number>, List[Row]]'])
+
+        # These are the columns in table, and are instance specific.
+        check_productions_match(productions['Column'],
+                                ['string_column:league',
+                                 'string_column:playoffs',
+                                 'string_column:open_cup',
+                                 'string_column:regular_season',
+                                 'date_column:year',
+                                 'number_column:avg_attendance',
+                                 'number_column:division'])
+
+        check_productions_match(productions['StringColumn'],
+                                ['string_column:league',
+                                 'string_column:playoffs',
+                                 'string_column:open_cup',
+                                 'string_column:regular_season'])
+
+        check_productions_match(productions['ComparableColumn'],
+                                ['date_column:year',
+                                 'number_column:avg_attendance',
+                                 'number_column:division'])
+
+        check_productions_match(productions['DateColumn'],
+                                ['date_column:year'])
+
+        check_productions_match(productions['NumberColumn'],
+                                ['number_column:avg_attendance',
+                                 'number_column:division'])
+
+        # Strings come from the question - any span in the question that shows up as a cell in the
+        # table is a valid string production.
+        check_productions_match(productions['str'],
+                                ['string:quarterfinals',
+                                 'string:did_not_qualify',
+                                 'string:a_league',
+                                 'string:usl_first_division',
+                                 'string:usl_a_league'])
+
+
+    def test_get_nonterminal_productions_in_world_without_number_columns(self):
+        question_tokens = [Token(x) for x in ['what', 'was', 'the', 'first', 'title', '?']]
+        table_file = self.FIXTURES_ROOT / 'data' / 'corenlp_processed_tables' / 'TEST-6.table'
+        table_context = TableQuestionContext.read_from_file(table_file, question_tokens)
+        # The table does not have a number column.
+        assert "number" not in table_context.column_types.values()
+        world = WikiTablesLanguage(table_context)
+        actions = world.get_nonterminal_productions()
+        assert set(actions.keys()) == {
+                "<List[Row],Column:List[str]>",
+                "<List[Row],ComparableColumn:List[Row]>",
+                "<List[Row],Column:List[Row]>",
+                "<List[Row],StringColumn,str:List[Row]>",
+                "<Number,Number,Number:Date>",
+                "<List[Row],DateColumn,Date:List[Row]>",
+                "<List[Row]:List[Row]>",
+                "<List[Row]:Number>",
+                "Date",
+                "Number",
+                "List[str]",
+                "Column",
+                "ComparableColumn",
+                "DateColumn",
+                "StringColumn",
+                "List[Row]",
+                "@start@",
+                }
+
+    def test_get_nonterminal_productions_in_world_without_date_columns(self):
+        question_tokens = [Token(x) for x in ['what', 'was', 'the', 'first', 'title', '?']]
+        table_file = self.FIXTURES_ROOT / 'data' / 'corenlp_processed_tables' / 'TEST-4.table'
+        table_context = TableQuestionContext.read_from_file(table_file, question_tokens)
+        # The table does not have a date column.
+        assert "date" not in table_context.column_types.values()
+        world = WikiTablesLanguage(table_context)
+        actions = world.get_nonterminal_productions()
+        assert set(actions.keys()) == {
+                "<List[Row],Column:List[str]>",
+                "<List[Row],NumberColumn,Number:List[Row]>",
+                "<List[Row],ComparableColumn:List[Row]>",
+                "<List[Row],Column:List[Row]>",
+                "<List[Row],List[Row],NumberColumn:Number>",
+                "<List[Row],StringColumn,str:List[Row]>",
+                "<Number,Number,Number:Date>",
+                "<List[Row],NumberColumn:Number>",
+                "<List[Row]:List[Row]>",
+                "<List[Row]:Number>",
+                "Date",
+                "Number",
+                "List[str]",
+                "Column",
+                "ComparableColumn",
+                "StringColumn",
+                "NumberColumn",
+                "List[Row]",
+                "@start@",
+                }
+
+    def test_get_nonterminal_productions_in_world_without_comparable_columns(self):
+        question_tokens = [Token(x) for x in ['what', 'was', 'the', 'first', 'title', '?']]
+        table_file = self.FIXTURES_ROOT / 'data' / 'corenlp_processed_tables' / 'TEST-1.table'
+        table_context = TableQuestionContext.read_from_file(table_file, question_tokens)
+        # The table does not have date or number columns.
+        assert "date" not in table_context.column_types.values()
+        assert "number" not in table_context.column_types.values()
+        world = WikiTablesLanguage(table_context)
+        actions = world.get_nonterminal_productions()
+        assert set(actions.keys()) == {
+                "<List[Row],Column:List[str]>",
+                "<List[Row],Column:List[Row]>",
+                "<List[Row],StringColumn,str:List[Row]>",
+                "<Number,Number,Number:Date>",
+                "<List[Row]:List[Row]>",
+                "<List[Row]:Number>",
+                "Date",
+                "Number",
+                "List[str]",
+                "Column",
+                "StringColumn",
+                "List[Row]",
+                "@start@",
+                }
+
+    def test_world_processes_logical_forms_correctly(self):
+        logical_form = "(select (filter_in all_rows string_column:league string:usl_a_league) date_column:year)"
+        action_sequence = self.language.logical_form_to_action_sequence(logical_form)
+        assert self.language.action_sequence_to_logical_form(action_sequence) == logical_form
+
+    def test_world_gets_correct_actions(self):
+        logical_form = "(select (filter_in all_rows string_column:league string:usl_a_league) date_column:year)"
+        action_sequence = self.language.logical_form_to_action_sequence(logical_form)
+        expected_sequence = ['@start@ -> List[str]',
+                             'List[str] -> [<List[Row],Column:List[str]>, List[Row], Column]',
+                             '<List[Row],Column:List[str]> -> select',
+                             'List[Row] -> [<List[Row],StringColumn,str:List[Row]>, '
+                                     'List[Row], StringColumn, str]',
+                             '<List[Row],StringColumn,str:List[Row]> -> filter_in',
+                             'List[Row] -> all_rows',
+                             'StringColumn -> string_column:league',
+                             'str -> string:usl_a_league',
+                             'Column -> date_column:year']
+        assert self.language.logical_form_to_action_sequence(logical_form) == expected_sequence
+
+    def test_world_gets_logical_form_from_actions(self):
+        logical_form = "(select (filter_in all_rows string_column:league string:usl_a_league) date_column:year)"
+        action_sequence = self.language.logical_form_to_action_sequence(logical_form)
+        assert self.language.action_sequence_to_logical_form(action_sequence) == logical_form
+
+    def test_world_processes_logical_forms_with_number_correctly(self):
+        logical_form = """(select (filter_number_greater all_rows number_column:avg_attendance 8000) date_column:year)"""
+        action_sequence = self.language.logical_form_to_action_sequence(logical_form)
+        assert self.language.action_sequence_to_logical_form(action_sequence) == logical_form
+
+    def test_world_processes_logical_forms_with_date_correctly(self):
+        logical_form = """(select (filter_date_greater all_rows date_column:year (date 2013 -1 -1)) date_column:year)"""
+        action_sequence = self.language.logical_form_to_action_sequence(logical_form)
+        assert self.language.action_sequence_to_logical_form(action_sequence) == logical_form
+
+    def test_get_agenda(self):
+        tokens = [Token(x) for x in ['what', 'was', 'the', 'last', 'year', '2000', '?']]
+        world = self._get_world_with_question_tokens(tokens)
+        assert set(world.get_agenda()) == {'Number -> 2000',
+                                           '<List[Row]:List[Row]> -> last',
+                                           'DateColumn -> date_column:year'}
+        tokens = [Token(x) for x in ['what', 'was', 'the', 'difference', 'in', 'attendance',
+                                     'between', 'years', '2001', 'and', '2005', '?']]
+        world = self._get_world_with_question_tokens(tokens)
+        # "year" column does not match because "years" occurs in the question.
+        assert set(world.get_agenda()) == {'Number -> 2001',
+                                           'Number -> 2005',
+                                           '<List[Row],List[Row],NumberColumn:Number> -> diff'}
+        tokens = [Token(x) for x in ['what', 'was', 'the', 'total', 'avg.', 'attendance', 'in',
+                                     'years', '2001', 'and', '2005', '?']]
+        world = self._get_world_with_question_tokens(tokens)
+        assert set(world.get_agenda()) == {'Number -> 2001',
+                                           'Number -> 2005',
+                                           '<List[Row],NumberColumn:Number> -> sum',
+                                           'NumberColumn -> number_column:avg_attendance'}
+        tokens = [Token(x) for x in ['when', 'was', 'the', 'least', 'avg.', 'attendance', '?']]
+        world = self._get_world_with_question_tokens(tokens)
+        assert set(world.get_agenda()) == {'<List[Row],ComparableColumn:List[Row]> -> argmin',
+                                           'NumberColumn -> number_column:avg_attendance'}
+        tokens = [Token(x) for x in ['what', 'is', 'the', 'least', 'avg.', 'attendance', '?']]
+        world = self._get_world_with_question_tokens(tokens)
+        assert set(world.get_agenda()) == {'<List[Row],NumberColumn:Number> -> min', 'NumberColumn -> number_column:avg_attendance'}
+        tokens = [Token(x) for x in ['when', 'did', 'the', 'team', 'not', 'qualify', '?']]
+        world = self._get_world_with_question_tokens(tokens)
+        assert set(world.get_agenda()) == {'str -> string:qualify'}
+        tokens = [Token(x) for x in ['when', 'was', 'the', 'avg.', 'attendance', 'at', 'least',
+                                     '7000', '?']]
+        world = self._get_world_with_question_tokens(tokens)
+        assert set(world.get_agenda()) == {'<List[Row],NumberColumn,Number:List[Row]> -> filter_number_greater_equals',
+                                           'NumberColumn -> number_column:avg_attendance', 'Number -> 7000'}
+        tokens = [Token(x) for x in ['when', 'was', 'the', 'avg.', 'attendance', 'more', 'than',
+                                     '7000', '?']]
+        world = self._get_world_with_question_tokens(tokens)
+        assert set(world.get_agenda()) == {'<List[Row],NumberColumn,Number:List[Row]> -> filter_number_greater',
+                                           'NumberColumn -> number_column:avg_attendance', 'Number -> 7000'}
+        tokens = [Token(x) for x in ['when', 'was', 'the', 'avg.', 'attendance', 'at', 'most',
+                                     '7000', '?']]
+        world = self._get_world_with_question_tokens(tokens)
+        assert set(world.get_agenda()) == {'<List[Row],NumberColumn,Number:List[Row]> -> filter_number_lesser_equals',
+                                           'NumberColumn -> number_column:avg_attendance', 'Number -> 7000'}
+        tokens = [Token(x) for x in ['what', 'was', 'the', 'top', 'year', '?']]
+        world = self._get_world_with_question_tokens(tokens)
+        assert set(world.get_agenda()) == {'<List[Row]:List[Row]> -> first', 'DateColumn -> date_column:year'}
+        tokens = [Token(x) for x in ['what', 'was', 'the', 'year', 'in', 'the', 'bottom', 'row',
+                                     '?']]
+        world = self._get_world_with_question_tokens(tokens)
+        assert set(world.get_agenda()) == {'<List[Row]:List[Row]> -> last', 'DateColumn -> date_column:year'}
