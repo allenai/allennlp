@@ -239,11 +239,12 @@ class BidafPlusPlus(Model):
         embedded_question = self._variational_dropout(embedded_question)
 
         # context embedding
-        embedded_passage = self._variational_dropout(self._text_field_embedder(passage))
+        embedded_passage = self._text_field_embedder(passage)
+        embedded_passage = self._variational_dropout(embedded_passage)
         passage_length = embedded_passage.size(1)
 
-        passage_zeros = (embedded_passage == 0).data.cpu().numpy().mean()
-        question_zeros = (embedded_question==0).data.cpu().numpy().mean()
+        passage_zeros = (passage['tokens'] == 0).data.cpu().numpy().mean()
+        question_zeros = (question['tokens'] == 0).data.cpu().numpy().mean()
         ElasticLogger().write_log('INFO', 'docqa++', \
             context_dict={'batch_size': batch_size, "max_q_len": max_q_len,'passage_length':passage_length, 'passage_zeros':passage_zeros,'question_zeros':question_zeros})
 
