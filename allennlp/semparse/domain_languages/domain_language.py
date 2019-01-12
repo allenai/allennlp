@@ -228,8 +228,9 @@ class DomainLanguage:
                 function = getattr(self, name)
                 if getattr(function, '_is_predicate', False):
                     self.add_predicate(name, function)
-        for name, value in allowed_constants.items():
-            self.add_constant(name, value)
+        if allowed_constants:
+            for name, value in allowed_constants.items():
+                self.add_constant(name, value)
         # Caching this to avoid recomputing it every time `get_nonterminal_productions` is called.
         self._nonterminal_productions: Dict[str, List[str]] = None
 
@@ -355,7 +356,7 @@ class DomainLanguage:
         self._functions[name] = function
         self._function_types[name] = function_nltk_type
 
-    def add_constant(self, name: str, value: Any):
+    def add_constant(self, name: str, value: Any, type_: Type = None):
         """
         Adds a constant to this domain language.  You would typically just pass in a list of
         constants to the ``super().__init__()`` call in your constructor, but you can also call
@@ -366,7 +367,8 @@ class DomainLanguage:
         you're doing semantic parsing - we need to be able to search over this space, and compute
         normalized probability distributions.
         """
-        constant_type = PredicateType.get_type(type(value))
+        value_type = type_ if type_ else type(value)
+        constant_type = PredicateType.get_type(value_type)
         self._functions[name] = lambda: value
         self._function_types[name] = constant_type
 
