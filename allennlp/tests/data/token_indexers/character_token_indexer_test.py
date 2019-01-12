@@ -11,20 +11,21 @@ from allennlp.data.tokenizers.character_tokenizer import CharacterTokenizer
 
 class CharacterTokenIndexerTest(AllenNlpTestCase):
     def test_count_vocab_items_respects_casing(self):
-        indexer = TokenCharactersIndexer("characters")
+        indexer = TokenCharactersIndexer("characters", min_padding_length=5)
         counter = defaultdict(lambda: defaultdict(int))
         indexer.count_vocab_items(Token("Hello"), counter)
         indexer.count_vocab_items(Token("hello"), counter)
         assert counter["characters"] == {"h": 1, "H": 1, "e": 2, "l": 4, "o": 2}
 
-        indexer = TokenCharactersIndexer("characters", CharacterTokenizer(lowercase_characters=True))
+        indexer = TokenCharactersIndexer("characters", CharacterTokenizer(lowercase_characters=True),
+                                         min_padding_length=5)
         counter = defaultdict(lambda: defaultdict(int))
         indexer.count_vocab_items(Token("Hello"), counter)
         indexer.count_vocab_items(Token("hello"), counter)
         assert counter["characters"] == {"h": 2, "e": 2, "l": 4, "o": 2}
 
     def test_as_array_produces_token_sequence(self):
-        indexer = TokenCharactersIndexer("characters")
+        indexer = TokenCharactersIndexer("characters", min_padding_length=1)
         padded_tokens = indexer.pad_token_sequence({'k': [[1, 2, 3, 4, 5], [1, 2, 3], [1]]},
                                                    desired_num_tokens={'k': 4},
                                                    padding_lengths={"num_token_characters": 10})
@@ -42,7 +43,7 @@ class CharacterTokenIndexerTest(AllenNlpTestCase):
         vocab.add_token_to_namespace("t", namespace='characters')
         vocab.add_token_to_namespace("c", namespace='characters')
 
-        indexer = TokenCharactersIndexer("characters")
+        indexer = TokenCharactersIndexer("characters", min_padding_length=1)
         indices = indexer.tokens_to_indices([Token("sentential")], vocab, "char")
         assert indices == {"char": [[3, 4, 5, 6, 4, 5, 6, 1, 1, 1]]}
 
@@ -58,7 +59,8 @@ class CharacterTokenIndexerTest(AllenNlpTestCase):
         vocab.add_token_to_namespace(">", namespace='characters')  # 9
         vocab.add_token_to_namespace("/", namespace='characters')  # 10
 
-        indexer = TokenCharactersIndexer("characters", start_tokens=["<s>"], end_tokens=["</s>"])
+        indexer = TokenCharactersIndexer("characters", start_tokens=["<s>"], end_tokens=["</s>"],
+                                         min_padding_length=1)
         indices = indexer.tokens_to_indices([Token("sentential")], vocab, "char")
         assert indices == {"char": [[8, 3, 9],
                                     [3, 4, 5, 6, 4, 5, 6, 1, 1, 1],
