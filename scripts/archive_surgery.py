@@ -32,22 +32,30 @@ def main():
 
     parser.add_argument("--input-file", required=True,
                         help="path to input file")
-    parser.add_argument("--output-file", required=True,
-                        help="path to output file")
     parser.add_argument("--editor", default=os.environ.get("EDITOR"),
                         help="editor to launch, whose default value is `$EDITOR` the environment variable")
+    output = parser.add_mutually_exclusive_group()
+    output.add_argument("--output-file", help="path to output file")
+    output.add_argument("--inplace", action="store_true",
+                        help="modify configs in place")
+    parser.add_argument("-f", "--force", action="store_true",
+                        help="overwrite the output file if it exists")
 
     args = parser.parse_args()
 
     if args.editor is None:
         raise RuntimeError("please specify an editor or set the $EDITOR environment variable")
 
-    if os.path.exists(args.output_file):
+    if not args.inplace and os.path.exists(args.output_file) and not args.force:
         raise ValueError("output file already exists")
 
     archive_file = cached_path(args.input_file)
     if not os.path.exists(archive_file):
         raise ValueError("input file doesn't exist")
+    if args.inplace:
+        output_file = archive_file
+    else:
+        output_file = args.output_file
 
     # Extract archive to temp dir
     tempdir = tempfile.mkdtemp()
@@ -58,7 +66,7 @@ def main():
     config_path = os.path.join(tempdir, CONFIG_NAME)
     subprocess.run([args.editor, config_path])
 
-    with tarfile.open(args.output_file, "w:gz") as tar:
+    with tarfile.open(output_file, "w:gz") as tar:
         tar.add(tempdir, arcname=os.path.sep)
 
 
