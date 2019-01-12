@@ -46,7 +46,7 @@ from allennlp.models.archival import archive_model, CONFIG_NAME
 from allennlp.models.model import Model, _DEFAULT_WEIGHTS
 from allennlp.training.trainer import Trainer, TrainerPieces
 from allennlp.training.trainer_base import TrainerBase
-from allennlp.training.util import create_serialization_dir
+from allennlp.training.util import create_serialization_dir, evaluate
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -188,12 +188,14 @@ def train_model(params: Params,
                 train_data=pieces.train_dataset,
                 validation_data=pieces.validation_dataset,
                 params=pieces.params,
-                validation_iterator=pieces.validation_iterator,
-                test_data=pieces.test_dataset,
-                evaluate_on_test=evaluate_on_test)
+                validation_iterator=pieces.validation_iterator)
+        evaluation_iterator = pieces.validation_iterator or pieces.iterator
+        evaluation_dataset = pieces.test_dataset
 
     else:
         trainer = TrainerBase.from_params(params, serialization_dir, recover)
+        # TODO(joelgrus): something else
+        evaluation_iterator = evaluation_dataset = None
 
     params.assert_empty('base train command')
 
@@ -206,6 +208,22 @@ def train_model(params: Params,
                          "a model archive using the current best epoch weights.")
             archive_model(serialization_dir, files_to_archive=params.files_to_archive)
         raise
+
+    # Evaluate
+    if evaluation_dataset and evaluate_on_test:
+        logger.info("The model will be evaluated using the best epoch weights.")
+        test_metrics = evaluate(trainer.model, evaluation_dataset, evaluation_iterator,
+                                cuda_device=trainer._cuda_devices[0], # pylint: disable=protected-access,
+                                # TODO(brendanr): Pass in an arg following Joel's trainer refactor.
+                                batch_weight_key="")
+
+        for key, value in test_metrics.items():
+            metrics["test_" + key] = value
+
+    elif evaluation_dataset:
+        logger.info("To evaluate on the test set after training, pass the "
+                    "'evaluate_on_test' flag, or use the 'allennlp evaluate' command.")
+
 
     # Now tar up results
     archive_model(serialization_dir, files_to_archive=params.files_to_archive)

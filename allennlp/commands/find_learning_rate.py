@@ -169,11 +169,7 @@ def find_learning_rate_model(params: Params, serialization_dir: str,
     prepare_environment(params)
 
     cuda_device = params.params.get('trainer').get('cuda_device', -1)
-    if isinstance(cuda_device, list):
-        for device in cuda_device:
-            check_for_gpu(device)
-    else:
-        check_for_gpu(cuda_device)
+    check_for_gpu(cuda_device)
 
     all_datasets = datasets_from_params(params)
     datasets_for_vocab_creation = set(params.pop("datasets_for_vocab_creation", all_datasets))
@@ -213,8 +209,7 @@ def find_learning_rate_model(params: Params, serialization_dir: str,
                                   train_data=train_data,
                                   validation_data=None,
                                   params=trainer_params,
-                                  validation_iterator=None,
-                                  test_data=None)
+                                  validation_iterator=None)
 
     logger.info(f'Starting learning rate search from {start_lr} to {end_lr} in {num_batches} iterations.')
     learning_rates, losses = search_learning_rate(trainer,

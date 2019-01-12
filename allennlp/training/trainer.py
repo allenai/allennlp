@@ -10,7 +10,6 @@ from typing import Dict, Optional, List, Tuple, Union, Iterable, Any, NamedTuple
 import torch
 import torch.optim.lr_scheduler
 
-from allennlp.commands.evaluate import evaluate
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import (dump_metrics, gpu_memory_mb, parse_cuda_device, peak_memory_mb,
@@ -56,9 +55,7 @@ class Trainer(TrainerBase):
                  histogram_interval: int = None,
                  should_log_parameter_statistics: bool = True,
                  should_log_learning_rate: bool = False,
-                 log_batch_size_period: Optional[int] = None,
-                 evaluation_dataset: Iterable[Instance] = None,
-                 batch_weight_key: str = None) -> None:
+                 log_batch_size_period: Optional[int] = None) -> None:
         """
         This is what used to be called just ``Trainer``. It just takes a labeled dataset
         and a ``DataIterator``, and uses the supplied ``Optimizer`` to learn the weights
@@ -150,8 +147,6 @@ class Trainer(TrainerBase):
             Whether to send parameter specific learning rate to tensorboard.
         log_batch_size_period : ``int``, optional, (default = ``None``)
             If defined, how often to log the average batch size.
-        evaluation_dataset : ``Iterable[Instance]``, optional (default = None)
-            If defined, we'll evaluate on this after training.
         """
         super().__init__(model, serialization_dir, cuda_device)
 
@@ -202,9 +197,6 @@ class Trainer(TrainerBase):
                 should_log_learning_rate=should_log_learning_rate)
 
         self._log_batch_size_period = log_batch_size_period
-
-        self._evaluation_dataset = evaluation_dataset
-        self._batch_weight_key = batch_weight_key
 
         self._last_log = 0.0  # time of last logging
 
@@ -457,29 +449,12 @@ class Trainer(TrainerBase):
 
             epochs_trained += 1
 
-        # Load the best model state before generating the evaluation metrics.
+        # Load the best model state before returning
         best_model_state = self._checkpointer.best_model_state()
         if best_model_state:
             self.model.load_state_dict(best_model_state)
 
-        return {**metrics, **self._evaluation_metrics()}
-
-    def _evaluation_metrics(self) -> Dict:
-        """
-        Evaluate on `evaluation_dataset` and return the generated metrics.
-        """
-        if self._evaluation_dataset is not None:
-            logger.info("The model will be evaluated using the best epoch weights.")
-            iterator = self._validation_iterator or self.iterator
-
-            # TODO(brendanr): make batch_weight_key configurable
-            test_metrics = evaluate(self.model, self._evaluation_dataset, iterator,
-                                    cuda_device=self._cuda_devices[0],
-                                    batch_weight_key="")
-
-            return {f"test_{name}": value for name, value in test_metrics.items()}
-        else:
-            return {}
+        return metrics
 
     def _save_checkpoint(self, epoch: Union[int, str]) -> None:
         """
@@ -575,10 +550,7 @@ class Trainer(TrainerBase):
                     train_data: Iterable[Instance],
                     validation_data: Optional[Iterable[Instance]],
                     params: Params,
-                    validation_iterator: DataIterator = None,
-                    test_data: Optional[Iterable[Instance]] = None,
-                    evaluate_on_test: bool = False,
-                    batch_weight_key: str = "") -> 'Trainer':
+                    validation_iterator: DataIterator = None) -> 'Trainer':
         # pylint: disable=arguments-differ
         patience = params.pop_int("patience", None)
         validation_metric = params.pop("validation_metric", "-loss")
@@ -616,15 +588,6 @@ class Trainer(TrainerBase):
         should_log_learning_rate = params.pop_bool("should_log_learning_rate", False)
         log_batch_size_period = params.pop_int("log_batch_size_period", None)
 
-        if test_data is not None and evaluate_on_test:
-            evaluation_dataset = test_data
-        elif test_data is not None:
-            logger.info("To evaluate on the test set after training, pass the "
-                        "'evaluate_on_test' flag, or use the 'allennlp evaluate' command.")
-            evaluation_dataset = None
-        else:
-            evaluation_dataset = None
-
         params.assert_empty(cls.__name__)
         return cls(model, optimizer, iterator,
                    train_data, validation_data,
@@ -645,9 +608,7 @@ class Trainer(TrainerBase):
                    histogram_interval=histogram_interval,
                    should_log_parameter_statistics=should_log_parameter_statistics,
                    should_log_learning_rate=should_log_learning_rate,
-                   log_batch_size_period=log_batch_size_period,
-                   evaluation_dataset=evaluation_dataset,
-                   batch_weight_key=batch_weight_key)
+                   log_batch_size_period=log_batch_size_period)
 
 
 class TrainerPieces(NamedTuple):
