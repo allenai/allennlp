@@ -2,6 +2,7 @@ from collections import defaultdict
 from typing import Any, Callable, CallableMeta, Dict, GenericMeta, List, Set, Tuple, Type, Union  # type: ignore
 import inspect
 import logging
+import traceback
 import types
 
 from nltk import Tree
@@ -401,7 +402,8 @@ class DomainLanguage:
             try:
                 return function(*arguments)
             except (TypeError, ValueError) as error:
-                raise ExecutionError(f"Error executing expression {expression}: {error}")
+                traceback.print_exc()
+                raise ExecutionError(f"Error executing expression {expression} (see stderr for stack trace)")
         elif isinstance(expression, str):
             if expression not in self._functions:
                 raise ExecutionError(f"Unrecognized constant: {expression}")

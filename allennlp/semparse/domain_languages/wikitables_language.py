@@ -1,11 +1,12 @@
 from collections import defaultdict
 from numbers import Number
-from typing import Dict, List, NamedTuple, Tuple
+from typing import Dict, List, NamedTuple, Tuple, TypeVar
 import logging
 
 from allennlp.semparse.domain_languages.domain_language import DomainLanguage, ExecutionError, predicate
 from allennlp.semparse.contexts.table_question_knowledge_graph import MONTH_NUMBERS
 from allennlp.semparse.contexts import TableQuestionContext
+from allennlp.tools import wikitables_evaluator as evaluator
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -21,7 +22,7 @@ class Date:
         # Date(2018, -1, -1) == Date(2018, 2, 3) and Date(2018, -1, -1) == Date(2018, 4, 5)
         # but Date(2018, 2, 3) != Date(2018, 4, 5).
         if not isinstance(other, Date):
-            return False
+            raise ExecutionError("Can only compare Dates with Dates")
         year_is_same = self.year == -1 or other.year == -1 or self.year == other.year
         month_is_same = self.month == -1 or other.month == -1 or self.month == other.month
         day_is_same = self.day == -1 or other.day == -1 or self.day == other.day
@@ -37,7 +38,7 @@ class Date:
         # the same. So we make an exception just in that case. That is, we deem the comparison
         # undefined only when one of the year values is -1, but not both.
         if not isinstance(other, Date):
-            return False  # comparison undefined
+            raise ExecutionError("Can only compare Dates with Dates")
         # We're doing an exclusive or below.
         if (self.year == -1) != (other.year == -1):
             return False  # comparison undefined
@@ -56,7 +57,7 @@ class Date:
 
     def __ge__(self, other) -> bool:
         if not isinstance(other, Date):
-            return False
+            raise ExecutionError("Can only compare Dates with Dates")
         return self > other or self == other
 
     def __str__(self):
@@ -66,6 +67,9 @@ class Date:
 class Row(NamedTuple):
     # Maps column names to cell values.
     values: Dict[str, str]
+
+
+ListOrRow = TypeVar('ListOrRow', List[Row], Row)
 
 
 class Column(NamedTuple):
@@ -126,6 +130,7 @@ class WikiTablesLanguage(DomainLanguage):
             self.add_predicate('min', self.min)
             self.add_predicate('average', self.average)
             self.add_predicate('sum', self.sum)
+            self.add_predicate('diff', self.diff)
         if "date" in column_types or "number" in column_types:
             self.add_predicate('argmax', self.argmax)
             self.add_predicate('argmin', self.argmin)
@@ -140,7 +145,7 @@ class WikiTablesLanguage(DomainLanguage):
             self.add_constant(entity, entity)
 
         for number in self._question_numbers:
-            self.add_constant(str(number), number, type_=Number)
+            self.add_constant(str(number), float(number), type_=Number)
 
         # Keeps track of column name productions so that we can add them to the agenda.
         self._column_productions_for_agenda: Dict[str, str] = {}
@@ -254,6 +259,27 @@ class WikiTablesLanguage(DomainLanguage):
                 agenda.append(f"{types.NUMBER_TYPE} -> {number}")
         return agenda
 
+    def evaluate_logical_form(self, logical_form: str, target_list: List[str]) -> bool:
+        """
+        Takes a logical form, and the list of target values as strings from the original lisp
+        string, and returns True iff the logical form executes to the target list, using the
+        official WikiTableQuestions evaluation script.
+        """
+        normalized_target_list = [TableQuestionContext.normalize_string(value) for value in
+                                  target_list]
+        target_value_list = evaluator.to_value_list(normalized_target_list)
+        try:
+            denotation = self.execute(logical_form)
+        except ExecutionError:
+            logger.warning(f'Failed to execute: {logical_form}')
+            return False
+        if isinstance(denotation, list):
+            denotation_list = [str(denotation_item) for denotation_item in denotation]
+        else:
+            denotation_list = [str(denotation)]
+        denotation_value_list = evaluator.to_value_list(denotation_list)
+        return evaluator.check_denotation(target_value_list, denotation_value_list)
+
     # Things below here are language predicates, until you get to private methods.
 
     @predicate
@@ -261,16 +287,18 @@ class WikiTablesLanguage(DomainLanguage):
         return self.table_data
 
     @predicate
-    def list(self, row: Row) -> List[Row]:
-        return [row]
-
-    @predicate
-    def select(self, rows: List[Row], column: Column) -> List[str]:
+    def select(self, rows: ListOrRow, column: Column) -> ListOrRow:
         """
         Select function takes a list of rows and a column and returns a list of cell values as
         strings.
         """
-        return [row.values[column.name] for row in rows]
+        if isinstance(rows, list):
+            return [row.values[column.name] for row in rows]
+        else:
+            if not rows:
+                return None
+            # "rows" is actually a single row.
+            return rows.values[column.name]
 
     def argmax(self, rows: List[Row], column: Column) -> Row:
         """
@@ -291,7 +319,6 @@ class WikiTablesLanguage(DomainLanguage):
         if not value_row_pairs:
             return None
         # Returns a list containing the row with the max cell value.
-        print("SORTED:", sorted(value_row_pairs, key=lambda x: x[0], reverse=True)[0][1])
         return sorted(value_row_pairs, key=lambda x: x[0], reverse=True)[0][1]
 
     def argmin(self, rows: List[Row], column: Column) -> Row:
@@ -313,8 +340,6 @@ class WikiTablesLanguage(DomainLanguage):
         if not value_row_pairs:
             return None
         # Returns a list containing the row with the max cell value.
-        print(value_row_pairs)
-        print(sorted(value_row_pairs, key=lambda x: x[0]))
         return sorted(value_row_pairs, key=lambda x: x[0])[0][1]
 
     # These six methods take a list of rows, a column, and a numerical value and return all the
@@ -393,7 +418,7 @@ class WikiTablesLanguage(DomainLanguage):
         """
         if not rows:
             logger.warning("Trying to get first row from an empty list")
-            return []
+            return None
         return rows[0]
 
     @predicate
@@ -404,7 +429,7 @@ class WikiTablesLanguage(DomainLanguage):
         """
         if not rows:
             logger.warning("Trying to get first row from an empty list")
-            return []
+            return None
         return rows[-1]
 
     @predicate
@@ -414,6 +439,8 @@ class WikiTablesLanguage(DomainLanguage):
         the input row in the original set of rows. If the input row happens to be the top row, we
         will return an empty list.
         """
+        if not row:
+            return None
         input_row_index = self._get_row_index(row)
         if input_row_index > 0:
             return self.table_data[input_row_index - 1]
@@ -426,6 +453,8 @@ class WikiTablesLanguage(DomainLanguage):
         the input row in the original set of rows. If the input row happens to be the last row, we
         will return an empty list.
         """
+        if not row:
+            return None
         input_row_index = self._get_row_index(row)
         if input_row_index < len(self.table_data) - 1 and input_row_index != -1:
             return self.table_data[input_row_index + 1]
@@ -481,7 +510,6 @@ class WikiTablesLanguage(DomainLanguage):
         those rows.
         """
         cell_row_pairs = self._get_number_row_pairs_to_filter(rows, column.name)
-        print(cell_row_pairs)
         if not cell_row_pairs:
             return 0.0
         return sum([value for value, _ in cell_row_pairs])
@@ -508,7 +536,7 @@ class WikiTablesLanguage(DomainLanguage):
             second_value = float(second_row.values[column.name])
             return first_value - second_value
         except ValueError:
-            raise ExecutionError(f"Invalid column for diff: {column_name}")
+            raise ExecutionError(f"Invalid column for diff: {column.name}")
 
     @predicate
     def same_as(self, row: Row, column: Column) -> List[Row]:
@@ -609,7 +637,7 @@ class WikiTablesLanguage(DomainLanguage):
         """
         row_index = -1
         for index, table_row in enumerate(self.table_data):
-            if table_row == row.values:
+            if table_row.values == row.values:
                 row_index = index
                 break
         return row_index

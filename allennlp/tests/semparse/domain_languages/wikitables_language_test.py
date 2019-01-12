@@ -14,14 +14,12 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
         super().setUp()
         # Adding a bunch of random tokens in here so we get them as constants in the language.
         question_tokens = [Token(x) for x in ['what', 'was', 'the', 'last', 'year', '2013', '?',
-                                              'quarterfinals', 'a_league', '2010']]
+                                              'quarterfinals', 'a_league', '2010', '8000',
+                                              'did_not_qualify', '2001', '2', '23', '2005', '1',
+                                              '2002', 'usl_a_league', 'usl_first_division']]
         self.table_file = self.FIXTURES_ROOT / 'data' / 'wikitables' / 'sample_table.tagged'
-        self.table_file_with_date = self.FIXTURES_ROOT / 'data' / 'corenlp_processed_tables' / 'TEST-3.table'
         self.table_context = TableQuestionContext.read_from_file(self.table_file, question_tokens)
-        self.table_context_with_date = TableQuestionContext.read_from_file(self.table_file_with_date,
-                                                                           question_tokens)
         self.language = WikiTablesLanguage(self.table_context)
-        self.language_with_date = WikiTablesLanguage(self.table_context_with_date)
 
     def test_execute_fails_with_unknown_function(self):
         logical_form = "(unknown_function all_rows string_column:league)"
@@ -36,22 +34,22 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
     def test_execute_works_with_argmax(self):
         logical_form = "(select (argmax all_rows number_column:avg_attendance) string_column:league)"
         cell_list = self.language.execute(logical_form)
-        assert cell_list == ['usl_a_league']
+        assert cell_list == 'usl_a_league'
 
     def test_execute_works_with_argmax_on_dates(self):
-        logical_form = "(select (argmax all_rows date_column:date) string_column:league)"
+        logical_form = "(select (argmax all_rows date_column:year) string_column:league)"
         cell_list = self.language.execute(logical_form)
-        assert cell_list == ['usl_first_division']
+        assert cell_list == 'usl_first_division'
 
     def test_execute_works_with_argmin(self):
-        logical_form = "(select (argmin all_rows number_column:avg_attendance) date_column:date)"
+        logical_form = "(select (argmin all_rows number_column:avg_attendance) date_column:year)"
         cell_list = self.language.execute(logical_form)
-        assert cell_list == ['march_2005']
+        assert cell_list == '2005'
 
     def test_execute_works_with_argmin_on_dates(self):
-        logical_form = "(select (argmin all_rows date_column:date) string_column:league)"
+        logical_form = "(select (argmin all_rows date_column:year) string_column:league)"
         cell_list = self.language.execute(logical_form)
-        assert cell_list == ['usl_a_league']
+        assert cell_list == 'usl_a_league'
 
     def test_execute_works_with_filter_number_greater(self):
         # Selecting cell values from all rows that have attendance greater than the min value of
@@ -68,12 +66,12 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
 
     def test_execute_works_with_filter_date_greater(self):
         # Selecting cell values from all rows that have date greater than 2002.
-        logical_form = """(select (filter_date_greater all_rows date_column:date
+        logical_form = """(select (filter_date_greater all_rows date_column:year
                                    (date 2002 -1 -1)) string_column:league)"""
         cell_value_list = self.language.execute(logical_form)
         assert cell_value_list == ['usl_first_division']
         # Replacing the filter value with an invalid value.
-        logical_form = """(select (filter_date_greater all_rows date_column:date
+        logical_form = """(select (filter_date_greater all_rows date_column:year
                                    2005) string_column:league)"""
         with pytest.raises(ExecutionError):
             self.language.execute(logical_form)
@@ -92,12 +90,12 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
     def test_execute_works_with_filter_date_greater_equals(self):
         # Selecting cell values from all rows that have date greater than or equal to 2005 February
         # 1st.
-        logical_form = """(select (filter_date_greater_equals all_rows date_column:date
+        logical_form = """(select (filter_date_greater_equals all_rows date_column:year
                                    (date 2005 2 1)) string_column:league)"""
         cell_value_list = self.language.execute(logical_form)
         assert cell_value_list == ['usl_first_division']
         # Replacing the filter value with an invalid value.
-        logical_form = """(select (filter_date_greater_equals all_rows date_column:date
+        logical_form = """(select (filter_date_greater_equals all_rows date_column:year
                                    2005) string_column:league)"""
         with pytest.raises(ExecutionError):
             self.language.execute(logical_form)
@@ -109,19 +107,19 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
         cell_value_list = self.language.execute(logical_form)
         assert cell_value_list == ['usl_first_division']
         # Replacing the filter value with an invalid value.
-        logical_form = """(select (filter_number_lesser all_rows date_column:date
+        logical_form = """(select (filter_number_lesser all_rows date_column:year
                                    (date 2005 -1 -1)) string_column:league)"""
         with pytest.raises(ExecutionError):
             self.language.execute(logical_form)
 
     def test_execute_works_with_filter_date_lesser(self):
         # Selecting cell values from all rows that have date less that 2005 January
-        logical_form = """(select (filter_date_lesser all_rows date_column:date
+        logical_form = """(select (filter_date_lesser all_rows date_column:year
                                    (date 2005 1 -1)) string_column:league)"""
         cell_value_list = self.language.execute(logical_form)
         assert cell_value_list == ["usl_a_league"]
         # Replacing the filter value with an invalid value.
-        logical_form = """(select (filter_date_lesser all_rows date_column:date
+        logical_form = """(select (filter_date_lesser all_rows date_column:year
                                    2005) string_column:league)"""
         with pytest.raises(ExecutionError):
             self.language.execute(logical_form)
@@ -132,19 +130,19 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
         count_result = self.language.execute(logical_form)
         assert count_result == 2
         # Replacing the filter value with an invalid value.
-        logical_form = """(select (filter_number_lesser_equals all_rows date_column:date
+        logical_form = """(select (filter_number_lesser_equals all_rows date_column:year
                                    (date 2005 -1 -1)) string_column:league)"""
         with pytest.raises(ExecutionError):
             self.language.execute(logical_form)
 
     def test_execute_works_with_filter_date_lesser_equals(self):
         # Selecting cell values from all rows that have date less that or equal to 2001 February 23
-        logical_form = """(select (filter_date_lesser_equals all_rows date_column:date
+        logical_form = """(select (filter_date_lesser_equals all_rows date_column:year
                                    (date 2001 2 23)) string_column:league)"""
         cell_value_list = self.language.execute(logical_form)
         assert cell_value_list == ['usl_a_league']
         # Replacing the filter value with an invalid value.
-        logical_form = """(select (filter_date_lesser_equals all_rows date_column:date
+        logical_form = """(select (filter_date_lesser_equals all_rows date_column:year
                                    2005) string_column:league)"""
         with pytest.raises(ExecutionError):
             self.language.execute(logical_form)
@@ -155,40 +153,40 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
         count_result = self.language.execute(logical_form)
         assert count_result == 0
         # Replacing the filter value with an invalid value.
-        logical_form = """(count (filter_number_equals all_rows date_column:date (date 2010 -1 -1)))"""
+        logical_form = """(count (filter_number_equals all_rows date_column:year (date 2010 -1 -1)))"""
         with pytest.raises(ExecutionError):
             self.language.execute(logical_form)
 
     def test_execute_works_with_filter_date_equals(self):
         # Selecting cell values from all rows that have date not equal to 2001
-        logical_form = """(select (filter_date_equals all_rows date_column:date
+        logical_form = """(select (filter_date_equals all_rows date_column:year
                                    (date 2001 -1 -1)) string_column:league)"""
         cell_value_list = self.language.execute(logical_form)
         assert cell_value_list == ['usl_a_league']
         # Replacing the filter value with an invalid value.
-        logical_form = """(select (filter_date_equals all_rows date_column:date
+        logical_form = """(select (filter_date_equals all_rows date_column:year
                                    2005) string_column:league)"""
         with pytest.raises(ExecutionError):
             self.language.execute(logical_form)
 
     def test_execute_works_with_filter_number_not_equals(self):
-        # Counting rows that have year not equal to 2010.
+        # Counting rows that have average attendance not equal to 8000
         logical_form = """(count (filter_number_not_equals all_rows number_column:avg_attendance 8000))"""
         count_result = self.language.execute(logical_form)
         assert count_result == 2
         # Replacing the filter value with an invalid value.
-        logical_form = """(count (filter_number_not_equals all_rows date_column:date (date 2010 -1 -1)))"""
+        logical_form = """(count (filter_number_not_equals all_rows date_column:year (date 2010 -1 -1)))"""
         with pytest.raises(ExecutionError):
             self.language.execute(logical_form)
 
     def test_execute_works_with_filter_date_not_equals(self):
         # Selecting cell values from all rows that have date not equal to 2001
-        logical_form = """(select (filter_date_not_equals all_rows date_column:date
+        logical_form = """(select (filter_date_not_equals all_rows date_column:year
                                    (date 2001 -1 -1)) string_column:league)"""
         cell_value_list = self.language.execute(logical_form)
         assert cell_value_list == ['usl_first_division']
         # Replacing the filter value with an invalid value.
-        logical_form = """(select (filter_date_not_equals all_rows date_column:date
+        logical_form = """(select (filter_date_not_equals all_rows date_column:year
                                    2005) string_column:league)"""
         with pytest.raises(ExecutionError):
             self.language.execute(logical_form)
@@ -210,78 +208,53 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
     def test_execute_works_with_first(self):
         # Selecting "regular season" from the first row.
         logical_form = """(select (first all_rows) string_column:regular_season)"""
-        cell_list = self.language.execute(logical_form)
-        assert cell_list == ["4th_western"]
+        assert self.language.execute(logical_form) == '4th_western'
 
-    def test_execute_logs_warning_with_first_on_empty_list(self):
+    def test_execute_returns_none_with_first_on_empty_list(self):
         # Selecting "regular season" from the first row where year is greater than 2010.
-        with self.assertLogs("allennlp.semparse.executors.wikitables_variable_free_executor") as log:
-            logical_form = """(select (first (filter_date_greater all_rows date_column:date
-                                                (date 2010 -1 -1)))
-                                      string_column:regular_season)"""
-            self.language.execute(logical_form)
-        self.assertEqual(log.output,
-                         ["WARNING:allennlp.semparse.executors.wikitables_variable_free_executor:"
-                          "Trying to get first row from an empty list: "
-                          "['filter_date_greater', 'all_rows', 'date_column:date', ['date', '2010', '-1', '-1']]"])
+        logical_form = """(select (first (filter_date_greater all_rows date_column:year
+                                            (date 2010 -1 -1)))
+                                  string_column:regular_season)"""
+        assert self.language.execute(logical_form) is None
 
     def test_execute_works_with_last(self):
         # Selecting "regular season" from the last row where year is not equal to 2010.
-        logical_form = """(select (last (filter_date_not_equals all_rows date_column:date
+        logical_form = """(select (last (filter_date_not_equals all_rows date_column:year
                                          (date 2010 -1 -1)))
                                   string_column:regular_season)"""
-        cell_list = self.language.execute(logical_form)
-        assert cell_list == ["5th"]
+        assert self.language.execute(logical_form) == '5th'
 
-    def test_execute_logs_warning_with_last_on_empty_list(self):
+    def test_execute_returns_none_with_last_on_empty_list(self):
         # Selecting "regular season" from the last row where year is greater than 2010.
-        with self.assertLogs("allennlp.semparse.executors.wikitables_variable_free_executor") as log:
-            logical_form = """(select (last (filter_date_greater all_rows date_column:date
-                                                (date 2010 -1 -1)))
+        logical_form = """(select (last (filter_date_greater all_rows date_column:year (date 2010 -1 -1)))
                                       string_column:regular_season)"""
-            self.language.execute(logical_form)
-        self.assertEqual(log.output,
-                         ["WARNING:allennlp.semparse.executors.wikitables_variable_free_executor:"
-                          "Trying to get last row from an empty list: "
-                          "['filter_date_greater', 'all_rows', 'date_column:date', ['date', '2010', '-1', '-1']]"])
+        assert self.language.execute(logical_form) is None
 
     def test_execute_works_with_previous(self):
         # Selecting "venue" from the row before last where year is not equal to 2010.
         logical_form = """(select (previous (last (filter_date_not_equals
                                                     all_rows date_column:year (date 2010 -1 -1))))
-                                  string_column:venue)"""
-        cell_list = self.language_with_date.execute(logical_form)
-        assert cell_list == ["4th_western"]
+                                  string_column:regular_season)"""
+        assert self.language.execute(logical_form) == "4th_western"
 
-    def test_execute_logs_warning_with_previous_on_empty_list(self):
+    def test_execute_returns_none_with_previous_on_empty_list(self):
         # Selecting "regular season" from the row before the one where year is greater than 2010.
-        with self.assertLogs("allennlp.semparse.executors.wikitables_variable_free_executor") as log:
-            logical_form = """(select (previous (filter_date_greater all_rows date_column:date (date 2010 -1 -1)))
+        logical_form = """(select (previous (first (filter_date_greater all_rows date_column:year (date 2010 -1 -1))))
                                       string_column:regular_season)"""
-            self.language.execute(logical_form)
-        self.assertEqual(log.output,
-                         ["WARNING:allennlp.semparse.executors.wikitables_variable_free_executor:"
-                          "Trying to get the previous row from an empty list: "
-                          "['filter_date_greater', 'all_rows', 'date_column:date', ['date', '2010', '-1', '-1']]"])
+        assert self.language.execute(logical_form) is None
 
     def test_execute_works_with_next(self):
         # Selecting "regular season" from the row after first where year is not equal to 2010.
         logical_form = """(select (next (first (filter_date_not_equals
-                                                all_rows date_column:date (date 2010 -1 -1))))
+                                                all_rows date_column:year (date 2010 -1 -1))))
                                   string_column:regular_season)"""
-        cell_list = self.language.execute(logical_form)
-        assert cell_list == ["5th"]
+        assert self.language.execute(logical_form) == '5th'
 
-    def test_execute_logs_warning_with_next_on_empty_list(self):
+    def test_execute_returns_none_with_next_on_empty_list(self):
         # Selecting "regular season" from the row after the one where year is greater than 2010.
-        with self.assertLogs("allennlp.semparse.executors.wikitables_variable_free_executor") as log:
-            logical_form = """(select (next (filter_date_greater all_rows date_column:date (date 2010 -1 -1)))
+        logical_form = """(select (next (first (filter_date_greater all_rows date_column:year (date 2010 -1 -1))))
                                       string_column:regular_season)"""
-            self.language.execute(logical_form)
-        self.assertEqual(log.output,
-                         ["WARNING:allennlp.semparse.executors.wikitables_variable_free_executor:"
-                          "Trying to get the next row from an empty list: "
-                          "['filter_date_greater', 'all_rows', 'date_column:date', ['date', '2010', '-1', '-1']]"])
+        assert self.language.execute(logical_form) is None
 
     def test_execute_works_with_mode(self):
         # Most frequent division value.
@@ -294,9 +267,9 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
         assert cell_list == ["2", "2"]
         # If we queried for the most frequent year instead, it should return two values since both
         # have the max frequency of 1.
-        logical_form = """(mode all_rows date_column:date)"""
+        logical_form = """(mode all_rows date_column:year)"""
         cell_list = self.language.execute(logical_form)
-        assert cell_list == ["january_2001", "march_2005"]
+        assert cell_list == ["2001", "2005"]
 
     def test_execute_works_with_same_as(self):
         # Select the "league" from all the rows that have the same value under "playoffs" as the
@@ -332,15 +305,15 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
     def test_execute_works_with_diff(self):
         # Difference in "avg attendance" between rows with "usl_a_league" and "usl_first_division"
         # in "league" columns.
-        logical_form = """(diff (filter_in all_rows string_column:league string:usl_a_league)
-                                (filter_in all_rows string_column:league string:usl_first_division)
+        logical_form = """(diff (first (filter_in all_rows string_column:league string:usl_a_league))
+                                (first (filter_in all_rows string_column:league string:usl_first_division))
                                 number_column:avg_attendance)"""
         avg_value = self.language.execute(logical_form)
         assert avg_value == 1141
 
     def test_execute_fails_with_diff_on_non_numerical_columns(self):
-        logical_form = """(diff (filter_in all_rows string_column:league string:usl_a_league)
-                                (filter_in all_rows string_column:league string:usl_first_division)
+        logical_form = """(diff (first (filter_in all_rows string_column:league string:usl_a_league))
+                                (first (filter_in all_rows string_column:league string:usl_first_division))
                                 string_column:league)"""
         with pytest.raises(ExecutionError):
             self.language.execute(logical_form)
@@ -356,9 +329,12 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
         assert Date(2013, -1, -1) >= Date(2013, 12, 31)
         # pylint: disable=singleton-comparison
         assert (Date(2013, 12, -1) > Date(2013, 12, 31)) == False
-        assert (Date(2013, 12, 31) > 2013) == False
-        assert (Date(2013, 12, 31) >= 2013) == False
-        assert Date(2013, 12, 31) != 2013
+        with pytest.raises(ExecutionError, match='only compare Dates with Dates'):
+            assert (Date(2013, 12, 31) > 2013) == False
+        with pytest.raises(ExecutionError, match='only compare Dates with Dates'):
+            assert (Date(2013, 12, 31) >= 2013) == False
+        with pytest.raises(ExecutionError, match='only compare Dates with Dates'):
+            assert Date(2013, 12, 31) != 2013
         assert (Date(2018, 1, 1) >= Date(-1, 2, 1)) == False
         assert (Date(2018, 1, 1) < Date(-1, 2, 1)) == False
         # When year is unknown in both cases, we can compare months and days.
@@ -379,11 +355,11 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
         tagged_file = self.FIXTURES_ROOT / "data" / "corenlp_processed_tables" / "TEST-2.table"
         context = TableQuestionContext.read_from_file(tagged_file, tokens)
         language = WikiTablesLanguage(context)
-        result = language.execute("(select (list (argmax all_rows number_column:attendance)) date_column:date)")
-        assert result == ["november_10"]
+        result = language.execute("(select (argmax all_rows number_column:attendance) date_column:date)")
+        assert result == "november_10"
 
     def test_evaluate_logical_form(self):
-        logical_form = """(select (same_as (filter_in all_rows string_column:league string:a_league)
+        logical_form = """(select (same_as (first (filter_in all_rows string_column:league string:a_league))
                                    string_column:playoffs)
                            string_column:league)"""
         assert self.language.evaluate_logical_form(logical_form, ["USL A-League",
