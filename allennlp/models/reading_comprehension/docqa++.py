@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 @Model.register("docqa++")
-class BidafPlusPlus(Model):
+class DocQAPlus(Model):
     """
     This class implements modified version of BiDAF
     (with self attention and residual layer, from Clark and Gardner ACL 17 paper) model as used in
@@ -71,7 +71,6 @@ class BidafPlusPlus(Model):
                  support_followup: bool = False,
                  num_context_answers: int = 0,
                  max_qad_triplets: int = 0,
-                 marker_embedding_dim: int = 10,
                  max_span_length: int = 30) -> None:
         super().__init__(vocab)
         self._num_context_answers = num_context_answers
@@ -82,7 +81,6 @@ class BidafPlusPlus(Model):
         self._text_field_embedder = text_field_embedder
         self._shared_norm = shared_norm
         self._phrase_layer = phrase_layer
-        self._marker_embedding_dim = marker_embedding_dim
         self._encoding_dim = phrase_layer.get_output_dim()
         max_turn_length = 12
 
@@ -97,11 +95,6 @@ class BidafPlusPlus(Model):
         self._merge_atten = TimeDistributed(torch.nn.Linear(self._encoding_dim * 4, self._encoding_dim))
 
         self._residual_encoder = residual_encoder
-
-        if num_context_answers > 0:
-            self._question_num_marker = torch.nn.Embedding(max_turn_length,
-                                                           marker_embedding_dim * num_context_answers)
-            self._prev_ans_marker = torch.nn.Embedding((num_context_answers * 4) + 1, marker_embedding_dim)
 
         self._self_attention = LinearMatrixAttention(self._encoding_dim, self._encoding_dim, 'x,y,x*y')
 
@@ -119,10 +112,9 @@ class BidafPlusPlus(Model):
         self._span_followup_predictor = TimeDistributed(self._followup_lin)
 
         check_dimensions_match(phrase_layer.get_input_dim(),
-                               text_field_embedder.get_output_dim() +
-                               marker_embedding_dim * num_context_answers,
+                               text_field_embedder.get_output_dim(),
                                "phrase layer input dim",
-                               "embedding dim + marker dim * num context answers")
+                               "embedding dim")
 
         initializer(self)
 
@@ -144,6 +136,7 @@ class BidafPlusPlus(Model):
         self._official_EM = Average()
         self._variational_dropout = InputVariationalDropout(dropout)
 
+    #@profile
     def forward(self,  # type: ignore
                 question: Dict[str, torch.LongTensor],
                 passage: Dict[str, torch.LongTensor],
@@ -243,10 +236,10 @@ class BidafPlusPlus(Model):
         embedded_passage = self._variational_dropout(embedded_passage)
         passage_length = embedded_passage.size(1)
 
-        #passage_zeros = (passage['tokens'] == 0).data.cpu().numpy().mean()
-        #question_zeros = (question['tokens'] == 0).data.cpu().numpy().mean()
-        #ElasticLogger().write_log('INFO', 'docqa++', \
-        #    context_dict={'batch_size': batch_size, "max_q_len": max_q_len,'passage_length':passage_length, 'passage_zeros':passage_zeros,'question_zeros':question_zeros})
+        passage_zeros = (passage['tokens'] == 0).data.cpu().numpy().mean()
+        question_zeros = (question['tokens'] == 0).data.cpu().numpy().mean()
+        ElasticLogger().write_log('INFO', 'docqa++', \
+            context_dict={'batch_size': batch_size, "max_q_len": max_q_len,'passage_length':passage_length, 'passage_zeros':passage_zeros,'question_zeros':question_zeros})
 
         # context repeating (as the amount of qas)
         question_mask = util.get_text_field_mask(question, num_wrapping_dims=1).float()
