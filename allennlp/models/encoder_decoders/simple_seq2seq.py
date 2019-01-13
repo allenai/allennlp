@@ -1,19 +1,16 @@
 from typing import Dict, List, Tuple
 
 import numpy
-from overrides import overrides
 import torch
 import torch.nn.functional as F
+from overrides import overrides
 from torch.nn.modules.linear import Linear
-from torch.nn.modules.rnn import LSTMCell
 
-from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import START_SYMBOL, END_SYMBOL
 from allennlp.data.vocabulary import Vocabulary
-from allennlp.modules.attention import LegacyAttention
-from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
-from allennlp.modules.similarity_functions import SimilarityFunction
 from allennlp.models.model import Model
+from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder
+from allennlp.modules.seq2seq_decoders.seq2seq2_decoder import Seq2SeqDecoder
 from allennlp.modules.token_embedders import Embedding
 from allennlp.nn import util
 from allennlp.nn.beam_search import BeamSearch
@@ -48,13 +45,6 @@ class SimpleSeq2Seq(Model):
     target_embedding_dim : ``int``, optional (default = source_embedding_dim)
         You can specify an embedding dimensionality for the target side. If not, we'll use the same
         value as the source embedder's.
-    attention : ``Attention``, optional (default = None)
-        If you want to use attention to get a dynamic summary of the encoder outputs at each step
-        of decoding, this is the function used to compute similarity between the decoder hidden
-        state and encoder outputs.
-    attention_function: ``SimilarityFunction``, optional (default = None)
-        This is if you want to use the legacy implementation of attention. This will be deprecated
-        since it consumes more memory than the specialized attention modules.
     beam_size : ``int``, optional (default = None)
         Width of the beam for beam search. If not specified, greedy decoding is used.
     scheduled_sampling_ratio : ``float``, optional (default = 0.)
@@ -73,9 +63,8 @@ class SimpleSeq2Seq(Model):
                  vocab: Vocabulary,
                  source_embedder: TextFieldEmbedder,
                  encoder: Seq2SeqEncoder,
+                 decoder: Seq2SeqDecoder,
                  max_decoding_steps: int,
-                 attention: Attention = None,
-                 attention_function: SimilarityFunction = None,
                  beam_size: int = None,
                  target_namespace: str = "tokens",
                  target_embedding_dim: int = None,
@@ -107,18 +96,10 @@ class SimpleSeq2Seq(Model):
         # Encodes the sequence of source embeddings into a sequence of hidden states.
         self._encoder = encoder
 
-        num_classes = self.vocab.get_vocab_size(self._target_namespace)
+        # Decodes the sequence of encoded hidden states into e new sequence of hidden states.
+        self._decoder = decoder
 
-        # Attention mechanism applied to the encoder output for each step.
-        if attention:
-            if attention_function:
-                raise ConfigurationError("You can only specify an attention module or an "
-                                         "attention function, but not both.")
-            self._attention = attention
-        elif attention_function:
-            self._attention = LegacyAttention(attention_function)
-        else:
-            self._attention = None
+        num_classes = self.vocab.get_vocab_size(self._target_namespace)
 
         # Dense embedding of vocab words in the target space.
         target_embedding_dim = target_embedding_dim or source_embedder.get_output_dim()
@@ -127,25 +108,10 @@ class SimpleSeq2Seq(Model):
         # Decoder output dim needs to be the same as the encoder output dim since we initialize the
         # hidden state of the decoder with the final hidden state of the encoder.
         self._encoder_output_dim = self._encoder.get_output_dim()
-        self._decoder_output_dim = self._encoder_output_dim
-
-        if self._attention:
-            # If using attention, a weighted average over encoder outputs will be concatenated
-            # to the previous target embedding to form the input to the decoder at each
-            # time step.
-            self._decoder_input_dim = self._decoder_output_dim + target_embedding_dim
-        else:
-            # Otherwise, the input to the decoder is just the previous target embedding.
-            self._decoder_input_dim = target_embedding_dim
-
-        # We'll use an LSTM cell as the recurrent cell that produces a hidden state
-        # for the decoder at each time step.
-        # TODO (pradeep): Do not hardcode decoder cell type.
-        self._decoder_cell = LSTMCell(self._decoder_input_dim, self._decoder_output_dim)
 
         # We project the hidden state from the decoder into the output vocabulary space
         # in order to get log probabilities of each target token, at each time step.
-        self._output_projection_layer = Linear(self._decoder_output_dim, num_classes)
+        self._output_projection_layer = Linear(self._decoder.get_output_dim(), num_classes)
 
     def take_step(self,
                   last_predictions: torch.Tensor,
@@ -314,6 +280,11 @@ class SimpleSeq2Seq(Model):
             # The last input from the target is either padding or the end symbol.
             # Either way, we don't have to process it.
             num_decoding_steps = target_sequence_length - 1
+
+            # Prepare embeddings for targets. They will be used as gold embeddings during decoder training
+            # shape: (batch_size, max_target_sequence_length, embedding_dim)
+            target_embeddings = self._target_embedder(targets)
+
         else:
             num_decoding_steps = self._max_decoding_steps
 
@@ -321,23 +292,38 @@ class SimpleSeq2Seq(Model):
         # shape: (batch_size,)
         last_predictions = source_mask.new_full((batch_size,), fill_value=self._start_index)
 
+        # shape: (steps, batch_size, target_embedding_dim)
+        steps_embeddings = torch.tensor([])
+
         step_logits: List[torch.Tensor] = []
         step_predictions: List[torch.Tensor] = []
         for timestep in range(num_decoding_steps):
             if self.training and torch.rand(1).item() < self._scheduled_sampling_ratio:
                 # Use gold tokens at test time and at a rate of 1 - _scheduled_sampling_ratio
                 # during training.
-                # shape: (batch_size,)
-                input_choices = last_predictions
+                # shape: (batch_size, steps, target_embedding_dim)
+                state['previous_steps_predictions'] = steps_embeddings
+
+                # shape: (batch_size, )
+                effective_last_prediction = last_predictions
             elif not target_tokens:
-                # shape: (batch_size,)
-                input_choices = last_predictions
+                # shape: (batch_size, steps, target_embedding_dim)
+                state['previous_steps_predictions'] = steps_embeddings
+
+                # shape: (batch_size, )
+                effective_last_prediction = last_predictions
             else:
-                # shape: (batch_size,)
-                input_choices = targets[:, timestep]
+                # shape: (batch_size, )
+                effective_last_prediction = targets[timestep]
+
+                if timestep == 0:
+                    state['previous_steps_predictions'] = torch.tensor([])
+                else:
+                    # shape: (batch_size, steps, target_embedding_dim)
+                    state['previous_steps_predictions'] = target_embeddings[:, :timestep]
 
             # shape: (batch_size, num_classes)
-            output_projections, state = self._prepare_output_projections(input_choices, state)
+            output_projections, state = self._prepare_output_projections(effective_last_prediction, state)
 
             # list of tensors, shape: (batch_size, 1, num_classes)
             step_logits.append(output_projections.unsqueeze(1))
@@ -350,6 +336,18 @@ class SimpleSeq2Seq(Model):
 
             # shape (predicted_classes): (batch_size,)
             last_predictions = predicted_classes
+
+            # shape: (batch_size, 1, target_embedding_dim)
+            last_predictions_embeddings = self._target_embedder(last_predictions).unsqueeze(1)
+
+            # This step is required, since we want to keep up two different prediction history: gold and real
+            if steps_embeddings.shape[-1] == 0:
+                # There is no previous steps, except for start vectors in ``last_predictions``
+                # shape: (group_size, 1, target_embedding_dim)
+                steps_embeddings = last_predictions_embeddings
+            else:
+                # shape: (group_size, steps_count, target_embedding_dim)
+                steps_embeddings = torch.cat([steps_embeddings, last_predictions_embeddings], 1)
 
             step_predictions.append(last_predictions.unsqueeze(1))
 
@@ -407,25 +405,29 @@ class SimpleSeq2Seq(Model):
         # shape: (group_size, decoder_output_dim)
         decoder_context = state["decoder_context"]
 
-        # shape: (group_size, target_embedding_dim)
-        embedded_input = self._target_embedder(last_predictions)
+        # shape: (group_size, steps_count, decoder_output_dim)
+        previous_steps_predictions = state.get("previous_steps_predictions")
 
-        if self._attention:
-            # shape: (group_size, encoder_output_dim)
-            attended_input = self._prepare_attended_input(decoder_hidden, encoder_outputs, source_mask)
+        # shape: (batch_size, 1, target_embedding_dim)
+        last_predictions_embeddings = self._target_embedder(last_predictions).unsqueeze(1)
 
-            # shape: (group_size, decoder_output_dim + target_embedding_dim)
-            decoder_input = torch.cat((attended_input, embedded_input), -1)
+        if previous_steps_predictions is None or previous_steps_predictions.shape[-1] == 0:
+            # There is no previous steps, except for start vectors in ``last_predictions``
+            # shape: (group_size, 1, target_embedding_dim)
+            previous_steps_predictions = last_predictions_embeddings
         else:
-            # shape: (group_size, target_embedding_dim)
-            decoder_input = embedded_input
+            # shape: (group_size, steps_count, target_embedding_dim)
+            previous_steps_predictions = torch.cat([previous_steps_predictions, last_predictions_embeddings], 1)
 
-        # shape (decoder_hidden): (batch_size, decoder_output_dim)
-        # shape (decoder_context): (batch_size, decoder_output_dim)
-        decoder_hidden, decoder_context = self._decoder_cell(
-                decoder_input,
-                (decoder_hidden, decoder_context))
+        decoder_hidden, decoder_context = self._decoder(
+            last_steps_predictions=previous_steps_predictions,
+            encoder_outputs=encoder_outputs,
+            source_mask=source_mask,
+            decoder_hidden=decoder_hidden,
+            decoder_context=decoder_context
+        )
 
+        state["previous_steps_predictions"] = previous_steps_predictions
         state["decoder_hidden"] = decoder_hidden
         state["decoder_context"] = decoder_context
 
@@ -434,24 +436,6 @@ class SimpleSeq2Seq(Model):
 
         return output_projections, state
 
-    def _prepare_attended_input(self,
-                                decoder_hidden_state: torch.LongTensor = None,
-                                encoder_outputs: torch.LongTensor = None,
-                                encoder_outputs_mask: torch.LongTensor = None) -> torch.Tensor:
-        """Apply attention over encoder outputs and decoder state."""
-        # Ensure mask is also a FloatTensor. Or else the multiplication within
-        # attention will complain.
-        # shape: (batch_size, max_input_sequence_length, encoder_output_dim)
-        encoder_outputs_mask = encoder_outputs_mask.float()
-
-        # shape: (batch_size, max_input_sequence_length)
-        input_weights = self._attention(
-                decoder_hidden_state, encoder_outputs, encoder_outputs_mask)
-
-        # shape: (batch_size, encoder_output_dim)
-        attended_input = util.weighted_sum(encoder_outputs, input_weights)
-
-        return attended_input
 
     @staticmethod
     def _get_loss(logits: torch.LongTensor,
