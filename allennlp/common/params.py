@@ -31,6 +31,46 @@ from allennlp.common.file_utils import cached_path
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
+# pylint: disable=inconsistent-return-statements
+def infer_and_cast(value: Any):
+    """
+    In some cases we'll be feeding params dicts to functions we don't own;
+    for example, PyTorch optimizers. In that case we can't use ``pop_int``
+    or similar to force casts (which means you can't specify ``int`` parameters
+    using environment variables). This function takes something that looks JSON-like
+    and recursively casts things that look like (bool, int, float) to (bool, int, float).
+    """
+    # pylint: disable=too-many-return-statements
+    if isinstance(value, (int, float, bool)):
+        # Already one of our desired types, so leave as is.
+        return value
+    elif isinstance(value, list):
+        # Recursively call on each list element.
+        return [infer_and_cast(item) for item in value]
+    elif isinstance(value, dict):
+        # Recursively call on each dict value.
+        return {key: infer_and_cast(item) for key, item in value.items()}
+    elif isinstance(value, str):
+        # If it looks like a bool, make it a bool.
+        if value.lower() == "true":
+            return True
+        elif value.lower() == "false":
+            return False
+        else:
+            # See if it could be an int.
+            try:
+                return int(value)
+            except ValueError:
+                pass
+            # See if it could be a float.
+            try:
+                return float(value)
+            except ValueError:
+                # Just return it as a string.
+                return value
+    else:
+        raise ValueError(f"cannot infer type of {value}")
+# pylint: enable=inconsistent-return-statements
 
 def unflatten(flat_dict: Dict[str, Any]) -> Dict[str, Any]:
     """
@@ -259,18 +299,23 @@ class Params(MutableMapping):
             raise ConfigurationError(message)
         return value
 
-    def as_dict(self, quiet=False):
+    def as_dict(self, quiet: bool = False, infer_type_and_cast: bool = False):
         """
         Sometimes we need to just represent the parameters as a dict, for instance when we pass
-        them to a Keras layer(so that they can be serialised).
+        them to PyTorch code.
 
         Parameters
         ----------
         quiet: bool, optional (default = False)
             Whether to log the parameters before returning them as a dict.
         """
+        if infer_type_and_cast:
+            params_as_dict = infer_and_cast(self.params)
+        else:
+            params_as_dict = self.params
+
         if quiet:
-            return self.params
+            return params_as_dict
 
         def log_recursively(parameters, history):
             for key, value in parameters.items():
@@ -285,7 +330,7 @@ class Params(MutableMapping):
                     "used subsequently.")
         logger.info("CURRENTLY DEFINED PARAMETERS: ")
         log_recursively(self.params, self.history)
-        return self.params
+        return params_as_dict
 
     def as_flat_dict(self):
         """

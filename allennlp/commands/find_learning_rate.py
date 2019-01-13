@@ -72,7 +72,9 @@ class FindLearningRate(Subcommand):
         # pylint: disable=protected-access
         description = '''Find a learning rate range where loss decreases quickly
                          for the specified model and dataset.'''
-        subparser = parser.add_parser(name, description=description, help='Train a model')
+        subparser = parser.add_parser(name,
+                                      description=description,
+                                      help='Find a learning rate range.')
 
         subparser.add_argument('param_path',
                                type=str,
@@ -96,7 +98,7 @@ class FindLearningRate(Subcommand):
         subparser.add_argument('--num-batches',
                                type=int,
                                default=100,
-                               help='number of mini-batches to run Learning rate finder')
+                               help='number of mini-batches to run learning rate finder')
         subparser.add_argument('--stopping-factor',
                                type=float,
                                default=None,

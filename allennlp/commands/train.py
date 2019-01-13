@@ -45,7 +45,7 @@ import torch
 
 from allennlp.commands.evaluate import evaluate
 from allennlp.commands.subcommand import Subcommand
-from allennlp.common.checks import ConfigurationError, check_for_gpu
+from allennlp.common.checks import ConfigurationError, check_for_gpu, check_for_data_path
 from allennlp.common import Params
 from allennlp.common.util import prepare_environment, prepare_global_logging, \
                                  get_frozen_and_tunable_parameter_names, dump_metrics
@@ -148,6 +148,11 @@ def datasets_from_params(params: Params) -> Dict[str, Iterable[Instance]]:
     """
     Load all the datasets specified by the config.
     """
+    for data_name in ["train_data_path", "validation_data_path", "test_data_path"]:
+        data_path = params.get(data_name, None)
+        if data_path is not None:
+            check_for_data_path(data_path, data_name)
+
     dataset_reader = DatasetReader.from_params(params.pop('dataset_reader'))
     validation_dataset_reader_params = params.pop("validation_dataset_reader", None)
 
@@ -380,7 +385,9 @@ def train_model(params: Params,
         logger.info("The model will be evaluated using the best epoch weights.")
         test_metrics = evaluate(
                 best_model, test_data, validation_iterator or iterator,
-                cuda_device=trainer._cuda_devices[0] # pylint: disable=protected-access
+                cuda_device=trainer._cuda_devices[0], # pylint: disable=protected-access,
+                # TODO(brendanr): Pass in an arg following Joel's trainer refactor.
+                batch_weight_key=""
         )
         for key, value in test_metrics.items():
             metrics["test_" + key] = value

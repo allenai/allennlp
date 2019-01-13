@@ -4,8 +4,12 @@ AllenNLP and its models are configured correctly.
 """
 
 import logging
+import os
 import subprocess
+
 from torch import cuda
+
+from allennlp.common.file_utils import cached_path
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -23,12 +27,14 @@ class ConfigurationError(Exception):
     def __str__(self):
         return repr(self.message)
 
+
 class ExperimentalFeatureWarning(RuntimeWarning):
     """
     A warning that you are using an experimental feature
     that may change or be deleted.
     """
     pass
+
 
 def log_pytorch_version_info():
     import torch
@@ -56,9 +62,19 @@ def check_for_gpu(device_id: int):
                                      f" but there are only {num_devices_available} devices "
                                      f" available.")
 
+
 def check_for_java() -> bool:
     try:
         java_version = subprocess.check_output(['java', '-version'], stderr=subprocess.STDOUT)
         return 'version' in java_version.decode()
     except FileNotFoundError:
         return False
+
+
+def check_for_data_path(data_path: str, dataset_name: str):
+    data_path = cached_path(data_path)
+    if not os.path.exists(data_path):
+        raise ConfigurationError(f"Experiment specified {dataset_name}, "
+                                 f"but {data_path} doesn't exist.")
+    # We should not check whether `data_path` is a file or not.
+    # Because a directory is also allowed.

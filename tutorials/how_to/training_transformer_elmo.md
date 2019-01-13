@@ -29,7 +29,7 @@ This document describes how to train and use a transformer-based version of ELMo
     ulimit -n 4096
     # Location of repo for training_config.
     cd allennlp
-    allennlp train training_config/bidirectional_lm.jsonnet --serialization-dir output_path
+    allennlp train training_config/bidirectional_language_model.jsonnet --serialization-dir output_path
     ```
 4. Wait. This will take days. (Example results here are from a model trained for just 4 epochs.)
 5. Evaluate. There is one gotcha here, which is that we discard 3 sentences for being too long (otherwise we'd exhaust GPU memory). If we wanted to report this number formally (in a paper or similar), we'd need to handle this differently.
