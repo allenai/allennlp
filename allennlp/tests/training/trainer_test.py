@@ -140,7 +140,7 @@ class TestTrainer(AllenNlpTestCase):
                               validation_dataset=self.instances,
                               num_epochs=3, serialization_dir=self.TEST_DIR)
 
-        epoch, val_metrics_per_epoch = new_trainer._restore_checkpoint()  # pylint: disable=protected-access
+        epoch, val_metrics_per_epoch, _ = new_trainer._restore_checkpoint()  # pylint: disable=protected-access
         assert epoch == 1
         assert len(val_metrics_per_epoch) == 1
         assert isinstance(val_metrics_per_epoch[0], float)
@@ -272,7 +272,7 @@ class TestTrainer(AllenNlpTestCase):
                               train_dataset=self.instances,
                               validation_dataset=self.instances,
                               num_epochs=4, serialization_dir=self.TEST_DIR)
-        epoch, _ = new_trainer._restore_checkpoint()
+        epoch, _, _ = new_trainer._restore_checkpoint()
         assert epoch == 2
         assert new_trainer._learning_rate_scheduler.lr_scheduler.last_epoch == 1
         new_trainer.train()
@@ -408,7 +408,7 @@ class TestTrainer(AllenNlpTestCase):
                                   self.iterator, self.instances, num_epochs=2,
                                   serialization_dir=self.TEST_DIR,
                                   model_save_interval=0.0001)
-        epoch, _ = restore_trainer._restore_checkpoint()  # pylint: disable=protected-access
+        epoch, _, _ = restore_trainer._restore_checkpoint()  # pylint: disable=protected-access
         assert epoch == 2
         # One batch per epoch.
         assert restore_trainer._batch_num_total == 2  # pylint: disable=protected-access
