@@ -42,22 +42,22 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
     def test_execute_works_with_argmax(self):
         logical_form = "(select (argmax all_rows number_column:avg_attendance) string_column:league)"
         cell_list = self.language.execute(logical_form)
-        assert cell_list == 'usl_a_league'
+        assert cell_list == ['usl_a_league']
 
     def test_execute_works_with_argmax_on_dates(self):
         logical_form = "(select (argmax all_rows date_column:year) string_column:league)"
         cell_list = self.language.execute(logical_form)
-        assert cell_list == 'usl_first_division'
+        assert cell_list == ['usl_first_division']
 
     def test_execute_works_with_argmin(self):
         logical_form = "(select (argmin all_rows number_column:avg_attendance) date_column:year)"
         cell_list = self.language.execute(logical_form)
-        assert cell_list == '2005'
+        assert cell_list == ['2005']
 
     def test_execute_works_with_argmin_on_dates(self):
         logical_form = "(select (argmin all_rows date_column:year) string_column:league)"
         cell_list = self.language.execute(logical_form)
-        assert cell_list == 'usl_a_league'
+        assert cell_list == ['usl_a_league']
 
     def test_execute_works_with_filter_number_greater(self):
         # Selecting cell values from all rows that have attendance greater than the min value of
@@ -216,54 +216,54 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
     def test_execute_works_with_first(self):
         # Selecting "regular season" from the first row.
         logical_form = """(select (first all_rows) string_column:regular_season)"""
-        assert self.language.execute(logical_form) == '4th_western'
+        assert self.language.execute(logical_form) == ['4th_western']
 
-    def test_execute_returns_none_with_first_on_empty_list(self):
+    def test_execute_returns_empty_list_with_first_on_empty_list(self):
         # Selecting "regular season" from the first row where year is greater than 2010.
         logical_form = """(select (first (filter_date_greater all_rows date_column:year
                                             (date 2010 -1 -1)))
                                   string_column:regular_season)"""
-        assert self.language.execute(logical_form) is None
+        assert self.language.execute(logical_form) == []
 
     def test_execute_works_with_last(self):
         # Selecting "regular season" from the last row where year is not equal to 2010.
         logical_form = """(select (last (filter_date_not_equals all_rows date_column:year
                                          (date 2010 -1 -1)))
                                   string_column:regular_season)"""
-        assert self.language.execute(logical_form) == '5th'
+        assert self.language.execute(logical_form) == ['5th']
 
-    def test_execute_returns_none_with_last_on_empty_list(self):
+    def test_execute_returns_empty_list_with_last_on_empty_list(self):
         # Selecting "regular season" from the last row where year is greater than 2010.
         logical_form = """(select (last (filter_date_greater all_rows date_column:year (date 2010 -1 -1)))
                                       string_column:regular_season)"""
-        assert self.language.execute(logical_form) is None
+        assert self.language.execute(logical_form) == []
 
     def test_execute_works_with_previous(self):
         # Selecting "venue" from the row before last where year is not equal to 2010.
         logical_form = """(select (previous (last (filter_date_not_equals
                                                     all_rows date_column:year (date 2010 -1 -1))))
                                   string_column:regular_season)"""
-        assert self.language.execute(logical_form) == "4th_western"
+        assert self.language.execute(logical_form) == ["4th_western"]
 
-    def test_execute_returns_none_with_previous_on_empty_list(self):
+    def test_execute_returns_empty_list_with_previous_on_empty_list(self):
         # Selecting "regular season" from the row before the one where year is greater than 2010.
         logical_form = """(select (previous (first (filter_date_greater all_rows date_column:year
                                                                         (date 2010 -1 -1))))
                                   string_column:regular_season)"""
-        assert self.language.execute(logical_form) is None
+        assert self.language.execute(logical_form) == []
 
     def test_execute_works_with_next(self):
         # Selecting "regular season" from the row after first where year is not equal to 2010.
         logical_form = """(select (next (first (filter_date_not_equals
                                                 all_rows date_column:year (date 2010 -1 -1))))
                                   string_column:regular_season)"""
-        assert self.language.execute(logical_form) == '5th'
+        assert self.language.execute(logical_form) == ['5th']
 
-    def test_execute_returns_none_with_next_on_empty_list(self):
+    def test_execute_returns_empty_list_with_next_on_empty_list(self):
         # Selecting "regular season" from the row after the one where year is greater than 2010.
         logical_form = """(select (next (first (filter_date_greater all_rows date_column:year (date 2010 -1 -1))))
                                       string_column:regular_season)"""
-        assert self.language.execute(logical_form) is None
+        assert self.language.execute(logical_form) == []
 
     def test_execute_works_with_mode(self):
         # Most frequent division value.
@@ -365,7 +365,7 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
         context = TableQuestionContext.read_from_file(tagged_file, tokens)
         language = WikiTablesLanguage(context)
         result = language.execute("(select (argmax all_rows number_column:attendance) date_column:date)")
-        assert result == "november_10"
+        assert result == ["november_10"]
 
     def test_evaluate_logical_form(self):
         logical_form = """(select (same_as (first (filter_in all_rows string_column:league string:a_league))
