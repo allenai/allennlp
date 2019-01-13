@@ -698,7 +698,7 @@ class Trainer(Registrable):
 
 
         if val_metrics == {}:
-            if elastic_train_metrics['batch_num_total'] % 50 == 1:
+            if elastic_train_metrics['batch_num_total'] % 100 == 1:
                 ElasticLogger().write_log('INFO', 'train_metric', context_dict=elastic_train_metrics)
         else:
             ElasticLogger().write_log('INFO', 'train_metric', context_dict=elastic_train_metrics)
