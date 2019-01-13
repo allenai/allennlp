@@ -21,6 +21,7 @@ from allennlp.data.vocabulary import Vocabulary
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
+#@profile
 def sort_by_padding(instances: List[Instance],
                     sorting_keys: List[Tuple[str, str]],  # pylint: disable=invalid-sequence-index
                     vocab: Vocabulary,
@@ -98,7 +99,7 @@ class MultiQAIterator(DataIterator):
         self._maximum_tensor_size = maximum_tensor_size
         self._all_question_instances_in_batch = all_question_instances_in_batch
 
-
+    #@profile
     @overrides
     def _create_batches(self, instances: Iterable[Instance], shuffle: bool) -> Iterable[Batch]:
         temp_max_tensor_size = 0
@@ -112,10 +113,10 @@ class MultiQAIterator(DataIterator):
             for ind in range(len(per_question_instances)):
                 per_question_instances[ind] = sorted(per_question_instances[ind], key=lambda x: x.fields['metadata'].metadata['rank'])
 
-            per_question_instances = sort_by_padding(per_question_instances,
-                                            self._sorting_keys,
-                                            self.vocab,
-                                            self._padding_noise)
+            #per_question_instances = sort_by_padding(per_question_instances,
+            #                                self._sorting_keys,
+            #                                self.vocab,
+            #                                self._padding_noise)
 
             batch = []
             for question_instances in per_question_instances:
