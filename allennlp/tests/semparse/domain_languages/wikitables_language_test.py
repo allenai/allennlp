@@ -247,8 +247,9 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
 
     def test_execute_returns_none_with_previous_on_empty_list(self):
         # Selecting "regular season" from the row before the one where year is greater than 2010.
-        logical_form = """(select (previous (first (filter_date_greater all_rows date_column:year (date 2010 -1 -1))))
-                                      string_column:regular_season)"""
+        logical_form = """(select (previous (first (filter_date_greater all_rows date_column:year
+                                                                        (date 2010 -1 -1))))
+                                  string_column:regular_season)"""
         assert self.language.execute(logical_form) is None
 
     def test_execute_works_with_next(self):
@@ -518,7 +519,6 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
                                  'string:usl_first_division',
                                  'string:usl_a_league'])
 
-
     def test_get_nonterminal_productions_in_world_without_number_columns(self):
         question_tokens = [Token(x) for x in ['what', 'was', 'the', 'first', 'title', '?']]
         table_file = self.FIXTURES_ROOT / 'data' / 'corenlp_processed_tables' / 'TEST-6.table'
@@ -609,12 +609,11 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
 
     def test_world_gets_correct_actions(self):
         logical_form = "(select (filter_in all_rows string_column:league string:usl_a_league) date_column:year)"
-        action_sequence = self.language.logical_form_to_action_sequence(logical_form)
         expected_sequence = ['@start@ -> List[str]',
                              'List[str] -> [<List[Row],Column:List[str]>, List[Row], Column]',
                              '<List[Row],Column:List[str]> -> select',
                              'List[Row] -> [<List[Row],StringColumn,str:List[Row]>, '
-                                     'List[Row], StringColumn, str]',
+                                     'List[Row], StringColumn, str]',  # pylint: disable=bad-continuation
                              '<List[Row],StringColumn,str:List[Row]> -> filter_in',
                              'List[Row] -> all_rows',
                              'StringColumn -> string_column:league',
@@ -628,12 +627,14 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
         assert self.language.action_sequence_to_logical_form(action_sequence) == logical_form
 
     def test_world_processes_logical_forms_with_number_correctly(self):
-        logical_form = """(select (filter_number_greater all_rows number_column:avg_attendance 8000) date_column:year)"""
+        logical_form = ("(select (filter_number_greater all_rows number_column:avg_attendance 8000) "
+                        "date_column:year)")
         action_sequence = self.language.logical_form_to_action_sequence(logical_form)
         assert self.language.action_sequence_to_logical_form(action_sequence) == logical_form
 
     def test_world_processes_logical_forms_with_date_correctly(self):
-        logical_form = """(select (filter_date_greater all_rows date_column:year (date 2013 -1 -1)) date_column:year)"""
+        logical_form = ("(select (filter_date_greater all_rows date_column:year (date 2013 -1 -1)) "
+                        "date_column:year)")
         action_sequence = self.language.logical_form_to_action_sequence(logical_form)
         assert self.language.action_sequence_to_logical_form(action_sequence) == logical_form
 
@@ -663,25 +664,29 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
                                            'NumberColumn -> number_column:avg_attendance'}
         tokens = [Token(x) for x in ['what', 'is', 'the', 'least', 'avg.', 'attendance', '?']]
         world = self._get_world_with_question_tokens(tokens)
-        assert set(world.get_agenda()) == {'<List[Row],NumberColumn:Number> -> min', 'NumberColumn -> number_column:avg_attendance'}
+        assert set(world.get_agenda()) == {'<List[Row],NumberColumn:Number> -> min',
+                                           'NumberColumn -> number_column:avg_attendance'}
         tokens = [Token(x) for x in ['when', 'did', 'the', 'team', 'not', 'qualify', '?']]
         world = self._get_world_with_question_tokens(tokens)
         assert set(world.get_agenda()) == {'str -> string:qualify'}
         tokens = [Token(x) for x in ['when', 'was', 'the', 'avg.', 'attendance', 'at', 'least',
                                      '7000', '?']]
         world = self._get_world_with_question_tokens(tokens)
-        assert set(world.get_agenda()) == {'<List[Row],NumberColumn,Number:List[Row]> -> filter_number_greater_equals',
-                                           'NumberColumn -> number_column:avg_attendance', 'Number -> 7000'}
-        tokens = [Token(x) for x in ['when', 'was', 'the', 'avg.', 'attendance', 'more', 'than',
-                                     '7000', '?']]
+        agenda = set(world.get_agenda())
+        assert agenda == {'<List[Row],NumberColumn,Number:List[Row]> -> filter_number_greater_equals',
+                          'NumberColumn -> number_column:avg_attendance',
+                          'Number -> 7000'}
+        tokens = [Token(x) for x in ['when', 'was', 'the', 'avg.', 'attendance', 'more', 'than', '7000', '?']]
         world = self._get_world_with_question_tokens(tokens)
-        assert set(world.get_agenda()) == {'<List[Row],NumberColumn,Number:List[Row]> -> filter_number_greater',
-                                           'NumberColumn -> number_column:avg_attendance', 'Number -> 7000'}
-        tokens = [Token(x) for x in ['when', 'was', 'the', 'avg.', 'attendance', 'at', 'most',
-                                     '7000', '?']]
+        agenda = set(world.get_agenda())
+        assert agenda == {'<List[Row],NumberColumn,Number:List[Row]> -> filter_number_greater',
+                          'NumberColumn -> number_column:avg_attendance',
+                          'Number -> 7000'}
+        tokens = [Token(x) for x in ['when', 'was', 'the', 'avg.', 'attendance', 'at', 'most', '7000', '?']]
         world = self._get_world_with_question_tokens(tokens)
-        assert set(world.get_agenda()) == {'<List[Row],NumberColumn,Number:List[Row]> -> filter_number_lesser_equals',
-                                           'NumberColumn -> number_column:avg_attendance', 'Number -> 7000'}
+        agenda = set(world.get_agenda())
+        assert agenda == {'<List[Row],NumberColumn,Number:List[Row]> -> filter_number_lesser_equals',
+                          'NumberColumn -> number_column:avg_attendance', 'Number -> 7000'}
         tokens = [Token(x) for x in ['what', 'was', 'the', 'top', 'year', '?']]
         world = self._get_world_with_question_tokens(tokens)
         assert set(world.get_agenda()) == {'<List[Row]:List[Row]> -> first', 'DateColumn -> date_column:year'}

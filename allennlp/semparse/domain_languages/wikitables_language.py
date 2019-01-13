@@ -1,6 +1,9 @@
 from collections import defaultdict
+# We use "Number" in a bunch of places throughout to try to generalize ints and floats.
+# Unfortunately, mypy doesn't like this very much, so we have to "type: ignore" a bunch of things.
+# But it makes for a nicer induced grammar, so it's worth it.
 from numbers import Number
-from typing import Dict, List, NamedTuple, Tuple
+from typing import Dict, List, NamedTuple, Set, Tuple
 import logging
 import re
 
@@ -156,6 +159,7 @@ class WikiTablesLanguage(DomainLanguage):
         # Adding column names to the local name mapping.
         for column_name, column_type in table_context.column_types.items():
             column_name = f"{column_type}_column:{column_name}"
+            column: Column = None
             if column_type == 'string':
                 column = StringColumn(column_name)
             elif column_type == 'date':
@@ -300,13 +304,7 @@ class WikiTablesLanguage(DomainLanguage):
         Select function takes a list of rows and a column and returns a list of cell values as
         strings.
         """
-        if isinstance(rows, list):
-            return [row.values[column.name] for row in rows]
-        else:
-            if not rows:
-                return None
-            # "rows" is actually a single row.
-            return rows.values[column.name]
+        return [row.values[column.name] for row in rows]
 
     def argmax(self, rows: List[Row], column: ComparableColumn) -> List[Row]:
         """
@@ -316,7 +314,7 @@ class WikiTablesLanguage(DomainLanguage):
         ``all_rows``.
         """
         if not rows:
-            return None
+            return []
         # We just check whether the first cell value is a date or number and assume that the rest
         # are the same kind of values.
         first_cell_value = rows[0].values[column.name]
@@ -325,9 +323,9 @@ class WikiTablesLanguage(DomainLanguage):
         else:
             value_row_pairs = self._get_number_row_pairs_to_filter(rows, column.name)  # type: ignore
         if not value_row_pairs:
-            return None
+            return []
         # Returns a list containing the row with the max cell value.
-        return sorted(value_row_pairs, key=lambda x: x[0], reverse=True)[0][1]
+        return [sorted(value_row_pairs, key=lambda x: x[0], reverse=True)[0][1]]
 
     def argmin(self, rows: List[Row], column: ComparableColumn) -> List[Row]:
         """
@@ -337,7 +335,7 @@ class WikiTablesLanguage(DomainLanguage):
         ``all_rows``.
         """
         if not rows:
-            return None
+            return []
         # We just check whether the first cell value is a date or number and assume that the rest
         # are the same kind of values.
         first_cell_value = rows[0].values[column.name]
@@ -346,35 +344,41 @@ class WikiTablesLanguage(DomainLanguage):
         else:
             value_row_pairs = self._get_number_row_pairs_to_filter(rows, column.name)  # type: ignore
         if not value_row_pairs:
-            return None
+            return []
         # Returns a list containing the row with the max cell value.
-        return sorted(value_row_pairs, key=lambda x: x[0])[0][1]
+        return [sorted(value_row_pairs, key=lambda x: x[0])[0][1]]
 
     # These six methods take a list of rows, a column, and a numerical value and return all the
     # rows where the value in that column is [comparator] than the given value.
     def filter_number_greater(self, rows: List[Row], column: NumberColumn, filter_value: Number) -> List[Row]:
         cell_row_pairs = self._get_number_row_pairs_to_filter(rows, column.name)
-        return [row for cell_value, row in cell_row_pairs if cell_value > filter_value]
+        return [row for cell_value, row in cell_row_pairs if cell_value > filter_value]  # type: ignore
 
-    def filter_number_greater_equals(self, rows: List[Row], column: NumberColumn, filter_value: Number) -> List[Row]:
+    def filter_number_greater_equals(self,
+                                     rows: List[Row],
+                                     column: NumberColumn,
+                                     filter_value: Number) -> List[Row]:
         cell_row_pairs = self._get_number_row_pairs_to_filter(rows, column.name)
-        return [row for cell_value, row in cell_row_pairs if cell_value >= filter_value]
+        return [row for cell_value, row in cell_row_pairs if cell_value >= filter_value]  # type: ignore
 
     def filter_number_lesser(self, rows: List[Row], column: NumberColumn, filter_value: Number) -> List[Row]:
         cell_row_pairs = self._get_number_row_pairs_to_filter(rows, column.name)
-        return [row for cell_value, row in cell_row_pairs if cell_value < filter_value]
+        return [row for cell_value, row in cell_row_pairs if cell_value < filter_value]  # type: ignore
 
-    def filter_number_lesser_equals(self, rows: List[Row], column: NumberColumn, filter_value: Number) -> List[Row]:
+    def filter_number_lesser_equals(self,
+                                    rows: List[Row],
+                                    column: NumberColumn,
+                                    filter_value: Number) -> List[Row]:
         cell_row_pairs = self._get_number_row_pairs_to_filter(rows, column.name)
-        return [row for cell_value, row in cell_row_pairs if cell_value <= filter_value]
+        return [row for cell_value, row in cell_row_pairs if cell_value <= filter_value]  # type: ignore
 
     def filter_number_equals(self, rows: List[Row], column: NumberColumn, filter_value: Number) -> List[Row]:
         cell_row_pairs = self._get_number_row_pairs_to_filter(rows, column.name)
-        return [row for cell_value, row in cell_row_pairs if cell_value == filter_value]
+        return [row for cell_value, row in cell_row_pairs if cell_value == filter_value]  # type: ignore
 
     def filter_number_not_equals(self, rows: List[Row], column: NumberColumn, filter_value: Number) -> List[Row]:
         cell_row_pairs = self._get_number_row_pairs_to_filter(rows, column.name)
-        return [row for cell_value, row in cell_row_pairs if cell_value != filter_value]
+        return [row for cell_value, row in cell_row_pairs if cell_value != filter_value]  # type: ignore
 
     # These six methods are the same as the six above, but for dates.
     def filter_date_greater(self, rows: List[Row], column: DateColumn, filter_value: Date) -> List[Row]:
@@ -426,8 +430,8 @@ class WikiTablesLanguage(DomainLanguage):
         """
         if not rows:
             logger.warning("Trying to get first row from an empty list")
-            return None
-        return rows[0]
+            return []
+        return [rows[0]]
 
     @predicate
     def last(self, rows: List[Row]) -> List[Row]:
@@ -437,40 +441,40 @@ class WikiTablesLanguage(DomainLanguage):
         """
         if not rows:
             logger.warning("Trying to get first row from an empty list")
-            return None
-        return rows[-1]
+            return []
+        return [rows[-1]]
 
     @predicate
-    def previous(self, row: List[Row]) -> List[Row]:
+    def previous(self, rows: List[Row]) -> List[Row]:
         """
         Takes an expression that evaluates to a single row, and returns the row that occurs before
         the input row in the original set of rows. If the input row happens to be the top row, we
         will return an empty list.
         """
-        if not row:
-            return None
-        input_row_index = self._get_row_index(row)
+        if not rows:
+            return []
+        input_row_index = self._get_row_index(rows[0])
         if input_row_index > 0:
-            return self.table_data[input_row_index - 1]
-        return None
+            return [self.table_data[input_row_index - 1]]
+        return []
 
     @predicate
-    def next(self, row: List[Row]) -> List[Row]:
+    def next(self, rows: List[Row]) -> List[Row]:
         """
         Takes an expression that evaluates to a single row, and returns the row that occurs after
         the input row in the original set of rows. If the input row happens to be the last row, we
         will return an empty list.
         """
-        if not row:
-            return None
-        input_row_index = self._get_row_index(row)
+        if not rows:
+            return []
+        input_row_index = self._get_row_index(rows[0])
         if input_row_index < len(self.table_data) - 1 and input_row_index != -1:
-            return self.table_data[input_row_index + 1]
-        return None
+            return [self.table_data[input_row_index + 1]]
+        return []
 
     @predicate
     def count(self, rows: List[Row]) -> Number:
-        return len(rows)
+        return len(rows)  # type: ignore
 
     @predicate
     def mode(self, rows: List[Row], column: Column) -> List[str]:
@@ -499,8 +503,8 @@ class WikiTablesLanguage(DomainLanguage):
         """
         cell_row_pairs = self._get_number_row_pairs_to_filter(rows, column.name)
         if not cell_row_pairs:
-            return 0.0
-        return max([value for value, _ in cell_row_pairs])
+            return 0.0  # type: ignore
+        return max([value for value, _ in cell_row_pairs])  # type: ignore
 
     def min(self, rows: List[Row], column: NumberColumn) -> Number:
         """
@@ -509,8 +513,8 @@ class WikiTablesLanguage(DomainLanguage):
         """
         cell_row_pairs = self._get_number_row_pairs_to_filter(rows, column.name)
         if not cell_row_pairs:
-            return 0.0
-        return min([value for value, _ in cell_row_pairs])
+            return 0.0  # type: ignore
+        return min([value for value, _ in cell_row_pairs])  # type: ignore
 
     def sum(self, rows: List[Row], column: NumberColumn) -> Number:
         """
@@ -519,8 +523,8 @@ class WikiTablesLanguage(DomainLanguage):
         """
         cell_row_pairs = self._get_number_row_pairs_to_filter(rows, column.name)
         if not cell_row_pairs:
-            return 0.0
-        return sum([value for value, _ in cell_row_pairs])
+            return 0.0  # type: ignore
+        return sum([value for value, _ in cell_row_pairs])  # type: ignore
 
     def average(self, rows: List[Row], column: NumberColumn) -> Number:
         """
@@ -529,8 +533,8 @@ class WikiTablesLanguage(DomainLanguage):
         """
         cell_row_pairs = self._get_number_row_pairs_to_filter(rows, column.name)
         if not cell_row_pairs:
-            return 0.0
-        return sum([value for value, _ in cell_row_pairs]) / len(cell_row_pairs)
+            return 0.0  # type: ignore
+        return sum([value for value, _ in cell_row_pairs]) / len(cell_row_pairs)  # type: ignore
 
     def diff(self, first_row: List[Row], second_row: List[Row], column: NumberColumn) -> Number:
         """
@@ -538,25 +542,25 @@ class WikiTablesLanguage(DomainLanguage):
         that column in those two rows.
         """
         if not first_row or not second_row:
-            return 0.0
+            return 0.0  # type: ignore
         try:
-            first_value = float(first_row.values[column.name])
-            second_value = float(second_row.values[column.name])
-            return first_value - second_value
+            first_value = float(first_row[0].values[column.name])
+            second_value = float(second_row[0].values[column.name])
+            return first_value - second_value  # type: ignore
         except ValueError:
             raise ExecutionError(f"Invalid column for diff: {column.name}")
 
     @predicate
-    def same_as(self, row: List[Row], column: Column) -> List[Row]:
+    def same_as(self, rows: List[Row], column: Column) -> List[Row]:
         """
         Takes a row and a column and returns a list of rows from the full set of rows that contain
         the same value under the given column as the given row.
         """
-        cell_value = row.values[column.name]
+        cell_value = rows[0].values[column.name]
         return_list = []
-        for row in self.table_data:
-            if row.values[column.name] == cell_value:
-                return_list.append(row)
+        for table_row in self.table_data:
+            if table_row.values[column.name] == cell_value:
+                return_list.append(table_row)
         return return_list
 
     @predicate
@@ -565,10 +569,10 @@ class WikiTablesLanguage(DomainLanguage):
         Takes three numbers and returns a ``Date`` object whose year, month, and day are the three
         numbers in that order.
         """
-        return Date(year, month, day)
+        return Date(year, month, day)  # type: ignore
 
     def __eq__(self, other):
-        if not isinstance(other, WikiTablesVariableFreeExecutor):
+        if not isinstance(other, WikiTablesLanguage):
             return False
         return self.table_data == other.table_data
 
@@ -637,7 +641,7 @@ class WikiTablesLanguage(DomainLanguage):
                     values_are_dates = True
         return values_are_dates
 
-    def _get_row_index(self, row: List[Row]) -> int:
+    def _get_row_index(self, row: Row) -> int:
         """
         Takes a row and returns its index in the full list of rows. If the row does not occur in the
         table (which should never happen because this function will only be called with a row that
