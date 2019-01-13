@@ -113,10 +113,10 @@ class MultiQAIterator(DataIterator):
             for ind in range(len(per_question_instances)):
                 per_question_instances[ind] = sorted(per_question_instances[ind], key=lambda x: x.fields['metadata'].metadata['rank'])
 
-            per_question_instances = sort_by_padding(per_question_instances,
-                                            self._sorting_keys,
-                                            self.vocab,
-                                            self._padding_noise)
+            #per_question_instances = sort_by_padding(per_question_instances,
+            #                                self._sorting_keys,
+            #                                self.vocab,
+            #                                self._padding_noise)
 
             batch = []
             for question_instances in per_question_instances:
