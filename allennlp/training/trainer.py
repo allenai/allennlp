@@ -764,7 +764,7 @@ class Trainer(Registrable):
         Trains the supplied model with the supplied parameters.
         """
         try:
-            epoch_counter, validation_metric_per_epoch = self._restore_checkpoint()
+            epoch_counter, validation_metric_per_epoch, best_validation_metrics = self._restore_checkpoint()
         except RuntimeError:
             traceback.print_exc()
             raise ConfigurationError("Could not recover training from the checkpoint.  Did you mean to output to "
@@ -781,6 +781,14 @@ class Trainer(Registrable):
         metrics: Dict[str, Any] = {}
         epochs_trained = 0
         training_start_time = time.time()
+        if not best_validation_metrics:
+            best_validation_metrics = {}
+
+        if validation_metric_per_epoch:
+            best_metric = min(validation_metric_per_epoch) if self._validation_metric_decreases else max(validation_metric_per_epoch)
+            metrics["best_epoch"] = validation_metric_per_epoch.index(best_metric)
+        for name, value in best_validation_metrics.items():
+            metrics["best_validation_" + name] = value
 
         for epoch in range(epoch_counter, self._num_epochs):
             epoch_start_time = time.time()
@@ -837,6 +845,8 @@ class Trainer(Registrable):
                 metrics['best_epoch'] = epoch
                 for key, value in val_metrics.items():
                     metrics["best_validation_" + key] = value
+                    if best_validation_metrics is not None:
+                        best_validation_metrics[key] = value
 
             if self._serialization_dir:
                 dump_metrics(os.path.join(self._serialization_dir, f'metrics_epoch_{epoch}.json'), metrics)
@@ -846,7 +856,7 @@ class Trainer(Registrable):
                 # if it doesn't, the validation metric passed here is ignored.
                 self._learning_rate_scheduler.step(this_epoch_val_metric, epoch)
 
-            self._save_checkpoint(epoch, validation_metric_per_epoch, is_best=is_best_so_far)
+            self._save_checkpoint(epoch, validation_metric_per_epoch, is_best_so_far, best_validation_metrics)
 
             epoch_elapsed_time = time.time() - epoch_start_time
             logger.info("Epoch duration: %s", time.strftime("%H:%M:%S", time.gmtime(epoch_elapsed_time)))
@@ -884,7 +894,8 @@ class Trainer(Registrable):
     def _save_checkpoint(self,
                          epoch: Union[int, str],
                          val_metric_per_epoch: List[float],
-                         is_best: Optional[bool] = None) -> None:
+                         is_best: Optional[bool] = None,
+                         best_validation_metrics: Optional[Dict[str, float]] = None) -> None:
         """
         Saves a checkpoint of the model to self._serialization_dir.
         Is a no-op if self._serialization_dir is None.
@@ -898,6 +909,8 @@ class Trainer(Registrable):
             A flag which causes the model weights at the given epoch to
             be copied to a "best.th" file. The value of this flag should
             be based on some validation metric computed by your model.
+        best_validation_metrics: Dict[str, float], optional (default = None)
+            Dict of metrics' name to best validation values so far.
         """
         if self._serialization_dir is not None:
             model_path = os.path.join(self._serialization_dir, "model_state_epoch_{}.th".format(epoch))
@@ -906,6 +919,7 @@ class Trainer(Registrable):
 
             training_state = {'epoch': epoch,
                               'val_metric_per_epoch': val_metric_per_epoch,
+                              'best_validation_metrics': best_validation_metrics,
                               'optimizer': self.optimizer.state_dict(),
                               'batch_num_total': self._batch_num_total}
             if self._learning_rate_scheduler is not None:
@@ -1002,7 +1016,7 @@ class Trainer(Registrable):
 
         if latest_checkpoint is None:
             # No checkpoint to restore, start at 0
-            return 0, []
+            return 0, [], None
 
         model_path, training_state_path = latest_checkpoint
 
@@ -1033,13 +1047,15 @@ class Trainer(Registrable):
         else:
             epoch_to_return = int(training_state["epoch"].split('.')[0]) + 1
 
+        best_validation_metrics = training_state.get("best_validation_metrics", None)
+
         # For older checkpoints with batch_num_total missing, default to old behavior where
         # it is unchanged.
         batch_num_total = training_state.get('batch_num_total')
         if batch_num_total is not None:
             self._batch_num_total = batch_num_total
 
-        return epoch_to_return, val_metric_per_epoch
+        return epoch_to_return, val_metric_per_epoch, best_validation_metrics
 
     # Requires custom from_params.
     @classmethod
