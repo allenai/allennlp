@@ -7,6 +7,7 @@ import torch
 import torch.nn.functional as F
 from torch.nn.functional import nll_loss
 import inspect
+import random
 
 from allennlp.common.checks import check_dimensions_match
 from allennlp.data import Vocabulary
@@ -236,10 +237,11 @@ class DocQAPlus(Model):
         embedded_passage = self._variational_dropout(embedded_passage)
         passage_length = embedded_passage.size(1)
 
-        #passage_zeros = (passage['tokens'] == 0).data.cpu().numpy().mean()
-        #question_zeros = (question['tokens'] == 0).data.cpu().numpy().mean()
-        #ElasticLogger().write_log('INFO', 'docqa++', \
-        #    context_dict={'batch_size': batch_size, "max_q_len": max_q_len,'passage_length':passage_length, 'passage_zeros':passage_zeros,'question_zeros':question_zeros})
+        if random.randint(1,30) % 30 == 0:
+            passage_zeros = (passage['tokens'] == 0).data.cpu().numpy().mean()
+            question_zeros = (question['tokens'] == 0).data.cpu().numpy().mean()
+            ElasticLogger().write_log('INFO', 'docqa++', \
+                context_dict={'batch_size': batch_size, "max_q_len": max_q_len,'passage_length':passage_length, 'passage_zeros':passage_zeros,'question_zeros':question_zeros})
 
         # context repeating (as the amount of qas)
         question_mask = util.get_text_field_mask(question, num_wrapping_dims=1).float()
