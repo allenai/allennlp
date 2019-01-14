@@ -785,7 +785,10 @@ class Trainer(Registrable):
             best_validation_metrics = {}
 
         if validation_metric_per_epoch:
-            best_metric = min(validation_metric_per_epoch) if self._validation_metric_decreases else max(validation_metric_per_epoch)
+            if self._validation_metric_decreases:
+                best_metric = min(validation_metric_per_epoch)
+            else:
+                best_metric = max(validation_metric_per_epoch)
             metrics["best_epoch"] = validation_metric_per_epoch.index(best_metric)
         for name, value in best_validation_metrics.items():
             metrics["best_validation_" + name] = value
@@ -845,8 +848,7 @@ class Trainer(Registrable):
                 metrics['best_epoch'] = epoch
                 for key, value in val_metrics.items():
                     metrics["best_validation_" + key] = value
-                    if best_validation_metrics is not None:
-                        best_validation_metrics[key] = value
+                    best_validation_metrics[key] = value
 
             if self._serialization_dir:
                 dump_metrics(os.path.join(self._serialization_dir, f'metrics_epoch_{epoch}.json'), metrics)
