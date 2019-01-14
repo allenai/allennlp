@@ -38,6 +38,11 @@ from allennlp.training.optimizers import Optimizer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
+# ALON - for line profiler
+try:
+    profile
+except NameError:
+    profile = lambda x: x
 
 def is_sparse(tensor):
     return tensor.is_sparse
@@ -470,6 +475,7 @@ class Trainer(Registrable):
         else:
             return 0
 
+    @profile
     def _train_epoch(self, epoch: int) -> Dict[str, float]:
         """
         Trains one epoch and returns metrics.

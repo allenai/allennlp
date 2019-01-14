@@ -15,6 +15,11 @@ from allennlp.data.tokenizers import Token, Tokenizer, WordTokenizer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
+# ALON - for line profiler
+try:
+    profile
+except NameError:
+    profile = lambda x: x
 
 @DatasetReader.register("multiqa+")
 class MultiQAReader(DatasetReader):
@@ -48,7 +53,8 @@ class MultiQAReader(DatasetReader):
         self._tokenizer = tokenizer or WordTokenizer()
         self._sample_size = sample_size
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
-        
+
+    @profile
     @overrides
     def _read(self, file_path: str):
         logger.info("Reading the dataset")

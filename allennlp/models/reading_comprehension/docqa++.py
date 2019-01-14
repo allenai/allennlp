@@ -21,6 +21,11 @@ from allennlp.training.metrics import Average, BooleanAccuracy, CategoricalAccur
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
+# ALON - for line profiler
+try:
+    profile
+except NameError:
+    profile = lambda x: x
 
 @Model.register("docqa++")
 class DocQAPlus(Model):
@@ -137,7 +142,7 @@ class DocQAPlus(Model):
         self._official_EM = Average()
         self._variational_dropout = InputVariationalDropout(dropout)
 
-    #@profile
+    @profile
     def forward(self,  # type: ignore
                 question: Dict[str, torch.LongTensor],
                 passage: Dict[str, torch.LongTensor],
@@ -213,7 +218,8 @@ class DocQAPlus(Model):
         for key in question.keys():
             question[key] = question[key].unsqueeze(1)
 
-        batch_size, max_qa_count, max_q_len, _ = question['token_characters'].size()
+        #batch_size, max_qa_count, max_q_len, _ = question['token_characters'].size()
+        batch_size, max_qa_count, max_q_len = question['tokens'].size()
         total_qa_count = batch_size * max_qa_count
 
         # debug log

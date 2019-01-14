@@ -21,7 +21,13 @@ from allennlp.data.vocabulary import Vocabulary
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
-#@profile
+# ALON - for line profiler
+try:
+    profile
+except NameError:
+    profile = lambda x: x
+
+@profile
 def sort_by_padding(instances: List[Instance],
                     sorting_keys: List[Tuple[str, str]],  # pylint: disable=invalid-sequence-index
                     vocab: Vocabulary,
@@ -99,7 +105,7 @@ class MultiQAIterator(DataIterator):
         self._maximum_tensor_size = maximum_tensor_size
         self._all_question_instances_in_batch = all_question_instances_in_batch
 
-    #@profile
+    @profile
     @overrides
     def _create_batches(self, instances: Iterable[Instance], shuffle: bool) -> Iterable[Batch]:
         temp_max_tensor_size = 0
