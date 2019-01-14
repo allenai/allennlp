@@ -421,7 +421,7 @@ class TestTrainer(AllenNlpTestCase):
                           num_epochs=1, serialization_dir=self.TEST_DIR)
         trainer.train()
         _, _, best_validation_metrics_epoch_1 = trainer._restore_checkpoint()  # pylint: disable=protected-access
-        # best_validation_metrics: {'accuracy': 0.75, 'accuracy3': 1.0, 'loss': 0.6243013441562653}
+        # best_validation_metrics_epoch_1: {'accuracy': 0.75, 'accuracy3': 1.0, 'loss': 0.6243013441562653}
         assert isinstance(best_validation_metrics_epoch_1, dict)
         assert "loss" in best_validation_metrics_epoch_1
 
