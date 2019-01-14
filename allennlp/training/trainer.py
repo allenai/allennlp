@@ -996,7 +996,7 @@ class Trainer(Registrable):
 
         return (model_path, training_state_path)
 
-    def _restore_checkpoint(self) -> Tuple[int, List[float]]:
+    def _restore_checkpoint(self) -> Tuple[int, List[float], Dict[str, float]]:
         """
         Restores a model from a serialization_dir to the last saved checkpoint.
         This includes an epoch count and optimizer state, which is serialized separately
