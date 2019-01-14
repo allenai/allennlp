@@ -414,6 +414,29 @@ class TestTrainer(AllenNlpTestCase):
         assert restore_trainer._batch_num_total == 2  # pylint: disable=protected-access
 
 
+    def test_trainer_saves_and_loads_best_validation_metrics_correctly(self):
+        # Use +loss instead of -loss as validation_metric to make sure first is best
+        trainer = Trainer(self.model, self.optimizer,
+                          self.iterator, self.instances,
+                          validation_dataset=self.instances,
+                          validation_metric="+loss",
+                          num_epochs=1, serialization_dir=self.TEST_DIR)
+        trainer.train()
+        _, _, best_validation_metrics_epoch_1 = trainer._restore_checkpoint()  # pylint: disable=protected-access
+        # best_validation_metrics: {'accuracy': 0.75, 'accuracy3': 1.0, 'loss': 0.6243013441562653}
+        assert isinstance(best_validation_metrics_epoch_1, dict)
+        assert "loss" in best_validation_metrics_epoch_1
+
+        restore_trainer = Trainer(self.model, self.optimizer,
+                                  self.iterator, self.instances,
+                                  validation_dataset=self.instances,
+                                  num_epochs=1, serialization_dir=self.TEST_DIR)
+        restore_trainer.train()
+        _, _, best_validation_metrics_epoch_2 = restore_trainer._restore_checkpoint()  # pylint: disable=protected-access
+
+        # Because of +loss, 2nd epoch won't be better than 1st. So best val metrics should be same.
+        assert best_validation_metrics_epoch_2 == best_validation_metrics_epoch_1
+
 class TestSparseClipGrad(AllenNlpTestCase):
     def test_sparse_clip_grad(self):
         # create a sparse embedding layer, then take gradient
