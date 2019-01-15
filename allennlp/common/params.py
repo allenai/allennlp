@@ -72,6 +72,24 @@ def infer_and_cast(value: Any):
         raise ValueError(f"cannot infer type of {value}")
 # pylint: enable=inconsistent-return-statements
 
+def _is_encodable(value: str) -> bool:
+    """
+    We need to filter out environment variables that can't
+    be unicode-encoded to avoid a "surrogates not allowed"
+    error in jsonnet.
+    """
+    # Idiomatically you'd like to not check the != b""
+    # but mypy doesn't like that.
+    return (value == "") or (value.encode('utf-8', 'ignore') != b"")
+
+def _environment_variables() -> Dict[str, str]:
+    """
+    Wraps `os.environ` to filter out non-encodable values.
+    """
+    return {key: value
+            for key, value in os.environ.items()
+            if _is_encodable(value)}
+
 def unflatten(flat_dict: Dict[str, Any]) -> Dict[str, Any]:
     """
     Given a "flattened" dict with compound keys, e.g.
@@ -128,7 +146,7 @@ def with_fallback(preferred: Dict[str, Any], fallback: Dict[str, Any]) -> Dict[s
 
 def parse_overrides(serialized_overrides: str) -> Dict[str, Any]:
     if serialized_overrides:
-        ext_vars = dict(os.environ)
+        ext_vars = _environment_variables()
         return unflatten(json.loads(evaluate_snippet("", serialized_overrides, ext_vars=ext_vars)))
     else:
         return {}
@@ -419,7 +437,7 @@ class Params(MutableMapping):
 
         # redirect to cache, if necessary
         params_file = cached_path(params_file)
-        ext_vars = {**dict(os.environ), **ext_vars}
+        ext_vars = {**_environment_variables(), **ext_vars}
 
         file_dict = json.loads(evaluate_file(params_file, ext_vars=ext_vars))
 
