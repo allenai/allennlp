@@ -78,7 +78,9 @@ def _is_encodable(value: str) -> bool:
     be unicode-encoded to avoid a "surrogates not allowed"
     error in jsonnet.
     """
-    return value == "" or value.encode('utf-8', 'ignore')
+    # Idiomatically you'd like to not check the != b""
+    # but mypy doesn't like that.
+    return (value == "") or (value.encode('utf-8', 'ignore') != b"")
 
 def _environment_variables() -> Dict[str, str]:
     """
