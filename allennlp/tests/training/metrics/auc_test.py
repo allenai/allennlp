@@ -11,7 +11,6 @@ from allennlp.common.checks import ConfigurationError
 
 class AucTest(AllenNlpTestCase):
     def test_auc_computation(self):
-
         auc = Auc()
         all_predictions = []
         all_labels = []
@@ -43,9 +42,7 @@ class AucTest(AllenNlpTestCase):
         real_auc_value = metrics.auc(fpr, tpr)
         assert_almost_equal(real_auc_value, computed_auc_value)
 
-
     def test_auc_gold_labels_behaviour(self):
-
         # Check that it works with different pos_label
         auc = Auc(pos_label=4)
 
