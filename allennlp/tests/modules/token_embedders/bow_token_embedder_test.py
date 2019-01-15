@@ -20,11 +20,11 @@ class TestBowTokenEmbedder(AllenNlpTestCase):
     def test_forward_calculates_bow_properly(self):
         params = Params({})
         embedder = BagOfWordsTokenEmbedder.from_params(self.vocab, params=params)
-        numpy_tensor = np.array([self.vocab.get_token_index(x) for x in ["1", "2", "3"]])
+        numpy_tensor = np.array([[2, 0], [3, 0], [4, 4]])
         inputs = torch.from_numpy(numpy_tensor).unsqueeze(1)
         embedder_output = embedder(inputs)
-        numpy_tensor = np.array([[0, 0, 1, 0, 0, 0], [0, 0, 0, 1, 0, 0], [0, 0, 0, 0, 1, 0]])
-        manual_output = torch.from_numpy(numpy_tensor)
+        numpy_tensor = np.array([[1, 0, 1, 0, 0, 0], [1, 0, 0, 1, 0, 0], [0, 0, 0, 0, 2, 0]])
+        manual_output = torch.from_numpy(numpy_tensor).float()
         assert_almost_equal(embedder_output.data.numpy(), manual_output.data.numpy())
 
     def test_projects_properly(self):
