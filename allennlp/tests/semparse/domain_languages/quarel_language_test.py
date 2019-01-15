@@ -97,9 +97,9 @@ class QuaRelLanguageTest(AllenNlpTestCase):
                         '(strength lower world2))')
         assert self.language.execute(logical_form) == -1
 
-    def test_get_valid_actions(self):
-        valid_actions = self.language.get_valid_actions()
-        assert set(valid_actions.keys()) == {
+    def test_get_nonterminal_productions(self):
+        productions = self.language.get_nonterminal_productions()
+        assert set(productions.keys()) == {
                 'QuaRelType',
                 '@start@',
                 'World',
@@ -108,21 +108,21 @@ class QuaRelLanguageTest(AllenNlpTestCase):
                 'int',
                 '<QuaRelType,QuaRelType,QuaRelType:int>',
                 '<Direction,World:QuaRelType>'}
-        check_productions_match(valid_actions['QuaRelType'],
+        check_productions_match(productions['QuaRelType'],
                                 ['[<QuaRelType,QuaRelType:QuaRelType>, QuaRelType, QuaRelType]',
                                  '[<Direction,World:QuaRelType>, Direction, World]'])
-        check_productions_match(valid_actions['@start@'],
+        check_productions_match(productions['@start@'],
                                 ['int'])
-        check_productions_match(valid_actions['World'],
+        check_productions_match(productions['World'],
                                 ['world1', 'world2'])
-        check_productions_match(valid_actions['Direction'],
+        check_productions_match(productions['Direction'],
                                 ['higher', 'lower',
                                  'high', 'low'])
-        check_productions_match(valid_actions['<QuaRelType,QuaRelType:QuaRelType>'], ['and'])
-        check_productions_match(valid_actions['int'],
+        check_productions_match(productions['<QuaRelType,QuaRelType:QuaRelType>'], ['and'])
+        check_productions_match(productions['int'],
                                 ['[<QuaRelType,QuaRelType,QuaRelType:int>, QuaRelType, QuaRelType, QuaRelType]'])
-        check_productions_match(valid_actions['<QuaRelType,QuaRelType,QuaRelType:int>'], ['infer'])
-        check_productions_match(valid_actions['<Direction,World:QuaRelType>'],
+        check_productions_match(productions['<QuaRelType,QuaRelType,QuaRelType:int>'], ['infer'])
+        check_productions_match(productions['<Direction,World:QuaRelType>'],
                                 ["friction", "speed", "distance", "heat", "smoothness", "acceleration",
                                  "amountSweat", "apparentSize", "breakability", "brightness", "exerciseIntensity",
                                  "flexibility", "gravity", "loudness", "mass", "strength", "thickness",
