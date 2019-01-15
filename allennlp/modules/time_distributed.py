@@ -40,3 +40,4 @@ class TimeDistributed(torch.nn.Module):
         outputs = reshaped_outputs.contiguous().view(*new_shape)
 
         return outputs
+
