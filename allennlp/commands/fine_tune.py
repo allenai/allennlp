@@ -2,6 +2,7 @@
 The ``fine-tune`` subcommand is used to continue training (or `fine-tune`) a model on a `different
 dataset` than the one it was originally trained on.  It requires a saved model archive file, a path
 to the data you will continue training with, and a directory in which to write the results.
+
 Run ``allennlp fine-tune --help`` for detailed usage information.
 """
 import argparse
@@ -100,6 +101,7 @@ def fine_tune_model_from_file_paths(model_archive_path: str,
                                     batch_weight_key: str = "") -> Model:
     """
     A wrapper around :func:`fine_tune_model` which loads the model archive from a file.
+
     Parameters
     ----------
     model_archive_path : ``str``
@@ -139,9 +141,11 @@ def fine_tune_model(model: Model,
     Fine tunes the given model, using a set of parameters that is largely identical to those used
     for :func:`~allennlp.commands.train.train_model`, except that the ``model`` section is ignored,
     if it is present (as we are already given a ``Model`` here).
+
     The main difference between the logic done here and the logic done in ``train_model`` is that
     here we do not worry about vocabulary construction or creating the model object.  Everything
     else is the same.
+
     Parameters
     ----------
     archive : ``Archive``

@@ -2,7 +2,9 @@
 The ``find-lr`` subcommand can be used to find a good learning rate for a model.
 It requires a configuration file and a directory in
 which to write the results.
+
 .. code-block:: bash
+
    $ allennlp find-lr --help
    usage: allennlp find-lr [-h] -s SERIALIZATION_DIR [-o OVERRIDES]
                            [--start-lr START_LR] [--end-lr END_LR]
@@ -10,11 +12,14 @@ which to write the results.
                            [--stopping-factor STOPPING_FACTOR] [--linear]
                            [--include-package INCLUDE_PACKAGE]
                            param_path
+
    Find a learning rate range where the loss decreases quickly for the specified
    model and dataset.
+
    positional arguments:
    param_path            path to parameter file describing the model to be
                            trained
+
    optional arguments:
    -h, --help              show this help message and exit
    -s SERIALIZATION_DIR, --serialization-dir SERIALIZATION_DIR
@@ -135,6 +140,7 @@ def find_learning_rate_model(params: Params, serialization_dir: str,
                              force: bool = False) -> None:
     """
     Runs learning rate search for given `num_batches` and saves the results in ``serialization_dir``
+
     Parameters
     ----------
     trainer: :class:`~allennlp.common.registrable.Registrable`
