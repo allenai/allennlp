@@ -1,6 +1,9 @@
+from typing import Optional
+
 import torch
 
 from allennlp.common import Registrable
+from allennlp.data import Vocabulary
 
 class TokenEmbedder(torch.nn.Module, Registrable):
     """
@@ -24,3 +27,9 @@ class TokenEmbedder(torch.nn.Module, Registrable):
         token.  This is `not` the shape of the returned tensor, but the last element of that shape.
         """
         raise NotImplementedError
+
+    def extend_by_vocab(self, extended_vocab: Vocabulary, vocab_namespace: Optional[str]):
+        """
+        Assures that this ``token_embedder`` can . In most cases, it will be no-op.
+        """
+        pass

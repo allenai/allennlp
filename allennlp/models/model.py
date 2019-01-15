@@ -17,6 +17,7 @@ from allennlp.data import Instance, Vocabulary
 from allennlp.data.dataset import Batch
 from allennlp.nn import util
 from allennlp.nn.regularizers import RegularizerApplicator
+from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -319,6 +320,18 @@ class Model(torch.nn.Module, Registrable):
         # This allows subclasses of Model to override _load.
         # pylint: disable=protected-access
         return cls.by_name(model_type)._load(config, serialization_dir, weights_file, cuda_device)
+
+    def extend_embedders_by_vocab(self, extended_vocab: Vocabulary) -> None:
+        """
+        It iterates over each ``text_field_embedder`` of this model and assures
+        it can embed with the extended vocab. This is required in fine-tuning or
+        transfer learning scenarios where model was trained with original vocabulary
+        but during fine-tuning/tranfer-learning, it will have it work with
+        extended vocabulary (original + new-data vocabulary)
+        """
+        for _, module in self._modules:
+            if isinstance(module, TextFieldEmbedder):
+                module.extend_by_vocab(extended_vocab)
 
 
 def remove_pretrained_embedding_params(params: Params):

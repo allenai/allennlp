@@ -66,7 +66,14 @@ class Embedding(TokenEmbedder):
         If given, this will scale gradients by the frequency of the words in the mini-batch.
     sparse : bool, (optional, default=False):
         Whether or not the Pytorch backend should use a sparse representation of the embedding weight.
-
+    vocab_namespace : str, (optional, default=None):
+        In case of fine-tuning/transfer learning, the model's embedding matrix needs to be
+        extended according to the size of extended-vocabulary. To be able to know how much to
+        extend the embedding-matrix, it's necessary to know which vocab_namspace was used to
+        construct it in the original training. We store vocab_namespace used during the original
+        training as an attribute, so that it can be retrieved during fine-tuning.
+        Caveat: This would prevent models trained before this commit to be unextendedable.
+        Any other way to know the namespace used by token_embedder in original training?
     Returns
     -------
     An Embedding module.
@@ -83,7 +90,8 @@ class Embedding(TokenEmbedder):
                  max_norm: float = None,
                  norm_type: float = 2.,
                  scale_grad_by_freq: bool = False,
-                 sparse: bool = False) -> None:
+                 sparse: bool = False,
+                 vocab_namespace: str = None) -> None:
         super(Embedding, self).__init__()
         self.num_embeddings = num_embeddings
         self.padding_index = padding_index
@@ -91,6 +99,7 @@ class Embedding(TokenEmbedder):
         self.norm_type = norm_type
         self.scale_grad_by_freq = scale_grad_by_freq
         self.sparse = sparse
+        self._vocab_namespace = vocab_namespace
 
         self.output_dim = projection_dim or embedding_dim
 
@@ -139,6 +148,23 @@ class Embedding(TokenEmbedder):
                 projection = TimeDistributed(projection)
             embedded = projection(embedded)
         return embedded
+
+    @overrides
+    def extend_by_vocab(self, extended_vocab: Vocabulary, vocab_namespace: Optional[str] = "tokens"):
+
+        vocab_namespace = getattr(self, "_vocab_namespace", None)
+        if not vocab_namespace:
+            logging.warning("Original training didnot store vocab_namespace for Embedding class "
+                            "defaulting to 'tokens'.")
+            vocab_namespace = "tokens"
+
+        extended_num_embeddings = extended_vocab.get_vocab_size(vocab_namespace)
+        extra_num_embeddings = extended_num_embeddings - self.num_embeddings
+        embedding_dim = self.weight.data.shape[-1]
+        weight = torch.FloatTensor(extra_num_embeddings, embedding_dim)
+        extra_weight = torch.nn.Parameter(weight, requires_grad=self.trainable)
+        torch.nn.init.xavier_uniform_(extra_weight)
+        self.weight = torch.cat([self.weight, extra_weight], dim=0)
 
     # Custom logic requires custom from_params.
     @classmethod
@@ -207,7 +233,8 @@ class Embedding(TokenEmbedder):
                    max_norm=max_norm,
                    norm_type=norm_type,
                    scale_grad_by_freq=scale_grad_by_freq,
-                   sparse=sparse)
+                   sparse=sparse,
+                   vocab_namespace=vocab_namespace)
 
 
 def _read_pretrained_embeddings_file(file_uri: str,
