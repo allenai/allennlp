@@ -1,7 +1,7 @@
-allennlp.training.single_task_trainer
+allennlp.training.checkpointer
 ======================================
 
-.. automodule:: allennlp.training.single_task_trainer
+.. automodule:: allennlp.training.checkpointer
    :members:
    :undoc-members:
    :show-inheritance:
