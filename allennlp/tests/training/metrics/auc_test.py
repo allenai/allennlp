@@ -65,3 +65,18 @@ class AucTest(AllenNlpTestCase):
         with pytest.raises(ConfigurationError) as _:
             labels = torch.LongTensor([3, 4, 5, 6, 7, 8, 9, 10])
             auc(predictions, labels)
+
+    def test_auc_with_mask(self):
+        auc = Auc()
+
+        predictions = torch.randn(8).float()
+        labels = torch.randint(0, 2, (8,)).long()
+        mask = torch.ByteTensor([1, 1, 1, 1, 0, 0, 0, 0])
+
+        auc(predictions, labels, mask)
+        computed_auc_value = auc.get_metric(reset=True)
+
+        fpr, tpr, _ = metrics.roc_curve(labels[:4].numpy(),
+                                        predictions[:4].numpy())
+        real_auc_value = metrics.auc(fpr, tpr)
+        assert_almost_equal(real_auc_value, computed_auc_value)

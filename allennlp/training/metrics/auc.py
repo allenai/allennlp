@@ -1,3 +1,5 @@
+from typing import Optional
+
 from overrides import overrides
 import torch
 from sklearn import metrics
@@ -19,17 +21,20 @@ class Auc(Metric):
         self._all_gold_labels = torch.LongTensor()
 
     def __call__(self,
-                 predictions: torch.FloatTensor,
-                 gold_labels: torch.LongTensor):
+                 predictions: torch.Tensor,
+                 gold_labels: torch.Tensor,
+                 mask: Optional[torch.Tensor] = None):
         """
         Parameters
         ----------
-        predictions : ``torch.FloatTensor``, required.
+        predictions : ``torch.Tensor``, required.
             A one-dimensional tensor of prediction scores of shape (batch_size).
-        gold_labels : ``torch.LongTensor``, required.
+        gold_labels : ``torch.Tensor``, required.
             A one-dimensional label tensor of shape (batch_size), with {1, 0}
             entries for positive and negative class. If it's not binary,
             `pos_label` should be passed in the initialization.
+        mask: ``torch.Tensor``, optional (default = None).
+            A one-dimensional label tensor of shape (batch_size).
         """
 
         predictions, gold_labels = self.unwrap_to_tensors(predictions, gold_labels)
@@ -52,8 +57,15 @@ class Auc(Metric):
             raise ConfigurationError("gold_labels tensor should be binary containing 0 and 1 or initialized "
                                      "pos_label {} should be present in gold_labels".format(self._pos_label))
 
-        self._all_predictions = torch.cat([self._all_predictions, predictions], dim=0)
-        self._all_gold_labels = torch.cat([self._all_gold_labels, gold_labels], dim=0)
+        if mask is None:
+            batch_size = gold_labels.shape[0]
+            mask = torch.ones(batch_size)
+        mask = mask.byte()
+
+        self._all_predictions = torch.cat([self._all_predictions,
+                                           torch.masked_select(predictions, mask).float()], dim=0)
+        self._all_gold_labels = torch.cat([self._all_gold_labels,
+                                           torch.masked_select(gold_labels, mask).long()], dim=0)
 
     def get_metric(self, reset: bool = False):
         if self._all_gold_labels.shape[0] == 0:
