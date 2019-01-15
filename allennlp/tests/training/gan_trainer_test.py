@@ -74,7 +74,7 @@ class SamplingReader(DatasetReader):
             example = self.sampler.sample(1)
             yield self.text_to_instance(example)
 
-    def text_to_instance(self, example: np.ndarray) -> Instance:
+    def text_to_instance(self, example: np.ndarray) -> Instance:  # type: ignore
         # pylint: disable=arguments-differ
         field = ArrayField(example)
         return Instance({"array": field})
@@ -102,7 +102,8 @@ class Generator(Model):
         self.activation = activation
         self.loss = torch.nn.BCELoss()
 
-    def forward(self, inputs: torch.Tensor, discriminator: Model = None) -> torch.Tensor:
+    def forward(self,  # type: ignore
+                inputs: torch.Tensor, discriminator: Model = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         hidden1 = self.activation(self.linear1(inputs))
         hidden2 = self.activation(self.linear2(hidden1))
@@ -159,7 +160,8 @@ class Discriminator(Model):
         self.activation = activation
         self.loss = torch.nn.BCELoss()
 
-    def forward(self, inputs: torch.Tensor, label: torch.Tensor = None) -> torch.Tensor:
+    def forward(self, # type: ignore
+                inputs: torch.Tensor, label: torch.Tensor = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         inputs = inputs.squeeze(-1)
         hidden1 = self.activation(self.linear1(self.preprocess(inputs)))
@@ -181,8 +183,8 @@ class GanTestTrainer(TrainerBase):
                  discriminator: Model,
                  iterator: DataIterator,
                  noise_iterator: DataIterator,
-                 generator_optimizer: Optimizer,
-                 discriminator_optimizer: Optimizer,
+                 generator_optimizer: torch.optim.Optimizer,
+                 discriminator_optimizer: torch.optim.Optimizer,
                  batches_per_epoch: int,
                  num_epochs: int) -> None:
         super().__init__(serialization_dir, -1)
@@ -266,6 +268,7 @@ class GanTestTrainer(TrainerBase):
                                f'mean: {metrics["mean"]:.2f} '
                                f'std: {metrics["stdev"]:.2f} ')
                 epochs.set_description(description)
+        return metrics
 
     @classmethod
     def from_params(cls,   # type: ignore
@@ -394,4 +397,5 @@ if __name__ == "__main__":
     import tempfile
     serialization_dir_ = tempfile.mkdtemp()
     trainer_ = TrainerBase.from_params(params_, serialization_dir_)
-    trainer_.train()
+    metrics_ = trainer_.train()
+    print(metrics_)
