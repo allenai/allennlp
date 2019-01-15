@@ -172,10 +172,10 @@ class QuarelWorld(World):
         # Remove "a:" prefixes from attributes (hack)
         logical_form = re.sub(r"\(a:", r"(", lf_raw)
         parse = semparse_util.lisp_to_nested_expression(logical_form)
-        if len(parse) < 1 and len(parse[0]) < 2:
+        if len(parse) < 2:
             return -1
-        if parse[0][0] == 'infer':
-            args = [self._exec_and(arg) for arg in parse[0][1:]]
+        if parse[0] == 'infer':
+            args = [self._exec_and(arg) for arg in parse[1:]]
             if None in args:
                 return -1
             return self._exec_infer(*args)
