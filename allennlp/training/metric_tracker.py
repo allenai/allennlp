@@ -1,4 +1,4 @@
-from typing import Optional, Iterable
+from typing import Optional, Iterable, Dict, Any
 
 from allennlp.common.checks import ConfigurationError
 
@@ -61,7 +61,7 @@ class MetricTracker:
         self._epochs_with_no_improvement = 0
         self._is_best_so_far = True
 
-    def state_dict(self):
+    def state_dict(self) -> Dict[str, Any]:
         """
         A ``Trainer`` can use this to serialize the state of the metric tracker.
         """
@@ -73,7 +73,7 @@ class MetricTracker:
                 "should_decrease": self._should_decrease
         }
 
-    def load_state_dict(self, state_dict) -> None:
+    def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
         """
         A ``Trainer`` can use this to hydrate a metric tracker from a serialized state.
         """
