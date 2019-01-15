@@ -146,7 +146,7 @@ class TestTrainer(AllenNlpTestCase):
         assert epoch == 1
 
         tracker = trainer._metric_tracker  # pylint: disable=protected-access
-        assert tracker.is_best_so_far
+        assert tracker.is_best_so_far()
         assert tracker._best_so_far is not None  # pylint: disable=protected-access
 
         new_trainer.train()
@@ -163,22 +163,22 @@ class TestTrainer(AllenNlpTestCase):
         # when it is the only metric it should be considered the best
         new_tracker = copy.deepcopy(tracker)
         new_tracker.add_metric(1)
-        assert new_tracker.is_best_so_far
+        assert new_tracker.is_best_so_far()
 
         # when it is the same as one before it it is not considered the best
         new_tracker = copy.deepcopy(tracker)
         new_tracker.add_metrics([.3, .3, .3, .2, .5, .1, .3])
-        assert not new_tracker.is_best_so_far
+        assert not new_tracker.is_best_so_far()
 
         # when it is the best it is considered the best
         new_tracker = copy.deepcopy(tracker)
         new_tracker.add_metrics([.3, .3, .3, .2, .5, .1, 13])
-        assert new_tracker.is_best_so_far
+        assert new_tracker.is_best_so_far()
 
         # when it is not the the best it is not considered the best
         new_tracker = copy.deepcopy(tracker)
         new_tracker.add_metrics([.3, .3, .3, .2, .5, .1, .0013])
-        assert not new_tracker.is_best_so_far
+        assert not new_tracker.is_best_so_far()
 
 
     def test_metric_only_considered_best_so_far_when_strictly_better_than_those_before_it_decreasing_metric(self):
@@ -192,17 +192,17 @@ class TestTrainer(AllenNlpTestCase):
         # when it is the only metric it should be considered the best
         new_tracker = copy.deepcopy(tracker)
         new_tracker.add_metric(1)
-        assert new_tracker.is_best_so_far
+        assert new_tracker.is_best_so_far()
 
         # when it is the same as one before it it is not considered the best
         new_tracker = copy.deepcopy(tracker)
         new_tracker.add_metrics([.3, .3, .3, .2, .5, .1, .3])
-        assert not new_tracker.is_best_so_far
+        assert not new_tracker.is_best_so_far()
 
         # when it is the best it is considered the best
         new_tracker = copy.deepcopy(tracker)
         new_tracker.add_metrics([.3, .3, .3, .2, .5, .1, 0.0013])
-        assert new_tracker.is_best_so_far
+        assert new_tracker.is_best_so_far()
 
         # when it is not the the best it is not considered the best
         new_tracker = copy.deepcopy(tracker)

@@ -14,6 +14,7 @@ in a Dict[str, str] serialized as JSON, but that's really hacky.)
 
 from typing import List, Dict, Iterable, Any, Set
 from collections import defaultdict
+import os
 
 import tqdm
 import torch
@@ -30,6 +31,7 @@ from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.tokenizers import WordTokenizer
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.models import Model
+from allennlp.training.checkpointer import Checkpointer
 from allennlp.training.optimizers import Optimizer
 from allennlp.training.trainer_base import TrainerBase
 
@@ -182,7 +184,8 @@ class MultiTaskTrainer(TrainerBase):
                  mingler: DatasetMingler,
                  optimizer: torch.optim.Optimizer,
                  datasets: Dict[str, Iterable[Instance]],
-                 num_epochs: int = 10) -> None:
+                 num_epochs: int = 10,
+                 num_serialized_models_to_keep: int = 10) -> None:
         super().__init__(serialization_dir)
         self.model = model
         self.iterator = iterator
@@ -190,10 +193,28 @@ class MultiTaskTrainer(TrainerBase):
         self.optimizer = optimizer
         self.datasets = datasets
         self.num_epochs = num_epochs
+        self.checkpointer = Checkpointer(serialization_dir,
+                                         num_serialized_models_to_keep=num_serialized_models_to_keep)
+
+    def save_checkpoint(self, epoch: int) -> None:
+        training_state = {"epoch": epoch, "optimizer": self.optimizer.state_dict()}
+        self.checkpointer.save_checkpoint(epoch, self.model.state_dict(), training_state, True)
+
+    def restore_checkpoint(self) -> int:
+        model_state, trainer_state = self.checkpointer.restore_checkpoint()
+        if not model_state and not trainer_state:
+            return 0
+        else:
+            self.model.load_state_dict(model_state)
+            self.optimizer.load_state_dict(trainer_state["optimizer"])
+            return trainer_state["epoch"] + 1
+
 
     def train(self) -> Dict:
+        start_epoch = self.restore_checkpoint()
+
         self.model.train()
-        for epoch in range(self.num_epochs):
+        for epoch in range(start_epoch, self.num_epochs):
             total_loss = 0.0
             batches = tqdm.tqdm(self.iterator(self.mingler.mingle(self.datasets), num_epochs=1))
             for i, batch in enumerate(batches):
@@ -203,6 +224,9 @@ class MultiTaskTrainer(TrainerBase):
                 total_loss += loss.item()
                 self.optimizer.step()
                 batches.set_description(f"epoch: {epoch} loss: {total_loss / (i + 1)}")
+
+            # Save checkpoint
+            self.save_checkpoint(epoch)
 
         return {}
 
@@ -284,3 +308,5 @@ class MultiTaskTest(AllenNlpTestCase):
 
     def test_training(self):
         self.trainer.train()
+
+        assert os.path.exists(os.path.join(self.TEST_DIR, "best.th"))

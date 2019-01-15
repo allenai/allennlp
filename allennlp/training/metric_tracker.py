@@ -4,8 +4,14 @@ from allennlp.common.checks import ConfigurationError
 
 class MetricTracker:
     """
-    This class tracks a metric for the dual purposes of early stopping
-    and for knowing whether the current value is the best so far.
+    This class tracks a metric during training for the dual purposes of early stopping
+    and for knowing whether the current value is the best so far. It mimics the PyTorch
+    `state_dict` / `load_state_dict` interface, so that it can be checkpointed along with
+    your model and optimizer.
+
+    Some metrics improve by increasing; others by decreasing. Here you can either explicitly
+    supply `should_decrease`, or you can provide a `metric_name` in which case "should decrease"
+    is inferred from the first character, which must be "+" or "-".
 
     Parameters
     ----------
@@ -28,8 +34,7 @@ class MetricTracker:
         self._best_so_far: float = None
         self._patience = patience
         self._epochs_with_no_improvement = 0
-
-        self.is_best_so_far = True
+        self._is_best_so_far = True
 
         # If the metric name starts with "+", we want it to increase.
         # If the metric name starts with "-", we want it to decrease.
@@ -54,7 +59,7 @@ class MetricTracker:
         """
         self._best_so_far = None
         self._epochs_with_no_improvement = 0
-        self.is_best_so_far = True
+        self._is_best_so_far = True
 
     def state_dict(self):
         """
@@ -64,7 +69,7 @@ class MetricTracker:
                 "best_so_far": self._best_so_far,
                 "patience": self._patience,
                 "epochs_with_no_improvement": self._epochs_with_no_improvement,
-                "is_best_so_far": self.is_best_so_far,
+                "is_best_so_far": self._is_best_so_far,
                 "should_decrease": self._should_decrease
         }
 
@@ -75,7 +80,7 @@ class MetricTracker:
         self._best_so_far = state_dict["best_so_far"]
         self._patience = state_dict["patience"]
         self._epochs_with_no_improvement = state_dict["epochs_with_no_improvement"]
-        self.is_best_so_far = state_dict["is_best_so_far"]
+        self._is_best_so_far = state_dict["is_best_so_far"]
         self._should_decrease = state_dict["should_decrease"]
 
     def add_metric(self, metric: float) -> None:
@@ -87,11 +92,11 @@ class MetricTracker:
                     (not self._should_decrease and metric > self._best_so_far))
 
         if new_best:
-            self.is_best_so_far = True
+            self._is_best_so_far = True
             self._best_so_far = metric
             self._epochs_with_no_improvement = 0
         else:
-            self.is_best_so_far = False
+            self._is_best_so_far = False
             self._epochs_with_no_improvement += 1
 
     def add_metrics(self, metrics: Iterable[float]) -> None:
@@ -100,6 +105,12 @@ class MetricTracker:
         """
         for metric in metrics:
             self.add_metric(metric)
+
+    def is_best_so_far(self) -> bool:
+        """
+        Returns true if the most recent value of the metric is the best so far.
+        """
+        return self._is_best_so_far
 
     def should_stop_early(self) -> bool:
         """

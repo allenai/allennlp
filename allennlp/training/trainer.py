@@ -448,7 +448,7 @@ class Trainer(TrainerBase):
             for key, value in val_metrics.items():
                 metrics["validation_" + key] = value
 
-            if self._metric_tracker.is_best_so_far:
+            if self._metric_tracker.is_best_so_far():
                 # Update all the best_ metrics.
                 # (Otherwise they just stay the same as they were.)
                 metrics['best_epoch'] = epoch
@@ -512,7 +512,7 @@ class Trainer(TrainerBase):
                 model_state=self.model.state_dict(),
                 epoch=epoch,
                 training_states=training_states,
-                is_best_so_far=self._metric_tracker.is_best_so_far)
+                is_best_so_far=self._metric_tracker.is_best_so_far())
 
     def _restore_checkpoint(self) -> int:
         """
