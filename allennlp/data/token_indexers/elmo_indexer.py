@@ -59,7 +59,7 @@ class ELMoCharacterMapper:
     bos_token = '<S>'
     eos_token = '</S>'
 
-    def __init__(self, tokens_to_add: Dict[str, int] = None):
+    def __init__(self, tokens_to_add: Dict[str, int] = None) -> None:
         self.tokens_to_add = tokens_to_add or {}
 
     def convert_word_to_char_ids(self, word: str) -> List[int]:
