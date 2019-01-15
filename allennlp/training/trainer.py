@@ -19,6 +19,7 @@ from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.model import Model
+from allennlp.nn import util as nn_util
 from allennlp.training.checkpointer import Checkpointer
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
 from allennlp.training.metric_tracker import MetricTracker
@@ -148,7 +149,11 @@ class Trainer(TrainerBase):
         log_batch_size_period : ``int``, optional, (default = ``None``)
             If defined, how often to log the average batch size.
         """
-        super().__init__(model, serialization_dir, cuda_device)
+        super().__init__(serialization_dir, cuda_device)
+
+        # TODO(joelgrus): I am not calling move_to_gpu here, because if the model is
+        # not already on the GPU then the optimizer is going to be wrong.
+        self.model = model
 
         self.iterator = iterator
         self._validation_iterator = validation_iterator
@@ -203,6 +208,29 @@ class Trainer(TrainerBase):
         # Enable activation logging.
         if histogram_interval is not None:
             self._tensorboard.enable_activation_logging(self.model)
+
+    def batch_loss(self, batch: torch.Tensor, for_training: bool) -> torch.Tensor:
+        """
+        Does a forward pass on the given batch and returns the ``loss`` value in the result.
+        If ``for_training`` is `True` also applies regularization penalty.
+        """
+        if self._multiple_gpu:
+            output_dict = training_util.data_parallel(batch, self.model, self._cuda_devices)
+        else:
+            batch = nn_util.move_to_device(batch, self._cuda_devices[0])
+            output_dict = self.model(**batch)
+
+        try:
+            loss = output_dict["loss"]
+            if for_training:
+                loss += self.model.get_regularization_penalty()
+        except KeyError:
+            if for_training:
+                raise RuntimeError("The model you are trying to optimize does not contain a"
+                                   " 'loss' key in the output of model.forward(inputs).")
+            loss = None
+
+        return loss
 
     def _train_epoch(self, epoch: int) -> Dict[str, float]:
         """
@@ -278,7 +306,7 @@ class Trainer(TrainerBase):
 
             # Update the description with the latest metrics
             metrics = training_util.get_metrics(self.model, train_loss, batches_this_epoch)
-            description = self._description_from_metrics(metrics)
+            description = training_util.description_from_metrics(metrics)
 
             train_generator_tqdm.set_description(description, refresh=False)
 
@@ -352,7 +380,7 @@ class Trainer(TrainerBase):
 
             # Update the description with the latest metrics
             val_metrics = training_util.get_metrics(self.model, val_loss, batches_this_epoch)
-            description = self._description_from_metrics(val_metrics)
+            description = training_util.description_from_metrics(val_metrics)
             val_generator_tqdm.set_description(description, refresh=False)
 
         return val_loss, batches_this_epoch
@@ -613,8 +641,12 @@ class Trainer(TrainerBase):
 
 class TrainerPieces(NamedTuple):
     """
-    These are things that need to get instantiated from_params
-    and fed to Trainer.from_params.
+    We would like to avoid having complex instantiation logic taking place
+    in `Trainer.from_params`. This helper class has a `from_params` that
+    instantiates a model, loads train (and possibly validation and test) datasets,
+    constructs a Vocabulary, creates data iterators, and handles a little bit
+    of bookkeeping. If you're creating your own alternative training regime
+    you might be able to use this.
     """
     model: Model
     iterator: DataIterator

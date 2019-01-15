@@ -24,6 +24,10 @@ from allennlp.nn import util as nn_util
 
 logger = logging.getLogger(__name__)
 
+# We want to warn people that tqdm ignores metrics that start with underscores
+# exactly once. This variable keeps track of whether we have.
+class HasBeenWarned:
+    tqdm_ignores_underscores = False
 
 def sparse_clip_norm(parameters, max_norm, norm_type=2) -> float:
     """Clips gradient norm of an iterable of parameters.
@@ -276,7 +280,6 @@ def evaluate(model: Model,
              data_iterator: DataIterator,
              cuda_device: int,
              batch_weight_key: str) -> Dict[str, Any]:
-    _warned_tqdm_ignores_underscores = False
     check_for_gpu(cuda_device)
     with torch.no_grad():
         model.eval()
@@ -316,11 +319,11 @@ def evaluate(model: Model,
                 # Report the average loss so far.
                 metrics["loss"] = total_loss / total_weight
 
-            if (not _warned_tqdm_ignores_underscores and
+            if (not HasBeenWarned.tqdm_ignores_underscores and
                         any(metric_name.startswith("_") for metric_name in metrics)):
                 logger.warning("Metrics with names beginning with \"_\" will "
                                "not be logged to the tqdm progress bar.")
-                _warned_tqdm_ignores_underscores = True
+                HasBeenWarned.tqdm_ignores_underscores = True
             description = ', '.join(["%s: %.2f" % (name, value) for name, value
                                      in metrics.items() if not name.startswith("_")]) + " ||"
             generator_tqdm.set_description(description, refresh=False)
@@ -334,3 +337,13 @@ def evaluate(model: Model,
             final_metrics["loss"] = total_loss / total_weight
 
         return final_metrics
+
+def description_from_metrics(metrics: Dict[str, float]) -> str:
+    if (not HasBeenWarned.tqdm_ignores_underscores and
+                any(metric_name.startswith("_") for metric_name in metrics)):
+        logger.warning("Metrics with names beginning with \"_\" will "
+                       "not be logged to the tqdm progress bar.")
+        HasBeenWarned.tqdm_ignores_underscores = True
+    return ', '.join(["%s: %.4f" % (name, value)
+                      for name, value in
+                      metrics.items() if not name.startswith("_")]) + " ||"

@@ -1,6 +1,7 @@
 """
 This isn't testing a real class, it's a proof-of-concept
-for how multi-task training could work.
+for how multi-task training could work. This is certainly
+not the only way to do multi-task training using AllenNLP.
 
 Note that you could almost fit this whole setup into
 the "SingleTaskTrainer" paradigm, if you just wrote like a
@@ -182,7 +183,8 @@ class MultiTaskTrainer(TrainerBase):
                  optimizer: torch.optim.Optimizer,
                  datasets: Dict[str, Iterable[Instance]],
                  num_epochs: int = 10) -> None:
-        super().__init__(model, serialization_dir)
+        super().__init__(serialization_dir)
+        self.model = model
         self.iterator = iterator
         self.mingler = mingler
         self.optimizer = optimizer
