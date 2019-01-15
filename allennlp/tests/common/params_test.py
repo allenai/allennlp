@@ -23,6 +23,13 @@ class TestParams(AllenNlpTestCase):
         model_params = params.pop("model")
         assert model_params.pop("type") == "bidaf"
 
+    def test_bad_unicode_environment_variables(self):
+        filename = self.FIXTURES_ROOT / 'bidaf' / 'experiment.json'
+        os.environ['BAD_ENVIRONMENT_VARIABLE'] = "\udce2"
+        Params.from_file(filename)
+        del os.environ['BAD_ENVIRONMENT_VARIABLE']
+
+
     def test_overrides(self):
         filename = self.FIXTURES_ROOT / 'bidaf' / 'experiment.json'
         overrides = '{ "train_data_path": "FOO", "model": { "type": "BAR" },'\
