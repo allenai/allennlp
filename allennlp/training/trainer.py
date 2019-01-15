@@ -58,7 +58,7 @@ class Trainer(TrainerBase):
                  should_log_learning_rate: bool = False,
                  log_batch_size_period: Optional[int] = None) -> None:
         """
-        This is what used to be called just ``Trainer``. It just takes a labeled dataset
+        A trainer for doing supervised learning. It just takes a labeled dataset
         and a ``DataIterator``, and uses the supplied ``Optimizer`` to learn the weights
         for your model over some fixed number of epochs. You can also pass in a validation
         dataset and enable early stopping. There are many other bells and whistles as well.
@@ -151,7 +151,7 @@ class Trainer(TrainerBase):
         """
         super().__init__(serialization_dir, cuda_device)
 
-        # TODO(joelgrus): I am not calling move_to_gpu here, because if the model is
+        # I am not calling move_to_gpu here, because if the model is
         # not already on the GPU then the optimizer is going to be wrong.
         self.model = model
 
@@ -208,6 +208,9 @@ class Trainer(TrainerBase):
         # Enable activation logging.
         if histogram_interval is not None:
             self._tensorboard.enable_activation_logging(self.model)
+
+    def rescale_gradients(self) -> Optional[float]:
+        return training_util.rescale_gradients(self.model, self._grad_norm)
 
     def batch_loss(self, batch: torch.Tensor, for_training: bool) -> torch.Tensor:
         """

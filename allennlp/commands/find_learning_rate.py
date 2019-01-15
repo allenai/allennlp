@@ -295,7 +295,7 @@ def search_learning_rate(trainer: Trainer,
             logger.info(f'Loss ({loss}) exceeds stopping_factor * lowest recorded loss.')
             break
 
-        rescale_gradients(trainer.model, trainer._grad_norm) # pylint: disable=protected-access
+        trainer.rescale_gradients()
         trainer.optimizer.step()
 
         learning_rates.append(current_lr)

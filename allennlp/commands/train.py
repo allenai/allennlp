@@ -194,7 +194,7 @@ def train_model(params: Params,
 
     else:
         trainer = TrainerBase.from_params(params, serialization_dir, recover)
-        # TODO(joelgrus): something else
+        # TODO(joelgrus): handle evaluation in the general case
         evaluation_iterator = evaluation_dataset = None
 
     params.assert_empty('base train command')
