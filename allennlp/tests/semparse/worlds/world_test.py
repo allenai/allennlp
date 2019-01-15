@@ -1,13 +1,11 @@
 # pylint: disable=no-self-use,invalid-name,protected-access
-import json
-
 from overrides import overrides
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.tokenizers import Token
 from allennlp.semparse import ParsingError, World
 from allennlp.semparse.contexts import TableQuestionKnowledgeGraph
-from allennlp.semparse.worlds import NlvrWorld, WikiTablesWorld
+from allennlp.semparse.worlds import WikiTablesWorld
 
 
 class FakeWorldWithoutRecursion(World):
@@ -44,10 +42,6 @@ class TestWorld(AllenNlpTestCase):
         super().setUp()
         self.world_without_recursion = FakeWorldWithoutRecursion()
         self.world_with_recursion = FakeWorldWithRecursion()
-
-        test_filename = self.FIXTURES_ROOT / "data" / "nlvr" / "sample_ungrouped_data.jsonl"
-        data = [json.loads(line)["structured_rep"] for line in open(test_filename).readlines()]
-        self.nlvr_world = NlvrWorld(data[0])
 
         question_tokens = [Token(x) for x in ['what', 'was', 'the', 'last', 'year', '2004', '?']]
         table_file = self.FIXTURES_ROOT / 'data' / 'wikitables' / 'sample_table.tsv'
@@ -152,45 +146,6 @@ class TestWorld(AllenNlpTestCase):
         parsed_reconstructed_logical_form = world.parse_logical_form(reconstructed_logical_form)
         assert parsed_logical_form == parsed_reconstructed_logical_form
 
-    def test_get_logical_form_with_real_logical_forms(self):
-        nlvr_world = self.nlvr_world
-        logical_form = ("(box_count_greater_equals (member_color_count_equals all_boxes 1) 1)")
-        parsed_logical_form = nlvr_world.parse_logical_form(logical_form)
-        action_sequence = nlvr_world.get_action_sequence(parsed_logical_form)
-        reconstructed_logical_form = nlvr_world.get_logical_form(action_sequence)
-        parsed_reconstructed_logical_form = nlvr_world.parse_logical_form(reconstructed_logical_form)
-        # It makes more sense to compare parsed logical forms instead of actual logical forms.
-        assert parsed_logical_form == parsed_reconstructed_logical_form
-        assert nlvr_world.execute(logical_form) == nlvr_world.execute(reconstructed_logical_form)
-        logical_form = "(object_color_all_equals (circle (touch_wall (all_objects))) color_black)"
-        parsed_logical_form = nlvr_world.parse_logical_form(logical_form)
-        action_sequence = nlvr_world.get_action_sequence(parsed_logical_form)
-        reconstructed_logical_form = nlvr_world.get_logical_form(action_sequence)
-        parsed_reconstructed_logical_form = nlvr_world.parse_logical_form(reconstructed_logical_form)
-        assert parsed_logical_form == parsed_reconstructed_logical_form
-        assert nlvr_world.execute(logical_form) == nlvr_world.execute(reconstructed_logical_form)
-
-    def test_get_logical_form_fails_with_incomplete_action_sequence(self):
-        nlvr_world = self.nlvr_world
-        action_sequence = ['@start@ -> t', 't -> [<b,t>, b]', '<b,t> -> box_exists']
-        with self.assertRaisesRegex(ParsingError, 'Incomplete action sequence'):
-            nlvr_world.get_logical_form(action_sequence)
-
-    def test_get_logical_form_fails_with_extra_actions(self):
-        nlvr_world = self.nlvr_world
-        action_sequence = ['@start@ -> <b,t>', '<b,t> -> box_exists', 't -> [<b,t>, b]']
-        with self.assertRaisesRegex(ParsingError, 'Extra actions'):
-            nlvr_world.get_logical_form(action_sequence)
-
-    def test_get_logical_form_fails_with_action_sequence_in_wrong_order(self):
-        nlvr_world = self.nlvr_world
-        action_sequence = ['@start@ -> t', 't -> [<b,t>, b]', '<b,t> -> box_exists',
-                           'b -> [<c,b>, c]', '<c,b> -> [<b,<c,b>>, b]',
-                           'b -> all_boxes', '<b,<c,b>> -> member_color_none_equals',
-                           'c -> color_blue']
-        with self.assertRaisesRegex(ParsingError, 'does not match'):
-            nlvr_world.get_logical_form(action_sequence)
-
     def test_get_logical_form_adds_var_correctly(self):
         world = self.wikitables_world
         action_sequence = ['@start@ -> e', 'e -> [<r,e>, r]', '<r,e> -> [<<#1,#2>,<#2,#1>>, <e,r>]',
@@ -226,20 +181,3 @@ class TestWorld(AllenNlpTestCase):
                            '<d,r> -> fb:row.row.index', 'r -> [<#1,#1>, r]', '<#1,#1> -> var', 'r -> x']
         with self.assertRaisesRegex(ParsingError, 'already had var'):
             world.get_logical_form(action_sequence)
-
-    def test_get_logical_form_with_multiple_negate_filters(self):
-        world = self.nlvr_world
-        # This is an actual sequence of actions produced by an untrained NlvrSemanticParser
-        action_sequence = ['@start@ -> t', 't -> [<o,<c,t>>, o, c]',
-                           '<o,<c,t>> -> object_color_all_equals', 'o -> [<o,o>, o]',
-                           '<o,o> -> [<<o,o>,<o,o>>, <o,o>]', '<<o,o>,<o,o>> -> negate_filter',
-                           '<o,o> -> [<<o,o>,<o,o>>, <o,o>]', '<<o,o>,<o,o>> -> negate_filter',
-                           '<o,o> -> blue', 'o -> [<o,o>, o]', '<o,o> -> blue', 'o -> [<o,o>, o]',
-                           '<o,o> -> blue', 'o -> all_objects', 'c -> color_blue']
-        logical_form = world.get_logical_form(action_sequence)
-        # "The color of all blue blue objects that are not not blue is blue".
-        expected_logical_form = ("(object_color_all_equals ((negate_filter (negate_filter blue)) "
-                                 "(blue (blue all_objects))) color_blue)")
-        parsed_logical_form = world.parse_logical_form(logical_form)
-        parsed_expected_logical_form = world.parse_logical_form(expected_logical_form)
-        assert parsed_logical_form == parsed_expected_logical_form
