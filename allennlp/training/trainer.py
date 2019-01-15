@@ -284,7 +284,7 @@ class Trainer(TrainerBase):
 
             train_loss += loss.item()
 
-            batch_grad_norm = training_util.rescale_gradients(self.model, self._grad_norm)
+            batch_grad_norm = self.rescale_gradients()
 
             # This does nothing if batch_num_total is None or you are using an
             # LRScheduler which doesn't update per batch.
