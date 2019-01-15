@@ -13,6 +13,7 @@ from allennlp.common.checks import ConfigurationError
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.training import Trainer
+from allennlp.training.trainer_base import TrainerBase
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
 from allennlp.training.util import sparse_clip_norm
 from allennlp.data import Vocabulary
@@ -469,6 +470,11 @@ class TestTrainer(AllenNlpTestCase):
         # One batch per epoch.
         assert restore_trainer._batch_num_total == 2  # pylint: disable=protected-access
 
+    def test_trainer_from_base_class_params(self):
+        params = Params.from_file(self.FIXTURES_ROOT / 'simple_tagger' / 'experiment.json')
+
+        # Can instantiate from base class params
+        TrainerBase.from_params(params, self.TEST_DIR)
 
 class TestSparseClipGrad(AllenNlpTestCase):
     def test_sparse_clip_grad(self):

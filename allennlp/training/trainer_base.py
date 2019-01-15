@@ -64,5 +64,19 @@ class TrainerBase(Registrable):
                     serialization_dir: str,
                     recover: bool = False):
         # pylint: disable=arguments-differ
-        typ3 = params.get("trainer", {}).pop("type", cls.default_implementation)
-        return TrainerBase.by_name(typ3).from_params(params, serialization_dir, recover)
+        typ3 = params.get("trainer", {}).pop("type", "default")
+
+        if typ3 == "default":
+            # Special logic to keep old from_params behavior.
+            from allennlp.training.trainer import Trainer, TrainerPieces
+
+            pieces = TrainerPieces.from_params(params, serialization_dir, recover)  # pylint: disable=no-member
+            return Trainer.from_params(model=pieces.model,
+                                       serialization_dir=serialization_dir,
+                                       iterator=pieces.iterator,
+                                       train_data=pieces.train_dataset,
+                                       validation_data=pieces.validation_dataset,
+                                       params=pieces.params,
+                                       validation_iterator=pieces.validation_iterator)
+        else:
+            return TrainerBase.by_name(typ3).from_params(params, serialization_dir, recover)
