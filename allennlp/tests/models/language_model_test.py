@@ -23,14 +23,14 @@ class TestUnidirectionalLanguageModel(ModelTestCase):
         self.ensure_model_can_train_save_and_load(self.param_file)
 
     def test_batch_predictions_are_consistent(self):
-        self.ensure_batch_predictions_are_consistent()
+        self.ensure_batch_predictions_are_consistent(keys_to_ignore=["batch_weight"])
 
     def test_forward_pass_runs_correctly(self):
         training_tensors = self.dataset.as_tensor_dict()
         result = self.model(**training_tensors)
 
-        assert set(result) == {"loss", "forward_loss", "backward_loss",
-                               "lm_embeddings", "noncontextual_token_embeddings", "mask"}
+        assert set(result) == {"loss", "forward_loss", "backward_loss", "lm_embeddings",
+                               "noncontextual_token_embeddings", "mask", "batch_weight"}
 
         # The model should preserve the BOS / EOS tokens.
         embeddings = result["lm_embeddings"]
