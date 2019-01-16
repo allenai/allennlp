@@ -54,7 +54,7 @@ COPY training_config training_config/
 COPY setup.py setup.py
 COPY README.md README.md
 
-RUN python setup.py install
+RUN pip install --editable .
 
 # Compile EVALB - required for parsing evaluation.
 # EVALB produces scary looking c-level output which we don't
