@@ -253,7 +253,6 @@ def enable_gradient_clipping(model: Model, grad_clipping: Optional[float]) -> No
                 parameter.register_hook(lambda grad: nn_util.clamp_tensor(grad,
                                                                           minimum=-grad_clipping,
                                                                           maximum=grad_clipping))
-                
 
 def rescale_gradients(model: Model, grad_norm: Optional[float] = None) -> Optional[float]:
     """
