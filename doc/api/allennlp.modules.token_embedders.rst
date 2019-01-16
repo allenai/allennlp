@@ -57,8 +57,8 @@ allennlp.modules.token_embedders
    :undoc-members:
    :show-inheritance:
 
-.. _bow-token-embedder:
-.. automodule:: allennlp.modules.token_embedders.bow_token_embedder
+.. _bag-of-word-counts-token-embedder:
+.. automodule:: allennlp.modules.token_embedders.bag_of_word_counts_token_embedder
    :members:
    :undoc-members:
    :show-inheritance:

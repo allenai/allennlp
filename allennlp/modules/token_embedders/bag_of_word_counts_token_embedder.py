@@ -23,7 +23,7 @@ class BagOfWordCountsTokenEmbedder(TokenEmbedder):
         to specified dimension.
     """
     def __init__(self, vocab_size: int, projection_dim: int = None) -> None:
-        super(BagOfWordsTokenEmbedder, self).__init__()
+        super(BagOfWordCountsTokenEmbedder, self).__init__()
         self.vocab_size = vocab_size
         if projection_dim:
             self._projection = torch.nn.Linear(vocab_size, projection_dim)
@@ -66,7 +66,7 @@ class BagOfWordCountsTokenEmbedder(TokenEmbedder):
         return bag_of_words_output
 
     @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> 'BagOfWordsTokenEmbedder':  # type: ignore
+    def from_params(cls, vocab: Vocabulary, params: Params) -> 'BagOfWordCountsTokenEmbedder':  # type: ignore
         # pylint: disable=arguments-differ
         """
         we look for a ``vocab_namespace`` key in the parameter dictionary

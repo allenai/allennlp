@@ -4,13 +4,13 @@ from numpy.testing import assert_almost_equal
 import torch
 from allennlp.common import Params
 from allennlp.data import Vocabulary
-from allennlp.modules.token_embedders import BagOfWordsTokenEmbedder
+from allennlp.modules.token_embedders import BagOfWordCountsTokenEmbedder
 from allennlp.common.testing import AllenNlpTestCase
 
 
-class TestBowTokenEmbedder(AllenNlpTestCase):
+class TestBagOfWordCountsTokenEmbedder(AllenNlpTestCase):
     def setUp(self):
-        super(TestBowTokenEmbedder, self).setUp()
+        super(TestBagOfWordCountsTokenEmbedder, self).setUp()
         self.vocab = Vocabulary()
         self.vocab.add_token_to_namespace("1")
         self.vocab.add_token_to_namespace("2")
@@ -19,7 +19,7 @@ class TestBowTokenEmbedder(AllenNlpTestCase):
 
     def test_forward_calculates_bow_properly(self):
         params = Params({})
-        embedder = BagOfWordsTokenEmbedder.from_params(self.vocab, params=params)
+        embedder = BagOfWordCountsTokenEmbedder.from_params(self.vocab, params=params)
         numpy_tensor = np.array([[2, 0], [3, 0], [4, 4]])
         inputs = torch.from_numpy(numpy_tensor).unsqueeze(1)
         embedder_output = embedder(inputs)
@@ -29,7 +29,7 @@ class TestBowTokenEmbedder(AllenNlpTestCase):
 
     def test_projects_properly(self):
         params = Params({"projection_dim": 50})
-        embedder = BagOfWordsTokenEmbedder.from_params(self.vocab, params=params)
+        embedder = BagOfWordCountsTokenEmbedder.from_params(self.vocab, params=params)
         numpy_tensor = np.array([self.vocab.get_token_index(x) for x in ["1", "2", "3"]])
         inputs = torch.from_numpy(numpy_tensor).unsqueeze(1)
         embedder_output = embedder(inputs)
