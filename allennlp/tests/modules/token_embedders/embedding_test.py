@@ -219,3 +219,24 @@ class TestEmbedding(AllenNlpTestCase):
             uri = format_embeddings_file_uri(path1, path2)
             decoded = parse_embeddings_file_uri(uri)
             assert decoded == (path1, path2)
+
+    def test_embeddings_extension_by_vocab(self):
+        vocab = Vocabulary()
+        vocab.add_token_to_namespace('word1', 'tokens')
+        vocab.add_token_to_namespace('word2', 'tokens')
+        embedding_params = Params({"vocab_namespace": "tokens",
+                                   "embedding_dim": 10})
+        embedder = Embedding.from_params(vocab, embedding_params)
+        original_weight = embedder.weight
+
+        # '@@PADDING@@', '@@UNKNOWN@@', 'word1', 'word2'
+        assert original_weight.shape[0] == 4
+
+        extension_counter = {"tokens": {"word3": 1}}
+        vocab._extend(extension_counter)
+
+        embedder.extend_by_vocab(vocab, "tokens")
+
+        extended_weight = embedder.weight
+        assert extended_weight.shape[0] == 5
+        assert torch.all(extended_weight[:4, :] == original_weight[:4, :])
