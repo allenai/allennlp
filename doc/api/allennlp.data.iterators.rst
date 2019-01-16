@@ -36,7 +36,7 @@ allennlp.data.iterators
    :undoc-members:
    :show-inheritance:
 
-.. _homogeneous-batch-iterator
+.. _homogeneous-batch-iterator:
 .. automodule:: allennlp.data.iterators.homogeneous_batch_iterator
    :members:
    :undoc-members:
