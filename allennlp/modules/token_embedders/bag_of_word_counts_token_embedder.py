@@ -23,7 +23,7 @@ class BagOfWordCountsTokenEmbedder(TokenEmbedder):
         to specified dimension.
     """
     def __init__(self, vocab_size: int, projection_dim: int = None) -> None:
-        super(BagOfWordCountsTokenEmbedder, self).__init__()
+        super().__init__()
         self.vocab_size = vocab_size
         if projection_dim:
             self._projection = torch.nn.Linear(vocab_size, projection_dim)
@@ -32,7 +32,7 @@ class BagOfWordCountsTokenEmbedder(TokenEmbedder):
         self.output_dim = projection_dim or vocab_size
 
     def get_output_dim(self):
-        return self.num_embeddings
+        return self.output_dim
 
     def forward(self,  # pylint: disable=arguments-differ
                 inputs: torch.Tensor) -> torch.Tensor:
