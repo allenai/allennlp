@@ -56,3 +56,9 @@ allennlp.modules.token_embedders
    :members:
    :undoc-members:
    :show-inheritance:
+
+.. _bow-token-embedder:
+.. automodule:: allennlp.modules.token_embedders.bow_token_embedder
+   :members:
+   :undoc-members:
+   :show-inheritance:
