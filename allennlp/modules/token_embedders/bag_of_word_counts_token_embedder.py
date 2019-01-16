@@ -10,7 +10,7 @@ class BagOfWordCountsTokenEmbedder(TokenEmbedder):
     """
     Represents a sequence of tokens as a bag of (discrete) word ids, as it was done
     in the pre-neural days.
-    
+
     Each sequence gets a vector of length vocabulary size, where the i'th entry in the vector
     corresponds to number of times the i'th token in the vocabulary appears in the sequence.
 
@@ -49,15 +49,15 @@ class BagOfWordCountsTokenEmbedder(TokenEmbedder):
         ``(batch_size, vocab_size)``
         """
         bag_of_words_vectors = []
-        
+
         mask = get_text_field_mask({'tokens': inputs})
-        
+
         for document, doc_mask in zip(inputs, mask):
             document = torch.masked_select(document, doc_mask.byte())
             vec = torch.bincount(document, minlength=self.vocab_size).float()
             vec = vec.view(1, -1)
             bag_of_words_vectors.append(vec)
-        
+
         bag_of_words_output = torch.cat(bag_of_words_vectors, 0)
 
         if self._projection:
