@@ -32,7 +32,7 @@ class TextClassificationJSONReader(DatasetReader):
     tokenizer : ``Tokenizer``, optional (default = ``{"tokens": WordTokenizer()}``)
         Tokenizer to use to split the input text into words or other kinds of tokens.
     segment_sentences: ``bool``, optional (default = ``False``)
-        If true, we will first segment the text into sentences using Spacy and then tokenize words.
+        If True, we will first segment the text into sentences using SpaCy and then tokenize words.
         Necessary for some models that require pre-segmentation of sentences,
         like the Hierarchical Attention Network.
     sequence_length: ``int``, optional (default = ``None``)
@@ -83,7 +83,6 @@ class TextClassificationJSONReader(DatasetReader):
     @overrides
     def text_to_instance(self, text: str, label: str = None) -> Instance:  # type: ignore
         """
-
         Parameters
         ----------
         text : ``str``, required.

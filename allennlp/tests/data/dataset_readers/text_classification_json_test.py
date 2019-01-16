@@ -9,9 +9,9 @@ from allennlp.common.testing import AllenNlpTestCase
 class TestTextClassificationJSONReader():
 
     @pytest.mark.parametrize("lazy", (True, False))
-    def test_read_from_file_ag(self, lazy):
+    def test_read_from_file_ag_news_corpus(self, lazy):
         reader = TextClassificationJSONReader(lazy=lazy)
-        ag_path = AllenNlpTestCase.FIXTURES_ROOT / "data" / "text_classification_json" / "ag.jsonl"
+        ag_path = AllenNlpTestCase.FIXTURES_ROOT / "data" / "text_classification_json" / "ag_news_corpus.jsonl"
         instances = reader.read(ag_path)
         instances = ensure_list(instances)
 
