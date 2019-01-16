@@ -62,7 +62,7 @@ from allennlp.common.util import prepare_environment
 from allennlp.data import Vocabulary, DataIterator
 from allennlp.models import Model
 from allennlp.training import Trainer
-from allennlp.training.util import datasets_from_params, rescale_gradients
+from allennlp.training.util import datasets_from_params
 # pylint: enable=multiple-statements,wrong-import-position
 
 
