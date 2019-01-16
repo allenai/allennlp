@@ -1,17 +1,17 @@
 # pylint: disable=no-self-use,invalid-name
 import pytest
 
-from allennlp.data.dataset_readers import TextCatReader
+from allennlp.data.dataset_readers import TextClassificationJSONReader
 from allennlp.common.util import ensure_list
 from allennlp.common.testing import AllenNlpTestCase
 
 
-class TestTextCatReader():
+class TestTextClassificationJSONReader():
 
     @pytest.mark.parametrize("lazy", (True, False))
     def test_read_from_file_ag(self, lazy):
-        reader = TextCatReader(lazy=lazy)
-        ag_path = AllenNlpTestCase.FIXTURES_ROOT / "data" / "textcat" / "ag.jsonl"
+        reader = TextClassificationJSONReader(lazy=lazy)
+        ag_path = AllenNlpTestCase.FIXTURES_ROOT / "data" / "text_classification_json" / "ag.jsonl"
         instances = reader.read(ag_path)
         instances = ensure_list(instances)
 

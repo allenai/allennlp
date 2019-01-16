@@ -53,7 +53,7 @@ class TextClassificationJSONReader(DatasetReader):
                  skip_label_indexing: bool = False,
                  lazy: bool = False) -> None:
         super().__init__(lazy=lazy)
-        self.tokenizer = tokenizer or WordTokenizer()
+        self._tokenizer = tokenizer or WordTokenizer()
         self._segment_sentences = segment_sentences
         self._sequence_length = sequence_length
         self._skip_label_indexing = skip_label_indexing
@@ -77,7 +77,7 @@ class TextClassificationJSONReader(DatasetReader):
     def _truncate(self, tokens):
         """
         truncate a set of tokens using the provided sequence length
-        """"
+        """
         if len(tokens) > self._sequence_length:
             tokens = tokens[:self._sequence_length]
         return tokens
