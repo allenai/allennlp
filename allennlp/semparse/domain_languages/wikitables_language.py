@@ -94,6 +94,11 @@ class NumberColumn(ComparableColumn):
     pass
 
 
+# TODO(mattg, pradeep): We should probably coerce the question strings to have type `List[str]`, so
+# that the filter_in and filter_not_in functions can easily use the output of a `select` as input.
+# Also, there are updates to this language in `allennlp-weak-supervision-research` that need to be
+# included here.
+
 class WikiTablesLanguage(DomainLanguage):
     # pylint: disable=too-many-public-methods,no-self-use
     """
@@ -143,7 +148,7 @@ class WikiTablesLanguage(DomainLanguage):
 
         self.table_graph = table_context.get_table_knowledge_graph()
 
-        # Adding entities and numbers seen in questions to the mapping.
+        # Adding entities and numbers seen in questions as constants.
         question_entities, question_numbers = table_context.get_entities_from_question()
         self._question_entities = [entity for entity, _ in question_entities]
         self._question_numbers = [number for number, _ in question_numbers]
@@ -156,7 +161,10 @@ class WikiTablesLanguage(DomainLanguage):
         # Keeps track of column name productions so that we can add them to the agenda.
         self._column_productions_for_agenda: Dict[str, str] = {}
 
-        # Adding column names to the local name mapping.
+        # Adding column names as constants.  Each column gets added once for every
+        # type in the hierarchy going from its concrete class to the base Column.  String columns
+        # get added as StringColumn and Column, and date and number columns get added as DateColumn
+        # (or NumberColumn), ComparableColumn, and Column.
         for column_name, column_type in table_context.column_types.items():
             column_name = f"{column_type}_column:{column_name}"
             column: Column = None
@@ -292,7 +300,10 @@ class WikiTablesLanguage(DomainLanguage):
         denotation_value_list = evaluator.to_value_list(denotation_list)
         return evaluator.check_denotation(target_value_list, denotation_value_list)
 
-    # Things below here are language predicates, until you get to private methods.
+    # Things below here are language predicates, until you get to private methods.  We start with
+    # general predicates that are always included in the language, then move to
+    # column-type-specific predicates, which only get added if we see columns of particular types
+    # in the table.
 
     @predicate
     def all_rows(self) -> List[Row]:
@@ -306,121 +317,26 @@ class WikiTablesLanguage(DomainLanguage):
         """
         return [row.values[column.name] for row in rows]
 
-    def argmax(self, rows: List[Row], column: ComparableColumn) -> List[Row]:
+    @predicate
+    def same_as(self, rows: List[Row], column: Column) -> List[Row]:
         """
-        Takes a list of rows and a column name and returns a list containing a single row (dict from
-        columns to cells) that has the maximum numerical value in the given column. We return a list
-        instead of a single dict to be consistent with the return type of ``select`` and
-        ``all_rows``.
+        Takes a row and a column and returns a list of rows from the full set of rows that contain
+        the same value under the given column as the given row.
         """
-        if not rows:
-            return []
-        # We just check whether the first cell value is a date or number and assume that the rest
-        # are the same kind of values.
-        first_cell_value = rows[0].values[column.name]
-        if self._value_looks_like_date(first_cell_value):
-            value_row_pairs = self._get_date_row_pairs_to_filter(rows, column.name)
-        else:
-            value_row_pairs = self._get_number_row_pairs_to_filter(rows, column.name)  # type: ignore
-        if not value_row_pairs:
-            return []
-        # Returns a list containing the row with the max cell value.
-        return [sorted(value_row_pairs, key=lambda x: x[0], reverse=True)[0][1]]
+        cell_value = rows[0].values[column.name]
+        return_list = []
+        for table_row in self.table_data:
+            if table_row.values[column.name] == cell_value:
+                return_list.append(table_row)
+        return return_list
 
-    def argmin(self, rows: List[Row], column: ComparableColumn) -> List[Row]:
+    @predicate
+    def date(self, year: Number, month: Number, day: Number) -> Date:
         """
-        Takes a list of rows and a column and returns a list containing a single row (dict from
-        columns to cells) that has the minimum numerical value in the given column. We return a list
-        instead of a single dict to be consistent with the return type of ``select`` and
-        ``all_rows``.
+        Takes three numbers and returns a ``Date`` object whose year, month, and day are the three
+        numbers in that order.
         """
-        if not rows:
-            return []
-        # We just check whether the first cell value is a date or number and assume that the rest
-        # are the same kind of values.
-        first_cell_value = rows[0].values[column.name]
-        if self._value_looks_like_date(first_cell_value):
-            value_row_pairs = self._get_date_row_pairs_to_filter(rows, column.name)
-        else:
-            value_row_pairs = self._get_number_row_pairs_to_filter(rows, column.name)  # type: ignore
-        if not value_row_pairs:
-            return []
-        # Returns a list containing the row with the max cell value.
-        return [sorted(value_row_pairs, key=lambda x: x[0])[0][1]]
-
-    # These six methods take a list of rows, a column, and a numerical value and return all the
-    # rows where the value in that column is [comparator] than the given value.
-    def filter_number_greater(self, rows: List[Row], column: NumberColumn, filter_value: Number) -> List[Row]:
-        cell_row_pairs = self._get_number_row_pairs_to_filter(rows, column.name)
-        return [row for cell_value, row in cell_row_pairs if cell_value > filter_value]  # type: ignore
-
-    def filter_number_greater_equals(self,
-                                     rows: List[Row],
-                                     column: NumberColumn,
-                                     filter_value: Number) -> List[Row]:
-        cell_row_pairs = self._get_number_row_pairs_to_filter(rows, column.name)
-        return [row for cell_value, row in cell_row_pairs if cell_value >= filter_value]  # type: ignore
-
-    def filter_number_lesser(self, rows: List[Row], column: NumberColumn, filter_value: Number) -> List[Row]:
-        cell_row_pairs = self._get_number_row_pairs_to_filter(rows, column.name)
-        return [row for cell_value, row in cell_row_pairs if cell_value < filter_value]  # type: ignore
-
-    def filter_number_lesser_equals(self,
-                                    rows: List[Row],
-                                    column: NumberColumn,
-                                    filter_value: Number) -> List[Row]:
-        cell_row_pairs = self._get_number_row_pairs_to_filter(rows, column.name)
-        return [row for cell_value, row in cell_row_pairs if cell_value <= filter_value]  # type: ignore
-
-    def filter_number_equals(self, rows: List[Row], column: NumberColumn, filter_value: Number) -> List[Row]:
-        cell_row_pairs = self._get_number_row_pairs_to_filter(rows, column.name)
-        return [row for cell_value, row in cell_row_pairs if cell_value == filter_value]  # type: ignore
-
-    def filter_number_not_equals(self, rows: List[Row], column: NumberColumn, filter_value: Number) -> List[Row]:
-        cell_row_pairs = self._get_number_row_pairs_to_filter(rows, column.name)
-        return [row for cell_value, row in cell_row_pairs if cell_value != filter_value]  # type: ignore
-
-    # These six methods are the same as the six above, but for dates.
-    def filter_date_greater(self, rows: List[Row], column: DateColumn, filter_value: Date) -> List[Row]:
-        cell_row_pairs = self._get_date_row_pairs_to_filter(rows, column.name)
-        return [row for cell_value, row in cell_row_pairs if cell_value > filter_value]
-
-    def filter_date_greater_equals(self, rows: List[Row], column: DateColumn, filter_value: Date) -> List[Row]:
-        cell_row_pairs = self._get_date_row_pairs_to_filter(rows, column.name)
-        return [row for cell_value, row in cell_row_pairs if cell_value >= filter_value]
-
-    def filter_date_lesser(self, rows: List[Row], column: DateColumn, filter_value: Date) -> List[Row]:
-        cell_row_pairs = self._get_date_row_pairs_to_filter(rows, column.name)
-        return [row for cell_value, row in cell_row_pairs if cell_value < filter_value]
-
-    def filter_date_lesser_equals(self, rows: List[Row], column: DateColumn, filter_value: Date) -> List[Row]:
-        cell_row_pairs = self._get_date_row_pairs_to_filter(rows, column.name)
-        return [row for cell_value, row in cell_row_pairs if cell_value <= filter_value]
-
-    def filter_date_equals(self, rows: List[Row], column: DateColumn, filter_value: Date) -> List[Row]:
-        cell_row_pairs = self._get_date_row_pairs_to_filter(rows, column.name)
-        return [row for cell_value, row in cell_row_pairs if cell_value == filter_value]
-
-    def filter_date_not_equals(self, rows: List[Row], column: DateColumn, filter_value: Date) -> List[Row]:
-        cell_row_pairs = self._get_date_row_pairs_to_filter(rows, column.name)
-        return [row for cell_value, row in cell_row_pairs if cell_value != filter_value]
-
-    # These two are similar to the filter methods above, but operate on strings obtained from the
-    # question, instead of dates or numbers.  So they check for whether the string value is present
-    # in the cell or not, instead of using a numerical / date comparator.
-    def filter_in(self, rows: List[Row], column: StringColumn, filter_value: str) -> List[Row]:
-        # Assuming filter value has underscores for spaces. The cell values also have underscores
-        # for spaces, so we do not need to replace them here.  Also, we need to remove the
-        # "string:" that was prepended to the entity name in the language.
-        filter_value = filter_value.lstrip('string:')
-        return [row for row in rows if filter_value in row.values[column.name]]
-
-    def filter_not_in(self, rows: List[Row], column: StringColumn, filter_value: str) -> List[Row]:
-        # Assuming filter value has underscores for spaces. The cell values also have underscores
-        # for spaces, so we do not need to replace them here.  Also, we need to remove the
-        # "string:" that was prepended to the entity name in the language.
-        filter_value = filter_value.lstrip('string:')
-        return [row for row in rows if filter_value not in row.values[column.name]]
+        return Date(year, month, day)  # type: ignore
 
     @predicate
     def first(self, rows: List[Row]) -> List[Row]:
@@ -496,6 +412,134 @@ class WikiTablesLanguage(DomainLanguage):
                 most_frequent_list.append(cell_value)
         return most_frequent_list
 
+    # These get added to the language (using `add_predicate()`) if we see a date or number column
+    # in the table.
+
+    def argmax(self, rows: List[Row], column: ComparableColumn) -> List[Row]:
+        """
+        Takes a list of rows and a column name and returns a list containing a single row (dict from
+        columns to cells) that has the maximum numerical value in the given column. We return a list
+        instead of a single dict to be consistent with the return type of ``select`` and
+        ``all_rows``.
+        """
+        if not rows:
+            return []
+        # We just check whether the first cell value is a date or number and assume that the rest
+        # are the same kind of values.
+        first_cell_value = rows[0].values[column.name]
+        if self._value_looks_like_date(first_cell_value):
+            value_row_pairs = self._get_date_row_pairs_to_filter(rows, column.name)
+        else:
+            value_row_pairs = self._get_number_row_pairs_to_filter(rows, column.name)  # type: ignore
+        if not value_row_pairs:
+            return []
+        # Returns a list containing the row with the max cell value.
+        return [sorted(value_row_pairs, key=lambda x: x[0], reverse=True)[0][1]]
+
+    def argmin(self, rows: List[Row], column: ComparableColumn) -> List[Row]:
+        """
+        Takes a list of rows and a column and returns a list containing a single row (dict from
+        columns to cells) that has the minimum numerical value in the given column. We return a list
+        instead of a single dict to be consistent with the return type of ``select`` and
+        ``all_rows``.
+        """
+        if not rows:
+            return []
+        # We just check whether the first cell value is a date or number and assume that the rest
+        # are the same kind of values.
+        first_cell_value = rows[0].values[column.name]
+        if self._value_looks_like_date(first_cell_value):
+            value_row_pairs = self._get_date_row_pairs_to_filter(rows, column.name)
+        else:
+            value_row_pairs = self._get_number_row_pairs_to_filter(rows, column.name)  # type: ignore
+        if not value_row_pairs:
+            return []
+        # Returns a list containing the row with the max cell value.
+        return [sorted(value_row_pairs, key=lambda x: x[0])[0][1]]
+
+    # These six methods take a list of rows, a column, and a numerical value and return all the
+    # rows where the value in that column is [comparator] than the given value.  They only get
+    # added to the language if we see a number column in the table.
+
+    def filter_number_greater(self, rows: List[Row], column: NumberColumn, filter_value: Number) -> List[Row]:
+        cell_row_pairs = self._get_number_row_pairs_to_filter(rows, column.name)
+        return [row for cell_value, row in cell_row_pairs if cell_value > filter_value]  # type: ignore
+
+    def filter_number_greater_equals(self,
+                                     rows: List[Row],
+                                     column: NumberColumn,
+                                     filter_value: Number) -> List[Row]:
+        cell_row_pairs = self._get_number_row_pairs_to_filter(rows, column.name)
+        return [row for cell_value, row in cell_row_pairs if cell_value >= filter_value]  # type: ignore
+
+    def filter_number_lesser(self, rows: List[Row], column: NumberColumn, filter_value: Number) -> List[Row]:
+        cell_row_pairs = self._get_number_row_pairs_to_filter(rows, column.name)
+        return [row for cell_value, row in cell_row_pairs if cell_value < filter_value]  # type: ignore
+
+    def filter_number_lesser_equals(self,
+                                    rows: List[Row],
+                                    column: NumberColumn,
+                                    filter_value: Number) -> List[Row]:
+        cell_row_pairs = self._get_number_row_pairs_to_filter(rows, column.name)
+        return [row for cell_value, row in cell_row_pairs if cell_value <= filter_value]  # type: ignore
+
+    def filter_number_equals(self, rows: List[Row], column: NumberColumn, filter_value: Number) -> List[Row]:
+        cell_row_pairs = self._get_number_row_pairs_to_filter(rows, column.name)
+        return [row for cell_value, row in cell_row_pairs if cell_value == filter_value]  # type: ignore
+
+    def filter_number_not_equals(self, rows: List[Row], column: NumberColumn, filter_value: Number) -> List[Row]:
+        cell_row_pairs = self._get_number_row_pairs_to_filter(rows, column.name)
+        return [row for cell_value, row in cell_row_pairs if cell_value != filter_value]  # type: ignore
+
+    # These six methods are the same as the six above, but for dates.  They only get added to the
+    # language if we see a date column in the table.
+
+    def filter_date_greater(self, rows: List[Row], column: DateColumn, filter_value: Date) -> List[Row]:
+        cell_row_pairs = self._get_date_row_pairs_to_filter(rows, column.name)
+        return [row for cell_value, row in cell_row_pairs if cell_value > filter_value]
+
+    def filter_date_greater_equals(self, rows: List[Row], column: DateColumn, filter_value: Date) -> List[Row]:
+        cell_row_pairs = self._get_date_row_pairs_to_filter(rows, column.name)
+        return [row for cell_value, row in cell_row_pairs if cell_value >= filter_value]
+
+    def filter_date_lesser(self, rows: List[Row], column: DateColumn, filter_value: Date) -> List[Row]:
+        cell_row_pairs = self._get_date_row_pairs_to_filter(rows, column.name)
+        return [row for cell_value, row in cell_row_pairs if cell_value < filter_value]
+
+    def filter_date_lesser_equals(self, rows: List[Row], column: DateColumn, filter_value: Date) -> List[Row]:
+        cell_row_pairs = self._get_date_row_pairs_to_filter(rows, column.name)
+        return [row for cell_value, row in cell_row_pairs if cell_value <= filter_value]
+
+    def filter_date_equals(self, rows: List[Row], column: DateColumn, filter_value: Date) -> List[Row]:
+        cell_row_pairs = self._get_date_row_pairs_to_filter(rows, column.name)
+        return [row for cell_value, row in cell_row_pairs if cell_value == filter_value]
+
+    def filter_date_not_equals(self, rows: List[Row], column: DateColumn, filter_value: Date) -> List[Row]:
+        cell_row_pairs = self._get_date_row_pairs_to_filter(rows, column.name)
+        return [row for cell_value, row in cell_row_pairs if cell_value != filter_value]
+
+    # These two are similar to the filter methods above, but operate on strings obtained from the
+    # question, instead of dates or numbers.  So they check for whether the string value is present
+    # in the cell or not, instead of using a numerical / date comparator.  We only add them to the
+    # language if we see a string column in the table (which is basically always).
+
+    def filter_in(self, rows: List[Row], column: StringColumn, filter_value: str) -> List[Row]:
+        # Assuming filter value has underscores for spaces. The cell values also have underscores
+        # for spaces, so we do not need to replace them here.  Also, we need to remove the
+        # "string:" that was prepended to the entity name in the language.
+        filter_value = filter_value.lstrip('string:')
+        return [row for row in rows if filter_value in row.values[column.name]]
+
+    def filter_not_in(self, rows: List[Row], column: StringColumn, filter_value: str) -> List[Row]:
+        # Assuming filter value has underscores for spaces. The cell values also have underscores
+        # for spaces, so we do not need to replace them here.  Also, we need to remove the
+        # "string:" that was prepended to the entity name in the language.
+        filter_value = filter_value.lstrip('string:')
+        return [row for row in rows if filter_value not in row.values[column.name]]
+
+    # These are some more number-column-specific functions, which only get added if we see a number
+    # column.
+
     def max(self, rows: List[Row], column: NumberColumn) -> Number:
         """
         Takes a list of rows and a column and returns the max of the values under that column in
@@ -550,26 +594,8 @@ class WikiTablesLanguage(DomainLanguage):
         except ValueError:
             raise ExecutionError(f"Invalid column for diff: {column.name}")
 
-    @predicate
-    def same_as(self, rows: List[Row], column: Column) -> List[Row]:
-        """
-        Takes a row and a column and returns a list of rows from the full set of rows that contain
-        the same value under the given column as the given row.
-        """
-        cell_value = rows[0].values[column.name]
-        return_list = []
-        for table_row in self.table_data:
-            if table_row.values[column.name] == cell_value:
-                return_list.append(table_row)
-        return return_list
-
-    @predicate
-    def date(self, year: Number, month: Number, day: Number) -> Date:
-        """
-        Takes three numbers and returns a ``Date`` object whose year, month, and day are the three
-        numbers in that order.
-        """
-        return Date(year, month, day)  # type: ignore
+    # End of language predicates.  Stuff below here is for private use, helping to implement the
+    # functions above.
 
     def __eq__(self, other):
         if not isinstance(other, WikiTablesLanguage):
@@ -626,7 +652,6 @@ class WikiTablesLanguage(DomainLanguage):
 
     @staticmethod
     def _value_looks_like_date(cell_value: str) -> bool:
-        # TODO (pradeep): This will be unnecessary when we have column types identified.
         # We try to figure out if the values being compared are simple numbers or dates. We use
         # simple rules here: that the string contains less than 4 parts, and one of the parts is a
         # month name. Note that this will not consider strings with just years as dates. That's fine

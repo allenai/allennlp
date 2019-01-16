@@ -13,6 +13,7 @@ from allennlp.tests.semparse.domain_languages.domain_language_test import check_
 
 
 class TestWikiTablesLanguage(AllenNlpTestCase):
+    # TODO(mattg, pradeep): Add tests for the ActionSpaceWalker as well.
     def setUp(self):
         super().setUp()
         # Adding a bunch of random tokens in here so we get them as constants in the language.
