@@ -19,7 +19,7 @@ class PlainTextReader(DatasetReader):
             for line in input_file:
                 yield self.text_to_instance(line)
 
-    def text_to_instance(self, line: str) -> Instance:
+    def text_to_instance(self, line: str) -> Instance:  # type: ignore
         # pylint: disable=arguments-differ
         tokens = self._tokenizer.tokenize(line)
         return Instance({"line": TextField(tokens, self._token_indexers)})

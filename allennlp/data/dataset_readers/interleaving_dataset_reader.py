@@ -2,7 +2,7 @@ from typing import Dict, Iterable
 import json
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.data.dataset_readers import DatasetReader
+from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import MetadataField
 from allennlp.data.instance import Instance
 
@@ -91,6 +91,6 @@ class InterleavingDatasetReader(DatasetReader):
         else:
             raise RuntimeError("impossible to get here")
 
-    def text_to_instance(self) -> Instance:
+    def text_to_instance(self) -> Instance:  # type: ignore
         # pylint: disable=arguments-differ
         raise RuntimeError("text_to_instance doesn't make sense here")

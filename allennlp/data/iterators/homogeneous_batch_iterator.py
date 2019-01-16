@@ -5,7 +5,7 @@ from collections import defaultdict
 from allennlp.common.util import lazy_groups_of
 from allennlp.data.dataset import Batch
 from allennlp.data.instance import Instance
-from allennlp.data.iterators import DataIterator
+from allennlp.data.iterators.data_iterator import DataIterator
 
 @DataIterator.register("homogeneous-batch")
 class HomogeneousBatchIterator(DataIterator):
@@ -55,7 +55,7 @@ class HomogeneousBatchIterator(DataIterator):
             # Divvy up the instances based on their value of the "partition_key" field.
             hoppers: Dict[str, List[Instance]] = defaultdict(list)
             for instance in instance_list:
-                partition = instance.fields[self._partition_key].metadata
+                partition = instance.fields[self._partition_key].metadata  # type: ignore
                 hoppers[partition].append(instance)
 
             # Get a `lazy_groups_of` iterator over each set of homogeneous instances.
