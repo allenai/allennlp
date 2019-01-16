@@ -67,7 +67,7 @@ sqlparse==0.2.4
 ftfy
 
 # To use the BERT model
-pytorch-pretrained-bert==0.3.0
+pytorch-pretrained-bert==0.4.0
 
 #### ESSENTIAL LIBRARIES USED IN SCRIPTS ####
 
