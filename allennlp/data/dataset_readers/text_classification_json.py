@@ -106,13 +106,13 @@ class TextClassificationJsonReader(DatasetReader):
             for sentence in sentence_splits:
                 word_tokens = self._tokenizer.tokenize(sentence)
                 if self._sequence_length is not None:
-                    self._truncate(word_tokens)
+                    word_tokens = self._truncate(word_tokens)
                 sentences.append(TextField(word_tokens, self._token_indexers))
             fields['tokens'] = ListField(sentences)
         else:
             tokens = self._tokenizer.tokenize(text)
             if self._sequence_length is not None:
-                self._truncate(tokens)
+                tokens = self._truncate(tokens)
             fields['tokens'] = TextField(tokens, self._token_indexers)
         if label is not None:
             fields['label'] = LabelField(label,
