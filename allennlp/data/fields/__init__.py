@@ -17,3 +17,4 @@ from allennlp.data.fields.sequence_field import SequenceField
 from allennlp.data.fields.sequence_label_field import SequenceLabelField
 from allennlp.data.fields.span_field import SpanField
 from allennlp.data.fields.text_field import TextField
+from allennlp.data.fields.namespace_swapping_field import NamespaceSwappingField
