@@ -329,7 +329,7 @@ class Model(torch.nn.Module, Registrable):
         but during fine-tuning/tranfer-learning, it will have it work with
         extended vocabulary (original + new-data vocabulary)
         """
-        for _, module in self._modules:
+        for _, module in self._modules.items():
             if isinstance(module, TextFieldEmbedder):
                 module.extend_vocab(extended_vocab)
 

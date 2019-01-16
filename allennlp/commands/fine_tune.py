@@ -199,7 +199,7 @@ def fine_tune_model(model: Model,
                                     (instance for key, dataset in all_datasets.items()
                                      for instance in dataset
                                      if key in datasets_for_vocab_creation))
-        model.extend_embedders_by_vocab(vocab)
+        model.extend_embedder_vocab(vocab)
 
     vocab.save_to_files(os.path.join(serialization_dir, "vocabulary"))
 
