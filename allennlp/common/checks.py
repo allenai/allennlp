@@ -2,6 +2,7 @@
 Functions and exceptions for checking that
 AllenNLP and its models are configured correctly.
 """
+from typing import Union
 
 import logging
 import os
@@ -50,8 +51,11 @@ def check_dimensions_match(dimension_1: int,
                                  f"and {dimension_2} instead")
 
 
-def check_for_gpu(device_id: int):
-    if device_id is not None and device_id >= 0:
+def check_for_gpu(device_id: Union[int, list]):
+    if isinstance(device_id, list):
+        for did in device_id:
+            check_for_gpu(did)
+    elif device_id is not None and device_id >= 0:
         num_devices_available = cuda.device_count()
         if num_devices_available == 0:
             raise ConfigurationError("Experiment specified a GPU but none are available;"
