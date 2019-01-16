@@ -1,4 +1,3 @@
-# pylint: disable=anomalous-backslash-in-string
 """
 A ``Text2SqlTableContext`` represents the SQL context in which an utterance appears
 for the any of the text2sql datasets, with the grammar and the valid actions.

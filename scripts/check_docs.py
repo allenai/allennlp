@@ -14,22 +14,10 @@ MODULES_THAT_NEED_NO_DOCS: Set[str] = {
         # No docs at top level.
         'allennlp',
         'allennlp.version',
-
-        # No docs for custom extensions, which aren't even in python.
-        'allennlp.custom_extensions.*',
-
         # No docs for tests, unnecessary info for users.
         'allennlp.tests.*',
-
-        # TODO(joelgrus): Figure out how to make these docs build;
-        # the cffi part is causing problems.
-        'allennlp.modules.alternating_highway_lstm',
         # Private base class, no docs needed.
         'allennlp.modules.encoder_base',
-        # Moved to dataset_readers/semantic_parsing. TODO(Mark): remove in version 0.8.
-        'allennlp.data.dataset_readers.atis',
-        'allennlp.data.dataset_readers.nlvr',
-        'allennlp.data.dataset_readers.wikitables',
         # Deprecated in favor of allennlp.models.language_model
         'allennlp.models.bidirectional_lm',
         # Deprecated in favor of
