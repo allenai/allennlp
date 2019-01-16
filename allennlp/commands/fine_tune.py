@@ -12,9 +12,7 @@ import os
 from copy import deepcopy
 import re
 
-from allennlp.commands.evaluate import evaluate
 from allennlp.commands.subcommand import Subcommand
-from allennlp.commands.train import datasets_from_params
 from allennlp.common import Params
 from allennlp.common.util import prepare_environment, prepare_global_logging, \
                                  get_frozen_and_tunable_parameter_names
@@ -23,6 +21,7 @@ from allennlp.models import load_archive, archive_model
 from allennlp.models.archival import CONFIG_NAME
 from allennlp.models.model import Model, _DEFAULT_WEIGHTS
 from allennlp.training.trainer import Trainer
+from allennlp.training.util import datasets_from_params, evaluate
 from allennlp.common.checks import ConfigurationError
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -70,6 +69,11 @@ class FineTune(Subcommand):
                                default=False,
                                help='outputs tqdm status on separate lines and slows tqdm refresh rate')
 
+        subparser.add_argument('--batch-weight-key',
+                               type=str,
+                               default="",
+                               help='If non-empty, name of metric used to weight the loss on a per-batch basis.')
+
         subparser.set_defaults(func=fine_tune_model_from_args)
 
         return subparser
@@ -84,7 +88,8 @@ def fine_tune_model_from_args(args: argparse.Namespace):
                                     serialization_dir=args.serialization_dir,
                                     overrides=args.overrides,
                                     extend_vocab=args.extend_vocab,
-                                    file_friendly_logging=args.file_friendly_logging)
+                                    file_friendly_logging=args.file_friendly_logging,
+                                    batch_weight_key=args.batch_weight_key)
 
 
 def fine_tune_model_from_file_paths(model_archive_path: str,
@@ -92,7 +97,8 @@ def fine_tune_model_from_file_paths(model_archive_path: str,
                                     serialization_dir: str,
                                     overrides: str = "",
                                     extend_vocab: bool = False,
-                                    file_friendly_logging: bool = False) -> Model:
+                                    file_friendly_logging: bool = False,
+                                    batch_weight_key: str = "") -> Model:
     """
     A wrapper around :func:`fine_tune_model` which loads the model archive from a file.
 
@@ -121,14 +127,16 @@ def fine_tune_model_from_file_paths(model_archive_path: str,
                            params=params,
                            serialization_dir=serialization_dir,
                            extend_vocab=extend_vocab,
-                           file_friendly_logging=file_friendly_logging)
+                           file_friendly_logging=file_friendly_logging,
+                           batch_weight_key=batch_weight_key)
 
 
 def fine_tune_model(model: Model,
                     params: Params,
                     serialization_dir: str,
                     extend_vocab: bool = False,
-                    file_friendly_logging: bool = False) -> Model:
+                    file_friendly_logging: bool = False,
+                    batch_weight_key: str = "") -> Model:
     """
     Fine tunes the given model, using a set of parameters that is largely identical to those used
     for :func:`~allennlp.commands.train.train_model`, except that the ``model`` section is ignored,
@@ -221,18 +229,20 @@ def fine_tune_model(model: Model,
     for name in tunable_parameter_names:
         logger.info(name)
 
-    trainer_choice = trainer_params.pop_choice("type",
-                                               Trainer.list_available(),
-                                               default_to_first_choice=True)
-    trainer = Trainer.by_name(trainer_choice).from_params(model=model,
-                                                          serialization_dir=serialization_dir,
-                                                          iterator=iterator,
-                                                          train_data=train_data,
-                                                          validation_data=validation_data,
-                                                          params=trainer_params,
-                                                          validation_iterator=validation_iterator)
+    trainer_type = trainer_params.pop("type", "default")
+    if trainer_type == "default":
+        trainer = Trainer.from_params(model=model,
+                                      serialization_dir=serialization_dir,
+                                      iterator=iterator,
+                                      train_data=train_data,
+                                      validation_data=validation_data,
+                                      params=trainer_params,
+                                      validation_iterator=validation_iterator)
+    else:
+        raise ConfigurationError("currently fine-tune only works with the default Trainer")
 
     evaluate_on_test = params.pop_bool("evaluate_on_test", False)
+
     params.assert_empty('base train command')
     try:
         metrics = trainer.train()
@@ -244,17 +254,23 @@ def fine_tune_model(model: Model,
             archive_model(serialization_dir, files_to_archive=params.files_to_archive)
         raise
 
-    # Now tar up results
-    archive_model(serialization_dir, files_to_archive=params.files_to_archive)
-
+    # Evaluate
     if test_data and evaluate_on_test:
-        test_metrics = evaluate(model, test_data, iterator, cuda_device=trainer._cuda_devices[0])  # pylint: disable=protected-access
+        logger.info("The model will be evaluated using the best epoch weights.")
+        test_metrics = evaluate(model, test_data, validation_iterator or iterator,
+                                cuda_device=trainer._cuda_devices[0], # pylint: disable=protected-access,
+                                batch_weight_key=batch_weight_key)
+
         for key, value in test_metrics.items():
             metrics["test_" + key] = value
 
     elif test_data:
         logger.info("To evaluate on the test set after training, pass the "
                     "'evaluate_on_test' flag, or use the 'allennlp evaluate' command.")
+
+
+    # Now tar up results
+    archive_model(serialization_dir, files_to_archive=params.files_to_archive)
 
     metrics_json = json.dumps(metrics, indent=2)
     with open(os.path.join(serialization_dir, "metrics.json"), "w") as metrics_file:

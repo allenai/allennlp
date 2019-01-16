@@ -14,7 +14,7 @@ from allennlp.models.model import Model
 from allennlp.models.semantic_parsing.nlvr.nlvr_semantic_parser import NlvrSemanticParser
 from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
 from allennlp.nn import Activation
-from allennlp.semparse.worlds import NlvrWorld
+from allennlp.semparse.domain_languages import NlvrLanguage
 from allennlp.state_machines.trainers import DecoderTrainer, ExpectedRiskMinimization
 from allennlp.state_machines.states import CoverageState, ChecklistStatelet
 from allennlp.state_machines.transition_functions import CoverageTransitionFunction
@@ -102,8 +102,8 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                                          max_decoding_steps=max_decoding_steps,
                                          max_num_finished_states=max_num_finished_states)
 
-        # Instantiating an empty NlvrWorld just to get the number of terminals.
-        self._terminal_productions = set(NlvrWorld([]).terminal_productions.values())
+        # Instantiating an empty NlvrLanguage just to get the number of terminals.
+        self._terminal_productions = set(NlvrLanguage(set()).terminal_productions.values())
         self._decoder_step = CoverageTransitionFunction(encoder_output_dim=self._encoder.get_output_dim(),
                                                         action_embedding_dim=action_embedding_dim,
                                                         input_attention=attention,
@@ -180,7 +180,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
     @overrides
     def forward(self,  # type: ignore
                 sentence: Dict[str, torch.LongTensor],
-                worlds: List[List[NlvrWorld]],
+                worlds: List[List[NlvrLanguage]],
                 actions: List[List[ProductionRule]],
                 agenda: torch.LongTensor,
                 identifier: List[str] = None,
@@ -321,7 +321,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
 
     def _update_metrics(self,
                         action_strings: List[List[List[str]]],
-                        worlds: List[List[NlvrWorld]],
+                        worlds: List[List[NlvrLanguage]],
                         label_strings: List[List[str]],
                         possible_actions: List[List[ProductionRule]],
                         agenda_data: List[List[int]]) -> None:
@@ -365,7 +365,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                 'agenda_coverage': self._agenda_coverage.get_metric(reset)
         }
 
-    def _get_state_cost(self, batch_worlds: List[List[NlvrWorld]], state: CoverageState) -> torch.Tensor:
+    def _get_state_cost(self, batch_worlds: List[List[NlvrLanguage]], state: CoverageState) -> torch.Tensor:
         """
         Return the cost of a finished state. Since it is a finished state, the group size will be
         1, and hence we'll return just one cost.
@@ -400,7 +400,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
 
     def _get_state_info(self,
                         state: CoverageState,
-                        batch_worlds: List[List[NlvrWorld]]) -> Dict[str, List]:
+                        batch_worlds: List[List[NlvrLanguage]]) -> Dict[str, List]:
         """
         This method is here for debugging purposes, in case you want to look at the what the model
         is learning. It may be inefficient to call it while training the model on real data.
