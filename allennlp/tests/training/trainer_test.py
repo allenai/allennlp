@@ -476,40 +476,90 @@ class TestTrainer(AllenNlpTestCase):
         # Can instantiate from base class params
         TrainerBase.from_params(params, self.TEST_DIR)
 
-    def test_trainer_saves_and_loads_best_validation_metrics_correctly(self):
+    def test_trainer_saves_and_loads_best_validation_metrics_correctly_1(self):
+        # Use -loss and run 1 epoch of original-training, and one of restored-training
+        # Run 1 epoch of original training.
         trainer = Trainer(self.model, self.optimizer,
                           self.iterator, self.instances,
                           validation_dataset=self.instances,
+                          validation_metric="-loss",
                           num_epochs=1, serialization_dir=self.TEST_DIR)
         trainer.train()
-        _, _, best_validation_metrics_epoch_1 = trainer._restore_checkpoint()  # pylint: disable=protected-access
+        trainer._restore_checkpoint() # pylint: disable=protected-access
+        best_validation_metrics_epoch_1 = trainer._metric_tracker.best_epoch_metrics # pylint: disable=protected-access
         # best_validation_metrics_epoch_1: {'accuracy': 0.75, 'accuracy3': 1.0, 'loss': 0.6243013441562653}
         assert isinstance(best_validation_metrics_epoch_1, dict)
         assert "loss" in best_validation_metrics_epoch_1
 
+        # Run 1 epoch of restored training.
         restore_trainer = Trainer(self.model, self.optimizer,
                                   self.iterator, self.instances,
                                   validation_dataset=self.instances,
                                   validation_metric="-loss",
-                                  num_epochs=3, serialization_dir=self.TEST_DIR)
+                                  num_epochs=2, serialization_dir=self.TEST_DIR)
         restore_trainer.train()
-        _, _, best_validation_metrics_epoch_2 = restore_trainer._restore_checkpoint()  # pylint: disable=protected-access
+        restore_trainer._restore_checkpoint()  # pylint: disable=protected-access
+        best_validation_metrics_epoch_2 = restore_trainer._metric_tracker.best_epoch_metrics # pylint: disable=protected-access
 
-        # Loss decreases in 3 epochs. But because of using -loss,
-        # 2nd epoch would be better than 1st. So best val metrics should not be same.
+        # Because of using -loss, 2nd epoch would be better than 1st. So best val metrics should not be same.
         assert best_validation_metrics_epoch_2 != best_validation_metrics_epoch_1
 
+    def test_trainer_saves_and_loads_best_validation_metrics_correctly_2(self):
+        # Use -loss and run 1 epoch of original-training, and one of restored-training
+        # Run 1 epoch of original training.
+        trainer = Trainer(self.model, self.optimizer,
+                          self.iterator, self.instances,
+                          validation_dataset=self.instances,
+                          validation_metric="+loss",
+                          num_epochs=1, serialization_dir=self.TEST_DIR)
+        trainer.train()
+        trainer._restore_checkpoint() # pylint: disable=protected-access
+        best_validation_metrics_epoch_1 = trainer._metric_tracker.best_epoch_metrics # pylint: disable=protected-access
+        # best_validation_metrics_epoch_1: {'accuracy': 0.75, 'accuracy3': 1.0, 'loss': 0.6243013441562653}
+        assert isinstance(best_validation_metrics_epoch_1, dict)
+        assert "loss" in best_validation_metrics_epoch_1
+
+        # Run 1 more epoch of restored training.
         restore_trainer = Trainer(self.model, self.optimizer,
                                   self.iterator, self.instances,
                                   validation_dataset=self.instances,
                                   validation_metric="+loss",
-                                  num_epochs=1, serialization_dir=self.TEST_DIR)
+                                  num_epochs=2, serialization_dir=self.TEST_DIR)
         restore_trainer.train()
-        _, _, best_validation_metrics_epoch_3 = restore_trainer._restore_checkpoint()  # pylint: disable=protected-access
+        restore_trainer._restore_checkpoint() # pylint: disable=protected-access
+        best_validation_metrics_epoch_2 = restore_trainer._metric_tracker.best_epoch_metrics # pylint: disable=protected-access
 
-        # Loss decreases in 3 epochs. But because of using +loss,
-        # 3rd epoch won't be better than 2nd. So best val metrics should be same.
-        assert best_validation_metrics_epoch_3 == best_validation_metrics_epoch_2
+        # Because of using +loss, 2nd epoch won't be better than 1st. So best val metrics should be same.
+        assert best_validation_metrics_epoch_2 == best_validation_metrics_epoch_1
+
+    def test_restored_training_returns_best_epoch_metrics_even_if_no_better_epoch_is_found_after_restoring(self):
+        # Instead of -loss, use +loss to assure 2nd epoch is considered worse.
+        # Run 1 epoch of original training.
+        original_trainer = Trainer(self.model, self.optimizer,
+                                   self.iterator, self.instances,
+                                   validation_dataset=self.instances,
+                                   validation_metric="+loss",
+                                   num_epochs=1, serialization_dir=self.TEST_DIR)
+        training_metrics = original_trainer.train()
+
+        # Run 1 epoch of restored training.
+        restored_trainer = Trainer(self.model, self.optimizer,
+                                   self.iterator, self.instances,
+                                   validation_dataset=self.instances,
+                                   validation_metric="+loss",
+                                   num_epochs=2, serialization_dir=self.TEST_DIR)
+        restored_metrics = restored_trainer.train()
+
+        assert "best_validation_loss" in restored_metrics
+        assert "best_validation_accuracy" in restored_metrics
+        assert "best_validation_accuracy3" in restored_metrics
+        assert "best_epoch" in restored_metrics
+
+        # Epoch 2 validation loss should be lesser than that of Epoch 1
+        assert training_metrics["best_validation_loss"] == restored_metrics["best_validation_loss"]
+        assert training_metrics["best_epoch"] == 0
+        assert training_metrics["validation_loss"] > restored_metrics["validation_loss"]
+
 
 class TestSparseClipGrad(AllenNlpTestCase):
     def test_sparse_clip_grad(self):

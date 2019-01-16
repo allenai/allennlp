@@ -35,6 +35,7 @@ class MetricTracker:
         self._patience = patience
         self._epochs_with_no_improvement = 0
         self._is_best_so_far = True
+        self.best_epoch_metrics = {}
 
         # If the metric name starts with "+", we want it to increase.
         # If the metric name starts with "-", we want it to decrease.
@@ -70,7 +71,8 @@ class MetricTracker:
                 "patience": self._patience,
                 "epochs_with_no_improvement": self._epochs_with_no_improvement,
                 "is_best_so_far": self._is_best_so_far,
-                "should_decrease": self._should_decrease
+                "should_decrease": self._should_decrease,
+                "best_epoch_metrics": self.best_epoch_metrics
         }
 
     def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
@@ -82,6 +84,7 @@ class MetricTracker:
         self._epochs_with_no_improvement = state_dict["epochs_with_no_improvement"]
         self._is_best_so_far = state_dict["is_best_so_far"]
         self._should_decrease = state_dict["should_decrease"]
+        self.best_epoch_metrics = state_dict["best_epoch_metrics"]
 
     def add_metric(self, metric: float) -> None:
         """
@@ -120,3 +123,12 @@ class MetricTracker:
             return False
         else:
             return self._epochs_with_no_improvement >= self._patience
+
+    # def best_epoch_metrics(self):
+    #     return self._best_epoch_metrics
+
+    # def update_best_epoch_metrics(self, metrics: Dict[str, Float]):
+    #     self._best_epoch_metrics = metrics
+
+    def best_epoch(self, last_run_epoch_num: int):
+        return last_run_epoch_num - self._epochs_with_no_improvement

@@ -410,17 +410,10 @@ class Trainer(TrainerBase):
         metrics: Dict[str, Any] = {}
         epochs_trained = 0
         training_start_time = time.time()
-        if not best_validation_metrics:
-            best_validation_metrics = {}
 
-        if validation_metric_per_epoch:
-            if self._validation_metric_decreases:
-                best_metric = min(validation_metric_per_epoch)
-            else:
-                best_metric = max(validation_metric_per_epoch)
-            metrics["best_epoch"] = validation_metric_per_epoch.index(best_metric)
-        for name, value in best_validation_metrics.items():
-            metrics["best_validation_" + name] = value
+        metrics['best_epoch'] = self._metric_tracker.best_epoch(epoch_counter - 1)
+        for key, value in self._metric_tracker.best_epoch_metrics.items():
+            metrics["best_validation_" + key] = value
 
         for epoch in range(epoch_counter, self._num_epochs):
             epoch_start_time = time.time()
@@ -468,7 +461,8 @@ class Trainer(TrainerBase):
                 metrics['best_epoch'] = epoch
                 for key, value in val_metrics.items():
                     metrics["best_validation_" + key] = value
-                    best_validation_metrics[key] = value
+
+                self._metric_tracker.best_epoch_metrics = val_metrics
 
             if self._serialization_dir:
                 dump_metrics(os.path.join(self._serialization_dir, f'metrics_epoch_{epoch}.json'), metrics)
@@ -575,8 +569,6 @@ class Trainer(TrainerBase):
         else:
             epoch_to_return = int(training_state["epoch"].split('.')[0]) + 1
 
-        best_validation_metrics = training_state.get("best_validation_metrics", None)
-
         # For older checkpoints with batch_num_total missing, default to old behavior where
         # it is unchanged.
         batch_num_total = training_state.get('batch_num_total')
@@ -584,6 +576,7 @@ class Trainer(TrainerBase):
             self._batch_num_total = batch_num_total
 
         return epoch_to_return
+
 
     # Requires custom from_params.
     @classmethod
