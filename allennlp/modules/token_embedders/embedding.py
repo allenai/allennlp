@@ -150,12 +150,16 @@ class Embedding(TokenEmbedder):
         return embedded
 
     @overrides
-    def extend_by_vocab(self, extended_vocab: Vocabulary, vocab_namespace: Optional[str] = "tokens"):
-        vocab_namespace = getattr(self, "_vocab_namespace", None)
+    def extend_by_vocab(self, extended_vocab: Vocabulary, vocab_namespace: Optional[str] = None):
         if not vocab_namespace:
-            logging.warning("Original training didnot store vocab_namespace for Embedding class "
-                            "defaulting to 'tokens'.")
+            vocab_namespace = getattr(self, "_vocab_namespace", None)
+
+        if not vocab_namespace:
             vocab_namespace = "tokens"
+            logging.warning("Neither original training store vocab_namespace for Embedding class "
+                            "nor user passed vocab_namespace in extended_vocab. So, "
+                            "defaulting to 'tokens' namespace for embedding extension.")
+
         extended_num_embeddings = extended_vocab.get_vocab_size(vocab_namespace)
         extra_num_embeddings = extended_num_embeddings - self.num_embeddings
         embedding_dim = self.weight.data.shape[-1]
