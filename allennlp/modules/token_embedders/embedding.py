@@ -151,20 +151,18 @@ class Embedding(TokenEmbedder):
 
     @overrides
     def extend_by_vocab(self, extended_vocab: Vocabulary, vocab_namespace: Optional[str] = "tokens"):
-
         vocab_namespace = getattr(self, "_vocab_namespace", None)
         if not vocab_namespace:
             logging.warning("Original training didnot store vocab_namespace for Embedding class "
                             "defaulting to 'tokens'.")
             vocab_namespace = "tokens"
-
         extended_num_embeddings = extended_vocab.get_vocab_size(vocab_namespace)
         extra_num_embeddings = extended_num_embeddings - self.num_embeddings
         embedding_dim = self.weight.data.shape[-1]
-        weight = torch.FloatTensor(extra_num_embeddings, embedding_dim)
-        extra_weight = torch.nn.Parameter(weight, requires_grad=self.trainable)
+        extra_weight = torch.FloatTensor(extra_num_embeddings, embedding_dim)
         torch.nn.init.xavier_uniform_(extra_weight)
-        self.weight = torch.cat([self.weight, extra_weight], dim=0)
+        extended_weight = torch.cat([self.weight.data, extra_weight], dim=0)
+        self.weight = torch.nn.Parameter(extended_weight, requires_grad=self.weight.requires_grad)
 
     # Custom logic requires custom from_params.
     @classmethod
