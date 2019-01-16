@@ -5,14 +5,14 @@ from allennlp.common import Params
 from allennlp.nn.util import get_text_field_mask
 
 
-@TokenEmbedder.register("bow_token_embedder")
-class BagOfWordsTokenEmbedder(TokenEmbedder):
+@TokenEmbedder.register("bag_of_word_counts")
+class BagOfWordCountsTokenEmbedder(TokenEmbedder):
     """
-    Embeds a document in a bag of words representation. Each document is represented by
-    a vector of length vocabulary size. Each cell corresponds to a different token in
-    the vocabulary, and is populated with the number of times that token appears
-    in the document. This embedding serves as a strong baseline for document-level
-    representation learning.
+    Represents a sequence of tokens as a bag of (discrete) word ids, as it was done
+    in the pre-neural days.
+    
+    Each sequence gets a vector of length vocabulary size, where the i'th entry in the vector
+    corresponds to number of times the i'th token in the vocabulary appears in the sequence.
 
     Parameters
     ----------
@@ -34,24 +34,6 @@ class BagOfWordsTokenEmbedder(TokenEmbedder):
     def get_output_dim(self):
         return self.num_embeddings
 
-    def compute_bow(self, tokens: torch.IntTensor) -> torch.Tensor:
-        """
-        Compute a bag of words representation with size batch_size x vocab_size
-
-        Parameters
-        ----------
-        tokens : ``Dict[str, torch.Tensor]``
-            tokens to compute bag of words representation of
-        """
-        bow_vectors = []
-        mask = get_text_field_mask({'tokens': tokens})
-        for document, doc_mask in zip(tokens, mask):
-            document = torch.masked_select(document, doc_mask.byte())
-            vec = torch.bincount(document, minlength=self.vocab_size).float()
-            vec = vec.view(1, -1)
-            bow_vectors.append(vec)
-        return torch.cat(bow_vectors, 0)
-
     def forward(self,  # pylint: disable=arguments-differ
                 inputs: torch.Tensor) -> torch.Tensor:
         """
@@ -66,11 +48,22 @@ class BagOfWordsTokenEmbedder(TokenEmbedder):
         The bag-of-words representations for the input sequence, shape
         ``(batch_size, vocab_size)``
         """
-        bow_output = self.compute_bow(inputs)
+        bag_of_words_vectors = []
+        
+        mask = get_text_field_mask({'tokens': inputs})
+        
+        for document, doc_mask in zip(inputs, mask):
+            document = torch.masked_select(document, doc_mask.byte())
+            vec = torch.bincount(document, minlength=self.vocab_size).float()
+            vec = vec.view(1, -1)
+            bag_of_words_vectors.append(vec)
+        
+        bag_of_words_output = torch.cat(bag_of_words_vectors, 0)
+
         if self._projection:
             projection = self._projection
-            bow_output = projection(bow_output)
-        return bow_output
+            bag_of_words_output = projection(bag_of_words_output)
+        return bag_of_words_output
 
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'BagOfWordsTokenEmbedder':  # type: ignore
