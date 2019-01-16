@@ -11,7 +11,8 @@ from allennlp.data.fields import ProductionRuleField, MetadataField
 from allennlp.data.tokenizers import Tokenizer, WordTokenizer
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.semparse.worlds import NlvrWorld
+from allennlp.semparse.domain_languages import NlvrLanguage
+from allennlp.semparse.domain_languages.nlvr_language import Box
 
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -155,14 +156,18 @@ class NlvrDatasetReader(DatasetReader):
             The identifier from the dataset if available.
         """
         # pylint: disable=arguments-differ
-        worlds = [NlvrWorld(data) for data in structured_representations]
+        worlds = []
+        for structured_representation in structured_representations:
+            boxes = set([Box(object_list, box_id) for box_id, object_list in
+                         enumerate(structured_representation)])
+            worlds.append(NlvrLanguage(boxes))
         tokenized_sentence = self._tokenizer.tokenize(sentence)
         sentence_field = TextField(tokenized_sentence, self._sentence_token_indexers)
         production_rule_fields: List[Field] = []
         instance_action_ids: Dict[str, int] = {}
         # TODO(pradeep): Assuming that possible actions are the same in all worlds. This may change
         # later.
-        for production_rule in worlds[0].all_possible_actions():
+        for production_rule in worlds[0].all_possible_productions():
             instance_action_ids[production_rule] = len(instance_action_ids)
             field = ProductionRuleField(production_rule, is_global_rule=True)
             production_rule_fields.append(field)
@@ -190,7 +195,7 @@ class NlvrDatasetReader(DatasetReader):
         elif self._output_agendas:
             # TODO(pradeep): Assuming every world gives the same agenda for a sentence. This is true
             # now, but may change later too.
-            agenda = worlds[0].get_agenda_for_sentence(sentence, add_paths_to_agenda=False)
+            agenda = worlds[0].get_agenda_for_sentence(sentence)
             assert agenda, "No agenda found for sentence: %s" % sentence
             # agenda_field contains indices into actions.
             agenda_field = ListField([IndexField(instance_action_ids[action], action_field)

@@ -259,7 +259,8 @@ class TestVocabulary(AllenNlpTestCase):
         # vocab, load the vocab, then index the text field again, and make sure we get the same
         # result.
         tokenizer = CharacterTokenizer(byte_encoding='utf-8')
-        token_indexer = TokenCharactersIndexer(character_tokenizer=tokenizer)
+        token_indexer = TokenCharactersIndexer(character_tokenizer=tokenizer,
+                                               min_padding_length=2)
         tokens = [Token(t) for t in ["Øyvind", "für", "汉字"]]
         text_field = TextField(tokens, {"characters": token_indexer})
         dataset = Batch([Instance({"sentence": text_field})])
@@ -673,7 +674,8 @@ class TestVocabulary(AllenNlpTestCase):
         assert len(words) == 3
 
     def test_max_vocab_size_partial_dict(self):
-        indexers = {"tokens": SingleIdTokenIndexer(), "token_characters": TokenCharactersIndexer()}
+        indexers = {"tokens": SingleIdTokenIndexer(),
+                    "token_characters": TokenCharactersIndexer(min_padding_length=3)}
         instance = Instance({
                 'text': TextField([Token(w) for w in 'Abc def ghi jkl mno pqr stu vwx yz'.split(' ')], indexers)
         })

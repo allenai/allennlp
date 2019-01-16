@@ -81,6 +81,11 @@ class Evaluate(Subcommand):
                                default="",
                                help='a JSON structure used to override the experiment configuration')
 
+        subparser.add_argument('--batch-weight-key',
+                               type=str,
+                               default="",
+                               help='If non-empty, name of metric used to weight the loss on a per-batch basis.')
+
         subparser.set_defaults(func=evaluate_from_args)
 
         return subparser
@@ -89,7 +94,8 @@ class Evaluate(Subcommand):
 def evaluate(model: Model,
              instances: Iterable[Instance],
              data_iterator: DataIterator,
-             cuda_device: int) -> Dict[str, Any]:
+             cuda_device: int,
+             batch_weight_key: str) -> Dict[str, Any]:
     _warned_tqdm_ignores_underscores = False
     check_for_gpu(cuda_device)
     with torch.no_grad():
@@ -101,21 +107,34 @@ def evaluate(model: Model,
         logger.info("Iterating over dataset")
         generator_tqdm = Tqdm.tqdm(iterator, total=data_iterator.get_num_batches(instances))
 
+        # Number of batches in instances.
         batch_count = 0
+        # Number of batches where the model produces a loss.
         loss_count = 0
+        # Cumulative weighted loss
         total_loss = 0.0
+        # Cumulative weight across all batches.
+        total_weight = 0.0
 
         for batch in generator_tqdm:
             batch_count += 1
             batch = util.move_to_device(batch, cuda_device)
-            loss = model(**batch).get("loss")
+            output_dict = model(**batch)
+            loss = output_dict.get("loss")
 
             metrics = model.get_metrics()
 
             if loss is not None:
                 loss_count += 1
-                metrics["loss"] = loss.item()
-                total_loss += loss.item()
+                if batch_weight_key:
+                    weight = output_dict[batch_weight_key].item()
+                else:
+                    weight = 1.0
+
+                total_weight += weight
+                total_loss += loss.item() * weight
+                # Report the average loss so far.
+                metrics["loss"] = total_loss / total_weight
 
             if (not _warned_tqdm_ignores_underscores and
                         any(metric_name.startswith("_") for metric_name in metrics)):
@@ -128,10 +147,11 @@ def evaluate(model: Model,
 
         final_metrics = model.get_metrics(reset=True)
         if loss_count > 0:
+            # Sanity check
             if loss_count != batch_count:
                 raise RuntimeError("The model you are trying to evaluate only sometimes " +
                                    "produced a loss!")
-            final_metrics["loss"] = total_loss/batch_count
+            final_metrics["loss"] = total_loss / total_weight
 
         return final_metrics
 
@@ -168,7 +188,7 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     iterator = DataIterator.from_params(iterator_params)
     iterator.index_with(model.vocab)
 
-    metrics = evaluate(model, instances, iterator, args.cuda_device)
+    metrics = evaluate(model, instances, iterator, args.cuda_device, args.batch_weight_key)
 
     logger.info("Finished evaluating.")
     logger.info("Metrics:")
