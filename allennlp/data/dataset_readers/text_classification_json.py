@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 @DatasetReader.register("text_classification_json")
-class TextClassificationJSONReader(DatasetReader):
+class TextClassificationJsonReader(DatasetReader):
     """
     Reads tokens and their labels from a labeled text classification dataset.
     Expects a "tokens" field and a "category" field in JSON format.
