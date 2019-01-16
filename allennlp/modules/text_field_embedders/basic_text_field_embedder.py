@@ -151,7 +151,7 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
         params.assert_empty(cls.__name__)
         return cls(token_embedders, embedder_to_indexer_map, allow_unmatched_keys)
 
-    def extend_by_vocab(self, extended_vocab: Vocabulary) -> None:
+    def extend_vocab(self, extended_vocab: Vocabulary) -> None:
         """
         It assures that ``basic_text_field_embedder`` can embed with the extended vocab.
         It iterates over each ``token_embedder`` and assures each of them can
@@ -159,4 +159,4 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
         """
         for key, _ in self._token_embedders.items():
             token_embedder = getattr(self, 'token_embedder_{}'.format(key))
-            token_embedder.extend_by_vocab(extended_vocab)
+            token_embedder.extend_vocab(extended_vocab)

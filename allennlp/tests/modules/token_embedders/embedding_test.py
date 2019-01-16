@@ -235,7 +235,7 @@ class TestEmbedding(AllenNlpTestCase):
         extension_counter = {"tokens": {"word3": 1}}
         vocab._extend(extension_counter)
 
-        embedder.extend_by_vocab(vocab, "tokens")
+        embedder.extend_vocab(vocab, "tokens")
 
         extended_weight = embedder.weight
         assert extended_weight.shape[0] == 5

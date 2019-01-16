@@ -188,7 +188,7 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
         counter = {"tokens": {"5": 1, "6": 1, "7": 1}}
         vocab._extend(counter) #pylint: disable=protected-access
 
-        text_embedder.extend_by_vocab(vocab)
+        text_embedder.extend_vocab(vocab)
 
         assert tuple(text_embedder.token_embedder_words1.weight.shape) == (9, 2)
         assert tuple(text_embedder.token_embedder_words2.weight.shape) == (9, 5)

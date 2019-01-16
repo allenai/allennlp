@@ -50,11 +50,9 @@ class TextFieldEmbedder(torch.nn.Module, Registrable):
         """
         raise NotImplementedError
 
-    def extend_by_vocab(self, extended_vocab: Vocabulary) -> None:
+    def extend_vocab(self, extended_vocab: Vocabulary) -> None:
         """
-        It assures that ``text_field_embedder`` can embed with the extended vocab.
-        This is required in fine-tuning or transfer learning scenarios, where
-        model was trained with original vocabulary but during fine-tuning/tranfer-learning,
-        it will have it work with extended vocabulary (original + new-data vocabulary)
+        Assures that this ``text_field_embedder`` can work with extended vocabulary.
+        By default it is no-op.
         """
-        raise NotImplementedError
+        pass
