@@ -102,8 +102,8 @@ class TextClassificationJsonReader(DatasetReader):
         fields: Dict[str, Field] = {}
         if self._segment_sentences:
             sentences: List[Field] = []
-            sentence_tokens = self._sentence_segmenter.split_sentences(text)
-            for sentence in sentence_tokens:
+            sentence_splits = self._sentence_segmenter.split_sentences(text)
+            for sentence in sentence_splits:
                 word_tokens = self._tokenizer.tokenize(sentence)
                 if self._sequence_length is not None:
                     self._truncate(word_tokens)
