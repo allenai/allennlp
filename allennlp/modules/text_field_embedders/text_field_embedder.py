@@ -52,7 +52,7 @@ class TextFieldEmbedder(torch.nn.Module, Registrable):
 
     def extend_vocab(self, extended_vocab: Vocabulary) -> None:
         """
-        Assures that this ``text_field_embedder`` can work with extended vocabulary.
-        By default it is no-op.
+        Assures that this ``TextFieldEmbedder`` can work with extended vocabulary.
+        Unless overridden by concrete ``TextFieldEmbedder``, it is no-op.
         """
         pass

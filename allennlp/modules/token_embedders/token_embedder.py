@@ -30,7 +30,7 @@ class TokenEmbedder(torch.nn.Module, Registrable):
 
     def extend_vocab(self, extended_vocab: Vocabulary, vocab_namespace: Optional[str]):
         """
-        Assures that this ``token_embedder`` can work with extended vocabulary.
-        By default it is no-op.
+        Assures that this ``TokenEmbedder`` can work with extended vocabulary.
+        Unless overridden by concrete ``TokenEmbedder``, it is no-op.
         """
         pass
