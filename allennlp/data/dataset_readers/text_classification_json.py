@@ -33,8 +33,8 @@ class TextClassificationJsonReader(DatasetReader):
         Tokenizer to use to split the input text into words or other kinds of tokens.
     segment_sentences: ``bool``, optional (default = ``False``)
         If True, we will first segment the text into sentences using SpaCy and then tokenize words.
-        Necessary for some models that require pre-segmentation of sentences,
-        like the Hierarchical Attention Network (https://www.semanticscholar.org/paper/Hierarchical-Attention-Networks-for-Document-Yang-Yang/1967ad3ac8a598adc6929e9e6b9682734f789427).
+        Necessary for some models that require pre-segmentation of sentences, like the Hierarchical
+        Attention Network (https://www.cs.cmu.edu/~hovy/papers/16HLT-hierarchical-attention-networks.pdf).
     max_sequence_length: ``int``, optional (default = ``None``)
         If specified, will truncate tokens to specified maximum length.
     skip_label_indexing: ``bool``, optional (default = ``False``)
