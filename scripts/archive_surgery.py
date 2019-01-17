@@ -37,7 +37,7 @@ def main():
     output = parser.add_mutually_exclusive_group()
     output.add_argument("--output-file", help="path to output file")
     output.add_argument("--inplace", action="store_true",
-                        help="modify configs in place")
+                        help="overwrite the input file with the modified configuration")
     parser.add_argument("-f", "--force", action="store_true",
                         help="overwrite the output file if it exists")
 
@@ -47,7 +47,7 @@ def main():
         raise RuntimeError("please specify an editor or set the $EDITOR environment variable")
 
     if not args.inplace and os.path.exists(args.output_file) and not args.force:
-        raise ValueError("output file already exists")
+        raise ValueError("output file already exists, use --force to override")
 
     archive_file = cached_path(args.input_file)
     if not os.path.exists(archive_file):
