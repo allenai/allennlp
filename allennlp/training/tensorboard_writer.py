@@ -141,7 +141,7 @@ class TensorboardWriter:
     def log_metrics(self,
                     train_metrics: dict,
                     val_metrics: dict = None,
-                    log_to_console: bool = True) -> None:
+                    log_to_console: bool = False) -> None:
         """
         Sends all of the train metrics (and validation metrics, if provided) to tensorboard.
         """

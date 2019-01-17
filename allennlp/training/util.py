@@ -248,11 +248,11 @@ def data_parallel(batch, model: Model, cuda_devices: List) -> Dict[str, torch.Te
 
 def enable_gradient_clipping(model: Model, grad_clipping: Optional[float]) -> None:
     if grad_clipping is not None:
-        clip_function = lambda grad: grad.clamp(-grad_clipping, grad_clipping)
         for parameter in model.parameters():
             if parameter.requires_grad:
-                parameter.register_hook(clip_function)
-
+                parameter.register_hook(lambda grad: nn_util.clamp_tensor(grad,
+                                                                          minimum=-grad_clipping,
+                                                                          maximum=grad_clipping))
 
 def rescale_gradients(model: Model, grad_norm: Optional[float] = None) -> Optional[float]:
     """
