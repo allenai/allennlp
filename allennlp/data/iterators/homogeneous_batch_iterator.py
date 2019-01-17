@@ -7,7 +7,7 @@ from allennlp.data.dataset import Batch
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator
 
-@DataIterator.register("homogeneous-batch")
+@DataIterator.register("homogeneous_batch")
 class HomogeneousBatchIterator(DataIterator):
     """
     This iterator takes a dataset of potentially heterogeneous instances
