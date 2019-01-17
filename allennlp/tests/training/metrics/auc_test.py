@@ -25,9 +25,9 @@ class AucTest(AllenNlpTestCase):
 
         computed_auc_value = auc.get_metric(reset=True)
 
-        fpr, tpr, _ = metrics.roc_curve(torch.cat(all_labels, dim=0).numpy(),
-                                        torch.cat(all_predictions, dim=0).numpy())
-        real_auc_value = metrics.auc(fpr, tpr)
+        false_positive_rates, true_positive_rates, _ = metrics.roc_curve(torch.cat(all_labels, dim=0).numpy(),
+                                                                         torch.cat(all_predictions, dim=0).numpy())
+        real_auc_value = metrics.auc(false_positive_rates, true_positive_rates)
         assert_almost_equal(real_auc_value, computed_auc_value)
 
         # One more computation to assure reset works.
@@ -37,14 +37,14 @@ class AucTest(AllenNlpTestCase):
         auc(predictions, labels)
         computed_auc_value = auc.get_metric(reset=True)
 
-        fpr, tpr, _ = metrics.roc_curve(labels.numpy(),
-                                        predictions.numpy())
-        real_auc_value = metrics.auc(fpr, tpr)
+        false_positive_rates, true_positive_rates, _ = metrics.roc_curve(labels.numpy(),
+                                                                         predictions.numpy())
+        real_auc_value = metrics.auc(false_positive_rates, true_positive_rates)
         assert_almost_equal(real_auc_value, computed_auc_value)
 
     def test_auc_gold_labels_behaviour(self):
         # Check that it works with different pos_label
-        auc = Auc(pos_label=4)
+        auc = Auc(positive_label=4)
 
         predictions = torch.randn(8).float()
         labels = torch.randint(3, 5, (8,)).long()
@@ -52,10 +52,10 @@ class AucTest(AllenNlpTestCase):
         auc(predictions, labels)
         computed_auc_value = auc.get_metric(reset=True)
 
-        fpr, tpr, _ = metrics.roc_curve(labels.numpy(),
-                                        predictions.numpy(),
-                                        pos_label=4)
-        real_auc_value = metrics.auc(fpr, tpr)
+        false_positive_rates, true_positive_rates, _ = metrics.roc_curve(labels.numpy(),
+                                                                         predictions.numpy(),
+                                                                         pos_label=4)
+        real_auc_value = metrics.auc(false_positive_rates, true_positive_rates)
         assert_almost_equal(real_auc_value, computed_auc_value)
 
         # Check that it errs on getting more than 2 labels.
@@ -73,7 +73,11 @@ class AucTest(AllenNlpTestCase):
         auc(predictions, labels, mask)
         computed_auc_value = auc.get_metric(reset=True)
 
-        fpr, tpr, _ = metrics.roc_curve(labels[:4].numpy(),
-                                        predictions[:4].numpy())
-        real_auc_value = metrics.auc(fpr, tpr)
+        false_positive_rates, true_positive_rates, _ = metrics.roc_curve(labels[:4].numpy(),
+                                                                         predictions[:4].numpy())
+        real_auc_value = metrics.auc(false_positive_rates, true_positive_rates)
         assert_almost_equal(real_auc_value, computed_auc_value)
+
+    def test_auc_works_without_calling_metric_at_all(self):
+        auc = Auc()
+        auc.get_metric()

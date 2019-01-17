@@ -14,9 +14,9 @@ class Auc(Metric):
     The AUC Metric measures the area under the receiver-operating characteristic
     (ROC) curve for binary classification problems.
     """
-    def __init__(self, pos_label=1):
+    def __init__(self, positive_label=1):
         super(Auc, self).__init__()
-        self._pos_label = pos_label
+        self._positive_label = positive_label
         self._all_predictions = torch.FloatTensor()
         self._all_gold_labels = torch.LongTensor()
 
@@ -32,7 +32,7 @@ class Auc(Metric):
         gold_labels : ``torch.Tensor``, required.
             A one-dimensional label tensor of shape (batch_size), with {1, 0}
             entries for positive and negative class. If it's not binary,
-            `pos_label` should be passed in the initialization.
+            `positive_label` should be passed in the initialization.
         mask: ``torch.Tensor``, optional (default = None).
             A one-dimensional label tensor of shape (batch_size).
         """
@@ -53,9 +53,9 @@ class Auc(Metric):
                                      "expected at maximum 2.".format(unique_gold_labels.numel()))
 
         gold_labels_is_binary = list(torch.sort(unique_gold_labels)[0].numpy()) == [0, 1]
-        if not gold_labels_is_binary and self._pos_label not in unique_gold_labels:
-            raise ConfigurationError("gold_labels tensor should be binary containing 0 and 1 or initialized "
-                                     "pos_label {} should be present in gold_labels".format(self._pos_label))
+        if not gold_labels_is_binary and self._positive_label not in unique_gold_labels:
+            raise ConfigurationError("gold_labels should be binary with 0 and 1 or initialized positive_label "
+                                     "{} should be present in gold_labels".format(self._positive_label))
 
         if mask is None:
             batch_size = gold_labels.shape[0]
@@ -70,10 +70,10 @@ class Auc(Metric):
     def get_metric(self, reset: bool = False):
         if self._all_gold_labels.shape[0] == 0:
             return 0.5
-        fpr, tpr, _ = metrics.roc_curve(self._all_gold_labels.numpy(),
-                                        self._all_predictions.numpy(),
-                                        pos_label=self._pos_label)
-        auc = metrics.auc(fpr, tpr)
+        false_positive_rates, true_positive_rates, _ = metrics.roc_curve(self._all_gold_labels.numpy(),
+                                                                         self._all_predictions.numpy(),
+                                                                         pos_label=self._positive_label)
+        auc = metrics.auc(false_positive_rates, true_positive_rates)
         if reset:
             self.reset()
         return auc
