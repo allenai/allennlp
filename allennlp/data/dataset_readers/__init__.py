@@ -34,3 +34,4 @@ from allennlp.data.dataset_readers.semantic_parsing.quarel import QuarelDatasetR
 from allennlp.data.dataset_readers.simple_language_modeling import SimpleLanguageModelingDatasetReader
 from allennlp.data.dataset_readers.babi import BabiReader
 from allennlp.data.dataset_readers.copynet_seq2seq import CopyNetDatasetReader
+from allennlp.data.dataset_readers.text_classification_json import TextClassificationJsonReader
