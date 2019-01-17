@@ -116,8 +116,8 @@ class NlvrLanguage(DomainLanguage):
         # We use this in the agenda-related methods, and some models that use this language look at
         # this field to know how many terminals to plan for.
         self.terminal_productions: Dict[str, str] = {}
-        for name, type_ in self._function_types.items():
-            self.terminal_productions[name] = "%s -> %s" % (type_, name)
+        for name, types in self._function_types.items():
+            self.terminal_productions[name] = f"{types[0]} -> {name}"
 
     # These first two methods are about getting an "agenda", which, given an input utterance,
     # tries to guess what production rules should be needed in the logical form.
