@@ -18,6 +18,7 @@ from allennlp.data.dataset import Batch
 from allennlp.nn import util
 from allennlp.nn.regularizers import RegularizerApplicator
 from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
+from allennlp.modules.token_embedders.embedding import Embedding
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -330,7 +331,7 @@ class Model(torch.nn.Module, Registrable):
         extended vocabulary (original + new-data vocabulary)
         """
         for _, module in self._modules.items():
-            if isinstance(module, TextFieldEmbedder):
+            if isinstance(module, (Embedding, TextFieldEmbedder)):
                 module.extend_vocab(extended_vocab)
 
 
