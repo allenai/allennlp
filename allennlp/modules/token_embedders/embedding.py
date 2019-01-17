@@ -72,12 +72,9 @@ class Embedding(TokenEmbedder):
         extend the embedding-matrix, it's necessary to know which vocab_namspace was used to
         construct it in the original training. We store vocab_namespace used during the original
         training as an attribute, so that it can be retrieved during fine-tuning.
-        Caveat: This would prevent models trained before this commit to be unextendedable.
-        Any other way to know the namespace used by token_embedder in original training?
     Returns
     -------
     An Embedding module.
-
     """
 
     def __init__(self,
@@ -99,6 +96,10 @@ class Embedding(TokenEmbedder):
         self.norm_type = norm_type
         self.scale_grad_by_freq = scale_grad_by_freq
         self.sparse = sparse
+
+        # Caveat: Earlier we weren't storing vocab_namespace, knowing which is necessary at time
+        # of embedding vocab extension. So old archive models are unextendable unless the user
+        # used default vocab_namespace 'tokens' for it.
         self._vocab_namespace = vocab_namespace
 
         self.output_dim = projection_dim or embedding_dim
@@ -152,13 +153,11 @@ class Embedding(TokenEmbedder):
     @overrides
     def extend_vocab(self, extended_vocab: Vocabulary, vocab_namespace: Optional[str] = None):
         if not vocab_namespace:
-            vocab_namespace = getattr(self, "_vocab_namespace", None)
+            vocab_namespace = self._vocab_namespace
 
         if not vocab_namespace:
             vocab_namespace = "tokens"
-            logging.warning("Neither original training store vocab_namespace for Embedding class "
-                            "nor user passed vocab_namespace in extended_vocab. So, "
-                            "defaulting to 'tokens' namespace for embedding extension.")
+            logging.warning("No vocab_namespace provided to Embedder.extend_vocab. Defaulting to 'tokens'.")
 
         extended_num_embeddings = extended_vocab.get_vocab_size(vocab_namespace)
         extra_num_embeddings = extended_num_embeddings - self.num_embeddings
