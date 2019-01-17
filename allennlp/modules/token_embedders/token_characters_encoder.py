@@ -40,6 +40,7 @@ class TokenCharactersEncoder(TokenEmbedder):
     def extend_vocab(self, extended_vocab: Vocabulary, vocab_namespace: str = "token_characters"):
         """
         Extends the embedding module according to the extended vocabulary.
+        Extended weight would be initialized with xavier uniform.
 
         Parameters
         ----------

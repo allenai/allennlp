@@ -150,6 +150,7 @@ class Embedding(TokenEmbedder):
     def extend_vocab(self, extended_vocab: Vocabulary, vocab_namespace: str = None):
         """
         Extends the embedding matrix according to the extended vocabulary.
+        Extended weight would be initialized with xavier uniform.
 
         Parameters
         ----------
