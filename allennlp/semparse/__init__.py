@@ -30,6 +30,7 @@ not need this code at all.
 # complete path, like `from allennlp.semparse.worlds import WikiTablesWorld`.
 from allennlp.data.tokenizers import Token as _
 from allennlp.semparse.domain_languages.domain_language import (DomainLanguage, ParsingError,
-                                                                ExecutionError, predicate)
+                                                                ExecutionError,
+                                                                predicate, predicate_with_side_args)
 from allennlp.semparse.worlds.world import World
 from allennlp.semparse.action_space_walker import ActionSpaceWalker
