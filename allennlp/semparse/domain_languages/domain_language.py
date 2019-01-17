@@ -2,6 +2,7 @@ from collections import defaultdict
 from typing import Any, Callable, CallableMeta, Dict, GenericMeta, List, Set, Tuple, Type, Union  # type: ignore
 import inspect
 import logging
+import traceback
 import types
 
 from nltk import Tree
@@ -216,20 +217,36 @@ class DomainLanguage:
     The language we construct is purely functional - no defining variables or using lambda
     functions, or anything like that.  If you would like to extend this code to handle more complex
     languages, open an issue on github.
+
+    We have rudimentary support for class hierarchies in the types that you provide.  This is done
+    through adding constants multiple times with different types.  For example, say you have a
+    ``Column`` class with ``NumberColumn`` and ``StringColumn`` subclasses.  You can have functions
+    that take the base class ``Column`` as an argument, and other functions that take the
+    subclasses.  These will get types like ``<List[Row],Column:List[str]>`` (for a "select"
+    function that returns whatever cell text is in that column for the given rows), and
+    ``<List[Row],NumberColumn,Number:List[Row]>`` (for a "greater_than" function that returns rows
+    with a value in the column greater than the given number).  These will generate argument types
+    of ``Column`` and ``NumberColumn``, respectively.  ``NumberColumn`` is a subclass of
+    ``Column``, so we want the ``Column`` production to include all ``NumberColumns`` as options.
+    This is done by calling ``add_constant()`` with each ``NumberColumn`` twice: once without a
+    ``type_`` argument (which infers the type as ``NumberColumn``), and once with ``type_=Column``.
+    You can see a concrete example of how this works in the
+    :class:`~allennlp.semparse.domain_languages.wikitables_language.WikiTablesLanguage`.
     """
     def __init__(self,
                  allowed_constants: Dict[str, Any] = None,
                  start_types: Set[Type] = None) -> None:
         self._functions: Dict[str, Callable] = {}
-        self._function_types: Dict[str, PredicateType] = {}
+        self._function_types: Dict[str, List[PredicateType]] = defaultdict(list)
         self._start_types: Set[PredicateType] = set([PredicateType.get_type(type_) for type_ in start_types])
         for name in dir(self):
             if isinstance(getattr(self, name), types.MethodType):
                 function = getattr(self, name)
                 if getattr(function, '_is_predicate', False):
                     self.add_predicate(name, function)
-        for name, value in allowed_constants.items():
-            self.add_constant(name, value)
+        if allowed_constants:
+            for name, value in allowed_constants.items():
+                self.add_constant(name, value)
         # Caching this to avoid recomputing it every time `get_nonterminal_productions` is called.
         self._nonterminal_productions: Dict[str, List[str]] = None
 
@@ -256,16 +273,22 @@ class DomainLanguage:
             actions: Dict[str, Set[str]] = defaultdict(set)
             # If you didn't give us a set of valid start types, we'll assume all types we know
             # about (including functional types) are valid start types.
-            start_types = self._start_types or set(self._function_types.values())
+            if self._start_types:
+                start_types = self._start_types
+            else:
+                start_types = set()
+                for type_list in self._function_types.values():
+                    start_types.update(type_list)
             for start_type in start_types:
                 actions[START_SYMBOL].add(f"{START_SYMBOL} -> {start_type}")
-            for name, function_type in self._function_types.items():
-                actions[str(function_type)].add(f"{function_type} -> {name}")
-                if isinstance(function_type, FunctionType):
-                    return_type = function_type.return_type
-                    arg_types = function_type.argument_types
-                    right_side = f"[{function_type}, {', '.join(str(arg_type) for arg_type in arg_types)}]"
-                    actions[str(return_type)].add(f"{return_type} -> {right_side}")
+            for name, function_type_list in self._function_types.items():
+                for function_type in function_type_list:
+                    actions[str(function_type)].add(f"{function_type} -> {name}")
+                    if isinstance(function_type, FunctionType):
+                        return_type = function_type.return_type
+                        arg_types = function_type.argument_types
+                        right_side = f"[{function_type}, {', '.join(str(arg_type) for arg_type in arg_types)}]"
+                        actions[str(return_type)].add(f"{return_type} -> {right_side}")
             self._nonterminal_productions = {key: sorted(value) for key, value in actions.items()}
         return self._nonterminal_productions
 
@@ -353,9 +376,9 @@ class DomainLanguage:
         return_nltk_type = PredicateType.get_type(return_type)
         function_nltk_type = PredicateType.get_function_type(argument_nltk_types, return_nltk_type)
         self._functions[name] = function
-        self._function_types[name] = function_nltk_type
+        self._function_types[name].append(function_nltk_type)
 
-    def add_constant(self, name: str, value: Any):
+    def add_constant(self, name: str, value: Any, type_: Type = None):
         """
         Adds a constant to this domain language.  You would typically just pass in a list of
         constants to the ``super().__init__()`` call in your constructor, but you can also call
@@ -366,9 +389,10 @@ class DomainLanguage:
         you're doing semantic parsing - we need to be able to search over this space, and compute
         normalized probability distributions.
         """
-        constant_type = PredicateType.get_type(type(value))
+        value_type = type_ if type_ else type(value)
+        constant_type = PredicateType.get_type(value_type)
         self._functions[name] = lambda: value
-        self._function_types[name] = constant_type
+        self._function_types[name].append(constant_type)
 
     def is_nonterminal(self, symbol: str) -> bool:
         """
@@ -399,7 +423,8 @@ class DomainLanguage:
             try:
                 return function(*arguments)
             except (TypeError, ValueError) as error:
-                raise ExecutionError(f"Error executing expression {expression}: {error}")
+                traceback.print_exc()
+                raise ExecutionError(f"Error executing expression {expression} (see stderr for stack trace)")
         elif isinstance(expression, str):
             if expression not in self._functions:
                 raise ExecutionError(f"Unrecognized constant: {expression}")
@@ -411,7 +436,9 @@ class DomainLanguage:
             # `FunctionType` in here, that means we're referring to the function as a first-class
             # object, instead of calling it (maybe as an argument to a higher-order function).  In
             # that case, we return the function _without_ calling it.
-            if isinstance(self._function_types[expression], FunctionType):
+            # Also, we just check the first function type here, because we assume you haven't
+            # registered the same function with both a constant type and a `FunctionType`.
+            if isinstance(self._function_types[expression][0], FunctionType):
                 return self._functions[expression]
             else:
                 return self._functions[expression]()
@@ -437,11 +464,23 @@ class DomainLanguage:
         elif isinstance(expression, str):
             if expression not in self._functions:
                 raise ParsingError(f"Unrecognized constant: {expression}")
-            constant_type = self._function_types[expression]
-            if expected_type and expected_type != constant_type:
-                raise ParsingError(f'{expression} did not have expected type {expected_type} '
-                                   f'(found {constant_type})')
-            return [f'{constant_type} -> {expression}'], constant_type
+            constant_types = self._function_types[expression]
+            if len(constant_types) == 1:
+                constant_type = constant_types[0]
+                # This constant had only one type; that's the easy case.
+                if expected_type and expected_type != constant_type:
+                    raise ParsingError(f'{expression} did not have expected type {expected_type} '
+                                       f'(found {constant_type})')
+                return [f'{constant_type} -> {expression}'], constant_type
+            else:
+                if not expected_type:
+                    raise ParsingError('With no expected type and multiple types to pick from '
+                                       f"I don't know what type to use (constant was {expression})")
+                if expected_type not in constant_types:
+                    raise ParsingError(f'{expression} did not have expected type {expected_type} '
+                                       f'(found these options: {constant_types}; none matched)')
+                return [f'{expected_type} -> {expression}'], expected_type
+
         else:
             raise ParsingError('Not sure how you got here. Please open an issue on github with details.')
 
@@ -466,7 +505,10 @@ class DomainLanguage:
             transitions, function_type = self._get_transitions(expression, None)
         elif expression in self._functions:
             name = expression
-            function_type = self._function_types[expression]
+            function_types = self._function_types[expression]
+            if len(function_types) != 1:
+                raise ParsingError(f"{expression} had multiple types; this is not yet supported for functions")
+            function_type = function_types[0]
             transitions = [f'{function_type} -> {name}']
         else:
             if isinstance(expression, str):
