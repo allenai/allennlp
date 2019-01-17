@@ -73,12 +73,3 @@ def check_for_java() -> bool:
         return 'version' in java_version.decode()
     except FileNotFoundError:
         return False
-
-
-def check_for_data_path(data_path: str, dataset_name: str):
-    data_path = cached_path(data_path)
-    if not os.path.exists(data_path):
-        raise ConfigurationError(f"Experiment specified {dataset_name}, "
-                                 f"but {data_path} doesn't exist.")
-    # We should not check whether `data_path` is a file or not.
-    # Because a directory is also allowed.

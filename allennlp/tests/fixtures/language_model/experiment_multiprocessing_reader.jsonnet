@@ -26,6 +26,7 @@ config + {
     "output_queue_size": 1000
   },
 
+  // Note the glob on the end of these paths.
   "train_data_path": "allennlp/tests/fixtures/language_model/sentences*",
   "validation_data_path": "allennlp/tests/fixtures/language_model/sentences*",
   "test_data_path": "allennlp/tests/fixtures/language_model/sentences*",
