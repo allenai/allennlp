@@ -47,10 +47,12 @@ class LearningRateSchedulersTest(AllenNlpTestCase):
         optimizer = scheduler.lr_scheduler.optimizer
         # Initial learning rate should be unchanged for first epoch.
         assert optimizer.param_groups[0]["lr"] == 1.0
-        # After first epoch (epoch id 0), take step. LR should be updated to prepare
-        # for the second epoch.
+        # But since the way PyTorch LR schedulers work is a little wonky,
+        # the LR will also be unchanged for the second epoch (epoch id 0).
         scheduler.step(epoch=0)
-        assert optimizer.param_groups[0]["lr"] == 0.5
-        # End of second epoch (epoch id 1), LR should be updated to prepare for third epoch.
+        assert optimizer.param_groups[0]["lr"] == 1.0
+        # Now the learning rate starts to be updated...
         scheduler.step(epoch=1)
+        assert optimizer.param_groups[0]["lr"] == 0.5
+        scheduler.step(epoch=2)
         assert optimizer.param_groups[0]["lr"] == 0.5 ** 2
