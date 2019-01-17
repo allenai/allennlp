@@ -281,3 +281,31 @@ class TestEmbedding(AllenNlpTestCase):
         extended_weight = embedder.weight
         assert extended_weight.shape[0] == 5
         assert torch.all(extended_weight[:4, :] == original_weight[:4, :])
+
+    def test_embedding_vocab_extension_works_with_pretrained_embedding_file(self):
+        vocab = Vocabulary()
+        vocab.add_token_to_namespace('word1')
+        vocab.add_token_to_namespace('word2')
+
+        embeddings_filename = str(self.TEST_DIR / "embeddings2.gz")
+        with gzip.open(embeddings_filename, 'wb') as embeddings_file:
+            embeddings_file.write("word3 0.5 0.3 -6.0\n".encode('utf-8'))
+            embeddings_file.write("word4 1.0 2.3 -1.0\n".encode('utf-8'))
+            embeddings_file.write("word2 0.1 0.4 -4.0\n".encode('utf-8'))
+            embeddings_file.write("word1 1.0 2.3 -1.0\n".encode('utf-8'))
+
+        embedding_params = Params({"vocab_namespace": "tokens", "embedding_dim": 3,
+                                   "pretrained_file": embeddings_filename})
+        embedder = Embedding.from_params(vocab, embedding_params)
+        original_weight = embedder.weight
+
+        assert tuple(original_weight.size()) == (4, 3)  # 4 because of padding and OOV
+
+        vocab.add_token_to_namespace('word3')
+        embedder.extend_vocab(vocab, pretrained_file=embeddings_filename) # default namespace
+        extended_weight = embedder.weight
+
+        extended_weight = embedder.weight
+        assert extended_weight.shape[0] == 5
+        assert torch.all(original_weight[:4, :] == extended_weight[:4, :])
+        assert torch.all(extended_weight[4, :] == torch.tensor([0.5, 0.3, -6.0]))

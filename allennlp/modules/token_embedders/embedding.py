@@ -147,10 +147,14 @@ class Embedding(TokenEmbedder):
         return embedded
 
     @overrides
-    def extend_vocab(self, extended_vocab: Vocabulary, vocab_namespace: str = None):
+    def extend_vocab(self,
+                     extended_vocab: Vocabulary,
+                     vocab_namespace: str = None,
+                     pretrained_file: str = None):
         """
         Extends the embedding matrix according to the extended vocabulary.
-        Extended weight would be initialized with xavier uniform.
+        If pretrained_file is available, it will be used for extented weight
+        or else it would be initialized with xavier uniform.
 
         Parameters
         ----------
@@ -162,6 +166,10 @@ class Embedding(TokenEmbedder):
             can pass it. If not passed, it will check if vocab_namespace used at the
             time of ``Embedding`` construction is available. If so, this namespace
             will be used or else default 'tokens' namespace will be used.
+        pretrained_file : str, (optional, default=None)
+            A file containing pretrained embeddings can be specified here. It can be
+            the path to a local file or an URL of a (cached) remote file. Check format
+            details in ``from_params`` of ``Embedding`` class.
         """
         # Caveat: For allennlp v0.8.1 and below, we weren't storing vocab_namespace as an attribute,
         # knowing which is necessary at time of embedding vocab extension. So old archive models are
@@ -172,11 +180,17 @@ class Embedding(TokenEmbedder):
             vocab_namespace = "tokens"
             logging.warning("No vocab_namespace provided to Embedder.extend_vocab. Defaulting to 'tokens'.")
 
-        extended_num_embeddings = extended_vocab.get_vocab_size(vocab_namespace)
-        extra_num_embeddings = extended_num_embeddings - self.num_embeddings
         embedding_dim = self.weight.data.shape[-1]
-        extra_weight = torch.FloatTensor(extra_num_embeddings, embedding_dim)
-        torch.nn.init.xavier_uniform_(extra_weight)
+        if not pretrained_file:
+            extended_num_embeddings = extended_vocab.get_vocab_size(vocab_namespace)
+            extra_num_embeddings = extended_num_embeddings - self.num_embeddings
+            extra_weight = torch.FloatTensor(extra_num_embeddings, embedding_dim)
+            torch.nn.init.xavier_uniform_(extra_weight)
+        else:
+            whole_weight = _read_pretrained_embeddings_file(pretrained_file, embedding_dim,
+                                                            extended_vocab, vocab_namespace)
+            extra_weight = whole_weight[self.num_embeddings:, :]
+
         extended_weight = torch.cat([self.weight.data, extra_weight], dim=0)
         self.weight = torch.nn.Parameter(extended_weight, requires_grad=self.weight.requires_grad)
 
