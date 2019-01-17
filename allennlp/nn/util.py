@@ -592,9 +592,9 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
     If ``average is None``, the returned loss is a vector of shape (batch_size,).
 
     """
-    if average not in {None, "token", "batch"}:
+    if average not in {None, "token", "batch", "sum"}:
         raise ValueError("Got average f{average}, expected one of "
-                         "None, 'token', or 'batch'")
+                         "None, 'token', 'batch', or 'sum'")
 
     # shape : (batch * sequence_length, num_classes)
     logits_flat = logits.view(-1, logits.size(-1))
@@ -629,6 +629,8 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
         return per_batch_loss.sum() / num_non_empty_sequences
     elif average == "token":
         return negative_log_likelihood.sum() / (weights.sum().float() + 1e-13)
+    elif average == "sum":
+        return negative_log_likelihood.sum(1)
     else:
         # shape : (batch_size,)
         per_batch_loss = negative_log_likelihood.sum(1) / (weights.sum(1).float() + 1e-13)

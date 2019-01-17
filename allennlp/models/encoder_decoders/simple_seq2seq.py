@@ -304,8 +304,15 @@ class SimpleSeq2Seq(Model):
         source_mask = state["source_mask"]
 
         batch_size = source_mask.size()[0]
+        # shape: (batch_size, max_target_sequence_length)
+        target_mask = util.get_text_field_mask(target_tokens)
+        weights = target_mask[:,1:]
 
         if target_tokens:
+            loss = 0.0
+            """
+            Incremental loss computation to save memory.
+            """
             # shape: (batch_size, max_target_sequence_length)
             targets = target_tokens["tokens"]
 
@@ -321,7 +328,6 @@ class SimpleSeq2Seq(Model):
         # shape: (batch_size,)
         last_predictions = source_mask.new_full((batch_size,), fill_value=self._start_index)
 
-        step_logits: List[torch.Tensor] = []
         step_predictions: List[torch.Tensor] = []
         for timestep in range(num_decoding_steps):
             if self.training and torch.rand(1).item() < self._scheduled_sampling_ratio:
@@ -338,15 +344,20 @@ class SimpleSeq2Seq(Model):
 
             # shape: (batch_size, num_classes)
             output_projections, state = self._prepare_output_projections(input_choices, state)
+            if target_tokens:
+                """
+                Targets and their mask include the start tokens. So increment by 1 to skip them.
+                The following is a bit complicated to do the same normalization incrementally without carrying around a matrix.
+                target_mask[:, timestep+1] gives us the mask for the particular time step.
+                weights.sum(1) gives us the number of target words for each example in the batch
+                """
+                loss += (util.sequence_cross_entropy_with_logits(output_projections, targets[:, timestep+1].unsqueeze(1), target_mask[:, timestep+1].unsqueeze(1), average="sum")/(weights.sum(1).float() + 1e-13)).sum()
 
-            # list of tensors, shape: (batch_size, 1, num_classes)
-            step_logits.append(output_projections.unsqueeze(1))
-
-            # shape: (batch_size, num_classes)
-            class_probabilities = F.softmax(output_projections, dim=-1)
-
+            """
+            Max is still the same for the unnormalized matrix. Avoid applying softmax normalization twice (already done in the cross entropy loss).
+            """
             # shape (predicted_classes): (batch_size,)
-            _, predicted_classes = torch.max(class_probabilities, 1)
+            _, predicted_classes = torch.max(output_projections, 1)
 
             # shape (predicted_classes): (batch_size,)
             last_predictions = predicted_classes
@@ -359,12 +370,8 @@ class SimpleSeq2Seq(Model):
         output_dict = {"predictions": predictions}
 
         if target_tokens:
-            # shape: (batch_size, num_decoding_steps, num_classes)
-            logits = torch.cat(step_logits, 1)
-
-            # Compute loss.
-            target_mask = util.get_text_field_mask(target_tokens)
-            loss = self._get_loss(logits, targets, target_mask)
+            num_non_empty_sequences = ((weights.sum(1) > 0).float().sum() + 1e-13)
+            loss /= num_non_empty_sequences
             output_dict["loss"] = loss
 
         return output_dict
@@ -452,6 +459,7 @@ class SimpleSeq2Seq(Model):
         attended_input = util.weighted_sum(encoder_outputs, input_weights)
 
         return attended_input
+    
 
     @staticmethod
     def _get_loss(logits: torch.LongTensor,
