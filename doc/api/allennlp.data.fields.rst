@@ -104,3 +104,9 @@ allennlp.data.fields
    :members:
    :undoc-members:
    :show-inheritance:
+
+.. _namespace-swapping-field:
+.. automodule:: allennlp.data.fields.namespace_swapping_field
+   :members:
+   :undoc-members:
+   :show-inheritance:

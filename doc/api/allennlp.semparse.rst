@@ -18,4 +18,5 @@ allennlp.semparse
    allennlp.semparse.type_declarations
    allennlp.semparse.worlds
    allennlp.semparse.executors
+   allennlp.semparse.domain_languages
    allennlp.semparse.util

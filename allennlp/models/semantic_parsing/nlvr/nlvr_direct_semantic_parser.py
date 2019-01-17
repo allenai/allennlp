@@ -11,7 +11,7 @@ from allennlp.models.model import Model
 from allennlp.models.semantic_parsing.nlvr.nlvr_semantic_parser import NlvrSemanticParser
 from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
 from allennlp.nn import Activation
-from allennlp.semparse.worlds import NlvrWorld
+from allennlp.semparse.domain_languages import NlvrLanguage
 from allennlp.state_machines import BeamSearch
 from allennlp.state_machines.states import GrammarBasedState
 from allennlp.state_machines.trainers import MaximumMarginalLikelihood
@@ -79,7 +79,7 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
     @overrides
     def forward(self,  # type: ignore
                 sentence: Dict[str, torch.LongTensor],
-                worlds: List[List[NlvrWorld]],
+                worlds: List[List[NlvrLanguage]],
                 actions: List[List[ProductionRule]],
                 identifier: List[str] = None,
                 target_action_sequences: torch.LongTensor = None,
@@ -159,7 +159,7 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
 
     def _update_metrics(self,
                         action_strings: List[List[List[str]]],
-                        worlds: List[List[NlvrWorld]],
+                        worlds: List[List[NlvrLanguage]],
                         label_strings: List[List[str]]) -> None:
         # TODO(pradeep): Move this to the base class.
         # TODO(pradeep): Using only the best decoded sequence. Define metrics for top-k sequences?

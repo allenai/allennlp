@@ -1,0 +1,53 @@
+{
+    "dataset_reader": {
+      "type": "conll2003",
+      "tag_label": "ner",
+      "token_indexers": {
+        "tokens": {
+          "type": "single_id",
+          "lowercase_tokens": true
+        },
+        "elmo": {
+          "type": "elmo_characters"
+        }
+      }
+    },
+    "train_data_path": "allennlp/tests/fixtures/data/conll2003.txt",
+    "validation_data_path": "allennlp/tests/fixtures/data/conll2003.txt",
+    "model": {
+      "type": "crf_tagger",
+      "text_field_embedder": {
+        "token_embedders": {
+          "tokens": {
+            "type": "embedding",
+            "embedding_dim": 50
+          },
+          "elmo": {
+            "type": "language_model_token_embedder",
+            "archive_file": "allennlp/tests/fixtures/language_model/model.tar.gz",
+            "dropout": 0.2,
+            "bos_eos_tokens": ["<S>", "</S>"],
+            "remove_bos_eos": true,
+            "requires_grad": true
+          }
+        }
+      },
+      "encoder": {
+              "type": "gru",
+              "input_size": 82,
+              "hidden_size": 25,
+              "num_layers": 2,
+              "dropout": 0.5,
+              "bidirectional": true
+      },
+      "regularizer": [
+        ["transitions$", {"type": "l2", "alpha": 0.01}]
+      ]
+    },
+    "iterator": {"type": "basic", "batch_size": 32},
+    "trainer": {
+      "optimizer": "adam",
+      "num_epochs": 5,
+      "cuda_device": -1
+    }
+  }
