@@ -140,7 +140,6 @@ local BASE_ITERATOR = {
       // Adjusted based on our sample size relative to Calypso's.
       "warmup_steps": 6000
     },
-    "should_log_parameter_statistics": true,
     "should_log_learning_rate": true
   }
 }
