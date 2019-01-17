@@ -38,9 +38,7 @@ class TokenCharactersEncoder(TokenEmbedder):
         return self._dropout(self._encoder(self._embedding(token_characters), mask))
 
     @overrides
-    def extend_vocab(self, extended_vocab: Vocabulary, vocab_namespace: Optional[str] = None):
-        if not vocab_namespace:
-            vocab_namespace = "token_characters"
+    def extend_vocab(self, extended_vocab: Vocabulary, vocab_namespace: Optional[str] = "token_characters"):
         self._embedding._module.extend_vocab(extended_vocab, vocab_namespace) # pylint: disable=protected-access
 
     # The setdefault requires a custom from_params
