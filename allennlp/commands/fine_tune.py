@@ -61,9 +61,9 @@ class FineTune(Subcommand):
                                action='store_true',
                                default=False,
                                help='if specified, we will use the instances in your new dataset to '
-                                    'extend your vocabulary. Currently expansion of embedding layers '
-                                    'is not implemented, so if your model has an embedding layer '
-                                    'this will probably make fine-tune crash.')
+                                    'extend your vocabulary. Extension of embedding layers is implemented, '
+                                    'but it does not initialize the extra tokens from pretrained embedding file, '
+                                    'which could have been used to initialize embedding layers during training.')
 
         subparser.add_argument('--file-friendly-logging',
                                action='store_true',
