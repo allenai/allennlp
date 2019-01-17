@@ -53,7 +53,7 @@ class TestFineTune(AllenNlpTestCase):
 
         assert tuple(original_weight.shape) == (24, 300)
         assert tuple(extended_weight.shape) == (25, 300)
-        assert torch.all(original_weight == extended_weight[:24,:])
+        assert torch.all(original_weight == extended_weight[:24, :])
 
     def test_fine_tune_runs_from_parser_arguments(self):
         raw_args = ["fine-tune",
