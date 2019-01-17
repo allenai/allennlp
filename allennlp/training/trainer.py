@@ -437,7 +437,7 @@ class Trainer(TrainerBase):
                         logger.info("Ran out of patience.  Stopping training.")
                         break
 
-            self._tensorboard.log_metrics(train_metrics, val_metrics=val_metrics)
+            self._tensorboard.log_metrics(train_metrics, val_metrics=val_metrics, log_to_console=True)
 
             # Create overall metrics dict
             training_elapsed_time = time.time() - training_start_time
