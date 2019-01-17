@@ -39,6 +39,28 @@ class TestNnUtil(AllenNlpTestCase):
         lengths = util.get_lengths_from_binary_sequence_mask(binary_mask)
         numpy.testing.assert_array_equal(lengths.data.numpy(), numpy.array([260, 260]))
 
+    def test_clamp_tensor(self):
+        # Test on uncoalesced sparse tensor
+        i = torch.LongTensor([[0, 1, 1, 0],
+                              [2, 0, 2, 2]])
+        v = torch.FloatTensor([3, 4, -5, 3])
+        tensor = torch.sparse.FloatTensor(i, v, torch.Size([2, 3]))
+        clamped_tensor = util.clamp_tensor(tensor, minimum=-3, maximum=3).to_dense()
+        assert_almost_equal(clamped_tensor, [[0, 0, 3], [3, 0, -3]])
+
+        # Test on coalesced sparse tensor
+        i = torch.LongTensor([[0, 1, 1],
+                              [2, 0, 2]])
+        v = torch.FloatTensor([3, 4, -5])
+        tensor = torch.sparse.FloatTensor(i, v, torch.Size([2, 3]))
+        clamped_tensor = util.clamp_tensor(tensor, minimum=-3, maximum=3).to_dense()
+        assert_almost_equal(clamped_tensor, [[0, 0, 3], [3, 0, -3]])
+
+        # Test on dense tensor
+        tensor = torch.tensor([[5, -4, 3], [-3, 0, -30]])
+        clamped_tensor = util.clamp_tensor(tensor, minimum=-3, maximum=3)
+        assert_almost_equal(clamped_tensor, [[3, -3, 3], [-3, 0, -3]])
+
     def test_sort_tensor_by_length(self):
         tensor = torch.rand([5, 7, 9])
         tensor[0, 3:, :] = 0
@@ -310,7 +332,6 @@ class TestNnUtil(AllenNlpTestCase):
                 "token_characters": torch.LongTensor([[[1, 2], [3, 0], [2, 0], [0, 0], [0, 0]],
                                                       [[5, 0], [4, 6], [0, 0], [0, 0], [0, 0]]])
         }
-
         assert_almost_equal(util.get_text_field_mask(text_field_tensors).numpy(),
                             [[1, 1, 1, 0, 0], [1, 1, 0, 0, 0]])
 

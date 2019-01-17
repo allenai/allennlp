@@ -1,4 +1,5 @@
 # pylint: disable=invalid-name,too-many-public-methods
+import copy
 import glob
 import json
 import os
@@ -11,8 +12,10 @@ import pytest
 from allennlp.common.checks import ConfigurationError
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.training.trainer import Trainer, sparse_clip_norm, is_sparse
+from allennlp.training import Trainer
+from allennlp.training.trainer_base import TrainerBase
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
+from allennlp.training.util import sparse_clip_norm
 from allennlp.data import Vocabulary
 from allennlp.common.params import Params
 from allennlp.models.simple_tagger import SimpleTagger
@@ -23,7 +26,7 @@ from allennlp.models.model import Model
 
 class TestTrainer(AllenNlpTestCase):
     def setUp(self):
-        super(TestTrainer, self).setUp()
+        super().setUp()
         self.instances = SequenceTaggingDatasetReader().read(self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv')
         vocab = Vocabulary.from_instances(self.instances)
         self.vocab = vocab
@@ -140,11 +143,13 @@ class TestTrainer(AllenNlpTestCase):
                               validation_dataset=self.instances,
                               num_epochs=3, serialization_dir=self.TEST_DIR)
 
-        epoch, val_metrics_per_epoch = new_trainer._restore_checkpoint()  # pylint: disable=protected-access
+        epoch = new_trainer._restore_checkpoint()  # pylint: disable=protected-access
         assert epoch == 1
-        assert len(val_metrics_per_epoch) == 1
-        assert isinstance(val_metrics_per_epoch[0], float)
-        assert val_metrics_per_epoch[0] != 0.
+
+        tracker = trainer._metric_tracker  # pylint: disable=protected-access
+        assert tracker.is_best_so_far()
+        assert tracker._best_so_far is not None  # pylint: disable=protected-access
+
         new_trainer.train()
 
     def test_metric_only_considered_best_so_far_when_strictly_better_than_those_before_it_increasing_metric(
@@ -154,14 +159,28 @@ class TestTrainer(AllenNlpTestCase):
                               validation_dataset=self.instances,
                               num_epochs=3, serialization_dir=self.TEST_DIR,
                               patience=5, validation_metric="+test")
+        tracker = new_trainer._metric_tracker  # pylint: disable=protected-access
+
         # when it is the only metric it should be considered the best
-        assert new_trainer._is_best_so_far(1, [])  # pylint: disable=protected-access
+        new_tracker = copy.deepcopy(tracker)
+        new_tracker.add_metric(1)
+        assert new_tracker.is_best_so_far()
+
         # when it is the same as one before it it is not considered the best
-        assert not new_trainer._is_best_so_far(.3, [.3, .3, .3, .2, .5, .1])  # pylint: disable=protected-access
+        new_tracker = copy.deepcopy(tracker)
+        new_tracker.add_metrics([.3, .3, .3, .2, .5, .1, .3])
+        assert not new_tracker.is_best_so_far()
+
         # when it is the best it is considered the best
-        assert new_trainer._is_best_so_far(13.00, [.3, .3, .3, .2, .5, .1])  # pylint: disable=protected-access
+        new_tracker = copy.deepcopy(tracker)
+        new_tracker.add_metrics([.3, .3, .3, .2, .5, .1, 13])
+        assert new_tracker.is_best_so_far()
+
         # when it is not the the best it is not considered the best
-        assert not new_trainer._is_best_so_far(.0013, [.3, .3, .3, .2, .5, .1])  # pylint: disable=protected-access
+        new_tracker = copy.deepcopy(tracker)
+        new_tracker.add_metrics([.3, .3, .3, .2, .5, .1, .0013])
+        assert not new_tracker.is_best_so_far()
+
 
     def test_metric_only_considered_best_so_far_when_strictly_better_than_those_before_it_decreasing_metric(self):
         new_trainer = Trainer(self.model, self.optimizer,
@@ -169,14 +188,26 @@ class TestTrainer(AllenNlpTestCase):
                               validation_dataset=self.instances,
                               num_epochs=3, serialization_dir=self.TEST_DIR,
                               patience=5, validation_metric="-test")
+        tracker = new_trainer._metric_tracker  # pylint: disable=protected-access
+
         # when it is the only metric it should be considered the best
-        assert new_trainer._is_best_so_far(1, [])  # pylint: disable=protected-access
+        new_tracker = copy.deepcopy(tracker)
+        new_tracker.add_metric(1)
+        assert new_tracker.is_best_so_far()
+
         # when it is the same as one before it it is not considered the best
-        assert not new_trainer._is_best_so_far(.3, [.3, .3, .3, .2, .5, .1])  # pylint: disable=protected-access
+        new_tracker = copy.deepcopy(tracker)
+        new_tracker.add_metrics([.3, .3, .3, .2, .5, .1, .3])
+        assert not new_tracker.is_best_so_far()
+
         # when it is the best it is considered the best
-        assert new_trainer._is_best_so_far(.013, [.3, .3, .3, .2, .5, .1])  # pylint: disable=protected-access
+        new_tracker = copy.deepcopy(tracker)
+        new_tracker.add_metrics([.3, .3, .3, .2, .5, .1, 0.0013])
+        assert new_tracker.is_best_so_far()
+
         # when it is not the the best it is not considered the best
-        assert not new_trainer._is_best_so_far(13.00, [.3, .3, .3, .2, .5, .1])  # pylint: disable=protected-access
+        new_tracker = copy.deepcopy(tracker)
+        new_tracker.add_metrics([.3, .3, .3, .2, .5, .1, 13])
 
     def test_should_stop_early_with_increasing_metric(self):
         new_trainer = Trainer(self.model, self.optimizer,
@@ -184,25 +215,39 @@ class TestTrainer(AllenNlpTestCase):
                               validation_dataset=self.instances,
                               num_epochs=3, serialization_dir=self.TEST_DIR,
                               patience=5, validation_metric="+test")
-        assert new_trainer._should_stop_early([.5, .3, .2, .1, .4, .4])  # pylint: disable=protected-access
-        assert not new_trainer._should_stop_early([.3, .3, .3, .2, .5, .1])  # pylint: disable=protected-access
+
+        tracker = new_trainer._metric_tracker  # pylint: disable=protected-access
+
+        new_tracker = copy.deepcopy(tracker)
+        new_tracker.add_metrics([.5, .3, .2, .1, .4, .4])
+        assert new_tracker.should_stop_early()
+
+        new_tracker = copy.deepcopy(tracker)
+        new_tracker.add_metrics([.3, .3, .3, .2, .5, .1])
+        assert not new_tracker.should_stop_early()
 
     def test_should_stop_early_with_flat_lining_metric(self):
+        # pylint: disable=protected-access
         flatline = [.2] * 6
-        assert Trainer(self.model, self.optimizer,  # pylint: disable=protected-access
-                       self.iterator, self.instances,
-                       validation_dataset=self.instances,
-                       num_epochs=3,
-                       serialization_dir=self.TEST_DIR,
-                       patience=5,
-                       validation_metric="+test")._should_stop_early(flatline)  # pylint: disable=protected-access
-        assert Trainer(self.model, self.optimizer,  # pylint: disable=protected-access
-                       self.iterator, self.instances,
-                       validation_dataset=self.instances,
-                       num_epochs=3,
-                       serialization_dir=self.TEST_DIR,
-                       patience=5,
-                       validation_metric="-test")._should_stop_early(flatline)  # pylint: disable=protected-access
+        tracker = Trainer(self.model, self.optimizer,
+                          self.iterator, self.instances,
+                          validation_dataset=self.instances,
+                          num_epochs=3,
+                          serialization_dir=self.TEST_DIR,
+                          patience=5,
+                          validation_metric="+test")._metric_tracker
+        tracker.add_metrics(flatline)
+        assert tracker.should_stop_early
+
+        tracker = Trainer(self.model, self.optimizer,
+                          self.iterator, self.instances,
+                          validation_dataset=self.instances,
+                          num_epochs=3,
+                          serialization_dir=self.TEST_DIR,
+                          patience=5,
+                          validation_metric="-test")._metric_tracker
+        tracker.add_metrics(flatline)
+        assert tracker.should_stop_early
 
     def test_should_stop_early_with_decreasing_metric(self):
         new_trainer = Trainer(self.model, self.optimizer,
@@ -210,24 +255,36 @@ class TestTrainer(AllenNlpTestCase):
                               validation_dataset=self.instances,
                               num_epochs=3, serialization_dir=self.TEST_DIR,
                               patience=5, validation_metric="-test")
-        assert new_trainer._should_stop_early([.02, .3, .2, .1, .4, .4])  # pylint: disable=protected-access
-        assert not new_trainer._should_stop_early([.3, .3, .2, .1, .4, .5])  # pylint: disable=protected-access
-        assert new_trainer._should_stop_early([.1, .3, .2, .1, .4, .5])  # pylint: disable=protected-access
+        tracker = new_trainer._metric_tracker  # pylint: disable=protected-access
+
+        new_tracker = copy.deepcopy(tracker)
+        new_tracker.add_metrics([.02, .3, .2, .1, .4, .4])
+        assert new_tracker.should_stop_early()
+
+        new_tracker = copy.deepcopy(tracker)
+        new_tracker.add_metrics([.3, .3, .2, .1, .4, .5])
+        assert not new_tracker.should_stop_early()
+
+        new_tracker = copy.deepcopy(tracker)
+        new_tracker.add_metrics([.1, .3, .2, .1, .4, .5])
+        assert new_tracker.should_stop_early()
 
     def test_should_stop_early_with_early_stopping_disabled(self):
         # Increasing metric
         trainer = Trainer(self.model, self.optimizer, self.iterator, self.instances,
                           validation_dataset=self.instances, num_epochs=100,
                           patience=None, validation_metric="+test")
-        decreasing_history = [float(i) for i in reversed(range(20))]
-        assert not trainer._should_stop_early(decreasing_history)  # pylint: disable=protected-access
+        tracker = trainer._metric_tracker  # pylint: disable=protected-access
+        tracker.add_metrics([float(i) for i in reversed(range(20))])
+        assert not tracker.should_stop_early()
 
         # Decreasing metric
         trainer = Trainer(self.model, self.optimizer, self.iterator, self.instances,
                           validation_dataset=self.instances, num_epochs=100,
                           patience=None, validation_metric="-test")
-        increasing_history = [float(i) for i in range(20)]
-        assert not trainer._should_stop_early(increasing_history)  # pylint: disable=protected-access
+        tracker = trainer._metric_tracker  # pylint: disable=protected-access
+        tracker.add_metrics([float(i) for i in range(20)])
+        assert not tracker.should_stop_early()
 
     def test_should_stop_early_with_invalid_patience(self):
         for patience in [0, -1, -2, 1.5, 'None']:
@@ -272,17 +329,17 @@ class TestTrainer(AllenNlpTestCase):
                               train_dataset=self.instances,
                               validation_dataset=self.instances,
                               num_epochs=4, serialization_dir=self.TEST_DIR)
-        epoch, _ = new_trainer._restore_checkpoint()
+        epoch = new_trainer._restore_checkpoint()
         assert epoch == 2
         assert new_trainer._learning_rate_scheduler.lr_scheduler.last_epoch == 1
         new_trainer.train()
 
     def test_trainer_raises_on_model_with_no_loss_key(self):
-        class FakeModel(torch.nn.Module):
+        class FakeModel(Model):
             def forward(self, **kwargs):  # pylint: disable=arguments-differ,unused-argument
                 return {}
         with pytest.raises(RuntimeError):
-            trainer = Trainer(FakeModel(), self.optimizer,
+            trainer = Trainer(FakeModel(None), self.optimizer,
                               self.iterator, self.instances,
                               num_epochs=2, serialization_dir=self.TEST_DIR)
             trainer.train()
@@ -408,11 +465,16 @@ class TestTrainer(AllenNlpTestCase):
                                   self.iterator, self.instances, num_epochs=2,
                                   serialization_dir=self.TEST_DIR,
                                   model_save_interval=0.0001)
-        epoch, _ = restore_trainer._restore_checkpoint()  # pylint: disable=protected-access
+        epoch = restore_trainer._restore_checkpoint()  # pylint: disable=protected-access
         assert epoch == 2
         # One batch per epoch.
         assert restore_trainer._batch_num_total == 2  # pylint: disable=protected-access
 
+    def test_trainer_from_base_class_params(self):
+        params = Params.from_file(self.FIXTURES_ROOT / 'simple_tagger' / 'experiment.json')
+
+        # Can instantiate from base class params
+        TrainerBase.from_params(params, self.TEST_DIR)
 
 class TestSparseClipGrad(AllenNlpTestCase):
     def test_sparse_clip_grad(self):
@@ -425,7 +487,7 @@ class TestSparseClipGrad(AllenNlpTestCase):
         ids[:5] = 5
         loss = embedding(ids).sum()
         loss.backward()
-        assert is_sparse(embedding.weight.grad)
+        assert embedding.weight.grad.is_sparse  # pylint: disable=no-member
 
         # Now try to clip the gradients.
         _ = sparse_clip_norm([embedding.weight], 1.5)
