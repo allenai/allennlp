@@ -115,6 +115,7 @@ class MultiQAPreprocess():
                  use_rank,
                  require_answer_in_doc,
                  require_answer_in_question) -> None:
+        self._DEBUG = True
         self._tokenizer = WordTokenizer()
         self._token_indexers = {'tokens': SingleIdTokenIndexer()}
         self._max_num_docs = max_context_docs
@@ -157,7 +158,6 @@ class MultiQAPreprocess():
                 yield (part_num, ind, snippet)
                 part_num += 1
 
-
     def compute_token_answer_starts(self, qas, doc_ind, part_type,part_num, part_text, part_tokens):
         part_offsets = [(token[1], token[1] + len(token[0])) for token in part_tokens]
         for qa in qas:
@@ -178,43 +178,139 @@ class MultiQAPreprocess():
                                 self._total_answers += 1
         return qas
     
-    def update_answer_docid(self,new_qas, qas, curr_doc_ind, org_doc_ind ,part_num, org_part_num):
+    def update_answer_docid(self,ans_start_updated_qas, qas, curr_doc_ind, org_doc_ind ,part_num, org_part_num):
         for qa_ind, qa in enumerate(qas):
             for ans_ind, answer in enumerate(qa['answers']):
                 for alias_ind, alias in enumerate(answer['aliases']):
                     for ind, alias_start in enumerate(alias['token_answer_starts']):
                         if alias_start[0] == org_doc_ind and alias_start[1] == org_part_num:
-                           new_qas[qa_ind]['answers'][ans_ind]['aliases'][alias_ind]['token_answer_starts'][ind] \
+                           ans_start_updated_qas[qa_ind]['answers'][ans_ind]['aliases'][alias_ind]['token_answer_starts'][ind] \
                                 = (curr_doc_ind, part_num, alias_start[2], alias_start[3])
-        return new_qas
+        return ans_start_updated_qas
+
+    def update_answer_part_split(self,ans_start_updated_qas, qas, org_doc_ind, org_part_ind, new_parts):
+        # This is a bit tricky, we are essentially adding new parts so
+        # we need to update the answers start for newly added parts (only tokens are important here),
+        # and increment the rest of the parts by the amount of newly added parts
+        # NOTE we are assuming the title will not be split.
+
+        for qa_ind, qa in enumerate(qas):
+            for ans_ind, answer in enumerate(qa['answers']):
+                for alias_ind, alias in enumerate(answer['aliases']):
+                    for ind, alias_start in enumerate(alias['token_answer_starts']):
+                        if alias_start[0] == org_doc_ind:
+                           update_alias = ans_start_updated_qas[qa_ind]['answers'][ans_ind]['aliases'][alias_ind]['token_answer_starts'][ind]
+                           if alias_start[1] == org_part_ind:
+                               for part_ind, new_part in enumerate(new_parts):
+                                   if new_part['part_start_org_start'] <= alias_start[2] and \
+                                      alias_start[3] <= new_part['part_start_org_end']:
+                                       ans_start_updated_qas[qa_ind]['answers'][ans_ind]['aliases'][alias_ind]['token_answer_starts'][ind] \
+                                           = (org_doc_ind, update_alias[1] + part_ind, \
+                                                update_alias[2] - new_part['part_start_org_start'], \
+                                                update_alias[3] - new_part['part_start_org_start'])
+                                       if self._DEBUG and len(new_part['tokens']) \
+                                               < update_alias[3] - new_part['part_start_org_start']:
+                                           raise (ValueError)
+                                       break
+                                   # we couldn't find a part that the answer is contained in ...
+                                   if part_ind == len(new_parts) - 1:
+                                        raise(ValueError)
+                           elif alias_start[1] > org_part_ind:
+                               # increment parts after by 1
+                               ans_start_updated_qas[qa_ind]['answers'][ans_ind]['aliases'][alias_ind]['token_answer_starts'][ind] \
+                                   = (org_doc_ind, update_alias[1] + len(new_parts) - 1, update_alias[2], update_alias[3])
+
+        return ans_start_updated_qas
+
+    def split_part(self, part, ans_start_updated_qas, qas, org_doc_ind, org_part_ind):
+
+        # this situation is not ideal for we don't have any good way to split
+        # paragraphs. we will try using sentences by utilizing the endline "." token
+        new_parts = []
+        created_part = None
+        last_split_token = 0
+        last_split_char = 0
+
+        # iterating over sentences (end with '.' tokens) + one for the end of the text / part
+        newline_tokens = [(ind, token) for ind, token in enumerate(part['tokens']) if token[0] == '.'] + \
+                        [(len(part['tokens']),('.',len(part['text'])))] * 2
+        for ind, sentence_end in enumerate(newline_tokens):
+            # check if to split + part SEP + _PARA_SEP
+            if sentence_end[0] - last_split_token + 2 > self._max_doc_size or ind  == len(newline_tokens) - 1:
+                chosen_splitpoint = newline_tokens[ind-1]
+                # splitting the original document
+                new_parts.append({'part': part['part'],
+                    'part_start_org_start':last_split_token,
+                    'part_start_org_end': chosen_splitpoint[0],
+                    'text': part['text'][last_split_char:chosen_splitpoint[1][1]],
+                    'tokens':[(token[0],token[1] - last_split_char) \
+                              for token in part['tokens'][last_split_token:chosen_splitpoint[0]]]})
+
+                if self._DEBUG and len(new_parts[-1]['tokens']) > self._max_doc_size:
+                    assert (ValueError)
+                last_split_char = chosen_splitpoint[1][1]
+                last_split_token = chosen_splitpoint[0]
+
+        ans_start_updated_qas = self.update_answer_part_split(ans_start_updated_qas, qas, org_doc_ind, org_part_ind, new_parts)
+
+        return ans_start_updated_qas, new_parts
     
+    def ensure_parts_size(self, document, context, new_documents, ans_start_updated_qas, org_doc_ind):
+        # split parts that are too larger than self._max_doc_size
+        sized_parts = []
+        part_split_performed = False
+        for part_ind, part in enumerate(document['parts']):
+            # checking part size + part SEP + _PARA_SEP
+            if len(part['tokens']) + 2 > self._max_doc_size:
+                ans_start_updated_qas, new_parts = self.split_part(part, ans_start_updated_qas, context['qas'], org_doc_ind, part_ind)
+                sized_parts += new_parts
+                part_split_performed = True
+            else:
+                sized_parts.append(part)
+        if part_split_performed:
+            context['qas'] = ans_start_updated_qas
+            document['parts'] = sized_parts
+            ans_start_updated_qas = copy.deepcopy(context['qas'])
+            new_documents = copy.deepcopy(context['documents'])
+
+        return new_documents, ans_start_updated_qas
+
     def split_documents(self, context):
-        new_qas = copy.deepcopy(context['qas'])
+        ans_start_updated_qas = copy.deepcopy(context['qas'])
         new_documents = copy.deepcopy(context['documents'])
         for org_doc_ind, document in enumerate(context['documents']):
-            if document['num_of_tokens'] > self._max_doc_size:
+
+            # only split documents if total amount of tokens is more than _max_doc_size
+            if document['num_of_tokens'] + len(document['parts']) + 1 > self._max_doc_size:
                 token_cumsum = 0
                 new_document = None
+
+                # ensuring part sizes for curr doc are smaller than _max_doc_size, if not splits them (using '.')
+                new_documents, ans_start_updated_qas = \
+                    self.ensure_parts_size(document, context, new_documents, ans_start_updated_qas, org_doc_ind)
+
+                if self._DEBUG:
+                    self.qas_docs_sanity_check_answers(ans_start_updated_qas,new_documents)
+
+                # now just iterate over parts and combine, until we reach max doc size or num of parts..
+                # Note we need to keep the original docs in the same location if possible, to avoid recalculating the
+                # qas answer starts...
                 for part_ind, part in enumerate(document['parts']):
-                    # check if to split
-                    if token_cumsum + len(part['tokens']) > self._max_doc_size:
-                        #if snippet is larger than max_doc_size then split by "«" (we need a special function 
-                        #for this so it can wait for tomorrow)  
-                        if len(part['tokens']) > self._max_doc_size:
-                            pass
-                        
-                        # splitting the original document
+                    # check if to split (accounting for separators to be added later)
+                    if token_cumsum + len(part['tokens']) + part_ind + 2 > self._max_doc_size:
+                        # splitting the original document, and keeping it in the same location to avoid qas answer start recalc
                         if not new_document:
                             new_documents[org_doc_ind]['num_of_tokens'] = token_cumsum
-                            new_documents[org_doc_ind]['parts'] = document['parts'][0:part_ind] 
+                            new_documents[org_doc_ind]['parts'] = document['parts'][0:part_ind]
 
                         new_document = {'parts':[],'num_of_tokens':0,'org_doc':org_doc_ind}
+                        # new documents will be appended to the end of the original document list.
                         new_documents.append(new_document)
                         token_cumsum = 0
                         curr_doc_ind = len(new_documents)-1
                     
                     if new_document:
-                        new_qas = self.update_answer_docid(new_qas, context['qas'], curr_doc_ind, org_doc_ind, \
+                        ans_start_updated_qas = self.update_answer_docid(ans_start_updated_qas, context['qas'], curr_doc_ind, org_doc_ind, \
                             len(new_document['parts']), part_ind)
                         new_document['parts'].append(part)
                         new_document['num_of_tokens'] += len(part['tokens'])
@@ -222,7 +318,7 @@ class MultiQAPreprocess():
 
                     token_cumsum += len(part['tokens'])
         context['documents'] = new_documents
-        context['qas'] = new_qas
+        context['qas'] = ans_start_updated_qas
 
     def tokenize_context(self, context):
         paragraphs = ['']
@@ -231,10 +327,11 @@ class MultiQAPreprocess():
         temp_tokenized_paragraph = []  # Temporarily used to calculated the amount of tokens in a given paragraph
         offset = 0
 
-        # 1. tokenize all documents separtly and map all answer to current paragrpah and token
+        # tokenize all documents separably and map all answer to current paragraphs and token
         for doc_ind, document in enumerate(context['documents']):
             document['num_of_tokens'] = 0
             document['parts'] = []
+            # document "parts" are title, paragraphs (and paragraphs after split, see split_documents for that)
             for part_num, part_type, part_text in self.iterate_doc_parts(document):
                 part_tokens = self._tokenizer.tokenize(part_text)
                 # seems Spacy class is pretty heavy in memory, lets move to a simple representation for now.. 
@@ -242,10 +339,10 @@ class MultiQAPreprocess():
                 
                 document['num_of_tokens'] += len(part_tokens) + 1 # adding 1 for part separator token
                 document['parts'].append({'part':part_type,'text':part_text,'tokens':part_tokens})
-                
+
                 # computing token_answer_starts (the answer_starts positions in tokens)
                 context['qas'] = self.compute_token_answer_starts(context['qas'], doc_ind, part_type, \
-                    part_num, part_text, part_tokens)
+                                                                  part_num, part_text, part_tokens)
 
     def score_documents(self, tokenized_question, documents):
         documents_text = [' '.join([part['text'] for part in doc['parts']]) for doc in documents]
@@ -293,6 +390,14 @@ class MultiQAPreprocess():
             
         return tokens, text, norm_answers_list, token_idx_char_offest, token_idx_offest
 
+    def qas_docs_sanity_check_answers(self, qas, docs):
+        for qa_ind, qa in enumerate(qas):
+            for ans_ind, answer in enumerate(qa['answers']):
+                for alias_ind, alias in enumerate(answer['aliases']):
+                    for ind, alias_start in enumerate(alias['token_answer_starts']):
+                        if len(docs[alias_start[0]]['parts'][alias_start[1]]['tokens']) < alias_start[3]:
+                            raise(ValueError)
+
     def sanity_check_answers(self,new_doc):
         updated_answers = copy.deepcopy(new_doc['answers'])
         for answer in new_doc['answers']:
@@ -307,8 +412,9 @@ class MultiQAPreprocess():
                 new_doc['text'][char_idx_start:char_idx_end], re.IGNORECASE) is None:
                 if (answer[2].lower() != \
                     new_doc['text'][char_idx_start:char_idx_end].lower()):
-                    #print('\nanswer alignment: original: "%s" -VS- found: "%s", removing this answer..' \
-                    #    % (answer[2],new_doc['text'][char_idx_start:char_idx_end]))
+                    if self._DEBUG:
+                        print('\nanswer alignment: original: "%s" -VS- found: "%s", removing this answer..' \
+                        % (answer[2],new_doc['text'][char_idx_start:char_idx_end]))
                     updated_answers.remove(answer)
                     self._answers_removed += 1
         return updated_answers
@@ -322,8 +428,9 @@ class MultiQAPreprocess():
         token_idx_offest = 0
         for doc_ind in ordered_inds:
             # spliting to new document, Note we assume we are after split documents and each
-            # document number of tokens is less than _max_doc_size
-            if new_doc['num_of_tokens'] + documents[doc_ind]['num_of_tokens'] > self._max_doc_size:
+            # document number of tokens is less than _max_doc_size. (Accounting for separators as well)
+            if new_doc['num_of_tokens'] + documents[doc_ind]['num_of_tokens']  \
+                    + len(documents[doc_ind]['parts']) + 1 > self._max_doc_size:
                 # Sanity check: the alias text should be equal the text in answer_start in the paragraph
                 # sometimes the original extraction was bad, or the tokenizer makes mistakes... 
                 new_doc['answers'] = self.sanity_check_answers(new_doc)
@@ -340,6 +447,9 @@ class MultiQAPreprocess():
             new_doc['tokens'] += tokens
             new_doc['text'] += text
             new_doc['answers'] += norm_answers_list
+
+            if self._DEBUG and new_doc['num_of_tokens'] > self._max_doc_size:
+                assert (ValueError)
 
         # adding the remainer document
         if new_doc['num_of_tokens'] > 0:
@@ -403,9 +513,13 @@ class MultiQAPreprocess():
                 # (merge is done via tf-idf doc ranking)
                 #document_scores = self.score_documents(tokenized_question, merged_documents)
                 merged_documents = self.merge_documents(context['documents'], qa, np.argsort(document_scores))
+                if self._DEBUG and len([doc for doc in context['documents'] if doc['num_of_tokens'] > self._max_doc_size]) > 0:
+                    assert (ValueError)
 
                 # filtering the merged documents
                 merged_documents = merged_documents[0: self._max_num_docs]
+                if self._DEBUG and len([doc for doc in merged_documents if doc['num_of_tokens'] > self._max_doc_size]) > 0:
+                    assert (ValueError)
 
                 # Adding Metadata
                 metadata = {}
@@ -438,7 +552,8 @@ class MultiQAPreprocess():
                     instance.update(document)
                     preprocessed_instances.append(instance)
 
-        #print("\nFraction of answer that were filtered %f" % (float(self._answers_removed) / self._total_answers))
+        if self._DEBUG:
+            print("\nFraction of answer that were filtered %f" % (float(self._answers_removed) / self._total_answers))
 
         return preprocessed_instances, all_qa_count, skipped_qa_count
 
@@ -529,8 +644,9 @@ def main():
 
     # sampling
     if args.sample_size > -1:
-        random.seed(1)
+        random.seed(2)
         contexts = random.sample(contexts, args.sample_size)
+        #contexts = contexts[1080:]
     
     if args.n_processes == 1:
         preprocessor = MultiQAPreprocess(args.ndocs, args.docsize, args.titles, args.use_rank, \
