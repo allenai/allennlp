@@ -153,7 +153,7 @@ class TestTrainer(AllenNlpTestCase):
         multigpu_iterator = BasicIterator(batch_size=4)
         multigpu_iterator.index_with(model.vocab)
         trainer = Trainer(model, self.optimizer, multigpu_iterator, instances, num_epochs=2, cuda_device=[0, 1])
-        metrics = trainer.train()
+        trainer.train()
 
     def test_trainer_can_resume_training(self):
         trainer = Trainer(self.model, self.optimizer,
