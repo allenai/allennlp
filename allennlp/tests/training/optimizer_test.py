@@ -1,11 +1,13 @@
 # pylint: disable=invalid-name
+import pytest
+
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Vocabulary
 from allennlp.common.params import Params
 from allennlp.models.simple_tagger import SimpleTagger
 from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
 from allennlp.training.optimizers import Optimizer
-from allennlp.training.trainer import Trainer
+from allennlp.training import Trainer
 from allennlp.data.iterators import BasicIterator
 
 
@@ -73,6 +75,31 @@ class TestOptimizer(AllenNlpTestCase):
         assert len(param_groups[1]['params']) == 2
         # the embedding + recurrent connections left in the default group
         assert len(param_groups[2]['params']) == 3
+
+
+    def test_parameter_type_inference(self):
+        # Should work ok even with lr as a string
+        optimizer_params = Params({
+                "type": "sgd",
+                "lr": "0.1"
+        })
+
+        parameters = [[n, p] for n, p in self.model.named_parameters() if p.requires_grad]
+        optimizer = Optimizer.from_params(parameters, optimizer_params)
+
+        assert optimizer.defaults["lr"] == 0.1
+
+        # But should crash (in the Pytorch code) if we don't do the type inference
+        optimizer_params = Params({
+                "type": "sgd",
+                "lr": "0.1",
+                "infer_type_and_cast": False
+        })
+
+        parameters = [[n, p] for n, p in self.model.named_parameters() if p.requires_grad]
+
+        with pytest.raises(TypeError):
+            optimizer = Optimizer.from_params(parameters, optimizer_params)
 
 
 class TestDenseSparseAdam(AllenNlpTestCase):

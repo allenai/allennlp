@@ -7,7 +7,6 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple, TypeVar
 import logging
 import copy
 import math
-import warnings
 
 import torch
 
@@ -50,6 +49,21 @@ def move_to_device(obj, cuda_device: int):
         return tuple([move_to_device(item, cuda_device) for item in obj])
     else:
         return obj
+
+
+def clamp_tensor(tensor, minimum, maximum):
+    """
+    Supports sparse and dense tensors.
+    Returns a tensor with values clamped between the provided minimum and maximum,
+    without modifying the original tensor.
+    """
+    if tensor.is_sparse:
+        coalesced_tensor = tensor.coalesce()
+        # pylint: disable=protected-access
+        coalesced_tensor._values().clamp_(minimum, maximum)
+        return coalesced_tensor
+    else:
+        return tensor.clamp(minimum, maximum)
 
 
 def batch_tensor_dicts(tensor_dicts: List[Dict[str, torch.Tensor]],
@@ -340,6 +354,31 @@ def masked_mean(vector: torch.Tensor,
     return value_sum / value_count.clamp(min=eps)
 
 
+def masked_flip(padded_sequence: torch.Tensor,
+                sequence_lengths: List[int]) -> torch.Tensor:
+    """
+        Flips a padded tensor along the time dimension without affecting masked entries.
+
+        Parameters
+        ----------
+        padded_sequence : ``torch.Tensor``
+            The tensor to flip along the time dimension.
+            Assumed to be of dimensions (batch size, num timesteps, ...)
+        sequence_lengths : ``torch.Tensor``
+            A list containing the lengths of each unpadded sequence in the batch.
+
+        Returns
+        -------
+        A ``torch.Tensor`` of the same shape as padded_sequence.
+        """
+    assert padded_sequence.size(0) == len(sequence_lengths), \
+        f'sequence_lengths length ${len(sequence_lengths)} does not match batch size ${padded_sequence.size(0)}'
+    num_timesteps = padded_sequence.size(1)
+    flipped_padded_sequence = torch.flip(padded_sequence, [1])
+    sequences = [flipped_padded_sequence[i, num_timesteps - length:] for i, length in enumerate(sequence_lengths)]
+    return torch.nn.utils.rnn.pad_sequence(sequences, batch_first=True)
+
+
 def viterbi_decode(tag_sequence: torch.Tensor,
                    transition_matrix: torch.Tensor,
                    tag_observations: Optional[List[int]] = None):
@@ -517,7 +556,6 @@ def weighted_sum(matrix: torch.Tensor, attention: torch.Tensor) -> torch.Tensor:
 def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
                                        targets: torch.LongTensor,
                                        weights: torch.FloatTensor,
-                                       batch_average: bool = None,
                                        average: str = "batch",
                                        label_smoothing: float = None) -> torch.FloatTensor:
     """
@@ -537,15 +575,6 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
         index of the true class for each corresponding step.
     weights : ``torch.FloatTensor``, required.
         A ``torch.FloatTensor`` of size (batch, sequence_length)
-    batch_average : bool, optional, (default = None).
-        A bool indicating whether the loss should be averaged across the batch,
-        or returned as a vector of losses per batch element.
-
-        .. deprecated:: 0.6.2
-           ``batch_average`` was deprecated and replaced with
-           the more general ``average`` in version 0.6.2. It will be removed
-           in version 0.8.
-
     average: str, optional (default = "batch")
         If "batch", average the loss across the batches. If "token", average
         the loss across each item in the input. If ``None``, return a vector
@@ -563,18 +592,6 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
     If ``average is None``, the returned loss is a vector of shape (batch_size,).
 
     """
-    if batch_average is not None:
-        # Maintain old behavior
-        if batch_average:
-            warnings.warn("batch_average=True was deprecated and replaced "
-                          "with average='batch' in version 0.6.2. It will be "
-                          "removed in version 0.8.", DeprecationWarning)
-            average = "batch"
-        else:
-            warnings.warn("batch_average=False was deprecated and replaced "
-                          "with average=None in version 0.6.2. It will be "
-                          "removed in version 0.8.", DeprecationWarning)
-            average = None
     if average not in {None, "token", "batch"}:
         raise ValueError("Got average f{average}, expected one of "
                          "None, 'token', or 'batch'")
@@ -1255,6 +1272,7 @@ def add_positional_features(tensor: torch.Tensor,
         sinusoids = torch.cat([sinusoids, sinusoids.new_zeros(timesteps, 1)], 1)
     return tensor + sinusoids.unsqueeze(0)
 
+
 def clone(module: torch.nn.Module, num_copies: int) -> torch.nn.ModuleList:
     "Produce N identical layers."
     return torch.nn.ModuleList([copy.deepcopy(module) for _ in range(num_copies)])
@@ -1271,6 +1289,7 @@ def combine_initial_dims(tensor: torch.Tensor) -> torch.Tensor:
         return tensor
     else:
         return tensor.view(-1, tensor.size(-1))
+
 
 def uncombine_initial_dims(tensor: torch.Tensor, original_size: torch.Size) -> torch.Tensor:
     """

@@ -65,11 +65,13 @@ class ElmoTokenEmbedder(TokenEmbedder):
                           scalar_mix_parameters=scalar_mix_parameters)
         if projection_dim:
             self._projection = torch.nn.Linear(self._elmo.get_output_dim(), projection_dim)
+            self.output_dim = projection_dim
         else:
             self._projection = None
+            self.output_dim = self._elmo.get_output_dim()
 
-    def get_output_dim(self):
-        return self._elmo.get_output_dim()
+    def get_output_dim(self) -> int:
+        return self.output_dim
 
     def forward(self, # pylint: disable=arguments-differ
                 inputs: torch.Tensor,
