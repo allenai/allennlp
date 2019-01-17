@@ -7,7 +7,7 @@ from allennlp.common.params import Params
 from allennlp.models.simple_tagger import SimpleTagger
 from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
 from allennlp.training.optimizers import Optimizer
-from allennlp.training.trainer import Trainer
+from allennlp.training import Trainer
 from allennlp.data.iterators import BasicIterator
 
 
