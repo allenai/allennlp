@@ -516,7 +516,9 @@ class DomainLanguage:
         left_side, right_side = first_action.split(' -> ')
         if right_side in self._functions:
             function = self._functions[right_side]
-            if isinstance(function, Callable):
+            # mypy doesn't like this check, saying that Callable isn't a reasonable thing to pass
+            # here.  But it works just fine; I'm not sure why mypy complains about it.
+            if isinstance(function, Callable):  # type: ignore
                 function_arguments = inspect.signature(function).parameters
                 if not function_arguments:
                     # This was a zero-argument function / constant that was registered as a lambda
