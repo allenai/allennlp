@@ -150,8 +150,8 @@ def predicate_with_side_args(side_arguments: List[str]) -> Callable:  # pylint: 
     provided by the decoder or other state, instead of from the language.  For example, you might
     want to have a function use the decoder's attention over some input text when a terminal was
     predicted.  That attention won't show up in the language productions.  Use this decorator, and
-    pass in the required state to :func:`DomainLanguage.execute`, if you need to ignore some
-    arguments when doing grammar induction.
+    pass in the required state to :func:`DomainLanguage.execute_action_sequence`, if you need to
+    ignore some arguments when doing grammar induction.
 
     In order for this to work out, the side arguments `must` be after any non-side arguments.  This
     is because we use ``*args`` to pass the non-side arguments, and ``**kwargs`` to pass the side
@@ -261,7 +261,7 @@ class DomainLanguage:
             if isinstance(getattr(self, name), types.MethodType):
                 function = getattr(self, name)
                 if getattr(function, '_is_predicate', False):
-                    side_arguments = getattr(function, '_side_arguments', False)
+                    side_arguments = getattr(function, '_side_arguments', None)
                     self.add_predicate(name, function, side_arguments)
         if allowed_constants:
             for name, value in allowed_constants.items():
@@ -417,9 +417,10 @@ class DomainLanguage:
             If given, we will ignore these arguments for the purposes of grammar induction.  This
             is to allow passing extra arguments from the decoder state that are not explicitly part
             of the language the decoder produces, such as the decoder's attention over the question
-            when a terminal was predicted.  If you use this functionality, you also need to
-            pass these arguments when you call ``language.execute(logical_form)``.  See
-            :func:`execute` for more information.
+            when a terminal was predicted.  If you use this functionality, you also `must` use
+            ``language.execute_action_sequence()`` instead of ``language.execute()``, and you must
+            pass the additional side arguments needed to that function.  See
+            :func:`execute_action_sequence` for more information.
         """
         side_arguments = side_arguments or []
         signature = inspect.signature(function)
@@ -567,7 +568,6 @@ class DomainLanguage:
                 argument, remaining_actions, remaining_side_args = self._execute_sequence(remaining_actions,
                                                                                           remaining_side_args)
                 arguments.append(argument)
-            print(function, arguments)
             return function(*arguments), remaining_actions, remaining_side_args
 
     def _get_transitions(self, expression: Any, expected_type: PredicateType) -> Tuple[List[str], PredicateType]:
