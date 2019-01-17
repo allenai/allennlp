@@ -47,7 +47,7 @@ class TestTextClassificationJsonReader():
 
     @pytest.mark.parametrize("lazy", (True, False))
     def test_read_from_file_ag_news_corpus_and_truncates_properly(self, lazy):
-        reader = TextClassificationJsonReader(lazy=lazy, sequence_length=5)
+        reader = TextClassificationJsonReader(lazy=lazy, max_sequence_length=5)
         ag_path = AllenNlpTestCase.FIXTURES_ROOT / "data" / "text_classification_json" / "ag_news_corpus.jsonl"
         instances = reader.read(ag_path)
         instances = ensure_list(instances)
