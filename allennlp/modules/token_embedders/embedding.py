@@ -96,10 +96,6 @@ class Embedding(TokenEmbedder):
         self.norm_type = norm_type
         self.scale_grad_by_freq = scale_grad_by_freq
         self.sparse = sparse
-
-        # Caveat: Earlier we weren't storing vocab_namespace, knowing which is necessary at time
-        # of embedding vocab extension. So old archive models are unextendable unless the user
-        # used default vocab_namespace 'tokens' for it.
         self._vocab_namespace = vocab_namespace
 
         self.output_dim = projection_dim or embedding_dim
@@ -152,9 +148,25 @@ class Embedding(TokenEmbedder):
 
     @overrides
     def extend_vocab(self, extended_vocab: Vocabulary, vocab_namespace: str = None):
-        if not vocab_namespace:
-            vocab_namespace = self._vocab_namespace
+        """
+        Extends the embedding matrix according to the extended vocabulary.
 
+        Parameters
+        ----------
+        extended_vocab : Vocabulary:
+            Vocabulary extended from original vocabulary used to construct
+            this ``Embedding``.
+        vocab_namespace : str, (optional, default=None)
+            In case you know what vocab_namespace should be used for extension, you
+            can pass it. If not passed, it will check if vocab_namespace used at the
+            time of ``Embedding`` construction is available. If so, this namespace
+            will be used or else default 'tokens' namespace will be used.
+        """
+        # Caveat: For allennlp v0.8.1 and below, we weren't storing vocab_namespace as an attribute,
+        # knowing which is necessary at time of embedding vocab extension. So old archive models are
+        # currently unextendable unless the user used default vocab_namespace 'tokens' for it.
+
+        vocab_namespace = vocab_namespace or self._vocab_namespace
         if not vocab_namespace:
             vocab_namespace = "tokens"
             logging.warning("No vocab_namespace provided to Embedder.extend_vocab. Defaulting to 'tokens'.")
