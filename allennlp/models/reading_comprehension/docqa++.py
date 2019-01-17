@@ -243,7 +243,7 @@ class DocQAPlus(Model):
         embedded_passage = self._variational_dropout(embedded_passage)
         passage_length = embedded_passage.size(1)
 
-        if random.randint(1,1) % 1 == 0:
+        if random.randint(1,100) % 100 == 0:
             passage_zeros = (passage['tokens'] == 0).data.cpu().numpy().mean()
             question_zeros = (question['tokens'] == 0).data.cpu().numpy().mean()
             ElasticLogger().write_log('INFO', 'docqa++', \
