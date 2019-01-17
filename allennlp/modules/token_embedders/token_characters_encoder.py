@@ -1,3 +1,6 @@
+from typing import Optional
+from overrides import overrides
+
 import torch
 
 from allennlp.common import Params
@@ -6,7 +9,6 @@ from allennlp.modules.token_embedders.embedding import Embedding
 from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
 from allennlp.modules.time_distributed import TimeDistributed
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
-
 
 @TokenEmbedder.register("character_encoding")
 class TokenCharactersEncoder(TokenEmbedder):
@@ -34,6 +36,12 @@ class TokenCharactersEncoder(TokenEmbedder):
     def forward(self, token_characters: torch.Tensor) -> torch.Tensor:  # pylint: disable=arguments-differ
         mask = (token_characters != 0).long()
         return self._dropout(self._encoder(self._embedding(token_characters), mask))
+
+    @overrides
+    def extend_vocab(self, extended_vocab: Vocabulary, vocab_namespace: Optional[str] = None):
+        if not vocab_namespace:
+            vocab_namespace = "token_characters"
+        self._embedding._module.extend_vocab(extended_vocab, vocab_namespace) # pylint: disable=protected-access
 
     # The setdefault requires a custom from_params
     @classmethod
