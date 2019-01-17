@@ -69,6 +69,10 @@ class Trainer(TrainerBase):
             An AllenNLP model to be optimized. Pytorch Modules can also be optimized if
             their ``forward`` method returns a dictionary with a "loss" key, containing a
             scalar tensor representing the loss function to be optimized.
+
+            If you are training your model using GPUs, your model should already be
+            on the correct device. (If you use `Trainer.from_params` this will be
+            handled for you.)
         optimizer : ``torch.nn.Optimizer``, required.
             An instance of a Pytorch Optimizer, instantiated with the parameters of the
             model to be optimized.

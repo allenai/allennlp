@@ -91,6 +91,7 @@ class TestTrainer(AllenNlpTestCase):
 
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="No CUDA device registered.")
     def test_trainer_can_run_cuda(self):
+        self.model.cuda()
         trainer = Trainer(self.model, self.optimizer,
                           self.iterator, self.instances, num_epochs=2,
                           cuda_device=0)
@@ -99,7 +100,7 @@ class TestTrainer(AllenNlpTestCase):
     @pytest.mark.skipif(torch.cuda.device_count() < 2,
                         reason="Need multiple GPUs.")
     def test_trainer_can_run_multiple_gpu(self):
-
+        self.model.cuda()
         class MetaDataCheckWrapper(Model):
             """
             Checks that the metadata field has been correctly split across the batch dimension
