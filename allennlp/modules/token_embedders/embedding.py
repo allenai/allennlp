@@ -151,7 +151,7 @@ class Embedding(TokenEmbedder):
         return embedded
 
     @overrides
-    def extend_vocab(self, extended_vocab: Vocabulary, vocab_namespace: Optional[str] = None):
+    def extend_vocab(self, extended_vocab: Vocabulary, vocab_namespace: str = None):
         if not vocab_namespace:
             vocab_namespace = self._vocab_namespace
 

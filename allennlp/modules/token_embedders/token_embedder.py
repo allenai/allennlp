@@ -28,7 +28,7 @@ class TokenEmbedder(torch.nn.Module, Registrable):
         """
         raise NotImplementedError
 
-    def extend_vocab(self, extended_vocab: Vocabulary, vocab_namespace: Optional[str]):
+    def extend_vocab(self, extended_vocab: Vocabulary, vocab_namespace: str = None):
         """
         Assures that this ``TokenEmbedder`` can work with extended vocabulary.
         Unless overridden by concrete ``TokenEmbedder``, it is no-op.
