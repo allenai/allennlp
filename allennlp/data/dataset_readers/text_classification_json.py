@@ -34,8 +34,8 @@ class TextClassificationJsonReader(DatasetReader):
     segment_sentences: ``bool``, optional (default = ``False``)
         If True, we will first segment the text into sentences using SpaCy and then tokenize words.
         Necessary for some models that require pre-segmentation of sentences,
-        like the Hierarchical Attention Network.
-    sequence_length: ``int``, optional (default = ``None``)
+        like the Hierarchical Attention Network (https://www.semanticscholar.org/paper/Hierarchical-Attention-Networks-for-Document-Yang-Yang/1967ad3ac8a598adc6929e9e6b9682734f789427).
+    max_sequence_length: ``int``, optional (default = ``None``)
         If specified, will truncate tokens to specified maximum length.
     skip_label_indexing: ``bool``, optional (default = ``False``)
         Whether or not to skip label indexing. You might want to skip label indexing if your
@@ -47,13 +47,13 @@ class TextClassificationJsonReader(DatasetReader):
                  token_indexers: Dict[str, TokenIndexer] = None,
                  tokenizer: Tokenizer = None,
                  segment_sentences: bool = False,
-                 sequence_length: int = None,
+                 max_sequence_length: int = None,
                  skip_label_indexing: bool = False,
                  lazy: bool = False) -> None:
         super().__init__(lazy=lazy)
         self._tokenizer = tokenizer or WordTokenizer()
         self._segment_sentences = segment_sentences
-        self._sequence_length = sequence_length
+        self._max_sequence_length = max_sequence_length
         self._skip_label_indexing = skip_label_indexing
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         if self._segment_sentences:
@@ -76,8 +76,8 @@ class TextClassificationJsonReader(DatasetReader):
         """
         truncate a set of tokens using the provided sequence length
         """
-        if len(tokens) > self._sequence_length:
-            tokens = tokens[:self._sequence_length]
+        if len(tokens) > self._max_sequence_length:
+            tokens = tokens[:self._max_sequence_length]
         return tokens
 
     @overrides
@@ -105,13 +105,13 @@ class TextClassificationJsonReader(DatasetReader):
             sentence_splits = self._sentence_segmenter.split_sentences(text)
             for sentence in sentence_splits:
                 word_tokens = self._tokenizer.tokenize(sentence)
-                if self._sequence_length is not None:
+                if self._max_sequence_length is not None:
                     word_tokens = self._truncate(word_tokens)
                 sentences.append(TextField(word_tokens, self._token_indexers))
             fields['tokens'] = ListField(sentences)
         else:
             tokens = self._tokenizer.tokenize(text)
-            if self._sequence_length is not None:
+            if self._max_sequence_length is not None:
                 tokens = self._truncate(tokens)
             fields['tokens'] = TextField(tokens, self._token_indexers)
         if label is not None:
