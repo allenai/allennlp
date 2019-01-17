@@ -115,7 +115,7 @@ class MultiQAPreprocess():
                  use_rank,
                  require_answer_in_doc,
                  require_answer_in_question) -> None:
-        self._DEBUG = True
+        self._DEBUG = False
         self._tokenizer = WordTokenizer()
         self._token_indexers = {'tokens': SingleIdTokenIndexer()}
         self._max_num_docs = max_context_docs
