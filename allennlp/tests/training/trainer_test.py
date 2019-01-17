@@ -141,15 +141,14 @@ class TestTrainer(AllenNlpTestCase):
     @pytest.mark.skipif(torch.cuda.device_count() < 2,
                         reason="Need multiple GPUs.")
     def test_production_rule_field_with_multiple_gpus(self):
-        # Trainer expects the model to already be on some GPU in the multi-GPU setting.
-        self.model.cuda(0)
-
         wikitables_dir = 'allennlp/tests/fixtures/data/wikitables/'
         wikitables_reader = WikiTablesDatasetReader(tables_directory=wikitables_dir,
                                                     dpd_output_directory=wikitables_dir + 'dpd_output/')
         instances = wikitables_reader.read(wikitables_dir + 'sample_data.examples')
         archive_path = self.FIXTURES_ROOT / 'semantic_parsing' / 'wikitables' / 'serialization' / 'model.tar.gz'
         model = load_archive(archive_path).model
+        # Trainer expects the model to already be on some GPU in the multi-GPU setting.
+        model.cuda(0)
 
         multigpu_iterator = BasicIterator(batch_size=4)
         multigpu_iterator.index_with(model.vocab)
