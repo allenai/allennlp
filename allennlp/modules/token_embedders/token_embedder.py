@@ -1,5 +1,3 @@
-from typing import Optional
-
 import torch
 
 from allennlp.common import Registrable

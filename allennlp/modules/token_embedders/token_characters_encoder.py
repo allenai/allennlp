@@ -1,4 +1,3 @@
-from typing import Optional
 from overrides import overrides
 
 import torch
