@@ -92,6 +92,9 @@ class TestTrainer(AllenNlpTestCase):
 
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="No CUDA device registered.")
     def test_trainer_can_run_cuda(self):
+        # Trainer expects the model to already be on the correct device.
+        self.model.cuda(0)
+
         trainer = Trainer(self.model, self.optimizer,
                           self.iterator, self.instances, num_epochs=2,
                           cuda_device=0)
@@ -100,11 +103,8 @@ class TestTrainer(AllenNlpTestCase):
     @pytest.mark.skipif(torch.cuda.device_count() < 2,
                         reason="Need multiple GPUs.")
     def test_trainer_can_run_multiple_gpu(self):
-        wikitables_dir = 'allennlp/tests/fixtures/data/wikitables/'
-        wikitables_reader = WikiTablesDatasetReader(tables_directory=wikitables_dir,
-                                                    dpd_output_directory=wikitables_dir + 'dpd_output/')
-        wikitables_instances = wikitables_reader.read(self.FIXTURES_ROOT / 'data' / 'wikitables' /
-                                                      'sample_data.examples')
+        # Trainer expects the model to already be on some GPU in the multi-GPU setting.
+        self.model.cuda(0)
 
         class MetaDataCheckWrapper(Model):
             """
@@ -141,6 +141,9 @@ class TestTrainer(AllenNlpTestCase):
     @pytest.mark.skipif(torch.cuda.device_count() < 2,
                         reason="Need multiple GPUs.")
     def test_production_rule_field_with_multiple_gpus(self):
+        # Trainer expects the model to already be on some GPU in the multi-GPU setting.
+        self.model.cuda(0)
+
         wikitables_dir = 'allennlp/tests/fixtures/data/wikitables/'
         wikitables_reader = WikiTablesDatasetReader(tables_directory=wikitables_dir,
                                                     dpd_output_directory=wikitables_dir + 'dpd_output/')
