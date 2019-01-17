@@ -83,7 +83,7 @@ class MultiQAReader(DatasetReader):
             contexts = contexts[0:self._sample_size]
 
 
-        if True:
+        if False:
             # bucketing by QuestionID
             instance_list = contexts
             instance_list = sorted(instance_list, key=lambda x: x['metadata']['question_id'])
