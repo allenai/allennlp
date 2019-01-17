@@ -10,6 +10,7 @@ allennlp.data.iterators
 * :ref:`BasicIterator<basic-iterator>`
 * :ref:`BucketIterator<bucket-iterator>`
 * :ref:`MultiprocessIterator<multiprocess-iterator>`
+* :ref:`HomogeneousBatchIterator<homogeneous-batch-iterator>`
 
 .. _data-iterator:
 .. automodule:: allennlp.data.iterators.data_iterator
@@ -34,3 +35,10 @@ allennlp.data.iterators
    :members:
    :undoc-members:
    :show-inheritance:
+
+.. _homogeneous-batch-iterator:
+.. automodule:: allennlp.data.iterators.homogeneous_batch_iterator
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   
