@@ -262,19 +262,25 @@ class PretrainedBertIndexer(WordpieceIndexer):
 
 def _get_token_type_ids(wordpiece_ids: List[int],
                         separator_ids: List[int]) -> List[int]:
-    length_wordpiece = len(wordpiece_ids)
-    length_end_pieces = len(separator_ids)
-    token_type_ids = [0] * length_wordpiece
+    num_wordpieces = len(wordpiece_ids)
+    token_type_ids = []
     type_id = 0
     cursor = 0
-    while cursor < len(wordpiece_ids):
-        if separator_ids[0] != wordpiece_ids[cursor]:
-            cursor += 1
+    while cursor < num_wordpieces:
+        # check length
+        if num_wordpieces - cursor < len(separator_ids):
+            token_type_ids.extend(type_id
+                                  for _ in range(num_wordpieces - cursor))
+            cursor += num_wordpieces - cursor
+        # check content
+        # when it is a separator
+        elif all(wordpiece_ids[cursor + index] == separator_id
+                 for index, separator_id in enumerate(separator_ids)):
+            token_type_ids.extend(type_id for _ in separator_ids)
+            type_id += 1
+            cursor += len(separator_ids)
+        # when it is not
         else:
-            if separator_ids == wordpiece_ids[cursor:cursor+length_end_pieces]:
-                type_id += 1
-                cursor += length_end_pieces
-                token_type_ids[cursor:] = [type_id] * (length_wordpiece - cursor)
-            else:
-                cursor += length_end_pieces
+            cursor += 1
+            token_type_ids.append(type_id)
     return token_type_ids

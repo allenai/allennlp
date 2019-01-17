@@ -85,26 +85,42 @@ class TestBertIndexer(ModelTestCase):
     def test_get_token_type_ids(self):
         wordpiece_ids = [0, 1, 2, 3, 4, 5]
 
+        # when the `separator` is at the end
         separator_ids = [5]
         desired_token_type_ids = [0, 0, 0, 0, 0, 0]
         assert _get_token_type_ids(wordpiece_ids, separator_ids) == desired_token_type_ids
 
+        # when the `separator` does not appear
         separator_ids = [6]
         desired_token_type_ids = [0, 0, 0, 0, 0, 0]
         assert _get_token_type_ids(wordpiece_ids, separator_ids) == desired_token_type_ids
 
+        # when the `separator` contains multi-tokens and at the end
         separator_ids = [3, 4, 5]
         desired_token_type_ids = [0, 0, 0, 0, 0, 0]
         assert _get_token_type_ids(wordpiece_ids, separator_ids) == desired_token_type_ids
 
-        wordpiece_ids = [0, 1, 2, 1, 3, 1]
-        separator_ids = [1]
-        desired_token_type_ids = [0, 0, 1, 1, 2, 2]
+        # when the `separator` contains multi-tokens and does not appear
+        separator_ids = [6, 7, 8]
+        desired_token_type_ids = [0, 0, 0, 0, 0, 0]
         assert _get_token_type_ids(wordpiece_ids, separator_ids) == desired_token_type_ids
 
-        wordpiece_ids = [0, 1, 2, 3, 1, 2]
+        wordpiece_ids = [0, 1, 2, 3, 1, 2, 3, 1, 2]
+
+        # when the `separator` appears many times
+        separator_ids = [2]
+        desired_token_type_ids = [0, 0, 0, 1, 1, 1, 2, 2, 2]
+        assert _get_token_type_ids(wordpiece_ids, separator_ids) == desired_token_type_ids
+
+        # when the `separator` contains multi-tokens and appears many times
         separator_ids = [1, 2]
-        desired_token_type_ids = [0, 0, 0, 1, 1, 1]
+        desired_token_type_ids = [0, 0, 0, 1, 1, 1, 2, 2, 2]
+        assert _get_token_type_ids(wordpiece_ids, separator_ids) == desired_token_type_ids
+
+        # edge case: the `separator` contains multi-tokens and
+        # some of them are same as the end of the word pieces
+        separator_ids = [2, 3]
+        desired_token_type_ids = [0, 0, 0, 0, 1, 1, 1, 2, 2]
         assert _get_token_type_ids(wordpiece_ids, separator_ids) == desired_token_type_ids
 
     def test_token_type_ids(self):
