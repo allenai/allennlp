@@ -105,7 +105,7 @@ class MultiQAReader(DatasetReader):
             # selecting instaces to add
             instances = []
             for question_instances in per_question_instances:
-                if False and file_path.find('_dev.')>-1:
+                if file_path.find('_dev.')>-1:
                     instances_to_add = question_instances
                 else:
                     # choose at most 2 instances from the same question:
