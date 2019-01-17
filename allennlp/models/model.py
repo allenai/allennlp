@@ -169,7 +169,6 @@ class Model(torch.nn.Module, Registrable):
                 elif len(output) != batch_size:
                     self._maybe_warn_for_unseparable_batches(name)
                     continue
-                outputs[name] = output
                 for instance_output, batch_element in zip(instance_separated_output, output):
                     instance_output[name] = batch_element
             return instance_separated_output
