@@ -1,4 +1,4 @@
-# pylint: disable=no-self-use,invalid-name
+# pylint: disable=no-self-use,invalid-name,protected-access
 from copy import deepcopy
 
 import numpy
@@ -61,12 +61,12 @@ class TestTokenCharactersEncoder(AllenNlpTestCase):
         vocab = self.vocab
         character_encoder = self.encoder
 
-        original_weight = character_encoder._embedding._module.weight # pylint: disable=protected-access
+        original_weight = character_encoder._embedding._module.weight
         assert tuple(original_weight.shape) == (6, 2)
         vocab.add_token_to_namespace("5", "token_characters")
 
         character_encoder.extend_vocab(vocab)
-        extended_weight = character_encoder._embedding._module.weight # pylint: disable=protected-access
+        extended_weight = character_encoder._embedding._module.weight
         assert tuple(extended_weight.shape) == (7, 2)
 
         assert torch.all(original_weight == extended_weight[:6, :])

@@ -1,4 +1,4 @@
-# pylint: disable=invalid-name,no-self-use
+# pylint: disable=invalid-name,no-self-use,protected-access
 import argparse
 import re
 import shutil
@@ -45,11 +45,11 @@ class TestFineTune(AllenNlpTestCase):
         params["train_data_path"] = str(self.FIXTURES_ROOT / 'data' / 'snli2.jsonl')
 
         trained_model = load_archive(self.model_archive).model
-        original_weight = trained_model._text_field_embedder.token_embedder_tokens.weight # pylint: disable=protected-access
+        original_weight = trained_model._text_field_embedder.token_embedder_tokens.weight
 
         # If we do vocab expansion, we should not get error now.
         fine_tuned_model = fine_tune_model(trained_model, params, self.serialization_dir, extend_vocab=True)
-        extended_weight = fine_tuned_model._text_field_embedder.token_embedder_tokens.weight # pylint: disable=protected-access
+        extended_weight = fine_tuned_model._text_field_embedder.token_embedder_tokens.weight
 
         assert tuple(original_weight.shape) == (24, 300)
         assert tuple(extended_weight.shape) == (25, 300)

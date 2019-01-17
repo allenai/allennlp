@@ -1,4 +1,4 @@
-# pylint: disable=no-self-use,invalid-name
+# pylint: disable=no-self-use,invalid-name, protected-access
 import pytest
 import torch
 
@@ -159,7 +159,7 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
 
         # But also allow loading the parameters in the new format
         new_embedder = BasicTextFieldEmbedder.from_params(params=new_params, vocab=self.vocab)
-        assert old_embedder._token_embedders.keys() == new_embedder._token_embedders.keys() #pylint: disable=protected-access
+        assert old_embedder._token_embedders.keys() == new_embedder._token_embedders.keys()
 
         assert new_embedder(self.inputs).size() == (1, 4, 10)
 
@@ -186,7 +186,7 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
             text_embedder(extended_inputs)
 
         counter = {"tokens": {"5": 1, "6": 1, "7": 1}}
-        vocab._extend(counter) #pylint: disable=protected-access
+        vocab._extend(counter)
 
         text_embedder.extend_vocab(vocab)
 
