@@ -125,6 +125,8 @@ class DataIterator(Registrable):
                 tensor_dicts = self._cache[key]
 
                 if shuffle:
+                    # TODO(brendanr): How can we handle this shuffle in a way
+                    # that respects multi-GPU friendly grouping?
                     random.shuffle(tensor_dicts)
                 for tensor_dict in tensor_dicts:
                     if self._track_epoch:
