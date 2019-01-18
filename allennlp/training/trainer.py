@@ -393,7 +393,7 @@ class Trainer(TrainerBase):
         Trains the supplied model with the supplied parameters.
         """
         try:
-            epoch_counter = self._restore_checkpoint()
+            epoch_counter, best_epoch, best_validation_metrics = self._restore_checkpoint()
         except RuntimeError:
             traceback.print_exc()
             raise ConfigurationError("Could not recover training from the checkpoint.  Did you mean to output to "
@@ -411,8 +411,8 @@ class Trainer(TrainerBase):
         epochs_trained = 0
         training_start_time = time.time()
 
-        metrics['best_epoch'] = self._metric_tracker.best_epoch(epoch_counter - 1)
-        for key, value in self._metric_tracker.best_epoch_metrics.items():
+        metrics['best_epoch'] = best_epoch
+        for key, value in best_validation_metrics.items():
             metrics["best_validation_" + key] = value
 
         for epoch in range(epoch_counter, self._num_epochs):
@@ -545,7 +545,7 @@ class Trainer(TrainerBase):
 
         if not training_state:
             # No checkpoint to restore, start at 0
-            return 0
+            return 0, None, {}
 
         self.model.load_state_dict(model_state)
         self.optimizer.load_state_dict(training_state["optimizer"])
@@ -575,7 +575,7 @@ class Trainer(TrainerBase):
         if batch_num_total is not None:
             self._batch_num_total = batch_num_total
 
-        return epoch_to_return
+        return epoch_to_return, self._metric_tracker.best_epoch, self._metric_tracker.best_epoch_metrics
 
 
     # Requires custom from_params.
