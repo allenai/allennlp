@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Any, Callable, CallableMeta, Dict, GenericMeta, List, Set, Tuple, Type, Union  # type: ignore
+from typing import Any, Callable, Dict, List, Set, Tuple, Type, Union
 import inspect
 import logging
 import traceback
@@ -11,6 +11,41 @@ from allennlp.common.util import START_SYMBOL
 from allennlp.semparse import util
 
 logger = logging.getLogger(__name__)
+
+
+# We rely heavily on the typing module and its type annotations for our grammar induction code.
+# Unfortunately, the behavior of the typing module changed somewhat substantially between python
+# 3.6 and 3.7, so we need to do some gymnastics to get some of our checks to work with both.
+# That's what these three methods are about.
+
+def is_callable(type_: Type) -> bool:
+    try:
+        from typing import CallableMeta
+        return isinstance(type_, CallableMeta)
+    except ImportError:
+        return getattr(type_, '_name', None) == 'Callable'
+
+
+def is_generic(type_: Type) -> bool:
+    try:
+        from typing import GenericMeta  # type: ignore
+        return isinstance(type_, GenericMeta)
+    except ImportError:
+        from typing import _GenericAlias  # pylint: disable=protected-access
+        return isinstance(type_, _GenericAlias)
+
+
+def get_generic_name(type_: Type) -> str:
+    try:
+        from typing import GenericMeta  # type: ignore
+        origin = type_.__origin__.__name__
+    except ImportError:
+        # In python 3.7, type_.__origin__ switched to the built-in class, instead of the typing
+        # class.
+        origin = type_._name  # pylint: disable=protected-access
+    args = type_.__args__
+    return f'{origin}[{",".join(arg.__name__ for arg in args)}]'
+
 
 class PredicateType:
     """
@@ -31,17 +66,15 @@ class PredicateType:
         those specially, so that the ``name`` for the ``BasicType`` remains ``List[str]``, as you
         would expect.
         """
-        if isinstance(type_, CallableMeta):
+        if is_callable(type_):
             callable_args = type_.__args__
             argument_types = [PredicateType.get_type(t) for t in callable_args[:-1]]
             return_type = PredicateType.get_type(callable_args[-1])
             return FunctionType(argument_types, return_type)
-        elif isinstance(type_, GenericMeta):
-            # This is something like List[int].  type_.__name__ will only give 'List', though, so
-            # we need to do some magic here.
-            origin = type_.__origin__
-            args = type_.__args__
-            name = f'{origin.__name__}[{",".join(arg.__name__ for arg in args)}]'
+        elif is_generic(type_):
+            # This is something like List[int].  type_.__name__ doesn't do the right thing (and
+            # crashes in python 3.7), so we need to do some magic here.
+            name = get_generic_name(type_)
         else:
             name = type_.__name__
         return BasicType(name)
