@@ -77,7 +77,9 @@ class DocQAPlus(Model):
                  support_followup: bool = False,
                  num_context_answers: int = 0,
                  max_qad_triplets: int = 0,
-                 max_span_length: int = 30) -> None:
+                 max_span_length: int = 30,
+                 stats_report_freq:float = None,
+                 debug_experiment_name:str = None) -> None:
         super().__init__(vocab)
         self._num_context_answers = num_context_answers
         self._multi_choice_answers = multi_choice_answers
@@ -88,7 +90,8 @@ class DocQAPlus(Model):
         self._shared_norm = shared_norm
         self._phrase_layer = phrase_layer
         self._encoding_dim = phrase_layer.get_output_dim()
-        max_turn_length = 12
+        self._stats_report_freq = stats_report_freq
+        self._debug_experiment_name = debug_experiment_name
 
         # see usage below for explanation
         self._all_qa_count = 0
@@ -243,11 +246,20 @@ class DocQAPlus(Model):
         embedded_passage = self._variational_dropout(embedded_passage)
         passage_length = embedded_passage.size(1)
 
-        if random.randint(1,100) % 100 == 0:
-            passage_zeros = (passage['tokens'] == 0).data.cpu().numpy().mean()
-            question_zeros = (question['tokens'] == 0).data.cpu().numpy().mean()
-            ElasticLogger().write_log('INFO', 'docqa++', \
-                context_dict={'batch_size': batch_size, "max_q_len": max_q_len,'passage_length':passage_length, 'passage_zeros':passage_zeros,'question_zeros':question_zeros})
+        # TODO this is mainly for debugging and analysis, should remove ...
+        if self._stats_report_freq is not None:
+            report_num_of_iter = int(1/self._stats_report_freq)
+            if random.randint(1,report_num_of_iter) % report_num_of_iter == 0:
+
+                datasets = [meta[0]['dataset'] for meta in metadata]
+                datasets_count = {dataset:0 for dataset in set(datasets)}
+                for dataset in datasets:
+                    datasets_count[dataset] += 1
+
+                passage_zeros = (passage['tokens'] == 0).data.cpu().numpy().mean()
+                question_zeros = (question['tokens'] == 0).data.cpu().numpy().mean()
+                ElasticLogger().write_log('INFO', 'docqa++', \
+                    context_dict={'name':self._debug_experiment_name, 'batch_size': batch_size, "max_q_len": max_q_len,'passage_length':passage_length, 'passage_zeros':passage_zeros,'question_zeros':question_zeros,'datasets_count':datasets_count})
 
         # context repeating (as the amount of qas)
         question_mask = util.get_text_field_mask(question, num_wrapping_dims=1).float()

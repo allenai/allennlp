@@ -73,6 +73,10 @@ class MultiQAReader(DatasetReader):
             if ind == 0:
                 num_examples_used = dataset_json['num_examples_used']
 
+            # TODO - replace with actual dataset name
+            for inst in dataset_json['preprocessed_instances']:
+                inst['metadata']['dataset'] = single_file_path.split('/')[-1].replace('.json.zip','')
+
             contexts += dataset_json['preprocessed_instances']
 
         # sampling
@@ -129,7 +133,6 @@ class MultiQAReader(DatasetReader):
         for inst in instances:
             tokenized_paragraph = [Token(text=t[0], idx=t[1]) for t in inst['tokens']]
             question_tokens = [Token(text=t[0], idx=t[1]) for t in inst['question_tokens']]
-
             instance = util.make_reading_comprehension_instance_multiqa_multidoc(question_tokens,
                                                      tokenized_paragraph,
                                                      self._token_indexers,

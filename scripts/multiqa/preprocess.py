@@ -201,17 +201,17 @@ class MultiQAPreprocess():
                     updated_alias = ans_start_updated_qas[qa_ind]['answers'][ans_ind]['aliases'][alias_ind]
                     for ind, alias_start in enumerate(alias['token_answer_starts']):
                         if alias_start[0] == org_doc_ind:
-                           update_alias = updated_alias['token_answer_starts'][ind]
+                           updated_token_start = updated_alias['token_answer_starts'][ind]
                            if alias_start[1] == org_part_ind:
                                for part_ind, new_part in enumerate(new_parts):
                                    if new_part['part_start_org_start'] <= alias_start[2] and \
-                                      alias_start[3] <= new_part['part_start_org_end']:
+                                      alias_start[3] < new_part['part_start_org_end']:
                                        ans_start_updated_qas[qa_ind]['answers'][ans_ind]['aliases'][alias_ind]['token_answer_starts'][ind] \
-                                           = (org_doc_ind, update_alias[1] + part_ind, \
-                                                update_alias[2] - new_part['part_start_org_start'], \
-                                                update_alias[3] - new_part['part_start_org_start'])
+                                           = (org_doc_ind, updated_token_start[1] + part_ind, \
+                                              updated_token_start[2] - new_part['part_start_org_start'], \
+                                              updated_token_start[3] - new_part['part_start_org_start'])
                                        if self._DEBUG and len(new_part['tokens']) \
-                                               < update_alias[3] - new_part['part_start_org_start']:
+                                               < updated_token_start[3] - new_part['part_start_org_start']:
                                            raise (ValueError)
                                        break
 
@@ -223,7 +223,8 @@ class MultiQAPreprocess():
                            elif alias_start[1] > org_part_ind:
                                # increment parts after by 1
                                ans_start_updated_qas[qa_ind]['answers'][ans_ind]['aliases'][alias_ind]['token_answer_starts'][ind] \
-                                   = (org_doc_ind, update_alias[1] + len(new_parts) - 1, update_alias[2], update_alias[3])
+                                   = (org_doc_ind, updated_token_start[1] + len(new_parts) - 1, \
+                                      updated_token_start[2], updated_token_start[3])
 
                     # if we couldn't find a part that the answer is contained in, remove it. This is rarely
                     # caused by splitting in the middle of a sentence, like in TriviaQA-web
@@ -676,6 +677,7 @@ def main():
     if args.sample_size > -1:
         random.seed(2)
         contexts = random.sample(contexts, args.sample_size)
+    contexts = contexts[6687:]
 
     if args.n_processes == 1:
         preprocessor = MultiQAPreprocess(args.ndocs, args.docsize, args.titles, args.use_rank, \
@@ -737,8 +739,10 @@ def main():
         bucketName = output_file.split('/')[0]
         outPutname = '/'.join(output_file.split('/')[1:])
         with open(temp_name, "w") as f:
-            for context in preproc_dataset['data']['contexts']:
-                f.write(json.dumps(context) + '\n')
+            # first JSON line is header
+            f.write(json.dumps({'num_examples_used':(all_qa_count - skipped_qa_count, all_qa_count)}) + '\n')
+            for instance in preprocessed_instances:
+                f.write(json.dumps(instance) + '\n')
 
         with zipfile.ZipFile(temp_name, "w", zipfile.ZIP_DEFLATED) as zip_file:
             zip_file.writestr(temp_name, json.dumps(preproc_dataset))
@@ -749,8 +753,16 @@ def main():
         filename = args.output_file.split('/')[-1]
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
+
+        with open(args.output_file.replace('.zip',''), "w") as f:
+            # first JSON line is header
+            f.write(json.dumps({'header':{'dataset':'','num_examples_used':(all_qa_count - skipped_qa_count, all_qa_count)}}) + '\n')
+            for instance in preprocessed_instances:
+                f.write(json.dumps(instance) + '\n')
+
         with zipfile.ZipFile(args.output_file, "w", zipfile.ZIP_DEFLATED) as zip_file:
-            zip_file.writestr(filename, json.dumps(preproc_dataset))
+            zip_file.write(args.output_file.replace('.zip',''))
+
 
 if __name__ == "__main__":
     main()
