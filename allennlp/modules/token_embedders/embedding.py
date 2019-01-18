@@ -147,7 +147,7 @@ class Embedding(TokenEmbedder):
         return embedded
 
     @overrides
-    def extend_vocab(self, # pylint: disable=arguments-differ
+    def extend_vocab(self,
                      extended_vocab: Vocabulary,
                      vocab_namespace: str = None,
                      pretrained_file: str = None):
@@ -155,7 +155,6 @@ class Embedding(TokenEmbedder):
         Extends the embedding matrix according to the extended vocabulary.
         If pretrained_file is available, it will be used for extented weight
         or else it would be initialized with xavier uniform.
-
         Parameters
         ----------
         extended_vocab : Vocabulary:
