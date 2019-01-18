@@ -11,6 +11,7 @@ import logging
 import os
 from copy import deepcopy
 import re
+from typing import Dict
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common import Params
@@ -128,7 +129,8 @@ def fine_tune_model_from_file_paths(model_archive_path: str,
                            serialization_dir=serialization_dir,
                            extend_vocab=extend_vocab,
                            file_friendly_logging=file_friendly_logging,
-                           batch_weight_key=batch_weight_key)
+                           batch_weight_key=batch_weight_key,
+                           files_to_archive=archive.files_to_archive)
 
 
 def fine_tune_model(model: Model,
@@ -136,7 +138,8 @@ def fine_tune_model(model: Model,
                     serialization_dir: str,
                     extend_vocab: bool = False,
                     file_friendly_logging: bool = False,
-                    batch_weight_key: str = "") -> Model:
+                    batch_weight_key: str = "",
+                    files_to_archive: Dict[str, str] = None) -> Model:
     """
     Fine tunes the given model, using a set of parameters that is largely identical to those used
     for :func:`~allennlp.commands.train.train_model`, except that the ``model`` section is ignored,
@@ -161,6 +164,8 @@ def fine_tune_model(model: Model,
     file_friendly_logging : ``bool``, optional (default=False)
         If ``True``, we add newlines to tqdm output, even on an interactive terminal, and we slow
         down tqdm's output to only once every 10 seconds.
+    files_to_archive: ``Dict[str, str]``, optional (default=None)
+        The same files_to_archive that was used to archive the original training model.
     """
     prepare_environment(params)
     if os.path.exists(serialization_dir) and os.listdir(serialization_dir):
@@ -198,7 +203,16 @@ def fine_tune_model(model: Model,
                                     (instance for key, dataset in all_datasets.items()
                                      for instance in dataset
                                      if key in datasets_for_vocab_creation))
-        model.extend_embedder_vocab(vocab)
+
+        # archived_filename_mapping is mapping from original file name
+        # to the replaced filename to locate it in the archive.
+        archived_filename_mapping = None
+        if files_to_archive:
+            flat_params_dict = params.duplicate().as_flat_dict(quiet=True)
+            archived_filename_mapping: Dict[str, str] = {flat_params_dict[key]
+                                                         for key in files_to_archive.keys()}
+
+        model.extend_embedder_vocab(vocab, pretrained_filename_mapping=archived_filename_mapping)
 
     vocab.save_to_files(os.path.join(serialization_dir, "vocabulary"))
 

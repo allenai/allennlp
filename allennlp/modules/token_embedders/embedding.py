@@ -5,7 +5,7 @@ import re
 import logging
 import warnings
 import itertools
-from typing import Optional, Tuple, Sequence, cast, IO, Iterator, Any, NamedTuple
+from typing import Optional, Tuple, Dict, Sequence, cast, IO, Iterator, Any, NamedTuple
 
 from overrides import overrides
 import numpy
@@ -88,7 +88,8 @@ class Embedding(TokenEmbedder):
                  norm_type: float = 2.,
                  scale_grad_by_freq: bool = False,
                  sparse: bool = False,
-                 vocab_namespace: str = None) -> None:
+                 vocab_namespace: str = None,
+                 pretrained_file: str = None) -> None:
         super(Embedding, self).__init__()
         self.num_embeddings = num_embeddings
         self.padding_index = padding_index
@@ -97,6 +98,7 @@ class Embedding(TokenEmbedder):
         self.scale_grad_by_freq = scale_grad_by_freq
         self.sparse = sparse
         self._vocab_namespace = vocab_namespace
+        self._pretrained_file = pretrained_file
 
         self.output_dim = projection_dim or embedding_dim
 
@@ -150,7 +152,8 @@ class Embedding(TokenEmbedder):
     def extend_vocab(self,  # pylint: disable=arguments-differ
                      extended_vocab: Vocabulary,
                      vocab_namespace: str = None,
-                     pretrained_file: str = None) -> None:
+                     pretrained_file: str = None,
+                     pretrained_filename_mapping: Dict[str, str] = None):
         """
         Extends the embedding matrix according to the extended vocabulary.
         If pretrained_file is available, it will be used for initializing the new words
@@ -170,6 +173,10 @@ class Embedding(TokenEmbedder):
             A file containing pretrained embeddings can be specified here. It can be
             the path to a local file or an URL of a (cached) remote file. Check format
             details in ``from_params`` of ``Embedding`` class.
+        pretrained_filename_mapping : Dict[str, str], (optional, default=None)
+            If pretrained_filename originally used during ``Embedding`` construction
+            is now available with a different name, then this mapping can be used.
+            It maps original filenames to replaced filenames that are now available.
         """
         # Caveat: For allennlp v0.8.1 and below, we weren't storing vocab_namespace as an attribute,
         # knowing which is necessary at time of embedding vocab extension. So old archive models are
@@ -179,6 +186,8 @@ class Embedding(TokenEmbedder):
         if not vocab_namespace:
             vocab_namespace = "tokens"
             logging.warning("No vocab_namespace provided to Embedder.extend_vocab. Defaulting to 'tokens'.")
+
+        pretrained_file = pretrained_file or pretrained_filename_mapping.get(self._pretrained_file, None)
 
         embedding_dim = self.weight.data.shape[-1]
         if not pretrained_file:

@@ -18,7 +18,8 @@ from allennlp.models.model import Model, _DEFAULT_WEIGHTS
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 # An archive comprises a Model and its experimental config
-Archive = NamedTuple("Archive", [("model", Model), ("config", Params)])
+Archive = NamedTuple("Archive", [("model", Model), ("config", Params),
+                                 ("files_to_archive", Dict[str, str])])
 
 # We archive a model by creating a tar.gz file with its weights, config, and vocabulary.
 #
@@ -155,7 +156,7 @@ def load_archive(archive_file: str,
                        serialization_dir=serialization_dir,
                        cuda_device=cuda_device)
 
-    return Archive(model=model, config=config)
+    return Archive(model=model, config=config, files_to_archive=files_to_archive)
 
 
 def _cleanup_archive_dir(path: str):

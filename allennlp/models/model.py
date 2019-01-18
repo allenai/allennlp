@@ -321,7 +321,9 @@ class Model(torch.nn.Module, Registrable):
         # pylint: disable=protected-access
         return cls.by_name(model_type)._load(config, serialization_dir, weights_file, cuda_device)
 
-    def extend_embedder_vocab(self, extended_vocab: Vocabulary) -> None:
+    def extend_embedder_vocab(self,
+                              extended_vocab: Vocabulary,
+                              pretrained_filename_mapping: Dict[str, str] = None) -> None:
         """
         It iterates over each ``text_field_embedder`` of this model and assures
         it can embed with the extended vocab. This is required in fine-tuning or
@@ -331,7 +333,7 @@ class Model(torch.nn.Module, Registrable):
         """
         for _, module in self._modules.items():
             if isinstance(module, (Embedding, TextFieldEmbedder)):
-                module.extend_vocab(extended_vocab)
+                module.extend_vocab(extended_vocab, pretrained_filename_mapping=pretrained_filename_mapping)
 
 
 def remove_pretrained_embedding_params(params: Params):

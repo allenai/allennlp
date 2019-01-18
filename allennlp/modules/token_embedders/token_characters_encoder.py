@@ -1,3 +1,4 @@
+from typing import Dict
 from overrides import overrides
 
 import torch
@@ -40,9 +41,9 @@ class TokenCharactersEncoder(TokenEmbedder):
     def extend_vocab(self,  # pylint: disable=arguments-differ
                      extended_vocab: Vocabulary,
                      vocab_namespace: str = "token_characters",
-                     pretrained_file: str = None) -> None:
+                     pretrained_file: str = None,
+                     pretrained_filename_mapping: Dict[str, str] = None):
         """
-        Extends the embedding module according to the extended vocabulary.
         If pretrained_file is available, it will be used for initializing the new words
         in the extended vocabulary; otherwise they will be initialized with xavier uniform.
 
@@ -60,13 +61,18 @@ class TokenCharactersEncoder(TokenEmbedder):
             A file containing pretrained embeddings can be specified here. It can be
             the path to a local file or an URL of a (cached) remote file. Check format
             details in ``from_params`` of ``Embedding`` class.
+        pretrained_filename_mapping : Dict[str, str], (optional, default=None)
+            If pretrained_filename originally used during ``Embedding`` construction
+            is now available with a different name, then this mapping can be used.
+            It maps original filenames to replaced filenames that are now available.
         """
         # Caveat: For allennlp v0.8.1 and below, we weren't storing vocab_namespace as an attribute, knowing
         # which is necessary at time of token_characters_encoder vocab extension. So old archive models are
         # currently unextendable unless the user used default vocab_namespace 'token_characters' for it.
         self._embedding._module.extend_vocab(extended_vocab, # pylint: disable=protected-access
                                              vocab_namespace=vocab_namespace,
-                                             pretrained_file=pretrained_file)
+                                             pretrained_file=pretrained_file,
+                                             pretrained_filename_mapping=pretrained_filename_mapping)
 
     # The setdefault requires a custom from_params
     @classmethod
