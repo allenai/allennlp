@@ -11,7 +11,7 @@ import torch
 from torch.nn.parallel import replicate, parallel_apply
 from torch.nn.parallel.scatter_gather import gather
 
-from allennlp.common.checks import ConfigurationError, check_for_data_path, check_for_gpu
+from allennlp.common.checks import ConfigurationError, check_for_gpu
 from allennlp.common.params import Params
 from allennlp.common.tqdm import Tqdm
 from allennlp.common.util import scatter_kwargs
@@ -126,11 +126,6 @@ def datasets_from_params(params: Params) -> Dict[str, Iterable[Instance]]:
     """
     Load all the datasets specified by the config.
     """
-    for data_name in ["train_data_path", "validation_data_path", "test_data_path"]:
-        data_path = params.get(data_name, None)
-        if data_path is not None:
-            check_for_data_path(data_path, data_name)
-
     dataset_reader = DatasetReader.from_params(params.pop('dataset_reader'))
     validation_dataset_reader_params = params.pop("validation_dataset_reader", None)
 
