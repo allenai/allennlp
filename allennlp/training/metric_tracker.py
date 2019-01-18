@@ -36,6 +36,8 @@ class MetricTracker:
         self._epochs_with_no_improvement = 0
         self._is_best_so_far = True
         self.best_epoch_metrics = {}
+        self._epoch_number = 0
+        self.best_epoch = None
 
         # If the metric name starts with "+", we want it to increase.
         # If the metric name starts with "-", we want it to decrease.
@@ -61,6 +63,8 @@ class MetricTracker:
         self._best_so_far = None
         self._epochs_with_no_improvement = 0
         self._is_best_so_far = True
+        self._epoch_number = 0
+        self.best_epoch = None
 
     def state_dict(self) -> Dict[str, Any]:
         """
@@ -72,7 +76,9 @@ class MetricTracker:
                 "epochs_with_no_improvement": self._epochs_with_no_improvement,
                 "is_best_so_far": self._is_best_so_far,
                 "should_decrease": self._should_decrease,
-                "best_epoch_metrics": self.best_epoch_metrics
+                "best_epoch_metrics": self.best_epoch_metrics,
+                "epoch_number": self._epoch_number,
+                "best_epoch": self.best_epoch
         }
 
     def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
@@ -85,6 +91,8 @@ class MetricTracker:
         self._is_best_so_far = state_dict["is_best_so_far"]
         self._should_decrease = state_dict["should_decrease"]
         self.best_epoch_metrics = state_dict["best_epoch_metrics"]
+        self._epoch_number = state_dict["epoch_number"]
+        self.best_epoch = state_dict["best_epoch"]
 
     def add_metric(self, metric: float) -> None:
         """
@@ -95,12 +103,14 @@ class MetricTracker:
                     (not self._should_decrease and metric > self._best_so_far))
 
         if new_best:
+            self.best_epoch = self._epoch_number
             self._is_best_so_far = True
             self._best_so_far = metric
             self._epochs_with_no_improvement = 0
         else:
             self._is_best_so_far = False
             self._epochs_with_no_improvement += 1
+        self._epoch_number += 1
 
     def add_metrics(self, metrics: Iterable[float]) -> None:
         """
@@ -123,12 +133,3 @@ class MetricTracker:
             return False
         else:
             return self._epochs_with_no_improvement >= self._patience
-
-    # def best_epoch_metrics(self):
-    #     return self._best_epoch_metrics
-
-    # def update_best_epoch_metrics(self, metrics: Dict[str, Float]):
-    #     self._best_epoch_metrics = metrics
-
-    def best_epoch(self, last_run_epoch_num: int):
-        return last_run_epoch_num - self._epochs_with_no_improvement
