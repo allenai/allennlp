@@ -92,8 +92,7 @@ class TestTrainer(AllenNlpTestCase):
 
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="No CUDA device registered.")
     def test_trainer_can_run_cuda(self):
-        # Trainer expects the model to already be on the correct device.
-        self.model.cuda(0)
+        self.model.cuda()
 
         trainer = Trainer(self.model, self.optimizer,
                           self.iterator, self.instances, num_epochs=2,
@@ -103,8 +102,7 @@ class TestTrainer(AllenNlpTestCase):
     @pytest.mark.skipif(torch.cuda.device_count() < 2,
                         reason="Need multiple GPUs.")
     def test_trainer_can_run_multiple_gpu(self):
-        # Trainer expects the model to already be on some GPU in the multi-GPU setting.
-        self.model.cuda(0)
+        self.model.cuda()
 
         class MetaDataCheckWrapper(Model):
             """
@@ -147,8 +145,7 @@ class TestTrainer(AllenNlpTestCase):
         instances = wikitables_reader.read(wikitables_dir + 'sample_data.examples')
         archive_path = self.FIXTURES_ROOT / 'semantic_parsing' / 'wikitables' / 'serialization' / 'model.tar.gz'
         model = load_archive(archive_path).model
-        # Trainer expects the model to already be on some GPU in the multi-GPU setting.
-        model.cuda(0)
+        model.cuda()
 
         multigpu_iterator = BasicIterator(batch_size=4)
         multigpu_iterator.index_with(model.vocab)
