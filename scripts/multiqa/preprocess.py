@@ -677,7 +677,6 @@ def main():
     if args.sample_size > -1:
         random.seed(2)
         contexts = random.sample(contexts, args.sample_size)
-    contexts = contexts[6687:]
 
     if args.n_processes == 1:
         preprocessor = MultiQAPreprocess(args.ndocs, args.docsize, args.titles, args.use_rank, \
@@ -732,12 +731,14 @@ def main():
     print('all_qa_count = %d' % all_qa_count)
     print('skipped_qa_count = %d' % skipped_qa_count)
     preproc_dataset = {'num_examples_used':(all_qa_count - skipped_qa_count, all_qa_count) ,'preprocessed':True,  'preprocessed_instances':preprocessed_instances}
-    
+
+    temp_name = 'temp.jsonl.zip'
     if args.output_file.startswith('s3://'):
-        temp_name = 'temp.jsonl.zip'
+
         output_file = args.output_file.replace('s3://','')
         bucketName = output_file.split('/')[0]
         outPutname = '/'.join(output_file.split('/')[1:])
+
         with open(temp_name, "w") as f:
             # first JSON line is header
             f.write(json.dumps({'num_examples_used':(all_qa_count - skipped_qa_count, all_qa_count)}) + '\n')
@@ -745,7 +746,8 @@ def main():
                 f.write(json.dumps(instance) + '\n')
 
         with zipfile.ZipFile(temp_name, "w", zipfile.ZIP_DEFLATED) as zip_file:
-            zip_file.writestr(temp_name, json.dumps(preproc_dataset))
+            zip_file.write(temp_name)
+
         s3 = boto3.client('s3')
         s3.upload_file(temp_name, bucketName, outPutname, ExtraArgs={'ACL':'public-read'})
     else:
@@ -754,14 +756,16 @@ def main():
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
 
-        with open(args.output_file.replace('.zip',''), "w") as f:
+        with open(filename.replace('.zip',''), "w") as f:
             # first JSON line is header
             f.write(json.dumps({'header':{'dataset':'','num_examples_used':(all_qa_count - skipped_qa_count, all_qa_count)}}) + '\n')
             for instance in preprocessed_instances:
                 f.write(json.dumps(instance) + '\n')
 
         with zipfile.ZipFile(args.output_file, "w", zipfile.ZIP_DEFLATED) as zip_file:
-            zip_file.write(args.output_file.replace('.zip',''))
+            zip_file.write(filename.replace('.zip',''))
+
+        os.remove(filename.replace('.zip',''))
 
 
 if __name__ == "__main__":

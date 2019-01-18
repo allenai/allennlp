@@ -66,9 +66,20 @@ class MultiQAReader(DatasetReader):
             single_file_path = cached_path(single_file_path)
             logger.info("Reading file at %s", single_file_path)
 
-            with zipfile.ZipFile(single_file_path, 'r') as myzip:
-                with myzip.open(myzip.namelist()[0]) as myfile:
-                    dataset_json = json.load(myfile)
+            if single_file_path.find('jsonl') > 0:
+                with zipfile.ZipFile(single_file_path, 'r') as myzip:
+                    with myzip.open(myzip.namelist()[0]) as myfile:
+                        dataset_json = {'preprocessed_instances':[]}
+                        for line,example in enumerate(myfile):
+                            # header
+                            if line == 0:
+                                dataset_json['num_examples_used'] = json.loads(example)['header']['num_examples_used']
+                            else:
+                                dataset_json['preprocessed_instances'].append(json.loads(example))
+            else:
+                with zipfile.ZipFile(single_file_path, 'r') as myzip:
+                    with myzip.open(myzip.namelist()[0]) as myfile:
+                        dataset_json = json.load(myfile)
 
             if ind == 0:
                 num_examples_used = dataset_json['num_examples_used']
