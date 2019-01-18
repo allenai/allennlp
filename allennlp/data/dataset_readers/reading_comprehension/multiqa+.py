@@ -63,10 +63,10 @@ class MultiQAReader(DatasetReader):
         contexts = []
         for ind, single_file_path in enumerate(file_path.split(',')):
             # if `file_path` is a URL, redirect to the cache
-            single_file_path = cached_path(single_file_path)
             logger.info("Reading file at %s", single_file_path)
 
             if single_file_path.find('jsonl') > 0:
+                single_file_path = cached_path(single_file_path)
                 with zipfile.ZipFile(single_file_path, 'r') as myzip:
                     with myzip.open(myzip.namelist()[0]) as myfile:
                         dataset_json = {'preprocessed_instances':[]}
@@ -77,6 +77,7 @@ class MultiQAReader(DatasetReader):
                             else:
                                 dataset_json['preprocessed_instances'].append(json.loads(example))
             else:
+                single_file_path = cached_path(single_file_path)
                 with zipfile.ZipFile(single_file_path, 'r') as myzip:
                     with myzip.open(myzip.namelist()[0]) as myfile:
                         dataset_json = json.load(myfile)
