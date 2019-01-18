@@ -5,12 +5,9 @@ AllenNLP and its models are configured correctly.
 from typing import Union
 
 import logging
-import os
 import subprocess
 
 from torch import cuda
-
-from allennlp.common.file_utils import cached_path
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
