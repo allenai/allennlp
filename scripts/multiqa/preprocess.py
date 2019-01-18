@@ -200,7 +200,7 @@ class MultiQAPreprocess():
                     inds_not_found = []
                     updated_alias = ans_start_updated_qas[qa_ind]['answers'][ans_ind]['aliases'][alias_ind]
                     for ind, alias_start in enumerate(alias['token_answer_starts']):
-                        if alias_start[0] == org_doc_ind:
+                        if alias_start[0] == org_doc_ind and len(updated_alias['token_answer_starts']) > ind:
                            updated_token_start = updated_alias['token_answer_starts'][ind]
                            if alias_start[1] == org_part_ind:
                                for part_ind, new_part in enumerate(new_parts):
