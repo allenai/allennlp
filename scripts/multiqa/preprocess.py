@@ -732,7 +732,7 @@ def main():
     print('skipped_qa_count = %d' % skipped_qa_count)
     preproc_dataset = {'num_examples_used':(all_qa_count - skipped_qa_count, all_qa_count) ,'preprocessed':True,  'preprocessed_instances':preprocessed_instances}
 
-    temp_name = 'temp.jsonl.zip'
+    temp_name = 'temp.jsonl'
     if args.output_file.startswith('s3://'):
 
         output_file = args.output_file.replace('s3://','')
@@ -741,15 +741,19 @@ def main():
 
         with open(temp_name, "w") as f:
             # first JSON line is header
-            f.write(json.dumps({'num_examples_used':(all_qa_count - skipped_qa_count, all_qa_count)}) + '\n')
+            f.write(json.dumps({'header':{'dataset':'', \
+                                           'num_examples_used':(all_qa_count - skipped_qa_count, all_qa_count)}}) + '\n')
             for instance in preprocessed_instances:
                 f.write(json.dumps(instance) + '\n')
 
-        with zipfile.ZipFile(temp_name, "w", zipfile.ZIP_DEFLATED) as zip_file:
+        with zipfile.ZipFile(temp_name + '.zip', "w", zipfile.ZIP_DEFLATED) as zip_file:
             zip_file.write(temp_name)
 
         s3 = boto3.client('s3')
-        s3.upload_file(temp_name, bucketName, outPutname, ExtraArgs={'ACL':'public-read'})
+        s3.upload_file(temp_name+ '.zip' , bucketName, outPutname, ExtraArgs={'ACL':'public-read'})
+
+        os.remove(temp_name)
+        os.remove(temp_name+ '.zip')
     else:
         output_dir = '/'.join(args.output_file.split('/')[0:-1])
         filename = args.output_file.split('/')[-1]
