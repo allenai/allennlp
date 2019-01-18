@@ -236,7 +236,7 @@ class Vocabulary(Registrable):
 
     def __getstate__(self):
         """
-        Need to sanitize defaultdict and defaultdict-like objects 
+        Need to sanitize defaultdict and defaultdict-like objects
         by converting them to vanilla dicts when we pickle the vocabulary.
         """
         state = copy.copy(self.__dict__)
