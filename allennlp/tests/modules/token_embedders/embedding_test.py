@@ -297,6 +297,10 @@ class TestEmbedding(AllenNlpTestCase):
         embedding_params = Params({"vocab_namespace": "tokens", "embedding_dim": 3,
                                    "pretrained_file": embeddings_filename})
         embedder = Embedding.from_params(vocab, embedding_params)
+
+        # Change weight to simulate embedding training
+        embedder.weight.data += 1
+        assert torch.all(embedder.weight[2:, :] == torch.Tensor([[2.0, 3.3, 0.0], [1.1, 1.4, -3.0]]))
         original_weight = embedder.weight
 
         assert tuple(original_weight.size()) == (4, 3)  # 4 because of padding and OOV
@@ -305,7 +309,11 @@ class TestEmbedding(AllenNlpTestCase):
         embedder.extend_vocab(vocab, pretrained_file=embeddings_filename) # default namespace
         extended_weight = embedder.weight
 
-        extended_weight = embedder.weight
-        assert extended_weight.shape[0] == 5
+        # Make sure extenstion happened for extra token in extended vocab
+        assert tuple(extended_weight.size()) == (5, 3)
+
+        # Make sure extension doesn't change original trained weights.
         assert torch.all(original_weight[:4, :] == extended_weight[:4, :])
+
+        # Make sure extended weight is taken from the embedding file.
         assert torch.all(extended_weight[4, :] == torch.Tensor([0.5, 0.3, -6.0]))
