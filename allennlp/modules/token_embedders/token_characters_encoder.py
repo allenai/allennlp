@@ -40,11 +40,11 @@ class TokenCharactersEncoder(TokenEmbedder):
     def extend_vocab(self,  # pylint: disable=arguments-differ
                      extended_vocab: Vocabulary,
                      vocab_namespace: str = "token_characters",
-                     pretrained_file: str = None):
+                     pretrained_file: str = None) -> None:
         """
         Extends the embedding module according to the extended vocabulary.
-        If pretrained_file is available, it will be used for extented weight
-        or else it would be initialized with xavier uniform.
+        If pretrained_file is available, it will be used for initializing the new words
+        in the extended vocabulary; otherwise they will be initialized with xavier uniform.
 
         Parameters
         ----------

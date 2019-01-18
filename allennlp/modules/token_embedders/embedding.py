@@ -150,11 +150,11 @@ class Embedding(TokenEmbedder):
     def extend_vocab(self,  # pylint: disable=arguments-differ
                      extended_vocab: Vocabulary,
                      vocab_namespace: str = None,
-                     pretrained_file: str = None):
+                     pretrained_file: str = None) -> None:
         """
         Extends the embedding matrix according to the extended vocabulary.
-        If pretrained_file is available, it will be used for extented weight
-        or else it would be initialized with xavier uniform.
+        If pretrained_file is available, it will be used for initializing the new words
+        in the extended vocabulary; otherwise they will be initialized with xavier uniform.
 
         Parameters
         ----------
@@ -187,6 +187,8 @@ class Embedding(TokenEmbedder):
             extra_weight = torch.FloatTensor(extra_num_embeddings, embedding_dim)
             torch.nn.init.xavier_uniform_(extra_weight)
         else:
+            # It's easiest to just reload the embeddings for the entire vocab,
+            # then only keep the ones we need.
             whole_weight = _read_pretrained_embeddings_file(pretrained_file, embedding_dim,
                                                             extended_vocab, vocab_namespace)
             extra_weight = whole_weight[self.num_embeddings:, :]
