@@ -2,6 +2,7 @@ from collections import defaultdict
 from typing import Any, Callable, Dict, List, Set, Tuple, Type, Union
 import inspect
 import logging
+import sys
 import traceback
 import types
 
@@ -19,27 +20,27 @@ logger = logging.getLogger(__name__)
 # That's what these three methods are about.
 
 def is_callable(type_: Type) -> bool:
-    try:
-        from typing import CallableMeta
-        return isinstance(type_, CallableMeta)
-    except ImportError:
+    if sys.version_info[1] == 6:  # python 3.6
+        from typing import CallableMeta  # type: ignore
+        return isinstance(type_, CallableMeta)  # type: ignore
+    else:  # python 3.7
         return getattr(type_, '_name', None) == 'Callable'
 
 
 def is_generic(type_: Type) -> bool:
-    try:
+    if sys.version_info[1] == 6:  # python 3.6
         from typing import GenericMeta  # type: ignore
-        return isinstance(type_, GenericMeta)
-    except ImportError:
-        from typing import _GenericAlias  # pylint: disable=protected-access
-        return isinstance(type_, _GenericAlias)
+        return isinstance(type_, GenericMeta)  # type: ignore
+    else:  # python 3.7
+        # pylint: disable=protected-access
+        from typing import _GenericAlias  # type: ignore
+        return isinstance(type_, _GenericAlias) # type: ignore
 
 
 def get_generic_name(type_: Type) -> str:
-    try:
-        from typing import GenericMeta  # type: ignore
+    if sys.version_info[1] == 6:  # python 3.6
         origin = type_.__origin__.__name__
-    except ImportError:
+    else:  # python 3.7
         # In python 3.7, type_.__origin__ switched to the built-in class, instead of the typing
         # class.
         origin = type_._name  # pylint: disable=protected-access
