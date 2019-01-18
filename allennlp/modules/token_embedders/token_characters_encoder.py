@@ -37,13 +37,14 @@ class TokenCharactersEncoder(TokenEmbedder):
         return self._dropout(self._encoder(self._embedding(token_characters), mask))
 
     @overrides
-    def extend_vocab(self,
+    def extend_vocab(self,  # pylint: disable=arguments-differ
                      extended_vocab: Vocabulary,
                      vocab_namespace: str = "token_characters",
                      pretrained_file: str = None):
         """
         Extends the embedding module according to the extended vocabulary.
-        Extended weight would be initialized with xavier uniform.
+        If pretrained_file is available, it will be used for extented weight
+        or else it would be initialized with xavier uniform.
 
         Parameters
         ----------
