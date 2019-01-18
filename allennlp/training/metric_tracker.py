@@ -35,9 +35,9 @@ class MetricTracker:
         self._patience = patience
         self._epochs_with_no_improvement = 0
         self._is_best_so_far = True
-        self.best_epoch_metrics = {}
+        self.best_epoch_metrics: Dict[str, float] = {}
         self._epoch_number = 0
-        self.best_epoch = None
+        self.best_epoch: int = None
 
         # If the metric name starts with "+", we want it to increase.
         # If the metric name starts with "-", we want it to decrease.

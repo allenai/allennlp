@@ -523,7 +523,7 @@ class Trainer(TrainerBase):
                 training_states=training_states,
                 is_best_so_far=self._metric_tracker.is_best_so_far())
 
-    def _restore_checkpoint(self) -> int:
+    def _restore_checkpoint(self) -> Tuple[int, int, Dict[str, float]]:
         """
         Restores the model and training state from the last saved checkpoint.
         This includes an epoch count and optimizer state, which is serialized separately
