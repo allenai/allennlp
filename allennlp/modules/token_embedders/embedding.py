@@ -147,7 +147,7 @@ class Embedding(TokenEmbedder):
         return embedded
 
     @overrides
-    def extend_vocab(self,
+    def extend_vocab(self, # pylint: disable=arguments-differ
                      extended_vocab: Vocabulary,
                      vocab_namespace: str = None,
                      pretrained_file: str = None):

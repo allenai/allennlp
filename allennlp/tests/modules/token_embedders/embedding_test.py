@@ -308,4 +308,4 @@ class TestEmbedding(AllenNlpTestCase):
         extended_weight = embedder.weight
         assert extended_weight.shape[0] == 5
         assert torch.all(original_weight[:4, :] == extended_weight[:4, :])
-        assert torch.all(extended_weight[4, :] == torch.tensor([0.5, 0.3, -6.0]))
+        assert torch.all(extended_weight[4, :] == torch.Tensor([0.5, 0.3, -6.0]))
