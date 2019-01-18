@@ -72,11 +72,11 @@ class Embedding(TokenEmbedder):
         extend the embedding-matrix, it's necessary to know which vocab_namspace was used to
         construct it in the original training. We store vocab_namespace used during the original
         training as an attribute, so that it can be retrieved during fine-tuning.
+
     Returns
     -------
     An Embedding module.
     """
-
     def __init__(self,
                  num_embeddings: int,
                  embedding_dim: int,
