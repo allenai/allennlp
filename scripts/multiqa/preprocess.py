@@ -197,9 +197,11 @@ class MultiQAPreprocess():
         for qa_ind, qa in enumerate(qas):
             for ans_ind, answer in enumerate(qa['answers']):
                 for alias_ind, alias in enumerate(answer['aliases']):
+                    inds_not_found = []
+                    updated_alias = ans_start_updated_qas[qa_ind]['answers'][ans_ind]['aliases'][alias_ind]
                     for ind, alias_start in enumerate(alias['token_answer_starts']):
                         if alias_start[0] == org_doc_ind:
-                           update_alias = ans_start_updated_qas[qa_ind]['answers'][ans_ind]['aliases'][alias_ind]['token_answer_starts'][ind]
+                           update_alias = updated_alias['token_answer_starts'][ind]
                            if alias_start[1] == org_part_ind:
                                for part_ind, new_part in enumerate(new_parts):
                                    if new_part['part_start_org_start'] <= alias_start[2] and \
@@ -212,13 +214,24 @@ class MultiQAPreprocess():
                                                < update_alias[3] - new_part['part_start_org_start']:
                                            raise (ValueError)
                                        break
-                                   # we couldn't find a part that the answer is contained in ...
+
+                                   # we couldn't find a part that the answer is contained in ... (this is usually
+                                   # caused by
                                    if part_ind == len(new_parts) - 1:
-                                        raise(ValueError)
+                                       inds_not_found.append(ind)
+
                            elif alias_start[1] > org_part_ind:
                                # increment parts after by 1
                                ans_start_updated_qas[qa_ind]['answers'][ans_ind]['aliases'][alias_ind]['token_answer_starts'][ind] \
                                    = (org_doc_ind, update_alias[1] + len(new_parts) - 1, update_alias[2], update_alias[3])
+
+                    # if we couldn't find a part that the answer is contained in, remove it. This is rarely
+                    # caused by splitting in the middle of a sentence, like in TriviaQA-web
+                    if len(inds_not_found)>0:
+                        self._total_answers += len(inds_not_found)
+                        self._answers_removed += len(inds_not_found)
+                        updated_alias['token_answer_starts'] = [updated_alias['token_answer_starts'][ind] \
+                            for ind in range(len(updated_alias['token_answer_starts'])) if ind not in inds_not_found]
 
         return ans_start_updated_qas
 
@@ -226,18 +239,32 @@ class MultiQAPreprocess():
 
         # this situation is not ideal for we don't have any good way to split
         # paragraphs. we will try using sentences by utilizing the endline "." token
-        new_parts = []
-        created_part = None
-        last_split_token = 0
-        last_split_char = 0
 
         # iterating over sentences (end with '.' tokens) + one for the end of the text / part
-        newline_tokens = [(ind, token) for ind, token in enumerate(part['tokens']) if token[0] == '.'] + \
+        new_lines = [(ind, token) for ind, token in enumerate(part['tokens']) if token[0] == '.'] + \
                         [(len(part['tokens']),('.',len(part['text'])))] * 2
-        for ind, sentence_end in enumerate(newline_tokens):
+
+        # in TriviaQA-web even newlines don't always help, in that case well need to just brutally split the part...
+        split_points = []
+        last_split_token = 0
+        ind = 0
+        while ind < len(new_lines):
+            if new_lines[ind][0] - last_split_token + 2 > self._max_doc_size:
+                new_split_point = last_split_token + self._max_doc_size - 2
+                split_points.append((new_split_point, part['tokens'][new_split_point]))
+                last_split_token = new_split_point
+            else:
+                split_points.append(new_lines[ind])
+                last_split_token = new_lines[ind][0]
+                ind += 1
+
+        new_parts = []
+        last_split_token = 0
+        last_split_char = 0
+        for ind, sentence_end in enumerate(split_points):
             # check if to split + part SEP + _PARA_SEP
-            if sentence_end[0] - last_split_token + 2 > self._max_doc_size or ind  == len(newline_tokens) - 1:
-                chosen_splitpoint = newline_tokens[ind-1]
+            if sentence_end[0] - last_split_token + 2 > self._max_doc_size or ind  == len(split_points) - 1:
+                chosen_splitpoint = split_points[ind-1]
                 # splitting the original document
                 new_parts.append({'part': part['part'],
                     'part_start_org_start':last_split_token,
@@ -247,7 +274,7 @@ class MultiQAPreprocess():
                               for token in part['tokens'][last_split_token:chosen_splitpoint[0]]]})
 
                 if self._DEBUG and len(new_parts[-1]['tokens']) > self._max_doc_size:
-                    assert (ValueError)
+                    raise(ValueError)
                 last_split_char = chosen_splitpoint[1][1]
                 last_split_token = chosen_splitpoint[0]
 
@@ -406,7 +433,8 @@ class MultiQAPreprocess():
                 char_idx_end = len(new_doc['text'])
             else:
                 char_idx_end = new_doc['tokens'][answer[1]+1][1]
-            
+
+
             self._total_answers += 1    
             if re.match(r'\b{0}\b'.format(re.escape(answer[2])), \
                 new_doc['text'][char_idx_start:char_idx_end], re.IGNORECASE) is None:
@@ -416,6 +444,8 @@ class MultiQAPreprocess():
                         print('\nanswer alignment: original: "%s" -VS- found: "%s", removing this answer..' \
                         % (answer[2],new_doc['text'][char_idx_start:char_idx_end]))
                     updated_answers.remove(answer)
+                    # We count the cases in which we remove answers, it usually results in a very small amount under 0.005 of
+                    # all the answer starts...
                     self._answers_removed += 1
         return updated_answers
 
@@ -449,7 +479,7 @@ class MultiQAPreprocess():
             new_doc['answers'] += norm_answers_list
 
             if self._DEBUG and new_doc['num_of_tokens'] > self._max_doc_size:
-                assert (ValueError)
+                raise(ValueError)
 
         # adding the remainer document
         if new_doc['num_of_tokens'] > 0:
@@ -514,12 +544,12 @@ class MultiQAPreprocess():
                 #document_scores = self.score_documents(tokenized_question, merged_documents)
                 merged_documents = self.merge_documents(context['documents'], qa, np.argsort(document_scores))
                 if self._DEBUG and len([doc for doc in context['documents'] if doc['num_of_tokens'] > self._max_doc_size]) > 0:
-                    assert (ValueError)
+                    raise(ValueError)
 
                 # filtering the merged documents
                 merged_documents = merged_documents[0: self._max_num_docs]
                 if self._DEBUG and len([doc for doc in merged_documents if doc['num_of_tokens'] > self._max_doc_size]) > 0:
-                    assert (ValueError)
+                    raise(ValueError)
 
                 # Adding Metadata
                 metadata = {}
@@ -646,8 +676,7 @@ def main():
     if args.sample_size > -1:
         random.seed(2)
         contexts = random.sample(contexts, args.sample_size)
-        #contexts = contexts[1080:]
-    
+
     if args.n_processes == 1:
         preprocessor = MultiQAPreprocess(args.ndocs, args.docsize, args.titles, args.use_rank, \
              args.require_answer_in_doc,args.require_answer_in_question)
@@ -703,10 +732,14 @@ def main():
     preproc_dataset = {'num_examples_used':(all_qa_count - skipped_qa_count, all_qa_count) ,'preprocessed':True,  'preprocessed_instances':preprocessed_instances}
     
     if args.output_file.startswith('s3://'):
-        temp_name = 'temp.json.zip'
+        temp_name = 'temp.jsonl.zip'
         output_file = args.output_file.replace('s3://','')
         bucketName = output_file.split('/')[0]
         outPutname = '/'.join(output_file.split('/')[1:])
+        with open(temp_name, "w") as f:
+            for context in preproc_dataset['data']['contexts']:
+                f.write(json.dumps(context) + '\n')
+
         with zipfile.ZipFile(temp_name, "w", zipfile.ZIP_DEFLATED) as zip_file:
             zip_file.writestr(temp_name, json.dumps(preproc_dataset))
         s3 = boto3.client('s3')
