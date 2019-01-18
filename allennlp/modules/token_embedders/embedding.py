@@ -76,7 +76,6 @@ class Embedding(TokenEmbedder):
     -------
     An Embedding module.
     """
-
     def __init__(self,
                  num_embeddings: int,
                  embedding_dim: int,
