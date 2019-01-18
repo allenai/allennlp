@@ -16,6 +16,7 @@ allennlp.data.dataset_readers
   allennlp.data.dataset_readers.conll2003
   allennlp.data.dataset_readers.coreference_resolution
   allennlp.data.dataset_readers.event2mind
+  allennlp.data.dataset_readers.interleaving_dataset_reader
   allennlp.data.dataset_readers.language_modeling
   allennlp.data.dataset_readers.multiprocess_dataset_reader
   allennlp.data.dataset_readers.ontonotes_ner
@@ -33,3 +34,4 @@ allennlp.data.dataset_readers
   allennlp.data.dataset_readers.universal_dependencies
   allennlp.data.dataset_readers.quora_paraphrase
   allennlp.data.dataset_readers.copynet_seq2seq
+  allennlp.data.dataset_readers.text_classification_json

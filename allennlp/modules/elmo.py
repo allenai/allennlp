@@ -71,7 +71,7 @@ class Elmo(torch.nn.Module):
     keep_sentence_boundaries : ``bool``, optional, (default = False)
         If True, the representation of the sentence boundary tokens are
         not removed.
-    scalar_mix_parameters : ``List[int]``, optional, (default = None)
+    scalar_mix_parameters : ``List[float]``, optional, (default = None)
         If not ``None``, use these scalar mix parameters to weight the representations
         produced by different layers. These mixing weights are not updated during
         training.

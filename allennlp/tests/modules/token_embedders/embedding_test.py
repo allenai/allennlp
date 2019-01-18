@@ -219,3 +219,65 @@ class TestEmbedding(AllenNlpTestCase):
             uri = format_embeddings_file_uri(path1, path2)
             decoded = parse_embeddings_file_uri(uri)
             assert decoded == (path1, path2)
+
+    def test_embedding_vocab_extension_with_specified_namespace(self):
+        vocab = Vocabulary()
+        vocab.add_token_to_namespace('word1', 'tokens_a')
+        vocab.add_token_to_namespace('word2', 'tokens_a')
+        embedding_params = Params({"vocab_namespace": "tokens_a",
+                                   "embedding_dim": 10})
+        embedder = Embedding.from_params(vocab, embedding_params)
+        original_weight = embedder.weight
+
+        assert original_weight.shape[0] == 4
+
+        extension_counter = {"tokens_a": {"word3": 1}}
+        vocab._extend(extension_counter)
+
+        embedder.extend_vocab(vocab, "tokens_a") # specified namespace
+
+        extended_weight = embedder.weight
+        assert extended_weight.shape[0] == 5
+        assert torch.all(extended_weight[:4, :] == original_weight[:4, :])
+
+    def test_embedding_vocab_extension_with_default_namespace(self):
+        vocab = Vocabulary()
+        vocab.add_token_to_namespace('word1')
+        vocab.add_token_to_namespace('word2')
+        embedding_params = Params({"vocab_namespace": "tokens",
+                                   "embedding_dim": 10})
+        embedder = Embedding.from_params(vocab, embedding_params)
+        original_weight = embedder.weight
+
+        assert original_weight.shape[0] == 4
+
+        extension_counter = {"tokens": {"word3": 1}}
+        vocab._extend(extension_counter)
+
+        embedder.extend_vocab(vocab) # default namespace
+
+        extended_weight = embedder.weight
+        assert extended_weight.shape[0] == 5
+        assert torch.all(extended_weight[:4, :] == original_weight[:4, :])
+
+    def test_embedding_vocab_extension_without_stored_namespace(self):
+        vocab = Vocabulary()
+        vocab.add_token_to_namespace('word1', "tokens_a")
+        vocab.add_token_to_namespace('word2', "tokens_a")
+        embedding_params = Params({"vocab_namespace": "tokens_a", "embedding_dim": 10})
+        embedder = Embedding.from_params(vocab, embedding_params)
+
+        # Previous models won't have _vocab_namespace attribute. Force it to be None
+        embedder._vocab_namespace = None
+        original_weight = embedder.weight
+
+        assert original_weight.shape[0] == 4
+
+        extension_counter = {"tokens_a": {"word3": 1}}
+        vocab._extend(extension_counter)
+
+        embedder.extend_vocab(vocab, "tokens_a") # specified namespace
+
+        extended_weight = embedder.weight
+        assert extended_weight.shape[0] == 5
+        assert torch.all(extended_weight[:4, :] == original_weight[:4, :])

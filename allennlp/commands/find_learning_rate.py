@@ -51,17 +51,19 @@ import math
 import logging
 import shutil
 
-import matplotlib; matplotlib.use('Agg') # pylint: disable=multiple-statements,wrong-import-position
-import matplotlib.pyplot as plt # pylint: disablewrong-import-position
+# pylint: disable=multiple-statements,wrong-import-position
+import matplotlib; matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 
-from allennlp.commands.subcommand import Subcommand # pylint: disablewrong-import-position
-from allennlp.commands.train import datasets_from_params # pylint: disablewrong-import-position
-from allennlp.common.checks import ConfigurationError, check_for_gpu # pylint: disablewrong-import-position
-from allennlp.common import Params, Tqdm # pylint: disablewrong-import-position
-from allennlp.common.util import prepare_environment # pylint: disablewrong-import-position
-from allennlp.data import Vocabulary, DataIterator # pylint: disablewrong-import-position
-from allennlp.models import Model # pylint: disablewrong-import-position
-from allennlp.training import Trainer # pylint: disablewrong-import-position
+from allennlp.commands.subcommand import Subcommand
+from allennlp.common.checks import ConfigurationError, check_for_gpu
+from allennlp.common import Params, Tqdm
+from allennlp.common.util import prepare_environment
+from allennlp.data import Vocabulary, DataIterator
+from allennlp.models import Model
+from allennlp.training import Trainer
+from allennlp.training.util import datasets_from_params
+# pylint: enable=multiple-statements,wrong-import-position
 
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -173,11 +175,7 @@ def find_learning_rate_model(params: Params, serialization_dir: str,
     prepare_environment(params)
 
     cuda_device = params.params.get('trainer').get('cuda_device', -1)
-    if isinstance(cuda_device, list):
-        for device in cuda_device:
-            check_for_gpu(device)
-    else:
-        check_for_gpu(cuda_device)
+    check_for_gpu(cuda_device)
 
     all_datasets = datasets_from_params(params)
     datasets_for_vocab_creation = set(params.pop("datasets_for_vocab_creation", all_datasets))
@@ -207,12 +205,16 @@ def find_learning_rate_model(params: Params, serialization_dir: str,
         if any(re.search(regex, name) for regex in no_grad_regexes):
             parameter.requires_grad_(False)
 
-    trainer = Trainer.from_params(model,
-                                  serialization_dir,
-                                  iterator,
-                                  train_data,
-                                  params=trainer_params,
+
+    trainer_choice = trainer_params.pop("type", "default")
+    if trainer_choice != "default":
+        raise ConfigurationError("currently find-learning-rate only works with the default Trainer")
+    trainer = Trainer.from_params(model=model,
+                                  serialization_dir=serialization_dir,
+                                  iterator=iterator,
+                                  train_data=train_data,
                                   validation_data=None,
+                                  params=trainer_params,
                                   validation_iterator=None)
 
     logger.info(f'Starting learning rate search from {start_lr} to {end_lr} in {num_batches} iterations.')
@@ -236,7 +238,6 @@ def search_learning_rate(trainer: Trainer,
     """
     Runs training loop on the model using :class:`~allennlp.training.trainer.Trainer`
     increasing learning rate from ``start_lr`` to ``end_lr`` recording the losses.
-
     Parameters
     ----------
     trainer: :class:`~allennlp.training.trainer.Trainer`
@@ -251,7 +252,6 @@ def search_learning_rate(trainer: Trainer,
     stopping_factor: ``float``
         Stop the search when the current loss exceeds the best loss recorded by
         multiple of stopping factor. If ``None`` search proceeds till the ``end_lr``
-
     Returns
     -------
     (learning_rates, losses): ``Tuple[List[float], List[float]]``
