@@ -20,27 +20,27 @@ logger = logging.getLogger(__name__)
 # That's what these three methods are about.
 
 def is_callable(type_: Type) -> bool:
-    if sys.version_info[1] == 6:  # python 3.6
+    if sys.version_info < (3, 7):
         from typing import CallableMeta  # type: ignore
         return isinstance(type_, CallableMeta)  # type: ignore
-    else:  # python 3.7
+    else:
         return getattr(type_, '_name', None) == 'Callable'
 
 
 def is_generic(type_: Type) -> bool:
-    if sys.version_info[1] == 6:  # python 3.6
+    if sys.version_info < (3, 7):
         from typing import GenericMeta  # type: ignore
         return isinstance(type_, GenericMeta)  # type: ignore
-    else:  # python 3.7
+    else:
         # pylint: disable=protected-access
         from typing import _GenericAlias  # type: ignore
         return isinstance(type_, _GenericAlias) # type: ignore
 
 
 def get_generic_name(type_: Type) -> str:
-    if sys.version_info[1] == 6:  # python 3.6
+    if sys.version_info < (3, 7):
         origin = type_.__origin__.__name__
-    else:  # python 3.7
+    else:
         # In python 3.7, type_.__origin__ switched to the built-in class, instead of the typing
         # class.
         origin = type_._name  # pylint: disable=protected-access
