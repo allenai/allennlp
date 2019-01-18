@@ -263,7 +263,7 @@ def search_learning_rate(trainer: Trainer,
 
     trainer.model.train()
 
-    num_gpus = len(trainer._cuda_devices)
+    num_gpus = len(trainer._cuda_devices) # pylint: disable=protected-access
 
     raw_train_generator = trainer.iterator(trainer.train_data,
                                            shuffle=trainer.shuffle)

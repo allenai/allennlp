@@ -1,7 +1,6 @@
 """
 Various utilities that don't fit anwhere else.
 """
-from ctypes import sizeof, c_void_p, c_int64, cast, py_object, c_uint64
 from itertools import zip_longest, islice
 from typing import Any, Callable, Dict, List, Tuple, TypeVar, Iterable, Iterator, Union
 import importlib
@@ -13,8 +12,6 @@ import subprocess
 import sys
 import os
 import re
-
-from torch.nn.parallel._functions import Scatter
 
 try:
     import resource
