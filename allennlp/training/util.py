@@ -14,7 +14,6 @@ from torch.nn.parallel.scatter_gather import gather
 from allennlp.common.checks import ConfigurationError, check_for_data_path, check_for_gpu
 from allennlp.common.params import Params
 from allennlp.common.tqdm import Tqdm
-from allennlp.common.util import scatter_kwargs
 from allennlp.data.dataset_readers import DatasetReader
 from allennlp.data import Instance
 from allennlp.data.iterators import DataIterator
@@ -239,12 +238,14 @@ def data_parallel(batch_group: List[TensorDict],
     """
     assert len(batch_group) <= len(cuda_devices)
 
-    inputs = [()] * len(batch_group)
     moved = [nn_util.move_to_device(batch, device)
              for batch, device in zip(batch_group, cuda_devices)]
 
     used_device_ids = cuda_devices[:len(moved)]
     replicas = replicate(model, used_device_ids)
+    # We pass all our arguments as kwargs. Create a list of empty tuples of the
+    # correct shape to serve as (non-existent) positional arguments.
+    inputs = [()] * len(batch_group)
     outputs = parallel_apply(replicas, inputs, moved, used_device_ids)
 
     # Only the 'loss' is needed.
