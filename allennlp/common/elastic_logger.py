@@ -3,6 +3,10 @@ from elasticsearch import Elasticsearch
 global logger
 import traceback
 import platform
+import logging
+tracer = logging.getLogger('elasticsearch')
+tracer.setLevel(logging.CRITICAL) # or desired level
+tracer.addHandler(logging.FileHandler('indexer.log'))
 
 class ElasticLogger:
     """ A python singleton """
