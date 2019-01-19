@@ -128,7 +128,7 @@ class MultiQAIterator(DataIterator):
             for question_instances in per_question_instances:
 
                 if self._all_question_instances_in_batch:
-                    instances_to_add = question_instances[0:self._batch_size]
+                    instances_to_add = question_instances
                 else:
                     # choose at most 2 instances from the same question:
                     if len(question_instances) > 2:
