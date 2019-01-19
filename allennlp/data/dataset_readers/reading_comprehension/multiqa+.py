@@ -100,7 +100,7 @@ class MultiQAReader(DatasetReader):
             contexts = contexts[0:self._sample_size]
 
 
-        if True:
+        if False:
             # bucketing by QuestionID
             instance_list = contexts
             instance_list = sorted(instance_list, key=lambda x: x['metadata']['question_id'])
@@ -122,9 +122,7 @@ class MultiQAReader(DatasetReader):
             # selecting instaces to add
             instances = []
             for question_instances in per_question_instances:
-                print(file_path)
                 if file_path.find('_dev.')>-1:
-                    print('validation dataset reader')
                     instances_to_add = question_instances
                 else:
                     # choose at most 2 instances from the same question:
@@ -158,7 +156,6 @@ class MultiQAReader(DatasetReader):
             instance.fields['metadata'].metadata['num_examples_used'] = num_examples_used
 
             yield instance
-        return
 
 
 

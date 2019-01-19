@@ -10,14 +10,13 @@ def dispatch():
     #Operation = "kill job"
     #Operation = "git pull"
     
-    ## HOST
+    ## HOST#
     #host = 'rack-gamir-g03'
     #host = 'rack-gamir-g05'
     #host = 'rack-gamir-g04'
     #host = 'savant'
-    host = 'rack-jonathan-g04'
-    #host = 'rack-jonathan-g02'
-    
+    host = 'rack-jonathan-g02'
+
     if Operation == "Preprocess":
         host = 'z-rack-jonathan-02'
     #host = 'z-rack-jonathan-02'
@@ -30,21 +29,25 @@ def dispatch():
     # CONFIG PARAMS
 
     config_path = '/Users/alontalmor/Dropbox/Backup/QAResearch/MultiQA/configs/'
-    #config_json = 'HotpotQA-O.json'
-    #config_json = 'ComplexWebQuestions-G.json'
-    config_json = 'TriviaQA-G.json'
+    #config_json = 'SearchQA.json'
+    #config_json = 'Squad.json'
+    #config_json = 'NewsQA.json'
+    #config_json = 'HotpotQA.json'
+    #config_json = 'ComplexWebQuestions.json'
+    #config_json = 'TriviaQA-G.json'
+    config_json = 'TriviaQA-web.json'
     with open(config_path + config_json, 'r') as f:
         dataset_specific_config = json.load(f)
 
     # Dataset name:
-    name = dataset_specific_config['train_data_path'].split('/')[-1].replace('_train.json.zip', '') + '/'
+    name = dataset_specific_config['train_data_path'].split('/')[-1].replace('_train.json.zip', '').replace('_train.jsonl.zip', '') + '/'
     name += 'GloVe_'
-    name += '10docs_400tokens_'
-    #name += str(dataset_specific_config['dataset_reader']['max_context_docs']) + 'docs_'
-    #name += str(dataset_specific_config['dataset_reader']['max_context_size']) + 'tokens_'
-    name += str(dataset_specific_config['trainer']['optimizer']['type']) + '_'
-    name += 'LR_' + str(dataset_specific_config['trainer']['optimizer']['lr']) + '_'
-    name += 'L2_' + str(dataset_specific_config['trainer']['optimizer']['weight_decay'])  + '_'
+    #name += '10docs_250tokens_'
+    #name += 'lazy_' + str(dataset_specific_config['dataset_reader']['lazy']) + '_'
+    #name += str(dataset_specific_config['trainer']['optimizer']['type']) + '_'
+    name += 'GPU' + str(dataset_specific_config['trainer']['cuda_device']) + '_'
+    #name += 'LR_' + str(dataset_specific_config['trainer']['optimizer']['lr']) + '_'
+    #name += 'L2_' + str(dataset_specific_config['trainer']['optimizer']['weight_decay'])  + '_'
     #name += 'shared_' + str(dataset_specific_config['model']['shared_norm'])  + '_'
     name += datetime.datetime.now().strftime("%m%d_%H%M")
 
@@ -53,7 +56,9 @@ def dispatch():
     #command = 'python -m allennlp.run make-vocab ' 
     #command = 'python -m allennlp.run dry-run '
     # base configuration file (mainly for model and tokenization)
-    command += 's3://multiqa/config/MultiQA_GloVe_rand_iter.json '
+    #command += 's3://multiqa/config/MultiQA_GloVe.json '
+    command += 's3://multiqa/config/MultiQA_GloVe_no_char_tokens.json '
+
     command += '--s ' + model_dir + name + ' '
 
     # Building the python command with arguments
@@ -62,8 +67,8 @@ def dispatch():
 
     ## RECOVERS
     if Operation == "Recover":
-        name = 'TriviaQA-G_1-2/GloVe_10docs_250tokens_adam_LR_0.001_L2_0.0001_shared_False_0103_1024'
-        command = '''python -m allennlp.run train s3://multiqa/config/MultiQA_GloVe_rand_iter.json --recover --s ../models/TriviaQA-G_1-2/GloVe_10docs_250tokens_adam_LR_0.001_L2_0.0001_shared_False_0103_1024 -o "{'dataset_reader': {'type': 'multiqa+', 'lazy': true}, 'iterator': {'type': 'multiqa', 'batch_size': 90, 'max_instances_in_memory': 10000, 'sorting_keys': [['question', 'num_tokens'], ['passage', 'num_tokens']]}, 'model': {'type': 'docqa++', 'frac_of_validation_used': 0.967, 'frac_of_training_used': 0.8345, 'shared_norm': false}, 'trainer': {'cuda_device': 0, 'learning_rate_scheduler': {'type': 'reduce_on_plateau', 'factor': 0.4, 'mode': 'max', 'patience': 6}, 'num_epochs': 100, 'optimizer': {'type': 'adam', 'lr': 0.001, 'weight_decay': 0.0001}, 'patience': 10, 'validation_metric': '+f1'}, 'validation_iterator': {'type': 'multiqa', 'batch_size': 60, 'max_instances_in_memory': 10000, 'all_question_instances_in_batch': true, 'sorting_keys': [['question', 'num_tokens'], ['passage', 'num_tokens']]}, 'train_data_path': 's3://multiqa/preproc/TriviaQA-G_1-2_train.json.zip', 'validation_data_path': 's3://multiqa/preproc/TriviaQA-G_1-2_dev.json.zip'}"'''
+        name = 'Squad_1000/GloVe_shared_False_0113_0815'
+        command = '''python -m allennlp.run train s3://multiqa/config/MultiQA_GloVe_rand_iter.json --s ../models/Squad_1000/GloVe_shared_False_0113_0815 -o "{'dataset_reader': {'type': 'multiqa+', 'lazy': false}, 'iterator': {'type': 'multiqa', 'batch_size': 130, 'max_instances_in_memory': 10000, 'sorting_keys': [['passage', 'num_tokens'], ['question', 'num_tokens']]}, 'model': {'type': 'docqa++', 'frac_of_validation_used': 1.0, 'frac_of_training_used': 1.0, 'shared_norm': false}, 'trainer': {'cuda_device': 1, 'learning_rate_scheduler': {'type': 'reduce_on_plateau', 'factor': 0.4, 'mode': 'max', 'patience': 5}, 'num_epochs': 80, 'optimizer': {'type': 'adam', 'lr': 0.001, 'weight_decay': 0.0001}, 'patience': 10, 'validation_metric': '+f1'}, 'validation_iterator': {'type': 'multiqa', 'batch_size': 80, 'max_instances_in_memory': 10000, 'sorting_keys': [['passage', 'num_tokens'], ['question', 'num_tokens']]}, 'train_data_path': 's3://multiqa/preproc/Squad_1000_train.json.zip', 'validation_data_path': 's3://multiqa/preproc/Squad_1000_dev.json.zip'}"''' + " --recover"
 
      # Packages
     command += ' --include-package allennlp.models.reading_comprehension.docqa++ \
@@ -73,10 +78,13 @@ def dispatch():
 
     # preprocess
     if Operation == "Preprocess":
-        set = 'train'
-        dataset = 'HotpotQA'
-        name = "preprocess_" + dataset + "_400_" + set + "_" + datetime.datetime.now().strftime("%m%d_%H%M")
-        command = "python scripts/multiqa/preprocess.py s3://multiqa/" + dataset + "_" + set + ".json.zip s3://multiqa/preproc/" + dataset + "_400_" + set + ".json.zip --n_processes 10 --ndocs 10 --docsize 400 --titles True --use_rank False --require_answer_in_doc False --sample_size -1  "
+        set = 'dev'
+        dataset = 'TriviaQA-web'
+        docsize = '250'
+        name = "preprocess_" + dataset + "_" + docsize + "_" + set + "_" + datetime.datetime.now().strftime("%m%d_%H%M")
+        command = "python scripts/multiqa/preprocess.py s3://multiqa/datasets/" + dataset + "_" + set + ".jsonl.zip s3://multiqa/preproc/" + dataset \
+                  + "_" + docsize + "_" + set + ".jsonl.zip --n_processes 10 --ndocs 10 --docsize " + docsize + \
+                  " --titles True --use_rank True --require_answer_in_doc False --sample_size -1  "
         if set == "train":
             command += "--require_answer_in_question True"
         else:
@@ -88,10 +96,11 @@ def dispatch():
     
     if Operation == "kill job":
         name = "kill job"
-        command = "preprocess_TriviaQA-G_400_train_0103_2247"
+        command = "ComplexWebQuestions_250/GloVe_GPU3_LR_0.001_L2_0.0001_0118_1605"
     
     print('\n')
     print(host)
+    print(name)
     print(command)
     
     connection_params = pika.URLParameters('amqp://imfgrmdk:Xv_s9oF_pDdrd0LlF0k6ogGBOqzewbqU@barnacle.rmq.cloudamqp.com/imfgrmdk')
@@ -105,6 +114,4 @@ def dispatch():
     connection.close()
 
 dispatch()
-
-
 
