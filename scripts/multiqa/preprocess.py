@@ -774,10 +774,19 @@ def main():
 
         os.remove(filename.replace('.zip',''))
     instance_with_answers = len([1 for instance in preprocessed_instances if instance['metadata']['has_answer']])
-    ElasticLogger().write_log('INFO', 'dataset preproc stats', \
-        context_dict={'name': preprocessed_instances[0]['metadata']['dataset'],'num_of_instances':len(preprocessed_instances), \
-                      'total_num_of_questions': all_qa_count, "num_of_questions_used": all_qa_count - skipped_qa_count,
-                      'frac_of_instances_with_answers':float(instance_with_answers) / len(preprocessed_instances)})
+    ElasticLogger().write_log('INFO', 'Dataset Preproc Stats', \
+        context_dict={'dataset': preprocessed_instances[0]['metadata']['dataset'],
+                      'name':outPutname,
+                      'num_of_documents':args.ndocs,
+                      'max_doc_size':args.docsize,
+                      'use_titles':args.titles,
+                      'use_rank':args.use_rank,
+                      'require_answer_in_doc': args.require_answer_in_doc,
+                      'require_answer_in_question': args.require_answer_in_question,
+                      'total_num_of_questions': all_qa_count,
+                      'num_of_questions_used': all_qa_count - skipped_qa_count,
+                      'frac_of_instances_with_answers':float(instance_with_answers) / len(preprocessed_instances),
+                      'num_of_instances':len(preprocessed_instances)})
 
 
 if __name__ == "__main__":
