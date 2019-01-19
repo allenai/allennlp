@@ -38,6 +38,18 @@ class TestSquadReader:
         expected_answer_tokens = ["Father", "Julius", "Nieuwland"]
         assert [t.text for t in answer_tokens] == expected_answer_tokens
 
+        # We also support limiting the length of passage and question when reading the dataset.
+        # We're making sure the length of the text is correct.
+        reader = SquadReader(lazy=lazy,
+                             passage_length_limit=30,
+                             question_length_limit=10,
+                             skip_invalid_examples=True)
+        instances = ensure_list(reader.read(AllenNlpTestCase.FIXTURES_ROOT / 'data' / 'squad.json'))
+        assert len(instances[0].fields["question"].tokens) == 10
+        assert len(instances[0].fields["passage"].tokens) == 30
+        # invalid examples where all the answers exceed the passage length should be skipped.
+        assert len(instances) == 3
+
     def test_can_build_from_params(self):
         reader = SquadReader.from_params(Params({}))
         # pylint: disable=protected-access
