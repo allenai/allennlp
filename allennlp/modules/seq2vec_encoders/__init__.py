@@ -27,7 +27,7 @@ from allennlp.modules.seq2vec_encoders.pytorch_seq2vec_wrapper import PytorchSeq
 from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
 from allennlp.modules.augmented_lstm import AugmentedLstm
 from allennlp.modules.stacked_alternating_lstm import StackedAlternatingLstm
-
+from allennlp.modules.seq2vec_encoders.self_attentive_encoder_wrapper  import SelfAttentiveEncoderWrapper
 
 class _Seq2VecWrapper:
     """

@@ -30,3 +30,8 @@ allennlp.modules.seq2vec_encoders
    :members:
    :undoc-members:
    :show-inheritance:
+
+.. automodule:: allennlp.modules.seq2vec_encoders.self_attentive_encoder_wrapper
+   :members:
+   :undoc-members:
+   :show-inheritance:

@@ -9,7 +9,8 @@ from allennlp.modules.self_attentive_sentence_encoder import SelfAttentiveSenten
 class TestSelfAttentiveSentenceEncoder(AllenNlpTestCase):
 
     def test_forward_and_dimensions(self):
-        self_attentive_encoder = SelfAttentiveSentenceEncoder(3, 4, 5, False)
+        self_attentive_encoder = SelfAttentiveSentenceEncoder(attention_size=3, num_attention_heads=4,
+                                                              input_dim=5)
         input_tensor = torch.randn(3, 5, 5)
         encoder_output = self_attentive_encoder(input_tensor)
 
@@ -21,23 +22,30 @@ class TestSelfAttentiveSentenceEncoder(AllenNlpTestCase):
         # Test attention weights shape
         assert list(attention_weights.size()) == [3, 5, 4]
 
-    def test_forbenius_norm_presence(self):
-        self_attentive_encoder = SelfAttentiveSentenceEncoder(3, 4, 5, True)
+    def test_frobenius_norm_presence(self):
+        self_attentive_encoder = SelfAttentiveSentenceEncoder(attention_size=3, num_attention_heads=4,
+                                                              input_dim=5, regularization_coefficient=0.5)
         input_tensor = torch.randn(3, 5, 5)
         encoder_output = self_attentive_encoder(input_tensor)
         assert "regularization_loss" in encoder_output
 
-    def test_l2_matrix_norm_calculation(self):
-        self_attentive_encoder = SelfAttentiveSentenceEncoder(3, 4, 5, False)
+    def test_regularization_penalty_calculation(self):
+        self_attentive_encoder = SelfAttentiveSentenceEncoder(attention_size=3, num_attention_heads=4,
+                                                              input_dim=5)
 
-        input_matrix = torch.ones(3, 4, 4)
-
-        norm = self_attentive_encoder.l2_matrix_norm(input_matrix)
+        input_matrix_identity = torch.eye(4, 5)
+        input_matrix_identity = input_matrix_identity.unsqueeze(0).expand(3, 4, 5)
+        input_matrix_zeros = torch.zeros(3, 4, 5)
+        
+        identity_norm = self_attentive_encoder.frobenius_regularization_penalty(input_matrix_identity)
+        zeros_norm = self_attentive_encoder.frobenius_regularization_penalty(input_matrix_zeros)
         # Calculated manually
-        assert norm == 12
+        assert identity_norm == 0
+        assert zeros_norm == 6
 
     def test_masking_of_input(self):
-        self_attentive_encoder = SelfAttentiveSentenceEncoder(3, 4, 5, False)
+        self_attentive_encoder = SelfAttentiveSentenceEncoder(attention_size=3, num_attention_heads=4,
+                                                              input_dim=5)
         input_tensor = torch.randn(3, 5, 5)
         mask = torch.ones(3, 5)
         mask[:, 3:] = 0
