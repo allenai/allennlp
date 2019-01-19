@@ -36,7 +36,7 @@ class TestSelfAttentiveSentenceEncoder(AllenNlpTestCase):
         input_matrix_identity = torch.eye(4, 5)
         input_matrix_identity = input_matrix_identity.unsqueeze(0).expand(3, 4, 5)
         input_matrix_zeros = torch.zeros(3, 4, 5)
-        
+        # Calculate
         identity_norm = self_attentive_encoder.frobenius_regularization_penalty(input_matrix_identity)
         zeros_norm = self_attentive_encoder.frobenius_regularization_penalty(input_matrix_zeros)
         # Calculated manually

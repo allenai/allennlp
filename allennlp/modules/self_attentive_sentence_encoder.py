@@ -90,7 +90,7 @@ class SelfAttentiveSentenceEncoder(torch.nn.Module):
         return outputs
 
     def frobenius_regularization_penalty(self, attention: torch.Tensor) -> torch.Tensor:
-        """ 
+        """
         Parameters
         ----------
         inputs : ``torch.FloatTensor``, required.
