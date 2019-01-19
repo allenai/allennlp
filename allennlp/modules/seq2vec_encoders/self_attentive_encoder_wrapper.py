@@ -2,7 +2,7 @@
 import torch
 
 from allennlp.modules.self_attentive_sentence_encoder import SelfAttentiveSentenceEncoder
-from allennlp.modules import Seq2VecEncoder
+from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
 
 @Seq2VecEncoder.register('self-attentive-encoder')
 class SelfAttentiveEncoderWrapper(Seq2VecEncoder):
