@@ -100,7 +100,7 @@ class MultiQAReader(DatasetReader):
             contexts = contexts[0:self._sample_size]
 
 
-        if False:
+        if True:
             # bucketing by QuestionID
             instance_list = contexts
             instance_list = sorted(instance_list, key=lambda x: x['metadata']['question_id'])
@@ -122,15 +122,19 @@ class MultiQAReader(DatasetReader):
             # selecting instaces to add
             instances = []
             for question_instances in per_question_instances:
-                if file_path.find('_dev.')>-1:
+                if False and file_path.find('_dev.')>-1:
                     instances_to_add = question_instances
                 else:
                     # choose at most 2 instances from the same question:
                     if len(question_instances) > 2:
-                        # This part is inspired by Clark and Gardner, 17 - over sample the high ranking documents
-
-                        instances_to_add = random.sample(question_instances[0:2], 1)
-                        instances_to_add += random.sample(question_instances[2:], 1)
+                        # This part is inspired by Clark and Gardner, 17 - oversample the highest ranking documents.
+                        # In thier work they use only instances with answers, so we will find the highest
+                        # ranking instance with an answer (this also insures we have at least one answer in the chosen instances)
+                        inst_with_answers = [inst for inst in question_instances if inst['answers'] != []]
+                        instances_to_add = random.sample(inst_with_answers[0:2], 1)
+                        # we assume each question will be visited once in an epoch
+                        question_instances.remove(instances_to_add[0])
+                        instances_to_add += random.sample(question_instances, 1)
 
                     else:
                         instances_to_add = question_instances
