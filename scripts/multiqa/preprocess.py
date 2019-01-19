@@ -300,7 +300,6 @@ class MultiQAPreprocess():
             context['qas'] = ans_start_updated_qas
             document['parts'] = sized_parts
             ans_start_updated_qas = copy.deepcopy(context['qas'])
-            new_documents = copy.deepcopy(context['documents'])
 
         return new_documents, ans_start_updated_qas
 
