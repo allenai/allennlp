@@ -21,7 +21,7 @@ local BASE_READER = {
             "type": "elmo_characters"
           }
         },
-        "max_sequence_length": 500,
+        "max_sequence_length": 400,
         "start_tokens": ["<S>"],
         "end_tokens": ["</S>"]
 };
@@ -34,7 +34,7 @@ local BASE_ITERATOR = {
   // samples in every batch.
   "batch_size": 512 * NUM_GPUS,
   "sorting_keys": [["source", "num_tokens"]],
-  "maximum_samples_per_batch": ["num_tokens", NUM_GPUS * 1000]
+  "maximum_samples_per_batch": ["num_tokens", 2000]
 };
 
 {
@@ -117,7 +117,7 @@ local BASE_ITERATOR = {
     // The multiprocess dataset reader and iterator use many file descriptors,
     // so we need to increase the ulimit depending on the size of this queue.
     // See https://pytorch.org/docs/stable/multiprocessing.html#file-descriptor-file-descriptor
-    // for a description of the underlying issue. `ulimit -n 4096` has sufficed,
+    // for a description of the underlying issue. `ulimit -n 8192` has sufficed,
     // but that number could use tuning.
     "output_queue_size": 500
   },
@@ -139,6 +139,7 @@ local BASE_ITERATOR = {
       // See https://github.com/allenai/calypso/blob/master/bin/train_transformer_lm1b.py#L51.
       // Adjusted based on our sample size relative to Calypso's.
       "warmup_steps": 6000
-    }
+    },
+    "should_log_learning_rate": true
   }
 }
