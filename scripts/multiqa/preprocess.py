@@ -7,6 +7,7 @@ import sys, os
 import boto3
 from typing import TypeVar,Iterable
 from multiprocessing import Pool
+from allennlp.common.elastic_logger import ElasticLogger
         
 
 T = TypeVar('T')
@@ -554,6 +555,7 @@ class MultiQAPreprocess():
 
                 # Adding Metadata
                 metadata = {}
+                metadata['dataset'] = context['dataset']
                 metadata["question_id"] = qa['id']
                 question_text = qa["question"].strip().replace("\n", "")
                 answer_texts_list = []
@@ -575,7 +577,7 @@ class MultiQAPreprocess():
                         continue
 
                     metadata['rank'] = rank
-
+                    metadata['has_answer'] = document['answers'] != []
                     # adding to cache
                     instance = {'question_text':question_text,
                         'question_tokens':tokenized_question,
@@ -712,6 +714,7 @@ def main():
         split_inds = [0] + list(np.cumsum(np.unique(intances_question_id, return_counts=True)[1]))
         per_question_instances = [instance_list[split_inds[ind]:split_inds[ind + 1]] for ind in
                                   range(len(split_inds) - 1)]
+        print('num of per_question_instances = %d' % (len(per_question_instances)))
 
         # sorting
         sorting_keys = ['question_tokens', 'tokens']
@@ -770,6 +773,11 @@ def main():
             zip_file.write(filename.replace('.zip',''))
 
         os.remove(filename.replace('.zip',''))
+    instance_with_answers = len([1 for instance in preprocessed_instances if instance['metadata']['has_answer']])
+    ElasticLogger().write_log('INFO', 'dataset preproc stats', \
+        context_dict={'name': preprocessed_instances[0]['metadata']['dataset'], \
+                      'total_num_of_instances': all_qa_count, "num_of_instances_used": all_qa_count - skipped_qa_count,
+                      'frac_of_instances_with_answers':float(instance_with_answers) / len(preprocessed_instances)})
 
 
 if __name__ == "__main__":
