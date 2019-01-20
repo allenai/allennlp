@@ -115,7 +115,8 @@ class MultiQAPreprocess():
                  use_document_titles,
                  use_rank,
                  require_answer_in_doc,
-                 require_answer_in_question) -> None:
+                 require_answer_in_question,
+                 header) -> None:
         self._DEBUG = False
         self._tokenizer = WordTokenizer()
         self._token_indexers = {'tokens': SingleIdTokenIndexer()}
@@ -128,6 +129,7 @@ class MultiQAPreprocess():
         self._use_rank = use_rank
         self._answers_removed = 0
         self._total_answers = 0
+        self._header = header
 
         # we chose "^..^" because the tokenizer splits the standard "<..>" chars
         self._SEP = ' ^SEP^ '
@@ -553,15 +555,16 @@ class MultiQAPreprocess():
                     raise(ValueError)
 
                 # Adding Metadata
-                metadata = {}
-                metadata['dataset'] = context['dataset']
-                metadata["question_id"] = qa['id']
+                qa_metadata = {}
+                qa_metadata['dataset'] = self._header['dataset']
+                qa_metadata["context_id"] = context['id']
+                qa_metadata["question_id"] = qa['id']
                 question_text = qa["question"].strip().replace("\n", "")
                 answer_texts_list = []
                 for answer in qa['answers']:
                     answer_texts_list += [alias['text'] for alias in answer['aliases']]
-                metadata["question"] = question_text
-                metadata['answer_texts_list'] = answer_texts_list
+                qa_metadata["question"] = question_text
+                qa_metadata['answer_texts_list'] = answer_texts_list
 
                 # If answer was not found in this question do not yield an instance
                 # (This could happen if we used part of the context or in unfiltered context versions)
@@ -575,12 +578,14 @@ class MultiQAPreprocess():
                         (self._require_answer_in_doc and document['answers'] == []): 
                         continue
 
-                    metadata['rank'] = rank
-                    metadata['has_answer'] = document['answers'] != []
+                    inst_metatdata = copy.deepcopy(qa_metadata)
+                    inst_metatdata['rank'] = rank
+                    inst_metatdata["instance_id"] = qa['id'] + '-' + str(rank)
+                    inst_metatdata['has_answer'] = document['answers'] != []
                     # adding to cache
                     instance = {'question_text':question_text,
                         'question_tokens':tokenized_question,
-                        'metadata':metadata}
+                        'metadata':inst_metatdata}
                     instance.update(document)
                     preprocessed_instances.append(instance)
 
@@ -590,7 +595,7 @@ class MultiQAPreprocess():
         return preprocessed_instances, all_qa_count, skipped_qa_count
 
 def _preprocess_t(arg):
-    preprocessor = MultiQAPreprocess(*arg[1:7])
+    preprocessor = MultiQAPreprocess(*arg[1:8])
     return preprocessor.preprocess(*arg[0:1])
 
 def flatten_iterable(listoflists: Iterable[Iterable[T]]) -> List[T]:
@@ -667,6 +672,7 @@ def main():
         if myzip.namelist()[0].find('jsonl')>0:
             contexts = []
             with myzip.open(myzip.namelist()[0]) as myfile:
+                header = json.loads(myfile.readline())['header']
                 for example in myfile:
                     contexts.append(json.loads(example))
         else:
@@ -681,7 +687,7 @@ def main():
 
     if args.n_processes == 1:
         preprocessor = MultiQAPreprocess(args.ndocs, args.docsize, args.titles, args.use_rank, \
-             args.require_answer_in_doc,args.require_answer_in_question)
+             args.require_answer_in_doc,args.require_answer_in_question, header)
         preprocessed_instances, all_qa_count, skipped_qa_count = preprocessor.preprocess(Tqdm.tqdm(contexts, ncols=80))
     else:
         preprocessed_instances = []
@@ -694,7 +700,7 @@ def main():
             pbar = Tqdm.tqdm(total=len(chunks), ncols=80,smoothing=0.0)
             for preproc_inst, all_count, s_count in pool.imap_unordered(_preprocess_t,\
                     [[c, args.ndocs, args.docsize, args.titles, args.use_rank, \
-                        args.require_answer_in_doc, args.require_answer_in_question] for c in chunks]):
+                        args.require_answer_in_doc, args.require_answer_in_question, header] for c in chunks]):
                 preprocessed_instances += preproc_inst 
                 all_qa_count += all_count
                 skipped_qa_count += s_count
@@ -734,17 +740,32 @@ def main():
     print('skipped_qa_count = %d' % skipped_qa_count)
     preproc_dataset = {'num_examples_used':(all_qa_count - skipped_qa_count, all_qa_count) ,'preprocessed':True,  'preprocessed_instances':preprocessed_instances}
 
+    # building header
+    instance_with_answers = len([1 for instance in preprocessed_instances if instance['metadata']['has_answer']])
+    preproc_header = {'preproc.num_of_documents':args.ndocs,
+              'preproc.max_doc_size':args.docsize,
+              'preproc.use_titles':args.titles,
+              'preproc.use_rank':args.use_rank,
+              'preproc.require_answer_in_doc': args.require_answer_in_doc,
+              'preproc.require_answer_in_question': args.require_answer_in_question,
+              'preproc.total_num_of_questions': all_qa_count,
+              'preproc.num_of_questions_used': all_qa_count - skipped_qa_count,
+              'preproc.frac_of_instances_with_answers':float(instance_with_answers) / len(preprocessed_instances),
+              'preproc.num_of_instances':len(preprocessed_instances),
+              'preproc.final_qas_used_fraction': \
+                    header['qas_used_fraction'] * (all_qa_count - skipped_qa_count) / all_qa_count}
+    preproc_header.update(header)
+
     temp_name = 'temp.jsonl'
     if args.output_file.startswith('s3://'):
 
         output_file = args.output_file.replace('s3://','')
         bucketName = output_file.split('/')[0]
         outPutname = '/'.join(output_file.split('/')[1:])
-
+        dataset = args.output_file.split('/')[-1]
         with open(temp_name, "w") as f:
             # first JSON line is header
-            f.write(json.dumps({'header':{'dataset':'', \
-                                           'num_examples_used':(all_qa_count - skipped_qa_count, all_qa_count)}}) + '\n')
+            f.write(json.dumps({'header':preproc_header}) + '\n')
             for instance in preprocessed_instances:
                 f.write(json.dumps(instance) + '\n')
 
@@ -758,34 +779,22 @@ def main():
         os.remove(temp_name+ '.zip')
     else:
         output_dir = '/'.join(args.output_file.split('/')[0:-1])
-        filename = args.output_file.split('/')[-1]
+        dataset = args.output_file.split('/')[-1]
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
 
-        with open(filename.replace('.zip',''), "w") as f:
+        with open(dataset.replace('.zip',''), "w") as f:
             # first JSON line is header
-            f.write(json.dumps({'header':{'dataset':'','num_examples_used':(all_qa_count - skipped_qa_count, all_qa_count)}}) + '\n')
+            f.write(json.dumps({'header': preproc_header}) + '\n')
             for instance in preprocessed_instances:
                 f.write(json.dumps(instance) + '\n')
 
         with zipfile.ZipFile(args.output_file, "w", zipfile.ZIP_DEFLATED) as zip_file:
-            zip_file.write(filename.replace('.zip',''))
+            zip_file.write(dataset.replace('.zip',''))
 
-        os.remove(filename.replace('.zip',''))
-    instance_with_answers = len([1 for instance in preprocessed_instances if instance['metadata']['has_answer']])
-    ElasticLogger().write_log('INFO', 'Dataset Preproc Stats', \
-        context_dict={'dataset': preprocessed_instances[0]['metadata']['dataset'],
-                      'name':outPutname,
-                      'num_of_documents':args.ndocs,
-                      'max_doc_size':args.docsize,
-                      'use_titles':args.titles,
-                      'use_rank':args.use_rank,
-                      'require_answer_in_doc': args.require_answer_in_doc,
-                      'require_answer_in_question': args.require_answer_in_question,
-                      'total_num_of_questions': all_qa_count,
-                      'num_of_questions_used': all_qa_count - skipped_qa_count,
-                      'frac_of_instances_with_answers':float(instance_with_answers) / len(preprocessed_instances),
-                      'num_of_instances':len(preprocessed_instances)})
+        os.remove(dataset.replace('.zip',''))
+
+    ElasticLogger().write_log('INFO', 'Dataset Preproc Stats', context_dict=preproc_header)
 
 
 if __name__ == "__main__":
