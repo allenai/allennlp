@@ -19,11 +19,15 @@ def flatten_json(y):
     def flatten(x, name=''):
         if type(x) is dict:
             for a in x:
-                flatten(x[a], name + a + '.')
+                # TODO this is a patch for shortning the names
+                b = a + '_'
+                if a == 'override_config' or a == 'config':
+                    b = ''
+                flatten(x[a], name + b)
         elif type(x) is list:
             i = 0
             for a in x:
-                flatten(a, name + str(i) + '.')
+                flatten(a, name + str(i) + '_')
                 i += 1
         else:
             out[name[:-1]] = x
@@ -44,6 +48,7 @@ parser.add_argument("--shell", type=str, default="not_bash",
 args = parser.parse_args()
 
 proc_running = []
+log_handles = {}
 iter_count = 0 # counting iteration for writing status
 while True:
     try:
@@ -61,7 +66,7 @@ while True:
             log_data = []
             try:
                 # Log snapshot
-                log_data = proc['log_handle'].readlines()
+                log_data = log_handles[proc['log_file']].readlines()
                 proc['log_snapshot'] = ' '.join(log_data)
             except:
                 proc['alive'] = False
@@ -84,20 +89,24 @@ while True:
                 # TODO this is an ugly check, but because we are forking with nohup, python does not provide any good alternative...
                 if proc['log_snapshot'].find('Traceback (most recent call last):') > -1 or \
                     proc['log_snapshot'].find('error') > -1:
-                    ElasticLogger().write_log('INFO', "Job died", flatten_json(proc), push_bulk=True,print_log=True)
-                    proc['log_handle'].close()
+                    ElasticLogger().write_log('INFO', "Job died", {'experiment_name':proc['experiment_name'],
+                            'log_snapshot':proc['log_snapshot']}, push_bulk=True,print_log=True)
+
                     # Requeue
                     #channel.basic_nack(proc['job_tag'])
                     proc_running.remove(proc)
-                    break
+
                 else:
                     ElasticLogger().write_log('INFO', "Job finished successfully", flatten_json(proc), push_bulk=True,print_log=True)
-                    proc['log_handle'].close()
 
                     # ack
                     #channel.basic_ack(proc['job_tag'])
                     proc_running.remove(proc)
-                    break
+
+                log_handles[proc['log_file']].close()
+                #log_handles.remove(proc['log_file'])
+                break
+
 
 
         ### Reading one job from queue
@@ -146,12 +155,13 @@ while True:
             # Executing
             print(bash_command)
             with open(log_file,'wb') as f:
-                #wa_proc = Popen("nohup python dummy_job.py &", shell=True, preexec_fn=os.setsid,stdout=f,stderr=f)
-                wa_proc = Popen(bash_command, shell=True, preexec_fn=os.setsid, stdout=f, stderr=f)
+                wa_proc = Popen("nohup python dummy_job.py &", shell=True, preexec_fn=os.setsid,stdout=f,stderr=f)
+                #wa_proc = Popen(bash_command, shell=True, preexec_fn=os.setsid, stdout=f, stderr=f)
 
             # open log file for reading
+            log_handles['log_file'] = open(log_file,'r')
             new_proc = {'job_tag':method_frame.delivery_tag,'config':body, 'command':bash_command, \
-                                 'log_file':log_file,'log_handle':open(log_file,'r'), 'log_snapshot':'',\
+                                 'log_file':log_file,'log_snapshot':'',\
                                  'experiment_name':properties.headers['name'], 'alive': True,\
                                  'pid': wa_proc.pid+1, 'start_time': time.time()}
             proc_running.append(new_proc)
