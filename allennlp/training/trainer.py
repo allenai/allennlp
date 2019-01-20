@@ -1,5 +1,6 @@
 
 import logging
+import math
 import os
 import time
 import re
@@ -13,10 +14,10 @@ import torch.optim.lr_scheduler
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import (dump_metrics, gpu_memory_mb, parse_cuda_device, peak_memory_mb,
-                                  get_frozen_and_tunable_parameter_names)
+                                  get_frozen_and_tunable_parameter_names, lazy_groups_of)
 from allennlp.common.tqdm import Tqdm
 from allennlp.data.instance import Instance
-from allennlp.data.iterators.data_iterator import DataIterator
+from allennlp.data.iterators.data_iterator import DataIterator, TensorDict
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.model import Model
 from allennlp.nn import util as nn_util
@@ -69,6 +70,10 @@ class Trainer(TrainerBase):
             An AllenNLP model to be optimized. Pytorch Modules can also be optimized if
             their ``forward`` method returns a dictionary with a "loss" key, containing a
             scalar tensor representing the loss function to be optimized.
+
+            If you are training your model using GPUs, your model should already be
+            on the correct device. (If you use `Trainer.from_params` this will be
+            handled for you.)
         optimizer : ``torch.nn.Optimizer``, required.
             An instance of a Pytorch Optimizer, instantiated with the parameters of the
             model to be optimized.
@@ -212,14 +217,16 @@ class Trainer(TrainerBase):
     def rescale_gradients(self) -> Optional[float]:
         return training_util.rescale_gradients(self.model, self._grad_norm)
 
-    def batch_loss(self, batch: torch.Tensor, for_training: bool) -> torch.Tensor:
+    def batch_loss(self, batch_group: List[TensorDict], for_training: bool) -> torch.Tensor:
         """
-        Does a forward pass on the given batch and returns the ``loss`` value in the result.
+        Does a forward pass on the given batches and returns the ``loss`` value in the result.
         If ``for_training`` is `True` also applies regularization penalty.
         """
         if self._multiple_gpu:
-            output_dict = training_util.data_parallel(batch, self.model, self._cuda_devices)
+            output_dict = training_util.data_parallel(batch_group, self.model, self._cuda_devices)
         else:
+            assert len(batch_group) == 1
+            batch = batch_group[0]
             batch = nn_util.move_to_device(batch, self._cuda_devices[0])
             output_dict = self.model(**batch)
 
@@ -251,11 +258,14 @@ class Trainer(TrainerBase):
         # Set the model to "train" mode.
         self.model.train()
 
+        num_gpus = len(self._cuda_devices)
+
         # Get tqdm for the training batches
-        train_generator = self.iterator(self.train_data,
-                                        num_epochs=1,
-                                        shuffle=self.shuffle)
-        num_training_batches = self.iterator.get_num_batches(self.train_data)
+        raw_train_generator = self.iterator(self.train_data,
+                                            num_epochs=1,
+                                            shuffle=self.shuffle)
+        train_generator = lazy_groups_of(raw_train_generator, num_gpus)
+        num_training_batches = math.ceil(self.iterator.get_num_batches(self.train_data)/num_gpus)
         self._last_log = time.time()
         last_save_time = time.time()
 
@@ -265,18 +275,20 @@ class Trainer(TrainerBase):
 
         histogram_parameters = set(self.model.get_parameters_for_histogram_tensorboard_logging())
 
+
         logger.info("Training")
         train_generator_tqdm = Tqdm.tqdm(train_generator,
                                          total=num_training_batches)
         cumulative_batch_size = 0
-        for batch in train_generator_tqdm:
+        for batch_group in train_generator_tqdm:
             batches_this_epoch += 1
             self._batch_num_total += 1
             batch_num_total = self._batch_num_total
 
             self.optimizer.zero_grad()
 
-            loss = self.batch_loss(batch, for_training=True)
+            loss = self.batch_loss(batch_group, for_training=True)
+
             if torch.isnan(loss):
                 raise ValueError("nan loss encountered")
 
@@ -325,7 +337,7 @@ class Trainer(TrainerBase):
                 self._tensorboard.log_histograms(self.model, histogram_parameters)
 
             if self._log_batch_size_period:
-                cur_batch = training_util.get_batch_size(batch)
+                cur_batch = sum([training_util.get_batch_size(batch) for batch in batch_group])
                 cumulative_batch_size += cur_batch
                 if (batches_this_epoch - 1) % self._log_batch_size_period == 0:
                     average = cumulative_batch_size/batches_this_epoch
@@ -361,17 +373,20 @@ class Trainer(TrainerBase):
         else:
             val_iterator = self.iterator
 
-        val_generator = val_iterator(self._validation_data,
-                                     num_epochs=1,
-                                     shuffle=False)
-        num_validation_batches = val_iterator.get_num_batches(self._validation_data)
+        num_gpus = len(self._cuda_devices)
+
+        raw_val_generator = val_iterator(self._validation_data,
+                                         num_epochs=1,
+                                         shuffle=False)
+        val_generator = lazy_groups_of(raw_val_generator, num_gpus)
+        num_validation_batches = math.ceil(val_iterator.get_num_batches(self._validation_data)/num_gpus)
         val_generator_tqdm = Tqdm.tqdm(val_generator,
                                        total=num_validation_batches)
         batches_this_epoch = 0
         val_loss = 0
-        for batch in val_generator_tqdm:
+        for batch_group in val_generator_tqdm:
 
-            loss = self.batch_loss(batch, for_training=False)
+            loss = self.batch_loss(batch_group, for_training=False)
             if loss is not None:
                 # You shouldn't necessarily have to compute a loss for validation, so we allow for
                 # `loss` to be None.  We need to be careful, though - `batches_this_epoch` is
@@ -441,7 +456,7 @@ class Trainer(TrainerBase):
                         logger.info("Ran out of patience.  Stopping training.")
                         break
 
-            self._tensorboard.log_metrics(train_metrics, val_metrics=val_metrics)
+            self._tensorboard.log_metrics(train_metrics, val_metrics=val_metrics, log_to_console=True)
 
             # Create overall metrics dict
             training_elapsed_time = time.time() - training_start_time
