@@ -146,19 +146,18 @@ while True:
             # Executing
             print(bash_command)
             with open(log_file,'wb') as f:
-
-                # TODO run bash command
-                # bash_command
-                wa_proc = Popen("nohup python dummy_job.py &", shell=True, preexec_fn=os.setsid,stdout=f,stderr=f)
+                #wa_proc = Popen("nohup python dummy_job.py &", shell=True, preexec_fn=os.setsid,stdout=f,stderr=f)
+                wa_proc = Popen(bash_command, shell=True, preexec_fn=os.setsid, stdout=f, stderr=f)
 
             # open log file for reading
-            proc_running.append({'job_tag':method_frame.delivery_tag,'config':body, 'command':bash_command, \
+            new_proc = {'job_tag':method_frame.delivery_tag,'config':body, 'command':bash_command, \
                                  'log_file':log_file,'log_handle':open(log_file,'r'), 'log_snapshot':'',\
                                  'experiment_name':properties.headers['name'], 'alive': True,\
-                                 'pid': wa_proc.pid+1, 'start_time': time.time()})
+                                 'pid': wa_proc.pid+1, 'start_time': time.time()}
+            proc_running.append(new_proc)
             # we are not persistant for now ...
             channel.basic_ack(method_frame.delivery_tag)
-            ElasticLogger().write_log('INFO', "Job Started", flatten_json(proc), push_bulk=True, print_log=True)
+            ElasticLogger().write_log('INFO', "Job Started", flatten_json(new_proc), push_bulk=True, print_log=True)
             time.sleep(2)
 
 
