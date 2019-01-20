@@ -155,8 +155,8 @@ while True:
             # Executing
             print(bash_command)
             with open(log_file,'wb') as f:
-                wa_proc = Popen("nohup python dummy_job.py &", shell=True, preexec_fn=os.setsid,stdout=f,stderr=f)
-                #wa_proc = Popen(bash_command, shell=True, preexec_fn=os.setsid, stdout=f, stderr=f)
+                #wa_proc = Popen("nohup python dummy_job.py &", shell=True, preexec_fn=os.setsid,stdout=f,stderr=f)
+                wa_proc = Popen(bash_command, shell=True, preexec_fn=os.setsid, stdout=f, stderr=f)
 
             # open log file for reading
             log_handles['log_file'] = open(log_file,'r')
