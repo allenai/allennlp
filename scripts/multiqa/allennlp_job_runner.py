@@ -61,14 +61,16 @@ while True:
                 print('checcking if process alive '  + str(proc['pid']))
                 os.killpg(os.getpgid(proc['pid']), 0)
             except:
+                print('killpg check not alive')
                 proc['alive'] = False
 
             log_data = []
             try:
                 # Log snapshot
                 log_data = log_handles[proc['log_file']].readlines()
-                proc['log_snapshot'] = ' '.join(log_data)
+                proc['log_snapshot'] += ' '.join(log_data)
             except:
+                print('log read failed')
                 proc['alive'] = False
 
 
@@ -159,7 +161,7 @@ while True:
                 wa_proc = Popen(bash_command, shell=True, preexec_fn=os.setsid, stdout=f, stderr=f)
 
             # open log file for reading
-            log_handles['log_file'] = open(log_file,'r')
+            log_handles[log_file] = open(log_file,'r')
             new_proc = {'job_tag':method_frame.delivery_tag,'config':body, 'command':bash_command, \
                                  'log_file':log_file,'log_snapshot':'',\
                                  'experiment_name':properties.headers['name'], 'alive': True,\
@@ -186,6 +188,7 @@ while True:
 
                 ElasticLogger().write_log('INFO', "Job Status", {'experiment_name':proc['experiment_name'],
                             'log_snapshot':proc['log_snapshot']}, push_bulk=True, print_log=True)
+                proc['log_snapshot'] = ''
 
             try:
                 gpu_mem = gpu_memory_mb()
