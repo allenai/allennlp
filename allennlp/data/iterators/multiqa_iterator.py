@@ -141,9 +141,16 @@ class MultiQAIterator(DataIterator):
                         # In thier work they use only instances with answers, so we will find the highest
                         # ranking instance with an answer (this also insures we have at least one answer in the chosen instances)
                         inst_with_answers = [inst for inst in question_instances if inst.fields['metadata'].metadata['has_answer']]
-                        instances_to_add = random.sample(inst_with_answers[0:2], 1)
-                        # we assume each question will be visited once in an epoch
-                        question_instances.remove(instances_to_add[0])
+
+                        # because we cannot enforce all instances of the same question to be
+                        # provided in the same _memory_sized_lists we have to check this:
+                        # yet another reason to do this in the data reader
+                        if len(inst_with_answers) > 0:
+                            instances_to_add = random.sample(inst_with_answers[0:2], 1)
+                            # we assume each question will be visited once in an epoch
+                            question_instances.remove(instances_to_add[0])
+                        else:
+                            instances_to_add = []
                         instances_to_add += random.sample(question_instances, 1)
 
                     else:
