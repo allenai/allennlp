@@ -187,7 +187,8 @@ class Embedding(TokenEmbedder):
             vocab_namespace = "tokens"
             logging.warning("No vocab_namespace provided to Embedder.extend_vocab. Defaulting to 'tokens'.")
 
-        pretrained_file = pretrained_file or pretrained_filename_mapping.get(self._pretrained_file, None)
+        if pretrained_filename_mapping:
+            pretrained_file = pretrained_file or pretrained_filename_mapping.get(self._pretrained_file, None)
 
         embedding_dim = self.weight.data.shape[-1]
         if not pretrained_file:

@@ -127,6 +127,7 @@ def load_archive(archive_file: str,
 
     # Check for supplemental files in archive
     fta_filename = os.path.join(serialization_dir, _FTA_NAME)
+    files_to_archive: Dict[str, str] = {}
     if os.path.exists(fta_filename):
         with open(fta_filename, 'r') as fta_file:
             files_to_archive = json.loads(fta_file.read())

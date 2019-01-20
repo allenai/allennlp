@@ -180,7 +180,7 @@ def train_model(params: Params,
 
     # Force Pretrained (Embedding) files to be always be added in files_to_archive
     files_to_archive = params.files_to_archive
-    flat_model_params_dict = params.duplicate().pop("model").as_flat_dict(quiet=True)
+    flat_model_params_dict = params.duplicate().pop("model").as_flat_dict()
     for flat_key, value in flat_model_params_dict.items():
         if flat_key.endswith("pretrained"):
             files_to_archive[flat_key] = value

@@ -206,11 +206,11 @@ def fine_tune_model(model: Model,
 
         # archived_filename_mapping is mapping from original file name
         # to the replaced filename to locate it in the archive.
-        archived_filename_mapping = None
+        archived_filename_mapping: Dict[str, str] = None
         if files_to_archive:
-            flat_params_dict = params.duplicate().as_flat_dict(quiet=True)
-            archived_filename_mapping: Dict[str, str] = {flat_params_dict[key]
-                                                         for key in files_to_archive.keys()}
+            flat_params_dict = params.duplicate().as_flat_dict()
+            archived_filename_mapping = {key: flat_params_dict[key]
+                                         for key in files_to_archive.keys()}
 
         model.extend_embedder_vocab(vocab, pretrained_filename_mapping=archived_filename_mapping)
 
