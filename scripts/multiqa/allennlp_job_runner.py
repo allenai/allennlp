@@ -11,30 +11,6 @@ import argparse
 import signal
 from allennlp.common.elastic_logger import ElasticLogger
 import pika
-
-# this will be used for saving to ElasticLogger
-def flatten_json(y):
-    out = {}
-
-    def flatten(x, name=''):
-        if type(x) is dict:
-            for a in x:
-                # TODO this is a patch for shortning the names
-                b = a + '_'
-                if a == 'override_config' or a == 'config':
-                    b = ''
-                flatten(x[a], name + b)
-        elif type(x) is list:
-            i = 0
-            for a in x:
-                flatten(a, name + str(i) + '_')
-                i += 1
-        else:
-            out[name[:-1]] = x
-
-    flatten(y)
-    return out
-
 connection_params = pika.URLParameters('amqp://imfgrmdk:Xv_s9oF_pDdrd0LlF0k6ogGBOqzewbqU@barnacle.rmq.cloudamqp.com/imfgrmdk')
 connection = pika.BlockingConnection(connection_params)
 channel = connection.channel()
@@ -48,7 +24,6 @@ parser.add_argument("--shell", type=str, default="not_bash",
 args = parser.parse_args()
 
 proc_running = []
-log_handles = {}
 iter_count = 0 # counting iteration for writing status
 while True:
     try:
@@ -61,16 +36,15 @@ while True:
                 print('checcking if process alive '  + str(proc['pid']))
                 os.killpg(os.getpgid(proc['pid']), 0)
             except:
-                print('killpg check not alive')
                 proc['alive'] = False
 
             log_data = []
             try:
                 # Log snapshot
-                log_data = log_handles[proc['log_file']].readlines()
-                proc['log_snapshot'] += ' '.join(log_data)
+                with open(proc['log_file'], 'r') as f:
+                    log_data = f.readlines()
+                    proc['log_snapshot'] = ' '.join(log_data[-30:])
             except:
-                print('log read failed')
                 proc['alive'] = False
 
 
@@ -91,24 +65,19 @@ while True:
                 # TODO this is an ugly check, but because we are forking with nohup, python does not provide any good alternative...
                 if proc['log_snapshot'].find('Traceback (most recent call last):') > -1 or \
                     proc['log_snapshot'].find('error') > -1:
-                    ElasticLogger().write_log('INFO', "Job died", {'experiment_name':proc['experiment_name'],
-                            'log_snapshot':proc['log_snapshot']}, push_bulk=True,print_log=True)
+                    ElasticLogger().write_log('INFO', "Job died", proc, push_bulk=True,print_log=True)
 
                     # Requeue
                     #channel.basic_nack(proc['job_tag'])
                     proc_running.remove(proc)
-
+                    break
                 else:
-                    ElasticLogger().write_log('INFO', "Job finished successfully", flatten_json(proc), push_bulk=True,print_log=True)
+                    ElasticLogger().write_log('INFO', "Job finished successfully", proc, push_bulk=True,print_log=True)
 
                     # ack
                     #channel.basic_ack(proc['job_tag'])
                     proc_running.remove(proc)
-
-                log_handles[proc['log_file']].close()
-                #log_handles.remove(proc['log_file'])
-                break
-
+                    break
 
 
         ### Reading one job from queue
@@ -117,12 +86,15 @@ while True:
         if body is not None:
 
             # Display the message parts
-            body = json.loads(body.decode())
+            body = body.decode()
             print(method_frame)
             print(properties)
             print(body)
 
-            if body['command'] == 'kill job':
+            #if properties.headers['name'] == 'restart':
+                #os.execl(path, arg0, arg1, ...)
+            # supporting process kill command:
+            if properties.headers['name'] == 'kill job':
                 print('kill job!')
                 try:
                     pid_to_kill = [proc['pid'] for proc in proc_running if proc['experiment_name'] == body]
@@ -132,44 +104,27 @@ while True:
                                               push_bulk=True, print_log=True)
                     channel.basic_ack(method_frame.delivery_tag)
                     time.sleep(2)
-            elif body['command'] == 'train':
-                bash_command = 'python -m allennlp.run train ' + body['master_config']
-                bash_command += '--s ' + body['model_dir'] + properties.headers['name'] + ' '
-                # Building the python command with arguments
-                bash_command += '-o "' + str(body['override_config']).replace('True', 'true').replace('False', 'false') + '"'
-                bash_command += body['include-package']
 
-            if args.shell == 'bash':
-                bash_command = 'nohup ' + bash_command + ' &'
-            else:
-                bash_command = 'nohup ' + bash_command + ' &'
 
-            # Creating the log dir
             log_file = 'logs/' + properties.headers['name'] + '.txt'
+            if args.shell == 'bash':
+                command = 'nohup ' + body + ' &'
+            else:
+                command = 'nohup ' + body + ' &'
+            print(command)
             log_dir_part = log_file.split('/')
             for dir_depth in range(len(log_dir_part)-1):
                 if not os.path.isdir('/'.join(log_dir_part[0:dir_depth+1])):
                     os.mkdir('/'.join(log_dir_part[0:dir_depth+1]))
 
-            # performing git pull before each execution
-            Popen("git pull origin master", shell=True, preexec_fn=os.setsid)
-
-            # Executing
-            print(bash_command)
             with open(log_file,'wb') as f:
-                #wa_proc = Popen("nohup python dummy_job.py &", shell=True, preexec_fn=os.setsid,stdout=f,stderr=f)
-                wa_proc = Popen(bash_command, shell=True, preexec_fn=os.setsid, stdout=f, stderr=f)
-
-            # open log file for reading
-            log_handles[log_file] = open(log_file,'r')
-            new_proc = {'job_tag':method_frame.delivery_tag,'config':body, 'command':bash_command, \
-                                 'log_file':log_file,'log_snapshot':'',\
+                wa_proc = Popen(command, shell=True, preexec_fn=os.setsid,stdout=f,stderr=f)
+            proc_running.append({'job_tag':method_frame.delivery_tag,'command':command, \
+                                 'log_file':log_file, 'log_snapshot':'',\
                                  'experiment_name':properties.headers['name'], 'alive': True,\
-                                 'pid': wa_proc.pid+1, 'start_time': time.time()}
-            proc_running.append(new_proc)
+                                 'pid': wa_proc.pid+1, 'start_time': time.time()})
             # we are not persistant for now ...
             channel.basic_ack(method_frame.delivery_tag)
-            ElasticLogger().write_log('INFO', "Job Started", flatten_json(new_proc), push_bulk=True, print_log=True)
             time.sleep(2)
 
 
@@ -186,9 +141,7 @@ while True:
                 except:
                     proc['alive'] = False
 
-                ElasticLogger().write_log('INFO', "Job Status", {'experiment_name':proc['experiment_name'],
-                            'log_snapshot':proc['log_snapshot']}, push_bulk=True, print_log=True)
-                proc['log_snapshot'] = ''
+                ElasticLogger().write_log('INFO', "Job Status",proc,push_bulk=True, print_log=True)
 
             try:
                 gpu_mem = gpu_memory_mb()
