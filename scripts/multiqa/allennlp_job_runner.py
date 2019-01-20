@@ -135,7 +135,7 @@ while True:
                 bash_command += '--s ' + body['model_dir'] + properties.headers['name'] + ' '
                 # Building the python command with arguments
                 bash_command += '-o "' + str(body['override_config']).replace('True', 'true').replace('False', 'false') + '"'
-                bash_command == body['include-package']
+                bash_command += body['include-package']
 
             if args.shell == 'bash':
                 bash_command = 'nohup ' + bash_command + ' &'
