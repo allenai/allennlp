@@ -186,7 +186,7 @@ class LstmTagger(Model):
 {% highlight python %}
     def forward(self,
                 sentence: Dict[str, torch.Tensor],
-                labels: torch.Tensor = None) -> torch.Tensor:
+                labels: torch.Tensor = None) -> Dict[str, torch.Tensor]:
 {% endhighlight %}
 </div>
 <div class="annotated-code__code-block" id="c26">
@@ -319,6 +319,40 @@ tag_ids = np.argmax(tag_logits, axis=-1)
 print([model.vocab.get_token_from_index(i, 'labels') for i in tag_ids])
 {% endhighlight %}
 </div>
+<div class="annotated-code__code-block" id="c48">
+{% highlight python %}
+with open("/tmp/model.th", 'wb') as f:
+    torch.save(model.state_dict(), f)
+{% endhighlight %}
+</div>
+<div class="annotated-code__code-block" id="c49">
+{% highlight python %}
+vocab.save_to_files("/tmp/vocabulary")
+{% endhighlight %}
+</div>
+<div class="annotated-code__code-block" id="c50">
+{% highlight python %}
+vocab2 = Vocabulary.from_files("/tmp/vocabulary")
+{% endhighlight %}
+</div>
+<div class="annotated-code__code-block" id="c51">
+{% highlight python %}
+model2 = LstmTagger(word_embeddings, lstm, vocab2)
+{% endhighlight %}
+</div>
+<div class="annotated-code__code-block" id="c52">
+{% highlight python %}
+with open("/tmp/model.th", 'rb') as f:
+    model2.load_state_dict(torch.load(f))
+{% endhighlight %}
+</div>
+<div class="annotated-code__code-block" id="c53">
+{% highlight python %}
+predictor2 = SentenceTaggerPredictor(model2, dataset_reader=reader)
+tag_logits2 = predictor2.predict("The dog ate the apple")['tag_logits']
+assert tag_logits2 == tag_logits
+{% endhighlight %}
+</div>
 </div>
     <!-- END Code Blocks -->
 
@@ -373,7 +407,31 @@ print([model.vocab.get_token_from_index(i, 'labels') for i in tag_ids])
 <li class="annotation" id="a45">It has a <code>predict</code> method that just needs a sentence and returns (a JSON-serializable version of) the output dict from forward.  Here <code>tag_logits</code> will be a (5, 3) array of logits, corresponding to the 3 possible tags for each of the 5 words.</li>
 <li class="annotation" id="a46">To get the actual "predictions" we can just take the <code>argmax</code>.</li>
 <li class="annotation" id="a47">And then use our vocabulary to find the predicted tags.</li>
+<li class="annotation" id="a48">Finally, we'd like to be able to save our model and reload it later. We'll need to save two things. The first is the model weights.</li>
+<li class="annotation" id="a49">And the second is the vocabulary:</li>
+<li class="annotation" id="a50">We only saved the model weights, so we actually have to recreate the model in code. First, let's reload the vocabulary into a new variable.</li>
+<li class="annotation" id="a51">And then let's recreate the model (if I were doing this in a different file I would of course have to re-instantiate the word embeddings and lstm as well).</li>
+<li class="annotation" id="a52">After which we have to load its state.</li>
+<li class="annotation" id="a53">And now we should get the same predictions:</li>
+<li class="annotation" id="a54"></li>
 </ul>
   </div><!-- END Annotations -->
 </div><!-- END Annotated Code -->
+<p>
+    Although this tutorial has been an explanation of how AllenNLP <em>works</em>,
+    in practice you probably wouldn't write code this way. Most AllenNLP objects
+    (e.g. Models, DatasetReaders, and so on) can be constructed <em>declaratively</em>
+    from JSON-like objects. 
+</p>
+<p>
+    So a more typical use case would involve <em>implementing</em> the Model and
+    DatasetReader as above, but creating a <a href = "https://jsonnet.org/">Jsonnet</a>
+    file indicating how you want to <em>instantiate</em> and <em>train</em> them,
+    and then simply using the command line tool <code>allennlp train</code> 
+    (which would automatically save an archive of the trained model).
+</p>
+<p>
+    For more details on how this would work in this example, please read
+    <a href = "https://github.com/allenai/allennlp/blob/master/tutorials/tagger/README.md#using-config-files">Using Config Files</a>.
+</p>
  {% include more-tutorials.html %}

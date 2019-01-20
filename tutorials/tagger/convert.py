@@ -11,6 +11,13 @@ parts = re.split(comment_regex, full_text)
 # remove newlines, then triple quotes, then more newlines
 HTML = parts[0].strip().strip('"""').strip()
 
+# it's possible we have ending HTML as well
+if parts[-1].strip().startswith('"""') and parts[-1].strip().endswith('"""'):
+    FINAL_HTML = parts[-1].strip().strip('"""').strip()
+    parts = parts[:-1]
+else:
+    FINAL_HTML = ""
+
 parts = parts[1:]
 num_parts = len(parts) // 2
 
@@ -47,6 +54,11 @@ for i, comment in enumerate(comments):
 HTML += """</ul>
   </div><!-- END Annotations -->
 </div><!-- END Annotated Code -->
+"""
+
+HTML += FINAL_HTML
+
+HTML += """
  {% include more-tutorials.html %}
 """
 
