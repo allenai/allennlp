@@ -95,7 +95,7 @@ class DocQAPlus(Model):
 
         # see usage below for explanation
         self._all_qa_count = 0
-        self._examples_used_frac = 1.0
+        self._qas_used_fraction = 1.0
         self._max_qad_triplets = max_qad_triplets
         self._frac_of_validation_used = frac_of_validation_used
         self._frac_of_training_used = frac_of_training_used
@@ -350,10 +350,8 @@ class DocQAPlus(Model):
         # (see https://github.com/allenai/allennlp/issues/1809) so we will save it every time it changes
         # insuring that if we do a full pass on the validation set and take max for all_qa_count we will
         # get the correct number (except if the last ones are skipped.... hopefully this is a small diff )
-        
-        self._all_qa_count = metadata[0][0]['num_examples_used'][1]
-        self._examples_used_frac = float(metadata[0][0]['num_examples_used'][0]) / metadata[0][0]['num_examples_used'][1]
-        
+
+        self._qas_used_fraction = metadata[0][0]['qas_used_fraction']
 
         # Compute the loss.
         if span_start is not None:
@@ -555,14 +553,11 @@ class DocQAPlus(Model):
 
         # calculating final accuracy considering fraction of examples used in dataset creation, and
         # number used after data-reader filter namely "self._examples_used_frac"
-        if self.training:
-            frac_used = self._examples_used_frac * self._frac_of_training_used
-        else:
-            frac_used = self._examples_used_frac * self._frac_of_validation_used
-        
+        frac_used = self._qas_used_fraction
+
         return {'EM': self._official_EM.get_metric(reset) * frac_used,
                 'f1': self._official_f1.get_metric(reset) * frac_used,
-                'examples_used_frac': frac_used}
+                'qas_used_fraction': frac_used}
 
 
     @staticmethod

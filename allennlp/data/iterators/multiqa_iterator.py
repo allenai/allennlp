@@ -109,7 +109,12 @@ class MultiQAIterator(DataIterator):
     @overrides
     def _create_batches(self, instances: Iterable[Instance], shuffle: bool) -> Iterable[Batch]:
         temp_max_tensor_size = 0
+        all_instances_ids = []
+        total_examples_in_batches = 0
         for instance_list in self._memory_sized_lists(instances):
+            all_instances_ids += [inst.fields['metadata'].metadata['instance_id'] for inst in instance_list]
+            logger.info("itertor: total instances %d, unique instances %d ", len(all_instances_ids), len(set(all_instances_ids)))
+
             instance_list = sorted(instance_list,key=lambda x: x.fields['metadata'].metadata['question_id'])
             intances_question_id = [instance.fields['metadata'].metadata['question_id'] for instance in instance_list]
             split_inds = [0] + list(np.cumsum(np.unique(intances_question_id, return_counts=True)[1]))
@@ -135,7 +140,7 @@ class MultiQAIterator(DataIterator):
                         # This part is inspired by Clark and Gardner, 17 - oversample the highest ranking documents.
                         # In thier work they use only instances with answers, so we will find the highest
                         # ranking instance with an answer (this also insures we have at least one answer in the chosen instances)
-                        inst_with_answers = [inst for inst in question_instances if inst['answers'] != []]
+                        inst_with_answers = [inst for inst in question_instances if inst.fields['metadata'].metadata['has_answer']]
                         instances_to_add = random.sample(inst_with_answers[0:2], 1)
                         # we assume each question will be visited once in an epoch
                         question_instances.remove(instances_to_add[0])
@@ -160,12 +165,19 @@ class MultiQAIterator(DataIterator):
 
                 if len(batch) + len(instances_to_add) > self._batch_size or \
                     (self._maximum_tensor_size is not None and estimated_tensor_size > self._maximum_tensor_size):
-                    #logger.info("batch size is = %d", len(batch))
+                    total_examples_in_batches += len(batch)
+                    logger.info("total_examples_in_batches = %d", total_examples_in_batches)
                     yield Batch(batch)
 
                     batch = instances_to_add
                 else:
                     batch += instances_to_add
+
+            # yielding remainder batch
+            if len(batch)>0:
+                total_examples_in_batches += len(batch)
+                logger.info("remainder ... total_examples_in_batches = %d", total_examples_in_batches)
+                yield Batch(batch)
 
 
 

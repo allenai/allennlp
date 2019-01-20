@@ -14,7 +14,6 @@ from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
 from allennlp.data.tokenizers import Token, Tokenizer, WordTokenizer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
-
 # ALON - for line profiler
 try:
     profile
@@ -69,28 +68,15 @@ class MultiQAReader(DatasetReader):
                 single_file_path_cached = cached_path(single_file_path)
                 with zipfile.ZipFile(single_file_path_cached, 'r') as myzip:
                     with myzip.open(myzip.namelist()[0]) as myfile:
-                        dataset_json = {'preprocessed_instances':[]}
+                        header = json.loads(myfile.readline())['header']
                         for line,example in enumerate(myfile):
                             # header
-                            if line == 0:
-                                dataset_json['num_examples_used'] = json.loads(example)['header']['num_examples_used']
-                                print(dataset_json['num_examples_used'])
-                            else:
-                                dataset_json['preprocessed_instances'].append(json.loads(example))
+                            contexts.append(json.loads(example))
             else:
                 single_file_path_cached = cached_path(single_file_path)
                 with zipfile.ZipFile(single_file_path_cached, 'r') as myzip:
                     with myzip.open(myzip.namelist()[0]) as myfile:
                         dataset_json = json.load(myfile)
-
-            if ind == 0:
-                num_examples_used = dataset_json['num_examples_used']
-
-            # TODO - replace with actual dataset name
-            for inst in dataset_json['preprocessed_instances']:
-                inst['metadata']['dataset'] = single_file_path.split('/')[-1].replace('.json.zip','').replace('.jsonl.zip','')
-
-            contexts += dataset_json['preprocessed_instances']
 
         # sampling
         if self._sample_size > -1:
@@ -98,6 +84,7 @@ class MultiQAReader(DatasetReader):
             #dataset_json['preprocessed_instances'] = \
             #    random.sample(dataset_json['preprocessed_instances'], self._sample_size)
             contexts = contexts[0:self._sample_size]
+
 
 
         if True:
@@ -147,7 +134,10 @@ class MultiQAReader(DatasetReader):
         else:
             instances = contexts
 
-        for inst in instances:
+        logger.info("multiqa+: yielding %d instances ", len(instances))
+        for inst_num,inst in enumerate(instances):
+            if inst_num % 99 == 0:
+                logger.info("yeilding inst_num %d",inst_num)
             tokenized_paragraph = [Token(text=t[0], idx=t[1]) for t in inst['tokens']]
             question_tokens = [Token(text=t[0], idx=t[1]) for t in inst['question_tokens']]
             instance = util.make_reading_comprehension_instance_multiqa_multidoc(question_tokens,
@@ -155,9 +145,8 @@ class MultiQAReader(DatasetReader):
                                                      self._token_indexers,
                                                      inst['text'],
                                                      inst['answers'],
-                                                     inst['metadata'])
-
-            instance.fields['metadata'].metadata['num_examples_used'] = num_examples_used
+                                                     inst['metadata'],
+                                                     header)
 
             yield instance
 

@@ -303,7 +303,8 @@ def make_reading_comprehension_instance_multiqa_multidoc(question_tokens: List[T
                                              token_indexers: Dict[str, TokenIndexer],
                                              paragraph: List[str],
                                              token_span_lists: List[List[Tuple[int, int]]] = None,
-                                             additional_metadata: Dict[str, Any] = None) -> Instance:
+                                             additional_metadata: Dict[str, Any] = None,
+                                             header = None) -> Instance:
     """
     Converts a question, a passage, and an optional answer (or answers) to an ``Instance`` for use
     in a reading comprehension model.
@@ -346,7 +347,8 @@ def make_reading_comprehension_instance_multiqa_multidoc(question_tokens: List[T
     passage_field = TextField(tokenized_paragraph, token_indexers)
     fields['passage'] = passage_field
     fields['question'] = TextField(question_tokens, token_indexers)
-    metadata = {'original_passage': paragraph,
+    metadata = {'qas_used_fraction':header['preproc.final_qas_used_fraction'],
+                'original_passage': paragraph,
                 'token_span_lists': token_span_lists,
                 'token_offsets': passage_offsets,
                 'question_tokens': [token.text for token in question_tokens],
