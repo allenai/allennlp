@@ -559,6 +559,28 @@ class TestTrainer(AllenNlpTestCase):
         assert training_metrics["best_epoch"] == 0
         assert training_metrics["validation_loss"] > restored_metrics["validation_loss"]
 
+    def test_restoring_works_with_older_checkpointing(self):
+        trainer = Trainer(self.model, self.optimizer,
+                          self.iterator, self.instances,
+                          validation_dataset=self.instances,
+                          num_epochs=3, serialization_dir=self.TEST_DIR)
+        trainer.train()
+
+        for index in range(3):
+            path = str(self.TEST_DIR / "training_state_epoch_{}.th".format(index))
+            state = torch.load(path)
+            state.pop("metric_tracker")
+            state.pop("batch_num_total")
+            state["val_metric_per_epoch"] = [0.4, 0.1, 0.8]
+            torch.save(state, path)
+
+        next_epoch, best_epoch, _ = trainer._restore_checkpoint() # pylint: disable=protected-access
+
+        # Loss decreases in 3 epochs, but because we hard fed the val metrics as above:
+        assert next_epoch == 3
+        assert best_epoch == 1
+        assert trainer._metric_tracker._best_so_far == 0.1 # pylint: disable=protected-access
+        assert trainer._metric_tracker._epochs_with_no_improvement == 1 # pylint: disable=protected-access
 
 class TestSparseClipGrad(AllenNlpTestCase):
     def test_sparse_clip_grad(self):
