@@ -142,7 +142,7 @@ class MultiQAIterator(DataIterator):
                         # ranking instance with an answer (this also insures we have at least one answer in the chosen instances)
                         inst_with_answers = [inst for inst in question_instances if inst.fields['metadata'].metadata['has_answer']]
 
-                        # because we cannot enforce all instances of the same question to be
+                        # Because we cannot enforce all instances of the same question to be
                         # provided in the same _memory_sized_lists we have to check this:
                         # yet another reason to do this in the data reader
                         if len(inst_with_answers) > 0:

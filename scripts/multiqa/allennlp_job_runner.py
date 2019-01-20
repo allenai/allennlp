@@ -11,6 +11,26 @@ import argparse
 import signal
 from allennlp.common.elastic_logger import ElasticLogger
 import pika
+
+# this will be used for saving to ElasticLogger
+def flatten_json(y):
+    out = {}
+
+    def flatten(x, name=''):
+        if type(x) is dict:
+            for a in x:
+                flatten(x[a], name + a + '.')
+        elif type(x) is list:
+            i = 0
+            for a in x:
+                flatten(a, name + str(i) + '.')
+                i += 1
+        else:
+            out[name[:-1]] = x
+
+    flatten(y)
+    return out
+
 connection_params = pika.URLParameters('amqp://imfgrmdk:Xv_s9oF_pDdrd0LlF0k6ogGBOqzewbqU@barnacle.rmq.cloudamqp.com/imfgrmdk')
 connection = pika.BlockingConnection(connection_params)
 channel = connection.channel()
@@ -41,9 +61,8 @@ while True:
             log_data = []
             try:
                 # Log snapshot
-                with open(proc['log_file'], 'r') as f:
-                    log_data = f.readlines()
-                    proc['log_snapshot'] = ' '.join(log_data[-30:])
+                log_data = proc['log_handle'].readlines()
+                proc['log_snapshot'] = ' '.join(log_data)
             except:
                 proc['alive'] = False
 
@@ -65,14 +84,15 @@ while True:
                 # TODO this is an ugly check, but because we are forking with nohup, python does not provide any good alternative...
                 if proc['log_snapshot'].find('Traceback (most recent call last):') > -1 or \
                     proc['log_snapshot'].find('error') > -1:
-                    ElasticLogger().write_log('INFO', "Job died", proc, push_bulk=True,print_log=True)
-
+                    ElasticLogger().write_log('INFO', "Job died", flatten_json(proc), push_bulk=True,print_log=True)
+                    proc['log_handle'].close()
                     # Requeue
                     #channel.basic_nack(proc['job_tag'])
                     proc_running.remove(proc)
                     break
                 else:
-                    ElasticLogger().write_log('INFO', "Job finished successfully", proc, push_bulk=True,print_log=True)
+                    ElasticLogger().write_log('INFO', "Job finished successfully", flatten_json(proc), push_bulk=True,print_log=True)
+                    proc['log_handle'].close()
 
                     # ack
                     #channel.basic_ack(proc['job_tag'])
@@ -86,15 +106,12 @@ while True:
         if body is not None:
 
             # Display the message parts
-            body = body.decode()
+            body = json.loads(body.decode())
             print(method_frame)
             print(properties)
             print(body)
 
-            #if properties.headers['name'] == 'restart':
-                #os.execl(path, arg0, arg1, ...)
-            # supporting process kill command:
-            if properties.headers['name'] == 'kill job':
+            if body['command'] == 'kill job':
                 print('kill job!')
                 try:
                     pid_to_kill = [proc['pid'] for proc in proc_running if proc['experiment_name'] == body]
@@ -104,27 +121,44 @@ while True:
                                               push_bulk=True, print_log=True)
                     channel.basic_ack(method_frame.delivery_tag)
                     time.sleep(2)
+            elif body['command'] == 'train':
+                bash_command = 'python -m allennlp.run train ' + body['master_config']
+                bash_command += '--s ' + body['model_dir'] + properties.headers['name'] + ' '
+                # Building the python command with arguments
+                bash_command += '-o "' + str(body['override_config']).replace('True', 'true').replace('False', 'false') + '"'
+                bash_command == body['include-package']
 
-
-            log_file = 'logs/' + properties.headers['name'] + '.txt'
             if args.shell == 'bash':
-                command = 'nohup ' + body + ' &'
+                bash_command = 'nohup ' + bash_command + ' &'
             else:
-                command = 'nohup ' + body + ' &'
-            print(command)
+                bash_command = 'nohup ' + bash_command + ' &'
+
+            # Creating the log dir
+            log_file = 'logs/' + properties.headers['name'] + '.txt'
             log_dir_part = log_file.split('/')
             for dir_depth in range(len(log_dir_part)-1):
                 if not os.path.isdir('/'.join(log_dir_part[0:dir_depth+1])):
                     os.mkdir('/'.join(log_dir_part[0:dir_depth+1]))
 
+            # performing git pull before each execution
+            Popen("git pull origin master", shell=True, preexec_fn=os.setsid)
+
+            # Executing
+            print(bash_command)
             with open(log_file,'wb') as f:
-                wa_proc = Popen(command, shell=True, preexec_fn=os.setsid,stdout=f,stderr=f)
-            proc_running.append({'job_tag':method_frame.delivery_tag,'command':command, \
-                                 'log_file':log_file, 'log_snapshot':'',\
+
+                # TODO run bash command
+                # bash_command
+                wa_proc = Popen("nohup python dummy_job.py &", shell=True, preexec_fn=os.setsid,stdout=f,stderr=f)
+
+            # open log file for reading
+            proc_running.append({'job_tag':method_frame.delivery_tag,'config':body, 'command':bash_command, \
+                                 'log_file':log_file,'log_handle':open(log_file,'r'), 'log_snapshot':'',\
                                  'experiment_name':properties.headers['name'], 'alive': True,\
                                  'pid': wa_proc.pid+1, 'start_time': time.time()})
             # we are not persistant for now ...
             channel.basic_ack(method_frame.delivery_tag)
+            ElasticLogger().write_log('INFO', "Job Started", flatten_json(proc), push_bulk=True, print_log=True)
             time.sleep(2)
 
 
@@ -141,7 +175,8 @@ while True:
                 except:
                     proc['alive'] = False
 
-                ElasticLogger().write_log('INFO', "Job Status",proc,push_bulk=True, print_log=True)
+                ElasticLogger().write_log('INFO', "Job Status", {'experiment_name':proc['experiment_name'],
+                            'log_snapshot':proc['log_snapshot']}, push_bulk=True, print_log=True)
 
             try:
                 gpu_mem = gpu_memory_mb()
