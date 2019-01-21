@@ -21,8 +21,28 @@ else:
 parts = parts[1:]
 num_parts = len(parts) // 2
 
-comments = parts[::2]
-codes = parts[1::2]
+pre_comments = parts[::2]
+pre_codes = parts[1::2]
+
+comments = []
+codes = []
+to_be_continued = False
+
+for comment, code in zip(pre_comments, pre_codes):
+    # Remove pounds
+    comment = comment.strip("####").strip()
+    if not to_be_continued:
+        # this is a new comment
+        comments.append("")
+
+    comments[-1] += " " + comment
+
+    if code:
+        codes.append(code)
+        to_be_continued = False
+    else:
+        to_be_continued = True
+
 
 HTML += """<div id="annotated-code">
   <!-- Code Blocks -->
@@ -47,7 +67,7 @@ HTML += """</div>
 """
 
 for i, comment in enumerate(comments):
-    comment = comment.strip("####").strip()
+    comment = comment.strip()
     HTML += f"""<li class="annotation" id="a{i}">{comment}</li>
 """
 
