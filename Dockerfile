@@ -1,4 +1,4 @@
-FROM python:3.6.3-jessie
+FROM python:3.6.8-jessie
 
 ENV LC_ALL=C.UTF-8
 ENV LANG=C.UTF-8
@@ -51,6 +51,9 @@ COPY .pylintrc .pylintrc
 COPY tutorials/ tutorials/
 COPY training_config training_config/
 COPY setup.py setup.py
+COPY README.md README.md
+
+RUN pip install --editable .
 
 # Compile EVALB - required for parsing evaluation.
 # EVALB produces scary looking c-level output which we don't

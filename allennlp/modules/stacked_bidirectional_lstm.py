@@ -25,6 +25,12 @@ class StackedBidirectionalLstm(torch.nn.Module):
         The dropout probability to be used in a dropout scheme as stated in
         `A Theoretically Grounded Application of Dropout in Recurrent Neural Networks
         <https://arxiv.org/abs/1512.05287>`_ .
+    use_highway: bool, optional (default = True)
+        Whether or not to use highway connections between layers. This effectively involves
+        reparameterising the normal output of an LSTM as::
+
+            gate = sigmoid(W_x1 * x_t + W_h * h_t)
+            output = gate * h_t  + (1 - gate) * (W_x2 * x_t)
     """
     def __init__(self,
                  input_size: int,
@@ -91,7 +97,8 @@ class StackedBidirectionalLstm(torch.nn.Module):
                                      initial_state[1].split(1, 0)))
 
         output_sequence = inputs
-        final_states = []
+        final_h = []
+        final_c = []
         for i, state in enumerate(hidden_states):
             forward_layer = getattr(self, 'forward_layer_{}'.format(i))
             backward_layer = getattr(self, 'backward_layer_{}'.format(i))
@@ -104,8 +111,11 @@ class StackedBidirectionalLstm(torch.nn.Module):
 
             output_sequence = torch.cat([forward_output, backward_output], -1)
             output_sequence = pack_padded_sequence(output_sequence, lengths, batch_first=True)
-            final_states.append((torch.cat(both_direction_states, -1) for both_direction_states
-                                 in zip(final_forward_state, final_backward_state)))
 
-        final_state_tuple = (torch.cat(state_list, 0) for state_list in zip(*final_states))
+            final_h.extend([final_forward_state[0], final_backward_state[0]])
+            final_c.extend([final_forward_state[1], final_backward_state[1]])
+
+        final_h = torch.cat(final_h, dim=0)
+        final_c = torch.cat(final_c, dim=0)
+        final_state_tuple = (final_h, final_c)
         return output_sequence, final_state_tuple

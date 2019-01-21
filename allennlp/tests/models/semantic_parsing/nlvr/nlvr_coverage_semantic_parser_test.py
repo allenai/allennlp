@@ -32,11 +32,11 @@ class NlvrCoverageSemanticParserTest(ModelTestCase):
 
     def test_get_checklist_info(self):
         # Creating a fake all_actions field where actions 0, 2 and 4 are terminal productions.
-        all_actions = [('<o,o> -> top', True, None),
+        all_actions = [('<Set[Object]:Set[Object]> -> top', True, None),
                        ('fake_action', True, None),
-                       ('c -> color_black', True, None),
+                       ('Color -> color_black', True, None),
                        ('fake_action2', True, None),
-                       ('e -> 6', True, None)]
+                       ('int -> 6', True, None)]
         # Of the actions above, those at indices 0 and 4 are on the agenda, and there are padding
         # indices at the end.
         test_agenda = torch.Tensor([[0], [4], [-1], [-1]])
