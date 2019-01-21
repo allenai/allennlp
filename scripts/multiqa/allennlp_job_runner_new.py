@@ -1,8 +1,9 @@
 
+_DEBUG = True
 ## Version 0.0
 #  only takes a command string and runs it on a specific channel, channel is the GPU computer name...
 from allennlp.common.util import *
-from subprocess import Popen
+from subprocess import Popen,call
 import traceback,os, psutil
 import time
 import socket
@@ -56,6 +57,7 @@ while True:
 
         # checking status of all processes
         for proc in proc_running:
+            print('Inspecting job: %s' % (proc['experiment_name']))
             # check if process still alive:
             try:
                 print('checcking if process alive '  + str(proc['pid']))
@@ -83,6 +85,7 @@ while True:
             #proc['log_update_diff'] > 2000:
 
             if not proc['alive']:
+                print('processed not alive.')
                 # checking if process successfully completed task,
                 # printing longer log
                 if len(log_data) > 100:
@@ -152,13 +155,15 @@ while True:
                     os.mkdir('/'.join(log_dir_part[0:dir_depth+1]))
 
             # performing git pull before each execution
-            Popen("git pull origin master", shell=True, preexec_fn=os.setsid)
+            call("git pull origin master", shell=True, preexec_fn=os.setsid)
 
             # Executing
             print(bash_command)
             with open(log_file,'wb') as f:
-                #wa_proc = Popen("nohup python dummy_job.py &", shell=True, preexec_fn=os.setsid,stdout=f,stderr=f)
-                wa_proc = Popen(bash_command, shell=True, preexec_fn=os.setsid, stdout=f, stderr=f)
+                if _DEBUG:
+                    wa_proc = Popen("nohup python dummy_job.py &", shell=True, preexec_fn=os.setsid,stdout=f,stderr=f)
+                else:
+                    wa_proc = Popen(bash_command, shell=True, preexec_fn=os.setsid, stdout=f, stderr=f)
 
             # open log file for reading
             log_handles[log_file] = open(log_file,'r')
@@ -170,7 +175,7 @@ while True:
             # we are not persistant for now ...
             channel.basic_ack(method_frame.delivery_tag)
             ElasticLogger().write_log('INFO', "Job Started", flatten_json(new_proc), push_bulk=True, print_log=True)
-            time.sleep(2)
+            time.sleep(3)
 
 
 
