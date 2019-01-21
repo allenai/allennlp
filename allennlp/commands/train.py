@@ -178,13 +178,6 @@ def train_model(params: Params,
 
     trainer_type = params.get("trainer", {}).get("type", "default")
 
-    # Force Pretrained (Embedding) files to be always be added in files_to_archive
-    files_to_archive = params.files_to_archive
-    flat_model_params_dict = params.duplicate().pop("model").as_flat_dict()
-    for flat_key, value in flat_model_params_dict.items():
-        if flat_key.endswith("pretrained"):
-            files_to_archive[flat_key] = value
-
     if trainer_type == "default":
         # Special logic to instantiate backward-compatible trainer.
         pieces = TrainerPieces.from_params(params, serialization_dir, recover)  # pylint: disable=no-member
@@ -213,7 +206,7 @@ def train_model(params: Params,
         if os.path.exists(os.path.join(serialization_dir, _DEFAULT_WEIGHTS)):
             logging.info("Training interrupted by the user. Attempting to create "
                          "a model archive using the current best epoch weights.")
-            archive_model(serialization_dir, files_to_archive=files_to_archive)
+            archive_model(serialization_dir, files_to_archive=params.files_to_archive)
         raise
 
     # Evaluate
