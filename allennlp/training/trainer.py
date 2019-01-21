@@ -28,6 +28,7 @@ from allennlp.training.optimizers import Optimizer
 from allennlp.training.tensorboard_writer import TensorboardWriter
 from allennlp.training.trainer_base import TrainerBase
 from allennlp.training import util as training_util
+from allennlp.training.exponential_moving_average import ExponentialMovingAverage
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -53,6 +54,7 @@ class Trainer(TrainerBase):
                  grad_norm: Optional[float] = None,
                  grad_clipping: Optional[float] = None,
                  learning_rate_scheduler: Optional[LearningRateScheduler] = None,
+                 exponential_moving_average_decay: Optional[float] = None,
                  summary_interval: int = 100,
                  histogram_interval: int = None,
                  should_log_parameter_statistics: bool = True,
@@ -130,6 +132,14 @@ class Trainer(TrainerBase):
             provided to determine if learning has plateaued.  To support updating the learning
             rate on every batch, this can optionally implement ``step_batch(batch_num_total)`` which
             updates the learning rate given the batch number.
+        exponential_moving_average_decay: ``float``, optimal, (default = None)
+            If provided, we will maintain moving averages for all variables. The moving averages
+            are computed using exponential decay, with this provided decay value. During training, we
+            employ a shadow variable for each parameter, which maintains the moving average. During
+            evaluation, we backup the original parameters and assign the moving averages to corresponding
+            parameters. Be careful that when saving the checkpoint, we will save the moving averages of
+            parameters. This is necessary because we want the saved model to perform as well as the validated
+            model if we load it later. But this may cause problems if you restart the training from checkpoint.
         summary_interval: ``int``, optional, (default = 100)
             Number of batches between logging scalars to tensorboard
         histogram_interval : ``int``, optional, (default = ``None``)
@@ -192,6 +202,11 @@ class Trainer(TrainerBase):
         self._grad_clipping = grad_clipping
 
         self._learning_rate_scheduler = learning_rate_scheduler
+
+        if exponential_moving_average_decay is not None:
+            self.exp_moving_average = ExponentialMovingAverage(model, exponential_moving_average_decay)
+        else:
+            self.exp_moving_average = None
 
         # We keep the total batch number as an instance variable because it
         # is used inside a closure for the hook which logs activations in
@@ -319,6 +334,9 @@ class Trainer(TrainerBase):
             else:
                 self.optimizer.step()
 
+            if self.exp_moving_average is not None:
+                self.exp_moving_average.apply(batch_num_total)
+
             # Update the description with the latest metrics
             metrics = training_util.get_metrics(self.model, train_loss, batches_this_epoch)
             description = training_util.description_from_metrics(metrics)
@@ -368,6 +386,9 @@ class Trainer(TrainerBase):
 
         self.model.eval()
 
+        if self.exp_moving_average is not None:
+            self.exp_moving_average.assign_average_value()
+
         if self._validation_iterator is not None:
             val_iterator = self._validation_iterator
         else:
@@ -400,6 +421,9 @@ class Trainer(TrainerBase):
             val_metrics = training_util.get_metrics(self.model, val_loss, batches_this_epoch)
             description = training_util.description_from_metrics(val_metrics)
             val_generator_tqdm.set_description(description, refresh=False)
+
+        if self.exp_moving_average is not None:
+            self.exp_moving_average.restore()
 
         return val_loss, batches_this_epoch
 
@@ -513,6 +537,11 @@ class Trainer(TrainerBase):
             The epoch of training.  If the checkpoint is saved in the middle
             of an epoch, the parameter is a string with the epoch and timestamp.
         """
+        # If exponential moving average is used for parameters, we save
+        # the moving average values into checkpoint, instead of the current values.
+        if self.exp_moving_average is not None:
+            self.exp_moving_average.assign_average_value()
+
         # These are the training states we need to persist.
         training_states = {
                 "metric_tracker": self._metric_tracker.state_dict(),
@@ -531,6 +560,10 @@ class Trainer(TrainerBase):
                 epoch=epoch,
                 training_states=training_states,
                 is_best_so_far=self._metric_tracker.is_best_so_far())
+
+        # Restore the original values for parameters so that training will not be affected.
+        if self.exp_moving_average is not None:
+            self.exp_moving_average.restore()
 
     def _restore_checkpoint(self) -> int:
         """
@@ -606,6 +639,7 @@ class Trainer(TrainerBase):
         grad_norm = params.pop_float("grad_norm", None)
         grad_clipping = params.pop_float("grad_clipping", None)
         lr_scheduler_params = params.pop("learning_rate_scheduler", None)
+        exponential_moving_average_decay = params.pop_float("exponential_moving_average_decay", None)
 
         if isinstance(cuda_device, list):
             model_device = cuda_device[0]
@@ -647,6 +681,7 @@ class Trainer(TrainerBase):
                    grad_norm=grad_norm,
                    grad_clipping=grad_clipping,
                    learning_rate_scheduler=scheduler,
+                   exponential_moving_average_decay=exponential_moving_average_decay,
                    num_serialized_models_to_keep=num_serialized_models_to_keep,
                    keep_serialized_model_every_num_seconds=keep_serialized_model_every_num_seconds,
                    model_save_interval=model_save_interval,

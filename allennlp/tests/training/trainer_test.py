@@ -90,6 +90,16 @@ class TestTrainer(AllenNlpTestCase):
         assert isinstance(metrics['peak_cpu_memory_MB'], float)
         assert metrics['peak_cpu_memory_MB'] > 0
 
+    def test_trainer_can_run_exponential_moving_average(self):
+        trainer = Trainer(model=self.model,
+                          optimizer=self.optimizer,
+                          iterator=self.iterator,
+                          train_dataset=self.instances,
+                          validation_dataset=self.instances,
+                          num_epochs=2,
+                          exponential_moving_average_decay=0.9999)
+        trainer.train()
+
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="No CUDA device registered.")
     def test_trainer_can_run_cuda(self):
         self.model.cuda()
@@ -160,6 +170,28 @@ class TestTrainer(AllenNlpTestCase):
                               self.iterator, self.instances,
                               validation_dataset=self.instances,
                               num_epochs=3, serialization_dir=self.TEST_DIR)
+
+        epoch = new_trainer._restore_checkpoint()  # pylint: disable=protected-access
+        assert epoch == 1
+
+        tracker = trainer._metric_tracker  # pylint: disable=protected-access
+        assert tracker.is_best_so_far()
+        assert tracker._best_so_far is not None  # pylint: disable=protected-access
+
+        new_trainer.train()
+
+    def test_trainer_can_resume_training_for_exponential_moving_average(self):
+        trainer = Trainer(self.model, self.optimizer,
+                          self.iterator, self.instances,
+                          validation_dataset=self.instances,
+                          num_epochs=1, serialization_dir=self.TEST_DIR,
+                          exponential_moving_average_decay=0.9999)
+        trainer.train()
+        new_trainer = Trainer(self.model, self.optimizer,
+                              self.iterator, self.instances,
+                              validation_dataset=self.instances,
+                              num_epochs=3, serialization_dir=self.TEST_DIR,
+                              exponential_moving_average_decay=0.9999)
 
         epoch = new_trainer._restore_checkpoint()  # pylint: disable=protected-access
         assert epoch == 1
