@@ -201,7 +201,7 @@ class PretrainedBertIndexer(WordpieceIndexer):
 
     Parameters
     ----------
-    pretrained_model: ``str``, optional (default = None)
+    pretrained_model: ``str``
         Either the name of the pretrained model to use (e.g. 'bert-base-uncased'),
         or the path to the .txt file with its vocabulary.
 
