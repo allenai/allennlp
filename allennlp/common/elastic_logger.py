@@ -68,9 +68,9 @@ class ElasticLogger:
 
                 if (len(self.bulk_data) > self.LOG_BULK_SIZE * 2 or push_bulk):
                     res = self.es.bulk(index=LOG_INDEX, body=self.bulk_data, refresh=True)
-                    self.bulk_data = []
                     if res['errors']:
                         print("error writing logs!!")
+                    self.bulk_data = []
             except:
                 print("log failed!!!!!!!!!!!!!!!!")
                 print(traceback.format_exc())
