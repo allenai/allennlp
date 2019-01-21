@@ -87,7 +87,11 @@ while True:
             if not proc['alive']:
                 print('processed not alive.')
                 # checking if process successfully completed task,
+
                 # printing longer log
+                log_handles[proc['log_file']].close()
+                with open(log_file, 'r') as f:
+                    log_data = f.readlines()
                 if len(log_data) > 100:
                     proc['log_snapshot'] = ' '.join(log_data[-100:])
 
@@ -108,7 +112,7 @@ while True:
                     #channel.basic_ack(proc['job_tag'])
                     proc_running.remove(proc)
 
-                log_handles[proc['log_file']].close()
+
                 #log_handles.remove(proc['log_file'])
                 break
 
@@ -193,7 +197,11 @@ while True:
 
                 ElasticLogger().write_log('INFO', "Job Status", {'experiment_name':proc['experiment_name'],
                             'log_snapshot':proc['log_snapshot']}, push_bulk=True, print_log=True)
-                proc['log_snapshot'] = ''
+                # Keeping last 3 log lines
+                if len(proc['log_snapshot'])>0:
+                    proc['log_snapshot'] = '\n'.join(proc['log_snapshot'].split('\n')[-4:])
+                else:
+                    proc['log_snapshot'] = ''
 
             try:
                 gpu_mem = gpu_memory_mb()
