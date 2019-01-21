@@ -75,6 +75,13 @@ class FineTune(Subcommand):
                                default="",
                                help='If non-empty, name of metric used to weight the loss on a per-batch basis.')
 
+        subparser.add_argument('--embedding-sources-mapping',
+                               type=str,
+                               default="",
+                               help='a JSON dict to define mapping from embedding file paths used during training '
+                               'to current embedding file paths. If not passed, and embedding needs to be '
+                               'extended, we will use the original file paths uded during training.')
+
         subparser.set_defaults(func=fine_tune_model_from_args)
 
         return subparser
@@ -90,7 +97,8 @@ def fine_tune_model_from_args(args: argparse.Namespace):
                                     overrides=args.overrides,
                                     extend_vocab=args.extend_vocab,
                                     file_friendly_logging=args.file_friendly_logging,
-                                    batch_weight_key=args.batch_weight_key)
+                                    batch_weight_key=args.batch_weight_key,
+                                    embedding_sources_mapping=args.embedding_sources_mapping)
 
 
 def fine_tune_model_from_file_paths(model_archive_path: str,
@@ -99,7 +107,8 @@ def fine_tune_model_from_file_paths(model_archive_path: str,
                                     overrides: str = "",
                                     extend_vocab: bool = False,
                                     file_friendly_logging: bool = False,
-                                    batch_weight_key: str = "") -> Model:
+                                    batch_weight_key: str = "",
+                                    embedding_sources_mapping: str = "") -> Model:
     """
     A wrapper around :func:`fine_tune_model` which loads the model archive from a file.
 
@@ -119,19 +128,22 @@ def fine_tune_model_from_file_paths(model_archive_path: str,
     file_friendly_logging : ``bool``, optional (default=False)
         If ``True``, we make our output more friendly to saved model files.  We just pass this
         along to :func:`fine_tune_model`.
+    embedding_sources_mapping: ``str``, optional (default="")
+        JSON string to define dict mapping from embedding paths used during training to
+        the corresponding embedding filepaths available during fine-tuning.
     """
     # We don't need to pass in `cuda_device` here, because the trainer will call `model.cuda()` if
     # necessary.
     archive = load_archive(model_archive_path)
     params = Params.from_file(config_file, overrides)
+    embedding_sources_mapping = json.loads(embedding_sources_mapping)
     return fine_tune_model(model=archive.model,
                            params=params,
                            serialization_dir=serialization_dir,
                            extend_vocab=extend_vocab,
                            file_friendly_logging=file_friendly_logging,
                            batch_weight_key=batch_weight_key,
-                           files_to_archive=archive.files_to_archive)
-
+                           embedding_sources_mapping=embedding_sources_mapping)
 
 def fine_tune_model(model: Model,
                     params: Params,
@@ -139,7 +151,7 @@ def fine_tune_model(model: Model,
                     extend_vocab: bool = False,
                     file_friendly_logging: bool = False,
                     batch_weight_key: str = "",
-                    files_to_archive: Dict[str, str] = None) -> Model:
+                    embedding_sources_mapping: Dict[str, str] = None) -> Model:
     """
     Fine tunes the given model, using a set of parameters that is largely identical to those used
     for :func:`~allennlp.commands.train.train_model`, except that the ``model`` section is ignored,
@@ -164,8 +176,9 @@ def fine_tune_model(model: Model,
     file_friendly_logging : ``bool``, optional (default=False)
         If ``True``, we add newlines to tqdm output, even on an interactive terminal, and we slow
         down tqdm's output to only once every 10 seconds.
-    files_to_archive: ``Dict[str, str]``, optional (default=None)
-        The same files_to_archive that was used to archive the original training model.
+    embedding_sources_mapping: ``Dict[str, str]``, optional (default=None)
+        mapping from embedding paths used during training to the corresponding
+        embedding filepaths available during fine-tuning.
     """
     prepare_environment(params)
     if os.path.exists(serialization_dir) and os.listdir(serialization_dir):
@@ -204,15 +217,7 @@ def fine_tune_model(model: Model,
                                      for instance in dataset
                                      if key in datasets_for_vocab_creation))
 
-        # archived_filename_mapping is mapping from original file name
-        # to the replaced filename to locate it in the archive.
-        archived_filename_mapping: Dict[str, str] = None
-        if files_to_archive:
-            flat_params_dict = params.duplicate().as_flat_dict()
-            archived_filename_mapping = {key: flat_params_dict[key]
-                                         for key in files_to_archive.keys()}
-
-        model.extend_embedder_vocab(vocab, pretrained_filename_mapping=archived_filename_mapping)
+        model.extend_embedder_vocab(vocab, pretrained_filename_mapping=embedding_sources_mapping)
 
     vocab.save_to_files(os.path.join(serialization_dir, "vocabulary"))
 
