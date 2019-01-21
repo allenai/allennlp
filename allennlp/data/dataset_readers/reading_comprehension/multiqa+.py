@@ -74,7 +74,7 @@ class MultiQAReader(DatasetReader):
                             instances.append(json.loads(example))
 
                             # making sure not to take all instances of the same question
-                            if len(instances)>10000 and instances[-1]['metadata']['question_id'] \
+                            if len(instances)>20000 and instances[-1]['metadata']['question_id'] \
                                                     != instances[-2]['metadata']['question_id']:
                                 remainder = instances[-1]
                                 instances = instances[:-1]

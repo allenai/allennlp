@@ -160,6 +160,7 @@ while True:
 
             # performing git pull before each execution
             call("git pull origin master", shell=True, preexec_fn=os.setsid)
+            time.sleep(1)
 
             # Executing
             print(bash_command)
