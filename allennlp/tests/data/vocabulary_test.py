@@ -1,4 +1,5 @@
 import codecs
+import pickle
 import gzip
 import zipfile
 from copy import deepcopy
@@ -28,6 +29,19 @@ class TestVocabulary(AllenNlpTestCase):
         self.instance = Instance({"text": text_field})
         self.dataset = Batch([self.instance])
         super(TestVocabulary, self).setUp()
+
+    def test_pickling(self):
+        vocab = Vocabulary.from_instances(self.dataset)
+
+        pickled = pickle.dumps(vocab)
+        unpickled = pickle.loads(pickled)
+
+        assert dict(unpickled._index_to_token) == dict(vocab._index_to_token)
+        assert dict(unpickled._token_to_index) == dict(vocab._token_to_index)
+        assert unpickled._non_padded_namespaces == vocab._non_padded_namespaces
+        assert unpickled._oov_token == vocab._oov_token
+        assert unpickled._padding_token == vocab._padding_token
+        assert unpickled._retained_counter == vocab._retained_counter
 
     def test_from_dataset_respects_max_vocab_size_single_int(self):
         max_vocab_size = 1
