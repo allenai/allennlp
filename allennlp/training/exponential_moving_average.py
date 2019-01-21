@@ -1,4 +1,4 @@
-from typing import Iterable
+from typing import Dict, Iterable
 from allennlp.models.model import Model
 
 
@@ -6,10 +6,10 @@ class ExponentialMovingAverage:
     """
     Maintain Exponential Moving Average for model parameters.
     """
-    def __init__(self, model: Model, decay: float = 0.9999):
+    def __init__(self, model: Model, decay: float = 0.9999) -> None:
         self.decay = decay
-        self._average_values = {}
-        self._backup_values = {}
+        self._average_values: Dict = {}
+        self._backup_values: Dict = {}
         self._model = model
         for name, param in model.named_parameters():
             self._average_values[name] = param.data.clone()
