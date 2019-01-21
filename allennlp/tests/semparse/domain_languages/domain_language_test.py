@@ -4,7 +4,8 @@ from typing import Callable, List
 import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.semparse import DomainLanguage, ExecutionError, ParsingError, predicate
+from allennlp.semparse import (DomainLanguage, ExecutionError, ParsingError,
+                               predicate, predicate_with_side_args)
 
 class Arithmetic(DomainLanguage):
     def __init__(self):
@@ -144,6 +145,21 @@ class DomainLanguageTest(AllenNlpTestCase):
     def test_higher_order_logical_form(self):
         assert self.language.execute('((three_less add) 2 (subtract 4 2))') == 1
 
+    def test_execute_action_sequence(self):
+        # Repeats tests from above, but using `execute_action_sequence` instead of `execute`.
+        logical_form = '(add 2 (subtract 4 2))'
+        action_sequence = self.language.logical_form_to_action_sequence(logical_form)
+        assert self.language.execute_action_sequence(action_sequence) == 4
+        logical_form = '(halve (multiply (divide 9 3) (power 2 3)))'
+        action_sequence = self.language.logical_form_to_action_sequence(logical_form)
+        assert self.language.execute_action_sequence(action_sequence) == 12
+        logical_form = '((three_less add) 2 (subtract 4 2))'
+        action_sequence = self.language.logical_form_to_action_sequence(logical_form)
+        assert self.language.execute_action_sequence(action_sequence) == 1
+        logical_form = '((three_less add) three (subtract 4 2))'
+        action_sequence = self.language.logical_form_to_action_sequence(logical_form)
+        assert self.language.execute_action_sequence(action_sequence) == 2
+
     def test_get_nonterminal_productions(self):
         valid_actions = self.language.get_nonterminal_productions()
         assert set(valid_actions.keys()) == {
@@ -264,3 +280,39 @@ class DomainLanguageTest(AllenNlpTestCase):
             self.language.logical_form_to_action_sequence('(sum (3 2))')
         with pytest.raises(ParsingError, match='did not have expected type'):
             self.language.logical_form_to_action_sequence('(sum (add 2 3))')
+
+    def test_execution_with_side_arguments(self):
+        class SideArgumentLanguage(DomainLanguage):
+            def __init__(self) -> None:
+                super().__init__(start_types={int}, allowed_constants={'1': 1, '2': 2, '3': 3})
+            @predicate_with_side_args(['num2'])
+            def add(self, num1: int, num2: int) -> int:
+                return num1 + num2
+
+            @predicate_with_side_args(['num'])
+            def current_number(self, num: int) -> int:
+                return num
+
+        language = SideArgumentLanguage()
+
+        # (add 1)
+        action_sequence = ['@start@ -> int',
+                           'int -> [<int:int>, int]',
+                           '<int:int> -> add',
+                           'int -> 1']
+        # For each action in the action sequence, we pass state.  We only actually _use_ the state
+        # when the action we've predicted at that step needs the state.  In this case, the third
+        # action will get {'num2': 3} passed to the `add()` function.
+        state = [{'num2': 1}, {'num2': 2}, {'num2': 3}, {'num2': 4}]
+        assert language.execute_action_sequence(action_sequence, state) == 4
+
+        # (add current_number)
+        action_sequence = ['@start@ -> int',
+                           'int -> [<int:int>, int]',
+                           '<int:int> -> add',
+                           'int -> current_number']
+        state = [{'num2': 1, 'num': 5},
+                 {'num2': 2, 'num': 6},
+                 {'num2': 3, 'num': 7},
+                 {'num2': 4, 'num': 8}]
+        assert language.execute_action_sequence(action_sequence, state) == 11

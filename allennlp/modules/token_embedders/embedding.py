@@ -66,13 +66,17 @@ class Embedding(TokenEmbedder):
         If given, this will scale gradients by the frequency of the words in the mini-batch.
     sparse : bool, (optional, default=False):
         Whether or not the Pytorch backend should use a sparse representation of the embedding weight.
+    vocab_namespace : str, (optional, default=None):
+        In case of fine-tuning/transfer learning, the model's embedding matrix needs to be
+        extended according to the size of extended-vocabulary. To be able to know how much to
+        extend the embedding-matrix, it's necessary to know which vocab_namspace was used to
+        construct it in the original training. We store vocab_namespace used during the original
+        training as an attribute, so that it can be retrieved during fine-tuning.
 
     Returns
     -------
     An Embedding module.
-
     """
-
     def __init__(self,
                  num_embeddings: int,
                  embedding_dim: int,
@@ -83,7 +87,8 @@ class Embedding(TokenEmbedder):
                  max_norm: float = None,
                  norm_type: float = 2.,
                  scale_grad_by_freq: bool = False,
-                 sparse: bool = False) -> None:
+                 sparse: bool = False,
+                 vocab_namespace: str = None) -> None:
         super(Embedding, self).__init__()
         self.num_embeddings = num_embeddings
         self.padding_index = padding_index
@@ -91,6 +96,7 @@ class Embedding(TokenEmbedder):
         self.norm_type = norm_type
         self.scale_grad_by_freq = scale_grad_by_freq
         self.sparse = sparse
+        self._vocab_namespace = vocab_namespace
 
         self.output_dim = projection_dim or embedding_dim
 
@@ -139,6 +145,56 @@ class Embedding(TokenEmbedder):
                 projection = TimeDistributed(projection)
             embedded = projection(embedded)
         return embedded
+
+    @overrides
+    def extend_vocab(self,  # pylint: disable=arguments-differ
+                     extended_vocab: Vocabulary,
+                     vocab_namespace: str = None,
+                     pretrained_file: str = None) -> None:
+        """
+        Extends the embedding matrix according to the extended vocabulary.
+        If pretrained_file is available, it will be used for initializing the new words
+        in the extended vocabulary; otherwise they will be initialized with xavier uniform.
+
+        Parameters
+        ----------
+        extended_vocab : Vocabulary:
+            Vocabulary extended from original vocabulary used to construct
+            this ``Embedding``.
+        vocab_namespace : str, (optional, default=None)
+            In case you know what vocab_namespace should be used for extension, you
+            can pass it. If not passed, it will check if vocab_namespace used at the
+            time of ``Embedding`` construction is available. If so, this namespace
+            will be used or else default 'tokens' namespace will be used.
+        pretrained_file : str, (optional, default=None)
+            A file containing pretrained embeddings can be specified here. It can be
+            the path to a local file or an URL of a (cached) remote file. Check format
+            details in ``from_params`` of ``Embedding`` class.
+        """
+        # Caveat: For allennlp v0.8.1 and below, we weren't storing vocab_namespace as an attribute,
+        # knowing which is necessary at time of embedding vocab extension. So old archive models are
+        # currently unextendable unless the user used default vocab_namespace 'tokens' for it.
+
+        vocab_namespace = vocab_namespace or self._vocab_namespace
+        if not vocab_namespace:
+            vocab_namespace = "tokens"
+            logging.warning("No vocab_namespace provided to Embedder.extend_vocab. Defaulting to 'tokens'.")
+
+        embedding_dim = self.weight.data.shape[-1]
+        if not pretrained_file:
+            extended_num_embeddings = extended_vocab.get_vocab_size(vocab_namespace)
+            extra_num_embeddings = extended_num_embeddings - self.num_embeddings
+            extra_weight = torch.FloatTensor(extra_num_embeddings, embedding_dim)
+            torch.nn.init.xavier_uniform_(extra_weight)
+        else:
+            # It's easiest to just reload the embeddings for the entire vocab,
+            # then only keep the ones we need.
+            whole_weight = _read_pretrained_embeddings_file(pretrained_file, embedding_dim,
+                                                            extended_vocab, vocab_namespace)
+            extra_weight = whole_weight[self.num_embeddings:, :]
+
+        extended_weight = torch.cat([self.weight.data, extra_weight], dim=0)
+        self.weight = torch.nn.Parameter(extended_weight, requires_grad=self.weight.requires_grad)
 
     # Custom logic requires custom from_params.
     @classmethod
@@ -207,7 +263,8 @@ class Embedding(TokenEmbedder):
                    max_norm=max_norm,
                    norm_type=norm_type,
                    scale_grad_by_freq=scale_grad_by_freq,
-                   sparse=sparse)
+                   sparse=sparse,
+                   vocab_namespace=vocab_namespace)
 
 
 def _read_pretrained_embeddings_file(file_uri: str,

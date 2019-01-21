@@ -11,13 +11,13 @@ import torch
 from torch.nn.parallel import replicate, parallel_apply
 from torch.nn.parallel.scatter_gather import gather
 
-from allennlp.common.checks import ConfigurationError, check_for_data_path, check_for_gpu
+from allennlp.common.checks import ConfigurationError, check_for_gpu
 from allennlp.common.params import Params
 from allennlp.common.tqdm import Tqdm
-from allennlp.common.util import scatter_kwargs
 from allennlp.data.dataset_readers import DatasetReader
 from allennlp.data import Instance
 from allennlp.data.iterators import DataIterator
+from allennlp.data.iterators.data_iterator import TensorDict
 from allennlp.models.model import Model
 from allennlp.models.archival import CONFIG_NAME
 from allennlp.nn import util as nn_util
@@ -126,11 +126,6 @@ def datasets_from_params(params: Params) -> Dict[str, Iterable[Instance]]:
     """
     Load all the datasets specified by the config.
     """
-    for data_name in ["train_data_path", "validation_data_path", "test_data_path"]:
-        data_path = params.get(data_name, None)
-        if data_path is not None:
-            check_for_data_path(data_path, data_name)
-
     dataset_reader = DatasetReader.from_params(params.pop('dataset_reader'))
     validation_dataset_reader_params = params.pop("validation_dataset_reader", None)
 
@@ -228,31 +223,38 @@ def create_serialization_dir(
                                      "does not exist.  There is nothing to recover from.")
         os.makedirs(serialization_dir, exist_ok=True)
 
-def data_parallel(batch, model: Model, cuda_devices: List) -> Dict[str, torch.Tensor]:
+def data_parallel(batch_group: List[TensorDict],
+                  model: Model,
+                  cuda_devices: List) -> Dict[str, torch.Tensor]:
     """
     Performs a forward pass using multiple GPUs.  This is a simplification
     of torch.nn.parallel.data_parallel to support the allennlp model
     interface.
     """
-    inputs, module_kwargs = scatter_kwargs((), batch, cuda_devices, 0)
+    assert len(batch_group) <= len(cuda_devices)
 
-    used_device_ids = cuda_devices[:len(inputs)]
+    moved = [nn_util.move_to_device(batch, device)
+             for batch, device in zip(batch_group, cuda_devices)]
+
+    used_device_ids = cuda_devices[:len(moved)]
     replicas = replicate(model, used_device_ids)
-    outputs = parallel_apply(replicas, inputs, module_kwargs, used_device_ids)
+    # We pass all our arguments as kwargs. Create a list of empty tuples of the
+    # correct shape to serve as (non-existent) positional arguments.
+    inputs = [()] * len(batch_group)
+    outputs = parallel_apply(replicas, inputs, moved, used_device_ids)
 
     # Only the 'loss' is needed.
     # a (num_gpu, ) tensor with loss on each GPU
     losses = gather([output['loss'].unsqueeze(0) for output in outputs], used_device_ids[0], 0)
     return {'loss': losses.mean()}
 
-
 def enable_gradient_clipping(model: Model, grad_clipping: Optional[float]) -> None:
     if grad_clipping is not None:
-        clip_function = lambda grad: grad.clamp(-grad_clipping, grad_clipping)
         for parameter in model.parameters():
             if parameter.requires_grad:
-                parameter.register_hook(clip_function)
-
+                parameter.register_hook(lambda grad: nn_util.clamp_tensor(grad,
+                                                                          minimum=-grad_clipping,
+                                                                          maximum=grad_clipping))
 
 def rescale_gradients(model: Model, grad_norm: Optional[float] = None) -> Optional[float]:
     """

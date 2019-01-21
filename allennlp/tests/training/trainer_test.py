@@ -11,7 +11,7 @@ import torch
 import pytest
 from allennlp.common.checks import ConfigurationError
 
-from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common.testing import AllenNlpTestCase, ModelTestCase
 from allennlp.training import Trainer
 from allennlp.training.trainer_base import TrainerBase
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
@@ -20,7 +20,8 @@ from allennlp.data import Vocabulary
 from allennlp.common.params import Params
 from allennlp.models.simple_tagger import SimpleTagger
 from allennlp.data.iterators import BasicIterator
-from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
+from allennlp.data.dataset_readers import SequenceTaggingDatasetReader, WikiTablesDatasetReader
+from allennlp.models.archival import load_archive
 from allennlp.models.model import Model
 
 
@@ -91,6 +92,7 @@ class TestTrainer(AllenNlpTestCase):
 
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="No CUDA device registered.")
     def test_trainer_can_run_cuda(self):
+        self.model.cuda()
         trainer = Trainer(self.model, self.optimizer,
                           self.iterator, self.instances, num_epochs=2,
                           cuda_device=0)
@@ -99,7 +101,7 @@ class TestTrainer(AllenNlpTestCase):
     @pytest.mark.skipif(torch.cuda.device_count() < 2,
                         reason="Need multiple GPUs.")
     def test_trainer_can_run_multiple_gpu(self):
-
+        self.model.cuda()
         class MetaDataCheckWrapper(Model):
             """
             Checks that the metadata field has been correctly split across the batch dimension
@@ -131,6 +133,22 @@ class TestTrainer(AllenNlpTestCase):
         assert isinstance(metrics['peak_gpu_0_memory_MB'], int)
         assert 'peak_gpu_1_memory_MB' in metrics
         assert isinstance(metrics['peak_gpu_1_memory_MB'], int)
+
+    @pytest.mark.skipif(torch.cuda.device_count() < 2,
+                        reason="Need multiple GPUs.")
+    def test_production_rule_field_with_multiple_gpus(self):
+        wikitables_dir = 'allennlp/tests/fixtures/data/wikitables/'
+        wikitables_reader = WikiTablesDatasetReader(tables_directory=wikitables_dir,
+                                                    dpd_output_directory=wikitables_dir + 'dpd_output/')
+        instances = wikitables_reader.read(wikitables_dir + 'sample_data.examples')
+        archive_path = self.FIXTURES_ROOT / 'semantic_parsing' / 'wikitables' / 'serialization' / 'model.tar.gz'
+        model = load_archive(archive_path).model
+        model.cuda()
+
+        multigpu_iterator = BasicIterator(batch_size=4)
+        multigpu_iterator.index_with(model.vocab)
+        trainer = Trainer(model, self.optimizer, multigpu_iterator, instances, num_epochs=2, cuda_device=[0, 1])
+        trainer.train()
 
     def test_trainer_can_resume_training(self):
         trainer = Trainer(self.model, self.optimizer,
@@ -494,3 +512,13 @@ class TestSparseClipGrad(AllenNlpTestCase):
         # Final norm should be 1.5
         grad = embedding.weight.grad.coalesce()  # pylint: disable=no-member
         self.assertAlmostEqual(grad._values().norm(2.0).item(), 1.5, places=5) # pylint: disable=protected-access
+
+class TestLanguageModelWithMultiprocessDatasetReader(ModelTestCase):
+    def setUp(self):
+        super().setUp()
+        self.set_up_model(self.FIXTURES_ROOT / 'language_model' / 'experiment_multiprocessing_reader.jsonnet',
+                          # Note the glob on the end of this path.
+                          self.FIXTURES_ROOT / 'language_model' / 'sentences*')
+
+    def test_unidirectional_language_model_can_train_save_and_load(self):
+        self.ensure_model_can_train_save_and_load(self.param_file)

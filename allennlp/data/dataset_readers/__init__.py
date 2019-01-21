@@ -14,6 +14,7 @@ from allennlp.data.dataset_readers.ontonotes_ner import OntonotesNamedEntityReco
 from allennlp.data.dataset_readers.coreference_resolution import ConllCorefReader, WinobiasReader
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.dataset_readers.event2mind import Event2MindDatasetReader
+from allennlp.data.dataset_readers.interleaving_dataset_reader import InterleavingDatasetReader
 from allennlp.data.dataset_readers.language_modeling import LanguageModelingReader
 from allennlp.data.dataset_readers.multiprocess_dataset_reader import MultiprocessDatasetReader
 from allennlp.data.dataset_readers.penn_tree_bank import PennTreeBankConstituencySpanDatasetReader
@@ -33,3 +34,4 @@ from allennlp.data.dataset_readers.semantic_parsing.quarel import QuarelDatasetR
 from allennlp.data.dataset_readers.simple_language_modeling import SimpleLanguageModelingDatasetReader
 from allennlp.data.dataset_readers.babi import BabiReader
 from allennlp.data.dataset_readers.copynet_seq2seq import CopyNetDatasetReader
+from allennlp.data.dataset_readers.text_classification_json import TextClassificationJsonReader
