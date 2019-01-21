@@ -161,7 +161,7 @@ class TestTrainer(AllenNlpTestCase):
                               validation_dataset=self.instances,
                               num_epochs=3, serialization_dir=self.TEST_DIR)
 
-        epoch, _, _ = new_trainer._restore_checkpoint()
+        epoch = new_trainer._restore_checkpoint()
         assert epoch == 1
 
         tracker = trainer._metric_tracker
@@ -345,7 +345,7 @@ class TestTrainer(AllenNlpTestCase):
                               train_dataset=self.instances,
                               validation_dataset=self.instances,
                               num_epochs=4, serialization_dir=self.TEST_DIR)
-        epoch, _, _ = new_trainer._restore_checkpoint()
+        epoch = new_trainer._restore_checkpoint()
         assert epoch == 2
         assert new_trainer._learning_rate_scheduler.lr_scheduler.last_epoch == 1
         new_trainer.train()
@@ -481,7 +481,7 @@ class TestTrainer(AllenNlpTestCase):
                                   self.iterator, self.instances, num_epochs=2,
                                   serialization_dir=self.TEST_DIR,
                                   model_save_interval=0.0001)
-        epoch, _, _ = restore_trainer._restore_checkpoint()
+        epoch = restore_trainer._restore_checkpoint()
         assert epoch == 2
         # One batch per epoch.
         assert restore_trainer._batch_num_total == 2
@@ -501,7 +501,9 @@ class TestTrainer(AllenNlpTestCase):
                           validation_metric="-loss",
                           num_epochs=1, serialization_dir=self.TEST_DIR)
         trainer.train()
-        _, best_epoch_1, best_validation_metrics_epoch_1 = trainer._restore_checkpoint()
+        _ = trainer._restore_checkpoint()
+        best_epoch_1 = trainer._metric_tracker.best_epoch
+        best_validation_metrics_epoch_1 = trainer._metric_tracker.best_epoch_metrics
         # best_validation_metrics_epoch_1: {'accuracy': 0.75, 'accuracy3': 1.0, 'loss': 0.6243013441562653}
         assert isinstance(best_validation_metrics_epoch_1, dict)
         assert "loss" in best_validation_metrics_epoch_1
@@ -513,7 +515,9 @@ class TestTrainer(AllenNlpTestCase):
                                   validation_metric="-loss",
                                   num_epochs=2, serialization_dir=self.TEST_DIR)
         restore_trainer.train()
-        _, best_epoch_2, best_validation_metrics_epoch_2 = restore_trainer._restore_checkpoint()
+        _ = restore_trainer._restore_checkpoint()
+        best_epoch_2 = restore_trainer._metric_tracker.best_epoch
+        best_validation_metrics_epoch_2 = restore_trainer._metric_tracker.best_epoch_metrics
 
         # Because of using -loss, 2nd epoch would be better than 1st. So best val metrics should not be same.
         assert best_epoch_1 == 0 and best_epoch_2 == 1
@@ -529,7 +533,9 @@ class TestTrainer(AllenNlpTestCase):
                           num_epochs=1, serialization_dir=self.TEST_DIR)
         trainer.train()
 
-        _, best_epoch_1, best_validation_metrics_epoch_1 = trainer._restore_checkpoint()
+        _ = trainer._restore_checkpoint()
+        best_epoch_1 = trainer._metric_tracker.best_epoch
+        best_validation_metrics_epoch_1 = trainer._metric_tracker.best_epoch_metrics
         # best_validation_metrics_epoch_1: {'accuracy': 0.75, 'accuracy3': 1.0, 'loss': 0.6243013441562653}
         assert isinstance(best_validation_metrics_epoch_1, dict)
         assert "loss" in best_validation_metrics_epoch_1
@@ -541,7 +547,9 @@ class TestTrainer(AllenNlpTestCase):
                                   validation_metric="+loss",
                                   num_epochs=2, serialization_dir=self.TEST_DIR)
         restore_trainer.train()
-        _, best_epoch_2, best_validation_metrics_epoch_2 = restore_trainer._restore_checkpoint()
+        _ = restore_trainer._restore_checkpoint()
+        best_epoch_2 = restore_trainer._metric_tracker.best_epoch
+        best_validation_metrics_epoch_2 = restore_trainer._metric_tracker.best_epoch_metrics
 
         # Because of using +loss, 2nd epoch won't be better than 1st. So best val metrics should be same.
         assert best_epoch_1 == best_epoch_2 == 0
@@ -590,7 +598,8 @@ class TestTrainer(AllenNlpTestCase):
             state["val_metric_per_epoch"] = [0.4, 0.1, 0.8]
             torch.save(state, path)
 
-        next_epoch, best_epoch, _ = trainer._restore_checkpoint()
+        next_epoch = trainer._restore_checkpoint()
+        best_epoch = trainer._metric_tracker.best_epoch
 
         # Loss decreases in 3 epochs, but because we hard fed the val metrics as above:
         assert next_epoch == 3
