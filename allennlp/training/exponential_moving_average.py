@@ -3,18 +3,18 @@ from allennlp.models.model import Model
 
 
 class ExponentialMovingAverage:
-    def __init__(self, model: Model, decay: float = 0.9999) -> None:
-        """
-        Create shadow variables and maintain exponential moving average for model parameters.
+    """
+    Create shadow variables and maintain exponential moving average for model parameters.
 
-        Parameters
-        ----------
-        model: ``Model``, required.
-            An AllenNLP model to be optimized.
-        decay: ``float``, optional, (default=0.9999).
-            The decay rate for each step. Note that a dynamic decay rate might be used if
-            `num_updates` is provided when applying the exponential moving average.
-        """
+    Parameters
+    ----------
+    model: ``Model``, required.
+        An AllenNLP model to be optimized.
+    decay: ``float``, optional, (default=0.9999).
+        The decay rate for each step. Note that a dynamic decay rate might be used if
+        `num_updates` is provided when applying the exponential moving average.
+    """
+    def __init__(self, model: Model, decay: float = 0.9999) -> None:
         self.decay = decay
         self._average_values: Dict = {}
         self._backup_values: Dict = {}
