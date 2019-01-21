@@ -207,12 +207,14 @@ tag_ids = np.argmax(tag_logits, axis=-1)
 print([model.vocab.get_token_from_index(i, 'labels') for i in tag_ids])
 
 #### Finally, we'd like to be able to save our model and reload it later. We'll need to save two things. The first is the model weights.
+# Here's how to save the model.
 with open("/tmp/model.th", 'wb') as f:
     torch.save(model.state_dict(), f)
-#### And the second is the vocabulary:
+#### And the second is the vocabulary.
 vocab.save_to_files("/tmp/vocabulary")
 
 #### We only saved the model weights, so we actually have to recreate the model in code. First, let's reload the vocabulary into a new variable.
+# And here's how to reload the model.
 vocab2 = Vocabulary.from_files("/tmp/vocabulary")
 #### And then let's recreate the model (if I were doing this in a different file I would of course have to re-instantiate the word embeddings and lstm as well).
 model2 = LstmTagger(word_embeddings, lstm, vocab2)
@@ -220,7 +222,7 @@ model2 = LstmTagger(word_embeddings, lstm, vocab2)
 with open("/tmp/model.th", 'rb') as f:
     model2.load_state_dict(torch.load(f))
 
-#### And now we should get the same predictions:
+#### And now we should get the same predictions.
 predictor2 = SentenceTaggerPredictor(model2, dataset_reader=reader)
 tag_logits2 = predictor2.predict("The dog ate the apple")['tag_logits']
 assert tag_logits2 == tag_logits
@@ -228,15 +230,15 @@ assert tag_logits2 == tag_logits
 ####
 """
 <p>
-    Although this tutorial has been an explanation of how AllenNLP <em>works</em>,
+    Although this tutorial has been an explanation of how AllenNLP works,
     in practice you probably wouldn't write your code this way. Most AllenNLP objects
-    (Models, DatasetReaders, and so on) can be constructed <em>declaratively</em>
+    (Models, DatasetReaders, and so on) can be constructed declaratively
     from JSON-like objects. 
 </p>
 <p>
-    So a more typical use case would involve <em>implementing</em> the Model and
+    So a more typical use case would involve implementing the Model and
     DatasetReader as above, but creating a <a href = "https://jsonnet.org/">Jsonnet</a>
-    file indicating how you want to <em>instantiate</em> and <em>train</em> them,
+    file indicating how you want to instantiate and train them,
     and then simply using the command line tool <code>allennlp train</code> 
     (which would automatically save an archive of the trained model).
 </p>
