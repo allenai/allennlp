@@ -1,5 +1,5 @@
 
-_DEBUG = True
+_DEBUG = False
 ## Version 0.0
 #  only takes a command string and runs it on a specific channel, channel is the GPU computer name...
 from allennlp.common.util import *
