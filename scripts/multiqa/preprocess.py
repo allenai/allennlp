@@ -695,6 +695,7 @@ def main():
                 break
             sampled_contexts.append(context)
             num_of_qas += len(context['qas'])
+        contexts = sampled_contexts
 
     if args.n_processes == 1:
         preprocessor = MultiQAPreprocess(args.ndocs, args.docsize, args.titles, args.use_rank, \
