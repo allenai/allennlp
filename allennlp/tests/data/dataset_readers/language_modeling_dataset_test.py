@@ -1,10 +1,9 @@
 # pylint: disable=no-self-use,invalid-name
+import numpy
+
 from allennlp.data.dataset_readers import LanguageModelingReader
 from allennlp.common.util import ensure_list
 from allennlp.common.testing import AllenNlpTestCase
-
-import numpy
-
 
 class TestLanguageModelingDatasetReader:
     def test_read_from_file_no_fuzz_is_deterministic(self):
@@ -33,7 +32,7 @@ class TestLanguageModelingDatasetReader:
         predict labels for the final words in the batch.
         """
         # Results should be identical if we run twice.
-        for i in range(2):
+        for _ in range(2):
             reader = LanguageModelingReader(batch_size=4,
                                             truncated_bptt_size=2,
                                             fuzz_truncated_bptt_size=False)
@@ -55,12 +54,12 @@ class TestLanguageModelingDatasetReader:
                                       ["for", "extra"]]
 
             first_instance_generated_inputs = [
-                [x.text for x in instances[0].fields["inputs"].field_list[i].tokens] for
-                i in range(len(instances[0].fields["inputs"].field_list))]
+                    [x.text for x in instances[0].fields["inputs"].field_list[i].tokens] for
+                    i in range(len(instances[0].fields["inputs"].field_list))]
             assert first_instance_generated_inputs == first_instance_inputs
             first_instance_generated_targets = [
-                [x.text for x in instances[0].fields["targets"].field_list[i].tokens] for
-                i in range(len(instances[0].fields["targets"].field_list))]
+                    [x.text for x in instances[0].fields["targets"].field_list[i].tokens] for
+                    i in range(len(instances[0].fields["targets"].field_list))]
             assert first_instance_generated_targets == first_instance_targets
 
             second_instance_inputs = [["a"],
@@ -72,12 +71,12 @@ class TestLanguageModelingDatasetReader:
                                        ["another"],
                                        ["language"]]
             second_instance_generated_inputs = [
-                [x.text for x in instances[1].fields["inputs"].field_list[i].tokens] for
-                i in range(len(instances[1].fields["inputs"].field_list))]
+                    [x.text for x in instances[1].fields["inputs"].field_list[i].tokens] for
+                    i in range(len(instances[1].fields["inputs"].field_list))]
             assert second_instance_generated_inputs == second_instance_inputs
             second_instance_generated_targets = [
-                [x.text for x in instances[1].fields["targets"].field_list[i].tokens] for
-                i in range(len(instances[1].fields["targets"].field_list))]
+                    [x.text for x in instances[1].fields["targets"].field_list[i].tokens] for
+                    i in range(len(instances[1].fields["targets"].field_list))]
             assert second_instance_generated_targets == second_instance_targets
 
     def test_read_from_file(self):
@@ -115,12 +114,12 @@ class TestLanguageModelingDatasetReader:
         first_instance_targets = [["is", "a", "sentence", "for", "language"],
                                   ["'s", "another", "one", "for", "extra"]]
         first_instance_generated_inputs = [
-            [x.text for x in instances[0].fields["inputs"].field_list[i].tokens] for
-            i in range(len(instances[0].fields["inputs"].field_list))]
+                [x.text for x in instances[0].fields["inputs"].field_list[i].tokens] for
+                i in range(len(instances[0].fields["inputs"].field_list))]
         assert first_instance_generated_inputs == first_instance_inputs
         first_instance_generated_targets = [
-            [x.text for x in instances[0].fields["targets"].field_list[i].tokens] for
-            i in range(len(instances[0].fields["targets"].field_list))]
+                [x.text for x in instances[0].fields["targets"].field_list[i].tokens] for
+                i in range(len(instances[0].fields["targets"].field_list))]
         assert first_instance_generated_targets == first_instance_targets
 
         second_instance_inputs = [["language", "modelling", "."],
@@ -128,10 +127,10 @@ class TestLanguageModelingDatasetReader:
         second_instance_targets = [["modelling", ".", "</S>"],
                                    ["language", "modelling", "."]]
         second_instance_generated_inputs = [
-            [x.text for x in instances[1].fields["inputs"].field_list[i].tokens] for
-            i in range(len(instances[1].fields["inputs"].field_list))]
+                [x.text for x in instances[1].fields["inputs"].field_list[i].tokens] for
+                i in range(len(instances[1].fields["inputs"].field_list))]
         assert second_instance_generated_inputs == second_instance_inputs
         second_instance_generated_targets = [
-            [x.text for x in instances[1].fields["targets"].field_list[i].tokens] for
-            i in range(len(instances[1].fields["targets"].field_list))]
+                [x.text for x in instances[1].fields["targets"].field_list[i].tokens] for
+                i in range(len(instances[1].fields["targets"].field_list))]
         assert second_instance_generated_targets == second_instance_targets
