@@ -10,17 +10,20 @@ def dispatch():
     #Operation = "kill job"
     #Operation = "git pull"
     
-    ## HOST#
+    ## HOST
     #host = 'rack-gamir-g03'
     #host = 'rack-gamir-g05'
     #host = 'rack-gamir-g04'
     #host = 'savant'
-    host = 'rack-jonathan-g02'
+    host = 'rack-jonathan-g04'
 
     if Operation == "Preprocess":
         host = 'z-rack-jonathan-02'
+        #host = 'rack-jonathan-02'
     #host = 'z-rack-jonathan-02'
-    
+
+    # host = 'test'
+
     if host in ['savant', 'rack-gamir-g03', 'rack-gamir-g04', 'rack-gamir-g05']:
         model_dir = '/home/joberant/home/alontalmor/models/'
     else:
@@ -33,15 +36,17 @@ def dispatch():
     #config_json = 'Squad.json'
     #config_json = 'NewsQA.json'
     #config_json = 'HotpotQA.json'
-    #config_json = 'ComplexWebQuestions.json'
+    config_json = 'ComplexWebQuestions.json'
     #config_json = 'TriviaQA-G.json'
-    config_json = 'TriviaQA-web.json'
+    #config_json = 'TriviaQA-web.json'
     with open(config_path + config_json, 'r') as f:
         dataset_specific_config = json.load(f)
 
     # Dataset name:
     name = dataset_specific_config['train_data_path'].split('/')[-1].replace('_train.json.zip', '').replace('_train.jsonl.zip', '') + '/'
     name += 'GloVe_'
+    #name += 'no_sort'
+    name += 'patiente_12_20_all_q_in_train'
     #name += '10docs_250tokens_'
     #name += 'lazy_' + str(dataset_specific_config['dataset_reader']['lazy']) + '_'
     #name += str(dataset_specific_config['trainer']['optimizer']['type']) + '_'
@@ -78,13 +83,21 @@ def dispatch():
 
     # preprocess
     if Operation == "Preprocess":
-        set = 'dev'
-        dataset = 'TriviaQA-web'
-        docsize = '250'
-        name = "preprocess_" + dataset + "_" + docsize + "_" + set + "_" + datetime.datetime.now().strftime("%m%d_%H%M")
-        command = "python scripts/multiqa/preprocess.py s3://multiqa/datasets/" + dataset + "_" + set + ".jsonl.zip s3://multiqa/preproc/" + dataset \
-                  + "_" + docsize + "_" + set + ".jsonl.zip --n_processes 10 --ndocs 10 --docsize " + docsize + \
-                  " --titles True --use_rank True --require_answer_in_doc False --sample_size -1  "
+        set = 'train'
+        dataset = 'HotpotQA'
+        docsize = '400'
+        sample = '50000'
+        if sample != '-1':
+            name = "preprocess_" + dataset + "_" + docsize + "_" + sample + "_" + set + "_" + datetime.datetime.now().strftime("%m%d_%H%M")
+            command = "python scripts/multiqa/preprocess.py s3://multiqa/datasets/" + dataset + "_" + set + ".jsonl.zip s3://multiqa/preproc/" + \
+            dataset   + "_" + sample + "_" + docsize + "_" + set + ".jsonl.zip --n_processes 7 --ndocs 10 --docsize " + docsize + \
+                      " --titles True --use_rank True --require_answer_in_doc False --sample_size " + sample + " "
+        else:
+            name = "preprocess_" + dataset + "_" + docsize + "_" + set + "_" + datetime.datetime.now().strftime("%m%d_%H%M")
+            command = "python scripts/multiqa/preprocess.py s3://multiqa/datasets/" + dataset + "_" + set + ".jsonl.zip s3://multiqa/preproc/" + dataset \
+                      + "_" + docsize + "_" + set + ".jsonl.zip --n_processes 10 --ndocs 10 --docsize " + docsize + \
+                      " --titles True --use_rank True --require_answer_in_doc False --sample_size " + sample + " "
+
         if set == "train":
             command += "--require_answer_in_question True"
         else:
@@ -96,7 +109,7 @@ def dispatch():
     
     if Operation == "kill job":
         name = "kill job"
-        command = "ComplexWebQuestions_250/GloVe_GPU3_LR_0.001_L2_0.0001_0118_1605"
+        command = "ComplexWebQuestions_250/GloVe_GPU1_0120_1447"
     
     print('\n')
     print(host)

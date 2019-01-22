@@ -683,7 +683,18 @@ def main():
     # sampling
     if args.sample_size > -1:
         random.seed(2)
-        contexts = random.sample(contexts, args.sample_size)
+        if args.sample_size < len(contexts):
+            contexts = random.sample(contexts, args.sample_size)
+        else:
+            contexts = random.sample(contexts,len(contexts))
+
+        sampled_contexts = []
+        num_of_qas = 0
+        for context in contexts:
+            if num_of_qas > args.sample_size:
+                break
+            sampled_contexts.append(context)
+            num_of_qas += len(context['qas'])
 
     if args.n_processes == 1:
         preprocessor = MultiQAPreprocess(args.ndocs, args.docsize, args.titles, args.use_rank, \
