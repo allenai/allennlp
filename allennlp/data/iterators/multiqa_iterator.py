@@ -172,8 +172,8 @@ class MultiQAIterator(DataIterator):
 
                 if len(batch) + len(instances_to_add) > self._batch_size or \
                     (self._maximum_tensor_size is not None and estimated_tensor_size > self._maximum_tensor_size):
-                    total_examples_in_batches += len(batch)
-                    logger.info("total_examples_in_batches = %d", total_examples_in_batches)
+                    #total_examples_in_batches += len(batch)
+                    #logger.info("total_examples_in_batches = %d", total_examples_in_batches)
                     yield Batch(batch)
 
                     batch = instances_to_add
@@ -182,8 +182,8 @@ class MultiQAIterator(DataIterator):
 
             # yielding remainder batch
             if len(batch)>0:
-                total_examples_in_batches += len(batch)
-                logger.info("remainder ... total_examples_in_batches = %d", total_examples_in_batches)
+                #total_examples_in_batches += len(batch)
+                #logger.info("remainder ... total_examples_in_batches = %d", total_examples_in_batches)
                 yield Batch(batch)
 
 
