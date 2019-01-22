@@ -53,6 +53,75 @@ class MultiQAReader(DatasetReader):
         self._sample_size = sample_size
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
 
+    def build_instances(self, header, instances):
+
+        # sampling
+        if self._sample_size > -1:
+            # random.seed(1)
+            # dataset_json['preprocessed_instances'] = \
+            #    random.sample(dataset_json['preprocessed_instances'], self._sample_size)
+            instances = instances[0:self._sample_size]
+
+        # bucketing by QuestionID
+        instance_list = instances
+        instance_list = sorted(instance_list, key=lambda x: x['metadata']['question_id'])
+        intances_question_id = [instance['metadata']['question_id'] for instance in instance_list]
+        split_inds = [0] + list(np.cumsum(np.unique(intances_question_id, return_counts=True)[1]))
+        per_question_instances = [instance_list[split_inds[ind]:split_inds[ind + 1]] for ind in
+                                  range(len(split_inds) - 1)]
+
+        # sorting
+        sorting_keys = ['question_tokens', 'tokens']
+        instances_with_lengths = []
+        for instance in per_question_instances:
+            padding_lengths = {key: len(instance[0][key]) for key in sorting_keys}
+            instance_with_lengths = ([padding_lengths[field_name] for field_name in sorting_keys], instance)
+            instances_with_lengths.append(instance_with_lengths)
+        instances_with_lengths.sort(key=lambda x: x[0])
+        per_question_instances = [instance_with_lengths[-1] for instance_with_lengths in instances_with_lengths]
+
+        # selecting instaces to add
+        filtered_instances = []
+        for question_instances in per_question_instances:
+            if header['split_type'] == 'dev':
+                instances_to_add = question_instances
+            else:
+                # choose at most 2 instances from the same question:
+                if len(question_instances) > 2:
+                    # This part is inspired by Clark and Gardner, 17 - oversample the highest ranking documents.
+                    # In thier work they use only instances with answers, so we will find the highest
+                    # ranking instance with an answer (this also insures we have at least one answer in the chosen instances)
+                    inst_with_answers = [inst for inst in question_instances if inst['answers'] != []]
+                    instances_to_add = random.sample(inst_with_answers[0:2], 1)
+                    # we assume each question will be visited once in an epoch
+                    question_instances.remove(instances_to_add[0])
+                    instances_to_add += random.sample(question_instances, 1)
+
+                else:
+                    instances_to_add = question_instances
+
+                # Require at least one answer:
+                if not any(inst['answers'] != [] for inst in instances_to_add):
+                    continue
+
+            filtered_instances += instances_to_add
+
+        #logger.info("multiqa+: yielding %d instances ", len(filtered_instances))
+        for inst_num, inst in enumerate(filtered_instances):
+            # if inst_num % 99 == 0:
+            #    logger.info("yeilding inst_num %d",inst_num)
+            tokenized_paragraph = [Token(text=t[0], idx=t[1]) for t in inst['tokens']]
+            question_tokens = [Token(text=t[0], idx=t[1]) for t in inst['question_tokens']]
+            instance = util.make_reading_comprehension_instance_multiqa_multidoc(question_tokens,
+                                                                                 tokenized_paragraph,
+                                                                                 self._token_indexers,
+                                                                                 inst['text'],
+                                                                                 inst['answers'],
+                                                                                 inst['metadata'],
+                                                                                 header)
+
+            yield instance
+
     @profile
     @overrides
     def _read(self, file_path: str):
@@ -78,74 +147,13 @@ class MultiQAReader(DatasetReader):
                                                     != instances[-2]['metadata']['question_id']:
                                 remainder = instances[-1]
                                 instances = instances[:-1]
-                                # sampling
-                                if self._sample_size > -1:
-                                    #random.seed(1)
-                                    #dataset_json['preprocessed_instances'] = \
-                                    #    random.sample(dataset_json['preprocessed_instances'], self._sample_size)
-                                    instances = instances[0:self._sample_size]
-
-                                # bucketing by QuestionID
-                                instance_list = instances
-                                instance_list = sorted(instance_list, key=lambda x: x['metadata']['question_id'])
-                                intances_question_id = [instance['metadata']['question_id'] for instance in instance_list]
-                                split_inds = [0] + list(np.cumsum(np.unique(intances_question_id, return_counts=True)[1]))
-                                per_question_instances = [instance_list[split_inds[ind]:split_inds[ind + 1]] for ind in
-                                                          range(len(split_inds) - 1)]
-
-                                # sorting
-                                sorting_keys = ['question_tokens','tokens']
-                                instances_with_lengths = []
-                                for instance in per_question_instances:
-                                    padding_lengths = {key: len(instance[0][key]) for key in sorting_keys}
-                                    instance_with_lengths = ([padding_lengths[field_name] for field_name in sorting_keys], instance)
-                                    instances_with_lengths.append(instance_with_lengths)
-                                instances_with_lengths.sort(key=lambda x: x[0])
-                                per_question_instances = [instance_with_lengths[-1] for instance_with_lengths in instances_with_lengths]
-
-                                # selecting instaces to add
-                                filtered_instances = []
-                                for question_instances in per_question_instances:
-                                    if header['split_type'] == 'dev':
-                                        instances_to_add = question_instances
-                                    else:
-                                        # choose at most 2 instances from the same question:
-                                        if len(question_instances) > 2:
-                                            # This part is inspired by Clark and Gardner, 17 - oversample the highest ranking documents.
-                                            # In thier work they use only instances with answers, so we will find the highest
-                                            # ranking instance with an answer (this also insures we have at least one answer in the chosen instances)
-                                            inst_with_answers = [inst for inst in question_instances if inst['answers'] != []]
-                                            instances_to_add = random.sample(inst_with_answers[0:2], 1)
-                                            # we assume each question will be visited once in an epoch
-                                            question_instances.remove(instances_to_add[0])
-                                            instances_to_add += random.sample(question_instances, 1)
-
-                                        else:
-                                            instances_to_add = question_instances
-
-                                        # Require at least one answer:
-                                        if not any(inst['answers'] != [] for inst in instances_to_add):
-                                            continue
-
-                                    filtered_instances += instances_to_add
-
-                                logger.info("multiqa+: yielding %d instances ", len(filtered_instances))
-                                for inst_num,inst in enumerate(filtered_instances):
-                                    #if inst_num % 99 == 0:
-                                    #    logger.info("yeilding inst_num %d",inst_num)
-                                    tokenized_paragraph = [Token(text=t[0], idx=t[1]) for t in inst['tokens']]
-                                    question_tokens = [Token(text=t[0], idx=t[1]) for t in inst['question_tokens']]
-                                    instance = util.make_reading_comprehension_instance_multiqa_multidoc(question_tokens,
-                                                                             tokenized_paragraph,
-                                                                             self._token_indexers,
-                                                                             inst['text'],
-                                                                             inst['answers'],
-                                                                             inst['metadata'],
-                                                                             header)
-
+                                for instance in self.build_instances(header, instances):
                                     yield instance
-
                                 instances = [remainder]
+
+                        # yielding the remainder
+                        for instance in self.build_instances(header, instances):
+                            yield instance
 
 
 

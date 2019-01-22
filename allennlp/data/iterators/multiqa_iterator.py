@@ -109,11 +109,11 @@ class MultiQAIterator(DataIterator):
     @overrides
     def _create_batches(self, instances: Iterable[Instance], shuffle: bool) -> Iterable[Batch]:
         temp_max_tensor_size = 0
-        all_instances_ids = []
+        #all_instances_ids = []
         total_examples_in_batches = 0
         for instance_list in self._memory_sized_lists(instances):
-            all_instances_ids += [inst.fields['metadata'].metadata['instance_id'] for inst in instance_list]
-            logger.info("itertor: total instances %d, unique instances %d ", len(all_instances_ids), len(set(all_instances_ids)))
+            #all_instances_ids += [inst.fields['metadata'].metadata['instance_id'] for inst in instance_list]
+            #logger.info("itertor: total instances %d, unique instances %d ", len(all_instances_ids), len(set(all_instances_ids)))
 
             instance_list = sorted(instance_list,key=lambda x: x.fields['metadata'].metadata['question_id'])
             intances_question_id = [instance.fields['metadata'].metadata['question_id'] for instance in instance_list]
