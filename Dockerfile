@@ -44,7 +44,6 @@ COPY requirements.txt .
 COPY scripts/install_requirements.sh scripts/install_requirements.sh
 RUN ./scripts/install_requirements.sh
 
-COPY bin/ bin/
 COPY scripts/ scripts/
 COPY allennlp/ allennlp/
 COPY pytest.ini pytest.ini
