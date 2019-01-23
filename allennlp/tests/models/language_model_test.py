@@ -140,6 +140,26 @@ class TestUnidirectionalContiguousLanguageModelUnsampled(TestUnidirectionalConti
                           'experiment_unidirectional_contiguous_unsampled.jsonnet',
                           self.FIXTURES_ROOT / 'language_model' / 'sentences.txt')
 
+class TestUnidirectionalContiguousLanguageModelTransformer(TestUnidirectionalContiguousLanguageModel):
+    def setUp(self):
+        super().setUp()
+
+        self.expected_embedding_shape = (2, 6, 20)
+
+        self.set_up_model(self.FIXTURES_ROOT / 'language_model' /
+                          'experiment_unidirectional_contiguous_transformer.jsonnet',
+                          self.FIXTURES_ROOT / 'language_model' / 'sentences.txt')
+
+    # pylint: disable=no-member
+    def test_unidirectional_language_model_can_train_save_and_load(self):
+        # Ignore layer 0 feedforward layer norm parameters, since
+        # they are not used.
+        self.ensure_model_can_train_save_and_load(
+                self.param_file, gradients_to_ignore={
+                        "_contextualizer.feedforward_layer_norm_0.gamma",
+                        "_contextualizer.feedforward_layer_norm_0.beta"})
+
+
 class TestBidirectionalLanguageModel(TestUnidirectionalLanguageModel):
     def setUp(self):
         super().setUp()
