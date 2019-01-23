@@ -27,7 +27,12 @@ class F1Measure(FBetaMeasure):
         f1-measure : float
         """
         metric = super().get_metric(reset=reset)
-        return metric['precision'], metric['recall'], metric['fscore']
+        # Because we just care about the class `positive_label`
+        # there is just one item in `precision`, `recall`, `fscore`
+        precision = metric['precision'][0]
+        recall = metric['recall'][0]
+        fscore = metric['fscore'][0]
+        return precision, recall, fscore
 
     @property
     def _true_positives(self):
@@ -72,3 +77,4 @@ class F1Measure(FBetaMeasure):
             # `self._true_sum` is the total number of instances under each _true_ class,
             # including true positives and false negatives.
             return self._true_sum[0] - self._true_positives
+
