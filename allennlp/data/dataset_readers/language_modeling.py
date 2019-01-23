@@ -137,7 +137,7 @@ class LanguageModelingReader(DatasetReader):
             yield Instance({
                     "inputs": ListField([TextField(single_batch, self._token_indexers) for
                                          single_batch in batch_inputs]),
-                    "targets": ListField([TextField(single_batch, self._token_indexers) for
-                                          single_batch in batch_targets])
+                    "forward_targets": ListField([TextField(single_batch, self._token_indexers) for
+                                                  single_batch in batch_targets])
             })
             batch_start_index += sequence_length

@@ -40,7 +40,7 @@ class TestLanguageModelingDatasetReader:
                                                 'language_modeling.txt'))
             # This should match the batch size
             assert len(instances[0].fields["inputs"].field_list) == 4
-            assert len(instances[0].fields["targets"].field_list) == 4
+            assert len(instances[0].fields["forward_targets"].field_list) == 4
             # This is the number of batches generated
             assert len(instances) == 2
 
@@ -48,7 +48,7 @@ class TestLanguageModelingDatasetReader:
                                      ["for", "language"],
                                      ["</S>", "Here"],
                                      ["one", "for"]]
-            first_instance_targets = [["is", "a"],
+            first_instance_forward_targets = [["is", "a"],
                                       ["language", "modelling"],
                                       ["Here", "'s"],
                                       ["for", "extra"]]
@@ -57,16 +57,16 @@ class TestLanguageModelingDatasetReader:
                     [x.text for x in instances[0].fields["inputs"].field_list[i].tokens] for
                     i in range(len(instances[0].fields["inputs"].field_list))]
             assert first_instance_generated_inputs == first_instance_inputs
-            first_instance_generated_targets = [
-                    [x.text for x in instances[0].fields["targets"].field_list[i].tokens] for
-                    i in range(len(instances[0].fields["targets"].field_list))]
-            assert first_instance_generated_targets == first_instance_targets
+            first_instance_generated_forward_targets = [
+                    [x.text for x in instances[0].fields["forward_targets"].field_list[i].tokens] for
+                    i in range(len(instances[0].fields["forward_targets"].field_list))]
+            assert first_instance_generated_forward_targets == first_instance_forward_targets
 
             second_instance_inputs = [["a"],
                                       ["modelling"],
                                       ["'s"],
                                       ["extra"]]
-            second_instance_targets = [["sentence"],
+            second_instance_forward_targets = [["sentence"],
                                        ["."],
                                        ["another"],
                                        ["language"]]
@@ -74,10 +74,10 @@ class TestLanguageModelingDatasetReader:
                     [x.text for x in instances[1].fields["inputs"].field_list[i].tokens] for
                     i in range(len(instances[1].fields["inputs"].field_list))]
             assert second_instance_generated_inputs == second_instance_inputs
-            second_instance_generated_targets = [
-                    [x.text for x in instances[1].fields["targets"].field_list[i].tokens] for
-                    i in range(len(instances[1].fields["targets"].field_list))]
-            assert second_instance_generated_targets == second_instance_targets
+            second_instance_generated_forward_targets = [
+                    [x.text for x in instances[1].fields["forward_targets"].field_list[i].tokens] for
+                    i in range(len(instances[1].fields["forward_targets"].field_list))]
+            assert second_instance_generated_forward_targets == second_instance_forward_targets
 
     def test_read_from_file(self):
         """
@@ -111,26 +111,26 @@ class TestLanguageModelingDatasetReader:
 
         first_instance_inputs = [["This", "is", "a", "sentence", "for"],
                                  ["Here", "'s", "another", "one", "for"]]
-        first_instance_targets = [["is", "a", "sentence", "for", "language"],
+        first_instance_forward_targets = [["is", "a", "sentence", "for", "language"],
                                   ["'s", "another", "one", "for", "extra"]]
         first_instance_generated_inputs = [
                 [x.text for x in instances[0].fields["inputs"].field_list[i].tokens] for
                 i in range(len(instances[0].fields["inputs"].field_list))]
         assert first_instance_generated_inputs == first_instance_inputs
-        first_instance_generated_targets = [
-                [x.text for x in instances[0].fields["targets"].field_list[i].tokens] for
-                i in range(len(instances[0].fields["targets"].field_list))]
-        assert first_instance_generated_targets == first_instance_targets
+        first_instance_generated_forward_targets = [
+                [x.text for x in instances[0].fields["forward_targets"].field_list[i].tokens] for
+                i in range(len(instances[0].fields["forward_targets"].field_list))]
+        assert first_instance_generated_forward_targets == first_instance_forward_targets
 
         second_instance_inputs = [["language", "modelling", "."],
                                   ["extra", "language", "modelling"]]
-        second_instance_targets = [["modelling", ".", "</S>"],
+        second_instance_forward_targets = [["modelling", ".", "</S>"],
                                    ["language", "modelling", "."]]
         second_instance_generated_inputs = [
                 [x.text for x in instances[1].fields["inputs"].field_list[i].tokens] for
                 i in range(len(instances[1].fields["inputs"].field_list))]
         assert second_instance_generated_inputs == second_instance_inputs
-        second_instance_generated_targets = [
-                [x.text for x in instances[1].fields["targets"].field_list[i].tokens] for
-                i in range(len(instances[1].fields["targets"].field_list))]
-        assert second_instance_generated_targets == second_instance_targets
+        second_instance_generated_forward_targets = [
+                [x.text for x in instances[1].fields["forward_targets"].field_list[i].tokens] for
+                i in range(len(instances[1].fields["forward_targets"].field_list))]
+        assert second_instance_generated_forward_targets == second_instance_forward_targets
