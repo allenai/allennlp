@@ -23,11 +23,13 @@ Say you've found some old code that needs some care. You have a fix in mind, may
 1. Determine whether backward compatibility is even an issue.
 
   __Likely safe__
+
   * New code
   * Internal code _TODO: How is this determined?_
   * Implementation change only
 
   __Care required__
+
   * File/class/function names
     * Including names passed to `Registrable.register`!
   * Function signatures
@@ -37,15 +39,18 @@ Say you've found some old code that needs some care. You have a fix in mind, may
 2. If so, first consider how critical the change is.
 
   __Non-critical__
+
   * Minor name changes
   * "Cleaner" APIs with no functional benefit
 
   __Medium__
+
   * Name/API that is actively confusing multiple users.
     * This means Github issues, messages on user channels, etc.
   * Useful new feature
 
   __High__
+
   * Major bugs
 
 3. Non-critical changes we should happily avoid. Otherwise, let's try to make the change in a backward compatible manner. Options include:
