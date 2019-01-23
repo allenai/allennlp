@@ -53,18 +53,20 @@ Say you've found some old code that needs some care. You have a fix in mind, may
 
     * Major bugs
 
-3. Non-critical changes we should happily avoid. Otherwise, let's try to make the change in a backward compatible manner. Options include:
-  * When deprecating, say, a class, leave a shim to its replacement.
-  * A function signature can likely be changed with a keyword argument.
-  * You can decorate with `Registrable.register` multiple times.
-  * Features can be hidden behind flags.
-  * Files can simply be forked. (for extreme cases)
+3. Non-critical changes we should happily avoid. Otherwise, let's try to make the change in a backward compatible manner.
 
-   Likely no deprecation needs to occur in this case. However, in the spirit of TOOWTDI, one may still mark the old component as deprecated while _not_ removing it. Usages in AllenNLP should be removed so that our warnings are not spammy. Though silencing warnings is an option, we should "eat our own dog food" or we can hardly expect our users to migrate.
+  * Options include:
+    * When deprecating, say, a class, leave a shim to its replacement.
+    * A function signature can likely be changed with a keyword argument.
+    * You can decorate with `Registrable.register` multiple times.
+    * Features can be hidden behind flags.
+    * Files can simply be forked. (for extreme cases)
+
+  * Likely no deprecation needs to occur in this case. However, in the spirit of TOOWTDI, one may still mark the old component as deprecated while _not_ removing it. Usages in AllenNLP should be removed so that our warnings are not spammy. Though silencing warnings is an option, we should "eat our own dog food" or we can hardly expect our users to migrate.
 
 4. No backward compatible change can be made.
 
-   In this situation it's adivsable to consult with other developers. Hopefully they can propose an alternative solution or help mitigate the churn during the change.
+  * In this situation it's adivsable to consult with other developers. Hopefully they can propose an alternative solution or help mitigate the churn during the change.
 
 ## Mechanics
 
