@@ -565,10 +565,10 @@ class Trainer(TrainerBase):
         # Currently the ``training_state`` contains a serialized ``MetricTracker``.
         if "metric_tracker" in training_state:
             self._metric_tracker.load_state_dict(training_state["metric_tracker"])
-        # It used to be the case that we tracked ``val_metrics_per_epoch``.
+        # It used to be the case that we tracked ``val_metric_per_epoch``.
         elif "val_metric_per_epoch" in training_state:
             self._metric_tracker.clear()
-            self._metric_tracker.add_metrics(training_state["val_metrics_per_epoch"])
+            self._metric_tracker.add_metrics(training_state["val_metric_per_epoch"])
         # And before that we didn't track anything.
         else:
             self._metric_tracker.clear()
