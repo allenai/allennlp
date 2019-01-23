@@ -64,10 +64,7 @@ class MultiHeadSelfAttention(Seq2SeqEncoder):
 
         self._scale = (input_dim // num_heads) ** 0.5
         self._output_projection = Linear(values_dim, self._output_dim)
-        if attention_dropout_prob > 0:
-            self._attention_dropout = Dropout(attention_dropout_prob)
-        else:
-            self._attention_dropout = lambda x: x
+        self._attention_dropout = Dropout(attention_dropout_prob)
 
     def get_input_dim(self):
         return self._input_dim

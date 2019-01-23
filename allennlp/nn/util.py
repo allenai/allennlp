@@ -244,7 +244,7 @@ def masked_softmax(vector: torch.Tensor,
     do it yourself before passing the mask into this function.
 
     If ``memory_efficient`` is set to true, we will simply use a very large negative number for those
-    masked positions so that the probabilities of them positions would be approximately 0.
+    masked positions so that the probabilities of those positions would be approximately 0.
     This is not accurate in math, but works for most cases and consumes less memory.
 
     In the case that the input vector is completely masked and ``memory_efficient`` is false, this function
