@@ -22,7 +22,7 @@ Say you've found some old code that needs some care. You have a fix in mind, may
 
 1. Determine whether backward compatibility is even an issue.
 
-  __Likely safe__
+  Why does this not work? __Likely safe__
 
   * New code
   * Internal code _TODO: How is this determined?_
