@@ -83,6 +83,13 @@ class LanguageModelingReader(DatasetReader):
             # Divide file_tokens into batch_size lists
             # Work out how we can evenly split the dataset into batch_size parts
             total_num_tokens_per_batch = len(file_tokens) // self._batch_size
+            if total_num_tokens_per_batch == 0:
+                # TODO (nfliu): figure out if this is the desired behavior
+                raise ValueError(f"There are {len(file_tokens)} tokens in the file, "
+                                 f"but batch size is {self._batch_size}. "
+                                 "batch size must be less than or equal to number of "
+                                 "tokens in the file.")
+
             # Trim off the remainder from file_tokens, so we can evenly divide it
             # into batch_size lists.
             file_tokens_for_even_split = file_tokens[:total_num_tokens_per_batch *
