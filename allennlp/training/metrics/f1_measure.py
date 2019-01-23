@@ -1,4 +1,4 @@
-from typing import Dict, Tuple
+from typing import Tuple
 
 from allennlp.training.metrics.metric import Metric
 from allennlp.training.metrics.fbeta_measure import FBetaMeasure
@@ -31,18 +31,44 @@ class F1Measure(FBetaMeasure):
 
     @property
     def _true_positives(self):
-        return self._tp_sum[0] if self._tp_sum is not None else 0.0
+        # When this metric is never called, `self._true_positive_sum` is None,
+        # under which case we return 0.0 for backward compatibility.
+        if self._true_positive_sum is None:
+            return 0.0
+        else:
+            # Because we just care about the class `positive_label`,
+            # there is just one item in `self._true_positive_sum`.
+            return self._true_positive_sum[0]
 
     @property
     def _true_negatives(self):
-        raise DeprecationWarning("`_true_negatives` is not supported.")
+        # When this metric is never called, `self._true_negative_sum` is None,
+        # under which case we return 0.0 for backward compatibility.
+        if self._true_negative_sum is None:
+            return 0.0
+        else:
+            # Because we just care about the class `positive_label`,
+            # there is just one item in `self._true_negative_sum`.
+            return self._true_negative_sum[0]
 
     @property
     def _false_positives(self):
-        return ((self._pred_sum[0] - self._true_positives) if self._pred_sum is not None
-                else 0.0)
+        # When this metric is never called, `self._pred_sum` is None,
+        # under which case we return 0.0 for backward compatibility.
+        if self._pred_sum is None:
+            return 0.0
+        else:
+            # `self._pred_sum` is the total number of instances under each _predicted_ class,
+            # including true positives and false positives.
+            return self._pred_sum[0] - self._true_positives
 
     @property
     def _false_negatives(self):
-        return ((self._true_sum[0] - self._true_positives) if self._true_sum is not None
-                else 0.0)
+        # When this metric is never called, `self._true_sum` is None,
+        # under which case we return 0.0 for backward compatibility.
+        if self._true_sum is None:
+            return 0.0
+        else:
+            # `self._true_sum` is the total number of instances under each _true_ class,
+            # including true positives and false negatives.
+            return self._true_sum[0] - self._true_positives

@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Union
+from typing import List, Optional, Union
 
 import torch
 from overrides import overrides
@@ -24,6 +24,9 @@ class FBetaMeasure(Metric):
     the precision and recall, where an F-beta score reaches its best
     value at 1 and worst score at 0.
 
+    If we have precision and recall, the F-beta score is simply:
+    ``F-beta = (1 + beta ** 2) * precision * recall / (beta ** 2 * precision + recall)``
+
     The F-beta score weights recall more than precision by a factor of
     ``beta``. ``beta == 1.0`` means recall and precision are equally important.
 
@@ -48,9 +51,8 @@ class FBetaMeasure(Metric):
     labels: list, optional
         The set of labels to include and their order if ``average is None``.
         Labels present in the data can be excluded, for example to calculate a
-        multi-classes average ignoring a majority negative class, while labels not present
-        in the data will result in 0 components in a macro average. For multi-labels
-        targets, labels are column indices.
+        multi-class average ignoring a majority negative class. Labels not present
+        in the data will result in 0 components in a macro average.
 
     """
     def __init__(self,
@@ -58,7 +60,7 @@ class FBetaMeasure(Metric):
                  average: str = None,
                  labels: List[int] = None) -> None:
         average_options = (None, 'micro', 'macro')
-        if average not in average_options and average != 'binary':
+        if average not in average_options:
             raise ConfigurationError(f"`average` has to be one of {average_options}.")
         if beta <= 0:
             raise ConfigurationError("`beta` should be >0 in the F-beta score.")
@@ -68,9 +70,20 @@ class FBetaMeasure(Metric):
         self._labels = labels
 
         # statistics
-        self._tp_sum = None
-        self._pred_sum = None
-        self._true_sum = None
+        # the total number of true positive instances under each class
+        # Shape: (num_classes, )
+        self._true_positive_sum: Union[None, torch.Tensor] = None
+        # the total number of instances
+        # Shape: (num_classes, )
+        self._total_sum: Union[None, torch.Tensor] = None
+        # the total number of instances under each _predicted_ class,
+        # including true positives and false positives
+        # Shape: (num_classes, )
+        self._pred_sum: Union[None, torch.Tensor] = None
+        # the total number of instances under each _true_ class,
+        # including true positives and false negatives
+        # Shape: (num_classes, )
+        self._true_sum: Union[None, torch.Tensor] = None
 
     @overrides
     def __call__(self,
@@ -90,16 +103,19 @@ class FBetaMeasure(Metric):
         """
         predictions, gold_labels, mask = self.unwrap_to_tensors(predictions, gold_labels, mask)
 
-        # Calculate tp_sum, pred_sum, true_sum
+        # Calculate true_positive_sum, true_negative_sum, pred_sum, true_sum
         num_classes = predictions.size(-1)
         if (gold_labels >= num_classes).any():
             raise ConfigurationError("A gold label passed to FBetaMeasure contains "
                                      f"an id >= {num_classes}, the number of classes.")
 
-        if self._tp_sum is None:
-            self._tp_sum = torch.zeros(num_classes)
+        # It means we call this metric at the first time
+        # when `self._true_positive_sum` is None.
+        if self._true_positive_sum is None:
+            self._true_positive_sum = torch.zeros(num_classes)
             self._true_sum = torch.zeros(num_classes)
             self._pred_sum = torch.zeros(num_classes)
+            self._total_sum = torch.zeros(num_classes)
 
         if mask is None:
             mask = torch.ones_like(gold_labels)
@@ -110,12 +126,16 @@ class FBetaMeasure(Metric):
         true_positives = (gold_labels == argmax_predictions) * mask
         true_positives_bins = gold_labels[true_positives]
 
+        # Watch it:
+        # The total numbers of true positives under all _predicted_ classes are zeros.
         if true_positives_bins.shape[0] == 0:
-            tp_sum = torch.zeros(num_classes)
+            true_positive_sum = torch.zeros(num_classes)
         else:
-            tp_sum = torch.bincount(true_positives_bins.long(), minlength=num_classes).float()
+            true_positive_sum = torch.bincount(true_positives_bins.long(), minlength=num_classes).float()
 
         pred_bins = argmax_predictions[mask].long()
+        # Watch it:
+        # When the `mask` is all 0, we will get an _empty_ tensor.
         if pred_bins.shape[0] != 0:
             pred_sum = torch.bincount(pred_bins, minlength=num_classes).float()
         else:
@@ -127,13 +147,14 @@ class FBetaMeasure(Metric):
         else:
             true_sum = torch.zeros(num_classes)
 
-        self._tp_sum += tp_sum
+        self._true_positive_sum += true_positive_sum
         self._pred_sum += pred_sum
         self._true_sum += true_sum
+        self._total_sum += mask.sum().to(torch.float)
 
     @overrides
     def get_metric(self,
-                   reset: bool = False) -> Dict[str, Union[float, List[float]]]:
+                   reset: bool = False):
         """
         Returns
         -------
@@ -142,12 +163,12 @@ class FBetaMeasure(Metric):
         recalls : List[float]
         f1-measures : List[float]
 
-        If ``self.average`` is not None, you will get ``float`` instead of ``List[float]``.
+        If ``self.average`` is not ``None``, you will get ``float`` instead of ``List[float]``.
         """
-        if self._tp_sum is None:
+        if self._true_positive_sum is None:
             raise RuntimeError("You never call this metric before.")
 
-        tp_sum = self._tp_sum
+        tp_sum = self._true_positive_sum
         pred_sum = self._pred_sum
         true_sum = self._true_sum
 
@@ -193,9 +214,18 @@ class FBetaMeasure(Metric):
 
     @overrides
     def reset(self) -> None:
-        self._tp_sum = None
+        self._true_positive_sum = None
         self._pred_sum = None
         self._true_sum = None
+        self._total_sum = None
+
+    @property
+    def _true_negative_sum(self):
+        if self._total_sum is None:
+            return None
+        else:
+            true_negative_sum = self._total_sum - self._pred_sum - self._true_sum + self._true_positive_sum
+            return true_negative_sum
 
 
 def _prf_divide(numerator, denominator):
