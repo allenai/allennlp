@@ -77,4 +77,3 @@ class F1Measure(FBetaMeasure):
             # `self._true_sum` is the total number of instances under each _true_ class,
             # including true positives and false negatives.
             return self._true_sum[0] - self._true_positives
-
