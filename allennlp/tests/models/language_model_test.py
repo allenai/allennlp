@@ -133,6 +133,12 @@ class TestUnidirectionalContiguousLanguageModel(ModelTestCase):
         with pytest.raises(ConfigurationError):
             Model.from_params(vocab=self.vocab, params=params.get("model"))
 
+class TestUnidirectionalContiguousLanguageModelUnsampled(TestUnidirectionalContiguousLanguageModel):
+    def setUp(self):
+        super().setUp()
+        self.set_up_model(self.FIXTURES_ROOT / 'language_model' /
+                          'experiment_unidirectional_contiguous_unsampled.jsonnet',
+                          self.FIXTURES_ROOT / 'language_model' / 'sentences.txt')
 
 class TestBidirectionalLanguageModel(TestUnidirectionalLanguageModel):
     def setUp(self):
