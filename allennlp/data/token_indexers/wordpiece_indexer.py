@@ -263,7 +263,7 @@ class PretrainedBertIndexer(WordpieceIndexer):
 def _get_token_type_ids(wordpiece_ids: List[int],
                         separator_ids: List[int]) -> List[int]:
     num_wordpieces = len(wordpiece_ids)
-    token_type_ids = []
+    token_type_ids: List[int] = []
     type_id = 0
     cursor = 0
     while cursor < num_wordpieces:

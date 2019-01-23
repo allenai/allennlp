@@ -1,5 +1,5 @@
 import warnings
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Any
 
 import torch
 from overrides import overrides
@@ -98,8 +98,9 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
             embedder = getattr(self, 'token_embedder_{}'.format(key))
             for _ in range(num_wrapping_dims):
                 embedder = TimeDistributed(embedder)
-            
             # If we pre-specified a mapping explictly, use that.
+            # make mypy happy
+            tensors: Union[List[Any], Dict[str, Any]] = None
             if self._embedder_to_indexer_map is not None:
                 indexer_map = self._embedder_to_indexer_map[key]
                 if isinstance(indexer_map, list):
