@@ -44,7 +44,6 @@ COPY requirements.txt .
 COPY scripts/install_requirements.sh scripts/install_requirements.sh
 RUN ./scripts/install_requirements.sh
 
-COPY bin/ bin/
 COPY scripts/ scripts/
 COPY allennlp/ allennlp/
 COPY pytest.ini pytest.ini
@@ -52,6 +51,9 @@ COPY .pylintrc .pylintrc
 COPY tutorials/ tutorials/
 COPY training_config training_config/
 COPY setup.py setup.py
+COPY README.md README.md
+
+RUN pip install --editable .
 
 # Compile EVALB - required for parsing evaluation.
 # EVALB produces scary looking c-level output which we don't
