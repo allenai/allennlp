@@ -8,7 +8,6 @@ import boto3
 from typing import TypeVar,Iterable
 from multiprocessing import Pool
 from allennlp.common.elastic_logger import ElasticLogger
-        
 
 T = TypeVar('T')
 
@@ -117,7 +116,7 @@ class MultiQAPreprocess():
                  require_answer_in_doc,
                  require_answer_in_question,
                  header) -> None:
-        self._DEBUG = False
+        self._DEBUG = True
         self._tokenizer = WordTokenizer()
         self._token_indexers = {'tokens': SingleIdTokenIndexer()}
         self._max_num_docs = max_context_docs
@@ -441,8 +440,8 @@ class MultiQAPreprocess():
             self._total_answers += 1    
             if re.match(r'\b{0}\b'.format(re.escape(answer[2])), \
                 new_doc['text'][char_idx_start:char_idx_end], re.IGNORECASE) is None:
-                if (answer[2].lower() != \
-                    new_doc['text'][char_idx_start:char_idx_end].lower()):
+                if (answer[2].lower().strip() != \
+                    new_doc['text'][char_idx_start:char_idx_end].lower().strip()):
                     if self._DEBUG:
                         print('\nanswer alignment: original: "%s" -VS- found: "%s", removing this answer..' \
                         % (answer[2],new_doc['text'][char_idx_start:char_idx_end]))
