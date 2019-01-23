@@ -460,7 +460,7 @@ class Vocabulary(Registrable):
                 logger.info("Loading Vocab from files instead of dataset.")
 
         if vocabulary_directory:
-            vocab = Vocabulary.from_files(vocabulary_directory)
+            vocab = cls.from_files(vocabulary_directory)
             if not extend:
                 params.assert_empty("Vocabulary - from files")
                 return vocab
@@ -475,14 +475,14 @@ class Vocabulary(Registrable):
         only_include_pretrained_words = params.pop_bool("only_include_pretrained_words", False)
         tokens_to_add = params.pop("tokens_to_add", None)
         params.assert_empty("Vocabulary - from dataset")
-        return Vocabulary.from_instances(instances=instances,
-                                         min_count=min_count,
-                                         max_vocab_size=max_vocab_size,
-                                         non_padded_namespaces=non_padded_namespaces,
-                                         pretrained_files=pretrained_files,
-                                         only_include_pretrained_words=only_include_pretrained_words,
-                                         tokens_to_add=tokens_to_add,
-                                         min_pretrained_embeddings=min_pretrained_embeddings)
+        return cls.from_instances(instances=instances,
+                                  min_count=min_count,
+                                  max_vocab_size=max_vocab_size,
+                                  non_padded_namespaces=non_padded_namespaces,
+                                  pretrained_files=pretrained_files,
+                                  only_include_pretrained_words=only_include_pretrained_words,
+                                  tokens_to_add=tokens_to_add,
+                                  min_pretrained_embeddings=min_pretrained_embeddings)
 
     def _extend(self,
                 counter: Dict[str, Dict[str, int]] = None,

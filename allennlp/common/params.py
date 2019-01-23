@@ -372,7 +372,7 @@ class Params(MutableMapping):
         Uses ``copy.deepcopy()`` to create a duplicate (but fully distinct)
         copy of these Params.
         """
-        return Params(copy.deepcopy(self.params))
+        return copy.deepcopy(self)
 
     def assert_empty(self, class_name: str):
         """

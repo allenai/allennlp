@@ -71,4 +71,7 @@ if __name__ == "__main__":
             success = False
 
     if not success:
+        print("To pass this check, you must add a reference to undocumented modules in our API "
+              "documentation in the appropriate place under doc/api (typically, these are modules "
+              "that you added in this PR), and remove any reference to modules that you deleted.")
         sys.exit(1)
