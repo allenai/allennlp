@@ -21,6 +21,7 @@ We _deprecate_ some component to communicate that a preferred alternative exists
 Say you've found some old code that needs some care. You have a fix in mind, maybe already a PR. Great, let's get it merged! But let's give some thought to backward compatibility along the way.
 
 1. Determine whether backward compatibility is even an issue.
+
   __Likely safe__
   * New code
   * Internal code _TODO: How is this determined?_
@@ -34,6 +35,7 @@ Say you've found some old code that needs some care. You have a fix in mind, may
   * Model internals that affect shape of saved weights
 
 2. If so, first consider how critical the change is.
+
   __Non-critical__
   * Minor name changes
   * "Cleaner" APIs with no functional benefit
