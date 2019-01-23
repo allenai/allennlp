@@ -21,12 +21,12 @@ We _deprecate_ some component to communicate that a preferred alternative exists
 Say you've found some old code that needs some care. You have a fix in mind, maybe already a PR. Great, let's get it merged! But let's give some thought to backward compatibility along the way.
 
 1. Determine whether backward compatibility is even an issue.
-  #### Likely safe
+  __Likely safe__
   * New code
   * Internal code _TODO: How is this determined?_
   * Implementation change only
 
-  #### Care required
+  __Care required__
   * File/class/function names
     * Including names passed to `Registrable.register`!
   * Function signatures
@@ -34,16 +34,16 @@ Say you've found some old code that needs some care. You have a fix in mind, may
   * Model internals that affect shape of saved weights
 
 2. If so, first consider how critical the change is.
-  #### Non-critical
+  __Non-critical__
   * Minor name changes
   * "Cleaner" APIs with no functional benefit
 
-  #### Medium
+  __Medium__
   * Name/API that is actively confusing multiple users.
     * This means Github issues, messages on user channels, etc.
   * Useful new feature
 
-  #### High
+  __High__
   * Major bugs
 
 3. Non-critical changes we should happily avoid. Otherwise, let's try to make the change in a backward compatible manner. Options include:
@@ -72,7 +72,7 @@ In this situation it's adivsable to consult with other developers. Hopefully the
       * If this isn't possible, consult with other developers. You should have a quite compelling rationale.
 
 2. Remove any AllenNLP usages of the deprecated feature to avoid warnings.
-  * Suppressing warnings should be done rarely. See https://github.com/allenai/allennlp/blob/9719b5c71207e642276fb1209ea1a4c8467e0792/allennlp/modules/token_embedders/embedding.py#L14.
+  * Suppressing warnings should be done rarely. [See here for instance.](https://github.com/allenai/allennlp/blob/9719b5c71207e642276fb1209ea1a4c8467e0792/allennlp/modules/token_embedders/embedding.py#L14)
 
 3. Wait
 
