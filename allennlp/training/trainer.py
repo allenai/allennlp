@@ -637,7 +637,6 @@ class Trainer(TrainerBase):
         grad_norm = params.pop_float("grad_norm", None)
         grad_clipping = params.pop_float("grad_clipping", None)
         lr_scheduler_params = params.pop("learning_rate_scheduler", None)
-        exponential_moving_average_decay = params.pop_float("exponential_moving_average_decay", None)
 
         if isinstance(cuda_device, list):
             model_device = cuda_device[0]
