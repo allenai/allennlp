@@ -15,6 +15,7 @@ allennlp.training.metrics
 * :ref:`Covariance<covariance>`
 * :ref:`Entropy<entropy>`
 * :ref:`EvalbBracketingScorer<evalb>`
+* :ref:`FBetaMeasure<fbeta-measure>`
 * :ref:`F1Measure<f1-measure>`
 * :ref:`MeanAbsoluteError<mean-absolute-error>`
 * :ref:`MentionRecall<mention-recall>`
@@ -81,6 +82,12 @@ allennlp.training.metrics
 
 .. _evalb:
 .. automodule:: allennlp.training.metrics.evalb_bracketing_scorer
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. _fbeta-measure:
+.. automodule:: allennlp.training.metrics.fbeta_measure
    :members:
    :undoc-members:
    :show-inheritance:
