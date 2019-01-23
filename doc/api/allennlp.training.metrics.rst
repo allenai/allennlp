@@ -23,6 +23,7 @@ allennlp.training.metrics
 * :ref:`SpanBasedF1Measure<span-based-f1-measure>`
 * :ref:`SquadEmAndF1<squad-em-and-f1>`
 * :ref:`UnigramRecall<unigram-recall>`
+* :ref:`HammingLoss<hamming-loss>`
 
 
 .. _metric:
@@ -129,6 +130,12 @@ allennlp.training.metrics
 
 .. _unigram-recall:
 .. automodule:: allennlp.training.metrics.unigram_recall
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. _hamming-loss:
+.. automodule:: allennlp.training.metrics.hamming_loss
    :members:
    :undoc-members:
    :show-inheritance:
