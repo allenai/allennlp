@@ -22,31 +22,31 @@ Say you've found some old code that needs some care. You have a fix in mind, may
 
 1. Determine whether backward compatibility is even an issue.
 
-### Likely safe
-* New code
-* Internal code _TODO: How is this determined?_
-* Implementation change only
+    ### Likely safe
+    * New code
+    * Internal code _TODO: How is this determined?_
+    * Implementation change only
 
-### Care required
-* File/class/function names
-  * Including names passed to `Registrable.register`!
-* Function signatures
-* Jsonnet config
-* Model internals that affect shape of saved weights
+    ### Care required
+    * File/class/function names
+      * Including names passed to `Registrable.register`!
+    * Function signatures
+    * Jsonnet config
+    * Model internals that affect shape of saved weights
 
 2. If so, first consider how critical the change is.
 
-### Non-critical
-* Minor name changes
-* "Cleaner" APIs with no functional benefit
+    ### Non-critical
+    * Minor name changes
+    * "Cleaner" APIs with no functional benefit
 
-### Medium
-* Name/API that is actively confusing multiple users.
-  * This means Github issues, messages on user channels, etc.
-* Useful new feature
+    ### Medium
+    * Name/API that is actively confusing multiple users.
+      * This means Github issues, messages on user channels, etc.
+    * Useful new feature
 
-### High
-* Major bugs
+    ### High
+    * Major bugs
 
 3. Non-critical changes we should happily avoid. Otherwise, let's try to make the change in a backward compatible manner. Options include:
 
