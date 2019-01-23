@@ -24,6 +24,7 @@ allennlp.training.metrics
 * :ref:`SquadEmAndF1<squad-em-and-f1>`
 * :ref:`UnigramRecall<unigram-recall>`
 * :ref:`HammingLoss<hamming-loss>`
+* :ref:`AUC<auc>`
 
 
 .. _metric:
