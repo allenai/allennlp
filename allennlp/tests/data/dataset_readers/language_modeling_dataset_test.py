@@ -134,3 +134,110 @@ class TestLanguageModelingDatasetReader:
                 [x.text for x in instances[1].fields["forward_targets"].field_list[i].tokens] for
                 i in range(len(instances[1].fields["forward_targets"].field_list))]
         assert second_instance_generated_forward_targets == second_instance_forward_targets
+
+
+class TestBidirectionalLanguageModelingDatasetReader:
+    def test_read_from_file_no_fuzz_is_deterministic(self):
+        """
+        The dataset is split into 4 batches, becoming:
+
+        [[This, is, a, sentence],
+         [for, language, modelling, .],
+         [</S>, Here, 's, another],
+         [one, for, extra, language]]
+        """
+        # Results should be identical if we run twice.
+        for _ in range(2):
+            reader = LanguageModelingReader(batch_size=4,
+                                            truncated_bptt_size=2,
+                                            fuzz_truncated_bptt_size=False,
+                                            bidirectional=True)
+            instances = ensure_list(reader.read(AllenNlpTestCase.FIXTURES_ROOT / 'data' /
+                                                'language_modeling.txt'))
+            # This should match the batch size
+            assert len(instances[0].fields["inputs"].field_list) == 4
+            assert len(instances[0].fields["forward_targets"].field_list) == 4
+            # This is the number of batches generated
+            assert len(instances) == 1
+
+            first_instance_inputs = [["is", "a"],
+                                     ["language", "modelling"],
+                                     ["Here", "'s"],
+                                     ["for", "extra"]]
+            first_instance_forward_targets = [["a", "sentence"],
+                                              ["modelling", "."],
+                                              ["'s", "another"],
+                                              ["extra", "language"]]
+            first_instance_backward_targets = [["This", "is"],
+                                               ["for", "language"],
+                                               ["</S>", "Here"],
+                                               ["one", "for"]]
+
+            first_instance_generated_inputs = [
+                    [x.text for x in instances[0].fields["inputs"].field_list[i].tokens] for
+                    i in range(len(instances[0].fields["inputs"].field_list))]
+            assert first_instance_generated_inputs == first_instance_inputs
+            first_instance_generated_forward_targets = [
+                    [x.text for x in instances[0].fields["forward_targets"].field_list[i].tokens] for
+                    i in range(len(instances[0].fields["forward_targets"].field_list))]
+            assert first_instance_generated_forward_targets == first_instance_forward_targets
+            first_instance_generated_backward_targets = [
+                    [x.text for x in instances[0].fields["backward_targets"].field_list[i].tokens] for
+                    i in range(len(instances[0].fields["backward_targets"].field_list))]
+            assert first_instance_generated_backward_targets == first_instance_backward_targets
+
+    def test_read_from_file(self):
+        """
+        The dataset is split into 2 batches, becoming:
+
+        [[This, is, a, sentence, for, language, modelling, ., </S>],
+         [Here, 's, another, one, for, extra, language, modelling, .]]
+        """
+        numpy.random.seed(seed=0)
+        reader = LanguageModelingReader(batch_size=2,
+                                        truncated_bptt_size=2,
+                                        bidirectional=True)
+        instances = ensure_list(reader.read(AllenNlpTestCase.FIXTURES_ROOT / 'data' /
+                                            'language_modeling.txt'))
+        # This should match the batch size
+        assert len(instances[0].fields["inputs"].field_list) == 2
+        # This is the number of batches generated
+        assert len(instances) == 2
+
+        first_instance_inputs = [["is", "a", "sentence", "for", "language"],
+                                 ["'s", "another", "one", "for", "extra"]]
+        first_instance_forward_targets = [["a", "sentence", "for", "language", "modelling"],
+                                          ["another", "one", "for", "extra", "language"]]
+        first_instance_backward_targets = [["This", "is", "a", "sentence", "for"],
+                                           ["Here", "'s", "another", "one", "for"]]
+        first_instance_generated_inputs = [
+                [x.text for x in instances[0].fields["inputs"].field_list[i].tokens] for
+                i in range(len(instances[0].fields["inputs"].field_list))]
+        assert first_instance_generated_inputs == first_instance_inputs
+        first_instance_generated_forward_targets = [
+                [x.text for x in instances[0].fields["forward_targets"].field_list[i].tokens] for
+                i in range(len(instances[0].fields["forward_targets"].field_list))]
+        assert first_instance_generated_forward_targets == first_instance_forward_targets
+        first_instance_generated_backward_targets = [
+                [x.text for x in instances[0].fields["backward_targets"].field_list[i].tokens] for
+                i in range(len(instances[0].fields["backward_targets"].field_list))]
+        assert first_instance_generated_backward_targets == first_instance_backward_targets
+
+        second_instance_inputs = [["modelling", "."],
+                                  ["language", "modelling"]]
+        second_instance_forward_targets = [[".", "</S>"],
+                                           ["modelling", "."]]
+        second_instance_backward_targets = [["language", "modelling"],
+                                            ["extra", "language"]]
+        second_instance_generated_inputs = [
+                [x.text for x in instances[1].fields["inputs"].field_list[i].tokens] for
+                i in range(len(instances[1].fields["inputs"].field_list))]
+        assert second_instance_generated_inputs == second_instance_inputs
+        second_instance_generated_forward_targets = [
+                [x.text for x in instances[1].fields["forward_targets"].field_list[i].tokens] for
+                i in range(len(instances[1].fields["forward_targets"].field_list))]
+        assert second_instance_generated_forward_targets == second_instance_forward_targets
+        second_instance_generated_backward_targets = [
+                [x.text for x in instances[1].fields["backward_targets"].field_list[i].tokens] for
+                i in range(len(instances[1].fields["backward_targets"].field_list))]
+        assert second_instance_generated_backward_targets == second_instance_backward_targets

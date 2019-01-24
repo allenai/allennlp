@@ -142,11 +142,12 @@ class LanguageModelingReader(DatasetReader):
                                      single_batch in batch_inputs])
             forward_targets_field = ListField([TextField(single_batch, self._token_indexers) for
                                                single_batch in batch_forward_targets])
-            yield Instance({
-                    "inputs": input_field,
-                    "forward_targets": forward_targets_field
-            })
-            if self._bidirectional:
+            if not self._bidirectional:
+                yield Instance({
+                        "inputs": input_field,
+                        "forward_targets": forward_targets_field
+                })
+            else:
                 batch_backward_targets = [single_batch[batch_start_index - 1:batch_start_index - 1 + sequence_length]
                                           for single_batch in batched_file_tokens]
                 backward_targets_field = ListField([TextField(single_batch, self._token_indexers) for
