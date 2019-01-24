@@ -60,7 +60,7 @@ def sanitize(x: Any) -> Any:  # pylint: disable=invalid-name,too-many-return-sta
     elif isinstance(x, numpy.ndarray):
         # array needs to be converted to a list
         return x.tolist()
-    elif isinstance(x, numpy.number):
+    elif isinstance(x, numpy.number):  # pylint: disable=no-member
         # NumPy numbers need to be converted to Python numbers
         return x.item()
     elif isinstance(x, dict):
