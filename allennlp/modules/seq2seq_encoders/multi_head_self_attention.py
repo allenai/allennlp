@@ -60,7 +60,6 @@ class MultiHeadSelfAttention(Seq2SeqEncoder):
             raise ValueError(f"Value size ({values_dim}) must be divisible by the number of "
                              f"attention heads ({num_heads}).")
 
-
         self._combined_projection = Linear(input_dim, 2 * attention_dim + values_dim)
 
         self._scale = (input_dim // num_heads) ** 0.5
@@ -125,11 +124,13 @@ class MultiHeadSelfAttention(Seq2SeqEncoder):
         keys_per_head = keys_per_head.view(batch_size * num_heads, timesteps, int(self._attention_dim/num_heads))
 
         # shape (num_heads * batch_size, timesteps, timesteps)
-        scaled_similarities = torch.bmm(queries_per_head, keys_per_head.transpose(1, 2)) / self._scale
+        scaled_similarities = torch.bmm(queries_per_head / self._scale, keys_per_head.transpose(1, 2))
 
         # shape (num_heads * batch_size, timesteps, timesteps)
         # Normalise the distributions, using the same mask for all heads.
-        attention = masked_softmax(scaled_similarities, mask.repeat(1, num_heads).view(batch_size * num_heads, timesteps))
+        attention = masked_softmax(scaled_similarities,
+                                   mask.repeat(1, num_heads).view(batch_size * num_heads, timesteps),
+                                   memory_efficient=True)
         attention = self._attention_dropout(attention)
 
         # Take a weighted sum of the values with respect to the attention
