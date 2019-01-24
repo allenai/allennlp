@@ -267,6 +267,16 @@ class Model(torch.nn.Module, Registrable):
         # want the code to look for it, so we remove it from the parameters here.
         remove_pretrained_embedding_params(model_params)
         model = Model.from_params(vocab=vocab, params=model_params)
+
+        # In case fine-tuning was done with vocab extension,
+        # (1) model vocab needs to be updated.
+        # (2) Embedders need to be extended to prevent embedding size error on load_state_dict
+        #     We only need to update embedding shapes, using pretrained embedding file isn't
+        #     necessary, because it will be anyway overwritten by load_state_dict.
+        # In other-cases, it would be a no-op
+        model.vocab = vocab
+        model.extend_embedder_vocab(vocab)
+
         model_state = torch.load(weights_file, map_location=util.device_mapping(cuda_device))
         model.load_state_dict(model_state)
 
