@@ -84,18 +84,18 @@ def dispatch():
     # preprocess
     if Operation == "Preprocess":
         set = 'train'
-        dataset = 'HotpotQA'
+        dataset = 'TriviaQA-web'
         docsize = '400'
-        sample = '50000'
+        sample = '15000'
         if sample != '-1':
             name = "preprocess_" + dataset + "_" + docsize + "_" + sample + "_" + set + "_" + datetime.datetime.now().strftime("%m%d_%H%M")
-            command = "python scripts/multiqa/preprocess.py s3://multiqa/datasets/" + dataset + "_" + set + ".jsonl.zip s3://multiqa/preproc/" + \
-            dataset   + "_" + sample + "_" + docsize + "_" + set + ".jsonl.zip --n_processes 7 --ndocs 10 --docsize " + docsize + \
-                      " --titles True --use_rank True --require_answer_in_doc False --sample_size " + sample + " "
+            command = "python scripts/multiqa/preprocess.py s3://multiqa/datasets/" + dataset + "_" + set + ".jsonl.zip s3://multiqa/" \
+                      + sample + "/" + dataset   + "_" + sample + "_" + docsize + "_" + set + ".jsonl.zip --n_processes 7 --ndocs 10 --docsize " \
+                      + docsize + " --titles True --use_rank True --require_answer_in_doc False --sample_size " + sample + " "
         else:
             name = "preprocess_" + dataset + "_" + docsize + "_" + set + "_" + datetime.datetime.now().strftime("%m%d_%H%M")
-            command = "python scripts/multiqa/preprocess.py s3://multiqa/datasets/" + dataset + "_" + set + ".jsonl.zip s3://multiqa/preproc/" + dataset \
-                      + "_" + docsize + "_" + set + ".jsonl.zip --n_processes 10 --ndocs 10 --docsize " + docsize + \
+            command = "python scripts/multiqa/preprocess.py s3://multiqa/datasets/" + dataset + "_" + set + ".jsonl.zip s3://multiqa/preproc/" \
+                      + dataset + "_" + docsize + "_" + set + ".jsonl.zip --n_processes 10 --ndocs 10 --docsize " + docsize + \
                       " --titles True --use_rank True --require_answer_in_doc False --sample_size " + sample + " "
 
         if set == "train":
