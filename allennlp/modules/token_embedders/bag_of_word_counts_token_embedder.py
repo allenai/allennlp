@@ -1,3 +1,5 @@
+# pylint: disable=protected-access
+
 import torch
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 from allennlp.data import Vocabulary
@@ -41,7 +43,7 @@ class BagOfWordCountsTokenEmbedder(TokenEmbedder):
         else:
             self._projection = None
         self._ignore_oov = ignore_oov
-        self.oov_idx = vocab._token_to_index[vocab_namespace].get(vocab._oov_token)
+        self.oov_idx = vocab.get_token_index(vocab._oov_token, namespace=vocab_namespace)
         if self.oov_idx is None:
             raise ConfigurationError("OOV token does not exist in vocabulary namespace {}".format(vocab_namespace))
         self.output_dim = projection_dim or self.vocab_size
