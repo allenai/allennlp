@@ -186,3 +186,28 @@ class TestBidirectionalLanguageModelTransformer(TestBidirectionalLanguageModel):
 
         self.set_up_model(self.FIXTURES_ROOT / 'language_model' / 'experiment_transformer.jsonnet',
                           self.FIXTURES_ROOT / 'language_model' / 'sentences.txt')
+
+class TestBidirectionalContiguousLanguageModel(TestUnidirectionalContiguousLanguageModel):
+    def setUp(self):
+        super().setUp()
+
+        self.expected_embedding_shape = (2, 5, 14)
+        self.bidirectional = True
+
+        self.set_up_model(self.FIXTURES_ROOT / 'language_model' / 'experiment_contiguous.jsonnet',
+                          self.FIXTURES_ROOT / 'language_model' / 'sentences.txt')
+
+class TestBidirectionalContiguousLanguageModelUnsampled(TestBidirectionalContiguousLanguageModel):
+    def setUp(self):
+        super().setUp()
+        self.set_up_model(self.FIXTURES_ROOT / 'language_model' / 'experiment_contiguous_unsampled.jsonnet',
+                          self.FIXTURES_ROOT / 'language_model' / 'sentences.txt')
+
+class TestBidirectionalContiguousLanguageModelTransformer(TestBidirectionalContiguousLanguageModel):
+    def setUp(self):
+        super().setUp()
+
+        self.expected_embedding_shape = (2, 5, 32)
+
+        self.set_up_model(self.FIXTURES_ROOT / 'language_model' / 'experiment_contiguous_transformer.jsonnet',
+                          self.FIXTURES_ROOT / 'language_model' / 'sentences.txt')

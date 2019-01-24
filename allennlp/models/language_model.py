@@ -325,11 +325,22 @@ class LanguageModel(Model):
             if self._bidirectional and backward_targets is not None:
                 backward_targets = backward_targets.get("tokens")
 
-        # if self._bidirectional:
-        #     # Error if one of forward_targets or backward_targets is provided,
-        #     # but not both (or none)
-        # else:
-        #     # Error if backward_targets is provided, since this LM is not bidirectional.
+        if self._bidirectional:
+            # Error if one of forward_targets or backward_targets is provided,
+            # but not both (or none).
+            if bool(forward_targets is not None) ^ bool(backward_targets is not None):
+                raise ValueError("Bidirectional LanguageModel received only one "
+                                 "of 'forward_targets' or 'backward_targets'. "
+                                 "Both 'forward_targets' and 'backward_targets' are "
+                                 "necessary to calculate loss in the bidirectional "
+                                 "case.")
+        else:
+            # Error if backward_targets is provided, since this LM is not bidirectional.
+            if backward_targets is not None:
+                raise ValueError("LanguageModel is not bidirectional, but "
+                                 "backward_targets were provided. In an unidirectional "
+                                 "LanguageModel, only forward_targets should be "
+                                 "provided.")
 
         mask = get_text_field_mask(inputs)
         # shape (batch_size, timesteps, embedding_size)
