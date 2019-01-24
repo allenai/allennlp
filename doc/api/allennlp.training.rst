@@ -10,6 +10,7 @@ for training AllenNLP models.
    allennlp.training.learning_rate_schedulers
    allennlp.training.metric_tracker
    allennlp.training.metrics
+   allennlp.training.moving_average
    allennlp.training.optimizers
    allennlp.training.tensorboard_writer
    allennlp.training.trainer
