@@ -535,7 +535,7 @@ class Trainer(TrainerBase):
             The epoch of training.  If the checkpoint is saved in the middle
             of an epoch, the parameter is a string with the epoch and timestamp.
         """
-        # If moving averagew are used for parameters, we save
+        # If moving averages are used for parameters, we save
         # the moving average values into checkpoint, instead of the current values.
         if self._moving_average is not None:
             self._moving_average.assign_average_value()

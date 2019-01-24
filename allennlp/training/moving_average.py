@@ -88,4 +88,4 @@ class ExponentialMovingAverage(MovingAverage):
             decay = self._decay
 
         for name, parameter in self._parameters:
-            self._shadows[name] = decay * self._shadows[name] + (1.0 - decay) * parameter.clone()
+            self._shadows[name].mul_(decay).add_((1 - decay) * parameter.data)
