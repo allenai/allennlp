@@ -49,9 +49,9 @@ class TestLanguageModelingDatasetReader:
                                      ["</S>", "Here"],
                                      ["one", "for"]]
             first_instance_forward_targets = [["is", "a"],
-                                      ["language", "modelling"],
-                                      ["Here", "'s"],
-                                      ["for", "extra"]]
+                                              ["language", "modelling"],
+                                              ["Here", "'s"],
+                                              ["for", "extra"]]
 
             first_instance_generated_inputs = [
                     [x.text for x in instances[0].fields["inputs"].field_list[i].tokens] for
@@ -67,9 +67,9 @@ class TestLanguageModelingDatasetReader:
                                       ["'s"],
                                       ["extra"]]
             second_instance_forward_targets = [["sentence"],
-                                       ["."],
-                                       ["another"],
-                                       ["language"]]
+                                               ["."],
+                                               ["another"],
+                                               ["language"]]
             second_instance_generated_inputs = [
                     [x.text for x in instances[1].fields["inputs"].field_list[i].tokens] for
                     i in range(len(instances[1].fields["inputs"].field_list))]
@@ -112,7 +112,7 @@ class TestLanguageModelingDatasetReader:
         first_instance_inputs = [["This", "is", "a", "sentence", "for"],
                                  ["Here", "'s", "another", "one", "for"]]
         first_instance_forward_targets = [["is", "a", "sentence", "for", "language"],
-                                  ["'s", "another", "one", "for", "extra"]]
+                                          ["'s", "another", "one", "for", "extra"]]
         first_instance_generated_inputs = [
                 [x.text for x in instances[0].fields["inputs"].field_list[i].tokens] for
                 i in range(len(instances[0].fields["inputs"].field_list))]
@@ -125,7 +125,7 @@ class TestLanguageModelingDatasetReader:
         second_instance_inputs = [["language", "modelling", "."],
                                   ["extra", "language", "modelling"]]
         second_instance_forward_targets = [["modelling", ".", "</S>"],
-                                   ["language", "modelling", "."]]
+                                           ["language", "modelling", "."]]
         second_instance_generated_inputs = [
                 [x.text for x in instances[1].fields["inputs"].field_list[i].tokens] for
                 i in range(len(instances[1].fields["inputs"].field_list))]

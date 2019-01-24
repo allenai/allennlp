@@ -62,9 +62,11 @@ class LanguageModelingIterator(BasicIterator):
             for token_level in tensor_dict.get("inputs", {}):
                 tensor_dict["inputs"][token_level] = tensor_dict["inputs"][token_level].squeeze(0)
             for token_level in tensor_dict.get("forward_targets", {}):
-                tensor_dict["forward_targets"][token_level] = tensor_dict["forward_targets"][token_level].squeeze(0)
+                tensor_dict["forward_targets"][token_level] = tensor_dict[
+                        "forward_targets"][token_level].squeeze(0)
             for token_level in tensor_dict.get("backward_targets", {}):
-                tensor_dict["backward_targets"][token_level] = tensor_dict["backward_targets"][token_level].squeeze(0)
+                tensor_dict["backward_targets"][token_level] = tensor_dict[
+                        "backward_targets"][token_level].squeeze(0)
             yield tensor_dict
 
 

@@ -103,9 +103,11 @@ class TestUnidirectionalContiguousLanguageModel(ModelTestCase):
         for token_level in training_tensors.get("inputs", {}):
             training_tensors["inputs"][token_level] = training_tensors["inputs"][token_level].squeeze(0)
         for token_level in training_tensors.get("forward_targets", {}):
-            training_tensors["forward_targets"][token_level] = training_tensors["forward_targets"][token_level].squeeze(0)
+            training_tensors["forward_targets"][token_level] = training_tensors[
+                    "forward_targets"][token_level].squeeze(0)
         for token_level in training_tensors.get("backward_targets", {}):
-            training_tensors["backward_targets"][token_level] = training_tensors["backward_targets"][token_level].squeeze(0)
+            training_tensors["backward_targets"][token_level] = training_tensors[
+                    "backward_targets"][token_level].squeeze(0)
 
         result = self.model(**training_tensors)
 
