@@ -40,7 +40,7 @@ class LanguageModelingReader(DatasetReader):
         See :class:`TokenIndexer`.
     start_tokens : ``List[str]``, optional (default=``None``)
         These are prepended to each line read by the dataset reader.
-    end_tokens : ``List[str]``, optional (default=``None``)
+    end_tokens : ``List[str]``, optional (default=``["</S>"]``)
         These are appended to each line read by the dataset reader.
     """
     def __init__(self,
