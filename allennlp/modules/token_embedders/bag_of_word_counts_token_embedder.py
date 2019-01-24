@@ -64,8 +64,7 @@ class BagOfWordCountsTokenEmbedder(TokenEmbedder):
         ``(batch_size, vocab_size)``
         """
         bag_of_words_vectors = []
-        num_wrapping_dims = 1 if inputs.dim() > 2 else 0
-        mask = get_text_field_mask({'tokens': inputs}, num_wrapping_dims)
+        mask = get_text_field_mask({'tokens': inputs}, 1)
 
         for document, doc_mask in zip(inputs, mask):
             document = torch.masked_select(document, doc_mask.byte())

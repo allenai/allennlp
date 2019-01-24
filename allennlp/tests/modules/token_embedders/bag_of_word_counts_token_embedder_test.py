@@ -45,7 +45,7 @@ class TestBagOfWordCountsTokenEmbedder(AllenNlpTestCase):
     def test_projects_properly(self):
         params = Params({"projection_dim": 50})
         embedder = BagOfWordCountsTokenEmbedder.from_params(self.vocab, params=params)
-        numpy_tensor = np.array([self.vocab.get_token_index(x) for x in ["1", "2", "3"]])
+        numpy_tensor = np.array([[1, 0], [1, 0], [4, 4]])
         inputs = torch.from_numpy(numpy_tensor).unsqueeze(1)
         embedder_output = embedder(inputs)
         assert embedder_output.shape[1] == 50
