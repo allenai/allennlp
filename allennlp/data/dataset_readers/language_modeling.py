@@ -31,6 +31,8 @@ class LanguageModelingReader(DatasetReader):
         The sequence length to use for truncated backpropagation through time.
     fuzz_truncated_bptt_size : ``bool``, optional (default=``True``)
         If True, randomly perturb the truncated_bptt_size between batches.
+    bidirectional : ``bool``, optional (default=``False``)
+        If True, generate instances for bidirectional language modeling.
     tokenizer : ``Tokenizer``, optional (default=``WordTokenizer()``)
         We use this ``Tokenizer`` for the text.  See :class:`Tokenizer`.
     token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
@@ -45,6 +47,7 @@ class LanguageModelingReader(DatasetReader):
                  batch_size: int = 20,
                  truncated_bptt_size: int = 35,
                  fuzz_truncated_bptt_size: bool = True,
+                 bidirectional: bool = False,
                  tokenizer: Tokenizer = None,
                  token_indexers: Dict[str, TokenIndexer] = None,
                  start_tokens: List[str] = None,
@@ -55,6 +58,7 @@ class LanguageModelingReader(DatasetReader):
             raise ConfigurationError("truncated_bptt_size cannot be less than 2.")
         self._truncated_bptt_size = truncated_bptt_size
         self._fuzz_truncated_bptt_size = fuzz_truncated_bptt_size
+        self._bidirectional = bidirectional
         self._tokenizer = tokenizer or WordTokenizer()
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
 
@@ -104,7 +108,9 @@ class LanguageModelingReader(DatasetReader):
             batched_file_tokens = self._all_batched_file_tokens[file_path]
 
         # Iterate over the batched_file_tokens, yielding batches
-        batch_start_index = 0
+        # If bidirectional, we start at index 1 (so the first instance) has
+        # backward targets. Else, we start at index 0.
+        batch_start_index = 1 if self._bidirectional else 0
         # The max value of batch_start_index is len(batched_file_tokens[0]) - 2,
         # leaving room for the target even when the final batch is size 1.
         while batch_start_index < len(batched_file_tokens[0]) - 1:
@@ -125,19 +131,29 @@ class LanguageModelingReader(DatasetReader):
                 sequence_length = self._truncated_bptt_size
 
             # We need to constrain the sequence_length to ensure that
-            # the targets don't reach beyond the length of our dataset
+            # the forward targets don't reach beyond the length of our dataset
             sequence_length = min(sequence_length,
                                   len(batched_file_tokens[0]) - batch_start_index - 1)
             batch_inputs = [single_batch[batch_start_index:batch_start_index + sequence_length]
                             for single_batch in batched_file_tokens]
-            batch_targets = [single_batch[batch_start_index + 1:batch_start_index + 1 + sequence_length]
-                             for single_batch in batched_file_tokens]
-
-            # Take the examples between batch_start_index and sequence_length
+            batch_forward_targets = [single_batch[batch_start_index + 1:batch_start_index + 1 + sequence_length]
+                                     for single_batch in batched_file_tokens]
+            input_field = ListField([TextField(single_batch, self._token_indexers) for
+                                     single_batch in batch_inputs])
+            forward_targets_field = ListField([TextField(single_batch, self._token_indexers) for
+                                               single_batch in batch_forward_targets])
             yield Instance({
-                    "inputs": ListField([TextField(single_batch, self._token_indexers) for
-                                         single_batch in batch_inputs]),
-                    "forward_targets": ListField([TextField(single_batch, self._token_indexers) for
-                                                  single_batch in batch_targets])
+                    "inputs": input_field,
+                    "forward_targets": forward_targets_field
             })
+            if self._bidirectional:
+                batch_backward_targets = [single_batch[batch_start_index - 1:batch_start_index - 1 + sequence_length]
+                                          for single_batch in batched_file_tokens]
+                backward_targets_field = ListField([TextField(single_batch, self._token_indexers) for
+                                                    single_batch in batch_backward_targets])
+                yield Instance({
+                        "inputs": input_field,
+                        "forward_targets": forward_targets_field,
+                        "backward_targets": backward_targets_field
+                })
             batch_start_index += sequence_length
