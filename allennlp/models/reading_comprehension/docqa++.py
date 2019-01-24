@@ -221,8 +221,10 @@ class DocQAPlus(Model):
         for key in question.keys():
             question[key] = question[key].unsqueeze(1)
 
-        #batch_size, max_qa_count, max_q_len, _ = question['token_characters'].size()
-        batch_size, max_qa_count, max_q_len = question['tokens'].size()
+        if 'tokens' in question:
+            batch_size, max_qa_count, max_q_len = question['tokens'].size()
+        elif 'token_characters' in question:
+            batch_size, max_qa_count, max_q_len, _ = question['token_characters'].size()
         total_qa_count = batch_size * max_qa_count
 
         # debug log
