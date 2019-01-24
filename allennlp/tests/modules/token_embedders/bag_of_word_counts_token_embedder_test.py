@@ -37,10 +37,13 @@ class TestBagOfWordCountsTokenEmbedder(AllenNlpTestCase):
         numpy_tensor = np.array([[0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 2, 0]])
         manual_output = torch.from_numpy(numpy_tensor).float()
         assert_almost_equal(embedder_output.data.numpy(), manual_output.data.numpy())
-    
+
     def test_ignore_oov_should_fail_on_non_padded_vocab(self):
         params = Params({"ignore_oov": True})
-        self.assertRaises(ConfigurationError, BagOfWordCountsTokenEmbedder.from_params, self.non_padded_vocab, params)
+        self.assertRaises(ConfigurationError,
+                          BagOfWordCountsTokenEmbedder.from_params,
+                          self.non_padded_vocab,
+                          params)
 
     def test_projects_properly(self):
         params = Params({"projection_dim": 50})

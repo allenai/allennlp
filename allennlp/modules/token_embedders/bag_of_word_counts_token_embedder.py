@@ -76,7 +76,7 @@ class BagOfWordCountsTokenEmbedder(TokenEmbedder):
             bag_of_words_vectors.append(vec)
 
         bag_of_words_output = torch.cat(bag_of_words_vectors, 0)
-        
+
         if self._projection:
             projection = self._projection
             bag_of_words_output = projection(bag_of_words_output)
@@ -89,7 +89,7 @@ class BagOfWordCountsTokenEmbedder(TokenEmbedder):
         we look for a ``vocab_namespace`` key in the parameter dictionary
         to know which vocabulary to use.
         """
-        
+
         vocab_namespace = params.pop("vocab_namespace", "tokens")
         projection_dim = params.pop_int("projection_dim", None)
         ignore_oov = params.pop("ignore_oov", False)
