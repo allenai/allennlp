@@ -132,3 +132,9 @@ allennlp.training.metrics
    :members:
    :undoc-members:
    :show-inheritance:
+
+.. _auc:
+.. automodule:: allennlp.training.metrics.auc
+   :members:
+   :undoc-members:
+   :show-inheritance:

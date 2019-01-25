@@ -28,6 +28,7 @@ from allennlp.training.optimizers import Optimizer
 from allennlp.training.tensorboard_writer import TensorboardWriter
 from allennlp.training.trainer_base import TrainerBase
 from allennlp.training import util as training_util
+from allennlp.training.moving_average import MovingAverage
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -57,7 +58,8 @@ class Trainer(TrainerBase):
                  histogram_interval: int = None,
                  should_log_parameter_statistics: bool = True,
                  should_log_learning_rate: bool = False,
-                 log_batch_size_period: Optional[int] = None) -> None:
+                 log_batch_size_period: Optional[int] = None,
+                 moving_average: Optional[MovingAverage] = None) -> None:
         """
         A trainer for doing supervised learning. It just takes a labeled dataset
         and a ``DataIterator``, and uses the supplied ``Optimizer`` to learn the weights
@@ -153,6 +155,13 @@ class Trainer(TrainerBase):
             Whether to send parameter specific learning rate to tensorboard.
         log_batch_size_period : ``int``, optional, (default = ``None``)
             If defined, how often to log the average batch size.
+        moving_average: ``MovingAverage``, optional, (default = None)
+            If provided, we will maintain moving averages for all parameters. During training, we
+            employ a shadow variable for each parameter, which maintains the moving average. During
+            evaluation, we backup the original parameters and assign the moving averages to corresponding
+            parameters. Be careful that when saving the checkpoint, we will save the moving averages of
+            parameters. This is necessary because we want the saved model to perform as well as the validated
+            model if we load it later. But this may cause problems if you restart the training from checkpoint.
         """
         super().__init__(serialization_dir, cuda_device)
 
@@ -192,6 +201,7 @@ class Trainer(TrainerBase):
         self._grad_clipping = grad_clipping
 
         self._learning_rate_scheduler = learning_rate_scheduler
+        self._moving_average = moving_average
 
         # We keep the total batch number as an instance variable because it
         # is used inside a closure for the hook which logs activations in
@@ -319,6 +329,10 @@ class Trainer(TrainerBase):
             else:
                 self.optimizer.step()
 
+            # Update moving averages
+            if self._moving_average is not None:
+                self._moving_average.apply(batch_num_total)
+
             # Update the description with the latest metrics
             metrics = training_util.get_metrics(self.model, train_loss, batches_this_epoch)
             description = training_util.description_from_metrics(metrics)
@@ -368,6 +382,10 @@ class Trainer(TrainerBase):
 
         self.model.eval()
 
+        # Replace parameter values with the shadow values from the moving averages.
+        if self._moving_average is not None:
+            self._moving_average.assign_average_value()
+
         if self._validation_iterator is not None:
             val_iterator = self._validation_iterator
         else:
@@ -400,6 +418,10 @@ class Trainer(TrainerBase):
             val_metrics = training_util.get_metrics(self.model, val_loss, batches_this_epoch)
             description = training_util.description_from_metrics(val_metrics)
             val_generator_tqdm.set_description(description, refresh=False)
+
+        # Now restore the original parameter values.
+        if self._moving_average is not None:
+            self._moving_average.restore()
 
         return val_loss, batches_this_epoch
 
@@ -519,6 +541,11 @@ class Trainer(TrainerBase):
             The epoch of training.  If the checkpoint is saved in the middle
             of an epoch, the parameter is a string with the epoch and timestamp.
         """
+        # If moving averages are used for parameters, we save
+        # the moving average values into checkpoint, instead of the current values.
+        if self._moving_average is not None:
+            self._moving_average.assign_average_value()
+
         # These are the training states we need to persist.
         training_states = {
                 "metric_tracker": self._metric_tracker.state_dict(),
@@ -537,6 +564,10 @@ class Trainer(TrainerBase):
                 epoch=epoch,
                 training_states=training_states,
                 is_best_so_far=self._metric_tracker.is_best_so_far())
+
+        # Restore the original values for parameters so that training will not be affected.
+        if self._moving_average is not None:
+            self._moving_average.restore()
 
     def _restore_checkpoint(self) -> int:
         """
@@ -624,6 +655,10 @@ class Trainer(TrainerBase):
 
         parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
         optimizer = Optimizer.from_params(parameters, params.pop("optimizer"))
+        if "moving_average" in params:
+            moving_average = MovingAverage.from_params(params.pop("moving_average"), parameters=parameters)
+        else:
+            moving_average = None
 
         if lr_scheduler_params:
             scheduler = LearningRateScheduler.from_params(optimizer, lr_scheduler_params)
@@ -660,7 +695,8 @@ class Trainer(TrainerBase):
                    histogram_interval=histogram_interval,
                    should_log_parameter_statistics=should_log_parameter_statistics,
                    should_log_learning_rate=should_log_learning_rate,
-                   log_batch_size_period=log_batch_size_period)
+                   log_batch_size_period=log_batch_size_period,
+                   moving_average=moving_average)
 
 
 class TrainerPieces(NamedTuple):
@@ -694,6 +730,7 @@ class TrainerPieces(NamedTuple):
 
         if recover and os.path.exists(os.path.join(serialization_dir, "vocabulary")):
             vocab = Vocabulary.from_files(os.path.join(serialization_dir, "vocabulary"))
+            params.pop("vocabulary", {})
         else:
             vocab = Vocabulary.from_params(
                     params.pop("vocabulary", {}),
