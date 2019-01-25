@@ -23,6 +23,7 @@ from allennlp.data.iterators import BasicIterator
 from allennlp.data.dataset_readers import SequenceTaggingDatasetReader, WikiTablesDatasetReader
 from allennlp.models.archival import load_archive
 from allennlp.models.model import Model
+from allennlp.training.moving_average import ExponentialMovingAverage
 
 
 class TestTrainer(AllenNlpTestCase):
@@ -89,6 +90,17 @@ class TestTrainer(AllenNlpTestCase):
         assert 'peak_cpu_memory_MB' in metrics
         assert isinstance(metrics['peak_cpu_memory_MB'], float)
         assert metrics['peak_cpu_memory_MB'] > 0
+
+    def test_trainer_can_run_exponential_moving_average(self):
+        moving_average = ExponentialMovingAverage(self.model.named_parameters(), decay=0.9999)
+        trainer = Trainer(model=self.model,
+                          optimizer=self.optimizer,
+                          iterator=self.iterator,
+                          train_dataset=self.instances,
+                          validation_dataset=self.instances,
+                          num_epochs=2,
+                          moving_average=moving_average)
+        trainer.train()
 
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="No CUDA device registered.")
     def test_trainer_can_run_cuda(self):
@@ -160,6 +172,32 @@ class TestTrainer(AllenNlpTestCase):
                               self.iterator, self.instances,
                               validation_dataset=self.instances,
                               num_epochs=3, serialization_dir=self.TEST_DIR)
+
+        epoch = new_trainer._restore_checkpoint()  # pylint: disable=protected-access
+        assert epoch == 1
+
+        tracker = trainer._metric_tracker  # pylint: disable=protected-access
+        assert tracker.is_best_so_far()
+        assert tracker._best_so_far is not None  # pylint: disable=protected-access
+
+        new_trainer.train()
+
+    def test_trainer_can_resume_training_for_exponential_moving_average(self):
+        moving_average = ExponentialMovingAverage(self.model.named_parameters())
+
+        trainer = Trainer(self.model, self.optimizer,
+                          self.iterator, self.instances,
+                          validation_dataset=self.instances,
+                          num_epochs=1, serialization_dir=self.TEST_DIR,
+                          moving_average=moving_average)
+        trainer.train()
+
+        new_moving_average = ExponentialMovingAverage(self.model.named_parameters())
+        new_trainer = Trainer(self.model, self.optimizer,
+                              self.iterator, self.instances,
+                              validation_dataset=self.instances,
+                              num_epochs=3, serialization_dir=self.TEST_DIR,
+                              moving_average=new_moving_average)
 
         epoch = new_trainer._restore_checkpoint()  # pylint: disable=protected-access
         assert epoch == 1
