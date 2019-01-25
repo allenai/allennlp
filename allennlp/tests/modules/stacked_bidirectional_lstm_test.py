@@ -5,6 +5,7 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 from allennlp.modules.stacked_bidirectional_lstm import StackedBidirectionalLstm
 from allennlp.modules.seq2seq_encoders import Seq2SeqEncoder
+from allennlp.modules.seq2vec_encoders import Seq2VecEncoder
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.params import Params
 
@@ -33,3 +34,24 @@ class TestStackedBidirectionalLstm(AllenNlpTestCase):
         assert encoder.get_input_dim() == 5
         assert encoder.get_output_dim() == 18
         assert encoder.is_bidirectional
+
+    def test_stacked_bidirectional_lstm_can_build_from_params_seq2vec(self):
+        params = Params({"type": "stacked_bidirectional_lstm",
+                         "input_size": 5,
+                         "hidden_size": 9,
+                         "num_layers": 3})
+        encoder = Seq2VecEncoder.from_params(params)
+
+        assert encoder.get_input_dim() == 5
+        assert encoder.get_output_dim() == 18
+
+    def test_stacked_bidirectional_lstm_can_complete_forward_pass_seq2vec(self):
+        params = Params({"type": "stacked_bidirectional_lstm",
+                         "input_size": 3,
+                         "hidden_size": 9,
+                         "num_layers": 3})
+        encoder = Seq2VecEncoder.from_params(params)
+        input_tensor = torch.rand(4, 5, 3)
+        mask = torch.ones(4, 5)
+        output = encoder(input_tensor, mask)
+        assert output.detach().numpy().shape == (4, 18)

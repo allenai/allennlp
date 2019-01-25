@@ -1,4 +1,5 @@
 import codecs
+import pickle
 import gzip
 import zipfile
 from copy import deepcopy
@@ -28,6 +29,19 @@ class TestVocabulary(AllenNlpTestCase):
         self.instance = Instance({"text": text_field})
         self.dataset = Batch([self.instance])
         super(TestVocabulary, self).setUp()
+
+    def test_pickling(self):
+        vocab = Vocabulary.from_instances(self.dataset)
+
+        pickled = pickle.dumps(vocab)
+        unpickled = pickle.loads(pickled)
+
+        assert dict(unpickled._index_to_token) == dict(vocab._index_to_token)
+        assert dict(unpickled._token_to_index) == dict(vocab._token_to_index)
+        assert unpickled._non_padded_namespaces == vocab._non_padded_namespaces
+        assert unpickled._oov_token == vocab._oov_token
+        assert unpickled._padding_token == vocab._padding_token
+        assert unpickled._retained_counter == vocab._retained_counter
 
     def test_from_dataset_respects_max_vocab_size_single_int(self):
         max_vocab_size = 1
@@ -259,7 +273,8 @@ class TestVocabulary(AllenNlpTestCase):
         # vocab, load the vocab, then index the text field again, and make sure we get the same
         # result.
         tokenizer = CharacterTokenizer(byte_encoding='utf-8')
-        token_indexer = TokenCharactersIndexer(character_tokenizer=tokenizer)
+        token_indexer = TokenCharactersIndexer(character_tokenizer=tokenizer,
+                                               min_padding_length=2)
         tokens = [Token(t) for t in ["Øyvind", "für", "汉字"]]
         text_field = TextField(tokens, {"characters": token_indexer})
         dataset = Batch([Instance({"sentence": text_field})])
@@ -673,7 +688,8 @@ class TestVocabulary(AllenNlpTestCase):
         assert len(words) == 3
 
     def test_max_vocab_size_partial_dict(self):
-        indexers = {"tokens": SingleIdTokenIndexer(), "token_characters": TokenCharactersIndexer()}
+        indexers = {"tokens": SingleIdTokenIndexer(),
+                    "token_characters": TokenCharactersIndexer(min_padding_length=3)}
         instance = Instance({
                 'text': TextField([Token(w) for w in 'Abc def ghi jkl mno pqr stu vwx yz'.split(' ')], indexers)
         })

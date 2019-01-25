@@ -29,12 +29,12 @@ import argparse
 import logging
 import os
 
-from allennlp.commands.train import datasets_from_params
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.common.util import prepare_environment
 from allennlp.data import Vocabulary
+from allennlp.training.util import datasets_from_params
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 

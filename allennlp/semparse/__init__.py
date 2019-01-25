@@ -29,5 +29,8 @@ not need this code at all.
 # dependency issues.  If you want to import semparse stuff from the data code, just use a more
 # complete path, like `from allennlp.semparse.worlds import WikiTablesWorld`.
 from allennlp.data.tokenizers import Token as _
-from allennlp.semparse.worlds.world import ParsingError, World
+from allennlp.semparse.domain_languages.domain_language import (DomainLanguage, ParsingError,
+                                                                ExecutionError,
+                                                                predicate, predicate_with_side_args)
+from allennlp.semparse.worlds.world import World
 from allennlp.semparse.action_space_walker import ActionSpaceWalker

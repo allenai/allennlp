@@ -3,7 +3,6 @@ from typing import Dict, List, Optional, NamedTuple
 import torch
 from overrides import overrides
 
-from allennlp.common.util import ScatterableList
 from allennlp.data.fields.field import Field
 from allennlp.data.vocabulary import Vocabulary
 
@@ -114,9 +113,9 @@ class ProductionRuleField(Field[ProductionRule]):  # type: ignore
         return ProductionRuleField(rule='', is_global_rule=False)
 
     @overrides
-    def batch_tensors(self, tensor_list: List[ProductionRule]) -> ScatterableList:  # type: ignore
+    def batch_tensors(self, tensor_list: List[ProductionRule]) -> List[ProductionRule]:  # type: ignore
         # pylint: disable=no-self-use
-        return ScatterableList(tensor_list)
+        return tensor_list
 
     def __str__(self) -> str:
         return f"ProductionRuleField with rule: {self.rule} (is_global_rule: " \
