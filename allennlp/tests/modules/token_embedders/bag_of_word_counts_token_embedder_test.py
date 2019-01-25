@@ -22,7 +22,7 @@ class TestBagOfWordCountsTokenEmbedder(AllenNlpTestCase):
         params = Params({})
         embedder = BagOfWordCountsTokenEmbedder.from_params(self.vocab, params=params)
         numpy_tensor = np.array([[2, 0], [3, 0], [4, 4]])
-        inputs = torch.from_numpy(numpy_tensor).unsqueeze(1)
+        inputs = torch.from_numpy(numpy_tensor)
         embedder_output = embedder(inputs)
         numpy_tensor = np.array([[0, 0, 1, 0, 0, 0], [0, 0, 0, 1, 0, 0], [0, 0, 0, 0, 2, 0]])
         manual_output = torch.from_numpy(numpy_tensor).float()
@@ -31,10 +31,10 @@ class TestBagOfWordCountsTokenEmbedder(AllenNlpTestCase):
     def test_zeros_out_unknown_tokens(self):
         params = Params({"ignore_oov": True})
         embedder = BagOfWordCountsTokenEmbedder.from_params(self.vocab, params=params)
-        numpy_tensor = np.array([[1, 0], [1, 0], [4, 4]])
-        inputs = torch.from_numpy(numpy_tensor).unsqueeze(1)
+        numpy_tensor = np.array([[1, 5], [2, 0], [4, 4]])
+        inputs = torch.from_numpy(numpy_tensor)
         embedder_output = embedder(inputs)
-        numpy_tensor = np.array([[0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 2, 0]])
+        numpy_tensor = np.array([[0, 0, 0, 0, 0, 1], [0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 2, 0]])
         manual_output = torch.from_numpy(numpy_tensor).float()
         assert_almost_equal(embedder_output.data.numpy(), manual_output.data.numpy())
 
@@ -49,6 +49,6 @@ class TestBagOfWordCountsTokenEmbedder(AllenNlpTestCase):
         params = Params({"projection_dim": 50})
         embedder = BagOfWordCountsTokenEmbedder.from_params(self.vocab, params=params)
         numpy_tensor = np.array([[1, 0], [1, 0], [4, 4]])
-        inputs = torch.from_numpy(numpy_tensor).unsqueeze(1)
+        inputs = torch.from_numpy(numpy_tensor)
         embedder_output = embedder(inputs)
         assert embedder_output.shape[1] == 50

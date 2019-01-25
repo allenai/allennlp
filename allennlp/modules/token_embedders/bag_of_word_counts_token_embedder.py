@@ -26,7 +26,7 @@ class BagOfWordCountsTokenEmbedder(TokenEmbedder):
         if specified, will project the resulting bag of words representation
         to specified dimension.
     ignore_oov : ``bool``, optional (default = ``False``)
-        if true, will set entry corresponding to OOV token to zero.
+        If true, we ignore the OOV token.
     """
     def __init__(self,
                  vocab: Vocabulary,
@@ -41,8 +41,8 @@ class BagOfWordCountsTokenEmbedder(TokenEmbedder):
         else:
             self._projection = None
         self._ignore_oov = ignore_oov
-        self.oov_idx = vocab.get_token_to_index_vocabulary(vocab_namespace).get(vocab._oov_token)
-        if self.oov_idx is None:
+        self._oov_idx = vocab.get_token_to_index_vocabulary(vocab_namespace).get(vocab._oov_token)
+        if self._oov_idx is None:
             raise ConfigurationError("OOV token does not exist in vocabulary namespace {}".format(vocab_namespace))
         self.output_dim = projection_dim or self.vocab_size
 
@@ -64,17 +64,16 @@ class BagOfWordCountsTokenEmbedder(TokenEmbedder):
         ``(batch_size, vocab_size)``
         """
         bag_of_words_vectors = []
-        mask = get_text_field_mask({'tokens': inputs}, 1)
 
+        mask = get_text_field_mask({'tokens': inputs})
+        if self._ignore_oov:
+            # also mask out positions corresponding to oov
+            mask *= (inputs != self._oov_idx).long()
         for document, doc_mask in zip(inputs, mask):
             document = torch.masked_select(document, doc_mask.byte())
-            if self._ignore_oov:
-                oov_mask = (document != self.oov_idx).nonzero().squeeze()
-                document = document[oov_mask]
             vec = torch.bincount(document, minlength=self.vocab_size).float()
             vec = vec.view(1, -1)
             bag_of_words_vectors.append(vec)
-
         bag_of_words_output = torch.cat(bag_of_words_vectors, 0)
 
         if self._projection:
@@ -92,7 +91,7 @@ class BagOfWordCountsTokenEmbedder(TokenEmbedder):
 
         vocab_namespace = params.pop("vocab_namespace", "tokens")
         projection_dim = params.pop_int("projection_dim", None)
-        ignore_oov = params.pop("ignore_oov", False)
+        ignore_oov = params.pop_bool("ignore_oov", False)
         params.assert_empty(cls.__name__)
         return cls(vocab=vocab,
                    vocab_namespace=vocab_namespace,
