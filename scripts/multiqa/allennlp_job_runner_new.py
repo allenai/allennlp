@@ -175,6 +175,15 @@ while True:
             call("git pull origin master", shell=True, preexec_fn=os.setsid)
             time.sleep(2)
 
+            # Assigning a free GPU
+            if config['override_config']['trainer']["cuda_device"] is None:
+                if len(free_gpus) > 0:
+                    config['override_config']['trainer']["cuda_device"] = free_gpus[0]
+                    free_gpus = free_gpus[1:]
+                else:
+                    ElasticLogger().write_log('INFO', "Job died", {'experiment_name': properties.headers['name'],
+                                                                   'log_snapshot': 'no free GPUs found'}, push_bulk=True, print_log=True)
+
             # Executing
             print(bash_command)
             with open(log_file,'wb') as f:
@@ -182,15 +191,6 @@ while True:
                     wa_proc = Popen("nohup python dummy_job.py &", shell=True, preexec_fn=os.setsid,stdout=f,stderr=f)
                 else:
                     wa_proc = Popen(bash_command, shell=True, preexec_fn=os.setsid, stdout=f, stderr=f)
-
-            # Assigning a free GPU
-            if config['override_config']['trainer']["cuda_device"] is None:
-                if len(free_gpus)>0:
-                    config['override_config']['trainer']["cuda_device"] = free_gpus[0]
-                    free_gpus = free_gpus[1:]
-                else:
-                    ElasticLogger().write_log('INFO', "Job died", {'experiment_name': properties.headers['name'],
-                                            'log_snapshot': 'no free GPUs found'}, push_bulk=True, print_log=True)
 
             # open log file for reading
             log_handles[log_file] = open(log_file,'r')
