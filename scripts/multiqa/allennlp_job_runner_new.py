@@ -50,10 +50,16 @@ args = parser.parse_args()
 
 proc_running = []
 job_gpus = []
-gpu_mem = gpu_memory_mb()
-if args.channel == 'rack-jonathan-g02':
-    gpu_mem = {(3 - key): val for key, val in gpu_mem.items()}
-free_gpus = [i for i, gpu in enumerate(gpu_mem.keys()) if gpu_mem[gpu] < 1700 and gpu not in job_gpus]
+
+try:
+    gpu_mem = gpu_memory_mb()
+    if args.channel == 'rack-jonathan-g02':
+        gpu_mem = {(3 - key): val for key, val in gpu_mem.items()}
+    free_gpus = [i for i, gpu in enumerate(gpu_mem.keys()) if gpu_mem[gpu] < 1700 and gpu not in job_gpus]
+    print('free_gpus = ' + str(free_gpus))
+except:
+    free_gpus = []
+
 
 log_handles = {}
 iter_count = 0 # counting iteration for writing status
