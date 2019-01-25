@@ -41,7 +41,8 @@ class BagOfWordCountsTokenEmbedder(TokenEmbedder):
         else:
             self._projection = None
         self._ignore_oov = ignore_oov
-        self._oov_idx = vocab.get_token_to_index_vocabulary(vocab_namespace).get(vocab._oov_token)
+        oov_token = vocab._oov_token  # pylint: disable=protected-access
+        self._oov_idx = vocab.get_token_to_index_vocabulary(vocab_namespace).get(oov_token)
         if self._oov_idx is None:
             raise ConfigurationError("OOV token does not exist in vocabulary namespace {}".format(vocab_namespace))
         self.output_dim = projection_dim or self.vocab_size
