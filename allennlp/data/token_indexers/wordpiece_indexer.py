@@ -160,7 +160,11 @@ class WordpieceIndexer(TokenIndexer[int]):
         # Our mask should correspond to the original tokens,
         # because calling util.get_text_field_mask on the
         # "wordpiece_id" tokens will produce the wrong shape.
-        mask = [1 for _ in tokens]
+        # However, because of the max_pieces constraint, we may
+        # have truncated the wordpieces; accordingly, we want the mask
+        # to correspond to the remaining tokens after truncation, which
+        # is captured by the offsets.
+        mask = [1 for _ in offsets]
 
         return {
                 index_name: wordpiece_ids,
