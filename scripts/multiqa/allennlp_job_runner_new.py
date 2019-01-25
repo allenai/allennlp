@@ -49,6 +49,8 @@ parser.add_argument("--shell", type=str, default="not_bash",
 args = parser.parse_args()
 
 proc_running = []
+job_gpus = []
+free_gpus = []
 log_handles = {}
 iter_count = 0 # counting iteration for writing status
 while True:
@@ -111,6 +113,7 @@ while True:
                     # ack
                     #channel.basic_ack(proc['job_tag'])
                     proc_running.remove(proc)
+                job_gpus.remove(proc['config']['override_config']['trainer']["cuda_device"])
 
 
                 #log_handles.remove(proc['log_file'])
@@ -119,32 +122,32 @@ while True:
 
 
         ### Reading one job from queue
-        method_frame, properties, body = channel.basic_get(args.channel)
+        method_frame, properties, body_ = channel.basic_get(args.channel)
 
-        if body is not None:
+        if body_ is not None:
 
             # Display the message parts
-            body = json.loads(body.decode())
+            config = json.loads(body_.decode())
             print(method_frame)
             print(properties)
-            print(body)
+            print(config)
 
-            if body['command'] == 'kill job':
+            if config['command'] == 'kill job':
                 print('kill job!')
                 try:
-                    pid_to_kill = [proc['pid'] for proc in proc_running if proc['experiment_name'] == body['experiment_name']]
+                    pid_to_kill = [proc['pid'] for proc in proc_running if proc['experiment_name'] == config['experiment_name']]
                     bash_command = 'kill ' + str(pid_to_kill[0])
                 except:
                     ElasticLogger().write_log('INFO', "job runner exception", {'error_message': traceback.format_exc()},
                                               push_bulk=True, print_log=True)
                     channel.basic_ack(method_frame.delivery_tag)
                     time.sleep(2)
-            elif body['command'] == 'train':
-                bash_command = 'python -m allennlp.run train ' + body['master_config']
-                bash_command += '--s ' + body['model_dir'] + properties.headers['name'] + ' '
+            elif config['command'] == 'train':
+                bash_command = 'python -m allennlp.run train ' + config['master_config']
+                bash_command += '--s ' + config['model_dir'] + properties.headers['name'] + ' '
                 # Building the python command with arguments
-                bash_command += '-o "' + str(body['override_config']).replace('True', 'true').replace('False', 'false') + '"'
-                bash_command += body['include-package']
+                bash_command += '-o "' + str(config['override_config']).replace('True', 'true').replace('False', 'false') + '"'
+                bash_command += config['include-package']
 
             if args.shell == 'bash':
                 bash_command = 'nohup ' + bash_command + ' &'
@@ -160,7 +163,7 @@ while True:
 
             # performing git pull before each execution
             call("git pull origin master", shell=True, preexec_fn=os.setsid)
-            time.sleep(1)
+            time.sleep(2)
 
             # Executing
             print(bash_command)
@@ -170,13 +173,23 @@ while True:
                 else:
                     wa_proc = Popen(bash_command, shell=True, preexec_fn=os.setsid, stdout=f, stderr=f)
 
+            # Assigning a free GPU
+            if config['override_config']['trainer']["cuda_device"] is None:
+                if len(free_gpus)>0:
+                    config['override_config']['trainer']["cuda_device"] = free_gpus[0]
+                    free_gpus = free_gpus[1:]
+                else:
+                    ElasticLogger().write_log('INFO', "Job died", {'experiment_name': properties.headers['name'],
+                                            'log_snapshot': 'no free GPUs found'}, push_bulk=True, print_log=True)
+
             # open log file for reading
             log_handles[log_file] = open(log_file,'r')
-            new_proc = {'job_tag':method_frame.delivery_tag,'config':body, 'command':bash_command, \
+            new_proc = {'job_tag':method_frame.delivery_tag,'config':config, 'command':bash_command, \
                                  'log_file':log_file,'log_snapshot':'',\
                                  'experiment_name':properties.headers['name'], 'alive': True,\
                                  'pid': wa_proc.pid+1, 'start_time': time.time()}
             proc_running.append(new_proc)
+            job_gpus.append(new_proc['config']['override_config']['trainer']["cuda_device"])
             # we are not persistant for now ...
             channel.basic_ack(method_frame.delivery_tag)
             ElasticLogger().write_log('INFO', "Job Started", flatten_json(new_proc), push_bulk=True, print_log=True)
@@ -209,7 +222,7 @@ while True:
                 # Ugly patch for misconfigured GPUs...
                 if args.channel == 'rack-jonathan-g02':
                     gpu_mem = {(3 - key):val for key,val in gpu_mem.items()}
-                free_gpus = [i for i, gpu in enumerate(gpu_mem.keys()) if gpu_mem[gpu] < 1700]
+                free_gpus = [i for i, gpu in enumerate(gpu_mem.keys()) if gpu_mem[gpu] < 1700 and gpu not in job_gpus]
             except:
                 free_gpus = []
 
