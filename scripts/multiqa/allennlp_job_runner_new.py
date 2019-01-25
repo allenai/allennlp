@@ -153,6 +153,15 @@ while True:
                     channel.basic_ack(method_frame.delivery_tag)
                     time.sleep(2)
             elif config['command'] == 'train':
+                # Assigning a free GPU
+                if config['override_config']['trainer']["cuda_device"] is None:
+                    if len(free_gpus) > 0:
+                        config['override_config']['trainer']["cuda_device"] = free_gpus[0]
+                        free_gpus = free_gpus[1:]
+                    else:
+                        ElasticLogger().write_log('INFO', "Job died", {'experiment_name': properties.headers['name'],
+                                    'log_snapshot': 'no free GPUs found'}, push_bulk=True,print_log=True)
+
                 bash_command = 'python -m allennlp.run train ' + config['master_config']
                 bash_command += '--s ' + config['model_dir'] + properties.headers['name'] + ' '
                 # Building the python command with arguments
@@ -175,14 +184,7 @@ while True:
             call("git pull origin master", shell=True, preexec_fn=os.setsid)
             time.sleep(2)
 
-            # Assigning a free GPU
-            if config['override_config']['trainer']["cuda_device"] is None:
-                if len(free_gpus) > 0:
-                    config['override_config']['trainer']["cuda_device"] = free_gpus[0]
-                    free_gpus = free_gpus[1:]
-                else:
-                    ElasticLogger().write_log('INFO', "Job died", {'experiment_name': properties.headers['name'],
-                                                                   'log_snapshot': 'no free GPUs found'}, push_bulk=True, print_log=True)
+
 
             # Executing
             print(bash_command)
