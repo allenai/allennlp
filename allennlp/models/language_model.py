@@ -352,12 +352,11 @@ class LanguageModel(Model):
         embeddings = self._text_field_embedder(source)
 
         # Either the top layer or all layers.
+        contextual_embeddings: Union[torch.Tensor, List[torch.Tensor]] = None
         if self._use_contextualizer_arg:
-            contextual_embeddings: Union[torch.Tensor, List[torch.Tensor]] = (
-                    self._contextualizer(embeddings, mask))
+            contextual_embeddings = self._contextualizer(embeddings, mask)
         else:
-            contextual_embeddings: Union[torch.Tensor, List[torch.Tensor]] = (
-                    self._forward_contextualizer(embeddings, mask))
+            contextual_embeddings = self._forward_contextualizer(embeddings, mask)
             if self._bidirectional:
                 backward_contextual_embeddings: Union[torch.Tensor, List[torch.Tensor]] = (
                         self._backward_contextualizer(embeddings, mask))
