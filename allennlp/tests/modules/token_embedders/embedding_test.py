@@ -140,7 +140,7 @@ class TestEmbedding(AllenNlpTestCase):
                 'pretrained_file': str(self.FIXTURES_ROOT / 'embeddings/multi-file-archive.zip'),
                 'embedding_dim': 5
                 })
-        with pytest.raises(ValueError, message="No ValueError when pretrained_file is a multi-file archive"):
+        with pytest.raises(ValueError, match="No ValueError when pretrained_file is a multi-file archive"):
             Embedding.from_params(vocab, params)
 
         for ext in ['.zip', '.tar.gz']:
