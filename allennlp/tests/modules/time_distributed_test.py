@@ -27,6 +27,7 @@ class TestTimeDistributed(AllenNlpTestCase):
                             [[[[.5, .5], [.4, .4]], [[.5, .5], [.5, .5]]]])
 
     def test_time_distributed_reshapes_named_arg_and_kwarg_correctly(self):
+        # TODO: maybe use PyTorchSeq2VecWrapper?
         char_embedding = Embedding(2, 2)
         char_embedding.weight = Parameter(torch.FloatTensor([[.4, .4], [.5, .5]]))
         distributed_embedding = TimeDistributed(char_embedding)
