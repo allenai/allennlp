@@ -171,6 +171,14 @@ class LanguageModel(Model):
                     "LanguageModel bidirectional is False, so "
                     "backward_contextualizer should not be provided."
                     f"Got backward_contextualizer: {backward_contextualizer}")
+        # Ensure that forward_contextualizer and backward_contextualizer
+        # are unidirectional
+        if forward_contextualizer.is_bidirectional():
+            raise ConfigurationError("forward_contextualizer should not be "
+                                     "bidirectional.")
+        if backward_contextualizer.is_bidirectional():
+            raise ConfigurationError("backward_contextualizer should not be "
+                                     "bidirectional.")
 
         self._forward_contextualizer = forward_contextualizer
         self._backward_contextualizer = backward_contextualizer
