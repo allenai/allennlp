@@ -82,7 +82,7 @@ class CorefPredictor(Predictor):
             pipe[1](spacy_document)
 
         sentences = [[token.text for token in sentence] for sentence in spacy_document.sents]
-        instance = self._dataset_reader.text_to_instance(sentences)
+        instance = self._dataset_reader.text_to_instance(sentences)  # pylint: disable=not-an-iterable
         return instance
 
     @overrides
