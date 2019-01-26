@@ -234,7 +234,7 @@ class TestTrainer(AllenNlpTestCase):
             with pytest.raises(ConfigurationError,
                                match='.* is an invalid value for "patience": '
                                      'it must be a positive integer or None '
-                                     '(if you want to disable early stopping)'):
+                                     '\(if you want to disable early stopping\)'):
                 Trainer(self.model, self.optimizer, self.iterator, self.instances,
                         validation_dataset=self.instances, num_epochs=100,
                         patience=patience, validation_metric="+test")
