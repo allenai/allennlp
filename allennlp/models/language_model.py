@@ -1,4 +1,5 @@
 from typing import Dict, List, Tuple, Union
+import warnings
 
 import torch
 import numpy as np
@@ -74,6 +75,23 @@ class LanguageModel(Model):
     contextualizer: ``Seq2SeqEncoder``
         Used to "contextualize" the embeddings. As described above,
         this encoder must not cheat by peeking ahead.
+
+        .. deprecated:: 0.8.2
+           ``contextualizer`` was deprecated in version 0.8.2 . It was
+           replaced with two more flexible arguments: ``forward_contextualizer``
+           and ``backward_contextualizer``, in order to enable bidirectional
+           language modeling of contiguous text. It will be removed in version 0.10 .
+
+    forward_contextualizer: ``Seq2SeqEncoder``
+        Used to "contextualize" the embeddings for a forward-direction LM.
+        As described above, this encoder must not cheat by peeking ahead.
+    backward_contextualizer: ``Seq2SeqEncoder``
+        Used to "contextualize" the embeddings for a backward-direction LM.
+        The contextualizer should operate from left to right; the the order of the
+        text in the backward inputs is assumed to have been flipped (e.g., by your
+        DatasetReader). If provided, the size of its output must match that of
+        the ``forward_contextualizer``.
+        As described above, this encoder must not cheat by peeking ahead.
     dropout: ``float``, optional (default: None)
         If specified, dropout is applied to the contextualized embeddings before computation of
         the softmax. The contextualized embeddings themselves are returned without dropout.
@@ -92,6 +110,8 @@ class LanguageModel(Model):
                  vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
                  contextualizer: Seq2SeqEncoder,
+                 forward_contextualizer: Seq2SeqEncoder = None,
+                 backward_contextualizer: Seq2SeqEncoder = None,
                  dropout: float = None,
                  num_samples: int = None,
                  sparse_embeddings: bool = False,
@@ -100,22 +120,82 @@ class LanguageModel(Model):
         super().__init__(vocab)
         self._text_field_embedder = text_field_embedder
 
-        if contextualizer.is_bidirectional() is not bidirectional:
+        # Only true when contextualizer is non-None and bidirectional is True
+        self._use_contextualizer_arg = False
+        if contextualizer is not None and (forward_contextualizer is not None or
+                                           backward_contextualizer is not None):
             raise ConfigurationError(
-                    "Bidirectionality of contextualizer must match bidirectionality of "
-                    "language model. "
-                    f"Contextualizer bidirectional: {contextualizer.is_bidirectional()}, "
-                    f"language model bidirectional: {bidirectional}")
+                    "Cannot provide both contextualizer and either "
+                    "forward_contextualizer or backward_contextualizer.")
 
-        self._contextualizer = contextualizer
+        if contextualizer is not None:
+            warnings.warn("``contextualizer`` was deprecated in version 0.8.2 . It was "
+                          "replaced with two more flexible arguments: "
+                          "``forward_contextualizer`` and ``backward_contextualizer``. "
+                          "It will be removed in version 0.10 .",
+                          DeprecationWarning)
+            if contextualizer.is_bidirectional() is not bidirectional:
+                raise ConfigurationError(
+                        "Bidirectionality of contextualizer must match bidirectionality "
+                        "of language model. "
+                        f"Contextualizer bidirectional: {contextualizer.is_bidirectional()}, "
+                        f"language model bidirectional: {bidirectional}")
+            if contextualizer.is_bidirectional():
+                # TODO (nfliu): Emit warning about cheating
+                self._use_contextualizer_arg = True
+            else:
+                # Unidirectional LM with unidirectional contextualizer, so just set
+                # forward_contextualizer to contextualizer.
+                forward_contextualizer = contextualizer
+                contextualizer = None
+            # If self._use_contextualizer_arg is True, this is non-None. Else, it is None.
+            self._contextualizer = contextualizer
+
+        # ``contextualizer`` logic handled, do error checking for
+        # forward_contextualizer and backward_contextualizer
+        if bidirectional and (bool(forward_contextualizer is None) or
+                              bool(backward_contextualizer is None)):
+            # If we're using the contextualizer argument,
+            # both forward_contextualizer and backward_contextualizer are None.
+            if not self._use_contextualizer_arg:
+                raise ConfigurationError(
+                        "LanguageModel bidirectional is True, but did not "
+                        "provide forward_contextualizer and backward_contextualizer. "
+                        f"Got forward_contextualizer: {forward_contextualizer} and "
+                        f"backward_contextualizer: {backward_contextualizer}")
+        if not self._use_contextualizer_arg and forward_contextualizer is None:
+            raise ConfigurationError(
+                    "The forward_contextualizer argument is required.")
+        if not bidirectional and backward_contextualizer is not None:
+            raise ConfigurationError(
+                    "LanguageModel bidirectional is False, so "
+                    "backward_contextualizer should not be provided."
+                    f"Got backward_contextualizer: {backward_contextualizer}")
+
+        self._forward_contextualizer = forward_contextualizer
+        self._backward_contextualizer = backward_contextualizer
         self._bidirectional = bidirectional
 
         # The dimension for making predictions just in the forward
         # (or backward) direction.
+        # They must be the same. TODO (nfliu): relax this assumption
         if self._bidirectional:
-            self._forward_dim = contextualizer.get_output_dim() // 2
+            if self._use_contextualizer_arg:
+                self._forward_dim = self._contextualizer.get_output_dim() // 2
+            else:
+                if (self._forward_contextualizer.get_output_dim() !=
+                            self._backward_contextualizer.get_output_dim()):
+                    raise ConfigurationError(
+                            "forward_contextualizer and backward_contextualizer "
+                            "must have the same output dimension. "
+                            "forward_contextualizer output dimension is "
+                            f"{self._forward_contextualizer.get_output_dim()}, while"
+                            "backward_contextualizer output dimension is "
+                            f"{self._forward_contextualizer.get_output_dim()}")
+                self._forward_dim = self._forward_contextualizer.get_output_dim()
         else:
-            self._forward_dim = contextualizer.get_output_dim()
+            # If bidirectional is False, self._use_contextualizer_arg is False.
+            self._forward_dim = self._forward_contextualizer.get_output_dim()
 
         # TODO(joelgrus): more sampled softmax configuration options, as needed.
         if num_samples is not None:
@@ -264,9 +344,33 @@ class LanguageModel(Model):
         embeddings = self._text_field_embedder(source)
 
         # Either the top layer or all layers.
-        contextual_embeddings: Union[torch.Tensor, List[torch.Tensor]] = self._contextualizer(
-                embeddings, mask
-        )
+        if self._use_contextualizer_arg:
+            contextual_embeddings: Union[torch.Tensor, List[torch.Tensor]] = (
+                    self._contextualizer(embeddings, mask))
+        else:
+            contextual_embeddings: Union[torch.Tensor, List[torch.Tensor]] = (
+                    self._forward_contextualizer(embeddings, mask))
+            if self._bidirectional:
+                backward_contextual_embeddings: Union[torch.Tensor, List[torch.Tensor]] = (
+                        self._backward_contextualizer(embeddings, mask))
+                # Concatenate the backward contextual embeddings to the
+                # forward contextual embeddings
+                if (isinstance(contextual_embeddings, list) and
+                            isinstance(backward_contextual_embeddings, list)):
+                    if len(contextual_embeddings) != len(backward_contextual_embeddings):
+                        raise ValueError("Contextualizers produced outputs of different lengths")
+                    for embedding_index, backward_embedding in enumerate(backward_contextual_embeddings):
+                        contextual_embeddings[embedding_index] = torch.cat(
+                                [contextual_embeddings[embedding_index], backward_embedding],
+                                dim=-1)
+                elif (isinstance(contextual_embeddings, torch.Tensor) and
+                      isinstance(backward_contextual_embeddings, torch.Tensor)):
+                    contextual_embeddings = torch.cat(
+                            [contextual_embeddings, backward_contextual_embeddings], dim=-1)
+                else:
+                    # TODO: raise error here, since forward and backward contextual
+                    # embeddings returned different things.
+                    raise ValueError()
 
         return_dict = {}
 
