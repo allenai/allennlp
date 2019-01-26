@@ -143,7 +143,8 @@ class TestEmbedding(AllenNlpTestCase):
         with pytest.raises(ValueError,
                            match="The archive .*/embeddings/multi-file-archive.zip contains multiple files, "
                                  "so you must select one of the files inside "
-                                 "providing a uri of the type: \\(path_or_url_to_archive\\)#path_inside_archive\\."):
+                                 "providing a uri of the type: "
+                                 "\\(path_or_url_to_archive\\)#path_inside_archive\\."):
             Embedding.from_params(vocab, params)
 
         for ext in ['.zip', '.tar.gz']:
