@@ -58,7 +58,7 @@ class SemanticRoleLabelerPredictor(Predictor):
         -------
         A dictionary representation of the semantic roles in the sentence.
         """
-        spacy_doc = Doc(self._tokenizer.spacy, words=tokenized_sentence)
+        spacy_doc = Doc(self._tokenizer.spacy.vocab, words=tokenized_sentence)
         for pipe in filter(None, self._tokenizer.spacy.pipeline):
             pipe[1](spacy_doc)
 
