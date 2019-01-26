@@ -4,6 +4,7 @@ out-of-vocabulary token.
 """
 
 import codecs
+import copy
 import logging
 import os
 from collections import defaultdict
@@ -232,6 +233,38 @@ class Vocabulary(Registrable):
                      tokens_to_add,
                      min_pretrained_embeddings)
 
+
+    def __getstate__(self):
+        """
+        Need to sanitize defaultdict and defaultdict-like objects
+        by converting them to vanilla dicts when we pickle the vocabulary.
+        """
+        state = copy.copy(self.__dict__)
+        state["_token_to_index"] = dict(state["_token_to_index"])
+        state["_index_to_token"] = dict(state["_index_to_token"])
+
+        if "_retained_counter" in state:
+            state["_retained_counter"] = {key: dict(value)
+                                          for key, value in state["_retained_counter"].items()}
+
+        return state
+
+    def __setstate__(self, state):
+        """
+        Conversely, when we unpickle, we need to reload the plain dicts
+        into our special DefaultDict subclasses.
+        """
+        # pylint: disable=attribute-defined-outside-init
+        self.__dict__ = copy.copy(state)
+        self._token_to_index = _TokenToIndexDefaultDict(self._non_padded_namespaces,
+                                                        self._padding_token,
+                                                        self._oov_token)
+        self._token_to_index.update(state["_token_to_index"])
+        self._index_to_token = _IndexToTokenDefaultDict(self._non_padded_namespaces,
+                                                        self._padding_token,
+                                                        self._oov_token)
+        self._index_to_token.update(state["_index_to_token"])
+
     def save_to_files(self, directory: str) -> None:
         """
         Persist this Vocabulary to files so it can be reloaded later.
@@ -427,7 +460,7 @@ class Vocabulary(Registrable):
                 logger.info("Loading Vocab from files instead of dataset.")
 
         if vocabulary_directory:
-            vocab = Vocabulary.from_files(vocabulary_directory)
+            vocab = cls.from_files(vocabulary_directory)
             if not extend:
                 params.assert_empty("Vocabulary - from files")
                 return vocab
@@ -442,14 +475,14 @@ class Vocabulary(Registrable):
         only_include_pretrained_words = params.pop_bool("only_include_pretrained_words", False)
         tokens_to_add = params.pop("tokens_to_add", None)
         params.assert_empty("Vocabulary - from dataset")
-        return Vocabulary.from_instances(instances=instances,
-                                         min_count=min_count,
-                                         max_vocab_size=max_vocab_size,
-                                         non_padded_namespaces=non_padded_namespaces,
-                                         pretrained_files=pretrained_files,
-                                         only_include_pretrained_words=only_include_pretrained_words,
-                                         tokens_to_add=tokens_to_add,
-                                         min_pretrained_embeddings=min_pretrained_embeddings)
+        return cls.from_instances(instances=instances,
+                                  min_count=min_count,
+                                  max_vocab_size=max_vocab_size,
+                                  non_padded_namespaces=non_padded_namespaces,
+                                  pretrained_files=pretrained_files,
+                                  only_include_pretrained_words=only_include_pretrained_words,
+                                  tokens_to_add=tokens_to_add,
+                                  min_pretrained_embeddings=min_pretrained_embeddings)
 
     def _extend(self,
                 counter: Dict[str, Dict[str, int]] = None,

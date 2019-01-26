@@ -85,3 +85,42 @@ with
 .
 
 For an example of this see the config for a [Transformer ELMo augmented constituency parser](../../training_config/constituency_parser_transformer_elmo.jsonnet) and compare with the [original ELMo augmented constituency parser](../../training_config/constituency_parser_elmo.jsonnet).
+
+## Calling the `BidirectionalLanguageModelTokenEmbedder` directly
+
+Of course, you can also directly call the embedder in your programs:
+
+```
+from allennlp.modules.token_embedders.bidirectional_language_model_token_embedder import BidirectionalLanguageModelTokenEmbedder
+from allennlp.data.token_indexers.elmo_indexer import ELMoTokenCharactersIndexer
+from allennlp.data.tokenizers.token import Token
+import torch
+
+lm_model_file = "output_path/model.tar.gz"
+
+sentence = "It is raining in Seattle ."
+tokens = [Token(word) for word in sentence.split()]
+
+lm_embedder = BidirectionalLanguageModelTokenEmbedder(
+    archive_file=lm_model_file,
+    dropout=0.2,
+    bos_eos_tokens=["<S>", "</S>"],
+    remove_bos_eos=True,
+    requires_grad=False
+)
+
+indexer = ELMoTokenCharactersIndexer()
+vocab = lm_embedder._lm.vocab
+character_indices = indexer.tokens_to_indices(tokens, vocab, "elmo")["elmo"]
+
+# Batch of size 1
+indices_tensor = torch.LongTensor([character_indices])
+
+# Embed and extract the single element from the batch.
+embeddings = lm_embedder(indices_tensor)[0]
+
+for word_embedding in embeddings:
+    print(word_embedding)
+```
+
+Note: This sidesteps our data loading and batching mechanisms for brevity. See [our main tutorial](https://allennlp.org/tutorials) for an exposition of how they function.

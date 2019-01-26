@@ -23,6 +23,13 @@ class TestParams(AllenNlpTestCase):
         model_params = params.pop("model")
         assert model_params.pop("type") == "bidaf"
 
+    def test_bad_unicode_environment_variables(self):
+        filename = self.FIXTURES_ROOT / 'bidaf' / 'experiment.json'
+        os.environ['BAD_ENVIRONMENT_VARIABLE'] = "\udce2"
+        Params.from_file(filename)
+        del os.environ['BAD_ENVIRONMENT_VARIABLE']
+
+
     def test_overrides(self):
         filename = self.FIXTURES_ROOT / 'bidaf' / 'experiment.json'
         overrides = '{ "train_data_path": "FOO", "model": { "type": "BAR" },'\
@@ -338,3 +345,14 @@ class TestParams(AllenNlpTestCase):
 
         assert params.as_dict() == lots_of_strings
         assert params.as_dict(infer_type_and_cast=True) == casted
+
+    def test_duplicate_copies_all_params_state(self):
+
+        params = Params({},
+                        loading_from_archive=True,
+                        files_to_archive={"hey": "this is a path"})
+
+        new_params = params.duplicate()
+
+        assert new_params.loading_from_archive
+        assert new_params.files_to_archive == {"hey": "this is a path"}

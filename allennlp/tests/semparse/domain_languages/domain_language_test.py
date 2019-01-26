@@ -1,10 +1,11 @@
 # pylint: disable=no-self-use,invalid-name,protected-access
-from typing import List
+from typing import Callable, List
 
 import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.semparse import DomainLanguage, ExecutionError, ParsingError, predicate
+from allennlp.semparse import (DomainLanguage, ExecutionError, ParsingError,
+                               predicate, predicate_with_side_args)
 
 class Arithmetic(DomainLanguage):
     def __init__(self):
@@ -81,6 +82,17 @@ class Arithmetic(DomainLanguage):
     def three(self) -> int:
         return 3
 
+    @predicate
+    def three_less(self, function: Callable[[int, int], int]) -> Callable[[int, int], int]:
+        """
+        Wraps a function into a new function that always returns three less than what the original
+        function would.  Totally senseless function that's just here to test higher-order
+        functions.
+        """
+        def new_function(num1: int, num2: int) -> int:
+            return function(num1, num2) - 3
+        return new_function
+
     def not_a_predicate(self) -> int:
         return 5
 
@@ -104,8 +116,6 @@ class DomainLanguageTest(AllenNlpTestCase):
             self.language.execute('"add"')
 
     def test_error_message_with_wrong_arguments(self):
-        with pytest.raises(ExecutionError):
-            self.language.execute('add')
         with pytest.raises(ExecutionError):
             self.language.execute('(add)')
         with pytest.raises(ExecutionError):
@@ -132,8 +142,26 @@ class DomainLanguageTest(AllenNlpTestCase):
         assert self.language.execute('(add 2 (subtract 4 2))') == 4
         assert self.language.execute('(halve (multiply (divide 9 3) (power 2 3)))') == 12
 
-    def test_get_valid_actions(self):
-        valid_actions = self.language.get_valid_actions()
+    def test_higher_order_logical_form(self):
+        assert self.language.execute('((three_less add) 2 (subtract 4 2))') == 1
+
+    def test_execute_action_sequence(self):
+        # Repeats tests from above, but using `execute_action_sequence` instead of `execute`.
+        logical_form = '(add 2 (subtract 4 2))'
+        action_sequence = self.language.logical_form_to_action_sequence(logical_form)
+        assert self.language.execute_action_sequence(action_sequence) == 4
+        logical_form = '(halve (multiply (divide 9 3) (power 2 3)))'
+        action_sequence = self.language.logical_form_to_action_sequence(logical_form)
+        assert self.language.execute_action_sequence(action_sequence) == 12
+        logical_form = '((three_less add) 2 (subtract 4 2))'
+        action_sequence = self.language.logical_form_to_action_sequence(logical_form)
+        assert self.language.execute_action_sequence(action_sequence) == 1
+        logical_form = '((three_less add) three (subtract 4 2))'
+        action_sequence = self.language.logical_form_to_action_sequence(logical_form)
+        assert self.language.execute_action_sequence(action_sequence) == 2
+
+    def test_get_nonterminal_productions(self):
+        valid_actions = self.language.get_nonterminal_productions()
         assert set(valid_actions.keys()) == {
                 '@start@',
                 'int',
@@ -145,6 +173,7 @@ class DomainLanguageTest(AllenNlpTestCase):
                 '<int,int:List[int]>',
                 '<int,int,int:List[int]>',
                 '<int,int,int,int:List[int]>',
+                '<<int,int:int>:<int,int:int>>',
                 }
         check_productions_match(valid_actions['@start@'],
                                 ['int'])
@@ -160,7 +189,12 @@ class DomainLanguageTest(AllenNlpTestCase):
         check_productions_match(valid_actions['<int:int>'],
                                 ['halve'])
         check_productions_match(valid_actions['<int,int:int>'],
-                                ['add', 'subtract', 'multiply', 'divide', 'power'])
+                                ['[<<int,int:int>:<int,int:int>>, <int,int:int>]',
+                                 'add',
+                                 'subtract',
+                                 'multiply',
+                                 'divide',
+                                 'power'])
         check_productions_match(valid_actions['<List[int]:int>'],
                                 ['sum'])
         check_productions_match(valid_actions['<int:List[int]>'],
@@ -171,6 +205,8 @@ class DomainLanguageTest(AllenNlpTestCase):
                                 ['list3'])
         check_productions_match(valid_actions['<int,int,int,int:List[int]>'],
                                 ['list4'])
+        check_productions_match(valid_actions['<<int,int:int>:<int,int:int>>'],
+                                ['three_less'])
 
     def test_logical_form_to_action_sequence(self):
         action_sequence = self.language.logical_form_to_action_sequence('(add 2 3)')
@@ -205,6 +241,16 @@ class DomainLanguageTest(AllenNlpTestCase):
                                    'int -> 2',
                                    'int -> 3']
 
+    def test_logical_form_to_action_sequence_with_higher_order_functions(self):
+        action_sequence = self.language.logical_form_to_action_sequence('((three_less add) 2 3)')
+        assert action_sequence == ['@start@ -> int',
+                                   'int -> [<int,int:int>, int, int]',
+                                   '<int,int:int> -> [<<int,int:int>:<int,int:int>>, <int,int:int>]',
+                                   '<<int,int:int>:<int,int:int>> -> three_less',
+                                   '<int,int:int> -> add',
+                                   'int -> 2',
+                                   'int -> 3']
+
     def test_action_sequence_to_logical_form(self):
         logical_form = '(add 2 3)'
         action_sequence = self.language.logical_form_to_action_sequence(logical_form)
@@ -212,6 +258,11 @@ class DomainLanguageTest(AllenNlpTestCase):
         assert recovered_logical_form == logical_form
 
         logical_form = '(halve (multiply (divide 9 three) (power 2 3)))'
+        action_sequence = self.language.logical_form_to_action_sequence(logical_form)
+        recovered_logical_form = self.language.action_sequence_to_logical_form(action_sequence)
+        assert recovered_logical_form == logical_form
+
+        logical_form = '((three_less add) 2 3)'
         action_sequence = self.language.logical_form_to_action_sequence(logical_form)
         recovered_logical_form = self.language.action_sequence_to_logical_form(action_sequence)
         assert recovered_logical_form == logical_form
@@ -229,3 +280,39 @@ class DomainLanguageTest(AllenNlpTestCase):
             self.language.logical_form_to_action_sequence('(sum (3 2))')
         with pytest.raises(ParsingError, match='did not have expected type'):
             self.language.logical_form_to_action_sequence('(sum (add 2 3))')
+
+    def test_execution_with_side_arguments(self):
+        class SideArgumentLanguage(DomainLanguage):
+            def __init__(self) -> None:
+                super().__init__(start_types={int}, allowed_constants={'1': 1, '2': 2, '3': 3})
+            @predicate_with_side_args(['num2'])
+            def add(self, num1: int, num2: int) -> int:
+                return num1 + num2
+
+            @predicate_with_side_args(['num'])
+            def current_number(self, num: int) -> int:
+                return num
+
+        language = SideArgumentLanguage()
+
+        # (add 1)
+        action_sequence = ['@start@ -> int',
+                           'int -> [<int:int>, int]',
+                           '<int:int> -> add',
+                           'int -> 1']
+        # For each action in the action sequence, we pass state.  We only actually _use_ the state
+        # when the action we've predicted at that step needs the state.  In this case, the third
+        # action will get {'num2': 3} passed to the `add()` function.
+        state = [{'num2': 1}, {'num2': 2}, {'num2': 3}, {'num2': 4}]
+        assert language.execute_action_sequence(action_sequence, state) == 4
+
+        # (add current_number)
+        action_sequence = ['@start@ -> int',
+                           'int -> [<int:int>, int]',
+                           '<int:int> -> add',
+                           'int -> current_number']
+        state = [{'num2': 1, 'num': 5},
+                 {'num2': 2, 'num': 6},
+                 {'num2': 3, 'num': 7},
+                 {'num2': 4, 'num': 8}]
+        assert language.execute_action_sequence(action_sequence, state) == 11
