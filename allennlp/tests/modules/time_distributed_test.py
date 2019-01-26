@@ -15,7 +15,25 @@ class TestTimeDistributed(AllenNlpTestCase):
         char_input = torch.LongTensor([[[1, 0], [1, 1]]])
         output = distributed_embedding(char_input)
         assert_almost_equal(output.data.numpy(),
-                            [[[[.5, .5], [.4, .4]], [[.5, .5,], [.5, .5]]]])
+                            [[[[.5, .5], [.4, .4]], [[.5, .5], [.5, .5]]]])
+
+    def test_time_distributed_reshapes_kwarg_correctly(self):
+        char_embedding = Embedding(2, 2)
+        char_embedding.weight = Parameter(torch.FloatTensor([[.4, .4], [.5, .5]]))
+        distributed_embedding = TimeDistributed(char_embedding)
+        char_input = torch.LongTensor([[[1, 0], [1, 1]]])
+        output = distributed_embedding(input=char_input)
+        assert_almost_equal(output.data.numpy(),
+                            [[[[.5, .5], [.4, .4]], [[.5, .5], [.5, .5]]]])
+
+    def test_time_distributed_reshapes_named_arg_and_kwarg_correctly(self):
+        char_embedding = Embedding(2, 2)
+        char_embedding.weight = Parameter(torch.FloatTensor([[.4, .4], [.5, .5]]))
+        distributed_embedding = TimeDistributed(char_embedding)
+        char_input = torch.LongTensor([[[1, 0], [1, 1]]])
+        output = distributed_embedding(char_input)
+        assert_almost_equal(output.data.numpy(),
+                            [[[[.5, .5], [.4, .4]], [[.5, .5], [.5, .5]]]])
 
     def test_time_distributed_works_with_multiple_inputs(self):
         module = lambda x, y: x + y
