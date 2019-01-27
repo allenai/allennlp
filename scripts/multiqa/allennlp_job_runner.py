@@ -334,7 +334,8 @@ class JobRunner():
 
 
 
-            logger.info('%d job currently running, available GPUS: %s', len(self.running_jobs), str(self.available_gpus))
+            logger.info('%d job currently running, available GPUS: %s, job_gpus: %s', \
+                        len(self.running_jobs), str(self.available_gpus), str(self.job_gpus))
             self.runner_iter_count+=1
             time.sleep(2)
 
