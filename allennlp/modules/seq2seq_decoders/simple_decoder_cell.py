@@ -6,14 +6,15 @@ from torch.nn import LSTMCell
 from allennlp.common.checks import ConfigurationError
 from allennlp.modules import Attention, SimilarityFunction
 from allennlp.modules.attention import LegacyAttention
-from allennlp.modules.seq2seq_decoders.seq2seq2_decoder import Seq2SeqDecoder
+from allennlp.modules.seq2seq_decoders.decoder_cell import DecoderCell
 from allennlp.nn import util
 
 
-@Seq2SeqDecoder.register("simple_decoder")
-class SimpleSeq2SeqDecoder(Seq2SeqDecoder):
+@DecoderCell.register("simple_decoder")
+class SimpleDecoderCell(DecoderCell):
     """
-    This decoder implements same decoding mechanism as was implemented in ``SimpleSeq2Seq``
+    This decoder cell implements simple decoding network with LSTMCell and Attention
+        as it was implemented in ``SimpleSeq2Seq``
 
     Parameters
     ----------
@@ -34,7 +35,7 @@ class SimpleSeq2SeqDecoder(Seq2SeqDecoder):
                  attention: Attention = None,
                  attention_function: SimilarityFunction = None,
                  ):
-        super(SimpleSeq2SeqDecoder, self).__init__(decoding_dim=decoding_dim)
+        super(SimpleDecoderCell, self).__init__(decoding_dim=decoding_dim)
 
         # In this particular type of decoder output of previous step passes directly to the input of current step
         # We also assume that sequence encoder output dimensionality is equal to the encoder output dimensionality

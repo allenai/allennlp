@@ -10,7 +10,7 @@ from allennlp.common.util import START_SYMBOL, END_SYMBOL
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder
-from allennlp.modules.seq2seq_decoders.seq2seq2_decoder import Seq2SeqDecoder
+from allennlp.modules.seq2seq_decoders.decoder_cell import DecoderCell
 from allennlp.modules.token_embedders import Embedding
 from allennlp.nn import util
 from allennlp.nn.beam_search import BeamSearch
@@ -63,7 +63,7 @@ class SimpleSeq2Seq(Model):
                  vocab: Vocabulary,
                  source_embedder: TextFieldEmbedder,
                  encoder: Seq2SeqEncoder,
-                 decoder: Seq2SeqDecoder,
+                 decoder: DecoderCell,
                  max_decoding_steps: int,
                  beam_size: int = None,
                  target_namespace: str = "tokens",
