@@ -1,9 +1,10 @@
-# pylint: disable=invalid-name,no-self-use
+# pylint: disable=invalid-name,no-self-use,protected-access
 import argparse
 import re
 import shutil
 
 import pytest
+import torch
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.commands.fine_tune import FineTune, fine_tune_model_from_file_paths, \
@@ -38,15 +39,21 @@ class TestFineTune(AllenNlpTestCase):
         # By default, no vocab expansion.
         fine_tune_model(model, params, self.serialization_dir)
 
-    def test_fine_tune_runtime_errors_with_vocab_expansion(self):
+    def test_fine_tune_works_with_vocab_expansion(self):
         params = Params.from_file(self.config_file)
+        # snli2 has a new token in it
         params["train_data_path"] = str(self.FIXTURES_ROOT / 'data' / 'snli2.jsonl')
 
-        model = load_archive(self.model_archive).model
+        trained_model = load_archive(self.model_archive).model
+        original_weight = trained_model._text_field_embedder.token_embedder_tokens.weight
 
-        # If we do vocab expansion, we get a runtime error because of the embedding.
-        with pytest.raises(RuntimeError):
-            fine_tune_model(model, params, self.serialization_dir, extend_vocab=True)
+        # If we do vocab expansion, we should not get error now.
+        fine_tuned_model = fine_tune_model(trained_model, params, self.serialization_dir, extend_vocab=True)
+        extended_weight = fine_tuned_model._text_field_embedder.token_embedder_tokens.weight
+
+        assert tuple(original_weight.shape) == (24, 300)
+        assert tuple(extended_weight.shape) == (25, 300)
+        assert torch.all(original_weight == extended_weight[:24, :])
 
     def test_fine_tune_runs_from_parser_arguments(self):
         raw_args = ["fine-tune",

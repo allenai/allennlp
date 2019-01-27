@@ -42,9 +42,6 @@ scikit-learn
 # Install the Tensorboard application separately (part of tensorflow) to view them.
 tensorboardX==1.2
 
-# Required by torch.utils.ffi
-cffi==1.11.5
-
 # aws commandline tools for running on Docker remotely.
 # second requirement is to get botocore < 1.11, to avoid the below bug
 awscli>=1.11.91
@@ -70,7 +67,7 @@ sqlparse==0.2.4
 ftfy
 
 # To use the BERT model
-pytorch-pretrained-bert==0.3.0
+pytorch-pretrained-bert==0.4.0
 
 #### ESSENTIAL LIBRARIES USED IN SCRIPTS ####
 
