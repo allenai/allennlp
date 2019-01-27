@@ -237,7 +237,7 @@ class JobRunner():
             with open('runner_state.pkl', 'wb') as f:
                 pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
             channels = ' '.join([' --channel ' + channel for channel in self.channel_tags])
-            bash_command = 'python allennlp_job_runner.py ' + self.resource_type + channels + \
+            bash_command = 'python scripts/multiqa/allennlp_job_runner.py ' + self.resource_type + channels + \
                            ' --models_dir ' + self._MODELS_DIR + ' --state runner_state.pkl'
             if self._DEBUG:
                 bash_command += ' --debug '
