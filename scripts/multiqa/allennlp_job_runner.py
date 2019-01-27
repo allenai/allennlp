@@ -321,7 +321,18 @@ class JobRunner():
                     # something went wrong
                     time.sleep(3)
                     ElasticLogger().write_log('INFO', "job runner exception", {'error_message': traceback.format_exc()}, print_log=True)
-                    self.connect_to_queue()
+                    logger.error('restarting')
+
+                    channels = ' '.join([' --channel ' + channel for channel in self.channel_tags])
+                    bash_command = 'python scripts/multiqa/allennlp_job_runner.py ' + self.resource_type + channels + \
+                                   ' --models_dir ' + self._MODELS_DIR
+                    if self._DEBUG:
+                        bash_command += ' --debug '
+
+                    bash_command = 'nohup ' + bash_command + ' > logs/runner_' + self.channel_tags[0] + '.log &'
+                    exit(1)
+
+
 
             logger.info('%d job currently running, available GPUS: %s', len(self.running_jobs), str(self.available_gpus))
             self.runner_iter_count+=1
