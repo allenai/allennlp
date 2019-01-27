@@ -47,7 +47,7 @@
     "contextualizer": {
         "type": "lstm",
         "bidirectional": true,
-        "num_layers": 3,
+        "num_layers": 1,
         "input_size": 16,
         "hidden_size": 7,
     }
