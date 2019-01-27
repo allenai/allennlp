@@ -210,7 +210,8 @@ class JobRunner():
         self.running_jobs.append(new_job)
         self.update_available_gpus()
 
-        ElasticLogger().write_log('INFO', "Job Started", new_job, push_bulk=True, print_log=False)
+        ElasticLogger().write_log('INFO', "Job Started", {'GPU':assigned_GPU, 'command': bash_command, \
+                    'experiment_name': name}, push_bulk=True, print_log=False)
         time.sleep(3)
 
     def handle_job_types(self, config, name):
