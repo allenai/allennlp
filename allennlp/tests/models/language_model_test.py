@@ -113,3 +113,17 @@ class TestBidirectionalLanguageModelForwardBackward(TestBidirectionalLanguageMod
         self.set_up_model(self.FIXTURES_ROOT / 'language_model' /
                           'experiment_forward_backward.jsonnet',
                           self.FIXTURES_ROOT / 'language_model' / 'sentences.txt')
+
+    def test_no_backward_contextualizer_throws_configuration_error(self):
+        params = Params.from_file(self.param_file)
+        # Remove the backward contextualizer, leaving only the forward
+        params["model"].pop("backward_contextualizer")
+        with pytest.raises(ConfigurationError):
+            Model.from_params(vocab=self.vocab, params=params.get("model"))
+
+    def test_bidirectional_encoder_throws_configuration_error(self):
+        params = Params.from_file(self.param_file)
+        # Set bidirectional to true
+        params["model"]["backward_contextualizer"]["bidirectional"] = True
+        with pytest.raises(ConfigurationError):
+            Model.from_params(vocab=self.vocab, params=params.get("model"))
