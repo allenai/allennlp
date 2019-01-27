@@ -109,7 +109,7 @@ class LanguageModel(Model):
     def __init__(self,
                  vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
-                 contextualizer: Seq2SeqEncoder,
+                 contextualizer: Seq2SeqEncoder = None,
                  forward_contextualizer: Seq2SeqEncoder = None,
                  backward_contextualizer: Seq2SeqEncoder = None,
                  dropout: float = None,
@@ -153,10 +153,8 @@ class LanguageModel(Model):
 
         # ``contextualizer`` logic handled, do error checking for
         # forward_contextualizer and backward_contextualizer
-        if bidirectional and (bool(forward_contextualizer is None) or
-                              bool(backward_contextualizer is None)):
-            # If we're using the contextualizer argument,
-            # both forward_contextualizer and backward_contextualizer are None.
+        if bidirectional and (forward_contextualizer is None or
+                              backward_contextualizer is None):
             if not self._use_contextualizer_arg:
                 raise ConfigurationError(
                         "LanguageModel bidirectional is True, but did not "
