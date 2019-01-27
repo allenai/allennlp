@@ -108,6 +108,10 @@ class JobRunner():
                                                            'log_snapshot': job['log_snapshot']}, push_bulk=True, print_log=False)
 
         else:
+            if job['GPU'] in self.job_gpus:
+                self.job_gpus.pop(job['GPU'])
+                self.update_available_gpus()
+
             # running post proc job
             if 'post_proc_bash' in job['config'] and not job['is_post_proc_run']:
                 logger.info('running post proc: %s',job['config']['post_proc_bash'])
@@ -124,8 +128,6 @@ class JobRunner():
                                                            'log_snapshot': job['log_snapshot']}, push_bulk=True, print_log=False)
 
         self.running_jobs.remove(job)
-        self.job_gpus.pop(job['GPU'])
-        self.update_available_gpus()
         self.log_handles.pop(job['log_file'])
 
     def write_status(self):
