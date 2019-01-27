@@ -18,7 +18,8 @@ logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s
 logger = logging.getLogger(__name__)
 
 class JobRunner():
-    def __init__(self, channel, type, models_dir, DEBUG):
+    def __init__(self, channel, type, models_dir, DEBUG, SIM_GPUS):
+        self._SIM_GPUS = SIM_GPUS
         self._DEBUG = DEBUG
         if self._DEBUG:  # pylint: disable=invalid-name
             level = logging.getLevelName('DEBUG')
@@ -39,7 +40,7 @@ class JobRunner():
         self.update_available_gpus()
 
     def update_available_gpus(self):
-        if self._DEBUG: # simulating gpu resources
+        if self._SIM_GPUS: # simulating gpu resources
             self.available_gpus = list(set([1]) - set(self.job_gpus))
             return
 
@@ -125,7 +126,6 @@ class JobRunner():
         self.job_gpus.pop(job['GPU'])
         self.update_available_gpus()
         self.log_handles.pop(job['log_file'])
-
 
     def write_status(self):
         # Virtual memory usage
@@ -310,9 +310,9 @@ class JobRunner():
                     ElasticLogger().write_log('INFO', "job runner exception", {'error_message': traceback.format_exc()}, print_log=True)
                     self.connect_to_queue()
 
-            logger.debug('%d job currently running, available GPUS: %s', len(self.running_jobs), str(self.available_gpus))
+            logger.info('%d job currently running, available GPUS: %s', len(self.running_jobs), str(self.available_gpus))
             self.runner_iter_count+=1
-            time.sleep(1)
+            time.sleep(2)
 
 def main():
     parser = argparse.ArgumentParser()
@@ -321,6 +321,7 @@ def main():
     parser.add_argument("--state", type=str, default=None, help="saved runner state")
     parser.add_argument("--models_dir", type=str, default='', help="debug session, runs dummy commands etc... ")
     parser.add_argument("--debug", type=bool, default=False, nargs='?', const=True ,help="debug session, runs dummy commands etc... ")
+    parser.add_argument("--simulate_gpus", type=bool, default=False, nargs='?', const=True, help="debug session, runs dummy commands etc... ")
     args = parser.parse_args()
 
     if args.state is not None:
@@ -329,7 +330,7 @@ def main():
         runner.connect_to_queue()
         runner.reopen_all_logs()
     else:
-        runner = JobRunner(args.channel, args.type, args.models_dir, args.debug)
+        runner = JobRunner(args.channel, args.type, args.models_dir, args.debug, args.simulate_gpus)
     runner.run()
 
 if __name__ == '__main__':
