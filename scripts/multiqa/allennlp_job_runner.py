@@ -1,6 +1,6 @@
 
 # TODO change...
-RUNNER_VERSION = "0.2.0"
+RUNNER_VERSION = "0.2.01"
 from allennlp.common.util import *
 from subprocess import Popen,call
 import traceback,os, psutil
