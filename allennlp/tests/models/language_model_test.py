@@ -121,9 +121,16 @@ class TestBidirectionalLanguageModelForwardBackward(TestBidirectionalLanguageMod
         with pytest.raises(ConfigurationError):
             Model.from_params(vocab=self.vocab, params=params.get("model"))
 
-    def test_bidirectional_encoder_throws_configuration_error(self):
+    def test_bidirectional_backward_contextualizer_throws_configuration_error(self):
         params = Params.from_file(self.param_file)
-        # Set bidirectional to true
+        # Set bidirectional to true in backward
         params["model"]["backward_contextualizer"]["bidirectional"] = True
+        with pytest.raises(ConfigurationError):
+            Model.from_params(vocab=self.vocab, params=params.get("model"))
+
+    def test_bidirectional_forward_contextualizer_throws_configuration_error(self):
+        params = Params.from_file(self.param_file)
+        # Set bidirectional to true in forward
+        params["model"]["forward_contextualizer"]["bidirectional"] = True
         with pytest.raises(ConfigurationError):
             Model.from_params(vocab=self.vocab, params=params.get("model"))
