@@ -41,7 +41,7 @@ class JobRunner():
 
     def update_available_gpus(self):
         if self._SIM_GPUS: # simulating gpu resources
-            self.available_gpus = list(set([1]) - set(self.job_gpus))
+            self.available_gpus = list(set([1,2]) - set(self.job_gpus))
             return
 
         try:
@@ -189,7 +189,10 @@ class JobRunner():
 
         # replace MARCOs
         bash_command = bash_command.replace('[MODEL_DIR]',self._MODELS_DIR)
-        bash_command = bash_command.replace('[GPU_ID]', str(assigned_GPU))
+        if not self._SIM_GPUS:
+            bash_command = bash_command.replace('[GPU_ID]', str(assigned_GPU))
+        else:
+            bash_command = bash_command.replace('[GPU_ID]', str(-1))
 
         bash_command = 'nohup ' + bash_command + ' &'
 
@@ -220,9 +223,13 @@ class JobRunner():
             assigned_GPU = -1
             if config['resource_type'] == 'GPU':
                 if config['override_config']['trainer']["cuda_device"] is None:
-                    config['override_config']['trainer']["cuda_device"] = self.available_gpus[0]
+                    if not self._SIM_GPUS:
+                        config['override_config']['trainer']["cuda_device"] = self.available_gpus[0]
+                    else:
+                        config['override_config']['trainer']["cuda_device"] = -1
                     assigned_GPU = self.available_gpus[0]
                 self.job_gpus.append(assigned_GPU)
+                self.update_available_gpus()
                 logger.info('assigned_GPU = %s',assigned_GPU)
 
             self.execute_job(name, config['bash_command'], config, assigned_GPU)
