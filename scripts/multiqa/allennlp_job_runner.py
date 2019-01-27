@@ -115,9 +115,11 @@ class JobRunner():
 
             # running post proc job
             if 'post_proc_bash' in job['config'] and not job['is_post_proc_run']:
-                logger.info('running post proc: %s',job['config']['post_proc_bash'])
+                post_proc_bash = job['config']['post_proc_bash']
+                post_proc_bash = post_proc_bash.replace('[MODEL_DIR]', self._MODELS_DIR)
+                logger.info('running post proc: %s',post_proc_bash)
                 log_handle = self.log_handles[job['log_file']]
-                wa_proc = Popen(job['config']['post_proc_bash'], shell=True , \
+                wa_proc = Popen(post_proc_bash, shell=True , \
                                 preexec_fn = os.setsid, stdout = log_handle, stderr = log_handle)
                 job['pid'] = wa_proc.pid + 1
                 job['alive'] = True
