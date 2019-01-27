@@ -100,6 +100,10 @@ class JobRunner():
         logger.info('processed not alive.')
         # checking if process successfully completed task,
 
+        if job['GPU'] in self.job_gpus:
+            self.job_gpus.remove(job['GPU'])
+            self.update_available_gpus()
+
         # TODO this is an ugly check for error , but because we are forking with nohup, python does not provide any good alternative...
         if job['log_snapshot'].find('Traceback (most recent call last):') > -1 or \
                 job['log_snapshot'].find('error') > -1:
@@ -108,9 +112,6 @@ class JobRunner():
                                                            'log_snapshot': job['log_snapshot']}, push_bulk=True, print_log=False)
 
         else:
-            if job['GPU'] in self.job_gpus:
-                self.job_gpus.remove(job['GPU'])
-                self.update_available_gpus()
 
             # running post proc job
             if 'post_proc_bash' in job['config'] and not job['is_post_proc_run']:
@@ -201,7 +202,7 @@ class JobRunner():
         # Executing
         logger.info(bash_command)
         with open(log_file, 'wb') as f:
-            if False and self._DEBUG:
+            if self._DEBUG:
                 wa_proc = Popen("nohup python dummy_job.py &", shell=True, preexec_fn=os.setsid, stdout=f, stderr=f)
             else:
                 wa_proc = Popen(bash_command, shell=True, preexec_fn=os.setsid, stdout=f, stderr=f)
