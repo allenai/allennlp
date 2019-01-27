@@ -193,7 +193,7 @@ class JobRunner():
         # replace MARCOs
         bash_command = bash_command.replace('[MODEL_DIR]',self._MODELS_DIR)
         if not self._SIM_GPUS:
-            bash_command = bash_command.replace('[GPU_ID]', str(assigned_GPU))
+            bash_command = bash_command.replace("'[GPU_ID]'", str(assigned_GPU)).replace('[GPU_ID]', str(assigned_GPU))
         else:
             bash_command = bash_command.replace('[GPU_ID]', str(-1))
 
