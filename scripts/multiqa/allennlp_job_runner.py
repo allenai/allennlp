@@ -109,7 +109,7 @@ class JobRunner():
 
         else:
             if job['GPU'] in self.job_gpus:
-                self.job_gpus.pop(job['GPU'])
+                self.job_gpus.remove(job['GPU'])
                 self.update_available_gpus()
 
             # running post proc job
