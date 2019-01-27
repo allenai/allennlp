@@ -222,7 +222,8 @@ class JobRunner():
                 if config['override_config']['trainer']["cuda_device"] is None:
                     config['override_config']['trainer']["cuda_device"] = self.available_gpus[0]
                     assigned_GPU = self.available_gpus[0]
-                self.job_gpus.append(config['override_config']['trainer']["cuda_device"])
+                self.job_gpus.append(assigned_GPU)
+                logger.info('assigned_GPU = %s',assigned_GPU)
 
             self.execute_job(name, config['bash_command'], config, assigned_GPU)
         elif config['operation'] == 'kill job':
