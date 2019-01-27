@@ -120,7 +120,8 @@ class JobRunner():
                 return
             else:
                 self.close_job_log(job)
-                ElasticLogger().write_log('INFO', "Job finished successfully", job, push_bulk=True, print_log=False)
+                ElasticLogger().write_log('INFO', "Job finished successfully", {'experiment_name': job['experiment_name'],
+                                                           'log_snapshot': job['log_snapshot']}, push_bulk=True, print_log=False)
 
         self.running_jobs.remove(job)
         self.job_gpus.pop(job['GPU'])
