@@ -432,7 +432,7 @@ class DocQAPlus(Model):
             # TODO: This is a patch, for dev question with no answer token found,
             # but we would like to see if we still get F1 score for it...
             if 'loss' not in output_dict:
-                output_dict["loss"] = torch.cuda.FloatTensor([0], device=span_start_logits_softmaxed.device) \
+                output_dict["loss"] = torch.cuda.FloatTensor([0], device=span_end_logits.device) \
                     if torch.cuda.is_available() else torch.FloatTensor([0])
 
 
