@@ -373,9 +373,11 @@ class LanguageModel(Model):
                     contextual_embeddings = torch.cat(
                             [contextual_embeddings, backward_contextual_embeddings], dim=-1)
                 else:
-                    # TODO: raise error here, since forward and backward contextual
-                    # embeddings returned different things.
-                    raise ValueError()
+                    raise ValueError("forward and backward contextualizer returned "
+                                     "different types. Output of forward_contextualizer "
+                                     f"has type f{type(contextual_embeddings)}, while"
+                                     "output of backward_contextualizer has type"
+                                     f"f{type(backward_contextual_embeddings)}")
 
         return_dict = {}
 
