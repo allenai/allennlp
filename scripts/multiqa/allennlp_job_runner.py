@@ -48,7 +48,7 @@ class JobRunner():
             gpu_mem = gpu_memory_mb()
             if self.channel == 'rack-jonathan-g02':
                 gpu_mem = {(3 - key): val for key, val in gpu_mem.items()}
-            self.available_gpus = [i for i, gpu in enumerate(gpu_mem.keys()) if gpu_mem[gpu] < 1700 and gpu not in self.job_gpus]
+            self.available_gpus = [i for i, gpu in enumerate(gpu_mem.keys()) if gpu_mem[gpu] < 1700 and i not in self.job_gpus]
         except:
             self.available_gpus = []
 
