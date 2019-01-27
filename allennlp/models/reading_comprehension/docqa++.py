@@ -429,6 +429,12 @@ class DocQAPlus(Model):
                                     span_end.view(-1)[inds_with_gold_answer], ignore_index=-1)
                     output_dict["loss"] = loss
 
+            # TODO: This is a patch, for dev question with no answer token found,
+            # but we would like to see if we still get F1 score for it...
+            if 'loss' not in output_dict:
+                output_dict["loss"] = torch.cuda.FloatTensor([0], device=span_start_logits_softmaxed.device) \
+                    if torch.cuda.is_available() else torch.FloatTensor([0])
+
 
             # TODO these are not updates
             #self._span_start_accuracy(span_start_logits, span_start.view(-1))
