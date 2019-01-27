@@ -50,9 +50,10 @@ class TestUnidirectionalLanguageModel(ModelTestCase):
         params = Params.from_file(self.param_file)
         # Make the contextualizer unidirectionality wrong - it should be
         # False to match the language model.
-        params["model"]["contextualizer"]["bidirectional"] = (not self.bidirectional)
-        with pytest.raises(ConfigurationError):
-            Model.from_params(vocab=self.vocab, params=params.get("model"))
+        if "contextualizer" in params["model"]:
+            params["model"]["contextualizer"]["bidirectional"] = (not self.bidirectional)
+            with pytest.raises(ConfigurationError):
+                Model.from_params(vocab=self.vocab, params=params.get("model"))
 
 class TestUnidirectionalLanguageModelUnsampled(TestUnidirectionalLanguageModel):
     def setUp(self):
@@ -103,4 +104,12 @@ class TestBidirectionalLanguageModelTransformer(TestBidirectionalLanguageModel):
         self.expected_embedding_shape = (2, 8, 32)
 
         self.set_up_model(self.FIXTURES_ROOT / 'language_model' / 'experiment_transformer.jsonnet',
+                          self.FIXTURES_ROOT / 'language_model' / 'sentences.txt')
+
+class TestBidirectionalLanguageModelForwardBackward(TestBidirectionalLanguageModel):
+    def setUp(self):
+        super().setUp()
+
+        self.set_up_model(self.FIXTURES_ROOT / 'language_model' /
+                          'experiment_forward_backward.jsonnet',
                           self.FIXTURES_ROOT / 'language_model' / 'sentences.txt')
