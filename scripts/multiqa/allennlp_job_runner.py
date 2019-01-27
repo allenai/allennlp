@@ -18,7 +18,7 @@ logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s
 logger = logging.getLogger(__name__)
 
 class JobRunner():
-    def __init__(self, channel, type, models_dir, DEBUG, SIM_GPUS):
+    def __init__(self, channel, type, models_dir, resources_to_spare, DEBUG, SIM_GPUS):
         self._SIM_GPUS = SIM_GPUS
         self._DEBUG = DEBUG
         if self._DEBUG:  # pylint: disable=invalid-name
@@ -37,6 +37,7 @@ class JobRunner():
         self.resources_available = True
         self.connect_to_queue()
         self.runner_iter_count = 0
+        self.resources_to_spare = resources_to_spare
         self.update_available_gpus()
 
     def update_available_gpus(self):
@@ -155,7 +156,8 @@ class JobRunner():
 
         self.update_available_gpus()
 
-        ElasticLogger().write_log('INFO', "Machine Status", {'free_gpus': self.available_gpus, \
+        ElasticLogger().write_log('INFO', "Machine Status", {'resources_to_spare':self.resources_to_spare,\
+                                                             'free_gpus': self.available_gpus, \
                                                              'num_procs_running': len(self.running_jobs), }, push_bulk=True, print_log=True)
 
     def connect_to_queue(self):
@@ -243,7 +245,8 @@ class JobRunner():
             pid_to_kill = [job['pid'] for job in self.running_jobs if job['experiment_name'] == config['experiment_name']]
             bash_command = 'kill ' + str(pid_to_kill[0])
             proc_info = Popen(bash_command, shell=True)
-
+        elif config['operation'] == 'resources to spare':
+            self.resources_to_spare = config['resources_to_spare']
         elif config['operation'] == 'restart runner':
             logger.debug('starting restart!!')
             self.close_all_logs()
@@ -294,7 +297,7 @@ class JobRunner():
     def perform_iteration(self):
         # checking current iteration resource status
         self.resources_available = False
-        if self.resource_type == 'GPU' and len(self.available_gpus)>0:
+        if self.resource_type == 'GPU' and len(self.available_gpus) > self.resources_to_spare:
             self.resources_available = True
         elif self.resource_type == 'CPU':
             self.resources_available = True
@@ -350,6 +353,7 @@ def main():
     parser.add_argument("--channel", type=str, help="RabbitMQ channel", action='append')
     parser.add_argument("--state", type=str, default=None, help="saved runner state")
     parser.add_argument("--models_dir", type=str, default='', help="debug session, runs dummy commands etc... ")
+    parser.add_argument("--resources_to_spare", type=int, default=0, help="how many resources to spare in this machine ")
     parser.add_argument("--debug", type=bool, default=False, nargs='?', const=True ,help="debug session, runs dummy commands etc... ")
     parser.add_argument("--simulate_gpus", type=bool, default=False, nargs='?', const=True, help="debug session, runs dummy commands etc... ")
     args = parser.parse_args()
@@ -360,7 +364,7 @@ def main():
         runner.connect_to_queue()
         runner.reopen_all_logs()
     else:
-        runner = JobRunner(args.channel, args.type, args.models_dir, args.debug, args.simulate_gpus)
+        runner = JobRunner(args.channel, args.type, args.models_dir, args.resources_to_spare, args.debug, args.simulate_gpus)
     runner.run()
 
 if __name__ == '__main__':
