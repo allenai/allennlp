@@ -225,7 +225,7 @@ class JobRunner():
             # Allocating resources
             assigned_GPU = -1
             if config['resource_type'] == 'GPU':
-                if config['override_config']['trainer']["cuda_device"] is None:
+                if config['override_config']['trainer']["cuda_device"] == '[GPU_ID]':
                     if not self._SIM_GPUS:
                         config['override_config']['trainer']["cuda_device"] = self.available_gpus[0]
                     else:
