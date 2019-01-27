@@ -1,6 +1,6 @@
 
 # TODO change...
-RUNNER_VERSION = "0.2.01"
+RUNNER_VERSION = "0.2.0"
 from allennlp.common.util import *
 from subprocess import Popen,call
 import traceback,os, psutil
@@ -143,7 +143,7 @@ class JobRunner():
                 job['alive'] = False
 
             ElasticLogger().write_log('INFO', "Job Status", {'experiment_name': job['experiment_name'],
-                                                             'log_snapshot': job['log_snapshot']}, push_bulk=True, print_log=True)
+                                                             'log_snapshot': job['log_snapshot']}, push_bulk=True, print_log=False)
             # Keeping last 3 log lines
             if len(job['log_snapshot']) > 0:
                 job['log_snapshot'] = '\n'.join(job['log_snapshot'].split('\n')[-4:])
