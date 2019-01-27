@@ -255,7 +255,8 @@ class JobRunner():
             bash_command = 'nohup ' + bash_command + ' > logs/runner_' + self.channel_tags[0] + '.log &'
             logger.debug('running new job runners: %s',bash_command)
             proc_info = Popen(bash_command, shell=True)
-            exit()
+            time.sleep(1)
+            exit(0)
 
     def sample_queues(self):
         ### Reading one job from queue (by order of channel specificity)
