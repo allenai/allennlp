@@ -109,8 +109,10 @@ class JobRunner():
         else:
             # running post proc job
             if 'post_proc_bash' in job['config'] and not job['is_post_proc_run']:
+                logger.info('running post proc: %s',job['config']['post_proc_bash'])
+                log_handle = self.log_handles[job['log_file']]
                 wa_proc = Popen(job['config']['post_proc_bash'], shell=True , \
-                                preexec_fn = os.setsid, stdout = job['log_file'], stderr = job['log_file'])
+                                preexec_fn = os.setsid, stdout = log_handle, stderr = log_handle)
                 job['pid'] = wa_proc.pid + 1
                 job['alive'] = True
                 job['is_post_proc_run'] = True
@@ -123,8 +125,6 @@ class JobRunner():
         self.job_gpus.pop(job['GPU'])
         self.update_available_gpus()
         self.log_handles.pop(job['log_file'])
-
-
 
 
     def write_status(self):
@@ -212,6 +212,41 @@ class JobRunner():
         ElasticLogger().write_log('INFO', "Job Started", new_job, push_bulk=True, print_log=False)
         time.sleep(3)
 
+    def handle_job_types(self, config, name):
+        if config['operation'] == 'run job':
+            # Allocating resources
+            assigned_GPU = -1
+            if config['resource_type'] == 'GPU':
+                if config['override_config']['trainer']["cuda_device"] is None:
+                    config['override_config']['trainer']["cuda_device"] = self.available_gpus[0]
+                    assigned_GPU = self.available_gpus[0]
+                self.job_gpus.append(config['override_config']['trainer']["cuda_device"])
+
+            self.execute_job(name, config['bash_command'], config, assigned_GPU)
+        elif config['operation'] == 'kill job':
+            logger.info('kill job!')
+            pid_to_kill = [job['pid'] for job in self.running_jobs if job['experiment_name'] == config['experiment_name']]
+            bash_command = 'kill ' + str(pid_to_kill[0])
+            proc_info = Popen(bash_command, shell=True)
+
+        elif config['operation'] == 'restart runner':
+            logger.debug('starting restart')
+            self.close_all_logs()
+            self.close_existing_connection()
+
+            with open('runner_state.pkl', 'wb') as f:
+                pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
+            channels = ' '.join([' --channel ' + channel for channel in self.channel_tags])
+            bash_command = 'python allennlp_job_runner.py ' + self.resource_type + channels + \
+                           ' --models_dir ' + self._MODELS_DIR + ' --state runner_state.pkl'
+            if self._DEBUG:
+                bash_command += ' --debug '
+
+            bash_command = 'nohup ' + bash_command + ' > logs/runner_' + self.channel_tags[0] + '.log &'
+            proc_info = Popen(bash_command, shell=True)
+            time.sleep(1)
+            exit()
+
     def sample_queues(self):
         ### Reading one job from queue (by order of channel specificity)
         for channel in self.channel_tags:
@@ -236,37 +271,9 @@ class JobRunner():
                 call("git pull origin master", shell=True, preexec_fn=os.setsid)
                 time.sleep(2)
 
-            # TODO - return to queue if failed to execute?
             self.channel.basic_ack(method_frame.delivery_tag)
 
-            if config['operation'] == 'run job':
-                # Allocating resources
-                assigned_GPU = -1
-                if config['resource_type'] == 'GPU':
-                    if config['override_config']['trainer']["cuda_device"] is None:
-                        config['override_config']['trainer']["cuda_device"] = self.available_gpus[0]
-                        assigned_GPU = self.available_gpus[0]
-                    self.job_gpus.append(config['override_config']['trainer']["cuda_device"])
-
-                self.execute_job(name, config['bash_command'], config, assigned_GPU)
-            elif config['operation'] == 'kill job':
-                logger.info('kill job!')
-                pid_to_kill = [job['pid'] for job in self.running_jobs if job['experiment_name'] == config['experiment_name']]
-                bash_command = 'kill ' + str(pid_to_kill[0])
-                proc_info = Popen(bash_command, shell=True)
-
-            elif config['operation'] == 'restart runner':
-                logger.debug('starting restart')
-                self.close_all_logs()
-                self.close_existing_connection()
-
-                with open('runner_state.pkl', 'wb') as f:
-                    pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
-                bash_command = 'nohup python allennlp_job_runner_V2.py ' + self.channel_tag + \
-                               ' --state runner_state.pkl > logs/runner_' + self.channel_tag + '.log &'
-                proc_info = Popen(bash_command, shell=True)
-                time.sleep(1)
-                exit()
+            self.handle_job_types(config, name)
 
     def perform_iteration(self):
         # checking current iteration resource status
