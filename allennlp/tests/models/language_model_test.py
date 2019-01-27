@@ -81,6 +81,32 @@ class TestUnidirectionalLanguageModelTransformer(TestUnidirectionalLanguageModel
                         "_forward_contextualizer.feedforward_layer_norm_0.gamma",
                         "_forward_contextualizer.feedforward_layer_norm_0.beta"})
 
+class TestUnidirectionlLanguageModelForwardContextualizer(TestUnidirectionalLanguageModel):
+    def setUp(self):
+        super().setUp()
+
+        self.set_up_model(self.FIXTURES_ROOT / 'language_model' /
+                          'experiment_unidirectional_forward.jsonnet',
+                          self.FIXTURES_ROOT / 'language_model' / 'sentences.txt')
+
+    def test_unidirectional_no_forward_contextualizer_throws_configuration_error(self):
+        params = Params.from_file(self.param_file)
+        params["model"].pop("forward_contextualizer")
+        with pytest.raises(ConfigurationError):
+            Model.from_params(vocab=self.vocab, params=params.get("model"))
+
+    def test_unidirectional_with_backward_contextualizer_throws_configuration_error(self):
+        params = Params.from_file(self.param_file)
+        params["model"]["backward_contextualizer"] = {
+                "type": "gru",
+                "input_size": 16,
+                "hidden_size": 7,
+                "num_layers": 3,
+                "dropout": 0.1
+        }
+        with pytest.raises(ConfigurationError):
+            Model.from_params(vocab=self.vocab, params=params.get("model"))
+
 class TestBidirectionalLanguageModel(TestUnidirectionalLanguageModel):
     def setUp(self):
         super().setUp()
