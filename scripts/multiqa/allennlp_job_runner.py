@@ -230,7 +230,7 @@ class JobRunner():
             proc_info = Popen(bash_command, shell=True)
 
         elif config['operation'] == 'restart runner':
-            logger.debug('starting restart')
+            logger.debug('starting restart!!')
             self.close_all_logs()
             self.close_existing_connection()
 
@@ -243,8 +243,8 @@ class JobRunner():
                 bash_command += ' --debug '
 
             bash_command = 'nohup ' + bash_command + ' > logs/runner_' + self.channel_tags[0] + '.log &'
+            logger.debug('running new job runners: %s',bash_command)
             proc_info = Popen(bash_command, shell=True)
-            time.sleep(1)
             exit()
 
     def sample_queues(self):
