@@ -31,9 +31,6 @@
             ]
         ],
         // NOTE: This configuration is correct, but slow.
-        // If you are interested in training the SRL model
-        // from scratch, you should use the 'alternating_lstm_cuda'
-        // encoder instead.
         "encoder": {
             "type": "alternating_lstm",
             "input_size": 1124,

@@ -1,11 +1,40 @@
 # pylint: disable=invalid-name,no-self-use
 import argparse
 import json
+from typing import Iterator, List, Dict, Iterable
 
+import torch
 from flaky import flaky
 
-from allennlp.commands.evaluate import evaluate_from_args, Evaluate
+from allennlp.commands.evaluate import evaluate_from_args, Evaluate, evaluate
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.data import DataIterator, Instance
+from allennlp.data.dataset import Batch
+from allennlp.data.iterators.data_iterator import TensorDict
+from allennlp.models import Model
+
+
+class DummyIterator(DataIterator):
+    def __init__(self, outputs: List[TensorDict]) -> None:
+        super().__init__()
+        self._outputs = outputs
+
+    def __call__(self,
+                 instances: Iterable[Instance],
+                 num_epochs: int = None,
+                 shuffle: bool = True) -> Iterator[TensorDict]:
+        yield from self._outputs
+
+    def _create_batches(self, instances: Iterable[Instance], shuffle: bool) -> Iterable[Batch]:
+        raise NotImplementedError
+
+
+class DummyModel(Model):
+    def __init__(self) -> None:
+        super().__init__(None) # type: ignore
+
+    def forward(self, **kwargs) -> Dict[str, torch.Tensor]:  # type: ignore # pylint: disable=arguments-differ
+        return kwargs
 
 
 class TestEvaluate(AllenNlpTestCase):
@@ -15,6 +44,23 @@ class TestEvaluate(AllenNlpTestCase):
         self.parser = argparse.ArgumentParser(description="Testing")
         subparsers = self.parser.add_subparsers(title='Commands', metavar='')
         Evaluate().add_subparser('evaluate', subparsers)
+
+    def test_evaluate_calculates_average_loss(self):
+        losses = [7.0, 9.0, 8.0]
+        outputs = [{"loss": torch.Tensor([loss])} for loss in losses]
+        iterator = DummyIterator(outputs)
+        metrics = evaluate(DummyModel(), None, iterator, -1, "")
+        self.assertAlmostEqual(metrics["loss"], 8.0)
+
+    def test_evaluate_calculates_average_loss_with_weights(self):
+        losses = [7.0, 9.0, 8.0]
+        weights = [10, 2, 1.5]
+        inputs = zip(losses, weights)
+        outputs = [{"loss": torch.Tensor([loss]), "batch_weight": torch.Tensor([weight])}
+                   for loss, weight in inputs]
+        iterator = DummyIterator(outputs)
+        metrics = evaluate(DummyModel(), None, iterator, -1, "batch_weight")
+        self.assertAlmostEqual(metrics["loss"], (70 + 18 + 12)/13.5)
 
     @flaky
     def test_evaluate_from_args(self):
