@@ -315,6 +315,8 @@ class JobRunner():
             else:
                 try:
                     self.perform_iteration()
+                except SystemExit:
+                    exit(0)
                 except:
                     # something went wrong
                     time.sleep(3)
