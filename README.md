@@ -171,7 +171,7 @@ Commands:
                 training utilities.
     test-install
                 Run the unit tests.
-    find-lr     Train a model
+    find-lr     Find a learning rate range.
 ```
 
 ## Docker images
