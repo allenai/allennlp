@@ -4,7 +4,7 @@ import numpy
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.modules import FeedForward
-from allennlp.modules.seq2seq_encoders import FeedForwardEncoder
+from allennlp.modules.seq2seq_encoders.feedforward_encoder import FeedForwardEncoder
 from allennlp.nn import Activation
 
 
@@ -24,8 +24,15 @@ class TestFeedforwardEncoder(AllenNlpTestCase):
                                   hidden_dims=10,
                                   activations=Activation.by_name("linear")())
         encoder = FeedForwardEncoder(feedforward)
-        tensor = torch.randn([1, 2, 3, 10])
+        tensor = torch.randn([2, 3, 10])
         output = encoder(tensor)
         target = feedforward(tensor)
+        numpy.testing.assert_array_almost_equal(target.detach().cpu().numpy(),
+                                                output.detach().cpu().numpy())
+
+        # mask should work
+        mask = torch.LongTensor([[1, 1, 1], [1, 0, 0]])
+        output = encoder(tensor, mask)
+        target = feedforward(tensor * mask.unsqueeze(dim=-1).float())
         numpy.testing.assert_array_almost_equal(target.detach().cpu().numpy(),
                                                 output.detach().cpu().numpy())

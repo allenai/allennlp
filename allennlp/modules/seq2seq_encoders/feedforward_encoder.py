@@ -1,8 +1,8 @@
-from overrides import overrides
 import torch
+from overrides import overrides
 
-from allennlp.modules.seq2seq_encoders import Seq2SeqEncoder
-from allennlp.modules import FeedForward
+from allennlp.modules.feedforward import FeedForward
+from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
 
 
 @Seq2SeqEncoder.register("feedforward")
@@ -29,5 +29,21 @@ class FeedForwardEncoder(Seq2SeqEncoder):
     @overrides
     def forward(self,  # pylint: disable=arguments-differ
                 inputs: torch.Tensor,
-                mask: torch.LongTensor = None) -> torch.FloatTensor:
-        return self._feedforward(inputs)
+                mask: torch.LongTensor = None) -> torch.Tensor:
+        """
+        Parameters
+        ----------
+        inputs : ``torch.Tensor``, required.
+            A tensor of shape (batch_size, timesteps, input_dim)
+        mask : ``torch.LongTensor``, optional (default = None).
+            A tensor of shape (batch_size, timesteps).
+
+        Returns
+        -------
+        A tensor of shape (batch_size, timesteps, output_dim).
+        """
+        if mask is None:
+            return self._feedforward(inputs)
+        else:
+            inputs = inputs * mask.unsqueeze(dim=-1).float()
+            return self._feedforward(inputs)
