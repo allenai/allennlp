@@ -20,6 +20,26 @@ try:
 except NameError:
     profile = lambda x: x
 
+def sample_contexts(instance_list,sample_size):
+    random.seed(2)
+
+    instance_list = sorted(instance_list, key=lambda x: x['metadata']['question_id'])
+    intances_question_id = [instance['metadata']['question_id'] for instance in instance_list]
+    split_inds = [0] + list(np.cumsum(np.unique(intances_question_id, return_counts=True)[1]))
+    per_question_instances = [instance_list[split_inds[ind]:split_inds[ind + 1]] for ind in
+                              range(len(split_inds) - 1)]
+
+    random.shuffle(per_question_instances)
+
+    sampled_contexts = []
+    num_of_qas = 0
+    for question_instances in per_question_instances:
+        if num_of_qas > sample_size:
+            break
+        sampled_contexts += question_instances
+        num_of_qas += len(question_instances)
+    return sampled_contexts
+
 @DatasetReader.register("multiqa+combine")
 class MultiQAReader(DatasetReader):
     """
@@ -46,10 +66,12 @@ class MultiQAReader(DatasetReader):
                  tokenizer: Tokenizer = None,
                  token_indexers: Dict[str, TokenIndexer] = None,
                  lazy: bool = False,
-                 sample_size: int = -1) -> None:
+                 dev_sample_size: int = -1,
+                 train_sample_size: int = -1,) -> None:
         super().__init__(lazy)
         self._tokenizer = tokenizer or WordTokenizer()
-        self._sample_size = sample_size
+        self._dev_sample_size = dev_sample_size
+        self._train_sample_size = train_sample_size
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
 
     @profile
@@ -58,7 +80,7 @@ class MultiQAReader(DatasetReader):
         logger.info("Reading the dataset")
 
         # supporting multi dataset training:
-        contexts = []
+        instance_list = []
         for ind, single_file_path in enumerate(file_path.split(',')):
             # if `file_path` is a URL, redirect to the cache
             logger.info("Reading file at %s", single_file_path)
@@ -68,20 +90,16 @@ class MultiQAReader(DatasetReader):
                 with myzip.open(myzip.namelist()[0]) as myfile:
                     header = json.loads(myfile.readline())['header']
                     for line,example in enumerate(myfile):
-                        # header
-                        contexts.append(json.loads(example))
+                        instance_list.append(json.loads(example))
 
-        # sampling
-        if self._sample_size > -1:
-            #random.seed(1)
-            #dataset_json['preprocessed_instances'] = \
-            #    random.sample(dataset_json['preprocessed_instances'], self._sample_size)
-            contexts = contexts[0:self._sample_size]
-
+            # per dataset sampling
+            if header['split_type'] == 'dev' and self._dev_sample_size > -1:
+                instance_list = sample_contexts(instance_list, self._dev_sample_size)
+            elif header['split_type'] == 'train' and self._train_sample_size > -1:
+                instance_list = sample_contexts(instance_list, self._train_sample_size)
 
 
         # bucketing by QuestionID
-        instance_list = contexts
         instance_list = sorted(instance_list, key=lambda x: x['metadata']['question_id'])
         intances_question_id = [instance['metadata']['question_id'] for instance in instance_list]
         split_inds = [0] + list(np.cumsum(np.unique(intances_question_id, return_counts=True)[1]))
