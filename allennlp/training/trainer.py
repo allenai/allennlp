@@ -556,7 +556,7 @@ class Trainer(TrainerBase):
         # If we have a learning rate scheduler, we should persist that too.
         if self._learning_rate_scheduler is not None:
             training_states["learning_rate_scheduler"] = (
-                    self._learning_rate_scheduler.lr_scheduler.state_dict()
+                    self._learning_rate_scheduler.state_dict()
             )
 
         self._checkpointer.save_checkpoint(
@@ -596,7 +596,7 @@ class Trainer(TrainerBase):
         self.model.load_state_dict(model_state)
         self.optimizer.load_state_dict(training_state["optimizer"])
         if self._learning_rate_scheduler is not None and "learning_rate_scheduler" in training_state:
-            self._learning_rate_scheduler.lr_scheduler.load_state_dict(training_state["learning_rate_scheduler"])
+            self._learning_rate_scheduler.load_state_dict(training_state["learning_rate_scheduler"])
         training_util.move_optimizer_to_cuda(self.optimizer)
 
         # Currently the ``training_state`` contains a serialized ``MetricTracker``.
