@@ -448,6 +448,10 @@ class Trainer(TrainerBase):
         epochs_trained = 0
         training_start_time = time.time()
 
+        metrics['best_epoch'] = self._metric_tracker.best_epoch
+        for key, value in self._metric_tracker.best_epoch_metrics.items():
+            metrics["best_validation_" + key] = value
+
         for epoch in range(epoch_counter, self._num_epochs):
             epoch_start_time = time.time()
             train_metrics = self._train_epoch(epoch)
@@ -494,6 +498,8 @@ class Trainer(TrainerBase):
                 metrics['best_epoch'] = epoch
                 for key, value in val_metrics.items():
                     metrics["best_validation_" + key] = value
+
+                self._metric_tracker.best_epoch_metrics = val_metrics
 
             if self._serialization_dir:
                 dump_metrics(os.path.join(self._serialization_dir, f'metrics_epoch_{epoch}.json'), metrics)
