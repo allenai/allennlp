@@ -159,8 +159,8 @@ optional arguments:
   --version     show program's version number and exit
 
 Commands:
-
-    configure   Generate configuration stubs.
+  
+    configure   Run the configuration wizard.
     train       Train a model
     evaluate    Evaluate the specified model + dataset
     predict     Use a trained model to make predictions.
@@ -171,6 +171,7 @@ Commands:
                 training utilities.
     test-install
                 Run the unit tests.
+    find-lr     Train a model
 ```
 
 ## Docker images
