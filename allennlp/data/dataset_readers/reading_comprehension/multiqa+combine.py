@@ -37,7 +37,7 @@ def sample_contexts(instance_list,sample_size):
         if num_of_qas > sample_size:
             break
         sampled_contexts += question_instances
-        num_of_qas += len(question_instances)
+        num_of_qas += 1
     return sampled_contexts
 
 @DatasetReader.register("multiqa+combine")
