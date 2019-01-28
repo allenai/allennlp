@@ -16,15 +16,14 @@ def text_standardize(text):
     """
     Apply text standardization following original implementation.
     """
-    # pylint: disable=anomalous-backslash-in-string
     text = text.replace('—', '-')
     text = text.replace('–', '-')
     text = text.replace('―', '-')
     text = text.replace('…', '...')
     text = text.replace('´', "'")
-    text = re.sub('''(-+|~+|!+|"+|;+|\?+|\++|,+|\)+|\(+|\\+|\/+|\*+|\[+|\]+|}+|{+|\|+|_+)''', r' \1 ', text)
-    text = re.sub('\s*\n\s*', ' \n ', text)
-    text = re.sub('[^\S\n]+', ' ', text)
+    text = re.sub(r'''(-+|~+|!+|"+|;+|\?+|\++|,+|\)+|\(+|\\+|\/+|\*+|\[+|\]+|}+|{+|\|+|_+)''', r' \1 ', text)
+    text = re.sub(r'\s*\n\s*', ' \n ', text)
+    text = re.sub(r'[^\S\n]+', ' ', text)
     return text.strip()
 
 

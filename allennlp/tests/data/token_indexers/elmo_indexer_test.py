@@ -65,3 +65,14 @@ class TestELMoTokenCharactersIndexer(AllenNlpTestCase):
                                    0, 0, 0, 0, 0]]
 
         assert padded_tokens['test-elmo'] == expected_padded_tokens
+
+    def test_elmo_indexer_with_additional_tokens(self):
+        indexer = ELMoTokenCharactersIndexer(tokens_to_add={'<first>': 1})
+        tokens = [Token('<first>')]
+        indices = indexer.tokens_to_indices(tokens, Vocabulary(), "test-elmo")["test-elmo"]
+        expected_indices = [[259, 2, 260, 261, 261, 261, 261, 261, 261, 261,
+                             261, 261, 261, 261, 261, 261, 261, 261, 261, 261,
+                             261, 261, 261, 261, 261, 261, 261, 261, 261, 261,
+                             261, 261, 261, 261, 261, 261, 261, 261, 261, 261,
+                             261, 261, 261, 261, 261, 261, 261, 261, 261, 261]]
+        assert indices == expected_indices

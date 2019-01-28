@@ -1,4 +1,3 @@
-# pylint: disable=anomalous-backslash-in-string
 """
 A ``Text2SqlTableContext`` represents the SQL context in which an utterance appears
 for the any of the text2sql datasets, with the grammar and the valid actions.
@@ -52,9 +51,9 @@ GRAMMAR_DICTIONARY["ordering"] = ['(ws "ASC")', '(ws "DESC")']
 GRAMMAR_DICTIONARY["col_ref"] = ['(table_name ws "." ws column_name)', 'table_name']
 GRAMMAR_DICTIONARY["table_name"] = ['name']
 GRAMMAR_DICTIONARY["column_name"] = ['name']
-GRAMMAR_DICTIONARY["ws"] = ['~"\s*"i']
-GRAMMAR_DICTIONARY['wsp'] = ['~"\s+"i']
-GRAMMAR_DICTIONARY['name'] = ['~"[a-zA-Z]\w*"i']
+GRAMMAR_DICTIONARY["ws"] = [r'~"\s*"i']
+GRAMMAR_DICTIONARY['wsp'] = [r'~"\s+"i']
+GRAMMAR_DICTIONARY['name'] = [r'~"[a-zA-Z]\w*"i']
 
 GRAMMAR_DICTIONARY["expr"] = ['in_expr',
                               # Like expressions.
@@ -84,7 +83,7 @@ GRAMMAR_DICTIONARY["function"] = ['(fname ws "(" ws "DISTINCT" ws arg_list_or_st
 GRAMMAR_DICTIONARY["arg_list_or_star"] = ['arg_list', '"*"']
 GRAMMAR_DICTIONARY["arg_list"] = ['(expr ws "," ws arg_list)', 'expr']
  # TODO(MARK): Massive hack, remove and modify the grammar accordingly
-GRAMMAR_DICTIONARY["number"] = ['~"\d*\.?\d+"i', "'3'", "'4'"]
+GRAMMAR_DICTIONARY["number"] = [r'~"\d*\.?\d+"i', "'3'", "'4'"]
 GRAMMAR_DICTIONARY["string_set"] = ['ws "(" ws string_set_vals ws ")"']
 GRAMMAR_DICTIONARY["string_set_vals"] = ['(string ws "," ws string_set_vals)', 'string']
 GRAMMAR_DICTIONARY["string"] = ['~"\'.*?\'"i']
