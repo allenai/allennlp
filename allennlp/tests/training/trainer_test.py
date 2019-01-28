@@ -1,4 +1,4 @@
-# pylint: disable=invalid-name,too-many-public-methods
+# pylint: disable=invalid-name,too-many-public-methods,protected-access
 import copy
 import glob
 import json
@@ -173,12 +173,12 @@ class TestTrainer(AllenNlpTestCase):
                               validation_dataset=self.instances,
                               num_epochs=3, serialization_dir=self.TEST_DIR)
 
-        epoch = new_trainer._restore_checkpoint()  # pylint: disable=protected-access
+        epoch = new_trainer._restore_checkpoint()
         assert epoch == 1
 
-        tracker = trainer._metric_tracker  # pylint: disable=protected-access
+        tracker = trainer._metric_tracker
         assert tracker.is_best_so_far()
-        assert tracker._best_so_far is not None  # pylint: disable=protected-access
+        assert tracker._best_so_far is not None
 
         new_trainer.train()
 
@@ -215,7 +215,7 @@ class TestTrainer(AllenNlpTestCase):
                               validation_dataset=self.instances,
                               num_epochs=3, serialization_dir=self.TEST_DIR,
                               patience=5, validation_metric="+test")
-        tracker = new_trainer._metric_tracker  # pylint: disable=protected-access
+        tracker = new_trainer._metric_tracker
 
         # when it is the only metric it should be considered the best
         new_tracker = copy.deepcopy(tracker)
@@ -244,7 +244,7 @@ class TestTrainer(AllenNlpTestCase):
                               validation_dataset=self.instances,
                               num_epochs=3, serialization_dir=self.TEST_DIR,
                               patience=5, validation_metric="-test")
-        tracker = new_trainer._metric_tracker  # pylint: disable=protected-access
+        tracker = new_trainer._metric_tracker
 
         # when it is the only metric it should be considered the best
         new_tracker = copy.deepcopy(tracker)
@@ -272,7 +272,7 @@ class TestTrainer(AllenNlpTestCase):
                               num_epochs=3, serialization_dir=self.TEST_DIR,
                               patience=5, validation_metric="+test")
 
-        tracker = new_trainer._metric_tracker  # pylint: disable=protected-access
+        tracker = new_trainer._metric_tracker
 
         new_tracker = copy.deepcopy(tracker)
         new_tracker.add_metrics([.5, .3, .2, .1, .4, .4])
@@ -283,7 +283,6 @@ class TestTrainer(AllenNlpTestCase):
         assert not new_tracker.should_stop_early()
 
     def test_should_stop_early_with_flat_lining_metric(self):
-        # pylint: disable=protected-access
         flatline = [.2] * 6
         tracker = Trainer(self.model, self.optimizer,
                           self.iterator, self.instances,
@@ -311,7 +310,7 @@ class TestTrainer(AllenNlpTestCase):
                               validation_dataset=self.instances,
                               num_epochs=3, serialization_dir=self.TEST_DIR,
                               patience=5, validation_metric="-test")
-        tracker = new_trainer._metric_tracker  # pylint: disable=protected-access
+        tracker = new_trainer._metric_tracker
 
         new_tracker = copy.deepcopy(tracker)
         new_tracker.add_metrics([.02, .3, .2, .1, .4, .4])
@@ -330,7 +329,7 @@ class TestTrainer(AllenNlpTestCase):
         trainer = Trainer(self.model, self.optimizer, self.iterator, self.instances,
                           validation_dataset=self.instances, num_epochs=100,
                           patience=None, validation_metric="+test")
-        tracker = trainer._metric_tracker  # pylint: disable=protected-access
+        tracker = trainer._metric_tracker
         tracker.add_metrics([float(i) for i in reversed(range(20))])
         assert not tracker.should_stop_early()
 
@@ -338,7 +337,7 @@ class TestTrainer(AllenNlpTestCase):
         trainer = Trainer(self.model, self.optimizer, self.iterator, self.instances,
                           validation_dataset=self.instances, num_epochs=100,
                           patience=None, validation_metric="-test")
-        tracker = trainer._metric_tracker  # pylint: disable=protected-access
+        tracker = trainer._metric_tracker
         tracker.add_metrics([float(i) for i in range(20)])
         assert not tracker.should_stop_early()
 
@@ -364,7 +363,6 @@ class TestTrainer(AllenNlpTestCase):
         trainer.train()
 
     def test_trainer_can_resume_with_lr_scheduler(self):
-        # pylint: disable=protected-access
         lr_scheduler = LearningRateScheduler.from_params(
                 self.optimizer, Params({"type": "exponential", "gamma": 0.5}))
         trainer = Trainer(model=self.model,
@@ -521,16 +519,131 @@ class TestTrainer(AllenNlpTestCase):
                                   self.iterator, self.instances, num_epochs=2,
                                   serialization_dir=self.TEST_DIR,
                                   model_save_interval=0.0001)
-        epoch = restore_trainer._restore_checkpoint()  # pylint: disable=protected-access
+        epoch = restore_trainer._restore_checkpoint()
         assert epoch == 2
         # One batch per epoch.
-        assert restore_trainer._batch_num_total == 2  # pylint: disable=protected-access
+        assert restore_trainer._batch_num_total == 2
 
     def test_trainer_from_base_class_params(self):
         params = Params.from_file(self.FIXTURES_ROOT / 'simple_tagger' / 'experiment.json')
 
         # Can instantiate from base class params
         TrainerBase.from_params(params, self.TEST_DIR)
+
+    def test_trainer_saves_and_loads_best_validation_metrics_correctly_1(self):
+        # Use -loss and run 1 epoch of original-training, and one of restored-training
+        # Run 1 epoch of original training.
+        trainer = Trainer(self.model, self.optimizer,
+                          self.iterator, self.instances,
+                          validation_dataset=self.instances,
+                          validation_metric="-loss",
+                          num_epochs=1, serialization_dir=self.TEST_DIR)
+        trainer.train()
+        _ = trainer._restore_checkpoint()
+        best_epoch_1 = trainer._metric_tracker.best_epoch
+        best_validation_metrics_epoch_1 = trainer._metric_tracker.best_epoch_metrics
+        # best_validation_metrics_epoch_1: {'accuracy': 0.75, 'accuracy3': 1.0, 'loss': 0.6243013441562653}
+        assert isinstance(best_validation_metrics_epoch_1, dict)
+        assert "loss" in best_validation_metrics_epoch_1
+
+        # Run 1 epoch of restored training.
+        restore_trainer = Trainer(self.model, self.optimizer,
+                                  self.iterator, self.instances,
+                                  validation_dataset=self.instances,
+                                  validation_metric="-loss",
+                                  num_epochs=2, serialization_dir=self.TEST_DIR)
+        restore_trainer.train()
+        _ = restore_trainer._restore_checkpoint()
+        best_epoch_2 = restore_trainer._metric_tracker.best_epoch
+        best_validation_metrics_epoch_2 = restore_trainer._metric_tracker.best_epoch_metrics
+
+        # Because of using -loss, 2nd epoch would be better than 1st. So best val metrics should not be same.
+        assert best_epoch_1 == 0 and best_epoch_2 == 1
+        assert best_validation_metrics_epoch_2 != best_validation_metrics_epoch_1
+
+    def test_trainer_saves_and_loads_best_validation_metrics_correctly_2(self):
+        # Use -loss and run 1 epoch of original-training, and one of restored-training
+        # Run 1 epoch of original training.
+        trainer = Trainer(self.model, self.optimizer,
+                          self.iterator, self.instances,
+                          validation_dataset=self.instances,
+                          validation_metric="+loss",
+                          num_epochs=1, serialization_dir=self.TEST_DIR)
+        trainer.train()
+
+        _ = trainer._restore_checkpoint()
+        best_epoch_1 = trainer._metric_tracker.best_epoch
+        best_validation_metrics_epoch_1 = trainer._metric_tracker.best_epoch_metrics
+        # best_validation_metrics_epoch_1: {'accuracy': 0.75, 'accuracy3': 1.0, 'loss': 0.6243013441562653}
+        assert isinstance(best_validation_metrics_epoch_1, dict)
+        assert "loss" in best_validation_metrics_epoch_1
+
+        # Run 1 more epoch of restored training.
+        restore_trainer = Trainer(self.model, self.optimizer,
+                                  self.iterator, self.instances,
+                                  validation_dataset=self.instances,
+                                  validation_metric="+loss",
+                                  num_epochs=2, serialization_dir=self.TEST_DIR)
+        restore_trainer.train()
+        _ = restore_trainer._restore_checkpoint()
+        best_epoch_2 = restore_trainer._metric_tracker.best_epoch
+        best_validation_metrics_epoch_2 = restore_trainer._metric_tracker.best_epoch_metrics
+
+        # Because of using +loss, 2nd epoch won't be better than 1st. So best val metrics should be same.
+        assert best_epoch_1 == best_epoch_2 == 0
+        assert best_validation_metrics_epoch_2 == best_validation_metrics_epoch_1
+
+    def test_restored_training_returns_best_epoch_metrics_even_if_no_better_epoch_is_found_after_restoring(self):
+        # Instead of -loss, use +loss to assure 2nd epoch is considered worse.
+        # Run 1 epoch of original training.
+        original_trainer = Trainer(self.model, self.optimizer,
+                                   self.iterator, self.instances,
+                                   validation_dataset=self.instances,
+                                   validation_metric="+loss",
+                                   num_epochs=1, serialization_dir=self.TEST_DIR)
+        training_metrics = original_trainer.train()
+
+        # Run 1 epoch of restored training.
+        restored_trainer = Trainer(self.model, self.optimizer,
+                                   self.iterator, self.instances,
+                                   validation_dataset=self.instances,
+                                   validation_metric="+loss",
+                                   num_epochs=2, serialization_dir=self.TEST_DIR)
+        restored_metrics = restored_trainer.train()
+
+        assert "best_validation_loss" in restored_metrics
+        assert "best_validation_accuracy" in restored_metrics
+        assert "best_validation_accuracy3" in restored_metrics
+        assert "best_epoch" in restored_metrics
+
+        # Epoch 2 validation loss should be lesser than that of Epoch 1
+        assert training_metrics["best_validation_loss"] == restored_metrics["best_validation_loss"]
+        assert training_metrics["best_epoch"] == 0
+        assert training_metrics["validation_loss"] > restored_metrics["validation_loss"]
+
+    def test_restoring_works_with_older_checkpointing(self):
+        trainer = Trainer(self.model, self.optimizer,
+                          self.iterator, self.instances,
+                          validation_dataset=self.instances,
+                          num_epochs=3, serialization_dir=self.TEST_DIR)
+        trainer.train()
+
+        for index in range(3):
+            path = str(self.TEST_DIR / "training_state_epoch_{}.th".format(index))
+            state = torch.load(path)
+            state.pop("metric_tracker")
+            state.pop("batch_num_total")
+            state["val_metric_per_epoch"] = [0.4, 0.1, 0.8]
+            torch.save(state, path)
+
+        next_epoch = trainer._restore_checkpoint()
+        best_epoch = trainer._metric_tracker.best_epoch
+
+        # Loss decreases in 3 epochs, but because we hard fed the val metrics as above:
+        assert next_epoch == 3
+        assert best_epoch == 1
+        assert trainer._metric_tracker._best_so_far == 0.1
+        assert trainer._metric_tracker._epochs_with_no_improvement == 1
 
 class TestSparseClipGrad(AllenNlpTestCase):
     def test_sparse_clip_grad(self):
@@ -549,7 +662,7 @@ class TestSparseClipGrad(AllenNlpTestCase):
         _ = sparse_clip_norm([embedding.weight], 1.5)
         # Final norm should be 1.5
         grad = embedding.weight.grad.coalesce()  # pylint: disable=no-member
-        self.assertAlmostEqual(grad._values().norm(2.0).item(), 1.5, places=5) # pylint: disable=protected-access
+        self.assertAlmostEqual(grad._values().norm(2.0).item(), 1.5, places=5)
 
 class TestLanguageModelWithMultiprocessDatasetReader(ModelTestCase):
     def setUp(self):
