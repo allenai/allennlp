@@ -48,7 +48,9 @@ class Activation(Registrable):
         """
         raise NotImplementedError
 
-# There are no classes to decorate, so we hack these into Registrable._registry
+# There are no classes to decorate, so we hack these into Registrable._registry.from
+# If you want to instantiate it, you can do like this:
+# Activation.by_name('relu')()
 # pylint: disable=protected-access
 Registrable._registry[Activation] = {  # type: ignore
         "linear": lambda: lambda x: x,
