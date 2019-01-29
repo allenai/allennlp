@@ -23,7 +23,7 @@
               "dropout": 0.2,
               "bos_eos_tokens": ["<S>", "</S>"],
               "remove_bos_eos": true,
-              "requires_grad": true
+              "requires_grad": false
             }
         }
       },
