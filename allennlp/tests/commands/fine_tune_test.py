@@ -68,13 +68,33 @@ class TestFineTune(AllenNlpTestCase):
             extra_token_vector_str = " ".join(map(str, list(extra_token_vector)))
             embeddings_file.write("seahorse {}\n".format(extra_token_vector_str).encode('utf-8'))
 
+        # TEST 1
         trained_model = load_archive(self.model_archive).model
         original_weight = trained_model._text_field_embedder.token_embedder_tokens.weight
-
-        # Passing *correct* embedding_sources_mapping should work
+        # Passing *correct* embedding_sources_mapping should work; pretrained_file attribute wasn't stored.
         embedding_sources_mapping = {"_text_field_embedder.token_embedder_tokens": embeddings_filename}
-        fine_tuned_model = fine_tune_model(trained_model, params, self.serialization_dir, extend_vocab=True,
-                                           embedding_sources_mapping=embedding_sources_mapping)
+        shutil.rmtree(self.serialization_dir, ignore_errors=True)
+        fine_tuned_model = fine_tune_model(trained_model, params.duplicate(), self.serialization_dir,
+                                           extend_vocab=True, embedding_sources_mapping=embedding_sources_mapping)
+        extended_weight = fine_tuned_model._text_field_embedder.token_embedder_tokens.weight
+        assert tuple(original_weight.shape) == (24, 300)
+        assert tuple(extended_weight.shape) == (25, 300)
+        assert torch.all(original_weight == extended_weight[:24, :])
+        assert np.all(extended_weight[24, :].numpy() == extra_token_vector.astype(np.float32))
+
+        # TEST 2
+        trained_model = load_archive(self.model_archive).model
+        original_weight = trained_model._text_field_embedder.token_embedder_tokens.weight
+        # Simulate behavior that pretrained_file attribute was saved
+        pretrained_file = embeddings_filename
+        trained_model._text_field_embedder.token_embedder_tokens._pretrained_file = pretrained_file
+
+        # Now, passing incorrect mapping should raise warning, and say it will be ignored
+        # since original is already reachable. And model should use originally saved attribute pretrained-file
+        embedding_sources_mapping = {"_text_field_embedder.token_embedder_tokens": "hello-world!"}
+        shutil.rmtree(self.serialization_dir, ignore_errors=True)
+        fine_tuned_model = fine_tune_model(trained_model, params.duplicate(), self.serialization_dir,
+                                           extend_vocab=True, embedding_sources_mapping=embedding_sources_mapping)
         extended_weight = fine_tuned_model._text_field_embedder.token_embedder_tokens.weight
         assert tuple(original_weight.shape) == (24, 300)
         assert tuple(extended_weight.shape) == (25, 300)
