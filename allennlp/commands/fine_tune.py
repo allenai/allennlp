@@ -27,13 +27,14 @@ from allennlp.common.checks import ConfigurationError
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
+
 class FineTune(Subcommand):
     def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
         # pylint: disable=protected-access
         description = """Continues training a saved model on a new dataset."""
         subparser = parser.add_parser(name,
                                       description=description,
-                                      help='Continue training a model on a new dataset')
+                                      help='Continue training a model on a new dataset.')
 
         subparser.add_argument('-m', '--model-archive',
                                required=True,

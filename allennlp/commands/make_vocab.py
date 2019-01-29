@@ -44,7 +44,7 @@ class MakeVocab(Subcommand):
         # pylint: disable=protected-access
         description = '''Create a vocabulary from the specified dataset.'''
         subparser = parser.add_parser(
-                name, description=description, help='Create a vocabulary')
+                name, description=description, help='Create a vocabulary.')
         subparser.add_argument('param_path',
                                type=str,
                                help='path to parameter file describing the model and its inputs')
@@ -75,6 +75,7 @@ def make_vocab_from_args(args: argparse.Namespace):
     params = Params.from_file(parameter_path, overrides)
 
     make_vocab_from_params(params, serialization_dir)
+
 
 def make_vocab_from_params(params: Params, serialization_dir: str):
     prepare_environment(params)
