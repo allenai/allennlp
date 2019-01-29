@@ -201,8 +201,12 @@ class Embedding(TokenEmbedder):
         if not (pretrained_file and os.path.exists(pretrained_file)):
             extra_info = (f"Originally pretrained_file was at "
                           f"{self._pretrained_file}. " if self._pretrained_file else "")
-            ConfigurationError(f"Embedding at model_path, {model_path} cannot locate the pretrained_file."
-                               f"{extra_info} If you are fine-tuning, please pass it by argument --embedding-sources")
+            # It's better to warn here and not give error because there is no way to distinguish between
+            # whether pretrained-file wasn't used during training or user forgot to pass / passed incorrect
+            # mapping. Giving error would prevent former case to executable.
+            Warning(f"Embedding at model_path, {model_path} cannot locate the pretrained_file. "
+                    f"{extra_info} If you are fine-tuning and want to use using pretrained_file "
+                    f"for embedding extension, please pass the mapping by --embedding-sources argument.")
 
         embedding_dim = self.weight.data.shape[-1]
         if not pretrained_file:
