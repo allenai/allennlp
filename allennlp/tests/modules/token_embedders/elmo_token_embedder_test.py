@@ -97,17 +97,3 @@ class TestElmoTokenEmbedder(ModelTestCase):
         input_tensor = torch.LongTensor([[[word1]]])
         embedded = embedding_layer(input_tensor).data.numpy()
         assert embedded.shape == (1, 1, 1, 20)
-
-    def test_vocab_extension_attempt_does_not_give_error(self):
-        # It shouldn't give error if TokenEmbedder does not extend the method `extend_vocab`
-
-        params = Params({'options_file': self.FIXTURES_ROOT / 'elmo' / 'options.json',
-                         'weight_file': self.FIXTURES_ROOT / 'elmo' / 'lm_weights.hdf5'})
-        embedding_layer = ElmoTokenEmbedder.from_params(vocab=None, params=params)
-
-        vocab = Vocabulary()
-        vocab.add_token_to_namespace('word1')
-        vocab.add_token_to_namespace('word2')
-
-        # This should just pass and be no-op
-        embedding_layer.extend_vocab(vocab)
