@@ -29,7 +29,7 @@ class PassThroughEncoder(Seq2SeqEncoder):
     @overrides
     def forward(self,  # pylint: disable=arguments-differ
                 inputs: torch.Tensor,
-                mask: torch.LongTensor = None) -> torch.FloatTensor:
+                mask: torch.LongTensor = None) -> torch.Tensor:
         """
         Parameters
         ----------
@@ -46,4 +46,6 @@ class PassThroughEncoder(Seq2SeqEncoder):
         if mask is None:
             return inputs
         else:
+            # We should mask out the output instead of the input.
+            # But here, output = input, so we directly mask out the input.
             return inputs * mask.unsqueeze(dim=-1).float()
