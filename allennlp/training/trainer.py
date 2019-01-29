@@ -1,5 +1,6 @@
 
 import logging
+import math
 import os
 import time
 import re
@@ -13,10 +14,10 @@ import torch.optim.lr_scheduler
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import (dump_metrics, gpu_memory_mb, parse_cuda_device, peak_memory_mb,
-                                  get_frozen_and_tunable_parameter_names)
+                                  get_frozen_and_tunable_parameter_names, lazy_groups_of)
 from allennlp.common.tqdm import Tqdm
 from allennlp.data.instance import Instance
-from allennlp.data.iterators.data_iterator import DataIterator
+from allennlp.data.iterators.data_iterator import DataIterator, TensorDict
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.model import Model
 from allennlp.nn import util as nn_util
@@ -27,6 +28,7 @@ from allennlp.training.optimizers import Optimizer
 from allennlp.training.tensorboard_writer import TensorboardWriter
 from allennlp.training.trainer_base import TrainerBase
 from allennlp.training import util as training_util
+from allennlp.training.moving_average import MovingAverage
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -56,7 +58,8 @@ class Trainer(TrainerBase):
                  histogram_interval: int = None,
                  should_log_parameter_statistics: bool = True,
                  should_log_learning_rate: bool = False,
-                 log_batch_size_period: Optional[int] = None) -> None:
+                 log_batch_size_period: Optional[int] = None,
+                 moving_average: Optional[MovingAverage] = None) -> None:
         """
         A trainer for doing supervised learning. It just takes a labeled dataset
         and a ``DataIterator``, and uses the supplied ``Optimizer`` to learn the weights
@@ -152,6 +155,13 @@ class Trainer(TrainerBase):
             Whether to send parameter specific learning rate to tensorboard.
         log_batch_size_period : ``int``, optional, (default = ``None``)
             If defined, how often to log the average batch size.
+        moving_average: ``MovingAverage``, optional, (default = None)
+            If provided, we will maintain moving averages for all parameters. During training, we
+            employ a shadow variable for each parameter, which maintains the moving average. During
+            evaluation, we backup the original parameters and assign the moving averages to corresponding
+            parameters. Be careful that when saving the checkpoint, we will save the moving averages of
+            parameters. This is necessary because we want the saved model to perform as well as the validated
+            model if we load it later. But this may cause problems if you restart the training from checkpoint.
         """
         super().__init__(serialization_dir, cuda_device)
 
@@ -191,6 +201,7 @@ class Trainer(TrainerBase):
         self._grad_clipping = grad_clipping
 
         self._learning_rate_scheduler = learning_rate_scheduler
+        self._moving_average = moving_average
 
         # We keep the total batch number as an instance variable because it
         # is used inside a closure for the hook which logs activations in
@@ -216,14 +227,16 @@ class Trainer(TrainerBase):
     def rescale_gradients(self) -> Optional[float]:
         return training_util.rescale_gradients(self.model, self._grad_norm)
 
-    def batch_loss(self, batch: torch.Tensor, for_training: bool) -> torch.Tensor:
+    def batch_loss(self, batch_group: List[TensorDict], for_training: bool) -> torch.Tensor:
         """
-        Does a forward pass on the given batch and returns the ``loss`` value in the result.
+        Does a forward pass on the given batches and returns the ``loss`` value in the result.
         If ``for_training`` is `True` also applies regularization penalty.
         """
         if self._multiple_gpu:
-            output_dict = training_util.data_parallel(batch, self.model, self._cuda_devices)
+            output_dict = training_util.data_parallel(batch_group, self.model, self._cuda_devices)
         else:
+            assert len(batch_group) == 1
+            batch = batch_group[0]
             batch = nn_util.move_to_device(batch, self._cuda_devices[0])
             output_dict = self.model(**batch)
 
@@ -255,11 +268,14 @@ class Trainer(TrainerBase):
         # Set the model to "train" mode.
         self.model.train()
 
+        num_gpus = len(self._cuda_devices)
+
         # Get tqdm for the training batches
-        train_generator = self.iterator(self.train_data,
-                                        num_epochs=1,
-                                        shuffle=self.shuffle)
-        num_training_batches = self.iterator.get_num_batches(self.train_data)
+        raw_train_generator = self.iterator(self.train_data,
+                                            num_epochs=1,
+                                            shuffle=self.shuffle)
+        train_generator = lazy_groups_of(raw_train_generator, num_gpus)
+        num_training_batches = math.ceil(self.iterator.get_num_batches(self.train_data)/num_gpus)
         self._last_log = time.time()
         last_save_time = time.time()
 
@@ -269,18 +285,20 @@ class Trainer(TrainerBase):
 
         histogram_parameters = set(self.model.get_parameters_for_histogram_tensorboard_logging())
 
+
         logger.info("Training")
         train_generator_tqdm = Tqdm.tqdm(train_generator,
                                          total=num_training_batches)
         cumulative_batch_size = 0
-        for batch in train_generator_tqdm:
+        for batch_group in train_generator_tqdm:
             batches_this_epoch += 1
             self._batch_num_total += 1
             batch_num_total = self._batch_num_total
 
             self.optimizer.zero_grad()
 
-            loss = self.batch_loss(batch, for_training=True)
+            loss = self.batch_loss(batch_group, for_training=True)
+
             if torch.isnan(loss):
                 raise ValueError("nan loss encountered")
 
@@ -311,6 +329,10 @@ class Trainer(TrainerBase):
             else:
                 self.optimizer.step()
 
+            # Update moving averages
+            if self._moving_average is not None:
+                self._moving_average.apply(batch_num_total)
+
             # Update the description with the latest metrics
             metrics = training_util.get_metrics(self.model, train_loss, batches_this_epoch)
             description = training_util.description_from_metrics(metrics)
@@ -329,7 +351,7 @@ class Trainer(TrainerBase):
                 self._tensorboard.log_histograms(self.model, histogram_parameters)
 
             if self._log_batch_size_period:
-                cur_batch = training_util.get_batch_size(batch)
+                cur_batch = sum([training_util.get_batch_size(batch) for batch in batch_group])
                 cumulative_batch_size += cur_batch
                 if (batches_this_epoch - 1) % self._log_batch_size_period == 0:
                     average = cumulative_batch_size/batches_this_epoch
@@ -360,22 +382,29 @@ class Trainer(TrainerBase):
 
         self.model.eval()
 
+        # Replace parameter values with the shadow values from the moving averages.
+        if self._moving_average is not None:
+            self._moving_average.assign_average_value()
+
         if self._validation_iterator is not None:
             val_iterator = self._validation_iterator
         else:
             val_iterator = self.iterator
 
-        val_generator = val_iterator(self._validation_data,
-                                     num_epochs=1,
-                                     shuffle=False)
-        num_validation_batches = val_iterator.get_num_batches(self._validation_data)
+        num_gpus = len(self._cuda_devices)
+
+        raw_val_generator = val_iterator(self._validation_data,
+                                         num_epochs=1,
+                                         shuffle=False)
+        val_generator = lazy_groups_of(raw_val_generator, num_gpus)
+        num_validation_batches = math.ceil(val_iterator.get_num_batches(self._validation_data)/num_gpus)
         val_generator_tqdm = Tqdm.tqdm(val_generator,
                                        total=num_validation_batches)
         batches_this_epoch = 0
         val_loss = 0
-        for batch in val_generator_tqdm:
+        for batch_group in val_generator_tqdm:
 
-            loss = self.batch_loss(batch, for_training=False)
+            loss = self.batch_loss(batch_group, for_training=False)
             if loss is not None:
                 # You shouldn't necessarily have to compute a loss for validation, so we allow for
                 # `loss` to be None.  We need to be careful, though - `batches_this_epoch` is
@@ -389,6 +418,10 @@ class Trainer(TrainerBase):
             val_metrics = training_util.get_metrics(self.model, val_loss, batches_this_epoch)
             description = training_util.description_from_metrics(val_metrics)
             val_generator_tqdm.set_description(description, refresh=False)
+
+        # Now restore the original parameter values.
+        if self._moving_average is not None:
+            self._moving_average.restore()
 
         return val_loss, batches_this_epoch
 
@@ -414,6 +447,10 @@ class Trainer(TrainerBase):
         metrics: Dict[str, Any] = {}
         epochs_trained = 0
         training_start_time = time.time()
+
+        metrics['best_epoch'] = self._metric_tracker.best_epoch
+        for key, value in self._metric_tracker.best_epoch_metrics.items():
+            metrics["best_validation_" + key] = value
 
         for epoch in range(epoch_counter, self._num_epochs):
             epoch_start_time = time.time()
@@ -462,6 +499,8 @@ class Trainer(TrainerBase):
                 for key, value in val_metrics.items():
                     metrics["best_validation_" + key] = value
 
+                self._metric_tracker.best_epoch_metrics = val_metrics
+
             if self._serialization_dir:
                 dump_metrics(os.path.join(self._serialization_dir, f'metrics_epoch_{epoch}.json'), metrics)
 
@@ -502,6 +541,11 @@ class Trainer(TrainerBase):
             The epoch of training.  If the checkpoint is saved in the middle
             of an epoch, the parameter is a string with the epoch and timestamp.
         """
+        # If moving averages are used for parameters, we save
+        # the moving average values into checkpoint, instead of the current values.
+        if self._moving_average is not None:
+            self._moving_average.assign_average_value()
+
         # These are the training states we need to persist.
         training_states = {
                 "metric_tracker": self._metric_tracker.state_dict(),
@@ -512,7 +556,7 @@ class Trainer(TrainerBase):
         # If we have a learning rate scheduler, we should persist that too.
         if self._learning_rate_scheduler is not None:
             training_states["learning_rate_scheduler"] = (
-                    self._learning_rate_scheduler.lr_scheduler.state_dict()
+                    self._learning_rate_scheduler.state_dict()
             )
 
         self._checkpointer.save_checkpoint(
@@ -520,6 +564,10 @@ class Trainer(TrainerBase):
                 epoch=epoch,
                 training_states=training_states,
                 is_best_so_far=self._metric_tracker.is_best_so_far())
+
+        # Restore the original values for parameters so that training will not be affected.
+        if self._moving_average is not None:
+            self._moving_average.restore()
 
     def _restore_checkpoint(self) -> int:
         """
@@ -548,16 +596,16 @@ class Trainer(TrainerBase):
         self.model.load_state_dict(model_state)
         self.optimizer.load_state_dict(training_state["optimizer"])
         if self._learning_rate_scheduler is not None and "learning_rate_scheduler" in training_state:
-            self._learning_rate_scheduler.lr_scheduler.load_state_dict(training_state["learning_rate_scheduler"])
+            self._learning_rate_scheduler.load_state_dict(training_state["learning_rate_scheduler"])
         training_util.move_optimizer_to_cuda(self.optimizer)
 
         # Currently the ``training_state`` contains a serialized ``MetricTracker``.
         if "metric_tracker" in training_state:
             self._metric_tracker.load_state_dict(training_state["metric_tracker"])
-        # It used to be the case that we tracked ``val_metrics_per_epoch``.
+        # It used to be the case that we tracked ``val_metric_per_epoch``.
         elif "val_metric_per_epoch" in training_state:
             self._metric_tracker.clear()
-            self._metric_tracker.add_metrics(training_state["val_metrics_per_epoch"])
+            self._metric_tracker.add_metrics(training_state["val_metric_per_epoch"])
         # And before that we didn't track anything.
         else:
             self._metric_tracker.clear()
@@ -607,6 +655,10 @@ class Trainer(TrainerBase):
 
         parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
         optimizer = Optimizer.from_params(parameters, params.pop("optimizer"))
+        if "moving_average" in params:
+            moving_average = MovingAverage.from_params(params.pop("moving_average"), parameters=parameters)
+        else:
+            moving_average = None
 
         if lr_scheduler_params:
             scheduler = LearningRateScheduler.from_params(optimizer, lr_scheduler_params)
@@ -643,7 +695,8 @@ class Trainer(TrainerBase):
                    histogram_interval=histogram_interval,
                    should_log_parameter_statistics=should_log_parameter_statistics,
                    should_log_learning_rate=should_log_learning_rate,
-                   log_batch_size_period=log_batch_size_period)
+                   log_batch_size_period=log_batch_size_period,
+                   moving_average=moving_average)
 
 
 class TrainerPieces(NamedTuple):
@@ -677,6 +730,7 @@ class TrainerPieces(NamedTuple):
 
         if recover and os.path.exists(os.path.join(serialization_dir, "vocabulary")):
             vocab = Vocabulary.from_files(os.path.join(serialization_dir, "vocabulary"))
+            params.pop("vocabulary", {})
         else:
             vocab = Vocabulary.from_params(
                     params.pop("vocabulary", {}),
