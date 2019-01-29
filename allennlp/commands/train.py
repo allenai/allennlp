@@ -225,6 +225,7 @@ def train_model(params: Params,
         logger.info("To evaluate on the test set after training, pass the "
                     "'evaluate_on_test' flag, or use the 'allennlp evaluate' command.")
 
+
     # Now tar up results
     archive_model(serialization_dir, files_to_archive=params.files_to_archive)
     dump_metrics(os.path.join(serialization_dir, "metrics.json"), metrics, log=True)
