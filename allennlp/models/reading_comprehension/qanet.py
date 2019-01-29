@@ -10,7 +10,7 @@ from allennlp.modules import Highway
 from allennlp.modules import Seq2SeqEncoder, TextFieldEmbedder
 from allennlp.modules.matrix_attention.matrix_attention import MatrixAttention
 from allennlp.nn import util, InitializerApplicator, RegularizerApplicator
-from allennlp.training.metrics import BooleanAccuracy, CategoricalAccuracy, SquadEmAndF1, Metric
+from allennlp.training.metrics import BooleanAccuracy, CategoricalAccuracy, SquadEmAndF1
 from allennlp.nn.util import masked_softmax
 
 
@@ -19,9 +19,11 @@ class QaNet(Model):
     """
     This class implements Adams Wei Yu's `QANet Model <https://openreview.net/forum?id=B14TlG-RW>`_
     for machine reading comprehension published at ICLR 2018.
+
     The overall architecture of QANet is very similar to BiDAF. The main difference is that QANet
-    replaces the RNN layer with CNN + self-attention. There are also some minor differences in the
+    replaces the RNN encoder with CNN + self-attention. There are also some minor differences in the
     modeling layer and output layer.
+
     Parameters
     ----------
     vocab : ``Vocabulary``
@@ -46,7 +48,6 @@ class QaNet(Model):
     regularizer : ``RegularizerApplicator``, optional (default=``None``)
         If provided, will be used to calculate the regularization penalty during training.
     """
-
     def __init__(self, vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
                  num_highway_layers: int,
@@ -54,7 +55,6 @@ class QaNet(Model):
                  matrix_attention_layer: MatrixAttention,
                  modeling_layer: Seq2SeqEncoder,
                  dropout_prob: float = 0.1,
-                 metrics: Metric = SquadEmAndF1(),
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
         super().__init__(vocab, regularizer)
@@ -84,7 +84,7 @@ class QaNet(Model):
         self._span_start_accuracy = CategoricalAccuracy()
         self._span_end_accuracy = CategoricalAccuracy()
         self._span_accuracy = BooleanAccuracy()
-        self._metrics = metrics
+        self._metrics = SquadEmAndF1()
         self._dropout = torch.nn.Dropout(p=dropout_prob) if dropout_prob > 0 else lambda x: x
 
         initializer(self)

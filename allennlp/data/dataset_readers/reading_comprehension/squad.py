@@ -27,10 +27,9 @@ class SquadReader(DatasetReader):
     evaluation script to get metrics.
 
     We also support limiting the maximum passage length and question length for training and evaluation.
-    Since some answer spans may exceed the maximum passage length, we regard such answer as
-    invalid. During training, we skip those examples of which all answer spans are invalid
-    (invalid examples); During testing, we use (0, 0) as the pseudo gold answer span for these invalid
-    examples.
+    Since some answer spans may exceed the maximum passage length, we regard such answer as invalid.
+    During training, we skip those examples of which all answer spans are invalid (invalid examples);
+    During testing, we use the last token as the pseudo gold answer for these invalid examples.
 
     Parameters
     ----------
@@ -126,11 +125,12 @@ class SquadReader(DatasetReader):
                 logger.debug("Tokens in answer: %s", passage_tokens[span_start:span_end + 1])
                 logger.debug("Answer: %s", passage_text[char_span_start:char_span_end])
             token_spans.append((span_start, span_end))
-        if not token_spans:
+        # The original answer is filtered out
+        if char_spans and not token_spans:
             if self.skip_invalid_examples:
                 return None
             else:
-                token_spans.append((0, 0))
+                token_spans.append((len(passage_tokens) - 1, len(passage_tokens) - 1))
         return util.make_reading_comprehension_instance(question_tokens,
                                                         passage_tokens,
                                                         self._token_indexers,

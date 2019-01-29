@@ -16,6 +16,7 @@ from allennlp.common.checks import check_dimensions_match
 class QaNetEncoder(Seq2SeqEncoder):
     """
     Stack multiple QANetEncoderBlock into one sequence encoder.
+
     Parameters
     ----------
     input_dim : ``int``, required.
@@ -50,7 +51,6 @@ class QaNetEncoder(Seq2SeqEncoder):
     attention_dropout_prob : ``float``, optional, (default = 0)
         The dropout probability for the attention distributions in the attention layer.
     """
-
     def __init__(self,
                  input_dim: int,
                  hidden_dim: int,
@@ -116,16 +116,18 @@ class QaNetEncoder(Seq2SeqEncoder):
 @Seq2SeqEncoder.register("qanet_encoder_block")
 class QaNetEncoderBlock(Seq2SeqEncoder):
     """
-    Implements the encoder block described in `QANet: Combining Local
-    Convolution with Global Self-attention for Reading Comprehension
-    <https://openreview.net/forum?id=B14TlG-RW>`_ .
+    Implements the encoder block described in `QANet: Combining Local Convolution with Global
+    Self-attention for Reading Comprehension <https://openreview.net/forum?id=B14TlG-RW>`_ .
+
     One encoder block mainly contains 4 parts:
-    1. Add position embedding
-    2. Several depthwise seperable convolutions.
-    3. Multi-headed self attention, which uses 2 learnt linear projections
-       to perform a dot-product similarity between every pair of elements
-       scaled by the square root of the sequence length.
-    4. A two-layer FeedForward network.
+
+        1. Add position embedding.
+        2. Several depthwise seperable convolutions.
+        3. Multi-headed self attention, which uses 2 learnt linear projections
+           to perform a dot-product similarity between every pair of elements
+           scaled by the square root of the sequence length.
+        4. A two-layer FeedForward network.
+
     Parameters
     ----------
     input_dim : ``int``, required.
@@ -153,12 +155,11 @@ class QaNetEncoderBlock(Seq2SeqEncoder):
         The dropout probability for the feedforward network.
     layer_dropout_undecayed_prob : ``float``, optional, (default = 0.1)
         The initial dropout probability for layer dropout, and this might decay w.r.t the depth
-        of the layer. For each mini-batch, the convolution/attention/ffn sublayer is
-        stochastically dropped according to its layer dropout probability.
+        of the layer. For each mini-batch, the convolution/attention/ffn sublayer is randomly
+        dropped according to its layer dropout probability.
     attention_dropout_prob : ``float``, optional, (default = 0)
         The dropout probability for the attention distributions in the attention layer.
     """
-
     def __init__(self,
                  input_dim: int,
                  hidden_dim: int,
@@ -178,15 +179,14 @@ class QaNetEncoderBlock(Seq2SeqEncoder):
         self._use_positional_encoding = use_positional_encoding
 
         self._conv_norm_layers = torch.nn.ModuleList([LayerNorm(hidden_dim) for _ in range(num_convs)])
-        self._depthwise_separable_convs = []
+        self._conv_layers = torch.nn.ModuleList()
         for _ in range(num_convs):
             padding = torch.nn.ConstantPad1d((conv_kernel_size // 2, (conv_kernel_size - 1) // 2), 0)
             depthwise_conv = torch.nn.Conv1d(hidden_dim, hidden_dim, conv_kernel_size, groups=hidden_dim)
             pointwise_conv = torch.nn.Conv1d(hidden_dim, hidden_dim, 1)
-            self._depthwise_separable_convs.append(
+            self._conv_layers.append(
                     torch.nn.Sequential(padding, depthwise_conv, pointwise_conv, Activation.by_name("relu")())
             )
-        self._conv_layers = torch.nn.ModuleList(self._depthwise_separable_convs)
 
         self.attention_norm_layer = LayerNorm(hidden_dim)
         self.attention_layer = MultiHeadSelfAttention(num_heads=num_attention_heads,
@@ -221,7 +221,6 @@ class QaNetEncoderBlock(Seq2SeqEncoder):
 
     @overrides
     def forward(self, inputs: torch.Tensor, mask: torch.Tensor = None) -> torch.Tensor:  # pylint: disable=arguments-differ
-
         if self._use_positional_encoding:
             output = add_positional_features(inputs)
         else:
@@ -248,7 +247,6 @@ class QaNetEncoderBlock(Seq2SeqEncoder):
         sublayer_count += 1
         output = self.residual_with_layer_dropout(output, feedforward_out,
                                                   sublayer_count, total_sublayers)
-
         return output
 
 
@@ -256,6 +254,7 @@ class ResidualWithLayerDropout(torch.nn.Module):
     """
     A residual connection with the layer dropout technique `Deep Networks with Stochastic
     Depth <https://arxiv.org/pdf/1603.09382.pdf>`_ .
+
     This module accepts the input and output of a layer, decides whether this layer should
     be stochastically dropped, returns either the input or output + input. During testing,
     it will re-calibrate the outputs of this layer by the expected number of times it
@@ -272,7 +271,8 @@ class ResidualWithLayerDropout(torch.nn.Module):
         inplace_str = ', inplace' if self.inplace else ''
         return f"undecayed_dropout_prob={self.undecayed_dropout_prob}{inplace_str}"
 
-    def forward(self, layer_input: torch.Tensor,
+    def forward(self,
+                layer_input: torch.Tensor,
                 layer_output: torch.Tensor,
                 layer_index: int = None,
                 total_layers: int = None) -> torch.Tensor:
@@ -281,6 +281,7 @@ class ResidualWithLayerDropout(torch.nn.Module):
         Apply dropout to this layer, for this whole mini-batch.
         dropout_prob = layer_index / total_layers * undecayed_dropout_prob if layer_idx and
         total_layers is specified, else it will use the undecayed_dropout_prob directly.
+
         Parameters
         ----------
         layer_input ``torch.FloatTensor`` required
@@ -292,6 +293,7 @@ class ResidualWithLayerDropout(torch.nn.Module):
             together with the `total_layers` parameter.
         total_layers ``int``
             The total number of layers.
+
         Returns
         -------
         output: ``torch.FloatTensor``
