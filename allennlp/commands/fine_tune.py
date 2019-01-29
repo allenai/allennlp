@@ -136,6 +136,7 @@ def fine_tune_model_from_file_paths(model_archive_path: str,
     # necessary.
     archive = load_archive(model_archive_path)
     params = Params.from_file(config_file, overrides)
+    embedding_sources_mapping = embedding_sources_mapping or '{}'
     embedding_sources_mapping = json.loads(embedding_sources_mapping)
     return fine_tune_model(model=archive.model,
                            params=params,

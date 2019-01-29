@@ -349,10 +349,11 @@ class Model(torch.nn.Module, Registrable):
         """
         # self.named_modules() gives all sub-modules (including nested children)
         # The path nesting is already separated by ".": eg. parent_module_name.child_module_name
+        embedding_sources_mapping = embedding_sources_mapping or {}
         for model_path, module in self.named_modules():
             if isinstance(module, Embedding):
                 pretrained_file = embedding_sources_mapping.get(model_path, None)
-                module.extended_vocab(extended_vocab,
+                module.extend_vocab(extended_vocab,
                                       pretrained_file=pretrained_file,
                                       model_path=model_path)
 
