@@ -80,8 +80,9 @@ class MultiQAReader(DatasetReader):
         logger.info("Reading the dataset")
 
         # supporting multi dataset training:
-        instance_list = []
+        mixed_instance_list = []
         for ind, single_file_path in enumerate(file_path.split(',')):
+            instance_list = []
             # if `file_path` is a URL, redirect to the cache
             logger.info("Reading file at %s", single_file_path)
 
@@ -98,12 +99,14 @@ class MultiQAReader(DatasetReader):
             elif header['split_type'] == 'train' and self._train_sample_size > -1:
                 instance_list = sample_contexts(instance_list, self._train_sample_size)
 
+            mixed_instance_list += instance_list
+
 
         # bucketing by QuestionID
-        instance_list = sorted(instance_list, key=lambda x: x['metadata']['question_id'])
-        intances_question_id = [instance['metadata']['question_id'] for instance in instance_list]
+        mixed_instance_list = sorted(mixed_instance_list, key=lambda x: x['metadata']['question_id'])
+        intances_question_id = [instance['metadata']['question_id'] for instance in mixed_instance_list]
         split_inds = [0] + list(np.cumsum(np.unique(intances_question_id, return_counts=True)[1]))
-        per_question_instances = [instance_list[split_inds[ind]:split_inds[ind + 1]] for ind in
+        per_question_instances = [mixed_instance_list[split_inds[ind]:split_inds[ind + 1]] for ind in
                                   range(len(split_inds) - 1)]
 
         # sorting
