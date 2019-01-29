@@ -193,9 +193,9 @@ class Embedding(TokenEmbedder):
             if pretrained_file:
                 # But user also passed pretrained_file
                 model_path_info = "at model_path, {model_path} " if model_path else ""
-                Warning(f"You passed pretrained_file, {pretrained_file} for "
-                        f"embedding {model_path_info}. But it's ignored because "
-                        f"original pretrained_file, {self._pretrained_file} is available.")
+                logging.warning(f"You passed pretrained_file, {pretrained_file} for "
+                                f"embedding {model_path_info}. But it's ignored because "
+                                f"original pretrained_file, {self._pretrained_file} is available.")
             pretrained_file = self._pretrained_file
 
         if not (pretrained_file and os.path.exists(pretrained_file)):
@@ -204,9 +204,9 @@ class Embedding(TokenEmbedder):
             # It's better to warn here and not give error because there is no way to distinguish between
             # whether pretrained-file wasn't used during training or user forgot to pass / passed incorrect
             # mapping. Giving error would prevent former case to executable.
-            Warning(f"Embedding at model_path, {model_path} cannot locate the pretrained_file. "
-                    f"{extra_info} If you are fine-tuning and want to use using pretrained_file "
-                    f"for embedding extension, please pass the mapping by --embedding-sources argument.")
+            logging.warning(f"Embedding at model_path, {model_path} cannot locate the pretrained_file. "
+                            f"{extra_info} If you are fine-tuning and want to use using pretrained_file "
+                            f"for embedding extension, please pass the mapping by --embedding-sources argument.")
 
         embedding_dim = self.weight.data.shape[-1]
         if not pretrained_file:
