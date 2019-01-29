@@ -32,23 +32,19 @@ and report any metrics calculated by the model.
     --include-package INCLUDE_PACKAGE
                             additional packages to include
 """
-from typing import Dict, Any, Iterable
+from typing import Dict, Any
 import argparse
 import logging
 import json
 
-import torch
 
 from allennlp.commands.subcommand import Subcommand
-from allennlp.common.checks import check_for_gpu
 from allennlp.common.util import prepare_environment
-from allennlp.common.tqdm import Tqdm
-from allennlp.data import Instance
+
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.iterators import DataIterator
 from allennlp.models.archival import load_archive
-from allennlp.models.model import Model
-from allennlp.nn import util
+from allennlp.training.util import evaluate
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -81,60 +77,14 @@ class Evaluate(Subcommand):
                                default="",
                                help='a JSON structure used to override the experiment configuration')
 
+        subparser.add_argument('--batch-weight-key',
+                               type=str,
+                               default="",
+                               help='If non-empty, name of metric used to weight the loss on a per-batch basis.')
+
         subparser.set_defaults(func=evaluate_from_args)
 
         return subparser
-
-
-def evaluate(model: Model,
-             instances: Iterable[Instance],
-             data_iterator: DataIterator,
-             cuda_device: int) -> Dict[str, Any]:
-    _warned_tqdm_ignores_underscores = False
-    check_for_gpu(cuda_device)
-    with torch.no_grad():
-        model.eval()
-
-        iterator = data_iterator(instances,
-                                 num_epochs=1,
-                                 shuffle=False)
-        logger.info("Iterating over dataset")
-        generator_tqdm = Tqdm.tqdm(iterator, total=data_iterator.get_num_batches(instances))
-
-        batch_count = 0
-        loss_count = 0
-        total_loss = 0.0
-
-        for batch in generator_tqdm:
-            batch_count += 1
-            batch = util.move_to_device(batch, cuda_device)
-            loss = model(**batch).get("loss")
-
-            metrics = model.get_metrics()
-
-            if loss is not None:
-                loss_count += 1
-                metrics["loss"] = loss.item()
-                total_loss += loss.item()
-
-            if (not _warned_tqdm_ignores_underscores and
-                        any(metric_name.startswith("_") for metric_name in metrics)):
-                logger.warning("Metrics with names beginning with \"_\" will "
-                               "not be logged to the tqdm progress bar.")
-                _warned_tqdm_ignores_underscores = True
-            description = ', '.join(["%s: %.2f" % (name, value) for name, value
-                                     in metrics.items() if not name.startswith("_")]) + " ||"
-            generator_tqdm.set_description(description, refresh=False)
-
-        final_metrics = model.get_metrics(reset=True)
-        if loss_count > 0:
-            if loss_count != batch_count:
-                raise RuntimeError("The model you are trying to evaluate only sometimes " +
-                                   "produced a loss!")
-            final_metrics["loss"] = total_loss/batch_count
-
-        return final_metrics
-
 
 def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     # Disable some of the more verbose logging statements
@@ -168,7 +118,7 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     iterator = DataIterator.from_params(iterator_params)
     iterator.index_with(model.vocab)
 
-    metrics = evaluate(model, instances, iterator, args.cuda_device)
+    metrics = evaluate(model, instances, iterator, args.cuda_device, args.batch_weight_key)
 
     logger.info("Finished evaluating.")
     logger.info("Metrics:")

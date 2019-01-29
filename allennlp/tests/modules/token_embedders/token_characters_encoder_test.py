@@ -1,4 +1,4 @@
-# pylint: disable=no-self-use,invalid-name
+# pylint: disable=no-self-use,invalid-name,protected-access
 from copy import deepcopy
 
 import numpy
@@ -56,3 +56,17 @@ class TestTokenCharactersEncoder(AllenNlpTestCase):
         reshaped_manual_output = self.inner_encoder(embedded, mask)
         manual_output = reshaped_manual_output.view(3, 4, 3)
         assert_almost_equal(encoder_output.data.numpy(), manual_output.data.numpy())
+
+    def test_char_embedding_vocab_extension_with_default_namespace(self):
+        vocab = self.vocab
+        character_encoder = self.encoder
+
+        original_weight = character_encoder._embedding._module.weight
+        assert tuple(original_weight.shape) == (6, 2)
+        vocab.add_token_to_namespace("5", "token_characters")
+
+        character_encoder.extend_vocab(vocab)
+        extended_weight = character_encoder._embedding._module.weight
+        assert tuple(extended_weight.shape) == (7, 2)
+
+        assert torch.all(original_weight == extended_weight[:6, :])
