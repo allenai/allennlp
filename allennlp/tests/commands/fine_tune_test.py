@@ -2,8 +2,10 @@
 import argparse
 import re
 import shutil
+import gzip
 
 import pytest
+import numpy as np
 import torch
 
 from allennlp.common.testing import AllenNlpTestCase
@@ -54,6 +56,30 @@ class TestFineTune(AllenNlpTestCase):
         assert tuple(original_weight.shape) == (24, 300)
         assert tuple(extended_weight.shape) == (25, 300)
         assert torch.all(original_weight == extended_weight[:24, :])
+
+    def test_fine_tune_works_with_vocab_expansion_with_pretrained_file(self):
+        params = Params.from_file(self.config_file)
+        # snli2 has a new token (seahorse) in it
+        params["train_data_path"] = str(self.FIXTURES_ROOT / 'data' / 'snli2.jsonl')
+
+        embeddings_filename = str(self.TEST_DIR / "embeddings2.gz")
+        extra_token_vector = np.random.rand(300)
+        with gzip.open(embeddings_filename, 'wb') as embeddings_file:
+            extra_token_vector_str = " ".join(map(str, list(extra_token_vector)))
+            embeddings_file.write("seahorse {}\n".format(extra_token_vector_str).encode('utf-8'))
+
+        trained_model = load_archive(self.model_archive).model
+        original_weight = trained_model._text_field_embedder.token_embedder_tokens.weight
+
+        # Passing *correct* embedding_sources_mapping should work
+        embedding_sources_mapping = {"_text_field_embedder.token_embedder_tokens": embeddings_filename}
+        fine_tuned_model = fine_tune_model(trained_model, params, self.serialization_dir, extend_vocab=True,
+                                           embedding_sources_mapping=embedding_sources_mapping)
+        extended_weight = fine_tuned_model._text_field_embedder.token_embedder_tokens.weight
+        assert tuple(original_weight.shape) == (24, 300)
+        assert tuple(extended_weight.shape) == (25, 300)
+        assert torch.all(original_weight == extended_weight[:24, :])
+        assert np.all(extended_weight[24, :].numpy() == extra_token_vector.astype(np.float32))
 
     def test_fine_tune_runs_from_parser_arguments(self):
         raw_args = ["fine-tune",
