@@ -323,18 +323,38 @@ class Model(torch.nn.Module, Registrable):
 
     def extend_embedder_vocab(self,
                               extended_vocab: Vocabulary,
-                              pretrained_filename_mapping: Dict[str, str] = None) -> None:
+                              embedding_sources_mapping: Dict[str, str] = None) -> None:
         """
-        It iterates over each ``text_field_embedder`` of this model and assures
-        it can embed with the extended vocab. This is required in fine-tuning or
-        transfer learning scenarios where model was trained with original vocabulary
-        but during fine-tuning/tranfer-learning, it will have it work with
-        extended vocabulary (original + new-data vocabulary)
-        """
-        for _, module in self._modules.items():
-            if isinstance(module, (Embedding, TextFieldEmbedder)):
-                module.extend_vocab(extended_vocab, pretrained_filename_mapping=pretrained_filename_mapping)
+        Iterates through all embedding modules in the model and assures it can embed
+        with the extended vocab. This is required in fine-tuning or transfer learning
+        scenarios where model was trained with original vocabulary but during
+        fine-tuning/tranfer-learning, it will have it work with extended vocabulary
+        (original + new-data vocabulary).
 
+        Parameters
+        ----------
+        extended_vocab : Vocabulary:
+            Vocabulary extended from original vocabulary used to construct
+            this ``Embedding``.
+        pretrained_file : str, (optional, default=None)
+            A file containing pretrained embeddings can be specified here. It can be
+            the path to a local file or an URL of a (cached) remote file. Check format
+            details in ``from_params`` of ``Embedding`` class.
+        embedding_sources_mapping : Dict[str, str], (optional, default=None)
+            Mapping from model_path to pretrained-file path of the embedding
+            modules. If pretrained-file used at time of embedding initialization
+            isn't available now, user should pass this mapping. Model path is
+            path traversing the model attributes upto this embedding module.
+            Eg. "_text_field_embedder.token_embedder_tokens".
+        """
+        # self.named_modules() gives all sub-modules (including nested children)
+        # The path nesting is already separated by ".": eg. parent_module_name.child_module_name
+        for model_path, module in self.named_modules():
+            if isinstance(module, Embedding):
+                pretrained_file = embedding_sources_mapping.get(model_path, None)
+                module.extended_vocab(extended_vocab,
+                                      pretrained_file=pretrained_file,
+                                      model_path=model_path)
 
 def remove_pretrained_embedding_params(params: Params):
     keys = params.keys()

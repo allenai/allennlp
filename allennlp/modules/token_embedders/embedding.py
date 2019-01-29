@@ -1,3 +1,4 @@
+        import os
 import io
 import tarfile
 import zipfile
@@ -5,7 +6,7 @@ import re
 import logging
 import warnings
 import itertools
-from typing import Optional, Tuple, Dict, Sequence, cast, IO, Iterator, Any, NamedTuple
+from typing import Optional, Tuple, Sequence, cast, IO, Iterator, Any, NamedTuple
 
 from overrides import overrides
 import numpy
@@ -153,7 +154,7 @@ class Embedding(TokenEmbedder):
                      extended_vocab: Vocabulary,
                      vocab_namespace: str = None,
                      pretrained_file: str = None,
-                     pretrained_filename_mapping: Dict[str, str] = None):
+                     model_path: str = None):
         """
         Extends the embedding matrix according to the extended vocabulary.
         If pretrained_file is available, it will be used for initializing the new words
@@ -173,10 +174,11 @@ class Embedding(TokenEmbedder):
             A file containing pretrained embeddings can be specified here. It can be
             the path to a local file or an URL of a (cached) remote file. Check format
             details in ``from_params`` of ``Embedding`` class.
-        pretrained_filename_mapping : Dict[str, str], (optional, default=None)
-            If pretrained_filename originally used during ``Embedding`` construction
-            is now available with a different name, then this mapping can be used.
-            It maps original filenames to replaced filenames that are now available.
+        model_path : str, (optional, default=None)
+            Path traversing the model attributes upto this embedding module.
+            Eg. "_text_field_embedder.token_embedder_tokens". This is only useful
+            to give helpful error message when extend_vocab is implicitly called
+            by fine-tune or any other command.
         """
         # Caveat: For allennlp v0.8.1 and below, we weren't storing vocab_namespace as an attribute,
         # knowing which is necessary at time of embedding vocab extension. So old archive models are
@@ -187,8 +189,21 @@ class Embedding(TokenEmbedder):
             vocab_namespace = "tokens"
             logging.warning("No vocab_namespace provided to Embedder.extend_vocab. Defaulting to 'tokens'.")
 
-        if pretrained_filename_mapping:
-            pretrained_file = pretrained_file or pretrained_filename_mapping.get(self._pretrained_file, None)
+        if self._pretrained_file and os.path.exists(self._pretrained_file):
+            # pretrained_file attribute was saved during training and is available:
+            if pretrained_file:
+                # But user also passed pretrained_file
+                model_path_info = "at model_path, {model_path} " if model_path else ""
+                Warning(f"You passed pretrained_file, {pretrained_file} for "
+                        f"embedding {model_path_info}. But it's ignored because "
+                        f"original pretrained_file, {self._pretrained_file} is available.")
+            pretrained_file = self._pretrained_file
+
+        if not (pretrained_file and os.path.exists(pretrained_file)):
+            extra_info = (f"Originally pretrained_file was at "
+                          f"{self._pretrained_file}. " if self._pretrained_file else "")
+            ConfigurationError(f"Embedding at model_path, {model_path} cannot locate the pretrained_file."
+                               f"{extra_info} If you are fine-tuning, please pass it by argument --embedding-sources")
 
         embedding_dim = self.weight.data.shape[-1]
         if not pretrained_file:

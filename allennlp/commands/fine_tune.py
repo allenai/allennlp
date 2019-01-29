@@ -177,8 +177,8 @@ def fine_tune_model(model: Model,
         If ``True``, we add newlines to tqdm output, even on an interactive terminal, and we slow
         down tqdm's output to only once every 10 seconds.
     embedding_sources_mapping: ``Dict[str, str]``, optional (default=None)
-        mapping from embedding paths used during training to the corresponding
-        embedding filepaths available during fine-tuning.
+        mapping from model paths to the pretrained embedding filepaths
+        used during fine-tuning.
     """
     prepare_environment(params)
     if os.path.exists(serialization_dir) and os.listdir(serialization_dir):
@@ -217,7 +217,7 @@ def fine_tune_model(model: Model,
                                      for instance in dataset
                                      if key in datasets_for_vocab_creation))
 
-        model.extend_embedder_vocab(vocab, pretrained_filename_mapping=embedding_sources_mapping)
+        model.extend_embedder_vocab(vocab, embedding_sources_mapping=embedding_sources_mapping)
 
     vocab.save_to_files(os.path.join(serialization_dir, "vocabulary"))
 
