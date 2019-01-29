@@ -120,9 +120,7 @@ class JobRunner():
                 post_proc_bash = job['config']['post_proc_bash']
                 post_proc_bash = post_proc_bash.replace('[MODEL_DIR]', self._MODELS_DIR)
                 logger.info('running post proc: %s',post_proc_bash)
-                log_handle = self.log_handles[job['log_file']]
-                wa_proc = Popen(post_proc_bash, shell=True , \
-                                preexec_fn = os.setsid, stdout = log_handle, stderr = log_handle)
+                wa_proc = Popen(post_proc_bash, shell=True , preexec_fn = os.setsid)
                 job['pid'] = wa_proc.pid + 1
                 job['alive'] = True
                 job['is_post_proc_run'] = True
@@ -331,7 +329,6 @@ class JobRunner():
                     ElasticLogger().write_log('INFO', "job runner exception", {'error_message': traceback.format_exc()}, print_log=True)
 
                     if self.last_exception is not None and time.time() - self.last_exception < 30:
-
                         exit(1)
 
                     time.sleep(3)
