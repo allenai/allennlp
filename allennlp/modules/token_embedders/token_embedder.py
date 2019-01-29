@@ -25,10 +25,3 @@ class TokenEmbedder(torch.nn.Module, Registrable):
         token.  This is `not` the shape of the returned tensor, but the last element of that shape.
         """
         raise NotImplementedError
-
-    def extend_vocab(self, extended_vocab: Vocabulary, vocab_namespace: str = None):
-        """
-        Assures that this ``TokenEmbedder`` can work with extended vocabulary.
-        Unless overridden by concrete ``TokenEmbedder``, it is no-op.
-        """
-        pass
