@@ -188,6 +188,11 @@ class Embedding(TokenEmbedder):
             vocab_namespace = "tokens"
             logging.warning("No vocab_namespace provided to Embedder.extend_vocab. Defaulting to 'tokens'.")
 
+        extended_num_embeddings = extended_vocab.get_vocab_size(vocab_namespace)
+        if extended_num_embeddings <= self.num_embeddings:
+            # It's already been extended. No need to initialize / read pretrained file in first place (no-op)
+            return
+
         if self._pretrained_file and os.path.exists(self._pretrained_file):
             # pretrained_file attribute was saved during training and is available:
             if pretrained_file:
@@ -210,7 +215,6 @@ class Embedding(TokenEmbedder):
 
         embedding_dim = self.weight.data.shape[-1]
         if not pretrained_file:
-            extended_num_embeddings = extended_vocab.get_vocab_size(vocab_namespace)
             extra_num_embeddings = extended_num_embeddings - self.num_embeddings
             extra_weight = torch.FloatTensor(extra_num_embeddings, embedding_dim)
             torch.nn.init.xavier_uniform_(extra_weight)
