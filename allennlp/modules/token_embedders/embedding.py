@@ -1,4 +1,4 @@
-        import os
+import os
 import io
 import tarfile
 import zipfile
@@ -149,7 +149,6 @@ class Embedding(TokenEmbedder):
             embedded = projection(embedded)
         return embedded
 
-    @overrides
     def extend_vocab(self,  # pylint: disable=arguments-differ
                      extended_vocab: Vocabulary,
                      vocab_namespace: str = None,
