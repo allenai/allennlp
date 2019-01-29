@@ -39,6 +39,7 @@ class JobRunner():
         self.runner_iter_count = 0
         self.resources_to_spare = resources_to_spare
         self.update_available_gpus()
+        self.last_exception = None
 
     def update_available_gpus(self):
         if self._SIM_GPUS: # simulating gpu resources
@@ -327,18 +328,16 @@ class JobRunner():
                     exit(0)
                 except:
                     # something went wrong
-                    time.sleep(3)
                     ElasticLogger().write_log('INFO', "job runner exception", {'error_message': traceback.format_exc()}, print_log=True)
-                    logger.error('restarting')
 
-                    channels = ' '.join([' --channel ' + channel for channel in self.channel_tags])
-                    bash_command = 'python scripts/multiqa/allennlp_job_runner.py ' + self.resource_type + channels + \
-                                   ' --models_dir ' + self._MODELS_DIR
-                    if self._DEBUG:
-                        bash_command += ' --debug '
+                    if self.last_exception is not None and time.time() - self.last_exception < 30:
 
-                    bash_command = 'nohup ' + bash_command + ' > logs/runner_' + self.channel_tags[0] + '.log &'
-                    exit(1)
+                        exit(1)
+
+                    time.sleep(3)
+                    self.connect_to_queue()
+                    self.last_exception = time.time()
+
 
 
 
