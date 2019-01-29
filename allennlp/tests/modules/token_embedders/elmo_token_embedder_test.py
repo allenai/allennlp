@@ -11,7 +11,6 @@ from allennlp.commands.train import train_model
 from allennlp.common import Params
 from allennlp.common.testing import ModelTestCase
 from allennlp.data.dataset import Batch
-from allennlp.data import Vocabulary
 from allennlp.modules.token_embedders import ElmoTokenEmbedder
 
 
