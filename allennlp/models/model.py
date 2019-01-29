@@ -17,7 +17,6 @@ from allennlp.data import Instance, Vocabulary
 from allennlp.data.dataset import Batch
 from allennlp.nn import util
 from allennlp.nn.regularizers import RegularizerApplicator
-from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
 from allennlp.modules.token_embedders.embedding import Embedding
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -354,8 +353,8 @@ class Model(torch.nn.Module, Registrable):
             if isinstance(module, Embedding):
                 pretrained_file = embedding_sources_mapping.get(model_path, None)
                 module.extend_vocab(extended_vocab,
-                                      pretrained_file=pretrained_file,
-                                      model_path=model_path)
+                                    pretrained_file=pretrained_file,
+                                    model_path=model_path)
 
 def remove_pretrained_embedding_params(params: Params):
     keys = params.keys()

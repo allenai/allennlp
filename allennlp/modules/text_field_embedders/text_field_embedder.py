@@ -3,7 +3,6 @@ from typing import Dict
 import torch
 
 from allennlp.common import Registrable
-from allennlp.data import Vocabulary
 
 class TextFieldEmbedder(torch.nn.Module, Registrable):
     """

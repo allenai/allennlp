@@ -1,7 +1,6 @@
 import torch
 
 from allennlp.common import Registrable
-from allennlp.data import Vocabulary
 
 class TokenEmbedder(torch.nn.Module, Registrable):
     """
