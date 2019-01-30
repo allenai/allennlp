@@ -28,7 +28,7 @@ class ArrayField(Field[numpy.ndarray]):
                      for i in range(len(padding_lengths))]
 
         # Convert explicitly to an ndarray just in case it's an scalar (it'd end up not being an ndarray otherwise)
-        return_array = numpy.asarray(numpy.ones(max_shape, "float32") * self.padding_value)
+        return_array = numpy.asarray(numpy.ones(max_shape, dtype=self.array.dtype) * self.padding_value)
 
         # If the tensor has a different shape from the largest tensor, pad dimensions with zeros to
         # form the right shaped list of slices for insertion into the final tensor.
@@ -40,11 +40,12 @@ class ArrayField(Field[numpy.ndarray]):
         tensor = torch.from_numpy(return_array)
         return tensor
 
+
     @overrides
     def empty_field(self):  # pylint: disable=no-self-use
         # Pass the padding_value, so that any outer field, e.g., `ListField[ArrayField]` uses the
         # same padding_value in the padded ArrayFields
-        return ArrayField(numpy.array([], dtype="float32"), padding_value=self.padding_value)
+        return ArrayField(numpy.array([], dtype=self.array.dtype), padding_value=self.padding_value)
 
 
     def __str__(self) -> str:

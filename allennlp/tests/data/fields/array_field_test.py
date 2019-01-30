@@ -63,3 +63,9 @@ class TestArrayField(AllenNlpTestCase):
         returned_tensor = array.as_tensor(array.get_padding_lengths())
         current_tensor = numpy.asarray(42)
         numpy.testing.assert_array_equal(returned_tensor, current_tensor)
+
+    def test_padding_does_not_changes_array_dtype(self):
+        numpy_array = numpy.array([1, 2, 3])
+        array = ArrayField(numpy_array)
+        returned_tensor = array.as_tensor(array.get_padding_lengths()).numpy()
+        assert numpy_array.dtype == returned_tensor.dtype
