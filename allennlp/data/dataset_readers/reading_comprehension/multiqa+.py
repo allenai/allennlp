@@ -47,20 +47,17 @@ class MultiQAReader(DatasetReader):
                  tokenizer: Tokenizer = None,
                  token_indexers: Dict[str, TokenIndexer] = None,
                  lazy: bool = False,
-                 sample_size: int = -1) -> None:
+                 dev_sample_size: int = -1,
+                 train_sample_size: int = -1) -> None:
         super().__init__(lazy)
         self._tokenizer = tokenizer or WordTokenizer()
-        self._sample_size = sample_size
+        self._dev_sample_size = dev_sample_size
+        self._train_sample_size = train_sample_size
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
 
     def build_instances(self, header, instances):
 
-        # sampling
-        if self._sample_size > -1:
-            # random.seed(1)
-            # dataset_json['preprocessed_instances'] = \
-            #    random.sample(dataset_json['preprocessed_instances'], self._sample_size)
-            instances = instances[0:self._sample_size]
+
 
         # bucketing by QuestionID
         instance_list = instances
