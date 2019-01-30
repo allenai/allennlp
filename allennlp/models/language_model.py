@@ -141,7 +141,17 @@ class LanguageModel(Model):
                         f"Contextualizer bidirectional: {contextualizer.is_bidirectional()}, "
                         f"language model bidirectional: {bidirectional}")
             if contextualizer.is_bidirectional():
-                # TODO (nfliu): Emit warning about cheating
+                warnings.warn(
+                    "When using a bidirectional contextualizer, it's crucial that "
+                    "the contextualizer does not cheat by looking ahead. For instance, "
+                    "if you're using a multi-layer bidirectional RNN here, the model "
+                    "is cheating because layers >= 2 use opposite direection inputs "
+                    "(a single-layer bidirectional RNN is thus fine). See the "
+                    "BidirectionalLanguageModelTransformer for an example of how to "
+                    "properly ensure that a multilayer bidirectional contextualizer "
+                    "doesn't inadvertently cheat, or provide values for the "
+                    "forward_contextualizer and backward_contextualizer arguments "
+                    "instead.")
                 self._use_contextualizer_arg = True
             else:
                 # Unidirectional LM with unidirectional contextualizer, so just set
