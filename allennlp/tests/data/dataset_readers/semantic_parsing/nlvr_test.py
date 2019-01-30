@@ -1,7 +1,7 @@
 # pylint: disable=no-self-use,invalid-name
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.dataset_readers import NlvrDatasetReader
-from allennlp.semparse.worlds import NlvrWorld
+from allennlp.semparse.domain_languages import NlvrLanguage
 
 
 class TestNlvrDatasetReader(AllenNlpTestCase):
@@ -13,7 +13,7 @@ class TestNlvrDatasetReader(AllenNlpTestCase):
         assert len(instances) == 3
         instance = instances[0]
         assert instance.fields.keys() == {'sentence', 'agenda', 'worlds', 'actions', 'labels',
-                                          'identifier'}
+                                          'identifier', 'metadata'}
         sentence_tokens = instance.fields["sentence"].tokens
         expected_tokens = ['There', 'is', 'a', 'circle', 'closely', 'touching', 'a', 'corner', 'of',
                            'a', 'box', '.']
@@ -22,11 +22,11 @@ class TestNlvrDatasetReader(AllenNlpTestCase):
         assert len(actions) == 115
         agenda = [item.sequence_index for item in instance.fields["agenda"].field_list]
         agenda_strings = [actions[rule_id] for rule_id in agenda]
-        assert set(agenda_strings) == set(['<o,o> -> circle',
-                                           '<o,t> -> object_exists',
-                                           '<o,o> -> touch_corner'])
+        assert set(agenda_strings) == set(['<Set[Object]:Set[Object]> -> circle',
+                                           '<Set[Object]:bool> -> object_exists',
+                                           '<Set[Object]:Set[Object]> -> touch_corner'])
         worlds = [world_field.as_tensor({}) for world_field in instance.fields["worlds"].field_list]
-        assert isinstance(worlds[0], NlvrWorld)
+        assert isinstance(worlds[0], NlvrLanguage)
         label = instance.fields["labels"].field_list[0].label
         assert label == "true"
 
@@ -43,7 +43,7 @@ class TestNlvrDatasetReader(AllenNlpTestCase):
         actions = [action.rule for action in instance.fields["actions"].field_list]
         agenda_actions = [actions[i] for i in agenda]
         world = instance.fields["worlds"].field_list[0].as_tensor({})
-        expected_agenda_actions = world.get_agenda_for_sentence(sentence, add_paths_to_agenda=False)
+        expected_agenda_actions = world.get_agenda_for_sentence(sentence)
         assert expected_agenda_actions == agenda_actions
 
     def test_reader_reads_grouped_data(self):
@@ -54,7 +54,7 @@ class TestNlvrDatasetReader(AllenNlpTestCase):
         assert len(instances) == 2
         instance = instances[0]
         assert instance.fields.keys() == {'sentence', 'agenda', 'worlds', 'actions', 'labels',
-                                          'identifier'}
+                                          'identifier', 'metadata'}
         sentence_tokens = instance.fields["sentence"].tokens
         expected_tokens = ['There', 'is', 'a', 'circle', 'closely', 'touching', 'a', 'corner', 'of',
                            'a', 'box', '.']
@@ -63,12 +63,12 @@ class TestNlvrDatasetReader(AllenNlpTestCase):
         assert len(actions) == 115
         agenda = [item.sequence_index for item in instance.fields["agenda"].field_list]
         agenda_strings = [actions[rule_id] for rule_id in agenda]
-        assert set(agenda_strings) == set(['<o,o> -> circle',
-                                           '<o,o> -> touch_corner',
-                                           '<o,t> -> object_exists'
+        assert set(agenda_strings) == set(['<Set[Object]:Set[Object]> -> circle',
+                                           '<Set[Object]:Set[Object]> -> touch_corner',
+                                           '<Set[Object]:bool> -> object_exists'
                                           ])
         worlds = [world_field.as_tensor({}) for world_field in instance.fields["worlds"].field_list]
-        assert all([isinstance(world, NlvrWorld) for world in worlds])
+        assert all([isinstance(world, NlvrLanguage) for world in worlds])
         labels = [label.label for label in instance.fields["labels"].field_list]
         assert labels == ["true", "false", "true", "false"]
 
@@ -82,18 +82,18 @@ class TestNlvrDatasetReader(AllenNlpTestCase):
         assert len(instances) == 2
         instance = instances[0]
         assert instance.fields.keys() == {"sentence", "target_action_sequences",
-                                          "worlds", "actions", "labels", "identifier"}
+                                          "worlds", "actions", "labels", "identifier", 'metadata'}
         all_action_sequence_indices = instance.fields["target_action_sequences"].field_list
         assert len(all_action_sequence_indices) == 20
         action_sequence_indices = [item.sequence_index for item in
                                    all_action_sequence_indices[0].field_list]
         actions = [action.rule for action in instance.fields["actions"].field_list]
         action_sequence = [actions[rule_id] for rule_id in action_sequence_indices]
-        assert action_sequence == ['@start@ -> t',
-                                   't -> [<o,t>, o]',
-                                   '<o,t> -> object_exists',
-                                   'o -> [<o,o>, o]',
-                                   '<o,o> -> touch_corner',
-                                   'o -> [<o,o>, o]',
-                                   '<o,o> -> circle',
-                                   'o -> all_objects']
+        assert action_sequence == ['@start@ -> bool',
+                                   'bool -> [<Set[Object]:bool>, Set[Object]]',
+                                   '<Set[Object]:bool> -> object_exists',
+                                   'Set[Object] -> [<Set[Object]:Set[Object]>, Set[Object]]',
+                                   '<Set[Object]:Set[Object]> -> touch_corner',
+                                   'Set[Object] -> [<Set[Object]:Set[Object]>, Set[Object]]',
+                                   '<Set[Object]:Set[Object]> -> circle',
+                                   'Set[Object] -> all_objects']

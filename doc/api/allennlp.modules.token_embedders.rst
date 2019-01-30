@@ -13,6 +13,7 @@ allennlp.modules.token_embedders
 * :ref:`ELMoTokenEmbedder<elmo-token-embedder>`
 * :ref:`OpenaiTransformerEmbedder<openai-transformer-embedder>`
 * :ref:`BertTokenEmbedder<bert-token-embedder>`
+* :ref:`LanguageModelTokenEmbedder<language-model-token-embedder>`
 
 .. _token-embedder:
 .. automodule:: allennlp.modules.token_embedders.token_embedder
@@ -46,6 +47,18 @@ allennlp.modules.token_embedders
 
 .. _bert-token-embedder:
 .. automodule:: allennlp.modules.token_embedders.bert_token_embedder
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. _language-model-token-embedder:
+.. automodule:: allennlp.modules.token_embedders.language_model_token_embedder
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. _bag-of-word-counts-token-embedder:
+.. automodule:: allennlp.modules.token_embedders.bag_of_word_counts_token_embedder
    :members:
    :undoc-members:
    :show-inheritance:

@@ -1,5 +1,6 @@
 from typing import Dict, List
 import itertools
+import warnings
 
 from overrides import overrides
 
@@ -41,6 +42,13 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
                  start_tokens: List[str] = None,
                  end_tokens: List[str] = None,
                  min_padding_length: int = 0) -> None:
+        if min_padding_length == 0:
+            url = "https://github.com/allenai/allennlp/issues/1954"
+            warnings.warn("You are using the default value (0) of `min_padding_length`, "
+                          f"which can cause some subtle bugs (more info see {url}). "
+                          "Strongly recommend to set a value, usually the maximum size "
+                          "of the convolutional layer size when using CnnEncoder.",
+                          UserWarning)
         self._min_padding_length = min_padding_length
         self._namespace = namespace
         self._character_tokenizer = character_tokenizer
