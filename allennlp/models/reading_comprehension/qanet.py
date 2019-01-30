@@ -114,12 +114,11 @@ class QaNet(Model):
             ending position of the answer with the passage.  This is an `inclusive` token index.
             If this is given, we will compute a loss that gets included in the output dictionary.
         metadata : ``List[Dict[str, Any]]``, optional
-            If present, this should contain the question ID, original passage text, and token
-            offsets into the passage for each instance in the batch.  We use this for computing
-            official metrics using the official SQuAD evaluation script.  The length of this list
-            should be the batch size, and each dictionary should have the keys ``id``,
-            ``original_passage``, and ``token_offsets``.  If you only want the best span string and
-            don't care about official metrics, you can omit the ``id`` key.
+            If present, this should contain the question tokens, passage tokens, original passage
+            text, and token offsets into the passage for each instance in the batch.  The length
+            of this list should be the batch size, and each dictionary should have the keys
+            ``question_tokens``, ``passage_tokens``, ``original_passage``, and ``token_offsets``.
+
         Returns
         -------
         An output dictionary consisting of:
