@@ -160,17 +160,18 @@ optional arguments:
 
 Commands:
 
-    configure   Generate configuration stubs.
-    train       Train a model
-    evaluate    Evaluate the specified model + dataset
+    configure   Run the configuration wizard.
+    train       Train a model.
+    evaluate    Evaluate the specified model + dataset.
     predict     Use a trained model to make predictions.
-    make-vocab  Create a vocabulary
+    make-vocab  Create a vocabulary.
     elmo        Create word vectors using a pretrained ELMo model.
-    fine-tune   Continue training a model on a new dataset
+    fine-tune   Continue training a model on a new dataset.
     dry-run     Create a vocabulary, compute dataset statistics and other
                 training utilities.
     test-install
                 Run the unit tests.
+    find-lr     Find a learning rate range.
 ```
 
 ## Docker images
