@@ -7,6 +7,7 @@ from torch.nn.functional import nll_loss
 from allennlp.common.checks import check_dimensions_match
 from allennlp.data import Vocabulary
 from allennlp.models.model import Model
+from allennlp.models.reading_comprehension.util import get_best_span
 from allennlp.modules import Highway
 from allennlp.modules import Seq2SeqEncoder, SimilarityFunction, TimeDistributed, TextFieldEmbedder
 from allennlp.modules.matrix_attention.legacy_matrix_attention import LegacyMatrixAttention
@@ -245,7 +246,7 @@ class BidirectionalAttentionFlow(Model):
         span_end_probs = util.masked_softmax(span_end_logits, passage_mask)
         span_start_logits = util.replace_masked_values(span_start_logits, passage_mask, -1e7)
         span_end_logits = util.replace_masked_values(span_end_logits, passage_mask, -1e7)
-        best_span = self.get_best_span(span_start_logits, span_end_logits)
+        best_span = get_best_span(span_start_logits, span_end_logits)
 
         output_dict = {
                 "passage_question_attention": passage_question_attention,
@@ -296,30 +297,3 @@ class BidirectionalAttentionFlow(Model):
                 'em': exact_match,
                 'f1': f1_score,
                 }
-
-    @staticmethod
-    def get_best_span(span_start_logits: torch.Tensor, span_end_logits: torch.Tensor) -> torch.Tensor:
-        if span_start_logits.dim() != 2 or span_end_logits.dim() != 2:
-            raise ValueError("Input shapes must be (batch_size, passage_length)")
-        batch_size, passage_length = span_start_logits.size()
-        max_span_log_prob = [-1e20] * batch_size
-        span_start_argmax = [0] * batch_size
-        best_word_span = span_start_logits.new_zeros((batch_size, 2), dtype=torch.long)
-
-        span_start_logits = span_start_logits.detach().cpu().numpy()
-        span_end_logits = span_end_logits.detach().cpu().numpy()
-
-        for b in range(batch_size):  # pylint: disable=invalid-name
-            for j in range(passage_length):
-                val1 = span_start_logits[b, span_start_argmax[b]]
-                if val1 < span_start_logits[b, j]:
-                    span_start_argmax[b] = j
-                    val1 = span_start_logits[b, j]
-
-                val2 = span_end_logits[b, j]
-
-                if val1 + val2 > max_span_log_prob[b]:
-                    best_word_span[b, 0] = span_start_argmax[b]
-                    best_word_span[b, 1] = j
-                    max_span_log_prob[b] = val1 + val2
-        return best_word_span

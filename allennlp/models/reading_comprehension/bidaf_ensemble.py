@@ -8,6 +8,7 @@ from allennlp.models.ensemble import Ensemble
 from allennlp.models.archival import load_archive
 from allennlp.models.model import Model
 from allennlp.models.reading_comprehension.bidaf import BidirectionalAttentionFlow
+from allennlp.models.reading_comprehension.util import get_best_span
 from allennlp.common import Params
 from allennlp.data import Vocabulary
 from allennlp.training.metrics import SquadEmAndF1
@@ -140,4 +141,4 @@ def ensemble(subresults: List[Dict[str, torch.Tensor]]) -> torch.Tensor:
 
     span_start_probs = sum(subresult['span_start_probs'] for subresult in subresults) / len(subresults)
     span_end_probs = sum(subresult['span_end_probs'] for subresult in subresults) / len(subresults)
-    return BidirectionalAttentionFlow.get_best_span(span_start_probs.log(), span_end_probs.log()) # type: ignore
+    return get_best_span(span_start_probs.log(), span_end_probs.log()) # type: ignore

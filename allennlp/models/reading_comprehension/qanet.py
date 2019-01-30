@@ -5,7 +5,7 @@ from torch.nn.functional import nll_loss
 
 from allennlp.data import Vocabulary
 from allennlp.models.model import Model
-from allennlp.models.reading_comprehension.bidaf import BidirectionalAttentionFlow
+from allennlp.models.reading_comprehension.util import get_best_span
 from allennlp.modules import Highway
 from allennlp.modules import Seq2SeqEncoder, TextFieldEmbedder
 from allennlp.modules.matrix_attention.matrix_attention import MatrixAttention
@@ -209,7 +209,7 @@ class QaNet(Model):
         span_start_probs = torch.nn.functional.softmax(span_start_logits, dim=-1)
         span_end_probs = torch.nn.functional.softmax(span_end_logits, dim=-1)
 
-        best_span = BidirectionalAttentionFlow.get_best_span(span_start_logits, span_end_logits)
+        best_span = get_best_span(span_start_logits, span_end_logits)
 
         output_dict = {
                 "passage_question_attention": passage_question_attention,
