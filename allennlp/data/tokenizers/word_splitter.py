@@ -192,7 +192,7 @@ class BertBasicWordSplitter(WordSplitter):
     def __init__(self,
                  do_lower_case: bool = True,
                  never_split: Set[str] = ("[UNK]", "[SEP]", "[PAD]", "[CLS]", "[MASK]")) -> None:
-        self.basic_tokenizer = BertTokenizer(do_lower_case)
+        self.basic_tokenizer = BertTokenizer(do_lower_case, never_split)
 
     @overrides
     def split_words(self, sentence: str) -> List[Token]:
