@@ -1,5 +1,5 @@
 import re
-from typing import List
+from typing import List, Set
 
 from overrides import overrides
 import spacy
@@ -189,7 +189,9 @@ class BertBasicWordSplitter(WordSplitter):
     This is used to split a sentence into words.
     Then the ``BertTokenIndexer`` converts each word into wordpieces.
     """
-    def __init__(self, do_lower_case: bool = True) -> None:
+    def __init__(self,
+                 do_lower_case: bool = True,
+                 never_split: Set[str] = ("[UNK]", "[SEP]", "[PAD]", "[CLS]", "[MASK]")) -> None:
         self.basic_tokenizer = BertTokenizer(do_lower_case)
 
     @overrides
