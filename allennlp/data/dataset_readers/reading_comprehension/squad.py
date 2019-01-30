@@ -26,10 +26,13 @@ class SquadReader(DatasetReader):
     ``metadata['token_offsets']``.  This is so that we can more easily use the official SQuAD
     evaluation script to get metrics.
 
-    We also support limiting the maximum passage length and question length for training and evaluation.
-    Since some answer spans may exceed the maximum passage length, we regard such answer as invalid.
-    During training, we skip those examples of which all answer spans are invalid (invalid examples);
-    During testing, we use the last token as the pseudo gold answer for these invalid examples.
+    We also support limiting the maximum length for both passage and question. However, some gold
+    answer spans may exceed the maximum passage length, which will cause error in making instances.
+    We simply skip these spans to avoid errors. If all of the gold answer spans of an example
+    are skipped, during training, we will skip this example. During validating or testing, since
+    we cannot skip examples, we use the last token as the pseudo gold answer span instead. The
+    computed loss will not be accurate as a result. But this will not affect the answer evaluation,
+    because we keep all the original gold answer texts.
 
     Parameters
     ----------
