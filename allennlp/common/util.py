@@ -305,6 +305,11 @@ def import_submodules(package_name: str) -> None:
     """
     importlib.invalidate_caches()
 
+    # For some reason, python doesn't always add this by default to your path, but you pretty much
+    # always want it when using `--include-package`.  And if it's already there, adding it again at
+    # the end won't hurt anything.
+    sys.path.append('.')
+
     # Import at top level
     module = importlib.import_module(package_name)
     path = getattr(module, '__path__', [])
