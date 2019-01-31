@@ -333,12 +333,8 @@ class Model(torch.nn.Module, Registrable):
         Parameters
         ----------
         extended_vocab : Vocabulary:
-            Vocabulary extended from original vocabulary used to construct
-            this ``Embedding``.
-        pretrained_file : str, (optional, default=None)
-            A file containing pretrained embeddings can be specified here. It can be
-            the path to a local file or an URL of a (cached) remote file. Check format
-            details in ``from_params`` of ``Embedding`` class.
+            Vocabulary extended from the vocabulary used to construct
+            the original embeddings.
         embedding_sources_mapping : Dict[str, str], (optional, default=None)
             Mapping from model_path to pretrained-file path of the embedding
             modules. If pretrained-file used at time of embedding initialization
