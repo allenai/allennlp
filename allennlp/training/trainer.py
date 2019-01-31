@@ -59,7 +59,8 @@ class Trainer(TrainerBase):
                  should_log_parameter_statistics: bool = True,
                  should_log_learning_rate: bool = False,
                  log_batch_size_period: Optional[int] = None,
-                 moving_average: Optional[MovingAverage] = None) -> None:
+                 moving_average: Optional[MovingAverage] = None,
+                 fp16: bool = False) -> None:
         """
         A trainer for doing supervised learning. It just takes a labeled dataset
         and a ``DataIterator``, and uses the supplied ``Optimizer`` to learn the weights
@@ -162,6 +163,11 @@ class Trainer(TrainerBase):
             parameters. Be careful that when saving the checkpoint, we will save the moving averages of
             parameters. This is necessary because we want the saved model to perform as well as the validated
             model if we load it later. But this may cause problems if you restart the training from checkpoint.
+        fp16: ``bool``, (default = False)
+            If True, then run with half precison.  This option requires apex
+            (https://www.github.com/nvidia/apex) to be installed, and for ``model.half()`` to be
+            called before constructing the Trainer. (If you use `Trainer.from_params` this will be
+            handled for you.)
         """
         super().__init__(serialization_dir, cuda_device)
 
@@ -175,6 +181,7 @@ class Trainer(TrainerBase):
         self.optimizer = optimizer
         self.train_data = train_dataset
         self._validation_data = validation_dataset
+        self.fp16 = fp16
 
         if patience is None:  # no early stopping
             if validation_dataset:
@@ -302,7 +309,10 @@ class Trainer(TrainerBase):
             if torch.isnan(loss):
                 raise ValueError("nan loss encountered")
 
-            loss.backward()
+            if self.fp16:
+                self.optimizer.backward(loss)
+            else:
+                loss.backward()
 
             train_loss += loss.item()
 
@@ -643,18 +653,31 @@ class Trainer(TrainerBase):
         grad_norm = params.pop_float("grad_norm", None)
         grad_clipping = params.pop_float("grad_clipping", None)
         lr_scheduler_params = params.pop("learning_rate_scheduler", None)
+        fp16 = params.pop_bool("fp16", False)
 
         if isinstance(cuda_device, list):
             model_device = cuda_device[0]
         else:
             model_device = cuda_device
+        if fp16:
+            model.half()
         if model_device >= 0:
             # Moving model to GPU here so that the optimizer state gets constructed on
             # the right device.
             model = model.cuda(model_device)
 
         parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
+
+        # If fp16, need to wrap the optimizer
+        try:
+            from apex.optimizers import FP16_Optimizer
+        except ImportError:
+            raise ImportError("Please install apex from https://www.github.com/nvidia/apex to use fp16 training.")
+
         optimizer = Optimizer.from_params(parameters, params.pop("optimizer"))
+        if fp16:
+            optimizer = FP16_Optimizer(optimizer, dynamic_loss_scale=True)
+
         if "moving_average" in params:
             moving_average = MovingAverage.from_params(params.pop("moving_average"), parameters=parameters)
         else:
@@ -696,7 +719,8 @@ class Trainer(TrainerBase):
                    should_log_parameter_statistics=should_log_parameter_statistics,
                    should_log_learning_rate=should_log_learning_rate,
                    log_batch_size_period=log_batch_size_period,
-                   moving_average=moving_average)
+                   moving_average=moving_average,
+                   fp16=fp16)
 
 
 class TrainerPieces(NamedTuple):

@@ -45,5 +45,8 @@ class Metric(Registrable):
         a huge memory leak, because it will prevent garbage collection for the computation
         graph. This method ensures that you're using tensors directly and that they are on
         the CPU.
+
+        In addition, all tensors are cast to float32 as torch does not
+        implement many operations for HalfTensor on CPU.
         """
-        return (x.detach().cpu() if isinstance(x, torch.Tensor) else x for x in tensors)
+        return (x.detach().cpu().float() if isinstance(x, torch.Tensor) else x for x in tensors)

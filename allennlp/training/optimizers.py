@@ -144,6 +144,13 @@ Registrable._registry[Optimizer] = {   # pylint: disable=protected-access
         "bert_adam": BertAdam,
 }
 
+try:
+    from apex.optimizers import FusedAdam
+    Registrable._registry[Optimizer]["fused_adam"] = FusedAdam
+except ImportError:
+    pass
+
+
 def _safe_sparse_mask(tensor: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
     """
     In PyTorch 1.0, Tensor._sparse_mask was changed to Tensor.sparse_mask.
