@@ -2,6 +2,13 @@ import torch
 
 
 def get_best_span(span_start_logits: torch.Tensor, span_end_logits: torch.Tensor) -> torch.Tensor:
+    """
+    This acts the same as the static method ``BidirectionalAttentionFlow.get_best_span()``
+    in ``allennlp/models/reading_comprehension/bidaf.py``. We keep it here so that users can
+    directly import this function without the class. This function can be used to find the
+    best span with the highest probability from a passage, given the unnormalized scores
+    ``span_start_logits`` and ``span_end_logits``.
+    """
     if span_start_logits.dim() != 2 or span_end_logits.dim() != 2:
         raise ValueError("Input shapes must be (batch_size, passage_length)")
     batch_size, passage_length = span_start_logits.size()
