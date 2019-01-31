@@ -51,17 +51,19 @@ import math
 import logging
 import shutil
 
-import matplotlib; matplotlib.use('Agg') # pylint: disable=multiple-statements,wrong-import-position
-import matplotlib.pyplot as plt # pylint: disablewrong-import-position
+# pylint: disable=multiple-statements,wrong-import-position
+import matplotlib; matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 
-from allennlp.commands.subcommand import Subcommand # pylint: disablewrong-import-position
-from allennlp.commands.train import datasets_from_params # pylint: disablewrong-import-position
-from allennlp.common.checks import ConfigurationError, check_for_gpu # pylint: disablewrong-import-position
-from allennlp.common import Params, Tqdm # pylint: disablewrong-import-position
-from allennlp.common.util import prepare_environment # pylint: disablewrong-import-position
-from allennlp.data import Vocabulary, DataIterator # pylint: disablewrong-import-position
-from allennlp.models import Model # pylint: disablewrong-import-position
-from allennlp.training import Trainer # pylint: disablewrong-import-position
+from allennlp.commands.subcommand import Subcommand
+from allennlp.common.checks import ConfigurationError, check_for_gpu
+from allennlp.common import Params, Tqdm
+from allennlp.common.util import prepare_environment, lazy_groups_of
+from allennlp.data import Vocabulary, DataIterator
+from allennlp.models import Model
+from allennlp.training import Trainer
+from allennlp.training.util import datasets_from_params
+# pylint: enable=multiple-statements,wrong-import-position
 
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -72,7 +74,9 @@ class FindLearningRate(Subcommand):
         # pylint: disable=protected-access
         description = '''Find a learning rate range where loss decreases quickly
                          for the specified model and dataset.'''
-        subparser = parser.add_parser(name, description=description, help='Train a model')
+        subparser = parser.add_parser(name,
+                                      description=description,
+                                      help='Find a learning rate range.')
 
         subparser.add_argument('param_path',
                                type=str,
@@ -96,7 +100,7 @@ class FindLearningRate(Subcommand):
         subparser.add_argument('--num-batches',
                                type=int,
                                default=100,
-                               help='number of mini-batches to run Learning rate finder')
+                               help='number of mini-batches to run learning rate finder')
         subparser.add_argument('--stopping-factor',
                                type=float,
                                default=None,
@@ -171,11 +175,7 @@ def find_learning_rate_model(params: Params, serialization_dir: str,
     prepare_environment(params)
 
     cuda_device = params.params.get('trainer').get('cuda_device', -1)
-    if isinstance(cuda_device, list):
-        for device in cuda_device:
-            check_for_gpu(device)
-    else:
-        check_for_gpu(cuda_device)
+    check_for_gpu(cuda_device)
 
     all_datasets = datasets_from_params(params)
     datasets_for_vocab_creation = set(params.pop("datasets_for_vocab_creation", all_datasets))
@@ -205,12 +205,16 @@ def find_learning_rate_model(params: Params, serialization_dir: str,
         if any(re.search(regex, name) for regex in no_grad_regexes):
             parameter.requires_grad_(False)
 
-    trainer = Trainer.from_params(model,
-                                  serialization_dir,
-                                  iterator,
-                                  train_data,
-                                  params=trainer_params,
+
+    trainer_choice = trainer_params.pop("type", "default")
+    if trainer_choice != "default":
+        raise ConfigurationError("currently find-learning-rate only works with the default Trainer")
+    trainer = Trainer.from_params(model=model,
+                                  serialization_dir=serialization_dir,
+                                  iterator=iterator,
+                                  train_data=train_data,
                                   validation_data=None,
+                                  params=trainer_params,
                                   validation_iterator=None)
 
     logger.info(f'Starting learning rate search from {start_lr} to {end_lr} in {num_batches} iterations.')
@@ -234,7 +238,6 @@ def search_learning_rate(trainer: Trainer,
     """
     Runs training loop on the model using :class:`~allennlp.training.trainer.Trainer`
     increasing learning rate from ``start_lr`` to ``end_lr`` recording the losses.
-
     Parameters
     ----------
     trainer: :class:`~allennlp.training.trainer.Trainer`
@@ -249,7 +252,6 @@ def search_learning_rate(trainer: Trainer,
     stopping_factor: ``float``
         Stop the search when the current loss exceeds the best loss recorded by
         multiple of stopping factor. If ``None`` search proceeds till the ``end_lr``
-
     Returns
     -------
     (learning_rates, losses): ``Tuple[List[float], List[float]]``
@@ -261,8 +263,11 @@ def search_learning_rate(trainer: Trainer,
 
     trainer.model.train()
 
-    train_generator = trainer.iterator(trainer.train_data,
-                                       shuffle=trainer.shuffle)
+    num_gpus = len(trainer._cuda_devices) # pylint: disable=protected-access
+
+    raw_train_generator = trainer.iterator(trainer.train_data,
+                                           shuffle=trainer.shuffle)
+    train_generator = lazy_groups_of(raw_train_generator, num_gpus)
     train_generator_tqdm = Tqdm.tqdm(train_generator,
                                      total=num_batches)
 
@@ -274,7 +279,7 @@ def search_learning_rate(trainer: Trainer,
     else:
         lr_update_factor = (end_lr / start_lr) ** (1.0 / num_batches)
 
-    for i, batch in enumerate(train_generator_tqdm):
+    for i, batch_group in enumerate(train_generator_tqdm):
 
         if linear_steps:
             current_lr = start_lr + (lr_update_factor * i)
@@ -285,7 +290,7 @@ def search_learning_rate(trainer: Trainer,
             param_group['lr'] = current_lr
 
         trainer.optimizer.zero_grad()
-        loss = trainer.batch_loss(batch, for_training=True)
+        loss = trainer.batch_loss(batch_group, for_training=True)
         loss.backward()
         loss = loss.detach().cpu().item()
 

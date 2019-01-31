@@ -6,7 +6,7 @@ from allennlp.common.testing import AllenNlpTestCase
 from allennlp.modules.seq2seq_encoders import PassThroughEncoder
 
 
-class TestStackedSelfAttention(AllenNlpTestCase):
+class TestPassThroughEncoder(AllenNlpTestCase):
     def test_get_dimension_is_correct(self):
         encoder = PassThroughEncoder(input_dim=9)
         assert encoder.get_input_dim() == 9
