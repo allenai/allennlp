@@ -61,10 +61,8 @@ class FineTune(Subcommand):
                                action='store_true',
                                default=False,
                                help='if specified, we will use the instances in your new dataset to '
-                                    'extend your vocabulary. Extension of embedding layers is implemented, '
-                                    'but it does not initialize the extra tokens from pretrained embedding file, '
-                                    'which could have been used to initialize embedding layers during training.')
-
+                                    'extend your vocabulary. If pretrained-file was used to initialize '
+                                    'embedding layers, you may also need to pass --embedding-sources-mapping.')
         subparser.add_argument('--file-friendly-logging',
                                action='store_true',
                                default=False,
@@ -78,10 +76,10 @@ class FineTune(Subcommand):
         subparser.add_argument('--embedding-sources-mapping',
                                type=str,
                                default="",
-                               help='a JSON dict to define mapping from embedding file paths used during training '
-                               'to current embedding file paths. If not passed, and embedding needs to be '
-                               'extended, we will use the original file paths uded during training.')
-
+                               help='a JSON dict defining mapping from embedding module path to embedding'
+                               'pretrained-file used during training. If not passed, and embedding needs to be '
+                               'extended, we will try to use the original file paths used during training. If '
+                               'they are not available we will use random vectors for embedding extension.')
         subparser.set_defaults(func=fine_tune_model_from_args)
 
         return subparser
