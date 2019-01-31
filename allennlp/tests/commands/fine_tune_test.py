@@ -2,7 +2,6 @@
 import argparse
 import re
 import shutil
-import gzip
 
 import pytest
 import numpy as np
@@ -13,6 +12,8 @@ from allennlp.commands.fine_tune import FineTune, fine_tune_model_from_file_path
                                fine_tune_model_from_args, fine_tune_model
 from allennlp.common.params import Params
 from allennlp.models import load_archive
+from allennlp.modules.token_embedders.embedding import _read_pretrained_embeddings_file
+from allennlp.data.vocabulary import Vocabulary
 
 class TestFineTune(AllenNlpTestCase):
     def setUp(self):
@@ -62,11 +63,10 @@ class TestFineTune(AllenNlpTestCase):
         # snli2 has a new token (seahorse) in it
         params["train_data_path"] = str(self.FIXTURES_ROOT / 'data' / 'snli2.jsonl')
 
-        embeddings_filename = str(self.TEST_DIR / "embeddings2.gz")
-        extra_token_vector = np.random.rand(300)
-        with gzip.open(embeddings_filename, 'wb') as embeddings_file:
-            extra_token_vector_str = " ".join(map(str, list(extra_token_vector)))
-            embeddings_file.write("seahorse {}\n".format(extra_token_vector_str).encode('utf-8'))
+        # seahorse_embeddings.gz has only token embedding for 'seahorse'.
+        embeddings_filename = str(self.FIXTURES_ROOT / 'data' / 'seahorse_embeddings.gz')
+        extra_token_vector = _read_pretrained_embeddings_file(embeddings_filename, 300,
+                                                              Vocabulary({"tokens": {"seahorse": 1}}))[2, :]
 
         # TEST 1
         trained_model = load_archive(self.model_archive).model
@@ -80,7 +80,7 @@ class TestFineTune(AllenNlpTestCase):
         assert tuple(original_weight.shape) == (24, 300)
         assert tuple(extended_weight.shape) == (25, 300)
         assert torch.all(original_weight == extended_weight[:24, :])
-        assert np.all(extended_weight[24, :].numpy() == extra_token_vector.astype(np.float32))
+        assert torch.all(extended_weight[24, :] == extra_token_vector)
 
         # TEST 2
         trained_model = load_archive(self.model_archive).model
@@ -99,7 +99,7 @@ class TestFineTune(AllenNlpTestCase):
         assert tuple(original_weight.shape) == (24, 300)
         assert tuple(extended_weight.shape) == (25, 300)
         assert torch.all(original_weight == extended_weight[:24, :])
-        assert np.all(extended_weight[24, :].numpy() == extra_token_vector.astype(np.float32))
+        assert torch.all(extended_weight[24, :] == extra_token_vector)
 
     def test_fine_tune_runs_from_parser_arguments(self):
         raw_args = ["fine-tune",
