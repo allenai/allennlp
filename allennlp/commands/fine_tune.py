@@ -134,15 +134,15 @@ def fine_tune_model_from_file_paths(model_archive_path: str,
     # necessary.
     archive = load_archive(model_archive_path)
     params = Params.from_file(config_file, overrides)
-    embedding_sources_mapping = embedding_sources_mapping or '{}'
-    embedding_sources_dict: Dict[str, str] = json.loads(embedding_sources_mapping)
+
+    embedding_sources: Dict[str, str] = json.loads(embedding_sources_mapping) if embedding_sources_mapping else {}
     return fine_tune_model(model=archive.model,
                            params=params,
                            serialization_dir=serialization_dir,
                            extend_vocab=extend_vocab,
                            file_friendly_logging=file_friendly_logging,
                            batch_weight_key=batch_weight_key,
-                           embedding_sources_mapping=embedding_sources_dict)
+                           embedding_sources_mapping=embedding_sources)
 
 def fine_tune_model(model: Model,
                     params: Params,
