@@ -4,7 +4,7 @@ into the first (batch) dimension, applies some other ``Module``,
 and then rolls the time dimension back up.
 """
 
-from typing import Iterable
+from typing import List
 
 import torch
 
@@ -25,7 +25,7 @@ class TimeDistributed(torch.nn.Module):
         super().__init__()
         self._module = module
 
-    def forward(self, *inputs, pass_through: Iterable[str] = None, **kwargs):
+    def forward(self, *inputs, pass_through: List[str] = None, **kwargs):
         # pylint: disable=arguments-differ
         pass_through = pass_through or []
 
