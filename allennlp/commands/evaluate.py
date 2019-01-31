@@ -54,7 +54,7 @@ class Evaluate(Subcommand):
         # pylint: disable=protected-access
         description = '''Evaluate the specified model + dataset'''
         subparser = parser.add_parser(
-                name, description=description, help='Evaluate the specified model + dataset')
+                name, description=description, help='Evaluate the specified model + dataset.')
 
         subparser.add_argument('archive_file', type=str, help='path to an archived trained model')
 

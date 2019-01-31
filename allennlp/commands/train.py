@@ -55,7 +55,7 @@ class Train(Subcommand):
     def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
         # pylint: disable=protected-access
         description = '''Train the specified model on the specified dataset.'''
-        subparser = parser.add_parser(name, description=description, help='Train a model')
+        subparser = parser.add_parser(name, description=description, help='Train a model.')
 
         subparser.add_argument('param_path',
                                type=str,
@@ -89,6 +89,7 @@ class Train(Subcommand):
         subparser.set_defaults(func=train_model_from_args)
 
         return subparser
+
 
 def train_model_from_args(args: argparse.Namespace):
     """
