@@ -18,7 +18,7 @@ with warnings.catch_warnings():
 
 from allennlp.common import Params, Tqdm
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.file_utils import get_file_extension, cached_path
+from allennlp.common.file_utils import get_file_extension, cached_path, file_is_available
 from allennlp.data import Vocabulary
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 from allennlp.modules.time_distributed import TimeDistributed
@@ -193,7 +193,7 @@ class Embedding(TokenEmbedder):
             # It's already been extended. No need to initialize / read pretrained file in first place (no-op)
             return
 
-        if self._pretrained_file and os.path.exists(self._pretrained_file):
+        if self._pretrained_file and file_is_available(self._pretrained_file):
             # pretrained_file attribute was saved during training and is available:
             if pretrained_file:
                 # But user also passed pretrained_file
@@ -203,12 +203,12 @@ class Embedding(TokenEmbedder):
                                 f"original pretrained_file, {self._pretrained_file} is available.")
             pretrained_file = self._pretrained_file
 
-        if not (pretrained_file and os.path.exists(pretrained_file)):
+        if not pretrained_file or file_is_available(pretrained_file):
             extra_info = (f"Originally pretrained_file was at "
                           f"{self._pretrained_file}. " if self._pretrained_file else "")
             # It's better to warn here and not give error because there is no way to distinguish between
             # whether pretrained-file wasn't used during training or user forgot to pass / passed incorrect
-            # mapping. Giving error would prevent former case to executable.
+            # mapping. Raising an error would prevent fine-tuning in the former case.
             logging.warning(f"Embedding at model_path, {model_path} cannot locate the pretrained_file. "
                             f"{extra_info} If you are fine-tuning and want to use using pretrained_file "
                             f"for embedding extension, please pass the mapping by --embedding-sources argument.")
