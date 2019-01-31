@@ -1,3 +1,6 @@
+// Configuration for the basic QANet model from "QANet: Combining Local
+// Convolution with Global Self-Attention for Reading Comprehension"
+// (https://arxiv.org/abs/1804.09541).
 {
     "dataset_reader": {
         "type": "squad",
@@ -36,7 +39,11 @@
             "token_characters": 200
         },
         "pretrained_files": {
-            "tokens": "https://s3-us-west-2.amazonaws.com/yizhongw-dev/glove/glove.840B.300d.lower.zip"
+            // This embedding file is created from the Glove 840B 300d embedding file.
+            // We kept all the original lowercased words and their embeddings. But there are also many words
+            // with only the uppercased version. To include as many words as possible, we lowered those words
+            // and used the embeddings of uppercased words as an alternative.
+            "tokens": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.840B.300d.lower.converted.zip"
         },
         "only_include_pretrained_words": true
     },
@@ -48,7 +55,7 @@
             "token_embedders": {
                 "tokens": {
                     "type": "embedding",
-                    "pretrained_file": "https://s3-us-west-2.amazonaws.com/yizhongw-dev/glove/glove.840B.300d.lower.zip",
+                    "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.840B.300d.lower.converted.zip",
                     "embedding_dim": 300,
                     "trainable": false
                 },
