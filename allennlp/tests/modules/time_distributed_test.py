@@ -39,6 +39,7 @@ class TestTimeDistributed(AllenNlpTestCase):
         class FakeModule(Module):
             @overrides
             def forward(self, input_tensor, tensor_to_pass_through=None, another_tensor=None):
+                # pylint: disable=arguments-differ
                 return input_tensor + tensor_to_pass_through + another_tensor
 
         module = FakeModule()
@@ -56,6 +57,7 @@ class TestTimeDistributed(AllenNlpTestCase):
         class FakeModule(Module):
             @overrides
             def forward(self, input_tensor, number=0, another_tensor=None):
+                # pylint: disable=arguments-differ
                 return input_tensor + number + another_tensor
 
         module = FakeModule()
