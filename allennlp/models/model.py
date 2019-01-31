@@ -5,7 +5,7 @@ an AllenNLP model.
 
 import logging
 import os
-from typing import Dict, Union, List, Set
+from typing import Dict, Union, List, Set, Any
 from collections import OrderedDict
 import json
 
@@ -343,6 +343,7 @@ class Model(torch.nn.Module, Registrable):
         corresponding module names of the model. This can be helpful to setup model path
         based regex, for example in initializer. If quite is false, dict will be printed.
         Both outputs are less verbose than print(model).
+
         Parameters
         ----------
         inspect: str, optional, (default = "parameters")
@@ -366,7 +367,7 @@ class Model(torch.nn.Module, Registrable):
                 dict_ = dict_.setdefault(key, {})
             dict_[keys[-1]] = value
 
-        model_inspection_dict = {}
+        model_inspection_dict: OrderedDict[str, Any] = OrderedDict()
         for module_path in sorted_module_paths:
             module = module_dict[module_path]
             module_class_name = module.__class__.__name__
