@@ -341,7 +341,7 @@ class Model(torch.nn.Module, Registrable):
         """
         Returns ordered nested dict showing the module / parameters paths and (optionally)
         corresponding module names of the model. This can be helpful to setup model path
-        based regex, for example in initializer. If quite is fale, it will be printed.
+        based regex, for example in initializer. If quite is false, dict will be printed.
         Both outputs are less verbose than print(model).
         Parameters
         ----------
