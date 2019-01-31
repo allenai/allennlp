@@ -303,10 +303,10 @@ class BidirectionalAttentionFlow(Model):
             raise ValueError("Input shapes must be (batch_size, passage_length)")
         batch_size, passage_length = span_start_logits.size()
         device = span_start_logits.device
-        probs_product = span_start_logits.unsqueeze(2) + span_end_logits.unsqueeze(1)
-        probs_product_triu = probs_product * torch.triu(torch.ones((passage_length, passage_length),
-                                                                   device=device)).unsqueeze(0)
-        res = probs_product_triu.view(batch_size, -1).argmax(-1)
+        logits_add = span_start_logits.unsqueeze(2) + span_end_logits.unsqueeze(1)
+        logits_add_triu = logits_add * torch.triu(torch.ones((passage_length, passage_length),
+                                                             device=device)).unsqueeze(0)
+        res = logits_add_triu.view(batch_size, -1).argmax(-1)
         span_start_idx = res // passage_length
         span_end_idx = res % passage_length
         return torch.stack([span_start_idx, span_end_idx], dim=-1)
