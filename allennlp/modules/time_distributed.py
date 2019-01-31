@@ -4,7 +4,7 @@ into the first (batch) dimension, applies some other ``Module``,
 and then rolls the time dimension back up.
 """
 
-from typing import Iterable, Optional
+from typing import Iterable
 
 import torch
 
