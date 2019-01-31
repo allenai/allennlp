@@ -1,0 +1,39 @@
+{
+    "_aggregate_feedforward": {
+        "_linear_layers": {
+            "0": {
+                "bias": "Parameter",
+                "weight": "Parameter"
+            }
+        }
+    },
+    "_attend_feedforward": {
+        "_module": {
+            "_linear_layers": {
+                "0": {
+                    "bias": "Parameter",
+                    "weight": "Parameter"
+                }
+            }
+        }
+    },
+    "_compare_feedforward": {
+        "_module": {
+            "_linear_layers": {
+                "0": {
+                    "bias": "Parameter",
+                    "weight": "Parameter"
+                }
+            }
+        }
+    },
+    "_text_field_embedder": {
+        "token_embedder_tokens": {
+            "_projection": {
+                "bias": "Parameter",
+                "weight": "Parameter"
+            },
+            "weight": "Parameter"
+        }
+    }
+}
