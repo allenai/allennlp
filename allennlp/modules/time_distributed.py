@@ -25,10 +25,9 @@ class TimeDistributed(torch.nn.Module):
         super().__init__()
         self._module = module
 
-    def forward(self, *inputs, pass_through: Optional[Iterable] = None,  # pylint: disable=arguments-differ
-                **kwargs):
-        if pass_through is None:
-            pass_through = []
+    def forward(self, *inputs, pass_through: Iterable[str] = None, **kwargs):
+        # pylint: disable=arguments-differ
+        pass_through = pass_through or []
 
         reshaped_inputs = [self._reshape_tensor(input_tensor) for input_tensor in inputs]
 
@@ -38,17 +37,16 @@ class TimeDistributed(torch.nn.Module):
             some_input = inputs[-1]
 
         reshaped_kwargs = {}
-        ignored_kwargs = {}
         for key, value in kwargs.items():
-            if key in pass_through or not isinstance(value, torch.Tensor):
-                ignored_kwargs[key] = value
-            else:
+            if isinstance(value, torch.Tensor) and key not in pass_through:
                 if some_input is None:
                     some_input = value
 
-                reshaped_kwargs[key] = self._reshape_tensor(value)
+                value = self._reshape_tensor(value)
 
-        reshaped_outputs = self._module(*reshaped_inputs, **reshaped_kwargs, **ignored_kwargs)
+            reshaped_kwargs[key] = value
+
+        reshaped_outputs = self._module(*reshaped_inputs, **reshaped_kwargs)
 
         if some_input is None:
             raise RuntimeError("No input tensor to time-distribute")
