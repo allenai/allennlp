@@ -10,7 +10,7 @@ from allennlp.models import Model
 
 class QaNetTest(ModelTestCase):
     def setUp(self):
-        super(QaNetTest, self).setUp()
+        super().setUp()
         self.set_up_model(self.FIXTURES_ROOT / 'qanet' / 'experiment.json',
                           self.FIXTURES_ROOT / 'data' / 'squad.json')
 

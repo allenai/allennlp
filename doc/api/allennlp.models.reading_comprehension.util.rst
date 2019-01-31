@@ -1,5 +1,5 @@
 allennlp.models.reading_comprehension.util
-===============================
+==========================================
 
 .. automodule:: allennlp.models.reading_comprehension.util
    :members:
