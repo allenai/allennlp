@@ -304,8 +304,8 @@ class BidirectionalAttentionFlow(Model):
         batch_size, passage_length = span_start_logits.size()
         device = span_start_logits.device
         logits_add = span_start_logits.unsqueeze(2) + span_end_logits.unsqueeze(1)
-        logits_add_triu = logits_add * torch.triu(torch.ones((passage_length, passage_length),
-                                                             device=device)).unsqueeze(0)
+        logits_add_triu = logits_add + torch.triu(torch.ones((passage_length, passage_length),
+                                                             device=device)).log().unsqueeze(0)
         res = logits_add_triu.view(batch_size, -1).argmax(-1)
         span_start_idx = res // passage_length
         span_end_idx = res % passage_length
