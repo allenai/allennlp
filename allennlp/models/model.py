@@ -345,8 +345,8 @@ class Model(torch.nn.Module, Registrable):
         Both outputs are less verbose than print(model).
         Parameters
         ----------
-        inspect: str, optional, (default = "modules")
-            Inspects "modules" or "parameters" of the model.
+        inspect: str, optional, (default = "parameters")
+            Inspects "parameters" or "modules" of the model.
         quite: bool, optional, (default = False)
             If true, doesn't print the output, only returns the final dict.
         """
