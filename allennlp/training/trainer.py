@@ -1,6 +1,5 @@
 
 import logging
-from allennlp.common.elastic_logger import ElasticLogger
 import math
 import os
 import time
@@ -8,6 +7,7 @@ import re
 import datetime
 import traceback
 from typing import Dict, Optional, List, Tuple, Union, Iterable, Any, NamedTuple
+from allennlp.common.elastic_logger import ElasticLogger
 
 import torch
 import torch.optim.lr_scheduler
@@ -345,6 +345,16 @@ class Trainer(TrainerBase):
             metrics = training_util.get_metrics(self.model, train_loss, batches_this_epoch)
             description = training_util.description_from_metrics(metrics)
 
+            # Alon addition - elastic logs - this is a huge Patch ... sorry didn't have time to change this before ACL ..
+            # Training logs are saved in training and validation under the training final results
+            elastic_train_metrics = metrics.copy()
+            elastic_train_metrics.update({'batch_num_total': batch_num_total, 'gpu': self._cuda_devices[0]})
+            elastic_train_metrics.update({'experiment_name': '/'.join(self._serialization_dir.split('/')[-2:])})
+
+            if elastic_train_metrics['batch_num_total'] % 100 == 1:
+                ElasticLogger().write_log('INFO', 'train_metric', context_dict=elastic_train_metrics)
+
+
             train_generator_tqdm.set_description(description, refresh=False)
 
             # Log parameter values to Tensorboard
@@ -488,6 +498,19 @@ class Trainer(TrainerBase):
                         break
 
             self._tensorboard.log_metrics(train_metrics, val_metrics=val_metrics, log_to_console=True)
+
+            # Alon addition - elastic logs - this is a huge Patch ... sorry didn't have time to change this before ACL ..
+            # Training logs are saved in training and validation under the training final results
+            elastic_val_metrics = val_metrics.copy()
+            elastic_val_metrics = {'validation/' + k: v for k, v in elastic_val_metrics.items()}
+            elastic_val_metrics.update({'epoch': epoch, 'gpu': self._cuda_devices[0]})
+            elastic_val_metrics.update({'experiment_name': '/'.join(self._serialization_dir.split('/')[-2:])})
+            elastic_val_metrics.update(
+                {'optimizer': str(type(self.optimizer)), 'serialization_dir': self._serialization_dir, \
+                 'target_number_of_epochs': self._num_epochs, 'iterator_type': self.iterator.default_implementation})
+            elastic_val_metrics.update(self.optimizer.defaults)
+            ElasticLogger().write_log('INFO', 'val_metric', context_dict=elastic_val_metrics)
+
 
             # Create overall metrics dict
             training_elapsed_time = time.time() - training_start_time
