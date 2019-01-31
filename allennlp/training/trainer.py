@@ -670,14 +670,17 @@ class Trainer(TrainerBase):
 
         # If fp16, need to wrap the optimizer
         try:
-            from apex.optimizers import FP16_Optimizer, FusedAdam
+            from apex.optimizers import FusedAdam
         except ImportError:
             raise ImportError("Please install apex from https://www.github.com/nvidia/apex to use fp16 training.")
 
         optimizer = Optimizer.from_params(parameters, params.pop("optimizer"))
         if fp16:
-            if not isinstance(optimizer, FusedAdam):
-                raise ConfigurationError("fp16 training only supports 'fused_adam' optimizer")
+            # The FP16_Optimizer we use depends on whether the optimizer is FusedAdam or a regular pytorch optimizer
+            if isinstance(optimizer, FusedAdam):
+                from apex.optimizers import FP16_Optimizer
+            else:
+                from apex.fp16_utils import FP16_Optimizer
             optimizer = FP16_Optimizer(optimizer, dynamic_loss_scale=True)
 
         if "moving_average" in params:
