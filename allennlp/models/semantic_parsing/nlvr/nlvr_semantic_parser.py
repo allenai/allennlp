@@ -10,9 +10,7 @@ from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder, Embedding
 from allennlp.nn import util
-from allennlp.semparse.type_declarations import type_declaration
-from allennlp.semparse.type_declarations.type_declaration import START_SYMBOL
-from allennlp.semparse.worlds import NlvrWorld
+from allennlp.semparse.domain_languages import NlvrLanguage, START_SYMBOL
 from allennlp.state_machines.states import GrammarBasedState, GrammarStatelet, RnnStatelet
 from allennlp.training.metrics import Average
 
@@ -143,14 +141,14 @@ class NlvrSemanticParser(Model):
 
     @staticmethod
     def _get_denotations(action_strings: List[List[List[str]]],
-                         worlds: List[List[NlvrWorld]]) -> List[List[List[str]]]:
+                         worlds: List[List[NlvrLanguage]]) -> List[List[List[str]]]:
         all_denotations: List[List[List[str]]] = []
         for instance_worlds, instance_action_sequences in zip(worlds, action_strings):
             denotations: List[List[str]] = []
             for instance_action_strings in instance_action_sequences:
                 if not instance_action_strings:
                     continue
-                logical_form = instance_worlds[0].get_logical_form(instance_action_strings)
+                logical_form = instance_worlds[0].action_sequence_to_logical_form(instance_action_strings)
                 instance_denotations: List[str] = []
                 for world in instance_worlds:
                     # Some of the worlds can be None for instances that come with less than 4 worlds
@@ -164,18 +162,18 @@ class NlvrSemanticParser(Model):
     @staticmethod
     def _check_denotation(action_sequence: List[str],
                           labels: List[str],
-                          worlds: List[NlvrWorld]) -> List[bool]:
+                          worlds: List[NlvrLanguage]) -> List[bool]:
         is_correct = []
         for world, label in zip(worlds, labels):
-            logical_form = world.get_logical_form(action_sequence)
+            logical_form = world.action_sequence_to_logical_form(action_sequence)
             denotation = world.execute(logical_form)
             is_correct.append(str(denotation).lower() == label)
         return is_correct
 
     def _create_grammar_state(self,
-                              world: NlvrWorld,
+                              world: NlvrLanguage,
                               possible_actions: List[ProductionRule]) -> GrammarStatelet:
-        valid_actions = world.get_valid_actions()
+        valid_actions = world.get_nonterminal_productions()
         action_mapping = {}
         for i, action in enumerate(possible_actions):
             action_mapping[action[0]] = i
@@ -197,7 +195,7 @@ class NlvrSemanticParser(Model):
                                                        list(global_action_ids))
         return GrammarStatelet([START_SYMBOL],
                                translated_valid_actions,
-                               type_declaration.is_nonterminal)
+                               world.is_nonterminal)
 
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
@@ -208,13 +206,13 @@ class NlvrSemanticParser(Model):
         """
         best_action_strings = output_dict["best_action_strings"]
         # Instantiating an empty world for getting logical forms.
-        world = NlvrWorld([])
+        world = NlvrLanguage(set())
         logical_forms = []
         for instance_action_sequences in best_action_strings:
             instance_logical_forms = []
             for action_strings in instance_action_sequences:
                 if action_strings:
-                    instance_logical_forms.append(world.get_logical_form(action_strings))
+                    instance_logical_forms.append(world.action_sequence_to_logical_form(action_strings))
                 else:
                     instance_logical_forms.append('')
             logical_forms.append(instance_logical_forms)
@@ -245,7 +243,7 @@ class NlvrSemanticParser(Model):
         output_dict["logical_form"] = logical_forms
         return output_dict
 
-    def _check_state_denotations(self, state: GrammarBasedState, worlds: List[NlvrWorld]) -> List[bool]:
+    def _check_state_denotations(self, state: GrammarBasedState, worlds: List[NlvrLanguage]) -> List[bool]:
         """
         Returns whether action history in the state evaluates to the correct denotations over all
         worlds. Only defined when the state is finished.

@@ -57,7 +57,7 @@ class BeamSearchTest(AllenNlpTestCase):
         )
 
         # This is what the log probs should look like for each item in the batch.
-        self.expected_log_probs = np.log(np.array([0.4, 0.3, 0.2]))
+        self.expected_log_probs = np.log(np.array([0.4, 0.3, 0.2]))  # pylint: disable=assignment-from-no-return
 
     def _check_results(self,
                        batch_size: int = 5,
@@ -129,7 +129,7 @@ class BeamSearchTest(AllenNlpTestCase):
     def test_greedy_search(self):
         beam_search = BeamSearch(self.end_index, beam_size=1)
         expected_top_k = np.array([[1, 2, 3, 4, 5]])
-        expected_log_probs = np.log(np.array([0.4]))
+        expected_log_probs = np.log(np.array([0.4]))  # pylint: disable=assignment-from-no-return
         self._check_results(expected_top_k=expected_top_k,
                             expected_log_probs=expected_log_probs,
                             beam_search=beam_search)
@@ -144,7 +144,7 @@ class BeamSearchTest(AllenNlpTestCase):
                  [2, 3, 4],
                  [3, 4, 5]]
         )
-        expected_log_probs = np.log(np.array([0.4, 0.3, 0.2]))
+        expected_log_probs = np.log(np.array([0.4, 0.3, 0.2]))  # pylint: disable=assignment-from-no-return
         self._check_results(expected_top_k=expected_top_k,
                             expected_log_probs=expected_log_probs,
                             beam_search=beam_search)

@@ -72,6 +72,12 @@ allennlp.predictors
    :undoc-members:
    :show-inheritance:
 
+.. _seq2seq:
+.. automodule:: allennlp.predictors.seq2seq
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 .. _simple-seq2seq:
 .. automodule:: allennlp.predictors.simple_seq2seq
    :members:

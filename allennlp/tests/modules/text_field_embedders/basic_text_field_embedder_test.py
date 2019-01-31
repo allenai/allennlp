@@ -1,4 +1,4 @@
-# pylint: disable=no-self-use,invalid-name
+# pylint: disable=no-self-use,invalid-name, protected-access
 import pytest
 import torch
 
@@ -159,6 +159,47 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
 
         # But also allow loading the parameters in the new format
         new_embedder = BasicTextFieldEmbedder.from_params(params=new_params, vocab=self.vocab)
-        assert old_embedder._token_embedders.keys() == new_embedder._token_embedders.keys() #pylint: disable=protected-access
+        assert old_embedder._token_embedders.keys() == new_embedder._token_embedders.keys()
 
         assert new_embedder(self.inputs).size() == (1, 4, 10)
+
+    def test_extension_by_vocab(self):
+        text_embedder = self.token_embedder
+        vocab = self.vocab
+
+        original_token_embedder_weight_words1 = text_embedder.token_embedder_words1.weight
+        original_token_embedder_weight_words2 = text_embedder.token_embedder_words2.weight
+        original_token_embedder_weight_words3 = text_embedder.token_embedder_words3.weight
+
+        assert tuple(text_embedder.token_embedder_words1.weight.shape) == (6, 2)
+        assert tuple(text_embedder.token_embedder_words2.weight.shape) == (6, 5)
+        assert tuple(text_embedder.token_embedder_words3.weight.shape) == (6, 3)
+
+        extended_inputs = {
+                "words1": torch.LongTensor([[6]]),
+                "words2": torch.LongTensor([[7]]),
+                "words3": torch.LongTensor([[8]])
+                }
+
+        # This should give error for now.
+        with pytest.raises(Exception) as _:
+            text_embedder(extended_inputs)
+
+        counter = {"tokens": {"5": 1, "6": 1, "7": 1}}
+        vocab._extend(counter)
+
+        text_embedder.extend_vocab(vocab)
+
+        assert tuple(text_embedder.token_embedder_words1.weight.shape) == (9, 2)
+        assert tuple(text_embedder.token_embedder_words2.weight.shape) == (9, 5)
+        assert tuple(text_embedder.token_embedder_words3.weight.shape) == (9, 3)
+
+        # This shouldn't give error now.
+        text_embedder(extended_inputs)
+
+        assert torch.all(text_embedder.token_embedder_words1.weight[:6, :]
+                         == original_token_embedder_weight_words1[:6, :])
+        assert torch.all(text_embedder.token_embedder_words2.weight[:6, :]
+                         == original_token_embedder_weight_words2[:6, :])
+        assert torch.all(text_embedder.token_embedder_words3.weight[:6, :]
+                         == original_token_embedder_weight_words3[:6, :])
