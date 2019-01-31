@@ -6,6 +6,8 @@ an AllenNLP model.
 import logging
 import os
 from typing import Dict, Union, List, Set
+from collections import OrderedDict
+import json
 
 import numpy
 import torch
@@ -333,6 +335,60 @@ class Model(torch.nn.Module, Registrable):
             if isinstance(module, (Embedding, TextFieldEmbedder)):
                 module.extend_vocab(extended_vocab)
 
+    def inspection_dict(self,
+                        inspect: str = "parameters",
+                        quite: bool = False) -> OrderedDict:
+        """
+        Returns ordered nested dict showing the module / parameters paths and (optionally)
+        corresponding module names of the model. This can be helpful to setup model path
+        based regex, for example in initializer. If quite is fale, it will be printed.
+        Both outputs are less verbose than print(model).
+        Parameters
+        ----------
+        inspect: str, optional, (default = "modules")
+            Inspects "modules" or "parameters" of the model.
+        quite: bool, optional, (default = False)
+            If true, doesn't print the output, only returns the final dict.
+        """
+        if inspect not in ["parameters", "modules"]:
+            ConfigurationError("model inspection works with modules or parameters only")
+
+        items = self.named_modules() if inspect == "modules" else self.named_parameters()
+        module_dict = {model_path: module for model_path, module in items}
+        sorted_module_paths = sorted(module_dict.keys(), key=lambda path: path.count('.'))
+
+        def nested_set(dict_, keys, value):
+            """
+            Given a nested list of keys defining a path, set's the value.
+            Eg. nested_set(dict_={}, ["one", "two"], "three") ==> {"one": {"two": "three"}}
+            """
+            for key in keys[:-1]:
+                dict_ = dict_.setdefault(key, {})
+            dict_[keys[-1]] = value
+
+        model_inspection_dict = {}
+        for module_path in sorted_module_paths:
+            module = module_dict[module_path]
+            module_class_name = module.__class__.__name__
+            if not module_path:
+                model_inspection_dict["__class__"] = module_class_name
+                continue
+            path_module_names = module_path.split(".")
+            value = {'__class__': module_class_name} if inspect == "modules" else "Parameter"
+            if path_module_names:
+                nested_set(model_inspection_dict, path_module_names, value)
+
+        def sorted_dict(dictionary):
+            """Recursively (alphabetically) orders dictionary according to keys"""
+            result = OrderedDict()
+            for key, val in sorted(dictionary.items(), key=lambda item: item[0]):
+                result[key] = sorted_dict(val) if isinstance(val, dict) else val
+            return result
+
+        model_inspection_dict = sorted_dict(model_inspection_dict)
+        if not quite:
+            print(json.dumps(model_inspection_dict, indent=4))
+        return model_inspection_dict
 
 def remove_pretrained_embedding_params(params: Params):
     keys = params.keys()
