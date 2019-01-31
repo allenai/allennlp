@@ -347,7 +347,8 @@ class Trainer(TrainerBase):
 
             # Alon addition - elastic logs - this is a huge Patch ... sorry didn't have time to change this before ACL ..
             # Training logs are saved in training and validation under the training final results
-            elastic_train_metrics = metrics.copy()
+            elastic_metrics = metrics.copy()
+            elastic_train_metrics = {'epoch_metrics/'+key:elastic_metrics[key] for key in elastic_metrics}
             elastic_train_metrics.update({'batch_num_total': batch_num_total, 'gpu': self._cuda_devices[0]})
             elastic_train_metrics.update({'experiment_name': '/'.join(self._serialization_dir.split('/')[-2:])})
 
