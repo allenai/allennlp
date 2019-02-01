@@ -1,5 +1,6 @@
 # pylint: disable=protected-access
 import torch
+import copy
 
 from allennlp.common.testing.test_case import AllenNlpTestCase
 from allennlp.models import load_archive
@@ -23,3 +24,18 @@ class TestModel(AllenNlpTestCase):
         assert tuple(extended_weight.shape) == (25, 300)
 
         assert torch.all(original_weight == extended_weight[:24, :])
+
+    def test_get_module_path(self):
+        model_archive = str(self.FIXTURES_ROOT / 'decomposable_attention' / 'serialization' / 'model.tar.gz')
+        model = load_archive(model_archive).model
+
+        module_path_1 = '_aggregate_feedforward._linear_layers'
+        module_path_2 = '_compare_feedforward._module._dropout.0'
+
+        modules_dict = {module_path: module for module_path, module in model.named_modules()}
+
+        module_1 = modules_dict[module_path_1]
+        module_2 = modules_dict[module_path_2]
+
+        assert module_path_1 == model.get_module_path(module_1)
+        assert module_path_2 == model.get_module_path(module_2)
