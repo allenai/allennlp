@@ -209,8 +209,8 @@ class DocQAPlusBERT(Model):
         repeated_passage_mask = passage_mask.unsqueeze(1).repeat(1, 1, 1)
         repeated_passage_mask = repeated_passage_mask.view(batch_size, passage_length)
 
-        span_start_logits = util.replace_masked_values(span_start_logits, repeated_passage_mask, -1e7)
-        span_end_logits = util.replace_masked_values(span_end_logits, repeated_passage_mask, -1e7)
+        #span_start_logits = util.replace_masked_values(span_start_logits, repeated_passage_mask, -1e7)
+        #span_end_logits = util.replace_masked_values(span_end_logits, repeated_passage_mask, -1e7)
 
         best_span = self._get_example_predications(span_start_logits, span_end_logits,self._max_span_length)
 
