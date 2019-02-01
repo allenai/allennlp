@@ -110,21 +110,48 @@ class BERTQAReader(DatasetReader):
             for t in inst['question_tokens']:
                 new_passage_tokens.append((t[0],t[1] + char_offset))
             new_passage += inst['metadata']['question'] + ' '
-            char_offset += len(inst['metadata']['question']) + 1 # question length + space
+            char_offset = len(new_passage) # question length + space
 
             # we also need to account for change in answer location
-            token_offset = len(new_passage_tokens)
+            token_offset = len(inst['question_tokens']) + 1
+
+            # finding ' ^SEP^ ' and replacing it
+            char_offset_to_sep = None
+            for ind,t in enumerate(inst['tokens']):
+                if t[0] == ' ^SEP^ ':
+                    split_point = ind
+                    char_offset_to_sep = inst['tokens'][split_point + 1][1]
+                if char_offset_to_sep is not None:
+                    t[1] = t[1] - char_offset_to_sep + char_offset + len('[SEP] ')
+
+            token_offset = len(inst['question_tokens']) + 1 - split_point
+            new_passage_tokens += [('[SEP]', char_offset)] + inst['tokens'][split_point + 1:]
+
+            # creating the new passage with [SEP]
+            new_passage += "[SEP] " + inst['text'][char_offset_to_sep:] + ' '
+
             new_answers = []
             for answer in inst['answers']:
                 new_answers.append([answer[0] + token_offset, answer[1] + token_offset, answer[2]])
 
-            for t in inst['tokens']:
-                new_passage_tokens.append((t[0],t[1] + char_offset))
-            new_passage += inst['text'] + ' '
+            new_passage_tokens.append(("[SEP]",len(new_passage)))
+            new_passage += "[SEP]"
 
-            char_offset += len(inst['text']) + 1 # passage length + space
-            new_passage_tokens.append(("^PARA^",char_offset))
-            new_passage += "^PARA^"
+            # sanity check:
+            if False:
+                for answer in new_answers:
+                    char_idx_start = new_passage_tokens[answer[0]][1]
+                    if answer[1] + 1 >= len(new_passage_tokens):
+                        char_idx_end = len(new_passage)
+                    else:
+                        char_idx_end = new_passage_tokens[answer[1] + 1][1]
+
+                    if re.match(r'\b{0}\b'.format(re.escape(answer[2])), \
+                        new_passage[char_idx_start:char_idx_end], re.IGNORECASE) is None:
+                        if (answer[2].lower().strip() != \
+                                new_passage[char_idx_start:char_idx_end].lower().strip()):
+                            x = 1
+
 
             tokenized_paragraph = [Token(text=t[0], idx=t[1]) for t in new_passage_tokens]
             question_tokens = [Token(text=t[0], idx=t[1]) for t in inst['question_tokens']]
