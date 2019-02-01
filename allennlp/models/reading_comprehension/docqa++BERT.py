@@ -197,7 +197,11 @@ class DocQAPlusBERT(Model):
             A scalar loss to be optimised.
         """
 
-        batch_size, _ = passage['bert'].size()
+        batch_size, num_of_passage_tokens = passage['bert'].size()
+        passage['bert'] = torch.nn.functional.pad(passage['bert'], (0, 384 - passage['bert'].size(1)), "constant", 0)
+        passage['bert-offsets'] = torch.nn.functional.pad(passage['bert-offsets'], (0, 384 - passage['bert-offsets'].size(1)), "constant", 0)
+        passage['mask'] = torch.nn.functional.pad(passage['mask'], (0, 384 - passage['mask'].size(1)), "constant", 1)
+
         embedded_passage = self._text_field_embedder(passage)
         passage_length = embedded_passage.size(1)
         logits = self.qa_outputs(embedded_passage)
@@ -209,8 +213,8 @@ class DocQAPlusBERT(Model):
         repeated_passage_mask = passage_mask.unsqueeze(1).repeat(1, 1, 1)
         repeated_passage_mask = repeated_passage_mask.view(batch_size, passage_length)
 
-        #span_start_logits = util.replace_masked_values(span_start_logits, repeated_passage_mask, -1e7)
-        #span_end_logits = util.replace_masked_values(span_end_logits, repeated_passage_mask, -1e7)
+        span_start_logits = util.replace_masked_values(span_start_logits, repeated_passage_mask, -1e7)
+        span_end_logits = util.replace_masked_values(span_end_logits, repeated_passage_mask, -1e7)
 
         best_span = self._get_example_predications(span_start_logits, span_end_logits,self._max_span_length)
 
