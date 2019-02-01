@@ -276,9 +276,10 @@ class InitializerApplicator:
             parameters to be initialzed.
         """
         self._initializers = initializers or []
-        self._prevent_regex = None
-        if prevent_regexes:
-            self._prevent_regex = "(" + ")|(".join(prevent_regexes) + ")"
+        self._prevent_regexes = prevent_regexes or []
+
+    def add_prevent_regexes(self, prevent_regexes: List[str]):
+        self._prevent_regexes += prevent_regexes
 
     def __call__(self, module: torch.nn.Module) -> None:
         """
@@ -296,7 +297,7 @@ class InitializerApplicator:
         # Store which initialisers were applied to which parameters.
         for name, parameter in module.named_parameters():
             for initializer_regex, initializer in self._initializers:
-                allow = self._prevent_regex is None or not bool(re.search(self._prevent_regex, name))
+                allow = not any(bool(re.search(regex, name)) for regex in self._prevent_regexes)
                 if allow and re.search(initializer_regex, name):
                     logger.info("Initializing %s using %s intitializer", name, initializer_regex)
                     initializer(parameter, parameter_name=name)
