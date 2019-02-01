@@ -63,10 +63,6 @@ class DocQAPlusBERT(Model):
 
     def __init__(self, vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
-                 phrase_layer: Seq2SeqEncoder,
-                 residual_encoder: Seq2SeqEncoder,
-                 span_start_encoder: Seq2SeqEncoder,
-                 span_end_encoder: Seq2SeqEncoder,
                  initializer: InitializerApplicator,
                  dropout: float = 0.2,
                  multi_choice_answers: int = 0,
@@ -88,8 +84,6 @@ class DocQAPlusBERT(Model):
         self._max_span_length = max_span_length
         self._text_field_embedder = text_field_embedder
         self._shared_norm = shared_norm
-        self._phrase_layer = phrase_layer
-        self._encoding_dim = phrase_layer.get_output_dim()
         self._stats_report_freq = stats_report_freq
         self._debug_experiment_name = debug_experiment_name
 
@@ -101,18 +95,6 @@ class DocQAPlusBERT(Model):
         self._frac_of_training_used = frac_of_training_used
 
         self.qa_outputs = torch.nn.Linear(self._text_field_embedder.get_output_dim(), 2)
-
-
-        self._span_start_encoder = span_start_encoder
-        self._span_end_encoder = span_end_encoder
-
-        self._span_start_predictor = TimeDistributed(torch.nn.Linear(self._encoding_dim, 1))
-        self._span_end_predictor = TimeDistributed(torch.nn.Linear(self._encoding_dim, 1))
-
-        check_dimensions_match(phrase_layer.get_input_dim(),
-                               text_field_embedder.get_output_dim(),
-                               "phrase layer input dim",
-                               "embedding dim")
 
         initializer(self)
 
@@ -150,24 +132,6 @@ class DocQAPlusBERT(Model):
             From an ``IndexField``.  This is one of the things we are trying to predict - the
             ending position of the answer with the passage.  This is an `inclusive` token index.
             If this is given, we will compute a loss that gets included in the output dictionary.
-        p1_answer_marker : ``torch.IntTensor``, optional
-            This is one of the inputs, but only when num_context_answers > 0.
-            This is a tensor that has a shape [batch_size, max_qa_count, max_passage_length].
-            Most passage token will have assigned 'O', except the passage tokens belongs to the previous answer
-            in the dialog, which will be assigned labels such as <1_start>, <1_in>, <1_end>.
-            For more details, look into dataset_readers/util/make_reading_comprehension_instance_quac
-        p2_answer_marker :  ``torch.IntTensor``, optional
-            This is one of the inputs, but only when num_context_answers > 1.
-            It is similar to p1_answer_marker, but marking previous previous answer in passage.
-        p3_answer_marker :  ``torch.IntTensor``, optional
-            This is one of the inputs, but only when num_context_answers > 2.
-            It is similar to p1_answer_marker, but marking previous previous previous answer in passage.
-        yesno_list :  ``torch.IntTensor``, optional
-            This is one of the outputs that we are trying to predict.
-            Three way classification (the yes/no/not a yes no question).
-        followup_list :  ``torch.IntTensor``, optional
-            This is one of the outputs that we are trying to predict.
-            Three way classification (followup / maybe followup / don't followup).
         metadata : ``List[Dict[str, Any]]``, optional
             If present, this should contain the question ID, original passage text, and token
             offsets into the passage for each instance in the batch.  We use this for computing
@@ -183,12 +147,6 @@ class DocQAPlusBERT(Model):
 
         qid : List[List[str]]
             A list of list, consisting of question ids.
-        followup : List[List[int]]
-            A list of list, consisting of continuation marker prediction index.
-            (y :yes, m: maybe follow up, n: don't follow up)
-        yesno : List[List[int]]
-            A list of list, consisting of affirmation marker prediction index.
-            (y :yes, x: not a yes/no question, n: np)
         best_span_str : List[List[str]]
             If sufficient metadata was provided for the instances in the batch, we also return the
             string from the original passage that the model thinks is the best answer to the
@@ -198,12 +156,12 @@ class DocQAPlusBERT(Model):
         """
 
         batch_size, num_of_passage_tokens = passage['bert'].size()
-        #if passage['bert'].size(1) < 384:
-        #    passage['bert'] = torch.nn.functional.pad(passage['bert'], (0, 384 - passage['bert'].size(1)), "constant", 0)
-        #if passage['bert-offsets'].size(1) < 384:
-        #    passage['bert-offsets'] = torch.nn.functional.pad(passage['bert-offsets'], (0, 384 - passage['bert-offsets'].size(1)), "constant", 0)
-        #if passage['mask'].size(1) < 384:
-        #    passage['mask'] = torch.nn.functional.pad(passage['mask'], (0, 384 - passage['mask'].size(1)), "constant", 1)
+        if passage['bert'].size(1) < 384:
+            passage['bert'] = torch.nn.functional.pad(passage['bert'], (0, 384 - passage['bert'].size(1)), "constant", 0)
+        if passage['bert-offsets'].size(1) < 384:
+            passage['bert-offsets'] = torch.nn.functional.pad(passage['bert-offsets'], (0, 384 - passage['bert-offsets'].size(1)), "constant", 0)
+        if passage['mask'].size(1) < 384:
+            passage['mask'] = torch.nn.functional.pad(passage['mask'], (0, 384 - passage['mask'].size(1)), "constant", 1)
 
         embedded_passage = self._text_field_embedder(passage)
         passage_length = embedded_passage.size(1)
