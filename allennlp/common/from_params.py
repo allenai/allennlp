@@ -295,6 +295,37 @@ class FromParams:
 
     @classmethod
     def from_pretrained_params(cls: Type[T], params: Params):
+        """
+        This is used to load a module from pretrained model archive. Any module that is
+        initialized via default from_params, can be initialized in a normal way or from
+        pretrained model only with a configuration change.
+
+        Template usage config
+            {
+                "_pretrained": {
+                    "archive_file": "../path/to/model.tar.gz",
+                    "module_path": "path.to.module.in.model",
+                    "freeze": False
+                }
+            }
+
+        Modules in allennlp having custom from_params are also loadable with above configuration.
+        If you have custom from_params, then to be able to make it loadable / transferrable
+        from an archive, you need to add following at the start of your from_params implementation
+
+            module = FromParams.from_pretrained_params(params)
+            if module:
+                return module
+
+
+        Caveat: Call to initializer(self) at end of model initializer can potentially wipe the
+        transferred parameters by reinitializing. This can heppen if you have setup initializer
+        regex that also matches parameters of the transferred module. To safe-guard against this,
+        you can either update you initializer regex or add extra initializer::
+
+            [".*transferred_module_name.*", {"type": "prevent"}]]
+
+        """
         from allennlp.models.archival import load_archive  # import here to avoid circular imports
 
         if params is None or isinstance(params, str):
@@ -315,11 +346,6 @@ class FromParams:
             if not isinstance(module, cls):
                 ConfigurationError(f"The transferred module from model at {archive_file} at module path "
                                    f"{module_path} was expected of type {cls} but is of type {type(module)}")
-
-            # TODO(Harsh): Figure out where to put this warning. If kept here, it will be printed many times.
-            # Call to initializer(model) can potentially initialize the transferred parameters if configured
-            # initialization regex matches the transferred parameters. To safe-guard against this,
-            # you could setup extra initializer: [".*transferred_module_name.*", {"type": "prevent"}]]
 
             for parameter in module.parameters():
                 parameter.requires_grad_(not freeze)
