@@ -1,6 +1,7 @@
 # pylint: disable=no-self-use,invalid-name,too-many-public-methods,protected-access
 from typing import Dict, Optional, List, Tuple, Set
 
+import pytest
 import torch
 
 from allennlp.common import Params
@@ -9,6 +10,7 @@ from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.tokenizers.word_splitter import WordSplitter
 from allennlp.models import Model
 from allennlp.models.archival import load_archive
+from allennlp.common.checks import ConfigurationError
 
 class MyClass(FromParams):
     def __init__(self, my_int: int, my_bool: bool = False) -> None:
@@ -316,3 +318,22 @@ class TestFromParams(AllenNlpTestCase):
         # # AttendFeedforward should have requires_grad On
         for parameter in transfer_model._attend_feedforward.parameters():
             assert parameter.requires_grad
+
+    def test_transferring_of_modules_ensures_type_consistency(self):
+
+        model_archive = str(self.FIXTURES_ROOT / 'decomposable_attention' / 'serialization' / 'model.tar.gz')
+        trained_model = load_archive(model_archive).model
+
+        config_file = str(self.FIXTURES_ROOT / 'decomposable_attention' / 'experiment.json')
+        model_params = Params.from_file(config_file).pop("model").as_dict(quiet=True)
+
+        # Override only text_field_embedder and make it load AttendFeedForward
+        model_params["text_field_embedder"] = {
+                "_pretrained": {
+                        "archive_file": model_archive,
+                        "module_path": "_attend_feedforward._module"
+                }
+        }
+        with pytest.raises(ConfigurationError):
+            Model.from_params(vocab=trained_model.vocab,
+                              params=Params(model_params))
