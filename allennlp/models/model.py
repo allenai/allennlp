@@ -5,7 +5,7 @@ an AllenNLP model.
 
 import logging
 import os
-from typing import Dict, Union, List, Set, Optional
+from typing import Dict, Union, List, Set
 
 import numpy
 import torch
@@ -332,13 +332,6 @@ class Model(torch.nn.Module, Registrable):
         for _, module in self._modules.items():
             if isinstance(module, (Embedding, TextFieldEmbedder)):
                 module.extend_vocab(extended_vocab)
-
-    def get_module_path(self, target_module: torch.nn.Module) -> Optional[str]:
-        """Given a model and a target_module, return the module path"""
-        for module_path, module in self.named_modules():
-            if module == target_module:
-                return module_path
-        return None
 
 def remove_pretrained_embedding_params(params: Params):
     keys = params.keys()
