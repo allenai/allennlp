@@ -333,6 +333,7 @@ class Model(torch.nn.Module, Registrable):
             if isinstance(module, (Embedding, TextFieldEmbedder)):
                 module.extend_vocab(extended_vocab)
 
+
 def remove_pretrained_embedding_params(params: Params):
     keys = params.keys()
     if 'pretrained_file' in keys:

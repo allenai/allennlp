@@ -311,7 +311,7 @@ class FromParams:
                                    f"from the model at {archive_file}. But it's not present.")
             if not isinstance(module, cls):
                 ConfigurationError(f"The transferred module from model at {archive_file} at module path "
-                                   f"{module_path} was expected of type {T} but is of type {type(module)}")
+                                   f"{module_path} was expected of type {cls.__name__} but is of type {type(module)}")
 
             # TODO(Harsh): Figure out where to put this warning. If kept here, it will be printed many times.
             # Call to initializer(model) can potentially initialize the transferred parameters if configured

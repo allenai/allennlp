@@ -276,6 +276,7 @@ class InitializerApplicator:
             parameters to be initialzed.
         """
         self._initializers = initializers or []
+        self._prevent_regex = None
         if prevent_regexes:
             self._prevent_regex = "(" + ")|(".join(prevent_regexes) + ")"
 

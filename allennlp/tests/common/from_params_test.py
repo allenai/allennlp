@@ -1,4 +1,4 @@
-# pylint: disable=no-self-use,invalid-name,too-many-public-methods
+# pylint: disable=no-self-use,invalid-name,too-many-public-methods,protected-access
 from typing import Dict, Optional, List, Tuple, Set
 
 import torch
