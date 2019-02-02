@@ -277,6 +277,7 @@ class JobRunner():
                 # Display the message parts
                 name = properties.headers['name']
                 config = json.loads(body_.decode())
+                delivery_tag = method_frame.delivery_tag
                 if config['operation'] != 'run job':  # no resources needed jobs
                     # we always ack for no resource jobs...
                     self.channel.basic_ack(method_frame.delivery_tag)
@@ -296,7 +297,7 @@ class JobRunner():
                 call("git pull origin master", shell=True, preexec_fn=os.setsid)
                 time.sleep(2)
 
-            self.handle_job_types(config, name, method_frame.delivery_tag)
+            self.handle_job_types(config, name, delivery_tag)
 
     def perform_iteration(self):
         # checking current iteration resource status
