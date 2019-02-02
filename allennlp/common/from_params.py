@@ -300,7 +300,8 @@ class FromParams:
         initialized via default from_params, can be initialized in a normal way or from
         pretrained model only with a configuration change.
 
-        Template usage config
+        Template usage config::
+
             {
                 "_pretrained": {
                     "archive_file": "../path/to/model.tar.gz",
@@ -311,19 +312,20 @@ class FromParams:
 
         Modules in allennlp having custom from_params are also loadable with above configuration.
         If you have custom from_params, then to be able to make it loadable / transferrable
-        from an archive, you need to add following at the start of your from_params implementation
+        from an archive, you need to add following at the start of your from_params implementation::
 
             module = FromParams.from_pretrained_params(params)
             if module:
                 return module
-
 
         Caveat: Call to initializer(self) at end of model initializer can potentially wipe the
         transferred parameters by reinitializing. This can heppen if you have setup initializer
         regex that also matches parameters of the transferred module. To safe-guard against this,
         you can either update you initializer regex or add extra initializer::
 
-            [".*transferred_module_name.*", {"type": "prevent"}]]
+            [
+                [".*transferred_module_name.*", "prevent"]]
+            ]
 
         """
         from allennlp.models.archival import load_archive  # import here to avoid circular imports
