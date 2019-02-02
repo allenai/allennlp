@@ -297,6 +297,9 @@ class FromParams:
     def from_pretrained_params(cls: Type[T], params: Params):
         from allennlp.models.archival import load_archive  # import here to avoid circular imports
 
+        if params is None or isinstance(params, str):
+            return None
+
         pretrained_module_params = params.pop("_pretrained", None)
         if pretrained_module_params:
             archive_file = pretrained_module_params.pop("archive_file")
