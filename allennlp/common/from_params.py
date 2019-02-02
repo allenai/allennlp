@@ -294,7 +294,7 @@ class FromParams:
             return cls(**kwargs)  # type: ignore
 
     @classmethod
-    def from_pretrained_params(cls: Type[T], params: Params):
+    def from_pretrained_params(cls: Type[T], params: Params) -> T:
         """
         This is used to load a module from pretrained model archive. Any module that is
         initialized via default from_params, can be initialized in a normal way or from
