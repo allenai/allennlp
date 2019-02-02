@@ -112,6 +112,7 @@ class JobRunner():
             self.close_job_log(job)
             ElasticLogger().write_log('INFO', "Job died", {'experiment_name': job['experiment_name'],
                                                            'log_snapshot': job['log_snapshot']}, push_bulk=True, print_log=False)
+            self.channel.basic_nack(job['delivery_tag'])
 
         else:
 
@@ -132,6 +133,7 @@ class JobRunner():
 
         self.running_jobs.remove(job)
         self.log_handles.pop(job['log_file'])
+        self.channel.basic_ack(job['delivery_tag'])
 
     def write_status(self):
         # Virtual memory usage
@@ -185,7 +187,7 @@ class JobRunner():
             logger.error('Error closing connection: %s', traceback.format_exc())
             ElasticLogger().write_log('INFO', "job runner exception", {'error_message': traceback.format_exc()}, print_log=True)
 
-    def execute_job(self,name, bash_command, config, assigned_GPU):
+    def execute_job(self,name, bash_command, config, assigned_GPU, delivery_tag):
         # Creating the log dir
         log_file = 'logs/' + name + '.txt'
         log_dir_part = log_file.split('/')
@@ -213,7 +215,7 @@ class JobRunner():
         # open log file for reading
         self.log_handles[log_file] = open(log_file, 'r')
         new_job = {'GPU':assigned_GPU,'config': config, 'command': bash_command, \
-                    'log_file': log_file, 'log_snapshot': '', 'is_post_proc_run':False, \
+                    'log_file': log_file,'delivery_tag':delivery_tag, 'log_snapshot': '', 'is_post_proc_run':False, \
                     'experiment_name': name, 'alive': True, \
                     'pid': wa_proc.pid + 1, 'start_time': time.time()}
         self.running_jobs.append(new_job)
@@ -221,9 +223,9 @@ class JobRunner():
 
         ElasticLogger().write_log('INFO', "Job Started", {'GPU':assigned_GPU, 'command': bash_command, \
                     'experiment_name': name}, push_bulk=True, print_log=False)
-        time.sleep(3)
+        time.sleep(5)
 
-    def handle_job_types(self, config, name):
+    def handle_job_types(self, config, name, delivery_tag):
         if config['operation'] == 'run job':
             # Allocating resources
             assigned_GPU = -1
@@ -238,7 +240,7 @@ class JobRunner():
                 self.update_available_gpus()
                 logger.info('assigned_GPU = %s',assigned_GPU)
 
-            self.execute_job(name, config['bash_command'], config, assigned_GPU)
+            self.execute_job(name, config['bash_command'], config, assigned_GPU, delivery_tag)
         elif config['operation'] == 'kill job':
             logger.info('kill job!')
             pid_to_kill = [job['pid'] for job in self.running_jobs if job['experiment_name'] == config['experiment_name']]
@@ -274,6 +276,8 @@ class JobRunner():
                 name = properties.headers['name']
                 config = json.loads(body_.decode())
                 if config['operation'] != 'run job':  # no resources needed jobs
+                    # we always ack for no resource jobs...
+                    self.channel.basic_ack(method_frame.delivery_tag)
                     break
                 elif self.resources_available:
                     break
@@ -289,9 +293,7 @@ class JobRunner():
                 call("git pull origin master", shell=True, preexec_fn=os.setsid)
                 time.sleep(2)
 
-            self.channel.basic_ack(method_frame.delivery_tag)
-
-            self.handle_job_types(config, name)
+            self.handle_job_types(config, name, method_frame.delivery_tag)
 
     def perform_iteration(self):
         # checking current iteration resource status
