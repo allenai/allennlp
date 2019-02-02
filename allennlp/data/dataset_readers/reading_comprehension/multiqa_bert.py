@@ -70,7 +70,11 @@ class BERTQAReader(DatasetReader):
             padding_lengths = {key: len(instance[0][key]) for key in sorting_keys}
             instance_with_lengths = ([padding_lengths[field_name] for field_name in sorting_keys], instance)
             instances_with_lengths.append(instance_with_lengths)
-        instances_with_lengths.sort(key=lambda x: x[0])
+        #instances_with_lengths.sort(key=lambda x: x[0])
+        # random shuffle training
+        random.seed(8)
+        random.shuffle(instances_with_lengths)
+
         per_question_instances = [instance_with_lengths[-1] for instance_with_lengths in instances_with_lengths]
 
         # selecting instaces to add
