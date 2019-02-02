@@ -241,6 +241,10 @@ class FromParams:
         # pylint: disable=protected-access
         from allennlp.common.registrable import Registrable  # import here to avoid circular imports
 
+        module = FromParams.from_pretrained_params(params)
+        if module:
+            return module
+
         logger.info(f"instantiating class {cls} from params {getattr(params, 'params', params)} "
                     f"and extras {extras}")
 
@@ -288,3 +292,33 @@ class FromParams:
                 kwargs = create_kwargs(cls, params, **extras)
 
             return cls(**kwargs)  # type: ignore
+
+    @classmethod
+    def from_pretrained_params(cls: Type[T], params: Params):
+        from allennlp.models.archival import load_archive  # import here to avoid circular imports
+
+        pretrained_module_params = params.pop("_pretrained", None)
+        if pretrained_module_params:
+            archive_file = pretrained_module_params.pop("archive_file")
+            module_path = pretrained_module_params.pop("module_path")
+            freeze = pretrained_module_params.pop("freeze", False)
+            model = load_archive(archive_file).model
+            modules_dict = {path: module for path, module in model.named_modules()}
+            module = modules_dict.get(module_path, None)
+
+            if not module:
+                ConfigurationError(f"You asked to transfer module at path {module_path} "
+                                   f"from the model at {archive_file}. But it's not present.")
+            if not isinstance(module, cls):
+                ConfigurationError(f"The transferred module from model at {archive_file} at module path "
+                                   f"{module_path} was expected of type {T} but is of type {type(module)}")
+
+            # TODO(Harsh): Figure out where to put this warning. If kept here, it will be printed many times.
+            # Call to initializer(model) can potentially initialize the transferred parameters if configured
+            # initialization regex matches the transferred parameters. To safe-guard against this,
+            # you could setup extra initializer: [".*transferred_module_name.*", {"type": "prevent"}]]
+
+            for parameter in module.parameters():
+                parameter.requires_grad_(not freeze)
+            return module
+        return None
