@@ -10,6 +10,7 @@ from allennlp.data import Vocabulary
 from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
 from allennlp.modules.time_distributed import TimeDistributed
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
+from allennlp.common.from_params import FromParams
 
 
 @TextFieldEmbedder.register("basic")
@@ -121,6 +122,10 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
         # This breaks our 'configuration wizard' and configuration checks. Hence, going forward,
         # the params need a 'token_embedders' key so that they line up with what the constructor wants.
         # For now, the old behavior is still supported, but produces a DeprecationWarning.
+
+        module = FromParams.from_pretrained_params(params)
+        if module:
+            return module
 
         embedder_to_indexer_map = params.pop("embedder_to_indexer_map", None)
         if embedder_to_indexer_map is not None:

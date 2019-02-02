@@ -8,6 +8,7 @@ from allennlp.modules.token_embedders.embedding import Embedding
 from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
 from allennlp.modules.time_distributed import TimeDistributed
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
+from allennlp.common.from_params import FromParams
 
 @TokenEmbedder.register("character_encoding")
 class TokenCharactersEncoder(TokenEmbedder):
@@ -71,6 +72,11 @@ class TokenCharactersEncoder(TokenEmbedder):
     # The setdefault requires a custom from_params
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'TokenCharactersEncoder':  # type: ignore
+
+        module = FromParams.from_pretrained_params(params)
+        if module:
+            return module
+
         # pylint: disable=arguments-differ
         embedding_params: Params = params.pop("embedding")
         # Embedding.from_params() uses "tokens" as the default namespace, but we need to change

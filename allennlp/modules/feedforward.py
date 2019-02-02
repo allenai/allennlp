@@ -8,6 +8,7 @@ import torch
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.nn import Activation
+from allennlp.common.from_params import FromParams
 
 
 class FeedForward(torch.nn.Module):
@@ -84,6 +85,11 @@ class FeedForward(torch.nn.Module):
     # method can't currently instatiate types like `Union[Activation, List[Activation]]`)
     @classmethod
     def from_params(cls, params: Params):
+
+        module = FromParams.from_pretrained_params(params)
+        if module:
+            return module
+
         input_dim = params.pop_int('input_dim')
         num_layers = params.pop_int('num_layers')
         hidden_dims = params.pop('hidden_dims')
