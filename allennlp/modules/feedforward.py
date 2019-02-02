@@ -8,7 +8,7 @@ import torch
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.nn import Activation
-from allennlp.common.from_params import FromParams
+from allennlp.common.from_params import from_pretrained_params
 
 
 class FeedForward(torch.nn.Module):
@@ -86,7 +86,7 @@ class FeedForward(torch.nn.Module):
     @classmethod
     def from_params(cls, params: Params):
 
-        module = FromParams.from_pretrained_params(params)
+        module = from_pretrained_params(cls, params)
         if module:
             return module
 

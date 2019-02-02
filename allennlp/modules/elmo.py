@@ -24,7 +24,7 @@ from allennlp.data.token_indexers.elmo_indexer import ELMoCharacterMapper, ELMoT
 from allennlp.data.dataset import Batch
 from allennlp.data import Token, Vocabulary, Instance
 from allennlp.data.fields import TextField
-from allennlp.common.from_params import FromParams
+from allennlp.common.from_params import from_pretrained_params
 
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -204,7 +204,7 @@ class Elmo(torch.nn.Module):
     # The add_to_archive logic here requires a custom from_params.
     @classmethod
     def from_params(cls, params: Params) -> 'Elmo':
-        module = FromParams.from_pretrained_params(params)
+        module = from_pretrained_params(cls, params)
         if module:
             return module
 

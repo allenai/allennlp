@@ -8,7 +8,7 @@ from allennlp.modules.token_embedders.embedding import Embedding
 from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
 from allennlp.modules.time_distributed import TimeDistributed
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
-from allennlp.common.from_params import FromParams
+from allennlp.common.from_params import from_pretrained_params
 
 @TokenEmbedder.register("character_encoding")
 class TokenCharactersEncoder(TokenEmbedder):
@@ -74,7 +74,7 @@ class TokenCharactersEncoder(TokenEmbedder):
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'TokenCharactersEncoder':  # type: ignore
         # pylint: disable=arguments-differ
 
-        module = FromParams.from_pretrained_params(params)
+        module = from_pretrained_params(cls, params)
         if module:
             return module
 
