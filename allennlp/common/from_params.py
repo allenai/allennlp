@@ -296,9 +296,9 @@ class FromParams:
     @classmethod
     def from_pretrained_params(cls: Type[T], params: Params) -> T:
         """
-        This is used to load a module from pretrained model archive. Any module that is
+        This is used to load a module from a pretrained model archive. Any module that is
         initialized via default from_params, can be initialized in a normal way or from
-        pretrained model only with a configuration change.
+        pretrained model with only a configuration change.
 
         Template usage config::
 
@@ -310,18 +310,20 @@ class FromParams:
                 }
             }
 
-        Modules in allennlp having custom from_params are also loadable with above configuration.
-        If you have custom from_params, then to be able to make it loadable / transferrable
+        Modules in allennlp having custom from_params are also loadable/transferrable with above
+        configuration. If you have custom from_params, then to be able to make it loadable/transferrable
         from an archive, you need to add following at the start of your from_params implementation::
 
             module = FromParams.from_pretrained_params(params)
             if module:
                 return module
 
+        Modules which are initialized directly without fromm_params are not transferrable with this.
+
         Caveat: Call to initializer(self) at end of model initializer can potentially wipe the
-        transferred parameters by reinitializing. This can heppen if you have setup initializer
+        transferred parameters by reinitializing them. This can happen if you have setup initializer
         regex that also matches parameters of the transferred module. To safe-guard against this,
-        you can either update you initializer regex or add extra initializer::
+        you can either update your initializer regex to prevent conflicting match or add extra initializer::
 
             [
                 [".*transferred_module_name.*", "prevent"]]
