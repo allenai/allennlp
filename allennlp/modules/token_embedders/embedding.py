@@ -1,4 +1,3 @@
-import os
 import io
 import tarfile
 import zipfile

@@ -4,7 +4,6 @@ import re
 import shutil
 
 import pytest
-import numpy as np
 import torch
 
 from allennlp.common.testing import AllenNlpTestCase
