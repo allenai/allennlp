@@ -156,12 +156,12 @@ class DocQAPlusBERT(Model):
         """
 
         batch_size, num_of_passage_tokens = passage['bert'].size()
-        #if passage['bert'].size(1) < 384:
-        #    passage['bert'] = torch.nn.functional.pad(passage['bert'], (0, 384 - passage['bert'].size(1)), "constant", 0)
-        #if passage['bert-offsets'].size(1) < 384:
-        #    passage['bert-offsets'] = torch.nn.functional.pad(passage['bert-offsets'], (0, 384 - passage['bert-offsets'].size(1)), "constant", 0)
-        #if passage['mask'].size(1) < 384:
-        #    passage['mask'] = torch.nn.functional.pad(passage['mask'], (0, 384 - passage['mask'].size(1)), "constant", 1)
+        if passage['bert'].size(1) < 384:
+            passage['bert'] = torch.nn.functional.pad(passage['bert'], (0, 384 - passage['bert'].size(1)), "constant", 0)
+        if passage['bert-offsets'].size(1) < 384:
+            passage['bert-offsets'] = torch.nn.functional.pad(passage['bert-offsets'], (0, 384 - passage['bert-offsets'].size(1)), "constant", 0)
+        if passage['mask'].size(1) < 384:
+            passage['mask'] = torch.nn.functional.pad(passage['mask'], (0, 384 - passage['mask'].size(1)), "constant", 1)
 
         embedded_passage = self._text_field_embedder(passage)
         passage_length = embedded_passage.size(1)
