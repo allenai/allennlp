@@ -112,6 +112,7 @@ class JobRunner():
             self.close_job_log(job)
             ElasticLogger().write_log('INFO', "Job died", {'experiment_name': job['experiment_name'],
                                                            'log_snapshot': job['log_snapshot']}, push_bulk=True, print_log=False)
+            logger.info("nack delivery tag %s", job['delivery_tag'])
             self.channel.basic_nack(job['delivery_tag'])
 
         else:
@@ -129,7 +130,8 @@ class JobRunner():
             else:
                 self.close_job_log(job)
                 ElasticLogger().write_log('INFO', "Job finished successfully", {'experiment_name': job['experiment_name'],
-                                                           'log_snapshot': job['log_snapshot']}, push_bulk=True, print_log=False)
+                                                           'command': job['command'],\
+                                                            'log_snapshot': job['log_snapshot']}, push_bulk=True, print_log=False)
 
         self.running_jobs.remove(job)
         self.log_handles.pop(job['log_file'])
@@ -287,6 +289,7 @@ class JobRunner():
 
         if body_ is not None:
             logger.info('New job found! %s',name)
+            logger.info('New job tag %s', method_frame.delivery_tag)
 
             # performing git pull before each execution
             if not self._DEBUG:
