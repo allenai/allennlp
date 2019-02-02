@@ -317,3 +317,34 @@ class TestEmbedding(AllenNlpTestCase):
 
         # Make sure extended weight is taken from the embedding file.
         assert torch.all(extended_weight[4, :] == torch.Tensor([0.5, 0.3, -6.0]))
+
+    def test_embedding_vocab_extension_is_no_op_when_extension_should_not_happen(self):
+        # Case1: When vocab is already in sync with embeddings or vocab namsepace
+        # is smaller than embedding, it should be a no-op.
+        vocab = Vocabulary({"tokens": {"word1": 1, "word2": 1}})
+        embedding_params = Params({"vocab_namespace": "tokens", "embedding_dim": 10})
+        embedder = Embedding.from_params(vocab, embedding_params)
+        original_weight = embedder.weight
+
+        embedder.extend_vocab(vocab, "tokens")
+        assert torch.all(embedder.weight == original_weight)
+
+        embedder.extend_vocab(Vocabulary(), "tokens")
+        assert torch.all(embedder.weight == original_weight)
+
+        # Case2: Shouldn't wrongly assuming "tokens" namespace for extension if no
+        # information on vocab_namespece is available. Rather log a warning and be a no-op.
+
+        vocab = Vocabulary()
+        vocab.add_token_to_namespace('word1', "tokens")
+        vocab.add_token_to_namespace('word2', "tokens")
+        embedding_params = Params({"vocab_namespace": "tokens", "embedding_dim": 10})
+        embedder = Embedding.from_params(vocab, embedding_params)
+
+        # Previous models won't have _vocab_namespace attribute. Force it to be None
+        embedder._vocab_namespace = None
+        embedder.weight = torch.nn.Parameter(embedder.weight[:1, :])
+        assert embedder.weight.shape[0] == 1
+        embedder.extend_vocab(vocab) # Don't specify namespace
+
+        assert embedder.weight.shape[0] == 1
