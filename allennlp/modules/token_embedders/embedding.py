@@ -165,7 +165,7 @@ class Embedding(TokenEmbedder):
             In case you know what vocab_namespace should be used for extension, you
             can pass it. If not passed, it will check if vocab_namespace used at the
             time of ``Embedding`` construction is available. If so, this namespace
-            will be used or else default 'tokens' namespace will be used.
+            will be used or else extend_vocab will be a no-op.
         pretrained_file : str, (optional, default=None)
             A file containing pretrained embeddings can be specified here. It can be
             the path to a local file or an URL of a (cached) remote file. Check format
@@ -173,12 +173,14 @@ class Embedding(TokenEmbedder):
         """
         # Caveat: For allennlp v0.8.1 and below, we weren't storing vocab_namespace as an attribute,
         # knowing which is necessary at time of embedding vocab extension. So old archive models are
-        # currently unextendable unless the user used default vocab_namespace 'tokens' for it.
+        # currently unextendable.
 
         vocab_namespace = vocab_namespace or self._vocab_namespace
         if not vocab_namespace:
-            vocab_namespace = "tokens"
-            logging.warning("No vocab_namespace provided to Embedder.extend_vocab. Defaulting to 'tokens'.")
+            # It's not safe to default to 'tokens' when we aren't sure that 'tokens'
+            # need to be extended. (Without this, several tests fail.)
+            logging.warning("No vocab_namespace provided to Embedder.extend_vocab. Extension will be no-op'.")
+            return
 
         extended_num_embeddings = extended_vocab.get_vocab_size(vocab_namespace)
         if extended_num_embeddings <= self.num_embeddings:
