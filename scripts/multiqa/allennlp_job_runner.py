@@ -124,7 +124,7 @@ class JobRunner():
                                                                'log_snapshot': job['log_snapshot']}, push_bulk=True, print_log=False)
                 job['retries'] += 1
                 # rerunning job:
-                with open(job['log_file'], 'ab') as f:
+                with open(job['log_file'], 'wb') as f:
                     if self._DEBUG:
                         wa_proc = Popen("nohup python dummy_job.py &", shell=True, preexec_fn=os.setsid, stdout=f, stderr=f)
                     else:
