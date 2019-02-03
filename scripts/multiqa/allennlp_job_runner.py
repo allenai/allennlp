@@ -120,6 +120,8 @@ class JobRunner():
             # checking retries:
 
             if job['retries'] < 3:
+                ElasticLogger().write_log('INFO', "Job Retry", {'experiment_name': job['experiment_name'],
+                                                               'log_snapshot': job['log_snapshot']}, push_bulk=True, print_log=False)
                 job['retries'] += 1
                 # rerunning job:
                 with open(job['log_file'], 'ab') as f:
@@ -134,11 +136,11 @@ class JobRunner():
             else:
 
                 self.close_job_log(job)
-                ElasticLogger().write_log('INFO', "Job died", {'experiment_name': job['experiment_name'],
-                                                               'log_snapshot': job['log_snapshot']}, push_bulk=True, print_log=False)
                 logger.info("resending to job %s to queue",job['experiment_name'])
 
                 if job['config']['retry'] < 3 and job['channel'] == 'GPUs':
+                    ElasticLogger().write_log('INFO', "Job Resend to Queue", {'experiment_name': job['experiment_name'],
+                                                                    'log_snapshot': job['log_snapshot']}, push_bulk=True, print_log=False)
                     job['config']['retry'] += 1
                     # routing job to the GPUs
                     self.channel.basic_publish(exchange='',
@@ -146,6 +148,10 @@ class JobRunner():
                                           headers={'name': job['experiment_name']}),
                                       routing_key='GPUs',
                                       body=json.dumps(job['config']))
+                else:
+                    ElasticLogger().write_log('INFO', "Job died", {'experiment_name': job['experiment_name'],
+                                                                   'log_snapshot': job['log_snapshot']}, push_bulk=True, print_log=False)
+
 
 
         else:
