@@ -145,7 +145,7 @@ class JobRunner():
                                                                     'log_snapshot': job['log_snapshot']}, push_bulk=True, print_log=False)
                     job['config']['retry'] += 1
                     # free GPU job assignment
-                    job['config']['override_config']['trainer']["cuda_device"] = '[GPU_ID]'
+                    #job['config']['override_config']['trainer']["cuda_device"] = '[GPU_ID]'
                     # routing job to the GPUs
                     self.channel.basic_publish(exchange='',
                                       properties=pika.BasicProperties(
@@ -281,10 +281,10 @@ class JobRunner():
             assigned_GPU = -1
             if config['resource_type'] == 'GPU':
                 if config['override_config']['trainer']["cuda_device"] == '[GPU_ID]':
-                    if not self._SIM_GPUS:
-                        config['override_config']['trainer']["cuda_device"] = self.available_gpus[0]
-                    else:
-                        config['override_config']['trainer']["cuda_device"] = -1
+                    #if not self._SIM_GPUS:
+                    #    config['override_config']['trainer']["cuda_device"] = self.available_gpus[0]
+                    #else:
+                    #    config['override_config']['trainer']["cuda_device"] = -1
                     assigned_GPU = self.available_gpus[0]
                 self.job_gpus.append(assigned_GPU)
                 self.update_available_gpus()
