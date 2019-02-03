@@ -116,7 +116,7 @@ class JobRunner():
         # TODO this is an ugly check for error , but because we are forking with nohup, python does not provide any good alternative...
         # We also assume here that jobs don't take less than 20 seconds...
         if job['log_snapshot'].find('Traceback (most recent call last):') > -1 or \
-                job['log_snapshot'].find('error') > -1 or time.time() - job['start_time']  < 20:
+                job['log_snapshot'].find('error') > -1 or (time.time() - job['start_time']  < 20 and self.resource_type == 'GPU'):
 
             if len(job['log_snapshot']) > 10001:
                 job['log_snapshot'] = job['log_snapshot'][-10000:]
