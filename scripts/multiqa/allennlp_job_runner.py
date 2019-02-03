@@ -40,6 +40,7 @@ class JobRunner():
         self.resources_to_spare = resources_to_spare
         self.update_available_gpus()
         self.last_exception = None
+        self.runned_job_names = []
 
     def update_available_gpus(self):
         if self._SIM_GPUS: # simulating gpu resources
@@ -257,6 +258,7 @@ class JobRunner():
 
         # open log file for reading
         self.log_handles[log_file] = open(log_file, 'r')
+        self.runned_job_names.append(name)
         new_job = {'GPU':assigned_GPU,'config': config, 'command': bash_command, 'channel':channel, \
                     'log_file': log_file, 'log_snapshot': '', 'is_post_proc_run':False, \
                     'experiment_name': name, 'alive': True,'retries': 0, \
@@ -321,7 +323,7 @@ class JobRunner():
                 if config['operation'] != 'run job':  # no resources needed jobs
                     # we always ack for no resource jobs...
                     break
-                elif os.path.isfile('logs/' + name + '.txt') and config['retry'] > 0:
+                elif name in self.runned_job_names and config['retry'] > 0:
                     # checking if this job has already been run, if so
                     # let another host try.
                     body_ = None
