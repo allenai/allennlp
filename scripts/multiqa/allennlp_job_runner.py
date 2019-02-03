@@ -102,6 +102,12 @@ class JobRunner():
         logger.info('processed not alive.')
         # checking if process successfully completed task,
 
+
+        # reading the whole log in this case:
+        self.log_handles[job['log_file']].seek(0)
+        job['log_snapshot'] = self.log_handles[job['log_file']].read()
+
+
         if job['GPU'] in self.job_gpus:
             self.job_gpus.remove(job['GPU'])
             self.update_available_gpus()
@@ -109,11 +115,38 @@ class JobRunner():
         # TODO this is an ugly check for error , but because we are forking with nohup, python does not provide any good alternative...
         if job['log_snapshot'].find('Traceback (most recent call last):') > -1 or \
                 job['log_snapshot'].find('error') > -1:
-            self.close_job_log(job)
-            ElasticLogger().write_log('INFO', "Job died", {'experiment_name': job['experiment_name'],
-                                                           'log_snapshot': job['log_snapshot']}, push_bulk=True, print_log=False)
-            logger.info("nack delivery tag %s", job['delivery_tag'])
-            self.channel.basic_nack(job['delivery_tag'])
+
+
+            # checking retries:
+
+            if job['retries'] < 3:
+                job['retries'] += 1
+                # rerunning job:
+                with open(job['log_file'], 'ab') as f:
+                    if self._DEBUG:
+                        wa_proc = Popen("nohup python dummy_job.py &", shell=True, preexec_fn=os.setsid, stdout=f, stderr=f)
+                    else:
+                        wa_proc = Popen(job['command'].replace('&',' --recover &'), shell=True,preexec_fn=os.setsid, stdout=f, stderr=f)
+                job['alive'] = True
+                job['pid'] = wa_proc.pid + 1
+                job['start_time'] =  time.time()
+                return
+            else:
+
+                self.close_job_log(job)
+                ElasticLogger().write_log('INFO', "Job died", {'experiment_name': job['experiment_name'],
+                                                               'log_snapshot': job['log_snapshot']}, push_bulk=True, print_log=False)
+                logger.info("resending to job %s to queue",job['experiment_name'])
+
+                if job['config']['retry'] < 3 and job['channel'] == 'GPUs':
+                    job['config']['retry'] += 1
+                    # routing job to the GPUs
+                    self.channel.basic_publish(exchange='',
+                                      properties=pika.BasicProperties(
+                                          headers={'name': job['experiment_name']}),
+                                      routing_key='GPUs',
+                                      body=json.dumps(job['config']))
+
 
         else:
 
@@ -122,7 +155,8 @@ class JobRunner():
                 post_proc_bash = job['config']['post_proc_bash']
                 post_proc_bash = post_proc_bash.replace('[MODEL_DIR]', self._MODELS_DIR)
                 logger.info('running post proc: %s',post_proc_bash)
-                wa_proc = Popen(post_proc_bash, shell=True , preexec_fn = os.setsid)
+                with open(job['log_file'], 'ab') as f:
+                    wa_proc = Popen(post_proc_bash, shell=True , preexec_fn = os.setsid, stdout=f, stderr=f)
                 job['pid'] = wa_proc.pid + 1
                 job['alive'] = True
                 job['is_post_proc_run'] = True
@@ -135,7 +169,6 @@ class JobRunner():
 
         self.running_jobs.remove(job)
         self.log_handles.pop(job['log_file'])
-        self.channel.basic_ack(job['delivery_tag'])
 
     def write_status(self):
         # Virtual memory usage
@@ -189,7 +222,7 @@ class JobRunner():
             logger.error('Error closing connection: %s', traceback.format_exc())
             ElasticLogger().write_log('INFO', "job runner exception", {'error_message': traceback.format_exc()}, print_log=True)
 
-    def execute_job(self,name, bash_command, config, assigned_GPU, delivery_tag):
+    def execute_job(self,name, bash_command, config, assigned_GPU, channel):
         # Creating the log dir
         log_file = 'logs/' + name + '.txt'
         log_dir_part = log_file.split('/')
@@ -214,11 +247,12 @@ class JobRunner():
             else:
                 wa_proc = Popen(bash_command, shell=True, preexec_fn=os.setsid, stdout=f, stderr=f)
 
+
         # open log file for reading
         self.log_handles[log_file] = open(log_file, 'r')
-        new_job = {'GPU':assigned_GPU,'config': config, 'command': bash_command, \
-                    'log_file': log_file,'delivery_tag':delivery_tag, 'log_snapshot': '', 'is_post_proc_run':False, \
-                    'experiment_name': name, 'alive': True, \
+        new_job = {'GPU':assigned_GPU,'config': config, 'command': bash_command, 'channel':channel, \
+                    'log_file': log_file, 'log_snapshot': '', 'is_post_proc_run':False, \
+                    'experiment_name': name, 'alive': True,'retries': 0, \
                     'pid': wa_proc.pid + 1, 'start_time': time.time()}
         self.running_jobs.append(new_job)
         self.update_available_gpus()
@@ -227,7 +261,7 @@ class JobRunner():
                     'experiment_name': name}, push_bulk=True, print_log=False)
         time.sleep(5)
 
-    def handle_job_types(self, config, name, delivery_tag):
+    def handle_job_types(self, config, name, channel):
         if config['operation'] == 'run job':
             # Allocating resources
             assigned_GPU = -1
@@ -242,7 +276,7 @@ class JobRunner():
                 self.update_available_gpus()
                 logger.info('assigned_GPU = %s',assigned_GPU)
 
-            self.execute_job(name, config['bash_command'], config, assigned_GPU, delivery_tag)
+            self.execute_job(name, config['bash_command'], config, assigned_GPU, channel)
         elif config['operation'] == 'kill job':
             logger.info('kill job!')
             pid_to_kill = [job['pid'] for job in self.running_jobs if job['experiment_name'] == config['experiment_name']]
@@ -277,14 +311,18 @@ class JobRunner():
                 # Display the message parts
                 name = properties.headers['name']
                 config = json.loads(body_.decode())
-                delivery_tag = method_frame.delivery_tag
                 if config['operation'] != 'run job':  # no resources needed jobs
                     # we always ack for no resource jobs...
-                    self.channel.basic_ack(method_frame.delivery_tag)
                     break
+                elif os.path.isfile('logs/' + name + '.txt') and config['retry'] > 0:
+                    # checking if this job has already been run, if so
+                    # let another host try.
+                    body_ = None
+                    self.channel.basic_nack(method_frame.delivery_tag)
                 elif self.resources_available:
                     break
                 else:
+                    # NO Resources
                     body_ = None
                     self.channel.basic_nack(method_frame.delivery_tag)
 
@@ -292,12 +330,14 @@ class JobRunner():
             logger.info('New job found! %s',name)
             logger.info('New job tag %s', method_frame.delivery_tag)
 
+            self.channel.basic_ack(method_frame.delivery_tag)
+
             # performing git pull before each execution
             if not self._DEBUG:
                 call("git pull origin master", shell=True, preexec_fn=os.setsid)
                 time.sleep(2)
 
-            self.handle_job_types(config, name, delivery_tag)
+            self.handle_job_types(config, name, channel)
 
     def perform_iteration(self):
         # checking current iteration resource status
