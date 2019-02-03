@@ -516,7 +516,7 @@ class MultiQAPreprocess():
 
         preprocessed_instances = []
 
-        for context_ind,context in enumerate(contexts):
+        for context_ind, context in enumerate(contexts):
 
             self.tokenize_context(context)
 
@@ -524,10 +524,7 @@ class MultiQAPreprocess():
             # also the split paragraph will not be merged with a different document. (done after merge)
             self.split_documents(context)   
 
-            # Discarding context that are too long (when len is 0 that means we breaked from context loop)
-            # TODO this is mainly relevant when we do not split large paragraphs.
             all_qa_count += len(context['qas'])
-
             
             # a list of question/answers
             for qa_ind, qa in enumerate(context['qas']): 
@@ -655,7 +652,8 @@ def main():
     parse.add_argument("--require_answer_in_question", type=str2bool, default=False, help="Add only instance that contain an answer")
     parse.add_argument("-n", "--n_processes", type=int, default=1, help="Number of processes to use")
     parse.add_argument("--sample_size", type=int, default=-1, help="enable sampling")
-    parse.add_argument("--sorting_keys", type=int, default=-1, help="sorting keys")
+    parse.add_argument("--sort_by_question", type=str2bool, default=False, help="sort by question token length to optimize GPU zero padding.")
+
     args = parse.parse_args()
     
     
@@ -722,7 +720,7 @@ def main():
     
     # rearranging instances for iterator (we don't use padding noise here, it will be use in the multiqa iterator.)
     ## TODO change question_text to question_tokens
-    if True:
+    if args.sort_by_question:
         # bucketing by QuestionID
         instance_list = preprocessed_instances
         instance_list = sorted(instance_list, key=lambda x: x['metadata']['question_id'])
