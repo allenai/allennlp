@@ -588,10 +588,12 @@ class Trainer(TrainerBase):
         }
 
         # If we have a learning rate scheduler, we should persist that too.
-        if self._learning_rate_scheduler is not None:
-            training_states["learning_rate_scheduler"] = (
-                    self._learning_rate_scheduler.state_dict()
-            )
+        # ALON support 0.4.0
+        if torch.__version__ != '0.4.0':
+            if self._learning_rate_scheduler is not None:
+                training_states["learning_rate_scheduler"] = (
+                        self._learning_rate_scheduler.state_dict()
+                )
 
         self._checkpointer.save_checkpoint(
                 model_state=self.model.state_dict(),
