@@ -10,11 +10,11 @@ from allennlp.data import Vocabulary
 from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
 from allennlp.modules.time_distributed import TimeDistributed
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
-from allennlp.common.from_params import from_pretrained_params
+from allennlp.common.from_params import FromParams
 
 
 @TextFieldEmbedder.register("basic")
-class BasicTextFieldEmbedder(TextFieldEmbedder):
+class BasicTextFieldEmbedder(TextFieldEmbedder, FromParams):
     """
     This is a ``TextFieldEmbedder`` that wraps a collection of :class:`TokenEmbedder` objects.  Each
     ``TokenEmbedder`` embeds or encodes the representation output from one
@@ -123,7 +123,7 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
         # the params need a 'token_embedders' key so that they line up with what the constructor wants.
         # For now, the old behavior is still supported, but produces a DeprecationWarning.
 
-        module = from_pretrained_params(cls, params)
+        module = cls.from_pretrained_params(params)
         if module:
             return module
 

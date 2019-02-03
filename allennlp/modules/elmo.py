@@ -24,7 +24,7 @@ from allennlp.data.token_indexers.elmo_indexer import ELMoCharacterMapper, ELMoT
 from allennlp.data.dataset import Batch
 from allennlp.data import Token, Vocabulary, Instance
 from allennlp.data.fields import TextField
-from allennlp.common.from_params import from_pretrained_params
+from allennlp.common.from_params import FromParams
 
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 # pylint: disable=attribute-defined-outside-init
 
 
-class Elmo(torch.nn.Module):
+class Elmo(torch.nn.Module, FromParams):
     """
     Compute ELMo representations using a pre-trained bidirectional language model.
 
@@ -203,8 +203,9 @@ class Elmo(torch.nn.Module):
 
     # The add_to_archive logic here requires a custom from_params.
     @classmethod
-    def from_params(cls, params: Params) -> 'Elmo':
-        module = from_pretrained_params(cls, params)
+    def from_params(cls, params: Params) -> 'Elmo':  # type: ignore
+        # pylint: disable=arguments-differ
+        module = cls.from_pretrained_params(params)
         if module:
             return module
 
