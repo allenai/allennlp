@@ -121,26 +121,33 @@ class BERTQAReader(DatasetReader):
 
             # finding ' ^SEP^ ' and replacing it
 
-            char_offset_to_sep = None
-            for ind,t in enumerate(inst['tokens']):
-                if t[0] == ' ^SEP^ ':
-                    split_point = ind
-                    char_offset_to_sep = inst['tokens'][split_point + 1][1]
-                    token_offset = len(inst['question_tokens']) + 1 - split_point
-                if char_offset_to_sep is not None:
-                    if ind + token_offset >= 800:
-                        x=1
-                        break
-                    t[1] = t[1] - char_offset_to_sep + char_offset + len('[SEP] ')
-            if ind != len(inst['tokens']) - 1:
-                new_passage_tokens += [('[SEP]', char_offset)] + inst['tokens'][split_point + 1:ind]
+            if False:
+                char_offset_to_sep = None
+                for ind,t in enumerate(inst['tokens']):
+                    if t[0] == '^PARA^':
+                        split_point = ind
+                        char_offset_to_sep = inst['tokens'][split_point + 1][1]
+                        token_offset = len(inst['question_tokens']) + 1 - split_point
+                    if char_offset_to_sep is not None:
+                        if ind + token_offset >= 800:
+                            x=1
+                            break
+                        t[1] = t[1] - char_offset_to_sep + char_offset + len('[SEP] ')
+                if ind != len(inst['tokens']) - 1:
+                    new_passage_tokens += [('[SEP]', char_offset)] + inst['tokens'][split_point + 1:ind]
+                else:
+                    new_passage_tokens += [('[SEP]', char_offset)] + inst['tokens'][split_point + 1:]
+
+                # creating the new passage with [SEP]
+                new_passage += "[SEP] " + inst['text'][char_offset_to_sep:] + ' '
             else:
-                new_passage_tokens += [('[SEP]', char_offset)] + inst['tokens'][split_point + 1:]
+                for ind,t in enumerate(inst['tokens']):
+                    t[1] = t[1] + char_offset + len('[SEP] ')
+                new_passage_tokens += [('[SEP]', char_offset)] + inst['tokens']
+                new_passage += "[SEP] " + inst['text'] + ' '
+                token_offset = len(inst['question_tokens']) + 2
 
 
-
-            # creating the new passage with [SEP]
-            new_passage += "[SEP] " + inst['text'][char_offset_to_sep:] + ' '
 
             new_answers = []
             for answer in inst['answers']:
@@ -167,7 +174,7 @@ class BERTQAReader(DatasetReader):
                         new_passage[char_idx_start:char_idx_end], re.IGNORECASE) is None:
                         if (answer[2].lower().strip() != \
                                 new_passage[char_idx_start:char_idx_end].lower().strip()):
-                            x = 1
+                            logger.info('answer mismatch')
 
 
             tokenized_paragraph = [Token(text=t[0], idx=t[1]) for t in new_passage_tokens]
