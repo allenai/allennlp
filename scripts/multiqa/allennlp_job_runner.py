@@ -122,7 +122,8 @@ class JobRunner():
             # checking retries:
 
             if job['retries'] < 3:
-                ElasticLogger().write_log('INFO', "Job Retry", {'experiment_name': job['experiment_name'],
+                ElasticLogger().write_log('INFO', "Job Retry", {'experiment_name': job['experiment_name'], \
+                                                                'command':job['command'].replace('&',' --recover &'), \
                                                                'log_snapshot': job['log_snapshot']}, push_bulk=True, print_log=False)
                 job['retries'] += 1
                 # rerunning job:
