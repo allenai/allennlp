@@ -144,6 +144,8 @@ class JobRunner():
                     ElasticLogger().write_log('INFO', "Job Resend to Queue", {'experiment_name': job['experiment_name'],
                                                                     'log_snapshot': job['log_snapshot']}, push_bulk=True, print_log=False)
                     job['config']['retry'] += 1
+                    # free GPU job assignment
+                    job['config']['override_config']['trainer']["cuda_device"] = '[GPU_ID]'
                     # routing job to the GPUs
                     self.channel.basic_publish(exchange='',
                                       properties=pika.BasicProperties(
