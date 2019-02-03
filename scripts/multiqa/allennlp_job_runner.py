@@ -245,7 +245,10 @@ class JobRunner():
         else:
             bash_command = bash_command.replace('[GPU_ID]', str(-1))
 
-        bash_command = 'nohup ' + bash_command + ' &'
+        if config['retry'] > 0 and os.path.isdir(self._MODELS_DIR + name):
+            bash_command = 'nohup ' + bash_command + ' --recover &'
+        else:
+            bash_command = 'nohup ' + bash_command + ' &'
 
         # Executing
         logger.info(bash_command)
