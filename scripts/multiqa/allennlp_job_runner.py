@@ -124,7 +124,7 @@ class JobRunner():
 
             if job['retries'] < 3:
                 ElasticLogger().write_log('INFO', "Job Retry", {'experiment_name': job['experiment_name'], \
-                        'command':job['command'].replace(' -f ','  ').replace('&',' --recover &'), \
+                        'command':job['command'].replace('&',' --recover &'), \
                         'log_snapshot': job['log_snapshot']}, push_bulk=True, print_log=False)
                 job['retries'] += 1
                 # rerunning job:
@@ -132,7 +132,7 @@ class JobRunner():
                     if self._DEBUG:
                         wa_proc = Popen("nohup python dummy_job.py &", shell=True, preexec_fn=os.setsid, stdout=f, stderr=f)
                     else:
-                        wa_proc = Popen(job['command'].replace(' -f ','  ').replace('&',' --recover &'),\
+                        wa_proc = Popen(job['command'].replace('&',' --recover &'),\
                                         shell=True,preexec_fn=os.setsid, stdout=f, stderr=f)
                 job['alive'] = True
                 job['pid'] = wa_proc.pid + 1
@@ -250,10 +250,7 @@ class JobRunner():
         else:
             bash_command = bash_command.replace('[GPU_ID]', str(-1))
 
-        if config['retry'] > 0 and os.path.isdir(self._MODELS_DIR + name):
-            bash_command = 'nohup ' + bash_command + ' -f &'
-        else:
-            bash_command = 'nohup ' + bash_command + ' &'
+        bash_command = 'nohup ' + bash_command + ' &'
 
         # Executing
         logger.info(bash_command)
@@ -261,7 +258,10 @@ class JobRunner():
             if self._DEBUG:
                 wa_proc = Popen("nohup python dummy_job.py &", shell=True, preexec_fn=os.setsid, stdout=f, stderr=f)
             else:
-                wa_proc = Popen(bash_command, shell=True, preexec_fn=os.setsid, stdout=f, stderr=f)
+                if config['retry'] > 0 and os.path.isdir(self._MODELS_DIR + name):
+                    wa_proc = Popen(bash_command.replace(' &',' -f &'), shell=True, preexec_fn=os.setsid, stdout=f, stderr=f)
+                else:
+                    wa_proc = Popen(bash_command, shell=True, preexec_fn=os.setsid, stdout=f, stderr=f)
 
 
         # open log file for reading
