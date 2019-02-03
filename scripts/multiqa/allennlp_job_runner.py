@@ -392,7 +392,7 @@ class JobRunner():
                     ElasticLogger().write_log('INFO', "job runner exception", {'error_message': traceback.format_exc()}, print_log=True)
 
                     if self.last_exception is not None and time.time() - self.last_exception < 30:
-                        exit(1)
+                        time.sleep(10)
 
                     time.sleep(3)
                     self.connect_to_queue()
