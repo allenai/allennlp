@@ -261,6 +261,8 @@ class JobRunner():
                 else:
                     wa_proc = Popen(bash_command, shell=True, preexec_fn=os.setsid, stdout=f, stderr=f)
 
+                time.sleep(5)
+
 
         # open log file for reading
         self.log_handles[log_file] = open(log_file, 'r')
@@ -293,6 +295,7 @@ class JobRunner():
             pid_to_kill = [job['pid'] for job in self.running_jobs if job['experiment_name'] == config['experiment_name']]
             bash_command = 'kill ' + str(pid_to_kill[0])
             proc_info = Popen(bash_command, shell=True)
+
         elif config['operation'] == 'resources to spare':
             self.resources_to_spare = config['resources_to_spare']
         elif config['operation'] == 'restart runner':
