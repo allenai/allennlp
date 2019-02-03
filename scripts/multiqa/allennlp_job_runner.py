@@ -116,7 +116,8 @@ class JobRunner():
         if job['log_snapshot'].find('Traceback (most recent call last):') > -1 or \
                 job['log_snapshot'].find('error') > -1:
 
-
+            if len(job['log_snapshot']) > 10001:
+                job['log_snapshot'] = job['log_snapshot'][-10000:]
             # checking retries:
 
             if job['retries'] < 3:
