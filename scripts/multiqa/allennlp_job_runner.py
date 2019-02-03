@@ -261,6 +261,7 @@ class JobRunner():
                 else:
                     wa_proc = Popen(bash_command, shell=True, preexec_fn=os.setsid, stdout=f, stderr=f)
 
+                # lets give this some time...
                 time.sleep(5)
 
 
