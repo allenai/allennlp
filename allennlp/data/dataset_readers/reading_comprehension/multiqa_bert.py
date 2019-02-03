@@ -128,7 +128,7 @@ class BERTQAReader(DatasetReader):
                     char_offset_to_sep = inst['tokens'][split_point + 1][1]
                     token_offset = len(inst['question_tokens']) + 1 - split_point
                 if char_offset_to_sep is not None:
-                    if ind + token_offset >= 400:
+                    if ind + token_offset >= 384:
                         x=1
                         break
                     t[1] = t[1] - char_offset_to_sep + char_offset + len('[SEP] ')
