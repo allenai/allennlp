@@ -132,7 +132,7 @@ class JobRunner():
                     if self._DEBUG:
                         wa_proc = Popen("nohup python dummy_job.py &", shell=True, preexec_fn=os.setsid, stdout=f, stderr=f)
                     else:
-                        wa_proc = Popen(job['command'].replace('-f &',' --recover &').replace('&',' --recover &'),\
+                        wa_proc = Popen(job['command'].replace(' -f ','  ').replace('&',' --recover &'),\
                                         shell=True,preexec_fn=os.setsid, stdout=f, stderr=f)
                 job['alive'] = True
                 job['pid'] = wa_proc.pid + 1
