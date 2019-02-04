@@ -15,8 +15,8 @@ class MovingAverage(Registrable):
 
     def __init__(self, parameters: Iterable[NamedParameter]) -> None:
         self._parameters = list(parameters)
-        self._shadows = {name: parameter.clone() for name, parameter in self._parameters}
-        self._backups = {name: parameter.clone() for name, parameter in self._parameters}
+        self._shadows = {name: parameter.data.clone() for name, parameter in self._parameters}
+        self._backups = {name: parameter.data.clone() for name, parameter in self._parameters}
 
     def apply(self, num_updates: Optional[int] = None):
         """
@@ -30,15 +30,15 @@ class MovingAverage(Registrable):
         Save the current parameter values to restore later.
         """
         for name, parameter in self._parameters:
-            self._backups[name].data = parameter.data.clone()
-            parameter.data = self._shadows[name].data.clone()
+            self._backups[name].copy_(parameter.data)
+            parameter.data.copy_(self._shadows[name])
 
     def restore(self) -> None:
         """
         Restore the backed-up (non-average) parameter values.
         """
         for name, parameter in self._parameters:
-            parameter.data = self._backups[name].data.clone()
+            parameter.data.copy_(self._backups[name])
 
 
 @MovingAverage.register("exponential")

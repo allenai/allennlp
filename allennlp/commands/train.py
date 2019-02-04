@@ -41,7 +41,7 @@ import os
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.checks import check_for_gpu
 from allennlp.common import Params
-from allennlp.common.util import prepare_environment, prepare_global_logging, dump_metrics
+from allennlp.common.util import prepare_environment, prepare_global_logging, cleanup_global_logging, dump_metrics
 from allennlp.models.archival import archive_model, CONFIG_NAME
 from allennlp.models.model import Model, _DEFAULT_WEIGHTS
 from allennlp.training.trainer import Trainer, TrainerPieces
@@ -55,7 +55,7 @@ class Train(Subcommand):
     def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
         # pylint: disable=protected-access
         description = '''Train the specified model on the specified dataset.'''
-        subparser = parser.add_parser(name, description=description, help='Train a model')
+        subparser = parser.add_parser(name, description=description, help='Train a model.')
 
         subparser.add_argument('param_path',
                                type=str,
@@ -89,6 +89,7 @@ class Train(Subcommand):
         subparser.set_defaults(func=train_model_from_args)
 
         return subparser
+
 
 def train_model_from_args(args: argparse.Namespace):
     """
@@ -167,7 +168,7 @@ def train_model(params: Params,
     """
     prepare_environment(params)
     create_serialization_dir(params, serialization_dir, recover, force)
-    prepare_global_logging(serialization_dir, file_friendly_logging)
+    stdout_handler = prepare_global_logging(serialization_dir, file_friendly_logging)
 
     cuda_device = params.params.get('trainer').get('cuda_device', -1)
     check_for_gpu(cuda_device)
@@ -224,6 +225,7 @@ def train_model(params: Params,
         logger.info("To evaluate on the test set after training, pass the "
                     "'evaluate_on_test' flag, or use the 'allennlp evaluate' command.")
 
+    cleanup_global_logging(stdout_handler)
 
     # Now tar up results
     archive_model(serialization_dir, files_to_archive=params.files_to_archive)
