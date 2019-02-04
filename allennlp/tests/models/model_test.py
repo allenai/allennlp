@@ -1,6 +1,4 @@
 # pylint: disable=protected-access
-import json
-
 import torch
 
 from allennlp.common.testing.test_case import AllenNlpTestCase
@@ -25,19 +23,3 @@ class TestModel(AllenNlpTestCase):
         assert tuple(extended_weight.shape) == (25, 300)
 
         assert torch.all(original_weight == extended_weight[:24, :])
-
-    def test_inspection_dict(self):
-        model_archive = str(self.FIXTURES_ROOT / 'decomposable_attention' / 'serialization' / 'model.tar.gz')
-        parameters_inspection = str(self.FIXTURES_ROOT / 'decomposable_attention' / 'parameters_inspection.json')
-        modules_inspection = str(self.FIXTURES_ROOT / 'decomposable_attention' / 'modules_inspection.json')
-
-        model = load_archive(model_archive).model
-
-        with open(parameters_inspection) as file:
-            parameters_inspection_dict = json.load(file)
-
-        with open(modules_inspection) as file:
-            modules_inspection_dict = json.load(file)
-
-        assert modules_inspection_dict == model.inspection_dict(inspect="modules", quite=True)
-        assert parameters_inspection_dict == model.inspection_dict(inspect="parameters", quite=True)
