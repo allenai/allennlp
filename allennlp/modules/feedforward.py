@@ -8,10 +8,9 @@ import torch
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.nn import Activation
-from allennlp.common.from_params import FromParams
 
 
-class FeedForward(torch.nn.Module, FromParams):
+class FeedForward(torch.nn.Module):
     """
     This ``Module`` is a feed-forward neural network, just a sequence of ``Linear`` layers with
     activation functions in between.
@@ -86,9 +85,6 @@ class FeedForward(torch.nn.Module, FromParams):
     @classmethod
     def from_params(cls, params: Params):  # type: ignore
         # pylint: disable=arguments-differ
-        module = cls.from_pretrained_params(params)
-        if module:
-            return module
 
         input_dim = params.pop_int('input_dim')
         num_layers = params.pop_int('num_layers')
