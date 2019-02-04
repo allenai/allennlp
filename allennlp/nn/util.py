@@ -12,7 +12,6 @@ import json
 import torch
 
 from allennlp.common.checks import ConfigurationError
-import allennlp
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -1323,8 +1322,8 @@ def uncombine_initial_dims(tensor: torch.Tensor, original_size: torch.Size) -> t
         return tensor.view(*view_args)
 
 
-# Circular import problem for Model.
-def inspect_model_parameters(model: allennlp.models.Model, quiet: bool = False) -> OrderedDict[str, Any]:
+# Circular import problem for typing Model
+def inspect_model_parameters(model, quiet: bool = False) -> Dict[str, Any]: #type: ignore
     """
     Inspects the model parameters and their tunability. The output is structured
     in a nested dict so that parameters in same sub-modules are grouped together.
@@ -1355,7 +1354,7 @@ def inspect_model_parameters(model: allennlp.models.Model, quiet: bool = False) 
             dict_ = dict_.setdefault(key, {})
         dict_[keys[-1]] = value
 
-    parameter_inspection_dict: OrderedDict[str, Any] = OrderedDict()
+    parameter_inspection_dict: Dict[str, Any] = OrderedDict()
     for parameter_path, parameter in parameters_dict.items():
         path_module_names = parameter_path.split(".")
         if path_module_names:
