@@ -11,6 +11,7 @@ from allennlp.common.testing import AllenNlpTestCase
 from allennlp.nn import util
 from allennlp.models import load_archive
 
+
 class TestNnUtil(AllenNlpTestCase):
     def test_get_sequence_lengths_from_binary_mask(self):
         binary_mask = torch.ByteTensor([[1, 1, 1, 0, 0, 0],
