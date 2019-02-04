@@ -202,8 +202,7 @@ class Elmo(torch.nn.Module):
 
     # The add_to_archive logic here requires a custom from_params.
     @classmethod
-    def from_params(cls, params: Params) -> 'Elmo':  # type: ignore
-
+    def from_params(cls, params: Params) -> 'Elmo':
         # Add files to archive
         params.add_file_to_archive('options_file')
         params.add_file_to_archive('weight_file')

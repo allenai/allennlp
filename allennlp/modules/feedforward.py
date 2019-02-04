@@ -83,9 +83,7 @@ class FeedForward(torch.nn.Module):
     # Requires custom logic around the activations (the automatic `from_params`
     # method can't currently instatiate types like `Union[Activation, List[Activation]]`)
     @classmethod
-    def from_params(cls, params: Params):  # type: ignore
-        # pylint: disable=arguments-differ
-
+    def from_params(cls, params: Params):
         input_dim = params.pop_int('input_dim')
         num_layers = params.pop_int('num_layers')
         hidden_dims = params.pop('hidden_dims')
