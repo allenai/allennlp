@@ -994,10 +994,7 @@ class TestNnUtil(AllenNlpTestCase):
     def test_inspect_model_parameters(self):
         model_archive = str(self.FIXTURES_ROOT / 'decomposable_attention' / 'serialization' / 'model.tar.gz')
         parameters_inspection = str(self.FIXTURES_ROOT / 'decomposable_attention' / 'parameters_inspection.json')
-
         model = load_archive(model_archive).model
-
         with open(parameters_inspection) as file:
             parameters_inspection_dict = json.load(file)
-
         assert parameters_inspection_dict == util.inspect_model_parameters(model)
