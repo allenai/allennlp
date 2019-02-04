@@ -170,7 +170,7 @@ class MultiQAIterator(DataIterator):
                         temp_max_tensor_size = estimated_tensor_size
                         #logger.info("temp_max_tensor_size = %d",temp_max_tensor_size)
 
-                if len(batch) + len(instances_to_add) > self._batch_size or \
+                if (len(batch) + len(instances_to_add) > self._batch_size and len(batch) > 0) or \
                     (self._maximum_tensor_size is not None and estimated_tensor_size > self._maximum_tensor_size):
                     #total_examples_in_batches += len(batch)
                     #logger.info("total_examples_in_batches = %d", total_examples_in_batches)
