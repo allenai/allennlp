@@ -1,4 +1,6 @@
 # pylint: disable=invalid-name,no-self-use,too-many-public-methods,not-callable
+import json
+
 import numpy
 from numpy.testing import assert_array_almost_equal, assert_almost_equal
 import torch
@@ -7,7 +9,7 @@ import pytest
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.nn import util
-
+from allennlp.models import load_archive
 
 class TestNnUtil(AllenNlpTestCase):
     def test_get_sequence_lengths_from_binary_mask(self):
@@ -988,3 +990,14 @@ class TestNnUtil(AllenNlpTestCase):
 
         embedding = util.uncombine_initial_dims(embedding2d, torch.Size((4, 10, 20, 17, 5)))
         assert list(embedding.size()) == [4, 10, 20, 17, 5, 12]
+
+    def test_inspect_model_parameters(self):
+        model_archive = str(self.FIXTURES_ROOT / 'decomposable_attention' / 'serialization' / 'model.tar.gz')
+        parameters_inspection = str(self.FIXTURES_ROOT / 'decomposable_attention' / 'parameters_inspection.json')
+
+        model = load_archive(model_archive).model
+
+        with open(parameters_inspection) as file:
+            parameters_inspection_dict = json.load(file)
+
+        assert parameters_inspection_dict == util.inspect_model_parameters(model)

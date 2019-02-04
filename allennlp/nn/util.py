@@ -2,15 +2,17 @@
 Assorted utilities for working with neural networks in AllenNLP.
 """
 # pylint: disable=too-many-lines
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from typing import Any, Dict, List, Optional, Sequence, Tuple, TypeVar
 import logging
 import copy
 import math
+import json
 
 import torch
 
 from allennlp.common.checks import ConfigurationError
+import allennlp
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -1319,3 +1321,60 @@ def uncombine_initial_dims(tensor: torch.Tensor, original_size: torch.Size) -> t
     else:
         view_args = list(original_size) + [tensor.size(-1)]
         return tensor.view(*view_args)
+
+
+# Circular import problem for Model.
+def inspect_model_parameters(model: allennlp.models.Model, quiet: bool = False) -> OrderedDict[str, Any]:
+    """
+    Inspects the model parameters and their tunability. The output is structured
+    in a nested dict so that parameters in same sub-modules are grouped together.
+    This can be helpful to setup module path based regex, for example in initializer.
+    It prints it by default (optional) and returns the inspection dict. Eg. output::
+
+        {
+            "_text_field_embedder": {
+                "token_embedder_tokens": {
+                    "_projection": {
+                        "bias": "parameter:tunable",
+                        "weight": "parameter:tunable"
+                    },
+                    "weight": "parameter:frozen"
+                }
+            }
+        }
+    """
+    parameters_dict = {parameter_path: parameter for parameter_path, parameter in model.named_parameters()}
+
+    def nested_set(dict_, keys, value):
+        """
+        Given a nested list of keys defining a path, set's the value. If the path is
+        not defined in the dict_, it makes the path first and sets the value.
+        Eg. nested_set(dict_={}, ["one", "two"], "three") ==> {"one": {"two": "three"}}
+        """
+        for key in keys[:-1]:
+            dict_ = dict_.setdefault(key, {})
+        dict_[keys[-1]] = value
+
+    parameter_inspection_dict: OrderedDict[str, Any] = OrderedDict()
+    for parameter_path, parameter in parameters_dict.items():
+        path_module_names = parameter_path.split(".")
+        if path_module_names:
+            requires_grad = parameter.requires_grad
+            value = "parameter:" + ("tunable" if requires_grad else "frozen")
+            # The location of parameter could be at arbitrary depth in the
+            # parameter_inspection_dict and that path may be not present yet.
+            nested_set(parameter_inspection_dict, path_module_names, value)
+
+    def sorted_dict(dictionary):
+        """Recursively (alphabetically) orders dictionary according to keys"""
+        result = OrderedDict()
+        for key, val in sorted(dictionary.items(), key=lambda item: item[0]):
+            result[key] = sorted_dict(val) if isinstance(val, dict) else val
+        return result
+
+    # Sorting the nested dict by keys makes it more parsable.
+    parameter_inspection_dict = sorted_dict(parameter_inspection_dict)
+
+    if not quiet:
+        print(json.dumps(parameter_inspection_dict, indent=4))
+    return parameter_inspection_dict
