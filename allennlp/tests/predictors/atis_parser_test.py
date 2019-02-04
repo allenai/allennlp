@@ -1,9 +1,12 @@
 # pylint: disable=no-self-use,invalid-name
+from flaky import flaky
+
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor
 
 class TestAtisParserPredictor(AllenNlpTestCase):
+    @flaky
     def test_atis_parser_uses_named_inputs(self):
         inputs = {
                 "utterance": "show me the flights to seattle",
@@ -24,6 +27,7 @@ class TestAtisParserPredictor(AllenNlpTestCase):
             predicted_sql_query = result.get("predicted_sql_query")
             assert predicted_sql_query is not None
 
+    @flaky
     def test_atis_parser_predicted_sql_present(self):
         inputs = {
                 "utterance": "show me flights to seattle"
@@ -37,6 +41,7 @@ class TestAtisParserPredictor(AllenNlpTestCase):
         predicted_sql_query = result.get("predicted_sql_query")
         assert predicted_sql_query is not None
 
+    @flaky
     def test_atis_parser_batch_predicted_sql_present(self):
         inputs = [{
                 "utterance": "show me flights to seattle",
