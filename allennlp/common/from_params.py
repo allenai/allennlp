@@ -124,8 +124,10 @@ def create_kwargs(cls: Type[T], params: Params, **extras) -> Dict[str, Any]:
         # We check the provided `extras` for these and just use them if they exist.
         if name in extras:
             kwargs[name] = extras[name]
-
-        # The next case is when the parameter type is itself constructible from_params.
+        elif name in params and "_pretrained" in params.get(name, {}):
+            pretrained_module_params = params.pop(name).pop("_pretrained")
+            kwargs[name] = _load_pretrained_module(annotation, pretrained_module_params)
+        # # The next case is when the parameter type is itself constructible from_params.
         elif hasattr(annotation, 'from_params'):
             if name in params:
                 # Our params have an entry for this, so we use that.
@@ -243,10 +245,6 @@ class FromParams:
         # pylint: disable=protected-access
         from allennlp.common.registrable import Registrable  # import here to avoid circular imports
 
-        module = cls.from_pretrained_params(params) # type: ignore
-        if module:
-            return module
-
         logger.info(f"instantiating class {cls} from params {getattr(params, 'params', params)} "
                     f"and extras {extras}")
 
@@ -295,70 +293,52 @@ class FromParams:
 
             return cls(**kwargs)  # type: ignore
 
-    @classmethod
-    def from_pretrained_params(cls: Type[T], params: Params) -> T:
-        """
-        This is used to load a module from a pretrained model archive. Any module that is
-        initialized via default from_params, can be initialized in a normal way or from
-        pretrained model with only a configuration change.
 
-        Template usage config::
+def _load_pretrained_module(cls: Type[T], params: Params) -> T:
+    """
+    This is used to load a module from a pretrained model archive. Instead of standard
+    params to construct a module, you can use the following template::
 
-            {
-                "_pretrained": {
-                    "archive_file": "../path/to/model.tar.gz",
-                    "module_path": "path.to.module.in.model",
-                    "freeze": False
-                }
+        {
+            "_pretrained": {
+                "archive_file": "../path/to/model.tar.gz",
+                "module_path": "path.to.module.in.model",
+                "freeze": False
             }
+        }
 
-        Modules in allennlp having custom from_params are also loadable/transferrable with above
-        configuration. If you have custom from_params, then to be able to make it loadable/transferrable
-        from an archive, you need to add following at the start of your from_params implementation::
+    to load the same module from a pretrained model archive.
 
-            module = from_pretrained_params(cls, params)
-            if module:
-                return module
+    Caveat: Call to initializer(self) at end of model initializer can potentially wipe the
+    transferred parameters by reinitializing them. This can happen if you have setup initializer
+    regex that also matches parameters of the transferred module. To safe-guard against this,
+    you can either update your initializer regex to prevent conflicting match or add extra initializer::
 
-        Modules which are initialized directly (without fromm_params) are not straightaway transferrable.
-        But this can be fixed by also inheritting FromParams in your class; the "free" from_params
-        implementation will take care of making it transferrable.
+        [
+            [".*transferred_module_name.*", "prevent"]]
+        ]
 
-        Caveat: Call to initializer(self) at end of model initializer can potentially wipe the
-        transferred parameters by reinitializing them. This can happen if you have setup initializer
-        regex that also matches parameters of the transferred module. To safe-guard against this,
-        you can either update your initializer regex to prevent conflicting match or add extra initializer::
+    """
+    # TODO(Harsh) Document this feature elsewhere, because it's private function.
+    from allennlp.models.archival import load_archive  # import here to avoid circular imports
 
-            [
-                [".*transferred_module_name.*", "prevent"]]
-            ]
+    archive_file = params.pop("archive_file")
+    module_path = params.pop("module_path")
+    freeze = params.pop("freeze", False)
+    model = load_archive(archive_file).model
+    modules_dict = {path: module for path, module in model.named_modules()}
+    module = modules_dict.get(module_path, None)
 
-        """
-        from allennlp.models.archival import load_archive  # import here to avoid circular imports
+    if not module:
+        raise ConfigurationError(f"You asked to transfer module at path {module_path} "
+                                 f"from the model at {archive_file}. But it's not present.")
+    if not isinstance(module, cls):
+        raise ConfigurationError(f"The transferred module from model at {archive_file} at module path "
+                                 f"{module_path} was expected of type {cls} but is of type {type(module)}")
+    if not isinstance(module, Module):
+        raise ConfigurationError(f"The transferred object from model at {archive_file} at module path "
+                                 f"{module_path} is not a PyTorch Module.")
 
-        if params is None or isinstance(params, str):
-            return None
-
-        pretrained_module_params = params.pop("_pretrained", None)
-        if pretrained_module_params:
-            archive_file = pretrained_module_params.pop("archive_file")
-            module_path = pretrained_module_params.pop("module_path")
-            freeze = pretrained_module_params.pop("freeze", False)
-            model = load_archive(archive_file).model
-            modules_dict = {path: module for path, module in model.named_modules()}
-            module = modules_dict.get(module_path, None)
-
-            if not module:
-                raise ConfigurationError(f"You asked to transfer module at path {module_path} "
-                                         f"from the model at {archive_file}. But it's not present.")
-            if not isinstance(module, cls):
-                raise ConfigurationError(f"The transferred module from model at {archive_file} at module path "
-                                         f"{module_path} was expected of type {cls} but is of type {type(module)}")
-            if not isinstance(module, Module):
-                raise ConfigurationError(f"The transferred object from model at {archive_file} at module path "
-                                         f"{module_path} is not a PyTorch Module.")
-
-            for parameter in module.parameters(): # type: ignore
-                parameter.requires_grad_(not freeze)
-            return module
-        return None
+    for parameter in module.parameters(): # type: ignore
+        parameter.requires_grad_(not freeze)
+    return module
