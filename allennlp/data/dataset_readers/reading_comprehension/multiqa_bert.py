@@ -220,7 +220,7 @@ class BERTQAReader(DatasetReader):
                                     yield instance
                                 instances = [remainder]
 
-                            if self._sample_size != -1 and number_of_yielded_instances > self._sample_size:
+                            if self._sample_size != -1 and len(instances) > self._sample_size:
                                 break
 
 
