@@ -997,4 +997,4 @@ class TestNnUtil(AllenNlpTestCase):
         model = load_archive(model_archive).model
         with open(parameters_inspection) as file:
             parameters_inspection_dict = json.load(file)
-        assert parameters_inspection_dict == util.inspect_model_parameters(model)
+        assert parameters_inspection_dict == util.inspect_parameters(model)

@@ -1322,10 +1322,9 @@ def uncombine_initial_dims(tensor: torch.Tensor, original_size: torch.Size) -> t
         return tensor.view(*view_args)
 
 
-# Circular import problem for typing Model
-def inspect_model_parameters(model, quiet: bool = False) -> Dict[str, Any]: #type: ignore
+def inspect_parameters(module: torch.nn.Module, quiet: bool = False) -> Dict[str, Any]:
     """
-    Inspects the model parameters and their tunability. The output is structured
+    Inspects the model/module parameters and their tunability. The output is structured
     in a nested dict so that parameters in same sub-modules are grouped together.
     This can be helpful to setup module path based regex, for example in initializer.
     It prints it by default (optional) and returns the inspection dict. Eg. output::
@@ -1341,8 +1340,11 @@ def inspect_model_parameters(model, quiet: bool = False) -> Dict[str, Any]: #typ
                 }
             }
         }
+
     """
-    parameters_dict = {parameter_path: parameter for parameter_path, parameter in model.named_parameters()}
+    # Importing allennlp.models.Model gets into circular imports. Anyway since model is
+    # also a Module, it's better to allow both in the utility.
+    parameters_dict = {parameter_path: parameter for parameter_path, parameter in module.named_parameters()}
 
     def nested_set(dict_, keys, value):
         """
