@@ -1342,40 +1342,15 @@ def inspect_parameters(module: torch.nn.Module, quiet: bool = False) -> Dict[str
         }
 
     """
-    # Importing allennlp.models.Model gets into circular imports. Anyway since model is
-    # also a Module, it's better to allow both in the utility.
-    parameters_dict = {parameter_path: parameter for parameter_path, parameter in module.named_parameters()}
-
-    def nested_set(dict_, keys, value):
-        """
-        Given a nested list of keys defining a path, set's the value. If the path is
-        not defined in the dict_, it makes the path first and sets the value.
-        Eg. nested_set(dict_={}, ["one", "two"], "three") ==> {"one": {"two": "three"}}
-        """
+    results = {}
+    for name, param in sorted(module.named_parameters()):
+        keys = name.split(".")
+        write_to = results
         for key in keys[:-1]:
-            dict_ = dict_.setdefault(key, {})
-        dict_[keys[-1]] = value
-
-    parameter_inspection_dict: Dict[str, Any] = OrderedDict()
-    for parameter_path, parameter in parameters_dict.items():
-        path_module_names = parameter_path.split(".")
-        if path_module_names:
-            requires_grad = parameter.requires_grad
-            value = "parameter:" + ("tunable" if requires_grad else "frozen")
-            # The location of parameter could be at arbitrary depth in the
-            # parameter_inspection_dict and that path may be not present yet.
-            nested_set(parameter_inspection_dict, path_module_names, value)
-
-    def sorted_dict(dictionary):
-        """Recursively (alphabetically) orders dictionary according to keys"""
-        result = OrderedDict()
-        for key, val in sorted(dictionary.items(), key=lambda item: item[0]):
-            result[key] = sorted_dict(val) if isinstance(val, dict) else val
-        return result
-
-    # Sorting the nested dict by keys makes it more parsable.
-    parameter_inspection_dict = sorted_dict(parameter_inspection_dict)
-
+            if key not in write_to:
+                write_to[key] = {}
+            write_to = write_to[key]
+        write_to[keys[-1]] = "tunable" if param.requires_grad else "frozen"
     if not quiet:
-        print(json.dumps(parameter_inspection_dict, indent=4))
-    return parameter_inspection_dict
+        print(json.dumps(results, indent=4))
+    return results

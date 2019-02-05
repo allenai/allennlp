@@ -2,8 +2,8 @@
     "_aggregate_feedforward": {
         "_linear_layers": {
             "0": {
-                "bias": "parameter:tunable",
-                "weight": "parameter:tunable"
+                "bias": "tunable",
+                "weight": "tunable"
             }
         }
     },
@@ -11,8 +11,8 @@
         "_module": {
             "_linear_layers": {
                 "0": {
-                    "bias": "parameter:tunable",
-                    "weight": "parameter:tunable"
+                    "bias": "tunable",
+                    "weight": "tunable"
                 }
             }
         }
@@ -21,8 +21,8 @@
         "_module": {
             "_linear_layers": {
                 "0": {
-                    "bias": "parameter:tunable",
-                    "weight": "parameter:tunable"
+                    "bias": "tunable",
+                    "weight": "tunable"
                 }
             }
         }
@@ -30,10 +30,10 @@
     "_text_field_embedder": {
         "token_embedder_tokens": {
             "_projection": {
-                "bias": "parameter:tunable",
-                "weight": "parameter:tunable"
+                "bias": "tunable",
+                "weight": "tunable"
             },
-            "weight": "parameter:frozen"
+            "weight": "frozen"
         }
     }
 }
