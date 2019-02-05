@@ -11,6 +11,7 @@ import logging
 import os
 from copy import deepcopy
 import re
+from typing import Dict
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common import Params
@@ -61,10 +62,8 @@ class FineTune(Subcommand):
                                action='store_true',
                                default=False,
                                help='if specified, we will use the instances in your new dataset to '
-                                    'extend your vocabulary. Extension of embedding layers is implemented, '
-                                    'but it does not initialize the extra tokens from pretrained embedding file, '
-                                    'which could have been used to initialize embedding layers during training.')
-
+                                    'extend your vocabulary. If pretrained-file was used to initialize '
+                                    'embedding layers, you may also need to pass --embedding-sources-mapping.')
         subparser.add_argument('--file-friendly-logging',
                                action='store_true',
                                default=False,
@@ -75,6 +74,13 @@ class FineTune(Subcommand):
                                default="",
                                help='If non-empty, name of metric used to weight the loss on a per-batch basis.')
 
+        subparser.add_argument('--embedding-sources-mapping',
+                               type=str,
+                               default="",
+                               help='a JSON dict defining mapping from embedding module path to embedding'
+                               'pretrained-file used during training. If not passed, and embedding needs to be '
+                               'extended, we will try to use the original file paths used during training. If '
+                               'they are not available we will use random vectors for embedding extension.')
         subparser.set_defaults(func=fine_tune_model_from_args)
 
         return subparser
@@ -90,7 +96,8 @@ def fine_tune_model_from_args(args: argparse.Namespace):
                                     overrides=args.overrides,
                                     extend_vocab=args.extend_vocab,
                                     file_friendly_logging=args.file_friendly_logging,
-                                    batch_weight_key=args.batch_weight_key)
+                                    batch_weight_key=args.batch_weight_key,
+                                    embedding_sources_mapping=args.embedding_sources_mapping)
 
 
 def fine_tune_model_from_file_paths(model_archive_path: str,
@@ -99,7 +106,8 @@ def fine_tune_model_from_file_paths(model_archive_path: str,
                                     overrides: str = "",
                                     extend_vocab: bool = False,
                                     file_friendly_logging: bool = False,
-                                    batch_weight_key: str = "") -> Model:
+                                    batch_weight_key: str = "",
+                                    embedding_sources_mapping: str = "") -> Model:
     """
     A wrapper around :func:`fine_tune_model` which loads the model archive from a file.
 
@@ -119,25 +127,31 @@ def fine_tune_model_from_file_paths(model_archive_path: str,
     file_friendly_logging : ``bool``, optional (default=False)
         If ``True``, we make our output more friendly to saved model files.  We just pass this
         along to :func:`fine_tune_model`.
+    embedding_sources_mapping: ``str``, optional (default="")
+        JSON string to define dict mapping from embedding paths used during training to
+        the corresponding embedding filepaths available during fine-tuning.
     """
     # We don't need to pass in `cuda_device` here, because the trainer will call `model.cuda()` if
     # necessary.
     archive = load_archive(model_archive_path)
     params = Params.from_file(config_file, overrides)
+
+    embedding_sources: Dict[str, str] = json.loads(embedding_sources_mapping) if embedding_sources_mapping else {}
     return fine_tune_model(model=archive.model,
                            params=params,
                            serialization_dir=serialization_dir,
                            extend_vocab=extend_vocab,
                            file_friendly_logging=file_friendly_logging,
-                           batch_weight_key=batch_weight_key)
-
+                           batch_weight_key=batch_weight_key,
+                           embedding_sources_mapping=embedding_sources)
 
 def fine_tune_model(model: Model,
                     params: Params,
                     serialization_dir: str,
                     extend_vocab: bool = False,
                     file_friendly_logging: bool = False,
-                    batch_weight_key: str = "") -> Model:
+                    batch_weight_key: str = "",
+                    embedding_sources_mapping: Dict[str, str] = None) -> Model:
     """
     Fine tunes the given model, using a set of parameters that is largely identical to those used
     for :func:`~allennlp.commands.train.train_model`, except that the ``model`` section is ignored,
@@ -162,6 +176,9 @@ def fine_tune_model(model: Model,
     file_friendly_logging : ``bool``, optional (default=False)
         If ``True``, we add newlines to tqdm output, even on an interactive terminal, and we slow
         down tqdm's output to only once every 10 seconds.
+    embedding_sources_mapping: ``Dict[str, str]``, optional (default=None)
+        mapping from model paths to the pretrained embedding filepaths
+        used during fine-tuning.
     """
     prepare_environment(params)
     if os.path.exists(serialization_dir) and os.listdir(serialization_dir):
@@ -199,7 +216,8 @@ def fine_tune_model(model: Model,
                                     (instance for key, dataset in all_datasets.items()
                                      for instance in dataset
                                      if key in datasets_for_vocab_creation))
-        model.extend_embedder_vocab(vocab)
+
+        model.extend_embedder_vocab(vocab, embedding_sources_mapping=embedding_sources_mapping)
 
     vocab.save_to_files(os.path.join(serialization_dir, "vocabulary"))
 
