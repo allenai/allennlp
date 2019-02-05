@@ -62,11 +62,19 @@ class TestStackedBidirectionalLstm():
     @pytest.mark.parametrize("dropout_name", ('layer_dropout_probability',
                                               'recurrent_dropout_probability'))
     def test_stacked_bidirectional_lstm_dropout_version_is_different(self, dropout_name: str):
-        params = {'input_size': 10, 'hidden_size': 11, 'num_layers': 3}
-        stacked_lstm = StackedBidirectionalLstm(**params)
-
-        dropout_params = {**params, dropout_name: 0.9}
-        dropped_stacked_lstm = StackedBidirectionalLstm(**dropout_params)
+        stacked_lstm = StackedBidirectionalLstm(input_size=10, hidden_size=11,
+                                                num_layers=3)
+        if dropout_name == 'layer_dropout_probability':
+            dropped_stacked_lstm = StackedBidirectionalLstm(input_size=10, hidden_size=11,
+                                                            num_layers=3,
+                                                            layer_dropout_probability=0.9)
+        elif dropout_name == 'recurrent_dropout_probability':
+            dropped_stacked_lstm = StackedBidirectionalLstm(input_size=10, hidden_size=11,
+                                                            num_layers=3,
+                                                            recurrent_dropout_probability=0.9)
+        else:
+            raise ValueError('Do not recognise the following dropout name '
+                             f'{dropout_name}')
         # Initialize all weights to be == 1.
         constant_init = Initializer.from_params(Params({"type": "constant", "val": 1.}))
         initializer = InitializerApplicator([(".*", constant_init)])
