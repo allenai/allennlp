@@ -8,6 +8,7 @@ import torch.nn.functional as F
 from torch.nn.functional import nll_loss
 import inspect
 import random
+import traceback
 
 from allennlp.common.checks import check_dimensions_match
 from allennlp.data import Vocabulary
@@ -107,13 +108,18 @@ class DocQAPlusBERT(Model):
         self._official_EM = Average()
         self._variational_dropout = InputVariationalDropout(dropout)
 
-    def multi_label_cross_entropy_loss(self,span_logits, answers, passage_length):
+    def multi_label_cross_entropy_loss(self, span_logits, answers, passage_length):
         instances_with_answer = np.argwhere(answers.squeeze().cpu() >= 0)[0].unique()
         target = torch.cuda.FloatTensor(len(instances_with_answer), passage_length, device=span_logits.device) \
             if torch.cuda.is_available() else torch.FloatTensor(len(instances_with_answer), passage_length)
         target.zero_()
-        for ind, q_target in enumerate(answers[instances_with_answer].squeeze().cpu()):
+
+        answers = answers[instances_with_answer].squeeze().cpu() if len(instances_with_answer)>1 \
+            else answers[instances_with_answer].cpu()
+
+        for ind, q_target in enumerate(answers):
             target[ind, q_target[(q_target >= 0) & (q_target < passage_length)]] = 1.0
+
         return -(torch.log((F.softmax(span_logits[instances_with_answer], dim=-1) * \
                             target.float()).sum(dim=1))).mean()
 
@@ -224,8 +230,6 @@ class DocQAPlusBERT(Model):
                         continue
 
 
-                    # TODO filtering result with no golden answer for loss, should we not compute this at all to save time?
-
                     span_start_logits_softmaxed = util.masked_log_softmax(\
                         torch.cat(tuple(span_start_logits[question_inds])).unsqueeze(0), \
                         torch.cat(tuple(repeated_passage_mask[question_inds])).unsqueeze(0))
@@ -233,23 +237,6 @@ class DocQAPlusBERT(Model):
                         torch.cat(tuple(span_end_logits[question_inds])).unsqueeze(0), \
                         torch.cat(tuple(repeated_passage_mask[question_inds])).unsqueeze(0))
 
-                    ## Log then Sum for share norm implementation
-                    #span_start_logits_softmaxed = util.masked_softmax( \
-                    #    torch.cat(tuple(span_start_logits[question_inds])).unsqueeze(0), \
-                    #    torch.cat(tuple(repeated_passage_mask[question_inds])).unsqueeze(0))
-                    #span_end_logits_softmaxed = util.masked_softmax(
-                    #    torch.cat(tuple(span_end_logits[question_inds])).unsqueeze(0), \
-                    #    torch.cat(tuple(repeated_passage_mask[question_inds])).unsqueeze(0))
-                    #start_indexes = [ind + doc_num * passage_length for doc_num, ind in
-                    #         enumerate(selected_span_start[question_inds])]
-                    #end_indexes = [ind + doc_num * passage_length for doc_num, ind in
-                    #         enumerate(selected_span_end[question_inds])]
-                    #dummy_target = torch.cuda.LongTensor([0],device=span_start_logits_softmaxed.device) \
-                    #    if torch.cuda.is_available() else torch.LongTensor([0])
-                    #loss += nll_loss(torch.log(torch.sum(span_start_logits_softmaxed[0,start_indexes])).unsqueeze(0).unsqueeze(0), \
-                    #                 dummy_target, ignore_index=-1)
-                    #loss += nll_loss(torch.log(torch.sum(span_end_logits_softmaxed[0, end_indexes])).unsqueeze(0).unsqueeze(0), \
-                    #                 dummy_target, ignore_index=-1)
 
                     span_start_logits_softmaxed = span_start_logits_softmaxed.reshape(len(question_inds),span_start_logits.size(1))
                     span_end_logits_softmaxed = span_end_logits_softmaxed.reshape(len(question_inds), span_start_logits.size(1))
@@ -267,14 +254,15 @@ class DocQAPlusBERT(Model):
             else:
                 # Per instance loss
 
-                try:
-                    loss = self.multi_label_cross_entropy_loss(span_start_logits, span_start, passage_length)
-                    loss += self.multi_label_cross_entropy_loss(span_end_logits, span_end, passage_length)
-                    output_dict["loss"] = loss
-                except:
+                #try:
+                loss = self.multi_label_cross_entropy_loss(span_start_logits, span_start, passage_length)
+                loss += self.multi_label_cross_entropy_loss(span_end_logits, span_end, passage_length)
+                output_dict["loss"] = loss
+                #except:
+                if False:
                     ElasticLogger().write_log('INFO', 'Loss Error', context_dict={'span_start_logits':span_start_logits.cpu().size(),
                         'span_end_logits_size':span_end_logits.cpu().size(),'span_start':span_start.squeeze().cpu().numpy().tolist(),
-                                                                                  'span_end':span_end.squeeze().cpu().numpy().tolist(),
+                            'span_end':span_end.squeeze().cpu().numpy().tolist(),'error_message': traceback.format_exc(),
                                                                 'batch_size':batch_size, 'passage_length':passage_length},print_log=True)
                     a = torch.autograd.Variable(torch.Tensor([[1, 2], [3, 4]]), requires_grad=True)
                     loss = torch.sum(a ** 2)
