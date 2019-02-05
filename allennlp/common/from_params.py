@@ -96,7 +96,7 @@ def create_kwargs(cls: Type[T], params: Params, **extras) -> Dict[str, Any]:
     For instance, you might provide an existing `Vocabulary` this way.
     """
     # Get the signature of the constructor.
-    from allennlp.models import load_archive  # import here to avoid circular imports
+    from allennlp.models.archival import load_archive  # import here to avoid circular imports
 
     signature = inspect.signature(cls.__init__)
     kwargs: Dict[str, Any] = {}
