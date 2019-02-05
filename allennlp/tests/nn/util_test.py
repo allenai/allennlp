@@ -1,4 +1,4 @@
-# pylint: disable=invalid-name,no-self-use,too-many-public-methods,not-callable
+# pylint: disable=invalid-name,no-self-use,too-many-public-methods,not-callable,too-many-lines
 import json
 
 import numpy
