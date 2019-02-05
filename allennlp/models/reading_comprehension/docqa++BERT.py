@@ -204,7 +204,7 @@ class DocQAPlusBERT(Model):
         self._qas_used_fraction = metadata[0][0]['qas_used_fraction']
 
         # Compute the loss.
-        if span_start is not None:
+        if span_start is not None and len(np.argwhere(span_start.squeeze().cpu() >= 0)) > 0:
             if self._shared_norm:
                 loss = 0
                 loss_steps = 0
@@ -288,11 +288,11 @@ class DocQAPlusBERT(Model):
             #self._span_end_accuracy(span_end_logits, span_end.view(-1))
             #self._span_accuracy(best_span[:, 0:2],torch.stack([span_start, span_end], -1).view(total_qa_count, 2))
 
-            # support for multi choice answers:
-            # TODO this does not handle prediction mode at all .....
-            # we iterate over document that do not contain the golden answer for validation and test setup.
-            span_start_logits_numpy = span_start_logits.data.cpu().numpy()
-            span_end_logits_numpy = span_end_logits.data.cpu().numpy()
+        # support for multi choice answers:
+        # TODO this does not handle prediction mode at all .....
+        # we iterate over document that do not contain the golden answer for validation and test setup.
+        span_start_logits_numpy = span_start_logits.data.cpu().numpy()
+        span_end_logits_numpy = span_end_logits.data.cpu().numpy()
 
 
         # Compute F1 and preparing the output dictionary.
