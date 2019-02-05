@@ -242,11 +242,10 @@ class DocQAPlusBERT(Model):
                     if len(inds_with_gold_answer)==0:
                         continue
 
-                    #try:
-                    loss += self.shared_norm_cross_entropy_loss(span_start_logits[question_inds], span_start[question_inds], passage_length)
-                    loss += self.shared_norm_cross_entropy_loss(span_end_logits[question_inds], span_end[question_inds], passage_length)
-                    #except:
-                    if False:
+                    try:
+                        loss += self.shared_norm_cross_entropy_loss(span_start_logits[question_inds], span_start[question_inds], passage_length)
+                        loss += self.shared_norm_cross_entropy_loss(span_end_logits[question_inds], span_end[question_inds], passage_length)
+                    except:
                         ElasticLogger().write_log('INFO', 'Loss Error', \
                                                   context_dict={'span_start_logits': span_start_logits[question_inds].cpu().size(),
                                                                   'span_end_logits_size': span_end_logits[question_inds].cpu().size(),
