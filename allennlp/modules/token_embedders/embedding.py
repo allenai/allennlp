@@ -17,7 +17,7 @@ with warnings.catch_warnings():
 
 from allennlp.common import Params, Tqdm
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.file_utils import get_file_extension, cached_path, file_is_available
+from allennlp.common.file_utils import get_file_extension, cached_path, is_url_or_existing_file
 from allennlp.data import Vocabulary
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 from allennlp.modules.time_distributed import TimeDistributed
@@ -193,26 +193,27 @@ class Embedding(TokenEmbedder):
             # It's already been extended. No need to initialize / read pretrained file in first place (no-op)
             return
 
-        if extension_pretrained_file and not file_is_available(extension_pretrained_file):
-        # User passed extension_pretrained_file but it's not available.
+        # Case 1: user passed extension_pretrained_file and it's available.
+        if extension_pretrained_file and is_url_or_existing_file(extension_pretrained_file):
+            # Don't have to do anything here, this is the happy case.
+            pass
+        # Case 2: user passed extension_pretrained_file and it's not available
+        elif extension_pretrained_file:
             raise ConfigurationError(f"You passed pretrained embedding file {extension_pretrained_file} "
                                      f"for model_path {model_path} but it's not available.")
-        elif not extension_pretrained_file:
-        # User didn't pass extension_pretrained_file
-            if self._pretrained_file and file_is_available(self._pretrained_file):
-            # But pretrained_file attribute was saved during training and is available:
-                extension_pretrained_file = self._pretrained_file
-            else:
-            # No file is available. Hope that pretrained embedddings weren't used in first place and warn.
-                extra_info = (f"Originally pretrained_file was at "
-                              f"{self._pretrained_file}. " if self._pretrained_file else "")
-                # It's better to warn here and not give error because there is no way to distinguish between
-                # whether pretrained-file wasn't used during training or user forgot to pass / passed incorrect
-                # mapping. Raising an error would prevent fine-tuning in the former case.
-                logging.warning(f"Embedding at model_path, {model_path} cannot locate the pretrained_file. "
-                                f"{extra_info} If you are fine-tuning and want to use using pretrained_file for "
-                                f"embedding extension, please pass the mapping by --embedding-sources argument.")
-        #else, user passed extension_pretrained_file and is available.
+        # Case 3: user didn't pass extension_pretrained_file, but pretrained_file attribute was
+        # saved during training and is available.
+        elif is_url_or_existing_file(self._pretrained_file):
+            extension_pretrained_file = self._pretrained_file
+        # Case 4: no file is available, hope that pretrained embeddings weren't used in the first place and warn
+            extra_info = (f"Originally pretrained_file was at "
+                          f"{self._pretrained_file}. " if self._pretrained_file else "")
+            # It's better to warn here and not give error because there is no way to distinguish between
+            # whether pretrained-file wasn't used during training or user forgot to pass / passed incorrect
+            # mapping. Raising an error would prevent fine-tuning in the former case.
+            logging.warning(f"Embedding at model_path, {model_path} cannot locate the pretrained_file. "
+                            f"{extra_info} If you are fine-tuning and want to use using pretrained_file for "
+                            f"embedding extension, please pass the mapping by --embedding-sources argument.")
 
         embedding_dim = self.weight.data.shape[-1]
         if not extension_pretrained_file:
