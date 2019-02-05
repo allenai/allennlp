@@ -119,18 +119,17 @@ class TestAugmentedLSTM(AllenNlpTestCase):
         num_hidden_dims_zero_across_timesteps = ((hidden_state == 0).sum()).item()
         assert not num_hidden_dims_zero_across_timesteps
 
-    @flaky(max_runs=3)
     def test_dropout_version_is_different_to_no_dropout(self):
         augmented_lstm = AugmentedLstm(10, 11)
         dropped_augmented_lstm = AugmentedLstm(10, 11, recurrent_dropout_probability=0.9)
         # Initialize all weights to be == 1.
-        constant_init = Initializer.from_params(Params({"type": "constant", "val": 1.}))
+        constant_init = Initializer.from_params(Params({"type": "constant", "val": 0.5}))
         initializer = InitializerApplicator([(".*", constant_init)])
         initializer(augmented_lstm)
         initializer(dropped_augmented_lstm)
 
-        initial_state = torch.zeros([1, 5, 11])
-        initial_memory = torch.zeros([1, 5, 11])
+        initial_state = torch.randn([1, 5, 11])
+        initial_memory = torch.randn([1, 5, 11])
 
         # If we use too bigger number like in the PyTorch test the dropout has no affect
         sorted_tensor, sorted_sequence, _, _ = sort_batch_by_length(self.random_tensor, self.sequence_lengths)

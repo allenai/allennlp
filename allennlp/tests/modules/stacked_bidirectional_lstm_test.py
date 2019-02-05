@@ -58,7 +58,7 @@ class TestStackedBidirectionalLstm():
         output = encoder(input_tensor, mask)
         assert output.detach().numpy().shape == (4, 18)
 
-    @flaky(max_runs=3)
+
     @pytest.mark.parametrize("dropout_name", ('layer_dropout_probability',
                                               'recurrent_dropout_probability'))
     def test_stacked_bidirectional_lstm_dropout_version_is_different(self, dropout_name: str):
@@ -76,13 +76,13 @@ class TestStackedBidirectionalLstm():
             raise ValueError('Do not recognise the following dropout name '
                              f'{dropout_name}')
         # Initialize all weights to be == 1.
-        constant_init = Initializer.from_params(Params({"type": "constant", "val": 1.}))
+        constant_init = Initializer.from_params(Params({"type": "constant", "val": 0.5}))
         initializer = InitializerApplicator([(".*", constant_init)])
         initializer(stacked_lstm)
         initializer(dropped_stacked_lstm)
 
-        initial_state = torch.zeros([3, 5, 11])
-        initial_memory = torch.zeros([3, 5, 11])
+        initial_state = torch.randn([3, 5, 11])
+        initial_memory = torch.randn([3, 5, 11])
 
         tensor = torch.rand([5, 7, 10])
         sequence_lengths = torch.LongTensor([7, 7, 7, 7, 7])
