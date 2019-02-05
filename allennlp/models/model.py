@@ -349,7 +349,7 @@ class Model(torch.nn.Module, Registrable):
             if isinstance(module, Embedding):
                 pretrained_file = embedding_sources_mapping.get(model_path, None)
                 module.extend_vocab(extended_vocab,
-                                    pretrained_file=pretrained_file,
+                                    extension_pretrained_file=pretrained_file,
                                     model_path=model_path)
 
 def remove_pretrained_embedding_params(params: Params):
