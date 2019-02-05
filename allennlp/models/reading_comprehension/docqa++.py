@@ -8,6 +8,7 @@ import torch.nn.functional as F
 from torch.nn.functional import nll_loss
 import inspect
 import random
+import traceback
 
 from allennlp.common.checks import check_dimensions_match
 from allennlp.data import Vocabulary
@@ -145,15 +146,20 @@ class DocQAPlus(Model):
         self._official_EM = Average()
         self._variational_dropout = InputVariationalDropout(dropout)
 
-    def multi_label_cross_entropy_loss(self,span_logits, answers, batch_size, passage_length):
+    def multi_label_cross_entropy_loss(self, span_logits, answers, passage_length):
         instances_with_answer = np.argwhere(answers.squeeze().cpu() >= 0)[0].unique()
-        target = torch.cuda.FloatTensor(batch_size, passage_length, device=span_logits.device) \
-            if torch.cuda.is_available() else torch.FloatTensor(batch_size, passage_length)
+        target = torch.cuda.FloatTensor(len(instances_with_answer), passage_length, device=span_logits.device) \
+            if torch.cuda.is_available() else torch.FloatTensor(len(instances_with_answer), passage_length)
         target.zero_()
-        for ind, q_target in enumerate(answers.squeeze().cpu()):
+
+        answers = answers[instances_with_answer].squeeze().cpu() if len(instances_with_answer)>1 \
+            else answers[instances_with_answer].cpu()
+
+        for ind, q_target in enumerate(answers):
             target[ind, q_target[(q_target >= 0) & (q_target < passage_length)]] = 1.0
+
         return -(torch.log((F.softmax(span_logits[instances_with_answer], dim=-1) * \
-                            target[instances_with_answer].float()).sum(dim=1))).mean()
+                            target.float()).sum(dim=1))).mean()
 
     @profile
     def forward(self,  # type: ignore
@@ -412,10 +418,18 @@ class DocQAPlus(Model):
                     output_dict["loss"] = loss
             else:
 
-                loss = self.multi_label_cross_entropy_loss(span_start_logits, span_start, batch_size, passage_length)
-                loss += self.multi_label_cross_entropy_loss(span_end_logits, span_end, batch_size, passage_length)
-                output_dict["loss"] = loss
-
+                try:
+                    loss = self.multi_label_cross_entropy_loss(span_start_logits, span_start, passage_length)
+                    loss += self.multi_label_cross_entropy_loss(span_end_logits, span_end, passage_length)
+                    output_dict["loss"] = loss
+                except:
+                    ElasticLogger().write_log('INFO', 'Loss Error', context_dict={'span_start_logits':span_start_logits.cpu().size(),
+                        'span_end_logits_size':span_end_logits.cpu().size(),'span_start':span_start.squeeze().cpu().numpy().tolist(),
+                            'span_end':span_end.squeeze().cpu().numpy().tolist(),'error_message': traceback.format_exc(),
+                                                                'batch_size':batch_size, 'passage_length':passage_length},print_log=True)
+                    a = torch.autograd.Variable(torch.Tensor([[1, 2], [3, 4]]), requires_grad=True)
+                    loss = torch.sum(a ** 2)
+                    output_dict["loss"] = loss
                 # Per instance loss
                 #inds_with_gold_answer = np.argwhere(span_start.view(-1).cpu().numpy() >= 0)
                 #inds_with_gold_answer = inds_with_gold_answer.squeeze() if len(inds_with_gold_answer) > 1 else inds_with_gold_answer
