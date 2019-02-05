@@ -2,7 +2,7 @@
 Assorted utilities for working with neural networks in AllenNLP.
 """
 # pylint: disable=too-many-lines
-from collections import defaultdict, OrderedDict
+from collections import defaultdict
 from typing import Any, Dict, List, Optional, Sequence, Tuple, TypeVar
 import logging
 import copy
@@ -1342,7 +1342,7 @@ def inspect_parameters(module: torch.nn.Module, quiet: bool = False) -> Dict[str
         }
 
     """
-    results = {}
+    results: Dict[str, Any] = {}
     for name, param in sorted(module.named_parameters()):
         keys = name.split(".")
         write_to = results
