@@ -25,13 +25,13 @@ class Archive(NamedTuple):
     model: Model
     config: Params
 
-    def extract_module(self, module_path: str, freeze: bool = True) -> Module:
+    def extract_module(self, path: str, freeze: bool = True) -> Module:
         """
         This method can be used to load a module from the pretrained model archive.
 
         Parameters
         ----------
-        module_path: ``str``
+        path: ``str``
             Path of target module to be loaded from the model.
             Eg. "_textfield_embedder.token_embedder_tokens"
         freeze: ``bool``, optional (default=True)
@@ -45,7 +45,7 @@ class Archive(NamedTuple):
             {
                 "_pretrained": {
                     "archive_file": "../path/to/model.tar.gz",
-                    "module_path": "path.to.module.in.model",
+                    "path": "path.to.module.in.model",
                     "freeze": False
                 }
             }
@@ -62,14 +62,14 @@ class Archive(NamedTuple):
 
         """
         modules_dict = {path: module for path, module in self.model.named_modules()}
-        module = modules_dict.get(module_path, None)
+        module = modules_dict.get(path, None)
 
         if not module:
-            raise ConfigurationError(f"You asked to transfer module at module_path {module_path} from "
+            raise ConfigurationError(f"You asked to transfer module at path {path} from "
                                      f"the model {type(self.model)}. But it's not present.")
         if not isinstance(module, Module):
             raise ConfigurationError(f"The transferred object from model {type(self.model)} at path "
-                                     f"{module_path} is not a PyTorch Module.")
+                                     f"{path} is not a PyTorch Module.")
 
         for parameter in module.parameters(): # type: ignore
             parameter.requires_grad_(not freeze)
