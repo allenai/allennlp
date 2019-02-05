@@ -34,7 +34,7 @@ def bidirectional_attention_flow_seo_2017() -> predictors.BidafPredictor:
     with warnings.catch_warnings():
         warnings.simplefilter(action="ignore", category=DeprecationWarning)
         model = PretrainedModel('https://s3-us-west-2.amazonaws.com/allennlp/models/bidaf-model-2017.09.15-charpad.tar.gz',
-                            'machine-comprehension')
+                                'machine-comprehension')
         return model.predictor() # type: ignore
 
 def open_information_extraction_stanovsky_2018() -> predictors.OpenIePredictor:
