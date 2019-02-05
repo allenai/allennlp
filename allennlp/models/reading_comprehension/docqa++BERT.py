@@ -254,12 +254,11 @@ class DocQAPlusBERT(Model):
             else:
                 # Per instance loss
 
-                #try:
-                loss = self.multi_label_cross_entropy_loss(span_start_logits, span_start, passage_length)
-                loss += self.multi_label_cross_entropy_loss(span_end_logits, span_end, passage_length)
-                output_dict["loss"] = loss
-                #except:
-                if False:
+                try:
+                    loss = self.multi_label_cross_entropy_loss(span_start_logits, span_start, passage_length)
+                    loss += self.multi_label_cross_entropy_loss(span_end_logits, span_end, passage_length)
+                    output_dict["loss"] = loss
+                except:
                     ElasticLogger().write_log('INFO', 'Loss Error', context_dict={'span_start_logits':span_start_logits.cpu().size(),
                         'span_end_logits_size':span_end_logits.cpu().size(),'span_start':span_start.squeeze().cpu().numpy().tolist(),
                             'span_end':span_end.squeeze().cpu().numpy().tolist(),'error_message': traceback.format_exc(),
