@@ -610,7 +610,7 @@ class EmbeddingsTextFile(Iterator[str]):
     def _get_the_only_file_in_the_archive(members_list: Sequence[str], archive_path: str) -> str:
         if len(members_list) > 1:
             raise ValueError('The archive %s contains multiple files, so you must select '
-                             'one of the files inside providing a uri of the type: %s'
+                             'one of the files inside providing a uri of the type: %s.'
                              % (archive_path, format_embeddings_file_uri('path_or_url_to_archive',
                                                                          'path_inside_archive')))
         return members_list[0]
