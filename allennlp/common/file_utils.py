@@ -9,7 +9,7 @@ import tempfile
 import json
 from urllib.parse import urlparse
 from pathlib import Path
-from typing import Optional, Tuple, Union, IO, Callable, Set, NoneType
+from typing import Optional, Tuple, Union, IO, Callable, Set
 from hashlib import sha256
 from functools import wraps
 
@@ -106,7 +106,7 @@ def cached_path(url_or_filename: Union[str, Path], cache_dir: str = None) -> str
         # Something unknown
         raise ValueError("unable to parse {} as a URL or as a local path".format(url_or_filename))
 
-def is_url_or_existing_file(url_or_filename: Union[str, Path, NoneType]) -> bool:
+def is_url_or_existing_file(url_or_filename: Union[str, Path, None]) -> bool:
     """
     Given something that might be a URL (or might be a local path),
     determine check if it's url or an existing file path.
