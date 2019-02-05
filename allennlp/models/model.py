@@ -17,7 +17,6 @@ from allennlp.data import Instance, Vocabulary
 from allennlp.data.dataset import Batch
 from allennlp.nn import util
 from allennlp.nn.regularizers import RegularizerApplicator
-from allennlp.modules.token_embedders.embedding import Embedding
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
