@@ -13,6 +13,7 @@ from allennlp.common.params import Params
 from allennlp.models import load_archive
 from allennlp.modules.token_embedders.embedding import _read_pretrained_embeddings_file
 from allennlp.data.vocabulary import Vocabulary
+from allennlp.common.checks import ConfigurationError
 
 class TestFineTune(AllenNlpTestCase):
     def setUp(self):
@@ -66,39 +67,45 @@ class TestFineTune(AllenNlpTestCase):
         embeddings_filename = str(self.FIXTURES_ROOT / 'data' / 'seahorse_embeddings.gz')
         extra_token_vector = _read_pretrained_embeddings_file(embeddings_filename, 300,
                                                               Vocabulary({"tokens": {"seahorse": 1}}))[2, :]
+        unavailable_embeddings_filename = "file-not-found"
 
-        # TEST 1
-        trained_model = load_archive(self.model_archive).model
-        original_weight = trained_model._text_field_embedder.token_embedder_tokens.weight
-        # Passing *correct* embedding_sources_mapping should work; pretrained_file attribute wasn't stored.
-        embedding_sources_mapping = {"_text_field_embedder.token_embedder_tokens": embeddings_filename}
-        shutil.rmtree(self.serialization_dir, ignore_errors=True)
-        fine_tuned_model = fine_tune_model(trained_model, params.duplicate(), self.serialization_dir,
-                                           extend_vocab=True, embedding_sources_mapping=embedding_sources_mapping)
-        extended_weight = fine_tuned_model._text_field_embedder.token_embedder_tokens.weight
-        assert tuple(original_weight.shape) == (24, 300)
-        assert tuple(extended_weight.shape) == (25, 300)
-        assert torch.all(original_weight == extended_weight[:24, :])
-        assert torch.all(extended_weight[24, :] == extra_token_vector)
+        def check_embedding_extension(user_pretrained_file, saved_pretrained_file, use_pretrained):
+            trained_model = load_archive(self.model_archive).model
+            original_weight = trained_model._text_field_embedder.token_embedder_tokens.weight
+            # Simulate the behavior of unavailable pretrained_file being stored as an attribute.
+            trained_model._text_field_embedder.token_embedder_tokens._pretrained_file = saved_pretrained_file
+            embedding_sources_mapping = {"_text_field_embedder.token_embedder_tokens": user_pretrained_file}
+            shutil.rmtree(self.serialization_dir, ignore_errors=True)
+            fine_tuned_model = fine_tune_model(trained_model, params.duplicate(),
+                                               self.serialization_dir, extend_vocab=True,
+                                               embedding_sources_mapping=embedding_sources_mapping)
+            extended_weight = fine_tuned_model._text_field_embedder.token_embedder_tokens.weight
+            assert original_weight.shape[0] + 1 == extended_weight.shape[0] == 25
+            assert torch.all(original_weight == extended_weight[:24, :])
+            if use_pretrained:
+                assert torch.all(extended_weight[24, :] == extra_token_vector)
+            else:
+                assert torch.all(extended_weight[24, :] != extra_token_vector)
 
-        # TEST 2
-        trained_model = load_archive(self.model_archive).model
-        original_weight = trained_model._text_field_embedder.token_embedder_tokens.weight
-        # Simulate behavior that pretrained_file attribute was saved
-        pretrained_file = embeddings_filename
-        trained_model._text_field_embedder.token_embedder_tokens._pretrained_file = pretrained_file
+        # TEST 1: Passing correct embedding_sources_mapping should work when pretrained_file attribute
+        #         wasn't stored. (Model archive was generated without behaviour of storing pretrained_file)
+        check_embedding_extension(embeddings_filename, None, True)
 
-        # Now, passing incorrect mapping should raise warning, and say it will be ignored
-        # since original is already reachable. And model should use originally saved attribute pretrained-file
-        embedding_sources_mapping = {"_text_field_embedder.token_embedder_tokens": "hello-world!"}
-        shutil.rmtree(self.serialization_dir, ignore_errors=True)
-        fine_tuned_model = fine_tune_model(trained_model, params.duplicate(), self.serialization_dir,
-                                           extend_vocab=True, embedding_sources_mapping=embedding_sources_mapping)
-        extended_weight = fine_tuned_model._text_field_embedder.token_embedder_tokens.weight
-        assert tuple(original_weight.shape) == (24, 300)
-        assert tuple(extended_weight.shape) == (25, 300)
-        assert torch.all(original_weight == extended_weight[:24, :])
-        assert torch.all(extended_weight[24, :] == extra_token_vector)
+        # TEST 2: Passing correct embedding_sources_mapping should work when pretrained_file
+        #         attribute was stored and user's choice should take precedence.
+        check_embedding_extension(embeddings_filename, unavailable_embeddings_filename, True)
+
+        # TEST 3: Passing no embedding_sources_mapping should work, if available pretrained_file
+        #         attribute was stored.
+        check_embedding_extension(None, embeddings_filename, True)
+
+        # TEST 4: Passing incorrect pretrained-file by mapping should raise error.
+        with pytest.raises(ConfigurationError):
+            check_embedding_extension(unavailable_embeddings_filename, embeddings_filename, True)
+
+        # TEST 5: If none is available, it should NOT raise error. Pretrained file could
+        #         possibly not have been used in first place.
+        check_embedding_extension(None, unavailable_embeddings_filename, False)
 
     def test_fine_tune_runs_from_parser_arguments(self):
         raw_args = ["fine-tune",
