@@ -206,6 +206,7 @@ class Embedding(TokenEmbedder):
         elif is_url_or_existing_file(self._pretrained_file):
             extension_pretrained_file = self._pretrained_file
         # Case 4: no file is available, hope that pretrained embeddings weren't used in the first place and warn
+        else:
             extra_info = (f"Originally pretrained_file was at "
                           f"{self._pretrained_file}. " if self._pretrained_file else "")
             # It's better to warn here and not give error because there is no way to distinguish between
