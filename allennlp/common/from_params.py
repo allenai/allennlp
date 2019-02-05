@@ -124,7 +124,8 @@ def create_kwargs(cls: Type[T], params: Params, **extras) -> Dict[str, Any]:
         # We check the provided `extras` for these and just use them if they exist.
         if name in extras:
             kwargs[name] = extras[name]
-        elif name in params and "_pretrained" in params.get(name, {}):
+        elif name in params and isinstance(params.get(name), Params) and "_pretrained" in params.get(name):
+        # This argument should be loaded from pretrained archive.
             pretrained_module_params = params.pop(name).pop("_pretrained")
             kwargs[name] = _load_pretrained_module(annotation, pretrained_module_params)
         # # The next case is when the parameter type is itself constructible from_params.
