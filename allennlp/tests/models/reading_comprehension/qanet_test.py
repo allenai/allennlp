@@ -1,6 +1,8 @@
 # pylint: disable=no-self-use,invalid-name
+from flaky import flaky
 import numpy
 from numpy.testing import assert_almost_equal
+
 from allennlp.common import Params
 from allennlp.data import DatasetReader, Vocabulary
 from allennlp.common.testing import ModelTestCase
