@@ -107,6 +107,14 @@ class DocQAPlusBERT(Model):
         self._official_EM = Average()
         self._variational_dropout = InputVariationalDropout(dropout)
 
+    def multi_label_cross_entropy_loss(self,span_logits, answers, batch_size, passage_length):
+        target = torch.cuda.FloatTensor(batch_size, passage_length, device=span_logits.device) \
+            if torch.cuda.is_available() else torch.FloatTensor(batch_size, passage_length)
+        target.zero_()
+        for ind, q_target in enumerate(answers.squeeze().cpu()):
+            target[ind, q_target[(q_target >= 0) & (q_target < passage_length)]] = 1.0
+        return -(torch.log((F.softmax(span_logits, dim=-1) * target.float()).sum(dim=1))).mean()
+
     @profile
     def forward(self,  # type: ignore
                 question: Dict[str, torch.LongTensor],
@@ -256,16 +264,21 @@ class DocQAPlusBERT(Model):
                     output_dict["loss"] = loss
             else:
                 # Per instance loss
-                inds_with_gold_answer = np.argwhere(span_start.view(-1).cpu().numpy() >= 0)
-                inds_with_gold_answer = inds_with_gold_answer.squeeze() if len(inds_with_gold_answer) > 1 else inds_with_gold_answer
-                if len(inds_with_gold_answer)>0:
-                    loss = nll_loss(util.masked_log_softmax(span_start_logits[inds_with_gold_answer], \
-                                                        repeated_passage_mask[inds_with_gold_answer]),\
-                                    span_start.view(-1)[inds_with_gold_answer], ignore_index=-1)
-                    loss += nll_loss(util.masked_log_softmax(span_end_logits[inds_with_gold_answer], \
-                                                        repeated_passage_mask[inds_with_gold_answer]),\
-                                    span_end.view(-1)[inds_with_gold_answer], ignore_index=-1)
-                    output_dict["loss"] = loss
+
+                loss = self.multi_label_cross_entropy_loss(span_start_logits, span_start, batch_size, passage_length)
+                loss += self.multi_label_cross_entropy_loss(span_end_logits, span_end, batch_size, passage_length)
+                output_dict["loss"] = loss
+
+                #inds_with_gold_answer = np.argwhere(span_start.view(-1).cpu().numpy() >= 0)
+                #inds_with_gold_answer = inds_with_gold_answer.squeeze() if len(inds_with_gold_answer) > 1 else inds_with_gold_answer
+                #if len(inds_with_gold_answer)>0:
+                #    loss = nll_loss(util.masked_log_softmax(span_start_logits[inds_with_gold_answer], \
+                #                                        repeated_passage_mask[inds_with_gold_answer]),\
+                #                    span_start.view(-1)[inds_with_gold_answer], ignore_index=-1)
+                #    loss += nll_loss(util.masked_log_softmax(span_end_logits[inds_with_gold_answer], \
+                #                                        repeated_passage_mask[inds_with_gold_answer]),\
+                #                    span_end.view(-1)[inds_with_gold_answer], ignore_index=-1)
+                #    output_dict["loss"] = loss
 
 
             # TODO these are not updates

@@ -157,7 +157,7 @@ class MultiQAIterator(DataIterator):
                         instances_to_add = question_instances
                     
                     # Require at least one answer:
-                    if not any(inst.fields['metadata'].metadata['token_span_lists'] != [] for inst in instances_to_add):
+                    if not any(inst.fields['metadata'].metadata['answers_list'] != [] for inst in instances_to_add):
                         continue
 
                 # enforcing batch size

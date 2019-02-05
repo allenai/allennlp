@@ -152,7 +152,7 @@ class MultiQAReader(DatasetReader):
                 logger.info("yeilding inst_num %d",inst_num)
             tokenized_paragraph = [Token(text=t[0], idx=t[1]) for t in inst['tokens']]
             question_tokens = [Token(text=t[0], idx=t[1]) for t in inst['question_tokens']]
-            instance = util.make_reading_comprehension_instance_multiqa_multidoc(question_tokens,
+            instance = util.make_reading_comprehension_instance_multiqa(question_tokens,
                                                      tokenized_paragraph,
                                                      self._token_indexers,
                                                      inst['text'],
@@ -163,47 +163,3 @@ class MultiQAReader(DatasetReader):
             yield instance
 
 
-
-    @overrides
-    def text_to_instance(self,  # type: ignore
-                         question_text: str,
-                         paragraph: List[str],
-                         span_starts: List[List[int]] = None,
-                         span_ends: List[List[int]] = None,
-                         tokenized_paragraph: List[List[Token]] = None,
-                         additional_metadata: Dict[str, Any] = None) -> Instance:
-        # pylint: disable=arguments-differ
-        # We need to convert character indices in `passage_text` to token indices in
-        # `passage_tokens`, as the latter is what we'll actually use for supervision.
-
-        tokenized_paragraph = tokenized_paragraph or []
-
-        # Building answer_token_span_list shape: [answer_type, paragraph, questions , answer list]
-        # Span_starts_list is a list of dim [answer types, question num] each values is (paragraph num, answer start char offset)
-        answer_token_span_list = {'answers':[],'distractor_answers':[]}
-        for answer_type in ['answers', 'distractor_answers']:
-            passage_offsets = [(token.idx, token.idx + len(token.text)) for token in tokenized_paragraph]
-
-            token_spans: List[Tuple[int, int]] = []
-            for char_span_start, char_span_end in zip(span_starts[answer_type], span_ends[answer_type]):
-                (span_start, span_end), error = util.char_span_to_token_span(passage_offsets,
-                                                                             (char_span_start, char_span_end))
-                if error:
-                    logger.debug("Passage: %s", paragraph)
-                    logger.debug("Passage tokens: %s", tokenized_paragraph)
-                    logger.debug("Answer span: (%d, %d)", char_span_start, char_span_end)
-                    logger.debug("Token span: (%d, %d)", span_start, span_end)
-                    logger.debug("Tokens in answer: %s", tokenized_paragraph[span_start:span_end + 1])
-                    logger.debug("Answer: %s", paragraph[char_span_start:char_span_end])
-                token_spans.append((span_start, span_end))
-
-            answer_token_span_list[answer_type].append(token_spans)
-
-        question_tokens = self._tokenizer.tokenize(question_text)
-
-        return util.make_reading_comprehension_instance_multiqa_multidoc(question_tokens,
-                                                             tokenized_paragraph,
-                                                             self._token_indexers,
-                                                             paragraph,
-                                                             answer_token_span_list,
-                                                             additional_metadata)

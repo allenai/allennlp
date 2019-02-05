@@ -145,6 +145,14 @@ class DocQAPlus(Model):
         self._official_EM = Average()
         self._variational_dropout = InputVariationalDropout(dropout)
 
+    def multi_label_cross_entropy_loss(self,span_logits, answers, batch_size, passage_length):
+        target = torch.cuda.FloatTensor(batch_size, passage_length, device=span_logits.device) \
+            if torch.cuda.is_available() else torch.FloatTensor(batch_size, passage_length)
+        target.zero_()
+        for ind, q_target in enumerate(answers.squeeze().cpu()):
+            target[ind, q_target[(q_target >= 0) & (q_target < passage_length)]] = 1.0
+        return -(torch.log((F.softmax(span_logits, dim=-1) * target.float()).sum(dim=1))).mean()
+
     @profile
     def forward(self,  # type: ignore
                 question: Dict[str, torch.LongTensor],
@@ -385,23 +393,7 @@ class DocQAPlus(Model):
                         torch.cat(tuple(span_end_logits[question_inds])).unsqueeze(0), \
                         torch.cat(tuple(repeated_passage_mask[question_inds])).unsqueeze(0))
 
-                    ## Log then Sum for share norm implementation
-                    #span_start_logits_softmaxed = util.masked_softmax( \
-                    #    torch.cat(tuple(span_start_logits[question_inds])).unsqueeze(0), \
-                    #    torch.cat(tuple(repeated_passage_mask[question_inds])).unsqueeze(0))
-                    #span_end_logits_softmaxed = util.masked_softmax(
-                    #    torch.cat(tuple(span_end_logits[question_inds])).unsqueeze(0), \
-                    #    torch.cat(tuple(repeated_passage_mask[question_inds])).unsqueeze(0))
-                    #start_indexes = [ind + doc_num * passage_length for doc_num, ind in
-                    #         enumerate(selected_span_start[question_inds])]
-                    #end_indexes = [ind + doc_num * passage_length for doc_num, ind in
-                    #         enumerate(selected_span_end[question_inds])]
-                    #dummy_target = torch.cuda.LongTensor([0],device=span_start_logits_softmaxed.device) \
-                    #    if torch.cuda.is_available() else torch.LongTensor([0])
-                    #loss += nll_loss(torch.log(torch.sum(span_start_logits_softmaxed[0,start_indexes])).unsqueeze(0).unsqueeze(0), \
-                    #                 dummy_target, ignore_index=-1)
-                    #loss += nll_loss(torch.log(torch.sum(span_end_logits_softmaxed[0, end_indexes])).unsqueeze(0).unsqueeze(0), \
-                    #                 dummy_target, ignore_index=-1)
+
 
                     span_start_logits_softmaxed = span_start_logits_softmaxed.reshape(len(question_inds),span_start_logits.size(1))
                     span_end_logits_softmaxed = span_end_logits_softmaxed.reshape(len(question_inds), span_start_logits.size(1))
@@ -417,17 +409,22 @@ class DocQAPlus(Model):
                     loss /= loss_steps
                     output_dict["loss"] = loss
             else:
+
+                loss = self.multi_label_cross_entropy_loss(span_start_logits, span_start, batch_size, passage_length)
+                loss += self.multi_label_cross_entropy_loss(span_end_logits, span_end, batch_size, passage_length)
+                output_dict["loss"] = loss
+
                 # Per instance loss
-                inds_with_gold_answer = np.argwhere(span_start.view(-1).cpu().numpy() >= 0)
-                inds_with_gold_answer = inds_with_gold_answer.squeeze() if len(inds_with_gold_answer) > 1 else inds_with_gold_answer
-                if len(inds_with_gold_answer)>0:
-                    loss = nll_loss(util.masked_log_softmax(span_start_logits[inds_with_gold_answer], \
-                                                        repeated_passage_mask[inds_with_gold_answer]),\
-                                    span_start.view(-1)[inds_with_gold_answer], ignore_index=-1)
-                    loss += nll_loss(util.masked_log_softmax(span_end_logits[inds_with_gold_answer], \
-                                                        repeated_passage_mask[inds_with_gold_answer]),\
-                                    span_end.view(-1)[inds_with_gold_answer], ignore_index=-1)
-                    output_dict["loss"] = loss
+                #inds_with_gold_answer = np.argwhere(span_start.view(-1).cpu().numpy() >= 0)
+                #inds_with_gold_answer = inds_with_gold_answer.squeeze() if len(inds_with_gold_answer) > 1 else inds_with_gold_answer
+                #if len(inds_with_gold_answer)>0:
+                #    loss = nll_loss(util.masked_log_softmax(span_start_logits[inds_with_gold_answer], \
+                #                                        repeated_passage_mask[inds_with_gold_answer]),\
+                #                    span_start.view(-1)[inds_with_gold_answer], ignore_index=-1)
+                #    loss += nll_loss(util.masked_log_softmax(span_end_logits[inds_with_gold_answer], \
+                #                                        repeated_passage_mask[inds_with_gold_answer]),\
+                #                    span_end.view(-1)[inds_with_gold_answer], ignore_index=-1)
+                #    output_dict["loss"] = loss
 
             # TODO: This is a patch, for dev question with no answer token found,
             # but we would like to see if we still get F1 score for it...
@@ -448,43 +445,6 @@ class DocQAPlus(Model):
             # we iterate over document that do not contain the golden answer for validation and test setup.
             span_start_logits_numpy = span_start_logits.data.cpu().numpy()
             span_end_logits_numpy = span_end_logits.data.cpu().numpy()
-
-            if False and self._multi_choice_answers:
-
-                for batch_ind,inst_metadata in enumerate(metadata):
-                    max_correct_answer = -50
-                    max_incorrect_answer = -50
-
-                    if self.training:
-                        instance_triplets = golden_answer_instance_triplets[batch_ind]
-                    else:
-                        instance_triplets = range(batch_ind * num_of_docs, (batch_ind + 1) * num_of_docs)
-
-                    if len(instance_triplets) == 0:
-                        continue
-
-                    # computing the max score of the correct answer
-                    for offest,j in zip(golden_answer_instance_offset[batch_ind],range(len(instance_triplets))):
-
-                        if offest < len(inst_metadata["token_span_lists"]['answers']):
-                            for answer_start_end in inst_metadata['token_span_lists']['answers'][offest][0]:
-                                score = span_start_logits_numpy[instance_triplets[j]][answer_start_end[0]] \
-                                        + span_end_logits_numpy[instance_triplets[j]][answer_start_end[1]]
-                                if score>max_correct_answer:
-                                    max_correct_answer = score
-
-                        # computing the max score of the incorrect answers
-                        if offest < len(inst_metadata["token_span_lists"]['distractor_answers']):
-                            for answer_start_end in inst_metadata['token_span_lists']['distractor_answers'][offest][0]:
-                                #print(inst_metadata['passage_tokens'][offest][answer_start_end[0]:answer_start_end[1]+1])
-                                score = span_start_logits_numpy[instance_triplets[j]][answer_start_end[0]] \
-                                        + span_end_logits_numpy[instance_triplets[j]][answer_start_end[1]]
-                                if score > max_incorrect_answer:
-                                    max_incorrect_answer = score
-
-                    # If max currect answer score is higher, then multi_choice accuracy bool accuracy is True.
-                    self._multichoice_accuracy(torch.Tensor([(max_correct_answer > max_incorrect_answer) * 1]),torch.Tensor([1]))
-
             
 
         # Compute F1 and preparing the output dictionary.
@@ -545,18 +505,8 @@ class DocQAPlus(Model):
             self._official_f1(100 * f1_score)
             self._official_EM(100 * EM_score)
         #output_dict['qid'].append(per_dialog_query_id_list)
-        #output_dict['best_span_str'].append(per_dialog_best_span_list)
+        output_dict['best_span_str'].append(best_span_string)
 
-        return output_dict
-
-    @overrides
-    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, Any]:
-        yesno_tags = [[self.vocab.get_token_from_index(x, namespace="yesno_labels") for x in yn_list] \
-                      for yn_list in output_dict.pop("yesno")]
-        followup_tags = [[self.vocab.get_token_from_index(x, namespace="followup_labels") for x in followup_list] \
-                         for followup_list in output_dict.pop("followup")]
-        output_dict['yesno'] = yesno_tags
-        output_dict['followup'] = followup_tags
         return output_dict
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
