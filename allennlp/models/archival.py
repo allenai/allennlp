@@ -20,8 +20,6 @@ from allennlp.models.model import Model, _DEFAULT_WEIGHTS
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
-# Archive = NamedTuple("Archive", [("model", Model), ("config", Params)])
-
 class Archive(NamedTuple):
     """ An archive comprises a Model and its experimental config"""
     model: Model
