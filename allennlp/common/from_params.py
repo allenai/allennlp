@@ -44,8 +44,6 @@ from typing import TypeVar, Type, Dict, Union, Any, cast, List, Tuple, Set
 import inspect
 import logging
 
-from torch.nn import Module
-
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 
@@ -98,6 +96,8 @@ def create_kwargs(cls: Type[T], params: Params, **extras) -> Dict[str, Any]:
     For instance, you might provide an existing `Vocabulary` this way.
     """
     # Get the signature of the constructor.
+    from allennlp.models import load_archive  # import here to avoid circular imports
+
     signature = inspect.signature(cls.__init__)
     kwargs: Dict[str, Any] = {}
 
@@ -126,8 +126,15 @@ def create_kwargs(cls: Type[T], params: Params, **extras) -> Dict[str, Any]:
             kwargs[name] = extras[name]
         # Next case is when argument should be loaded from pretrained archive.
         elif name in params and isinstance(params.get(name), Params) and "_pretrained" in params.get(name):
-            pretrained_module_params = params.pop(name).pop("_pretrained")
-            kwargs[name] = _load_pretrained_module(annotation, pretrained_module_params)
+            load_module_params = params.pop(name).pop("_pretrained")
+            archive_file = load_module_params.pop("archive_file")
+            module_path = load_module_params.pop("module_path")
+            freeze = load_module_params.pop("freeze", True)
+            archive = load_archive(archive_file)
+            kwargs[name] = archive.extract_module(module_path, freeze) # pylint: disable=no-member
+            if not isinstance(kwargs[name], annotation):
+                raise ConfigurationError(f"The module from model at {archive_file} at path {module_path} "
+                                         f"was expected of type {annotation} but is of type {type(kwargs[name])}")
         # # The next case is when the parameter type is itself constructible from_params.
         elif hasattr(annotation, 'from_params'):
             if name in params:
@@ -293,53 +300,3 @@ class FromParams:
                 kwargs = create_kwargs(cls, params, **extras)
 
             return cls(**kwargs)  # type: ignore
-
-
-def _load_pretrained_module(cls: Type[T], params: Params) -> T:
-    """
-    This is used to load a module from a pretrained model archive. Instead of standard
-    params to construct a module, you can use the following template::
-
-        {
-            "_pretrained": {
-                "archive_file": "../path/to/model.tar.gz",
-                "module_path": "path.to.module.in.model",
-                "freeze": False
-            }
-        }
-
-    to load the same module from a pretrained model archive.
-
-    Caveat: Call to initializer(self) at end of model initializer can potentially wipe the
-    transferred parameters by reinitializing them. This can happen if you have setup initializer
-    regex that also matches parameters of the transferred module. To safe-guard against this,
-    you can either update your initializer regex to prevent conflicting match or add extra initializer::
-
-        [
-            [".*transferred_module_name.*", "prevent"]]
-        ]
-
-    """
-    # TODO(Harsh) Document this feature elsewhere, because it's private function.
-    from allennlp.models.archival import load_archive  # import here to avoid circular imports
-
-    archive_file = params.pop("archive_file")
-    module_path = params.pop("module_path")
-    freeze = params.pop("freeze", False)
-    model = load_archive(archive_file).model
-    modules_dict = {path: module for path, module in model.named_modules()}
-    module = modules_dict.get(module_path, None)
-
-    if not module:
-        raise ConfigurationError(f"You asked to transfer module at path {module_path} "
-                                 f"from the model at {archive_file}. But it's not present.")
-    if not isinstance(module, cls):
-        raise ConfigurationError(f"The transferred module from model at {archive_file} at module path "
-                                 f"{module_path} was expected of type {cls} but is of type {type(module)}")
-    if not isinstance(module, Module):
-        raise ConfigurationError(f"The transferred object from model at {archive_file} at module path "
-                                 f"{module_path} is not a PyTorch Module.")
-
-    for parameter in module.parameters(): # type: ignore
-        parameter.requires_grad_(not freeze)
-    return module
