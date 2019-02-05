@@ -108,12 +108,14 @@ class DocQAPlusBERT(Model):
         self._variational_dropout = InputVariationalDropout(dropout)
 
     def multi_label_cross_entropy_loss(self,span_logits, answers, batch_size, passage_length):
+        instances_with_answer = np.argwhere(answers.squeeze().cpu() >= 0)[0].unique()
         target = torch.cuda.FloatTensor(batch_size, passage_length, device=span_logits.device) \
             if torch.cuda.is_available() else torch.FloatTensor(batch_size, passage_length)
         target.zero_()
         for ind, q_target in enumerate(answers.squeeze().cpu()):
             target[ind, q_target[(q_target >= 0) & (q_target < passage_length)]] = 1.0
-        return -(torch.log((F.softmax(span_logits, dim=-1) * target.float()).sum(dim=1))).mean()
+        return -(torch.log((F.softmax(span_logits[instances_with_answer], dim=-1) * \
+                            target[instances_with_answer].float()).sum(dim=1))).mean()
 
     @profile
     def forward(self,  # type: ignore
