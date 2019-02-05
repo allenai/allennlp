@@ -151,12 +151,13 @@ class Embedding(TokenEmbedder):
     def extend_vocab(self,  # pylint: disable=arguments-differ
                      extended_vocab: Vocabulary,
                      vocab_namespace: str = None,
-                     pretrained_file: str = None,
+                     extension_pretrained_file: str = None,
                      model_path: str = None):
         """
         Extends the embedding matrix according to the extended vocabulary.
-        If pretrained_file is available, it will be used for initializing the new words
-        in the extended vocabulary; otherwise they will be initialized with xavier uniform.
+        If extension_pretrained_file is available, it will be used for initializing the new words
+        embeddings in the extended vocabulary; otherwise we will check if _pretrained_file attribute
+        is already available. If none is available, they will be initialized with xavier uniform.
 
         Parameters
         ----------
@@ -168,7 +169,7 @@ class Embedding(TokenEmbedder):
             can pass it. If not passed, it will check if vocab_namespace used at the
             time of ``Embedding`` construction is available. If so, this namespace
             will be used or else default 'tokens' namespace will be used.
-        pretrained_file : str, (optional, default=None)
+        extension_pretrained_file : str, (optional, default=None)
             A file containing pretrained embeddings can be specified here. It can be
             the path to a local file or an URL of a (cached) remote file. Check format
             details in ``from_params`` of ``Embedding`` class.
@@ -192,35 +193,36 @@ class Embedding(TokenEmbedder):
             # It's already been extended. No need to initialize / read pretrained file in first place (no-op)
             return
 
-        if self._pretrained_file and file_is_available(self._pretrained_file):
-            # pretrained_file attribute was saved during training and is available:
-            if pretrained_file:
-                # But user also passed pretrained_file
-                model_path_info = "at model_path, {model_path} " if model_path else ""
-                logging.warning(f"You passed pretrained_file, {pretrained_file} for "
-                                f"embedding {model_path_info}. But it's ignored because "
-                                f"original pretrained_file, {self._pretrained_file} is available.")
-            pretrained_file = self._pretrained_file
-
-        if not pretrained_file or file_is_available(pretrained_file):
-            extra_info = (f"Originally pretrained_file was at "
-                          f"{self._pretrained_file}. " if self._pretrained_file else "")
-            # It's better to warn here and not give error because there is no way to distinguish between
-            # whether pretrained-file wasn't used during training or user forgot to pass / passed incorrect
-            # mapping. Raising an error would prevent fine-tuning in the former case.
-            logging.warning(f"Embedding at model_path, {model_path} cannot locate the pretrained_file. "
-                            f"{extra_info} If you are fine-tuning and want to use using pretrained_file "
-                            f"for embedding extension, please pass the mapping by --embedding-sources argument.")
+        if extension_pretrained_file and not file_is_available(extension_pretrained_file):
+        # User passed extension_pretrained_file but it's not available.
+            raise ConfigurationError(f"You passed pretrained embedding file {extension_pretrained_file} "
+                                     f"for model_path {model_path} but it's not available.")
+        elif not extension_pretrained_file:
+        # User didn't pass extension_pretrained_file
+            if self._pretrained_file and file_is_available(self._pretrained_file):
+            # But pretrained_file attribute was saved during training and is available:
+                extension_pretrained_file = self._pretrained_file
+            else:
+            # No file is available. Hope that pretrained embedddings weren't used in first place and warn.
+                extra_info = (f"Originally pretrained_file was at "
+                              f"{self._pretrained_file}. " if self._pretrained_file else "")
+                # It's better to warn here and not give error because there is no way to distinguish between
+                # whether pretrained-file wasn't used during training or user forgot to pass / passed incorrect
+                # mapping. Raising an error would prevent fine-tuning in the former case.
+                logging.warning(f"Embedding at model_path, {model_path} cannot locate the pretrained_file. "
+                                f"{extra_info} If you are fine-tuning and want to use using pretrained_file for "
+                                f"embedding extension, please pass the mapping by --embedding-sources argument.")
+        #else, user passed extension_pretrained_file and is available.
 
         embedding_dim = self.weight.data.shape[-1]
-        if not pretrained_file:
+        if not extension_pretrained_file:
             extra_num_embeddings = extended_num_embeddings - self.num_embeddings
             extra_weight = torch.FloatTensor(extra_num_embeddings, embedding_dim)
             torch.nn.init.xavier_uniform_(extra_weight)
         else:
             # It's easiest to just reload the embeddings for the entire vocab,
             # then only keep the ones we need.
-            whole_weight = _read_pretrained_embeddings_file(pretrained_file, embedding_dim,
+            whole_weight = _read_pretrained_embeddings_file(extension_pretrained_file, embedding_dim,
                                                             extended_vocab, vocab_namespace)
             extra_weight = whole_weight[self.num_embeddings:, :]
 
