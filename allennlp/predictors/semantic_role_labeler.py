@@ -1,6 +1,7 @@
 from typing import List
 
 from overrides import overrides
+from spacy.tokens import Doc
 
 from allennlp.common.util import JsonDict, sanitize, group_by_count
 from allennlp.data import DatasetReader, Instance
@@ -57,7 +58,7 @@ class SemanticRoleLabelerPredictor(Predictor):
         -------
         A dictionary representation of the semantic roles in the sentence.
         """
-        spacy_doc = self._tokenizer.spacy.tokenizer.tokens_from_list(tokenized_sentence)
+        spacy_doc = Doc(self._tokenizer.spacy.vocab, words=tokenized_sentence)
         for pipe in filter(None, self._tokenizer.spacy.pipeline):
             pipe[1](spacy_doc)
 

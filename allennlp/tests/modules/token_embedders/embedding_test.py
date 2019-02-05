@@ -140,7 +140,11 @@ class TestEmbedding(AllenNlpTestCase):
                 'pretrained_file': str(self.FIXTURES_ROOT / 'embeddings/multi-file-archive.zip'),
                 'embedding_dim': 5
                 })
-        with pytest.raises(ValueError, message="No ValueError when pretrained_file is a multi-file archive"):
+        with pytest.raises(ValueError,
+                           match="The archive .*/embeddings/multi-file-archive.zip contains multiple files, "
+                                 "so you must select one of the files inside "
+                                 "providing a uri of the type: "
+                                 "\\(path_or_url_to_archive\\)#path_inside_archive\\."):
             Embedding.from_params(vocab, params)
 
         for ext in ['.zip', '.tar.gz']:
