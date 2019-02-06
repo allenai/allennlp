@@ -1,5 +1,4 @@
 # pylint: disable=invalid-name,no-self-use
-from flaky import flaky
 import pytest
 import numpy
 import torch
