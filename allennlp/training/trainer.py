@@ -741,9 +741,8 @@ class TrainerPieces(NamedTuple):
 
         model = Model.from_params(vocab=vocab, params=params.pop('model'))
 
-        # If vocab extension is ON for training, it's likely that pretrained embedding module
-        # was transferred. If so they need to be extended with the extended vocab.
-        # If vocab and embeddings are already in sync, it would be a no-op.
+        # If vocab extension is ON for training, embedding extension should also be
+        # done. If vocab and embeddings are already in sync, it would be a no-op.
         model.extend_embedder_vocab(vocab)
 
         # Initializing the model can have side effect of expanding the vocabulary

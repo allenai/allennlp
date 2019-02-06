@@ -268,6 +268,8 @@ class Model(torch.nn.Module, Registrable):
 
         # If vocab+embedding extension was done, the model initialized from from_params
         # and one defined by state dict in weights_file might not have same embedding shapes.
+        # Eg. when model embedder module was transferred along with vocab extension, the
+        # initialized embedding weight shape would be smaller than one in the state_dict.
         # So calling model embedding extension is required before load_state_dict.
         # If vocab and model embeddings are in sync, following would be just a no-op.
         model.extend_embedder_vocab(vocab)
