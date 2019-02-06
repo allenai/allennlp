@@ -220,7 +220,8 @@ def make_reading_comprehension_instance_multiqa(question_tokens: List[Token],
                                              paragraph: List[str],
                                              answers_list: List[Tuple[int, int]] = None,
                                              additional_metadata: Dict[str, Any] = None,
-                                             header = None) -> Instance:
+                                             header = None,
+                                             use_multi_label_loss=False) -> Instance:
     """
     Converts a question, a passage, and an optional answer (or answers) to an ``Instance`` for use
     in a reading comprehension model.
@@ -272,19 +273,34 @@ def make_reading_comprehension_instance_multiqa(question_tokens: List[Token],
 
     # in prediction mode we won't have this... TODO: what will we do in multi-answer prediction?
     if answers_list is not None:
-        span_start_list: List[Field] = []
-        span_end_list: List[Field] = []
-        if answers_list == []:
-            span_start_list.append(IndexField(-1, passage_field))
-            span_end_list.append(IndexField(-1, passage_field))
-        else:
-            for answer in answers_list:
-                span_start_list.append(IndexField(answer[0], passage_field))
-                span_end_list.append(IndexField(answer[1], passage_field))
-        
+        if use_multi_label_loss:
+            span_start_list: List[Field] = []
+            span_end_list: List[Field] = []
+            if answers_list == []:
+                span_start_list.append(IndexField(-1, passage_field))
+                span_end_list.append(IndexField(-1, passage_field))
+            else:
+                for answer in answers_list:
+                    span_start_list.append(IndexField(answer[0], passage_field))
+                    span_end_list.append(IndexField(answer[1], passage_field))
 
-        fields['span_start'] = ListField(span_start_list)
-        fields['span_end'] = ListField(span_end_list)
+
+            fields['span_start'] = ListField(span_start_list)
+            fields['span_end'] = ListField(span_end_list)
+
+        else:
+            span_start_list: List[Field] = []
+            span_end_list: List[Field] = []
+            if answers_list == []:
+                span_start, span_end = -1, -1
+            else:
+                span_start, span_end, text = answers_list[0]
+
+            span_start_list.append(IndexField(span_start, passage_field))
+            span_end_list.append(IndexField(span_end, passage_field))
+
+            fields['span_start'] = ListField(span_start_list)
+            fields['span_end'] = ListField(span_end_list)
 
     metadata.update(additional_metadata)
     fields['metadata'] = MetadataField(metadata)
