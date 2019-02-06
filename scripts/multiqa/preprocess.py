@@ -153,6 +153,7 @@ class MultiQAPreprocess():
             yield (part_num,'rank','^RANK^' + str(document['rank']))
             part_num += 1
 
+        # TODO not using titles creates a crash...
         if self._use_document_titles:
             yield (part_num, 'title',document['title'])
             part_num += 1
