@@ -118,6 +118,7 @@ class MultiQAPreprocess():
                  require_answer_in_question,
                  header) -> None:
         self._BERT_format = BERT_format
+        # TODO
         self._DEBUG = False
         self._tokenizer = WordTokenizer()
         self._token_indexers = {'tokens': SingleIdTokenIndexer()}
@@ -141,11 +142,24 @@ class MultiQAPreprocess():
             self._bert_wordpiece_tokenizer = bert_tokenizer.wordpiece_tokenizer.tokenize
             self._SEP = ' [SEP] '
             self._KNOWN_SEP = {'rank': ' ', 'title': ' [SEP] '}
+            self._bert_do_lowercase = True
+            self._never_lowercase = ['[UNK]', '[SEP]', '[PAD]', '[CLS]', '[MASK]']
         else:
             # we chose "^..^" because the tokenizer splits the standard "<..>" chars
             self._SEP = ' ^SEP^ '
             self._PARA_SEP = ' ^PARA^ '
             self._KNOWN_SEP = {'rank': ' ', 'title': ' ^TITLE_SEP^ '}
+
+    def wordpiece_tokenizer_len(self,tokens):
+        total_len = 0
+        for token in tokens:
+            # Lowercase if necessary
+            text = (token[0].lower()
+                    if self._bert_do_lowercase and token[0] not in self._never_lowercase
+                    else token[0])
+            total_len +=  len(self._bert_wordpiece_tokenizer(text))
+        return total_len
+
     def iterate_doc_parts(self,document):
         part_num = 0
 
@@ -385,7 +399,7 @@ class MultiQAPreprocess():
                 # seems Spacy class is pretty heavy in memory, lets move to a simple representation for now.. 
                 part_tokens = [(t.text, t.idx) for t in part_tokens]
                 if self._BERT_format:
-                    document['num_of_tokens'] += len(self._bert_wordpiece_tokenizer(part_text)) + 1  # adding 1 for part separator token
+                    document['num_of_tokens'] += self.wordpiece_tokenizer_len(part_tokens) + 1  # adding 1 for part separator token
                 else:
                     document['num_of_tokens'] += len(part_tokens) + 1  # adding 1 for part separator token
 
@@ -434,7 +448,7 @@ class MultiQAPreprocess():
             part_offset = len(SEP) + token_idx_char_offest
             
             # updating tokens
-            tokens.append((SEP, token_idx_char_offest))
+            tokens.append((SEP.strip(), token_idx_char_offest))
             part_token_idx_offset = token_idx_offest + 1
             tokens += [(token[0], token[1] + part_offset) for token in part['tokens']]
             
@@ -481,15 +495,18 @@ class MultiQAPreprocess():
 
     def create_new_doc(self, qa):
         if self._BERT_format:
-            char_offset = 6  # accounting for the new [CLS] + space
-            tokens = [('[CLS]', 0)]
-            text = '[CLS] '
+            char_offset = 0  # accounting for the new [CLS] + space
+            tokens = []
+            text = ''
+            # allennlp implicitly adds this
+            #tokens = [('[CLS]', 0)]
+            #text = '[CLS] '
             for t in qa['tokenized_question']:
                 tokens.append((t[0], t[1] + char_offset))
             text += qa['question'] + ' '
             token_idx_char_offest = len(text)
             token_idx_offest = len(tokens)
-            new_doc = {'num_of_tokens': len(self._bert_wordpiece_tokenizer(text)), \
+            new_doc = {'num_of_tokens': self.wordpiece_tokenizer_len(tokens), \
                        'tokens': tokens, 'text': text, 'answers': []}
         else:
             token_idx_char_offest = 0
@@ -506,19 +523,27 @@ class MultiQAPreprocess():
         for doc_ind in ordered_inds:
             # spliting to new document, Note we assume we are after split documents and each
             # document number of tokens is less than _max_doc_size. (Accounting for separators as well)
-            if new_doc['num_of_tokens'] + documents[doc_ind]['num_of_tokens']  \
-                    + len(documents[doc_ind]['parts']) + 1 > self._max_doc_size:
+            if self._BERT_format:
+                curr_num_of_tokens = new_doc['num_of_tokens'] + documents[doc_ind]['num_of_tokens'] \
+                                     + len(documents[doc_ind]['parts'])
+            else:
+                curr_num_of_tokens = new_doc['num_of_tokens'] + documents[doc_ind]['num_of_tokens'] \
+                    + len(documents[doc_ind]['parts']) + 1
+            if  curr_num_of_tokens > self._max_doc_size:
                 # Sanity check: the alias text should be equal the text in answer_start in the paragraph
                 # sometimes the original extraction was bad, or the tokenizer makes mistakes... 
                 new_doc['answers'] = self.sanity_check_answers(new_doc)
 
-                if self._BERT_format:
-                    new_doc['tokens'] += [('[SEP]',token_idx_char_offest + 1)]
-                    new_doc['text'] += ' [SEP]'
-                    new_doc['num_of_tokens'] += 1
+                # AllenNLP implicitly adds this...
+                #if self._BERT_format:
+                #    new_doc['tokens'] += [('[SEP]',token_idx_char_offest + 1)]
+                #    new_doc['text'] += ' [SEP]'
+                #    new_doc['num_of_tokens'] += 1
 
                 # BERT wordpiece_tokens sanity check
-                if self._DEBUG and self._BERT_format and new_doc['num_of_tokens'] != len(self._bert_wordpiece_tokenizer(new_doc['text'])):
+                if self._DEBUG and self._BERT_format and \
+                        (self.wordpiece_tokenizer_len(new_doc['tokens']) + 2 > 512 or \
+                        self.wordpiece_tokenizer_len(new_doc['tokens']) != new_doc['num_of_tokens']):
                     raise ValueError()
 
 
@@ -529,7 +554,7 @@ class MultiQAPreprocess():
                 self.glue_parts(doc_ind, documents[doc_ind], qa['answers'], token_idx_char_offest, token_idx_offest)
 
             if self._BERT_format:
-                new_doc['num_of_tokens'] += len(self._bert_wordpiece_tokenizer(text))
+                new_doc['num_of_tokens'] += self.wordpiece_tokenizer_len(tokens)
             else:
                 new_doc['num_of_tokens'] += len(tokens)
             new_doc['tokens'] += tokens
@@ -541,6 +566,12 @@ class MultiQAPreprocess():
 
         # adding the remainer document
         if new_doc['num_of_tokens'] > 0:
+            # AllenNLP implicitly adds this...
+            #if self._BERT_format:
+            #    new_doc['tokens'] += [('[SEP]', token_idx_char_offest + 1)]
+            #    new_doc['text'] += ' [SEP]'
+            #    new_doc['num_of_tokens'] += 1
+
             new_doc['answers'] = self.sanity_check_answers(new_doc)
             merged_documents.append(new_doc)
         
