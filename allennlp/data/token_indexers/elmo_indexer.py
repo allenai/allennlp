@@ -27,6 +27,9 @@ class ELMoCharacterMapper:
     Maps individual tokens to sequences of character ids, compatible with ELMo.
     To be consistent with previously trained models, we include it here as special of existing
     character indexers.
+
+    We allow to add optional additional special tokens with designated
+    character ids with ``tokens_to_add``.
     """
     max_word_length = 50
 
@@ -56,9 +59,16 @@ class ELMoCharacterMapper:
     bos_token = '<S>'
     eos_token = '</S>'
 
-    @staticmethod
-    def convert_word_to_char_ids(word: str) -> List[int]:
-        if word == ELMoCharacterMapper.bos_token:
+    def __init__(self, tokens_to_add: Dict[str, int] = None) -> None:
+        self.tokens_to_add = tokens_to_add or {}
+
+    def convert_word_to_char_ids(self, word: str) -> List[int]:
+        if word in self.tokens_to_add:
+            char_ids = [ELMoCharacterMapper.padding_character] * ELMoCharacterMapper.max_word_length
+            char_ids[0] = ELMoCharacterMapper.beginning_of_word_character
+            char_ids[1] = self.tokens_to_add[word]
+            char_ids[2] = ELMoCharacterMapper.end_of_word_character
+        elif word == ELMoCharacterMapper.bos_token:
             char_ids = ELMoCharacterMapper.beginning_of_sentence_characters
         elif word == ELMoCharacterMapper.eos_token:
             char_ids = ELMoCharacterMapper.end_of_sentence_characters
@@ -82,11 +92,17 @@ class ELMoTokenCharactersIndexer(TokenIndexer[List[int]]):
     Parameters
     ----------
     namespace : ``str``, optional (default=``elmo_characters``)
+    tokens_to_add : ``Dict[str, int]``, optional (default=``None``)
+        If not None, then provides a mapping of special tokens to character
+        ids. When using pre-trained models, then the character id must be
+        less then 261, and we recommend using un-used ids (e.g. 1-32).
     """
     # pylint: disable=no-self-use
     def __init__(self,
-                 namespace: str = 'elmo_characters') -> None:
+                 namespace: str = 'elmo_characters',
+                 tokens_to_add: Dict[str, int] = None) -> None:
         self._namespace = namespace
+        self._mapper = ELMoCharacterMapper(tokens_to_add)
 
     @overrides
     def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):
@@ -100,14 +116,14 @@ class ELMoTokenCharactersIndexer(TokenIndexer[List[int]]):
         # TODO(brendanr): Retain the token to index mappings in the vocabulary and remove this
         # pylint pragma. See:
         # https://github.com/allenai/allennlp/blob/master/allennlp/data/token_indexers/wordpiece_indexer.py#L113
-        # pylint: disable=unused-argument
 
+        # pylint: disable=unused-argument
         texts = [token.text for token in tokens]
 
         if any(text is None for text in texts):
             raise ConfigurationError('ELMoTokenCharactersIndexer needs a tokenizer '
                                      'that retains text')
-        return {index_name: [ELMoCharacterMapper.convert_word_to_char_ids(text) for text in texts]}
+        return {index_name: [self._mapper.convert_word_to_char_ids(text) for text in texts]}
 
     @overrides
     def get_padding_lengths(self, token: List[int]) -> Dict[str, int]:

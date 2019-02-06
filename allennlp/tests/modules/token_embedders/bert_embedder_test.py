@@ -13,6 +13,7 @@ from allennlp.data.tokenizers.word_splitter import BertBasicWordSplitter
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.modules.token_embedders.bert_token_embedder import BertEmbedder
 
+
 class TestBertEmbedder(ModelTestCase):
     def setUp(self):
         super().setUp()
@@ -115,7 +116,6 @@ class TestBertEmbedder(ModelTestCase):
                 [1, 2, 3, 4, 5, 6, 7, 8, 9]
         ]
 
-
     def test_squad_with_unwordpieceable_passage(self):
         # pylint: disable=line-too-long
         tokenizer = WordTokenizer()
@@ -167,7 +167,6 @@ class TestBertEmbedder(ModelTestCase):
 
         _ = embedder(ptokens["bert"], offsets=ptokens["bert-offsets"])
         _ = embedder(qtokens["bert"], offsets=qtokens["bert-offsets"])
-
 
     def test_max_length(self):
         config = BertConfig(len(self.token_indexer.vocab))
