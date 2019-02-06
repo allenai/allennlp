@@ -75,6 +75,7 @@ class DocQAPlusBERT(Model):
                  num_context_answers: int = 0,
                  max_qad_triplets: int = 0,
                  max_span_length: int = 30,
+                 use_multi_label_loss: bool = False,
                  stats_report_freq:float = None,
                  debug_experiment_name:str = None) -> None:
         super().__init__(vocab)
@@ -87,6 +88,8 @@ class DocQAPlusBERT(Model):
         self._shared_norm = shared_norm
         self._stats_report_freq = stats_report_freq
         self._debug_experiment_name = debug_experiment_name
+        self._use_multi_label_loss = use_multi_label_loss
+
 
         # see usage below for explanation
         self._all_qa_count = 0
@@ -242,39 +245,42 @@ class DocQAPlusBERT(Model):
                     if len(inds_with_gold_answer)==0:
                         continue
 
-                    try:
-                        loss += self.shared_norm_cross_entropy_loss(span_start_logits[question_inds], span_start[question_inds], passage_length)
-                        loss += self.shared_norm_cross_entropy_loss(span_end_logits[question_inds], span_end[question_inds], passage_length)
-                    except:
-                        ElasticLogger().write_log('INFO', 'Loss Error', \
-                                                  context_dict={'span_start_logits': span_start_logits[question_inds].cpu().size(),
-                                                                  'span_end_logits_size': span_end_logits[question_inds].cpu().size(),
-                                                                  'span_start': span_start[question_inds].squeeze().cpu().numpy().tolist(),
-                                                                  'span_end': span_end[question_inds].squeeze().cpu().numpy().tolist(),
-                                                                  'error_message': traceback.format_exc(),
-                                                                  'batch_size': batch_size,
-                                                                  'passage_length': passage_length}, print_log=True)
-                        a = torch.autograd.Variable(torch.Tensor([[1, 2], [3, 4]]), requires_grad=True)
-                        loss = torch.sum(a ** 2)
-                        output_dict["loss"] = loss
+                    if self._use_multi_label_loss:
+                        try:
+                            loss += self.shared_norm_cross_entropy_loss(span_start_logits[question_inds], \
+                                                                        span_start[question_inds], passage_length)
+                            loss += self.shared_norm_cross_entropy_loss(span_end_logits[question_inds], \
+                                                                        span_end[question_inds], passage_length)
+                        except:
+                            ElasticLogger().write_log('INFO', 'Loss Error', \
+                                                      context_dict={'span_start_logits': span_start_logits[question_inds].cpu().size(),
+                                                                      'span_end_logits_size': span_end_logits[question_inds].cpu().size(),
+                                                                      'span_start': span_start[question_inds].squeeze().cpu().numpy().tolist(),
+                                                                      'span_end': span_end[question_inds].squeeze().cpu().numpy().tolist(),
+                                                                      'error_message': traceback.format_exc(),
+                                                                      'batch_size': batch_size,
+                                                                      'passage_length': passage_length}, print_log=True)
+                            a = torch.autograd.Variable(torch.Tensor([[1, 2], [3, 4]]), requires_grad=True)
+                            loss = torch.sum(a ** 2)
+                            output_dict["loss"] = loss
+                    else:
+
+                        span_start_logits_softmaxed = util.masked_log_softmax(\
+                            torch.cat(tuple(span_start_logits[question_inds])).unsqueeze(0), \
+                            torch.cat(tuple(repeated_passage_mask[question_inds])).unsqueeze(0))
+                        span_end_logits_softmaxed = util.masked_log_softmax(
+                            torch.cat(tuple(span_end_logits[question_inds])).unsqueeze(0), \
+                            torch.cat(tuple(repeated_passage_mask[question_inds])).unsqueeze(0))
 
 
-                    #span_start_logits_softmaxed = util.masked_log_softmax(\
-                    #    torch.cat(tuple(span_start_logits[question_inds])).unsqueeze(0), \
-                    #    torch.cat(tuple(repeated_passage_mask[question_inds])).unsqueeze(0))
-                    #span_end_logits_softmaxed = util.masked_log_softmax(
-                    #    torch.cat(tuple(span_end_logits[question_inds])).unsqueeze(0), \
-                    #    torch.cat(tuple(repeated_passage_mask[question_inds])).unsqueeze(0))
+                        span_start_logits_softmaxed = span_start_logits_softmaxed.reshape(len(question_inds),span_start_logits.size(1))
+                        span_end_logits_softmaxed = span_end_logits_softmaxed.reshape(len(question_inds), span_start_logits.size(1))
 
-
-                    #span_start_logits_softmaxed = span_start_logits_softmaxed.reshape(len(question_inds),span_start_logits.size(1))
-                    #span_end_logits_softmaxed = span_end_logits_softmaxed.reshape(len(question_inds), span_start_logits.size(1))
-
-                    # computing loss only for indexes with answers
-                    #loss += nll_loss(span_start_logits_softmaxed[inds_with_gold_answer], \
-                    #                 span_start.view(-1)[question_inds[inds_with_gold_answer]], ignore_index=-1)
-                    #loss += nll_loss(span_end_logits_softmaxed[inds_with_gold_answer], \
-                    #                 span_end.view(-1)[question_inds[inds_with_gold_answer]], ignore_index=-1)
+                        # computing loss only for indexes with answers
+                        loss += nll_loss(span_start_logits_softmaxed[inds_with_gold_answer], \
+                                         span_start.view(-1)[question_inds[inds_with_gold_answer]], ignore_index=-1)
+                        loss += nll_loss(span_end_logits_softmaxed[inds_with_gold_answer], \
+                                         span_end.view(-1)[question_inds[inds_with_gold_answer]], ignore_index=-1)
                     loss_steps += 1
 
                 if loss_steps > 0:
@@ -282,30 +288,31 @@ class DocQAPlusBERT(Model):
                     output_dict["loss"] = loss
             else:
                 # Per instance loss
+                if self._use_multi_label_loss:
+                    try:
+                        loss = self.multi_label_cross_entropy_loss(span_start_logits, span_start, passage_length)
+                        loss += self.multi_label_cross_entropy_loss(span_end_logits, span_end, passage_length)
+                        output_dict["loss"] = loss
+                    except:
+                        ElasticLogger().write_log('INFO', 'Loss Error', context_dict={'span_start_logits':span_start_logits.cpu().size(),
+                            'span_end_logits_size':span_end_logits.cpu().size(),'span_start':span_start.squeeze().cpu().numpy().tolist(),
+                                'span_end':span_end.squeeze().cpu().numpy().tolist(),'error_message': traceback.format_exc(),
+                                                                    'batch_size':batch_size, 'passage_length':passage_length},print_log=True)
+                        a = torch.autograd.Variable(torch.Tensor([[1, 2], [3, 4]]), requires_grad=True)
+                        loss = torch.sum(a ** 2)
+                        output_dict["loss"] = loss
+                else:
 
-                try:
-                    loss = self.multi_label_cross_entropy_loss(span_start_logits, span_start, passage_length)
-                    loss += self.multi_label_cross_entropy_loss(span_end_logits, span_end, passage_length)
-                    output_dict["loss"] = loss
-                except:
-                    ElasticLogger().write_log('INFO', 'Loss Error', context_dict={'span_start_logits':span_start_logits.cpu().size(),
-                        'span_end_logits_size':span_end_logits.cpu().size(),'span_start':span_start.squeeze().cpu().numpy().tolist(),
-                            'span_end':span_end.squeeze().cpu().numpy().tolist(),'error_message': traceback.format_exc(),
-                                                                'batch_size':batch_size, 'passage_length':passage_length},print_log=True)
-                    a = torch.autograd.Variable(torch.Tensor([[1, 2], [3, 4]]), requires_grad=True)
-                    loss = torch.sum(a ** 2)
-                    output_dict["loss"] = loss
-
-                #inds_with_gold_answer = np.argwhere(span_start.view(-1).cpu().numpy() >= 0)
-                #inds_with_gold_answer = inds_with_gold_answer.squeeze() if len(inds_with_gold_answer) > 1 else inds_with_gold_answer
-                #if len(inds_with_gold_answer)>0:
-                #    loss = nll_loss(util.masked_log_softmax(span_start_logits[inds_with_gold_answer], \
-                #                                        repeated_passage_mask[inds_with_gold_answer]),\
-                #                    span_start.view(-1)[inds_with_gold_answer], ignore_index=-1)
-                #    loss += nll_loss(util.masked_log_softmax(span_end_logits[inds_with_gold_answer], \
-                #                                        repeated_passage_mask[inds_with_gold_answer]),\
-                #                    span_end.view(-1)[inds_with_gold_answer], ignore_index=-1)
-                #    output_dict["loss"] = loss
+                    inds_with_gold_answer = np.argwhere(span_start.view(-1).cpu().numpy() >= 0)
+                    inds_with_gold_answer = inds_with_gold_answer.squeeze() if len(inds_with_gold_answer) > 1 else inds_with_gold_answer
+                    if len(inds_with_gold_answer)>0:
+                        loss = nll_loss(util.masked_log_softmax(span_start_logits[inds_with_gold_answer], \
+                                                            repeated_passage_mask[inds_with_gold_answer]),\
+                                        span_start.view(-1)[inds_with_gold_answer], ignore_index=-1)
+                        loss += nll_loss(util.masked_log_softmax(span_end_logits[inds_with_gold_answer], \
+                                                            repeated_passage_mask[inds_with_gold_answer]),\
+                                        span_end.view(-1)[inds_with_gold_answer], ignore_index=-1)
+                        output_dict["loss"] = loss
 
 
             # TODO these are not updates
