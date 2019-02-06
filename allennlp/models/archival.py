@@ -29,18 +29,10 @@ class Archive(NamedTuple):
         """
         This method can be used to load a module from the pretrained model archive.
 
-        Parameters
-        ----------
-        path: ``str``
-            Path of target module to be loaded from the model.
-            Eg. "_textfield_embedder.token_embedder_tokens"
-        freeze: ``bool``, optional (default=True)
-            Whether to freeze the module parameters or not.
-
-        This method is implicitly used in FromParams based construction. So instead of using
-        standard params to construct a module, you can instead load a pretrained module from the
-        model archive directly. For eg, instead of using params like {"type": "module_type", ...},
-        you can use the following template::
+        It is also used implicitly in FromParams based construction. So instead of using standard
+        params to construct a module, you can instead load a pretrained module from the model
+        archive directly. For eg, instead of using params like {"type": "module_type", ...}, you
+        can use the following template::
 
             {
                 "_pretrained": {
@@ -59,6 +51,14 @@ class Archive(NamedTuple):
             [
                 [".*transferred_module_name.*", "prevent"]]
             ]
+
+        Parameters
+        ----------
+        path : ``str``, required
+            Path of target module to be loaded from the model.
+            Eg. "_textfield_embedder.token_embedder_tokens"
+        freeze : ``bool``, optional (default=True)
+            Whether to freeze the module parameters or not.
 
         """
         modules_dict = {path: module for path, module in self.model.named_modules()}
