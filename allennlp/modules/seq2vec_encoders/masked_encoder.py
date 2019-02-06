@@ -6,8 +6,6 @@ from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
 from allennlp.nn.util import get_text_field_mask
 
 @Seq2VecEncoder.register("masked_encoder")
-#matan: maybe I don't need this class?!?!? look at pytroch_seq2vec_wrapper
-# there are two different types of wrappers
 class MaskedEncoder(Seq2VecEncoder):
     """
     This ``MaskedEncoder``. This class wraps Pytorch RNN with embedding and masking

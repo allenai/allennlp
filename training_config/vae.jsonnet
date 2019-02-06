@@ -1,5 +1,5 @@
 local SEED = 0;
-local DATA_PATH = "../../../dev/data/penn/"; #Matan
+local DATA_PATH = "../data/penn/";
 local READER = "autoencoder";
 local CUDA = -1;
 
@@ -31,8 +31,8 @@ local RECONSTRUCTION_WEIGHT = 1.0;
   "dataset_reader": {
     "type": READER
   },
-  "train_data_path": DATA_PATH + "/small_train.txt", #Matan
-  "validation_data_path": DATA_PATH + "/small_valid.txt",#Matan
+  "train_data_path": DATA_PATH + "/train.txt",
+  "validation_data_path": DATA_PATH + "/valid.txt",
   "model": {
     "type": "vae",
     "encoder": {
