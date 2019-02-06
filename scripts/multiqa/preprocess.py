@@ -109,6 +109,7 @@ class Paragraph_TfIdf_Scoring():
 class MultiQAPreprocess():
 
     def __init__(self,
+                 BERT_format,
                  max_context_docs,
                  max_doc_size,
                  use_document_titles,
@@ -116,6 +117,7 @@ class MultiQAPreprocess():
                  require_answer_in_doc,
                  require_answer_in_question,
                  header) -> None:
+        self._BERT_format = BERT_format
         self._DEBUG = False
         self._tokenizer = WordTokenizer()
         self._token_indexers = {'tokens': SingleIdTokenIndexer()}
@@ -130,11 +132,20 @@ class MultiQAPreprocess():
         self._total_answers = 0
         self._header = header
 
-        # we chose "^..^" because the tokenizer splits the standard "<..>" chars
-        self._SEP = ' ^SEP^ '
-        self._PARA_SEP = ' ^PARA^ '
-        self._KNOWN_SEP = {'rank':' ', 'title':' ^TITLE_SEP^ '}
-        
+
+
+        if self._BERT_format:
+            from pytorch_pretrained_bert.tokenization import BertTokenizer
+            # TODO add model type and do_lower_case to the input params
+            bert_tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
+            self._bert_wordpiece_tokenizer = bert_tokenizer.wordpiece_tokenizer.tokenize
+            self._SEP = ' [SEP] '
+            self._KNOWN_SEP = {'rank': ' ', 'title': ' [SEP] '}
+        else:
+            # we chose "^..^" because the tokenizer splits the standard "<..>" chars
+            self._SEP = ' ^SEP^ '
+            self._PARA_SEP = ' ^PARA^ '
+            self._KNOWN_SEP = {'rank': ' ', 'title': ' ^TITLE_SEP^ '}
     def iterate_doc_parts(self,document):
         part_num = 0
 
@@ -310,7 +321,8 @@ class MultiQAPreprocess():
         for org_doc_ind, document in enumerate(context['documents']):
 
             # only split documents if total amount of tokens is more than _max_doc_size
-            if document['num_of_tokens'] + len(document['parts']) + 1 > self._max_doc_size:
+            num_of_tokens_and_new_part = document['num_of_tokens'] + len(document['parts']) + 1 # num of tokens + num of separators  + 1
+            if num_of_tokens_and_new_part > self._max_doc_size:
                 token_cumsum = 0
                 new_document = None
 
@@ -329,7 +341,10 @@ class MultiQAPreprocess():
                     if token_cumsum + len(part['tokens']) + part_ind + 2 > self._max_doc_size:
                         # splitting the original document, and keeping it in the same location to avoid qas answer start recalc
                         if not new_document:
-                            new_documents[org_doc_ind]['num_of_tokens'] = token_cumsum
+                            if self._BERT_format:
+                                new_documents[org_doc_ind]['num_of_tokens'] = document['num_of_tokens']
+                            else:
+                                new_documents[org_doc_ind]['num_of_tokens'] = token_cumsum
                             new_documents[org_doc_ind]['parts'] = document['parts'][0:part_ind]
 
                         new_document = {'parts':[],'num_of_tokens':0,'org_doc':org_doc_ind}
@@ -342,7 +357,10 @@ class MultiQAPreprocess():
                         ans_start_updated_qas = self.update_answer_docid(ans_start_updated_qas, context['qas'], curr_doc_ind, org_doc_ind, \
                             len(new_document['parts']), part_ind)
                         new_document['parts'].append(part)
-                        new_document['num_of_tokens'] += len(part['tokens'])
+                        if self._BERT_format:
+                            new_documents[org_doc_ind]['num_of_tokens'] = document['num_of_tokens']
+                        else:
+                            new_document['num_of_tokens'] += len(part['tokens'])
                         
 
                     token_cumsum += len(part['tokens'])
@@ -365,8 +383,11 @@ class MultiQAPreprocess():
                 part_tokens = self._tokenizer.tokenize(part_text)
                 # seems Spacy class is pretty heavy in memory, lets move to a simple representation for now.. 
                 part_tokens = [(t.text, t.idx) for t in part_tokens]
-                
-                document['num_of_tokens'] += len(part_tokens) + 1 # adding 1 for part separator token
+                if self._BERT_format:
+                    document['num_of_tokens'] += len(self._bert_wordpiece_tokenizer(part_text)) + 1  # adding 1 for part separator token
+                else:
+                    document['num_of_tokens'] += len(part_tokens) + 1  # adding 1 for part separator token
+
                 document['parts'].append({'part':part_type,'text':part_text,'tokens':part_tokens})
 
                 # computing token_answer_starts (the answer_starts positions in tokens)
@@ -390,10 +411,16 @@ class MultiQAPreprocess():
         return answers_list
 
     def glue_parts(self, doc_id, document, answers, in_token_idx_char_offest, in_token_idx_offest):
-        text = self._PARA_SEP
-        tokens = [(self._PARA_SEP.strip(),in_token_idx_char_offest)]
-        token_idx_char_offest = in_token_idx_char_offest + len(self._PARA_SEP)
-        token_idx_offest = in_token_idx_offest + 1
+        if self._BERT_format:
+            text = ''
+            tokens = []
+            token_idx_char_offest = in_token_idx_char_offest
+            token_idx_offest = in_token_idx_offest
+        else:
+            text = self._PARA_SEP
+            tokens = [(self._PARA_SEP.strip(),in_token_idx_char_offest)]
+            token_idx_char_offest = in_token_idx_char_offest + len(self._PARA_SEP)
+            token_idx_offest = in_token_idx_offest + 1
         norm_answers_list = []
 
         for part_ind, part in enumerate(document['parts']):
@@ -451,13 +478,30 @@ class MultiQAPreprocess():
                     self._answers_removed += 1
         return updated_answers
 
-    def merge_documents(self, documents, qa, ordered_inds): 
+    def create_new_doc(self, qa):
+        if self._BERT_format:
+            char_offset = 6  # accounting for the new [CLS] + space
+            tokens = [('[CLS]', 0)]
+            text = '[CLS] '
+            for t in qa['tokenized_question']:
+                tokens.append((t[0], t[1] + char_offset))
+            text += qa['question'] + ' '
+            token_idx_char_offest = len(text)
+            token_idx_offest = len(tokens)
+            new_doc = {'num_of_tokens': len(self._bert_wordpiece_tokenizer(text)), \
+                       'tokens': tokens, 'text': text, 'answers': []}
+        else:
+            token_idx_char_offest = 0
+            token_idx_offest = 0
+            new_doc = {'num_of_tokens':0, 'tokens':[], 'text':'', 'answers':[]}
+        return new_doc, token_idx_offest, token_idx_char_offest
+
+    def merge_documents(self, documents, qa, ordered_inds):
 
         merged_documents = []
-        new_doc = {'num_of_tokens':0, 'tokens':[], 'text':'', 'answers':[]}
-        curr_doc_ind = 0
-        token_idx_char_offest = 0
-        token_idx_offest = 0
+        new_doc, token_idx_offest, token_idx_char_offest = self.create_new_doc(qa)
+
+
         for doc_ind in ordered_inds:
             # spliting to new document, Note we assume we are after split documents and each
             # document number of tokens is less than _max_doc_size. (Accounting for separators as well)
@@ -467,15 +511,26 @@ class MultiQAPreprocess():
                 # sometimes the original extraction was bad, or the tokenizer makes mistakes... 
                 new_doc['answers'] = self.sanity_check_answers(new_doc)
 
-                token_idx_char_offest = 0
-                token_idx_offest = 0
+                if self._BERT_format:
+                    new_doc['tokens'] += [('[SEP]',token_idx_char_offest + 1)]
+                    new_doc['text'] += ' [SEP]'
+                    new_doc['num_of_tokens'] += 1
+
+                # BERT wordpiece_tokens sanity check
+                if self._DEBUG and self._BERT_format and new_doc['num_of_tokens'] != len(self._bert_wordpiece_tokenizer(new_doc['text'])):
+                    raise ValueError()
+
+
                 merged_documents.append(new_doc)
-                new_doc = {'num_of_tokens':0, 'tokens':[], 'text':'', 'answers':[]}
+                new_doc, token_idx_offest, token_idx_char_offest = self.create_new_doc(qa)
 
             tokens, text, norm_answers_list, token_idx_char_offest, token_idx_offest = \
                 self.glue_parts(doc_ind, documents[doc_ind], qa['answers'], token_idx_char_offest, token_idx_offest)
 
-            new_doc['num_of_tokens'] += len(tokens)
+            if self._BERT_format:
+                new_doc['num_of_tokens'] += len(self._bert_wordpiece_tokenizer(text))
+            else:
+                new_doc['num_of_tokens'] += len(tokens)
             new_doc['tokens'] += tokens
             new_doc['text'] += text
             new_doc['answers'] += norm_answers_list
@@ -532,6 +587,7 @@ class MultiQAPreprocess():
                 # tokenize question
                 tokenized_question = self._tokenizer.tokenize(qa['question'])
                 tokenized_question = [(t.text, t.idx) for t in tokenized_question]
+                qa['tokenized_question'] = tokenized_question
         
                 # scoring each paragraph for the current question 
                 document_scores = self.score_documents(tokenized_question, context['documents'])
@@ -591,7 +647,7 @@ class MultiQAPreprocess():
         return preprocessed_instances, all_qa_count, skipped_qa_count
 
 def _preprocess_t(arg):
-    preprocessor = MultiQAPreprocess(*arg[1:8])
+    preprocessor = MultiQAPreprocess(*arg[1:9])
     return preprocessor.preprocess(*arg[0:1])
 
 def flatten_iterable(listoflists: Iterable[Iterable[T]]) -> List[T]:
@@ -643,7 +699,7 @@ def main():
     parse = argparse.ArgumentParser("Pre-process for DocumentQA/MultiQA model and datareader")
     parse.add_argument("input_file", type=str, help="and input file in MultiQA format (s3 supported)")
     parse.add_argument("output_file", type=str, help="output name and dir to save file (s3 supported)")
-    # This is slow, using more processes is recommended
+    parse.add_argument("--BERT_format", type=str2bool, default=False, help="Output will be in BERT format")
     parse.add_argument("--ndocs", type=int, default=10, help="Number of documents to create")
     parse.add_argument("--docsize", type=int, default=400, help="Max size of each document")
     parse.add_argument("--titles", type=str2bool, default=True, help="Use input documents titles")
@@ -695,7 +751,7 @@ def main():
         contexts = sampled_contexts
 
     if args.n_processes == 1:
-        preprocessor = MultiQAPreprocess(args.ndocs, args.docsize, args.titles, args.use_rank, \
+        preprocessor = MultiQAPreprocess(args.BERT_format,args.ndocs, args.docsize, args.titles, args.use_rank, \
              args.require_answer_in_doc,args.require_answer_in_question, header)
         preprocessed_instances, all_qa_count, skipped_qa_count = preprocessor.preprocess(Tqdm.tqdm(contexts, ncols=80))
     else:
@@ -708,7 +764,7 @@ def main():
             chunks = flatten_iterable(group(c, 200) for c in chunks)
             pbar = Tqdm.tqdm(total=len(chunks), ncols=80,smoothing=0.0)
             for preproc_inst, all_count, s_count in pool.imap_unordered(_preprocess_t,\
-                    [[c, args.ndocs, args.docsize, args.titles, args.use_rank, \
+                    [[c, args.BERT_format,args.ndocs, args.docsize, args.titles, args.use_rank, \
                         args.require_answer_in_doc, args.require_answer_in_question, header] for c in chunks]):
                 preprocessed_instances += preproc_inst 
                 all_qa_count += all_count
