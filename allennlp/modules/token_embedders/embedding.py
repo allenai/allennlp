@@ -169,7 +169,7 @@ class Embedding(TokenEmbedder):
             can pass it. If not passed, it will check if vocab_namespace used at the
             time of ``Embedding`` construction is available. If so, this namespace
             will be used or else extend_vocab will be a no-op.
-        pretrained_file : str, (optional, default=None)
+        extension_pretrained_file : str, (optional, default=None)
             A file containing pretrained embeddings can be specified here. It can be
             the path to a local file or an URL of a (cached) remote file. Check format
             details in ``from_params`` of ``Embedding`` class.
