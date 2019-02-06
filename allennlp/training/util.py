@@ -21,6 +21,7 @@ from allennlp.data.iterators.data_iterator import TensorDict
 from allennlp.models.model import Model
 from allennlp.models.archival import CONFIG_NAME
 from allennlp.nn import util as nn_util
+from allennlp.training.loss_weighters import LossWeighter
 
 logger = logging.getLogger(__name__)
 
@@ -266,16 +267,33 @@ def rescale_gradients(model: Model, grad_norm: Optional[float] = None) -> Option
         return sparse_clip_norm(parameters_to_clip, grad_norm)
     return None
 
-def get_metrics(model: Model, total_loss: float, num_batches: int, reset: bool = False) -> Dict[str, float]:
+def get_metrics(model: Model,
+                total_loss: Dict[str, float],
+                num_batches: int,
+                reset: bool = False) -> Dict[str, float]:
     """
     Gets the metrics but sets ``"loss"`` to
     the total loss divided by the ``num_batches`` so that
     the ``"loss"`` metric is "average loss per batch".
     """
     metrics = model.get_metrics(reset=reset)
-    metrics["loss"] = float(total_loss / num_batches) if num_batches > 0 else 0.0
+    metrics.update({k: float(v / num_batches) if num_batches > 0 else 0.0 for k, v in total_loss.items()})
     return metrics
 
+def sum_losses(losses: Dict[str, torch.Tensor],
+               loss_weights: Dict[str, LossWeighter],
+               training: Optional[bool] = True) -> torch.Tensor:
+    """Sums losses and their respective weights"""
+    loss = 0
+    for l_name in losses:
+        if l_name not in loss_weights:
+            loss_weight = 1.0
+        elif training:
+            loss_weight = loss_weights[l_name].next()
+        else:
+            loss_weight = loss_weights[l_name].get()
+        loss += losses[l_name] * loss_weight
+    return loss
 
 def evaluate(model: Model,
              instances: Iterable[Instance],

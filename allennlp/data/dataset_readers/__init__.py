@@ -7,6 +7,7 @@ and produce datasets in the formats required by specific models.
 """
 
 # pylint: disable=line-too-long
+from allennlp.data.dataset_readers.autoencoder import AutoencoderDatasetReader
 from allennlp.data.dataset_readers.ccgbank import CcgBankDatasetReader
 from allennlp.data.dataset_readers.conll2003 import Conll2003DatasetReader
 from allennlp.data.dataset_readers.conll2000 import Conll2000DatasetReader

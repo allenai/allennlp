@@ -28,6 +28,7 @@ from allennlp.training.optimizers import Optimizer
 from allennlp.training.tensorboard_writer import TensorboardWriter
 from allennlp.training.trainer_base import TrainerBase
 from allennlp.training import util as training_util
+from allennlp.training.loss_weighters import LossWeighter
 from allennlp.training.moving_average import MovingAverage
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -54,6 +55,7 @@ class Trainer(TrainerBase):
                  grad_norm: Optional[float] = None,
                  grad_clipping: Optional[float] = None,
                  learning_rate_scheduler: Optional[LearningRateScheduler] = None,
+                 loss_weights: Optional[Dict[str, LossWeighter]] = {},
                  summary_interval: int = 100,
                  histogram_interval: int = None,
                  should_log_parameter_statistics: bool = True,
@@ -132,6 +134,10 @@ class Trainer(TrainerBase):
             provided to determine if learning has plateaued.  To support updating the learning
             rate on every batch, this can optionally implement ``step_batch(batch_num_total)`` which
             updates the learning rate given the batch number.
+        loss_weights : ``Dict[str, Union[LossWeighter, float]]``, optional, (default = {}),
+            Whenever the loss function is composed of more then a single term weighting is probable.
+            Pass different instances of class ``LossWeighter`` in a dict represented by their corresponding
+            loss name.
         summary_interval: ``int``, optional, (default = 100)
             Number of batches between logging scalars to tensorboard
         histogram_interval : ``int``, optional, (default = ``None``)
@@ -201,6 +207,7 @@ class Trainer(TrainerBase):
         self._grad_clipping = grad_clipping
 
         self._learning_rate_scheduler = learning_rate_scheduler
+        self._loss_weights = loss_weights
         self._moving_average = moving_average
 
         # We keep the total batch number as an instance variable because it
@@ -227,7 +234,7 @@ class Trainer(TrainerBase):
     def rescale_gradients(self) -> Optional[float]:
         return training_util.rescale_gradients(self.model, self._grad_norm)
 
-    def batch_loss(self, batch_group: List[TensorDict], for_training: bool) -> torch.Tensor:
+    def batch_loss(self, batch_group: List[TensorDict], for_training: bool) -> Dict[str, torch.Tensor]:
         """
         Does a forward pass on the given batches and returns the ``loss`` value in the result.
         If ``for_training`` is `True` also applies regularization penalty.
@@ -242,8 +249,12 @@ class Trainer(TrainerBase):
 
         try:
             loss = output_dict["loss"]
+            if not isinstance(loss, Dict):
+                loss = {"loss": loss}
             if for_training:
-                loss += self.model.get_regularization_penalty()
+                reg_pen = self.model.get_regularization_penalty()
+                if reg_pen != 0.0:
+                    loss["regularization_penalty"] = reg_pen
         except KeyError:
             if for_training:
                 raise RuntimeError("The model you are trying to optimize does not contain a"
@@ -264,7 +275,7 @@ class Trainer(TrainerBase):
             gpu_usage.append((gpu, memory))
             logger.info(f"GPU {gpu} memory usage MB: {memory}")
 
-        train_loss = 0.0
+        train_loss = {}
         # Set the model to "train" mode.
         self.model.train()
 
@@ -297,14 +308,16 @@ class Trainer(TrainerBase):
 
             self.optimizer.zero_grad()
 
-            loss = self.batch_loss(batch_group, for_training=True)
+            loss_dict = self.batch_loss(batch_group, for_training=True)
+            loss = training_util.sum_losses(loss_dict, self._loss_weights)
+            loss_dict["loss"] = loss
 
             if torch.isnan(loss):
                 raise ValueError("nan loss encountered")
 
             loss.backward()
 
-            train_loss += loss.item()
+            train_loss = {k: train_loss.get(k, 0) + loss_dict[k].item() for k in loss_dict}
 
             batch_grad_norm = self.rescale_gradients()
 
@@ -343,6 +356,7 @@ class Trainer(TrainerBase):
             if self._tensorboard.should_log_this_batch():
                 self._tensorboard.log_parameter_and_gradient_statistics(self.model, batch_grad_norm)
                 self._tensorboard.log_learning_rates(self.model, self.optimizer)
+                self._tensorboard.log_loss_weights(self._loss_weights)
 
                 self._tensorboard.add_train_scalar("loss/loss_train", metrics["loss"])
                 self._tensorboard.log_metrics({"epoch_metrics/" + k: v for k, v in metrics.items()})
@@ -401,18 +415,20 @@ class Trainer(TrainerBase):
         val_generator_tqdm = Tqdm.tqdm(val_generator,
                                        total=num_validation_batches)
         batches_this_epoch = 0
-        val_loss = 0
+        val_loss = {}
         for batch_group in val_generator_tqdm:
 
-            loss = self.batch_loss(batch_group, for_training=False)
-            if loss is not None:
+            loss_dict = self.batch_loss(batch_group, for_training=False)
+            if loss_dict is not None:
                 # You shouldn't necessarily have to compute a loss for validation, so we allow for
                 # `loss` to be None.  We need to be careful, though - `batches_this_epoch` is
                 # currently only used as the divisor for the loss function, so we can safely only
                 # count those batches for which we actually have a loss.  If this variable ever
                 # gets used for something else, we might need to change things around a bit.
                 batches_this_epoch += 1
-                val_loss += loss.detach().cpu().numpy()
+                loss = training_util.sum_losses(loss_dict, self._loss_weights, False)
+                loss_dict["loss"] = loss
+                val_loss = {k: val_loss.get(k, 0) + loss_dict[k].detach().cpu().numpy() for k in loss_dict}
 
             # Update the description with the latest metrics
             val_metrics = training_util.get_metrics(self.model, val_loss, batches_this_epoch)
@@ -643,6 +659,7 @@ class Trainer(TrainerBase):
         grad_norm = params.pop_float("grad_norm", None)
         grad_clipping = params.pop_float("grad_clipping", None)
         lr_scheduler_params = params.pop("learning_rate_scheduler", None)
+        loss_weights_params = params.pop("loss_weights", None)
 
         if isinstance(cuda_device, list):
             model_device = cuda_device[0]
@@ -664,6 +681,11 @@ class Trainer(TrainerBase):
             scheduler = LearningRateScheduler.from_params(optimizer, lr_scheduler_params)
         else:
             scheduler = None
+
+        if loss_weights_params:
+            loss_weights = LossWeighter.from_params(loss_weights_params)
+        else:
+            loss_weights = {}
 
         num_serialized_models_to_keep = params.pop_int("num_serialized_models_to_keep", 20)
         keep_serialized_model_every_num_seconds = params.pop_int(
@@ -688,6 +710,7 @@ class Trainer(TrainerBase):
                    grad_norm=grad_norm,
                    grad_clipping=grad_clipping,
                    learning_rate_scheduler=scheduler,
+                   loss_weights=loss_weights,
                    num_serialized_models_to_keep=num_serialized_models_to_keep,
                    keep_serialized_model_every_num_seconds=keep_serialized_model_every_num_seconds,
                    model_save_interval=model_save_interval,

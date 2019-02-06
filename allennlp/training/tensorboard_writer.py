@@ -1,4 +1,4 @@
-from typing import Any, Set, Optional, Callable
+from typing import Any, Set, Optional, Callable, Dict
 import logging
 import os
 
@@ -6,6 +6,7 @@ from tensorboardX import SummaryWriter
 import torch
 
 from allennlp.models.model import Model
+from allennlp.training.loss_weighters import LossWeighter
 
 logger = logging.getLogger(__name__)
 
@@ -129,6 +130,10 @@ class TensorboardWriter:
                     effective_rate = rate * float(param.requires_grad)
                     self.add_train_scalar("learning_rate/" + names[param], effective_rate)
 
+    def log_loss_weights(self, loss_weights: Dict[str, LossWeighter]) -> None:
+        if loss_weights != {}:
+            for lw_name, lw in loss_weights.items():
+                self.add_train_scalar("loss_weights/" + lw_name, lw.get())
 
     def log_histograms(self, model: Model, histogram_parameters: Set[str]) -> None:
         """
