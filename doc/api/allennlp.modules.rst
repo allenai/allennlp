@@ -36,3 +36,4 @@ allennlp.modules
    allennlp.modules.bimpm_matching
    allennlp.modules.masked_layer_norm
    allennlp.modules.sampled_softmax_loss
+   allennlp.modules.residual_with_layer_dropout

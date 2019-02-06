@@ -16,7 +16,6 @@ class TestText2SqlWorld(AllenNlpTestCase):
         self.schema = str(self.FIXTURES_ROOT / 'data' / 'text2sql' / 'restaurants-schema.csv')
         self.database_path = str(self.FIXTURES_ROOT / "data" / "text2sql" / "restaurants.db")
 
-
     def test_untyped_grammar_has_no_string_or_number_references(self):
         world = Text2SqlWorld(self.schema, use_untyped_entities=True)
         grammar_dictionary = world.base_grammar_dictionary

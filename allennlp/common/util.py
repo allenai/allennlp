@@ -206,7 +206,7 @@ def prepare_environment(params: Params):
 
     log_pytorch_version_info()
 
-def prepare_global_logging(serialization_dir: str, file_friendly_logging: bool) -> None:
+def prepare_global_logging(serialization_dir: str, file_friendly_logging: bool) -> logging.FileHandler:
     """
     This function configures 3 global logging attributes - streaming stdout and stderr
     to a file as well as the terminal, setting the formatting for the python logging
@@ -216,13 +216,18 @@ def prepare_global_logging(serialization_dir: str, file_friendly_logging: bool) 
 
     Parameters
     ----------
-    serializezation_dir : ``str``, required.
+    serialization_dir : ``str``, required.
         The directory to stream logs to.
     file_friendly_logging : ``bool``, required.
         Whether logs should clean the output to prevent carriage returns
         (used to update progress bars on a single terminal line). This
         option is typically only used if you are running in an environment
         without a terminal.
+
+    Returns
+    -------
+    ``logging.FileHandler``
+        A logging file handler that can later be closed and removed from the global logger.
     """
 
     # If we don't have a terminal as stdout,
@@ -242,6 +247,25 @@ def prepare_global_logging(serialization_dir: str, file_friendly_logging: bool) 
     stdout_handler = logging.FileHandler(std_out_file)
     stdout_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s'))
     logging.getLogger().addHandler(stdout_handler)
+
+    return stdout_handler
+
+def cleanup_global_logging(stdout_handler: logging.FileHandler) -> None:
+    """
+    This function closes any open file handles and logs set up by `prepare_global_logging`.
+
+    Parameters
+    ----------
+    stdout_handler : ``logging.FileHandler``, required.
+        The file handler returned from `prepare_global_logging`, attached to the global logger.
+    """
+    stdout_handler.close()
+    logging.getLogger().removeHandler(stdout_handler)
+
+    if isinstance(sys.stdout, TeeLogger):
+        sys.stdout = sys.stdout.cleanup()
+    if isinstance(sys.stderr, TeeLogger):
+        sys.stderr = sys.stderr.cleanup()
 
 LOADED_SPACY_MODELS: Dict[Tuple[str, bool, bool, bool], SpacyModelType] = {}
 
@@ -280,6 +304,11 @@ def import_submodules(package_name: str) -> None:
     classes get loaded and registered.
     """
     importlib.invalidate_caches()
+
+    # For some reason, python doesn't always add this by default to your path, but you pretty much
+    # always want it when using `--include-package`.  And if it's already there, adding it again at
+    # the end won't hurt anything.
+    sys.path.append('.')
 
     # Import at top level
     module = importlib.import_module(package_name)

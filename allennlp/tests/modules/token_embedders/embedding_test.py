@@ -140,7 +140,11 @@ class TestEmbedding(AllenNlpTestCase):
                 'pretrained_file': str(self.FIXTURES_ROOT / 'embeddings/multi-file-archive.zip'),
                 'embedding_dim': 5
                 })
-        with pytest.raises(ValueError, message="No ValueError when pretrained_file is a multi-file archive"):
+        with pytest.raises(ValueError,
+                           match="The archive .*/embeddings/multi-file-archive.zip contains multiple files, "
+                                 "so you must select one of the files inside "
+                                 "providing a uri of the type: "
+                                 "\\(path_or_url_to_archive\\)#path_inside_archive\\."):
             Embedding.from_params(vocab, params)
 
         for ext in ['.zip', '.tar.gz']:
@@ -306,7 +310,7 @@ class TestEmbedding(AllenNlpTestCase):
         assert tuple(original_weight.size()) == (4, 3)  # 4 because of padding and OOV
 
         vocab.add_token_to_namespace('word3')
-        embedder.extend_vocab(vocab, pretrained_file=embeddings_filename) # default namespace
+        embedder.extend_vocab(vocab, extension_pretrained_file=embeddings_filename) # default namespace
         extended_weight = embedder.weight
 
         # Make sure extenstion happened for extra token in extended vocab
