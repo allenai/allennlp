@@ -20,8 +20,9 @@ class DecoderCell(torch.nn.Module, Registrable):
 
     """
 
-    def __init__(self, decoding_dim):
+    def __init__(self, decoding_dim, target_embedding_dim):
         super(DecoderCell, self).__init__()
+        self.target_embedding_dim = target_embedding_dim
         self._decoding_dim = decoding_dim
 
     def get_output_dim(self) -> int:
@@ -29,7 +30,7 @@ class DecoderCell(torch.nn.Module, Registrable):
         Returns the dimension of each vector in the sequence output by this ``DecoderCell``.
         This is `not` the shape of the returned tensor, but the last element of that shape.
         """
-        return self.output_dim
+        return self._decoding_dim
 
     def forward(self,
                 previous_steps_predictions: torch.Tensor,

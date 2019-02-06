@@ -72,12 +72,17 @@
       "hidden_size": 10,
       "num_layers": 1
     },
+    "decoder_cell": {
+      "type": "simple_decoder",
+      "decoding_dim": 10,
+      "target_embedding_dim": 30,
+      "attention": {
+        "type": "dot_product"
+      }
+    },
     "max_decoding_steps": 20,
     "target_embedding_dim": 30,
     "target_namespace": "target_tokens",
-    "attention": {
-      "type": "dot_product"
-    },
     "beam_size": 5
   },
   "iterator": {

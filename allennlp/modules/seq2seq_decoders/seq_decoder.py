@@ -23,19 +23,22 @@ class SeqDecoder(Model):
     def __init__(
             self,
             vocab: Vocabulary,
-            decoder: DecoderCell,
+            decoder_cell: DecoderCell,
             max_decoding_steps: int,
+            bidirectional_input: bool,
             beam_size: int = None,
             target_embedding_dim: int = None,
             target_namespace: str = "tokens",
             tensor_based_metric: Metric = None,
-            token_based_metric: Metric = None
+            token_based_metric: Metric = None,
     ):
 
-        super().__init__(vocab)
         self.vocab = vocab
+        super().__init__(vocab)
 
         self._target_namespace = target_namespace
+
+        self.bidirectional_input = bidirectional_input
 
         # We need the start symbol to provide as the input at the first timestep of decoding, and
         # end symbol as a way to indicate the end of the decoded sequence.
@@ -56,7 +59,7 @@ class SeqDecoder(Model):
         self._beam_search = BeamSearch(self._end_index, max_steps=max_decoding_steps, beam_size=beam_size)
 
         # Decodes the sequence of encoded hidden states into e new sequence of hidden states.
-        self._decoder = decoder
+        self._decoder = decoder_cell
 
         # Decoder output dim needs to be the same as the encoder output dim since we initialize the
         # hidden state of the decoder with the final hidden state of the encoder.
@@ -111,7 +114,7 @@ class SeqDecoder(Model):
         final_encoder_output = util.get_final_encoder_states(
             state["encoder_outputs"],
             state["source_mask"],
-            bidirectional=False)
+            bidirectional=self.bidirectional_input)
         # shape: (batch_size, decoder_output_dim)
         state["decoder_hidden"] = final_encoder_output
         # shape: (batch_size, decoder_output_dim)

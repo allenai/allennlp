@@ -21,6 +21,8 @@ class SimpleDecoderCell(DecoderCell):
     decoding_dim : ``int``, required
         Defines dimensionality of output vectors. Since this model takes it's output on a previous step
         as input of following step, this is also an input dimensionality.
+    target_embedding_dim : ``int``, required
+        Defines dimensionality of input target embeddings
     attention : ``Attention``, optional (default = None)
         If you want to use attention to get a dynamic summary of the encoder outputs at each step
         of decoding, this is the function used to compute similarity between the decoder hidden
@@ -32,15 +34,16 @@ class SimpleDecoderCell(DecoderCell):
 
     def __init__(self,
                  decoding_dim: int,
+                 target_embedding_dim: int,
                  attention: Attention = None,
                  attention_function: SimilarityFunction = None,
                  ):
-        super(SimpleDecoderCell, self).__init__(decoding_dim=decoding_dim)
+        super(SimpleDecoderCell, self).__init__(decoding_dim=decoding_dim, target_embedding_dim=target_embedding_dim)
 
         # In this particular type of decoder output of previous step passes directly to the input of current step
-        # We also assume that sequence encoder output dimensionality is equal to the encoder output dimensionality
+        # We also assume that sequence decoder output dimensionality is equal to the encoder output dimensionality
         self._sequence_encoding_dim = self._decoding_dim
-        self._decoder_input_dim = self._decoding_dim
+        self._decoder_input_dim = self.target_embedding_dim
         self._decoder_output_dim = self._decoding_dim
 
         # Attention mechanism applied to the encoder output for each step.
@@ -104,8 +107,12 @@ class SimpleDecoderCell(DecoderCell):
             # shape: (group_size, target_embedding_dim)
             decoder_input = last_predictions_embedding
 
+        print('last_predictions_embedding.shape', last_predictions_embedding.shape)
+
+        print('decoder_input.shape', decoder_input.shape)
+
         # shape (decoder_hidden): (batch_size, decoder_output_dim)
-        # shape (decoder_context): (batch_size, decoder_output_dim)
+        # shape (decoder_context): (batch_size, decoder_output_dim)_decoder_output_dim
         decoder_hidden, decoder_context = self._decoder_cell(
                 decoder_input,
                 (decoder_hidden, decoder_context))

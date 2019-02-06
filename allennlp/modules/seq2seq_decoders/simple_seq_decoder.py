@@ -16,8 +16,9 @@ class SimpleSeqDecoder(SeqDecoder):
     def __init__(
             self,
             vocab: Vocabulary,
-            decoder: DecoderCell,
+            decoder_cell: DecoderCell,
             max_decoding_steps: int,
+            bidirectional_input: bool,
             beam_size: int = None,
             target_embedding_dim: int = None,
             target_namespace: str = "tokens",
@@ -25,8 +26,17 @@ class SimpleSeqDecoder(SeqDecoder):
             token_based_metric: Metric = None,
             scheduled_sampling_ratio: float = 0.,
     ):
-        super().__init__(vocab, decoder, max_decoding_steps, beam_size, target_embedding_dim, target_namespace,
-                         tensor_based_metric, token_based_metric)
+        super().__init__(
+            vocab=vocab,
+            decoder_cell=decoder_cell,
+            max_decoding_steps=max_decoding_steps,
+            bidirectional_input=bidirectional_input,
+            beam_size=beam_size,
+            target_embedding_dim=target_embedding_dim,
+            target_namespace=target_namespace,
+            tensor_based_metric=tensor_based_metric,
+            token_based_metric=token_based_metric,
+        )
 
         self._scheduled_sampling_ratio = scheduled_sampling_ratio
 
@@ -37,11 +47,11 @@ class SimpleSeqDecoder(SeqDecoder):
         # shape (all_top_k_predictions): (batch_size, beam_size, num_decoding_steps)
         # shape (log_probabilities): (batch_size, beam_size)
         all_top_k_predictions, log_probabilities = self._beam_search.search(
-                start_predictions, state, self.take_step)
+            start_predictions, state, self.take_step)
 
         output_dict = {
-                "class_log_probabilities": log_probabilities,
-                "predictions": all_top_k_predictions,
+            "class_log_probabilities": log_probabilities,
+            "predictions": all_top_k_predictions,
         }
         return output_dict
 
@@ -73,7 +83,6 @@ class SimpleSeqDecoder(SeqDecoder):
             # Prepare embeddings for targets. They will be used as gold embeddings during decoder training
             # shape: (batch_size, max_target_sequence_length, embedding_dim)
             target_embeddings = self._target_embedder(targets)
-
         else:
             num_decoding_steps = self._max_decoding_steps
 
@@ -103,7 +112,7 @@ class SimpleSeqDecoder(SeqDecoder):
                 effective_last_prediction = last_predictions
             else:
                 # shape: (batch_size, )
-                effective_last_prediction = targets[timestep]
+                effective_last_prediction = targets[:, timestep]
 
                 if timestep == 0:
                     state['previous_steps_predictions'] = torch.tensor([])
@@ -158,7 +167,8 @@ class SimpleSeqDecoder(SeqDecoder):
 
     def _prepare_output_projections(self,
                                     last_predictions: torch.Tensor,
-                                    state: Dict[str, torch.Tensor]) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:  # pylint: disable=line-too-long
+                                    state: Dict[str, torch.Tensor]) -> Tuple[
+        torch.Tensor, Dict[str, torch.Tensor]]:  # pylint: disable=line-too-long
         """
         Decode current state and last prediction to produce produce projections
         into the target space, which can then be used to get probabilities of
@@ -193,7 +203,7 @@ class SimpleSeqDecoder(SeqDecoder):
             previous_steps_predictions = torch.cat([previous_steps_predictions, last_predictions_embeddings], 1)
 
         decoder_hidden, decoder_context = self._decoder(
-            last_steps_predictions=previous_steps_predictions,
+            previous_steps_predictions=previous_steps_predictions,
             encoder_outputs=encoder_outputs,
             source_mask=source_mask,
             decoder_hidden=decoder_hidden,
