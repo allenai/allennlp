@@ -308,6 +308,8 @@ class TestTrainOnLazyDataset(AllenNlpTestCase):
         # trained on snli (snli2 has one extra token over snli).
         # Make sure (1) embedding extension happens implicitly.
         #           (2) model dumped in such a way is loadable.
+        # (1) corresponds to model.extend_embedder_vocab(vocab) in trainer.py
+        # (2) corresponds to model.extend_embedder_vocab(vocab) in model.py
         config_file = str(self.FIXTURES_ROOT / 'decomposable_attention' / 'experiment.json')
         model_archive = str(self.FIXTURES_ROOT / 'decomposable_attention' / 'serialization' / 'model.tar.gz')
         serialization_dir = str(self.TEST_DIR / 'train')
@@ -334,8 +336,8 @@ class TestTrainOnLazyDataset(AllenNlpTestCase):
 
         transferred_model = train_model(Params(params), serialization_dir=serialization_dir)
 
-        assert len(original_vocab.get_token_from_index("tokens")) == 24
-        assert len(transferred_model.get_token_from_index("tokens")) == 25
+        assert original_vocab.get_vocab_size("tokens") == 24
+        assert transferred_model.vocab.get_vocab_size("tokens") == 25
 
         extended_weight = transferred_model._text_field_embedder.token_embedder_tokens.weight
         assert original_weight.shape[0] + 1 == extended_weight.shape[0] == 25
@@ -343,4 +345,4 @@ class TestTrainOnLazyDataset(AllenNlpTestCase):
 
         # Check that such a dumped model is loadable
         # self.serialization_dir = self.TEST_DIR / 'fine_tune'
-        load_archive(str(self.TEST_DIR / 'fine_tune' / "model.tar.gz"))
+        load_archive(str(self.TEST_DIR / 'train' / "model.tar.gz"))
