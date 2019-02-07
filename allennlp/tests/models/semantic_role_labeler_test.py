@@ -47,7 +47,6 @@ class SemanticRoleLabelerTest(ModelTestCase):
         for prediction, length in zip(decode_output_dict["tags"], lengths):
             assert len(prediction) == length
 
-
     def test_bio_tags_correctly_convert_to_conll_format(self):
         bio_tags = ["B-ARG-1", "I-ARG-1", "O", "B-V", "B-ARGM-ADJ", "O"]
         conll_tags = convert_bio_tags_to_conll_format(bio_tags)

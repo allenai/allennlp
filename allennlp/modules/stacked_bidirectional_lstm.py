@@ -2,6 +2,7 @@ from typing import Optional, Tuple
 import torch
 from torch.nn.utils.rnn import PackedSequence, pack_padded_sequence, pad_packed_sequence
 from allennlp.modules.augmented_lstm import AugmentedLstm
+from allennlp.modules.input_variational_dropout import InputVariationalDropout
 from allennlp.common.checks import ConfigurationError
 
 
@@ -10,8 +11,9 @@ class StackedBidirectionalLstm(torch.nn.Module):
     A standard stacked Bidirectional LSTM where the LSTM layers
     are concatenated between each layer. The only difference between
     this and a regular bidirectional LSTM is the application of
-    variational dropout to the hidden states of the LSTM.
-    Note that this will be slower, as it doesn't use CUDNN.
+    variational dropout to the hidden states and outputs of each layer apart
+    from the last layer of the LSTM. Note that this will be slower, as it
+    doesn't use CUDNN.
 
     Parameters
     ----------
@@ -22,9 +24,13 @@ class StackedBidirectionalLstm(torch.nn.Module):
     num_layers : int, required
         The number of stacked Bidirectional LSTMs to use.
     recurrent_dropout_probability: float, optional (default = 0.0)
-        The dropout probability to be used in a dropout scheme as stated in
-        `A Theoretically Grounded Application of Dropout in Recurrent Neural Networks
-        <https://arxiv.org/abs/1512.05287>`_ .
+        The recurrent dropout probability to be used in a dropout scheme as
+        stated in `A Theoretically Grounded Application of Dropout in Recurrent
+        Neural Networks <https://arxiv.org/abs/1512.05287>`_ .
+    layer_dropout_probability: float, optional (default = 0.0)
+        The layer wise dropout probability to be used in a dropout scheme as
+        stated in  `A Theoretically Grounded Application of Dropout in
+        Recurrent Neural Networks <https://arxiv.org/abs/1512.05287>`_ .
     use_highway: bool, optional (default = True)
         Whether or not to use highway connections between layers. This effectively involves
         reparameterising the normal output of an LSTM as::
@@ -37,6 +43,7 @@ class StackedBidirectionalLstm(torch.nn.Module):
                  hidden_size: int,
                  num_layers: int,
                  recurrent_dropout_probability: float = 0.0,
+                 layer_dropout_probability: float = 0.0,
                  use_highway: bool = True) -> None:
         super(StackedBidirectionalLstm, self).__init__()
 
@@ -66,10 +73,12 @@ class StackedBidirectionalLstm(torch.nn.Module):
             self.add_module('backward_layer_{}'.format(layer_index), backward_layer)
             layers.append([forward_layer, backward_layer])
         self.lstm_layers = layers
+        self.layer_dropout = InputVariationalDropout(layer_dropout_probability)
 
     def forward(self,  # pylint: disable=arguments-differ
                 inputs: PackedSequence,
-                initial_state: Optional[Tuple[torch.Tensor, torch.Tensor]] = None):
+                initial_state: Optional[Tuple[torch.Tensor, torch.Tensor]] = None
+               ) -> Tuple[PackedSequence, Tuple[torch.Tensor, torch.Tensor]]:
         """
         Parameters
         ----------
@@ -77,7 +86,7 @@ class StackedBidirectionalLstm(torch.nn.Module):
             A batch first ``PackedSequence`` to run the stacked LSTM over.
         initial_state : Tuple[torch.Tensor, torch.Tensor], optional, (default = None)
             A tuple (state, memory) representing the initial hidden state and memory
-            of the LSTM. Each tensor has shape (1, batch_size, output_dimension * 2).
+            of the LSTM. Each tensor has shape (num_layers, batch_size, output_dimension * 2).
 
         Returns
         -------
@@ -85,7 +94,7 @@ class StackedBidirectionalLstm(torch.nn.Module):
             The encoded sequence of shape (batch_size, sequence_length, hidden_size * 2)
         final_states: torch.Tensor
             The per-layer final (state, memory) states of the LSTM, each with shape
-            (num_layers, batch_size, hidden_size * 2).
+            (num_layers * 2, batch_size, hidden_size * 2).
         """
         if not initial_state:
             hidden_states = [None] * len(self.lstm_layers)
@@ -110,6 +119,10 @@ class StackedBidirectionalLstm(torch.nn.Module):
             backward_output, _ = pad_packed_sequence(backward_output, batch_first=True)
 
             output_sequence = torch.cat([forward_output, backward_output], -1)
+            # Apply layer wise dropout on each output sequence apart from the
+            # first (input) and last
+            if i < (self.num_layers - 1):
+                output_sequence = self.layer_dropout(output_sequence)
             output_sequence = pack_padded_sequence(output_sequence, lengths, batch_first=True)
 
             final_h.extend([final_forward_state[0], final_backward_state[0]])

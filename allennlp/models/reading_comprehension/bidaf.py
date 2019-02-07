@@ -7,6 +7,7 @@ from torch.nn.functional import nll_loss
 from allennlp.common.checks import check_dimensions_match
 from allennlp.data import Vocabulary
 from allennlp.models.model import Model
+from allennlp.models.reading_comprehension.util import get_best_span
 from allennlp.modules import Highway
 from allennlp.modules import Seq2SeqEncoder, SimilarityFunction, TimeDistributed, TextFieldEmbedder
 from allennlp.modules.matrix_attention.legacy_matrix_attention import LegacyMatrixAttention
@@ -139,12 +140,11 @@ class BidirectionalAttentionFlow(Model):
             ending position of the answer with the passage.  This is an `inclusive` token index.
             If this is given, we will compute a loss that gets included in the output dictionary.
         metadata : ``List[Dict[str, Any]]``, optional
-            If present, this should contain the question ID, original passage text, and token
-            offsets into the passage for each instance in the batch.  We use this for computing
-            official metrics using the official SQuAD evaluation script.  The length of this list
-            should be the batch size, and each dictionary should have the keys ``id``,
-            ``original_passage``, and ``token_offsets``.  If you only want the best span string and
-            don't care about official metrics, you can omit the ``id`` key.
+            metadata : ``List[Dict[str, Any]]``, optional
+            If present, this should contain the question tokens, passage tokens, original passage
+            text, and token offsets into the passage for each instance in the batch.  The length
+            of this list should be the batch size, and each dictionary should have the keys
+            ``question_tokens``, ``passage_tokens``, ``original_passage``, and ``token_offsets``.
 
         Returns
         -------
@@ -245,7 +245,7 @@ class BidirectionalAttentionFlow(Model):
         span_end_probs = util.masked_softmax(span_end_logits, passage_mask)
         span_start_logits = util.replace_masked_values(span_start_logits, passage_mask, -1e7)
         span_end_logits = util.replace_masked_values(span_end_logits, passage_mask, -1e7)
-        best_span = self.get_best_span(span_start_logits, span_end_logits)
+        best_span = get_best_span(span_start_logits, span_end_logits)
 
         output_dict = {
                 "passage_question_attention": passage_question_attention,

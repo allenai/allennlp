@@ -17,8 +17,6 @@ from allennlp.data import Instance, Vocabulary
 from allennlp.data.dataset import Batch
 from allennlp.nn import util
 from allennlp.nn.regularizers import RegularizerApplicator
-from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
-from allennlp.modules.token_embedders.embedding import Embedding
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -321,18 +319,37 @@ class Model(torch.nn.Module, Registrable):
         # pylint: disable=protected-access
         return cls.by_name(model_type)._load(config, serialization_dir, weights_file, cuda_device)
 
-    def extend_embedder_vocab(self, extended_vocab: Vocabulary) -> None:
+    def extend_embedder_vocab(self,
+                              extended_vocab: Vocabulary,
+                              embedding_sources_mapping: Dict[str, str] = None) -> None:
         """
-        It iterates over each ``text_field_embedder`` of this model and assures
-        it can embed with the extended vocab. This is required in fine-tuning or
-        transfer learning scenarios where model was trained with original vocabulary
-        but during fine-tuning/tranfer-learning, it will have it work with
-        extended vocabulary (original + new-data vocabulary)
-        """
-        for _, module in self._modules.items():
-            if isinstance(module, (Embedding, TextFieldEmbedder)):
-                module.extend_vocab(extended_vocab)
+        Iterates through all embedding modules in the model and assures it can embed
+        with the extended vocab. This is required in fine-tuning or transfer learning
+        scenarios where model was trained with original vocabulary but during
+        fine-tuning/tranfer-learning, it will have it work with extended vocabulary
+        (original + new-data vocabulary).
 
+        Parameters
+        ----------
+        extended_vocab : Vocabulary:
+            Vocabulary extended from the vocabulary used to construct
+            the original embeddings.
+        embedding_sources_mapping : Dict[str, str], (optional, default=None)
+            Mapping from model_path to pretrained-file path of the embedding
+            modules. If pretrained-file used at time of embedding initialization
+            isn't available now, user should pass this mapping. Model path is
+            path traversing the model attributes upto this embedding module.
+            Eg. "_text_field_embedder.token_embedder_tokens".
+        """
+        # self.named_modules() gives all sub-modules (including nested children)
+        # The path nesting is already separated by ".": eg. parent_module_name.child_module_name
+        embedding_sources_mapping = embedding_sources_mapping or {}
+        for model_path, module in self.named_modules():
+            if hasattr(module, 'extend_vocab'):
+                pretrained_file = embedding_sources_mapping.get(model_path, None)
+                module.extend_vocab(extended_vocab,
+                                    extension_pretrained_file=pretrained_file,
+                                    model_path=model_path)
 
 def remove_pretrained_embedding_params(params: Params):
     keys = params.keys()
