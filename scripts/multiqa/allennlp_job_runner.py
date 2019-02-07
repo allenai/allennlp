@@ -295,6 +295,10 @@ class JobRunner():
                 self.job_gpus.append(assigned_GPU)
                 self.update_available_gpus()
                 logger.info('assigned_GPU = %s',assigned_GPU)
+            elif self._SIM_GPUS:
+                assigned_GPU = self.available_gpus[-1]
+                self.job_gpus.append(assigned_GPU)
+                self.update_available_gpus()
 
             self.execute_job(name, config['bash_command'], config, assigned_GPU, channel)
         elif config['operation'] == 'kill job':
