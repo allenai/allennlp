@@ -1,5 +1,4 @@
 local SEED = 0;
-local DATA_PATH = "../data/penn/";
 local READER = "autoencoder";
 local CUDA = -1;
 
@@ -8,8 +7,8 @@ local HIDDEN_DIM = 1024;
 local LATENT_DIM = 32;
 local BATCH_SIZE = 32;
 
-local NUM_EPOCHS = 3;
-local SUMMARY_INTERVAL = 1;
+local NUM_EPOCHS = 30;
+local SUMMARY_INTERVAL = 10;
 local GRAD_CLIPPING = 5;
 local GRAD_NORM = 5;
 local SHOULD_LOG_PARAMETER_STATISTICS = false;
@@ -31,8 +30,8 @@ local RECONSTRUCTION_WEIGHT = 1.0;
   "dataset_reader": {
     "type": READER
   },
-  "train_data_path": DATA_PATH + "/train.txt",
-  "validation_data_path": DATA_PATH + "/valid.txt",
+  "train_data_path": "allennlp/tests/fixtures/data/autoencoder.txt",
+  "validation_data_path": "allennlp/tests/fixtures/data/autoencoder.txt",
   "model": {
     "type": "vae",
     "encoder": {

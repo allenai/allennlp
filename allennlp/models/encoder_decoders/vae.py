@@ -1,7 +1,6 @@
 from typing import Dict, List
 import torch
 from torch.nn.modules import Linear
-import numpy
 
 from overrides import overrides
 
@@ -11,7 +10,7 @@ from allennlp.models.model import Model
 from allennlp.modules.decoders import Decoder
 from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
 from allennlp.nn import InitializerApplicator
-from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits, move_to_device
+from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits
 from allennlp.training.metrics import BLEU, Perplexity
 
 
@@ -19,8 +18,7 @@ from allennlp.training.metrics import BLEU, Perplexity
 class VAE(Model):
     """
     This ``VAE`` class is a :class:`Model` which implements a simple VAE as first described
-    in https://arxiv.org/pdf/1511.06349.pdf (Bowman et al., 2015). For this implementation the code published
-    by https://arxiv.org/pdf/1802.02550.pdf (Kim et al., 2018) was used.
+    in https://arxiv.org/pdf/1511.06349.pdf (Bowman et al., 2015).
 
     Parameters
     ----------

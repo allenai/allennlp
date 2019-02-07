@@ -15,8 +15,7 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 @DatasetReader.register("autoencoder")
 class AutoencoderDatasetReader(Seq2SeqDatasetReader):
     """
-    This class inherits for Seq2SeqDatasetReader as the only difference is when dealing with
-    autoencoding tasks the target is equal to the source.
+    ``AutoencoderDatasetReader`` class inherits Seq2SeqDatasetReader as the only difference is when dealing with autoencoding tasks i.e., the target equals the source.
     """
     @overrides
     def _read(self, file_path):
