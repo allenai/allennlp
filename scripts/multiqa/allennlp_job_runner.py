@@ -301,7 +301,7 @@ class JobRunner():
             logger.info('kill job!')
             job_to_kill = [job for job in self.running_jobs if job['experiment_name'] == config['experiment_name']]
             if len(job_to_kill) == 0:
-                logger.write('job not found! %s ', config['experiment_name'])
+                logger.info('job not found! %s ', config['experiment_name'])
             else:
                 job_to_kill = job_to_kill[0]
             bash_command = 'kill ' + str(job_to_kill['pid'])
