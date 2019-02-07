@@ -348,6 +348,7 @@ class JobRunner():
                 if config['operation'] == 'kill job':
                     job_to_kill = [job for job in self.running_jobs if job['experiment_name'] == config['experiment_name']]
                     if len(job_to_kill) == 0:
+                        body_ = None
                         self.channel.basic_nack(method_frame.delivery_tag)
                     else:
                         break
