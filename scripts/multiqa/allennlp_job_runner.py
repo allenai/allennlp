@@ -116,7 +116,8 @@ class JobRunner():
         # TODO this is an ugly check for error , but because we are forking with nohup, python does not provide any good alternative...
         # We also assume here that jobs don't take less than 20 seconds...
         if job['log_snapshot'].find('Traceback (most recent call last):') > -1 or \
-                job['log_snapshot'].find('error') > -1 or (time.time() - job['start_time']  < 20 and self.resource_type == 'GPU'):
+                job['log_snapshot'].find('error') > -1 or \
+                ('output_file' in job and not os.path.exists(job['output_file'])):
 
             if len(job['log_snapshot']) > 10001:
                 job['log_snapshot'] = job['log_snapshot'][-10000:]
@@ -250,6 +251,9 @@ class JobRunner():
 
         bash_command = 'nohup ' + bash_command + ' &'
 
+        if 'output_file' in config:
+            config['output_file'] = config['output_file'].replace('[MODEL_DIR]', self._MODELS_DIR)
+
         # Executing
         logger.info(bash_command)
         with open(log_file, 'wb') as f:
@@ -268,10 +272,12 @@ class JobRunner():
         # open log file for reading
         self.log_handles[log_file] = open(log_file, 'r')
         self.runned_job_names.append(name)
-        new_job = {'GPU':assigned_GPU,'config': config, 'command': bash_command, 'channel':channel, \
+        new_job = {'GPU':assigned_GPU,'config': config,'command': bash_command, 'channel':channel, \
                     'log_file': log_file, 'log_snapshot': '', 'is_post_proc_run':False, \
                     'experiment_name': name, 'alive': True,'retries': 0, \
                     'pid': wa_proc.pid + 1, 'start_time': time.time()}
+        if 'output_file' in config:
+            new_job['output_file'] =  config['output_file']
         self.running_jobs.append(new_job)
         self.update_available_gpus()
 
@@ -293,9 +299,22 @@ class JobRunner():
             self.execute_job(name, config['bash_command'], config, assigned_GPU, channel)
         elif config['operation'] == 'kill job':
             logger.info('kill job!')
-            pid_to_kill = [job['pid'] for job in self.running_jobs if job['experiment_name'] == config['experiment_name']]
-            bash_command = 'kill ' + str(pid_to_kill[0])
+            job_to_kill = [job for job in self.running_jobs if job['experiment_name'] == config['experiment_name']]
+            if len(job_to_kill) == 0:
+                logger.write('job not found! %s ', config['experiment_name'])
+            else:
+                job_to_kill = job_to_kill[0]
+            bash_command = 'kill ' + str(job_to_kill['pid'])
             proc_info = Popen(bash_command, shell=True)
+            self.close_job_log(job_to_kill)
+            # Removing job from job list
+            if job_to_kill['GPU'] in self.job_gpus:
+                self.job_gpus.remove(job_to_kill['GPU'])
+                self.update_available_gpus()
+            ElasticLogger().write_log('INFO', "Job killed", {'experiment_name': job_to_kill['experiment_name'],
+                                                           'log_snapshot': job_to_kill['log_snapshot']}, push_bulk=True, print_log=False)
+            self.running_jobs.remove(job_to_kill)
+            self.log_handles.pop(job_to_kill['log_file'])
 
         elif config['operation'] == 'resources to spare':
             self.resources_to_spare = config['resources_to_spare']
