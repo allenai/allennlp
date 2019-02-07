@@ -389,8 +389,10 @@ class JobRunner():
         self.resources_available = False
         if self.resource_type == 'GPU' and len(self.available_gpus) > self.resources_to_spare:
             self.resources_available = True
-        elif self.resource_type == 'CPU':
+        elif self._SIM_GPUS and len(self.available_gpus) > self.resources_to_spare:
             self.resources_available = True
+        #elif self.resource_type == 'CPU':
+        #    self.resources_available = True
 
         # checking status of all processes
         for job in self.running_jobs:
