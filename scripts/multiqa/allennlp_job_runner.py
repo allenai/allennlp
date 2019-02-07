@@ -348,6 +348,12 @@ class JobRunner():
                 if config['operation'] != 'run job':  # no resources needed jobs
                     # we always ack for no resource jobs...
                     break
+                elif config['operation'] != 'kill job':
+                    job_to_kill = [job for job in self.running_jobs if job['experiment_name'] == config['experiment_name']]
+                    if len(job_to_kill)==0:
+                        self.channel.basic_nack(method_frame.delivery_tag)
+                    else:
+                        break
                 elif name in self.runned_job_names and config['retry'] > 0:
                     # checking if this job has already been run, if so
                     # let another host try.
