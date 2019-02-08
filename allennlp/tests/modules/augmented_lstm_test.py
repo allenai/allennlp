@@ -99,3 +99,51 @@ class TestAugmentedLSTM(AllenNlpTestCase):
         lstm = AugmentedLstm(2, 3, use_highway=False)
         true_state_bias = numpy.array([0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0])
         numpy.testing.assert_array_equal(lstm.state_linearity.bias.data.numpy(), true_state_bias)
+
+    def test_dropout_is_not_applied_to_output_or_returned_hidden_states(self):
+        sorted_tensor, sorted_sequence, _, _ = sort_batch_by_length(self.random_tensor, self.sequence_lengths)
+        tensor = pack_padded_sequence(sorted_tensor, sorted_sequence.data.tolist(), batch_first=True)
+        lstm = AugmentedLstm(10, 11, recurrent_dropout_probability=0.5)
+        output, (hidden_state, _) = lstm(tensor)
+        output_sequence, _ = pad_packed_sequence(output, batch_first=True)
+        # Test returned output sequence
+        num_hidden_dims_zero_across_timesteps = ((output_sequence.sum(1) == 0).sum()).item()
+        # If this is not True then dropout has been applied to the output of the LSTM
+        assert not num_hidden_dims_zero_across_timesteps
+        # Should not have dropout applied to the last hidden state as this is not used
+        # within the LSTM and makes it more consistent with the `torch.nn.LSTM` where
+        # dropout is not applied to any of it's output. This would also make it more
+        # consistent with the Keras LSTM implementation as well.
+        hidden_state = hidden_state.squeeze()
+        num_hidden_dims_zero_across_timesteps = ((hidden_state == 0).sum()).item()
+        assert not num_hidden_dims_zero_across_timesteps
+
+    def test_dropout_version_is_different_to_no_dropout(self):
+        augmented_lstm = AugmentedLstm(10, 11)
+        dropped_augmented_lstm = AugmentedLstm(10, 11, recurrent_dropout_probability=0.9)
+        # Initialize all weights to be == 1.
+        constant_init = Initializer.from_params(Params({"type": "constant", "val": 0.5}))
+        initializer = InitializerApplicator([(".*", constant_init)])
+        initializer(augmented_lstm)
+        initializer(dropped_augmented_lstm)
+
+        initial_state = torch.randn([1, 5, 11])
+        initial_memory = torch.randn([1, 5, 11])
+
+        # If we use too bigger number like in the PyTorch test the dropout has no affect
+        sorted_tensor, sorted_sequence, _, _ = sort_batch_by_length(self.random_tensor, self.sequence_lengths)
+        lstm_input = pack_padded_sequence(sorted_tensor, sorted_sequence.data.tolist(), batch_first=True)
+
+        augmented_output, augmented_state = augmented_lstm(lstm_input, (initial_state, initial_memory))
+        dropped_output, dropped_state = dropped_augmented_lstm(lstm_input, (initial_state, initial_memory))
+        dropped_output_sequence, _ = pad_packed_sequence(dropped_output, batch_first=True)
+        augmented_output_sequence, _ = pad_packed_sequence(augmented_output, batch_first=True)
+        with pytest.raises(AssertionError):
+            numpy.testing.assert_array_almost_equal(dropped_output_sequence.data.numpy(),
+                                                    augmented_output_sequence.data.numpy(), decimal=4)
+        with pytest.raises(AssertionError):
+            numpy.testing.assert_array_almost_equal(dropped_state[0].data.numpy(),
+                                                    augmented_state[0].data.numpy(), decimal=4)
+        with pytest.raises(AssertionError):
+            numpy.testing.assert_array_almost_equal(dropped_state[1].data.numpy(),
+                                                    augmented_state[1].data.numpy(), decimal=4)

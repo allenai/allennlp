@@ -55,7 +55,7 @@ def check_for_gpu(device_id: Union[int, list]):
     elif device_id is not None and device_id >= 0:
         num_devices_available = cuda.device_count()
         if num_devices_available == 0:
-            raise ConfigurationError("Experiment specified a GPU but none are available;"
+            raise ConfigurationError("Experiment specified a GPU but none is available;"
                                      " if you want to run on CPU use the override"
                                      " 'trainer.cuda_device=-1' in the json config file.")
         elif device_id >= num_devices_available:

@@ -19,7 +19,7 @@ class TestAtisReader(AllenNlpTestCase):
 
     def test_atis_read_from_file(self):
         data_path = AllenNlpTestCase.FIXTURES_ROOT / "data" / "atis" / "sample.json"
-        database_file = cached_path("https://s3-us-west-2.amazonaws.com/allennlp/datasets/atis/atis.db")
+        database_file = "https://s3-us-west-2.amazonaws.com/allennlp/datasets/atis/atis.db"
         reader = AtisDatasetReader(database_file=database_file)
 
         instances = list(reader.read(str(data_path)))

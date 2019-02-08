@@ -1,5 +1,5 @@
-from typing import Dict, List
 import warnings
+from typing import Dict, List, Union, Any
 
 import torch
 from overrides import overrides
@@ -29,16 +29,18 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
         A dictionary mapping token embedder names to implementations.
         These names should match the corresponding indexer used to generate
         the tensor passed to the TokenEmbedder.
-    embedder_to_indexer_map : ``Dict[str, List[str]]``, optional, (default = None)
-        Optionally, you can provide a mapping between the names of the TokenEmbedders
-        that you are using to embed your TextField and an ordered list of indexer names
-        which are needed for running it. In most cases, your TokenEmbedder will only
-        require a single tensor, because it is designed to run on the output of a
-        single TokenIndexer. For example, the ELMo Token Embedder can be used in
-        two modes, one of which requires both character ids and word ids for the
-        same text. Note that the list of token indexer names is `ordered`, meaning
-        that the tensors produced by the indexers will be passed to the embedders
-        in the order you specify in this list.
+    embedder_to_indexer_map : ``Dict[str, Union[List[str], Dict[str, str]]]``, optional, (default = None)
+        Optionally, you can provide a mapping between the names of the TokenEmbedders that
+        you are using to embed your TextField and an ordered list of indexer names which
+        are needed for running it, or a mapping between the parameters which the
+        ``TokenEmbedder.forward`` takes and the indexer names which are viewed as arguments.
+        In most cases, your TokenEmbedder will only require a single tensor, because it is
+        designed to run on the output of a single TokenIndexer. For example, the ELMo Token
+        Embedder can be used in two modes, one of which requires both character ids and word
+        ids for the same text. Note that the list of token indexer names is `ordered`,
+        meaning that the tensors produced by the indexers will be passed to the embedders in
+        the order you specify in this list. You can also use `null` in the configuration to
+        set some specified parameters to None.
     allow_unmatched_keys : ``bool``, optional (default = False)
         If True, then don't enforce the keys of the ``text_field_input`` to
         match those in ``token_embedders`` (useful if the mapping is specified
@@ -46,7 +48,7 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
     """
     def __init__(self,
                  token_embedders: Dict[str, TokenEmbedder],
-                 embedder_to_indexer_map: Dict[str, List[str]] = None,
+                 embedder_to_indexer_map: Dict[str, Union[List[str], Dict[str, str]]] = None,
                  allow_unmatched_keys: bool = False) -> None:
         super(BasicTextFieldEmbedder, self).__init__()
         self._token_embedders = token_embedders
@@ -91,20 +93,34 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
         embedded_representations = []
         keys = sorted(embedder_keys)
         for key in keys:
-            # If we pre-specified a mapping explictly, use that.
-            if self._embedder_to_indexer_map is not None:
-                tensors = [text_field_input[indexer_key] for
-                           indexer_key in self._embedder_to_indexer_map[key]]
-            else:
-                # otherwise, we assume the mapping between indexers and embedders
-                # is bijective and just use the key directly.
-                tensors = [text_field_input[key]]
             # Note: need to use getattr here so that the pytorch voodoo
             # with submodules works with multiple GPUs.
             embedder = getattr(self, 'token_embedder_{}'.format(key))
             for _ in range(num_wrapping_dims):
                 embedder = TimeDistributed(embedder)
-            token_vectors = embedder(*tensors)
+            # If we pre-specified a mapping explictly, use that.
+            # make mypy happy
+            tensors: Union[List[Any], Dict[str, Any]] = None
+            if self._embedder_to_indexer_map is not None:
+                indexer_map = self._embedder_to_indexer_map[key]
+                if isinstance(indexer_map, list):
+                    # If `indexer_key` is None, we map it to `None`.
+                    tensors = [(text_field_input[indexer_key] if indexer_key is not None else None)
+                               for indexer_key in indexer_map]
+                    token_vectors = embedder(*tensors)
+                elif isinstance(indexer_map, dict):
+                    tensors = {
+                            name: text_field_input[argument]
+                            for name, argument in indexer_map.items()
+                    }
+                    token_vectors = embedder(**tensors)
+                else:
+                    raise NotImplementedError
+            else:
+                # otherwise, we assume the mapping between indexers and embedders
+                # is bijective and just use the key directly.
+                tensors = [text_field_input[key]]
+                token_vectors = embedder(*tensors)
             embedded_representations.append(token_vectors)
         return torch.cat(embedded_representations, dim=-1)
 
@@ -150,13 +166,3 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
 
         params.assert_empty(cls.__name__)
         return cls(token_embedders, embedder_to_indexer_map, allow_unmatched_keys)
-
-    def extend_vocab(self, extended_vocab: Vocabulary) -> None:
-        """
-        It assures that ``basic_text_field_embedder`` can embed with the extended vocab.
-        It iterates over each ``token_embedder`` and assures each of them can
-        embed with extended vocab.
-        """
-        for key, _ in self._token_embedders.items():
-            token_embedder = getattr(self, 'token_embedder_{}'.format(key))
-            token_embedder.extend_vocab(extended_vocab)
