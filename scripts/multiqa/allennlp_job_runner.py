@@ -327,11 +327,11 @@ class JobRunner():
             self.close_all_logs()
             self.close_existing_connection()
 
-            with open('runner_state.pkl', 'wb') as f:
+            with open('runner_state_' + self.channel_tags[0] + '.pkl', 'wb') as f:
                 pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
             channels = ' '.join([' --channel ' + channel for channel in self.channel_tags])
             bash_command = 'python scripts/multiqa/allennlp_job_runner.py ' + self.resource_type + channels + \
-                           ' --models_dir ' + self._MODELS_DIR + ' --state runner_state.pkl'
+                           ' --models_dir ' + self._MODELS_DIR + ' --state runner_state_' + self.channel_tags[0] + '.pkl'
             if self._DEBUG:
                 bash_command += ' --debug '
 
