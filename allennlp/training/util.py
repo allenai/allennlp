@@ -237,7 +237,19 @@ def data_parallel(batch_group: List[TensorDict],
              for batch, device in zip(batch_group, cuda_devices)]
 
     used_device_ids = cuda_devices[:len(moved)]
-    replicas = replicate(model, used_device_ids)
+    main_device_id = next(model.parameters()).device
+
+    # Replicate the model across devices with special handling for the device
+    # where the model already resides.
+    if main_device_id in used_device_ids:
+        main_device_index = used_device_ids.index(main_device_id)
+        used_device_ids.pop(main_device_index)
+        replicas = replicate(model, used_device_ids)
+        used_device_ids.insert(main_device_index, main_device_id)
+        replicas.insert(main_device_index, model)
+    else:
+        replicas = replicate(model, used_device_ids)
+
     # We pass all our arguments as kwargs. Create a list of empty tuples of the
     # correct shape to serve as (non-existent) positional arguments.
     inputs = [()] * len(batch_group)
