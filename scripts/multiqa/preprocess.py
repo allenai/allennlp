@@ -151,12 +151,13 @@ class MultiQAPreprocess():
 
         else:
             # we chose "^..^" because the tokenizer splits the standard "<..>" chars
-            self._SEP = ' ^SEP^ '
-            self._PARA_SEP = ' ^PARA^ '
-            self._KNOWN_SEP = {'rank': ' ', 'title': ' ^TITLE_SEP^ '}
+            self._SEP = ' [SEP] '
+            self._PARA_SEP = ' [PARA] '
+            self._KNOWN_SEP = {'rank': ' ', 'title': ' [TITLE_SEP] '}
 
-    def wordpiece_tokenizer_len(self,tokens):
+    def wordpiece_tokenizer_len(self, tokens, return_wordpieces = False):
         total_len = 0
+        all_word_pieces = []
         for token in tokens:
             # Lowercase if necessary
             if type(token) == tuple:
@@ -167,8 +168,13 @@ class MultiQAPreprocess():
                 text = (token.text.lower()
                         if self._bert_do_lowercase and token.text not in self._never_lowercase
                         else token.text)
-            total_len +=  len(self._bert_wordpiece_tokenizer(text))
-        return total_len
+            word_pieces = self._bert_wordpiece_tokenizer(text)
+            all_word_pieces += word_pieces
+            total_len +=  len(word_pieces)
+        if return_wordpieces:
+            return all_word_pieces
+        else:
+            return total_len
 
     def iterate_doc_parts(self,document):
         part_num = 0
@@ -903,43 +909,53 @@ def main():
                     header['qas_used_fraction'] * (all_qa_count - skipped_qa_count) / all_qa_count}
     preproc_header.update(header)
 
-    temp_name = 'temp.jsonl'
     if args.output_file.startswith('s3://'):
 
         output_file = args.output_file.replace('s3://','')
         bucketName = output_file.split('/')[0]
         outPutname = '/'.join(output_file.split('/')[1:])
-        dataset = args.output_file.split('/')[-1]
-        with open(temp_name, "w") as f:
+        local_filename = outPutname.replace('/','_')
+        with open(local_filename.replace('.zip',''), "w") as f:
             # first JSON line is header
             f.write(json.dumps({'header':preproc_header}) + '\n')
             for instance in preprocessed_instances:
                 f.write(json.dumps(instance) + '\n')
 
-        with zipfile.ZipFile(temp_name + '.zip', "w", zipfile.ZIP_DEFLATED) as zip_file:
-            zip_file.write(temp_name)
+        with zipfile.ZipFile(local_filename, "w", zipfile.ZIP_DEFLATED) as zip_file:
+            zip_file.write(local_filename.replace('.zip',''))
 
         s3 = boto3.client('s3')
-        s3.upload_file(temp_name+ '.zip' , bucketName, outPutname, ExtraArgs={'ACL':'public-read'})
+        s3.upload_file(local_filename , bucketName, outPutname, ExtraArgs={'ACL':'public-read'})
 
-        os.remove(temp_name)
-        os.remove(temp_name+ '.zip')
+        os.remove(local_filename)
+        os.remove(local_filename.replace('.zip',''))
     else:
         output_dir = '/'.join(args.output_file.split('/')[0:-1])
         dataset = args.output_file.split('/')[-1]
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
 
-        with open(dataset.replace('.zip',''), "w") as f:
+        with open(args.output_file.replace('.zip',''), "w") as f:
             # first JSON line is header
             f.write(json.dumps({'header': preproc_header}) + '\n')
             for instance in preprocessed_instances:
-                f.write(json.dumps(instance) + '\n')
+                if False:
+                    s = json.dumps(instance, sort_keys=True, indent=4)
+                    # just making the answer starts in the sample no have a newline for every offset..
+                    s = re.sub('\n\s*(\d+)', r'\1', s)
+                    s = re.sub('\n\s*"title"', r'"title"', s)
+                    s = re.sub('(\d+)\n\s*]', r'\1]', s)
+                    s = re.sub('(\d+)],\n\s*', r'\1],', s)
+                    s = re.sub('\[\s*\n', r'[', s)
+                    s = re.sub('\[\s*', r'[', s)
+                    f.write(s + '\n')
+                else:
+                    f.write(json.dumps(instance) + '\n')
 
         with zipfile.ZipFile(args.output_file, "w", zipfile.ZIP_DEFLATED) as zip_file:
-            zip_file.write(dataset.replace('.zip',''))
+            zip_file.write(args.output_file.replace('.zip',''))
 
-        os.remove(dataset.replace('.zip',''))
+        os.remove(args.output_file.replace('.zip',''))
 
     ElasticLogger().write_log('INFO', 'Dataset Preproc Stats', context_dict=preproc_header)
 

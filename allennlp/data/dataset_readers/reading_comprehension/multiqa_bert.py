@@ -47,11 +47,17 @@ class BERTQAReader(DatasetReader):
     def __init__(self,
                  tokenizer: Tokenizer = None,
                  token_indexers: Dict[str, TokenIndexer] = None,
+                 use_one_inst_per_question = False,
                  lazy: bool = False,
-                 sample_size: int = -1) -> None:
+                 all_question_instances_in_batch = False,
+                 sample_size: int = -1,
+                 ) -> None:
         super().__init__(lazy)
+        random.seed(0)
         self._tokenizer = tokenizer or WordTokenizer()
         self._sample_size = sample_size
+        self._use_one_inst_per_question = use_one_inst_per_question
+        self._all_question_instances_in_batch = all_question_instances_in_batch
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
 
     def build_instances(self, header, instances):
@@ -65,30 +71,34 @@ class BERTQAReader(DatasetReader):
                                   range(len(split_inds) - 1)]
 
         # sorting
-        sorting_keys = ['question_tokens', 'tokens']
-        instances_with_lengths = []
-        for instance in per_question_instances:
-            padding_lengths = {key: len(instance[0][key]) for key in sorting_keys}
-            instance_with_lengths = ([padding_lengths[field_name] for field_name in sorting_keys], instance)
-            instances_with_lengths.append(instance_with_lengths)
+        #sorting_keys = ['question_tokens', 'tokens']
+        #instances_with_lengths = []
+        #for instance in per_question_instances:
+        #    padding_lengths = {key: len(instance[0][key]) for key in sorting_keys}
+        #    instance_with_lengths = ([padding_lengths[field_name] for field_name in sorting_keys], instance)
+        #    instances_with_lengths.append(instance_with_lengths)
         #instances_with_lengths.sort(key=lambda x: x[0])
         # random shuffle training
-        random.seed(8)
-        random.shuffle(instances_with_lengths)
+        #random.seed(8)
+        #random.shuffle(instances_with_lengths)
 
-        per_question_instances = [instance_with_lengths[-1] for instance_with_lengths in instances_with_lengths]
+        #per_question_instances = [instance_with_lengths[-1] for instance_with_lengths in instances_with_lengths]
 
         # selecting instaces to add
         filtered_instances = []
         for question_instances in per_question_instances:
-            if header['split_type'] == 'dev':
+            if self._all_question_instances_in_batch:
                 instances_to_add = question_instances
             else:
                 # choose at most 2 instances from the same question:
-                if len(question_instances) > 2:
+                if len(question_instances) > 1 and self._use_one_inst_per_question:
+                    inst_with_answers = [inst for inst in question_instances if inst['answers'] != []]
+                    instances_to_add = random.sample(inst_with_answers, 1)
+                elif len(question_instances) > 2:
                     # This part is inspired by Clark and Gardner, 17 - oversample the highest ranking documents.
                     # In thier work they use only instances with answers, so we will find the highest
                     # ranking instance with an answer (this also insures we have at least one answer in the chosen instances)
+
                     inst_with_answers = [inst for inst in question_instances if inst['answers'] != []]
                     instances_to_add = random.sample(inst_with_answers[0:2], 1)
                     # we assume each question will be visited once in an epoch
@@ -106,80 +116,6 @@ class BERTQAReader(DatasetReader):
 
         #logger.info("multiqa+: yielding %d instances ", len(filtered_instances))
         for inst_num, inst in enumerate(filtered_instances):
-            # for bert changing the order of the passage token only for now...
-            # very patchy but it's just for testing
-            if False:
-                char_offset = 6 # accounting for the new [CLS] + space
-                new_passage_tokens = [('[CLS]',0)]
-                new_passage = '[CLS] '
-                for t in inst['question_tokens']:
-                    new_passage_tokens.append((t[0],t[1] + char_offset))
-                new_passage += inst['metadata']['question'] + ' '
-                char_offset = len(new_passage) # question length + space
-
-                # we also need to account for change in answer location
-                token_offset = len(inst['question_tokens']) + 1
-
-                # finding ' ^SEP^ ' and replacing it
-
-                if False:
-                    char_offset_to_sep = None
-                    for ind,t in enumerate(inst['tokens']):
-                        if t[0] == '^PARA^':
-                            split_point = ind
-                            char_offset_to_sep = inst['tokens'][split_point + 1][1]
-                            token_offset = len(inst['question_tokens']) + 1 - split_point
-                        if char_offset_to_sep is not None:
-                            if ind + token_offset >= 800:
-                                x=1
-                                break
-                            t[1] = t[1] - char_offset_to_sep + char_offset + len('[SEP] ')
-                    if ind != len(inst['tokens']) - 1:
-                        new_passage_tokens += [('[SEP]', char_offset)] + inst['tokens'][split_point + 1:ind]
-                    else:
-                        new_passage_tokens += [('[SEP]', char_offset)] + inst['tokens'][split_point + 1:]
-
-                    # creating the new passage with [SEP]
-                    new_passage += "[SEP] " + inst['text'][char_offset_to_sep:] + ' '
-                else:
-                    for ind,t in enumerate(inst['tokens']):
-                        t[1] = t[1] + char_offset + len('[SEP] ')
-                    new_passage_tokens += [('[SEP]', char_offset)] + inst['tokens']
-                    new_passage += "[SEP] " + inst['text'] + ' '
-                    token_offset = len(inst['question_tokens']) + 2
-
-
-
-                new_answers = []
-                for answer in inst['answers']:
-                    if answer[1] + token_offset < len(new_passage_tokens):
-                        new_answers.append([answer[0] + token_offset, answer[1] + token_offset, answer[2]])
-                    else:
-                        print('lost one answer!')
-
-
-
-                new_passage_tokens.append(("[SEP]",len(new_passage)))
-                new_passage += "[SEP]"
-
-                # sanity check:
-                if False:
-                    for answer in new_answers:
-                        char_idx_start = new_passage_tokens[answer[0]][1]
-                        if answer[1] + 1 >= len(new_passage_tokens):
-                            char_idx_end = len(new_passage)
-                        else:
-                            char_idx_end = new_passage_tokens[answer[1] + 1][1]
-
-                        if re.match(r'\b{0}\b'.format(re.escape(answer[2])), \
-                            new_passage[char_idx_start:char_idx_end], re.IGNORECASE) is None:
-                            if (answer[2].lower().strip() != \
-                                    new_passage[char_idx_start:char_idx_end].lower().strip()):
-                                logger.info('answer mismatch')
-
-                tokenized_paragraph = [Token(text=t[0], idx=t[1]) for t in new_passage_tokens]
-                question_tokens = [Token(text=t[0], idx=t[1]) for t in inst['question_tokens']]
-
             tokenized_paragraph = [Token(text=t[0], idx=t[1]) for t in inst['tokens']]
             question_tokens = [Token(text=t[0], idx=t[1]) for t in inst['question_tokens']]
             new_passage = inst['text']
@@ -216,7 +152,7 @@ class BERTQAReader(DatasetReader):
                             instances.append(json.loads(example))
 
                             # making sure not to take all instances of the same question
-                            if len(instances)>100000 and instances[-1]['metadata']['question_id'] \
+                            if len(instances)>10000 and instances[-1]['metadata']['question_id'] \
                                                     != instances[-2]['metadata']['question_id']:
                                 remainder = instances[-1]
                                 instances = instances[:-1]
