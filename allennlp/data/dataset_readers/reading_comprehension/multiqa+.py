@@ -47,12 +47,10 @@ class MultiQAReader(DatasetReader):
                  tokenizer: Tokenizer = None,
                  token_indexers: Dict[str, TokenIndexer] = None,
                  lazy: bool = False,
-                 dev_sample_size: int = -1,
-                 train_sample_size: int = -1) -> None:
+                 sample_size: int = -1) -> None:
         super().__init__(lazy)
         self._tokenizer = tokenizer or WordTokenizer()
-        self._dev_sample_size = dev_sample_size
-        self._train_sample_size = train_sample_size
+        self._sample_size = sample_size
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
 
     def build_instances(self, header, instances):
@@ -126,6 +124,7 @@ class MultiQAReader(DatasetReader):
 
         # supporting multi dataset training:
         instances = []
+        total_questions_yielded = 0
         for ind, single_file_path in enumerate(file_path.split(',')):
             # if `file_path` is a URL, redirect to the cache
             logger.info("Reading file at %s", single_file_path)
@@ -138,6 +137,15 @@ class MultiQAReader(DatasetReader):
                         for line,example in enumerate(myfile):
                             # header
                             instances.append(json.loads(example))
+
+
+                            if len(instances) > 2 and instances[-1]['metadata']['question_id'] != \
+                                                        instances[-2]['metadata']['question_id']:
+                                total_questions_yielded += 1
+
+                            # supporting sample size
+                            if self._sample_size > -1 and total_questions_yielded > self._sample_size:
+                                break
 
                             # making sure not to take all instances of the same question
                             if len(instances)>10000 and instances[-1]['metadata']['question_id'] \
