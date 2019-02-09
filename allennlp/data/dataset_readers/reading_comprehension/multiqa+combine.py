@@ -66,12 +66,10 @@ class MultiQAReader(DatasetReader):
                  tokenizer: Tokenizer = None,
                  token_indexers: Dict[str, TokenIndexer] = None,
                  lazy: bool = False,
-                 dev_sample_size: int = -1,
-                 train_sample_size: int = -1,) -> None:
+                 sample_size: int = -1) -> None:
         super().__init__(lazy)
         self._tokenizer = tokenizer or WordTokenizer()
-        self._dev_sample_size = dev_sample_size
-        self._train_sample_size = train_sample_size
+        self._sample_size = sample_size
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
 
     @profile
@@ -90,14 +88,12 @@ class MultiQAReader(DatasetReader):
             with zipfile.ZipFile(single_file_path_cached, 'r') as myzip:
                 with myzip.open(myzip.namelist()[0]) as myfile:
                     header = json.loads(myfile.readline())['header']
-                    for line,example in enumerate(myfile):
+                    for line, example in enumerate(myfile):
                         instance_list.append(json.loads(example))
 
             # per dataset sampling
-            if header['split_type'] == 'dev' and self._dev_sample_size > -1:
-                instance_list = sample_contexts(instance_list, self._dev_sample_size)
-            elif header['split_type'] == 'train' and self._train_sample_size > -1:
-                instance_list = sample_contexts(instance_list, self._train_sample_size)
+            if self._sample_size > -1:
+                instance_list = sample_contexts(instance_list, self._sample_size)
 
             mixed_instance_list += instance_list
 
