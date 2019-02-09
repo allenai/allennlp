@@ -208,11 +208,11 @@ class MultiQAPreprocess():
             for answer in qa['answers']:
                 for alias in answer['aliases']:
                     for alias_start in alias['answer_starts']:
+                        if 'token_answer_starts' not in alias:
+                            alias['token_answer_starts'] = []
                         if alias_start[0] == doc_ind and alias_start[1] == part_type:
                             char_span_start = alias_start[2]
                             char_span_end = char_span_start + len(alias['text'])
-                            if 'token_answer_starts' not in alias:
-                                    alias['token_answer_starts'] = []
                             try:
                                 (span_start, span_end), error = util.char_span_to_token_span(part_offsets,
                                                                             (char_span_start, char_span_end))
@@ -508,7 +508,7 @@ class MultiQAPreprocess():
             token_idx_offest = in_token_idx_offest + len(tokens)
             
             # NOTE we are currently only handling correct answers ... 
-            norm_answers_list += self.extract_answers_with_token_idx(doc_id,part_ind, answers,\
+            norm_answers_list += self.extract_answers_with_token_idx(doc_id, part_ind, answers,\
                  part_token_idx_offset)
             
         return tokens, text, norm_answers_list, token_idx_char_offest, token_idx_offest
@@ -794,6 +794,7 @@ def main():
     parse.add_argument("--sample_size", type=int, default=-1, help="enable sampling")
     parse.add_argument("--sort_by_question", type=str2bool, default=False, help="sort by question token length to optimize GPU zero padding.")
     parse.add_argument("--DEBUG", type=str2bool, default=False, help="sort by question token length to optimize GPU zero padding.")
+    parse.add_argument("--START_OFFSET", type=int, default=None, help="start from a certain input index")
 
     args = parse.parse_args()
     
@@ -835,8 +836,8 @@ def main():
             num_of_qas += len(context['qas'])
         contexts = sampled_contexts
 
-    #if args.DEBUG:
-    #    contexts = contexts[8552 + 1219:]
+    if args.DEBUG and args.START_OFFSET is not None:
+        contexts = contexts[args.START_OFFSET:]
 
     if args.n_processes == 1:
         preprocessor = MultiQAPreprocess(args.BERT_format,args.ndocs, args.docsize, args.titles, args.use_rank, \
