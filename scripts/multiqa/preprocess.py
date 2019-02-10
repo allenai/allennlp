@@ -370,6 +370,8 @@ class MultiQAPreprocess():
                 question_tokens_len = self.wordpiece_tokenizer_len(self._tokenizer.tokenize(qa['question']))
                 if question_tokens_len > max_question_len:
                     max_question_len = question_tokens_len
+        else:
+            max_question_len = None
 
         ans_start_updated_qas = copy.deepcopy(context['qas'])
         new_documents = copy.deepcopy(context['documents'])

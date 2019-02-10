@@ -66,7 +66,8 @@ class MultiQAReader(DatasetReader):
                  tokenizer: Tokenizer = None,
                  token_indexers: Dict[str, TokenIndexer] = None,
                  lazy: bool = False,
-                 sample_size: int = -1) -> None:
+                 sample_size: int = -1,
+                 dev_sample_size: int = None) -> None:
         super().__init__(lazy)
         self._tokenizer = tokenizer or WordTokenizer()
         self._sample_size = sample_size
