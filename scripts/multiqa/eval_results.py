@@ -45,26 +45,30 @@ def parse_filename(filename):
     logger.error('could not find any parsing for the format %s',filename)
     return
 
-def process_results(filename):
+def process_results(filename, type, source_dataset, \
+                        target_dataset, eval_set):
     with open(filename, 'r') as f:
-        results = json.load(f)
-        results_dict = parse_filename(filename)
-        results_dict.update(results)
-        ElasticLogger().write_log('INFO', 'Evaluation Results', context_dict=results_dict)
+        results_dict = json.load(f)
+        results_dict['type'] = type
+        if 'source_dataset' is not None:
+            results_dict['source_dataset'] = source_dataset
+        results_dict['target_dataset'] = target_dataset
+        results_dict['eval_set'] = eval_set
+        ElasticLogger().write_log('INFO', 'EvalResults', context_dict=results_dict)
 
 def main():
     parse = argparse.ArgumentParser("Pre-process for DocumentQA/MultiQA model and datareader")
     parse.add_argument("--eval_res_file",default=None, type=str, help="allennlp evaluation output file path")
-    parse.add_argument("--results_dir",default=None, type=str, help="full directory of allennlp evaluation output file path")
+    parse.add_argument("--type", default=None, type=str, help="allennlp evaluation output file path")
+    parse.add_argument("--source_dataset", default=None, type=str, help="allennlp evaluation output file path")
+    parse.add_argument("--target_dataset", default=None, type=str, help="allennlp evaluation output file path")
+    parse.add_argument("--eval_set", default=None, type=str, help="allennlp evaluation output file path")
+
     args = parse.parse_args()
 
-    if args.results_dir is not None:
-        for filename in os.listdir(args.results_dir):
-            process_results(filename)
-
-    elif args.eval_res_file is not None:
-        process_results(args.eval_res_file)
-
+    if args.eval_res_file is not None:
+        process_results(args.eval_res_file, args.type, args.source_dataset, \
+                        args.target_dataset, args.eval_set)
     else:
         logger.error('No input provided')
 
