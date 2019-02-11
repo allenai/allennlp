@@ -20,3 +20,13 @@ allennlp.models.reading_comprehension
    :members:
    :undoc-members:
    :show-inheritance:
+
+.. automodule:: allennlp.models.reading_comprehension.qanet
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: allennlp.models.reading_comprehension.util
+   :members:
+   :undoc-members:
+   :show-inheritance:

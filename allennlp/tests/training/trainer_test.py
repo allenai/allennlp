@@ -15,6 +15,7 @@ from allennlp.common.testing import AllenNlpTestCase, ModelTestCase
 from allennlp.training import Trainer
 from allennlp.training.trainer_base import TrainerBase
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
+from allennlp.training.momentum_schedulers import MomentumScheduler
 from allennlp.training.util import sparse_clip_norm
 from allennlp.data import Vocabulary
 from allennlp.common.params import Params
@@ -49,7 +50,7 @@ class TestTrainer(AllenNlpTestCase):
                         }
                 })
         self.model = SimpleTagger.from_params(vocab=self.vocab, params=self.model_params)
-        self.optimizer = torch.optim.SGD(self.model.parameters(), 0.01)
+        self.optimizer = torch.optim.SGD(self.model.parameters(), 0.01, momentum=0.9)
         self.iterator = BasicIterator(batch_size=2)
         self.iterator.index_with(vocab)
 
@@ -237,7 +238,6 @@ class TestTrainer(AllenNlpTestCase):
         new_tracker.add_metrics([.3, .3, .3, .2, .5, .1, .0013])
         assert not new_tracker.is_best_so_far()
 
-
     def test_metric_only_considered_best_so_far_when_strictly_better_than_those_before_it_decreasing_metric(self):
         new_trainer = Trainer(self.model, self.optimizer,
                               self.iterator, self.instances,
@@ -344,10 +344,43 @@ class TestTrainer(AllenNlpTestCase):
     def test_should_stop_early_with_invalid_patience(self):
         for patience in [0, -1, -2, 1.5, 'None']:
             with pytest.raises(ConfigurationError,
-                               message='No ConfigurationError for patience={}'.format(patience)):
+                               match='.* is an invalid value for "patience": '
+                                     'it must be a positive integer or None '
+                                     '\\(if you want to disable early stopping\\)'):
                 Trainer(self.model, self.optimizer, self.iterator, self.instances,
                         validation_dataset=self.instances, num_epochs=100,
                         patience=patience, validation_metric="+test")
+
+    def test_trainer_can_run_and_resume_with_momentum_scheduler(self):
+        scheduler = MomentumScheduler.from_params(
+                self.optimizer, Params({"type": "inverted_triangular", "cool_down": 2, "warm_up": 2}))
+        trainer = Trainer(model=self.model,
+                          optimizer=self.optimizer,
+                          iterator=self.iterator,
+                          momentum_scheduler=scheduler,
+                          validation_metric="-loss",
+                          train_dataset=self.instances,
+                          validation_dataset=self.instances,
+                          num_epochs=4,
+                          serialization_dir=self.TEST_DIR)
+        trainer.train()
+
+        new_scheduler = MomentumScheduler.from_params(
+                self.optimizer, Params({"type": "inverted_triangular", "cool_down": 2, "warm_up": 2}))
+        new_trainer = Trainer(model=self.model,
+                              optimizer=self.optimizer,
+                              iterator=self.iterator,
+                              momentum_scheduler=new_scheduler,
+                              validation_metric="-loss",
+                              train_dataset=self.instances,
+                              validation_dataset=self.instances,
+                              num_epochs=6,
+                              serialization_dir=self.TEST_DIR)
+        epoch = new_trainer._restore_checkpoint()
+        assert epoch == 4
+        assert new_trainer._momentum_scheduler.last_epoch == 3
+        new_trainer.train()
+
 
     def test_trainer_can_run_with_lr_scheduler(self):
         lr_params = Params({"type": "reduce_on_plateau"})

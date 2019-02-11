@@ -1,6 +1,7 @@
 from typing import List
 
 from overrides import overrides
+from spacy.tokens import Doc
 
 from spacy.tokens.doc import Doc
 
@@ -142,11 +143,11 @@ class CorefPredictor(Predictor):
         Create an instance from words list represent an already tokenized document,
         for skipping tokenization when that information already exist for the user
         """
-        spacy_document = self._spacy.tokenizer.tokens_from_list(words)
+        spacy_document = Doc(self._spacy.vocab, words=words)
         for pipe in filter(None, self._spacy.pipeline):
             pipe[1](spacy_document)
 
-        sentences = [[token.text for token in sentence] for sentence in spacy_document.sents]
+        sentences = [[token.text for token in sentence] for sentence in spacy_document.sents]  # pylint: disable=not-an-iterable
         instance = self._dataset_reader.text_to_instance(sentences)
         return instance
 
