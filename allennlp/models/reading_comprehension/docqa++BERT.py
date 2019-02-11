@@ -319,6 +319,13 @@ class DocQAPlusBERT(Model):
             #self._span_start_accuracy(span_start_logits, span_start.view(-1))
             #self._span_end_accuracy(span_end_logits, span_end.view(-1))
             #self._span_accuracy(best_span[:, 0:2],torch.stack([span_start, span_end], -1).view(total_qa_count, 2))
+        # TODO: This is a patch, for dev question with no answer token found,
+        # but we would like to see if we still get F1 score for it...
+        # so in evaluation our loss is not Accurate! (however the question with no answer tokens will
+        # remain the same number so it is relatively accuracy)
+        if not self.training and 'loss' not in output_dict:
+            output_dict["loss"] = torch.cuda.FloatTensor([0], device=span_end_logits.device) \
+                if torch.cuda.is_available() else torch.FloatTensor([0])
 
         # support for multi choice answers:
         # TODO this does not handle prediction mode at all .....
