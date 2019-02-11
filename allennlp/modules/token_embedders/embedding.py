@@ -197,7 +197,7 @@ class Embedding(TokenEmbedder):
 
         if extended_num_embeddings < self.num_embeddings:
             raise ConfigurationError(f"Size of namespace, {vocab_namespace} for extended_vocab is smaller than "
-                                     f"embedding. You likely passed incorrect vocab_namespace or vocab for extension.")
+                                     f"embedding. You likely passed incorrect vocab or namespace for extension.")
 
         # Case 1: user passed extension_pretrained_file and it's available.
         if extension_pretrained_file and is_url_or_existing_file(extension_pretrained_file):
