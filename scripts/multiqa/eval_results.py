@@ -46,7 +46,7 @@ def parse_filename(filename):
     return
 
 def process_results(filename, type, source_dataset, \
-                        target_dataset, eval_set, model, target_size):
+                        target_dataset, eval_set, model, target_size, experiment):
     with open(filename, 'r') as f:
         results_dict = json.load(f)
         results_dict['type'] = type
@@ -55,6 +55,7 @@ def process_results(filename, type, source_dataset, \
         results_dict['target_dataset'] = target_dataset
         results_dict['eval_set'] = eval_set
         results_dict['model'] = model
+        results_dict['experiment'] = experiment
         if 'target_size' is not None:
             results_dict['target_size'] = target_size
         ElasticLogger().write_log('INFO', 'EvalResults', context_dict=results_dict)
@@ -68,12 +69,13 @@ def main():
     parse.add_argument("--eval_set", default=None, type=str)
     parse.add_argument("--model", default=None, type=str)
     parse.add_argument("--target_size", default=None, type=str)
+    parse.add_argument("--experiment", default=None, type=str)
 
     args = parse.parse_args()
 
     if args.eval_res_file is not None:
         process_results(args.eval_res_file, args.type, args.source_dataset, \
-                        args.target_dataset, args.eval_set, args.model ,args.target_size)
+                        args.target_dataset, args.eval_set, args.model ,args.target_size, args.experiment)
     else:
         logger.error('No input provided')
 
