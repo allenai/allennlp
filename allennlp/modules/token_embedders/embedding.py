@@ -191,7 +191,7 @@ class Embedding(TokenEmbedder):
             return
 
         extended_num_embeddings = extended_vocab.get_vocab_size(vocab_namespace)
-        if extended_num_embeddings <= self.num_embeddings:
+        if extended_num_embeddings == self.num_embeddings:
             # It's already been extended. No need to initialize / read pretrained file in first place (no-op)
             return
 
