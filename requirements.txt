@@ -89,7 +89,7 @@ h5py
 pytz>=2017.3
 
 # Reads Universal Dependencies files.
-conllu>=0.11
+conllu==0.11
 
 #### ESSENTIAL TESTING-RELATED PACKAGES ####
 
