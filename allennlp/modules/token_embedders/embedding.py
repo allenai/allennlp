@@ -195,11 +195,6 @@ class Embedding(TokenEmbedder):
             # It's already been extended. No need to initialize / read pretrained file in first place (no-op)
             return
 
-        extended_num_embeddings = extended_vocab.get_vocab_size(vocab_namespace)
-        if extended_num_embeddings <= self.num_embeddings:
-            # It's already been extended. No need to initialize / read pretrained file in first place (no-op)
-            return
-
         # Case 1: user passed extension_pretrained_file and it's available.
         if extension_pretrained_file and is_url_or_existing_file(extension_pretrained_file):
             # Don't have to do anything here, this is the happy case.
