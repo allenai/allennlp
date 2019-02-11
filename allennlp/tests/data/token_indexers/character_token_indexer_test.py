@@ -116,4 +116,4 @@ class CharacterTokenIndexerTest(AllenNlpTestCase):
         indexer = TokenCharactersIndexer("characters",
                                          character_tokenizer=CharacterTokenizer(),
                                          tokenizer=WordTokenizer())
-        assert isinstance(indexer._character_tokenizer, WordTokenizer)
+        assert isinstance(indexer._character_tokenizer, WordTokenizer) # pylint: disable=protected-access
