@@ -9,7 +9,7 @@ from allennlp.common.util import pad_sequence_to_length
 from allennlp.data.tokenizers.token import Token
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
 from allennlp.data.vocabulary import Vocabulary
-from allennlp.data.tokenizers.character_tokenizer import CharacterTokenizer
+from allennlp.data.tokenizers import Tokenizer, CharacterTokenizer
 
 
 @TokenIndexer.register("characters")
@@ -22,7 +22,7 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
     namespace : ``str``, optional (default=``token_characters``)
         We will use this namespace in the :class:`Vocabulary` to map the characters in each token
         to indices.
-    character_tokenizer : ``CharacterTokenizer``, optional (default=``CharacterTokenizer()``)
+    character_tokenizer : ``Tokenizer``, optional (default=``CharacterTokenizer()``)
         We use a :class:`CharacterTokenizer` to handle splitting tokens into characters, as it has
         options for byte encoding and other things.  The default here is to instantiate a
         ``CharacterTokenizer`` with its default parameters, which uses unicode characters and
@@ -38,7 +38,7 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
     # pylint: disable=no-self-use
     def __init__(self,
                  namespace: str = 'token_characters',
-                 character_tokenizer: CharacterTokenizer = CharacterTokenizer(),
+                 character_tokenizer: Tokenizer = CharacterTokenizer(),
                  start_tokens: List[str] = None,
                  end_tokens: List[str] = None,
                  min_padding_length: int = 0) -> None:
