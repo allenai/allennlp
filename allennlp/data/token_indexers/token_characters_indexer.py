@@ -56,6 +56,7 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
                           UserWarning)
         self._min_padding_length = min_padding_length
         self._namespace = namespace
+        self._character_tokenizer: Tokenizer = None
         if tokenizer is None:
             # NOTE: (matt-peters) when removing character_tokenizer in the future, the default
             # value for tokenizer should change to CharacterTokenizer() from None.
