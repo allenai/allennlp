@@ -9,7 +9,7 @@ from allennlp.common.util import pad_sequence_to_length
 from allennlp.data.tokenizers.token import Token
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
 from allennlp.data.vocabulary import Vocabulary
-from allennlp.data.tokenizers.character_tokenizer import CharacterTokenizer
+from allennlp.data.tokenizers import Tokenizer, CharacterTokenizer
 
 
 @TokenIndexer.register("characters")
@@ -26,7 +26,11 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
         We use a :class:`CharacterTokenizer` to handle splitting tokens into characters, as it has
         options for byte encoding and other things.  The default here is to instantiate a
         ``CharacterTokenizer`` with its default parameters, which uses unicode characters and
-        retains casing.
+        retains casing.  Note: this argument is depreciated in favor of tokenizer and will be
+        removed before version 1.0.
+    tokenizer : ``Tokenizer``, optional (default=``None``)
+        If provided, it is used instead of character_tokenizer, otherwise we default to
+        character_tokenizer.
     start_tokens : ``List[str]``, optional (default=``None``)
         These are prepended to the tokens provided to ``tokens_to_indices``.
     end_tokens : ``List[str]``, optional (default=``None``)
@@ -39,6 +43,7 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
     def __init__(self,
                  namespace: str = 'token_characters',
                  character_tokenizer: CharacterTokenizer = CharacterTokenizer(),
+                 tokenizer: Tokenizer = None,
                  start_tokens: List[str] = None,
                  end_tokens: List[str] = None,
                  min_padding_length: int = 0) -> None:
@@ -51,7 +56,16 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
                           UserWarning)
         self._min_padding_length = min_padding_length
         self._namespace = namespace
-        self._character_tokenizer = character_tokenizer
+        self._character_tokenizer: Tokenizer = None
+        if tokenizer is None:
+            # NOTE: (matt-peters) when removing character_tokenizer in the future, the default
+            # value for tokenizer should change to CharacterTokenizer() from None.
+            warnings.warn("character_tokenizer is depreciated and will be "
+                          "removed before version 1.0.  Use tokenizer instead.",
+                          UserWarning)
+            self._character_tokenizer = character_tokenizer
+        else:
+            self._character_tokenizer = tokenizer
 
         self._start_tokens = [Token(st) for st in (start_tokens or [])]
         self._end_tokens = [Token(et) for et in (end_tokens or [])]
