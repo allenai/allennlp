@@ -7,7 +7,6 @@ from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Token, Vocabulary
 from allennlp.data.token_indexers import TokenCharactersIndexer
 from allennlp.data.tokenizers.character_tokenizer import CharacterTokenizer
-from allennlp.data.tokenizers import WordTokenizer
 
 
 class CharacterTokenIndexerTest(AllenNlpTestCase):
@@ -105,15 +104,3 @@ class CharacterTokenIndexerTest(AllenNlpTestCase):
     def test_warn_min_padding_length(self):
         with pytest.warns(UserWarning, match=r"using the default value \(0\) of `min_padding_length`"):
             TokenCharactersIndexer("characters")
-
-    def test_warn_no_tokenizer(self):
-        with pytest.warns(UserWarning, match="depreciated"):
-            TokenCharactersIndexer("characters",
-                                   character_tokenizer=CharacterTokenizer(),
-                                   tokenizer=None)
-
-    def test_prefers_tokenizer_to_character_tokenizer(self):
-        indexer = TokenCharactersIndexer("characters",
-                                         character_tokenizer=CharacterTokenizer(),
-                                         tokenizer=WordTokenizer())
-        assert isinstance(indexer._character_tokenizer, WordTokenizer) # pylint: disable=protected-access
