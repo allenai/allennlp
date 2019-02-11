@@ -22,11 +22,15 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
     namespace : ``str``, optional (default=``token_characters``)
         We will use this namespace in the :class:`Vocabulary` to map the characters in each token
         to indices.
-    character_tokenizer : ``Tokenizer``, optional (default=``CharacterTokenizer()``)
+    character_tokenizer : ``CharacterTokenizer``, optional (default=``CharacterTokenizer()``)
         We use a :class:`CharacterTokenizer` to handle splitting tokens into characters, as it has
         options for byte encoding and other things.  The default here is to instantiate a
         ``CharacterTokenizer`` with its default parameters, which uses unicode characters and
-        retains casing.
+        retains casing.  Note: this argument is depreciated in favor of tokenizer and will be
+        removed before version 1.0.
+    tokenizer : ``Tokenizer``, optional (default=``None``)
+        If provided, it is used instead of character_tokenizer, otherwise we default to
+        character_tokenizer.
     start_tokens : ``List[str]``, optional (default=``None``)
         These are prepended to the tokens provided to ``tokens_to_indices``.
     end_tokens : ``List[str]``, optional (default=``None``)
@@ -38,7 +42,8 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
     # pylint: disable=no-self-use
     def __init__(self,
                  namespace: str = 'token_characters',
-                 character_tokenizer: Tokenizer = CharacterTokenizer(),
+                 character_tokenizer: CharacterTokenizer = CharacterTokenizer(),
+                 tokenizer: Tokenizer = None,
                  start_tokens: List[str] = None,
                  end_tokens: List[str] = None,
                  min_padding_length: int = 0) -> None:
@@ -51,7 +56,13 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
                           UserWarning)
         self._min_padding_length = min_padding_length
         self._namespace = namespace
-        self._character_tokenizer = character_tokenizer
+        if tokenizer is None:
+            warnings.warn("character_tokenizer is depreciated and will be "
+                          "removed before version 1.0.  Use tokenizer instead.",
+                          UserWarning)
+            self._character_tokenizer = character_tokenizer
+        else:
+            self._character_tokenizer = tokenizer
 
         self._start_tokens = [Token(st) for st in (start_tokens or [])]
         self._end_tokens = [Token(et) for et in (end_tokens or [])]
