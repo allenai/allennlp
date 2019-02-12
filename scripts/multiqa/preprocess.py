@@ -151,9 +151,9 @@ class MultiQAPreprocess():
 
         else:
             # we chose "^..^" because the tokenizer splits the standard "<..>" chars
-            self._SEP = ' [SEP] '
-            self._PARA_SEP = ' [PARA] '
-            self._KNOWN_SEP = {'rank': ' ', 'title': ' [TITLE_SEP] '}
+            self._SEP = ' ^SEP^ '
+            self._PARA_SEP = ' ^PARA^ '
+            self._KNOWN_SEP = {'rank': ' ', 'title': ' ^TITLE_SEP^ '}
 
     def wordpiece_tokenizer_len(self, tokens, return_wordpieces = False):
         total_len = 0
