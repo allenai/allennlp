@@ -270,7 +270,9 @@ class Embedding(TokenEmbedder):
         """
         # pylint: disable=arguments-differ
         num_embeddings = params.pop_int('num_embeddings', None)
-        vocab_namespace = params.pop("vocab_namespace", "tokens")
+        # If num_embeddings is present, set default namespace to None so that extend_vocab
+        # call doesn't misinterpret that some namespace was originally used.
+        vocab_namespace = params.pop("vocab_namespace", None if num_embeddings else "tokens")
         if num_embeddings is None:
             num_embeddings = vocab.get_vocab_size(vocab_namespace)
         embedding_dim = params.pop_int('embedding_dim')
