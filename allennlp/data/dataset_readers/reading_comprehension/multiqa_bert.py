@@ -21,6 +21,27 @@ try:
 except NameError:
     profile = lambda x: x
 
+def sample_contexts(instance_list,sample_size):
+    random.seed(2)
+
+    instance_list = sorted(instance_list, key=lambda x: x['metadata']['question_id'])
+    intances_question_id = [instance['metadata']['question_id'] for instance in instance_list]
+    split_inds = [0] + list(np.cumsum(np.unique(intances_question_id, return_counts=True)[1]))
+    per_question_instances = [instance_list[split_inds[ind]:split_inds[ind + 1]] for ind in
+                              range(len(split_inds) - 1)]
+
+    random.shuffle(per_question_instances)
+
+    sampled_contexts = []
+    num_of_qas = 0
+    for question_instances in per_question_instances:
+        if num_of_qas >= sample_size:
+            break
+        sampled_contexts += question_instances
+        num_of_qas += 1
+    return sampled_contexts
+
+
 @DatasetReader.register("multiqa_bert")
 class BERTQAReader(DatasetReader):
     """
@@ -152,7 +173,7 @@ class BERTQAReader(DatasetReader):
                             instances.append(json.loads(example))
 
                             # making sure not to take all instances of the same question
-                            if len(instances)>10000 and instances[-1]['metadata']['question_id'] \
+                            if self._sample_size == -1 and len(instances)>10000 and instances[-1]['metadata']['question_id'] \
                                                     != instances[-2]['metadata']['question_id']:
                                 remainder = instances[-1]
                                 instances = instances[:-1]
@@ -161,9 +182,9 @@ class BERTQAReader(DatasetReader):
                                     yield instance
                                 instances = [remainder]
 
-                            if self._sample_size != -1 and len(instances) > self._sample_size:
-                                break
-
+                        # per dataset sampling
+                        if self._sample_size > -1:
+                            instances = sample_contexts(instances, self._sample_size)
 
                         # yielding the remainder
                         for instance in self.build_instances(header, instances):
