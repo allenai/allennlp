@@ -107,6 +107,17 @@ class TestFineTune(AllenNlpTestCase):
         #         possibly not have been used in first place.
         check_embedding_extension(None, unavailable_embeddings_filename, False)
 
+    def test_fine_tune_extended_model_is_loadable(self):
+        params = Params.from_file(self.config_file)
+        # snli2 has a new token (seahorse) in it
+        params["train_data_path"] = str(self.FIXTURES_ROOT / 'data' / 'snli2.jsonl')
+        trained_model = load_archive(self.model_archive).model
+        shutil.rmtree(self.serialization_dir, ignore_errors=True)
+        fine_tune_model(trained_model, params.duplicate(),
+                        self.serialization_dir, extend_vocab=True)
+        # self.serialization_dir = str(self.TEST_DIR / 'fine_tune')
+        load_archive(str(self.TEST_DIR / 'fine_tune' / "model.tar.gz"))
+
     def test_fine_tune_runs_from_parser_arguments(self):
         raw_args = ["fine-tune",
                     "-m", self.model_archive,

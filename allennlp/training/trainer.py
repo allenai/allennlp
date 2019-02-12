@@ -759,6 +759,10 @@ class TrainerPieces(NamedTuple):
 
         model = Model.from_params(vocab=vocab, params=params.pop('model'))
 
+        # If vocab extension is ON for training, embedding extension should also be
+        # done. If vocab and embeddings are already in sync, it would be a no-op.
+        model.extend_embedder_vocab(vocab)
+
         # Initializing the model can have side effect of expanding the vocabulary
         vocab.save_to_files(os.path.join(serialization_dir, "vocabulary"))
 

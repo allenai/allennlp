@@ -40,8 +40,10 @@ class TokenCharactersEncoder(TokenEmbedder):
         # pylint: disable=arguments-differ
         embedding_params: Params = params.pop("embedding")
         # Embedding.from_params() uses "tokens" as the default namespace, but we need to change
-        # that to be "token_characters" by default.
-        embedding_params.setdefault("vocab_namespace", "token_characters")
+        # that to be "token_characters" by default. If num_embeddings is present, set default namespace
+        # to None so that extend_vocab call doesn't misinterpret that some namespace was originally used.
+        default_namespace = None if embedding_params.get("num_embeddings", None) else "token_characters"
+        embedding_params.setdefault("vocab_namespace", default_namespace)
         embedding = Embedding.from_params(vocab, embedding_params)
         encoder_params: Params = params.pop("encoder")
         encoder = Seq2VecEncoder.from_params(encoder_params)
