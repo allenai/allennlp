@@ -82,6 +82,21 @@ class Evaluate(Subcommand):
                                default="",
                                help='If non-empty, name of metric used to weight the loss on a per-batch basis.')
 
+        subparser.add_argument('--extend-vocab',
+                               action='store_true',
+                               default=False,
+                               help='if specified, we will use the instances in your new dataset to '
+                                    'extend your vocabulary. If pretrained-file was used to initialize '
+                                    'embedding layers, you may also need to pass --embedding-sources-mapping.')
+
+        subparser.add_argument('--embedding-sources-mapping',
+                               type=str,
+                               default="",
+                               help='a JSON dict defining mapping from embedding module path to embedding'
+                               'pretrained-file used during training. If not passed, and embedding needs to be '
+                               'extended, we will try to use the original file paths used during training. If '
+                               'they are not available we will use random vectors for embedding extension.')
+
         subparser.set_defaults(func=evaluate_from_args)
 
         return subparser
@@ -112,11 +127,19 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     logger.info("Reading evaluation data from %s", evaluation_data_path)
     instances = dataset_reader.read(evaluation_data_path)
 
+    embedding_sources: Dict[str, str] = (json.loads(args.embedding_sources_mapping)
+                                         if args.embedding_sources_mapping else {})
+    if args.extend_vocab:
+        logger.info("Vocabulary is being extended with test instances.")
+        model.vocab.extend_from_instances(instances, embedding_sources)
+
     iterator_params = config.pop("validation_iterator", None)
     if iterator_params is None:
         iterator_params = config.pop("iterator")
     iterator = DataIterator.from_params(iterator_params)
     iterator.index_with(model.vocab)
+
+    model.extend_embedder_vocab(model.vocab)
 
     metrics = evaluate(model, instances, iterator, args.cuda_device, args.batch_weight_key)
 
