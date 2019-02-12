@@ -133,14 +133,13 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     if args.extend_vocab:
         logger.info("Vocabulary is being extended with test instances.")
         model.vocab.extend_from_instances(Params({}), instances=instances)
+        model.extend_embedder_vocab(model.vocab, embedding_sources)
 
     iterator_params = config.pop("validation_iterator", None)
     if iterator_params is None:
         iterator_params = config.pop("iterator")
     iterator = DataIterator.from_params(iterator_params)
     iterator.index_with(model.vocab)
-
-    model.extend_embedder_vocab(model.vocab, embedding_sources)
 
     metrics = evaluate(model, instances, iterator, args.cuda_device, args.batch_weight_key)
 
