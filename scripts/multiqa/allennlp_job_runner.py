@@ -5,7 +5,7 @@ from allennlp.common.util import *
 from subprocess import Popen,call
 import traceback,os, psutil
 import time
-import socket
+import shutil
 import logging
 import argparse
 import pickle
@@ -115,15 +115,13 @@ class JobRunner():
 
         # TODO this is an ugly check for error , but because we are forking with nohup, python does not provide any good alternative...
         # We also assume here that jobs don't take less than 20 seconds...
-        if job['log_snapshot'].find('Traceback (most recent call last):') > -1 or \
-                job['log_snapshot'].find('error') > -1 or \
-                ('output_file' in job and not os.path.exists(job['output_file'])):
+        if ('output_file' in job and not os.path.exists(job['output_file'])):
 
             if len(job['log_snapshot']) > 10001:
                 job['log_snapshot'] = job['log_snapshot'][-10000:]
             # checking retries:
 
-            if job['retries'] < 3:
+            if job['retries'] < 3 and job['command'].find(' train ') > -1:
                 ElasticLogger().write_log('INFO', "Job Retry", {'experiment_name': job['experiment_name'], \
                         'command':job['command'].replace('&',' --recover &'), \
                         'log_snapshot': job['log_snapshot']}, push_bulk=True, print_log=False)
@@ -261,7 +259,11 @@ class JobRunner():
                 wa_proc = Popen("nohup python dummy_job.py &", shell=True, preexec_fn=os.setsid, stdout=f, stderr=f)
             else:
                 if config['retry'] > 0 and os.path.isdir(self._MODELS_DIR + name):
-                    wa_proc = Popen(bash_command.replace(' &',' -f &'), shell=True, preexec_fn=os.setsid, stdout=f, stderr=f)
+                    if bash_command.find(' train ')>-1:
+                        wa_proc = Popen(bash_command.replace(' &',' -f &'), shell=True, preexec_fn=os.setsid, stdout=f, stderr=f)
+                    else:
+                        shutil.rmtree(self._MODELS_DIR + name)
+                        wa_proc = Popen(bash_command, shell=True, preexec_fn=os.setsid, stdout=f, stderr=f)
                 else:
                     wa_proc = Popen(bash_command, shell=True, preexec_fn=os.setsid, stdout=f, stderr=f)
 
