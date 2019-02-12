@@ -16,7 +16,7 @@ class TestModel(AllenNlpTestCase):
 
         vocab = trained_model.vocab
         counter = {"tokens": {"seahorse": 1}} # 'seahorse' is extra token in snli2.jsonl
-        vocab._extend(counter)
+        trained_model.vocab._extend(counter)
         trained_model.extend_embedder_vocab(vocab)
 
         extended_weight = trained_model._text_field_embedder.token_embedder_tokens.weight
