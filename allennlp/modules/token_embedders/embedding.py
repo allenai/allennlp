@@ -185,9 +185,9 @@ class Embedding(TokenEmbedder):
 
         vocab_namespace = vocab_namespace or self._vocab_namespace
         if not vocab_namespace:
-            # It's not safe to default to 'tokens' when we aren't sure that 'tokens'
-            # need to be extended. (Without this, several tests fail.)
-            logging.info("No vocab_namespace provided to Embedder.extend_vocab. Extension will be no-op'.")
+            # It's not safe to default to 'tokens' when we aren't sure that 'tokens' need to be extended.
+            logging.info("Loading a model trained before embedding extension was implemented; "
+                         "pass an explicit vocab namespace if you want to extend the vocabulary.")
             return
 
         extended_num_embeddings = extended_vocab.get_vocab_size(vocab_namespace)
