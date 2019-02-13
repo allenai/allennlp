@@ -1,5 +1,5 @@
 import re
-from typing import List, Set
+from typing import List, Tuple
 
 from overrides import overrides
 import spacy
