@@ -106,8 +106,9 @@ def archive_model(serialization_dir: str,
         in the archive. That is, if you wanted to include ``params['model']['weights']``
         then you would specify the key as `"model.weights"`.
     archive_path : ``str``, optional, (default = None)
-        A path to serialize the model to. The default is "model.tar.gz" inside the
-        serialization_dir.
+        A full path to serialize the model to. The default is "model.tar.gz" inside the
+        serialization_dir. If you pass a directory here, we'll serialize the model
+        to "model.tar.gz" inside the directory.
     """
     weights_file = os.path.join(serialization_dir, weights)
     if not os.path.exists(weights_file):
@@ -127,6 +128,8 @@ def archive_model(serialization_dir: str,
 
     if archive_path is not None:
         archive_file = archive_path
+        if os.path.isdir(archive_file):
+            archive_file = os.path.join(archive_file, "model.tar.gz")
     else:
         archive_file = os.path.join(serialization_dir, "model.tar.gz")
     logger.info("archiving weights and vocabulary to %s", archive_file)
