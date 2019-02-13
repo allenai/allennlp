@@ -179,7 +179,8 @@ class JobRunner():
                                                             'log_snapshot': job['log_snapshot']}, push_bulk=True, print_log=False)
 
         self.running_jobs.remove(job)
-        self.log_handles.pop(job['log_file'])
+        if job['log_file'] in self.log_handles:
+            self.log_handles.pop(job['log_file'])
 
     def write_status(self):
         # Virtual memory usage
