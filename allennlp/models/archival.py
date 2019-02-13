@@ -88,7 +88,8 @@ _FTA_NAME = "files_to_archive.json"
 
 def archive_model(serialization_dir: str,
                   weights: str = _DEFAULT_WEIGHTS,
-                  files_to_archive: Dict[str, str] = None) -> None:
+                  files_to_archive: Dict[str, str] = None,
+                  archive_path: str = None) -> None:
     """
     Archive the model weights, its training configuration, and its
     vocabulary to `model.tar.gz`. Include the additional ``files_to_archive``
@@ -104,6 +105,9 @@ def archive_model(serialization_dir: str,
         A mapping {flattened_key -> filename} of supplementary files to include
         in the archive. That is, if you wanted to include ``params['model']['weights']``
         then you would specify the key as `"model.weights"`.
+    archive_path : ``str``, optional, (default = None)
+        A path to serialize the model to. The default is "model.tar.gz" inside the
+        serialization_dir.
     """
     weights_file = os.path.join(serialization_dir, weights)
     if not os.path.exists(weights_file):
@@ -121,8 +125,10 @@ def archive_model(serialization_dir: str,
         with open(fta_filename, 'w') as fta_file:
             fta_file.write(json.dumps(files_to_archive))
 
-
-    archive_file = os.path.join(serialization_dir, "model.tar.gz")
+    if archive_path is not None:
+        archive_file = archive_path
+    else:
+        archive_file = os.path.join(serialization_dir, "model.tar.gz")
     logger.info("archiving weights and vocabulary to %s", archive_file)
     with tarfile.open(archive_file, 'w:gz') as archive:
         archive.add(config_file, arcname=CONFIG_NAME)
