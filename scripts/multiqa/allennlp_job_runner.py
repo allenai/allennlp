@@ -105,8 +105,9 @@ class JobRunner():
 
 
         # reading the whole log in this case:
-        self.log_handles[job['log_file']].seek(0)
-        job['log_snapshot'] = self.log_handles[job['log_file']].read()
+        if job['log_file'] in self.log_handles:
+            self.log_handles[job['log_file']].seek(0)
+            job['log_snapshot'] = self.log_handles[job['log_file']].read()
 
 
         if job['GPU'] in self.job_gpus:
