@@ -62,6 +62,7 @@ from allennlp.common.util import prepare_environment, lazy_groups_of
 from allennlp.data import Vocabulary, DataIterator
 from allennlp.models import Model
 from allennlp.training import Trainer
+from allennlp.training import util as training_util
 from allennlp.training.util import datasets_from_params
 # pylint: enable=multiple-statements,wrong-import-position
 
@@ -291,6 +292,8 @@ def search_learning_rate(trainer: Trainer,
 
         trainer.optimizer.zero_grad()
         loss = trainer.batch_loss(batch_group, for_training=True)
+        loss = training_util.sum_losses(loss)
+
         loss.backward()
         loss = loss.detach().cpu().item()
 

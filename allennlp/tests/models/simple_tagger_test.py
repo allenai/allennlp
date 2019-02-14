@@ -11,6 +11,7 @@ from allennlp.data.dataset_readers import DatasetReader
 from allennlp.data.iterators import DataIterator, BasicIterator
 from allennlp.models import Model
 from allennlp.training import Trainer
+from allennlp.training import util as training_util
 
 class SimpleTaggerTest(ModelTestCase):
     def setUp(self):
@@ -64,8 +65,10 @@ class SimpleTaggerTest(ModelTestCase):
         training_batch = next(iterator(self.instances, num_epochs=1))
         validation_batch = next(iterator(self.instances, num_epochs=1))
 
-        training_loss = trainer.batch_loss([training_batch], for_training=True).item()
-        validation_loss = trainer.batch_loss([validation_batch], for_training=False).item()
+        training_loss = trainer.batch_loss([training_batch], for_training=True)
+        training_loss = training_util.sum_losses(training_loss).item()
+        validation_loss = trainer.batch_loss([validation_batch], for_training=False)
+        validation_loss = training_util.sum_losses(validation_loss).item()
 
         # Training loss should have the regularization penalty, but validation loss should not.
         numpy.testing.assert_almost_equal(training_loss, validation_loss)
@@ -116,8 +119,10 @@ class SimpleTaggerRegularizationTest(ModelTestCase):
         training_batch = next(self.iterator(self.instances, num_epochs=1))
         validation_batch = next(self.iterator(self.instances, num_epochs=1))
 
-        training_loss = self.trainer.batch_loss([training_batch], for_training=True).data
-        validation_loss = self.trainer.batch_loss([validation_batch], for_training=False).data
+        training_loss = self.trainer.batch_loss([training_batch], for_training=True)
+        training_loss = training_util.sum_losses(training_loss)
+        validation_loss = self.trainer.batch_loss([validation_batch], for_training=False)
+        validation_loss = training_util.sum_losses(validation_loss)
 
         # Training loss should have the regularization penalty, but validation loss should not.
         assert (training_loss != validation_loss).all()
