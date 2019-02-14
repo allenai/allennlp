@@ -1,13 +1,11 @@
 # pylint: disable=no-self-use,invalid-name,protected-access
 import os
 import pytest
-import torch
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor
 from allennlp.predictors.wikitables_parser import (SEMPRE_ABBREVIATIONS_PATH, SEMPRE_GRAMMAR_PATH)
-from allennlp.state_machines.interactive_beam_search import InteractiveBeamSearch
 
 
 @pytest.mark.java
@@ -73,11 +71,6 @@ class TestWikiTablesParserPredictor(AllenNlpTestCase):
         archive = load_archive(archive_path)
         predictor = Predictor.from_archive(archive, 'wikitables-parser')
 
-        # Need to cheat to get the mapping id -> rule
-        instance = predictor._json_to_instance(inputs)
-        index_to_rule = [production_rule_field.rule
-                         for production_rule_field in instance.fields['actions'].field_list]
-
         # This is not the start of the best sequence, but it will be once we force it.
         initial_tokens = ['@start@ -> p', 'p -> [<#1,#1>, p]']
 
@@ -92,9 +85,6 @@ class TestWikiTablesParserPredictor(AllenNlpTestCase):
         result = predictor.predict_json(inputs)
         best_action_sequence = result['best_action_sequence']
         assert best_action_sequence[:2] == initial_tokens
-
-        # We also want to check that the returned `choices`
-
 
         # Should get choices back from beam search
         beam_search_choices = result["choices"]

@@ -5,7 +5,6 @@ import torch
 
 from allennlp.state_machines import util
 from allennlp.state_machines.beam_search import BeamSearch, StateType
-from allennlp.state_machines.states import State
 from allennlp.state_machines.transition_functions import TransitionFunction
 
 
@@ -72,7 +71,7 @@ class InteractiveBeamSearch(BeamSearch[StateType]):
         """
         Parameters
         ----------
-        initial_state : ``State``
+        initial_state : ``StateType``
             The starting state of our search.  This is assumed to be `batched`, and our beam search
             is batch-aware - we'll keep ``beam_size`` states around for each instance in the batch.
         transition_function : ``TransitionFunction``
@@ -81,17 +80,17 @@ class InteractiveBeamSearch(BeamSearch[StateType]):
 
         Returns
         -------
-        best_states : ``Dict[int, List[State]]``
+        best_states : ``Dict[int, List[StateType]]``
             This is a mapping from batch index to the top states for that instance.
         """
-        finished_states: Dict[int, List[State]] = defaultdict(list)
+        finished_states: Dict[int, List[StateType]] = defaultdict(list)
         states = [initial_state]
         step_num = 0
         self.choices = {}
 
         while states and step_num < num_steps:
             step_num += 1
-            next_states: Dict[int, List[State]] = defaultdict(list)
+            next_states: Dict[int, List[StateType]] = defaultdict(list)
             grouped_state = states[0].combine_states(states)
 
             # Generate marginal candidates.
@@ -148,7 +147,7 @@ class InteractiveBeamSearch(BeamSearch[StateType]):
                 if self._beam_size:
                     batch_states = batch_states[:self._beam_size]
                 states.extend(batch_states)
-        best_states: Dict[int, List[State]] = {}
+        best_states: Dict[int, List[StateType]] = {}
         for batch_index, batch_states in finished_states.items():
             # The time this sort takes is pretty negligible, no particular need to optimize this
             # yet.  Maybe with a larger beam size...

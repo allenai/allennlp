@@ -83,11 +83,12 @@ class WikiTablesParserPredictor(Predictor):
 
         # A sequence of strings to force, then convert them to ints
         initial_tokens = inputs.get("initial_sequence", [])
+        # pylint: disable=not-callable
         initial_sequence = torch.tensor([rule_to_index[token] for token in initial_tokens])
-
         original_beam_search = self._model._beam_search
-        interactive_beam_search = InteractiveBeamSearch(original_beam_search._beam_size,
-                                                        initial_sequence=initial_sequence)
+        beam_size = getattr(original_beam_search, "_beam_size")
+        interactive_beam_search: InteractiveBeamSearch = InteractiveBeamSearch(beam_size,
+                                                                               initial_sequence=initial_sequence)
         self._model._beam_search = interactive_beam_search
 
         # Now get results
