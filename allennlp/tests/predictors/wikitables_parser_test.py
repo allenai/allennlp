@@ -108,7 +108,16 @@ class TestWikiTablesParserPredictor(AllenNlpTestCase):
         best_action_sequence3 = result['best_action_sequence']
         assert best_action_sequence3[:2] == initial_tokens
 
+        # Should get choices back from beam search
+        beam_search_choices = [
+                [(score, index_to_rule[idx]) for score, idx in choices]
+                for choices in interactive_beam_search.choices.values()
+        ]
 
+        # Make sure that our forced choices appear as beam_search_choices.
+        for idx in [0, 1]:
+            choices = beam_search_choices[idx]
+            assert any(token == initial_tokens[idx] for _, token in choices)
 
     def test_answer_present_with_batch_predict(self):
         inputs = [{

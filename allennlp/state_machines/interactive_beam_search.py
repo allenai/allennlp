@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Dict, List, Optional
+from typing import Dict, List, Tuple
 
 import torch
 
@@ -60,7 +60,7 @@ class InteractiveBeamSearch(BeamSearch[StateType]):
 
         # We want to store the possible choices at each timestep,
         # so that they can be used interactively.
-        self.choices: Dict[int, List[int]] = {}
+        self.choices: Dict[int, List[Tuple[float, int]]] = {}
         self.max_marginal_candidates = max_marginal_candidates
         self.marginal_candidate_beam_size = marginal_candidate_beam_size or beam_size
 
@@ -95,23 +95,29 @@ class InteractiveBeamSearch(BeamSearch[StateType]):
             grouped_state = states[0].combine_states(states)
 
             # Generate marginal candidates.
-            # This is inefficient.
+            # This is inefficient, but that's OK.
             candidates = transition_function.take_step(grouped_state,
                                                        max_actions=self.marginal_candidate_beam_size)
-            marginal_candidates: List[int] = []
+
             scored_candidates = [(score, action_history[-1])
                                  for next_state in candidates
                                  for action_history, score in zip(next_state.action_history, next_state.score)]
             # Sort highest score to lowest score
             scored_candidates.sort(reverse=True)
 
-            for _, candidate in scored_candidates:
-                if candidate not in marginal_candidates:
-                    marginal_candidates.append(candidate)
-                if len(marginal_candidates) >= self.max_marginal_candidates:
-                    break
+            # Now we want to keep the top `max_marginal_candidates` choices at this step.
+            self.choices[step_num] = []
 
-            self.choices[step_num] = marginal_candidates
+            for score, candidate in scored_candidates:
+                # If we have the maximum number of candidates, then stop.
+                if len(self.choices[step_num]) >= self.max_marginal_candidates:
+                    break
+                # If we already have this candidate, then just go to the next one.
+                elif any(choice == candidate for _, choice in self.choices[step_num]):
+                    continue
+                # Otherwise, this is a keeper.
+                else:
+                    self.choices[step_num].append((score.item(), candidate))
 
             # Now do the actual beam search
             allowed_actions = []
