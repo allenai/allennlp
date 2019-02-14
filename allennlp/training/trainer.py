@@ -52,7 +52,7 @@ class Trainer(TrainerBase):
                  validation_iterator: DataIterator = None,
                  shuffle: bool = True,
                  num_epochs: int = 20,
-                 gradient_accumulation_steps: int = None,
+                 gradient_accumulation_steps: int = 1,
                  serialization_dir: Optional[str] = None,
                  num_serialized_models_to_keep: int = 20,
                  keep_serialized_model_every_num_seconds: int = None,
@@ -305,11 +305,11 @@ class Trainer(TrainerBase):
             self._batch_num_total += 1
             batch_num_total = self._batch_num_total
 
-            # TODO alon change...
-            if self._gradient_accumulation_steps is None or batches_this_epoch == 1:
+            # TODO alon change... we do zero_grad near the optimizer step
+            if batches_this_epoch == 1:
                 self.optimizer.zero_grad()
 
-            loss = self.batch_loss(batch_group, for_training=True)
+            loss = self.batch_loss(batch_group, for_training=True) / self._gradient_accumulation_steps
 
             if torch.isnan(loss):
                 raise ValueError("nan loss encountered")
@@ -340,12 +340,9 @@ class Trainer(TrainerBase):
                                                        update_norm / (param_norm + 1e-7))
             else:
                 # TODO Alon changing the trainer following this post https://github.com/allenai/allennlp/issues/2112
-                if self._gradient_accumulation_steps is not None:
-                    if batch_num_total % self._gradient_accumulation_steps == 0:
-                        self.optimizer.step()
-                        self.optimizer.zero_grad()
-                else:
+                if batch_num_total % self._gradient_accumulation_steps == 0:
                     self.optimizer.step()
+                    self.optimizer.zero_grad()
 
             # Update moving averages
             if self._moving_average is not None:
@@ -685,7 +682,7 @@ class Trainer(TrainerBase):
         validation_metric = params.pop("validation_metric", "-loss")
         shuffle = params.pop_bool("shuffle", True)
         num_epochs = params.pop_int("num_epochs", 20)
-        gradient_accumulation_steps = params.pop_int("gradient_accumulation_steps", None)
+        gradient_accumulation_steps = params.pop_int("gradient_accumulation_steps", 1)
         cuda_device = parse_cuda_device(params.pop("cuda_device", -1))
         grad_norm = params.pop_float("grad_norm", None)
         grad_clipping = params.pop_float("grad_clipping", None)
