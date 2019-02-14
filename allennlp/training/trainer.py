@@ -305,7 +305,9 @@ class Trainer(TrainerBase):
             self._batch_num_total += 1
             batch_num_total = self._batch_num_total
 
-            self.optimizer.zero_grad()
+            # TODO alon change...
+            if self._gradient_accumulation_steps is None or batches_this_epoch == 1:
+                self.optimizer.zero_grad()
 
             loss = self.batch_loss(batch_group, for_training=True)
 
@@ -341,6 +343,7 @@ class Trainer(TrainerBase):
                 if self._gradient_accumulation_steps is not None:
                     if batch_num_total % self._gradient_accumulation_steps == 0:
                         self.optimizer.step()
+                        self.optimizer.zero_grad()
                 else:
                     self.optimizer.step()
 
