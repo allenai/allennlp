@@ -52,7 +52,7 @@ class Trainer(TrainerBase):
                  validation_iterator: DataIterator = None,
                  shuffle: bool = True,
                  num_epochs: int = 20,
-                 gradient_accumulation_steps: int = 1,
+                 gradient_accumulation_steps: int = None,
                  serialization_dir: Optional[str] = None,
                  num_serialized_models_to_keep: int = 20,
                  keep_serialized_model_every_num_seconds: int = None,
@@ -314,11 +314,9 @@ class Trainer(TrainerBase):
             if torch.isnan(loss):
                 raise ValueError("nan loss encountered")
 
-            train_loss += loss.item()
-
-            # TODO Alon
-            loss /= self._gradient_accumulation_steps
             loss.backward()
+
+            train_loss += loss.item()
 
             batch_grad_norm = self.rescale_gradients()
 
@@ -684,7 +682,7 @@ class Trainer(TrainerBase):
         validation_metric = params.pop("validation_metric", "-loss")
         shuffle = params.pop_bool("shuffle", True)
         num_epochs = params.pop_int("num_epochs", 20)
-        gradient_accumulation_steps = params.pop_int("gradient_accumulation_steps", 1)
+        gradient_accumulation_steps = params.pop_int("gradient_accumulation_steps", None)
         cuda_device = parse_cuda_device(params.pop("cuda_device", -1))
         grad_norm = params.pop_float("grad_norm", None)
         grad_clipping = params.pop_float("grad_clipping", None)
