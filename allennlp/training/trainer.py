@@ -309,14 +309,16 @@ class Trainer(TrainerBase):
             if batches_this_epoch == 1:
                 self.optimizer.zero_grad()
 
-            loss = self.batch_loss(batch_group, for_training=True) / self._gradient_accumulation_steps
+            loss = self.batch_loss(batch_group, for_training=True)
 
             if torch.isnan(loss):
                 raise ValueError("nan loss encountered")
 
-            loss.backward()
-
             train_loss += loss.item()
+
+            # TODO Alon
+            loss /= self._gradient_accumulation_steps
+            loss.backward()
 
             batch_grad_norm = self.rescale_gradients()
 
