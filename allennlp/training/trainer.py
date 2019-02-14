@@ -52,6 +52,7 @@ class Trainer(TrainerBase):
                  validation_iterator: DataIterator = None,
                  shuffle: bool = True,
                  num_epochs: int = 20,
+                 gradient_accumulation_steps: int = None,
                  serialization_dir: Optional[str] = None,
                  num_serialized_models_to_keep: int = 20,
                  keep_serialized_model_every_num_seconds: int = None,
@@ -181,6 +182,7 @@ class Trainer(TrainerBase):
         self.optimizer = optimizer
         self.train_data = train_dataset
         self._validation_data = validation_dataset
+        self._gradient_accumulation_steps = gradient_accumulation_steps
 
         if patience is None:  # no early stopping
             if validation_dataset:
@@ -335,7 +337,12 @@ class Trainer(TrainerBase):
                     self._tensorboard.add_train_scalar("gradient_update/" + name,
                                                        update_norm / (param_norm + 1e-7))
             else:
-                self.optimizer.step()
+                # TODO Alon changing the trainer following this post https://github.com/allenai/allennlp/issues/2112
+                if self._gradient_accumulation_steps is not None:
+                    if batch_num_total % self._gradient_accumulation_steps == 0:
+                        self.optimizer.step()
+                else:
+                    self.optimizer.step()
 
             # Update moving averages
             if self._moving_average is not None:
@@ -675,6 +682,7 @@ class Trainer(TrainerBase):
         validation_metric = params.pop("validation_metric", "-loss")
         shuffle = params.pop_bool("shuffle", True)
         num_epochs = params.pop_int("num_epochs", 20)
+        gradient_accumulation_steps = params.pop_int("gradient_accumulation_steps", None)
         cuda_device = parse_cuda_device(params.pop("cuda_device", -1))
         grad_norm = params.pop_float("grad_norm", None)
         grad_clipping = params.pop_float("grad_clipping", None)
@@ -719,6 +727,7 @@ class Trainer(TrainerBase):
                    validation_iterator=validation_iterator,
                    shuffle=shuffle,
                    num_epochs=num_epochs,
+                   gradient_accumulation_steps=gradient_accumulation_steps,
                    serialization_dir=serialization_dir,
                    cuda_device=cuda_device,
                    grad_norm=grad_norm,
