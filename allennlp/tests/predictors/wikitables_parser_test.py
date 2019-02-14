@@ -72,51 +72,36 @@ class TestWikiTablesParserPredictor(AllenNlpTestCase):
         archive_path = self.FIXTURES_ROOT / 'semantic_parsing' / 'wikitables' / 'serialization' / 'model.tar.gz'
         archive = load_archive(archive_path)
         predictor = Predictor.from_archive(archive, 'wikitables-parser')
-        model = predictor._model
-        original_beam_search = model._beam_search
 
-        # Have to get the rules out manually
+        # Need to cheat to get the mapping id -> rule
         instance = predictor._json_to_instance(inputs)
         index_to_rule = [production_rule_field.rule
                          for production_rule_field in instance.fields['actions'].field_list]
-        rule_to_index = {rule: i for i, rule in enumerate(index_to_rule)}
 
         # This is not the start of the best sequence, but it will be once we force it.
         initial_tokens = ['@start@ -> p', 'p -> [<#1,#1>, p]']
-        initial_sequence = torch.tensor([rule_to_index[token] for token in initial_tokens])
 
         # First let's try an unforced one. Its initial tokens should not be ours.
-        result = predictor.predict_instance(instance)
+        result = predictor.predict_json(inputs)
         best_action_sequence = result['best_action_sequence']
         assert best_action_sequence
         assert best_action_sequence[:2] != initial_tokens
 
-        # Now let's try the interactive beam search but but with no forcing.
-        # It should produce the same results as the vanilla beam search.
-        interactive_beam_search = InteractiveBeamSearch(original_beam_search._beam_size,
-                                                        initial_sequence=None)
-        model._beam_search = interactive_beam_search
-        result = predictor.predict_instance(instance)
-        best_action_sequence2 = result['best_action_sequence']
-        assert best_action_sequence2 == best_action_sequence
+        # Now let's try forcing it down the path of `initial_sequence`
+        inputs["initial_sequence"] = initial_tokens
+        result = predictor.predict_json(inputs)
+        best_action_sequence = result['best_action_sequence']
+        assert best_action_sequence[:2] == initial_tokens
 
-        # Finally, let's try forcing it down the path of `initial_sequence`
-        interactive_beam_search = InteractiveBeamSearch(original_beam_search._beam_size,
-                                                        initial_sequence=initial_sequence)
-        model._beam_search = interactive_beam_search
-        result = predictor.predict_instance(instance)
-        best_action_sequence3 = result['best_action_sequence']
-        assert best_action_sequence3[:2] == initial_tokens
+        # We also want to check that the returned `choices`
+
 
         # Should get choices back from beam search
-        beam_search_choices = [
-                [(score, index_to_rule[idx]) for score, idx in choices]
-                for choices in interactive_beam_search.choices.values()
-        ]
+        beam_search_choices = result["choices"]
 
         # Make sure that our forced choices appear as beam_search_choices.
         for idx in [0, 1]:
-            choices = beam_search_choices[idx]
+            choices = beam_search_choices[idx + 1]
             assert any(token == initial_tokens[idx] for _, token in choices)
 
     def test_answer_present_with_batch_predict(self):
