@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Dict, Generic, List, Mapping, Sequence, TypeVar
+from typing import Dict, Generic, List, TypeVar
 
 from allennlp.common.registrable import FromParams
 from allennlp.state_machines.states import State
@@ -41,7 +41,7 @@ class BeamSearch(FromParams, Generic[StateType]):
                num_steps: int,
                initial_state: StateType,
                transition_function: TransitionFunction,
-               keep_final_unfinished_states: bool = True) -> Mapping[int, Sequence[StateType]]:
+               keep_final_unfinished_states: bool = True) -> Dict[int, List[StateType]]:
         """
         Parameters
         ----------
@@ -87,7 +87,7 @@ class BeamSearch(FromParams, Generic[StateType]):
                 # ones here, without an additional sort.
                 states.extend(batch_states[:self._beam_size])
             step_num += 1
-        best_states: Dict[int, Sequence[StateType]] = {}
+        best_states: Dict[int, List[StateType]] = {}
         for batch_index, batch_states in finished_states.items():
             # The time this sort takes is pretty negligible, no particular need to optimize this
             # yet.  Maybe with a larger beam size...
