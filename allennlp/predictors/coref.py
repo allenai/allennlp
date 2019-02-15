@@ -3,8 +3,6 @@ from typing import List
 from overrides import overrides
 from spacy.tokens import Doc
 
-from spacy.tokens.doc import Doc
-
 from allennlp.common.util import JsonDict
 from allennlp.common.util import get_spacy_model
 from allennlp.data import DatasetReader, Instance
