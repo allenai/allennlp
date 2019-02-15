@@ -11,14 +11,69 @@ import tempfile
 import tarfile
 import shutil
 
+from torch.nn import Module
+
+from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
 from allennlp.common.params import Params, unflatten, with_fallback, parse_overrides
 from allennlp.models.model import Model, _DEFAULT_WEIGHTS
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
-# An archive comprises a Model and its experimental config
-Archive = NamedTuple("Archive", [("model", Model), ("config", Params)])
+class Archive(NamedTuple):
+    """ An archive comprises a Model and its experimental config"""
+    model: Model
+    config: Params
+
+    def extract_module(self, path: str, freeze: bool = True) -> Module:
+        """
+        This method can be used to load a module from the pretrained model archive.
+
+        It is also used implicitly in FromParams based construction. So instead of using standard
+        params to construct a module, you can instead load a pretrained module from the model
+        archive directly. For eg, instead of using params like {"type": "module_type", ...}, you
+        can use the following template::
+
+            {
+                "_pretrained": {
+                    "archive_file": "../path/to/model.tar.gz",
+                    "path": "path.to.module.in.model",
+                    "freeze": False
+                }
+            }
+
+        If you use this feature with FromParams, take care of the following caveat: Call to
+        initializer(self) at end of model initializer can potentially wipe the transferred parameters
+        by reinitializing them. This can happen if you have setup initializer regex that also
+        matches parameters of the transferred module. To safe-guard against this, you can either
+        update your initializer regex to prevent conflicting match or add extra initializer::
+
+            [
+                [".*transferred_module_name.*", "prevent"]]
+            ]
+
+        Parameters
+        ----------
+        path : ``str``, required
+            Path of target module to be loaded from the model.
+            Eg. "_textfield_embedder.token_embedder_tokens"
+        freeze : ``bool``, optional (default=True)
+            Whether to freeze the module parameters or not.
+
+        """
+        modules_dict = {path: module for path, module in self.model.named_modules()}
+        module = modules_dict.get(path, None)
+
+        if not module:
+            raise ConfigurationError(f"You asked to transfer module at path {path} from "
+                                     f"the model {type(self.model)}. But it's not present.")
+        if not isinstance(module, Module):
+            raise ConfigurationError(f"The transferred object from model {type(self.model)} at path "
+                                     f"{path} is not a PyTorch Module.")
+
+        for parameter in module.parameters(): # type: ignore
+            parameter.requires_grad_(not freeze)
+        return module
 
 # We archive a model by creating a tar.gz file with its weights, config, and vocabulary.
 #

@@ -35,7 +35,8 @@ class AugmentedLstm(torch.nn.Module):
         `A Theoretically Grounded Application of Dropout in Recurrent Neural Networks
         <https://arxiv.org/abs/1512.05287>`_ . Implementation wise, this simply
         applies a fixed dropout mask per sequence to the recurrent connection of the
-        LSTM.
+        LSTM. Dropout is not applied to the output sequence nor the last hidden
+        state that is returned, it is only applied to all previous hidden states.
     use_highway: bool, optional (default = True)
         Whether or not to use highway connections between layers. This effectively involves
         reparameterising the normal output of an LSTM as::
@@ -163,6 +164,9 @@ class AugmentedLstm(torch.nn.Module):
             # Actually get the slices of the batch which we need for the computation at this timestep.
             previous_memory = full_batch_previous_memory[0: current_length_index + 1].clone()
             previous_state = full_batch_previous_state[0: current_length_index + 1].clone()
+            # Only do recurrent dropout if the dropout prob is > 0.0 and we are in training mode.
+            if dropout_mask is not None and self.training:
+                previous_state = previous_state * dropout_mask[0: current_length_index + 1]
             timestep_input = sequence_tensor[0: current_length_index + 1, index]
 
             # Do the projections for all the gates all at once.
@@ -187,10 +191,6 @@ class AugmentedLstm(torch.nn.Module):
                                              projected_state[:, 4 * self.hidden_size:5 * self.hidden_size])
                 highway_input_projection = projected_input[:, 5 * self.hidden_size:6 * self.hidden_size]
                 timestep_output = highway_gate * timestep_output + (1 - highway_gate) * highway_input_projection
-
-            # Only do dropout if the dropout prob is > 0.0 and we are in training mode.
-            if dropout_mask is not None and self.training:
-                timestep_output = timestep_output * dropout_mask[0: current_length_index + 1]
 
             # We've been doing computation with less than the full batch, so here we create a new
             # variable for the the whole batch at this timestep and insert the result for the

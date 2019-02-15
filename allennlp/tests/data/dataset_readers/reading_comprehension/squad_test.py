@@ -6,6 +6,7 @@ from allennlp.common.util import ensure_list
 from allennlp.data.dataset_readers import SquadReader
 from allennlp.common.testing import AllenNlpTestCase
 
+
 class TestSquadReader:
     @pytest.mark.parametrize("lazy", (True, False))
     def test_read_from_file(self, lazy):
@@ -43,3 +44,35 @@ class TestSquadReader:
         # pylint: disable=protected-access
         assert reader._tokenizer.__class__.__name__ == 'WordTokenizer'
         assert reader._token_indexers["tokens"].__class__.__name__ == 'SingleIdTokenIndexer'
+
+    def test_length_limit_works(self):
+        # We're making sure the length of the text is correct if length limit is provided.
+        reader = SquadReader(passage_length_limit=30,
+                             question_length_limit=10,
+                             skip_invalid_examples=True)
+        instances = ensure_list(reader.read(AllenNlpTestCase.FIXTURES_ROOT / 'data' / 'squad.json'))
+        assert len(instances[0].fields["question"].tokens) == 10
+        assert len(instances[0].fields["passage"].tokens) == 30
+        # invalid examples where all the answers exceed the passage length should be skipped.
+        assert len(instances) == 3
+
+        # Length limit still works if we do not skip the invalid examples
+        reader = SquadReader(passage_length_limit=30,
+                             question_length_limit=10,
+                             skip_invalid_examples=False)
+        instances = ensure_list(reader.read(AllenNlpTestCase.FIXTURES_ROOT / 'data' / 'squad.json'))
+        assert len(instances[0].fields["question"].tokens) == 10
+        assert len(instances[0].fields["passage"].tokens) == 30
+        # invalid examples should not be skipped.
+        assert len(instances) == 5
+
+        # Make sure the answer texts does not change, so that the evaluation will not be affected
+        reader_unlimited = SquadReader(passage_length_limit=30,
+                                       question_length_limit=10,
+                                       skip_invalid_examples=False)
+        instances_unlimited = ensure_list(
+                reader_unlimited.read(AllenNlpTestCase.FIXTURES_ROOT / 'data' / 'squad.json'))
+        for instance_x, instance_y in zip(instances, instances_unlimited):
+            print(instance_x.fields["metadata"]["answer_texts"])
+            assert set(instance_x.fields["metadata"]["answer_texts"]) \
+                   == set(instance_y.fields["metadata"]["answer_texts"])

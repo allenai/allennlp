@@ -9,17 +9,20 @@ and report any metrics calculated by the model.
     usage: allennlp evaluate [-h] [--output-file OUTPUT_FILE]
                              [--weights-file WEIGHTS_FILE]
                              [--cuda-device CUDA_DEVICE] [-o OVERRIDES]
+                             [--batch-weight-key BATCH_WEIGHT_KEY]
+                             [--extend-vocab]
+                             [--embedding-sources-mapping EMBEDDING_SOURCES_MAPPING]
                              [--include-package INCLUDE_PACKAGE]
                              archive_file input_file
 
     Evaluate the specified model + dataset
 
     positional arguments:
-    archive_file          path to an archived trained model
-    input_file            path to the file containing the evaluation data
+    archive_file            path to an archived trained model
+    input_file              path to the file containing the evaluation data
 
     optional arguments:
-    -h, --help            show this help message and exit
+    -h, --help              show this help message and exit
     --output-file OUTPUT_FILE
                             path to output file to save metrics
     --weights-file WEIGHTS_FILE
@@ -29,26 +32,37 @@ and report any metrics calculated by the model.
     -o OVERRIDES, --overrides OVERRIDES
                             a JSON structure used to override the experiment
                             configuration
+    --batch-weight-key BATCH_WEIGHT_KEY
+                            If non-empty, name of metric used to weight the loss
+                            on a per-batch basis.
+    --extend-vocab          if specified, we will use the instances in your new
+                            dataset to extend your vocabulary. If pretrained-file
+                            was used to initialize embedding layers, you may also
+                            need to pass --embedding-sources-mapping.
+    --embedding-sources-mapping EMBEDDING_SOURCES_MAPPING
+                            a JSON dict defining mapping from embedding module
+                            path to embeddingpretrained-file used during training.
+                            If not passed, and embedding needs to be extended, we
+                            will try to use the original file paths used during
+                            training. If they are not available we will use random
+                            vectors for embedding extension.
     --include-package INCLUDE_PACKAGE
                             additional packages to include
 """
-from typing import Dict, Any, Iterable
+from typing import Dict, Any
 import argparse
 import logging
 import json
 
-import torch
 
 from allennlp.commands.subcommand import Subcommand
-from allennlp.common.checks import check_for_gpu
 from allennlp.common.util import prepare_environment
-from allennlp.common.tqdm import Tqdm
-from allennlp.data import Instance
+
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.iterators import DataIterator
 from allennlp.models.archival import load_archive
-from allennlp.models.model import Model
-from allennlp.nn import util
+from allennlp.training.util import evaluate
+from allennlp.common import Params
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -58,7 +72,7 @@ class Evaluate(Subcommand):
         # pylint: disable=protected-access
         description = '''Evaluate the specified model + dataset'''
         subparser = parser.add_parser(
-                name, description=description, help='Evaluate the specified model + dataset')
+                name, description=description, help='Evaluate the specified model + dataset.')
 
         subparser.add_argument('archive_file', type=str, help='path to an archived trained model')
 
@@ -81,60 +95,29 @@ class Evaluate(Subcommand):
                                default="",
                                help='a JSON structure used to override the experiment configuration')
 
+        subparser.add_argument('--batch-weight-key',
+                               type=str,
+                               default="",
+                               help='If non-empty, name of metric used to weight the loss on a per-batch basis.')
+
+        subparser.add_argument('--extend-vocab',
+                               action='store_true',
+                               default=False,
+                               help='if specified, we will use the instances in your new dataset to '
+                                    'extend your vocabulary. If pretrained-file was used to initialize '
+                                    'embedding layers, you may also need to pass --embedding-sources-mapping.')
+
+        subparser.add_argument('--embedding-sources-mapping',
+                               type=str,
+                               default="",
+                               help='a JSON dict defining mapping from embedding module path to embedding'
+                               'pretrained-file used during training. If not passed, and embedding needs to be '
+                               'extended, we will try to use the original file paths used during training. If '
+                               'they are not available we will use random vectors for embedding extension.')
+
         subparser.set_defaults(func=evaluate_from_args)
 
         return subparser
-
-
-def evaluate(model: Model,
-             instances: Iterable[Instance],
-             data_iterator: DataIterator,
-             cuda_device: int) -> Dict[str, Any]:
-    _warned_tqdm_ignores_underscores = False
-    check_for_gpu(cuda_device)
-    with torch.no_grad():
-        model.eval()
-
-        iterator = data_iterator(instances,
-                                 num_epochs=1,
-                                 shuffle=False)
-        logger.info("Iterating over dataset")
-        generator_tqdm = Tqdm.tqdm(iterator, total=data_iterator.get_num_batches(instances))
-
-        batch_count = 0
-        loss_count = 0
-        total_loss = 0.0
-
-        for batch in generator_tqdm:
-            batch_count += 1
-            batch = util.move_to_device(batch, cuda_device)
-            loss = model(**batch).get("loss")
-
-            metrics = model.get_metrics()
-
-            if loss is not None:
-                loss_count += 1
-                metrics["loss"] = loss.item()
-                total_loss += loss.item()
-
-            if (not _warned_tqdm_ignores_underscores and
-                        any(metric_name.startswith("_") for metric_name in metrics)):
-                logger.warning("Metrics with names beginning with \"_\" will "
-                               "not be logged to the tqdm progress bar.")
-                _warned_tqdm_ignores_underscores = True
-            description = ', '.join(["%s: %.2f" % (name, value) for name, value
-                                     in metrics.items() if not name.startswith("_")]) + " ||"
-            generator_tqdm.set_description(description, refresh=False)
-
-        final_metrics = model.get_metrics(reset=True)
-        if loss_count > 0:
-            if loss_count != batch_count:
-                raise RuntimeError("The model you are trying to evaluate only sometimes " +
-                                   "produced a loss!")
-            final_metrics["loss"] = total_loss/batch_count
-
-        return final_metrics
-
 
 def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     # Disable some of the more verbose logging statements
@@ -162,13 +145,20 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     logger.info("Reading evaluation data from %s", evaluation_data_path)
     instances = dataset_reader.read(evaluation_data_path)
 
+    embedding_sources: Dict[str, str] = (json.loads(args.embedding_sources_mapping)
+                                         if args.embedding_sources_mapping else {})
+    if args.extend_vocab:
+        logger.info("Vocabulary is being extended with test instances.")
+        model.vocab.extend_from_instances(Params({}), instances=instances)
+        model.extend_embedder_vocab(embedding_sources)
+
     iterator_params = config.pop("validation_iterator", None)
     if iterator_params is None:
         iterator_params = config.pop("iterator")
     iterator = DataIterator.from_params(iterator_params)
     iterator.index_with(model.vocab)
 
-    metrics = evaluate(model, instances, iterator, args.cuda_device)
+    metrics = evaluate(model, instances, iterator, args.cuda_device, args.batch_weight_key)
 
     logger.info("Finished evaluating.")
     logger.info("Metrics:")

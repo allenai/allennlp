@@ -7,55 +7,11 @@ from nltk import Tree
 from nltk.sem.logic import ApplicationExpression, Expression, LambdaExpression, BasicType, Type
 
 from allennlp.semparse.type_declarations import type_declaration as types
+from allennlp.semparse.domain_languages.domain_language import ParsingError
+from allennlp.semparse.domain_languages.domain_language import nltk_tree_to_logical_form
 from allennlp.semparse import util as semparse_util
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
-
-
-class ParsingError(Exception):
-    """
-    This exception gets raised when there is a parsing error during logical form processing.  This
-    might happen because you're not handling the full set of possible logical forms, for instance,
-    and having this error provides a consistent way to catch those errors and log how frequently
-    this occurs.
-    """
-    def __init__(self, message):
-        super(ParsingError, self).__init__()
-        self.message = message
-
-    def __str__(self):
-        return repr(self.message)
-
-
-class ExecutionError(Exception):
-    """
-    This exception gets raised when you're trying to execute a logical form that your executor does
-    not understand. This may be because your logical form contains a function with an invalid name
-    or a set of arguments whose types do not match those that the function expects.
-    """
-    def __init__(self, message):
-        super(ExecutionError, self).__init__()
-        self.message = message
-
-    def __str__(self):
-        return repr(self.message)
-
-
-def nltk_tree_to_logical_form(tree: Tree) -> str:
-    """
-    Given an ``nltk.Tree`` representing the syntax tree that generates a logical form, this method
-    produces the actual (lisp-like) logical form, with all of the non-terminal symbols converted
-    into the correct number of parentheses.
-    """
-    # nltk.Tree actually inherits from `list`, so you use `len()` to get the number of children.
-    # We're going to be explicit about checking length, instead of using `if tree:`, just to avoid
-    # any funny business nltk might have done (e.g., it's really odd if `if tree:` evaluates to
-    # `False` if there's a single leaf node with no children).
-    if len(tree) == 0:  # pylint: disable=len-as-condition
-        return tree.label()
-    if len(tree) == 1:
-        return tree[0].label()
-    return '(' + ' '.join(nltk_tree_to_logical_form(child) for child in tree) + ')'
 
 
 class World:

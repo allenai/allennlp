@@ -27,9 +27,9 @@ class QuarelWorld(World):
 
         self._syntax = syntax
         self.types = QuarelTypeDeclaration(syntax)
-        super(QuarelWorld, self).__init__(
-                global_type_signatures=self.types.name_mapper.common_type_signature,
-                global_name_mapping=self.types.name_mapper.common_name_mapping)
+        super().__init__(
+                global_type_signatures=self.types.name_mapper.type_signatures,
+                global_name_mapping=self.types.name_mapper.name_mapping)
         self.table_graph = table_graph
 
         # Keep map and counter for each entity type encountered (first letter in entity string)
@@ -69,8 +69,8 @@ class QuarelWorld(World):
     @overrides
     def _map_name(self, name: str, keep_mapping: bool = False) -> str:
         translated_name = name
-        if name in self.types.name_mapper.common_name_mapping:
-            translated_name = self.types.name_mapper.common_name_mapping[name]
+        if name in self.types.name_mapper.name_mapping:
+            translated_name = self.types.name_mapper.name_mapping[name]
         elif name in self.local_name_mapping:
             translated_name = self.local_name_mapping[name]
         elif name.startswith("a:"):
@@ -172,10 +172,10 @@ class QuarelWorld(World):
         # Remove "a:" prefixes from attributes (hack)
         logical_form = re.sub(r"\(a:", r"(", lf_raw)
         parse = semparse_util.lisp_to_nested_expression(logical_form)
-        if len(parse) < 1 and len(parse[0]) < 2:
+        if len(parse) < 2:
             return -1
-        if parse[0][0] == 'infer':
-            args = [self._exec_and(arg) for arg in parse[0][1:]]
+        if parse[0] == 'infer':
+            args = [self._exec_and(arg) for arg in parse[1:]]
             if None in args:
                 return -1
             return self._exec_infer(*args)
