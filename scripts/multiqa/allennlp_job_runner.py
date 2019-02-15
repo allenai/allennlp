@@ -369,7 +369,7 @@ class JobRunner():
                     # let another host try.
                     body_ = None
                     self.channel.basic_nack(method_frame.delivery_tag)
-                elif self.resources_available and (hasattr(self, '_job_no_run_string') and self._job_no_run_string == '' or name.find(self._job_no_run_string) == -1):
+                elif self.resources_available and ((not hasattr(self, '_job_no_run_string')) or self._job_no_run_string == '' or name.find(self._job_no_run_string) == -1):
                     break
                 else:
                     # NO Resources
