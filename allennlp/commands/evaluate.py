@@ -9,17 +9,20 @@ and report any metrics calculated by the model.
     usage: allennlp evaluate [-h] [--output-file OUTPUT_FILE]
                              [--weights-file WEIGHTS_FILE]
                              [--cuda-device CUDA_DEVICE] [-o OVERRIDES]
+                             [--batch-weight-key BATCH_WEIGHT_KEY]
+                             [--extend-vocab]
+                             [--embedding-sources-mapping EMBEDDING_SOURCES_MAPPING]
                              [--include-package INCLUDE_PACKAGE]
                              archive_file input_file
 
     Evaluate the specified model + dataset
 
     positional arguments:
-    archive_file          path to an archived trained model
-    input_file            path to the file containing the evaluation data
+    archive_file            path to an archived trained model
+    input_file              path to the file containing the evaluation data
 
     optional arguments:
-    -h, --help            show this help message and exit
+    -h, --help              show this help message and exit
     --output-file OUTPUT_FILE
                             path to output file to save metrics
     --weights-file WEIGHTS_FILE
@@ -29,6 +32,20 @@ and report any metrics calculated by the model.
     -o OVERRIDES, --overrides OVERRIDES
                             a JSON structure used to override the experiment
                             configuration
+    --batch-weight-key BATCH_WEIGHT_KEY
+                            If non-empty, name of metric used to weight the loss
+                            on a per-batch basis.
+    --extend-vocab          if specified, we will use the instances in your new
+                            dataset to extend your vocabulary. If pretrained-file
+                            was used to initialize embedding layers, you may also
+                            need to pass --embedding-sources-mapping.
+    --embedding-sources-mapping EMBEDDING_SOURCES_MAPPING
+                            a JSON dict defining mapping from embedding module
+                            path to embeddingpretrained-file used during training.
+                            If not passed, and embedding needs to be extended, we
+                            will try to use the original file paths used during
+                            training. If they are not available we will use random
+                            vectors for embedding extension.
     --include-package INCLUDE_PACKAGE
                             additional packages to include
 """
@@ -45,6 +62,7 @@ from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.iterators import DataIterator
 from allennlp.models.archival import load_archive
 from allennlp.training.util import evaluate
+from allennlp.common import Params
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -82,6 +100,21 @@ class Evaluate(Subcommand):
                                default="",
                                help='If non-empty, name of metric used to weight the loss on a per-batch basis.')
 
+        subparser.add_argument('--extend-vocab',
+                               action='store_true',
+                               default=False,
+                               help='if specified, we will use the instances in your new dataset to '
+                                    'extend your vocabulary. If pretrained-file was used to initialize '
+                                    'embedding layers, you may also need to pass --embedding-sources-mapping.')
+
+        subparser.add_argument('--embedding-sources-mapping',
+                               type=str,
+                               default="",
+                               help='a JSON dict defining mapping from embedding module path to embedding'
+                               'pretrained-file used during training. If not passed, and embedding needs to be '
+                               'extended, we will try to use the original file paths used during training. If '
+                               'they are not available we will use random vectors for embedding extension.')
+
         subparser.set_defaults(func=evaluate_from_args)
 
         return subparser
@@ -111,6 +144,13 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     evaluation_data_path = args.input_file
     logger.info("Reading evaluation data from %s", evaluation_data_path)
     instances = dataset_reader.read(evaluation_data_path)
+
+    embedding_sources: Dict[str, str] = (json.loads(args.embedding_sources_mapping)
+                                         if args.embedding_sources_mapping else {})
+    if args.extend_vocab:
+        logger.info("Vocabulary is being extended with test instances.")
+        model.vocab.extend_from_instances(Params({}), instances=instances)
+        model.extend_embedder_vocab(embedding_sources)
 
     iterator_params = config.pop("validation_iterator", None)
     if iterator_params is None:
