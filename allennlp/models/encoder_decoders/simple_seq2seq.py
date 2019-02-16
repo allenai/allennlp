@@ -6,6 +6,7 @@ import torch.nn.functional as F
 from overrides import overrides
 from torch.nn.modules.linear import Linear
 
+from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import START_SYMBOL, END_SYMBOL
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.model import Model
@@ -90,6 +91,11 @@ class SimpleSeq2Seq(Model):
 
         # Encodes the sequence of source embeddings into a sequence of hidden states.
         self._encoder = encoder
+
+        if self._encoder.get_output_dim() != decoder_cell.get_output_dim():
+            raise ConfigurationError(
+                f"Encoder hidden dimension {self._encoder.get_output_dim()} should be"
+                f" equal to decoder dimension {decoder_cell.get_output_dim()}.")
 
         self.decoder: SimpleSeqDecoder = SimpleSeqDecoder(
             vocab=vocab,

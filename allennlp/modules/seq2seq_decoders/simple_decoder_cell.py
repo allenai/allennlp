@@ -19,10 +19,10 @@ class SimpleDecoderCell(DecoderCell):
     Parameters
     ----------
     decoding_dim : ``int``, required
-        Defines dimensionality of output vectors. Since this model takes it's output on a previous step
-        as input of following step, this is also an input dimensionality.
+        Defines dimensionality of output vectors.
     target_embedding_dim : ``int``, required
-        Defines dimensionality of input target embeddings
+        Defines dimensionality of input target embeddings.  Since this model takes it's output on a previous step
+        as input of following step, this is also an input dimensionality.
     attention : ``Attention``, optional (default = None)
         If you want to use attention to get a dynamic summary of the encoder outputs at each step
         of decoding, this is the function used to compute similarity between the decoder hidden

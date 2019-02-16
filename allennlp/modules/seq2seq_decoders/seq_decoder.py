@@ -18,6 +18,37 @@ class SeqDecoder(Model):
     """
     A ``SeqDecoder`` is a base class for different types of Seq decoding modules
 
+    Parameters
+    ----------
+    vocab : ``Vocabulary``, required
+        Vocabulary containing source and target vocabularies. They may be under the same namespace
+        (`tokens`) or the target tokens can have a different namespace, in which case it needs to
+        be specified as `target_namespace`.
+    max_decoding_steps : ``int``
+        Maximum length of decoded sequences.
+    bidirectional_input : ``bool``
+        If input encoded sequence was produced by bidirectional encoder.
+        If True, the first encode step of back direction will be used as initial hidden state.
+        If not, the will be used the last step only.
+    target_namespace : ``str``, optional (default = 'target_tokens')
+        If the target side vocabulary is different from the source side's, you need to specify the
+        target's namespace here. If not, we'll assume it is "tokens", which is also the default
+        choice for the source side, and this might cause them to share vocabularies.
+    target_embedding_dim : ``int``, optional (default = source_embedding_dim)
+        You can specify an embedding dimensionality for the target side. If not, we'll use the same
+        value as the source embedder's.
+    beam_size : ``int``, optional (default = None)
+        Width of the beam for beam search. If not specified, greedy decoding is used.
+    tensor_based_metric : ``Metric``, optional (default = BLEU)
+        A metric to track on validation data that takes raw tensors when its called.
+        This metric must accept two arguments when called: a batched tensor
+        of predicted token indices, and a batched tensor of gold token indices.
+    token_based_metric : ``Metric``, optional (default = None)
+        A metric to track on validation data that takes lists of lists of tokens
+        as input. This metric must accept two arguments when called, both
+        of type `List[List[str]]`. The first is a predicted sequence for each item
+        in the batch and the second is a gold sequence for each item in the batch.
+
     """
 
     def __init__(

@@ -15,9 +15,11 @@ class DecoderCell(torch.nn.Module, Registrable):
     Parameters
     ----------
     decoding_dim : ``int``, required
-        Defines dimensionality of output vectors. Since this model takes it's output on a previous step
-        as input of following step, this is also an input dimensionality.
+        Defines dimensionality of output vectors.
 
+    target_embedding_dim : ``int``, required
+        Defines dimensionality of target embeddings. Since this model takes it's output on a previous step
+        as input of following step, this is also an input dimensionality.
     """
 
     def __init__(self, decoding_dim, target_embedding_dim):
