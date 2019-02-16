@@ -118,13 +118,23 @@ class MultiQAIterator(DataIterator):
             # if empty sorting_keys - we assume no sort is required
             if self._sorting_keys != [[]]:
                 instance_list = sorted(instance_list,key=lambda x: x.fields['metadata'].metadata['question_id'])
-            intances_question_id = [instance.fields['metadata'].metadata['question_id'] for instance in instance_list]
-            split_inds = [0] + list(np.cumsum(np.unique(intances_question_id, return_counts=True)[1]))
-            per_question_instances = [instance_list[split_inds[ind]:split_inds[ind+1]] for ind in range(len(split_inds)-1)]
+                intances_question_id = [instance.fields['metadata'].metadata['question_id'] for instance in instance_list]
+                split_inds = [0] + list(np.cumsum(np.unique(intances_question_id, return_counts=True)[1]))
+                per_question_instances = [instance_list[split_inds[ind]:split_inds[ind+1]] for ind in range(len(split_inds)-1)]
 
-            # sorting question_instances by rank, we should get them sorted already, but just in case.
-            for ind in range(len(per_question_instances)):
-                per_question_instances[ind] = sorted(per_question_instances[ind], key=lambda x: x.fields['metadata'].metadata['rank'])
+                # sorting question_instances by rank, we should get them sorted already, but just in case.
+                for ind in range(len(per_question_instances)):
+                    per_question_instances[ind] = sorted(per_question_instances[ind], key=lambda x: x.fields['metadata'].metadata['rank'])
+            else:
+                intances_question_id = [instance.fields['metadata'].metadata['question_id'] for instance in instance_list]
+                split_inds = [0]
+                for ind in range(len(intances_question_id)-1):
+                    if intances_question_id[ind] != intances_question_id[ind+1]:
+                        split_inds.append(ind + 1)
+                split_inds += [len(intances_question_id)]
+                per_question_instances = [instance_list[split_inds[ind]:split_inds[ind + 1]] for ind in range(len(split_inds) - 1)]
+
+
 
             if self._sorting_keys != [[]]:
                 per_question_instances = sort_by_padding(per_question_instances,
