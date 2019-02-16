@@ -420,6 +420,7 @@ class JobRunner():
             else:
                 try:
                     self.perform_iteration()
+                    time.sleep(3)
                 except SystemExit:
                     exit(0)
                 except:
