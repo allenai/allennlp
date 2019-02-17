@@ -67,8 +67,8 @@ class VariationalDecoder(Decoder):
         relevant_mask = target_mask[:, :-1]
         embeddings = self._target_embedder(relevant_targets)
         embeddings = self._emb_dropout(embeddings)
-        h0 = embeddings.new_zeros(self.dec_num_layers, embeddings.size(0), self.dec_hidden)
-        c0 = embeddings.new_zeros(self.dec_num_layers, embeddings.size(0), self.dec_hidden)
+        h0 = embeddings.new_zeros(self.dec_num_layers, embeddings.size(0), self.dec_hidden) # pylint: disable=invalid-name
+        c0 = embeddings.new_zeros(self.dec_num_layers, embeddings.size(0), self.dec_hidden) # pylint: disable=invalid-name
         h0[-1] = self._latent_to_dec_hidden(latent)
         logits = self._run_decoder(embeddings, relevant_mask, (h0, c0), latent)
         class_probabilities = F.softmax(logits, 2)
@@ -89,3 +89,26 @@ class VariationalDecoder(Decoder):
         logits = logits.view(embeddings.size(0), embeddings.size(1), -1)
 
         return logits
+
+    def generate(self, latent: torch.Tensor, max_len: int = 20) -> Dict[str, torch.Tensor]:
+        batch_size, _ = latent.size()
+        last_genereation = latent.new_full((batch_size, 1),
+                                           fill_value=self.vocab.get_token_index(START_SYMBOL), dtype=torch.long)
+        h0 = latent.new_zeros(self.dec_num_layers, batch_size, self.dec_hidden) # pylint: disable=invalid-name
+        c0 = latent.new_zeros(self.dec_num_layers, batch_size, self.dec_hidden) # pylint: disable=invalid-name
+        h0[-1] = self._latent_to_dec_hidden(latent)
+
+        # We are decoding step by step. So we are using a stateful decoder
+        self.rnn.stateful = True
+        self.rnn._update_states((h0, c0), torch.arange(batch_size)) # pylint: disable=protected-access
+        generations = [last_genereation]
+        for _ in range(max_len):
+            embeddings = self._target_embedder({"tokens": last_genereation})
+            mask = get_text_field_mask({"tokens": last_genereation})
+            logits = self._run_decoder(embeddings, mask, None, latent)
+            class_probabilities = F.softmax(logits, 2)
+            _, last_genereation = torch.max(class_probabilities, 2)
+            generations.append(last_genereation)
+
+        generations = torch.cat(generations, 1)
+        return {"logits": logits, "predictions": generations}

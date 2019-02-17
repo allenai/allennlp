@@ -132,8 +132,8 @@ class TensorboardWriter:
 
     def log_loss_weights(self, loss_weights: Dict[str, LossWeighter]) -> None:
         if loss_weights != {}:
-            for lw_name, lw in loss_weights.items():
-                self.add_train_scalar("loss_weights/" + lw_name, lw.get())
+            for loss_weight_name, loss_weight in loss_weights.items():
+                self.add_train_scalar("loss_weights/" + loss_weight_name, loss_weight.get())
 
     def log_histograms(self, model: Model, histogram_parameters: Set[str]) -> None:
         """

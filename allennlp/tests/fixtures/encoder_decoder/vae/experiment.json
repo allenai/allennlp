@@ -1,0 +1,88 @@
+{
+	"random_seed": 0,
+	"numpy_seed": 0,
+	"pytorch_seed": 0,
+	"dataset_reader": {
+		"type": "autoencoder"
+	},
+	"train_data_path": "allennlp/tests/fixtures/data/autoencoder.txt",
+	"validation_data_path": "allennlp/tests/fixtures/data/autoencoder.txt",
+	"model": {
+		"type": "vae",
+		"encoder": {
+			"type": "masked_encoder",
+			"source_embedder": {
+				"token_embedders": {
+					"tokens": {
+						"type": "embedding",
+						"vocab_namespace": "tokens",
+						"embedding_dim": 8
+					}
+				}
+			},
+			"rnn": {
+				"type": "lstm",
+				"input_size": 8,
+				"hidden_size": 8
+			}
+		},
+		"decoder": {
+			"type": "variational_decoder",
+			"target_embedder": {
+				"token_embedders": {
+					"tokens": {
+						"type": "embedding",
+						"vocab_namespace": "tokens",
+						"embedding_dim": 8
+					}
+				}
+			},
+			"rnn": {
+				"type": "lstm",
+				"input_size": 16,
+				"hidden_size": 8
+			},
+			"latent_dim": 8
+		},
+		"latent_dim": 8,
+		"initializer": [
+			[".*", {
+					"type": "uniform",
+					"a": -0.1,
+					"b": 0.1
+				}
+			]
+		]
+	},
+	"iterator": {
+		"type": "bucket",
+		"batch_size": 2,
+		"sorting_keys": [["source_tokens", "num_tokens"]]
+	},
+	"trainer": {
+		"num_epochs": 2,
+		"patience": 1,
+		"cuda_device": -1,
+		"summary_interval": 1,
+		"grad_clipping": 5,
+		"grad_norm": 5,
+		"loss_weights": {
+			"reconstruction": {
+				"initial_weight": 1.0
+			},
+			"kld": {
+				"type": "linear_annealer",
+				"min_weight": 0.0,
+				"max_weight": 0.1,
+				"warmup": 0,
+				"num_iter_to_max": 10
+			}
+		},
+		"should_log_parameter_statistics": false,
+		"should_log_learning_rate": true,
+		"optimizer": {
+			"type": "sgd",
+			"lr": 1
+		}
+	}
+}

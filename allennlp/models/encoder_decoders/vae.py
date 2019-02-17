@@ -1,4 +1,5 @@
 from typing import Dict, List
+import numpy
 import torch
 from torch.nn.modules import Linear
 
@@ -10,7 +11,7 @@ from allennlp.models.model import Model
 from allennlp.modules.decoders import Decoder
 from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
 from allennlp.nn import InitializerApplicator
-from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits
+from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits, move_to_device
 from allennlp.training.metrics import BLEU, Perplexity
 
 
@@ -76,11 +77,7 @@ class VAE(Model):
                                              target_mask, mean, logvar)
 
         if not self.training:
-            if "predictions" in output_dict:
-                best_predictions = output_dict["predictions"]
-            else:
-                top_k_predictions = self._decoder.forward_beam_search(latent)
-                best_predictions = top_k_predictions["predictions"][:, 0, :]
+            best_predictions = output_dict["predictions"]
             self._bleu(best_predictions, target_tokens["tokens"])
             self._ppl(output_dict["logits"], get_text_field_mask(target_tokens)[:, 1:])
 
@@ -144,4 +141,42 @@ class VAE(Model):
             all_metrics.update(self._ppl.get_metric(reset=reset))
 
         return all_metrics
- 
+
+    def generate(self, num_to_sample: int = 1):
+        cuda_device = self._get_prediction_device()
+        latent = torch.randn(num_to_sample, self._latent_dim)
+        latent = move_to_device(latent, cuda_device)
+        generated = self._decoder.generate(latent)
+
+        return self.decode(generated)
+
+    @overrides
+    #simple_seq2seq's decode
+    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+        """
+        Finalize predictions.
+
+        This method overrides ``Model.decode``, which gets called after ``Model.forward``, at test
+        time, to finalize predictions. The logic for the decoder part of the encoder-decoder lives
+        within the ``forward`` method.
+
+        This method trims the output predictions to the first end symbol, replaces indices with
+        corresponding tokens, and adds a field called ``predicted_tokens`` to the ``output_dict``.
+        """
+        predicted_indices = output_dict["predictions"]
+        if not isinstance(predicted_indices, numpy.ndarray):
+            predicted_indices = predicted_indices.detach().cpu().numpy()
+        all_predicted_tokens = []
+        for indices in predicted_indices:
+            # Beam search gives us the top k results for each source sentence in the batch
+            # but we just want the single best.
+            if len(indices.shape) > 1:
+                indices = indices[0]
+            indices = list(indices)
+            # Collect indices till the first end_symbol
+            if self._end_index in indices:
+                indices = indices[:indices.index(self._end_index)]
+            predicted_tokens = [self.vocab.get_token_from_index(x) for x in indices]
+            all_predicted_tokens.append(predicted_tokens)
+        output_dict["predicted_tokens"] = all_predicted_tokens
+        return output_dict
