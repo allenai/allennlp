@@ -420,7 +420,6 @@ class JobRunner():
             else:
                 try:
                     self.perform_iteration()
-                    time.sleep(3)
                 except SystemExit:
                     exit(0)
                 except:
@@ -440,7 +439,7 @@ class JobRunner():
             logger.info('%d job currently running, available GPUS: %s, job_gpus: %s', \
                         len(self.running_jobs), str(self.available_gpus), str(self.job_gpus))
             self.runner_iter_count+=1
-            time.sleep(2)
+            time.sleep(10)
 
 def main():
     parser = argparse.ArgumentParser()
