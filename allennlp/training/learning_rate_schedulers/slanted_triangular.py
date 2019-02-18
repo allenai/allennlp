@@ -60,7 +60,6 @@ class SlantedTriangular(LearningRateScheduler):
         self.ratio = ratio
         self.gradual_unfreezing = gradual_unfreezing
         self.freezing_current = self.gradual_unfreezing
-        self.is_first_epoch = True
         # track the actual number of steps for each epoch
         self.batch_num_total_epoch_end: List[int] = []
         if self.gradual_unfreezing:
@@ -97,9 +96,8 @@ class SlantedTriangular(LearningRateScheduler):
             # epoch; so the first time, with epoch id -1, we want to set
             # up for epoch #1; the second time, with epoch id 0,
             # we want to set up for epoch #2, etc.
-            if self.is_first_epoch:
+            if epoch < 0:
                 num_layers_to_unfreeze = 1
-                self.is_first_epoch = False
             else:
                 num_layers_to_unfreeze = epoch + 2
             if num_layers_to_unfreeze >= len(self.optimizer.param_groups)-1:
