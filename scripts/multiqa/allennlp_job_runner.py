@@ -349,6 +349,9 @@ class JobRunner():
     def sample_queues(self):
         ### Reading one job from queue (by order of channel specificity)
         for channel in self.channel_tags:
+            if not self.resources_available and channel == 'GPUs':
+                continue
+
             method_frame, properties, body_ = self.channel.basic_get(channel)
             if body_ is not None:
                 # Display the message parts
@@ -376,6 +379,7 @@ class JobRunner():
                     # NO Resources
                     body_ = None
                     self.channel.basic_nack(method_frame.delivery_tag)
+                    time.sleep(10)
 
         if body_ is not None:
             logger.info('New job found! %s',name)
