@@ -28,17 +28,28 @@ class BeamSearch:
         to a number smaller than ``beam_size`` may give better results, as it can introduce
         more diversity into the search. See `Beam Search Strategies for Neural Machine Translation.
         Freitag and Al-Onaizan, 2017 <http://arxiv.org/abs/1702.01806>`_.
+    initial_sequence : ``List[int]``, optional (default = None)
+        If provided, the beam search will be constrained to sequences that start with these values.
     """
-
     def __init__(self,
                  end_index: int,
                  max_steps: int = 50,
                  beam_size: int = 10,
-                 per_node_beam_size: int = None) -> None:
+                 per_node_beam_size: int = None,
+                 initial_sequence: List[int] = None,
+                 marginal_candidate_beam_size: int = None) -> None:
         self._end_index = end_index
         self.max_steps = max_steps
         self.beam_size = beam_size
         self.per_node_beam_size = per_node_beam_size or beam_size
+        self._marginal_candidate_beam_size = marginal_candidate_beam_size
+
+        if initial_sequence is not None:
+            self._initial_sequence = initial_sequence
+            self._choices = {}
+        else:
+            self._initial_sequence = []
+            self._choices = None
 
     def search(self,
                start_predictions: torch.Tensor,
@@ -107,6 +118,13 @@ class BeamSearch:
                                      f"relative to per_node_beam_size ({self.per_node_beam_size:d}).\n"
                                      f"Please decrease beam_size or per_node_beam_size.")
 
+        # Clobber class_log_probabilities if we're forcing an initial sequence.
+        if self._initial_sequence:
+            self._choices = {0: start_class_log_probabilities.tolist()}
+            forced_value = self._initial_sequence[0]
+            start_class_log_probabilities.fill_(-float("inf"))
+            start_class_log_probabilities[:, forced_value] = 0.0
+
         # shape: (batch_size, beam_size), (batch_size, beam_size)
         start_top_log_probabilities, start_predicted_classes = \
                 start_class_log_probabilities.topk(self.beam_size)
@@ -148,6 +166,14 @@ class BeamSearch:
             # and updates the state.
             # shape: (batch_size * beam_size, num_classes)
             class_log_probabilities, state = step(last_predictions, state)
+
+            # Clobber class_log_probabilities if we're forcing an initial sequence.
+            # Note that timestep == 0 is really element 1 of the initial sequence.
+            if timestep + 1 < len(self._initial_sequence):
+                self._choices[timestep + 1] = class_log_probabilities.tolist()
+                forced_value = self._initial_sequence[timestep + 1]
+                class_log_probabilities.fill_(-float("inf"))
+                class_log_probabilities[:, forced_value] = 0.0
 
             # shape: (batch_size * beam_size, num_classes)
             last_predictions_expanded = last_predictions.unsqueeze(-1).expand(
