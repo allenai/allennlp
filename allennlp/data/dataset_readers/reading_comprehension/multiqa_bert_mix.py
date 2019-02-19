@@ -160,9 +160,11 @@ class BERTQAReaderMix(DatasetReader):
                         dataset['num_of_questions'] += 1
                         dataset['inst_remainder'] = [remainder]
                         break
+                else:
+                    # No more lines to be read from file
+                    is_done[ind] = True
 
                 # per dataset sampling
-                x=1
                 if self._sample_size > -1 and dataset['num_of_questions'] >= self._sample_size:
                     is_done[ind] = True
 
