@@ -195,7 +195,7 @@ class DocQAPlusBERT(Model):
         #if passage['mask'].size(1) < 384:
         #    passage['mask'] = torch.nn.functional.pad(passage['mask'], (0, 384 - passage['mask'].size(1)), "constant", 1)
 
-        if random.randint(1, 20) % 20 == 0:
+        if random.randint(1, 100) % 100 == 0:
             for meta in metadata:
                 logger.info("%s %s", meta['dataset'], meta['instance_id'])
 
