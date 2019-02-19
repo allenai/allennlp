@@ -195,6 +195,10 @@ class DocQAPlusBERT(Model):
         #if passage['mask'].size(1) < 384:
         #    passage['mask'] = torch.nn.functional.pad(passage['mask'], (0, 384 - passage['mask'].size(1)), "constant", 1)
 
+        if random.randint(1, 20) % 20 == 0:
+            for meta in metadata:
+                logger.info("%s %s", meta['dataset'], meta['instance_id'])
+
         embedded_passage = self._text_field_embedder(passage)
         passage_length = embedded_passage.size(1)
         logits = self.qa_outputs(embedded_passage)
