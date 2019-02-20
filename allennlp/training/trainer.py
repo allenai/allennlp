@@ -353,7 +353,7 @@ class Trainer(TrainerBase):
                 self._tensorboard.log_learning_rates(self.model, self.optimizer)
 
                 self._tensorboard.add_train_scalar("loss/loss_train", metrics["loss"])
-                self._tensorboard.log_metrics({"epoch_metrics/" + k: v for k, v in metrics.items()})
+                self._tensorboard.log_metrics(metrics)
 
             if self._tensorboard.should_log_histograms_this_batch():
                 self._tensorboard.log_histograms(self.model, histogram_parameters)
