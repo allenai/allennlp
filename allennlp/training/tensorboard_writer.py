@@ -64,10 +64,11 @@ class TensorboardWriter:
     def should_log_histograms_this_batch(self) -> bool:
         return self._histogram_interval is not None and self._get_batch_num_total() % self._histogram_interval == 0
 
-    def add_train_scalar(self, name: str, value: float) -> None:
+    def add_train_scalar(self, name: str, value: float, timestep: int = None) -> None:
+        timestep = timestep or self._get_batch_num_total()
         # get the scalar
         if self._train_log is not None:
-            self._train_log.add_scalar(name, self._item(value), self._get_batch_num_total())
+            self._train_log.add_scalar(name, self._item(value), timestep)
 
     def add_train_histogram(self, name: str, values: torch.Tensor) -> None:
         if self._train_log is not None:
@@ -75,10 +76,10 @@ class TensorboardWriter:
                 values_to_write = values.cpu().data.numpy().flatten()
                 self._train_log.add_histogram(name, values_to_write, self._get_batch_num_total())
 
-    def add_validation_scalar(self, name: str, value: float) -> None:
+    def add_validation_scalar(self, name: str, value: float, timestep: int = None) -> None:
+        timestep = timestep or self._get_batch_num_total()
         if self._validation_log is not None:
-            self._validation_log.add_scalar(name, self._item(value), self._get_batch_num_total())
-
+            self._validation_log.add_scalar(name, self._item(value), timestep)
 
     def log_parameter_and_gradient_statistics(self, # pylint: disable=invalid-name
                                               model: Model,
@@ -129,7 +130,6 @@ class TensorboardWriter:
                     effective_rate = rate * float(param.requires_grad)
                     self.add_train_scalar("learning_rate/" + names[param], effective_rate)
 
-
     def log_histograms(self, model: Model, histogram_parameters: Set[str]) -> None:
         """
         Send histograms of parameters to tensorboard.
@@ -141,6 +141,7 @@ class TensorboardWriter:
     def log_metrics(self,
                     train_metrics: dict,
                     val_metrics: dict = None,
+                    epoch: int = None,
                     log_to_console: bool = False) -> None:
         """
         Sends all of the train metrics (and validation metrics, if provided) to tensorboard.
@@ -163,10 +164,10 @@ class TensorboardWriter:
             # Log to tensorboard
             train_metric = train_metrics.get(name)
             if train_metric is not None:
-                self.add_train_scalar(name, train_metric)
+                self.add_train_scalar(name, train_metric, timestep=epoch)
             val_metric = val_metrics.get(name)
             if val_metric is not None:
-                self.add_validation_scalar(name, val_metric)
+                self.add_validation_scalar(name, val_metric, timestep=epoch)
 
             # And maybe log to console
             if log_to_console and val_metric is not None and train_metric is not None:
@@ -175,7 +176,6 @@ class TensorboardWriter:
                 logger.info(no_train_message_template, name.ljust(name_length), "N/A", val_metric)
             elif log_to_console and train_metric is not None:
                 logger.info(no_val_message_template, name.ljust(name_length), train_metric, "N/A")
-
 
     def enable_activation_logging(self, model: Model) -> None:
         if self._histogram_interval is not None:
