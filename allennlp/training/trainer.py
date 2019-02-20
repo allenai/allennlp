@@ -353,7 +353,7 @@ class Trainer(TrainerBase):
                 self._tensorboard.log_learning_rates(self.model, self.optimizer)
 
                 self._tensorboard.add_train_scalar("loss/loss_train", metrics["loss"])
-                self._tensorboard.log_metrics(metrics)
+                self._tensorboard.log_metrics({"epoch_metrics/" + k: v for k, v in metrics.items()})
 
             if self._tensorboard.should_log_histograms_this_batch():
                 self._tensorboard.log_histograms(self.model, histogram_parameters)
@@ -380,7 +380,6 @@ class Trainer(TrainerBase):
         for (gpu_num, memory) in gpu_usage:
             metrics['gpu_'+str(gpu_num)+'_memory_MB'] = memory
         return metrics
-
 
     def _validation_loss(self) -> Tuple[float, int]:
         """
@@ -486,7 +485,10 @@ class Trainer(TrainerBase):
                         logger.info("Ran out of patience.  Stopping training.")
                         break
 
-            self._tensorboard.log_metrics(train_metrics, val_metrics=val_metrics, log_to_console=True)
+            self._tensorboard.log_metrics(train_metrics,
+                                          val_metrics=val_metrics,
+                                          log_to_console=True,
+                                          epoch=epoch + 1)  # +1 because tensorboard doesn't like 0
 
             # Create overall metrics dict
             training_elapsed_time = time.time() - training_start_time
@@ -634,7 +636,6 @@ class Trainer(TrainerBase):
             self._batch_num_total = batch_num_total
 
         return epoch_to_return
-
 
     # Requires custom from_params.
     @classmethod
