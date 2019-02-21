@@ -76,6 +76,17 @@ class ArchivalTest(AllenNlpTestCase):
         params2 = archive.config
         assert params2.as_dict() == params_copy
 
+    def test_archive_model_uses_archive_path(self):
+
+        serialization_dir = self.TEST_DIR / 'serialization'
+        # Train a model
+        train_model(self.params, serialization_dir=serialization_dir)
+        # Use a new path.
+        archive_model(serialization_dir=serialization_dir,
+                      archive_path=serialization_dir / "new_path.tar.gz")
+        archive = load_archive(serialization_dir / 'new_path.tar.gz')
+        assert archive
+
     def test_extra_files(self):
 
         serialization_dir = self.TEST_DIR / 'serialization'
