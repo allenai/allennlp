@@ -69,6 +69,8 @@ class BERTQAReaderMix(DatasetReader):
                  tokenizer: Tokenizer = None,
                  token_indexers: Dict[str, TokenIndexer] = None,
                  use_one_inst_per_question = False,
+                 rewind_datasets: bool = False,
+                 sampling_ratio = None,
                  lazy: bool = False,
                  all_question_instances_in_batch = False,
                  sample_size: int = -1,
@@ -77,6 +79,8 @@ class BERTQAReaderMix(DatasetReader):
         random.seed(0)
         logger.info('----------------- NEW SEED ---------------')
         self._tokenizer = tokenizer or WordTokenizer()
+        self._rewind_datasets = rewind_datasets
+        self._sampling_ratio = sampling_ratio
         self._sample_size = sample_size
         self._use_one_inst_per_question = use_one_inst_per_question
         self._all_question_instances_in_batch = all_question_instances_in_batch
@@ -136,8 +140,10 @@ class BERTQAReaderMix(DatasetReader):
         for ind, single_file_path in enumerate(file_path.split(',')):
             single_file_path_cached = cached_path(single_file_path)
             zip_handle = zipfile.ZipFile(single_file_path_cached, 'r')
-            datasets.append({'zip_handle':zip_handle , 'file_handle': zip_handle.open(zip_handle.namelist()[0]), \
-                             'num_of_questions':0, 'inst_remainder':[]})
+            datasets.append({'single_file_path':single_file_path, 'zip_handle':zip_handle, \
+                             'file_handle': zip_handle.open(zip_handle.namelist()[0]), \
+                             'num_of_questions':0, 'inst_remainder':[], \
+                             'sample_ratio':1 if self._sampling_ratio is None else self._sampling_ratio[ind] })
             datasets[ind]['header'] = json.loads(datasets[ind]['file_handle'].readline())['header']
 
         is_done = [False for _ in datasets]
@@ -147,6 +153,7 @@ class BERTQAReaderMix(DatasetReader):
                     continue
 
                 instances = dataset['inst_remainder']
+                iter_question_count = 0
                 for example in dataset['file_handle']:
                     # header
                     instances.append(json.loads(example))
@@ -158,11 +165,25 @@ class BERTQAReaderMix(DatasetReader):
                         for instance in self.gen_question_instances(dataset['header'], instances):
                             yield instance
                         dataset['num_of_questions'] += 1
+                        iter_question_count += 1
                         dataset['inst_remainder'] = [remainder]
-                        break
+
+                        if iter_question_count >= dataset['sample_ratio']:
+                            break
+                        else:
+                            instances = dataset['inst_remainder']
+
                 else:
                     # No more lines to be read from file
-                    is_done[ind] = True
+                    if self._rewind_datasets:
+                        logger.info('rewinding! %s', dataset['single_file_path'])
+                        # Reopening file (seek doesn't seem to work inside a zip)
+                        dataset['file_handle'].close()
+                        dataset['file_handle'] = dataset['zip_handle'].open(dataset['zip_handle'].namelist()[0])
+                        # Reading header
+                        _ = dataset['file_handle'].readline()
+                    else:
+                        is_done[ind] = True
 
                 # per dataset sampling
                 if self._sample_size > -1 and dataset['num_of_questions'] >= self._sample_size:
