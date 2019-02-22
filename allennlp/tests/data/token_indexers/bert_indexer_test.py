@@ -141,3 +141,22 @@ class TestBertIndexer(ModelTestCase):
 
         #                                                [CLS] 2, 15, 10, 11, 6, 17, 2  15, 10, 11, 6, [SEP]
         assert indexed_tokens["bert-type-ids"] == [0,    0, 0,  0,  0,  0, 0,  1, 1,  1,  1,  1, 1]  #pylint: disable=bad-whitespace
+
+    def test_rolling_window(self):
+        tokenizer = WordTokenizer(word_splitter=BertBasicWordSplitter())
+
+        sentence = "the quickest quick brown fox jumped over the lazy dog"
+        tokens = tokenizer.tokenize(sentence)
+
+        vocab = Vocabulary()
+        vocab_path = self.FIXTURES_ROOT / 'bert' / 'vocab.txt'
+        token_indexer = PretrainedBertIndexer(str(vocab_path), truncate_long_sequences=False, max_pieces=10)
+
+        indexed_tokens = token_indexer.tokens_to_indices(tokens, vocab, "bert")
+
+        # 16 = [CLS], 17 = [SEP]
+        # 1 full window + 1 half window with start/end tokens
+        assert indexed_tokens["bert"] == [
+            16, 2, 3, 4, 3, 5, 6, 8, 9, 17, 16, 5, 6, 8, 9, 2, 14, 12, 17
+        ]
+        assert indexed_tokens["bert-offsets"] == [1, 3, 4, 5, 6, 7, 8, 9, 10, 11]

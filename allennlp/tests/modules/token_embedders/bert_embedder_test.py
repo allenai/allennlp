@@ -234,3 +234,44 @@ class TestBertEmbedder(ModelTestCase):
 
         bert_vectors = tlo_embedder(tokens["bert"], offsets=tokens["bert-offsets"])
         assert list(bert_vectors.shape) == [2, 2, 10, 12]
+
+    def test_rolling_window(self):
+        tokenizer = WordTokenizer(word_splitter=BertBasicWordSplitter())
+
+        sentence = "the quickest quick brown fox jumped over the lazy dog"
+        tokens = tokenizer.tokenize(sentence)
+
+        vocab = Vocabulary()
+
+        vocab_path = self.FIXTURES_ROOT / 'bert' / 'vocab.txt'
+        token_indexer = PretrainedBertIndexer(str(vocab_path), truncate_long_sequences=False, max_pieces=10)
+
+        config_path = self.FIXTURES_ROOT / 'bert' / 'config.json'
+        config = BertConfig(str(config_path))
+        bert_model = BertModel(config)
+        token_embedder = BertEmbedder(bert_model, max_pieces=10)
+
+        instance = Instance({"tokens": TextField(tokens, {"bert": token_indexer})})
+
+        batch = Batch([instance])
+        batch.index_instances(vocab)
+
+        padding_lengths = batch.get_padding_lengths()
+        tensor_dict = batch.as_tensor_dict(padding_lengths)
+        tokens = tensor_dict["tokens"]
+
+        # 16 = [CLS], 17 = [SEP]
+        # 1 full window + 1 half window with start/end tokens
+        assert tokens["bert"].tolist() == [
+            [16, 2, 3, 4, 3, 5, 6, 8, 9, 17, 16, 5, 6, 8, 9, 2, 14, 12, 17]
+        ]
+
+        assert tokens["bert-offsets"].tolist() == [
+            [1, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+        ]
+
+        bert_vectors = token_embedder(tokens["bert"])
+        assert list(bert_vectors.shape) == [1, 13, 12]
+
+        bert_vectors = token_embedder(tokens["bert"], offsets=tokens["bert-offsets"])
+        assert list(bert_vectors.shape) == [1, 10, 12]
