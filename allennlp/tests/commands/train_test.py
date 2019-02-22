@@ -308,8 +308,8 @@ class TestTrainOnLazyDataset(AllenNlpTestCase):
         # trained on snli (snli2 has one extra token over snli).
         # Make sure (1) embedding extension happens implicitly.
         #           (2) model dumped in such a way is loadable.
-        # (1) corresponds to model.extend_embedder_vocab(vocab) in trainer.py
-        # (2) corresponds to model.extend_embedder_vocab(vocab) in model.py
+        # (1) corresponds to model.extend_embedder_vocab() in trainer.py
+        # (2) corresponds to model.extend_embedder_vocab() in model.py
         config_file = str(self.FIXTURES_ROOT / 'decomposable_attention' / 'experiment.json')
         model_archive = str(self.FIXTURES_ROOT / 'decomposable_attention' / 'serialization' / 'model.tar.gz')
         serialization_dir = str(self.TEST_DIR / 'train')

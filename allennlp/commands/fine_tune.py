@@ -217,7 +217,7 @@ def fine_tune_model(model: Model,
                                      for instance in dataset
                                      if key in datasets_for_vocab_creation))
 
-        model.extend_embedder_vocab(vocab, embedding_sources_mapping=embedding_sources_mapping)
+        model.extend_embedder_vocab(embedding_sources_mapping)
 
     vocab.save_to_files(os.path.join(serialization_dir, "vocabulary"))
 
