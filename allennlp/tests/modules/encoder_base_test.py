@@ -1,5 +1,6 @@
 # pylint: disable=no-self-use,protected-access,invalid-name
 import numpy
+import pytest
 import torch
 from torch.nn import LSTM, RNN
 
@@ -219,42 +220,42 @@ class TestEncoderBase(AllenNlpTestCase):
         encoder_base._update_states([final_states[0]], self.restoration_indices)
         encoder_base.sort_and_run_forward(self.rnn, self.tensor, self.mask)
 
+    @pytest.mark.skipif(not torch.cuda.is_available(), reason="requires cuda")
     def test_non_contiguous_initial_states_handled_on_gpu(self):
         # Some PyTorch operations which produce contiguous tensors on the CPU produce
         # non-contiguous tensors on the GPU (e.g. forward pass of an RNN when batch_first=True).
         # Accordingly, we perform the same checks from previous test on the GPU to ensure the
         # encoder is not affected by which device it is on.
-        if torch.cuda.is_available():
 
-            # Case 1: Encoder is not stateful
+        # Case 1: Encoder is not stateful
 
-            # A transposition will make the tensors non-contiguous, start them off at the wrong shape
-            # and transpose them into the right shape.
-            encoder_base = _EncoderBase(stateful=False).cuda()
-            initial_states = (torch.randn(5, 6, 7).cuda().permute(1, 0, 2),
-                              torch.randn(5, 6, 7).cuda().permute(1, 0, 2))
-            assert not initial_states[0].is_contiguous() and not initial_states[1].is_contiguous()
-            assert initial_states[0].size() == torch.Size([6, 5, 7])
-            assert initial_states[1].size() == torch.Size([6, 5, 7])
+        # A transposition will make the tensors non-contiguous, start them off at the wrong shape
+        # and transpose them into the right shape.
+        encoder_base = _EncoderBase(stateful=False).cuda()
+        initial_states = (torch.randn(5, 6, 7).cuda().permute(1, 0, 2),
+                            torch.randn(5, 6, 7).cuda().permute(1, 0, 2))
+        assert not initial_states[0].is_contiguous() and not initial_states[1].is_contiguous()
+        assert initial_states[0].size() == torch.Size([6, 5, 7])
+        assert initial_states[1].size() == torch.Size([6, 5, 7])
 
-            # We'll pass them through an LSTM encoder and a vanilla RNN encoder to make sure it works
-            # whether the initial states are a tuple of tensors or just a single tensor.
-            encoder_base.sort_and_run_forward(self.lstm.cuda(), self.tensor.cuda(), self.mask.cuda(),
-                                              initial_states)
-            encoder_base.sort_and_run_forward(self.rnn.cuda(), self.tensor.cuda(), self.mask.cuda(),
-                                              initial_states[0])
+        # We'll pass them through an LSTM encoder and a vanilla RNN encoder to make sure it works
+        # whether the initial states are a tuple of tensors or just a single tensor.
+        encoder_base.sort_and_run_forward(self.lstm.cuda(), self.tensor.cuda(), self.mask.cuda(),
+                                            initial_states)
+        encoder_base.sort_and_run_forward(self.rnn.cuda(), self.tensor.cuda(), self.mask.cuda(),
+                                            initial_states[0])
 
-            # Case 2: Encoder is stateful
+        # Case 2: Encoder is stateful
 
-            # For stateful encoders, the initial state may be non-contiguous if its state was
-            # previously updated with non-contiguous tensors. As in the non-stateful tests, we check
-            # that the encoder still works on initial states for RNNs and LSTMs.
-            final_states = initial_states
-            # Check LSTM
-            encoder_base = _EncoderBase(stateful=True).cuda()
-            encoder_base._update_states(final_states, self.restoration_indices.cuda())
-            encoder_base.sort_and_run_forward(self.lstm.cuda(), self.tensor.cuda(), self.mask.cuda())
-            # Check RNN
-            encoder_base.reset_states()
-            encoder_base._update_states([final_states[0]], self.restoration_indices.cuda())
-            encoder_base.sort_and_run_forward(self.rnn.cuda(), self.tensor.cuda(), self.mask.cuda())
+        # For stateful encoders, the initial state may be non-contiguous if its state was
+        # previously updated with non-contiguous tensors. As in the non-stateful tests, we check
+        # that the encoder still works on initial states for RNNs and LSTMs.
+        final_states = initial_states
+        # Check LSTM
+        encoder_base = _EncoderBase(stateful=True).cuda()
+        encoder_base._update_states(final_states, self.restoration_indices.cuda())
+        encoder_base.sort_and_run_forward(self.lstm.cuda(), self.tensor.cuda(), self.mask.cuda())
+        # Check RNN
+        encoder_base.reset_states()
+        encoder_base._update_states([final_states[0]], self.restoration_indices.cuda())
+        encoder_base.sort_and_run_forward(self.rnn.cuda(), self.tensor.cuda(), self.mask.cuda())
