@@ -9,6 +9,7 @@ from torch.nn.functional import nll_loss
 import inspect
 import random
 import traceback
+import json
 
 from allennlp.common.checks import check_dimensions_match
 from allennlp.data import Vocabulary
@@ -75,6 +76,7 @@ class DocQAPlusBERT(Model):
                  num_context_answers: int = 0,
                  max_qad_triplets: int = 0,
                  max_span_length: int = 30,
+                 predictions_file = None,
                  use_multi_label_loss: bool = False,
                  stats_report_freq:float = None,
                  debug_experiment_name:str = None) -> None:
@@ -89,6 +91,7 @@ class DocQAPlusBERT(Model):
         self._stats_report_freq = stats_report_freq
         self._debug_experiment_name = debug_experiment_name
         self._use_multi_label_loss = use_multi_label_loss
+        self._predictions_file = predictions_file
 
 
         # see usage below for explanation
@@ -360,6 +363,8 @@ class DocQAPlusBERT(Model):
             # We need to perform softmax here !!
             best_span_ind = np.argmax(span_start_logits_numpy[question_inds, best_span_cpu[question_inds][:, 0]] +
                       span_end_logits_numpy[question_inds, best_span_cpu[question_inds][:, 1]])
+            best_span_logit = np.max(span_start_logits_numpy[question_inds, best_span_cpu[question_inds][:, 0]] +
+                                      span_end_logits_numpy[question_inds, best_span_cpu[question_inds][:, 1]])
 
             # TODO this shouldent happen - we should consider spans from passages not taken...
             #if span_start.view(-1)[question_inds[best_span_ind]] == -1:
@@ -395,6 +400,15 @@ class DocQAPlusBERT(Model):
                     EM_score = squad_eval.metric_max_over_ground_truths(squad_eval.exact_match_score, best_span_string,gold_answer_texts)
             self._official_f1(100 * f1_score)
             self._official_EM(100 * EM_score)
+
+            if self._predictions_file is not None:
+                with open(self._predictions_file,'a') as f:
+                    f.write(json.dumps({'question_id':question_instances_metadata[best_span_ind]['question_id'], \
+                                'best_span_logit':float(best_span_logit), \
+                                'f1':100 * f1_score,
+                                'EM':100 * EM_score,
+                                'best_span_string':best_span_string,\
+                                'gold_answer_texts':gold_answer_texts}) + '\n')
         #output_dict['qid'].append(per_dialog_query_id_list)
         #output_dict['best_span_str'].append(per_dialog_best_span_list)
 
