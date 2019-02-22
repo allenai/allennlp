@@ -59,7 +59,9 @@ class InteractiveBeamSearch(BeamSearch[StateType]):
 
         # We want to store the possible choices at each timestep,
         # so that they can be used interactively.
-        self.choices: Dict[int, List[Tuple[float, int]]] = {}
+        self.choices: List[List[Tuple[float, int]]] = []
+        self.beams: List[List[Tuple[float, List[int]]]] = []
+
         self.max_marginal_candidates = max_marginal_candidates
         self.marginal_candidate_beam_size = marginal_candidate_beam_size or beam_size
 
@@ -86,7 +88,8 @@ class InteractiveBeamSearch(BeamSearch[StateType]):
         finished_states: Dict[int, List[StateType]] = defaultdict(list)
         states = [initial_state]
         step_num = 0
-        self.choices = {}
+        self.choices = []
+        self.beams = []
 
         while states and step_num < num_steps:
             step_num += 1
@@ -105,18 +108,20 @@ class InteractiveBeamSearch(BeamSearch[StateType]):
             scored_candidates.sort(reverse=True)
 
             # Now we want to keep the top `max_marginal_candidates` choices at this step.
-            self.choices[step_num] = []
+            choices = []
 
             for score, candidate in scored_candidates:
                 # If we have the maximum number of candidates, then stop.
-                if len(self.choices[step_num]) >= self.max_marginal_candidates:
+                if len(choices) >= self.max_marginal_candidates:
                     break
                 # If we already have this candidate, then just go to the next one.
-                elif any(choice == candidate for _, choice in self.choices[step_num]):
+                elif any(choice == candidate for _, choice in choices):
                     continue
                 # Otherwise, this is a keeper.
                 else:
-                    self.choices[step_num].append((score.item(), candidate))
+                    choices.append((score.item(), candidate))
+
+            self.choices.append(choices)
 
             # Now do the actual beam search
             allowed_actions = []
@@ -128,6 +133,7 @@ class InteractiveBeamSearch(BeamSearch[StateType]):
                 next_actions = allowed_transitions.get(tuple(action_history))
                 if next_actions is not None:
                     allowed_actions.append(next_actions)
+
             for next_state in transition_function.take_step(grouped_state,
                                                             max_actions=self._per_node_beam_size,
                                                             allowed_actions=allowed_actions or None):
@@ -147,6 +153,22 @@ class InteractiveBeamSearch(BeamSearch[StateType]):
                 if self._beam_size:
                     batch_states = batch_states[:self._beam_size]
                 states.extend(batch_states)
+
+                # Add to beams
+                self.beams.append([(state.score[0].item(), state.action_history[0])
+                                   for state in batch_states])
+
+        # Add finished states to the beams as well.
+        for state in finished_states[0]:
+            score = state.score[0].item()
+            action_history = state.action_history[0]
+
+            while len(self.beams) < len(action_history):
+                self.beams.append([])
+
+            self.beams[len(action_history) - 1].append((score, action_history))
+
+
         best_states: Dict[int, List[StateType]] = {}
         for batch_index, batch_states in finished_states.items():
             # The time this sort takes is pretty negligible, no particular need to optimize this

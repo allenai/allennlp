@@ -95,9 +95,17 @@ class WikiTablesParserPredictor(Predictor):
         results = self.predict_instance(instance)
 
         # And add in the choices. Need to convert from idxs to rules.
-        results["choices"] = {}
-        for step, choices in interactive_beam_search.choices.items():
-            results["choices"][step] = [(score, index_to_rule[idx]) for score, idx in choices]
+        results["choices"] = [
+                [(probability, action)
+                 for probability, action in zip(pa["action_probabilities"], pa["considered_actions"])]
+                for pa in results["predicted_actions"]
+        ]
+
+        results["beams"] = [
+                [(score, [index_to_rule[idx] for idx in sequence])
+                 for score, sequence in beam]
+                for beam in interactive_beam_search.beams
+        ]
 
         # Restore original beam search
         self._model._beam_search = original_beam_search

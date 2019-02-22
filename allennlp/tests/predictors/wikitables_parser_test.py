@@ -90,9 +90,15 @@ class TestWikiTablesParserPredictor(AllenNlpTestCase):
         beam_search_choices = result["choices"]
 
         # Make sure that our forced choices appear as beam_search_choices.
-        for idx in [0, 1]:
-            choices = beam_search_choices[idx + 1]
-            assert any(token == initial_tokens[idx] for _, token in choices)
+        for choices, initial_token in zip(beam_search_choices, initial_tokens):
+            assert any(token == initial_token for _, token in choices)
+
+        # Should get back beams too
+        beams = result["beams"]
+        for idx, (beam, action) in enumerate(zip(beams, best_action_sequence)):
+            # First beam should have 1-element sequences, etc...
+            assert all(len(sequence) == idx + 1 for _, sequence in beam)
+            assert any(sequence[-1] == action for _, sequence in beam)
 
     def test_answer_present_with_batch_predict(self):
         inputs = [{
