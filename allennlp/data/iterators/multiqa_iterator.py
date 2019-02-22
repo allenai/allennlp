@@ -87,7 +87,8 @@ class MultiQAIterator(DataIterator):
                  max_instances_in_memory: int = None,
                  cache_instances: bool = False,
                  track_epoch: bool = False,
-                 all_question_instances_in_batch=False,
+                 all_question_instances_in_batch = False,
+                 one_instance_per_batch = False,
                  maximum_tensor_size: int = None,
                  maximum_samples_per_batch: Tuple[str, int] = None) -> None:
         if not sorting_keys:
@@ -103,6 +104,7 @@ class MultiQAIterator(DataIterator):
         self._padding_noise = padding_noise
         self._biggest_batch_first = biggest_batch_first
         self._maximum_tensor_size = maximum_tensor_size
+        self._one_instance_per_batch = one_instance_per_batch
         self._all_question_instances_in_batch = all_question_instances_in_batch
 
     @profile
@@ -114,90 +116,91 @@ class MultiQAIterator(DataIterator):
         for instance_list in self._memory_sized_lists(instances):
             #all_instances_ids += [inst.fields['metadata'].metadata['instance_id'] for inst in instance_list]
             #logger.info("itertor: total instances %d, unique instances %d ", len(all_instances_ids), len(set(all_instances_ids)))
-
-            # if empty sorting_keys - we assume no sort is required
-            if self._sorting_keys != [[]]:
-                instance_list = sorted(instance_list,key=lambda x: x.fields['metadata'].metadata['question_id'])
-                intances_question_id = [instance.fields['metadata'].metadata['question_id'] for instance in instance_list]
-                split_inds = [0] + list(np.cumsum(np.unique(intances_question_id, return_counts=True)[1]))
-                per_question_instances = [instance_list[split_inds[ind]:split_inds[ind+1]] for ind in range(len(split_inds)-1)]
-
-                # sorting question_instances by rank, we should get them sorted already, but just in case.
-                for ind in range(len(per_question_instances)):
-                    per_question_instances[ind] = sorted(per_question_instances[ind], key=lambda x: x.fields['metadata'].metadata['rank'])
+            if self._one_instance_per_batch:
+                for instance in instance_list:
+                    yield Batch([instance])
             else:
-                intances_question_id = [instance.fields['metadata'].metadata['question_id'] for instance in instance_list]
-                split_inds = [0]
-                for ind in range(len(intances_question_id)-1):
-                    if intances_question_id[ind] != intances_question_id[ind+1]:
-                        split_inds.append(ind + 1)
-                split_inds += [len(intances_question_id)]
-                per_question_instances = [instance_list[split_inds[ind]:split_inds[ind + 1]] for ind in range(len(split_inds) - 1)]
+                # if empty sorting_keys - we assume no sort is required
+                if self._sorting_keys != [[]]:
+                    instance_list = sorted(instance_list,key=lambda x: x.fields['metadata'].metadata['question_id'])
+                    intances_question_id = [instance.fields['metadata'].metadata['question_id'] for instance in instance_list]
+                    split_inds = [0] + list(np.cumsum(np.unique(intances_question_id, return_counts=True)[1]))
+                    per_question_instances = [instance_list[split_inds[ind]:split_inds[ind+1]] for ind in range(len(split_inds)-1)]
 
+                    # sorting question_instances by rank, we should get them sorted already, but just in case.
+                    for ind in range(len(per_question_instances)):
+                        per_question_instances[ind] = sorted(per_question_instances[ind], key=lambda x: x.fields['metadata'].metadata['rank'])
 
-
-            if self._sorting_keys != [[]]:
-                per_question_instances = sort_by_padding(per_question_instances,
-                                                self._sorting_keys,
-                                                self.vocab,
-                                                self._padding_noise)
-
-            batch = []
-            for question_instances in per_question_instances:
-
-                if self._all_question_instances_in_batch:
-                    instances_to_add = question_instances
+                    per_question_instances = sort_by_padding(per_question_instances,
+                                                             self._sorting_keys,
+                                                             self.vocab,
+                                                             self._padding_noise)
                 else:
-                    # choose at most 2 instances from the same question:
-                    if len(question_instances) > 2:
-                        # This part is inspired by Clark and Gardner, 17 - oversample the highest ranking documents.
-                        # In thier work they use only instances with answers, so we will find the highest
-                        # ranking instance with an answer (this also insures we have at least one answer in the chosen instances)
-                        inst_with_answers = [inst for inst in question_instances if inst.fields['metadata'].metadata['has_answer']]
+                    intances_question_id = [instance.fields['metadata'].metadata['question_id'] for instance in instance_list]
+                    split_inds = [0]
+                    for ind in range(len(intances_question_id)-1):
+                        if intances_question_id[ind] != intances_question_id[ind+1]:
+                            split_inds.append(ind + 1)
+                    split_inds += [len(intances_question_id)]
+                    per_question_instances = [instance_list[split_inds[ind]:split_inds[ind + 1]] for ind in range(len(split_inds) - 1)]
 
-                        # Because we cannot enforce all instances of the same question to be
-                        # provided in the same _memory_sized_lists we have to check this:
-                        # yet another reason to do this in the data reader
-                        if len(inst_with_answers) > 0:
-                            instances_to_add = random.sample(inst_with_answers[0:2], 1)
-                            # we assume each question will be visited once in an epoch
-                            question_instances.remove(instances_to_add[0])
-                        else:
-                            instances_to_add = []
-                        instances_to_add += random.sample(question_instances, 1)
 
-                    else:
+                batch = []
+                for question_instances in per_question_instances:
+
+                    if self._all_question_instances_in_batch:
                         instances_to_add = question_instances
-                    
-                    # Require at least one answer:
-                    if not any(inst.fields['metadata'].metadata['answers_list'] != [] for inst in instances_to_add):
-                        continue
+                    else:
+                        # choose at most 2 instances from the same question:
+                        if len(question_instances) > 2:
+                            # This part is inspired by Clark and Gardner, 17 - oversample the highest ranking documents.
+                            # In thier work they use only instances with answers, so we will find the highest
+                            # ranking instance with an answer (this also insures we have at least one answer in the chosen instances)
+                            inst_with_answers = [inst for inst in question_instances if inst.fields['metadata'].metadata['has_answer']]
 
-                # enforcing batch size
-                # (for docqa we assume the amount of doucments per question is smaller than batch size)
-                if self._maximum_tensor_size is not None:
-                    estimated_tensor_size = calc_tensor_size(batch + instances_to_add,
-                         self._sorting_keys,
-                         self.vocab)
-                    if estimated_tensor_size > temp_max_tensor_size:
-                        temp_max_tensor_size = estimated_tensor_size
-                        #logger.info("temp_max_tensor_size = %d",temp_max_tensor_size)
+                            # Because we cannot enforce all instances of the same question to be
+                            # provided in the same _memory_sized_lists we have to check this:
+                            # yet another reason to do this in the data reader
+                            if len(inst_with_answers) > 0:
+                                instances_to_add = random.sample(inst_with_answers[0:2], 1)
+                                # we assume each question will be visited once in an epoch
+                                question_instances.remove(instances_to_add[0])
+                            else:
+                                instances_to_add = []
+                            instances_to_add += random.sample(question_instances, 1)
 
-                if (len(batch) + len(instances_to_add) > self._batch_size and len(batch) > 0) or \
-                    (self._maximum_tensor_size is not None and estimated_tensor_size > self._maximum_tensor_size):
+                        else:
+                            instances_to_add = question_instances
+
+                        # Require at least one answer:
+                        if not any(inst.fields['metadata'].metadata['answers_list'] != [] for inst in instances_to_add):
+                            continue
+
+                    # enforcing batch size
+                    # (for docqa we assume the amount of doucments per question is smaller than batch size)
+                    if self._maximum_tensor_size is not None:
+                        estimated_tensor_size = calc_tensor_size(batch + instances_to_add,
+                             self._sorting_keys,
+                             self.vocab)
+                        if estimated_tensor_size > temp_max_tensor_size:
+                            temp_max_tensor_size = estimated_tensor_size
+                            #logger.info("temp_max_tensor_size = %d",temp_max_tensor_size)
+
+                    if (len(batch) + len(instances_to_add) > self._batch_size and len(batch) > 0) or \
+                        (self._maximum_tensor_size is not None and estimated_tensor_size > self._maximum_tensor_size):
+                        #total_examples_in_batches += len(batch)
+                        #logger.info("total_examples_in_batches = %d", total_examples_in_batches)
+                        yield Batch(batch)
+
+                        batch = instances_to_add
+                    else:
+                        batch += instances_to_add
+
+                # yielding remainder batch
+                if len(batch)>0:
                     #total_examples_in_batches += len(batch)
-                    #logger.info("total_examples_in_batches = %d", total_examples_in_batches)
+                    #logger.info("remainder ... total_examples_in_batches = %d", total_examples_in_batches)
                     yield Batch(batch)
-
-                    batch = instances_to_add
-                else:
-                    batch += instances_to_add
-
-            # yielding remainder batch
-            if len(batch)>0:
-                #total_examples_in_batches += len(batch)
-                #logger.info("remainder ... total_examples_in_batches = %d", total_examples_in_batches)
-                yield Batch(batch)
 
 
 
