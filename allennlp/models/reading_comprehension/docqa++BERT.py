@@ -6,7 +6,7 @@ from overrides import overrides
 import torch
 import torch.nn.functional as F
 from torch.nn.functional import nll_loss
-import inspect
+import os
 import random
 import traceback
 import json
@@ -92,6 +92,9 @@ class DocQAPlusBERT(Model):
         self._debug_experiment_name = debug_experiment_name
         self._use_multi_label_loss = use_multi_label_loss
         self._predictions_file = predictions_file
+
+        if predictions_file is not None and os.path.isfile(predictions_file):
+            os.remove(predictions_file)
 
 
         # see usage below for explanation
