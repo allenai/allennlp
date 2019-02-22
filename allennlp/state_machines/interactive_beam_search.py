@@ -108,7 +108,7 @@ class InteractiveBeamSearch(BeamSearch[StateType]):
             scored_candidates.sort(reverse=True)
 
             # Now we want to keep the top `max_marginal_candidates` choices at this step.
-            choices = []
+            choices: List[Tuple[float, int]] = []
 
             for score, candidate in scored_candidates:
                 # If we have the maximum number of candidates, then stop.
