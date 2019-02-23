@@ -66,6 +66,9 @@ def process_results(filename, type, source_dataset, \
             results_dict['f1'] += question_instances[best_ind]['f1']
         results_dict['EM'] /= len(per_question_instances)
         results_dict['f1'] /= len(per_question_instances)
+        results_dict['EM'] *= instance_list[0]['qas_used_fraction']
+        results_dict['f1'] *= instance_list[0]['qas_used_fraction']
+
 
     else:
         # computing
