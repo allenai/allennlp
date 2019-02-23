@@ -117,8 +117,16 @@ class MultiQAIterator(DataIterator):
             #all_instances_ids += [inst.fields['metadata'].metadata['instance_id'] for inst in instance_list]
             #logger.info("itertor: total instances %d, unique instances %d ", len(all_instances_ids), len(set(all_instances_ids)))
             if self._one_instance_per_batch:
+                instances_to_add = []
                 for instance in instance_list:
-                    yield Batch([instance])
+                    instances_to_add += [instance]
+                    if len(instances_to_add) >= self._batch_size:
+                        yield Batch(instances_to_add)
+                        instances_to_add = []
+
+                # remainder
+                if len(instances_to_add) > 0:
+                    yield Batch(instances_to_add)
             else:
                 # if empty sorting_keys - we assume no sort is required
                 if self._sorting_keys != [[]]:
