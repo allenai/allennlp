@@ -8,6 +8,7 @@ import numpy
 from typing import TypeVar,Iterable
 from multiprocessing import Pool
 from allennlp.common.elastic_logger import ElasticLogger
+from subprocess import Popen,call
 
 T = TypeVar('T')
 
@@ -70,6 +71,8 @@ def process_results(filename, type, source_dataset, \
         results_dict['f1'] *= instance_list[0]['qas_used_fraction']
 
 
+
+
     else:
         # computing
         with open(filename, 'r') as f:
@@ -87,7 +90,10 @@ def process_results(filename, type, source_dataset, \
         results_dict['target_size'] = target_size
     ElasticLogger().write_log('INFO', 'EvalResults', context_dict=results_dict)
 
-
+    if predictions_file is not None:
+        # uploading to cloud
+        command = "aws s3 cp " + predictions_file + " s3://multiqa/predictions/" + predictions_file.split('/')[-1] + " --acl public-read"
+        Popen(command, shell=True, preexec_fn=os.setsid)
 
 def main():
     parse = argparse.ArgumentParser("Pre-process for DocumentQA/MultiQA model and datareader")
