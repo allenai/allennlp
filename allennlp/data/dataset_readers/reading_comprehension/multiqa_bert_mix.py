@@ -95,7 +95,10 @@ class BERTQAReaderMix(DatasetReader):
             # choose at most 2 instances from the same question:
             if len(question_instances) > 1 and self._use_one_inst_per_question:
                 inst_with_answers = [inst for inst in question_instances if inst['answers'] != []]
-                instances_to_add = random.sample(inst_with_answers, 1)
+                if len(inst_with_answers) > 0:
+                    instances_to_add = random.sample(inst_with_answers, 1)
+                else:
+                    instances_to_add = []
             elif len(question_instances) > 2:
                 # This part is inspired by Clark and Gardner, 17 - oversample the highest ranking documents.
                 # In thier work they use only instances with answers, so we will find the highest
@@ -111,8 +114,8 @@ class BERTQAReaderMix(DatasetReader):
                 instances_to_add = question_instances
 
             # Require at least one answer:
-            if not any(inst['answers'] != [] for inst in instances_to_add):
-                raise ValueError()
+            #if not any(inst['answers'] != [] for inst in instances_to_add):
+            #    raise ValueError()
 
         #logger.info("multiqa+: yielding %d instances ", len(filtered_instances))
         for inst_num, inst in enumerate(instances_to_add):
