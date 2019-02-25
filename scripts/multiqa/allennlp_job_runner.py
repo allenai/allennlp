@@ -377,6 +377,9 @@ class JobRunner():
             if not self.resources_available and channel == 'GPUs':
                 continue
 
+            if len(self.available_gpus)<4 and channel == '4GPUs':
+                continue
+
             method_frame, properties, body_ = self.channel.basic_get(channel)
             if body_ is not None:
                 # Display the message parts
