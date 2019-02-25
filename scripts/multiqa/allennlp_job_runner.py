@@ -52,7 +52,11 @@ class JobRunner():
             gpu_mem = gpu_memory_mb()
             if self.channel == 'rack-jonathan-g02':
                 gpu_mem = {(3 - key): val for key, val in gpu_mem.items()}
-            self.available_gpus = [i for i, gpu in enumerate(gpu_mem.keys()) if gpu_mem[gpu] < 1000 and i not in self.job_gpus]
+
+                self.available_gpus = [i for i, gpu in enumerate(gpu_mem.keys()) if
+                                        gpu_mem[gpu] >= 300 and gpu_mem[gpu] < 1000 and i not in self.job_gpus]
+                self.available_gpus += [i for i, gpu in enumerate(gpu_mem.keys()) if gpu_mem[gpu] < 300 and i not in self.job_gpus]
+
         except:
             self.available_gpus = []
 
@@ -94,11 +98,12 @@ class JobRunner():
 
     def close_job_log(self,job):
         # printing longer log
-        self.log_handles[job['log_file']].close()
-        with open(job['log_file'], 'r') as f:
-            log_data = f.readlines()
-        if len(log_data) > 100:
-            job['log_snapshot'] = ' '.join(log_data[-100:])
+        if job['log_file'] in self.log_handles:
+            self.log_handles[job['log_file']].close()
+            with open(job['log_file'], 'r') as f:
+                log_data = f.readlines()
+            if len(log_data) > 100:
+                job['log_snapshot'] = ' '.join(log_data[-100:])
 
     def handle_job_stopped(self,job):
         logger.info('processed not alive.')
@@ -111,13 +116,19 @@ class JobRunner():
             job['log_snapshot'] = self.log_handles[job['log_file']].read()
 
 
-        if job['GPU'] in self.job_gpus:
-            self.job_gpus.remove(job['GPU'])
-            self.update_available_gpus()
+
+        if type(job['GPU']) == list:
+            for GPU in job['GPU']:
+                if GPU in self.job_gpus:
+                    self.job_gpus.remove(GPU)
+        else:
+            if job['GPU'] in self.job_gpus:
+                self.job_gpus.remove(job['GPU'])
+        self.update_available_gpus()
 
         # TODO this is an ugly check for error , but because we are forking with nohup, python does not provide any good alternative...
         # We also assume here that jobs don't take less than 20 seconds...
-        if ('output_file' in job and not os.path.exists(job['output_file'])):
+        if ('output_file' in job and job['output_file'] is not None and not os.path.exists(job['output_file'])):
 
             if len(job['log_snapshot']) > 10001:
                 job['log_snapshot'] = job['log_snapshot'][-10000:]
@@ -247,12 +258,15 @@ class JobRunner():
         bash_command = bash_command.replace('[MODEL_DIR]',self._MODELS_DIR)
         if not self._SIM_GPUS:
             bash_command = bash_command.replace("'[GPU_ID]'", str(assigned_GPU)).replace('[GPU_ID]', str(assigned_GPU))
+            bash_command = bash_command.replace("'[GPU_ID4]'", str(assigned_GPU)).replace('[GPU_ID4]', str(assigned_GPU))
+
         else:
-            bash_command = bash_command.replace('[GPU_ID]', str(-1))
+            bash_command = bash_command.replace("'[GPU_ID]'", str(assigned_GPU)).replace('[GPU_ID]', str(assigned_GPU))
+            bash_command = bash_command.replace("'[GPU_ID4]'", str(assigned_GPU)).replace('[GPU_ID4]', str(assigned_GPU))
 
         bash_command = 'nohup ' + bash_command + ' &'
 
-        if 'output_file' in config:
+        if 'output_file' in config and config['output_file'] is not None:
             config['output_file'] = config['output_file'].replace('[MODEL_DIR]', self._MODELS_DIR)
 
         # Executing
@@ -271,7 +285,8 @@ class JobRunner():
                     wa_proc = Popen(bash_command, shell=True, preexec_fn=os.setsid, stdout=f, stderr=f)
 
                 # lets give this some time...
-                time.sleep(5)
+                if not self._DEBUG:
+                    time.sleep(5)
 
 
         # open log file for reading
@@ -295,11 +310,21 @@ class JobRunner():
             # Allocating resources
             assigned_GPU = -1
             if config['resource_type'] == 'GPU':
-                if config['override_config']['trainer']["cuda_device"] == '[GPU_ID]':
-                    assigned_GPU = self.available_gpus[-1]
-                self.job_gpus.append(assigned_GPU)
-                self.update_available_gpus()
-                logger.info('assigned_GPU = %s',assigned_GPU)
+                if config['override_config']['trainer']["cuda_device"] == '[GPU_ID4]':
+                    assigned_GPU = []
+                    for i in range(4):
+                        single_assigned_GPU = self.available_gpus[-1]
+                        self.job_gpus.append(single_assigned_GPU)
+                        self.update_available_gpus()
+                        logger.info('assigned_GPU = %s', single_assigned_GPU)
+                        assigned_GPU.append(single_assigned_GPU)
+                else:
+                    if config['override_config']['trainer']["cuda_device"] == '[GPU_ID]':
+                        assigned_GPU = self.available_gpus[-1]
+                    self.job_gpus.append(assigned_GPU)
+                    self.update_available_gpus()
+                    logger.info('assigned_GPU = %s', assigned_GPU)
+
             elif self._SIM_GPUS:
                 assigned_GPU = self.available_gpus[-1]
                 self.job_gpus.append(assigned_GPU)
@@ -373,13 +398,15 @@ class JobRunner():
                     body_ = None
                     self.channel.basic_nack(method_frame.delivery_tag)
                     time.sleep(10)
-                elif self.resources_available and ((not hasattr(self, '_job_no_run_string')) or self._job_no_run_string == '' or name.find(self._job_no_run_string) == -1):
+                elif self.resources_available and ((not hasattr(self, '_job_no_run_string')) or self._job_no_run_string == '' or name.find(self._job_no_run_string) == -1) and  \
+                        not (config['override_config']['trainer']["cuda_device"] == '[GPU_ID4]' and len(self.available_gpus)<4):
                     break
                 else:
                     # NO Resources
                     body_ = None
                     self.channel.basic_nack(method_frame.delivery_tag)
-                    time.sleep(10)
+                    if not self._DEBUG:
+                        time.sleep(10)
 
         if body_ is not None:
             logger.info('New job found! %s',name)
@@ -444,7 +471,10 @@ class JobRunner():
             logger.info('%d job currently running, available GPUS: %s, job_gpus: %s', \
                         len(self.running_jobs), str(self.available_gpus), str(self.job_gpus))
             self.runner_iter_count+=1
-            time.sleep(10)
+            if not self._DEBUG:
+                time.sleep(10)
+            else:
+                time.sleep(1)
 
 def main():
     parser = argparse.ArgumentParser()
