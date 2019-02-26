@@ -438,7 +438,7 @@ class JobRunner():
         for job in self.running_jobs:
             job = self.inspect_job(job)
 
-            if not job['alive'] or job['log_update_diff'] > 2000:
+            if not job['alive']:
                 self.handle_job_stopped(job)
 
         # sample queues for new jobs
