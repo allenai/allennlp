@@ -72,6 +72,16 @@ class TestEvaluate(AllenNlpTestCase):
         metrics = evaluate_from_args(args)
         assert metrics.keys() == {'span_acc', 'end_acc', 'start_acc', 'em', 'f1', 'loss'}
 
+    def test_evaluate_from_args_untrained(self):
+        kebab_args = ["evaluate", str(self.FIXTURES_ROOT / "bidaf" / "experiment.json"),
+                      str(self.FIXTURES_ROOT / "data" / "squad.json"),
+                      "--cuda-device", "-1",
+                      "--load-config-only"]
+
+        args = self.parser.parse_args(kebab_args)
+        metrics = evaluate_from_args(args)
+        assert metrics.keys() == {'span_acc', 'end_acc', 'start_acc', 'em', 'f1', 'loss'}
+
     def test_output_file_evaluate_from_args(self):
         output_file = str(self.TEST_DIR / "metrics.json")
         kebab_args = ["evaluate", str(self.FIXTURES_ROOT / "bidaf" / "serialization" / "model.tar.gz"),

@@ -57,9 +57,11 @@ import json
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.util import prepare_environment
+from allennlp.data import Vocabulary
 
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.iterators import DataIterator
+from allennlp.models import Model
 from allennlp.models.archival import load_archive
 from allennlp.training.util import evaluate
 from allennlp.common import Params
@@ -115,6 +117,14 @@ class Evaluate(Subcommand):
                                'extended, we will try to use the original file paths used during training. If '
                                'they are not available we will use random vectors for embedding extension.')
 
+        subparser.add_argument('--load-config-only',
+                               action='store_true',
+                               default=False,
+                               help='If specified, the archive file should in fact be a .jsonnet '
+                                    'config file. This will be instantiated and evaluated without '
+                                    'trained weights. Intended for evaluating programmatic '
+                                    'baselines or models trained outside AllenNLP.')
+
         subparser.set_defaults(func=evaluate_from_args)
 
         return subparser
@@ -125,12 +135,14 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     logging.getLogger('allennlp.nn.initializers').disabled = True
     logging.getLogger('allennlp.modules.token_embedders.embedding').setLevel(logging.INFO)
 
-    # Load from archive
-    archive = load_archive(args.archive_file, args.cuda_device, args.overrides, args.weights_file)
-    config = archive.config
+    # Load config
+    if args.load_config_only:
+        config = Params.from_file(args.archive_file, args.overrides)
+        config.loading_from_archive = True
+    else:
+        archive = load_archive(args.archive_file, args.cuda_device, args.overrides, args.weights_file)
+        config = archive.config
     prepare_environment(config)
-    model = archive.model
-    model.eval()
 
     # Load the evaluation data
 
@@ -144,6 +156,15 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     evaluation_data_path = args.input_file
     logger.info("Reading evaluation data from %s", evaluation_data_path)
     instances = dataset_reader.read(evaluation_data_path)
+
+    # Load model
+    if args.load_config_only:
+        logger.info("Vocabulary is being extended with test instances.")
+        vocab = Vocabulary.from_params(config.pop("vocabulary", {}), instances)
+        model = Model.from_params(vocab=vocab, params=config.pop('model'))
+    else:
+        model = archive.model
+    model.eval()
 
     embedding_sources: Dict[str, str] = (json.loads(args.embedding_sources_mapping)
                                          if args.embedding_sources_mapping else {})
