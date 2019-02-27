@@ -18,6 +18,7 @@ from allennlp.training.metrics.mean_absolute_error import MeanAbsoluteError
 from allennlp.training.metrics.mention_recall import MentionRecall
 from allennlp.training.metrics.metric import Metric
 from allennlp.training.metrics.pearson_correlation import PearsonCorrelation
+from allennlp.training.metrics.perplexity import Perplexity
 from allennlp.training.metrics.sequence_accuracy import SequenceAccuracy
 from allennlp.training.metrics.span_based_f1_measure import SpanBasedF1Measure
 from allennlp.training.metrics.squad_em_and_f1 import SquadEmAndF1
