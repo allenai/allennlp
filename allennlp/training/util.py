@@ -281,9 +281,12 @@ def get_metrics(model: Model,
     return metrics
 
 def sum_losses(losses: Dict[str, torch.Tensor],
-               loss_weights: Dict[str, LossWeighter] = {},
+               loss_weights: Dict[str, LossWeighter] = None,
                training: Optional[bool] = True) -> torch.Tensor:
     """Sums losses and their respective weights"""
+    if loss_weights is None:
+        return losses.values().sum()
+
     loss = 0
     for l_name in losses:
         if l_name not in loss_weights:

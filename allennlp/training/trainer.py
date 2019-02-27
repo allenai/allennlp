@@ -55,7 +55,7 @@ class Trainer(TrainerBase):
                  grad_norm: Optional[float] = None,
                  grad_clipping: Optional[float] = None,
                  learning_rate_scheduler: Optional[LearningRateScheduler] = None,
-                 loss_weights: Optional[Dict[str, LossWeighter]] = {},
+                 loss_weights: Optional[Dict[str, LossWeighter]] = None,
                  summary_interval: int = 100,
                  histogram_interval: int = None,
                  should_log_parameter_statistics: bool = True,
@@ -134,7 +134,7 @@ class Trainer(TrainerBase):
             provided to determine if learning has plateaued.  To support updating the learning
             rate on every batch, this can optionally implement ``step_batch(batch_num_total)`` which
             updates the learning rate given the batch number.
-        loss_weights : ``Dict[str, Union[LossWeighter, float]]``, optional, (default = {}),
+        loss_weights : ``Dict[str, Union[LossWeighter, float]]``, optional, (default = None),
             Whenever the loss function is composed of more then a single term weighting is probable.
             Pass different instances of class ``LossWeighter`` in a dict represented by their corresponding
             loss name.
@@ -275,7 +275,7 @@ class Trainer(TrainerBase):
             gpu_usage.append((gpu, memory))
             logger.info(f"GPU {gpu} memory usage MB: {memory}")
 
-        train_loss = {}
+        train_loss: Dict[str, float] = {}
         # Set the model to "train" mode.
         self.model.train()
 
@@ -388,7 +388,7 @@ class Trainer(TrainerBase):
         return metrics
 
 
-    def _validation_loss(self) -> Tuple[float, int]:
+    def _validation_loss(self) -> Tuple[Dict[str, float], int]:
         """
         Computes the validation loss. Returns it and the number of batches.
         """
@@ -415,7 +415,7 @@ class Trainer(TrainerBase):
         val_generator_tqdm = Tqdm.tqdm(val_generator,
                                        total=num_validation_batches)
         batches_this_epoch = 0
-        val_loss = {}
+        val_loss: Dict[str, float] = {}
         for batch_group in val_generator_tqdm:
 
             loss_dict = self.batch_loss(batch_group, for_training=False)

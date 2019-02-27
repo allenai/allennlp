@@ -5,7 +5,7 @@ import torch.nn.functional as F
 
 from allennlp.common.util import START_SYMBOL, END_SYMBOL
 from allennlp.data.vocabulary import Vocabulary
-from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder
+from allennlp.modules import Seq2SeqEncoder, TextFieldEmbedder
 from allennlp.modules.decoders import Decoder
 from allennlp.nn.util import get_text_field_mask
 
@@ -72,7 +72,7 @@ class VariationalDecoder(Decoder):
         h0[-1] = self._latent_to_dec_hidden(latent)
         logits = self._run_decoder(embeddings, relevant_mask, (h0, c0), latent)
         class_probabilities = F.softmax(logits, 2)
-        _, best_predictions = torch.max(class_probabilities, 2) 
+        _, best_predictions = torch.max(class_probabilities, 2)
 
         return {"logits": logits, "predictions": best_predictions}
 
@@ -93,7 +93,7 @@ class VariationalDecoder(Decoder):
     def generate(self, latent: torch.Tensor, max_len: int = 20) -> Dict[str, torch.Tensor]:
         batch_size, _ = latent.size()
         last_genereation = latent.new_full((batch_size, 1),
-                                           fill_value=self.vocab.get_token_index(START_SYMBOL), dtype=torch.long)
+                                           fill_value=self._start_index, dtype=torch.long)
         h0 = latent.new_zeros(self.dec_num_layers, batch_size, self.dec_hidden) # pylint: disable=invalid-name
         c0 = latent.new_zeros(self.dec_num_layers, batch_size, self.dec_hidden) # pylint: disable=invalid-name
         h0[-1] = self._latent_to_dec_hidden(latent)

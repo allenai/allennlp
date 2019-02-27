@@ -1,3 +1,5 @@
+from typing import Dict
+
 import torch
 from allennlp.common import Params, Registrable
 
@@ -21,7 +23,7 @@ class LossWeighter(Registrable):
         raise NotImplementedError
 
     @classmethod
-    def from_params(cls, params: Params):
+    def from_params(cls, params: Params) -> Dict[str, 'LossWeighter']:
         # pylint: disable=arguments-differ
         weighters = {}
         for param_name in params:
@@ -40,7 +42,7 @@ class ConstantWeight(LossWeighter):
         pass
 
 class _Annealer(LossWeighter):
-    def __init__(self, min_weight: float, max_weight: float, warmup: int, num_iter_to_max: int):
+    def __init__(self, min_weight: float, max_weight: float, warmup: int, num_iter_to_max: int) -> None:
         """
         This class is an abstract class for annealing loss weighters.
         """
@@ -75,7 +77,11 @@ class SigmoidAnnealer(_Annealer):
     """
     This class anneals weights in a sigmoid fashion.
     """
-    def __init__(self, min_weight: float, max_weight: float, warmup: int, num_iter_to_max: int, slope: float):
+    def __init__(self, min_weight: float,
+                 max_weight: float,
+                 warmup: int,
+                 num_iter_to_max: int,
+                 slope: float) -> None:
         super(SigmoidAnnealer, self).__init__(min_weight, max_weight, warmup, num_iter_to_max)
         self.slope = slope
 

@@ -31,7 +31,7 @@ class AutoencoderDatasetReader(Seq2SeqDatasetReader):
                 yield self.text_to_instance(line)
 
     @overrides
-    def text_to_instance(self, input_string: str) -> Instance:
+    def text_to_instance(self, input_string: str) -> Instance:  # type: ignore
         # pylint: disable=arguments-differ
         tokenized_string = self._source_tokenizer.tokenize(input_string)
         tokenized_source = tokenized_string.copy()

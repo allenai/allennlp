@@ -33,7 +33,7 @@ class MaskedEncoder(Seq2VecEncoder):
         return self.rnn.get_input_dim()
 
     def get_output_dim(self) -> int:
-        return self.rnn.get_output_dim
+        return self.rnn.get_output_dim()
 
     def forward(self, source_tokens: Dict[str, torch.LongTensor]) -> Tuple[torch.Tensor, torch.Tensor]:
         # pylint: disable=arguments-differ

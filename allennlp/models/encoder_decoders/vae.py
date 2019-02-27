@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, Tuple
 import numpy
 import torch
 from torch.nn.modules import Linear
@@ -84,7 +84,9 @@ class VAE(Model):
         return output_dict
 
     def variational_encoding(self,
-                             source_tokens: Dict[str, torch.LongTensor]) -> List[torch.Tensor]:
+                             source_tokens: Dict[str, torch.LongTensor]) -> Tuple[torch.Tensor,
+                                                                                  torch.Tensor,
+                                                                                  torch.Tensor]:
         final_state = self._encoder(source_tokens)
         mean = self._latent_to_mean(final_state)
         logvar = self._latent_to_logvar(final_state)
