@@ -96,6 +96,8 @@ def create_kwargs(cls: Type[T], params: Params, **extras) -> Dict[str, Any]:
     For instance, you might provide an existing `Vocabulary` this way.
     """
     # Get the signature of the constructor.
+    from allennlp.models.archival import load_archive  # import here to avoid circular imports
+
     signature = inspect.signature(cls.__init__)
     kwargs: Dict[str, Any] = {}
 
@@ -122,8 +124,18 @@ def create_kwargs(cls: Type[T], params: Params, **extras) -> Dict[str, Any]:
         # We check the provided `extras` for these and just use them if they exist.
         if name in extras:
             kwargs[name] = extras[name]
-
-        # The next case is when the parameter type is itself constructible from_params.
+        # Next case is when argument should be loaded from pretrained archive.
+        elif name in params and isinstance(params.get(name), Params) and "_pretrained" in params.get(name):
+            load_module_params = params.pop(name).pop("_pretrained")
+            archive_file = load_module_params.pop("archive_file")
+            module_path = load_module_params.pop("module_path")
+            freeze = load_module_params.pop("freeze", True)
+            archive = load_archive(archive_file)
+            kwargs[name] = archive.extract_module(module_path, freeze) # pylint: disable=no-member
+            if not isinstance(kwargs[name], annotation):
+                raise ConfigurationError(f"The module from model at {archive_file} at path {module_path} "
+                                         f"was expected of type {annotation} but is of type {type(kwargs[name])}")
+        # # The next case is when the parameter type is itself constructible from_params.
         elif hasattr(annotation, 'from_params'):
             if name in params:
                 # Our params have an entry for this, so we use that.
