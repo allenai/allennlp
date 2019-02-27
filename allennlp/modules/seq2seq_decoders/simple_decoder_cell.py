@@ -1,12 +1,12 @@
 import torch
-from typing import Tuple
+from typing import Tuple, Generic, Dict, Any
 
 from torch.nn import LSTMCell
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.modules import Attention, SimilarityFunction
 from allennlp.modules.attention import LegacyAttention
-from allennlp.modules.seq2seq_decoders.decoder_cell import DecoderCell
+from allennlp.modules.seq2seq_decoders.decoder_cell import DecoderCell, CellState
 from allennlp.nn import util
 
 
@@ -79,20 +79,31 @@ class SimpleDecoderCell(DecoderCell):
 
         # shape: (batch_size, max_input_sequence_length)
         input_weights = self._attention(
-                decoder_hidden_state, encoder_outputs, encoder_outputs_mask)
+            decoder_hidden_state, encoder_outputs, encoder_outputs_mask)
 
         # shape: (batch_size, encoder_output_dim)
         attended_input = util.weighted_sum(encoder_outputs, input_weights)
 
         return attended_input
 
+    def init_decoder_state(self, batch_size: int, final_encoder_output: torch.Tensor) -> CellState:
+
+        return {
+            "decoder_hidden": final_encoder_output,  # shape: (batch_size, decoder_output_dim)
+            "decoder_context": final_encoder_output.new_zeros(
+                batch_size,
+                self._decoder_output_dim
+            )  # shape: (batch_size, decoder_output_dim)
+        }
+
     def forward(self,
                 previous_steps_predictions: torch.Tensor,
                 encoder_outputs: torch.Tensor,
                 source_mask: torch.Tensor,
-                decoder_hidden: torch.Tensor,
-                decoder_context: torch.Tensor
-                ) -> Tuple[torch.Tensor, torch.Tensor]:
+                previous_state: CellState) -> Tuple[CellState, torch.Tensor]:
+
+        decoder_hidden = previous_state['decoder_hidden']
+        decoder_context = previous_state['decoder_context']
 
         # shape: (group_size, output_dim)
         last_predictions_embedding = previous_steps_predictions[:, -1]
@@ -107,15 +118,10 @@ class SimpleDecoderCell(DecoderCell):
             # shape: (group_size, target_embedding_dim)
             decoder_input = last_predictions_embedding
 
-        print('last_predictions_embedding.shape', last_predictions_embedding.shape)
-
-        print('decoder_input.shape', decoder_input.shape)
-
         # shape (decoder_hidden): (batch_size, decoder_output_dim)
         # shape (decoder_context): (batch_size, decoder_output_dim)_decoder_output_dim
         decoder_hidden, decoder_context = self._decoder_cell(
-                decoder_input,
-                (decoder_hidden, decoder_context))
+            decoder_input,
+            (decoder_hidden, decoder_context))
 
-        return decoder_hidden, decoder_context
-
+        return {"decoder_hidden": decoder_hidden, "decoder_context": decoder_context}, decoder_hidden

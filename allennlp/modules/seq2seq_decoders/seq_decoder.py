@@ -146,10 +146,8 @@ class SeqDecoder(Model):
             state["encoder_outputs"],
             state["source_mask"],
             bidirectional=self.bidirectional_input)
-        # shape: (batch_size, decoder_output_dim)
-        state["decoder_hidden"] = final_encoder_output
-        # shape: (batch_size, decoder_output_dim)
-        state["decoder_context"] = state["encoder_outputs"].new_zeros(batch_size, self.decoder_output_dim)
+
+        state.update(self._decoder.init_decoder_state(batch_size, final_encoder_output))
 
         return state
 

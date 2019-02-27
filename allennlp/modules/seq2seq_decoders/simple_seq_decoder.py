@@ -182,12 +182,6 @@ class SimpleSeqDecoder(SeqDecoder):
         # shape: (group_size, max_input_sequence_length)
         source_mask = state["source_mask"]
 
-        # shape: (group_size, decoder_output_dim)
-        decoder_hidden = state["decoder_hidden"]
-
-        # shape: (group_size, decoder_output_dim)
-        decoder_context = state["decoder_context"]
-
         # shape: (group_size, steps_count, decoder_output_dim)
         previous_steps_predictions = state.get("previous_steps_predictions")
 
@@ -202,20 +196,20 @@ class SimpleSeqDecoder(SeqDecoder):
             # shape: (group_size, steps_count, target_embedding_dim)
             previous_steps_predictions = torch.cat([previous_steps_predictions, last_predictions_embeddings], 1)
 
-        decoder_hidden, decoder_context = self._decoder(
+        decoder_state, decoder_output = self._decoder(
             previous_steps_predictions=previous_steps_predictions,
             encoder_outputs=encoder_outputs,
             source_mask=source_mask,
-            decoder_hidden=decoder_hidden,
-            decoder_context=decoder_context
+            previous_state=state
         )
 
         state["previous_steps_predictions"] = previous_steps_predictions
-        state["decoder_hidden"] = decoder_hidden
-        state["decoder_context"] = decoder_context
+
+        # Update state with new decoder state, override previous state
+        state.update(decoder_state)
 
         # shape: (group_size, num_classes)
-        output_projections = self._output_projection_layer(decoder_hidden)
+        output_projections = self._output_projection_layer(decoder_output)
 
         return output_projections, state
 

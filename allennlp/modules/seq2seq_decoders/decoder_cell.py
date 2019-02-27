@@ -1,7 +1,9 @@
 import torch
-from typing import Tuple
-
+from typing import Tuple, TypeVar, Generic, Dict, Any
+from allennlp.nn import util
 from allennlp.common import Registrable
+
+CellState = Dict[str, torch.Tensor]  # pylint: disable=invalid-name
 
 
 class DecoderCell(torch.nn.Module, Registrable):
@@ -34,13 +36,32 @@ class DecoderCell(torch.nn.Module, Registrable):
         """
         return self._decoding_dim
 
+    def init_decoder_state(self, batch_size: int, final_encoder_output: torch.Tensor) -> CellState:
+        """
+        Initialize the encoded state to be passed to the first decoding time step.
+
+        Parameters
+        ----------
+        batch_size : ``int``
+            Size of batch
+
+        final_encoder_output : ``torch.Tensor``
+            Last state of the Encoder
+
+        Returns
+        -------
+        ``Dict[str, torch.Tensor]``
+        Initial state
+
+        """
+
+        raise NotImplementedError()
+
     def forward(self,
                 previous_steps_predictions: torch.Tensor,
                 encoder_outputs: torch.Tensor,
                 source_mask: torch.Tensor,
-                decoder_hidden: torch.Tensor,
-                decoder_context: torch.Tensor
-                ) -> Tuple[torch.Tensor, torch.Tensor]:
+                previous_state: CellState) -> Tuple[CellState, torch.Tensor]:
         """
         Performs single decoding step, returns decoder hidden state and decoder output.
 
@@ -55,17 +76,13 @@ class DecoderCell(torch.nn.Module, Registrable):
         source_mask : ``torch.Tensor``, required
             This tensor contains mask for each input sequence.
             Shape: (group_size, max_input_sequence_length)
-        decoder_hidden : ``torch.Tensor``, required
-            Decoder hidden state, generated on previous decoding step.
-            Shape: (group_size, decoder_output_dim)
-        decoder_context : ``torch.Tensor``, required
-            Decoder output, generated on previous decoding step.
-            Shape: (group_size, decoder_output_dim)
+        previous_state : ``CellState``, required
+            previous state of decoder
 
         Returns
         -------
-        Tuple[torch.Tensor, Dict[str, torch.Tensor]]
-            A tuple of ``(decoder_hidden, decoder_context)``
+        Tuple[CellState, torch.Tensor]
+        Tuple of new decoder state and decoder output. Output should be used to generate out sequence elements
+
         """
         raise NotImplementedError()
-
