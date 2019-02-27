@@ -130,8 +130,8 @@ class TensorboardWriter:
                     effective_rate = rate * float(param.requires_grad)
                     self.add_train_scalar("learning_rate/" + names[param], effective_rate)
 
-    def log_loss_weights(self, loss_weights: Dict[str, LossWeighter]) -> None:
-        if loss_weights != {}:
+    def log_loss_weights(self, loss_weights: Dict[str, LossWeighter] = None) -> None:
+        if loss_weights is not None:
             for loss_weight_name, loss_weight in loss_weights.items():
                 self.add_train_scalar("loss_weights/" + loss_weight_name, loss_weight.get())
 

@@ -285,7 +285,7 @@ def sum_losses(losses: Dict[str, torch.Tensor],
                training: Optional[bool] = True) -> torch.Tensor:
     """Sums losses and their respective weights"""
     if loss_weights is None:
-        return losses.values().sum()
+        return sum(losses.values())
 
     loss = 0
     for l_name in losses:
