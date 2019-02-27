@@ -6,7 +6,7 @@ import torch.nn.functional as F
 from allennlp.common.util import START_SYMBOL, END_SYMBOL
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.modules import Seq2SeqEncoder, TextFieldEmbedder
-from allennlp.modules.decoders import Decoder
+from allennlp.modules.decoders.decoder import Decoder
 from allennlp.nn.util import get_text_field_mask
 
 @Decoder.register("variational_decoder")
@@ -54,7 +54,7 @@ class VariationalDecoder(Decoder):
         self._start_index = self.vocab.get_token_index(START_SYMBOL)
         self._end_index = self.vocab.get_token_index(END_SYMBOL)
 
-    def forward(self,
+    def forward(self, # type: ignore
                 target_tokens: Dict[str, torch.LongTensor],
                 latent: torch.Tensor) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
