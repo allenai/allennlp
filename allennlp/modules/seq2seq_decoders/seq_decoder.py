@@ -1,12 +1,11 @@
 from typing import Dict, List, Tuple
 
 import torch
-from torch.nn import Linear
+from torch.nn import Linear, Module
 import torch.nn.functional as F
 
 from allennlp.common.util import START_SYMBOL, END_SYMBOL
 from allennlp.data import Vocabulary
-from allennlp.models import Model
 from allennlp.modules import Embedding
 from allennlp.modules.seq2seq_decoders.decoder_cell import DecoderCell
 from allennlp.nn import util
@@ -14,7 +13,7 @@ from allennlp.nn.beam_search import BeamSearch
 from allennlp.training.metrics import Metric, BLEU
 
 
-class SeqDecoder(Model):
+class SeqDecoder(Module):
     """
     A ``SeqDecoder`` is a base class for different types of Seq decoding modules
 
@@ -65,7 +64,7 @@ class SeqDecoder(Model):
     ):
 
         self.vocab = vocab
-        super().__init__(vocab)
+        super().__init__()
 
         self._target_namespace = target_namespace
 

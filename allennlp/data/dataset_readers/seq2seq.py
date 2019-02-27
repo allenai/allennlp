@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 class Seq2SeqDatasetReader(DatasetReader):
     """
     Read a tsv file containing paired sequences, and create a dataset suitable for a
-    ``SimpleSeq2Seq`` model, or any model with a matching API.
+    ``ComposedSeq2Seq`` model, or any model with a matching API.
 
     Expected format for each input line: <source_sequence_string>\t<target_sequence_string>
 

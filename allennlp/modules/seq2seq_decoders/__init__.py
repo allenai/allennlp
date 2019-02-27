@@ -4,7 +4,7 @@ into a sequence of output vectors.
 
 The available Seq2Seq decoders are
 
-* :class:`"simple_decoder" <allennlp.modules.seq2seq_decoders.simple_seq2seq_decoder.SimpleDecoderCell>`
+* :class:`"simple_decoder" <allennlp.modules.seq2seq_decoders.lstm_decoder_cell.LstmDecoderCell>`
 
 """
-from allennlp.modules.seq2seq_decoders.simple_decoder_cell import SimpleDecoderCell
+from allennlp.modules.seq2seq_decoders.lstm_decoder_cell import LstmDecoderCell

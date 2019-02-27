@@ -3,18 +3,16 @@ from typing import Tuple, Generic, Dict, Any
 
 from torch.nn import LSTMCell
 
-from allennlp.common.checks import ConfigurationError
-from allennlp.modules import Attention, SimilarityFunction
-from allennlp.modules.attention import LegacyAttention
+from allennlp.modules import Attention
 from allennlp.modules.seq2seq_decoders.decoder_cell import DecoderCell, CellState
 from allennlp.nn import util
 
 
-@DecoderCell.register("simple_decoder")
-class SimpleDecoderCell(DecoderCell):
+@DecoderCell.register("lstm_decoder_cell")
+class LstmDecoderCell(DecoderCell):
     """
     This decoder cell implements simple decoding network with LSTMCell and Attention
-        as it was implemented in ``SimpleSeq2Seq``
+        as it was implemented in ``ComposedSeq2Seq``
 
     Parameters
     ----------
@@ -27,18 +25,14 @@ class SimpleDecoderCell(DecoderCell):
         If you want to use attention to get a dynamic summary of the encoder outputs at each step
         of decoding, this is the function used to compute similarity between the decoder hidden
         state and encoder outputs.
-    attention_function: ``SimilarityFunction``, optional (default = None)
-        This is if you want to use the legacy implementation of attention. This will be deprecated
-        since it consumes more memory than the specialized attention modules.
     """
 
     def __init__(self,
                  decoding_dim: int,
                  target_embedding_dim: int,
-                 attention: Attention = None,
-                 attention_function: SimilarityFunction = None,
+                 attention: Attention = None
                  ):
-        super(SimpleDecoderCell, self).__init__(decoding_dim=decoding_dim, target_embedding_dim=target_embedding_dim)
+        super(LstmDecoderCell, self).__init__(decoding_dim=decoding_dim, target_embedding_dim=target_embedding_dim)
 
         # In this particular type of decoder output of previous step passes directly to the input of current step
         # We also assume that sequence decoder output dimensionality is equal to the encoder output dimensionality
@@ -47,15 +41,7 @@ class SimpleDecoderCell(DecoderCell):
         self._decoder_output_dim = self._decoding_dim
 
         # Attention mechanism applied to the encoder output for each step.
-        if attention:
-            if attention_function:
-                raise ConfigurationError("You can only specify an attention module or an "
-                                         "attention function, but not both.")
-            self._attention = attention
-        elif attention_function:
-            self._attention = LegacyAttention(attention_function)
-        else:
-            self._attention = None
+        self._attention: Attention = attention
 
         if self._attention:
             # If using attention, a weighted average over encoder outputs will be concatenated

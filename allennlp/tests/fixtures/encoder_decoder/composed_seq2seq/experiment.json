@@ -40,7 +40,7 @@
   "train_data_path": "allennlp/tests/fixtures/data/seq2seq_copy.tsv",
   "validation_data_path": "allennlp/tests/fixtures/data/seq2seq_copy.tsv",
   "model": {
-    "type": "simple_seq2seq",
+    "type": "composed_seq2seq",
     "source_embedder": {
       "token_embedders": {
         "tokens": {
@@ -72,12 +72,17 @@
       "hidden_size": 10,
       "num_layers": 1
     },
+    "decoder_cell": {
+      "type": "lstm_decoder_cell",
+      "decoding_dim": 10,
+      "target_embedding_dim": 30,
+      "attention": {
+        "type": "dot_product"
+      }
+    },
     "max_decoding_steps": 20,
     "target_embedding_dim": 30,
     "target_namespace": "target_tokens",
-    "attention": {
-      "type": "dot_product"
-    },
     "beam_size": 5
   },
   "iterator": {
