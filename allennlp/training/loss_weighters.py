@@ -23,7 +23,7 @@ class LossWeighter(Registrable):
         raise NotImplementedError
 
     @classmethod
-    def from_params(cls, params: Params) -> Dict[str, 'LossWeighter']:
+    def from_params(cls, params: Params) -> Dict[str, 'LossWeighter']: # type: ignore
         # pylint: disable=arguments-differ
         weighters = {}
         for param_name in params:
