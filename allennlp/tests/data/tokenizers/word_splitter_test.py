@@ -176,7 +176,7 @@ class TestBertBasicWordSplitter(AllenNlpTestCase):
 
     def test_do_lower_case(self):
         # BertBasicWordSplitter makes every token not in `never_split` to lowercase by default
-        word_splitter = BertBasicWordSplitter(never_split=("[UNUSED0]"))  # pylint: disable=Tuple type checking
+        word_splitter = BertBasicWordSplitter(never_split=["[UNUSED0]"])  # pylint: disable=Tuple type checking
         sentence = "[UNUSED0] [UNK] [unused0]"
         expected_tokens = ["[UNUSED0]", "[", "unk", "]", "[", "unused0", "]"]
         tokens = [token.text for token in word_splitter.split_words(sentence)]
