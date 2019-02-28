@@ -333,13 +333,13 @@ class DocQAPlusBERT(Model):
         # but we would like to see if we still get F1 score for it...
         # so in evaluation our loss is not Accurate! (however the question with no answer tokens will
         # remain the same number so it is relatively accuracy)
-        #if 'loss' not in output_dict:
-        if not self.training:
-            output_dict["loss"] = torch.cuda.FloatTensor([0], device=span_end_logits.device) \
-                if torch.cuda.is_available() else torch.FloatTensor([0])
-        else:
-            output_dict["loss"] = torch.tensor([[1.]], requires_grad=True,device=span_end_logits.device) \
-                if torch.cuda.is_available() else torch.tensor([[1.]], requires_grad=True)
+        if 'loss' not in output_dict:
+            if not self.training:
+                output_dict["loss"] = torch.cuda.FloatTensor([0], device=span_end_logits.device) \
+                    if torch.cuda.is_available() else torch.FloatTensor([0])
+            else:
+                output_dict["loss"] = torch.tensor([[1.]], requires_grad=True,device=span_end_logits.device) \
+                    if torch.cuda.is_available() else torch.tensor([[1.]], requires_grad=True)
 
         # support for multi choice answers:
         # TODO this does not handle prediction mode at all .....
@@ -416,7 +416,6 @@ class DocQAPlusBERT(Model):
                                 'EM':100 * EM_score,
                                 'best_span_string':best_span_string,\
                                 'gold_answer_texts':gold_answer_texts, \
-                                'question': question_instances_metadata[best_span_ind]['question'], \
                                 'qas_used_fraction':self._qas_used_fraction}) + '\n')
         #output_dict['qid'].append(per_dialog_query_id_list)
         #output_dict['best_span_str'].append(per_dialog_best_span_list)
