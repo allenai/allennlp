@@ -350,6 +350,7 @@ class JobRunner():
             else:
                 if job_to_kill['GPU'] in self.job_gpus:
                     self.job_gpus.remove(job_to_kill['GPU'])
+            self.update_available_gpus()
 
             ElasticLogger().write_log('INFO', "Job killed", {'experiment_name': job_to_kill['experiment_name'],
                                                            'log_snapshot': job_to_kill['log_snapshot']}, push_bulk=True, print_log=False)
