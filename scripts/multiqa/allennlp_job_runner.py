@@ -341,10 +341,16 @@ class JobRunner():
             bash_command = 'kill ' + str(job_to_kill['pid'])
             proc_info = Popen(bash_command, shell=True)
             self.close_job_log(job_to_kill)
+
             # Removing job from job list
-            if job_to_kill['GPU'] in self.job_gpus:
-                self.job_gpus.remove(job_to_kill['GPU'])
-                self.update_available_gpus()
+            if type(job_to_kill['GPU']) == list:
+                for GPU in job_to_kill['GPU']:
+                    if GPU in self.job_gpus:
+                        self.job_gpus.remove(GPU)
+            else:
+                if job_to_kill['GPU'] in self.job_gpus:
+                    self.job_gpus.remove(job_to_kill['GPU'])
+
             ElasticLogger().write_log('INFO', "Job killed", {'experiment_name': job_to_kill['experiment_name'],
                                                            'log_snapshot': job_to_kill['log_snapshot']}, push_bulk=True, print_log=False)
             self.running_jobs.remove(job_to_kill)
