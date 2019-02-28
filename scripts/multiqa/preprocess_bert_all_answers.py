@@ -330,7 +330,7 @@ class MultiQAPreprocess():
                 last_split_char = chosen_splitpoint[1][1]
                 last_split_token = chosen_splitpoint[0]
 
-        ans_start_updated_qas = self.update_answer_part_split(ans_start_updated_qas, qas, org_doc_ind, org_part_ind, new_parts)
+        #ans_start_updated_qas = self.update_answer_part_split(ans_start_updated_qas, qas, org_doc_ind, org_part_ind, new_parts)
 
         return ans_start_updated_qas, new_parts
     
