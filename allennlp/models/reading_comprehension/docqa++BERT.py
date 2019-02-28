@@ -416,7 +416,7 @@ class DocQAPlusBERT(Model):
                                 'EM':100 * EM_score,
                                 'best_span_string':best_span_string,\
                                 'gold_answer_texts':gold_answer_texts, \
-                                'question': question_instances_metadata[best_span_ind]['question'],
+                                'question': question_instances_metadata[best_span_ind]['question'], \
                                 'qas_used_fraction':self._qas_used_fraction}) + '\n')
         #output_dict['qid'].append(per_dialog_query_id_list)
         #output_dict['best_span_str'].append(per_dialog_best_span_list)
