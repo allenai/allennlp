@@ -419,8 +419,8 @@ class MultiQAPreprocess():
                         curr_doc_ind = len(new_documents)-1
                     
                     if new_document:
-                        ans_start_updated_qas = self.update_answer_docid(ans_start_updated_qas, context['qas'], curr_doc_ind, org_doc_ind, \
-                            len(new_document['parts']), part_ind)
+                        #ans_start_updated_qas = self.update_answer_docid(ans_start_updated_qas, context['qas'], curr_doc_ind, org_doc_ind, \
+                        #    len(new_document['parts']), part_ind)
                         new_document['parts'].append(part)
                         if self._BERT_format:
                             new_document['num_of_tokens'] += self.wordpiece_tokenizer_len(part['tokens'])
