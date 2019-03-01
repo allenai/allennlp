@@ -49,6 +49,7 @@ and report any metrics calculated by the model.
     --include-package INCLUDE_PACKAGE
                             additional packages to include
 """
+import os
 from typing import Dict, Any
 import argparse
 import logging
@@ -124,6 +125,10 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     logging.getLogger('allennlp.common.params').disabled = True
     logging.getLogger('allennlp.nn.initializers').disabled = True
     logging.getLogger('allennlp.modules.token_embedders.embedding').setLevel(logging.INFO)
+
+    if os.path.isdir(args.archive_file):
+        logger.warning(f"Attempting to load directory, {args.archive_file}, which may be missing "
+                       "critical files. You probably want to pass a path ending in .tar.gz.")
 
     # Load from archive
     archive = load_archive(args.archive_file, args.cuda_device, args.overrides, args.weights_file)
