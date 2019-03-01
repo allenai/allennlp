@@ -14,8 +14,19 @@ class TestDropReader:
         instances = ensure_list(reader.read(AllenNlpTestCase.FIXTURES_ROOT / 'data' / 'drop.json'))
         assert len(instances) == 19
 
-        print(instances[0])
         instance = instances[0]
+        assert set(instance.fields.keys()) == {
+                'question',
+                'passage',
+                'number_indices',
+                'numbers_in_passage',
+                'answer_as_passage_spans',
+                'answer_as_question_spans',
+                'answer_as_add_sub_expressions',
+                'answer_as_counts',
+                'metadata',
+                }
+
         assert [t.text for t in instance["question"][:3]] == ["What", "happened", "second"]
         assert [t.text for t in instance["passage"][:3]] == ["The", "Port", "of"]
         assert [t.text for t in instance["passage"][-3:]] == ["cruise", "ships", "."]
@@ -37,15 +48,93 @@ class TestDropReader:
         assert instance["answer_as_add_sub_expressions"][0].labels == [0,] * 22
         assert len(instance["answer_as_counts"]) == 1
         assert instance["answer_as_counts"][0].label == -1
-        assert instance['metadata'].metadata.keys() == {'original_passage',
-                                                        'passage_token_offsets',
-                                                        'question_token_offsets',
-                                                        'question_tokens', 'passage_tokens',
-                                                        'number_tokens', 'number_indices',
-                                                        'answer_texts', 'original_question',
-                                                        'original_numbers', 'passage_id',
-                                                        'question_id', 'answer_info',
-                                                        'answer_annotations'}
+        assert set(instance['metadata'].metadata.keys()) == {
+                'answer_annotations',
+                'answer_info',
+                'answer_texts',
+                'number_indices',
+                'number_tokens',
+                'original_numbers',
+                'original_passage',
+                'original_question',
+                'passage_id',
+                'passage_token_offsets',
+                'passage_tokens',
+                'question_id',
+                'question_token_offsets',
+                'question_tokens',
+                }
+
+    def test_read_in_bert_format(self):
+        reader = DropReader(instance_format="bert")
+        instances = ensure_list(reader.read(AllenNlpTestCase.FIXTURES_ROOT / 'data' / 'drop.json'))
+        assert len(instances) == 19
+
+        print(instances[0])
+        instance = instances[0]
+        assert set(instance.fields.keys()) == {
+                'answer_as_passage_spans',
+                'metadata',
+                'passage',
+                'question',
+                'question_and_passage',
+                }
+
+        assert [t.text for t in instance["question"][:3]] == ["What", "happened", "second"]
+        assert [t.text for t in instance["passage"][:3]] == ["The", "Port", "of"]
+        assert [t.text for t in instance["passage"][-3:]] == ["cruise", "ships", "."]
+        question_length = len(instance['question'])
+        passage_length = len(instance['passage'])
+        assert len(instance['question_and_passage']) == question_length + passage_length + 1
+
+        assert len(instance["answer_as_passage_spans"]) == 1
+        assert instance["answer_as_passage_spans"][0] == (question_length + 1 + 46,
+                                                          question_length + 1 + 47)
+        assert set(instance['metadata'].metadata.keys()) == {
+                'answer_annotations',
+                'answer_texts',
+                'original_passage',
+                'original_question',
+                'passage_id',
+                'passage_token_offsets',
+                'passage_tokens',
+                'question_id',
+                'question_tokens',
+                }
+
+    def test_read_in_squad_format(self):
+        reader = DropReader(instance_format="squad")
+        instances = ensure_list(reader.read(AllenNlpTestCase.FIXTURES_ROOT / 'data' / 'drop.json'))
+        assert len(instances) == 19
+
+        print(instances[0])
+        instance = instances[0]
+        assert set(instance.fields.keys()) == {
+                'question',
+                'passage',
+                'span_start',
+                'span_end',
+                'metadata',
+                }
+
+        assert [t.text for t in instance["question"][:3]] == ["What", "happened", "second"]
+        assert [t.text for t in instance["passage"][:3]] == ["The", "Port", "of"]
+        assert [t.text for t in instance["passage"][-3:]] == ["cruise", "ships", "."]
+
+        assert instance["span_start"] == 46
+        assert instance["span_end"] == 47
+        assert set(instance['metadata'].metadata.keys()) == {
+                'answer_annotations',
+                'answer_texts',
+                'original_passage',
+                'original_question',
+                'passage_id',
+                'token_offsets',
+                'passage_tokens',
+                'question_id',
+                'question_tokens',
+                'valid_passage_spans',
+                }
 
     def test_can_build_from_params(self):
         reader = DropReader.from_params(Params({}))
