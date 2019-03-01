@@ -6,7 +6,7 @@ from overrides import overrides
 
 from allennlp.tools.squad_eval import metric_max_over_ground_truths
 from allennlp.tools.drop_eval import (get_metrics as drop_em_and_f1,
-                                      to_string as convert_annotation_to_string)
+                                      answer_json_to_strings)
 from allennlp.training.metrics.metric import Metric
 
 
@@ -38,9 +38,9 @@ class DropEmAndF1(Metric):
         ground_truths: ``List``
             All the ground truth answer annotations.
         """
-        ground_truth_answer_strings = [convert_annotation_to_string(annotation)[0] for annotation in ground_truths]
+        ground_truth_answer_strings = [answer_json_to_strings(annotation)[0] for annotation in ground_truths]
         # pylint: disable=unused-variable
-        ground_truth_answer_types = [convert_annotation_to_string(annotation)[1] for annotation in ground_truths]
+        ground_truth_answer_types = [answer_json_to_strings(annotation)[1] for annotation in ground_truths]
         exact_match, f1_score = metric_max_over_ground_truths(
                 drop_em_and_f1,
                 prediction,
