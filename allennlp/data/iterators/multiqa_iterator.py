@@ -198,6 +198,9 @@ class MultiQAIterator(DataIterator):
                         (self._maximum_tensor_size is not None and estimated_tensor_size > self._maximum_tensor_size):
                         #total_examples_in_batches += len(batch)
                         #logger.info("total_examples_in_batches = %d", total_examples_in_batches)
+
+                        # This is done for a bug in inside the model in dev set .... i need to get rid of this and refactor everything here
+                        batch = sorted(batch,key=lambda x: x.fields['metadata'].metadata['question_id'])
                         yield Batch(batch)
 
                         batch = instances_to_add
@@ -208,6 +211,9 @@ class MultiQAIterator(DataIterator):
                 if len(batch)>0:
                     #total_examples_in_batches += len(batch)
                     #logger.info("remainder ... total_examples_in_batches = %d", total_examples_in_batches)
+
+                    # This is done for a bug in inside the model in dev set .... i need to get rid of this and refactor everything here
+                    batch = sorted(batch, key=lambda x: x.fields['metadata'].metadata['question_id'])
                     yield Batch(batch)
 
 
