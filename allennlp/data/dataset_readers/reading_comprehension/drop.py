@@ -33,6 +33,55 @@ WORD_NUMBER_MAP = {"zero": 0, "one": 1, "two": 2, "three": 3, "four": 4,
 
 @DatasetReader.register("drop")
 class DropReader(DatasetReader):
+    """
+    Reads a JSON-formatted DROP dataset file and returns instances in a few different possible
+    formats.  The input format is complicated; see the test fixture for an example of what it looks
+    like.  The output formats all contain a question ``TextField``, a passage ``TextField``, and
+    some kind of answer representation.  Because DROP has instances with several different kinds of
+    answers, this dataset reader allows you to filter out questions that do not have answers of a
+    particular type (e.g., remove questions that have numbers as answers, if you model can only
+    give passage spans as answers).  We typically return all possible ways of arriving at a given
+    answer string, and expect models to marginalize over these possibilities.
+
+    Parameters
+    ----------
+    tokenizer : ``Tokenizer``, optional (default=``WordTokenizer()``)
+        We use this ``Tokenizer`` for both the question and the passage.  See :class:`Tokenizer`.
+        Default is ```WordTokenizer()``.
+    token_indexers : ``Dict[str, TokenIndexer]``, optional
+        We similarly use this for both the question and the passage.  See :class:`TokenIndexer`.
+        Default is ``{"tokens": SingleIdTokenIndexer()}``.
+    lazy : ``bool``, optional (default=False)
+        If this is true, ``instances()`` will return an object whose ``__iter__`` method
+        reloads the dataset each time it's called. Otherwise, ``instances()`` returns a list.
+    passage_length_limit : ``int``, optional (default=None)
+        If specified, we will cut the passage if the length of passage exceeds this limit.
+    question_length_limit : ``int``, optional (default=None)
+        If specified, we will cut the question if the length of passage exceeds this limit.
+    skip_when_all_empty: ``List[str]``, optional (default=None)
+        In some cases such as preparing for training examples, you may want to skip some examples
+        when there are no gold labels. You can specify on what condition should the examples be
+        skipped. Currently, you can put "passage_span", "question_span", "addition_subtraction",
+        or "counting" in this list, to tell the reader skip when there are no such label found.
+        If not specified, we will keep all the examples.
+    instance_format: ``str``, optional (default="drop")
+        We try to be generous in providing a few different formats for the instances in DROP,
+        in terms of the ``Fields`` that we return for each ``Instance``, to allow for several
+        different kinds of models.  "drop" format will do processing to detect numbers and
+        various ways those numbers can be arrived at from the passage, and return ``Fields``
+        related to that.  "bert" format only allows passage spans as answers, and provides a
+        "question_and_passage" field with the two pieces of text joined as BERT expects.
+        "squad" format provides the same fields that our BiDAF and other SQuAD models expect.
+    relaxed_span_match_for_finding_labels : ``bool``, optional (default=True)
+        DROP dataset contains multi-span answers, and the date-type answers are usually hard to
+        find exact span matches for, also.  In order to use as many examples as possible
+        to train the model, we may not want a strict match for such cases when finding the gold
+        span labels. If this argument is true, we will treat every span in the multi-span
+        answers as correct, and every token in the date answer as correct, too.  Because models
+        trained on DROP typically marginalize over all possible answer positions, this is just
+        being a little more generous in what is being marginalized.  Note that this will not
+        affect evaluation.
+    """
     def __init__(self,
                  tokenizer: Tokenizer = None,
                  token_indexers: Dict[str, TokenIndexer] = None,
@@ -42,41 +91,6 @@ class DropReader(DatasetReader):
                  skip_when_all_empty: List[str] = None,
                  instance_format: str = "drop",
                  relaxed_span_match_for_finding_labels: bool = True) -> None:
-        """
-        Reads a JSON-formatted DROP dataset file and returns a ``Dataset``
-
-        Parameters
-        ----------
-        tokenizer : ``Tokenizer``, optional (default=``WordTokenizer()``)
-            We use this ``Tokenizer`` for both the question and the passage.  See :class:`Tokenizer`.
-            Default is ```WordTokenizer()``.
-        token_indexers : ``Dict[str, TokenIndexer]``, optional
-            We similarly use this for both the question and the passage.  See :class:`TokenIndexer`.
-            Default is ``{"tokens": SingleIdTokenIndexer()}``.
-        lazy : ``bool``, optional (default=False)
-            If this is true, ``instances()`` will return an object whose ``__iter__`` method
-            reloads the dataset each time it's called. Otherwise, ``instances()`` returns a list.
-        passage_length_limit : ``int``, optional (default=None)
-            If specified, we will cut the passage if the length of passage exceeds this limit.
-        question_length_limit : ``int``, optional (default=None)
-            If specified, we will cut the question if the length of passage exceeds this limit.
-        skip_when_all_empty: ``List[str]``, optional (default=None)
-            In some cases such as preparing for training examples, you may want to skip some examples
-            when there are no gold labels. You can specify on what condition should the examples be
-            skipped. Currently, you can put "passage_span", "question_span", "addition_subtraction",
-            or "counting" in this list, to tell the reader skip when there are no such label found.
-            If not specified, we will keep all the examples.
-        instance_format: ``str``, optional (default="drop")
-            Since we want to test different kind of models on DROP dataset, and they may require
-            different instance format. Current, we support three formats: "drop", "squad" and "bert".
-        relaxed_span_match_for_finding_labels : ``bool``, optional (default=True)
-            DROP dataset contains multi-span answers, and the date-type answers usually cannot find
-            a single passage span to match it, either. In order to use as many examples as possible
-            to train the model, we may not want a strict match for such cases when finding the gold
-            span labels. If this argument is true, we will treat every span in the multi-span answers
-            as correct, and every token in the date answer as correct, too. Note that this will not
-            affect evaluation.
-        """
         super().__init__(lazy)
         self._tokenizer = tokenizer or WordTokenizer()
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
@@ -138,8 +152,6 @@ class DropReader(DatasetReader):
             passage_tokens = split_tokens_by_hyphen(passage_tokens)
         question_tokens = self._tokenizer.tokenize(question_text)
         question_tokens = split_tokens_by_hyphen(question_tokens)
-        # passage_text = question_text
-        # passage_tokens = question_tokens
         if self.passage_length_limit is not None:
             passage_tokens = passage_tokens[: self.passage_length_limit]
         if self.question_length_limit is not None:
