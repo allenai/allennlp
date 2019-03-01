@@ -5,6 +5,9 @@ import string
 from collections import defaultdict
 from typing import Dict, List, Union, Tuple, Any
 
+from overrides import overrides
+from word2number.w2n import word_to_num
+
 from allennlp.common.file_utils import cached_path
 from allennlp.data.fields import Field, TextField, MetadataField, LabelField, ListField, \
     SequenceLabelField, SpanField, IndexField
@@ -16,9 +19,6 @@ from allennlp.data.dataset_readers.reading_comprehension.util import (IGNORED_TO
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
 from allennlp.data.tokenizers import Token, Tokenizer, WordTokenizer
-
-from overrides import overrides
-from word2number.w2n import word_to_num
 
 
 logger = logging.getLogger(__name__)
@@ -121,7 +121,6 @@ class DropReader(DatasetReader):
                     instances.append(instance)
                 else:
                     skip_count += 1
-        # pylint: disable=logging-fstring-interpolation
         logger.info(f"Skipped {skip_count} questions, kept {len(instances)} questions.")
         return instances
 
@@ -146,7 +145,8 @@ class DropReader(DatasetReader):
         if self.question_length_limit is not None:
             question_tokens = question_tokens[: self.question_length_limit]
 
-        answer_type, answer_texts = None, []
+        answer_type: str = None
+        answer_texts: List[str] = []
         if answer_annotations:
             # Currently we only use the first annotated answer here, but actually this doesn't affect
             # the training, because we only have one annotation for the train set.
@@ -232,11 +232,11 @@ class DropReader(DatasetReader):
                 number = self.convert_word_to_number(answer_text)
                 if number is not None:
                     target_numbers.append(number)
-            valid_signs_for_add_sub_expressions = []
-            valid_counts = []
+            valid_signs_for_add_sub_expressions: List[List[int]] = []
+            valid_counts: List[int] = []
             if answer_type in ["number", "date"]:
-                valid_signs_for_add_sub_expressions = \
-                    self.find_valid_add_sub_expressions(numbers_in_passage, target_numbers)
+                valid_signs_for_add_sub_expressions = self.find_valid_add_sub_expressions(numbers_in_passage,
+                                                                                          target_numbers)
             if answer_type in ["number"]:
                 # Currently we only support count number 0 ~ 9
                 numbers_for_count = list(range(10))
@@ -291,15 +291,18 @@ class DropReader(DatasetReader):
         question_offsets = [(token.idx, token.idx + len(token.text)) for token in question_tokens]
 
         # This is separate so we can reference it later with a known type.
-        fields["passage"] = TextField(passage_tokens, token_indexers)
-        fields["question"] = TextField(question_tokens, token_indexers)
-        number_index_fields = [IndexField(index, fields["passage"]) for index in number_indices]
+        passage_field = TextField(passage_tokens, token_indexers)
+        question_field = TextField(question_tokens, token_indexers)
+        fields["passage"] = passage_field
+        fields["question"] = question_field
+        number_index_fields: List[Field] = [IndexField(index, passage_field) for index in number_indices]
         fields["number_indices"] = ListField(number_index_fields)
         # This field is actually not required in the model,
         # it is used to create the `answer_as_plus_minus_combinations` field, which is a `SequenceLabelField`.
         # We cannot use `number_indices` field for creating that, because the `ListField` will not be empty
         # when we want to create a new empty field. That will lead to error.
-        fields["numbers_in_passage"] = TextField(number_tokens, token_indexers)
+        numbers_in_passage_field = TextField(number_tokens, token_indexers)
+        fields["numbers_in_passage"] = numbers_in_passage_field
         metadata = {"original_passage": passage_text,
                     "passage_token_offsets": passage_offsets,
                     "question_token_offsets": question_offsets,
@@ -310,28 +313,29 @@ class DropReader(DatasetReader):
         if answer_info:
             metadata["answer_texts"] = answer_info["answer_texts"]
 
-            passage_span_fields = \
-                [SpanField(span[0], span[1], fields["passage"]) for span in answer_info["answer_passage_spans"]]
+            passage_span_fields: List[Field] = \
+                [SpanField(span[0], span[1], passage_field) for span in answer_info["answer_passage_spans"]]
             if not passage_span_fields:
-                passage_span_fields.append(SpanField(-1, -1, fields["passage"]))
+                passage_span_fields.append(SpanField(-1, -1, passage_field))
             fields["answer_as_passage_spans"] = ListField(passage_span_fields)
 
-            question_span_fields = \
-                [SpanField(span[0], span[1], fields["question"]) for span in answer_info["answer_question_spans"]]
+            question_span_fields: List[Field] = \
+                [SpanField(span[0], span[1], question_field) for span in answer_info["answer_question_spans"]]
             if not question_span_fields:
-                question_span_fields.append(SpanField(-1, -1, fields["question"]))
+                question_span_fields.append(SpanField(-1, -1, question_field))
             fields["answer_as_question_spans"] = ListField(question_span_fields)
 
-            add_sub_signs_field = []
+            add_sub_signs_field: List[Field] = []
             for signs_for_one_add_sub_expression in answer_info["signs_for_add_sub_expressions"]:
-                add_sub_signs_field.append(
-                        SequenceLabelField(signs_for_one_add_sub_expression, fields["numbers_in_passage"]))
+                add_sub_signs_field.append(SequenceLabelField(signs_for_one_add_sub_expression,
+                                                              numbers_in_passage_field))
             if not add_sub_signs_field:
-                add_sub_signs_field.append(
-                        SequenceLabelField([0] * len(fields["numbers_in_passage"]), fields["numbers_in_passage"]))
+                add_sub_signs_field.append(SequenceLabelField([0] * len(number_tokens),
+                                                              numbers_in_passage_field))
             fields["answer_as_add_sub_expressions"] = ListField(add_sub_signs_field)
 
-            count_fields = [LabelField(count_label, skip_indexing=True) for count_label in answer_info["counts"]]
+            count_fields: List[Field] = [LabelField(count_label, skip_indexing=True)
+                                         for count_label in answer_info["counts"]]
             if not count_fields:
                 count_fields.append(LabelField(-1, skip_indexing=True))
             fields["answer_as_counts"] = ListField(count_fields)
@@ -353,10 +357,12 @@ class DropReader(DatasetReader):
         passage_offsets = [(token.idx, token.idx + len(token.text)) for token in passage_tokens]
 
         # This is separate so we can reference it later with a known type.
-        fields['passage'] = TextField(passage_tokens, token_indexers)
-        fields['question'] = TextField(question_tokens, token_indexers)
-        question_and_passage_filed = TextField(question_concat_passage_tokens, token_indexers)
-        fields['question_and_passage'] = question_and_passage_filed
+        passage_field = TextField(passage_tokens, token_indexers)
+        question_field = TextField(question_tokens, token_indexers)
+        fields["passage"] = passage_field
+        fields["question"] = question_field
+        question_and_passage_field = TextField(question_concat_passage_tokens, token_indexers)
+        fields['question_and_passage'] = question_and_passage_field
 
         metadata = {'original_passage': passage_text, 'passage_token_offsets': passage_offsets,
                     'question_tokens': [token.text for token in question_tokens],
@@ -365,11 +371,11 @@ class DropReader(DatasetReader):
         if answer_info:
             metadata['answer_texts'] = answer_info["answer_texts"]
 
-            passage_span_fields = \
-                [SpanField(span[0], span[1], fields["question_and_passage"])
+            passage_span_fields: List[Field] = \
+                [SpanField(span[0], span[1], question_and_passage_field)
                  for span in answer_info["answer_passage_spans"]]
             if not passage_span_fields:
-                passage_span_fields.append(SpanField(-1, -1, fields["question_and_passage"]))
+                passage_span_fields.append(SpanField(-1, -1, question_and_passage_field))
             fields["answer_as_passage_spans"] = ListField(passage_span_fields)
 
         metadata.update(additional_metadata)
@@ -377,7 +383,7 @@ class DropReader(DatasetReader):
         return Instance(fields)
 
     @staticmethod
-    def extract_answer_info_from_annotation(answer_annotation: Dict[str, Any]) -> Tuple[str, List]:
+    def extract_answer_info_from_annotation(answer_annotation: Dict[str, Any]) -> Tuple[str, List[str]]:
         answer_type = None
         if answer_annotation["spans"]:
             answer_type = "spans"
@@ -388,7 +394,7 @@ class DropReader(DatasetReader):
 
         answer_content = answer_annotation[answer_type] if answer_type is not None else None
 
-        answer_texts = []
+        answer_texts: List[str] = []
         if answer_type is None:  # No answer
             pass
         elif answer_type == "spans":
@@ -490,8 +496,7 @@ class DropReader(DatasetReader):
         return valid_signs_for_add_sub_expressions
 
     @staticmethod
-    def find_valid_counts(count_numbers: List[int],
-                          targets: List[int]) -> List[int]:
+    def find_valid_counts(count_numbers: List[int], targets: List[int]) -> List[int]:
         valid_indices = []
         for index, number in enumerate(count_numbers):
             if number in targets:
