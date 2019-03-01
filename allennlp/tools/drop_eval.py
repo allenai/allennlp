@@ -3,7 +3,6 @@
 from collections import defaultdict
 from typing import Any, Dict, List, Set, Tuple, Union
 import json
-import sys
 import argparse
 import string
 import re
@@ -34,18 +33,18 @@ def _lower(text: str) -> str:
 def _tokenize(text: str) -> List[str]:
     return re.split(" |-", text)
 
-def _normalize_answer(string: str) -> str:
+def _normalize_answer(text: str) -> str:
     """Lower text and remove punctuation, articles and extra whitespace."""
 
     parts = [_white_space_fix(_remove_articles(_normalize_number(_remove_punc(_lower(token)))))
-             for token in _tokenize(string)]
+             for token in _tokenize(text)]
     parts = [part for part in parts if part.strip()]
     normalized = ' '.join(parts).strip()
     return normalized
 
-def _is_number(string: str) -> bool:
+def _is_number(text: str) -> bool:
     try:
-        float(string)
+        float(text)
         return True
     except ValueError:
         return False
@@ -57,14 +56,12 @@ def _normalize_number(text: str) -> str:
         return text
 
 
-def _answer_to_bags(answer: Union[str, List[str], Tuple[str]]) -> Tuple[Set[str], List[Set[str]]]:
-    span_bag = set()
-    raw_spans = []
-    if isinstance(answer, list) or isinstance(answer, tuple):
+def _answer_to_bags(answer: Union[str, List[str], Tuple[str, ...]]) -> Tuple[Set[str], List[Set[str]]]:
+    if isinstance(answer, (list, tuple)):
         raw_spans = answer
-    if isinstance(answer, str):
+    else:
         raw_spans = [answer]
-    span_bag = set()
+    span_bag: Set[str] = set()
     token_bag = []
     for raw_span in raw_spans:
         span = _normalize_answer(raw_span)
@@ -75,13 +72,11 @@ def _answer_to_bags(answer: Union[str, List[str], Tuple[str]]) -> Tuple[Set[str]
 
 def _align_bags(predicted: List[Set[str]], gold: List[Set[str]]) -> List[float]:
     f1_scores = []
-    for gold_index in range(len(gold)):
-        gold_item = gold[gold_index]
+    for gold_index, gold_item in enumerate(gold):
         max_f1 = 0.0
         max_index = None
-        best_alignment = (set([]),set([]))
-        for pred_index in range(len(predicted)):
-            pred_item = predicted[pred_index]
+        best_alignment: Tuple[Set[str], Set[str]] = (set(), set())
+        for pred_index, pred_item in enumerate(predicted):
             current_f1 = _compute_f1(pred_item, gold_item)
             if current_f1 >= max_f1:
                 best_alignment = (gold_item, pred_item)
@@ -92,18 +87,18 @@ def _align_bags(predicted: List[Set[str]], gold: List[Set[str]]) -> List[float]:
             f1_scores.append(max_f1)
         else:
             f1_scores.append(0.0)
-        gold[gold_index] = {}
-        predicted[max_index] = {}
+        gold[gold_index] = set()
+        predicted[max_index] = set()
     return f1_scores
 
 
 def _compute_f1(predicted_bag: Set[str], gold_bag: Set[str]) -> float:
     intersection = len(gold_bag.intersection(predicted_bag))
-    if len(predicted_bag) == 0:
+    if not predicted_bag:
         precision = 1.0
     else:
         precision = intersection / float(len(predicted_bag))
-    if len(gold_bag) == 0:
+    if not gold_bag:
         recall = 1.0
     else:
         recall = intersection / float(len(gold_bag))
@@ -120,14 +115,13 @@ def _match_numbers_if_present(gold_bag: Set[str], predicted_bag: Set[str]) -> bo
     for word in predicted_bag:
         if _is_number(word):
             predicted_numbers.add(word)
-    if (len(gold_numbers) == 0 or
-        (len(gold_numbers) > 0 and len(gold_numbers.intersection(predicted_numbers)) > 0)):
+    if (not gold_numbers) or gold_numbers.intersection(predicted_numbers):
         return True
     return False
 
 
-def get_metrics(predicted: Union[str, List[str], Tuple[str]],
-                gold: Union[str, List[str], Tuple[str]]) -> Tuple[float, float]:
+def get_metrics(predicted: Union[str, List[str], Tuple[str, ...]],
+                gold: Union[str, List[str], Tuple[str, ...]]) -> Tuple[float, float]:
     """
     Takes a predicted answer and a gold answer (that are both either a string or a list of
     strings), and returns exact match and the DROP F1 metric for the prediction.  If you are
@@ -151,9 +145,9 @@ def answer_json_to_strings(answer: Dict[str, Any]) -> Tuple[Tuple[str, ...], str
     Takes an answer JSON blob from the DROP data release and converts it into strings used for
     evaluation.
     """
-    if answer["number"] != "":
+    if answer["number"]:
         return tuple([str(answer["number"])]), "number"
-    elif len(answer["spans"]) > 0:
+    elif answer["spans"]:
         return tuple(answer["spans"]), "span" if len(answer["spans"]) == 1 else "spans"
     else:
         return tuple(["{0} {1} {2}".format(answer["date"]["day"],
@@ -173,16 +167,16 @@ def evaluate_json(annotations: Dict[str, Any], predicted_answers: Dict[str, Any]
     either a JSON dictionary with an "answer" key, or just a string (or list of strings) that is
     the answer.
     """
-    exact_match = []
-    f1 = []
+    instance_exact_match = []
+    instance_f1 = []
     # for each type as well
-    type_to_em = defaultdict(list)
-    type_to_f1 = defaultdict(list)
-    for pid, annotation in annotations.items():
+    type_to_em: Dict[str, List[float]] = defaultdict(list)
+    type_to_f1: Dict[str, List[float]] = defaultdict(list)
+    for _, annotation in annotations.items():
         for qa_pair in annotation["qa_pairs"]:
             query_id = qa_pair["query_id"]
-            max_em_score = 0
-            max_f1_score = 0
+            max_em_score = 0.0
+            max_f1_score = 0.0
             max_type = None
             if query_id in predicted_answers:
                 if "answer" in predicted_answers[query_id]:
@@ -193,20 +187,20 @@ def evaluate_json(annotations: Dict[str, Any], predicted_answers: Dict[str, Any]
                 print("Missing prediction for question: {}".format(query_id))
                 predicted = None
             for answer in [qa_pair["answer"]] + qa_pair["validated_answers"]:
-                gold_answer, gold_type = answer_json_to_string(answer)
+                gold_answer, gold_type = answer_json_to_strings(answer)
                 em_score, f1_score = get_metrics(predicted, gold_answer)
                 if gold_answer[0].strip() != "":
                     max_em_score = max(max_em_score, em_score)
                     max_f1_score = max(max_f1_score, f1_score)
                     if max_em_score == em_score or max_f1_score == f1_score:
                         max_type = gold_type
-            exact_match.append(max_em_score)
-            f1.append(max_f1_score)
+            instance_exact_match.append(max_em_score)
+            instance_f1.append(max_f1_score)
             type_to_em[max_type].append(max_em_score)
             type_to_f1[max_type].append(max_f1_score)
 
-    global_em = np.mean(exact_match)
-    global_f1 = np.mean(f1)
+    global_em = np.mean(instance_exact_match)
+    global_f1 = np.mean(instance_f1)
     print("Exact-match accuracy {0:.2f}".format(global_em * 100))
     print("F1 score {0:.2f}".format(global_f1 * 100))
     print("{0:.2f}   &   {1:.2f}".format(global_em * 100, global_f1 * 100))
@@ -230,14 +224,21 @@ def evaluate_prediction_file(prediction_path: str, gold_path: str) -> Tuple[floa
     """
     predicted_answers = json.load(open(prediction_path, encoding='utf-8'))
     annotations = json.load(open(gold_path, encoding='utf-8'))
-    return evalute_json(annotations, predicted_answers)
+    return evaluate_json(annotations, predicted_answers)
 
 
 if __name__ == "__main__":
+    # pylint: disable=invalid-name
     parser = argparse.ArgumentParser(description='evaluate on drop dataset')
-    parser.add_argument("--gold_path", type=str, required=False, default="drop_dataset_test.gold.json",
-                    help='location of the gold file')
-    parser.add_argument("--prediction_path", type=str, required=False, default="sample_predictions.json",
-                    help='location of the prediction file')
+    parser.add_argument("--gold_path",
+                        type=str,
+                        required=False,
+                        default="drop_dataset_test.gold.json",
+                        help='location of the gold file')
+    parser.add_argument("--prediction_path",
+                        type=str,
+                        required=False,
+                        default="sample_predictions.json",
+                        help='location of the prediction file')
     args = parser.parse_args()
     evaluate_prediction_file(args.prediction_path, args.gold_path)

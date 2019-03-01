@@ -1,3 +1,5 @@
+# pylint: disable=no-self-use,invalid-name
+
 from allennlp.tools.drop_eval import _normalize_answer, get_metrics
 
 class TestDropEvalNormalize:
