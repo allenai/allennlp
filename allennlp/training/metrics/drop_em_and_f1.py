@@ -28,7 +28,7 @@ class DropEmAndF1(Metric):
         self._count = 0
 
     @overrides
-    def __call__(self, prediction: Union[str, List], ground_truths: List):
+    def __call__(self, prediction: Union[str, List], ground_truths: List):  # type: ignore
         """
         Parameters
         ----------
@@ -38,9 +38,9 @@ class DropEmAndF1(Metric):
         ground_truths: ``List``
             All the ground truth answer annotations.
         """
+        # If you wanted to split this out by answer type, you could look at [1] here and group by
+        # that, instead of only keeping [0].
         ground_truth_answer_strings = [answer_json_to_strings(annotation)[0] for annotation in ground_truths]
-        # pylint: disable=unused-variable
-        ground_truth_answer_types = [answer_json_to_strings(annotation)[1] for annotation in ground_truths]
         exact_match, f1_score = metric_max_over_ground_truths(
                 drop_em_and_f1,
                 prediction,
