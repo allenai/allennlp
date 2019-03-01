@@ -49,7 +49,6 @@ and report any metrics calculated by the model.
     --include-package INCLUDE_PACKAGE
                             additional packages to include
 """
-import os
 from typing import Dict, Any
 import argparse
 import logging
