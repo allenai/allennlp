@@ -1,5 +1,4 @@
 import string
-import re
 from typing import Tuple, List, Union
 
 from overrides import overrides

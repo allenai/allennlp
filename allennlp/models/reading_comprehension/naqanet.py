@@ -433,7 +433,7 @@ class NumericallyAugmentedQaNet(Model):
                 else:
                     predicted_ability_str = self.answering_abilities[0]
 
-                answer_json = {}
+                answer_json: Dict[str, Any] = {}
 
                 # We did not consider multi-mention answers here
                 if predicted_ability_str == "passage_span_extraction":
