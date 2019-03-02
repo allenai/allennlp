@@ -371,7 +371,7 @@ def handle_cannot(reference_answers: List[str]):
     return reference_answers
 
 
-def split_token_by_delimiter(token: Token, delimiter: str) -> List[str]:
+def split_token_by_delimiter(token: Token, delimiter: str) -> List[Token]:
     split_tokens = []
     char_offset = token.idx
     for sub_str in token.text.split(delimiter):
@@ -390,11 +390,12 @@ def split_token_by_delimiter(token: Token, delimiter: str) -> List[str]:
 
 def split_tokens_by_hyphen(tokens: List[Token]) -> List[Token]:
     hyphens = ["-", "–", "~"]
-    new_tokens = []
+    new_tokens: List[Token] = []
 
     for token in tokens:
         if any(hyphen in token.text for hyphen in hyphens):
-            unsplit_tokens, split_tokens = [token], []
+            unsplit_tokens = [token]
+            split_tokens: List[Token] = []
             for hyphen in hyphens:
                 for unsplit_token in unsplit_tokens:
                     if hyphen in token.text:
