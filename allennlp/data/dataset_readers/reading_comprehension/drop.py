@@ -314,7 +314,6 @@ class DropReader(DatasetReader):
         # We cannot use `number_indices` field for creating that, because the `ListField` will not be empty
         # when we want to create a new empty field. That will lead to error.
         numbers_in_passage_field = TextField(number_tokens, token_indexers)
-        fields["numbers_in_passage"] = numbers_in_passage_field
         metadata = {"original_passage": passage_text,
                     "passage_token_offsets": passage_offsets,
                     "question_token_offsets": question_offsets,

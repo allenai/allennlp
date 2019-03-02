@@ -9,10 +9,6 @@ from allennlp.tools.drop_eval import (get_metrics as drop_em_and_f1,
 from allennlp.training.metrics.metric import Metric
 
 
-STOPWORDS = set(["a", "an", "the"])
-PUNCTUATIONS = set(string.punctuation)
-
-
 @Metric.register("drop")
 class DropEmAndF1(Metric):
     """

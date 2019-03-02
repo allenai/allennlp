@@ -131,14 +131,13 @@ class NumericallyAugmentedQaNet(Model):
     def forward(self,  # type: ignore
                 question: Dict[str, torch.LongTensor],
                 passage: Dict[str, torch.LongTensor],
-                numbers_in_passage: Dict[str, torch.LongTensor],
                 number_indices: torch.LongTensor,
                 answer_as_passage_spans: torch.LongTensor = None,
                 answer_as_question_spans: torch.LongTensor = None,
                 answer_as_add_sub_expressions: torch.LongTensor = None,
                 answer_as_counts: torch.LongTensor = None,
                 metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ, unused-argument
+        # pylint: disable=arguments-differ
 
         question_mask = util.get_text_field_mask(question).float()
         passage_mask = util.get_text_field_mask(passage).float()
