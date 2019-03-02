@@ -23,6 +23,13 @@ class NumericallyAugmentedQaNet(Model):
     """
     This class augments the QANet model with some rudimentary numerical reasoning abilities, as
     published in the original DROP paper.
+
+    The main idea here is that instead of just predicting a passage span after doing all of the
+    QANet modeling stuff, we add several different "answer abilities": predicting a span from the
+    question, predicting a count, or predicting an arithmetic expression.  Near the end of the
+    QANet model, we have a variable that predicts what kind of answer type we need, and each branch
+    has separate modeling logic to predict that answer type.  We then marginalize over all possible
+    ways of getting to the right answer through each of these answer types.
     """
     def __init__(self, vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
@@ -33,14 +40,15 @@ class NumericallyAugmentedQaNet(Model):
                  dropout_prob: float = 0.1,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None,
-                 answering_abilities: Iterable[str] = ("passage_span_extraction",
-                                                       "question_span_extraction",
-                                                       "addition_subtraction",
-                                                       "counting")) -> None:
+                 answering_abilities: List[str] = None) -> None:
         super().__init__(vocab, regularizer)
 
-        # The answering abilities to include in this model
-        self.answering_abilities = list(answering_abilities)
+
+        if answering_abilities is None:
+            self.answering_abilities = ["passage_span_extraction", "question_span_extraction",
+                                        "addition_subtraction", "counting"]
+        else:
+            self.answering_abilities = answering_abilities
 
         text_embed_dim = text_field_embedder.get_output_dim()
         encoding_in_dim = phrase_layer.get_input_dim()
