@@ -74,7 +74,7 @@ def process_results(filename, type, source_dataset, \
         results_dict['f1'] *= instance_list[0]['qas_used_fraction']
 
         # sanity test:
-        single_file_path = cached_path('s3://multiqa/datasets/' + eval_set  + '_dev.jsonl.zip')
+        single_file_path = cached_path('s3://multiqa/datasets/' + eval_set  + '_' + split_type + '.jsonl.zip')
         all_question_ids = []
         with zipfile.ZipFile(single_file_path, 'r') as myzip:
             if myzip.namelist()[0].find('jsonl') > 0:
