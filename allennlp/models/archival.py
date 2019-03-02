@@ -175,10 +175,8 @@ def load_archive(archive_file: str,
         logger.info(f"loading archive file {archive_file} from cache at {resolved_archive_file}")
 
     if os.path.isdir(resolved_archive_file):
-        archive_is_directory = True
         serialization_dir = resolved_archive_file
     else:
-        archive_is_directory = False
         # Extract archive to temp dir
         tempdir = tempfile.mkdtemp()
         logger.info(f"extracting archive file {resolved_archive_file} to temp dir {tempdir}")
@@ -192,7 +190,7 @@ def load_archive(archive_file: str,
 
     # Check for supplemental files in archive
     fta_filename = os.path.join(serialization_dir, _FTA_NAME)
-    if not archive_is_directory and os.path.exists(fta_filename):
+    if os.path.exists(fta_filename):
         with open(fta_filename, 'r') as fta_file:
             files_to_archive = json.loads(fta_file.read())
 
@@ -200,11 +198,13 @@ def load_archive(archive_file: str,
         replacements_dict: Dict[str, Any] = {}
         for key, original_filename in files_to_archive.items():
             replacement_filename = os.path.join(serialization_dir, f"fta/{key}")
-            if not os.path.exists(replacement_filename):
-                raise RuntimeError(f"Archived file {replacement_filename} not found! At train time "
-                                   f"this file was located at {original_filename}.")
-
-            replacements_dict[key] = replacement_filename
+            if os.path.exists(replacement_filename):
+                replacements_dict[key] = replacement_filename
+            else:
+                logger.warning(f"Archived file {replacement_filename} not found! At train time "
+                               f"this file was located at {original_filename}. This may be "
+                               "because you are loading a serialization directory. Attempting to "
+                               "load the file from its train-time location.")
 
         overrides_dict = parse_overrides(overrides)
         combined_dict = with_fallback(preferred=overrides_dict, fallback=unflatten(replacements_dict))
@@ -217,10 +217,10 @@ def load_archive(archive_file: str,
     if weights_file:
         weights_path = weights_file
     else:
-        if archive_is_directory:
+        weights_path = os.path.join(serialization_dir, _WEIGHTS_NAME)
+        # Fallback for serialization directories.
+        if not os.path.exists(weights_path):
             weights_path = os.path.join(serialization_dir, _DEFAULT_WEIGHTS)
-        else:
-            weights_path = os.path.join(serialization_dir, _WEIGHTS_NAME)
 
 
     # Instantiate model. Use a duplicate of the config, as it will get consumed.
