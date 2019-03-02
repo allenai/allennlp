@@ -19,7 +19,6 @@ class TestDropReader:
                 'question',
                 'passage',
                 'number_indices',
-                'numbers_in_passage',
                 'answer_as_passage_spans',
                 'answer_as_question_spans',
                 'answer_as_add_sub_expressions',
@@ -33,13 +32,13 @@ class TestDropReader:
 
         # Note that the last number in here is added as padding in case we don't find any numbers
         # in a particular passage.
+        # Just FYI, these are the actual numbers that the indices correspond to:
+        # [ "1", "25", "2014", "5", "2018", "1", "2", "1", "54", "52", "6", "60", "58", "2010",
+        #  "67", "2010", "1996", "3", "1", "6", "1", "0"]
         assert [f.sequence_index for f in instance["number_indices"]] == [
                 16, 30, 36, 41, 52, 64, 80, 89, 147, 153, 166, 174, 177, 206, 245, 252, 267, 279,
                 283, 288, 296, -1
                 ]
-        assert [t.text for t in instance["numbers_in_passage"]] == [
-                "1", "25", "2014", "5", "2018", "1", "2", "1", "54", "52", "6", "60", "58", "2010",
-                "67", "2010", "1996", "3", "1", "6", "1", "0"]
         assert len(instance["answer_as_passage_spans"]) == 1
         assert instance["answer_as_passage_spans"][0] == (46, 47)
         assert len(instance["answer_as_question_spans"]) == 1
