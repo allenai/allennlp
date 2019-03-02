@@ -175,10 +175,10 @@ def load_archive(archive_file: str,
         logger.info(f"loading archive file {archive_file} from cache at {resolved_archive_file}")
 
     if os.path.isdir(resolved_archive_file):
-        loading_dir = True
+        archive_is_directory = True
         serialization_dir = resolved_archive_file
     else:
-        loading_dir = False
+        archive_is_directory = False
         # Extract archive to temp dir
         tempdir = tempfile.mkdtemp()
         logger.info(f"extracting archive file {resolved_archive_file} to temp dir {tempdir}")
@@ -192,7 +192,7 @@ def load_archive(archive_file: str,
 
     # Check for supplemental files in archive
     fta_filename = os.path.join(serialization_dir, _FTA_NAME)
-    if not loading_dir and os.path.exists(fta_filename):
+    if not archive_is_directory and os.path.exists(fta_filename):
         with open(fta_filename, 'r') as fta_file:
             files_to_archive = json.loads(fta_file.read())
 
@@ -217,7 +217,7 @@ def load_archive(archive_file: str,
     if weights_file:
         weights_path = weights_file
     else:
-        if loading_dir:
+        if archive_is_directory:
             weights_path = os.path.join(serialization_dir, _DEFAULT_WEIGHTS)
         else:
             weights_path = os.path.join(serialization_dir, _WEIGHTS_NAME)
