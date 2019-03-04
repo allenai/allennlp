@@ -196,12 +196,18 @@ def load_archive(archive_file: str,
 
         # Add these replacements to overrides
         replacements_dict: Dict[str, Any] = {}
-        for key, _ in files_to_archive.items():
+        for key, original_filename in files_to_archive.items():
             replacement_filename = os.path.join(serialization_dir, f"fta/{key}")
-            replacements_dict[key] = replacement_filename
+            if os.path.exists(replacement_filename):
+                replacements_dict[key] = replacement_filename
+            else:
+                logger.warning(f"Archived file {replacement_filename} not found! At train time "
+                               f"this file was located at {original_filename}. This may be "
+                               "because you are loading a serialization directory. Attempting to "
+                               "load the file from its train-time location.")
 
         overrides_dict = parse_overrides(overrides)
-        combined_dict = with_fallback(preferred=unflatten(replacements_dict), fallback=overrides_dict)
+        combined_dict = with_fallback(preferred=overrides_dict, fallback=unflatten(replacements_dict))
         overrides = json.dumps(combined_dict)
 
     # Load config
@@ -212,6 +218,10 @@ def load_archive(archive_file: str,
         weights_path = weights_file
     else:
         weights_path = os.path.join(serialization_dir, _WEIGHTS_NAME)
+        # Fallback for serialization directories.
+        if not os.path.exists(weights_path):
+            weights_path = os.path.join(serialization_dir, _DEFAULT_WEIGHTS)
+
 
     # Instantiate model. Use a duplicate of the config, as it will get consumed.
     model = Model.load(config.duplicate(),
