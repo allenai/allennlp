@@ -1,4 +1,4 @@
-from allennlp.common.testing import import AllenNlpTestCase
+from allennlp.common.testing import AllenNlpTestCase
 
 class TestBasicAllenNlp(AllenNlpTestCase):
     def test_run_as_script(self):
