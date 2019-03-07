@@ -11,6 +11,7 @@ from allennlp.nn import util
 from allennlp.training.metrics import Metric
 
 
+@SeqDecoder.register("simple_seq_decoder")
 class SimpleSeqDecoder(SeqDecoder):
 
     def __init__(
@@ -18,7 +19,7 @@ class SimpleSeqDecoder(SeqDecoder):
             vocab: Vocabulary,
             decoder_cell: DecoderCell,
             max_decoding_steps: int,
-            bidirectional_input: bool,
+            bidirectional_input: bool = False,
             beam_size: int = None,
             target_embedding_dim: int = None,
             target_namespace: str = "tokens",
@@ -196,7 +197,7 @@ class SimpleSeqDecoder(SeqDecoder):
             # shape: (group_size, steps_count, target_embedding_dim)
             previous_steps_predictions = torch.cat([previous_steps_predictions, last_predictions_embeddings], 1)
 
-        decoder_state, decoder_output = self._decoder(
+        decoder_state, decoder_output = self.decoder_cell(
             previous_steps_predictions=previous_steps_predictions,
             encoder_outputs=encoder_outputs,
             source_mask=source_mask,

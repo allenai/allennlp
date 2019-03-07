@@ -4,6 +4,7 @@ import torch
 from torch.nn import Linear, Module
 import torch.nn.functional as F
 
+from allennlp.common import Registrable
 from allennlp.common.util import START_SYMBOL, END_SYMBOL
 from allennlp.data import Vocabulary
 from allennlp.modules import Embedding
@@ -13,7 +14,7 @@ from allennlp.nn.beam_search import BeamSearch
 from allennlp.training.metrics import Metric, BLEU
 
 
-class SeqDecoder(Module):
+class SeqDecoder(Module, Registrable):
     """
     A ``SeqDecoder`` is a base class for different types of Seq decoding modules
 
@@ -23,6 +24,8 @@ class SeqDecoder(Module):
         Vocabulary containing source and target vocabularies. They may be under the same namespace
         (`tokens`) or the target tokens can have a different namespace, in which case it needs to
         be specified as `target_namespace`.
+    decoder_cell : ``DecoderCell``, required
+        Module that contains implementation of neural network for decoding output elements
     max_decoding_steps : ``int``
         Maximum length of decoded sequences.
     bidirectional_input : ``bool``
@@ -89,12 +92,12 @@ class SeqDecoder(Module):
         self._beam_search = BeamSearch(self._end_index, max_steps=max_decoding_steps, beam_size=beam_size)
 
         # Decodes the sequence of encoded hidden states into e new sequence of hidden states.
-        self._decoder = decoder_cell
+        self.decoder_cell = decoder_cell
 
         # Decoder output dim needs to be the same as the encoder output dim since we initialize the
         # hidden state of the decoder with the final hidden state of the encoder.
         # We arbitrarily set the decoder's input dimension to be the same as the output dimension.
-        self.decoder_output_dim = self._decoder.get_output_dim()
+        self.decoder_output_dim = self.decoder_cell.get_output_dim()
         self.decoder_input_dim = self.decoder_output_dim
         self.encoder_output_dim = self.decoder_input_dim
 
@@ -113,7 +116,7 @@ class SeqDecoder(Module):
 
         # We project the hidden state from the decoder into the output vocabulary space
         # in order to get log probabilities of each target token, at each time step.
-        self._output_projection_layer = Linear(self._decoder.get_output_dim(), target_vocab_size)
+        self._output_projection_layer = Linear(self.decoder_cell.get_output_dim(), target_vocab_size)
 
     def _forward_beam_search(self, state: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """Make forward pass during prediction using a beam search."""
@@ -146,7 +149,7 @@ class SeqDecoder(Module):
             state["source_mask"],
             bidirectional=self.bidirectional_input)
 
-        state.update(self._decoder.init_decoder_state(batch_size, final_encoder_output))
+        state.update(self.decoder_cell.init_decoder_state(batch_size, final_encoder_output))
 
         return state
 

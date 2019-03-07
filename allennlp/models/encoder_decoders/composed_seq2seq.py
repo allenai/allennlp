@@ -12,6 +12,7 @@ from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder
 from allennlp.modules.seq2seq_decoders.decoder_cell import DecoderCell
+from allennlp.modules.seq2seq_decoders.seq_decoder import SeqDecoder
 from allennlp.modules.seq2seq_decoders.simple_seq_decoder import SimpleSeqDecoder
 from allennlp.modules.token_embedders import Embedding
 from allennlp.nn import util
@@ -40,56 +41,20 @@ class ComposedSeq2Seq(Model):
         Embedder for source side sequences
     encoder : ``Seq2SeqEncoder``, required
         The encoder of the "encoder/decoder" model
-    decoder_cell : ``DecoderCell``, required
-        Defines which neural module to use for sequence decoding.
-        This class defines only neural network itself, all decoding algorithms are implemented in ``SimpleSeqDecoder``
-    max_decoding_steps : ``int``
-        Maximum length of decoded sequences.
-    target_namespace : ``str``, optional (default = 'target_tokens')
-        If the target side vocabulary is different from the source side's, you need to specify the
-        target's namespace here. If not, we'll assume it is "tokens", which is also the default
-        choice for the source side, and this might cause them to share vocabularies.
-    target_embedding_dim : ``int``, optional (default = source_embedding_dim)
-        You can specify an embedding dimensionality for the target side. If not, we'll use the same
-        value as the source embedder's.
-    beam_size : ``int``, optional (default = None)
-        Width of the beam for beam search. If not specified, greedy decoding is used.
-    scheduled_sampling_ratio : ``float``, optional (default = 0.)
-        At each timestep during training, we sample a random number between 0 and 1, and if it is
-        not less than this value, we use the ground truth labels for the whole batch. Else, we use
-        the predictions from the previous time step for the whole batch. If this value is 0.0
-        (default), this corresponds to teacher forcing, and if it is 1.0, it corresponds to not
-        using target side ground truth labels.  See the following paper for more information:
-        `Scheduled Sampling for Sequence Prediction with Recurrent Neural Networks. Bengio et al.,
-        2015 <https://arxiv.org/abs/1506.03099>`_.
-    tensor_based_metric : ``Metric``, optional (default = BLEU)
-        A metric to track on validation data that takes raw tensors when its called.
-        This metric must accept two arguments when called: a batched tensor
-        of predicted token indices, and a batched tensor of gold token indices.
-    token_based_metric : ``Metric``, optional (default = None)
-        A metric to track on validation data that takes lists of lists of tokens
-        as input. This metric must accept two arguments when called, both
-        of type `List[List[str]]`. The first is a predicted sequence for each item
-        in the batch and the second is a gold sequence for each item in the batch.
+    decoder : ``SeqDecoder``, required
+        The decoder of the "encoder/decoder" model
     """
 
     def __init__(self,
                  vocab: Vocabulary,
                  source_embedder: TextFieldEmbedder,
                  encoder: Seq2SeqEncoder,
-                 decoder_cell: DecoderCell,
-                 max_decoding_steps: int,
-                 beam_size: int = None,
-                 target_namespace: str = "tokens",
-                 target_embedding_dim: int = None,
-                 scheduled_sampling_ratio: float = 0.,
-                 tensor_based_metric: Metric = None,
-                 token_based_metric: Metric = None,
+                 decoder: SeqDecoder,
                  ) -> None:
 
         super(ComposedSeq2Seq, self).__init__(vocab)
-        self._target_namespace = target_namespace
-        self._scheduled_sampling_ratio = scheduled_sampling_ratio
+
+        self.decoder = decoder
 
         # Dense embedding of source vocab tokens.
         self._source_embedder = source_embedder
@@ -97,24 +62,10 @@ class ComposedSeq2Seq(Model):
         # Encodes the sequence of source embeddings into a sequence of hidden states.
         self._encoder = encoder
 
-        if self._encoder.get_output_dim() != decoder_cell.get_output_dim():
+        if self._encoder.get_output_dim() != self.decoder.decoder_cell.get_output_dim():
             raise ConfigurationError(
                 f"Encoder hidden dimension {self._encoder.get_output_dim()} should be"
-                f" equal to decoder dimension {decoder_cell.get_output_dim()}.")
-
-        self.decoder: SimpleSeqDecoder = SimpleSeqDecoder(
-            vocab=vocab,
-            decoder_cell=decoder_cell,
-            max_decoding_steps=max_decoding_steps,
-            beam_size=beam_size,
-            target_embedding_dim=target_embedding_dim,
-            target_namespace=target_namespace,
-            tensor_based_metric=tensor_based_metric,
-            token_based_metric=token_based_metric,
-            scheduled_sampling_ratio=scheduled_sampling_ratio,
-            bidirectional_input=self._encoder.is_bidirectional()
-        )
-
+                f" equal to decoder dimension {self.decoder.decoder_cell.get_output_dim()}.")
 
     @overrides
     def forward(self,  # type: ignore

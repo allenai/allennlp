@@ -24,20 +24,20 @@ class ComposedSeq2SeqTest(ModelTestCase):
         param_overrides = json.dumps({
             "model": {
                 "encoder": {"bidirectional": True},
-                "decoder_cell": {"decoding_dim": 20}
+                "decoder": {"decoder_cell": {"decoding_dim": 20}, 'bidirectional_input': True}
             }})
         self.ensure_model_can_train_save_and_load(self.param_file,
                                                   tolerance=1e-2,
                                                   overrides=param_overrides)
 
     def test_no_attention_model_can_train_save_and_load(self):
-        param_overrides = json.dumps({"model": {"decoder_cell": {"attention": None}}})
+        param_overrides = json.dumps({"model": {"decoder": {"decoder_cell": {"attention": None}}}})
         self.ensure_model_can_train_save_and_load(self.param_file,
                                                   tolerance=1e-2,
                                                   overrides=param_overrides)
 
     def test_greedy_model_can_train_save_and_load(self):
-        param_overrides = json.dumps({"model": {"beam_size": None}})
+        param_overrides = json.dumps({"model": {"decoder": {"beam_size": None}}})
         self.ensure_model_can_train_save_and_load(self.param_file,
                                                   tolerance=1e-2,
                                                   overrides=param_overrides)
