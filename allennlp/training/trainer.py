@@ -381,7 +381,6 @@ class Trainer(TrainerBase):
             metrics['gpu_'+str(gpu_num)+'_memory_MB'] = memory
         return metrics
 
-
     def _validation_loss(self) -> Tuple[float, int]:
         """
         Computes the validation loss. Returns it and the number of batches.
@@ -486,7 +485,10 @@ class Trainer(TrainerBase):
                         logger.info("Ran out of patience.  Stopping training.")
                         break
 
-            self._tensorboard.log_metrics(train_metrics, val_metrics=val_metrics, log_to_console=True)
+            self._tensorboard.log_metrics(train_metrics,
+                                          val_metrics=val_metrics,
+                                          log_to_console=True,
+                                          epoch=epoch + 1)  # +1 because tensorboard doesn't like 0
 
             # Create overall metrics dict
             training_elapsed_time = time.time() - training_start_time
@@ -634,7 +636,6 @@ class Trainer(TrainerBase):
             self._batch_num_total = batch_num_total
 
         return epoch_to_return
-
 
     # Requires custom from_params.
     @classmethod
