@@ -27,8 +27,8 @@ class ComposedSeq2Seq(Model):
     a neural machine translation system, an abstractive summarization system, or any other common
     seq2seq problem.  The model here is simple, but should be a decent starting place for
     implementing recent models for these tasks.
-    The ``ComposedSeq2Seq`` is composed from separate Encoder and Decoder classes.
-    This parts are fully customizable and independent from each other.
+    The ``ComposedSeq2Seq`` is composed from separate Seq2SeqEncoder and DecoderCell classes.
+    This parts are customizable and independent from each other.
 
     Parameters
     ----------
@@ -40,6 +40,9 @@ class ComposedSeq2Seq(Model):
         Embedder for source side sequences
     encoder : ``Seq2SeqEncoder``, required
         The encoder of the "encoder/decoder" model
+    decoder_cell : ``DecoderCell``, required
+        Defines which neural module to use for sequence decoding.
+        This class defines only neural network itself, all decoding algorithms are implemented in ``SimpleSeqDecoder``
     max_decoding_steps : ``int``
         Maximum length of decoded sequences.
     target_namespace : ``str``, optional (default = 'target_tokens')
