@@ -122,9 +122,7 @@ class Predictor(Registrable):
         return instances
 
     @classmethod
-    def from_path(cls,
-                  archive_path: str,
-                  predictor_name: str = None) -> 'Predictor':
+    def from_path(cls, archive_path: str, predictor_name: str = None) -> 'Predictor':
         """
         Instantiate a :class:`Predictor` from an archive path.
 
@@ -142,9 +140,7 @@ class Predictor(Registrable):
         return Predictor.from_archive(load_archive(archive_path), predictor_name)
 
     @classmethod
-    def from_archive(cls,
-                     archive: Archive,
-                     predictor_name: str = None) -> 'Predictor':
+    def from_archive(cls, archive: Archive, predictor_name: str = None) -> 'Predictor':
         """
         Instantiate a :class:`Predictor` from an :class:`~allennlp.models.archival.Archive`;
         that is, from the result of training a model. Optionally specify which `Predictor`
