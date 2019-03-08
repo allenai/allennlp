@@ -1,5 +1,6 @@
 from typing import List
 import json
+from contextlib import contextmanager
 
 from allennlp.common import Registrable
 from allennlp.common.checks import ConfigurationError
@@ -32,7 +33,9 @@ class Predictor(Registrable):
     a ``Predictor`` is a thin wrapper around an AllenNLP model that handles JSON -> JSON predictions
     that can be used for serving models through the web API or making predictions in bulk.
     """
-    def __init__(self, model: Model, dataset_reader: DatasetReader) -> None:
+    def __init__(self,
+                 model: Model,
+                 dataset_reader: DatasetReader) -> None:
         self._model = model
         self._dataset_reader = dataset_reader
 
@@ -53,6 +56,38 @@ class Predictor(Registrable):
     def predict_json(self, inputs: JsonDict) -> JsonDict:
         instance = self._json_to_instance(inputs)
         return self.predict_instance(instance)
+
+    @contextmanager
+    def capture_model_internals(self) -> dict:
+        """
+        Context manager that captures the outputs of this predictor's model.
+        The idea is that you'd use it as follows:
+
+            with predictor.capture_model_internals() as internals:
+                outputs = predictor.predict_json(inputs)
+
+            return {**outputs, "model_internals": internals}
+        """
+        results = {}
+        hooks = []
+
+        # First we'll register hooks to add the outputs of each module to the results dict.
+        def add_output(idx: int):
+            def _add_output(mod, _, outputs):
+                results[idx] = {"name": str(mod), "output": sanitize(outputs)}
+            return _add_output
+
+        for idx, module in enumerate(self._model.modules()):
+            if module != self._model:
+                hook = module.register_forward_hook(add_output(idx))
+                hooks.append(hook)
+
+        # If you capture the return value of the context manager, you get the results dict.
+        yield results
+
+        # And then when you exit the context we remove all the hooks.
+        for hook in hooks:
+            hook.remove()
 
     def predict_instance(self, instance: Instance) -> JsonDict:
         outputs = self._model.forward_on_instance(instance)
@@ -89,7 +124,9 @@ class Predictor(Registrable):
         return instances
 
     @classmethod
-    def from_path(cls, archive_path: str, predictor_name: str = None) -> 'Predictor':
+    def from_path(cls,
+                  archive_path: str,
+                  predictor_name: str = None) -> 'Predictor':
         """
         Instantiate a :class:`Predictor` from an archive path.
 
@@ -107,7 +144,9 @@ class Predictor(Registrable):
         return Predictor.from_archive(load_archive(archive_path), predictor_name)
 
     @classmethod
-    def from_archive(cls, archive: Archive, predictor_name: str = None) -> 'Predictor':
+    def from_archive(cls,
+                     archive: Archive,
+                     predictor_name: str = None) -> 'Predictor':
         """
         Instantiate a :class:`Predictor` from an :class:`~allennlp.models.archival.Archive`;
         that is, from the result of training a model. Optionally specify which `Predictor`
