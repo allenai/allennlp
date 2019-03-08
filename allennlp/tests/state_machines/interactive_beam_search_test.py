@@ -43,20 +43,6 @@ class TestInteractiveBeamSearch(AllenNlpTestCase):
         assert best_states[0][1].action_history[0] == [-2, -1, 0, 1, 2, 4]
         assert best_states[0][2].action_history[0] == [-2, -1, 0, 1, 2, 3, 4]
 
-        # Check that choices are correct
-        allowed_steps = [[choice for _, choice in step_choices]
-                         for step_choices in beam_search.choices]
-
-        assert allowed_steps == [
-                [-1, -2],  # from -3, can go to -1 or -2
-                [0, -1],   # forced to -2, can go to 0 or -1
-                [1, 0],    # forced to -1, can go to 1 or 0
-                [2, 1],    # forced to  0, can go to 2 or 1
-                [3, 2],    # forced to  1, can go to 3 or 2
-                [5, 4, 3],     # could go 2 -> {3, 4} or 3 -> {4, 5}
-                [7, 6, 5, 4]   # could go 3 -> {4, 5} or 4 -> {5, 6} or 5 -> {6, 7}
-        ]
-
         # Check that beams are correct
         best_action_sequence = best_states[0][0].action_history[0]
 

@@ -35,35 +35,21 @@ class InteractiveBeamSearch(BeamSearch[StateType]):
         to a number smaller than `beam_size` may give better results, as it can introduce
         more diversity into the search. See Freitag and Al-Onaizan 2017,
         "Beam Search Strategies for Neural Machine Translation".
-    max_marginal_candidates : ``int``, optional (default = 5)
-        How many marginal candidates to return for each time step.
-    marginal_candidate_beam_size : ``int``, optional (default = beam_size)
-        The beam search generates action histories. So if your beam size is e.g. 10,
-        at each step you will generate 10 new action histories, but it's likely / possible
-        that results in fewer than 10 marginal candidates. This parameter allows you to specify
-        a larger beam for the purpose of generating marginal candidates.
     """
     def __init__(self,
                  beam_size: int,
                  initial_sequence: torch.Tensor = None,
-                 per_node_beam_size: int = None,
-                 max_marginal_candidates: int = 5,
-                 marginal_candidate_beam_size: int = None) -> None:
+                 per_node_beam_size: int = None) -> None:
         super().__init__(beam_size, per_node_beam_size)
         if initial_sequence is not None:
             # construct_prefix_tree wants a tensor of shape (batch_size, num_sequences, sequence_length)
-            # so we need to add the first two dimensions in
-            self._allowed_transitions = util.construct_prefix_tree(initial_sequence.view(1, 1, -1))
+            # so we need to add the first two dimensions in. This returns a list, but we're assuming
+            # batch size 1, so we extract the first element.
+            self._allowed_transitions = util.construct_prefix_tree(initial_sequence.view(1, 1, -1))[0]
         else:
-            self._allowed_transitions = [{}]
+            self._allowed_transitions = {}
 
-        # We want to store the possible choices at each timestep,
-        # so that they can be used interactively.
-        self.choices: List[List[Tuple[float, int]]] = []
         self.beams: List[List[Tuple[float, List[int]]]] = []
-
-        self.max_marginal_candidates = max_marginal_candidates
-        self.marginal_candidate_beam_size = marginal_candidate_beam_size or beam_size
 
     def search(self,
                num_steps: int,
@@ -73,12 +59,19 @@ class InteractiveBeamSearch(BeamSearch[StateType]):
         """
         Parameters
         ----------
+        num_steps : ``int``
+            How many steps should we take in our search?  This is an upper bound, as it's possible
+            for the search to run out of valid actions before hitting this number, or for all
+            states on the beam to finish.
         initial_state : ``StateType``
             The starting state of our search.  This is assumed to be `batched`, and our beam search
             is batch-aware - we'll keep ``beam_size`` states around for each instance in the batch.
         transition_function : ``TransitionFunction``
             The ``TransitionFunction`` object that defines and scores transitions from one state to the
             next.
+        keep_final_unfinished_states : ``bool``, optional (default=True)
+            If we run out of steps before a state is "finished", should we return that state in our
+            search results?
 
         Returns
         -------
@@ -88,7 +81,6 @@ class InteractiveBeamSearch(BeamSearch[StateType]):
         finished_states: Dict[int, List[StateType]] = defaultdict(list)
         states = [initial_state]
         step_num = 0
-        self.choices = []
         self.beams = []
 
         while states and step_num < num_steps:
@@ -96,47 +88,19 @@ class InteractiveBeamSearch(BeamSearch[StateType]):
             next_states: Dict[int, List[StateType]] = defaultdict(list)
             grouped_state = states[0].combine_states(states)
 
-            # Generate marginal candidates.
-            # This is inefficient, but that's OK.
-            candidates = transition_function.take_step(grouped_state,
-                                                       max_actions=self.marginal_candidate_beam_size)
+            # The only possible constraint on allowed actions is that we're still following
+            # the specified initial sequence, which we can check by seeing if the first
+            # action history appears in our allowed transitions.
+            next_actions = self._allowed_transitions.get(tuple(grouped_state.action_history[0]))
 
-            scored_candidates = [(score, action_history[-1])
-                                 for next_state in candidates
-                                 for action_history, score in zip(next_state.action_history, next_state.score)]
-            # Sort highest score to lowest score
-            scored_candidates.sort(reverse=True)
-
-            # Now we want to keep the top `max_marginal_candidates` choices at this step.
-            choices: List[Tuple[float, int]] = []
-
-            for score, candidate in scored_candidates:
-                # If we have the maximum number of candidates, then stop.
-                if len(choices) >= self.max_marginal_candidates:
-                    break
-                # If we already have this candidate, then just go to the next one.
-                elif any(choice == candidate for _, choice in choices):
-                    continue
-                # Otherwise, this is a keeper.
-                else:
-                    choices.append((score.item(), candidate))
-
-            self.choices.append(choices)
-
-            # Now do the actual beam search
-            allowed_actions = []
-            # We've assumed batch size 1.
-            allowed_transitions = self._allowed_transitions[0]
-
-            for action_history in grouped_state.action_history:
-                # Use `None` for allowed actions if none prescribed.
-                next_actions = allowed_transitions.get(tuple(action_history))
-                if next_actions is not None:
-                    allowed_actions.append(next_actions)
+            if next_actions is None:
+                allowed_actions = None
+            else:
+                allowed_actions = [next_actions]
 
             for next_state in transition_function.take_step(grouped_state,
                                                             max_actions=self._per_node_beam_size,
-                                                            allowed_actions=allowed_actions or None):
+                                                            allowed_actions=allowed_actions):
                 # NOTE: we're doing state.batch_indices[0] here (and similar things below),
                 # hard-coding a group size of 1.  But, our use of `next_state.is_finished()`
                 # already checks for that, as it crashes if the group size is not 1.
