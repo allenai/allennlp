@@ -52,3 +52,7 @@ class TeeLogger:
         # Mirror the API of sys.stdout so that we can
         # check for the presence of a terminal easily.
         return not self.file_friendly_terminal_output
+
+    def cleanup(self) -> TextIO:
+        self.log.close()
+        return self.terminal

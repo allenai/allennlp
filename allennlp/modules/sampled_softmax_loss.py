@@ -121,7 +121,7 @@ class SampledSoftmaxLoss(torch.nn.Module):
             num_words = self.softmax_w.size(0)
 
         self._num_words = num_words
-        self._log_num_words_p1 = np.log(num_words + 1)
+        self._log_num_words_p1 = np.log(num_words + 1)  # pylint: disable=assignment-from-no-return
 
         # compute the probability of each sampled id
         self._probs = (np.log(np.arange(num_words) + 2) -
@@ -172,6 +172,7 @@ class SampledSoftmaxLoss(torch.nn.Module):
         long_targets.requires_grad_(False)
 
         # Get the softmax weights (so we can compute logits)
+        # shape (batch_size * max_sequence_length + num_samples)
         all_ids = torch.cat([long_targets, sampled_ids], dim=0)
 
         if self.sparse:

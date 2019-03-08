@@ -1,6 +1,7 @@
 from typing import List
 
 from overrides import overrides
+from spacy.tokens import Doc
 
 from allennlp.common.util import JsonDict
 from allennlp.common.util import get_spacy_model
@@ -14,12 +15,12 @@ class CorefPredictor(Predictor):
     """
     Predictor for the :class:`~allennlp.models.coreference_resolution.CoreferenceResolver` model.
     """
-    def __init__(self, model: Model, dataset_reader: DatasetReader) -> None:
+    def __init__(self, model: Model, dataset_reader: DatasetReader, language: str = 'en_core_web_sm') -> None:
         super().__init__(model, dataset_reader)
 
         # We have to use spacy to tokenise our document here, because we need
         # to also know sentence boundaries to propose valid mentions.
-        self._spacy = get_spacy_model("en_core_web_sm", pos_tags=True, parse=True, ner=False)
+        self._spacy = get_spacy_model(language, pos_tags=True, parse=True, ner=False)
 
     def predict(self, document: str) -> JsonDict:
         """
@@ -76,11 +77,11 @@ class CorefPredictor(Predictor):
         Create an instance from words list represent an already tokenized document,
         for skipping tokenization when that information already exist for the user
         """
-        spacy_document = self._spacy.tokenizer.tokens_from_list(words)
+        spacy_document = Doc(self._spacy.vocab, words=words)
         for pipe in filter(None, self._spacy.pipeline):
             pipe[1](spacy_document)
 
-        sentences = [[token.text for token in sentence] for sentence in spacy_document.sents]
+        sentences = [[token.text for token in sentence] for sentence in spacy_document.sents]  # pylint: disable=not-an-iterable
         instance = self._dataset_reader.text_to_instance(sentences)
         return instance
 

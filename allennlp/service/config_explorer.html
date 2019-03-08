@@ -9,6 +9,14 @@
             font-family: sans-serif;
         }
 
+        .needs-attention {
+            color: red;
+        }
+
+        .known-issues {
+            font-size: small;
+        }
+
         .fa-times,
         .fa-plus {
             margin-top: 2px;
@@ -185,8 +193,8 @@
 
     <div id="app"></div>
 
-    <script crossorigin src="https://unpkg.com/react@16/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@16/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/react@16/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@16/umd/react-dom.production.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/immutable/3.8.2/immutable.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/6.26.0/babel.js"></script>
     <script src="https://unpkg.com/tippy.js@2.5.2/dist/tippy.all.min.js"></script>
@@ -195,11 +203,12 @@
         The API returns objects that look like the following:
 
         ConfigItem = {
-        name : str
-        annotation : List[str]
-        configurable : bool
-        defaultValue : str
-        comment : str
+            name : str
+            annotation : List[str]
+            configurable : bool
+            defaultValue : str
+            comment : str
+        }
 
         Config = {
             type: str
@@ -216,6 +225,7 @@
         */
 
         const baseApi = ''
+
 
         // A configItem is optional if it has a default value
         const isOptional = (configItem) => configItem.get('defaultValue') !== undefined
@@ -248,14 +258,18 @@
         // Recursively convert the provided value to JSON
         const jsonify = (value, annotation, configurable, optional) => {
             if (!value && optional) {
+                // No value and optional => undefined
                 return undefined
             } else if (configurable) {
+                // configurable => call configToJson
                 return configToJson(value)
             } else {
                 const origin = annotation.get('origin')
                 const args = annotation.get('args')
 
                 if (origin === '?') {
+                    // No type annotation, this is probably PyTorch code.
+                    // just use our best guess.
                     return bestGuess(value)
                 }
                 if (origin === 'Dict') {
@@ -265,6 +279,7 @@
                     const dict = {}
                     let nonEmpty = false;
 
+                    // if value is defined, it's a list of key-value pairs
                     (value || Immutable.List()).forEach((entry) => {
                         const entryKey = entry.get("key")
                         const entryValue = entry.get("value")
@@ -294,6 +309,12 @@
                 } else if (origin === 'str') {
                     const keep = (value && value.length) || !optional
                     return keep ? (value || '') : undefined
+                } else if (origin === 'Tuple') {
+                    const ary = args.map((arg, i) => {
+                        const elt = jsonify(value[i], arg, false, optional)
+                        return elt
+                    })
+                    return ary
                 } else {
                     console.log("unknown type " + annotation.toJS())
                     return undefined
@@ -359,6 +380,39 @@
             }
         }
 
+        // Walk the config and return a list of keys that need attention.
+        const keysNeedingAttention = (node) => {
+            const name = node.get('name')
+
+            // If we're not top-level, we use "{name}." as a prefix
+            // for the child keys.
+            const prefix = name ? name + "." : ''
+
+            // The keys that need attention.
+            let keys = []
+
+            // If this is configurable and has children,
+            if (node.get('configurable') && node.get('value')) {
+                // look at each child,
+                node.getIn(['value', 'items']).forEach((item) => {
+                    // recursively find its keys that need attention,
+                    keysNeedingAttention(item).forEach((key) => {
+                        // and add the prefix.
+                        keys.push(prefix + key)
+                    })
+                })
+            }
+
+            // If we already know that e.g. "model.text_field_embedder" needs attention,
+            // then we don't want to also say that "model" needs attention; however, if
+            // "model" does need attention and it has no children yet, we do want to include it.
+            if (!keys.length && !node.get('completed')) {
+                keys.push(name)
+            }
+
+            return keys
+        }
+
         // Top-level component
         class App extends React.Component {
             constructor() {
@@ -372,8 +426,11 @@
             }
 
             setData(fn) {
+                // Get old data
                 const { data } = this.state
+                // apply the transformation and mark things as complete
                 const newData = markComplete(fn(data))
+                // and set the state with the new data
                 return this.setState({ data: newData })
             }
 
@@ -383,21 +440,62 @@
                     .then(res => res.json())
                     .then(({ config }) => {
                         const data = Immutable.Map({ configurable: true, value: Immutable.fromJS(config) })
-                        this.setState({ data: data })
+                        this.setState({ data: markComplete(data) })
                     })
             }
 
             render() {
                 const config = this.state.data.get('value')
+
                 return (
                     <div class="wizard">
                         <div class="tree">
                             <Config path={Immutable.List(['value'])} setData={this.setData} config={config} />
                         </div>
+                        <NeedsAttention keys={keysNeedingAttention(this.state.data)}/>
                         <JsonBox config={config} />
+                        <KnownIssues />
                     </div>
                 )
             }
+        }
+
+        // Caveat for known issues
+        const KnownIssues = () => (
+            <div class="known-issues">
+                <h3>Known Issues</h3>
+                <ul>
+                    <li>For the most part this doesn't handle union types correctly.
+                        For example, if an argument is annotated as <pre>Union[int, Dict[str, int]]</pre>
+                        we don't currently have a control for that, and you'll have to fill in that part of the JSON
+                        yourself.</li>
+                </ul>
+            </div>
+        )
+
+        // Component that shows keys that need attention
+        const NeedsAttention = ({keys}) => {
+            if (keys.length) {
+                return (
+                    <div class="needs-attention">
+                        Some items need attention, see the red exclamation marks above!
+                    </div>
+                )
+            } else {
+                return null
+            }
+            /*
+            const renderedKeys = keys.map((key) => <li class="needs-attention-key">{key}</li>)
+            const header = keys.length ? <h3>Items that need attention:</h3> : null
+            return (
+                <div class="needs-attention">
+                    {header}
+                    <ul>
+                        {renderedKeys}
+                    </ul>
+                </div>
+            )
+            */
         }
 
         // Component that displays the JSON-rendered config file
@@ -463,9 +561,28 @@
                 return <Dict path={path} item={item} setData={setData} />
             } else if (origin === 'List' || origin == 'Sequence' || (origin == 'Tuple' && args.size == 2 && args.get(2) === '...')) {
                 return <List path={path} item={item} setData={setData} />
+            } else if (origin === 'Tuple' && args.size == 2) {
+                return <Pair path={path} item={item} setData={setData} />
             } else {
                 return <TextInput path={path} item={item} setData={setData} />
             }
+        }
+
+        const Pair = ({ path, item, setData }) => {
+            const pairValues = item.get('value') || [undefined, undefined]
+
+            const onChange = (i) => evt => {
+                const newValues = pairValues.slice(0)
+                newValues[i] = evt.target.value
+                setData(config => config.setIn(path.push('value'), newValues))
+            }
+
+            return (
+                <span>
+                    <input type="text" value={pairValues[0]} onChange={onChange(0)} />
+                    <input type="text" value={pairValues[1]} onChange={onChange(1)} />
+                </span>
+            )
         }
 
         class Tooltip extends React.Component {
@@ -589,6 +706,7 @@
         const Configurator = ({ path, item, setData }) => {
             const annotation = item.get('annotation')
             const className = annotation.get('origin')
+            const registrable = item.get('registrable')
 
             // User-supplied
             const choices = item.get('choices')
@@ -598,7 +716,7 @@
             let prefix = choices ? commonPrefix(choices) : null
 
             const getChoices = () => {
-                fetch(`${baseApi}/api/config/?class=${className}`)
+                fetch(`${baseApi}/api/config/?class=${className}&get_choices=true`)
                     .then(res => res.json())
                     .then(({ config, choices }) => {
                         if (choices) {

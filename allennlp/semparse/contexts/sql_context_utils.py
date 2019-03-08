@@ -18,8 +18,9 @@ def format_grammar_string(grammar_dictionary: Dict[str, List[str]]) -> str:
     Formats a dictionary of production rules into the string format expected
     by the Parsimonious Grammar class.
     """
-    return '\n'.join([f"{nonterminal} = {' / '.join(right_hand_side)}"
-                      for nonterminal, right_hand_side in grammar_dictionary.items()])
+    grammar_string = '\n'.join([f"{nonterminal} = {' / '.join(right_hand_side)}"
+                                for nonterminal, right_hand_side in grammar_dictionary.items()])
+    return grammar_string.replace("\\", "\\\\")
 
 
 def initialize_valid_actions(grammar: Grammar,
@@ -87,7 +88,7 @@ def format_action(nonterminal: str,
     is_number : ``bool``, optional, (default = False).
         Whether the production produces a string.
         If it does, it is formatted as ``nonterminal -> ['number']``
-    keywords_to_uppecase: ``List[str]``, optional, (default = None)
+    keywords_to_uppercase: ``List[str]``, optional, (default = None)
         Keywords in the grammar to uppercase. In the case of sql,
         this might be SELECT, MAX etc.
     """
@@ -144,7 +145,7 @@ class SqlVisitor(NodeVisitor):
     ----------
     grammar : ``Grammar``
         A Grammar object that we use to parse the text.
-    keywords_to_uppecase: ``List[str]``, optional, (default = None)
+    keywords_to_uppercase: ``List[str]``, optional, (default = None)
         Keywords in the grammar to uppercase. In the case of sql,
         this might be SELECT, MAX etc.
     """

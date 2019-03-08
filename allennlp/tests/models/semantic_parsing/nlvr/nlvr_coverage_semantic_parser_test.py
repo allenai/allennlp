@@ -5,7 +5,7 @@ import torch
 from allennlp.common import Params
 from allennlp.common.testing import ModelTestCase
 from allennlp.data import Vocabulary
-from allennlp.data.iterators import EpochTrackingBucketIterator
+from allennlp.data.iterators import BucketIterator
 from allennlp.models import Model
 from allennlp.models.archival import load_archive
 
@@ -32,11 +32,11 @@ class NlvrCoverageSemanticParserTest(ModelTestCase):
 
     def test_get_checklist_info(self):
         # Creating a fake all_actions field where actions 0, 2 and 4 are terminal productions.
-        all_actions = [('<o,o> -> top', True, None),
+        all_actions = [('<Set[Object]:Set[Object]> -> top', True, None),
                        ('fake_action', True, None),
-                       ('c -> color_black', True, None),
+                       ('Color -> color_black', True, None),
                        ('fake_action2', True, None),
-                       ('e -> 6', True, None)]
+                       ('int -> 6', True, None)]
         # Of the actions above, those at indices 0 and 4 are on the agenda, and there are padding
         # indices at the end.
         test_agenda = torch.Tensor([[0], [4], [-1], [-1]])
@@ -52,7 +52,7 @@ class NlvrCoverageSemanticParserTest(ModelTestCase):
         model = Model.from_params(vocab=self.vocab, params=params['model'])
         # Initial cost weight, before forward is called.
         assert model._checklist_cost_weight == 0.8
-        iterator = EpochTrackingBucketIterator(sorting_keys=[['sentence', 'num_tokens']])
+        iterator = BucketIterator(sorting_keys=[['sentence', 'num_tokens']], track_epoch=True)
         cost_weights = []
         for epoch_data in iterator(self.dataset, num_epochs=4):
             model.forward(**epoch_data)

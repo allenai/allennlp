@@ -445,7 +445,7 @@ in practice you wouldn't do most of that work manually.
 
 ### Configuration and Params
 
-Most AllenNLP object are constructible from JSON-like parameter objects.
+Most AllenNLP objects are constructible from JSON-like parameter objects.
 
 So, for instance, instead of writing
 

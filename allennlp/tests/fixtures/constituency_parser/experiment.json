@@ -9,12 +9,10 @@
       "type": "constituency_parser",
       "text_field_embedder": {
         "token_embedders": {
-          "token_embedders": {
-            "tokens": {
-              "type": "embedding",
-              "embedding_dim": 2,
-              "trainable": true
-            }
+          "tokens": {
+            "type": "embedding",
+            "embedding_dim": 2,
+            "trainable": true
           }
         }
       },

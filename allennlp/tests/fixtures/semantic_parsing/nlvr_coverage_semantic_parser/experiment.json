@@ -39,7 +39,8 @@
     "penalize_non_agenda_actions": true
   },
   "iterator": {
-    "type": "epoch_tracking_bucket",
+    "type": "bucket",
+    "track_epoch": true,
     "sorting_keys": [["sentence", "num_tokens"]],
     "padding_noise": 0.0,
     "batch_size" : 4

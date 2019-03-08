@@ -14,25 +14,15 @@ MODULES_THAT_NEED_NO_DOCS: Set[str] = {
         # No docs at top level.
         'allennlp',
         'allennlp.version',
-
-        # No docs for custom extensions, which aren't even in python.
-        'allennlp.custom_extensions.*',
-
         # No docs for tests, unnecessary info for users.
         'allennlp.tests.*',
-
-        # TODO(joelgrus): Figure out how to make these docs build;
-        # the cffi part is causing problems.
-        'allennlp.modules.alternating_highway_lstm',
         # Private base class, no docs needed.
         'allennlp.modules.encoder_base',
-        # Deprecated module name (renamed to allennlp.modules.pruner). This can be removed once the
-        # module is removed (probably in version 0.8).
-        'allennlp.modules.span_pruner',
-        # Moved to dataset_readers/semantic_parsing. TODO(Mark): remove in version 0.8.
-        'allennlp.data.dataset_readers.atis',
-        'allennlp.data.dataset_readers.nlvr',
-        'allennlp.data.dataset_readers.wikitables',
+        # Deprecated in favor of allennlp.models.language_model
+        'allennlp.models.bidirectional_lm',
+        # Deprecated in favor of
+        # allennlp.modules.token_embedders.language_model_token_embedder
+        'allennlp.modules.token_embedders.bidirectional_language_model_token_embedder',
         # Deprecated in favor of allennlp.predictors.
         'allennlp.service.predictors.*',
 }
@@ -81,4 +71,7 @@ if __name__ == "__main__":
             success = False
 
     if not success:
+        print("To pass this check, you must add a reference to undocumented modules in our API "
+              "documentation in the appropriate place under doc/api (typically, these are modules "
+              "that you added in this PR), and remove any reference to modules that you deleted.")
         sys.exit(1)

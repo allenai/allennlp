@@ -41,7 +41,17 @@ allennlp.modules.seq2seq_encoders
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: allennlp.modules.seq2seq_encoders.bidirectional_transformer_encoder
+.. automodule:: allennlp.modules.seq2seq_encoders.bidirectional_language_model_transformer
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: allennlp.modules.seq2seq_encoders.feedforward_encoder
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: allennlp.modules.seq2seq_encoders.qanet_encoder
    :members:
    :undoc-members:
    :show-inheritance:

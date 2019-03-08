@@ -7,7 +7,6 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple, TypeVar
 import logging
 import copy
 import math
-import warnings
 
 import torch
 
@@ -50,6 +49,21 @@ def move_to_device(obj, cuda_device: int):
         return tuple([move_to_device(item, cuda_device) for item in obj])
     else:
         return obj
+
+
+def clamp_tensor(tensor, minimum, maximum):
+    """
+    Supports sparse and dense tensors.
+    Returns a tensor with values clamped between the provided minimum and maximum,
+    without modifying the original tensor.
+    """
+    if tensor.is_sparse:
+        coalesced_tensor = tensor.coalesce()
+        # pylint: disable=protected-access
+        coalesced_tensor._values().clamp_(minimum, maximum)
+        return coalesced_tensor
+    else:
+        return tensor.clamp(minimum, maximum)
 
 
 def batch_tensor_dicts(tensor_dicts: List[Dict[str, torch.Tensor]],
@@ -147,7 +161,7 @@ def sort_batch_by_length(tensor: torch.Tensor, sequence_lengths: torch.Tensor):
     sorted_sequence_lengths, permutation_index = sequence_lengths.sort(0, descending=True)
     sorted_tensor = tensor.index_select(0, permutation_index)
 
-    index_range = sequence_lengths.new_tensor(torch.arange(0, len(sequence_lengths)))
+    index_range = torch.arange(0, len(sequence_lengths), device=sequence_lengths.device)
     # This is the equivalent of zipping with index, sorting by the original
     # sequence lengths and returning the now sorted indices.
     _, reverse_mapping = permutation_index.sort(0, descending=False)
@@ -169,7 +183,7 @@ def get_final_encoder_states(encoder_outputs: torch.Tensor,
     Additionally, if ``bidirectional`` is ``True``, we will split the final dimension of the
     ``encoder_outputs`` into two and assume that the first half is for the forward direction of the
     encoder and the second half is for the backward direction.  We will concatenate the last state
-    for each encoder dimension, giving ``encoder_outputs[:, -1, :encoding_dim/2]`` concated with
+    for each encoder dimension, giving ``encoder_outputs[:, -1, :encoding_dim/2]`` concatenated with
     ``encoder_outputs[:, 0, encoding_dim/2:]``.
     """
     # These are the indices of the last words in the sequences (i.e. length sans padding - 1).  We
@@ -208,13 +222,17 @@ def get_dropout_mask(dropout_probability: float, tensor_for_masking: torch.Tenso
     This scaling ensures expected values and variances of the output of applying this mask
      and the original tensor are the same.
     """
-    binary_mask = tensor_for_masking.new_tensor(torch.rand(tensor_for_masking.size()) > dropout_probability)
+    binary_mask = (torch.rand(tensor_for_masking.size()) > dropout_probability).to(tensor_for_masking.device)
     # Scale mask by 1/keep_prob to preserve output statistics.
     dropout_mask = binary_mask.float().div(1.0 - dropout_probability)
     return dropout_mask
 
 
-def masked_softmax(vector: torch.Tensor, mask: torch.Tensor, dim: int = -1) -> torch.Tensor:
+def masked_softmax(vector: torch.Tensor,
+                   mask: torch.Tensor,
+                   dim: int = -1,
+                   memory_efficient: bool = False,
+                   mask_fill_value: float = -1e32) -> torch.Tensor:
     """
     ``torch.nn.functional.softmax(vector)`` does not work if some elements of ``vector`` should be
     masked.  This performs a softmax on just the non-masked portions of ``vector``.  Passing
@@ -225,9 +243,14 @@ def masked_softmax(vector: torch.Tensor, mask: torch.Tensor, dim: int = -1) -> t
     unsqueeze on dimension 1 until they match.  If you need a different unsqueezing of your mask,
     do it yourself before passing the mask into this function.
 
-    In the case that the input vector is completely masked, this function returns an array
-    of ``0.0``. This behavior may cause ``NaN`` if this is used as the last layer of a model
-    that uses categorical cross-entropy loss.
+    If ``memory_efficient`` is set to true, we will simply use a very large negative number for those
+    masked positions so that the probabilities of those positions would be approximately 0.
+    This is not accurate in math, but works for most cases and consumes less memory.
+
+    In the case that the input vector is completely masked and ``memory_efficient`` is false, this function
+    returns an array of ``0.0``. This behavior may cause ``NaN`` if this is used as the last layer of
+    a model that uses categorical cross-entropy loss. Instead, if ``memory_efficient`` is true, this function
+    will treat every element as equal, and do softmax over equal numbers.
     """
     if mask is None:
         result = torch.nn.functional.softmax(vector, dim=dim)
@@ -235,10 +258,14 @@ def masked_softmax(vector: torch.Tensor, mask: torch.Tensor, dim: int = -1) -> t
         mask = mask.float()
         while mask.dim() < vector.dim():
             mask = mask.unsqueeze(1)
-        # To limit numerical errors from large vector elements outside the mask, we zero these out.
-        result = torch.nn.functional.softmax(vector * mask, dim=dim)
-        result = result * mask
-        result = result / (result.sum(dim=dim, keepdim=True) + 1e-13)
+        if not memory_efficient:
+            # To limit numerical errors from large vector elements outside the mask, we zero these out.
+            result = torch.nn.functional.softmax(vector * mask, dim=dim)
+            result = result * mask
+            result = result / (result.sum(dim=dim, keepdim=True) + 1e-13)
+        else:
+            masked_vector = vector.masked_fill((1 - mask).byte(), mask_fill_value)
+            result = torch.nn.functional.softmax(masked_vector, dim=dim)
     return result
 
 
@@ -340,6 +367,31 @@ def masked_mean(vector: torch.Tensor,
     return value_sum / value_count.clamp(min=eps)
 
 
+def masked_flip(padded_sequence: torch.Tensor,
+                sequence_lengths: List[int]) -> torch.Tensor:
+    """
+        Flips a padded tensor along the time dimension without affecting masked entries.
+
+        Parameters
+        ----------
+        padded_sequence : ``torch.Tensor``
+            The tensor to flip along the time dimension.
+            Assumed to be of dimensions (batch size, num timesteps, ...)
+        sequence_lengths : ``torch.Tensor``
+            A list containing the lengths of each unpadded sequence in the batch.
+
+        Returns
+        -------
+        A ``torch.Tensor`` of the same shape as padded_sequence.
+        """
+    assert padded_sequence.size(0) == len(sequence_lengths), \
+        f'sequence_lengths length ${len(sequence_lengths)} does not match batch size ${padded_sequence.size(0)}'
+    num_timesteps = padded_sequence.size(1)
+    flipped_padded_sequence = torch.flip(padded_sequence, [1])
+    sequences = [flipped_padded_sequence[i, num_timesteps - length:] for i, length in enumerate(sequence_lengths)]
+    return torch.nn.utils.rnn.pad_sequence(sequences, batch_first=True)
+
+
 def viterbi_decode(tag_sequence: torch.Tensor,
                    transition_matrix: torch.Tensor,
                    tag_observations: Optional[List[int]] = None):
@@ -360,7 +412,7 @@ def viterbi_decode(tag_sequence: torch.Tensor,
     tag_observations : Optional[List[int]], optional, (default = None)
         A list of length ``sequence_length`` containing the class ids of observed
         elements in the sequence, with unobserved elements being set to -1. Note that
-        it is possible to provide evidence which results in degenerate labellings if
+        it is possible to provide evidence which results in degenerate labelings if
         the sequences of tags you provide as evidence cannot transition between each
         other, or those transitions are extremely unlikely. In this situation we log a
         warning, but the responsibility for providing self-consistent evidence ultimately
@@ -475,37 +527,6 @@ def get_text_field_mask(text_field_tensors: Dict[str, torch.Tensor],
         raise ValueError("Expected a tensor with dimension 2 or 3, found {}".format(smallest_dim))
 
 
-def last_dim_softmax(tensor: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:
-    """
-    Takes a tensor with 3 or more dimensions and does a masked softmax over the last dimension.  We
-    assume the tensor has shape ``(batch_size, ..., sequence_length)`` and that the mask (if given)
-    has shape ``(batch_size, sequence_length)``.
-
-    .. deprecated:: 0.6.1
-           ``last_dim_softmax`` was deprecated in favor of just using ``masked_softmax`` in version
-           0.6.1.  It will be removed in version 0.8.
-    """
-    warnings.warn("``last_dim_softmax`` was deprecated in favor of just using ``masked_softmax`` "
-                  "in version 0.6.1.  It will be removed in version 0.8.", DeprecationWarning)
-    return masked_softmax(tensor, mask, dim=-1)
-
-
-def last_dim_log_softmax(tensor: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:
-    """
-    Takes a tensor with 3 or more dimensions and does a masked log softmax over the last dimension.
-    We assume the tensor has shape ``(batch_size, ..., sequence_length)`` and that the mask (if given)
-    has shape ``(batch_size, sequence_length)``.
-
-    .. deprecated:: 0.6.1
-           ``last_dim_log_softmax`` was deprecated in favor of just using ``masked_log_softmax`` in
-           version 0.6.1.  It will be removed in version 0.8.
-    """
-    warnings.warn("``last_dim_log_softmax`` was deprecated in favor of just using "
-                  "``masked_log_softmax`` in version 0.6.1.  It will be removed in version 0.8.",
-                  DeprecationWarning)
-    return masked_log_softmax(tensor, mask, dim=-1)
-
-
 def weighted_sum(matrix: torch.Tensor, attention: torch.Tensor) -> torch.Tensor:
     """
     Takes a matrix of vectors and a set of weights over the rows in the matrix (which we call an
@@ -548,7 +569,6 @@ def weighted_sum(matrix: torch.Tensor, attention: torch.Tensor) -> torch.Tensor:
 def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
                                        targets: torch.LongTensor,
                                        weights: torch.FloatTensor,
-                                       batch_average: bool = None,
                                        average: str = "batch",
                                        label_smoothing: float = None) -> torch.FloatTensor:
     """
@@ -568,22 +588,13 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
         index of the true class for each corresponding step.
     weights : ``torch.FloatTensor``, required.
         A ``torch.FloatTensor`` of size (batch, sequence_length)
-    batch_average : bool, optional, (default = None).
-        A bool indicating whether the loss should be averaged across the batch,
-        or returned as a vector of losses per batch element.
-
-        .. deprecated:: 0.6.2
-           ``batch_average`` was deprecated and replaced with
-           the more general ``average`` in version 0.6.2. It will be removed
-           in version 0.8.
-
     average: str, optional (default = "batch")
         If "batch", average the loss across the batches. If "token", average
         the loss across each item in the input. If ``None``, return a vector
         of losses per batch element.
     label_smoothing : ``float``, optional (default = None)
         Whether or not to apply label smoothing to the cross-entropy loss.
-        For example, with a label smoothing value of 0.2, a 4 class classifcation
+        For example, with a label smoothing value of 0.2, a 4 class classification
         target would look like ``[0.05, 0.05, 0.85, 0.05]`` if the 3rd class was
         the correct label.
 
@@ -594,18 +605,6 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
     If ``average is None``, the returned loss is a vector of shape (batch_size,).
 
     """
-    if batch_average is not None:
-        # Maintain old behavior
-        if batch_average:
-            warnings.warn("batch_average=True was deprecated and replaced "
-                          "with average='batch' in version 0.6.2. It will be "
-                          "removed in version 0.8.", DeprecationWarning)
-            average = "batch"
-        else:
-            warnings.warn("batch_average=False was deprecated and replaced "
-                          "with average=None in version 0.6.2. It will be "
-                          "removed in version 0.8.", DeprecationWarning)
-            average = None
     if average not in {None, "token", "batch"}:
         raise ValueError("Got average f{average}, expected one of "
                          "None, 'token', or 'batch'")
@@ -1286,6 +1285,7 @@ def add_positional_features(tensor: torch.Tensor,
         sinusoids = torch.cat([sinusoids, sinusoids.new_zeros(timesteps, 1)], 1)
     return tensor + sinusoids.unsqueeze(0)
 
+
 def clone(module: torch.nn.Module, num_copies: int) -> torch.nn.ModuleList:
     "Produce N identical layers."
     return torch.nn.ModuleList([copy.deepcopy(module) for _ in range(num_copies)])
@@ -1302,6 +1302,7 @@ def combine_initial_dims(tensor: torch.Tensor) -> torch.Tensor:
         return tensor
     else:
         return tensor.view(-1, tensor.size(-1))
+
 
 def uncombine_initial_dims(tensor: torch.Tensor, original_size: torch.Size) -> torch.Tensor:
     """

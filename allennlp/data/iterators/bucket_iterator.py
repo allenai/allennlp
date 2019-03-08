@@ -1,6 +1,7 @@
 import logging
 import random
-from typing import List, Tuple, Iterable, cast, Dict
+from collections import deque
+from typing import List, Tuple, Iterable, cast, Dict, Deque
 
 from overrides import overrides
 
@@ -116,10 +117,16 @@ class BucketIterator(DataIterator):
                                             self._padding_noise)
 
             batches = []
+            excess: Deque[Instance] = deque()
             for batch_instances in lazy_groups_of(iter(instance_list), self._batch_size):
-                for possibly_smaller_batches in self._ensure_batch_is_sufficiently_small(batch_instances):
+                for possibly_smaller_batches in self._ensure_batch_is_sufficiently_small(batch_instances, excess):
                     batches.append(Batch(possibly_smaller_batches))
+            if excess:
+                batches.append(Batch(excess))
 
+            # TODO(brendanr): Add multi-GPU friendly grouping, i.e. group
+            # num_gpu batches together, shuffle and then expand the groups.
+            # This guards against imbalanced batches across GPUs.
             move_to_front = self._biggest_batch_first and len(batches) > 1
             if move_to_front:
                 # We'll actually pop the last _two_ batches, because the last one might not be full.

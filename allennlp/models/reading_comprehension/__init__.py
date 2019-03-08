@@ -8,3 +8,5 @@ These submodules contain models for things that are predominantly focused on rea
 from allennlp.models.reading_comprehension.bidaf import BidirectionalAttentionFlow
 from allennlp.models.reading_comprehension.bidaf_ensemble import BidafEnsemble
 from allennlp.models.reading_comprehension.dialog_qa import DialogQA
+from allennlp.models.reading_comprehension.naqanet import NumericallyAugmentedQaNet
+from allennlp.models.reading_comprehension.qanet import QaNet

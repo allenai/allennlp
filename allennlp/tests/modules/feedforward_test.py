@@ -6,18 +6,18 @@ import torch
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.modules import FeedForward
-from allennlp.nn import InitializerApplicator
+from allennlp.nn import InitializerApplicator, Initializer, Activation
 from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestFeedForward(AllenNlpTestCase):
     def test_init_checks_hidden_dim_consistency(self):
         with pytest.raises(ConfigurationError):
-            FeedForward(2, 4, [5, 5], 'relu')
+            FeedForward(2, 4, [5, 5], Activation.by_name('relu')())
 
     def test_init_checks_activation_consistency(self):
         with pytest.raises(ConfigurationError):
-            FeedForward(2, 4, 5, ['relu', 'relu'])
+            FeedForward(2, 4, 5, [Activation.by_name('relu')(), Activation.by_name('relu')()])
 
     def test_forward_gives_correct_output(self):
         params = Params({
@@ -28,7 +28,7 @@ class TestFeedForward(AllenNlpTestCase):
                 })
         feedforward = FeedForward.from_params(params)
 
-        constant_init = lambda tensor: torch.nn.init.constant_(tensor, 1.)
+        constant_init = Initializer.from_params(Params({"type": "constant", "val": 1.}))
         initializer = InitializerApplicator([(".*", constant_init)])
         initializer(feedforward)
 

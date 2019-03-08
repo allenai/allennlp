@@ -491,9 +491,9 @@ class NameMapper:
     Parameters
     ----------
     language_has_lambda : ``bool`` (optional, default=False)
-        If your language has lambda functions, the word "lambda" needs to be in the common name
-        mapping, mapped to the alias "\". NLTK understands this symbol, and it doesn't need a type
-        signature for it. Setting this flag to True adds the mapping to `common_name_mapping`.
+        If your language has lambda functions, the word "lambda" needs to be in the name mapping,
+        mapped to the alias "\". NLTK understands this symbol, and it doesn't need a type signature
+        for it. Setting this flag to True adds the mapping to `name_mapping`.
     alias_prefix : ``str`` (optional, default="F")
         The one letter prefix used for all aliases. You do not need to specify it if you have only
         instance of this class for you language. If not, you can specify a different prefix for each
@@ -502,10 +502,10 @@ class NameMapper:
     def __init__(self,
                  language_has_lambda: bool = False,
                  alias_prefix: str = "F") -> None:
-        self.common_name_mapping: Dict[str, str] = {}
+        self.name_mapping: Dict[str, str] = {}
         if language_has_lambda:
-            self.common_name_mapping["lambda"] = "\\"
-        self.common_type_signature: Dict[str, Type] = {}
+            self.name_mapping["lambda"] = "\\"
+        self.type_signatures: Dict[str, Type] = {}
         assert len(alias_prefix) == 1 and alias_prefix.isalpha(), (f"Invalid alias prefix: {alias_prefix}"
                                                                    "Needs to be a single upper case character.")
         self._alias_prefix = alias_prefix.upper()
@@ -515,26 +515,26 @@ class NameMapper:
                                 name: str,
                                 signature: Type,
                                 alias: str = None) -> None:
-        if name in self.common_name_mapping:
-            alias = self.common_name_mapping[name]
-            old_signature = self.common_type_signature[alias]
+        if name in self.name_mapping:
+            alias = self.name_mapping[name]
+            old_signature = self.type_signatures[alias]
             if old_signature != signature:
                 raise RuntimeError(f"{name} already added with signature {old_signature}. "
                                    f"Cannot add it again with {signature}!")
         else:
             alias = alias or f"{self._alias_prefix}{self._name_counter}"
             self._name_counter += 1
-            self.common_name_mapping[name] = alias
-            self.common_type_signature[alias] = signature
+            self.name_mapping[name] = alias
+            self.type_signatures[alias] = signature
 
     def get_alias(self, name: str) -> str:
-        if name not in self.common_name_mapping:
+        if name not in self.name_mapping:
             raise RuntimeError(f"Unmapped name: {name}")
-        return self.common_name_mapping[name]
+        return self.name_mapping[name]
 
     def get_signature(self, name: str) -> Type:
         alias = self.get_alias(name)
-        return self.common_type_signature[alias]
+        return self.type_signatures[alias]
 
 
 def substitute_any_type(type_: Type, basic_types: Set[BasicType]) -> List[Type]:
@@ -565,7 +565,7 @@ def _get_complex_type_production(complex_type: ComplexType,
     (perhaps each with multiple arguments) that produce the return values.  This method also takes
     care of ``MultiMatchNamedBasicTypes``. If one of the arguments or the return types is a multi
     match type, it gets all the substitutions of those types from ``multi_match_mapping`` and forms
-    a list with all possible combinations of sustitutions. If the complex type passed to this method
+    a list with all possible combinations of substitutions. If the complex type passed to this method
     has no ``MultiMatchNamedBasicTypes``, the returned list will contain a single tuple.  For
     example, if the complex is type ``<a,<<b,c>,d>>``, and ``a`` is a multi match type that matches
     ``e`` and ``f``, this gives the following list of tuples: ``[('d', 'd -> [<a,<<b,c>,d>, e,

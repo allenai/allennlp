@@ -1,4 +1,4 @@
-# pylint: disable=no-self-use,invalid-name
+# pylint: disable=no-self-use,invalid-name,protected-access
 from copy import deepcopy
 
 import numpy
@@ -9,7 +9,7 @@ from allennlp.common import Params
 from allennlp.data import Vocabulary
 from allennlp.modules import Seq2VecEncoder
 from allennlp.modules.token_embedders import Embedding, TokenCharactersEncoder
-from allennlp.nn import InitializerApplicator
+from allennlp.nn import InitializerApplicator, Initializer
 from allennlp.common.testing import AllenNlpTestCase
 
 
@@ -37,7 +37,7 @@ class TestTokenCharactersEncoder(AllenNlpTestCase):
         self.encoder = TokenCharactersEncoder.from_params(vocab=self.vocab, params=deepcopy(params))
         self.embedding = Embedding.from_params(vocab=self.vocab, params=params["embedding"])
         self.inner_encoder = Seq2VecEncoder.from_params(params["encoder"])
-        constant_init = lambda tensor: torch.nn.init.constant_(tensor, 1.)
+        constant_init = Initializer.from_params(Params({"type": "constant", "val": 1.}))
         initializer = InitializerApplicator([(".*", constant_init)])
         initializer(self.encoder)
         initializer(self.embedding)

@@ -4,6 +4,7 @@ out-of-vocabulary token.
 """
 
 import codecs
+import copy
 import logging
 import os
 from collections import defaultdict
@@ -186,12 +187,12 @@ class Vocabulary(Registrable):
         Words which appear in the pretrained embedding file but not in the data are NOT included
         in the Vocabulary.
     min_pretrained_embeddings : ``Dict[str, int]``, optional
-        If provided, specifies for each namespace a mininum number of lines (typically the
+        If provided, specifies for each namespace a minimum number of lines (typically the
         most common words) to keep from pretrained embedding files, even for words not
         appearing in the data.
     only_include_pretrained_words : ``bool``, optional (default=False)
-        This defines the stategy for using any pretrained embedding files which may have been
-        specified in ``pretrained_files``. If False, an inclusive stategy is used: and words
+        This defines the strategy for using any pretrained embedding files which may have been
+        specified in ``pretrained_files``. If False, an inclusive strategy is used: and words
         which are in the ``counter`` and in the pretrained file are added to the ``Vocabulary``,
         regardless of whether their count exceeds ``min_count`` or not. If True, we use an
         exclusive strategy: words are only included in the Vocabulary if they are in the pretrained
@@ -231,6 +232,38 @@ class Vocabulary(Registrable):
                      only_include_pretrained_words,
                      tokens_to_add,
                      min_pretrained_embeddings)
+
+
+    def __getstate__(self):
+        """
+        Need to sanitize defaultdict and defaultdict-like objects
+        by converting them to vanilla dicts when we pickle the vocabulary.
+        """
+        state = copy.copy(self.__dict__)
+        state["_token_to_index"] = dict(state["_token_to_index"])
+        state["_index_to_token"] = dict(state["_index_to_token"])
+
+        if "_retained_counter" in state:
+            state["_retained_counter"] = {key: dict(value)
+                                          for key, value in state["_retained_counter"].items()}
+
+        return state
+
+    def __setstate__(self, state):
+        """
+        Conversely, when we unpickle, we need to reload the plain dicts
+        into our special DefaultDict subclasses.
+        """
+        # pylint: disable=attribute-defined-outside-init
+        self.__dict__ = copy.copy(state)
+        self._token_to_index = _TokenToIndexDefaultDict(self._non_padded_namespaces,
+                                                        self._padding_token,
+                                                        self._oov_token)
+        self._token_to_index.update(state["_token_to_index"])
+        self._index_to_token = _IndexToTokenDefaultDict(self._non_padded_namespaces,
+                                                        self._padding_token,
+                                                        self._oov_token)
+        self._index_to_token.update(state["_index_to_token"])
 
     def save_to_files(self, directory: str) -> None:
         """
@@ -427,7 +460,7 @@ class Vocabulary(Registrable):
                 logger.info("Loading Vocab from files instead of dataset.")
 
         if vocabulary_directory:
-            vocab = Vocabulary.from_files(vocabulary_directory)
+            vocab = cls.from_files(vocabulary_directory)
             if not extend:
                 params.assert_empty("Vocabulary - from files")
                 return vocab
@@ -442,14 +475,14 @@ class Vocabulary(Registrable):
         only_include_pretrained_words = params.pop_bool("only_include_pretrained_words", False)
         tokens_to_add = params.pop("tokens_to_add", None)
         params.assert_empty("Vocabulary - from dataset")
-        return Vocabulary.from_instances(instances=instances,
-                                         min_count=min_count,
-                                         max_vocab_size=max_vocab_size,
-                                         non_padded_namespaces=non_padded_namespaces,
-                                         pretrained_files=pretrained_files,
-                                         only_include_pretrained_words=only_include_pretrained_words,
-                                         tokens_to_add=tokens_to_add,
-                                         min_pretrained_embeddings=min_pretrained_embeddings)
+        return cls.from_instances(instances=instances,
+                                  min_count=min_count,
+                                  max_vocab_size=max_vocab_size,
+                                  non_padded_namespaces=non_padded_namespaces,
+                                  pretrained_files=pretrained_files,
+                                  only_include_pretrained_words=only_include_pretrained_words,
+                                  tokens_to_add=tokens_to_add,
+                                  min_pretrained_embeddings=min_pretrained_embeddings)
 
     def _extend(self,
                 counter: Dict[str, Dict[str, int]] = None,
@@ -561,7 +594,7 @@ class Vocabulary(Registrable):
 
     def is_padded(self, namespace: str) -> bool:
         """
-        Returns whether or not there are padding and OOV tokens added to the given namepsace.
+        Returns whether or not there are padding and OOV tokens added to the given namespace.
         """
         return self._index_to_token[namespace][0] == self._padding_token
 
@@ -615,6 +648,14 @@ class Vocabulary(Registrable):
         namespaces = [f"\tNamespace: {name}, Size: {self.get_vocab_size(name)} \n"
                       for name in self._index_to_token]
         return " ".join([base_string, non_padded_namespaces] + namespaces)
+
+    def __repr__(self) -> str:
+        # This is essentially the same as __str__, but with no newlines
+        base_string = f"Vocabulary with namespaces: "
+        namespaces = [f"{name}, Size: {self.get_vocab_size(name)} ||"
+                      for name in self._index_to_token]
+        non_padded_namespaces = f"Non Padded Namespaces: {self._non_padded_namespaces}"
+        return " ".join([base_string] + namespaces + [non_padded_namespaces])
 
     def print_statistics(self) -> None:
         if self._retained_counter:

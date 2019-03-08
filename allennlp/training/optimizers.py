@@ -121,7 +121,14 @@ class Optimizer(Registrable):
             else:
                 num_parameters += parameter_group.numel()
         logger.info("Number of trainable parameters: %s", num_parameters)
-        return Optimizer.by_name(optimizer)(parameter_groups, **params.as_dict()) # type: ignore
+
+        # By default we cast things that e.g. look like floats to floats before handing them
+        # to the Optimizer constructor, but if you want to disable that behavior you could add a
+        #       "infer_type_and_cast": false
+        # key to your "trainer.optimizer" config.
+        infer_type_and_cast = params.pop_bool("infer_type_and_cast", True)
+        params_as_dict = params.as_dict(infer_type_and_cast=infer_type_and_cast)
+        return Optimizer.by_name(optimizer)(parameter_groups, **params_as_dict) # type: ignore
 
 # We just use the Pytorch optimizers, so here we force them into
 # Registry._registry so we can build them from params.
@@ -136,6 +143,18 @@ Registrable._registry[Optimizer] = {   # pylint: disable=protected-access
         "averaged_sgd": torch.optim.ASGD,
         "bert_adam": BertAdam,
 }
+
+def _safe_sparse_mask(tensor: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
+    """
+    In PyTorch 1.0, Tensor._sparse_mask was changed to Tensor.sparse_mask.
+    This wrapper allows AllenNLP to (temporarily) work with both 1.0 and 0.4.1.
+    """
+    # pylint: disable=protected-access
+    try:
+        return tensor.sparse_mask(mask)
+    except AttributeError:
+        # TODO(joelgrus): remove this and/or warn at some point
+        return tensor._sparse_mask(mask)
 
 
 @Optimizer.register('dense_sparse_adam')
@@ -223,14 +242,14 @@ class DenseSparseAdam(torch.optim.Optimizer):
                     # Decay the first and second moment running average coefficient
                     #      old <- b * old + (1 - b) * new
                     # <==> old += (1 - b) * (new - old)
-                    old_exp_avg_values = exp_avg._sparse_mask(grad)._values()
+                    old_exp_avg_values = _safe_sparse_mask(exp_avg, grad)._values()
                     exp_avg_update_values = grad_values.sub(old_exp_avg_values).mul_(1 - beta1)
                     exp_avg.add_(make_sparse(exp_avg_update_values))
-                    old_exp_avg_sq_values = exp_avg_sq._sparse_mask(grad)._values()
+                    old_exp_avg_sq_values = _safe_sparse_mask(exp_avg_sq, grad)._values()
                     exp_avg_sq_update_values = grad_values.pow(2).sub_(old_exp_avg_sq_values).mul_(1 - beta2)
                     exp_avg_sq.add_(make_sparse(exp_avg_sq_update_values))
 
-                    # Dense addition again is intended, avoiding another _sparse_mask
+                    # Dense addition again is intended, avoiding another sparse_mask
                     numer = exp_avg_update_values.add_(old_exp_avg_values)
                     exp_avg_sq_update_values.add_(old_exp_avg_sq_values)
                     denom = exp_avg_sq_update_values.sqrt_().add_(group['eps'])
