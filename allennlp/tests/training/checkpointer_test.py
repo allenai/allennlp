@@ -12,6 +12,11 @@ from allennlp.common.checks import ConfigurationError
 
 class TestCheckpointer(AllenNlpTestCase):
     def retrieve_and_delete_saved(self):
+        """
+        Helper function for the tests below. Finds the weight and training state files in
+        self.TEST_DIR, parses their names for the epochs that were saved, deletes them,
+        and returns the saved epochs as two lists of integers.
+        """
         serialization_files = os.listdir(self.TEST_DIR)
         model_checkpoints = [x for x in serialization_files if "model_state_epoch" in x]
         found_model_epochs = [int(re.search(r"model_state_epoch_([0-9\.\-]+)\.th", x).group(1))
@@ -27,7 +32,7 @@ class TestCheckpointer(AllenNlpTestCase):
 
     def test_default(self):
         """
-        Tests against Trainer's default values for num_to_keep
+        Tests that the default behavior keeps just the last 20 checkpoints.
         """
         default_num_to_keep = 20
         num_epochs = 30
@@ -45,7 +50,8 @@ class TestCheckpointer(AllenNlpTestCase):
 
     def test_with_time(self):
         """
-        Tests consistent behavior for keep_serialized_model_every_num_seconds
+        Tests that keep_serialized_model_every_num_seconds parameter causes a checkpoint to be saved
+        after enough time has elapsed between epochs.
         """
         num_to_keep = 10
         num_epochs = 30
@@ -66,6 +72,11 @@ class TestCheckpointer(AllenNlpTestCase):
         assert models == training == target
 
     def test_configuration_error_when_passed_as_conflicting_argument_to_trainer(self):
+        """
+        Users should initialize Trainer either with an instance of Checkpointer or by specifying
+        parameter values for num_serialized_models_to_keep and keep_serialized_model_every_num_seconds.
+        Check that Trainer raises a ConfigurationError if both methods are used at the same time.
+        """
         with self.assertRaises(ConfigurationError):
             Trainer(None, None, None, None,
                     num_serialized_models_to_keep=30,
@@ -90,7 +101,7 @@ class TestCheckpointer(AllenNlpTestCase):
 
     def test_registered_subclass(self):
         """
-        Tests that registering subclasses works correctly.
+        Tests that registering Checkpointer subclasses works correctly.
         """
 
         @Checkpointer.register("checkpointer_subclass")
