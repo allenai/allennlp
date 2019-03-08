@@ -173,7 +173,7 @@ class BeamSearchTest(AllenNlpTestCase):
         # But with a beam size of 3, the call to `topk` to find the 3 most likely
         # next beams will result in 2 new beams that are invalid, in that have probability of 0.
         # The beam search should warn us of this.
-        initial_predictions = torch.tensor([self.end_index-1, self.end_index-1])  # pylint: disable=not-callable
+        initial_predictions = torch.LongTensor([self.end_index-1, self.end_index-1])
         with pytest.warns(RuntimeWarning):
             self.beam_search.search(initial_predictions, {}, take_step)
 

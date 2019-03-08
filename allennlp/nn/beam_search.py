@@ -49,6 +49,16 @@ class BeamSearch:
         Given a starting state and a step function, apply beam search to find the
         most likely target sequences.
 
+        Notes
+        -----
+        If your step function returns ``-inf`` for some log probabilities
+        (like if your using a masked log-softmax) then some of the "best"
+        sequences returned may also have ``-inf`` log probability. Specifically
+        this happens when the beam size is smaller than the number of actions
+        with finite log probability (non-zero probability) returned by the step function.
+        Therefore if your using a mask you may want to check the results ``search``
+        and potentially discard sequences with non-finite log probability.
+
         Parameters
         ----------
         start_predictions : ``torch.Tensor``
