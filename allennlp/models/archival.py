@@ -88,7 +88,8 @@ _FTA_NAME = "files_to_archive.json"
 
 def archive_model(serialization_dir: str,
                   weights: str = _DEFAULT_WEIGHTS,
-                  files_to_archive: Dict[str, str] = None) -> None:
+                  files_to_archive: Dict[str, str] = None,
+                  archive_path: str = None) -> None:
     """
     Archive the model weights, its training configuration, and its
     vocabulary to `model.tar.gz`. Include the additional ``files_to_archive``
@@ -104,6 +105,10 @@ def archive_model(serialization_dir: str,
         A mapping {flattened_key -> filename} of supplementary files to include
         in the archive. That is, if you wanted to include ``params['model']['weights']``
         then you would specify the key as `"model.weights"`.
+    archive_path : ``str``, optional, (default = None)
+        A full path to serialize the model to. The default is "model.tar.gz" inside the
+        serialization_dir. If you pass a directory here, we'll serialize the model
+        to "model.tar.gz" inside the directory.
     """
     weights_file = os.path.join(serialization_dir, weights)
     if not os.path.exists(weights_file):
@@ -121,8 +126,12 @@ def archive_model(serialization_dir: str,
         with open(fta_filename, 'w') as fta_file:
             fta_file.write(json.dumps(files_to_archive))
 
-
-    archive_file = os.path.join(serialization_dir, "model.tar.gz")
+    if archive_path is not None:
+        archive_file = archive_path
+        if os.path.isdir(archive_file):
+            archive_file = os.path.join(archive_file, "model.tar.gz")
+    else:
+        archive_file = os.path.join(serialization_dir, "model.tar.gz")
     logger.info("archiving weights and vocabulary to %s", archive_file)
     with tarfile.open(archive_file, 'w:gz') as archive:
         archive.add(config_file, arcname=CONFIG_NAME)
@@ -187,12 +196,18 @@ def load_archive(archive_file: str,
 
         # Add these replacements to overrides
         replacements_dict: Dict[str, Any] = {}
-        for key, _ in files_to_archive.items():
+        for key, original_filename in files_to_archive.items():
             replacement_filename = os.path.join(serialization_dir, f"fta/{key}")
-            replacements_dict[key] = replacement_filename
+            if os.path.exists(replacement_filename):
+                replacements_dict[key] = replacement_filename
+            else:
+                logger.warning(f"Archived file {replacement_filename} not found! At train time "
+                               f"this file was located at {original_filename}. This may be "
+                               "because you are loading a serialization directory. Attempting to "
+                               "load the file from its train-time location.")
 
         overrides_dict = parse_overrides(overrides)
-        combined_dict = with_fallback(preferred=unflatten(replacements_dict), fallback=overrides_dict)
+        combined_dict = with_fallback(preferred=overrides_dict, fallback=unflatten(replacements_dict))
         overrides = json.dumps(combined_dict)
 
     # Load config
@@ -203,6 +218,10 @@ def load_archive(archive_file: str,
         weights_path = weights_file
     else:
         weights_path = os.path.join(serialization_dir, _WEIGHTS_NAME)
+        # Fallback for serialization directories.
+        if not os.path.exists(weights_path):
+            weights_path = os.path.join(serialization_dir, _DEFAULT_WEIGHTS)
+
 
     # Instantiate model. Use a duplicate of the config, as it will get consumed.
     model = Model.load(config.duplicate(),

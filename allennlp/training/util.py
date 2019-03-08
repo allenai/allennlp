@@ -237,7 +237,10 @@ def data_parallel(batch_group: List[TensorDict],
              for batch, device in zip(batch_group, cuda_devices)]
 
     used_device_ids = cuda_devices[:len(moved)]
+    # Counterintuitively, it appears replicate expects the source device id to be the first element
+    # in the device id list. See torch.cuda.comm.broadcast_coalesced, which is called indirectly.
     replicas = replicate(model, used_device_ids)
+
     # We pass all our arguments as kwargs. Create a list of empty tuples of the
     # correct shape to serve as (non-existent) positional arguments.
     inputs = [()] * len(batch_group)
