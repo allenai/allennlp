@@ -278,20 +278,37 @@ model = LstmTagger(word_embeddings, lstm, vocab)
 </div>
 <div class="annotated-code__code-block" id="c39">
 {% highlight python %}
-optimizer = optim.SGD(model.parameters(), lr=0.1)
+if torch.cuda.is_available():
+    cuda_device = 0
 {% endhighlight %}
 </div>
 <div class="annotated-code__code-block" id="c40">
 {% highlight python %}
-iterator = BucketIterator(batch_size=2, sorting_keys=[("sentence", "num_tokens")])
+    model = model.cuda(cuda_device)
+else:
 {% endhighlight %}
 </div>
 <div class="annotated-code__code-block" id="c41">
 {% highlight python %}
-iterator.index_with(vocab)
+    cuda_device = -1
 {% endhighlight %}
 </div>
 <div class="annotated-code__code-block" id="c42">
+{% highlight python %}
+optimizer = optim.SGD(model.parameters(), lr=0.1)
+{% endhighlight %}
+</div>
+<div class="annotated-code__code-block" id="c43">
+{% highlight python %}
+iterator = BucketIterator(batch_size=2, sorting_keys=[("sentence", "num_tokens")])
+{% endhighlight %}
+</div>
+<div class="annotated-code__code-block" id="c44">
+{% highlight python %}
+iterator.index_with(vocab)
+{% endhighlight %}
+</div>
+<div class="annotated-code__code-block" id="c45">
 {% highlight python %}
 trainer = Trainer(model=model,
                   optimizer=optimizer,
@@ -299,68 +316,75 @@ trainer = Trainer(model=model,
                   train_dataset=train_dataset,
                   validation_dataset=validation_dataset,
                   patience=10,
-                  num_epochs=1000)
-{% endhighlight %}
-</div>
-<div class="annotated-code__code-block" id="c43">
-{% highlight python %}
-trainer.train()
-{% endhighlight %}
-</div>
-<div class="annotated-code__code-block" id="c44">
-{% highlight python %}
-predictor = SentenceTaggerPredictor(model, dataset_reader=reader)
-{% endhighlight %}
-</div>
-<div class="annotated-code__code-block" id="c45">
-{% highlight python %}
-tag_logits = predictor.predict("The dog ate the apple")['tag_logits']
+                  num_epochs=1000,
+                  cuda_device=cuda_device)
 {% endhighlight %}
 </div>
 <div class="annotated-code__code-block" id="c46">
 {% highlight python %}
-tag_ids = np.argmax(tag_logits, axis=-1)
+trainer.train()
 {% endhighlight %}
 </div>
 <div class="annotated-code__code-block" id="c47">
 {% highlight python %}
-print([model.vocab.get_token_from_index(i, 'labels') for i in tag_ids])
+predictor = SentenceTaggerPredictor(model, dataset_reader=reader)
 {% endhighlight %}
 </div>
 <div class="annotated-code__code-block" id="c48">
+{% highlight python %}
+tag_logits = predictor.predict("The dog ate the apple")['tag_logits']
+{% endhighlight %}
+</div>
+<div class="annotated-code__code-block" id="c49">
+{% highlight python %}
+tag_ids = np.argmax(tag_logits, axis=-1)
+{% endhighlight %}
+</div>
+<div class="annotated-code__code-block" id="c50">
+{% highlight python %}
+print([model.vocab.get_token_from_index(i, 'labels') for i in tag_ids])
+{% endhighlight %}
+</div>
+<div class="annotated-code__code-block" id="c51">
 {% highlight python %}
 # Here's how to save the model.
 with open("/tmp/model.th", 'wb') as f:
     torch.save(model.state_dict(), f)
 {% endhighlight %}
 </div>
-<div class="annotated-code__code-block" id="c49">
+<div class="annotated-code__code-block" id="c52">
 {% highlight python %}
 vocab.save_to_files("/tmp/vocabulary")
 {% endhighlight %}
 </div>
-<div class="annotated-code__code-block" id="c50">
+<div class="annotated-code__code-block" id="c53">
 {% highlight python %}
 # And here's how to reload the model.
 vocab2 = Vocabulary.from_files("/tmp/vocabulary")
 {% endhighlight %}
 </div>
-<div class="annotated-code__code-block" id="c51">
+<div class="annotated-code__code-block" id="c54">
 {% highlight python %}
 model2 = LstmTagger(word_embeddings, lstm, vocab2)
 {% endhighlight %}
 </div>
-<div class="annotated-code__code-block" id="c52">
+<div class="annotated-code__code-block" id="c55">
 {% highlight python %}
 with open("/tmp/model.th", 'rb') as f:
     model2.load_state_dict(torch.load(f))
 {% endhighlight %}
 </div>
-<div class="annotated-code__code-block" id="c53">
+<div class="annotated-code__code-block" id="c56">
+{% highlight python %}
+if cuda_device > -1:
+    model2.cuda(cuda_device)
+{% endhighlight %}
+</div>
+<div class="annotated-code__code-block" id="c57">
 {% highlight python %}
 predictor2 = SentenceTaggerPredictor(model2, dataset_reader=reader)
 tag_logits2 = predictor2.predict("The dog ate the apple")['tag_logits']
-assert tag_logits2 == tag_logits
+np.testing.assert_array_almost_equal(tag_logits2, tag_logits)
 {% endhighlight %}
 </div>
 </div>
@@ -408,21 +432,25 @@ assert tag_logits2 == tag_logits
 <li class="annotation" id="a36">For embedding the tokens we'll just use the <code>BasicTextFieldEmbedder</code> which takes a mapping from index names to embeddings. If you go back to where we defined our <code>DatasetReader</code>, the default parameters included a single index called "tokens", so our mapping just needs an embedding corresponding to that index. We use the <code>Vocabulary</code> to find how many embeddings we need and our <code>EMBEDDING_DIM</code> parameter to specify the output dimension. It's also possible to start with pre-trained embeddings (for example, GloVe vectors), but there's no need to do that on this tiny toy dataset.</li>
 <li class="annotation" id="a37">We next need to specify the sequence encoder. The need for <code>PytorchSeq2SeqWrapper</code> here is slightly unfortunate (and if you use <a href = "https://github.com/allenai/allennlp/blob/master/tutorials/tagger/README.md#using-config-files">configuration files</a> you won't need to worry about it) but here it's required to add some extra functionality (and a cleaner interface) to the built-in PyTorch module. In AllenNLP we do everything batch first, so we specify that as well.</li>
 <li class="annotation" id="a38">Finally, we can instantiate the model.</li>
-<li class="annotation" id="a39">Now we're ready to train the model. The first thing we'll need is an optimizer. We can just use PyTorch's stochastic gradient descent.</li>
-<li class="annotation" id="a40">And we need a <code>DataIterator</code> that handles batching for our datasets. The <code>BucketIterator</code> sorts instances by the specified fields in order to create batches with similar sequence lengths. Here we indicate that we want to sort the instances by the number of tokens in the sentence field.</li>
-<li class="annotation" id="a41">We also specify that the iterator should make sure its instances are indexed using our vocabulary; that is, that their strings have been converted to integers using the mapping we previously created.</li>
-<li class="annotation" id="a42">Now we instantiate our <code>Trainer</code> and run it. Here we tell it to run for 1000 epochs and to stop training early if it ever spends 10 epochs without the validation metric improving. The default validation metric is loss (which improves by getting smaller), but it's also possible to specify a different metric and direction (e.g. accuracy should get bigger).</li>
-<li class="annotation" id="a43">When we launch it it will print a progress bar for each epoch that includes both the "loss" and the "accuracy" metric. If our model is good, the loss should go down and the accuracy up as we train.</li>
-<li class="annotation" id="a44">As in the original PyTorch tutorial, we'd like to look at the predictions our model generates. AllenNLP contains a <code>Predictor</code> abstraction that takes inputs, converts them to instances, feeds them through your model, and returns JSON-serializable results. Often you'd need to implement your own Predictor, but AllenNLP already has a <code>SentenceTaggerPredictor</code> that works perfectly here, so we can use it. It requires our model (for making predictions) and a dataset reader (for creating instances).</li>
-<li class="annotation" id="a45">It has a <code>predict</code> method that just needs a sentence and returns (a JSON-serializable version of) the output dict from forward. Here <code>tag_logits</code> will be a (5, 3) array of logits, corresponding to the 3 possible tags for each of the 5 words.</li>
-<li class="annotation" id="a46">To get the actual "predictions" we can just take the <code>argmax</code>.</li>
-<li class="annotation" id="a47">And then use our vocabulary to find the predicted tags.</li>
-<li class="annotation" id="a48">Finally, we'd like to be able to save our model and reload it later. We'll need to save two things. The first is the model weights.</li>
-<li class="annotation" id="a49">And the second is the vocabulary.</li>
-<li class="annotation" id="a50">We only saved the model weights, so we actually have to recreate the same model structure using code if we want to reuse them. First, let's reload the vocabulary into a new variable.</li>
-<li class="annotation" id="a51">And then let's recreate the model (if we were doing this in a different file we would of course have to re-instantiate the word embeddings and lstm as well).</li>
-<li class="annotation" id="a52">After which we have to load its state.</li>
-<li class="annotation" id="a53">And now we should get the same predictions.</li>
+<li class="annotation" id="a39">Next let's check if we have access to a GPU.</li>
+<li class="annotation" id="a40">Since we do, we move our model to GPU 0.</li>
+<li class="annotation" id="a41">In this case we don't, so we specify -1 to fall back to the CPU. (Where the model already resides.)</li>
+<li class="annotation" id="a42">Now we're ready to train the model. The first thing we'll need is an optimizer. We can just use PyTorch's stochastic gradient descent.</li>
+<li class="annotation" id="a43">And we need a <code>DataIterator</code> that handles batching for our datasets. The <code>BucketIterator</code> sorts instances by the specified fields in order to create batches with similar sequence lengths. Here we indicate that we want to sort the instances by the number of tokens in the sentence field.</li>
+<li class="annotation" id="a44">We also specify that the iterator should make sure its instances are indexed using our vocabulary; that is, that their strings have been converted to integers using the mapping we previously created.</li>
+<li class="annotation" id="a45">Now we instantiate our <code>Trainer</code> and run it. Here we tell it to run for 1000 epochs and to stop training early if it ever spends 10 epochs without the validation metric improving. The default validation metric is loss (which improves by getting smaller), but it's also possible to specify a different metric and direction (e.g. accuracy should get bigger).</li>
+<li class="annotation" id="a46">When we launch it it will print a progress bar for each epoch that includes both the "loss" and the "accuracy" metric. If our model is good, the loss should go down and the accuracy up as we train.</li>
+<li class="annotation" id="a47">As in the original PyTorch tutorial, we'd like to look at the predictions our model generates. AllenNLP contains a <code>Predictor</code> abstraction that takes inputs, converts them to instances, feeds them through your model, and returns JSON-serializable results. Often you'd need to implement your own Predictor, but AllenNLP already has a <code>SentenceTaggerPredictor</code> that works perfectly here, so we can use it. It requires our model (for making predictions) and a dataset reader (for creating instances).</li>
+<li class="annotation" id="a48">It has a <code>predict</code> method that just needs a sentence and returns (a JSON-serializable version of) the output dict from forward. Here <code>tag_logits</code> will be a (5, 3) array of logits, corresponding to the 3 possible tags for each of the 5 words.</li>
+<li class="annotation" id="a49">To get the actual "predictions" we can just take the <code>argmax</code>.</li>
+<li class="annotation" id="a50">And then use our vocabulary to find the predicted tags.</li>
+<li class="annotation" id="a51">Finally, we'd like to be able to save our model and reload it later. We'll need to save two things. The first is the model weights.</li>
+<li class="annotation" id="a52">And the second is the vocabulary.</li>
+<li class="annotation" id="a53">We only saved the model weights, so we actually have to recreate the same model structure using code if we want to reuse them. First, let's reload the vocabulary into a new variable.</li>
+<li class="annotation" id="a54">And then let's recreate the model (if we were doing this in a different file we would of course have to re-instantiate the word embeddings and lstm as well).</li>
+<li class="annotation" id="a55">After which we have to load its state.</li>
+<li class="annotation" id="a56">Here we move the loaded model to the GPU that we used previously. This is necessary because we moved <code>word_embeddings</code> and <code>lstm</code> with the original model earlier. All of a model's parameters need to be on the same device.</li>
+<li class="annotation" id="a57">And now we should get the same predictions.</li>
 </ul>
   </div><!-- END Annotations -->
 </div><!-- END Annotated Code -->
