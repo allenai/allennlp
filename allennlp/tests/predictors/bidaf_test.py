@@ -15,7 +15,6 @@ class TestBidafPredictor(AllenNlpTestCase):
 
         archive = load_archive(self.FIXTURES_ROOT / 'bidaf' / 'serialization' / 'model.tar.gz')
         predictor = Predictor.from_archive(archive, 'machine-comprehension')
-        predictor._return_model_internals = True
 
         result = predictor.predict_json(inputs)
 

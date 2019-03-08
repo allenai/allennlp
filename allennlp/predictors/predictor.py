@@ -58,8 +58,8 @@ class Predictor(Registrable):
     @contextmanager
     def capture_model_internals(self) -> dict:
         """
-        Context manager that captures the outputs of this predictor's model.
-        The idea is that you'd use it as follows:
+        Context manager that captures the internal-module outputs of
+        this predictor's model. The idea is that you could use it as follows:
 
             with predictor.capture_model_internals() as internals:
                 outputs = predictor.predict_json(inputs)
