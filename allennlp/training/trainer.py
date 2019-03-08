@@ -50,6 +50,7 @@ class Trainer(TrainerBase):
                  serialization_dir: Optional[str] = None,
                  num_serialized_models_to_keep: int = 20,
                  keep_serialized_model_every_num_seconds: int = None,
+                 checkpointer: Checkpointer = None,
                  model_save_interval: float = None,
                  cuda_device: Union[int, List] = -1,
                  grad_norm: Optional[float] = None,
@@ -115,6 +116,11 @@ class Trainer(TrainerBase):
             To do so, specify keep_serialized_model_every_num_seconds as the number of seconds
             between permanently saved checkpoints.  Note that this option is only used if
             num_serialized_models_to_keep is not None, otherwise all checkpoints are kept.
+        checkpointer : ``Checkpointer``, optional (default=None)
+            An instance of class Checkpointer to use instead of the default. If a checkpointer is specified,
+            the arguments num_serialized_models_to_keep and keep_serialized_model_every_num_seconds should
+            not be specified. The caller is responsible for initializing the checkpointer so that it is
+            consistent with serialization_dir.
         model_save_interval : ``float``, optional (default=None)
             If provided, then serialize models every ``model_save_interval``
             seconds within single epochs.  In all cases, models are also saved
@@ -196,9 +202,19 @@ class Trainer(TrainerBase):
 
         self._num_epochs = num_epochs
 
-        self._checkpointer = Checkpointer(serialization_dir,
-                                          keep_serialized_model_every_num_seconds,
-                                          num_serialized_models_to_keep)
+        if checkpointer is not None:
+            # We can't easily check if these parameters were passed in, so check against their default values.
+            # We don't check against serialization_dir since it is also used by the parent class.
+            if num_serialized_models_to_keep != 20 or \
+                    keep_serialized_model_every_num_seconds is not None:
+                raise ConfigurationError(
+                        "When passing a custom Checkpointer, you may not also pass in separate checkpointer "
+                        "args 'num_serialized_models_to_keep' or 'keep_serialized_model_every_num_seconds'.")
+            self._checkpointer = checkpointer
+        else:
+            self._checkpointer = Checkpointer(serialization_dir,
+                                              keep_serialized_model_every_num_seconds,
+                                              num_serialized_models_to_keep)
 
         self._model_save_interval = model_save_interval
 
@@ -683,9 +699,22 @@ class Trainer(TrainerBase):
         else:
             momentum_scheduler = None
 
-        num_serialized_models_to_keep = params.pop_int("num_serialized_models_to_keep", 20)
-        keep_serialized_model_every_num_seconds = params.pop_int(
-                "keep_serialized_model_every_num_seconds", None)
+        if 'checkpointer' in params:
+            if 'keep_serialized_model_every_num_seconds' in params or \
+                    'num_serialized_models_to_keep' in params:
+                raise ConfigurationError(
+                        "Checkpointer may be initialized either from the 'checkpointer' key or from the "
+                        "keys 'num_serialized_models_to_keep' and 'keep_serialized_model_every_num_seconds'"
+                        " but the passed config uses both methods.")
+            checkpointer = Checkpointer.from_params(params.pop("checkpointer"))
+        else:
+            num_serialized_models_to_keep = params.pop_int("num_serialized_models_to_keep", 20)
+            keep_serialized_model_every_num_seconds = params.pop_int(
+                    "keep_serialized_model_every_num_seconds", None)
+            checkpointer = Checkpointer(
+                    serialization_dir=serialization_dir,
+                    num_serialized_models_to_keep=num_serialized_models_to_keep,
+                    keep_serialized_model_every_num_seconds=keep_serialized_model_every_num_seconds)
         model_save_interval = params.pop_float("model_save_interval", None)
         summary_interval = params.pop_int("summary_interval", 100)
         histogram_interval = params.pop_int("histogram_interval", None)
@@ -707,8 +736,7 @@ class Trainer(TrainerBase):
                    grad_clipping=grad_clipping,
                    learning_rate_scheduler=lr_scheduler,
                    momentum_scheduler=momentum_scheduler,
-                   num_serialized_models_to_keep=num_serialized_models_to_keep,
-                   keep_serialized_model_every_num_seconds=keep_serialized_model_every_num_seconds,
+                   checkpointer=checkpointer,
                    model_save_interval=model_save_interval,
                    summary_interval=summary_interval,
                    histogram_interval=histogram_interval,
