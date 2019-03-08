@@ -14,10 +14,9 @@ class TestModel(AllenNlpTestCase):
         original_weight = trained_model._text_field_embedder.token_embedder_tokens.weight
         assert tuple(original_weight.shape) == (24, 300)
 
-        vocab = trained_model.vocab
         counter = {"tokens": {"seahorse": 1}} # 'seahorse' is extra token in snli2.jsonl
-        vocab._extend(counter)
-        trained_model.extend_embedder_vocab(vocab)
+        trained_model.vocab._extend(counter)
+        trained_model.extend_embedder_vocab()
 
         extended_weight = trained_model._text_field_embedder.token_embedder_tokens.weight
         assert tuple(extended_weight.shape) == (25, 300)

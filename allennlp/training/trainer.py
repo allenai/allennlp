@@ -23,11 +23,13 @@ from allennlp.models.model import Model
 from allennlp.nn import util as nn_util
 from allennlp.training.checkpointer import Checkpointer
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
+from allennlp.training.momentum_schedulers import MomentumScheduler
 from allennlp.training.metric_tracker import MetricTracker
 from allennlp.training.optimizers import Optimizer
 from allennlp.training.tensorboard_writer import TensorboardWriter
 from allennlp.training.trainer_base import TrainerBase
 from allennlp.training import util as training_util
+from allennlp.training.moving_average import MovingAverage
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -53,11 +55,13 @@ class Trainer(TrainerBase):
                  grad_norm: Optional[float] = None,
                  grad_clipping: Optional[float] = None,
                  learning_rate_scheduler: Optional[LearningRateScheduler] = None,
+                 momentum_scheduler: Optional[MomentumScheduler] = None,
                  summary_interval: int = 100,
                  histogram_interval: int = None,
                  should_log_parameter_statistics: bool = True,
                  should_log_learning_rate: bool = False,
-                 log_batch_size_period: Optional[int] = None) -> None:
+                 log_batch_size_period: Optional[int] = None,
+                 moving_average: Optional[MovingAverage] = None) -> None:
         """
         A trainer for doing supervised learning. It just takes a labeled dataset
         and a ``DataIterator``, and uses the supplied ``Optimizer`` to learn the weights
@@ -123,13 +127,16 @@ class Trainer(TrainerBase):
             If provided, gradients will be clipped `during the backward pass` to have an (absolute)
             maximum of this value.  If you are getting ``NaNs`` in your gradients during training
             that are not solved by using ``grad_norm``, you may need this.
-        learning_rate_scheduler : ``PytorchLRScheduler``, optional, (default = None)
-            A Pytorch learning rate scheduler. The learning rate will be decayed with respect to
-            this schedule at the end of each epoch. If you use
-            :class:`torch.optim.lr_scheduler.ReduceLROnPlateau`, this will use the ``validation_metric``
-            provided to determine if learning has plateaued.  To support updating the learning
-            rate on every batch, this can optionally implement ``step_batch(batch_num_total)`` which
-            updates the learning rate given the batch number.
+        learning_rate_scheduler : ``LearningRateScheduler``, optional (default = None)
+            If specified, the learning rate will be decayed with respect to
+            this schedule at the end of each epoch (or batch, if the scheduler implements
+            the ``step_batch`` method). If you use :class:`torch.optim.lr_scheduler.ReduceLROnPlateau`,
+            this will use the ``validation_metric`` provided to determine if learning has plateaued.
+            To support updating the learning rate on every batch, this can optionally implement
+            ``step_batch(batch_num_total)`` which updates the learning rate given the batch number.
+        momentum_scheduler : ``MomentumScheduler``, optional (default = None)
+            If specified, the momentum will be updated at the end of each batch or epoch
+            according to the schedule.
         summary_interval: ``int``, optional, (default = 100)
             Number of batches between logging scalars to tensorboard
         histogram_interval : ``int``, optional, (default = ``None``)
@@ -153,6 +160,13 @@ class Trainer(TrainerBase):
             Whether to send parameter specific learning rate to tensorboard.
         log_batch_size_period : ``int``, optional, (default = ``None``)
             If defined, how often to log the average batch size.
+        moving_average: ``MovingAverage``, optional, (default = None)
+            If provided, we will maintain moving averages for all parameters. During training, we
+            employ a shadow variable for each parameter, which maintains the moving average. During
+            evaluation, we backup the original parameters and assign the moving averages to corresponding
+            parameters. Be careful that when saving the checkpoint, we will save the moving averages of
+            parameters. This is necessary because we want the saved model to perform as well as the validated
+            model if we load it later. But this may cause problems if you restart the training from checkpoint.
         """
         super().__init__(serialization_dir, cuda_device)
 
@@ -192,6 +206,8 @@ class Trainer(TrainerBase):
         self._grad_clipping = grad_clipping
 
         self._learning_rate_scheduler = learning_rate_scheduler
+        self._momentum_scheduler = momentum_scheduler
+        self._moving_average = moving_average
 
         # We keep the total batch number as an instance variable because it
         # is used inside a closure for the hook which logs activations in
@@ -298,10 +314,12 @@ class Trainer(TrainerBase):
 
             batch_grad_norm = self.rescale_gradients()
 
-            # This does nothing if batch_num_total is None or you are using an
-            # LRScheduler which doesn't update per batch.
+            # This does nothing if batch_num_total is None or you are using a
+            # scheduler which doesn't update per batch.
             if self._learning_rate_scheduler:
                 self._learning_rate_scheduler.step_batch(batch_num_total)
+            if self._momentum_scheduler:
+                self._momentum_scheduler.step_batch(batch_num_total)
 
             if self._tensorboard.should_log_histograms_this_batch():
                 # get the magnitude of parameter updates for logging
@@ -318,6 +336,10 @@ class Trainer(TrainerBase):
                                                        update_norm / (param_norm + 1e-7))
             else:
                 self.optimizer.step()
+
+            # Update moving averages
+            if self._moving_average is not None:
+                self._moving_average.apply(batch_num_total)
 
             # Update the description with the latest metrics
             metrics = training_util.get_metrics(self.model, train_loss, batches_this_epoch)
@@ -359,7 +381,6 @@ class Trainer(TrainerBase):
             metrics['gpu_'+str(gpu_num)+'_memory_MB'] = memory
         return metrics
 
-
     def _validation_loss(self) -> Tuple[float, int]:
         """
         Computes the validation loss. Returns it and the number of batches.
@@ -367,6 +388,10 @@ class Trainer(TrainerBase):
         logger.info("Validating")
 
         self.model.eval()
+
+        # Replace parameter values with the shadow values from the moving averages.
+        if self._moving_average is not None:
+            self._moving_average.assign_average_value()
 
         if self._validation_iterator is not None:
             val_iterator = self._validation_iterator
@@ -401,6 +426,10 @@ class Trainer(TrainerBase):
             description = training_util.description_from_metrics(val_metrics)
             val_generator_tqdm.set_description(description, refresh=False)
 
+        # Now restore the original parameter values.
+        if self._moving_average is not None:
+            self._moving_average.restore()
+
         return val_loss, batches_this_epoch
 
     def train(self) -> Dict[str, Any]:
@@ -425,6 +454,10 @@ class Trainer(TrainerBase):
         metrics: Dict[str, Any] = {}
         epochs_trained = 0
         training_start_time = time.time()
+
+        metrics['best_epoch'] = self._metric_tracker.best_epoch
+        for key, value in self._metric_tracker.best_epoch_metrics.items():
+            metrics["best_validation_" + key] = value
 
         for epoch in range(epoch_counter, self._num_epochs):
             epoch_start_time = time.time()
@@ -452,7 +485,10 @@ class Trainer(TrainerBase):
                         logger.info("Ran out of patience.  Stopping training.")
                         break
 
-            self._tensorboard.log_metrics(train_metrics, val_metrics=val_metrics, log_to_console=True)
+            self._tensorboard.log_metrics(train_metrics,
+                                          val_metrics=val_metrics,
+                                          log_to_console=True,
+                                          epoch=epoch + 1)  # +1 because tensorboard doesn't like 0
 
             # Create overall metrics dict
             training_elapsed_time = time.time() - training_start_time
@@ -473,13 +509,17 @@ class Trainer(TrainerBase):
                 for key, value in val_metrics.items():
                     metrics["best_validation_" + key] = value
 
+                self._metric_tracker.best_epoch_metrics = val_metrics
+
             if self._serialization_dir:
                 dump_metrics(os.path.join(self._serialization_dir, f'metrics_epoch_{epoch}.json'), metrics)
 
+            # The Scheduler API is agnostic to whether your schedule requires a validation metric -
+            # if it doesn't, the validation metric passed here is ignored.
             if self._learning_rate_scheduler:
-                # The LRScheduler API is agnostic to whether your schedule requires a validation metric -
-                # if it doesn't, the validation metric passed here is ignored.
                 self._learning_rate_scheduler.step(this_epoch_val_metric, epoch)
+            if self._momentum_scheduler:
+                self._momentum_scheduler.step(this_epoch_val_metric, epoch)
 
             self._save_checkpoint(epoch)
 
@@ -513,6 +553,11 @@ class Trainer(TrainerBase):
             The epoch of training.  If the checkpoint is saved in the middle
             of an epoch, the parameter is a string with the epoch and timestamp.
         """
+        # If moving averages are used for parameters, we save
+        # the moving average values into checkpoint, instead of the current values.
+        if self._moving_average is not None:
+            self._moving_average.assign_average_value()
+
         # These are the training states we need to persist.
         training_states = {
                 "metric_tracker": self._metric_tracker.state_dict(),
@@ -520,17 +565,21 @@ class Trainer(TrainerBase):
                 "batch_num_total": self._batch_num_total
         }
 
-        # If we have a learning rate scheduler, we should persist that too.
+        # If we have a learning rate or momentum scheduler, we should persist them too.
         if self._learning_rate_scheduler is not None:
-            training_states["learning_rate_scheduler"] = (
-                    self._learning_rate_scheduler.lr_scheduler.state_dict()
-            )
+            training_states["learning_rate_scheduler"] = self._learning_rate_scheduler.state_dict()
+        if self._momentum_scheduler is not None:
+            training_states["momentum_scheduler"] = self._momentum_scheduler.state_dict()
 
         self._checkpointer.save_checkpoint(
                 model_state=self.model.state_dict(),
                 epoch=epoch,
                 training_states=training_states,
                 is_best_so_far=self._metric_tracker.is_best_so_far())
+
+        # Restore the original values for parameters so that training will not be affected.
+        if self._moving_average is not None:
+            self._moving_average.restore()
 
     def _restore_checkpoint(self) -> int:
         """
@@ -559,7 +608,9 @@ class Trainer(TrainerBase):
         self.model.load_state_dict(model_state)
         self.optimizer.load_state_dict(training_state["optimizer"])
         if self._learning_rate_scheduler is not None and "learning_rate_scheduler" in training_state:
-            self._learning_rate_scheduler.lr_scheduler.load_state_dict(training_state["learning_rate_scheduler"])
+            self._learning_rate_scheduler.load_state_dict(training_state["learning_rate_scheduler"])
+        if self._momentum_scheduler is not None and "momentum_scheduler" in training_state:
+            self._momentum_scheduler.load_state_dict(training_state["momentum_scheduler"])
         training_util.move_optimizer_to_cuda(self.optimizer)
 
         # Currently the ``training_state`` contains a serialized ``MetricTracker``.
@@ -586,7 +637,6 @@ class Trainer(TrainerBase):
 
         return epoch_to_return
 
-
     # Requires custom from_params.
     @classmethod
     def from_params(cls,  # type: ignore
@@ -606,6 +656,7 @@ class Trainer(TrainerBase):
         grad_norm = params.pop_float("grad_norm", None)
         grad_clipping = params.pop_float("grad_clipping", None)
         lr_scheduler_params = params.pop("learning_rate_scheduler", None)
+        momentum_scheduler_params = params.pop("momentum_scheduler", None)
 
         if isinstance(cuda_device, list):
             model_device = cuda_device[0]
@@ -618,11 +669,19 @@ class Trainer(TrainerBase):
 
         parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
         optimizer = Optimizer.from_params(parameters, params.pop("optimizer"))
+        if "moving_average" in params:
+            moving_average = MovingAverage.from_params(params.pop("moving_average"), parameters=parameters)
+        else:
+            moving_average = None
 
         if lr_scheduler_params:
-            scheduler = LearningRateScheduler.from_params(optimizer, lr_scheduler_params)
+            lr_scheduler = LearningRateScheduler.from_params(optimizer, lr_scheduler_params)
         else:
-            scheduler = None
+            lr_scheduler = None
+        if momentum_scheduler_params:
+            momentum_scheduler = MomentumScheduler.from_params(optimizer, momentum_scheduler_params)
+        else:
+            momentum_scheduler = None
 
         num_serialized_models_to_keep = params.pop_int("num_serialized_models_to_keep", 20)
         keep_serialized_model_every_num_seconds = params.pop_int(
@@ -646,7 +705,8 @@ class Trainer(TrainerBase):
                    cuda_device=cuda_device,
                    grad_norm=grad_norm,
                    grad_clipping=grad_clipping,
-                   learning_rate_scheduler=scheduler,
+                   learning_rate_scheduler=lr_scheduler,
+                   momentum_scheduler=momentum_scheduler,
                    num_serialized_models_to_keep=num_serialized_models_to_keep,
                    keep_serialized_model_every_num_seconds=keep_serialized_model_every_num_seconds,
                    model_save_interval=model_save_interval,
@@ -654,7 +714,8 @@ class Trainer(TrainerBase):
                    histogram_interval=histogram_interval,
                    should_log_parameter_statistics=should_log_parameter_statistics,
                    should_log_learning_rate=should_log_learning_rate,
-                   log_batch_size_period=log_batch_size_period)
+                   log_batch_size_period=log_batch_size_period,
+                   moving_average=moving_average)
 
 
 class TrainerPieces(NamedTuple):
@@ -698,6 +759,10 @@ class TrainerPieces(NamedTuple):
             )
 
         model = Model.from_params(vocab=vocab, params=params.pop('model'))
+
+        # If vocab extension is ON for training, embedding extension should also be
+        # done. If vocab and embeddings are already in sync, it would be a no-op.
+        model.extend_embedder_vocab()
 
         # Initializing the model can have side effect of expanding the vocabulary
         vocab.save_to_files(os.path.join(serialization_dir, "vocabulary"))

@@ -6,7 +6,7 @@ from allennlp.common.testing import AllenNlpTestCase
 from allennlp.modules.seq2seq_encoders import PassThroughEncoder
 
 
-class TestStackedSelfAttention(AllenNlpTestCase):
+class TestPassThroughEncoder(AllenNlpTestCase):
     def test_get_dimension_is_correct(self):
         encoder = PassThroughEncoder(input_dim=9)
         assert encoder.get_input_dim() == 9
@@ -18,3 +18,13 @@ class TestStackedSelfAttention(AllenNlpTestCase):
         output = encoder(tensor)
         numpy.testing.assert_array_almost_equal(tensor.detach().cpu().numpy(),
                                                 output.detach().cpu().numpy())
+
+    def test_pass_through_encoder_with_mask(self):
+        encoder = PassThroughEncoder(input_dim=9)
+        tensor = torch.randn([2, 3, 9])
+        mask = torch.LongTensor([[1, 1, 1], [1, 0, 0]])
+        output = encoder(tensor, mask)
+
+        target = tensor * mask.unsqueeze(dim=-1).float()
+        numpy.testing.assert_array_almost_equal(output.detach().cpu().numpy(),
+                                                target.detach().cpu().numpy())
