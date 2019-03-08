@@ -1,5 +1,8 @@
 from allennlp.common.testing import AllenNlpTestCase
 
+
 class TestBasicAllenNlp(AllenNlpTestCase):
-    def test_run_as_script(self):
-        import tutorials.tagger.basic_allennlp
+    @classmethod
+    def test_run_as_script(cls):
+        # Just ensure the tutorial runs without throwing an exception.
+        import tutorials.tagger.basic_allennlp # pylint: disable=unused-variable
