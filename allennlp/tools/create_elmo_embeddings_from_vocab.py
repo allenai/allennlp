@@ -95,6 +95,7 @@ def main(vocab_path: str,
 
 
 if __name__ == "__main__":
+    # pylint: disable=invalid-name
     parser = argparse.ArgumentParser(description='Generate CNN representations for a vocabulary '
                                                  'using ELMo',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
