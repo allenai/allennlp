@@ -165,8 +165,6 @@ class SemiSupervisedTextClassificationJsonReader(TextClassificationJsonReader):
         with open(cached_path(file_path), "r") as data_file, UnlabeledData(self._additional_unlabeled_data_path) as unlabeled_data_file:
             if self._sample is not None:
                 data_file = self._reservoir_sampling(data_file)
-            else:
-                data_file = data_file
             file_iterator = itertools.chain(data_file, unlabeled_data_file)
             for line in file_iterator:
                 items = json.loads(line)
