@@ -18,7 +18,13 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class UnlabeledData(object):
-    def __init__(self, fpath=None):
+    """
+    Custom class for opening unlabeled data files.
+    If the specified filepath is None, this class will
+    return an empty list. Otherwise, it will open the file
+    in read mode.
+    """
+    def __init__(self, fpath: str = None):
         self.fpath = fpath
 
     def __enter__(self):
@@ -28,7 +34,7 @@ class UnlabeledData(object):
             self.file = []
         return self.file
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self):
         if self.file:
             self.file.close()
 
