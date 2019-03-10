@@ -9,9 +9,7 @@
             "tokens": {
                 "type": "single_id",
                 "namespace": "tokens",
-                "lowercase_tokens": true,
-                "end_tokens": ["@@PADDING@@", "@@PADDING@@"],
-                "start_tokens": ["@@PADDING@@", "@@PADDING@@"]
+                "lowercase_tokens": true
             }
         },
         "max_sequence_length": 400
@@ -26,9 +24,7 @@
             "tokens": {
                 "type": "single_id",
                 "namespace": "tokens",
-                "lowercase_tokens": true,
-                "end_tokens": ["@@PADDING@@", "@@PADDING@@"],
-                "start_tokens": ["@@PADDING@@", "@@PADDING@@"]
+                "lowercase_tokens": true
             }
         },
         "max_sequence_length": 400
@@ -42,17 +38,19 @@
             "token_embedders": {
                 "tokens": {
                     "type": "embedding",
-                    "embedding_dim": 300,
+                    "embedding_dim": 10,
                     "trainable": true
                 }
             }
         },
-        "seq2vec_encoder": {
-           "type": "cnn",
-           "num_filters": 100,
-           "embedding_dim": 300,
-           "output_dim": 512
-        }
+        "seq2seq_encoder": {
+            "type": "lstm",
+            "num_layers": 1,
+            "bidirectional": false,
+            "input_size": 10,
+            "hidden_size": 128
+        },
+        "aggregations": ["maxpool", "attention"]
     },
     "iterator": {
         "type": "bucket",
@@ -78,3 +76,4 @@
         }
     }
 }
+

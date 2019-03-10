@@ -30,8 +30,8 @@
         "max_sequence_length": 400
     },
 "datasets_for_vocab_creation": ["train"],
-"train_data_path": "allennlp/tests/fixtures/data/test_classification_json/imdb_train.jsonl",
-"validation_data_path": "allennlp/tests/fixtures/data/test_classification_json/imdb_test.jsonl",
+"train_data_path": "allennlp/tests/fixtures/data/text_classification_json/imdb_train.jsonl",
+"validation_data_path": "allennlp/tests/fixtures/data/text_classification_json/imdb_test.jsonl",
     "model": {
         "type": "classifier",
         "input_embedder": {
