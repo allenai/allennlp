@@ -1,23 +1,14 @@
-from typing import Dict, List, Tuple
+from typing import Dict
 
-import numpy
 import torch
-import torch.nn.functional as F
 from overrides import overrides
-from torch.nn.modules.linear import Linear
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.util import START_SYMBOL, END_SYMBOL
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder
-from allennlp.modules.seq2seq_decoders.decoder_cell import DecoderCell
 from allennlp.modules.seq2seq_decoders.seq_decoder import SeqDecoder
-from allennlp.modules.seq2seq_decoders.simple_seq_decoder import SimpleSeqDecoder
-from allennlp.modules.token_embedders import Embedding
 from allennlp.nn import util
-from allennlp.nn.beam_search import BeamSearch
-from allennlp.training.metrics import BLEU, Metric
 
 
 @Model.register("composed_seq2seq")
@@ -62,10 +53,13 @@ class ComposedSeq2Seq(Model):
         # Encodes the sequence of source embeddings into a sequence of hidden states.
         self._encoder = encoder
 
-        if self._encoder.get_output_dim() != self.decoder.decoder_cell.get_output_dim():
+        print(type(self._encoder))
+        print(type(self.decoder))
+
+        if self._encoder.get_output_dim() != self.decoder.get_output_dim():
             raise ConfigurationError(
                 f"Encoder hidden dimension {self._encoder.get_output_dim()} should be"
-                f" equal to decoder dimension {self.decoder.decoder_cell.get_output_dim()}.")
+                f" equal to decoder dimension {self.decoder.get_output_dim()}.")
 
     @overrides
     def forward(self,  # type: ignore
@@ -96,8 +90,6 @@ class ComposedSeq2Seq(Model):
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
         Finalize predictions.
-
-        Use decode method from `SimpleSeqDecoder`
         """
         return self.decoder.decode(output_dict)
 

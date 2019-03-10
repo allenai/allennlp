@@ -73,7 +73,7 @@
       "num_layers": 1
     },
     "decoder": {
-      "type": "simple_seq_decoder",
+      "type": "rnn_seq_decoder",
       "decoder_cell": {
         "type": "lstm_decoder_cell",
         "decoding_dim": 10,
@@ -83,7 +83,6 @@
         }
       },
       "max_decoding_steps": 20,
-      "target_embedding_dim": 30,
       "target_namespace": "target_tokens",
       "beam_size": 5
     }
