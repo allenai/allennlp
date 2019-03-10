@@ -34,7 +34,7 @@ class UnlabeledData(object):
             self.file = []
         return self.file
 
-    def __exit__(self):
+    def __exit__(self, type, value, traceback):
         if self.file:
             self.file.close()
 
