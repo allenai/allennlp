@@ -1,3 +1,4 @@
+import itertools
 import json
 import logging
 from io import TextIOWrapper
@@ -14,6 +15,22 @@ from allennlp.data.tokenizers.sentence_splitter import SpacySentenceSplitter
 from overrides import overrides
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
+
+class UnlabeledData(object):
+    def __init__(self, fpath=None):
+        self.fpath = fpath
+
+    def __enter__(self):
+        if self.fpath:
+            self.file = open(cached_path(self.fpath), 'r')
+        else:
+            self.file = []
+        return self.file
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.file:
+            self.file.close()
 
 
 @DatasetReader.register("semisupervised_text_classification_json")
@@ -134,27 +151,24 @@ class SemiSupervisedTextClassificationJsonReader(TextClassificationJsonReader):
             if sample_index < self._sample:
                 result[sample_index] = item
 
-        return result
+        for line in result:
+            yield line
 
     @overrides
     def _read(self, file_path):
-        with open(cached_path(file_path), "r") as data_file:
+        with open(cached_path(file_path), "r") as data_file, UnlabeledData(self._additional_unlabeled_data_path) as unlabeled_data_file:
             if self._sample is not None:
-                lines = self._reservoir_sampling(data_file)
+                data_file = self._reservoir_sampling(data_file)
             else:
-                lines = data_file.readlines()
-
-        if self._additional_unlabeled_data_path:
-            with open(cached_path(self._additional_unlabeled_data_path)) as data_file:
-                lines.extend([item for item in data_file.readlines()])
-
-        for line in lines:
-            items = json.loads(line)
-            text = items["text"]
-            if self._ignore_labels:
-                instance = self.text_to_instance(text=text, label=None)
-            else:
-                label = str(items.get('label'))
-                instance = self.text_to_instance(text=text, label=label)
-            if instance is not None and instance.fields['tokens'].tokens:
-                yield instance
+                data_file = data_file
+            file_iterator = itertools.chain(data_file, unlabeled_data_file)
+            for line in file_iterator:
+                items = json.loads(line)
+                text = items["text"]
+                if self._ignore_labels:
+                    instance = self.text_to_instance(text=text, label=None)
+                else:
+                    label = str(items.get('label'))
+                    instance = self.text_to_instance(text=text, label=label)
+                if instance is not None and instance.fields['tokens'].tokens:
+                    yield instance
