@@ -14,35 +14,6 @@
         },
         "max_sequence_length": 400
     },
-    "validation_dataset_reader": {
-        "lazy": false,
-        "type": "text_classification_json",
-        "tokenizer": {
-            "word_splitter": "spacy"
-        },
-        "token_indexers": {
-            "tokens": {
-                "type": "single_id",
-                "namespace": "tokens",
-                "lowercase_tokens": true
-            }
-        },
-        "max_sequence_length": 400
-    },
-"datasets_for_vocab_creation": ["train"],
-"train_data_path": "allennlp/tests/fixtures/data/text_classification_json/imdb_train.jsonl",
-"validation_data_path": "allennlp/tests/fixtures/data/text_classification_json/imdb_test.jsonl",
-    "model": {
-        "type": "classifier",
-        "text_field_embedder": {
-            "token_embedders": {
-                "tokens": {
-                    "type": "bag_of_word_counts",
-                    "ignore_oov": true
-                }
-            }
-        }
-    },
     "iterator": {
         "type": "bucket",
         "sorting_keys": [["tokens", "num_tokens"]],
@@ -67,4 +38,3 @@
         }
     }
 }
-
