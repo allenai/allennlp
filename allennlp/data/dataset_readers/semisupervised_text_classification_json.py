@@ -1,4 +1,3 @@
-import itertools
 import json
 import logging
 from io import TextIOWrapper
@@ -17,28 +16,6 @@ from allennlp.data.tokenizers.sentence_splitter import SpacySentenceSplitter
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-class UnlabeledData(object):
-    """
-    Custom class for opening unlabeled data files.
-    If the specified filepath is None, this class will
-    return an empty list. Otherwise, it will open the file
-    in read mode.
-    """
-    def __init__(self, filepath: str = None) -> None:
-        self.filepath = filepath
-
-    def __enter__(self) -> None:
-        if self.filepath:
-            self._file = open(cached_path(self.filepath), 'r') #  pylint:disable=attribute-defined-outside-init
-        else:
-            self._file = [] #  pylint:disable=attribute-defined-outside-init
-        return self._file
-
-    def __exit__(self, _type, _value, _traceback) -> None:
-        if self._file:
-            self._file.close()
-
-
 @DatasetReader.register("semisupervised_text_classification_json")
 class SemiSupervisedTextClassificationJsonReader(TextClassificationJsonReader):
     """
@@ -47,10 +24,8 @@ class SemiSupervisedTextClassificationJsonReader(TextClassificationJsonReader):
     This dataset reader inherits from TextClassificationJSONReader, but differs from its parent
     in that it is primed for semisupervised learning. This dataset reader allows for:
         1) Ignoring labels in the training data (e.g. for unsupervised pretraining)
-        2) Reading additional unlabeled data from another file
-        3) Throttling the training data to a random subsample (according to the numpy seed),
-           for analysis of the effect of semisupervised models on different amounts of labeled
-           data
+        2) Throttling the training data (according to the numpy seed), for analysis of the
+           effect of semisupervised models on different amounts of labeled data
 
     Expects a "tokens" field and a "label" field in JSON format.
 
@@ -74,18 +49,10 @@ class SemiSupervisedTextClassificationJsonReader(TextClassificationJsonReader):
         If specified, will truncate tokens to specified maximum length.
     ignore_labels: ``bool``, optional (default = ``False``)
         If specified, will ignore labels when reading data.
-    additional_unlabeled_data_path: ``str``, optional (default = ``None``)
-        If specified, will additionally read all unlabeled data from this filepath.
-        If ignore_labels is set to False, all data in this file should have a
-        consistent dummy-label (e.g. "N/A"), to identify examples that are unlabeled
-        in a downstream model that uses this dataset reader.
     sample: ``int``, optional (default = ``None``)
         If specified, will sample data to a specified length.
-            **Note**:
-                1) This operation will *not* apply to any additional unlabeled data
-                   (specified in `additional_unlabeled_data_path`).
-                2) To produce a consistent subsample of data, use a consistent seed in your
-                   training config.
+            **Note**: To produce a consistent subsample of data, use a consistent seed in your
+            training config.
     skip_label_indexing: ``bool``, optional (default = ``False``)
         Whether or not to skip label indexing. You might want to skip label indexing if your
         labels are numbers, so the dataset reader doesn't re-number them starting from 0.
@@ -99,7 +66,6 @@ class SemiSupervisedTextClassificationJsonReader(TextClassificationJsonReader):
                  max_sequence_length: int = None,
                  skip_label_indexing: bool = False,
                  ignore_labels: bool = False,
-                 additional_unlabeled_data_path: str = None,
                  sample: int = None,
                  lazy: bool = False) -> None:
         super().__init__(lazy=lazy,
@@ -115,7 +81,6 @@ class SemiSupervisedTextClassificationJsonReader(TextClassificationJsonReader):
         self._ignore_labels = ignore_labels
         self._skip_label_indexing = skip_label_indexing
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
-        self._additional_unlabeled_data_path = additional_unlabeled_data_path
         if self._segment_sentences:
             self._sentence_segmenter = SpacySentenceSplitter()
 
@@ -135,7 +100,7 @@ class SemiSupervisedTextClassificationJsonReader(TextClassificationJsonReader):
 
         Parameters
         ----------
-        file : `_io.TextIOWrapper` - file path
+        file : `_io.TextIOWrapper` - file handle
         sample_size : `int` - size of random sample you want
 
         Returns
@@ -162,12 +127,10 @@ class SemiSupervisedTextClassificationJsonReader(TextClassificationJsonReader):
 
     @overrides
     def _read(self, file_path):
-        with open(cached_path(file_path), "r") as data_file, \
-             UnlabeledData(self._additional_unlabeled_data_path) as unlabeled_data_file:
+        with open(cached_path(file_path), "r") as data_file:
             if self._sample is not None:
                 data_file = self._reservoir_sampling(data_file)
-            file_iterator = itertools.chain(data_file, unlabeled_data_file) 
-            for line in file_iterator:
+            for line in data_file:
                 items = json.loads(line)
                 text = items["text"]
                 if self._ignore_labels:
