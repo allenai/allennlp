@@ -133,9 +133,11 @@ def with_fallback(preferred: Dict[str, Any], fallback: Dict[str, Any]) -> Dict[s
                     index = int(elem_key)
                     merged_list[index] = merge(preferred_element, fallback_value[index])
                 except ValueError:
-                    raise ConfigurationError(f"could not merge dicts - the preferred dict contains invalid keys (key {elem_key} is not a valid list index)")
+                    raise ConfigurationError("could not merge dicts - the preferred dict contains "
+                                             f"invalid keys (key {elem_key} is not a valid list index)")
                 except IndexError:
-                    raise ConfigurationError(f"could not merge dicts - the preferred dict contains invalid keys (key {index} is out of bounds)")
+                    raise ConfigurationError("could not merge dicts - the preferred dict contains "
+                                             f"invalid keys (key {index} is out of bounds)")
             return merged_list
         else:
             return copy.deepcopy(preferred_value)

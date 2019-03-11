@@ -343,7 +343,7 @@ class TestParams(AllenNlpTestCase):
             @classmethod
             def from_params(cls, params: Params) -> 'A':
                 bs = params.pop("bs")
-                return cls(bs=[B.from_params(b_params) for b_params in bs] )
+                return cls(bs=[B.from_params(b_params) for b_params in bs])
 
         params = Params({
                 "a": {
