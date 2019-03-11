@@ -84,14 +84,8 @@ class WikiTablesParserPredictor(Predictor):
         initial_tokens = inputs.get("initial_sequence", [])
 
         # Want to get initial_sequence on the same device as the model.
-        try:
-            device = next(self._model.parameters()).device
-        except StopIteration:
-            # Model has no parameters, so just use CPU
-            device = torch.device('cpu')
-
         initial_sequence = torch.tensor([rule_to_index[token] for token in initial_tokens],
-                                        device=device)
+                                        device=next(self._model.parameters()).device)
 
         # Replace beam search with one that forces the initial sequence
         original_beam_search = self._model._beam_search
