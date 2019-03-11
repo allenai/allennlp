@@ -16,11 +16,6 @@ allennlp.state_machines
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: allennlp.state_machines.interactive_beam_search
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 .. automodule:: allennlp.state_machines.util
    :members:
    :undoc-members:

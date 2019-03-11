@@ -14,7 +14,6 @@ from allennlp.data import DatasetReader, Instance
 from allennlp.models import Model
 from allennlp.predictors.predictor import Predictor
 from allennlp.common.checks import check_for_java
-from allennlp.state_machines.interactive_beam_search import InteractiveBeamSearch
 
 # TODO(mattg): We should merge how this works with how the `WikiTablesAccuracy` metric works, maybe
 # just removing the need for adding this stuff at all, because the parser already runs the java
@@ -85,10 +84,10 @@ class WikiTablesParserPredictor(Predictor):
         initial_tokens = inputs.get("initial_sequence", [])
         # pylint: disable=not-callable
         initial_sequence = torch.tensor([rule_to_index[token] for token in initial_tokens])
+
+        # Replace beam search with one that forces the initial sequence
         original_beam_search = self._model._beam_search
-        beam_size = getattr(original_beam_search, "_beam_size")
-        interactive_beam_search: InteractiveBeamSearch = InteractiveBeamSearch(beam_size,
-                                                                               initial_sequence=initial_sequence)
+        interactive_beam_search = original_beam_search.constrained_to(initial_sequence)
         self._model._beam_search = interactive_beam_search
 
         # Now get results
