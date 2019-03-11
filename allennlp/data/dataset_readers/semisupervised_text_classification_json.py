@@ -28,10 +28,10 @@ class UnlabeledData(object):
         self.filepath = filepath
 
     def __enter__(self) -> None:
-        if self.fpath:
-            self._file = open(cached_path(self.filepath), 'r')
+        if self.filepath:
+            self._file = open(cached_path(self.filepath), 'r') #  pylint:disable=attribute-defined-outside-init
         else:
-            self._file = []
+            self._file = [] #  pylint:disable=attribute-defined-outside-init
         return self._file
 
     def __exit__(self, _type, _value, _traceback) -> None:
@@ -121,7 +121,7 @@ class SemiSupervisedTextClassificationJsonReader(TextClassificationJsonReader):
 
     def _reservoir_sampling(self, file_: TextIOWrapper):
         """
-        A function for reading random lines from file without loading the 
+        A function for reading random lines from file without loading the
         entire file into memory.
 
         For more information, see here: https://en.wikipedia.org/wiki/Reservoir_sampling
@@ -163,10 +163,10 @@ class SemiSupervisedTextClassificationJsonReader(TextClassificationJsonReader):
     @overrides
     def _read(self, file_path):
         with open(cached_path(file_path), "r") as data_file, \
-             UnlabeledData(self._additional_unlabeled_data_path) as unlabeled_data:
+             UnlabeledData(self._additional_unlabeled_data_path) as unlabeled_data_file:
             if self._sample is not None:
                 data_file = self._reservoir_sampling(data_file)
-            file_iterator = itertools.chain(data_file, unlabeled_data._file)
+            file_iterator = itertools.chain(data_file, unlabeled_data_file) 
             for line in file_iterator:
                 items = json.loads(line)
                 text = items["text"]

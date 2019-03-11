@@ -171,7 +171,7 @@ class TestSemiSupervisedTextClassificationJsonReader(AllenNlpTestCase):
         assert text1 == text3
 
     def test_reads_additional_unlabeled_data_properly(self):
-        
+
         DATA_DIR = self.FIXTURES_ROOT / "data" / "semisupervised_text_classification_json"
         imdb_labeled_path = DATA_DIR / "imdb_train.jsonl"
         imdb_unlabeled_path = DATA_DIR / "imdb_unlabeled.jsonl"
