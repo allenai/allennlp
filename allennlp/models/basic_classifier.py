@@ -29,8 +29,13 @@ class BasicClassifier(Model):
     seq2vec_encoder : ``Seq2VecEnoder``, optional (default = ``None``)
         Seq2Vec encoder layer. If `seq2seq_encoder` is provided, this encoder will pool its output.
         Otherwise, this encoder will operate directly on the output of the `text_field_embedder`.
-    dropout : ``float``, optional (default=None)
+    dropout : ``float``, optional (default = ``None``)
         Dropout percentage to use.
+    num_labels: ``int``, optional (default = ``None``)
+        Number of labels to project to in classification layer. By default, the classification layer will
+        project to the size of the vocabulary namespace corresponding to labels.
+    label_namespace: ``str``, optional (default = "labels")
+        Vocabulary namespace corresponding to labels. By default, we use the "labels" namespace.
     initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
         If provided, will be used to initialize the model parameters.
     """
@@ -40,6 +45,8 @@ class BasicClassifier(Model):
                  seq2seq_encoder: Seq2SeqEncoder = None,
                  seq2vec_encoder: Seq2VecEncoder = None,
                  dropout: float = None,
+                 num_labels: int = None,
+                 label_namespace: str = "labels",
                  initializer: InitializerApplicator = InitializerApplicator()) -> None:
 
         super().__init__(vocab)
@@ -66,7 +73,10 @@ class BasicClassifier(Model):
         else:
             self._dropout = None
 
-        self._num_labels = vocab.get_vocab_size(namespace="labels")
+        if num_labels:
+            self._num_labels = num_labels
+        else:
+            self._num_labels = vocab.get_vocab_size(namespace=label_namespace)
         self._classification_layer = torch.nn.Linear(self._classifier_input_dim, self._num_labels)
         self._accuracy = CategoricalAccuracy()
         self._loss = torch.nn.CrossEntropyLoss()
