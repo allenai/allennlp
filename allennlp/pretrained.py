@@ -61,12 +61,18 @@ def named_entity_recognition_with_elmo_peters_2018() -> predictors.SentenceTagge
         warnings.simplefilter(action="ignore", category=DeprecationWarning)
         model = PretrainedModel('https://s3-us-west-2.amazonaws.com/allennlp/models/ner-model-2018.12.18.tar.gz',
                                 'sentence-tagger')
-        return model.predictor() # type: ignore
+        predictor = model.predictor()
+        # pylint: disable=protected-access
+        predictor._dataset_reader._token_indexers['token_characters']._min_padding_length = 3  # type: ignore
+        return predictor  # type: ignore
 
 def fine_grained_named_entity_recognition_with_elmo_peters_2018() -> predictors.SentenceTaggerPredictor:
     model = PretrainedModel('https://s3-us-west-2.amazonaws.com/allennlp/models/fine-grained-ner-model-elmo-2018.08.31.tar.gz',
                             'sentence-tagger')
-    return model.predictor() # type: ignore
+    predictor = model.predictor()
+    # pylint: disable=protected-access
+    predictor._dataset_reader._token_indexers['token_characters']._min_padding_length = 3  # type: ignore
+    return predictor  # type: ignore
 
 def span_based_constituency_parsing_with_elmo_joshi_2018() -> predictors.ConstituencyParserPredictor:
     with warnings.catch_warnings():
