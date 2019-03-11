@@ -1,44 +1,60 @@
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List
 
 import torch
+from allennlp.common.checks import ConfigurationError
 from allennlp.data import Vocabulary
 from allennlp.models.model import Model
-from allennlp.modules import Seq2VecEncoder, Seq2SeqEncoder, FeedForward
-from allennlp.modules import TextFieldEmbedder
+from allennlp.modules import (FeedForward, Seq2SeqEncoder, Seq2VecEncoder,
+                              TextFieldEmbedder)
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
 from allennlp.nn.util import get_text_field_mask
 from allennlp.training.metrics import CategoricalAccuracy
-from allennlp.nn.util import (get_final_encoder_states, masked_max, masked_mean, masked_log_softmax)
-from allennlp.common.checks import ConfigurationError
 
 
 @Model.register("classifier")
 class Classifier(Model):
+    """
+    This ``Model`` implements a generic text classifier. After embedding the text into
+    a text field, we will optionally encode the embeddings with a Seq2VecEncoder and
+    then pass the embeddings to a linear classification layer to the label space.
 
+    Parameters
+    ----------
+    vocab : ``Vocabulary``
+    text_field_embedder : ``TextFieldEmbedder``
+        Used to embed the input text into a ``TextField``
+    encoder: ``Seq2VecEnoder``
+        Encoder layer for the input text
+    dropout : ``float``, optional (default=0.1)
+        Dropout percentage to use.
+    initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
+        If provided, will be used to initialize the model parameters.
+    """
     def __init__(self,
                  vocab: Vocabulary,
-                 input_embedder: TextFieldEmbedder,
+                 text_field_embedder: TextFieldEmbedder,
                  encoder: Seq2VecEncoder = None,
                  dropout: float = None,
-                 initializer: InitializerApplicator = InitializerApplicator(),
-                 regularizer: Optional[RegularizerApplicator] = None) -> None:
+                 initializer: InitializerApplicator = InitializerApplicator()) -> None:
+
         super().__init__(vocab)
-        self._input_embedder = input_embedder
+        self._text_field_embedder = text_field_embedder
+
+        if encoder:
+            self._encoder = encoder
+            self._classifier_input_dim = self._encoder.get_output_dim()
+        else:
+            self._encoder = None
+            self._classifier_input_dim = self._text_field_embedder.get_output_dim()
+
         if dropout:
             self._dropout = torch.nn.Dropout(dropout)
         else:
             self._dropout = None
 
-        if encoder:
-            self._encoder = encoder
-            self._clf_input_dim = self._encoder.get_output_dim()
-        else:
-            self._encoder = None
-            self._clf_input_dim = self._input_embedder.get_output_dim()
-
         self._num_labels = vocab.get_vocab_size(namespace="labels")
+        self._classification_layer = torch.nn.Linear(self._classifier_input_dim, self._num_labels)
         self._accuracy = CategoricalAccuracy()
-        self._classification_layer = torch.nn.Linear(self._clf_input_dim, self._num_labels)
         self._loss = torch.nn.CrossEntropyLoss()
         initializer(self)
 
@@ -71,7 +87,7 @@ class Classifier(Model):
         loss : torch.FloatTensor, optional
             A scalar loss to be optimised.
         """
-        embedded_text = self._input_embedder(tokens)
+        embedded_text = self._text_field_embedder(tokens)
         mask = get_text_field_mask(tokens).float()
 
         if self._encoder:
