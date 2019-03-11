@@ -81,7 +81,7 @@ class ModelTestCase(AllenNlpTestCase):
             assert_allclose(model.state_dict()[key].cpu().numpy(),
                             loaded_model.state_dict()[key].cpu().numpy(),
                             err_msg=key)
-        params = Params.from_file(param_file)
+        params = Params.from_file(param_file, params_overrides=overrides)
         reader = DatasetReader.from_params(params['dataset_reader'])
 
         # Need to duplicate params because Iterator.from_params will consume.

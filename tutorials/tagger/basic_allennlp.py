@@ -271,6 +271,15 @@ lstm = PytorchSeq2SeqWrapper(torch.nn.LSTM(EMBEDDING_DIM, HIDDEN_DIM, batch_firs
 #### Finally, we can instantiate the model.
 model = LstmTagger(word_embeddings, lstm, vocab)
 
+#### Next let's check if we have access to a GPU.
+if torch.cuda.is_available():
+    cuda_device = 0
+    #### Since we do, we move our model to GPU 0.
+    model = model.cuda(cuda_device)
+else:
+    #### In this case we don't, so we specify -1 to fall back to the CPU. (Where the model already resides.)
+    cuda_device = -1
+
 #### Now we're ready to train the model. The first thing we'll need is an optimizer.
 #### We can just use PyTorch's stochastic gradient descent.
 optimizer = optim.SGD(model.parameters(), lr=0.1)
@@ -295,7 +304,8 @@ trainer = Trainer(model=model,
                   train_dataset=train_dataset,
                   validation_dataset=validation_dataset,
                   patience=10,
-                  num_epochs=1000)
+                  num_epochs=1000,
+                  cuda_device=cuda_device)
 
 #### When we launch it it will print a progress bar for each epoch
 #### that includes both the "loss" and the "accuracy" metric. 
@@ -338,11 +348,17 @@ model2 = LstmTagger(word_embeddings, lstm, vocab2)
 #### After which we have to load its state.
 with open("/tmp/model.th", 'rb') as f:
     model2.load_state_dict(torch.load(f))
+#### Here we move the loaded model to the GPU that we used previously. This is
+#### necessary because we moved <code>word_embeddings</code> and <code>lstm</code>
+#### with the original model earlier. All of a model's parameters need to be on
+#### the same device.
+if cuda_device > -1:
+    model2.cuda(cuda_device)
 
 #### And now we should get the same predictions.
 predictor2 = SentenceTaggerPredictor(model2, dataset_reader=reader)
 tag_logits2 = predictor2.predict("The dog ate the apple")['tag_logits']
-assert tag_logits2 == tag_logits
+np.testing.assert_array_almost_equal(tag_logits2, tag_logits)
 
 ####
 """
