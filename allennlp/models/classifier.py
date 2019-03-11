@@ -77,36 +77,6 @@ class Classifier(Model):
         if self._encoder:
             embedded_text = self._encoder(embedded_text,
                                           mask=mask)
-        # if self._aggregations:
-        #     encoded_repr = []
-        #     for aggregation in self._aggregations:
-        #         if aggregation == 'maxpool':
-        #             broadcast_mask = mask.unsqueeze(-1).float()
-        #             encoded_text = embedded_text * broadcast_mask
-        #             encoded_text = masked_max(encoded_text,
-        #                                        broadcast_mask,
-        #                                        dim=1)
-        #         elif aggregation == 'meanpool':
-        #             broadcast_mask = mask.unsqueeze(-1).float()
-        #             encoded_text = embedded_text * broadcast_mask
-        #             encoded_text = masked_mean(encoded_text,
-        #                                         broadcast_mask,
-        #                                         dim=1,
-        #                                         keepdim=False)
-        #         elif aggregation == 'final_state':
-        #             is_bi = self._encoder.is_bidirectional()
-        #             encoded_text = get_final_encoder_states(embedded_text,
-        #                                                      mask,
-        #                                                      is_bi)
-        #         elif aggregation == 'attention':
-        #             alpha = self._attention_layer(embedded_text)
-        #             alpha = masked_log_softmax(alpha, mask.unsqueeze(-1), dim=1).exp()
-        #             encoded_text = alpha * embedded_text
-        #             encoded_text = encoded_text.sum(dim=1)
-        #         else:
-        #             raise ConfigurationError(f"{aggregation} aggregation not available.")
-        #         encoded_repr.append(encoded_text)
-        #     embedded_text = torch.cat(encoded_repr, 1)
 
         if self._dropout:
             embedded_text = self._dropout(embedded_text)
