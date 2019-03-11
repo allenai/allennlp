@@ -102,15 +102,19 @@ class BeamSearch(FromParams, Generic[StateType]):
             next_states: Dict[int, List[StateType]] = defaultdict(list)
             grouped_state = states[0].combine_states(states)
 
-            # The only possible constraint on allowed actions is that we're still following
-            # the specified initial sequence, which we can check by seeing if the first
-            # action history appears in our allowed transitions.
-            allowed_actions = None
-
             if self._allowed_transitions:
+                # We were provided an initial sequence, so we need to check
+                # if the current sequence is still constrained.
                 key = tuple(grouped_state.action_history[0])
                 if key in self._allowed_transitions:
+                    # We're still in the initial_sequence, so our hand is forced.
                     allowed_actions = [self._allowed_transitions[key]]
+                else:
+                    # We've gone past the end of the initial sequence, so no constraint.
+                    allowed_actions = None
+            else:
+                # No initial sequence was provided, so all actions are allowed.
+                allowed_actions = None
 
             for next_state in transition_function.take_step(grouped_state,
                                                             max_actions=self._per_node_beam_size,
