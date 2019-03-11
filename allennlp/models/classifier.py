@@ -26,7 +26,7 @@ class Classifier(Model):
         Used to embed the input text into a ``TextField``
     encoder: ``Seq2VecEnoder``
         Encoder layer for the input text
-    dropout : ``float``, optional (default=0.1)
+    dropout : ``float``, optional (default=None)
         Dropout percentage to use.
     initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
         If provided, will be used to initialize the model parameters.
