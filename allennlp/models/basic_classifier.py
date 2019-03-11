@@ -1,7 +1,6 @@
-from typing import Any, Dict, List
+from typing import Dict
 
 import torch
-from allennlp.common.checks import ConfigurationError
 from allennlp.data import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import Seq2SeqEncoder, Seq2VecEncoder, TextFieldEmbedder
@@ -26,9 +25,10 @@ class BasicClassifier(Model):
         Used to embed the input text into a ``TextField``
     seq2seq_encoder : ``Seq2SeqEncoder``, optional (default=``None``)
         Optional Seq2Seq encoder layer for the input text.
-    seq2vec_encoder : ``Seq2VecEnoder``, optional (default = ``None``)
-        Seq2Vec encoder layer. If `seq2seq_encoder` is provided, this encoder will pool its output.
-        Otherwise, this encoder will operate directly on the output of the `text_field_embedder`.
+    seq2vec_encoder : ``Seq2VecEnoder``
+        Required Seq2Vec encoder layer. If `seq2seq_encoder` is provided, this encoder
+        will pool its output. Otherwise, this encoder will operate directly on the output
+        of the `text_field_embedder`.
     dropout : ``float``, optional (default = ``None``)
         Dropout percentage to use.
     num_labels: ``int``, optional (default = ``None``)
@@ -42,8 +42,8 @@ class BasicClassifier(Model):
     def __init__(self,
                  vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
+                 seq2vec_encoder: Seq2VecEncoder,
                  seq2seq_encoder: Seq2SeqEncoder = None,
-                 seq2vec_encoder: Seq2VecEncoder = None,
                  dropout: float = None,
                  num_labels: int = None,
                  label_namespace: str = "labels",
@@ -57,16 +57,8 @@ class BasicClassifier(Model):
         else:
             self._seq2seq_encoder = None
 
-        if seq2seq_encoder and not seq2vec_encoder:
-            raise ConfigurationError("If you provide a seq2seq encoder,"
-                                     "you must provide a seq2vec encoder to pool its output.")
-
-        if seq2vec_encoder:
-            self._seq2vec_encoder = seq2vec_encoder
-            self._classifier_input_dim = self._seq2vec_encoder.get_output_dim()
-        else:
-            self._seq2vec_encoder = None
-            self._classifier_input_dim = self._text_field_embedder.get_output_dim()
+        self._seq2vec_encoder = seq2vec_encoder
+        self._classifier_input_dim = self._seq2vec_encoder.get_output_dim()
 
         if dropout:
             self._dropout = torch.nn.Dropout(dropout)
