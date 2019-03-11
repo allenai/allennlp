@@ -79,10 +79,10 @@ class Classifier(Model):
         -------
         An output dictionary consisting of:
 
-        label_logits : torch.FloatTensor
+        logits : torch.FloatTensor
             A tensor of shape ``(batch_size, num_labels)`` representing
             unnormalized log probabilities of the label.
-        label_probs : torch.FloatTensor
+        probs : torch.FloatTensor
             A tensor of shape ``(batch_size, num_labels)`` representing
             probabilities of the label.
         loss : torch.FloatTensor, optional
@@ -98,15 +98,15 @@ class Classifier(Model):
         if self._dropout:
             embedded_text = self._dropout(embedded_text)
 
-        label_logits = self._classification_layer(embedded_text)
-        label_probs = torch.nn.functional.softmax(label_logits, dim=-1)
+        logits = self._classification_layer(embedded_text)
+        probs = torch.nn.functional.softmax(logits, dim=-1)
 
-        output_dict = {"label_logits": label_logits, "label_probs": label_probs}
+        output_dict = {"logits": logits, "probs": probs}
 
         if label is not None:
-            loss = self._loss(label_logits, label.long().view(-1))
+            loss = self._loss(logits, label.long().view(-1))
             output_dict["loss"] = loss
-            self._accuracy(label_logits, label)
+            self._accuracy(logits, label)
 
         return output_dict
 
