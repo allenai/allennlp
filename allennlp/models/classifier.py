@@ -16,7 +16,8 @@ class Classifier(Model):
     """
     This ``Model`` implements a generic text classifier. After embedding the text into
     a text field, we will optionally encode the embeddings with a Seq2VecEncoder and
-    then pass the embeddings to a linear classification layer to the label space.
+    then pass the embeddings to a linear classification layer, which projects
+    into the label space.
 
     Parameters
     ----------
