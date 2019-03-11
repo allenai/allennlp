@@ -43,14 +43,13 @@
                 }
             }
         },
-        "seq2seq_encoder": {
+        "encoder": {
             "type": "lstm",
             "num_layers": 1,
             "bidirectional": false,
             "input_size": 10,
             "hidden_size": 128
-        },
-        "aggregations": ["maxpool", "attention"]
+        }
     },
     "iterator": {
         "type": "bucket",

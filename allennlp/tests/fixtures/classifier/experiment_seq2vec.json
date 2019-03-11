@@ -47,7 +47,7 @@
                 }
             }
         },
-        "seq2vec_encoder": {
+        "encoder": {
            "type": "cnn",
            "num_filters": 100,
            "embedding_dim": 300,
