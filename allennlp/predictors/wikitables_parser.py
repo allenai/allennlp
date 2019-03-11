@@ -72,7 +72,7 @@ class WikiTablesParserPredictor(Predictor):
         """
         We need to override this because of the interactive beam search aspects.
         """
-        # pylint: disable=protected-access
+        # pylint: disable=protected-access,not-callable
         instance = self._json_to_instance(inputs)
 
         # Get the rules out of the instance
@@ -82,8 +82,16 @@ class WikiTablesParserPredictor(Predictor):
 
         # A sequence of strings to force, then convert them to ints
         initial_tokens = inputs.get("initial_sequence", [])
-        # pylint: disable=not-callable
-        initial_sequence = torch.tensor([rule_to_index[token] for token in initial_tokens])
+
+        # Want to get initial_sequence on the same device as the model.
+        try:
+            device = next(self._model.parameters()).device
+        except StopIteration:
+            # Model has no parameters, so just use CPU
+            device = torch.device('cpu')
+
+        initial_sequence = torch.tensor([rule_to_index[token] for token in initial_tokens],
+                                        device=device)
 
         # Replace beam search with one that forces the initial sequence
         original_beam_search = self._model._beam_search
