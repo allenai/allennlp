@@ -1,12 +1,10 @@
 from typing import Any, Dict, List
 
 import torch
-from allennlp.common.checks import ConfigurationError
 from allennlp.data import Vocabulary
 from allennlp.models.model import Model
-from allennlp.modules import (FeedForward, Seq2SeqEncoder, Seq2VecEncoder,
-                              TextFieldEmbedder)
-from allennlp.nn import InitializerApplicator, RegularizerApplicator
+from allennlp.modules import Seq2VecEncoder, TextFieldEmbedder
+from allennlp.nn import InitializerApplicator
 from allennlp.nn.util import get_text_field_mask
 from allennlp.training.metrics import CategoricalAccuracy
 
@@ -63,7 +61,7 @@ class Classifier(Model):
                 tokens: Dict[str, torch.LongTensor],
                 label: torch.IntTensor = None,
                 metadata: List[Dict[str, Any]] = None  # pylint:disable=unused-argument
-                ) -> Dict[str, torch.Tensor]:
+               ) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
         Parameters
