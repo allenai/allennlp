@@ -9,7 +9,7 @@ from allennlp.data.dataset_readers import SemiSupervisedTextClassificationJsonRe
 
 
 class TestSemiSupervisedTextClassificationJsonReader(AllenNlpTestCase):
-    
+
     @pytest.mark.parametrize("lazy", (True, False))
     def test_read_from_file(self):
         reader = SemiSupervisedTextClassificationJsonReader()
@@ -171,9 +171,10 @@ class TestSemiSupervisedTextClassificationJsonReader(AllenNlpTestCase):
         assert text1 == text3
 
     def test_reads_additional_unlabeled_data_properly(self):
-
-        imdb_labeled_path = self.FIXTURES_ROOT / "data" / "semisupervised_text_classification_json" / "imdb_train.jsonl"
-        imdb_unlabeled_path = self.FIXTURES_ROOT / "data" / "semisupervised_text_classification_json" / "imdb_unlabeled.jsonl"
+        
+        DATA_DIR = self.FIXTURES_ROOT / "data" / "semisupervised_text_classification_json"
+        imdb_labeled_path = DATA_DIR / "imdb_train.jsonl"
+        imdb_unlabeled_path = DATA_DIR / "imdb_unlabeled.jsonl"
         reader = SemiSupervisedTextClassificationJsonReader(additional_unlabeled_data_path=imdb_unlabeled_path)
         instances = reader.read(imdb_labeled_path)
         instances = ensure_list(instances)
@@ -184,7 +185,8 @@ class TestSemiSupervisedTextClassificationJsonReader(AllenNlpTestCase):
 
     def test_ignores_label_properly(self):
 
-        imdb_labeled_path = self.FIXTURES_ROOT / "data" / "semisupervised_text_classification_json" / "imdb_train.jsonl"
+        DATA_DIR = self.FIXTURES_ROOT / "data" / "semisupervised_text_classification_json"
+        imdb_labeled_path = DATA_DIR / "imdb_train.jsonl"
         reader = SemiSupervisedTextClassificationJsonReader(ignore_labels=True)
         instances = reader.read(imdb_labeled_path)
         instances = ensure_list(instances)

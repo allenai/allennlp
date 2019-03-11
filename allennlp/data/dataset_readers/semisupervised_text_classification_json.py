@@ -5,6 +5,7 @@ from io import TextIOWrapper
 from typing import Dict
 
 import numpy as np
+from overrides import overrides
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers import TextClassificationJsonReader
@@ -12,7 +13,6 @@ from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
 from allennlp.data.tokenizers import Tokenizer, WordTokenizer
 from allennlp.data.tokenizers.sentence_splitter import SpacySentenceSplitter
-from overrides import overrides
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -24,19 +24,19 @@ class UnlabeledData(object):
     return an empty list. Otherwise, it will open the file
     in read mode.
     """
-    def __init__(self, fpath: str = None):
-        self.fpath = fpath
+    def __init__(self, filepath: str = None) -> None:
+        self.filepath = filepath
 
-    def __enter__(self):
+    def __enter__(self) -> None:
         if self.fpath:
-            self.file = open(cached_path(self.fpath), 'r')
+            self._file = open(cached_path(self.filepath), 'r')
         else:
-            self.file = []
-        return self.file
+            self._file = []
+        return self._file
 
-    def __exit__(self, type, value, traceback):
-        if self.file:
-            self.file.close()
+    def __exit__(self, _type, _value, _traceback) -> None:
+        if self._file:
+            self._file.close()
 
 
 @DatasetReader.register("semisupervised_text_classification_json")
@@ -107,8 +107,7 @@ class SemiSupervisedTextClassificationJsonReader(TextClassificationJsonReader):
                          tokenizer=tokenizer,
                          segment_sentences=segment_sentences,
                          max_sequence_length=max_sequence_length,
-                         skip_label_indexing=skip_label_indexing,
-                         )
+                         skip_label_indexing=skip_label_indexing)
         self._tokenizer = tokenizer or WordTokenizer()
         self._sample = sample
         self._segment_sentences = segment_sentences
@@ -123,10 +122,11 @@ class SemiSupervisedTextClassificationJsonReader(TextClassificationJsonReader):
     def _reservoir_sampling(self, file_: TextIOWrapper):
         """
         A function for reading random lines from file without loading the 
-        entire file into memory. For more information, see here: https://en.wikipedia.org/wiki/Reservoir_sampling
+        entire file into memory.
 
+        For more information, see here: https://en.wikipedia.org/wiki/Reservoir_sampling
 
-        To create a k-length sample of a file, without knowing the length of the file in advance, 
+        To create a k-length sample of a file, without knowing the length of the file in advance,
         we first create a reservoir array containing the first k elements of the file. Then, we further
         iterate through the file, replacing elements in the reservoir with decreasing probability.
 
@@ -162,10 +162,11 @@ class SemiSupervisedTextClassificationJsonReader(TextClassificationJsonReader):
 
     @overrides
     def _read(self, file_path):
-        with open(cached_path(file_path), "r") as data_file, UnlabeledData(self._additional_unlabeled_data_path) as unlabeled_data_file:
+        with open(cached_path(file_path), "r") as data_file, \
+             UnlabeledData(self._additional_unlabeled_data_path) as unlabeled_data:
             if self._sample is not None:
                 data_file = self._reservoir_sampling(data_file)
-            file_iterator = itertools.chain(data_file, unlabeled_data_file)
+            file_iterator = itertools.chain(data_file, unlabeled_data._file)
             for line in file_iterator:
                 items = json.loads(line)
                 text = items["text"]
