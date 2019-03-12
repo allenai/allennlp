@@ -174,13 +174,13 @@ class BeamSearchTest(AllenNlpTestCase):
         # next beams will result in 2 new beams that are invalid, in that have probability of 0.
         # The beam search should warn us of this.
         initial_predictions = torch.LongTensor([self.end_index-1, self.end_index-1])
-        with pytest.warns(RuntimeWarning):
+        with pytest.warns(RuntimeWarning, match="Infinite log probabilities"):
             self.beam_search.search(initial_predictions, {}, take_step)
 
     def test_empty_sequences(self):
-        initial_predictions = torch.tensor([self.end_index-1, self.end_index-1])  # pylint: disable=not-callable
+        initial_predictions = torch.LongTensor([self.end_index-1, self.end_index-1])
         beam_search = BeamSearch(self.end_index, beam_size=1)
-        with pytest.warns(RuntimeWarning):
+        with pytest.warns(RuntimeWarning, match="Empty sequences predicted"):
             predictions, log_probs = beam_search.search(initial_predictions, {}, take_step)
         # predictions hould have shape `(batch_size, beam_size, max_predicted_length)`.
         assert list(predictions.size()) == [2, 1, 1]

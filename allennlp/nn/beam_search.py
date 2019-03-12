@@ -52,7 +52,7 @@ class BeamSearch:
         Notes
         -----
         If your step function returns ``-inf`` for some log probabilities
-        (like if your using a masked log-softmax) then some of the "best"
+        (like if you're using a masked log-softmax) then some of the "best"
         sequences returned may also have ``-inf`` log probability. Specifically
         this happens when the beam size is smaller than the number of actions
         with finite log probability (non-zero probability) returned by the step function.
