@@ -999,7 +999,7 @@ def main():
             # first JSON line is header
             f.write(json.dumps({'header':preproc_header}) + '\n')
             for instance in preprocessed_instances:
-                f.write(json.dumps(instance, sort_keys=True, indent=4 ) + '\n')
+                f.write(json.dumps(instance) + '\n')
 
         with zipfile.ZipFile(local_filename, "w", zipfile.ZIP_DEFLATED) as zip_file:
             zip_file.write(local_filename.replace('.zip',''))
