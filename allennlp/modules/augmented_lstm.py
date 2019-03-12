@@ -125,7 +125,7 @@ class AugmentedLstm(torch.nn.Module):
         output_accumulator = sequence_tensor.new_zeros(batch_size, total_timesteps, self.hidden_size)
         if initial_state is None:
             full_batch_previous_memory = sequence_tensor.new_zeros(batch_size, self.hidden_size)
-            full_batch_previous_state = sequence_tensor.data.new_zeros(batch_size, self.hidden_size)
+            full_batch_previous_state = sequence_tensor.new_zeros(batch_size, self.hidden_size)
         else:
             full_batch_previous_state = initial_state[0].squeeze(0)
             full_batch_previous_memory = initial_state[1].squeeze(0)
@@ -195,8 +195,8 @@ class AugmentedLstm(torch.nn.Module):
             # We've been doing computation with less than the full batch, so here we create a new
             # variable for the the whole batch at this timestep and insert the result for the
             # relevant elements of the batch into it.
-            full_batch_previous_memory = full_batch_previous_memory.data.clone()
-            full_batch_previous_state = full_batch_previous_state.data.clone()
+            full_batch_previous_memory = full_batch_previous_memory.clone()
+            full_batch_previous_state = full_batch_previous_state.clone()
             full_batch_previous_memory[0:current_length_index + 1] = memory
             full_batch_previous_state[0:current_length_index + 1] = timestep_output
             output_accumulator[0:current_length_index + 1, index] = timestep_output
