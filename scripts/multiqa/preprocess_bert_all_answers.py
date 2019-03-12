@@ -745,6 +745,7 @@ class MultiQAPreprocess():
                 qa_metadata['dataset'] = self._header['dataset']
                 qa_metadata["context_id"] = context['id']
                 qa_metadata["question_id"] = qa['id']
+                qa_metadata["all_answers"] = qa['answers']
                 question_text = qa["question"].strip().replace("\n", "")
                 answer_texts_list = []
                 for answer in qa['answers']:
@@ -842,6 +843,7 @@ def main():
     parse.add_argument("--require_answer_in_question", type=str2bool, default=False, help="Add only instance that contain an answer")
     parse.add_argument("-n", "--n_processes", type=int, default=1, help="Number of processes to use")
     parse.add_argument("--sample_size", type=int, default=-1, help="enable sampling")
+    parse.add_argument("--MRQA_style", type=str2bool, default=False, help="MRQA output style")
     parse.add_argument("--sort_by_question", type=str2bool, default=False, help="sort by question token length to optimize GPU zero padding.")
     parse.add_argument("--DEBUG", type=str2bool, default=False, help="sort by question token length to optimize GPU zero padding.")
     parse.add_argument("--START_OFFSET", type=int, default=None, help="start from a certain input index")
@@ -960,8 +962,35 @@ def main():
                     header['qas_used_fraction'] * (all_qa_count - skipped_qa_count) / all_qa_count}
     preproc_header.update(header)
 
-    if args.output_file.startswith('s3://'):
+    if args.MRQA_style:
+        # changing the header...
+        preproc_header = {'header':{'dataset':header['dataset'],
+                                    'split': header['split_type'],
+                                    '#examples':len(preprocessed_instances)}}
+        mrqa_foramt_instances = []
+        for instance in preprocessed_instances:
+            answers = instance['metadata']['all_answers']
 
+            ## NOTE!! we are supporting only 1 answer here ...
+            new_answers = {"answer":answers[0]["answer"],"aliases":[]}
+
+            for alias in answers[0]['aliases']:
+                for answer_in_tokens in instance['answers']:
+                    if alias['text'] == answer_in_tokens[2]:
+                        new_answers["aliases"].append({"answer_starts":instance['tokens'][answer_in_tokens[0]][1], \
+                                                           "text":alias['text']})
+
+            mrqa_instance = {'id':instance['metadata']['question_id'],
+                             "context": instance['text'],
+                             "question": instance['question_text'],
+                             "answer": new_answers}
+
+            mrqa_foramt_instances.append(mrqa_instance)
+
+        preprocessed_instances = mrqa_foramt_instances
+
+
+    if args.output_file.startswith('s3://'):
         output_file = args.output_file.replace('s3://','')
         bucketName = output_file.split('/')[0]
         outPutname = '/'.join(output_file.split('/')[1:])
@@ -970,7 +999,7 @@ def main():
             # first JSON line is header
             f.write(json.dumps({'header':preproc_header}) + '\n')
             for instance in preprocessed_instances:
-                f.write(json.dumps(instance) + '\n')
+                f.write(json.dumps(instance, sort_keys=True, indent=4 ) + '\n')
 
         with zipfile.ZipFile(local_filename, "w", zipfile.ZIP_DEFLATED) as zip_file:
             zip_file.write(local_filename.replace('.zip',''))
