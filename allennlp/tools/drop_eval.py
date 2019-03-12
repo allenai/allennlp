@@ -73,7 +73,7 @@ def _answer_to_bags(answer: Union[str, List[str], Tuple[str, ...]]) -> Tuple[Set
 def _align_bags(predicted: List[Set[str]], gold: List[Set[str]]) -> List[float]:
     """
     Takes gold and predicted answer sets and first finds a greedy 1-1 alignment 
-    between them and 
+    between them and gets maximum metric values over all the answers
     """
     f1_scores = []
     for gold_index, gold_item in enumerate(gold):
@@ -245,8 +245,8 @@ if __name__ == "__main__":
                         help='location of the gold file')
     parser.add_argument("--prediction_path",
                         type=str,
-                        default="sample_predictions.json",
                         required=False,
+                        default="sample_predictions.json",
                         help='location of the prediction file')
     args = parser.parse_args()
     evaluate_prediction_file(args.prediction_path, args.gold_path)
