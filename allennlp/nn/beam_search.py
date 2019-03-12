@@ -56,7 +56,7 @@ class BeamSearch:
         sequences returned may also have ``-inf`` log probability. Specifically
         this happens when the beam size is smaller than the number of actions
         with finite log probability (non-zero probability) returned by the step function.
-        Therefore if your using a mask you may want to check the results ``search``
+        Therefore if you're using a mask you may want to check the results from ``search``
         and potentially discard sequences with non-finite log probability.
 
         Parameters
