@@ -71,24 +71,31 @@ def _answer_to_bags(answer: Union[str, List[str], Tuple[str, ...]]) -> Tuple[Set
 
 
 def _align_bags(predicted: List[Set[str]], gold: List[Set[str]]) -> List[float]:
+    """
+    Takes gold and predicted answer sets and first finds a greedy 1-1 alignment 
+    between them and 
+    """
     f1_scores = []
     for gold_index, gold_item in enumerate(gold):
         max_f1 = 0.0
         max_index = None
         best_alignment: Tuple[Set[str], Set[str]] = (set(), set())
-        for pred_index, pred_item in enumerate(predicted):
-            current_f1 = _compute_f1(pred_item, gold_item)
-            if current_f1 >= max_f1:
-                best_alignment = (gold_item, pred_item)
-                max_f1 = current_f1
-                max_index = pred_index
-        match_flag = _match_numbers_if_present(*best_alignment)
+        if len(predicted) != 0:
+            for pred_index, pred_item in enumerate(predicted):
+                current_f1 = _compute_f1(pred_item, gold_item)
+                if current_f1 >= max_f1:
+                    best_alignment = (gold_item, pred_item)
+                    max_f1 = current_f1
+                    max_index = pred_index
+            match_flag = _match_numbers_if_present(*best_alignment)
+            gold[gold_index] = set()
+            predicted[max_index] = set()
+        else:
+            match_flag = False        
         if match_flag:
             f1_scores.append(max_f1)
         else:
-            f1_scores.append(0.0)
-        gold[gold_index] = set()
-        predicted[max_index] = set()
+            f1_scores.append(0.0)  
     return f1_scores
 
 
@@ -145,11 +152,11 @@ def answer_json_to_strings(answer: Dict[str, Any]) -> Tuple[Tuple[str, ...], str
     Takes an answer JSON blob from the DROP data release and converts it into strings used for
     evaluation.
     """
-    if answer["number"]:
+    if "number" in answer and answer["number"]:
         return tuple([str(answer["number"])]), "number"
-    elif answer["spans"]:
+    elif "spans" in answer and answer["spans"]:
         return tuple(answer["spans"]), "span" if len(answer["spans"]) == 1 else "spans"
-    else:
+    elif "date" in answer:
         return tuple(["{0} {1} {2}".format(answer["date"]["day"],
                                            answer["date"]["month"],
                                            answer["date"]["year"])]), "date"
@@ -163,9 +170,8 @@ def evaluate_json(annotations: Dict[str, Any], predicted_answers: Dict[str, Any]
     gold annotations, but must be top-level keys in the predicted answers).
 
     The ``annotations`` are assumed to have the format of the dev set in the DROP data release.
-    The ``predicted_answers`` JSON must be a dictionary keyed by query id, where the value is
-    either a JSON dictionary with an "answer" key, or just a string (or list of strings) that is
-    the answer.
+    The ``predicted_answers`` JSON must be a dictionary keyed by query id, where the value is a string 
+    (or list of strings) that is the answer.
     """
     instance_exact_match = []
     instance_f1 = []
@@ -179,21 +185,23 @@ def evaluate_json(annotations: Dict[str, Any], predicted_answers: Dict[str, Any]
             max_f1_score = 0.0
             max_type = None
             if query_id in predicted_answers:
-                if "answer" in predicted_answers[query_id]:
-                    predicted = predicted_answers[query_id]["answer"]
-                else:
-                    predicted = predicted_answers[query_id]
+                predicted = predicted_answers[query_id]
+                candidate_answers = [qa_pair["answer"]]
+                if "validated_answers" in qa_pair and len(qa_pair["validated_answers"]) > 0:
+                    candidate_answers += qa_pair["validated_answers"]
+                for answer in candidate_answers:
+                    gold_answer, gold_type = answer_json_to_strings(answer)
+                    em_score, f1_score = get_metrics(predicted, gold_answer)
+                    if gold_answer[0].strip() != "":
+                        max_em_score = max(max_em_score, em_score)
+                        max_f1_score = max(max_f1_score, f1_score)
+                        if max_em_score == em_score or max_f1_score == f1_score:
+                            max_type = gold_type
             else:
                 print("Missing prediction for question: {}".format(query_id))
-                predicted = None
-            for answer in [qa_pair["answer"]] + qa_pair["validated_answers"]:
-                gold_answer, gold_type = answer_json_to_strings(answer)
-                em_score, f1_score = get_metrics(predicted, gold_answer)
-                if gold_answer[0].strip() != "":
-                    max_em_score = max(max_em_score, em_score)
-                    max_f1_score = max(max_f1_score, f1_score)
-                    if max_em_score == em_score or max_f1_score == f1_score:
-                        max_type = gold_type
+                _, max_type = answer_json_to_strings(qa_pair["answer"])
+                max_em_score = 0.0
+                max_f1_score = 0.0
             instance_exact_match.append(max_em_score)
             instance_f1.append(max_f1_score)
             type_to_em[max_type].append(max_em_score)
@@ -237,8 +245,11 @@ if __name__ == "__main__":
                         help='location of the gold file')
     parser.add_argument("--prediction_path",
                         type=str,
-                        required=False,
                         default="sample_predictions.json",
+                        required=False,
                         help='location of the prediction file')
     args = parser.parse_args()
     evaluate_prediction_file(args.prediction_path, args.gold_path)
+
+
+

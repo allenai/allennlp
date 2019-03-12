@@ -1,6 +1,6 @@
 # pylint: disable=no-self-use,invalid-name
 
-from allennlp.tools.drop_eval import _normalize_answer, get_metrics
+from allennlp.tools.drop_eval import _normalize_answer, get_metrics, evaluate_json
 
 class TestDropEvalNormalize:
     def test_number_parse(self):
@@ -72,3 +72,31 @@ class TestDropEvalGetMetrics:
         # macro-averaging F1 over spans
         assert get_metrics(["ottoman", "Kantakouzenous"],
                            ["ottoman", "army of Kantakouzenous"]) == (0.0, 0.75)
+
+    def test_json_loader(self):
+        annotation = {"pid1": {"passage": "Loren ipsum..",
+                               "qa_pairs": [{"query_id": "qid1", "question": "text1", "answer": {"number": "0"}}]}}
+        prediction = {"qid1": "0"}
+        assert evaluate_json(annotation, prediction) == (1.0, 1.0)
+
+        annotation = {"pid1": {"passage": "Loren ipsum..",
+                               "qa_pairs": [{"query_id": "qid1", "question": "text1", "answer": {"number": "0"}}]}}
+        prediction = {"qid0": "0"}
+        assert evaluate_json(annotation, prediction) == (0.0, 0.0)
+
+        annotation = {"pid1": {"passage": "Loren ipsum..",
+                               "qa_pairs": [{"query_id": "qid1", "question": "text1", "answer": {"number": "0"}}]}}
+        prediction = {"qid1": "10"}
+        assert evaluate_json(annotation, prediction) == (0.0, 0.0)
+
+        annotation = {"pid1": {"passage": "Loren ipsum..",
+                               "qa_pairs": [{"query_id": "qid1", "question": "text1",
+                                             "answer": {"date": {"day": "17", "month":"August", "year":""}}}]}}
+        prediction = {"qid1": "17 August"}
+        assert evaluate_json(annotation, prediction) == (1.0, 1.0)
+
+        annotation = {"pid1": {"passage": "Loren ipsum..",
+                               "qa_pairs": [{"query_id": "qid1", "question": "text1",
+                                             "answer": {"spans": ["span1", "span2"]}}]}}
+        prediction = {"qid1": "span1"}
+        assert evaluate_json(annotation, prediction) == (0.0, 0.5)
