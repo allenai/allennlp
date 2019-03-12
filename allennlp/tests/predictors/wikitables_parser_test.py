@@ -94,7 +94,11 @@ class TestWikiTablesParserPredictor(AllenNlpTestCase):
             assert any(token == initial_token for _, token in choices)
 
         # Should get back beams too
-        beams = result["beams"]
+        beam_snapshots = result["beam_snapshots"]
+        assert len(beam_snapshots) == 1
+        assert 0 in beam_snapshots
+        beams = beam_snapshots[0]
+
         for idx, (beam, action) in enumerate(zip(beams, best_action_sequence)):
             # First beam should have 1-element sequences, etc...
             assert all(len(sequence) == idx + 1 for _, sequence in beam)

@@ -102,11 +102,19 @@ class WikiTablesParserPredictor(Predictor):
                 for pa in results["predicted_actions"]
         ]
 
-        results["beams"] = [
-                [(score, [index_to_rule[idx] for idx in sequence])
-                 for score, sequence in beam]
-                for beam in interactive_beam_search.beams
-        ]
+        results["beam_snapshots"] = {
+                # For each batch_index, we get a list of beam snapshots
+                batch_index: [
+                        # Each beam_snapshots consists of a list of timesteps,
+                        # each of which is a list of pairs (score, sequence).
+                        # The sequence is the *indices* of the rules, which we
+                        # want to convert to the string representations.
+                        [(score, [index_to_rule[idx] for idx in sequence])
+                         for score, sequence in timestep_snapshot]
+                        for timestep_snapshot in beam_snapshots
+                ]
+                for batch_index, beam_snapshots in interactive_beam_search.beam_snapshots.items()
+        }
 
         # Restore original beam search
         self._model._beam_search = original_beam_search

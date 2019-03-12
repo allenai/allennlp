@@ -35,6 +35,14 @@ class BeamSearch(FromParams, Generic[StateType]):
         to a number smaller than `beam_size` may give better results, as it can introduce
         more diversity into the search. See Freitag and Al-Onaizan 2017,
         "Beam Search Strategies for Neural Machine Translation".
+    initial_sequence : ``torch.Tensor``, optional (default = None)
+        If you provide a (sequence_length,) tensor here, the beam search will be constrained
+        to only sequences that begin with the provided initial_sequence.
+    keep_beam_details : ``bool``, optional (default = False)
+        If True, we store snapshots of each beam in an instance variable ``beam_snapshots``,
+        which is a dict: { batch_index -> [timestep0_histories, ..., timestepk_histories] },
+        where a "timestep history" is just a pair (score, action_history) that was considered
+        at that timestep.
     """
     def __init__(self,
                  beam_size: int,
@@ -53,9 +61,11 @@ class BeamSearch(FromParams, Generic[StateType]):
             self._allowed_transitions = None
 
         if keep_beam_details:
-            self.beams: List[List[Tuple[float, List[int]]]] = []
+            # mapping from batch_index to a list (timesteps) of lists (beam elements)
+            # of pairs (score, action_history)
+            self.beam_snapshots: Dict[int, List[List[Tuple[float, List[int]]]]] = {}
         else:
-            self.beams = None
+            self.beam_snapshots = None
 
     def constrained_to(self, initial_sequence: torch.Tensor, keep_beam_details: bool = True) -> 'BeamSearch':
         """
@@ -95,8 +105,8 @@ class BeamSearch(FromParams, Generic[StateType]):
         step_num = 1
 
         # Erase stored beams, if we're tracking them.
-        if self.beams is not None:
-            self.beams.clear()
+        if self.beam_snapshots is not None:
+            self.beam_snapshots = defaultdict(list)
 
         while states and step_num <= num_steps:
             next_states: Dict[int, List[StateType]] = defaultdict(list)
@@ -135,22 +145,25 @@ class BeamSearch(FromParams, Generic[StateType]):
                 # ones here, without an additional sort.
                 states.extend(batch_states[:self._beam_size])
 
-                if self.beams is not None:
+                if self.beam_snapshots is not None:
                     # Add to beams
-                    self.beams.append([(state.score[0].item(), state.action_history[0])
-                                       for state in batch_states])
+                    self.beam_snapshots[batch_index].append(
+                            [(state.score[0].item(), state.action_history[0])
+                             for state in batch_states]
+                    )
             step_num += 1
 
         # Add finished states to the stored beams as well.
-        if self.beams is not None:
-            for state in finished_states[0]:
-                score = state.score[0].item()
-                action_history = state.action_history[0]
+        if self.beam_snapshots is not None:
+            for batch_index, states in finished_states.items():
+                for state in states:
+                    score = state.score[0].item()
+                    action_history = state.action_history[0]
 
-                while len(self.beams) < len(action_history):
-                    self.beams.append([])
+                    while len(self.beam_snapshots[batch_index]) < len(action_history):
+                        self.beam_snapshots[batch_index].append([])
 
-                self.beams[len(action_history) - 1].append((score, action_history))
+                    self.beam_snapshots[batch_index][len(action_history) - 1].append((score, action_history))
 
         best_states: Dict[int, List[StateType]] = {}
         for batch_index, batch_states in finished_states.items():

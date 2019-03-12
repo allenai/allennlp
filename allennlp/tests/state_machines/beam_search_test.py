@@ -85,7 +85,13 @@ class TestBeamSearch(AllenNlpTestCase):
         # Check that beams are correct
         best_action_sequence = best_states[0][0].action_history[0]
 
-        for i, beam in enumerate(beam_search.beams):
+        beam_snapshots = beam_search.beam_snapshots
+        assert len(beam_snapshots) == 1
+
+        beam_snapshots0 = beam_snapshots.get(0)
+        assert beam_snapshots0 is not None
+
+        for i, beam in enumerate(beam_snapshots0):
             assert all(len(sequence) == i + 1 for _, sequence in beam)
             if i < len(best_action_sequence):
                 assert any(sequence[-1] == best_action_sequence[i] for _, sequence in beam)
