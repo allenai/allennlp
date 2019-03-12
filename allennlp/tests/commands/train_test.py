@@ -110,10 +110,7 @@ class TestTrain(AllenNlpTestCase):
                 }
         })
 
-        with pytest.raises(ConfigurationError,
-                           match="Experiment specified a GPU but none is available;"
-                                 " if you want to run on CPU use the override"
-                                 " 'trainer.cuda_device=-1' in the json config file."):
+        with pytest.raises(ConfigurationError, match="Experiment specified"):
             train_model(params, serialization_dir=os.path.join(self.TEST_DIR, 'test_train_model'))
 
     def test_train_with_test_set(self):

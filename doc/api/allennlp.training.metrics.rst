@@ -13,6 +13,7 @@ allennlp.training.metrics
 * :ref:`CategoricalAccuracy<categorical-accuracy>`
 * :ref:`ConllCorefScores<conll-coref-scores>`
 * :ref:`Covariance<covariance>`
+* :ref:`DropEmAndF1<drop_em_and_f1>`
 * :ref:`Entropy<entropy>`
 * :ref:`EvalbBracketingScorer<evalb>`
 * :ref:`F1Measure<f1-measure>`
@@ -69,6 +70,12 @@ allennlp.training.metrics
 
 .. _covariance:
 .. automodule:: allennlp.training.metrics.covariance
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. _drop_em_and_f1:
+.. automodule:: allennlp.training.metrics.drop_em_and_f1
    :members:
    :undoc-members:
    :show-inheritance:
