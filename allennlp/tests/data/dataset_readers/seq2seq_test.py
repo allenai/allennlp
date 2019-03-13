@@ -1,6 +1,6 @@
 # pylint: disable=no-self-use,invalid-name
-import pytest
 import tempfile
+import pytest
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import ensure_list
@@ -60,8 +60,8 @@ class TestSeq2SeqDatasetReader:
                                                                     "should", "get", "copied", "@end@"]
 
     @pytest.mark.parametrize("line", (
-        ("a\n"),
-        ("a\tb\tc\n"),
+            ("a\n"),
+            ("a\tb\tc\n"),
     ))
     def test_invalid_line_format(self, line):
         with tempfile.NamedTemporaryFile("w") as fp_tmp:
@@ -69,11 +69,11 @@ class TestSeq2SeqDatasetReader:
             fp_tmp.flush()
             reader = Seq2SeqDatasetReader()
             with pytest.raises(ConfigurationError):
-                instances = reader.read(fp_tmp.name)
+                reader.read(fp_tmp.name)
 
     @pytest.mark.parametrize("line", (
-        ("a b\tc d\n"),
-        ('"a b"\t"c d"\n'),
+            ("a b\tc d\n"),
+            ('"a b"\t"c d"\n'),
     ))
     def test_correct_quote_handling(self, line):
         with tempfile.NamedTemporaryFile("w") as fp_tmp:
