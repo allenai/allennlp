@@ -132,6 +132,7 @@ setup(name='allennlp',
           'parsimonious==0.8.0',
           'ftfy',
           'sqlparse==0.2.4',
+          'word2number==1.1',
           'pytorch-pretrained-bert>=0.6.0',
       ],
       entry_points={

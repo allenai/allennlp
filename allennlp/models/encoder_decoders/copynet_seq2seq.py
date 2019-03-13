@@ -12,7 +12,7 @@ from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
 from allennlp.modules.token_embedders import Embedding
-from allennlp.nn import util
+from allennlp.nn import InitializerApplicator, util
 from allennlp.training.metrics import Metric, BLEU
 from allennlp.nn.beam_search import BeamSearch
 
@@ -69,6 +69,8 @@ class CopyNetSeq2Seq(Model):
         as input. This metric must accept two arguments when called, both
         of type `List[List[str]]`. The first is a predicted sequence for each item
         in the batch and the second is a gold sequence for each item in the batch.
+    initializer : ``InitializerApplicator``, optional
+        An initialization strategy for the model weights.
     """
 
     def __init__(self,
@@ -83,7 +85,8 @@ class CopyNetSeq2Seq(Model):
                  source_namespace: str = "source_tokens",
                  target_namespace: str = "target_tokens",
                  tensor_based_metric: Metric = None,
-                 token_based_metric: Metric = None) -> None:
+                 token_based_metric: Metric = None,
+                 initializer: InitializerApplicator = InitializerApplicator()) -> None:
         super().__init__(vocab)
         self._source_namespace = source_namespace
         self._target_namespace = target_namespace
@@ -142,6 +145,8 @@ class CopyNetSeq2Seq(Model):
 
         # At prediction time, we'll use a beam search to find the best target sequence.
         self._beam_search = BeamSearch(self._end_index, max_steps=max_decoding_steps, beam_size=beam_size)
+
+        initializer(self)
 
     @overrides
     def forward(self,  # type: ignore
