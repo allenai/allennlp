@@ -1,9 +1,11 @@
 # pylint: disable=no-self-use,invalid-name
 import pytest
+import tempfile
 
-from allennlp.data.dataset_readers import Seq2SeqDatasetReader
+from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import ensure_list
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.data.dataset_readers import Seq2SeqDatasetReader
 
 class TestSeq2SeqDatasetReader:
     @pytest.mark.parametrize("lazy", (True, False))
@@ -56,3 +58,15 @@ class TestSeq2SeqDatasetReader:
                                                                     "should", "get", "copied", "@end@"]
         assert [t.text for t in fields["target_tokens"].tokens] == ["@start@", "all", "these", "sentences",
                                                                     "should", "get", "copied", "@end@"]
+
+    @pytest.mark.parametrize("line", (
+        ("a\n"),
+        ("a\tb\tc\n"),
+    ))
+    def test_invalid_line_format(self, line):
+        with tempfile.NamedTemporaryFile("w") as fp_tmp:
+            fp_tmp.write(line)
+            fp_tmp.flush()
+            reader = Seq2SeqDatasetReader()
+            with pytest.raises(ConfigurationError):
+                instances = reader.read(fp_tmp.name)
