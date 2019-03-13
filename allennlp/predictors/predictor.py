@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Iterator
 import json
 from contextlib import contextmanager
 
@@ -56,10 +56,12 @@ class Predictor(Registrable):
         return self.predict_instance(instance)
 
     @contextmanager
-    def capture_model_internals(self) -> dict:
+    def capture_model_internals(self) -> Iterator[dict]:
         """
         Context manager that captures the internal-module outputs of
         this predictor's model. The idea is that you could use it as follows:
+
+        .. code-block:: python
 
             with predictor.capture_model_internals() as internals:
                 outputs = predictor.predict_json(inputs)
