@@ -1,3 +1,4 @@
+import csv
 from typing import Dict
 import logging
 
@@ -64,16 +65,10 @@ class Seq2SeqDatasetReader(DatasetReader):
     def _read(self, file_path):
         with open(cached_path(file_path), "r") as data_file:
             logger.info("Reading instances from lines in file at: %s", file_path)
-            for line_num, line in enumerate(data_file):
-                line = line.strip("\n")
-
-                if not line:
-                    continue
-
-                line_parts = line.split('\t')
-                if len(line_parts) != 2:
-                    raise ConfigurationError("Invalid line format: %s (line number %d)" % (line, line_num + 1))
-                source_sequence, target_sequence = line_parts
+            for line_num, row in enumerate(csv.reader(data_file, delimiter="\t")):
+                if len(row) != 2:
+                    raise ConfigurationError("Invalid line format: %s (line number %d)" % (row, line_num + 1))
+                source_sequence, target_sequence = row
                 yield self.text_to_instance(source_sequence, target_sequence)
 
     @overrides
