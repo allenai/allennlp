@@ -70,3 +70,19 @@ class TestSeq2SeqDatasetReader:
             reader = Seq2SeqDatasetReader()
             with pytest.raises(ConfigurationError):
                 instances = reader.read(fp_tmp.name)
+
+    @pytest.mark.parametrize("line", (
+        ("a b\tc d\n"),
+        ('"a b"\t"c d"\n'),
+    ))
+    def test_correct_quote_handling(self, line):
+        with tempfile.NamedTemporaryFile("w") as fp_tmp:
+            fp_tmp.write(line)
+            fp_tmp.flush()
+            reader = Seq2SeqDatasetReader()
+            instances = reader.read(fp_tmp.name)
+            instances = ensure_list(instances)
+            assert len(instances) == 1
+            fields = instances[0].fields
+            assert [t.text for t in fields["source_tokens"].tokens] == ["@start@", "a", "b", "@end@"]
+            assert [t.text for t in fields["target_tokens"].tokens] == ["@start@", "c", "d", "@end@"]
