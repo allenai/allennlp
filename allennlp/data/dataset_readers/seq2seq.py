@@ -46,6 +46,8 @@ class Seq2SeqDatasetReader(DatasetReader):
         ``source_token_indexers``.
     source_add_start_token : bool, (optional, default=True)
         Whether or not to add `START_SYMBOL` to the beginning of the source sequence.
+    delimiter : str, (optional, default="\t")
+        Set delimiter for tsv/csv file.
     """
     def __init__(self,
                  source_tokenizer: Tokenizer = None,
@@ -53,6 +55,7 @@ class Seq2SeqDatasetReader(DatasetReader):
                  source_token_indexers: Dict[str, TokenIndexer] = None,
                  target_token_indexers: Dict[str, TokenIndexer] = None,
                  source_add_start_token: bool = True,
+                 delimiter: str = "\t",
                  lazy: bool = False) -> None:
         super().__init__(lazy)
         self._source_tokenizer = source_tokenizer or WordTokenizer()
@@ -60,12 +63,13 @@ class Seq2SeqDatasetReader(DatasetReader):
         self._source_token_indexers = source_token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._target_token_indexers = target_token_indexers or self._source_token_indexers
         self._source_add_start_token = source_add_start_token
+        self._delimiter = delimiter
 
     @overrides
     def _read(self, file_path):
         with open(cached_path(file_path), "r") as data_file:
             logger.info("Reading instances from lines in file at: %s", file_path)
-            for line_num, row in enumerate(csv.reader(data_file, delimiter="\t")):
+            for line_num, row in enumerate(csv.reader(data_file, delimiter=self._delimiter)):
                 if len(row) != 2:
                     raise ConfigurationError("Invalid line format: %s (line number %d)" % (row, line_num + 1))
                 source_sequence, target_sequence = row
