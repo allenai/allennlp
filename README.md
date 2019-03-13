@@ -125,11 +125,10 @@ You can also install AllenNLP by cloning our git repository:
 Create a Python 3.6 virtual environment, and install the necessary requirements by running:
 
   ```bash
-  INSTALL_TEST_REQUIREMENTS=true scripts/install_requirements.sh
+  scripts/install_requirements.sh
   ```
 
-Changing the flag to false if you don't want to be able to run
-tests. Once the requirements have been installed, run:
+Once the requirements have been installed, run:
 
   ```bash
   pip install --editable .
