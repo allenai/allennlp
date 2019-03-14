@@ -161,11 +161,11 @@ class SpacyWordSplitter(WordSplitter):
         else:
             return [Token(token.text,
                           token.idx,
-                          token.lemma,
-                          token.pos,
-                          token.tag,
-                          token.dep,
-                          token.ent_type) for token in tokens]
+                          token.lemma_,
+                          token.pos_,
+                          token.tag_,
+                          token.dep_,
+                          token.ent_type_) for token in tokens]
 
     @overrides
     def batch_split_words(self, sentences: List[str]) -> List[List[Token]]:
