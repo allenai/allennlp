@@ -94,7 +94,7 @@ class NumericallyAugmentedQaNet(Model):
                                                            hidden_dims=[modeling_out_dim, 1],
                                                            num_layers=2)
 
-        if "question_span_extraction" in answering_abilities:
+        if "question_span_extraction" in self.answering_abilities:
             self._question_span_extraction_index = self.answering_abilities.index("question_span_extraction")
             self._question_span_start_predictor = FeedForward(modeling_out_dim * 2,
                                                               activations=[Activation.by_name('relu')(),
@@ -107,7 +107,7 @@ class NumericallyAugmentedQaNet(Model):
                                                             hidden_dims=[modeling_out_dim, 1],
                                                             num_layers=2)
 
-        if "addition_subtraction" in answering_abilities:
+        if "addition_subtraction" in self.answering_abilities:
             self._addition_subtraction_index = self.answering_abilities.index("addition_subtraction")
             self._number_sign_predictor = FeedForward(modeling_out_dim * 3,
                                                       activations=[Activation.by_name('relu')(),
@@ -115,7 +115,7 @@ class NumericallyAugmentedQaNet(Model):
                                                       hidden_dims=[modeling_out_dim, 3],
                                                       num_layers=2)
 
-        if "counting" in answering_abilities:
+        if "counting" in self.answering_abilities:
             self._counting_index = self.answering_abilities.index("counting")
             self._count_number_predictor = FeedForward(modeling_out_dim,
                                                        activations=[Activation.by_name('relu')(),
