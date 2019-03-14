@@ -233,7 +233,7 @@ class TestEncoderBase(AllenNlpTestCase):
         # and transpose them into the right shape.
         encoder_base = _EncoderBase(stateful=False).cuda()
         initial_states = (torch.randn(5, 6, 7).cuda().permute(1, 0, 2),
-                            torch.randn(5, 6, 7).cuda().permute(1, 0, 2))
+                          torch.randn(5, 6, 7).cuda().permute(1, 0, 2))
         assert not initial_states[0].is_contiguous() and not initial_states[1].is_contiguous()
         assert initial_states[0].size() == torch.Size([6, 5, 7])
         assert initial_states[1].size() == torch.Size([6, 5, 7])
@@ -241,9 +241,9 @@ class TestEncoderBase(AllenNlpTestCase):
         # We'll pass them through an LSTM encoder and a vanilla RNN encoder to make sure it works
         # whether the initial states are a tuple of tensors or just a single tensor.
         encoder_base.sort_and_run_forward(self.lstm.cuda(), self.tensor.cuda(), self.mask.cuda(),
-                                            initial_states)
+                                          initial_states)
         encoder_base.sort_and_run_forward(self.rnn.cuda(), self.tensor.cuda(), self.mask.cuda(),
-                                            initial_states[0])
+                                          initial_states[0])
 
         # Case 2: Encoder is stateful
 
