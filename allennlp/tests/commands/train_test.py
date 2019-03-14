@@ -1,4 +1,4 @@
-# pylint: disable=invalid-name,no-self-use
+# pylint: disable=invalid-name,no-self-use,protected-access
 import argparse
 from typing import Iterable
 import os
@@ -13,6 +13,8 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.commands.train import Train, train_model, train_model_from_args
 from allennlp.data import DatasetReader, Instance
+from allennlp.data.vocabulary import Vocabulary
+from allennlp.models import load_archive
 
 SEQUENCE_TAGGING_DATA_PATH = str(AllenNlpTestCase.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv')
 
@@ -108,10 +110,7 @@ class TestTrain(AllenNlpTestCase):
                 }
         })
 
-        with pytest.raises(ConfigurationError,
-                           message="Experiment specified a GPU but none is available;"
-                                   " if you want to run on CPU use the override"
-                                   " 'trainer.cuda_device=-1' in the json config file."):
+        with pytest.raises(ConfigurationError, match="Experiment specified"):
             train_model(params, serialization_dir=os.path.join(self.TEST_DIR, 'test_train_model'))
 
     def test_train_with_test_set(self):
@@ -300,3 +299,47 @@ class TestTrainOnLazyDataset(AllenNlpTestCase):
         shutil.rmtree(serialization_dir, ignore_errors=True)
         with pytest.raises(Exception) as _:
             model = train_model(params, serialization_dir=serialization_dir)
+
+    def test_vocab_extended_model_with_transferred_embedder_is_loadable(self):
+        # Train on snli2 but load text_field_embedder and vocab from the model
+        # trained on snli (snli2 has one extra token over snli).
+        # Make sure (1) embedding extension happens implicitly.
+        #           (2) model dumped in such a way is loadable.
+        # (1) corresponds to model.extend_embedder_vocab() in trainer.py
+        # (2) corresponds to model.extend_embedder_vocab() in model.py
+        config_file = str(self.FIXTURES_ROOT / 'decomposable_attention' / 'experiment.json')
+        model_archive = str(self.FIXTURES_ROOT / 'decomposable_attention' / 'serialization' / 'model.tar.gz')
+        serialization_dir = str(self.TEST_DIR / 'train')
+
+        params = Params.from_file(config_file).as_dict()
+
+        snli_vocab_path = str(self.FIXTURES_ROOT / 'data' / 'snli_vocab')
+        params["train_data_path"] = str(self.FIXTURES_ROOT / 'data' / 'snli2.jsonl')
+        params["model"]["text_field_embedder"] = {
+                "_pretrained": {
+                        "archive_file": model_archive,
+                        "module_path": "_text_field_embedder"
+                }
+        }
+        params["vocabulary"] = {
+                "directory_path": snli_vocab_path,
+                "extend": True
+        }
+
+        original_vocab = Vocabulary.from_files(snli_vocab_path)
+
+        original_model = load_archive(model_archive).model
+        original_weight = original_model._text_field_embedder.token_embedder_tokens.weight
+
+        transferred_model = train_model(Params(params), serialization_dir=serialization_dir)
+
+        assert original_vocab.get_vocab_size("tokens") == 24
+        assert transferred_model.vocab.get_vocab_size("tokens") == 25
+
+        extended_weight = transferred_model._text_field_embedder.token_embedder_tokens.weight
+        assert original_weight.shape[0] + 1 == extended_weight.shape[0] == 25
+        assert torch.all(original_weight == extended_weight[:24, :])
+
+        # Check that such a dumped model is loadable
+        # self.serialization_dir = self.TEST_DIR / 'fine_tune'
+        load_archive(str(self.TEST_DIR / 'train' / "model.tar.gz"))

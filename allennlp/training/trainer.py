@@ -23,6 +23,7 @@ from allennlp.models.model import Model
 from allennlp.nn import util as nn_util
 from allennlp.training.checkpointer import Checkpointer
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
+from allennlp.training.momentum_schedulers import MomentumScheduler
 from allennlp.training.metric_tracker import MetricTracker
 from allennlp.training.optimizers import Optimizer
 from allennlp.training.tensorboard_writer import TensorboardWriter
@@ -49,11 +50,13 @@ class Trainer(TrainerBase):
                  serialization_dir: Optional[str] = None,
                  num_serialized_models_to_keep: int = 20,
                  keep_serialized_model_every_num_seconds: int = None,
+                 checkpointer: Checkpointer = None,
                  model_save_interval: float = None,
                  cuda_device: Union[int, List] = -1,
                  grad_norm: Optional[float] = None,
                  grad_clipping: Optional[float] = None,
                  learning_rate_scheduler: Optional[LearningRateScheduler] = None,
+                 momentum_scheduler: Optional[MomentumScheduler] = None,
                  summary_interval: int = 100,
                  histogram_interval: int = None,
                  should_log_parameter_statistics: bool = True,
@@ -113,6 +116,11 @@ class Trainer(TrainerBase):
             To do so, specify keep_serialized_model_every_num_seconds as the number of seconds
             between permanently saved checkpoints.  Note that this option is only used if
             num_serialized_models_to_keep is not None, otherwise all checkpoints are kept.
+        checkpointer : ``Checkpointer``, optional (default=None)
+            An instance of class Checkpointer to use instead of the default. If a checkpointer is specified,
+            the arguments num_serialized_models_to_keep and keep_serialized_model_every_num_seconds should
+            not be specified. The caller is responsible for initializing the checkpointer so that it is
+            consistent with serialization_dir.
         model_save_interval : ``float``, optional (default=None)
             If provided, then serialize models every ``model_save_interval``
             seconds within single epochs.  In all cases, models are also saved
@@ -125,13 +133,16 @@ class Trainer(TrainerBase):
             If provided, gradients will be clipped `during the backward pass` to have an (absolute)
             maximum of this value.  If you are getting ``NaNs`` in your gradients during training
             that are not solved by using ``grad_norm``, you may need this.
-        learning_rate_scheduler : ``PytorchLRScheduler``, optional, (default = None)
-            A Pytorch learning rate scheduler. The learning rate will be decayed with respect to
-            this schedule at the end of each epoch. If you use
-            :class:`torch.optim.lr_scheduler.ReduceLROnPlateau`, this will use the ``validation_metric``
-            provided to determine if learning has plateaued.  To support updating the learning
-            rate on every batch, this can optionally implement ``step_batch(batch_num_total)`` which
-            updates the learning rate given the batch number.
+        learning_rate_scheduler : ``LearningRateScheduler``, optional (default = None)
+            If specified, the learning rate will be decayed with respect to
+            this schedule at the end of each epoch (or batch, if the scheduler implements
+            the ``step_batch`` method). If you use :class:`torch.optim.lr_scheduler.ReduceLROnPlateau`,
+            this will use the ``validation_metric`` provided to determine if learning has plateaued.
+            To support updating the learning rate on every batch, this can optionally implement
+            ``step_batch(batch_num_total)`` which updates the learning rate given the batch number.
+        momentum_scheduler : ``MomentumScheduler``, optional (default = None)
+            If specified, the momentum will be updated at the end of each batch or epoch
+            according to the schedule.
         summary_interval: ``int``, optional, (default = 100)
             Number of batches between logging scalars to tensorboard
         histogram_interval : ``int``, optional, (default = ``None``)
@@ -191,9 +202,19 @@ class Trainer(TrainerBase):
 
         self._num_epochs = num_epochs
 
-        self._checkpointer = Checkpointer(serialization_dir,
-                                          keep_serialized_model_every_num_seconds,
-                                          num_serialized_models_to_keep)
+        if checkpointer is not None:
+            # We can't easily check if these parameters were passed in, so check against their default values.
+            # We don't check against serialization_dir since it is also used by the parent class.
+            if num_serialized_models_to_keep != 20 or \
+                    keep_serialized_model_every_num_seconds is not None:
+                raise ConfigurationError(
+                        "When passing a custom Checkpointer, you may not also pass in separate checkpointer "
+                        "args 'num_serialized_models_to_keep' or 'keep_serialized_model_every_num_seconds'.")
+            self._checkpointer = checkpointer
+        else:
+            self._checkpointer = Checkpointer(serialization_dir,
+                                              keep_serialized_model_every_num_seconds,
+                                              num_serialized_models_to_keep)
 
         self._model_save_interval = model_save_interval
 
@@ -201,6 +222,7 @@ class Trainer(TrainerBase):
         self._grad_clipping = grad_clipping
 
         self._learning_rate_scheduler = learning_rate_scheduler
+        self._momentum_scheduler = momentum_scheduler
         self._moving_average = moving_average
 
         # We keep the total batch number as an instance variable because it
@@ -308,10 +330,12 @@ class Trainer(TrainerBase):
 
             batch_grad_norm = self.rescale_gradients()
 
-            # This does nothing if batch_num_total is None or you are using an
-            # LRScheduler which doesn't update per batch.
+            # This does nothing if batch_num_total is None or you are using a
+            # scheduler which doesn't update per batch.
             if self._learning_rate_scheduler:
                 self._learning_rate_scheduler.step_batch(batch_num_total)
+            if self._momentum_scheduler:
+                self._momentum_scheduler.step_batch(batch_num_total)
 
             if self._tensorboard.should_log_histograms_this_batch():
                 # get the magnitude of parameter updates for logging
@@ -372,7 +396,6 @@ class Trainer(TrainerBase):
         for (gpu_num, memory) in gpu_usage:
             metrics['gpu_'+str(gpu_num)+'_memory_MB'] = memory
         return metrics
-
 
     def _validation_loss(self) -> Tuple[float, int]:
         """
@@ -478,7 +501,10 @@ class Trainer(TrainerBase):
                         logger.info("Ran out of patience.  Stopping training.")
                         break
 
-            self._tensorboard.log_metrics(train_metrics, val_metrics=val_metrics, log_to_console=True)
+            self._tensorboard.log_metrics(train_metrics,
+                                          val_metrics=val_metrics,
+                                          log_to_console=True,
+                                          epoch=epoch + 1)  # +1 because tensorboard doesn't like 0
 
             # Create overall metrics dict
             training_elapsed_time = time.time() - training_start_time
@@ -504,10 +530,12 @@ class Trainer(TrainerBase):
             if self._serialization_dir:
                 dump_metrics(os.path.join(self._serialization_dir, f'metrics_epoch_{epoch}.json'), metrics)
 
+            # The Scheduler API is agnostic to whether your schedule requires a validation metric -
+            # if it doesn't, the validation metric passed here is ignored.
             if self._learning_rate_scheduler:
-                # The LRScheduler API is agnostic to whether your schedule requires a validation metric -
-                # if it doesn't, the validation metric passed here is ignored.
                 self._learning_rate_scheduler.step(this_epoch_val_metric, epoch)
+            if self._momentum_scheduler:
+                self._momentum_scheduler.step(this_epoch_val_metric, epoch)
 
             self._save_checkpoint(epoch)
 
@@ -553,11 +581,11 @@ class Trainer(TrainerBase):
                 "batch_num_total": self._batch_num_total
         }
 
-        # If we have a learning rate scheduler, we should persist that too.
+        # If we have a learning rate or momentum scheduler, we should persist them too.
         if self._learning_rate_scheduler is not None:
-            training_states["learning_rate_scheduler"] = (
-                    self._learning_rate_scheduler.state_dict()
-            )
+            training_states["learning_rate_scheduler"] = self._learning_rate_scheduler.state_dict()
+        if self._momentum_scheduler is not None:
+            training_states["momentum_scheduler"] = self._momentum_scheduler.state_dict()
 
         self._checkpointer.save_checkpoint(
                 model_state=self.model.state_dict(),
@@ -597,6 +625,8 @@ class Trainer(TrainerBase):
         self.optimizer.load_state_dict(training_state["optimizer"])
         if self._learning_rate_scheduler is not None and "learning_rate_scheduler" in training_state:
             self._learning_rate_scheduler.load_state_dict(training_state["learning_rate_scheduler"])
+        if self._momentum_scheduler is not None and "momentum_scheduler" in training_state:
+            self._momentum_scheduler.load_state_dict(training_state["momentum_scheduler"])
         training_util.move_optimizer_to_cuda(self.optimizer)
 
         # Currently the ``training_state`` contains a serialized ``MetricTracker``.
@@ -623,7 +653,6 @@ class Trainer(TrainerBase):
 
         return epoch_to_return
 
-
     # Requires custom from_params.
     @classmethod
     def from_params(cls,  # type: ignore
@@ -643,6 +672,7 @@ class Trainer(TrainerBase):
         grad_norm = params.pop_float("grad_norm", None)
         grad_clipping = params.pop_float("grad_clipping", None)
         lr_scheduler_params = params.pop("learning_rate_scheduler", None)
+        momentum_scheduler_params = params.pop("momentum_scheduler", None)
 
         if isinstance(cuda_device, list):
             model_device = cuda_device[0]
@@ -661,13 +691,30 @@ class Trainer(TrainerBase):
             moving_average = None
 
         if lr_scheduler_params:
-            scheduler = LearningRateScheduler.from_params(optimizer, lr_scheduler_params)
+            lr_scheduler = LearningRateScheduler.from_params(optimizer, lr_scheduler_params)
         else:
-            scheduler = None
+            lr_scheduler = None
+        if momentum_scheduler_params:
+            momentum_scheduler = MomentumScheduler.from_params(optimizer, momentum_scheduler_params)
+        else:
+            momentum_scheduler = None
 
-        num_serialized_models_to_keep = params.pop_int("num_serialized_models_to_keep", 20)
-        keep_serialized_model_every_num_seconds = params.pop_int(
-                "keep_serialized_model_every_num_seconds", None)
+        if 'checkpointer' in params:
+            if 'keep_serialized_model_every_num_seconds' in params or \
+                    'num_serialized_models_to_keep' in params:
+                raise ConfigurationError(
+                        "Checkpointer may be initialized either from the 'checkpointer' key or from the "
+                        "keys 'num_serialized_models_to_keep' and 'keep_serialized_model_every_num_seconds'"
+                        " but the passed config uses both methods.")
+            checkpointer = Checkpointer.from_params(params.pop("checkpointer"))
+        else:
+            num_serialized_models_to_keep = params.pop_int("num_serialized_models_to_keep", 20)
+            keep_serialized_model_every_num_seconds = params.pop_int(
+                    "keep_serialized_model_every_num_seconds", None)
+            checkpointer = Checkpointer(
+                    serialization_dir=serialization_dir,
+                    num_serialized_models_to_keep=num_serialized_models_to_keep,
+                    keep_serialized_model_every_num_seconds=keep_serialized_model_every_num_seconds)
         model_save_interval = params.pop_float("model_save_interval", None)
         summary_interval = params.pop_int("summary_interval", 100)
         histogram_interval = params.pop_int("histogram_interval", None)
@@ -687,9 +734,9 @@ class Trainer(TrainerBase):
                    cuda_device=cuda_device,
                    grad_norm=grad_norm,
                    grad_clipping=grad_clipping,
-                   learning_rate_scheduler=scheduler,
-                   num_serialized_models_to_keep=num_serialized_models_to_keep,
-                   keep_serialized_model_every_num_seconds=keep_serialized_model_every_num_seconds,
+                   learning_rate_scheduler=lr_scheduler,
+                   momentum_scheduler=momentum_scheduler,
+                   checkpointer=checkpointer,
                    model_save_interval=model_save_interval,
                    summary_interval=summary_interval,
                    histogram_interval=histogram_interval,
@@ -740,6 +787,10 @@ class TrainerPieces(NamedTuple):
             )
 
         model = Model.from_params(vocab=vocab, params=params.pop('model'))
+
+        # If vocab extension is ON for training, embedding extension should also be
+        # done. If vocab and embeddings are already in sync, it would be a no-op.
+        model.extend_embedder_vocab()
 
         # Initializing the model can have side effect of expanding the vocabulary
         vocab.save_to_files(os.path.join(serialization_dir, "vocabulary"))

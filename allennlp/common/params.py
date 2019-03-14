@@ -122,6 +122,26 @@ def with_fallback(preferred: Dict[str, Any], fallback: Dict[str, Any]) -> Dict[s
     """
     Deep merge two dicts, preferring values from `preferred`.
     """
+    def merge(preferred_value: Any, fallback_value: Any) -> Any:
+        if isinstance(preferred_value, dict) and isinstance(fallback_value, dict):
+            return with_fallback(preferred_value, fallback_value)
+        elif isinstance(preferred_value, dict) and isinstance(fallback_value, list):
+            # treat preferred_value as a sparse list, where each key is an index to be overridden
+            merged_list = fallback_value
+            for elem_key, preferred_element in preferred_value.items():
+                try:
+                    index = int(elem_key)
+                    merged_list[index] = merge(preferred_element, fallback_value[index])
+                except ValueError:
+                    raise ConfigurationError("could not merge dicts - the preferred dict contains "
+                                             f"invalid keys (key {elem_key} is not a valid list index)")
+                except IndexError:
+                    raise ConfigurationError("could not merge dicts - the preferred dict contains "
+                                             f"invalid keys (key {index} is out of bounds)")
+            return merged_list
+        else:
+            return copy.deepcopy(preferred_value)
+
     preferred_keys = set(preferred.keys())
     fallback_keys = set(fallback.keys())
     common_keys = preferred_keys & fallback_keys
@@ -137,16 +157,13 @@ def with_fallback(preferred: Dict[str, Any], fallback: Dict[str, Any]) -> Dict[s
         preferred_value = preferred[key]
         fallback_value = fallback[key]
 
-        if isinstance(preferred_value, dict) and isinstance(fallback_value, dict):
-            merged[key] = with_fallback(preferred_value, fallback_value)
-        else:
-            merged[key] = copy.deepcopy(preferred_value)
-
+        merged[key] = merge(preferred_value, fallback_value)
     return merged
 
 def parse_overrides(serialized_overrides: str) -> Dict[str, Any]:
     if serialized_overrides:
         ext_vars = _environment_variables()
+
         return unflatten(json.loads(evaluate_snippet("", serialized_overrides, ext_vars=ext_vars)))
     else:
         return {}
@@ -410,7 +427,7 @@ class Params(MutableMapping):
                           loading_from_archive=self.loading_from_archive,
                           files_to_archive=self.files_to_archive)
         if isinstance(value, list):
-            value = [self._check_is_dict(new_history + '.list', v) for v in value]
+            value = [self._check_is_dict(f"{new_history}.{i}", v) for i, v in enumerate(value)]
         return value
 
     @staticmethod
