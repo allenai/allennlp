@@ -109,10 +109,11 @@ Once you have [installed Docker](https://docs.docker.com/engine/installation/)
 just run the following command to get an environment that will run on either the cpu or gpu.
 
    ```bash
-   docker run -it -p 8000:8000 --rm allennlp/allennlp:v0.8.2
+   mkdir -p $HOME/.allennlp/
+   docker run --rm -v $HOME/.allennlp:/root/.allennlp allennlp/allennlp:v0.8.2
    ```
 
-You can test the Docker environment with `docker run -it -p 8000:8000 --rm allennlp/allennlp:v0.8.2 test-install`.
+You can test the Docker environment with `docker run --rm -v $HOME/.allennlp:/root/.allennlp allennlp/allennlp:v0.8.2 test-install`.
 
 ### Installing from source
 
@@ -125,11 +126,10 @@ You can also install AllenNLP by cloning our git repository:
 Create a Python 3.6 virtual environment, and install the necessary requirements by running:
 
   ```bash
-  INSTALL_TEST_REQUIREMENTS=true scripts/install_requirements.sh
+  scripts/install_requirements.sh
   ```
 
-Changing the flag to false if you don't want to be able to run
-tests. Once the requirements have been installed, run:
+Once the requirements have been installed, run:
 
   ```bash
   pip install --editable .
