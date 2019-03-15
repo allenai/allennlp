@@ -65,7 +65,7 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
             output_dim += embedder.get_output_dim()
         return output_dim
 
-    def forward(self, text_field_input: Dict[str, torch.Tensor], num_wrapping_dims: int = 0) -> torch.Tensor:
+    def forward(self, text_field_input: Dict[str, torch.Tensor], num_wrapping_dims: int = 0, **kwargs) -> torch.Tensor:
         embedder_keys = self._token_embedders.keys()
         input_keys = text_field_input.keys()
 
@@ -107,20 +107,20 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
                     # If `indexer_key` is None, we map it to `None`.
                     tensors = [(text_field_input[indexer_key] if indexer_key is not None else None)
                                for indexer_key in indexer_map]
-                    token_vectors = embedder(*tensors)
+                    token_vectors = embedder(*tensors, **kwargs)
                 elif isinstance(indexer_map, dict):
                     tensors = {
                             name: text_field_input[argument]
                             for name, argument in indexer_map.items()
                     }
-                    token_vectors = embedder(**tensors)
+                    token_vectors = embedder(**tensors, **kwargs)
                 else:
                     raise NotImplementedError
             else:
                 # otherwise, we assume the mapping between indexers and embedders
                 # is bijective and just use the key directly.
                 tensors = [text_field_input[key]]
-                token_vectors = embedder(*tensors)
+                token_vectors = embedder(*tensors, **kwargs)
             embedded_representations.append(token_vectors)
         return torch.cat(embedded_representations, dim=-1)
 
