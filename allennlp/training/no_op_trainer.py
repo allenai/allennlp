@@ -10,6 +10,11 @@ from allennlp.training.trainer_base import TrainerBase
 @TrainerBase.register("no_op")
 class NoOpTrainer(TrainerBase):
     def __init__(self, serialization_dir: str, model: Model) -> None:
+        """
+        A trivial trainer to assist in making model archives for models that do not actually
+        require training. For instance, a majority class baseline.
+        """
+
         super().__init__(serialization_dir, -1)
         self.model = model
 
