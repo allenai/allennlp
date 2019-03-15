@@ -409,7 +409,7 @@ class WikiTablesDatasetReader(DatasetReader):
 
     @staticmethod
     def _read_tokens_from_json_list(json_list) -> List[Token]:
-        return [Token(text=json_obj['text'], lemma=json_obj['lemma']) for json_obj in json_list]
+        return [Token(text=json_obj['text'], lemma_=json_obj['lemma']) for json_obj in json_list]
 
     @staticmethod
     def _should_keep_logical_form(logical_form: str) -> bool:

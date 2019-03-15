@@ -6,6 +6,11 @@ allennlp.data.dataset_readers.reading_comprehension
    :undoc-members:
    :show-inheritance:
 
+.. automodule:: allennlp.data.dataset_readers.reading_comprehension.drop
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 .. automodule:: allennlp.data.dataset_readers.reading_comprehension.squad
    :members:
    :undoc-members:
@@ -20,7 +25,7 @@ allennlp.data.dataset_readers.reading_comprehension
    :members:
    :undoc-members:
    :show-inheritance:
-   
+
 .. automodule:: allennlp.data.dataset_readers.reading_comprehension.qangaroo
    :members:
    :undoc-members:
