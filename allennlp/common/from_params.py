@@ -254,7 +254,7 @@ class FromParams:
         from allennlp.common.registrable import Registrable  # import here to avoid circular imports
 
         logger.info(f"instantiating class {cls} from params {getattr(params, 'params', params)} "
-                    f"and extras {extras}")
+                    f"and extras {set(extras.keys())}")
 
         if params is None:
             return None
