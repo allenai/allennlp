@@ -15,11 +15,11 @@ class ArrayField(Field[numpy.ndarray]):
     """
     def __init__(self,
                  array: numpy.ndarray,
-                 dtype: numpy.dtype = numpy.float32,
-                 padding_value: int = 0) -> None:
+                 padding_value: int = 0,
+                 dtype: numpy.dtype = numpy.float32) -> None:
         self.array = array
-        self.dtype = dtype
         self.padding_value = padding_value
+        self.dtype = dtype
 
     @overrides
     def get_padding_lengths(self) -> Dict[str, int]:
@@ -49,8 +49,8 @@ class ArrayField(Field[numpy.ndarray]):
         # Pass the padding_value, so that any outer field, e.g., `ListField[ArrayField]` uses the
         # same padding_value in the padded ArrayFields
         return ArrayField(numpy.array([], dtype=self.dtype),
-                          dtype=self.dtype,
-                          padding_value=self.padding_value)
+                          padding_value=self.padding_value,
+                          dtype=self.dtype)
 
 
     def __str__(self) -> str:
