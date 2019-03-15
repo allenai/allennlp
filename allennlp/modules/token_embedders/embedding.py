@@ -168,7 +168,7 @@ class Embedding(TokenEmbedder):
             In case you know what vocab_namespace should be used for extension, you
             can pass it. If not passed, it will check if vocab_namespace used at the
             time of ``Embedding`` construction is available. If so, this namespace
-            will be used or else default 'tokens' namespace will be used.
+            will be used or else extend_vocab will be a no-op.
         extension_pretrained_file : str, (optional, default=None)
             A file containing pretrained embeddings can be specified here. It can be
             the path to a local file or an URL of a (cached) remote file. Check format
@@ -181,17 +181,23 @@ class Embedding(TokenEmbedder):
         """
         # Caveat: For allennlp v0.8.1 and below, we weren't storing vocab_namespace as an attribute,
         # knowing which is necessary at time of embedding vocab extension. So old archive models are
-        # currently unextendable unless the user used default vocab_namespace 'tokens' for it.
+        # currently unextendable.
 
         vocab_namespace = vocab_namespace or self._vocab_namespace
         if not vocab_namespace:
-            vocab_namespace = "tokens"
-            logging.warning("No vocab_namespace provided to Embedder.extend_vocab. Defaulting to 'tokens'.")
+            # It's not safe to default to "tokens" or any other namespace.
+            logging.info("Loading a model trained before embedding extension was implemented; "
+                         "pass an explicit vocab namespace if you want to extend the vocabulary.")
+            return
 
         extended_num_embeddings = extended_vocab.get_vocab_size(vocab_namespace)
-        if extended_num_embeddings <= self.num_embeddings:
+        if extended_num_embeddings == self.num_embeddings:
             # It's already been extended. No need to initialize / read pretrained file in first place (no-op)
             return
+
+        if extended_num_embeddings < self.num_embeddings:
+            raise ConfigurationError(f"Size of namespace, {vocab_namespace} for extended_vocab is smaller than "
+                                     f"embedding. You likely passed incorrect vocab or namespace for extension.")
 
         # Case 1: user passed extension_pretrained_file and it's available.
         if extension_pretrained_file and is_url_or_existing_file(extension_pretrained_file):
@@ -264,7 +270,9 @@ class Embedding(TokenEmbedder):
         """
         # pylint: disable=arguments-differ
         num_embeddings = params.pop_int('num_embeddings', None)
-        vocab_namespace = params.pop("vocab_namespace", "tokens")
+        # If num_embeddings is present, set default namespace to None so that extend_vocab
+        # call doesn't misinterpret that some namespace was originally used.
+        vocab_namespace = params.pop("vocab_namespace", None if num_embeddings else "tokens")
         if num_embeddings is None:
             num_embeddings = vocab.get_vocab_size(vocab_namespace)
         embedding_dim = params.pop_int('embedding_dim')
