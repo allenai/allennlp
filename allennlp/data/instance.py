@@ -1,7 +1,23 @@
 from typing import Dict, MutableMapping, Mapping
 
 from allennlp.data.fields.field import DataArray, Field
+from allennlp.data.fields import TextField, ListField, SpanField
 from allennlp.data.vocabulary import Vocabulary
+
+
+def remap_span_indices_after_subword_tokenization(
+        original_span_indices, offsets, num_wordpieces
+    ):
+    """
+    ASSUMED original data has CLS/SEP and then was wordpiece tokenized
+    use_starting_offsets = True for the indexer and the offsets!
+    num_wordpieces = number of total word pieces, including CLS and SEP
+    """
+    end_offsets = [e - 1 for e in offsets[1:]] + [num_wordpieces - 2]
+    new_span_indices = [
+        [offsets[s], end_offsets[e]] for s, e in original_span_indices
+    ]
+    return new_span_indices
 
 
 class Instance(Mapping[str, Field]):
@@ -68,8 +84,34 @@ class Instance(Mapping[str, Field]):
         """
         if not self.indexed:
             self.indexed = True
+            offsets = None
+
             for field in self.fields.values():
                 field.index(vocab)
+
+                if isinstance(field, TextField):
+                    for key in field._indexed_tokens:
+                        if key[-8:] == '-offsets':
+                            if offsets is not None:
+                                raise ValueError
+                            offsets = field._indexed_tokens[key]
+                            key_no_offsets = key[:-8]
+                            num_wordpieces = len(field._indexed_tokens[key_no_offsets])
+
+            if offsets is not None:
+                # some wordpiece indexer -- look for span fields to modify
+                for field in self.fields.values():
+                    if isinstance(field, ListField) and isinstance(field.field_list[0], SpanField):
+                        # need to modify the span fields
+                        old_spans = [
+                            [span.span_start, span.span_end] for span in field.field_list
+                        ]
+                        new_spans = remap_span_indices_after_subword_tokenization(
+                            old_spans, offsets, num_wordpieces
+                        )
+                        for span, (new_start, new_end) in zip(field.field_list, new_spans):
+                            span.span_start = new_start
+                            span.span_end = new_end
 
     def get_padding_lengths(self) -> Dict[str, Dict[str, int]]:
         """
