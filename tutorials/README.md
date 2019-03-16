@@ -32,7 +32,3 @@ Our 2018 EMNLP tutorial is available at https://github.com/allenai/writing-code-
 * [Using pre-trained ELMo representations](how_to/elmo.md)
 * [Using span representations](how_to/span_representations.md)
 
-## Deeper Dives
-
-* [Datasets, Instances, and Fields](notebooks/data_pipeline.ipynb)
-* [Vocabularies](notebooks/vocabulary.ipynb)

@@ -66,12 +66,12 @@ def sanitize(x: Any) -> Any:  # pylint: disable=invalid-name,too-many-return-sta
     elif isinstance(x, dict):
         # Dicts need their values sanitized
         return {key: sanitize(value) for key, value in x.items()}
-    elif isinstance(x, (list, tuple)):
-        # Lists and Tuples need their values sanitized
-        return [sanitize(x_i) for x_i in x]
     elif isinstance(x, (spacy.tokens.Token, allennlp.data.Token)):
         # Tokens get sanitized to just their text.
         return x.text
+    elif isinstance(x, (list, tuple)):
+        # Lists and Tuples need their values sanitized
+        return [sanitize(x_i) for x_i in x]
     elif x is None:
         return "None"
     elif hasattr(x, 'to_json'):
@@ -304,6 +304,11 @@ def import_submodules(package_name: str) -> None:
     classes get loaded and registered.
     """
     importlib.invalidate_caches()
+
+    # For some reason, python doesn't always add this by default to your path, but you pretty much
+    # always want it when using `--include-package`.  And if it's already there, adding it again at
+    # the end won't hurt anything.
+    sys.path.append('.')
 
     # Import at top level
     module = importlib.import_module(package_name)

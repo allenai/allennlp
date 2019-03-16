@@ -38,6 +38,8 @@ from allennlp.modules.seq2seq_encoders.stacked_self_attention import StackedSelf
 from allennlp.modules.seq2seq_encoders.multi_head_self_attention import MultiHeadSelfAttention
 from allennlp.modules.seq2seq_encoders.pass_through_encoder import PassThroughEncoder
 from allennlp.modules.seq2seq_encoders.feedforward_encoder import FeedForwardEncoder
+from allennlp.modules.seq2seq_encoders.qanet_encoder import QaNetEncoder
+
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 

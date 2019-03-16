@@ -60,7 +60,6 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
 
         del self.inputs['words4']
 
-
     def test_forward_concats_resultant_embeddings(self):
         assert self.token_embedder(self.inputs).size() == (1, 4, 10)
 
@@ -120,6 +119,62 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
                 }
         token_embedder(inputs)
 
+    def test_forward_runs_with_non_bijective_mapping_with_null(self):
+        elmo_fixtures_path = self.FIXTURES_ROOT / 'elmo'
+        options_file = str(elmo_fixtures_path / 'options.json')
+        weight_file = str(elmo_fixtures_path / 'lm_weights.hdf5')
+        params = Params({
+                "token_embedders": {
+                        "elmo": {
+                                "type": "elmo_token_embedder",
+                                "options_file": options_file,
+                                "weight_file": weight_file
+                        },
+                },
+                "embedder_to_indexer_map": {
+                        # ignore `word_inputs` in `ElmoTokenEmbedder.forward`
+                        "elmo": ["elmo", None]
+                }
+        })
+        token_embedder = BasicTextFieldEmbedder.from_params(self.vocab, params)
+        inputs = {
+                'elmo': (torch.rand(3, 6, 50) * 15).long(),
+        }
+        token_embedder(inputs)
+
+    def test_forward_runs_with_non_bijective_mapping_with_dict(self):
+        elmo_fixtures_path = self.FIXTURES_ROOT / 'elmo'
+        options_file = str(elmo_fixtures_path / 'options.json')
+        weight_file = str(elmo_fixtures_path / 'lm_weights.hdf5')
+        params = Params({
+                "token_embedders": {
+                        "words": {
+                                "type": "embedding",
+                                "num_embeddings": 20,
+                                "embedding_dim": 2,
+                        },
+                        "elmo": {
+                                "type": "elmo_token_embedder",
+                                "options_file": options_file,
+                                "weight_file": weight_file
+                        },
+                },
+                "embedder_to_indexer_map": {
+                        # pass arguments to `ElmoTokenEmbedder.forward` by dict
+                        "elmo": {
+                                "inputs": "elmo",
+                                "word_inputs": "words"
+                        },
+                        "words": ["words"]
+                }
+        })
+        token_embedder = BasicTextFieldEmbedder.from_params(self.vocab, params)
+        inputs = {
+                'words': (torch.rand(3, 6) * 20).long(),
+                'elmo': (torch.rand(3, 6, 50) * 15).long(),
+        }
+        token_embedder(inputs)
+
     def test_old_from_params_new_from_params(self):
         old_params = Params({
                 "words1": {
@@ -162,44 +217,3 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
         assert old_embedder._token_embedders.keys() == new_embedder._token_embedders.keys()
 
         assert new_embedder(self.inputs).size() == (1, 4, 10)
-
-    def test_extension_by_vocab(self):
-        text_embedder = self.token_embedder
-        vocab = self.vocab
-
-        original_token_embedder_weight_words1 = text_embedder.token_embedder_words1.weight
-        original_token_embedder_weight_words2 = text_embedder.token_embedder_words2.weight
-        original_token_embedder_weight_words3 = text_embedder.token_embedder_words3.weight
-
-        assert tuple(text_embedder.token_embedder_words1.weight.shape) == (6, 2)
-        assert tuple(text_embedder.token_embedder_words2.weight.shape) == (6, 5)
-        assert tuple(text_embedder.token_embedder_words3.weight.shape) == (6, 3)
-
-        extended_inputs = {
-                "words1": torch.LongTensor([[6]]),
-                "words2": torch.LongTensor([[7]]),
-                "words3": torch.LongTensor([[8]])
-                }
-
-        # This should give error for now.
-        with pytest.raises(Exception) as _:
-            text_embedder(extended_inputs)
-
-        counter = {"tokens": {"5": 1, "6": 1, "7": 1}}
-        vocab._extend(counter)
-
-        text_embedder.extend_vocab(vocab)
-
-        assert tuple(text_embedder.token_embedder_words1.weight.shape) == (9, 2)
-        assert tuple(text_embedder.token_embedder_words2.weight.shape) == (9, 5)
-        assert tuple(text_embedder.token_embedder_words3.weight.shape) == (9, 3)
-
-        # This shouldn't give error now.
-        text_embedder(extended_inputs)
-
-        assert torch.all(text_embedder.token_embedder_words1.weight[:6, :]
-                         == original_token_embedder_weight_words1[:6, :])
-        assert torch.all(text_embedder.token_embedder_words2.weight[:6, :]
-                         == original_token_embedder_weight_words2[:6, :])
-        assert torch.all(text_embedder.token_embedder_words3.weight[:6, :]
-                         == original_token_embedder_weight_words3[:6, :])

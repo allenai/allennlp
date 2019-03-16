@@ -1,0 +1,139 @@
+{
+    "dataset_reader": {
+        "type": "drop",
+        "token_indexers": {
+            "tokens": {
+                "type": "single_id",
+                "lowercase_tokens": true
+            },
+            "token_characters": {
+                "type": "characters",
+                "min_padding_length": 5
+            }
+        },
+        "passage_length_limit": 400,
+        "question_length_limit": 50,
+        "skip_when_all_empty": ["passage_span", "question_span", "addition_subtraction", "counting"],
+        "instance_format": "drop"
+    },
+    "validation_dataset_reader": {
+        "type": "drop",
+        "token_indexers": {
+            "tokens": {
+                "type": "single_id",
+                "lowercase_tokens": true
+            },
+            "token_characters": {
+                "type": "characters",
+                "min_padding_length": 2
+            }
+        },
+        "passage_length_limit": 1000,
+        "question_length_limit": 100,
+        "skip_when_all_empty": [],
+        "instance_format": "drop"
+    },
+    "train_data_path": "allennlp/tests/fixtures/data/drop.json",
+    "validation_data_path": "allennlp/tests/fixtures/data/drop.json",
+    "model": {
+        "type": "naqanet",
+        "text_field_embedder": {
+            "token_embedders": {
+                "tokens": {
+                    "type": "embedding",
+                    "embedding_dim": 10,
+                    "trainable": false
+                },
+                "token_characters": {
+                    "type": "character_encoding",
+                    "embedding": {
+                        "embedding_dim": 4
+                    },
+                    "encoder": {
+                        "type": "cnn",
+                        "embedding_dim": 4,
+                        "num_filters": 20,
+                        "ngram_filter_sizes": [
+                            2
+                        ]
+                    }
+                }
+            }
+        },
+        "num_highway_layers": 1,
+        "phrase_layer": {
+            "type": "qanet_encoder",
+            "input_dim": 12,
+            "hidden_dim": 12,
+            "attention_projection_dim": 12,
+            "feedforward_hidden_dim": 12,
+            "num_blocks": 1,
+            "num_convs_per_block": 4,
+            "conv_kernel_size": 7,
+            "num_attention_heads": 6,
+            "dropout_prob": 0.1,
+            "layer_dropout_undecayed_prob": 0.1,
+            "attention_dropout_prob": 0
+        },
+        "matrix_attention_layer": {
+            "type": "linear",
+            "tensor_1_dim": 12,
+            "tensor_2_dim": 12,
+            "combination": "x,y"
+        },
+        "modeling_layer": {
+            "type": "qanet_encoder",
+            "input_dim": 12,
+            "hidden_dim": 12,
+            "attention_projection_dim": 12,
+            "feedforward_hidden_dim": 12,
+            "num_blocks": 1,
+            "num_convs_per_block": 2,
+            "conv_kernel_size": 5,
+            "num_attention_heads": 6,
+            "dropout_prob": 0.1,
+            "layer_dropout_undecayed_prob": 0.1,
+            "attention_dropout_prob": 0
+        },
+        "dropout_prob": 0.1,
+        "regularizer": [
+            [
+                ".*",
+                {
+                    "type": "l2",
+                    "alpha": 1e-07
+                }
+            ]
+        ],
+        "answering_abilities": [
+            "passage_span_extraction",
+            "question_span_extraction",
+            "addition_subtraction",
+            "counting"
+        ]
+    },
+    "iterator": {
+        "type": "basic",
+        "batch_size": 16
+    },
+    "trainer": {
+        "num_epochs": 1,
+        "grad_norm": 5,
+        "patience": 10,
+        "validation_metric": "+f1",
+        "cuda_device": -1,
+        "optimizer": {
+            "type": "adam",
+            "lr": 0.001,
+            "betas": [
+                0.8,
+                0.999
+            ],
+            "eps": 1e-07
+        },
+        "moving_average": {
+            "type": "exponential",
+            "decay": 0.9999
+        }
+    }
+}
