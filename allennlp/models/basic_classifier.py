@@ -25,7 +25,7 @@ class BasicClassifier(Model):
         Used to embed the input text into a ``TextField``
     seq2seq_encoder : ``Seq2SeqEncoder``, optional (default=``None``)
         Optional Seq2Seq encoder layer for the input text.
-    seq2vec_encoder : ``Seq2VecEnoder``
+    seq2vec_encoder : ``Seq2VecEncoder``
         Required Seq2Vec encoder layer. If `seq2seq_encoder` is provided, this encoder
         will pool its output. Otherwise, this encoder will operate directly on the output
         of the `text_field_embedder`.
@@ -105,8 +105,7 @@ class BasicClassifier(Model):
         if self._seq2seq_encoder:
             embedded_text = self._seq2seq_encoder(embedded_text, mask=mask)
 
-        if self._seq2vec_encoder:
-            embedded_text = self._seq2vec_encoder(embedded_text, mask=mask)
+        embedded_text = self._seq2vec_encoder(embedded_text, mask=mask)
 
         if self._dropout:
             embedded_text = self._dropout(embedded_text)
