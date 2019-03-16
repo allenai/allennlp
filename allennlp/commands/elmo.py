@@ -94,7 +94,7 @@ class Elmo(Subcommand):
     def add_subparser(self,
                       name: str,
                       parser: argparse._SubParsersAction,
-                      encoding: str = 'utf-8') -> argparse.ArgumentParser:
+                      encoding: str = None) -> argparse.ArgumentParser:
         # pylint: disable=protected-access
         description = '''Create word vectors using ELMo.'''
         subparser = parser.add_parser(
