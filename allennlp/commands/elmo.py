@@ -91,13 +91,17 @@ class Elmo(Subcommand):
 
     See https://github.com/allenai/allennlp/blob/master/tutorials/how_to/elmo.md for more details.
     """
-    def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
+    def add_subparser(self,
+                      name: str,
+                      parser: argparse._SubParsersAction,
+                      encoding: str = 'utf-8') -> argparse.ArgumentParser:
         # pylint: disable=protected-access
         description = '''Create word vectors using ELMo.'''
         subparser = parser.add_parser(
                 name, description=description, help='Create word vectors using a pretrained ELMo model.')
 
-        subparser.add_argument('input_file', type=argparse.FileType('r'), help='The path to the input file.')
+        subparser.add_argument('input_file', type=argparse.FileType('r', encoding=encoding),
+                               help='The path to the input file.')
         subparser.add_argument('output_file', type=str, help='The path to the output file.')
 
         group = subparser.add_mutually_exclusive_group(required=True)
