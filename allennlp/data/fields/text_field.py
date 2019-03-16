@@ -34,11 +34,13 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
     ``SingleIdTokenIndexer`` produces an array of shape (num_tokens,), while a
     ``TokenCharactersIndexer`` produces an array of shape (num_tokens, num_characters).
     """
+
     def __init__(self, tokens: List[Token], token_indexers: Dict[str, TokenIndexer]) -> None:
         self.tokens = tokens
         self._token_indexers = token_indexers
         self._indexed_tokens: Optional[Dict[str, TokenList]] = None
         self._indexer_name_to_indexed_token: Optional[Dict[str, List[str]]] = None
+        self._token_index_to_indexer_name: Optional[Dict[str, str]] = None
 
         if not all([isinstance(x, (Token, SpacyToken)) for x in tokens]):
             raise ConfigurationError("TextFields must be passed Tokens. "
@@ -64,12 +66,16 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
     def index(self, vocab: Vocabulary):
         token_arrays: Dict[str, TokenList] = {}
         indexer_name_to_indexed_token: Dict[str, List[str]] = {}
+        token_index_to_indexer_name: Dict[str, str] = {}
         for indexer_name, indexer in self._token_indexers.items():
             token_indices = indexer.tokens_to_indices(self.tokens, vocab, indexer_name)
             token_arrays.update(token_indices)
             indexer_name_to_indexed_token[indexer_name] = list(token_indices.keys())
+            for token_index in token_indices.keys():
+                token_index_to_indexer_name[token_index] = indexer_name
         self._indexed_tokens = token_arrays
         self._indexer_name_to_indexed_token = indexer_name_to_indexed_token
+        self._token_index_to_indexer_name = token_index_to_indexer_name
 
     @overrides
     def get_padding_lengths(self) -> Dict[str, int]:
@@ -88,10 +94,10 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
 
         # Each indexer can return a different sequence length, and for indexers that return
         # multiple arrays each can have a different length.  We'll keep track of them here.
-        for indexer_name, indexer in self._token_indexers.items():
+        for token_index, indexer in self._token_indexers.items():
             indexer_lengths = {}
 
-            for indexed_tokens_key in self._indexer_name_to_indexed_token[indexer_name]:
+            for indexed_tokens_key in self._indexer_name_to_indexed_token[token_index]:
                 # This is a list of dicts, one for each token in the field.
                 token_lengths = [indexer.get_padding_lengths(token)
                                  for token in self._indexed_tokens[indexed_tokens_key]]
@@ -109,10 +115,11 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
 
         padding_lengths = {}
         num_tokens = set()
-        for indexer_name, token_list in self._indexed_tokens.items():
+        for token_index, token_list in self._indexed_tokens.items():
+            indexer_name = self._token_index_to_indexer_name[token_index]
             indexer = self._token_indexers[indexer_name]
-            padding_lengths[f"{indexer_name}_length"] = max(len(token_list),
-                                                            indexer.get_token_min_padding_length())
+            padding_lengths[f"{token_index}_length"] = max(len(token_list),
+                                                           indexer.get_token_min_padding_length())
             num_tokens.add(len(token_list))
 
         # We don't actually use this for padding anywhere, but we used to.  We add this key back in

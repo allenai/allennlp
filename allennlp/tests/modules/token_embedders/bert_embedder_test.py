@@ -82,7 +82,7 @@ class TestBertEmbedder(ModelTestCase):
         bert_vectors = self.token_embedder(tokens["bert"], offsets=tokens["bert-offsets"])
         assert list(bert_vectors.shape) == [2, 10, 12]
 
-        ## Now try top_layer_only = True
+        # Now try top_layer_only = True
         tlo_embedder = BertEmbedder(self.bert_model, top_layer_only=True)
         bert_vectors = tlo_embedder(tokens["bert"])
         assert list(bert_vectors.shape) == [2, 14, 12]
@@ -227,7 +227,7 @@ class TestBertEmbedder(ModelTestCase):
         bert_vectors = self.token_embedder(tokens["bert"], offsets=tokens["bert-offsets"])
         assert list(bert_vectors.shape) == [2, 2, 10, 12]
 
-        ## Now try top_layer_only = True
+        # Now try top_layer_only = True
         tlo_embedder = BertEmbedder(self.bert_model, top_layer_only=True)
         bert_vectors = tlo_embedder(tokens["bert"])
         assert list(bert_vectors.shape) == [2, 2, 14, 12]
