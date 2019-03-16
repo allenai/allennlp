@@ -29,7 +29,7 @@ class TokenIndexer(Generic[TokenType], Registrable):
 
     def __init__(self,
                  token_min_padding_length: int = 0) -> None:
-        self._token_min_padding_length = token_min_padding_length
+        self._token_min_padding_length: int = token_min_padding_length
 
     def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):
         """
