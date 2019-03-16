@@ -95,22 +95,24 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
                 # This is a list of dicts, one for each token in the field.
                 token_lengths = [indexer.get_padding_lengths(token)
                                  for token in self._indexed_tokens[indexed_tokens_key]]
-            if not token_lengths:
-                # This is a padding edge case and occurs when we want to pad a ListField of
-                # TextFields. In order to pad the list field, we need to be able to have an
-                # _empty_ TextField, but if this is the case, token_lengths will be an empty
-                # list, so we add the default empty padding dictionary to the list instead.
-                token_lengths = [{}]
-            # Iterate over the keys and find the maximum token length.
-            # It's fine to iterate over the keys of the first token since all tokens have the same keys.
-            for key in token_lengths[0]:
-                indexer_lengths[key] = max(x[key] if key in x else 0 for x in token_lengths)
+                if not token_lengths:
+                    # This is a padding edge case and occurs when we want to pad a ListField of
+                    # TextFields. In order to pad the list field, we need to be able to have an
+                    # _empty_ TextField, but if this is the case, token_lengths will be an empty
+                    # list, so we add the default empty padding dictionary to the list instead.
+                    token_lengths = [{}]
+                # Iterate over the keys and find the maximum token length.
+                # It's fine to iterate over the keys of the first token since all tokens have the same keys.
+                for key in token_lengths[0]:
+                    indexer_lengths[key] = max(x[key] if key in x else 0 for x in token_lengths)
             lengths.append(indexer_lengths)
 
         padding_lengths = {}
         num_tokens = set()
         for indexer_name, token_list in self._indexed_tokens.items():
-            padding_lengths[f"{indexer_name}_length"] = len(token_list)
+            indexer = self._token_indexers[indexer_name]
+            padding_lengths[f"{indexer_name}_length"] = max(len(token_list),
+                                                            indexer.get_token_min_padding_length())
             num_tokens.add(len(token_list))
 
         # We don't actually use this for padding anywhere, but we used to.  We add this key back in

@@ -22,6 +22,7 @@ def _make_bos_eos(
     char_ids[2] = end_of_word_character
     return char_ids
 
+
 class ELMoCharacterMapper:
     """
     Maps individual tokens to sequences of character ids, compatible with ELMo.
@@ -96,11 +97,15 @@ class ELMoTokenCharactersIndexer(TokenIndexer[List[int]]):
         If not None, then provides a mapping of special tokens to character
         ids. When using pre-trained models, then the character id must be
         less then 261, and we recommend using un-used ids (e.g. 1-32).
+    token_min_padding_length : ``int``, optional (default=``0``)
+        See :class:`TokenIndexer`.
     """
     # pylint: disable=no-self-use
     def __init__(self,
                  namespace: str = 'elmo_characters',
-                 tokens_to_add: Dict[str, int] = None) -> None:
+                 tokens_to_add: Dict[str, int] = None,
+                 token_min_padding_length: int = 0) -> None:
+        super().__init__(token_min_padding_length)
         self._namespace = namespace
         self._mapper = ELMoCharacterMapper(tokens_to_add)
 
