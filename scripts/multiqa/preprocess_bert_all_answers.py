@@ -117,7 +117,9 @@ class MultiQAPreprocess():
                  require_answer_in_doc,
                  require_answer_in_question,
                  header,
-                 DEBUG) -> None:
+                 DEBUG,
+                 USE_TFIDF) -> None:
+        self._USE_TFIDF = USE_TFIDF
         self._BERT_format = BERT_format
         self._DEBUG = DEBUG
         self._tokenizer = WordTokenizer()
@@ -690,7 +692,6 @@ class MultiQAPreprocess():
                             part_tokens = [t[0] for t in part['tokens']]
                             occurances = self.any_found(part_tokens, answer_tokens)
                             for instance in occurances:
-                                pass
                                 alias['token_answer_starts'].append((doc_ind, part_num, instance[0], instance[1]-1))
 
     def preprocess(self, contexts):
@@ -718,10 +719,9 @@ class MultiQAPreprocess():
                 tokenized_question = [(t.text, t.idx) for t in tokenized_question]
                 qa['tokenized_question'] = tokenized_question
 
-
-        
-                # scoring each paragraph for the current question 
-                document_scores = self.score_documents(tokenized_question, context['documents'])
+                # scoring each paragraph for the current question
+                if self._USE_TFIDF:
+                    document_scores = self.score_documents(tokenized_question, context['documents'])
                 #merged_documents = self.merge_documents(context['documents'], qa, \
                 #    np.random.permutation(len(context['documents'])))
 
@@ -731,7 +731,11 @@ class MultiQAPreprocess():
                 # merge paragraphs if needed until we reach max amount of documents... 
                 # (merge is done via tf-idf doc ranking)
                 #document_scores = self.score_documents(tokenized_question, merged_documents)
-                merged_documents = self.merge_documents(context['documents'], qa, np.argsort(document_scores))
+                if self._USE_TFIDF:
+                    merged_documents = self.merge_documents(context['documents'], qa, np.argsort(document_scores))
+                else:
+                    merged_documents = self.merge_documents(context['documents'], qa, range(len(context['documents'])))
+
                 if self._DEBUG and len([doc for doc in context['documents'] if doc['num_of_tokens'] > self._max_doc_size]) > 0:
                     raise(ValueError)
 
@@ -782,7 +786,7 @@ class MultiQAPreprocess():
         return preprocessed_instances, all_qa_count, skipped_qa_count
 
 def _preprocess_t(arg):
-    preprocessor = MultiQAPreprocess(*arg[1:10])
+    preprocessor = MultiQAPreprocess(*arg[1:11])
     return preprocessor.preprocess(*arg[0:1])
 
 def flatten_iterable(listoflists: Iterable[Iterable[T]]) -> List[T]:
@@ -847,6 +851,9 @@ def main():
     parse.add_argument("--sort_by_question", type=str2bool, default=False, help="sort by question token length to optimize GPU zero padding.")
     parse.add_argument("--DEBUG", type=str2bool, default=False, help="sort by question token length to optimize GPU zero padding.")
     parse.add_argument("--START_OFFSET", type=int, default=None, help="start from a certain input index")
+    parse.add_argument("--USE_TFIDF", type=str2bool, default=True, help="sort using TF-IDF distance to questions.. ")
+
+
 
     args = parse.parse_args()
     
@@ -893,7 +900,7 @@ def main():
 
     if args.n_processes == 1:
         preprocessor = MultiQAPreprocess(args.BERT_format,args.ndocs, args.docsize, args.titles, args.use_rank, \
-             args.require_answer_in_doc,args.require_answer_in_question, header, args.DEBUG)
+             args.require_answer_in_doc,args.require_answer_in_question, header, args.DEBUG, args.USE_TFIDF)
         preprocessed_instances, all_qa_count, skipped_qa_count = preprocessor.preprocess(Tqdm.tqdm(contexts, ncols=80))
     else:
         preprocessed_instances = []
@@ -906,7 +913,7 @@ def main():
             pbar = Tqdm.tqdm(total=len(chunks), ncols=80,smoothing=0.0)
             for preproc_inst, all_count, s_count in pool.imap_unordered(_preprocess_t,\
                     [[c, args.BERT_format,args.ndocs, args.docsize, args.titles, args.use_rank, \
-                        args.require_answer_in_doc, args.require_answer_in_question, header, args.DEBUG] for c in chunks]):
+                        args.require_answer_in_doc, args.require_answer_in_question, header, args.DEBUG, args.USE_TFIDF] for c in chunks]):
                 preprocessed_instances += preproc_inst 
                 all_qa_count += all_count
                 skipped_qa_count += s_count
