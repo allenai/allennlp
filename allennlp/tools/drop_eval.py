@@ -161,8 +161,7 @@ def answer_json_to_strings(answer: Dict[str, Any]) -> Tuple[Tuple[str, ...], str
                                            answer["date"]["month"],
                                            answer["date"]["year"])]), "date"
     else:
-        print("Answer type not found, should be one of number, spans or date at: {0}".format(json.dumps(answer)))
-        raise ValueError
+        raise ValueError(f"Answer type not found, should be one of number, spans or date at: {json.dumps(answer)}")
 
 
 def evaluate_json(annotations: Dict[str, Any], predicted_answers: Dict[str, Any]) -> Tuple[float, float]:
