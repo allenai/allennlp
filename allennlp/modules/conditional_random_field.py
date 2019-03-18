@@ -140,7 +140,7 @@ def is_transition_allowed(constraint_type: str,
                 to_tag in ('B', 'S') and from_tag in ('E', 'S'),
                 # Can only transition to M-x from B-x, where
                 # x is the same tag.
-                to_tag == 'M' and from_tag == 'B' and from_entity == to_entity,
+                to_tag == 'M' and from_tag in ('B', 'M') and from_entity == to_entity,
                 # Can only transition to E-x from B-x or M-x, where
                 # x is the same tag.
                 to_tag == 'E' and from_tag in ('B', 'M') and from_entity == to_entity,
