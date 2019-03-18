@@ -1,3 +1,9 @@
+// Configuration for the multi-lingual dependency parser model based on:
+// Schuster et al. "Cross-Lingual Alignment of Contextual Word Embeddings, with Applications to Zero-shot Dependency Parsing"
+// https://arxiv.org/abs/1902.09492 (NAACL 2019)
+//
+// To recompute alignemts for ELMo, refer to: https://github.com/TalSchuster/CrossLingualELMo
+// For the dataset, refer to https://github.com/ryanmcd/uni-dep-tb
 {
     "dataset_reader": {
         "type": "universal_dependencies_multilang",
@@ -85,30 +91,30 @@
         }
     },
     "train_data_path": {
-        "de": "/scratch2/bsf_proj/universal/uni-dep-tb/universal_treebanks_v2.0/std/de/de-universal-train.conll",
-        "en": "/scratch2/bsf_proj/universal/uni-dep-tb/universal_treebanks_v2.0/std/en/en-univiersal-train.conll",
-        "fr": "/scratch2/bsf_proj/universal/uni-dep-tb/universal_treebanks_v2.0/std/fr/fr-universal-train.conll",
-        "it": "/scratch2/bsf_proj/universal/uni-dep-tb/universal_treebanks_v2.0/std/it/it-universal-train.conll",
-        "pt": "/scratch2/bsf_proj/universal/uni-dep-tb/universal_treebanks_v2.0/std/pt-br/pt-br-universal-train.conll",
-        "sv": "/scratch2/bsf_proj/universal/uni-dep-tb/universal_treebanks_v2.0/std/sv/sv-universal-train.conll"
+        "de": "UNI_DEP_V2_PATH/universal/uni-dep-tb/universal_treebanks_v2.0/std/de/de-universal-train.conll",
+        "en": "UNI_DEP_V2_PATH/universal/uni-dep-tb/universal_treebanks_v2.0/std/en/en-univiersal-train.conll",
+        "fr": "UNI_DEP_V2_PATH/universal/uni-dep-tb/universal_treebanks_v2.0/std/fr/fr-universal-train.conll",
+        "it": "UNI_DEP_V2_PATH/universal/uni-dep-tb/universal_treebanks_v2.0/std/it/it-universal-train.conll",
+        "pt": "UNI_DEP_V2_PATH/universal/uni-dep-tb/universal_treebanks_v2.0/std/pt-br/pt-br-universal-train.conll",
+        "sv": "UNI_DEP_V2_PATH/universal/uni-dep-tb/universal_treebanks_v2.0/std/sv/sv-universal-train.conll"
     },
     "validation_data_path": {
-        "de": "/scratch2/bsf_proj/universal/uni-dep-tb/universal_treebanks_v2.0/std/de/de-universal-dev.conll",
-        "en": "/scratch2/bsf_proj/universal/uni-dep-tb/universal_treebanks_v2.0/std/en/en-univiersal-dev.conll",
-        "es": "/scratch2/bsf_proj/universal/uni-dep-tb/universal_treebanks_v2.0/std/es/es-universal-dev.conll",
-        "fr": "/scratch2/bsf_proj/universal/uni-dep-tb/universal_treebanks_v2.0/std/fr/fr-universal-dev.conll",
-        "it": "/scratch2/bsf_proj/universal/uni-dep-tb/universal_treebanks_v2.0/std/it/it-universal-dev.conll",
-        "pt": "/scratch2/bsf_proj/universal/uni-dep-tb/universal_treebanks_v2.0/std/pt-br/pt-br-universal-dev.conll",
-        "sv": "/scratch2/bsf_proj/universal/uni-dep-tb/universal_treebanks_v2.0/std/sv/sv-universal-dev.conll"
+        "de": "UNI_DEP_V2_PATH/universal/uni-dep-tb/universal_treebanks_v2.0/std/de/de-universal-dev.conll",
+        "en": "UNI_DEP_V2_PATH/universal/uni-dep-tb/universal_treebanks_v2.0/std/en/en-univiersal-dev.conll",
+        "es": "UNI_DEP_V2_PATH/universal/uni-dep-tb/universal_treebanks_v2.0/std/es/es-universal-dev.conll",
+        "fr": "UNI_DEP_V2_PATH/universal/uni-dep-tb/universal_treebanks_v2.0/std/fr/fr-universal-dev.conll",
+        "it": "UNI_DEP_V2_PATH/universal/uni-dep-tb/universal_treebanks_v2.0/std/it/it-universal-dev.conll",
+        "pt": "UNI_DEP_V2_PATH/universal/uni-dep-tb/universal_treebanks_v2.0/std/pt-br/pt-br-universal-dev.conll",
+        "sv": "UNI_DEP_V2_PATH/universal/uni-dep-tb/universal_treebanks_v2.0/std/sv/sv-universal-dev.conll"
     },
     "test_data_path": {
-        "de": "/scratch2/bsf_proj/universal/uni-dep-tb/universal_treebanks_v2.0/std/de/de-universal-test.conll",
-        "en": "/scratch2/bsf_proj/universal/uni-dep-tb/universal_treebanks_v2.0/std/en/en-univiersal-test.conll",
-        "es": "/scratch2/bsf_proj/universal/uni-dep-tb/universal_treebanks_v2.0/std/es/es-universal-test.conll",
-        "fr": "/scratch2/bsf_proj/universal/uni-dep-tb/universal_treebanks_v2.0/std/fr/fr-universal-test.conll",
-        "it": "/scratch2/bsf_proj/universal/uni-dep-tb/universal_treebanks_v2.0/std/it/it-universal-test.conll",
-        "pt": "/scratch2/bsf_proj/universal/uni-dep-tb/universal_treebanks_v2.0/std/pt-br/pt-br-universal-test.conll",
-        "sv": "/scratch2/bsf_proj/universal/uni-dep-tb/universal_treebanks_v2.0/std/sv/sv-universal-test.conll"
+        "de": "UNI_DEP_V2_PATH/universal/uni-dep-tb/universal_treebanks_v2.0/std/de/de-universal-test.conll",
+        "en": "UNI_DEP_V2_PATH/universal/uni-dep-tb/universal_treebanks_v2.0/std/en/en-univiersal-test.conll",
+        "es": "UNI_DEP_V2_PATH/universal/uni-dep-tb/universal_treebanks_v2.0/std/es/es-universal-test.conll",
+        "fr": "UNI_DEP_V2_PATH/universal/uni-dep-tb/universal_treebanks_v2.0/std/fr/fr-universal-test.conll",
+        "it": "UNI_DEP_V2_PATH/universal/uni-dep-tb/universal_treebanks_v2.0/std/it/it-universal-test.conll",
+        "pt": "UNI_DEP_V2_PATH/universal/uni-dep-tb/universal_treebanks_v2.0/std/pt-br/pt-br-universal-test.conll",
+        "sv": "UNI_DEP_V2_PATH/universal/uni-dep-tb/universal_treebanks_v2.0/std/sv/sv-universal-test.conll"
     },
     "trainer": {
         "cuda_device": 0,
