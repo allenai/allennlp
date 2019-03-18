@@ -67,7 +67,9 @@ class TextClassificationJsonReader(DatasetReader):
                     continue
                 items = json.loads(line)
                 text = items["text"]
-                label = str(items["label"])
+                label = items.get("label", None)
+                if label is not None:
+                    label = str(label)
                 instance = self.text_to_instance(text=text, label=label)
                 if instance is not None:
                     yield instance
