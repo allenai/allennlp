@@ -64,9 +64,9 @@
                     "do_layer_norm": false,
                     "dropout": 0.3,
                     "scalar_mix_parameters": [
-                        -9e20,
+                        -9e10,
                         1,
-                        -9e20
+                        -9e10
                     ],
                     "options_files": {
                         "en": "https://www.dropbox.com/s/ypjuzlf7kj957g3/options262.json?dl=1",
