@@ -699,10 +699,11 @@ class Trainer(TrainerBase):
         parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
 
         # If fp16, need to wrap the optimizer
-        try:
-            from apex.optimizers import FusedAdam
-        except ImportError:
-            raise ImportError("Please install apex from https://www.github.com/nvidia/apex to use fp16 training.")
+        if fp16:
+            try:
+                from apex.optimizers import FusedAdam
+            except ImportError:
+                raise ImportError("Please install apex from https://www.github.com/nvidia/apex to use fp16 training.")
 
         optimizer = Optimizer.from_params(parameters, params.pop("optimizer"))
         if fp16:
