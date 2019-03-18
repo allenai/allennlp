@@ -12,7 +12,7 @@ from allennlp.training import NoOpTrainer
 
 class ConstantModel(Model):
     def forward(self, *inputs) -> Dict[str, torch.Tensor]:
-        return {"class": torch.LongTensor(1)}
+        return {"class": torch.tensor(98)} # pylint: disable=not-callable
 
 class TestNoOpTrainer(AllenNlpTestCase):
     def setUp(self):
