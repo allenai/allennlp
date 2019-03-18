@@ -2,6 +2,7 @@ from collections import deque
 from typing import Iterable, Deque
 import logging
 import random
+from collections import defaultdict
 
 from allennlp.common.util import lazy_groups_of
 from allennlp.data.instance import Instance
@@ -11,11 +12,9 @@ from allennlp.data.dataset import Batch
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 def split_by_lang(instance_list):
-    insts_by_lang = {}
+    insts_by_lang = defaultdict(lambda: [])
     for inst in instance_list:
         inst_lang = inst.fields['metadata'].metadata['lang']
-        if inst_lang not in insts_by_lang:
-            insts_by_lang[inst_lang] = []
         insts_by_lang[inst_lang].append(inst)
 
     return iter(insts_by_lang.values())
