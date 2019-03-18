@@ -30,3 +30,4 @@ from allennlp.models.bimpm import BiMpm
 from allennlp.models.graph_parser import GraphParser
 from allennlp.models.bidirectional_lm import BidirectionalLanguageModel
 from allennlp.models.language_model import LanguageModel
+from allennlp.models.basic_classifier import BasicClassifier
