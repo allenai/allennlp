@@ -852,7 +852,7 @@ def main():
     parse.add_argument("--DEBUG", type=str2bool, default=False, help="sort by question token length to optimize GPU zero padding.")
     parse.add_argument("--START_OFFSET", type=int, default=None, help="start from a certain input index")
     parse.add_argument("--USE_TFIDF", type=str2bool, default=True, help="sort using TF-IDF distance to questions.. ")
-
+    parse.add_argument("--IGNORE_QAS_NOT_PROC", type=str2bool, default=False, help="sort using TF-IDF distance to questions.. ")
 
 
     args = parse.parse_args()
@@ -968,6 +968,9 @@ def main():
               'preproc.final_qas_used_fraction': \
                     header['qas_used_fraction'] * (all_qa_count - skipped_qa_count) / all_qa_count}
     preproc_header.update(header)
+
+    if args.IGNORE_QAS_NOT_PROC:
+        preproc_header['preproc.final_qas_used_fraction'] = 1.0
 
     if args.MRQA_style:
         # changing the header...
