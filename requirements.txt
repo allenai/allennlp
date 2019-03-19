@@ -27,7 +27,6 @@ msgpack>=0.5.6,<0.6.0
 
 # Mainly used for the faster tokenizer.
 spacy>=2.0,<2.2
-en-core-web-sm
 
 # Used by span prediction models.
 numpy
