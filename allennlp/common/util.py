@@ -292,10 +292,11 @@ def get_spacy_model(spacy_model_name: str, pos_tags: bool, parse: bool, ner: boo
             logger.warning(f"Spacy models '{spacy_model_name}' not found.  Downloading and installing.")
             spacy_download(spacy_model_name)
             # NOTE(mattg): The following four lines are a workaround suggested by Ines for spacy
-            # 2.1, which removed the linking that was done in spacy 2.0.  importlib doesn't find
+            # 2.1.0, which removed the linking that was done in spacy 2.0.  importlib doesn't find
             # packages that were installed in the same python session, so the way `spacy_download`
-            # works in 2.1 is broken for this use case.  These four lines can probably be removed
+            # works in 2.1.0 is broken for this use case.  These four lines can probably be removed
             # at some point in the future, once spacy has figured out a better way to handle this.
+            # See https://github.com/explosion/spaCy/issues/3435.
             from spacy.cli import link
             from spacy.util import get_package_path
             package_path = get_package_path(spacy_model_name)
