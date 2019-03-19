@@ -23,7 +23,7 @@ class TestSentenceSplitter(AllenNlpTestCase):
                 "Here's the '3rd' sentence - yes, it is. And yes; this is a fourth sentence?")
         tokens = self.dep_parse_splitter.split_sentences(text)
         expected_tokens = ["This is the first sentence.", "This is the second sentence!",
-                           "Here's the '3rd' sentence -", "yes, it is.", "And yes; this is a fourth sentence?"]
+                           "Here's the '3rd' sentence - yes, it is.", "And yes; this is a fourth sentence?"]
         assert tokens == expected_tokens
 
     def test_batch_rule_based_sentence_splitting(self):
