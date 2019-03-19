@@ -77,11 +77,12 @@ class TestTextClassificationJsonReader():
         instances = reader.read(ag_path)
         instances = ensure_list(instances)
 
-        instance1 = {"tokens": [['Memphis', 'Rout'],
-                                ['Still', 'Stings', 'for', 'No', '.', '14',
-                                 'Louisville', ';', 'Coach', 'Petrino', 'Vows', 'to', 'Have',
+        instance1 = {"tokens": [['Memphis', 'Rout', 'Still', 'Stings', 'for', 'No', '.', '14',
+                                 'Louisville', ';'],
+                                ['Coach', 'Petrino', 'Vows', 'to', 'Have',
                                  'Team', 'Better', 'Prepared', '.'],
-                                ['NASHVILLE', ',', 'Tenn.', 'Nov', '3', ',', '2004', '-',
+                                ['NASHVILLE', ','],
+                                ['Tenn.', 'Nov', '3', ',', '2004', '-',
                                  'Louisville', '#', '39;s', '30-point', 'loss', 'at', 'home',
                                  'to', 'Memphis', 'last', 'season', 'is', 'still', 'a', 'painful',
                                  'memory', 'for', 'the', 'Cardinals', '.']],
