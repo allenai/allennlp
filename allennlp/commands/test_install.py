@@ -69,8 +69,7 @@ def _run_test(args: argparse.Namespace):
             logger.warning("the argument '-k' overwrites '--run-all'.")
     else:
         if args.run_all:
-            # TODO(nfliu): remove this when notebooks have been rewritten as markdown.
-            pytest_k = ['-k', 'not notebooks_test']
+            pytest_k = []
             pytest_m = []
         else:
             pytest_k = ['-k', 'not sniff_test and not notebooks_test']
