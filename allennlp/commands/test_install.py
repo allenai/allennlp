@@ -60,11 +60,9 @@ def _run_test(args: argparse.Namespace):
     test_dir = os.path.join(module_parent, "allennlp")
     logger.info("Running tests at %s", test_dir)
 
-    # set for "k" and for "not run-all"
-    pytest_m = ['-m', 'not java']
-
     if args.k:
         pytest_k = ['-k', args.k]
+        pytest_m = ['-m', 'not java']
         if args.run_all:
             logger.warning("the argument '-k' overwrites '--run-all'.")
     else:
@@ -73,6 +71,7 @@ def _run_test(args: argparse.Namespace):
             pytest_m = []
         else:
             pytest_k = ['-k', 'not sniff_test and not notebooks_test']
+            pytest_m = ['-m', 'not java']
 
     exit_code = pytest.main([test_dir, '--color=no'] + pytest_k + pytest_m)
 
