@@ -65,13 +65,12 @@ def _run_test(args: argparse.Namespace):
         pytest_m = ['-m', 'not java']
         if args.run_all:
             logger.warning("the argument '-k' overwrites '--run-all'.")
+    elif args.run_all:
+        pytest_k = []
+        pytest_m = []
     else:
-        if args.run_all:
-            pytest_k = []
-            pytest_m = []
-        else:
-            pytest_k = ['-k', 'not sniff_test']
-            pytest_m = ['-m', 'not java']
+        pytest_k = ['-k', 'not sniff_test']
+        pytest_m = ['-m', 'not java']
 
     exit_code = pytest.main([test_dir, '--color=no'] + pytest_k + pytest_m)
 
