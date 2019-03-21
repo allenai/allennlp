@@ -70,7 +70,7 @@ def _run_test(args: argparse.Namespace):
             pytest_k = []
             pytest_m = []
         else:
-            pytest_k = ['-k', 'not sniff_test and not notebooks_test']
+            pytest_k = ['-k', 'not sniff_test']
             pytest_m = ['-m', 'not java']
 
     exit_code = pytest.main([test_dir, '--color=no'] + pytest_k + pytest_m)
