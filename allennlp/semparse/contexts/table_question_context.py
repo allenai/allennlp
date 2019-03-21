@@ -1,10 +1,11 @@
 import re
 import csv
-from typing import Dict, List, Optional, Tuple, Union, Set
+from typing import Union, Dict, List, Tuple, Set
 from collections import defaultdict
 
 from unidecode import unidecode
 from allennlp.data.tokenizers import Token
+from allennlp.semparse.domain_languages.domain_language import ExecutionError
 from allennlp.semparse.contexts.knowledge_graph import KnowledgeGraph
 
 # == stop words that will be omitted by ContextGenerator
@@ -76,6 +77,88 @@ NUMBER_WORDS = {
         }
 
 
+class Date:
+    def __init__(self, year: int, month: int, day: int) -> None:
+        self.year = year
+        self.month = month
+        self.day = day
+
+    def __eq__(self, other) -> bool:
+        # Note that the logic below renders equality to be non-transitive. That is,
+        # Date(2018, -1, -1) == Date(2018, 2, 3) and Date(2018, -1, -1) == Date(2018, 4, 5)
+        # but Date(2018, 2, 3) != Date(2018, 4, 5).
+        if not isinstance(other, Date):
+            raise ExecutionError("only compare Dates with Dates")
+        year_is_same = self.year == -1 or other.year == -1 or self.year == other.year
+        month_is_same = self.month == -1 or other.month == -1 or self.month == other.month
+        day_is_same = self.day == -1 or other.day == -1 or self.day == other.day
+        return year_is_same and month_is_same and day_is_same
+
+    def __gt__(self, other) -> bool:
+        # pylint: disable=too-many-return-statements
+        # The logic below is tricky, and is based on some assumptions we make about date comparison.
+        # Year, month or day being -1 means that we do not know its value. In those cases, the
+        # we consider the comparison to be undefined, and return False if all the fields that are
+        # more significant than the field being compared are equal. However, when year is -1 for both
+        # dates being compared, it is safe to assume that the year is not specified because it is
+        # the same. So we make an exception just in that case. That is, we deem the comparison
+        # undefined only when one of the year values is -1, but not both.
+        if not isinstance(other, Date):
+            raise ExecutionError("only compare Dates with Dates")
+        # We're doing an exclusive or below.
+        if (self.year == -1) != (other.year == -1):
+            return False  # comparison undefined
+        # If both years are -1, we proceed.
+        if self.year != other.year:
+            return self.year > other.year
+        # The years are equal and not -1, or both are -1.
+        if self.month == -1 or other.month == -1:
+            return False
+        if self.month != other.month:
+            return self.month > other.month
+        # The months and years are equal and not -1
+        if self.day == -1 or other.day == -1:
+            return False
+        return self.day > other.day
+
+    def __ge__(self, other) -> bool:
+        if not isinstance(other, Date):
+            raise ExecutionError("only compare Dates with Dates")
+        return self > other or self == other
+
+    def __str__(self):
+        if (self.month, self.day) == (-1, -1):
+            # If we have only the year, return just that so that the official evaluator does the
+            # comparison against the target as if both are numbers.
+            return str(self.year)
+        return f"{self.year}-{self.month}-{self.day}"
+
+    def __hash__(self):
+        return hash(str(self))
+
+    @classmethod
+    def make_date(cls, string: str) -> 'Date':
+        year_string, month_string, day_string = string.split("-")
+        year = -1
+        month = -1
+        day = -1
+        try:
+            year = int(year_string)
+        except ValueError:
+            pass
+        try:
+            month = int(month_string)
+        except ValueError:
+            pass
+        try:
+            day = int(day_string)
+        except ValueError:
+            pass
+        return Date(year, month, day)
+
+CellValueType = Union[str, float, Date]  # pylint: disable=invalid-name
+
+
 class TableQuestionContext:
     """
     A barebones implementation similar to
@@ -83,23 +166,26 @@ class TableQuestionContext:
     for extracting entities from a question given a table and type its columns with <string> | <date> | <number>
     """
     def __init__(self,
-                 table_data: List[Dict[str, str]],
-                 column_types: Dict[str, str],
+                 table_data: List[Dict[str, CellValueType]],
+                 column_types: Dict[str, Set[str]],
+                 column_names: Set[str],
                  question_tokens: List[Token]) -> None:
         self.table_data = table_data
-        self.column_types = column_types
+        self.column_types: Set[str] = set()
+        self.column_names = column_names
+        for types in column_types.values():
+            self.column_types.update(types)
         self.question_tokens = question_tokens
-        # Mapping from cell values to the the columns they are under.
-        cell_value_column_mapping: Dict[str, List[str]] = defaultdict(list)
+        # Mapping from strings to the columns they are under.
+        string_column_mapping: Dict[str, List[str]] = defaultdict(list)
         for table_row in table_data:
             for column_name, cell_value in table_row.items():
-                cell_value_column_mapping[cell_value].append(column_name)
+                if "string_column:" in column_name and cell_value is not None:
+                    string_column_mapping[cell_value].append(column_name)
         # We want the object to raise KeyError when checking if a specific string is a cell in the
         # table.
-        self._cell_value_column_mapping = dict(cell_value_column_mapping)
+        self._string_column_mapping = dict(string_column_mapping)
         self._table_knowledge_graph: KnowledgeGraph = None
-
-    MAX_TOKENS_FOR_NUM_CELL = 2
 
     def __eq__(self, other):
         if not isinstance(other, TableQuestionContext):
@@ -115,25 +201,24 @@ class TableQuestionContext:
             # now, and later add number and string entities as needed.
             number_columns = []
             date_columns = []
-            for column, column_type in self.column_types.items():
-                if column_type == "number":
-                    column_name = f"number_column:{column}"
-                    number_columns.append(column_name)
-                elif column_type == "date":
-                    column_name = f"date_column:{column}"
-                    date_columns.append(column_name)
-                else:
-                    column_name = f"string_column:{column}"
+            for typed_column_name in self.table_data[0].keys():
+                if "number_column:" in typed_column_name or "num2_column" in typed_column_name:
+                    number_columns.append(typed_column_name)
+
+                if "date_column:" in typed_column_name:
+                    date_columns.append(typed_column_name)
+
                 # Add column names to entities, with no neighbors yet.
-                entities.add(column_name)
-                neighbors[column_name] = []
-                entity_text[column_name] = column.replace("_", " ")
+                entities.add(typed_column_name)
+                neighbors[typed_column_name] = []
+                entity_text[typed_column_name] = typed_column_name.split(":")[-1].replace("_", " ")
 
             string_entities, numbers = self.get_entities_from_question()
-            for entity, column_name in string_entities:
+            for entity, column_names in string_entities:
                 entities.add(entity)
-                neighbors[entity].append(column_name)
-                neighbors[column_name].append(entity)
+                for column_name in column_names:
+                    neighbors[entity].append(column_name)
+                    neighbors[column_name].append(entity)
                 entity_text[entity] = entity.replace("string:", "").replace("_", " ")
             # For all numbers (except -1), we add all number and date columns as their neighbors.
             for number, _ in numbers:
@@ -164,7 +249,10 @@ class TableQuestionContext:
 
         header = lines[0] # the first line is the header
         index = 1
-        table_data: List[Dict[str, str]] = []
+        # Each row is a mapping from column names to cell data. Cell data is a dict, where keys are
+        # "string", "number", "num2" and "date", and the values are the corresponding values
+        # extracted by CoreNLP.
+        table_data: List[Dict[str, Dict[str, str]]] = []
         while lines[index][0] == '-1':
             # column names start with fb:row.row.
             current_line = lines[index]
@@ -173,8 +261,7 @@ class TableQuestionContext:
             column_name = column_name_sempre.replace('fb:row.row.', '')
             column_index_to_name[column_index] = column_name
             index += 1
-        column_node_type_info = [{'string' : 0, 'number' : 0, 'date' : 0}
-                                 for col in column_index_to_name]
+        column_types: Dict[str, Set[str]] = defaultdict(set)
         last_row_index = -1
         for current_line in lines[1:]:
             row_index = int(current_line[0])
@@ -184,37 +271,54 @@ class TableQuestionContext:
             if row_index != last_row_index:
                 table_data.append({})
             node_info = dict(zip(header, current_line))
-            cell_value = cls.normalize_string(node_info['content'])
+            cell_data: Dict[str, str] = {}
             column_name = column_index_to_name[column_index]
-            table_data[-1][column_name] = cell_value
-            num_tokens = len(node_info['tokens'].split('|'))
             if node_info['date']:
-                column_node_type_info[column_index]['date'] += 1
-            # If cell contains too many tokens, then likely not number
-            elif node_info['number'] and num_tokens <= cls.MAX_TOKENS_FOR_NUM_CELL:
-                column_node_type_info[column_index]['number'] += 1
-            elif node_info['content'] != '—':
-                column_node_type_info[column_index]['string'] += 1
+                column_types[column_name].add("date")
+                cell_data["date"] = node_info["date"]
+
+            if node_info['number']:
+                column_types[column_name].add("number")
+                cell_data["number"] = node_info["number"]
+
+            if node_info['num2']:
+                column_types[column_name].add("num2")
+                cell_data["num2"] = node_info["num2"]
+
+            if node_info['content'] != '—':
+                column_types[column_name].add("string")
+                cell_data['string'] = node_info["content"]
+
+            table_data[-1][column_name] = cell_data
             last_row_index = row_index
-        column_types: Dict[str, str] = {}
-        for column_index, column_name in column_index_to_name.items():
-            current_column_type_info = column_node_type_info[column_index]
-            if current_column_type_info["string"] > 0:
-                # There is at least one value that is neither date nor number.
-                column_types[column_name] = "string"
-            elif current_column_type_info["date"] > current_column_type_info["number"]:
-                column_types[column_name] = "date"
-            else:
-                column_types[column_name] = "number"
-        # Now that we determined the column types, let us prefix the column names with those.
-        table_data_with_column_types: List[Dict[str, str]] = []
+        # Table data with each column split into different ones, depending on the types they have.
+        table_data_with_column_types: List[Dict[str, CellValueType]] = []
+        all_column_names: Set[str] = set()
         for table_row in table_data:
             table_data_with_column_types.append({})
-            for column_name, cell_value in table_row.items():
-                column_type = column_types[column_name]
-                typed_column_name = f"{column_type}_column:{column_name}"
-                table_data_with_column_types[-1][typed_column_name] = cell_value
-        return cls(table_data_with_column_types, column_types, question_tokens)
+            for column_name, cell_data in table_row.items():
+                for column_type in column_types[column_name]:
+                    typed_column_name = f"{column_type}_column:{column_name}"
+                    all_column_names.add(typed_column_name)
+                    cell_value_string = cell_data.get(column_type, None)
+                    if column_type in ["number", "num2"]:
+                        try:
+                            cell_number = float(cell_value_string)
+                        except (ValueError, TypeError):
+                            cell_number = None
+                        table_data_with_column_types[-1][typed_column_name] = cell_number
+                    elif column_type == "date":
+                        cell_date = None
+                        if cell_value_string is not None:
+                            cell_date = Date.make_date(cell_value_string)
+                        table_data_with_column_types[-1][typed_column_name] = cell_date
+                    else:
+                        if cell_value_string is None:
+                            normalized_string = None
+                        else:
+                            normalized_string = cls.normalize_string(cell_value_string)
+                        table_data_with_column_types[-1][typed_column_name] = normalized_string
+        return cls(table_data_with_column_types, column_types, all_column_names, question_tokens)
 
     @classmethod
     def read_from_file(cls, filename: str, question_tokens: List[Token]) -> 'TableQuestionContext':
@@ -232,21 +336,21 @@ class TableQuestionContext:
             normalized_token_text = self.normalize_string(token_text)
             if not normalized_token_text:
                 continue
-            token_column = self._string_in_table(normalized_token_text)
-            if token_column:
-                token_type = token_column.split(":")[0].replace("_column", "")
+            token_columns = self._string_in_table(normalized_token_text)
+            if token_columns:
+                token_type = token_columns[0].split(":")[0].replace("_column", "")
                 entity_data.append({'value': normalized_token_text,
                                     'token_start': i,
                                     'token_end': i+1,
                                     'token_type': token_type,
-                                    'token_in_column': token_column})
+                                    'token_in_columns': token_columns})
 
         extracted_numbers = self._get_numbers_from_tokens(self.question_tokens)
         # filter out number entities to avoid repetition
         expanded_entities = []
         for entity in self._expand_entities(self.question_tokens, entity_data):
             if entity["token_type"] == "string":
-                expanded_entities.append((f"string:{entity['value']}", entity['token_in_column']))
+                expanded_entities.append((f"string:{entity['value']}", entity['token_in_columns']))
         return expanded_entities, extracted_numbers  #TODO(shikhar) Handle conjunctions
 
     @staticmethod
@@ -265,11 +369,9 @@ class TableQuestionContext:
         """
         numbers = []
         for i, token in enumerate(tokens):
-            number: Union[int, float] = None
             token_text = token.text
             text = token.text.replace(',', '').lower()
-            if text in NUMBER_WORDS:
-                number = NUMBER_WORDS[text]
+            number = NUMBER_WORDS.get(text, None)
 
             magnitude = 1
             if i < len(tokens) - 1:
@@ -312,28 +414,22 @@ class TableQuestionContext:
                     numbers.append((str(int(number + 10 ** num_zeros)), i))
         return numbers
 
-    def _string_in_table(self, candidate: str) -> Optional[str]:
+    def _string_in_table(self, candidate: str) -> List[str]:
         """
-        Checks if the string occurs in the table, and if it does, returns the name of the column
-        under which it occurs. If it does not, returns None.
+        Checks if the string occurs in the table, and if it does, returns the names of the columns
+        under which it occurs. If it does not, returns an empty list.
         """
         candidate_column_names: List[str] = []
         # First check if the entire candidate occurs as a cell.
-        if candidate in self._cell_value_column_mapping:
-            candidate_column_names = self._cell_value_column_mapping[candidate]
+        if candidate in self._string_column_mapping:
+            candidate_column_names = self._string_column_mapping[candidate]
         # If not, check if it is a substring pf any cell value.
         if not candidate_column_names:
-            for cell_value, column_names in self._cell_value_column_mapping.items():
+            for cell_value, column_names in self._string_column_mapping.items():
                 if candidate in cell_value:
-                    candidate_column_names = column_names
-                    break
-        if not candidate_column_names:
-            return None
+                    candidate_column_names.extend(column_names)
         candidate_column_names = list(set(candidate_column_names))
-        # Note: if candidate_column_names is now a list with more than one element, it means that
-        # the candidate matched a cell value that occurs under multiple columns. This is
-        # unusual, and we are ignoring such cases, and simply returning the first name.
-        return candidate_column_names[0]
+        return candidate_column_names
 
     def _process_conjunction(self, entity_data):
         raise NotImplementedError
@@ -348,7 +444,7 @@ class TableQuestionContext:
             current_end = entity['token_end']
             current_token = entity['value']
             current_token_type = entity['token_type']
-            current_token_column = entity['token_in_column']
+            current_token_columns = entity['token_in_columns']
 
             while current_end < len(question):
                 next_token = question[current_end].text
@@ -357,22 +453,22 @@ class TableQuestionContext:
                     current_end += 1
                     continue
                 candidate = "%s_%s" %(current_token, next_token_normalized)
-                candidate_column = self._string_in_table(candidate)
-                if candidate_column is None:
-                    candidate_type = None
-                else:
-                    candidate_type = candidate_column.split(":")[0].replace("_column", "")
-                if candidate_type is not None and candidate_type == current_token_type:
-                    current_end += 1
-                    current_token = candidate
-                else:
+                candidate_columns = self._string_in_table(candidate)
+                candidate_columns = list(set(candidate_columns).intersection(current_token_columns))
+                if not candidate_columns:
                     break
+                candidate_type = candidate_columns[0].split(":")[0].replace("_column", "")
+                if candidate_type != current_token_type:
+                    break
+                current_end += 1
+                current_token = candidate
+                current_token_columns = candidate_columns
 
             new_entities.append({'token_start' : current_start,
                                  'token_end' : current_end,
                                  'value' : current_token,
                                  'token_type': current_token_type,
-                                 'token_in_column': current_token_column})
+                                 'token_in_columns': current_token_columns})
         return new_entities
 
     @staticmethod
