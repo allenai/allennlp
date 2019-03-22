@@ -29,12 +29,12 @@ import argparse
 import logging
 import os
 
-from allennlp.commands.train import datasets_from_params
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.common.util import prepare_environment
 from allennlp.data import Vocabulary
+from allennlp.training.util import datasets_from_params
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -44,7 +44,7 @@ class MakeVocab(Subcommand):
         # pylint: disable=protected-access
         description = '''Create a vocabulary from the specified dataset.'''
         subparser = parser.add_parser(
-                name, description=description, help='Create a vocabulary')
+                name, description=description, help='Create a vocabulary.')
         subparser.add_argument('param_path',
                                type=str,
                                help='path to parameter file describing the model and its inputs')
@@ -76,6 +76,7 @@ def make_vocab_from_args(args: argparse.Namespace):
 
     make_vocab_from_params(params, serialization_dir)
 
+
 def make_vocab_from_params(params: Params, serialization_dir: str):
     prepare_environment(params)
 
@@ -97,9 +98,9 @@ def make_vocab_from_params(params: Params, serialization_dir: str):
     logger.info("From dataset instances, %s will be considered for vocabulary creation.",
                 ", ".join(datasets_for_vocab_creation))
 
-    instances = [instance for key, dataset in all_datasets.items()
+    instances = (instance for key, dataset in all_datasets.items()
                  for instance in dataset
-                 if key in datasets_for_vocab_creation]
+                 if key in datasets_for_vocab_creation)
 
     vocab = Vocabulary.from_params(vocab_params, instances)
 

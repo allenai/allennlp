@@ -11,10 +11,9 @@ import logging
 import os
 from copy import deepcopy
 import re
+from typing import Dict
 
-from allennlp.commands.evaluate import evaluate
 from allennlp.commands.subcommand import Subcommand
-from allennlp.commands.train import datasets_from_params
 from allennlp.common import Params
 from allennlp.common.util import prepare_environment, prepare_global_logging, \
                                  get_frozen_and_tunable_parameter_names
@@ -23,9 +22,11 @@ from allennlp.models import load_archive, archive_model
 from allennlp.models.archival import CONFIG_NAME
 from allennlp.models.model import Model, _DEFAULT_WEIGHTS
 from allennlp.training.trainer import Trainer
+from allennlp.training.util import datasets_from_params, evaluate
 from allennlp.common.checks import ConfigurationError
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
 
 class FineTune(Subcommand):
     def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
@@ -33,7 +34,7 @@ class FineTune(Subcommand):
         description = """Continues training a saved model on a new dataset."""
         subparser = parser.add_parser(name,
                                       description=description,
-                                      help='Continue training a model on a new dataset')
+                                      help='Continue training a model on a new dataset.')
 
         subparser.add_argument('-m', '--model-archive',
                                required=True,
@@ -61,15 +62,25 @@ class FineTune(Subcommand):
                                action='store_true',
                                default=False,
                                help='if specified, we will use the instances in your new dataset to '
-                                    'extend your vocabulary. Currently expansion of embedding layers '
-                                    'is not implemented, so if your model has an embedding layer '
-                                    'this will probably make fine-tune crash.')
-
+                                    'extend your vocabulary. If pretrained-file was used to initialize '
+                                    'embedding layers, you may also need to pass --embedding-sources-mapping.')
         subparser.add_argument('--file-friendly-logging',
                                action='store_true',
                                default=False,
                                help='outputs tqdm status on separate lines and slows tqdm refresh rate')
 
+        subparser.add_argument('--batch-weight-key',
+                               type=str,
+                               default="",
+                               help='If non-empty, name of metric used to weight the loss on a per-batch basis.')
+
+        subparser.add_argument('--embedding-sources-mapping',
+                               type=str,
+                               default="",
+                               help='a JSON dict defining mapping from embedding module path to embedding'
+                               'pretrained-file used during training. If not passed, and embedding needs to be '
+                               'extended, we will try to use the original file paths used during training. If '
+                               'they are not available we will use random vectors for embedding extension.')
         subparser.set_defaults(func=fine_tune_model_from_args)
 
         return subparser
@@ -84,7 +95,9 @@ def fine_tune_model_from_args(args: argparse.Namespace):
                                     serialization_dir=args.serialization_dir,
                                     overrides=args.overrides,
                                     extend_vocab=args.extend_vocab,
-                                    file_friendly_logging=args.file_friendly_logging)
+                                    file_friendly_logging=args.file_friendly_logging,
+                                    batch_weight_key=args.batch_weight_key,
+                                    embedding_sources_mapping=args.embedding_sources_mapping)
 
 
 def fine_tune_model_from_file_paths(model_archive_path: str,
@@ -92,7 +105,9 @@ def fine_tune_model_from_file_paths(model_archive_path: str,
                                     serialization_dir: str,
                                     overrides: str = "",
                                     extend_vocab: bool = False,
-                                    file_friendly_logging: bool = False) -> Model:
+                                    file_friendly_logging: bool = False,
+                                    batch_weight_key: str = "",
+                                    embedding_sources_mapping: str = "") -> Model:
     """
     A wrapper around :func:`fine_tune_model` which loads the model archive from a file.
 
@@ -112,23 +127,31 @@ def fine_tune_model_from_file_paths(model_archive_path: str,
     file_friendly_logging : ``bool``, optional (default=False)
         If ``True``, we make our output more friendly to saved model files.  We just pass this
         along to :func:`fine_tune_model`.
+    embedding_sources_mapping: ``str``, optional (default="")
+        JSON string to define dict mapping from embedding paths used during training to
+        the corresponding embedding filepaths available during fine-tuning.
     """
     # We don't need to pass in `cuda_device` here, because the trainer will call `model.cuda()` if
     # necessary.
     archive = load_archive(model_archive_path)
     params = Params.from_file(config_file, overrides)
+
+    embedding_sources: Dict[str, str] = json.loads(embedding_sources_mapping) if embedding_sources_mapping else {}
     return fine_tune_model(model=archive.model,
                            params=params,
                            serialization_dir=serialization_dir,
                            extend_vocab=extend_vocab,
-                           file_friendly_logging=file_friendly_logging)
-
+                           file_friendly_logging=file_friendly_logging,
+                           batch_weight_key=batch_weight_key,
+                           embedding_sources_mapping=embedding_sources)
 
 def fine_tune_model(model: Model,
                     params: Params,
                     serialization_dir: str,
                     extend_vocab: bool = False,
-                    file_friendly_logging: bool = False) -> Model:
+                    file_friendly_logging: bool = False,
+                    batch_weight_key: str = "",
+                    embedding_sources_mapping: Dict[str, str] = None) -> Model:
     """
     Fine tunes the given model, using a set of parameters that is largely identical to those used
     for :func:`~allennlp.commands.train.train_model`, except that the ``model`` section is ignored,
@@ -153,6 +176,9 @@ def fine_tune_model(model: Model,
     file_friendly_logging : ``bool``, optional (default=False)
         If ``True``, we add newlines to tqdm output, even on an interactive terminal, and we slow
         down tqdm's output to only once every 10 seconds.
+    embedding_sources_mapping: ``Dict[str, str]``, optional (default=None)
+        mapping from model paths to the pretrained embedding filepaths
+        used during fine-tuning.
     """
     prepare_environment(params)
     if os.path.exists(serialization_dir) and os.listdir(serialization_dir):
@@ -191,6 +217,8 @@ def fine_tune_model(model: Model,
                                      for instance in dataset
                                      if key in datasets_for_vocab_creation))
 
+        model.extend_embedder_vocab(embedding_sources_mapping)
+
     vocab.save_to_files(os.path.join(serialization_dir, "vocabulary"))
 
     iterator = DataIterator.from_params(params.pop("iterator"))
@@ -221,18 +249,20 @@ def fine_tune_model(model: Model,
     for name in tunable_parameter_names:
         logger.info(name)
 
-    trainer_choice = trainer_params.pop_choice("type",
-                                               Trainer.list_available(),
-                                               default_to_first_choice=True)
-    trainer = Trainer.by_name(trainer_choice).from_params(model=model,
-                                                          serialization_dir=serialization_dir,
-                                                          iterator=iterator,
-                                                          train_data=train_data,
-                                                          validation_data=validation_data,
-                                                          params=trainer_params,
-                                                          validation_iterator=validation_iterator)
+    trainer_type = trainer_params.pop("type", "default")
+    if trainer_type == "default":
+        trainer = Trainer.from_params(model=model,
+                                      serialization_dir=serialization_dir,
+                                      iterator=iterator,
+                                      train_data=train_data,
+                                      validation_data=validation_data,
+                                      params=trainer_params,
+                                      validation_iterator=validation_iterator)
+    else:
+        raise ConfigurationError("currently fine-tune only works with the default Trainer")
 
     evaluate_on_test = params.pop_bool("evaluate_on_test", False)
+
     params.assert_empty('base train command')
     try:
         metrics = trainer.train()
@@ -244,17 +274,23 @@ def fine_tune_model(model: Model,
             archive_model(serialization_dir, files_to_archive=params.files_to_archive)
         raise
 
-    # Now tar up results
-    archive_model(serialization_dir, files_to_archive=params.files_to_archive)
-
+    # Evaluate
     if test_data and evaluate_on_test:
-        test_metrics = evaluate(model, test_data, iterator, cuda_device=trainer._cuda_devices[0])  # pylint: disable=protected-access
+        logger.info("The model will be evaluated using the best epoch weights.")
+        test_metrics = evaluate(model, test_data, validation_iterator or iterator,
+                                cuda_device=trainer._cuda_devices[0], # pylint: disable=protected-access,
+                                batch_weight_key=batch_weight_key)
+
         for key, value in test_metrics.items():
             metrics["test_" + key] = value
 
     elif test_data:
         logger.info("To evaluate on the test set after training, pass the "
                     "'evaluate_on_test' flag, or use the 'allennlp evaluate' command.")
+
+
+    # Now tar up results
+    archive_model(serialization_dir, files_to_archive=params.files_to_archive)
 
     metrics_json = json.dumps(metrics, indent=2)
     with open(os.path.join(serialization_dir, "metrics.json"), "w") as metrics_file:

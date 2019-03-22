@@ -55,6 +55,8 @@ class WordpieceIndexer(TokenIndexer[int]):
         These are prepended to the tokens provided to ``tokens_to_indices``.
     end_tokens : ``List[str]``, optional (default=``None``)
         These are appended to the tokens provided to ``tokens_to_indices``.
+    separator_token : ``str``, optional (default=``[SEP]``)
+        This token indicates the segments in the sequence.
     """
     def __init__(self,
                  vocab: Dict[str, int],
@@ -65,7 +67,8 @@ class WordpieceIndexer(TokenIndexer[int]):
                  do_lowercase: bool = False,
                  never_lowercase: List[str] = None,
                  start_tokens: List[str] = None,
-                 end_tokens: List[str] = None) -> None:
+                 end_tokens: List[str] = None,
+                 separator_token: str = "[SEP]") -> None:
         self.vocab = vocab
 
         # The BERT code itself does a two-step tokenization:
@@ -93,6 +96,10 @@ class WordpieceIndexer(TokenIndexer[int]):
         self._end_piece_ids = [vocab[wordpiece]
                                for token in (end_tokens or [])
                                for wordpiece in wordpiece_tokenizer(token)]
+
+        # Convert the separator_token to wordpiece_ids
+        self._separator_ids = [vocab[wordpiece]
+                               for wordpiece in wordpiece_tokenizer(separator_token)]
 
     @overrides
     def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):
@@ -156,15 +163,23 @@ class WordpieceIndexer(TokenIndexer[int]):
 
         # By construction, we still have enough room to add the end_token ids.
         wordpiece_ids.extend(self._end_piece_ids)
+        # Constructing `token_type_ids` by `self._separator`
+        token_type_ids = _get_token_type_ids(wordpiece_ids,
+                                             self._separator_ids)
 
         # Our mask should correspond to the original tokens,
         # because calling util.get_text_field_mask on the
         # "wordpiece_id" tokens will produce the wrong shape.
-        mask = [1 for _ in tokens]
+        # However, because of the max_pieces constraint, we may
+        # have truncated the wordpieces; accordingly, we want the mask
+        # to correspond to the remaining tokens after truncation, which
+        # is captured by the offsets.
+        mask = [1 for _ in offsets]
 
         return {
                 index_name: wordpiece_ids,
                 f"{index_name}-offsets": offsets,
+                f"{index_name}-type-ids": token_type_ids,
                 "mask": mask
         }
 
@@ -190,7 +205,7 @@ class WordpieceIndexer(TokenIndexer[int]):
         We need to override this because the indexer generates multiple keys.
         """
         # pylint: disable=no-self-use
-        return [index_name, f"{index_name}-offsets", "mask"]
+        return [index_name, f"{index_name}-offsets", f"{index_name}-type-ids", "mask"]
 
 
 @TokenIndexer.register("bert-pretrained")
@@ -201,7 +216,7 @@ class PretrainedBertIndexer(WordpieceIndexer):
 
     Parameters
     ----------
-    pretrained_model: ``str``, optional (default = None)
+    pretrained_model: ``str``
         Either the name of the pretrained model to use (e.g. 'bert-base-uncased'),
         or the path to the .txt file with its vocabulary.
 
@@ -245,4 +260,31 @@ class PretrainedBertIndexer(WordpieceIndexer):
                          do_lowercase=do_lowercase,
                          never_lowercase=never_lowercase,
                          start_tokens=["[CLS]"],
-                         end_tokens=["[SEP]"])
+                         end_tokens=["[SEP]"],
+                         separator_token="[SEP]")
+
+
+def _get_token_type_ids(wordpiece_ids: List[int],
+                        separator_ids: List[int]) -> List[int]:
+    num_wordpieces = len(wordpiece_ids)
+    token_type_ids: List[int] = []
+    type_id = 0
+    cursor = 0
+    while cursor < num_wordpieces:
+        # check length
+        if num_wordpieces - cursor < len(separator_ids):
+            token_type_ids.extend(type_id
+                                  for _ in range(num_wordpieces - cursor))
+            cursor += num_wordpieces - cursor
+        # check content
+        # when it is a separator
+        elif all(wordpiece_ids[cursor + index] == separator_id
+                 for index, separator_id in enumerate(separator_ids)):
+            token_type_ids.extend(type_id for _ in separator_ids)
+            type_id += 1
+            cursor += len(separator_ids)
+        # when it is not
+        else:
+            cursor += 1
+            token_type_ids.append(type_id)
+    return token_type_ids

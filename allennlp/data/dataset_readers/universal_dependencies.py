@@ -14,7 +14,7 @@ from allennlp.data.tokenizers import Token
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-def lazy_parse(text: str, fields: Tuple = DEFAULT_FIELDS):
+def lazy_parse(text: str, fields: Tuple[str, ...]=DEFAULT_FIELDS):
     for sentence in text.split("\n\n"):
         if sentence:
             yield [parse_line(line, fields)
