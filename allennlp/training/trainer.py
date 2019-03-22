@@ -125,8 +125,8 @@ class Trainer(TrainerBase):
             If provided, then serialize models every ``model_save_interval``
             seconds within single epochs.  In all cases, models are also saved
             at the end of every epoch if ``serialization_dir`` is provided.
-        cuda_device : ``int``, optional (default = -1)
-            An integer specifying the CUDA device to use. If -1, the CPU is used.
+        cuda_device : ``Union[int, List[int]]``, optional (default = -1)
+            An integer or list of integers specifying the CUDA device(s) to use. If -1, the CPU is used.
         grad_norm : ``float``, optional, (default = None).
             If provided, gradient norms will be rescaled to have a maximum of this value.
         grad_clipping : ``float``, optional (default = ``None``).
