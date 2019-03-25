@@ -1,4 +1,6 @@
 # pylint: disable=no-self-use,line-too-long
+import pytest
+import spacy
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp import pretrained
@@ -104,6 +106,7 @@ class SniffTest(AllenNlpTestCase):
         assert result["words"] == ["Michael", "Jordan", "is", "a", "professor", "at", "Berkeley", "."]
         assert result["tags"] == ["B-PER", "L-PER", "O", "O", "O", "O", "U-LOC", "O"]
 
+    @pytest.mark.skipif(spacy.__version__ < "2.1", reason="this model changed from 2.0 to 2.1")
     def test_constituency_parsing(self):
         predictor = pretrained.span_based_constituency_parsing_with_elmo_joshi_2018()
 
