@@ -9,6 +9,7 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.modules.seq2vec_encoders import PytorchSeq2VecWrapper
 from allennlp.nn.util import sort_batch_by_length, get_lengths_from_binary_sequence_mask
+from allennlp.modules.stacked_alternating_lstm import StackedAlternatingLstm
 
 
 class TestPytorchSeq2VecWrapper(AllenNlpTestCase):
@@ -113,3 +114,16 @@ class TestPytorchSeq2VecWrapper(AllenNlpTestCase):
         with pytest.raises(ConfigurationError):
             lstm = LSTM(bidirectional=True, num_layers=3, input_size=3, hidden_size=7)
             _ = PytorchSeq2VecWrapper(lstm)
+
+    def test_wrapper_works_with_alternating_lstm(self):
+        model = PytorchSeq2VecWrapper(
+                StackedAlternatingLstm(recurrent_dropout_probability=0.44,
+                                       input_size=100,
+                                       hidden_size=128,
+                                       num_layers=3,
+                                       use_input_projection_bias=False))
+
+        input_tensor = torch.randn(5, 7, 100)
+        mask = torch.ones(5, 7)
+        output = model(input_tensor, mask)
+        assert tuple(output.size()) == (5, 128)
