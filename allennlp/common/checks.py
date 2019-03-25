@@ -34,6 +34,9 @@ class ExperimentalFeatureWarning(RuntimeWarning):
     """
     pass
 
+def log_pytorch_version_info():
+    import torch
+    logger.info("Pytorch version: %s", torch.__version__)
 
 def check_dimensions_match(dimension_1: int,
                            dimension_2: int,

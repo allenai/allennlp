@@ -173,9 +173,6 @@ def namespace_match(pattern: str, namespace: str):
     return False
 
 
-def log_pytorch_version_info():
-    logger.info("Pytorch version: %s", torch.__version__)
-
 def prepare_environment(params: Params):
     """
     Sets random seeds for reproducible experiments. This may not work as expected
