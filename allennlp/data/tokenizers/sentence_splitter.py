@@ -1,5 +1,8 @@
 from typing import List
 from overrides import overrides
+
+import spacy
+
 from allennlp.common import Registrable
 from allennlp.common.util import get_spacy_model
 
@@ -44,8 +47,10 @@ class SpacySentenceSplitter(SentenceSplitter):
         self.spacy = get_spacy_model(language, parse=not rule_based, ner=False, pos_tags=False)
         if rule_based:
             # we use `sentencizer`, a built-in spacy module for rule-based sentence boundary detection.
-            if not self.spacy.has_pipe('sentencizer'):
-                sbd = self.spacy.create_pipe('sentencizer')
+            # depending on the spacy version, it could be called 'sentencizer' or 'sbd'
+            sbd_name = 'sbd' if spacy.__version__ < '2.1' else 'sentencizer'
+            if not self.spacy.has_pipe(sbd_name):
+                sbd = self.spacy.create_pipe(sbd_name)
                 self.spacy.add_pipe(sbd)
 
     @overrides
