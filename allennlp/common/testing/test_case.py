@@ -6,7 +6,7 @@ import shutil
 import tempfile
 from unittest import TestCase
 
-from allennlp.common.checks import log_pytorch_version_info
+from allennlp.common.util import log_pytorch_version_info
 
 TEST_DIR = tempfile.mkdtemp(prefix="allennlp_tests")
 
