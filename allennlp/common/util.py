@@ -27,6 +27,7 @@ from spacy.language import Language as SpacyModelType
 # This base import is so we can refer to allennlp.data.Token in `sanitize()` without creating
 # circular dependencies.
 import allennlp
+from allennlp.common.checks import log_pytorch_version_info
 from allennlp.common.params import Params
 from allennlp.common.tqdm import Tqdm
 from allennlp.common.tee_logger import TeeLogger
