@@ -117,11 +117,11 @@ class TestPytorchSeq2VecWrapper(AllenNlpTestCase):
 
     def test_wrapper_works_with_alternating_lstm(self):
         model = PytorchSeq2VecWrapper(
-                StackedAlternatingLstm(input_size=100,
-                                       hidden_size=128,
+                StackedAlternatingLstm(input_size=4,
+                                       hidden_size=5,
                                        num_layers=3))
 
-        input_tensor = torch.randn(5, 7, 100)
-        mask = torch.ones(5, 7)
+        input_tensor = torch.randn(2, 3, 4)
+        mask = torch.ones(2, 3)
         output = model(input_tensor, mask)
-        assert tuple(output.size()) == (5, 128)
+        assert tuple(output.size()) == (2, 5)
