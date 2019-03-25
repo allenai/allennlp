@@ -3,7 +3,7 @@ A stacked LSTM with LSTM layers which alternate between going forwards over
 the sequence and going backwards.
 """
 
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 import torch
 from torch.nn.utils.rnn import PackedSequence
 from allennlp.modules.augmented_lstm import AugmentedLstm
@@ -72,7 +72,7 @@ class StackedAlternatingLstm(torch.nn.Module):
     def forward(self,  # pylint: disable=arguments-differ
                 inputs: PackedSequence,
                 initial_state: Optional[Tuple[torch.Tensor, torch.Tensor]] = None) -> \
-            Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
+            Tuple[Union[torch.Tensor, PackedSequence], Tuple[torch.Tensor, torch.Tensor]]:
         """
         Parameters
         ----------
@@ -107,5 +107,5 @@ class StackedAlternatingLstm(torch.nn.Module):
             output_sequence, final_state = layer(output_sequence, state)
             final_states.append(final_state)
 
-        final_state_tuple = tuple(torch.cat(state_list, 0) for state_list in zip(*final_states))
-        return output_sequence, final_state_tuple
+        final_hidden_state, final_cell_state = tuple(torch.cat(state_list, 0) for state_list in zip(*final_states))
+        return output_sequence, (final_hidden_state, final_cell_state)
