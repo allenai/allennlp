@@ -71,7 +71,8 @@ class StackedAlternatingLstm(torch.nn.Module):
 
     def forward(self,  # pylint: disable=arguments-differ
                 inputs: PackedSequence,
-                initial_state: Optional[Tuple[torch.Tensor, torch.Tensor]] = None):
+                initial_state: Optional[Tuple[torch.Tensor, torch.Tensor]] = None) -> \
+            Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         """
         Parameters
         ----------
@@ -85,7 +86,7 @@ class StackedAlternatingLstm(torch.nn.Module):
         -------
         output_sequence : PackedSequence
             The encoded sequence of shape (batch_size, sequence_length, hidden_size)
-        final_states: torch.Tensor
+        final_states: Tuple[torch.Tensor, torch.Tensor]
             The per-layer final (state, memory) states of the LSTM, each with shape
             (num_layers, batch_size, hidden_size).
         """
