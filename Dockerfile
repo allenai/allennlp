@@ -36,8 +36,7 @@ RUN apt-get update --fix-missing && apt-get install -y \
 # Copy select files needed for installing requirements.
 # We only copy what we need here so small changes to the repository does not trigger re-installation of the requirements.
 COPY requirements.txt .
-COPY scripts/install_requirements.sh scripts/install_requirements.sh
-RUN ./scripts/install_requirements.sh
+RUN pip install -r requirements.txt
 
 COPY scripts/ scripts/
 COPY allennlp/ allennlp/

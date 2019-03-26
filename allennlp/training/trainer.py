@@ -50,6 +50,7 @@ class Trainer(TrainerBase):
                  serialization_dir: Optional[str] = None,
                  num_serialized_models_to_keep: int = 20,
                  keep_serialized_model_every_num_seconds: int = None,
+                 checkpointer: Checkpointer = None,
                  model_save_interval: float = None,
                  cuda_device: Union[int, List] = -1,
                  grad_norm: Optional[float] = None,
@@ -115,12 +116,17 @@ class Trainer(TrainerBase):
             To do so, specify keep_serialized_model_every_num_seconds as the number of seconds
             between permanently saved checkpoints.  Note that this option is only used if
             num_serialized_models_to_keep is not None, otherwise all checkpoints are kept.
+        checkpointer : ``Checkpointer``, optional (default=None)
+            An instance of class Checkpointer to use instead of the default. If a checkpointer is specified,
+            the arguments num_serialized_models_to_keep and keep_serialized_model_every_num_seconds should
+            not be specified. The caller is responsible for initializing the checkpointer so that it is
+            consistent with serialization_dir.
         model_save_interval : ``float``, optional (default=None)
             If provided, then serialize models every ``model_save_interval``
             seconds within single epochs.  In all cases, models are also saved
             at the end of every epoch if ``serialization_dir`` is provided.
-        cuda_device : ``int``, optional (default = -1)
-            An integer specifying the CUDA device to use. If -1, the CPU is used.
+        cuda_device : ``Union[int, List[int]]``, optional (default = -1)
+            An integer or list of integers specifying the CUDA device(s) to use. If -1, the CPU is used.
         grad_norm : ``float``, optional, (default = None).
             If provided, gradient norms will be rescaled to have a maximum of this value.
         grad_clipping : ``float``, optional (default = ``None``).
@@ -196,9 +202,19 @@ class Trainer(TrainerBase):
 
         self._num_epochs = num_epochs
 
-        self._checkpointer = Checkpointer(serialization_dir,
-                                          keep_serialized_model_every_num_seconds,
-                                          num_serialized_models_to_keep)
+        if checkpointer is not None:
+            # We can't easily check if these parameters were passed in, so check against their default values.
+            # We don't check against serialization_dir since it is also used by the parent class.
+            if num_serialized_models_to_keep != 20 or \
+                    keep_serialized_model_every_num_seconds is not None:
+                raise ConfigurationError(
+                        "When passing a custom Checkpointer, you may not also pass in separate checkpointer "
+                        "args 'num_serialized_models_to_keep' or 'keep_serialized_model_every_num_seconds'.")
+            self._checkpointer = checkpointer
+        else:
+            self._checkpointer = Checkpointer(serialization_dir,
+                                              keep_serialized_model_every_num_seconds,
+                                              num_serialized_models_to_keep)
 
         self._model_save_interval = model_save_interval
 
@@ -381,7 +397,6 @@ class Trainer(TrainerBase):
             metrics['gpu_'+str(gpu_num)+'_memory_MB'] = memory
         return metrics
 
-
     def _validation_loss(self) -> Tuple[float, int]:
         """
         Computes the validation loss. Returns it and the number of batches.
@@ -486,7 +501,10 @@ class Trainer(TrainerBase):
                         logger.info("Ran out of patience.  Stopping training.")
                         break
 
-            self._tensorboard.log_metrics(train_metrics, val_metrics=val_metrics, log_to_console=True)
+            self._tensorboard.log_metrics(train_metrics,
+                                          val_metrics=val_metrics,
+                                          log_to_console=True,
+                                          epoch=epoch + 1)  # +1 because tensorboard doesn't like 0
 
             # Create overall metrics dict
             training_elapsed_time = time.time() - training_start_time
@@ -635,7 +653,6 @@ class Trainer(TrainerBase):
 
         return epoch_to_return
 
-
     # Requires custom from_params.
     @classmethod
     def from_params(cls,  # type: ignore
@@ -682,9 +699,22 @@ class Trainer(TrainerBase):
         else:
             momentum_scheduler = None
 
-        num_serialized_models_to_keep = params.pop_int("num_serialized_models_to_keep", 20)
-        keep_serialized_model_every_num_seconds = params.pop_int(
-                "keep_serialized_model_every_num_seconds", None)
+        if 'checkpointer' in params:
+            if 'keep_serialized_model_every_num_seconds' in params or \
+                    'num_serialized_models_to_keep' in params:
+                raise ConfigurationError(
+                        "Checkpointer may be initialized either from the 'checkpointer' key or from the "
+                        "keys 'num_serialized_models_to_keep' and 'keep_serialized_model_every_num_seconds'"
+                        " but the passed config uses both methods.")
+            checkpointer = Checkpointer.from_params(params.pop("checkpointer"))
+        else:
+            num_serialized_models_to_keep = params.pop_int("num_serialized_models_to_keep", 20)
+            keep_serialized_model_every_num_seconds = params.pop_int(
+                    "keep_serialized_model_every_num_seconds", None)
+            checkpointer = Checkpointer(
+                    serialization_dir=serialization_dir,
+                    num_serialized_models_to_keep=num_serialized_models_to_keep,
+                    keep_serialized_model_every_num_seconds=keep_serialized_model_every_num_seconds)
         model_save_interval = params.pop_float("model_save_interval", None)
         summary_interval = params.pop_int("summary_interval", 100)
         histogram_interval = params.pop_int("histogram_interval", None)
@@ -706,8 +736,7 @@ class Trainer(TrainerBase):
                    grad_clipping=grad_clipping,
                    learning_rate_scheduler=lr_scheduler,
                    momentum_scheduler=momentum_scheduler,
-                   num_serialized_models_to_keep=num_serialized_models_to_keep,
-                   keep_serialized_model_every_num_seconds=keep_serialized_model_every_num_seconds,
+                   checkpointer=checkpointer,
                    model_save_interval=model_save_interval,
                    summary_interval=summary_interval,
                    histogram_interval=histogram_interval,
