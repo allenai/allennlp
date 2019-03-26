@@ -38,9 +38,11 @@ class Instance(Mapping[str, Field]):
     fields : ``Dict[str, Field]``
         The ``Field`` objects that will be used to produce data arrays for this instance.
     """
-    def __init__(self, fields: MutableMapping[str, Field]) -> None:
+    def __init__(self, fields: MutableMapping[str, Field],
+                       should_remap_span_indices: bool = False) -> None:
         self.fields = fields
         self.indexed = False
+        self.should_remap_span_indices = should_remap_span_indices
 
     # Add methods for ``Mapping``.  Note, even though the fields are
     # mutable, we don't implement ``MutableMapping`` because we want
@@ -89,14 +91,15 @@ class Instance(Mapping[str, Field]):
             for field in self.fields.values():
                 field.index(vocab)
 
-                if isinstance(field, TextField):
-                    for key in field._indexed_tokens:
-                        if key[-8:] == '-offsets':
-                            if offsets is not None:
-                                raise ValueError
-                            offsets = field._indexed_tokens[key]
-                            key_no_offsets = key[:-8]
-                            num_wordpieces = len(field._indexed_tokens[key_no_offsets])
+                if self.should_remap_span_indices:
+                    if isinstance(field, TextField):
+                        for key in field._indexed_tokens:
+                            if key[-8:] == '-offsets':
+                                if offsets is not None:
+                                    raise ValueError
+                                offsets = field._indexed_tokens[key]
+                                key_no_offsets = key[:-8]
+                                num_wordpieces = len(field._indexed_tokens[key_no_offsets])
 
             if offsets is not None:
                 # some wordpiece indexer -- look for span fields to modify
