@@ -1,5 +1,6 @@
 # pylint: disable=no-self-use,invalid-name
 import pytest
+import spacy
 
 from allennlp.data.dataset_readers import TextClassificationJsonReader
 from allennlp.common.util import ensure_list
@@ -70,6 +71,7 @@ class TestTextClassificationJsonReader():
         assert [t.text for t in fields["tokens"].tokens] == instance3["tokens"]
         assert fields["label"].label == instance3["label"]
 
+    @pytest.mark.skipif(spacy.__version__ < "2.1", reason="this model changed from 2.0 to 2.1")
     @pytest.mark.parametrize("lazy", (True, False))
     def test_read_from_file_ag_news_corpus_and_segments_sentences_properly(self, lazy):
         reader = TextClassificationJsonReader(lazy=lazy, segment_sentences=True)
