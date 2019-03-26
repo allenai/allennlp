@@ -206,6 +206,9 @@ class TestParams(AllenNlpTestCase):
             # constituency parser
             'PTB_TRAIN_PATH', 'PTB_DEV_PATH', 'PTB_TEST_PATH',
 
+            # dependency parser
+            'PTB_DEPENDENCIES_TRAIN', 'PTB_DEPENDENCIES_VAL',
+
             # srl_elmo_5.5B
             'SRL_TRAIN_DATA_PATH', 'SRL_VALIDATION_DATA_PATH',
 
