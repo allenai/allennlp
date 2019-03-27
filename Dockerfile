@@ -31,7 +31,8 @@ RUN apt-get update --fix-missing && apt-get install -y \
     wget \
     libevent-dev \
     build-essential \
-    openjdk-8-jdk
+    openjdk-8-jdk && \
+    rm -rf /var/lib/apt/lists/*
 
 # Copy select files needed for installing requirements.
 # We only copy what we need here so small changes to the repository does not trigger re-installation of the requirements.
