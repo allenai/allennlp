@@ -73,7 +73,7 @@ class TextClassificationJsonReader(DatasetReader):
                         try:
                             label = int(label)
                         except ValueError:
-                            raise Exception('Labels must be integers if skip_label_indexing is True.')
+                            raise ValueError('Labels must be integers if skip_label_indexing is True.')
                     else:
                         label = str(label)
                 instance = self.text_to_instance(text=text, label=label)
