@@ -83,7 +83,7 @@ class LstmTagger(Model):
         return {"accuracy": self.accuracy.get_metric(reset)}
 
 # In practice you'd probably do this from the command line:
-#   $ allennlp train tutorials/tagger/experiment.jsonnet -s /tmp/serialization_dir
+#   $ allennlp train tutorials/tagger/experiment.jsonnet -s /tmp/serialization_dir --include-package tutorials.tagger.config_allennlp
 #
 if __name__ == "__main__":
     params = Params.from_file('tutorials/tagger/experiment.jsonnet')
