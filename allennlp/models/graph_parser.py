@@ -128,8 +128,8 @@ class GraphParser(Model):
     @overrides
     def forward(self,  # type: ignore
                 tokens: Dict[str, torch.LongTensor],
+                metadata: List[Dict[str, Any]],
                 pos_tags: torch.LongTensor = None,
-                metadata: List[Dict[str, Any]] = None,
                 arc_tags: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
@@ -137,7 +137,11 @@ class GraphParser(Model):
         ----------
         tokens : Dict[str, torch.LongTensor], required
             The output of ``TextField.as_array()``.
-        pos_tags : ``torch.LongTensor``, optional, (default = None).
+        metadata : List[Dict[str, Any]], required
+            A dictionary of metadata for each batch element which has keys:
+                tokens : ``List[str]``, required.
+                    The original string tokens in the sentence.
+        pos_tags : torch.LongTensor, optional (default = None)
             The output of a ``SequenceLabelField`` containing POS tags.
         arc_tags : torch.LongTensor, optional (default = None)
             A torch tensor representing the sequence of integer indices denoting the parent of every

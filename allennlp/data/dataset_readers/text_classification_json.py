@@ -89,7 +89,7 @@ class TextClassificationJsonReader(DatasetReader):
         ----------
         text : ``str``, required.
             The text to classify
-        label ``str``, optional, (default = None).
+        label : ``str``, optional, (default = None).
             The label for this text.
 
         Returns
