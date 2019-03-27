@@ -27,9 +27,10 @@ class TestTextClassificationJsonReader:
         assert [t.text for t in fields["tokens"].tokens] == instance2["tokens"]
         assert fields["label"].label == instance2["label"]
 
-        with pytest.raises(ValueError, message='Labels must be integers if skip_label_indexing is True.'):
+        with pytest.raises(ValueError) as exec_info:
             ag_path = AllenNlpTestCase.FIXTURES_ROOT / "data" / "text_classification_json" / "imdb_corpus.jsonl"
             ensure_list(reader.read(ag_path))
+        assert str(exec_info.value) == 'Labels must be integers if skip_label_indexing is True.'
 
     @pytest.mark.parametrize("lazy", (True, False))
     def test_read_from_file_ag_news_corpus(self, lazy):
