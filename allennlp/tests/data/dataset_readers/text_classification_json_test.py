@@ -7,7 +7,30 @@ from allennlp.common.util import ensure_list
 from allennlp.common.testing import AllenNlpTestCase
 
 
-class TestTextClassificationJsonReader():
+class TestTextClassificationJsonReader:
+
+    @pytest.mark.parametrize("lazy", (True, False))
+    def test_set_skip_indexing_true(self, lazy):
+        reader = TextClassificationJsonReader(lazy=lazy, skip_label_indexing=True)
+        ag_path = AllenNlpTestCase.FIXTURES_ROOT / "data" / "text_classification_json" / "integer_labels.jsonl"
+        instances = reader.read(ag_path)
+        instances = ensure_list(instances)
+
+        instance1 = {"tokens": ['This', 'text', 'has', 'label', '0'], "label": 0}
+        instance2 = {"tokens": ['This', 'text', 'has', 'label', '1'], "label": 1}
+
+        assert len(instances) == 2
+        fields = instances[0].fields
+        assert [t.text for t in fields["tokens"].tokens] == instance1["tokens"]
+        assert fields["label"].label == instance1["label"]
+        fields = instances[1].fields
+        assert [t.text for t in fields["tokens"].tokens] == instance2["tokens"]
+        assert fields["label"].label == instance2["label"]
+
+        with pytest.raises(ValueError) as exec_info:
+            ag_path = AllenNlpTestCase.FIXTURES_ROOT / "data" / "text_classification_json" / "imdb_corpus.jsonl"
+            ensure_list(reader.read(ag_path))
+        assert str(exec_info.value) == 'Labels must be integers if skip_label_indexing is True.'
 
     @pytest.mark.parametrize("lazy", (True, False))
     def test_read_from_file_ag_news_corpus(self, lazy):
