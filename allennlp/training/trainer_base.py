@@ -79,4 +79,8 @@ class TrainerBase(Registrable):
                                        params=pieces.params,
                                        validation_iterator=pieces.validation_iterator)
         else:
-            return TrainerBase.by_name(typ3).from_params(params, serialization_dir, recover)
+            klass = TrainerBase.by_name(typ3)
+            # Explicit check to prevent recursion.
+            is_overriden = klass.from_params.__func__ != TrainerBase.from_params.__func__ # type: ignore
+            assert is_overriden, f"Class {klass.__name__} must override `from_params`."
+            return klass.from_params(params, serialization_dir, recover)

@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 class TextClassificationJsonReader(DatasetReader):
     """
     Reads tokens and their labels from a labeled text classification dataset.
-    Expects a "tokens" field and a "category" field in JSON format.
+    Expects a "text" field and a "label" field in JSON format.
 
     The output of ``read`` is a list of ``Instance`` s with the fields:
         tokens: ``TextField`` and
@@ -67,7 +67,9 @@ class TextClassificationJsonReader(DatasetReader):
                     continue
                 items = json.loads(line)
                 text = items["text"]
-                label = str(items["label"])
+                label = items.get("label", None)
+                if label is not None:
+                    label = str(label)
                 instance = self.text_to_instance(text=text, label=label)
                 if instance is not None:
                     yield instance
