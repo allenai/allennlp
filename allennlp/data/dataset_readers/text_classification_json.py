@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Union
 import logging
 import json
 from overrides import overrides
@@ -69,7 +69,13 @@ class TextClassificationJsonReader(DatasetReader):
                 text = items["text"]
                 label = items.get("label", None)
                 if label is not None:
-                    label = str(label)
+                    if self._skip_label_indexing:
+                        try:
+                            label = int(label)
+                        except ValueError:
+                            raise ValueError('Labels must be integers if skip_label_indexing is True.')
+                    else:
+                        label = str(label)
                 instance = self.text_to_instance(text=text, label=label)
                 if instance is not None:
                     yield instance
@@ -83,7 +89,7 @@ class TextClassificationJsonReader(DatasetReader):
         return tokens
 
     @overrides
-    def text_to_instance(self, text: str, label: str = None) -> Instance:  # type: ignore
+    def text_to_instance(self, text: str, label: Union[str, int] = None) -> Instance:  # type: ignore
         """
         Parameters
         ----------
