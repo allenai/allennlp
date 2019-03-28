@@ -192,6 +192,9 @@ def make_model(num_layers: int = 6,
     return model
 
 
+Seq2SeqEncoder.register("bidirectional_language_model_transformer")(
+        BidirectionalLanguageModelTransformer
+)
 class BidirectionalLanguageModelTransformer(Seq2SeqEncoder):
     def __init__(self,
                  input_dim: int,
