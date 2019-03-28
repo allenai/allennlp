@@ -111,8 +111,8 @@ class CoreferenceResolver(Model):
     def forward(self,  # type: ignore
                 text: Dict[str, torch.LongTensor],
                 spans: torch.IntTensor,
-                metadata: List[Dict[str, Any]],
-                span_labels: torch.IntTensor = None) -> Dict[str, torch.Tensor]:
+                span_labels: torch.IntTensor = None,
+                metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
         Parameters
@@ -124,13 +124,13 @@ class CoreferenceResolver(Model):
             A tensor of shape (batch_size, num_spans, 2), representing the inclusive start and end
             indices of candidate spans for mentions. Comes from a ``ListField[SpanField]`` of
             indices into the text of the document.
-        metadata : ``List[Dict[str, Any]]``, required.
-            A metadata dictionary for each instance in the batch. We use the "original_text" and "clusters" keys
-            from this dictionary, which respectively have the original text and the annotated gold coreference
-            clusters for that instance.
         span_labels : ``torch.IntTensor``, optional (default = None).
             A tensor of shape (batch_size, num_spans), representing the cluster ids
             of each span, or -1 for those which do not appear in any clusters.
+        metadata : ``List[Dict[str, Any]]``, optional (default = None).
+            A metadata dictionary for each instance in the batch. We use the "original_text" and "clusters" keys
+            from this dictionary, which respectively have the original text and the annotated gold coreference
+            clusters for that instance.
 
         Returns
         -------
