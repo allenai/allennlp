@@ -47,9 +47,9 @@ class PorterStemmer(WordStemmer):
         new_text = self.stemmer.stem(word.text)
         return Token(text=new_text,
                      idx=word.idx,
-                     lemma=word.lemma_,
-                     pos=word.pos_,
-                     tag=word.tag_,
-                     dep=word.dep_,
-                     ent_type=word.ent_type_,
+                     lemma_=word.lemma_,
+                     pos_=word.pos_,
+                     tag_=word.tag_,
+                     dep_=word.dep_,
+                     ent_type_=word.ent_type_,
                      text_id=getattr(word, 'text_id', None))

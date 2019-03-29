@@ -1,6 +1,6 @@
 # pylint: disable=no-self-use,invalid-name
 
-from allennlp.tools.drop_eval import _normalize_answer, get_metrics
+from allennlp.tools.drop_eval import _normalize_answer, get_metrics, evaluate_json
 
 class TestDropEvalNormalize:
     def test_number_parse(self):
@@ -72,3 +72,36 @@ class TestDropEvalGetMetrics:
         # macro-averaging F1 over spans
         assert get_metrics(["ottoman", "Kantakouzenous"],
                            ["ottoman", "army of Kantakouzenous"]) == (0.0, 0.75)
+
+class TestDropEvalFunctional:
+    def test_json_loader(self):
+        annotation = {"qid1": {"answer": {"number": "1"}, "validated_answers": [{"number": "0"}]}}
+        prediction = {"qid1": "1"}
+        assert evaluate_json(annotation, prediction) == (1.0, 1.0)
+
+        annotation = {"qid1": {"answer": {"spans": ["2"]}, "validated_answers": [{"number": "2"}]}}
+        prediction = {"qid1": "2"}
+        assert evaluate_json(annotation, prediction) == (1.0, 1.0)
+
+        annotation = {"qid1": {"answer": {"spans": ["0"]}, \
+                               "validated_answers": [{"number": "1"}, {"number": "2"}]}}
+        prediction = {"qid1": "1"}
+        assert evaluate_json(annotation, prediction) == (1.0, 1.0)
+
+        annotation = {"qid1": {"answer": {"date": {"day": "17", "month": "August", "year": ""}},\
+                                    "validated_answers": [{"spans": ["August"]}, {"number": "17"}]}}
+        prediction = {"qid1": "17 August"}
+        assert evaluate_json(annotation, prediction) == (1.0, 1.0)
+
+        annotation = {"qid1": {"answer": {"spans": ["span1", "span2"]}, \
+                                    "validated_answers": [{"spans": ["span2"]}]}}
+        prediction = {"qid1": "span1"}
+        assert evaluate_json(annotation, prediction) == (0.0, 0.5)
+
+        annotation = {"qid1": {"answer": {"spans": ["1"]}, "validated_answers": [{"number": "0"}]}}
+        prediction = {"qid0": "2"}
+        assert evaluate_json(annotation, prediction) == (0.0, 0.0)
+
+        annotation = {"qid1": {"answer": {"spans": ["answer1"]}, "validated_answers": [{"spans": ["answer2"]}]}}
+        prediction = {"qid1": "answer"}
+        assert evaluate_json(annotation, prediction) == (0.0, 0.0)
