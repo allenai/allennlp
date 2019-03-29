@@ -21,12 +21,8 @@ overrides
 # imports this.
 nltk
 
-# Pin msgpack because the newer version introduces an incompatibility with spaCy
-# Get rid of this if we ever unpin spacy
-msgpack>=0.5.6,<0.6.0
-
 # Mainly used for the faster tokenizer.
-spacy>=2.0,<2.2
+spacy>=2.0.18,<2.2
 
 # Used by span prediction models.
 numpy
