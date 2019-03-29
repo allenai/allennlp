@@ -164,11 +164,17 @@ class BiaffineDependencyParser(Model):
             sequence.  The dictionary is designed to be passed directly to a ``TextFieldEmbedder``,
             which knows how to combine different word representations into a single vector per
             token in your input.
-        pos_tags : ``torch.LongTensor``, required.
+        pos_tags : ``torch.LongTensor``, required
             The output of a ``SequenceLabelField`` containing POS tags.
             POS tags are required regardless of whether they are used in the model,
             because they are used to filter the evaluation metric to only consider
             heads of words which are not punctuation.
+        metadata : List[Dict[str, Any]], optional (default=None)
+            A dictionary of metadata for each batch element which has keys:
+                words : ``List[str]``, required.
+                    The tokens in the original sentence.
+                pos : ``List[str]``, required.
+                    The dependencies POS tags for each word.
         head_tags : torch.LongTensor, optional (default = None)
             A torch tensor representing the sequence of integer gold class labels for the arcs
             in the dependency parse. Has shape ``(batch_size, sequence_length)``.
