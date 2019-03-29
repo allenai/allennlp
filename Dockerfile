@@ -37,6 +37,8 @@ RUN apt-get update --fix-missing && apt-get install -y \
 # Copy select files needed for installing requirements.
 # We only copy what we need here so small changes to the repository does not trigger re-installation of the requirements.
 COPY requirements.txt .
+# Ensure pip is new enough to install AllenNLP's dependencies.
+RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
 
 COPY scripts/ scripts/

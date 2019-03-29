@@ -22,6 +22,9 @@ WORKDIR /stage/allennlp
 ARG VERSION
 ARG SOURCE_COMMIT
 
+# Ensure pip is new enough to install AllenNLP's dependencies.
+RUN pip install --upgrade pip
+
 # Install the specified version of AllenNLP.
 RUN if [ ! -z "$VERSION" ]; \
     then echo "Installing allennlp==$VERSION."; pip install allennlp==$VERSION; \
