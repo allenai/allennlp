@@ -1,12 +1,12 @@
 from typing import Dict, Optional, Any, List
 import logging
 
+from collections import defaultdict
 from overrides import overrides
 import torch
 import numpy
-from collections import defaultdict
 
-from allennlp.common.checks import check_dimensions_match, ConfigurationError
+from allennlp.common.checks import ConfigurationError
 from allennlp.data import Vocabulary
 from allennlp.modules import Seq2SeqEncoder, TextFieldEmbedder, Embedding
 from allennlp.modules import FeedForward
@@ -18,13 +18,14 @@ from allennlp.training.metrics import AttachmentScores
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
+
 @Model.register("biaffine_parser_multilang")
 class BiaffineDependencyParserMultiLang(BiaffineDependencyParser):
     """
     This dependency parser implements the multi-lingual extension
     of the Dozat and Manning (2016) model as described in
-    ` Cross-Lingual Alignment of Contextual Word Embeddings, with Applications to Zero-shot Dependency Parsing (Schuster et al., 2019)
-    <https://arxiv.org/abs/1902.09492>`_ .
+    `Cross-Lingual Alignment of Contextual Word Embeddings, with Applications to Zero-shot
+    Dependency Parsing (Schuster et al., 2019) <https://arxiv.org/abs/1902.09492>`_ .
     Also, please refer to the `alignment computation code
     <https://github.com/TalSchuster/CrossLingualELMo>`_.
 
@@ -73,6 +74,7 @@ class BiaffineDependencyParserMultiLang(BiaffineDependencyParser):
     regularizer : ``RegularizerApplicator``, optional (default=``None``)
         If provided, will be used to calculate the regularization penalty during training.
     """
+
     def __init__(self,
                  vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
@@ -88,22 +90,24 @@ class BiaffineDependencyParserMultiLang(BiaffineDependencyParser):
                  input_dropout: float = 0.0,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
-        super(BiaffineDependencyParserMultiLang, self).__init__(vocab, text_field_embedder,
-        encoder, tag_representation_dim, arc_representation_dim, tag_feedforward,
-        arc_feedforward, pos_tag_embedding, use_mst_decoding_for_validation, dropout,
-        input_dropout, initializer, regularizer)
+        super(BiaffineDependencyParserMultiLang, self).__init__(
+                vocab, text_field_embedder, encoder, tag_representation_dim,
+                arc_representation_dim, tag_feedforward, arc_feedforward,
+                pos_tag_embedding, use_mst_decoding_for_validation, dropout,
+                input_dropout, initializer, regularizer)
 
         self.langs_for_early_stop = langs_for_early_stop
 
-        self._attachment_scores = defaultdict(lambda: AttachmentScores())
+        self._attachment_scores = defaultdict(AttachmentScores())
 
     @overrides
-    def forward(self,  # type: ignore
-                words: Dict[str, torch.LongTensor],
-                pos_tags: torch.LongTensor,
-                metadata: List[Dict[str, Any]],
-                head_tags: torch.LongTensor = None,
-                head_indices: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
+    def forward(
+            self,  # type: ignore
+            words: Dict[str, torch.LongTensor],
+            pos_tags: torch.LongTensor,
+            metadata: List[Dict[str, Any]],
+            head_tags: torch.LongTensor = None,
+            head_indices: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
         Embedding each language by the corresponding parameters for
@@ -168,78 +172,85 @@ class BiaffineDependencyParserMultiLang(BiaffineDependencyParser):
 
         if pos_tags is not None and self._pos_tag_embedding is not None:
             embedded_pos_tags = self._pos_tag_embedding(pos_tags)
-            embedded_text_input = torch.cat([embedded_text_input, embedded_pos_tags], -1)
+            embedded_text_input = torch.cat(
+                    [embedded_text_input, embedded_pos_tags], -1)
         elif self._pos_tag_embedding is not None:
-            raise ConfigurationError("Model uses a POS embedding, but no POS tags were passed.")
+            raise ConfigurationError(
+                    "Model uses a POS embedding, but no POS tags were passed.")
 
         mask = get_text_field_mask(words)
         embedded_text_input = self._input_dropout(embedded_text_input)
         encoded_text = self.encoder(embedded_text_input, mask)
 
-        batch_size, sequence_length, encoding_dim = encoded_text.size()
+        batch_size, _, encoding_dim = encoded_text.size()
 
         head_sentinel = self._head_sentinel.expand(batch_size, 1, encoding_dim)
         # Concatenate the head sentinel onto the sentence representation.
         encoded_text = torch.cat([head_sentinel, encoded_text], 1)
         mask = torch.cat([mask.new_ones(batch_size, 1), mask], 1)
         if head_indices is not None:
-            head_indices = torch.cat([head_indices.new_zeros(batch_size, 1), head_indices], 1)
+            head_indices = torch.cat(
+                    [head_indices.new_zeros(batch_size, 1), head_indices], 1)
         if head_tags is not None:
-            head_tags = torch.cat([head_tags.new_zeros(batch_size, 1), head_tags], 1)
+            head_tags = torch.cat(
+                    [head_tags.new_zeros(batch_size, 1), head_tags], 1)
         float_mask = mask.float()
         encoded_text = self._dropout(encoded_text)
 
         # shape (batch_size, sequence_length, arc_representation_dim)
-        head_arc_representation = self._dropout(self.head_arc_feedforward(encoded_text))
-        child_arc_representation = self._dropout(self.child_arc_feedforward(encoded_text))
+        head_arc_representation = self._dropout(
+                self.head_arc_feedforward(encoded_text))
+        child_arc_representation = self._dropout(
+                self.child_arc_feedforward(encoded_text))
 
         # shape (batch_size, sequence_length, tag_representation_dim)
-        head_tag_representation = self._dropout(self.head_tag_feedforward(encoded_text))
-        child_tag_representation = self._dropout(self.child_tag_feedforward(encoded_text))
+        head_tag_representation = self._dropout(
+                self.head_tag_feedforward(encoded_text))
+        child_tag_representation = self._dropout(
+                self.child_tag_feedforward(encoded_text))
         # shape (batch_size, sequence_length, sequence_length)
         attended_arcs = self.arc_attention(head_arc_representation,
                                            child_arc_representation)
 
         minus_inf = -1e8
         minus_mask = (1 - float_mask) * minus_inf
-        attended_arcs = attended_arcs + minus_mask.unsqueeze(2) + minus_mask.unsqueeze(1)
+        attended_arcs = attended_arcs + minus_mask.unsqueeze(
+                2) + minus_mask.unsqueeze(1)
 
         if self.training or not self.use_mst_decoding_for_validation:
-            predicted_heads, predicted_head_tags = self._greedy_decode(head_tag_representation,
-                                                                       child_tag_representation,
-                                                                       attended_arcs,
-                                                                       mask)
+            predicted_heads, predicted_head_tags = self._greedy_decode(
+                    head_tag_representation, child_tag_representation,
+                    attended_arcs, mask)
         else:
-            predicted_heads, predicted_head_tags = self._mst_decode(head_tag_representation,
-                                                                    child_tag_representation,
-                                                                    attended_arcs,
-                                                                    mask)
+            predicted_heads, predicted_head_tags = self._mst_decode(
+                    head_tag_representation, child_tag_representation,
+                    attended_arcs, mask)
         if head_indices is not None and head_tags is not None:
 
-            arc_nll, tag_nll = self._construct_loss(head_tag_representation=head_tag_representation,
-                                                    child_tag_representation=child_tag_representation,
-                                                    attended_arcs=attended_arcs,
-                                                    head_indices=head_indices,
-                                                    head_tags=head_tags,
-                                                    mask=mask)
+            arc_nll, tag_nll = self._construct_loss(
+                    head_tag_representation=head_tag_representation,
+                    child_tag_representation=child_tag_representation,
+                    attended_arcs=attended_arcs,
+                    head_indices=head_indices,
+                    head_tags=head_tags,
+                    mask=mask)
             loss = arc_nll + tag_nll
 
             evaluation_mask = self._get_mask_for_eval(mask[:, 1:], pos_tags)
             # We calculate attatchment scores for the whole sentence
             # but excluding the symbolic ROOT token at the start,
             # which is why we start from the second element in the sequence.
-            self._attachment_scores[batch_lang](predicted_heads[:, 1:],
-                                    predicted_head_tags[:, 1:],
-                                    head_indices[:, 1:],
-                                    head_tags[:, 1:],
-                                    evaluation_mask)
+            self._attachment_scores[batch_lang](
+                    predicted_heads[:, 1:], predicted_head_tags[:, 1:],
+                    head_indices[:, 1:], head_tags[:, 1:], evaluation_mask)
         else:
-            arc_nll, tag_nll = self._construct_loss(head_tag_representation=head_tag_representation,
-                                                    child_tag_representation=child_tag_representation,
-                                                    attended_arcs=attended_arcs,
-                                                    head_indices=predicted_heads.long(),
-                                                    head_tags=predicted_head_tags.long(),
-                                                    mask=mask)
+            arc_nll, tag_nll = self._construct_loss(
+                    head_tag_representation=head_tag_representation,
+                    child_tag_representation=child_tag_representation,
+                    attended_arcs=attended_arcs,
+                    head_indices=predicted_heads.long(),
+                    head_tags=predicted_head_tags.long(),
+                    mask=mask)
             loss = arc_nll + tag_nll
 
         output_dict = {
@@ -251,7 +262,7 @@ class BiaffineDependencyParserMultiLang(BiaffineDependencyParser):
                 "mask": mask,
                 "words": [meta["words"] for meta in metadata],
                 "pos": [meta["pos"] for meta in metadata]
-                }
+        }
 
         return output_dict
 
@@ -268,7 +279,8 @@ class BiaffineDependencyParserMultiLang(BiaffineDependencyParser):
             for key in lang_metrics.keys():
                 # Store only those metrics.
                 if key in ['UAS', 'LAS', 'loss']:
-                    metrics_wlang["{}_{}".format(key, lang)] = lang_metrics[key]
+                    metrics_wlang["{}_{}".format(key,
+                                                 lang)] = lang_metrics[key]
 
             # Include in the average only languages that should count for early stopping.
             if lang in self.langs_for_early_stop:
@@ -277,5 +289,8 @@ class BiaffineDependencyParserMultiLang(BiaffineDependencyParser):
 
             metrics.update(metrics_wlang)
 
-        metrics.update({"UAS_AVG": numpy.mean(all_uas), "LAS_AVG": numpy.mean(all_las)})
+        metrics.update({
+                "UAS_AVG": numpy.mean(all_uas),
+                "LAS_AVG": numpy.mean(all_las)
+        })
         return metrics

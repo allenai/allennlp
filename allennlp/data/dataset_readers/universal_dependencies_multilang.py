@@ -1,13 +1,11 @@
 from typing import Dict, Tuple, List
 import logging
 import itertools
-import numpy as np
 from collections import defaultdict
+import numpy as np
 
 from overrides import overrides
-from conllu.parser import parse_line, DEFAULT_FIELDS
 
-from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import Field, TextField, SequenceLabelField, MetadataField
 from allennlp.data.instance import Instance
@@ -16,6 +14,22 @@ from allennlp.data.tokenizers import Token
 from allennlp.data.dataset_readers.universal_dependencies import lazy_parse
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
+
+def parse_file_paths(file_paths: Dict[str, str]):
+    """
+    Converts from allennlp.params.Params to a python dict.
+
+    Parameters
+    ----------
+    file_paths :  ``Dict[str, str]``, required.
+        The dictionary of identifier (e.g. "en" for English) to file path.
+
+    Returns
+    -------
+    A dictionary of identifier ("en","it" etc.) to file path.
+    """
+    return dict(file_paths)
 
 
 @DatasetReader.register("universal_dependencies_multilang")
@@ -61,23 +75,7 @@ class UniversalDependenciesMultiLangDatasetReader(DatasetReader):
         self.iterators = None
         self.instances_per_lang = defaultdict(int)
 
-    def _parse_file_paths(self, file_paths: Dict[str, str]):
-        """
-        Converts from allennlp.params.Params to a python dict.
-
-        Parameters
-        ----------
-        file_paths :  ``Dict[str, str]``, required.
-            The dictionary of identifier (e.g. "en" for English) to file path.
-
-        Returns
-        -------
-        A dictionary of identifier ("en","it" etc.) to file path.
-        """
-        return dict(file_paths)
-
-
-    def _read_one_file(self, lang, file_path):
+    def _read_one_file(self, lang: str, file_path: str):
         with open(file_path, 'r') as conllu_file:
             logger.info("Reading UD instances for %s language from conllu dataset at: %s", lang, file_path)
 
@@ -100,9 +98,10 @@ class UniversalDependenciesMultiLangDatasetReader(DatasetReader):
 
     @overrides
     def _read(self, file_paths: Dict[str, str]):
-        file_paths = self._parse_file_paths(file_paths)
+        file_paths = parse_file_paths(file_paths)
         if (self.is_first_pass and self.is_first_pass_for_vocab) or (not self.alternate):
-            iterators = [(lang, iter(self._read_one_file(lang, value))) for (lang, value) in file_paths.items()]
+            iterators = [(lang, iter(self._read_one_file(lang, value))) \
+                        for (lang, value) in file_paths.items()]
             _, iterators = zip(*iterators)
             self.is_first_pass = False
             for inst in itertools.chain(*iterators):
@@ -111,7 +110,8 @@ class UniversalDependenciesMultiLangDatasetReader(DatasetReader):
             self.instances_per_lang = defaultdict(int)
         else:
             if self.iterators is None:
-                self.iterators = [(lang, iter(self._read_one_file(lang, value))) for (lang, value) in file_paths.items()]
+                self.iterators = [(lang, iter(self._read_one_file(lang, value))) \
+                                for (lang, value) in file_paths.items()]
             num_langs = len(file_paths)
             while True:
                 lang_num = np.random.randint(num_langs)

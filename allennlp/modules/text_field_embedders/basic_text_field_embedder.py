@@ -65,7 +65,9 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
             output_dim += embedder.get_output_dim()
         return output_dim
 
-    def forward(self, text_field_input: Dict[str, torch.Tensor], num_wrapping_dims: int = 0, **kwargs) -> torch.Tensor:
+    def forward(self, text_field_input: Dict[str, torch.Tensor],
+                num_wrapping_dims: int = 0,
+                **kwargs) -> torch.Tensor:
         embedder_keys = self._token_embedders.keys()
         input_keys = text_field_input.keys()
 
