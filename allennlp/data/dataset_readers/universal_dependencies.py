@@ -81,7 +81,7 @@ class UniversalDependenciesDatasetReader(DatasetReader):
             The words in the sentence to be encoded.
         upos_tags : ``List[str]``, required.
             The universal dependencies POS tags for each word.
-        dependencies ``List[Tuple[str, int]]``, optional (default = None)
+        dependencies : ``List[Tuple[str, int]]``, optional (default = None)
             A list of  (head tag, head index) tuples. Indices are 1 indexed,
             meaning an index of 0 corresponds to that word being the root of
             the dependency tree.

@@ -101,7 +101,7 @@ class WinobiasReader(DatasetReader):
         """
         Parameters
         ----------
-        sentences : ``List[Token]``, required.
+        sentence : ``List[Token]``, required.
             The already tokenised sentence to analyse.
         gold_clusters : ``Optional[List[List[Tuple[int, int]]]]``, optional (default = None)
             A list of all clusters in the sentence, represented as word spans. Each cluster

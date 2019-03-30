@@ -123,12 +123,10 @@ class Text2SqlParser(Model):
             ``ProductionRule`` using a ``ProductionRuleField``.  We will embed all of these
             and use the embeddings to determine which action to take at each timestep in the
             decoder.
-        target_action_sequence : torch.Tensor, optional (default=None)
+        action_sequence : torch.Tensor, optional (default=None)
             The action sequence for the correct action sequence, where each action is an index into the list
             of possible actions.  This tensor has shape ``(batch_size, sequence_length, 1)``. We remove the
             trailing dimension.
-        sql_queries : List[List[str]], optional (default=None)
-            A list of the SQL queries that are given during training or validation.
         """
         embedded_utterance = self._utterance_embedder(tokens)
         mask = util.get_text_field_mask(tokens).float()
