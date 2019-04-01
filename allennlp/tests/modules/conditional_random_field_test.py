@@ -76,7 +76,6 @@ class TestConditionalRandomField(AllenNlpTestCase):
         # The manually computed log likelihood should equal the result of crf.forward.
         assert manual_log_likelihood.item() == approx(log_likelihood)
 
-
     def test_forward_works_with_mask(self):
         # Use a non-trivial mask
         mask = torch.LongTensor([
@@ -109,6 +108,12 @@ class TestConditionalRandomField(AllenNlpTestCase):
         # The manually computed log likelihood should equal the result of crf.forward.
         assert manual_log_likelihood.item() == approx(log_likelihood)
 
+        mask = torch.LongTensor([
+                [1, 1, 1, 0],
+                [1, 1, 0, 0]
+        ])
+        with raises(ValueError):
+            self.crf(self.logits, self.tags, mask)
 
     def test_viterbi_tags(self):
         mask = torch.LongTensor([

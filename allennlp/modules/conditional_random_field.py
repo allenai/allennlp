@@ -301,7 +301,7 @@ class ConditionalRandomField(torch.nn.Module):
         last_input_score = last_inputs.gather(1, last_tags.view(-1, 1))  # (batch_size, 1)
         last_input_score = last_input_score.squeeze()                    # (batch_size,)
 
-        score = score + last_transition_score + last_input_score * mask[-1]
+        score = score + last_transition_score + last_input_score * mask[sequence_length - 1]
 
         return score
 
@@ -316,6 +316,9 @@ class ConditionalRandomField(torch.nn.Module):
         if mask is None:
             mask = torch.ones(*tags.size(), dtype=torch.long)
 
+        if not inputs.size(1) == tags.size(1) == mask.size(1):
+            raise ValueError(f'inputs, tags and mask must have the same length in the time dimension. '
+                             f'Got {inputs.size(1)}, {tags.size(1)} and {mask.size(1)} respectively.')
         log_denominator = self._input_likelihood(inputs, mask)
         log_numerator = self._joint_likelihood(inputs, tags, mask)
 
