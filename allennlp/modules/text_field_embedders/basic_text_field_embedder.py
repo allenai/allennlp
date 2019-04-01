@@ -131,6 +131,8 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
             logger.warning(f"Mismatched token_vectors, truncating to shortest: {dims}")
             min_dim = min(dims)
             embedded_representations = [tv.narrow(1, 0, min_dim) for tv in embedded_representations]
+            dims = [tv.size()[1] for tv in embedded_representations]
+            logger.warning(f"Truncated to {dims}")
         return torch.cat(embedded_representations, dim=-1)
 
     # This is some unusual logic, it needs a custom from_params.
