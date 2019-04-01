@@ -273,7 +273,7 @@ class Model(torch.nn.Module, Registrable):
         model.extend_embedder_vocab()
 
         model_state = torch.load(weights_file, map_location=util.device_mapping(cuda_device))
-        model.load_state_dict(model_state, strict=False)
+        model.load_state_dict(model_state)
 
         # Force model to cpu or gpu, as appropriate, to make sure that the embeddings are
         # in sync with the weights
