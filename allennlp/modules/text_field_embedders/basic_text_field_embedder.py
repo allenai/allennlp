@@ -1,5 +1,6 @@
 import warnings
 from typing import Dict, List, Union, Any
+import logging
 
 import torch
 from overrides import overrides
@@ -11,6 +12,7 @@ from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldE
 from allennlp.modules.time_distributed import TimeDistributed
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 
+logger = logging.getLogger(__name__)
 
 @TextFieldEmbedder.register("basic")
 class BasicTextFieldEmbedder(TextFieldEmbedder):
@@ -122,6 +124,13 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
                 tensors = [text_field_input[key]]
                 token_vectors = embedder(*tensors)
             embedded_representations.append(token_vectors)
+
+        # Truncate to shortest token_vectors. Possible if one of the indexers truncated more than others.
+        dims = [tv.size()[1] for tv in embedded_representations]
+        if len(set(dims)) > 1:
+            logger.warning(f"Mismatched token_vectors, truncating to shortest: {dims}")
+            min_dim = min(dims)
+            embedded_representations = [tv.narrow(1, 0, min_dim) for tv in embedded_representations]
         return torch.cat(embedded_representations, dim=-1)
 
     # This is some unusual logic, it needs a custom from_params.
