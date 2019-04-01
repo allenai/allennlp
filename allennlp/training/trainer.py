@@ -359,7 +359,7 @@ class Trainer(TrainerBase):
             for this_batch, this_batch_size in zip(
                     accumulated_batches, accumulated_batch_sizes
             ):
-                loss = self.batch_loss(batch_group, for_training=True)
+                loss = self.batch_loss(this_batch, for_training=True)
                 loss = loss * (this_batch_size / float(effective_batch_size))
 
                 if torch.isnan(loss):
