@@ -95,6 +95,3 @@ Seq2SeqEncoder.register("rnn")(_Seq2SeqWrapper(torch.nn.RNN))
 Seq2SeqEncoder.register("augmented_lstm")(_Seq2SeqWrapper(AugmentedLstm))
 Seq2SeqEncoder.register("alternating_lstm")(_Seq2SeqWrapper(StackedAlternatingLstm))
 Seq2SeqEncoder.register("stacked_bidirectional_lstm")(_Seq2SeqWrapper(StackedBidirectionalLstm))
-Seq2SeqEncoder.register("bidirectional_language_model_transformer")(
-        BidirectionalLanguageModelTransformer
-)

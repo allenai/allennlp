@@ -124,9 +124,13 @@ def fine_tune_model_from_file_paths(model_archive_path: str,
         :func:`fine_tune_model`.
     overrides : ``str``
         A JSON string that we will use to override values in the input parameter file.
+    extend_vocab: ``bool``, optional (default=False)
+        If ``True``, we use the new instances to extend your vocabulary.
     file_friendly_logging : ``bool``, optional (default=False)
         If ``True``, we make our output more friendly to saved model files.  We just pass this
         along to :func:`fine_tune_model`.
+    batch_weight_key : ``str``, optional (default="")
+        If non-empty, name of metric used to weight the loss on a per-batch basis.
     embedding_sources_mapping: ``str``, optional (default="")
         JSON string to define dict mapping from embedding paths used during training to
         the corresponding embedding filepaths available during fine-tuning.
@@ -163,19 +167,19 @@ def fine_tune_model(model: Model,
 
     Parameters
     ----------
-    archive : ``Archive``
-        A saved model archive that is the result of running the ``train`` command.
-    train_data_path : ``str``
-        Path to the training data to use for fine-tuning.
+    model : ``Model``
+        A model to fine tune.
+    params : ``Params``
+        A parameter object specifying an AllenNLP Experiment
     serialization_dir : ``str``
         The directory in which to save results and logs.
-    validation_data_path : ``str``, optional
-        Path to the validation data to use while fine-tuning.
     extend_vocab: ``bool``, optional (default=False)
         If ``True``, we use the new instances to extend your vocabulary.
     file_friendly_logging : ``bool``, optional (default=False)
         If ``True``, we add newlines to tqdm output, even on an interactive terminal, and we slow
         down tqdm's output to only once every 10 seconds.
+    batch_weight_key : ``str``, optional (default="")
+        If non-empty, name of metric used to weight the loss on a per-batch basis.
     embedding_sources_mapping: ``Dict[str, str]``, optional (default=None)
         mapping from model paths to the pretrained embedding filepaths
         used during fine-tuning.

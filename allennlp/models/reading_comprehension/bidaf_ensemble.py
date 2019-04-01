@@ -127,10 +127,8 @@ def ensemble(subresults: List[Dict[str, torch.Tensor]]) -> torch.Tensor:
 
     Parameters
     ----------
-    index : int
-        The index within this index to ensemble
-
     subresults : List[Dict[str, torch.Tensor]]
+        Results of each submodel.
 
     Returns
     -------

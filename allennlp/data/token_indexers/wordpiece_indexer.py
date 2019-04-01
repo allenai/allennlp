@@ -73,7 +73,7 @@ class WordpieceIndexer(TokenIndexer[int]):
 
         # The BERT code itself does a two-step tokenization:
         #    sentence -> [words], and then word -> [wordpieces]
-        # In AllenNLP, the first step is implemented as the ``BertSimpleWordSplitter``,
+        # In AllenNLP, the first step is implemented as the ``BertBasicWordSplitter``,
         # and this token indexer handles the second.
         self.wordpiece_tokenizer = wordpiece_tokenizer
 
