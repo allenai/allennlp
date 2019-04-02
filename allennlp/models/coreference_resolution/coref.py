@@ -124,9 +124,13 @@ class CoreferenceResolver(Model):
             A tensor of shape (batch_size, num_spans, 2), representing the inclusive start and end
             indices of candidate spans for mentions. Comes from a ``ListField[SpanField]`` of
             indices into the text of the document.
-        span_labels : ``torch.IntTensor``, optional (default = None)
+        span_labels : ``torch.IntTensor``, optional (default = None).
             A tensor of shape (batch_size, num_spans), representing the cluster ids
             of each span, or -1 for those which do not appear in any clusters.
+        metadata : ``List[Dict[str, Any]]``, optional (default = None).
+            A metadata dictionary for each instance in the batch. We use the "original_text" and "clusters" keys
+            from this dictionary, which respectively have the original text and the annotated gold coreference
+            clusters for that instance.
 
         Returns
         -------

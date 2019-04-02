@@ -343,6 +343,8 @@ class Params(MutableMapping):
         ----------
         quiet: bool, optional (default = False)
             Whether to log the parameters before returning them as a dict.
+        infer_type_and_cast : bool, optional (default = False)
+            If True, we infer types and cast (e.g. things that look like floats to floats).
         """
         if infer_type_and_cast:
             params_as_dict = infer_and_cast(self.params)

@@ -245,7 +245,7 @@ def make_reading_comprehension_instance_quac(question_list_tokens: List[List[Tok
         The original passage text.  We need this so that we can recover the actual span from the
         original passage that the model predicts as the answer to the question.  This is used in
         official evaluation scripts.
-    token_spans_lists : ``List[List[Tuple[int, int]]]``, optional
+    token_span_lists : ``List[List[Tuple[int, int]]]``, optional
         Indices into ``passage_tokens`` to use as the answer to the question for training.  This is
         a list of list, first because there is multiple questions per dialog, and
         because there might be several possible correct answer spans in the passage.

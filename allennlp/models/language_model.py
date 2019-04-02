@@ -227,14 +227,12 @@ class LanguageModel(Model):
         Computes the averaged forward (and backward, if language model is bidirectional)
         LM loss from the batch.
 
-        By convention, the input dict is required to have at least a ``"tokens"``
-        entry that's the output of a ``SingleIdTokenIndexer``, which is used
-        to compute the language model targets.
-
         Parameters
         ----------
-        tokens: ``torch.Tensor``, required.
-            The output of ``Batch.as_tensor_dict()`` for a batch of sentences.
+        source: ``Dict[str, torch.LongTensor]``, required.
+            The output of ``Batch.as_tensor_dict()`` for a batch of sentences. By convention,
+            it's required to have at least a ``"tokens"`` entry that's the output of a
+            ``SingleIdTokenIndexer``, which is used to compute the language model targets.
 
         Returns
         -------

@@ -86,7 +86,7 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
         ----------
         tokens : ``List[str]``, required.
             The tokens in a given sentence.
-        pos_tags ``List[str]``, optional, (default = None).
+        pos_tags : ``List[str]``, optional, (default = None).
             The POS tags for the words in the sentence.
         gold_tree : ``Tree``, optional (default = None).
             The gold parse tree to create span labels from.

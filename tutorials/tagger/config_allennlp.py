@@ -9,6 +9,7 @@ import numpy as np
 
 from allennlp.commands.train import train_model
 from allennlp.common.params import Params
+from allennlp.common.file_utils import cached_path
 from allennlp.data import Instance
 from allennlp.data.dataset_readers import DatasetReader
 from allennlp.data.fields import TextField, SequenceLabelField
@@ -42,7 +43,7 @@ class PosDatasetReader(DatasetReader):
         return Instance(fields)
 
     def _read(self, file_path: str) -> Iterator[Instance]:
-        with open(file_path) as f:
+        with open(cached_file(file_path)) as f:
             for line in f:
                 pairs = line.strip().split()
                 sentence, tags = zip(*(pair.split("###") for pair in pairs))
@@ -82,7 +83,7 @@ class LstmTagger(Model):
         return {"accuracy": self.accuracy.get_metric(reset)}
 
 # In practice you'd probably do this from the command line:
-#   $ allennlp train tutorials/tagger/experiment.jsonnet -s /tmp/serialization_dir
+#   $ allennlp train tutorials/tagger/experiment.jsonnet -s /tmp/serialization_dir --include-package tutorials.tagger.config_allennlp
 #
 if __name__ == "__main__":
     params = Params.from_file('tutorials/tagger/experiment.jsonnet')
