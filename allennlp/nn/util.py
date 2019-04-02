@@ -255,7 +255,8 @@ def masked_softmax(vector: torch.Tensor,
     if mask is None:
         result = torch.nn.functional.softmax(vector, dim=dim)
     else:
-        mask = mask.float()
+        dtype = vector.dtype
+        mask = mask.to(dtype)
         while mask.dim() < vector.dim():
             mask = mask.unsqueeze(1)
         if not memory_efficient:
@@ -1094,7 +1095,8 @@ def get_range_vector(size: int, device: int) -> torch.Tensor:
 
 def bucket_values(distances: torch.Tensor,
                   num_identity_buckets: int = 4,
-                  num_total_buckets: int = 10) -> torch.Tensor:
+                  num_total_buckets: int = 10,
+                  dtype=torch.float32) -> torch.Tensor:
     """
     Places the given values (designed for distances) into ``num_total_buckets``semi-logscale
     buckets, with ``num_identity_buckets`` of these capturing single values.
@@ -1121,7 +1123,7 @@ def bucket_values(distances: torch.Tensor,
     # We do this to make the buckets more granular in the initial range, where we expect
     # most values to fall. We then add (num_identity_buckets - 1) because we want these indices
     # to start _after_ the fixed number of buckets which we specified would only hold single values.
-    logspace_index = (distances.float().log() / math.log(2)).floor().long() + (num_identity_buckets - 1)
+    logspace_index = (distances.to(dtype).log() / math.log(2)).floor().long() + (num_identity_buckets - 1)
     # create a mask for values which will go into single number buckets (i.e not a range).
     use_identity_mask = (distances <= num_identity_buckets).long()
     use_buckets_mask = 1 + (-1 * use_identity_mask)

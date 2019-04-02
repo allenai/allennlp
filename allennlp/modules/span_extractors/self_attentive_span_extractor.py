@@ -47,6 +47,9 @@ class SelfAttentiveSpanExtractor(SpanExtractor):
                 span_indices: torch.LongTensor,
                 sequence_mask: torch.LongTensor = None,
                 span_indices_mask: torch.LongTensor = None) -> torch.FloatTensor:
+
+        dtype = sequence_tensor.dtype
+
         # both of shape (batch_size, num_spans, 1)
         span_starts, span_ends = span_indices.split(1, dim=-1)
 
@@ -75,13 +78,13 @@ class SelfAttentiveSpanExtractor(SpanExtractor):
         # We're using <= here (and for the mask below) because the span ends are
         # inclusive, so we want to include indices which are equal to span_widths rather
         # than using it as a non-inclusive upper bound.
-        span_mask = (max_span_range_indices <= span_widths).float()
+        span_mask = (max_span_range_indices <= span_widths).to(dtype)
         raw_span_indices = span_ends - max_span_range_indices
         # We also don't want to include span indices which are less than zero,
         # which happens because some spans near the beginning of the sequence
         # have an end index < max_batch_span_width, so we add this to the mask here.
-        span_mask = span_mask * (raw_span_indices >= 0).float()
-        span_indices = torch.nn.functional.relu(raw_span_indices.float()).long()
+        span_mask = span_mask * (raw_span_indices >= 0).to(dtype)
+        span_indices = torch.nn.functional.relu(raw_span_indices.to(dtype)).long()
 
         # Shape: (batch_size * num_spans * max_batch_span_width)
         flat_span_indices = util.flatten_and_batch_shift_indices(span_indices, sequence_tensor.size(1))
@@ -94,7 +97,9 @@ class SelfAttentiveSpanExtractor(SpanExtractor):
                                                           span_indices,
                                                           flat_span_indices).squeeze(-1)
         # Shape: (batch_size, num_spans, max_batch_span_width)
-        span_attention_weights = util.masked_softmax(span_attention_logits, span_mask)
+        span_attention_weights = util.masked_softmax(span_attention_logits, span_mask,
+                                                     memory_efficient=True,
+                                                     mask_fill_value=-1000)
 
         # Do a weighted sum of the embedded spans with
         # respect to the normalised attention distributions.
@@ -105,6 +110,6 @@ class SelfAttentiveSpanExtractor(SpanExtractor):
             # Above we were masking the widths of spans with respect to the max
             # span width in the batch. Here we are masking the spans which were
             # originally passed in as padding.
-            return attended_text_embeddings * span_indices_mask.unsqueeze(-1).float()
+            return attended_text_embeddings * span_indices_mask.unsqueeze(-1).to(dtype)
 
         return attended_text_embeddings

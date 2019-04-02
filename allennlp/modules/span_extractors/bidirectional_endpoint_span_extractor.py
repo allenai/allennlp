@@ -118,6 +118,8 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
                 sequence_mask: torch.LongTensor = None,
                 span_indices_mask: torch.LongTensor = None) -> torch.FloatTensor:
 
+        dtype = sequence_tensor.dtype
+
         # Both of shape (batch_size, sequence_length, embedding_size / 2)
         forward_sequence, backward_sequence = sequence_tensor.split(int(self._input_dim / 2), dim=-1)
         forward_sequence = forward_sequence.contiguous()
@@ -186,8 +188,8 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
             # If we're using sentinels, we need to replace all the elements which were
             # outside the dimensions of the sequence_tensor with either the start sentinel,
             # or the end sentinel.
-            float_end_sentinel_mask = end_sentinel_mask.float()
-            float_start_sentinel_mask = start_sentinel_mask.float()
+            float_end_sentinel_mask = end_sentinel_mask.to(dtype)
+            float_start_sentinel_mask = start_sentinel_mask.to(dtype)
             forward_start_embeddings = forward_start_embeddings * (1 - float_start_sentinel_mask) \
                                         + float_start_sentinel_mask * self._start_sentinel
             backward_start_embeddings = backward_start_embeddings * (1 - float_end_sentinel_mask) \
@@ -208,7 +210,8 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
             # Embed the span widths and concatenate to the rest of the representations.
             if self._bucket_widths:
                 span_widths = util.bucket_values(span_ends - span_starts,
-                                                 num_total_buckets=self._num_width_embeddings)
+                                                 num_total_buckets=self._num_width_embeddings,
+                                                 dtype=dtype)
             else:
                 span_widths = span_ends - span_starts
 
@@ -216,5 +219,5 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
             return torch.cat([span_embeddings, span_width_embeddings], -1)
 
         if span_indices_mask is not None:
-            return span_embeddings * span_indices_mask.float().unsqueeze(-1)
+            return span_embeddings * span_indices_mask.to(dtype).unsqueeze(-1)
         return span_embeddings
