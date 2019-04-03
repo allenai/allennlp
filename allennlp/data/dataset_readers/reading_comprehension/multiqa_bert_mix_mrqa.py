@@ -152,7 +152,7 @@ class BERTQAReaderMixMRQA(DatasetReader):
                 inst['answers'] = []
                 qa_metadata = {'has_answer': False, 'dataset': header['dataset'], "question_id": qa['qid'], \
                                'answer_texts_list': []}
-                for answer in qa['valid_answers']:
+                for answer in qa['detected_answers']:
                     # TODO assuming only one instance per answer
                     if len(answer['token_spans']) > 1:
                         assert ValueError()
