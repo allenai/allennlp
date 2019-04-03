@@ -116,9 +116,9 @@ class BERTQAReaderMixMRQA(DatasetReader):
         # of the up to our max length with a stride of 128.
         # splitting into chuncks that are not larger than 510 token pieces (NOTE AllenNLP
         # adds the [CLS] and [SEP] token pieces automatically
+        instances = []
         for qa in unproc_context['qas']:
             curr_token_ix = 0
-            instances = []
             window_start_token_offset = 0
             while curr_token_ix < len(unproc_context['context_tokens']):
                 _, num_of_question_wordpieces = self.tokens_to_wordpieces(qa['question_tokens'])
@@ -245,7 +245,7 @@ class BERTQAReaderMixMRQA(DatasetReader):
                 if is_done[ind]:
                     continue
 
-                instances = dataset['inst_remainder']
+                instances = []
                 iter_question_count = 0
                 for example in dataset['file_handle']:
                     unproc_example = json.loads(example)
@@ -262,7 +262,6 @@ class BERTQAReaderMixMRQA(DatasetReader):
 
                     if iter_question_count >= dataset['sample_ratio']:
                         break
-
 
                 else:
                     # No more lines to be read from file
