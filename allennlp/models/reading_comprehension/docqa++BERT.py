@@ -192,6 +192,15 @@ class DocQAPlusBERT(Model):
         loss : torch.FloatTensor, optional
             A scalar loss to be optimised.
         """
+        # TODO remove this!!
+        #if len(set([insta_meta['question_id'] for insta_meta in metadata]) & set(['5a73c958554299623ed4ac5c#0', '5a776fc15542997042120a3a#0'])):
+        #output_dict: Dict[str, Any] = {}
+        #self._official_f1(0)
+        #self._official_EM(0)
+        #output_dict["loss"] = torch.cuda.FloatTensor([0], device=span_end_logits.device) \
+        #    if torch.cuda.is_available() else torch.FloatTensor([0])
+        #return output_dict
+
 
         batch_size, num_of_passage_tokens = passage['bert'].size()
         #if passage['bert'].size(1) < 384:
@@ -201,9 +210,9 @@ class DocQAPlusBERT(Model):
         #if passage['mask'].size(1) < 384:
         #    passage['mask'] = torch.nn.functional.pad(passage['mask'], (0, 384 - passage['mask'].size(1)), "constant", 1)
 
-        if random.randint(1, 100) % 100 == 0:
-            for meta in metadata:
-                logger.info("%s %s", meta['dataset'], meta['instance_id'])
+        #if random.randint(1, 100) % 100 == 0:
+        #    for meta in metadata:
+        #        logger.info("%s %s", meta['dataset'], meta['instance_id'])
 
         embedded_passage = self._text_field_embedder(passage)
         passage_length = embedded_passage.size(1)
