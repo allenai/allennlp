@@ -64,7 +64,8 @@ class Trainer(TrainerBase):
                  log_batch_size_period: Optional[int] = None,
                  moving_average: Optional[MovingAverage] = None,
                  fp16: bool = False,
-                 gradient_accumulation_batch_size: bool = None) -> None:
+                 gradient_accumulation_batch_size: int = None,
+                 unfreeze_step_number: int = None) -> None:
         """
         A trainer for doing supervised learning. It just takes a labeled dataset
         and a ``DataIterator``, and uses the supplied ``Optimizer`` to learn the weights
@@ -258,6 +259,7 @@ class Trainer(TrainerBase):
             self._tensorboard.enable_activation_logging(self.model)
 
         self.gradient_accumulation_batch_size = gradient_accumulation_batch_size
+        self.unfreeze_step_number = unfreeze_step_number
 
     def rescale_gradients(self) -> Optional[float]:
         return training_util.rescale_gradients(self.model, self._grad_norm)
@@ -352,6 +354,12 @@ class Trainer(TrainerBase):
             batches_this_epoch += 1
             self._batch_num_total += 1
             batch_num_total = self._batch_num_total
+
+            if self.unfreeze_step_number is not None:
+                if batch_num_total == 1 and hasattr(self.model, 'freeze'):
+                    self.model.freeze()
+                elif batch_num_total == self.unfreeze_step_number and hasattr(self.model, 'unfreeze'):
+                    self.model.unfreeze()
 
             self.optimizer.zero_grad()
 
@@ -723,6 +731,7 @@ class Trainer(TrainerBase):
         fp16 = params.pop_bool("fp16", False)
         momentum_scheduler_params = params.pop("momentum_scheduler", None)
         gradient_accumulation_batch_size = params.pop_int("gradient_accumulation_batch_size", None)
+        unfreeze_step_number = params.pop_int("unfreeze_step_number", None)
 
         if isinstance(cuda_device, list):
             model_device = cuda_device[0]
@@ -813,7 +822,8 @@ class Trainer(TrainerBase):
                    log_batch_size_period=log_batch_size_period,
                    moving_average=moving_average,
                    fp16=fp16,
-                   gradient_accumulation_batch_size=gradient_accumulation_batch_size)
+                   gradient_accumulation_batch_size=gradient_accumulation_batch_size,
+                   unfreeze_step_number=unfreeze_step_number)
 
 
 class TrainerPieces(NamedTuple):
