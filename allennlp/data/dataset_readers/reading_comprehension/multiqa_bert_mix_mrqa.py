@@ -131,7 +131,15 @@ class BERTQAReaderMixMRQA(DatasetReader):
                 while num_of_wordpieces < MAX_WORDPIECES - num_of_question_wordpieces - 1 \
                         and curr_token_ix < len(unproc_context['context_tokens']):
                     curr_token = copy.deepcopy(unproc_context['context_tokens'][curr_token_ix])
+
+                    # BERT has only [SEP] in it's word piece vocabulary. because we keps all separators char length 5
+                    # we can replace all of them with [SEP] without modifying the offset
+                    if curr_token[0] in ['[TLE]','[PAR]','[DOC]']:
+                        curr_token[0] = '[SEP]'
+
+                    # fixing the car offset of each token
                     curr_token[1] += question_char_offset - context_char_offset
+
                     text = (curr_token[0].lower()
                             if _bert_do_lowercase and curr_token[0] not in self._never_lowercase
                             else curr_token[0])
@@ -255,8 +263,14 @@ class BERTQAReaderMixMRQA(DatasetReader):
                     # MRQA uses all questions:
                     dataset['header']['preproc.final_qas_used_fraction'] = 1.0
 
-                    for instance in self.gen_question_instances(dataset['header'], instances):
-                        yield instance
+                    instance_list = sorted(instances, key=lambda x: x['metadata']['question_id'])
+                    intances_question_id = [instance['metadata']['question_id'] for instance in instances]
+                    split_inds = [0] + list(np.cumsum(np.unique(intances_question_id, return_counts=True)[1]))
+                    per_question_instances = [instance_list[split_inds[ind]:split_inds[ind + 1]] for ind in range(len(split_inds) - 1)]
+
+                    for question_instance in per_question_instances:
+                        for instance in self.gen_question_instances(dataset['header'], question_instance):
+                            yield instance
                     dataset['num_of_questions'] += 1
                     iter_question_count += 1
 
