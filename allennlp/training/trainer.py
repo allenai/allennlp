@@ -65,7 +65,8 @@ class Trainer(TrainerBase):
                  moving_average: Optional[MovingAverage] = None,
                  fp16: bool = False,
                  gradient_accumulation_batch_size: int = None,
-                 unfreeze_step_number: int = None) -> None:
+                 unfreeze_step_number: int = None,
+                 num_steps_reset_metrics: int = None) -> None:
         """
         A trainer for doing supervised learning. It just takes a labeled dataset
         and a ``DataIterator``, and uses the supplied ``Optimizer`` to learn the weights
@@ -260,6 +261,7 @@ class Trainer(TrainerBase):
 
         self.gradient_accumulation_batch_size = gradient_accumulation_batch_size
         self.unfreeze_step_number = unfreeze_step_number
+        self.num_steps_reset_metrics = num_steps_reset_metrics
 
     def rescale_gradients(self) -> Optional[float]:
         return training_util.rescale_gradients(self.model, self._grad_norm)
@@ -414,7 +416,12 @@ class Trainer(TrainerBase):
                 self._moving_average.apply(batch_num_total)
 
             # Update the description with the latest metrics
-            metrics = training_util.get_metrics(self.model, train_loss, batches_this_epoch)
+            if self.num_steps_reset_metrics is not None and self.num_steps_reset_metrics % batch_num_total == 0:
+                reset_metrics = True
+            else:
+                reset_metrics = False
+
+            metrics = training_util.get_metrics(self.model, train_loss, batches_this_epoch, reset=reset_metrics)
             description = training_util.description_from_metrics(metrics)
 
             train_generator_tqdm.set_description(description, refresh=False)
@@ -732,6 +739,7 @@ class Trainer(TrainerBase):
         momentum_scheduler_params = params.pop("momentum_scheduler", None)
         gradient_accumulation_batch_size = params.pop_int("gradient_accumulation_batch_size", None)
         unfreeze_step_number = params.pop_int("unfreeze_step_number", None)
+        num_steps_reset_metrics = params.pop_int("num_steps_reset_metrics", None)
 
         if isinstance(cuda_device, list):
             model_device = cuda_device[0]
