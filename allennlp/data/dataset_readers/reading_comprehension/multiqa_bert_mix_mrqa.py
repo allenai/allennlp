@@ -271,7 +271,7 @@ class BERTQAReaderMixMRQA(DatasetReader):
                     for question_instance in per_question_instances:
                         for instance in self.gen_question_instances(dataset['header'], question_instance):
                             yield instance
-                    dataset['num_of_questions'] += 1
+                    dataset['num_of_questions'] += len(per_question_instances)
                     iter_question_count += 1
 
                     if iter_question_count >= dataset['sample_ratio']:
