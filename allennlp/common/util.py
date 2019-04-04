@@ -2,7 +2,7 @@
 Various utilities that don't fit anwhere else.
 """
 from itertools import zip_longest, islice
-from typing import Any, Callable, Dict, List, Tuple, TypeVar, Iterable, Iterator, Union
+from typing import Any, Callable, Dict, List, Tuple, TypeVar, Iterable, Iterator
 import importlib
 import json
 import logging
@@ -11,7 +11,6 @@ import random
 import subprocess
 import sys
 import os
-import re
 
 try:
     import resource
@@ -405,28 +404,6 @@ def is_lazy(iterable: Iterable[A]) -> bool:
     which here just means it's not a list.
     """
     return not isinstance(iterable, list)
-
-def parse_cuda_device(cuda_device: Union[str, int, List[int]]) -> Union[int, List[int]]:
-    """
-    Disambiguates single GPU and multiple GPU settings for cuda_device param.
-    """
-    def from_list(strings):
-        if len(strings) > 1:
-            return [int(d) for d in strings]
-        elif len(strings) == 1:
-            return int(strings[0])
-        else:
-            return -1
-
-    if isinstance(cuda_device, str):
-        return from_list(re.split(r',\s*', cuda_device))
-    elif isinstance(cuda_device, int):
-        return cuda_device
-    elif isinstance(cuda_device, list):
-        return from_list(cuda_device)
-    else:
-        # TODO(brendanr): Determine why mypy can't tell that this matches the Union.
-        return int(cuda_device)  # type: ignore
 
 def get_frozen_and_tunable_parameter_names(model: torch.nn.Module) -> List:
     frozen_parameter_names = []
