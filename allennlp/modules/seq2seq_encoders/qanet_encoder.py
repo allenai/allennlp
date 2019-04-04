@@ -73,7 +73,7 @@ class QaNetEncoder(Seq2SeqEncoder):
         else:
             self._input_projection_layer = lambda x: x
 
-        self._encoder_blocks: ModuleList[QaNetEncoderBlock] = Module([])
+        self._encoder_blocks = ModuleList([])
         for block_index in range(num_blocks):
             encoder_block = QaNetEncoderBlock(hidden_dim,
                                               hidden_dim,
