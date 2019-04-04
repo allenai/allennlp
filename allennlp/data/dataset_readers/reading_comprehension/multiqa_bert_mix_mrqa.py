@@ -159,15 +159,13 @@ class BERTQAReaderMixMRQA(DatasetReader):
                             context_char_offset + curr_context_tokens[-1][1] + len(curr_context_tokens[-1][0]) + 1]
                 inst['answers'] = []
                 qa_metadata = {'has_answer': False, 'dataset': header['dataset'], "question_id": qa['qid'], \
-                               'answer_texts_list': []}
+                               'answer_texts_list': list(set(qa['answers']))}
                 for answer in qa['detected_answers']:
                     # TODO assuming only one instance per answer
-                    if len(answer['token_spans']) > 1:
-                        assert ValueError()
+
                     if answer['token_spans'][0][0] >= window_start_token_offset and \
                         answer['token_spans'][0][1] < window_end_token_offset:
                         qa_metadata['has_answer'] = True
-                        qa_metadata['answer_texts_list'].append(answer['text'])
                         answer_token_offset = len(qa['question_tokens']) + 1 - window_start_token_offset
                         inst['answers'].append((answer['token_spans'][0][0] + answer_token_offset, \
                                                        answer['token_spans'][0][1] + answer_token_offset,
