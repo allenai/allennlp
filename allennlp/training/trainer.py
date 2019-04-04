@@ -416,7 +416,7 @@ class Trainer(TrainerBase):
                 self._moving_average.apply(batch_num_total)
 
             # Update the description with the latest metrics
-            if self.num_steps_reset_metrics is not None and self.num_steps_reset_metrics % batch_num_total == 0:
+            if self.num_steps_reset_metrics is not None and batch_num_total % self.num_steps_reset_metrics == 0:
                 reset_metrics = True
             else:
                 reset_metrics = False
