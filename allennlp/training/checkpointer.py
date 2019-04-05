@@ -66,7 +66,8 @@ class Checkpointer(Registrable):
                             self._last_permanent_saved_checkpoint_time = save_time
                     if remove_path:
                         for fname in paths_to_remove[1:]:
-                            os.remove(fname)
+                            if os.path.isfile(fname):
+                                os.remove(fname)
 
     def find_latest_checkpoint(self) -> Tuple[str, str]:
         """

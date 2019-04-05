@@ -12,8 +12,8 @@ import torch
 import torch.optim.lr_scheduler
 
 from allennlp.common import Params
-from allennlp.common.checks import ConfigurationError
-from allennlp.common.util import (dump_metrics, gpu_memory_mb, parse_cuda_device, peak_memory_mb,
+from allennlp.common.checks import ConfigurationError, parse_cuda_device
+from allennlp.common.util import (dump_metrics, gpu_memory_mb, peak_memory_mb,
                                   get_frozen_and_tunable_parameter_names, lazy_groups_of)
 from allennlp.common.tqdm import Tqdm
 from allennlp.data.instance import Instance
@@ -125,8 +125,8 @@ class Trainer(TrainerBase):
             If provided, then serialize models every ``model_save_interval``
             seconds within single epochs.  In all cases, models are also saved
             at the end of every epoch if ``serialization_dir`` is provided.
-        cuda_device : ``int``, optional (default = -1)
-            An integer specifying the CUDA device to use. If -1, the CPU is used.
+        cuda_device : ``Union[int, List[int]]``, optional (default = -1)
+            An integer or list of integers specifying the CUDA device(s) to use. If -1, the CPU is used.
         grad_norm : ``float``, optional, (default = None).
             If provided, gradient norms will be rescaled to have a maximum of this value.
         grad_clipping : ``float``, optional (default = ``None``).

@@ -470,7 +470,7 @@ class TestVocabulary(AllenNlpTestCase):
             _ = Vocabulary.from_params(params, instances)
 
     def test_from_params_valid_vocab_extension_thoroughly(self):
-        '''
+        """
         Tests for Valid Vocab Extension thoroughly: Vocab extension is valid
         when overlapping namespaces have same padding behaviour (padded/non-padded)
         Summary of namespace paddings in this test:
@@ -497,7 +497,7 @@ class TestVocabulary(AllenNlpTestCase):
            an              #3->an
            atom            #4->atom
            banana          #5->banana
-        '''
+        """
 
         vocab_dir = self.TEST_DIR / 'vocab_save'
         original_vocab = Vocabulary(non_padded_namespaces=["tokens1", "tokens3"])

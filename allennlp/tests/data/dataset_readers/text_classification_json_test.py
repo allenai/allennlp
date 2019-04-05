@@ -1,12 +1,36 @@
 # pylint: disable=no-self-use,invalid-name
 import pytest
+import spacy
 
 from allennlp.data.dataset_readers import TextClassificationJsonReader
 from allennlp.common.util import ensure_list
 from allennlp.common.testing import AllenNlpTestCase
 
 
-class TestTextClassificationJsonReader():
+class TestTextClassificationJsonReader:
+
+    @pytest.mark.parametrize("lazy", (True, False))
+    def test_set_skip_indexing_true(self, lazy):
+        reader = TextClassificationJsonReader(lazy=lazy, skip_label_indexing=True)
+        ag_path = AllenNlpTestCase.FIXTURES_ROOT / "data" / "text_classification_json" / "integer_labels.jsonl"
+        instances = reader.read(ag_path)
+        instances = ensure_list(instances)
+
+        instance1 = {"tokens": ['This', 'text', 'has', 'label', '0'], "label": 0}
+        instance2 = {"tokens": ['This', 'text', 'has', 'label', '1'], "label": 1}
+
+        assert len(instances) == 2
+        fields = instances[0].fields
+        assert [t.text for t in fields["tokens"].tokens] == instance1["tokens"]
+        assert fields["label"].label == instance1["label"]
+        fields = instances[1].fields
+        assert [t.text for t in fields["tokens"].tokens] == instance2["tokens"]
+        assert fields["label"].label == instance2["label"]
+
+        with pytest.raises(ValueError) as exec_info:
+            ag_path = AllenNlpTestCase.FIXTURES_ROOT / "data" / "text_classification_json" / "imdb_corpus.jsonl"
+            ensure_list(reader.read(ag_path))
+        assert str(exec_info.value) == 'Labels must be integers if skip_label_indexing is True.'
 
     @pytest.mark.parametrize("lazy", (True, False))
     def test_read_from_file_ag_news_corpus(self, lazy):
@@ -70,6 +94,7 @@ class TestTextClassificationJsonReader():
         assert [t.text for t in fields["tokens"].tokens] == instance3["tokens"]
         assert fields["label"].label == instance3["label"]
 
+    @pytest.mark.skipif(spacy.__version__ < "2.1", reason="this model changed from 2.0 to 2.1")
     @pytest.mark.parametrize("lazy", (True, False))
     def test_read_from_file_ag_news_corpus_and_segments_sentences_properly(self, lazy):
         reader = TextClassificationJsonReader(lazy=lazy, segment_sentences=True)
@@ -77,11 +102,12 @@ class TestTextClassificationJsonReader():
         instances = reader.read(ag_path)
         instances = ensure_list(instances)
 
-        instance1 = {"tokens": [['Memphis', 'Rout'],
-                                ['Still', 'Stings', 'for', 'No', '.', '14',
-                                 'Louisville', ';', 'Coach', 'Petrino', 'Vows', 'to', 'Have',
+        instance1 = {"tokens": [['Memphis', 'Rout', 'Still', 'Stings', 'for', 'No', '.', '14',
+                                 'Louisville', ';'],
+                                ['Coach', 'Petrino', 'Vows', 'to', 'Have',
                                  'Team', 'Better', 'Prepared', '.'],
-                                ['NASHVILLE', ',', 'Tenn.', 'Nov', '3', ',', '2004', '-',
+                                ['NASHVILLE', ','],
+                                ['Tenn.', 'Nov', '3', ',', '2004', '-',
                                  'Louisville', '#', '39;s', '30-point', 'loss', 'at', 'home',
                                  'to', 'Memphis', 'last', 'season', 'is', 'still', 'a', 'painful',
                                  'memory', 'for', 'the', 'Cardinals', '.']],

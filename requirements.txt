@@ -12,7 +12,7 @@
 torch>=0.4.1
 
 # Parameter parsing (but not on Windows).
-jsonnet==0.10.0 ; sys.platform != 'win32'
+jsonnet>=0.10.0 ; sys.platform != 'win32'
 
 # Adds an @overrides decorator for better documentation and error checking when using subclasses.
 overrides
@@ -21,18 +21,14 @@ overrides
 # imports this.
 nltk
 
-# Pin msgpack because the newer version introduces an incompatibility with spaCy
-# Get rid of this if we ever unpin spacy
-msgpack>=0.5.6,<0.6.0
-
 # Mainly used for the faster tokenizer.
-spacy>=2.0,<2.1
+spacy>=2.0.18,<2.2
 
 # Used by span prediction models.
 numpy
 
 # Used for reading configuration info out of numpy-style docstrings.
-numpydoc==0.8.0
+numpydoc>=0.8.0
 
 # Used in coreference resolution evaluation metrics.
 scipy
@@ -40,32 +36,31 @@ scikit-learn
 
 # Write logs for training visualisation with the Tensorboard application
 # Install the Tensorboard application separately (part of tensorflow) to view them.
-tensorboardX==1.2
+tensorboardX>=1.2
 
 # aws commandline tools for running on Docker remotely.
-# second requirement is to get botocore < 1.11, to avoid the below bug
 awscli>=1.11.91
 
 # Accessing files from S3 directly.
 boto3
 
 # REST interface for models
-flask==1.0.2
-flask-cors==3.0.7
-gevent==1.3.6
+flask>=1.0.2
+flask-cors>=3.0.7
+gevent>=1.3.6
 
 # Used by semantic parsing code to strip diacritics from unicode strings.
 unidecode
 
 # Used by semantic parsing code to parse SQL
-parsimonious==0.8.0
+parsimonious>=0.8.0
 
 # Used by semantic parsing code to format and postprocess SQL
-sqlparse==0.2.4
+sqlparse>=0.2.4
 
 # For text normalization
 ftfy
-word2number==1.1
+word2number>=1.1
 
 # To use the BERT model
 pytorch-pretrained-bert>=0.6.0
@@ -73,7 +68,7 @@ pytorch-pretrained-bert>=0.6.0
 #### ESSENTIAL LIBRARIES USED IN SCRIPTS ####
 
 # Plot graphs for learning rate finder
-matplotlib==2.2.3
+matplotlib>=2.2.3
 
 # Used for downloading datasets over HTTP
 requests>=2.18
@@ -88,7 +83,7 @@ editdistance
 h5py
 
 # For timezone utilities
-pytz==2017.3
+pytz>=2017.3
 
 # Reads Universal Dependencies files.
 conllu==0.11
@@ -106,7 +101,7 @@ flaky
 responses>=0.7
 
 # For mocking s3.
-moto==1.3.4
+moto>=1.3.4
 
 #### TESTING-RELATED PACKAGES ####
 
@@ -129,7 +124,7 @@ aiohttp
 #### DOC-RELATED PACKAGES ####
 
 # Builds our documentation.
-sphinx==1.5.3
+sphinx>=1.5.3
 
 # Watches the documentation directory and rebuilds on changes.
 sphinx-autobuild
@@ -141,4 +136,4 @@ sphinx_rtd_theme
 pypandoc
 
 # Pypi uploads
-twine==1.11.0
+twine>=1.11.0

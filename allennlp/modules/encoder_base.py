@@ -197,12 +197,12 @@ class _EncoderBase(torch.nn.Module):
             # tuple and returns the tensor directly.
             correctly_shaped_state = correctly_shaped_states[0]
             sorted_state = correctly_shaped_state.index_select(1, sorting_indices)
-            return sorted_state[:, :num_valid, :]
+            return sorted_state[:, :num_valid, :].contiguous()
         else:
             # LSTMs have a state tuple of (state, memory).
             sorted_states = [state.index_select(1, sorting_indices)
                              for state in correctly_shaped_states]
-            return tuple(state[:, :num_valid, :] for state in sorted_states)
+            return tuple(state[:, :num_valid, :].contiguous() for state in sorted_states)
 
     def _update_states(self,
                        final_states: RnnStateStorage,
