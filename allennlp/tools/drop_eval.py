@@ -180,28 +180,33 @@ def evaluate_json(annotations: Dict[str, Any], predicted_answers: Dict[str, Any]
     # for each type as well
     type_to_em: Dict[str, List[float]] = defaultdict(list)
     type_to_f1: Dict[str, List[float]] = defaultdict(list)
-    for query_id, annotation in annotations.items():
-        max_em_score = 0.0
-        max_f1_score = 0.0
-        max_type = None
-        if query_id in predicted_answers:
-            predicted = predicted_answers[query_id]
-            candidate_answers = [annotation["answer"]]
-            if "validated_answers" in annotation and annotation["validated_answers"]:
-                candidate_answers += annotation["validated_answers"]
-            for answer in candidate_answers:
-                gold_answer, gold_type = answer_json_to_strings(answer)
-                em_score, f1_score = get_metrics(predicted, gold_answer)
-                if gold_answer[0].strip() != "":
-                    max_em_score = max(max_em_score, em_score)
-                    max_f1_score = max(max_f1_score, f1_score)
-                    if max_em_score == em_score or max_f1_score == f1_score:
-                        max_type = gold_type
-        else:
-            print("Missing prediction for question: {}".format(query_id))
-            _, max_type = answer_json_to_strings(annotation["answer"])
+    for _, annotation in annotations.items():
+        for qa_pair in annotation["qa_pairs"]:
+            query_id = qa_pair["query_id"]
             max_em_score = 0.0
             max_f1_score = 0.0
+            max_type = None
+            if query_id in predicted_answers:
+                predicted = predicted_answers[query_id]
+                candidate_answers = [qa_pair["answer"]]
+                if "validated_answers" in qa_pair and qa_pair["validated_answers"]:
+                    candidate_answers += qa_pair["validated_answers"]
+                for answer in candidate_answers:
+                    gold_answer, gold_type = answer_json_to_strings(answer)
+                    em_score, f1_score = get_metrics(predicted, gold_answer)
+                    if gold_answer[0].strip() != "":
+                        max_em_score = max(max_em_score, em_score)
+                        max_f1_score = max(max_f1_score, f1_score)
+                        if max_em_score == em_score or max_f1_score == f1_score:
+                            max_type = gold_type
+            else:
+                print("Missing prediction for question: {}".format(query_id))
+                if qa_pair and qa_pair["answer"]:
+                    max_type = answer_json_to_strings(qa_pair["answer"])[1]
+                else:
+                    max_type = "number"
+                max_em_score = 0.0
+                max_f1_score = 0.0
         instance_exact_match.append(max_em_score)
         instance_f1.append(max_f1_score)
         type_to_em[max_type].append(max_em_score)
