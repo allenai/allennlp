@@ -1,7 +1,7 @@
 import json
 import logging
 from typing import Any, Dict, List, Tuple
-import zipfile,re, copy, random
+import gzip,re, copy, random
 import numpy as np
 
 from overrides import overrides
@@ -238,9 +238,10 @@ class BERTQAReaderMixMRQA(DatasetReader):
         datasets = []
         for ind, single_file_path in enumerate(file_path.split(',')):
             single_file_path_cached = cached_path(single_file_path)
-            zip_handle = zipfile.ZipFile(single_file_path_cached, 'r')
+            zip_handle = gzip.open(single_file_path_cached, 'rb')
+            #zip_handle = zipfile.ZipFile(single_file_path_cached, 'r')
             datasets.append({'single_file_path':single_file_path, 'zip_handle':zip_handle, \
-                             'file_handle': zip_handle.open(zip_handle.namelist()[0]), \
+                             'file_handle': zip_handle, \
                              'num_of_questions':0, 'inst_remainder':[], \
                              'sample_ratio':1 if self._sampling_ratio is None else self._sampling_ratio[ind] })
             datasets[ind]['header'] = json.loads(datasets[ind]['file_handle'].readline())['header']
