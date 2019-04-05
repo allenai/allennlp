@@ -68,7 +68,6 @@ class TestArrayField(AllenNlpTestCase):
     def test_as_tensor_with_scalar_keeps_dtype(self):
         array = ArrayField(numpy.asarray(42, dtype=numpy.float32))
         returned_tensor = array.as_tensor(array.get_padding_lengths())
-        current_tensor = numpy.asarray(42, dtype=numpy.float32)
         assert returned_tensor.dtype == torch.float32
 
     def test_alternative_dtypes(self):
