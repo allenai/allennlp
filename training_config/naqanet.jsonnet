@@ -42,8 +42,8 @@
         },
         "only_include_pretrained_words": true
     },
-    "train_data_path": std.extVar("DROP_TRAIN_DATA_PATH"),
-    "validation_data_path": std.extVar("DROP_DEV_DATA_PATH"),
+    "train_data_path": "drop_dataset_train.json",
+    "validation_data_path": "drop_dataset_dev.json",
     "model": {
         "type": "augmented_qanet",
         "text_field_embedder": {
