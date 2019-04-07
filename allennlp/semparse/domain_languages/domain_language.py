@@ -27,13 +27,14 @@ def is_callable(type_: Type) -> bool:
         return getattr(type_, '_name', None) == 'Callable'
 
 
+# pylint: disable=no-name-in-module
 def is_generic(type_: Type) -> bool:
     if sys.version_info < (3, 7):
         from typing import GenericMeta  # type: ignore
         return isinstance(type_, GenericMeta)  # type: ignore
     else:
         # pylint: disable=protected-access
-        from typing import _GenericAlias  # pylint: disable=no-name-in-module
+        from typing import _GenericAlias
         return isinstance(type_, _GenericAlias) # type: ignore
 
 
