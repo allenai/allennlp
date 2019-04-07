@@ -47,7 +47,8 @@ def parse_filename(filename):
     return
 
 def process_results(filename, type, source_dataset, \
-                        target_dataset, eval_set, split_type, model, target_size, experiment, full_experiments_name, predictions_file):
+                        target_dataset, eval_set, split_type, model, target_size, \
+                    experiment, full_experiments_name, predictions_file, eval_path):
     # for BERTlarge we process a precdiction file ...
     if predictions_file is not None:
         instance_list = []
@@ -74,7 +75,11 @@ def process_results(filename, type, source_dataset, \
         results_dict['f1'] *= instance_list[0]['qas_used_fraction']
 
         # sanity test:
-        single_file_path = cached_path('s3://multiqa/datasets/' + eval_set  + '_' + split_type + '.jsonl.zip')
+        if eval_path is None:
+            single_file_path = cached_path('s3://multiqa/datasets/' + eval_set  + '_' + split_type + '.jsonl.zip')
+        else:
+            single_file_path = cached_path(eval_path)
+
         all_question_ids = []
         with zipfile.ZipFile(single_file_path, 'r') as myzip:
             if myzip.namelist()[0].find('jsonl') > 0:
@@ -128,13 +133,14 @@ def main():
     parse.add_argument("--experiment", default=None, type=str)
     parse.add_argument("--full_experiments_name", default=None, type=str)
     parse.add_argument("--predictions_file", default=None, type=str)
+    parse.add_argument("--eval_path", default=None, type=str)
     args = parse.parse_args()
 
 
     if args.eval_res_file is not None:
         process_results(args.eval_res_file, args.type, args.source_dataset, \
                         args.target_dataset, args.eval_set, args.split_type, args.model ,args.target_size, \
-                        args.experiment, args.full_experiments_name, args.predictions_file)
+                        args.experiment, args.full_experiments_name, args.predictions_file, args.eval_path)
     else:
         logger.error('No input provided')
 
