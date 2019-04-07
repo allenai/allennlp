@@ -2,7 +2,7 @@ import argparse
 import json
 import logging
 from typing import Any, Dict, List, Tuple
-import zipfile,re, copy, random, math
+import zipfile, gzip, re, copy, random, math
 import sys, os
 import numpy
 from typing import TypeVar,Iterable
@@ -77,19 +77,28 @@ def process_results(filename, type, source_dataset, \
         # sanity test:
         if eval_path is None:
             single_file_path = cached_path('s3://multiqa/datasets/' + eval_set  + '_' + split_type + '.jsonl.zip')
+            all_question_ids = []
+            with zipfile.ZipFile(single_file_path, 'r') as myzip:
+                if myzip.namelist()[0].find('jsonl') > 0:
+                    contexts = []
+                    with myzip.open(myzip.namelist()[0]) as myfile:
+                        header = json.loads(myfile.readline())['header']
+                        for example in myfile:
+                            context = json.loads(example)
+                            contexts.append(context)
+                            all_question_ids += [qa['id'] for qa in context['qas']]
         else:
             single_file_path = cached_path(eval_path)
+            all_question_ids = []
+            contexts = []
+            with gzip.open(single_file_path) as myfile:
+                header = json.loads(myfile.readline())['header']
+                for example in myfile:
+                    context = json.loads(example)
+                    contexts.append(context)
+                    all_question_ids += [qa['id'] for qa in context['qas']]
 
-        all_question_ids = []
-        with zipfile.ZipFile(single_file_path, 'r') as myzip:
-            if myzip.namelist()[0].find('jsonl') > 0:
-                contexts = []
-                with myzip.open(myzip.namelist()[0]) as myfile:
-                    header = json.loads(myfile.readline())['header']
-                    for example in myfile:
-                        context = json.loads(example)
-                        contexts.append(context)
-                        all_question_ids += [qa['id'] for qa in context['qas']]
+
         predictions_question_ids = list(set(intances_question_id))
         print(set(all_question_ids) - set(predictions_question_ids))
         results_dict['qids_missing_frac'] = len(set(all_question_ids) - set(predictions_question_ids)) / len(set(all_question_ids))
