@@ -15,38 +15,10 @@ from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
 from allennlp.data.tokenizers import Token, Tokenizer, WordTokenizer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
-# ALON - for line profiler
-try:
-    profile
-except NameError:
-    profile = lambda x: x
-
-def sample_contexts(instance_list,sample_size):
-    random.seed(2)
-
-    instance_list = sorted(instance_list, key=lambda x: x['metadata']['question_id'])
-    intances_question_id = [instance['metadata']['question_id'] for instance in instance_list]
-    split_inds = [0] + list(np.cumsum(np.unique(intances_question_id, return_counts=True)[1]))
-    per_question_instances = [instance_list[split_inds[ind]:split_inds[ind + 1]] for ind in
-                              range(len(split_inds) - 1)]
-
-    random.shuffle(per_question_instances)
-
-    sampled_contexts = []
-    num_of_qas = 0
-    for question_instances in per_question_instances:
-        if num_of_qas >= sample_size:
-            break
-        sampled_contexts += question_instances
-        num_of_qas += 1
-    return sampled_contexts
 
 
-
-
-
-@DatasetReader.register("multiqa_bert_mix_mrqa")
-class BERTQAReaderMixMRQA(DatasetReader):
+@DatasetReader.register("mrqa_reader")
+class MRQAReader(DatasetReader):
     """
     Reads a JSON-formatted Quesiton Answering in Context (QuAC) data file
     and returns a ``Dataset`` where the ``Instances`` have four fields: ``question``, a ``ListField``,
@@ -79,8 +51,10 @@ class BERTQAReaderMixMRQA(DatasetReader):
                  sample_size: int = -1,
                  ) -> None:
         super().__init__(lazy)
+
+        # make sure sampling can always be reproduced
         random.seed(0)
-        logger.info('----------------- NEW SEED ---------------')
+
         self._tokenizer = tokenizer or WordTokenizer()
         self._rewind_datasets = rewind_datasets
         self._sampling_ratio = sampling_ratio
@@ -118,6 +92,10 @@ class BERTQAReaderMixMRQA(DatasetReader):
         # adds the [CLS] and [SEP] token pieces automatically
         instances = []
         for qa in unproc_context['qas']:
+            # is_impossible not supported at this point...
+            if qa['is_impossible']:
+                continue
+
             curr_token_ix = 0
             window_start_token_offset = 0
             while curr_token_ix < len(unproc_context['context_tokens']):
