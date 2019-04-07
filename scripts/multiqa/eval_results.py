@@ -75,7 +75,9 @@ def process_results(filename, type, source_dataset, \
         results_dict['f1'] *= instance_list[0]['qas_used_fraction']
 
         # sanity test:
-        if eval_path is None:
+        if eval_path == '-1':
+            pass
+        elif eval_path is None:
             single_file_path = cached_path('s3://multiqa/datasets/' + eval_set  + '_' + split_type + '.jsonl.zip')
             all_question_ids = []
             with zipfile.ZipFile(single_file_path, 'r') as myzip:
@@ -87,6 +89,10 @@ def process_results(filename, type, source_dataset, \
                             context = json.loads(example)
                             contexts.append(context)
                             all_question_ids += [qa['id'] for qa in context['qas']]
+            predictions_question_ids = list(set(intances_question_id))
+            # print(set(all_question_ids) - set(predictions_question_ids))
+            results_dict['qids_missing_frac'] = len(set(all_question_ids) - set(predictions_question_ids)) / len(set(all_question_ids))
+
         else:
             single_file_path = cached_path(eval_path)
             all_question_ids = []
@@ -99,9 +105,9 @@ def process_results(filename, type, source_dataset, \
                     all_question_ids += [qa['id'] for qa in context['qas']]
 
 
-        predictions_question_ids = list(set(intances_question_id))
-        #print(set(all_question_ids) - set(predictions_question_ids))
-        results_dict['qids_missing_frac'] = len(set(all_question_ids) - set(predictions_question_ids)) / len(set(all_question_ids))
+            predictions_question_ids = list(set(intances_question_id))
+            #print(set(all_question_ids) - set(predictions_question_ids))
+            results_dict['qids_missing_frac'] = len(set(all_question_ids) - set(predictions_question_ids)) / len(set(all_question_ids))
 
 
 
