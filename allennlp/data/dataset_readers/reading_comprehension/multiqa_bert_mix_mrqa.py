@@ -207,7 +207,6 @@ class MRQAReader(DatasetReader):
 
             yield instance
 
-    @profile
     @overrides
     def _read(self, file_path: str):
         logger.info("Reading the dataset")
