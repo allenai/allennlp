@@ -100,7 +100,7 @@ def process_results(filename, type, source_dataset, \
 
 
         predictions_question_ids = list(set(intances_question_id))
-        print(set(all_question_ids) - set(predictions_question_ids))
+        #print(set(all_question_ids) - set(predictions_question_ids))
         results_dict['qids_missing_frac'] = len(set(all_question_ids) - set(predictions_question_ids)) / len(set(all_question_ids))
 
 
@@ -125,9 +125,14 @@ def process_results(filename, type, source_dataset, \
     ElasticLogger().write_log('INFO', 'EvalResults', context_dict=results_dict)
 
     if predictions_file is not None:
-        # uploading to cloud
-        command = "aws s3 cp " + predictions_file + " s3://multiqa/predictions/" + predictions_file.split('/')[-1] + " --acl public-read"
-        Popen(command, shell=True, preexec_fn=os.setsid)
+        if eval_path is not None:
+            # uploading to cloud
+            command = "aws s3 cp " + predictions_file + " s3://mrqa/predictions/" + predictions_file.split('/')[-1] + " --acl public-read"
+            Popen(command, shell=True, preexec_fn=os.setsid)
+        else:
+            # uploading to cloud
+            command = "aws s3 cp " + predictions_file + " s3://multiqa/predictions/" + predictions_file.split('/')[-1] + " --acl public-read"
+            Popen(command, shell=True, preexec_fn=os.setsid)
 
 def main():
     parse = argparse.ArgumentParser("Pre-process for DocumentQA/MultiQA model and datareader")
