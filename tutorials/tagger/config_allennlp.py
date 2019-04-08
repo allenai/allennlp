@@ -43,7 +43,7 @@ class PosDatasetReader(DatasetReader):
         return Instance(fields)
 
     def _read(self, file_path: str) -> Iterator[Instance]:
-        with open(cached_file(file_path)) as f:
+        with open(cached_path(file_path)) as f:
             for line in f:
                 pairs = line.strip().split()
                 sentence, tags = zip(*(pair.split("###") for pair in pairs))
