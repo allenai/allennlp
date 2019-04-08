@@ -1,8 +1,7 @@
 import json
 import logging
 from typing import Any, Dict, List, Tuple
-import gzip,re, copy, random
-import numpy as np
+import gzip , copy, random
 
 from overrides import overrides
 from pytorch_pretrained_bert.tokenization import BertTokenizer
@@ -22,14 +21,15 @@ class MRQAReader(DatasetReader):
     """
     Reads MRQA formatted datasets files, and creates AllenNLP instances.
     This code supports comma separated list of datasets to perform Multi-Task training.
-    Each instance is a single Question-Answer-Chunk. A Chunk is a single context for the model, where
-    long contexts are split into multiple Chunks (usually of 512 word pieces for BERT), using sliding window.
+    Each instance is a single Question-Answer-Chunk. (This is will be changed in the future to instance per questions)
+    A Chunk is a single context for the model, where long contexts are split into multiple Chunks (usually of 512 word pieces for BERT),
+    using sliding window.
     """
 
     def __init__(self,
                  tokenizer: Tokenizer = None,
                  token_indexers: Dict[str, TokenIndexer] = None,
-                 sampling_ratio = None,
+                 dataset_weight = None,
                  lazy: bool = False,
                  is_training = False,
                  sample_size: int = -1,
@@ -38,7 +38,7 @@ class MRQAReader(DatasetReader):
                  ) -> None:
         super().__init__(lazy)
 
-        # make sure sampling can always be reproduced
+        # make sure results may be reproduced when sampling...
         random.seed(0)
 
         self._STRIDE = STRIDE
@@ -46,45 +46,34 @@ class MRQAReader(DatasetReader):
         # therefore we need to subtract 2
         self._MAX_WORDPIECES = MAX_WORDPIECES - 2
         self._tokenizer = tokenizer or WordTokenizer()
-        self._sampling_ratio = sampling_ratio
+        self._dataset_weight = dataset_weight
         self._sample_size = sample_size
         self._is_training = is_training
+
+        # BERT specific init
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         bert_tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
         self._bert_wordpiece_tokenizer = bert_tokenizer.wordpiece_tokenizer.tokenize
         self._never_lowercase = ['[UNK]', '[SEP]', '[PAD]', '[CLS]', '[MASK]']
 
-    def tokens_to_wordpieces(self, tokens, _bert_do_lowercase=True):
-        total_len = 0
-        all_word_pieces = []
-        for token in tokens:
-            text = (token[0].lower()
-                    if _bert_do_lowercase and token[0] not in self._never_lowercase
-                    else token[0])
-
-            word_pieces = self._bert_wordpiece_tokenizer(text)
-            all_word_pieces += word_pieces
-            total_len += len(word_pieces)
-        return all_word_pieces, total_len
+    def token_to_wordpieces(self, token, _bert_do_lowercase=True):
+        text = (token[0].lower()
+                if _bert_do_lowercase and token[0] not in self._never_lowercase
+                else token[0])
+        word_pieces = self._bert_wordpiece_tokenizer(text)
+        return len(word_pieces), word_pieces
 
     def make_chunks(self, unproc_context, header, _bert_do_lowercase=True):
         """
         Each instance is a single Question-Answer-Chunk. A Chunk is a single context for the model, where
         long contexts are split into multiple Chunks (usually of 512 word pieces for BERT), using sliding window.
-
-        :param unproc_context:
-        :param header:
-        :param _bert_do_lowercase:
-        :return:
         """
 
-        # converting the context into word pieces
-
-        # We can have documents that are longer than the maximum sequence length.
-        # To deal with this we do a sliding window approach, where we take chunks
-        # of the up to our max length with a stride of 128.
+        # We could have contexts that are longer than the maximum sequence length.
+        # To tackle this we'll implement a sliding window approach, where we take chunks
+        # of up to our max length with a fixed stride.
         # splitting into chuncks that are not larger than 510 token pieces (NOTE AllenNLP
-        # adds the [CLS] and [SEP] token pieces automatically
+        # adds the [CLS] and [SEP] token pieces automatically)
         per_question_chunks = []
         for qa in unproc_context['qas']:
             # is_impossible not supported at this point...
@@ -95,11 +84,16 @@ class MRQAReader(DatasetReader):
             curr_token_ix = 0
             window_start_token_offset = 0
             while curr_token_ix < len(unproc_context['context_tokens']):
-                _, num_of_question_wordpieces = self.tokens_to_wordpieces(qa['question_tokens'])
+                num_of_question_wordpieces = 0
+                for token in qa['question_tokens']:
+                    num_of_wordpieces, _ = self.token_to_wordpieces(token)
+                    num_of_question_wordpieces += num_of_wordpieces
+
                 curr_token_ix = window_start_token_offset
 
                 curr_context_tokens = qa['question_tokens'] + [['[SEP]',len(qa['question']) + 1]]
                 context_char_offset = unproc_context['context_tokens'][curr_token_ix][1]
+                # 5 chars for [SEP], 1 + 1 chars for spaces
                 question_char_offset = len(qa['question']) + 5 + 1 + 1
                 num_of_wordpieces = 0
                 while num_of_wordpieces < self._MAX_WORDPIECES - num_of_question_wordpieces - 1 \
@@ -114,11 +108,8 @@ class MRQAReader(DatasetReader):
                     # fixing the car offset of each token
                     curr_token[1] += question_char_offset - context_char_offset
 
-                    text = (curr_token[0].lower()
-                            if _bert_do_lowercase and curr_token[0] not in self._never_lowercase
-                            else curr_token[0])
+                    _, word_pieces = self.token_to_wordpieces(curr_token)
 
-                    word_pieces = self._bert_wordpiece_tokenizer(text)
                     num_of_wordpieces += len(word_pieces)
                     if num_of_wordpieces < self._MAX_WORDPIECES - num_of_question_wordpieces - 1:
                         window_end_token_offset = curr_token_ix + 1
@@ -135,8 +126,6 @@ class MRQAReader(DatasetReader):
                 qa_metadata = {'has_answer': False, 'dataset': header['dataset'], "question_id": qa['qid'], \
                                'answer_texts_list': list(set(qa['answers']))}
                 for answer in qa['detected_answers']:
-                    # TODO assuming only one instance per answer
-
                     if answer['token_spans'][0][0] >= window_start_token_offset and \
                         answer['token_spans'][0][1] < window_end_token_offset:
                         qa_metadata['has_answer'] = True
@@ -144,11 +133,6 @@ class MRQAReader(DatasetReader):
                         inst['answers'].append((answer['token_spans'][0][0] + answer_token_offset, \
                                                        answer['token_spans'][0][1] + answer_token_offset,
                                                        answer['text']))
-
-                        if inst['answers'][-1][1] + 1 < len(inst['tokens']) and \
-                                inst['text'][inst['tokens'][inst['answers'][-1][0]][1]: \
-                                inst['tokens'][inst['answers'][-1][1] + 1][1]].strip() != answer['text']:
-                            assert ValueError()
 
                 inst['metadata'] = qa_metadata
                 chunks.append(inst)
@@ -159,14 +143,14 @@ class MRQAReader(DatasetReader):
         return per_question_chunks
 
 
-    def gen_question_instances(self, header, question_instances):
+    def gen_question_instances(self, question_chunks):
         if self._is_training:
             # When training randomly choose one chunk per example (training with shared norm (Clark and Gardner, 17)
             # is not well defined when using sliding window )
-            inst_with_answers = [inst for inst in question_instances if inst['answers'] != []]
-            instances_to_add = random.sample(inst_with_answers, 1)
+            chunks_with_answers = [inst for inst in question_chunks if inst['answers'] != []]
+            instances_to_add = random.sample(chunks_with_answers, 1)
         else:
-            instances_to_add = question_instances
+            instances_to_add = question_chunks
 
         for inst_num, inst in enumerate(instances_to_add):
             tokenized_paragraph = [Token(text=t[0], idx=t[1]) for t in inst['tokens']]
@@ -178,8 +162,7 @@ class MRQAReader(DatasetReader):
                                              self._token_indexers,
                                              new_passage,
                                              new_answers,
-                                             inst['metadata'],
-                                             header)
+                                             inst['metadata'])
 
             yield instance
 
@@ -190,11 +173,10 @@ class MRQAReader(DatasetReader):
         for ind, single_file_path in enumerate(file_path.split(',')):
             single_file_path_cached = cached_path(single_file_path)
             zip_handle = gzip.open(single_file_path_cached, 'rb')
-            #zip_handle = zipfile.ZipFile(single_file_path_cached, 'r')
-            datasets.append({'single_file_path':single_file_path, 'zip_handle':zip_handle, \
+            datasets.append({'single_file_path':single_file_path, \
                              'file_handle': zip_handle, \
                              'num_of_questions':0, 'inst_remainder':[], \
-                             'num_to_sample':1 if self._sampling_ratio is None else self._sampling_ratio[ind] })
+                             'dataset_weight':1 if self._dataset_weight is None else self._dataset_weight[ind] })
             datasets[ind]['header'] = json.loads(datasets[ind]['file_handle'].readline())['header']
 
         is_done = [False for _ in datasets]
@@ -205,12 +187,12 @@ class MRQAReader(DatasetReader):
 
                 for example in dataset['file_handle']:
                     for question_chunks in self.make_chunks(json.loads(example), datasets[ind]['header']):
-                        for instance in self.gen_question_instances(dataset['header'], question_chunks):
+                        for instance in self.gen_question_instances( question_chunks):
                             yield instance
                         dataset['num_of_questions'] += 1
 
                     # supporting sampling of first #dataset['num_to_sample'] examples
-                    if dataset['num_of_questions'] >= dataset['num_to_sample']:
+                    if dataset['num_of_questions'] >= dataset['dataset_weight']:
                         break
 
                 else:
@@ -224,7 +206,6 @@ class MRQAReader(DatasetReader):
         for dataset in datasets:
             logger.info("Total number of processed questions for %s is %d",dataset['header']['dataset'], dataset['num_of_questions'])
             dataset['file_handle'].close()
-            dataset['zip_handle'].close()
 
 
 def make_multiqa_instance(question_tokens: List[Token],
@@ -233,7 +214,6 @@ def make_multiqa_instance(question_tokens: List[Token],
                                              paragraph: List[str],
                                              answers_list: List[Tuple[int, int]] = None,
                                              additional_metadata: Dict[str, Any] = None,
-                                             header = None,
                                              use_multi_label_loss=False) -> Instance:
 
     additional_metadata = additional_metadata or {}
