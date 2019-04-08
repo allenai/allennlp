@@ -20,24 +20,10 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 @DatasetReader.register("mrqa_reader")
 class MRQAReader(DatasetReader):
     """
-    Reads a JSON-formatted Quesiton Answering in Context (QuAC) data file
-    and returns a ``Dataset`` where the ``Instances`` have four fields: ``question``, a ``ListField``,
-    ``passage``, another ``TextField``, and ``span_start`` and ``span_end``, both ``ListField`` composed of
-    IndexFields`` into the ``passage`` ``TextField``.
-    Two ``ListField``, composed of ``LabelField``, ``yesno_list`` and  ``followup_list`` is added.
-    We also add a
-    ``MetadataField`` that stores the instance's ID, the original passage text, gold answer strings,
-    and token offsets into the original passage, accessible as ``metadata['id']``,
-    ``metadata['original_passage']``, ``metadata['answer_text_lists'] and ``metadata['token_offsets']``.
-
-    Parameters
-    ----------
-    tokenizer : ``Tokenizer``, optional (default=``WordTokenizer()``)
-        We use this ``Tokenizer`` for both the question and the passage.  See :class:`Tokenizer`.
-        Default is ```WordTokenizer()``.
-    token_indexers : ``Dict[str, TokenIndexer]``, optional
-        We similarly use this for both the question and the passage.  See :class:`TokenIndexer`.
-        Default is ``{"tokens": SingleIdTokenIndexer()}``.
+    Reads MRQA formatted datasets files, and creates AllenNLP instances.
+    This code supports comma separated list of datasets to perform Multi-Task training.
+    Each instance is a single Question-Answer-Chunk. A Chunk is a single context for the model, where
+    long contexts are split into multiple Chunks (usually of 512 word pieces for BERT), using sliding window.
     """
 
     def __init__(self,
@@ -47,12 +33,18 @@ class MRQAReader(DatasetReader):
                  lazy: bool = False,
                  is_training = False,
                  sample_size: int = -1,
+                 STRIDE: int = 128,
+                 MAX_WORDPIECES: int = 512,
                  ) -> None:
         super().__init__(lazy)
 
         # make sure sampling can always be reproduced
         random.seed(0)
 
+        self._STRIDE = STRIDE
+        # NOTE AllenNLP automatically adds [CLS] and [SEP] word peices in the begining and end of the context,
+        # therefore we need to subtract 2
+        self._MAX_WORDPIECES = MAX_WORDPIECES - 2
         self._tokenizer = tokenizer or WordTokenizer()
         self._sampling_ratio = sampling_ratio
         self._sample_size = sample_size
@@ -75,10 +67,17 @@ class MRQAReader(DatasetReader):
             total_len += len(word_pieces)
         return all_word_pieces, total_len
 
-    def make_instances(self, unproc_context, header, _bert_do_lowercase=True):
-        STRIDE = 128
-        MAX_WORDPIECES = 510
-        # TODO remember to convert all separators to [SEP]
+    def make_chunks(self, unproc_context, header, _bert_do_lowercase=True):
+        """
+        Each instance is a single Question-Answer-Chunk. A Chunk is a single context for the model, where
+        long contexts are split into multiple Chunks (usually of 512 word pieces for BERT), using sliding window.
+
+        :param unproc_context:
+        :param header:
+        :param _bert_do_lowercase:
+        :return:
+        """
+
         # converting the context into word pieces
 
         # We can have documents that are longer than the maximum sequence length.
@@ -86,12 +85,13 @@ class MRQAReader(DatasetReader):
         # of the up to our max length with a stride of 128.
         # splitting into chuncks that are not larger than 510 token pieces (NOTE AllenNLP
         # adds the [CLS] and [SEP] token pieces automatically
-        instances = []
+        per_question_chunks = []
         for qa in unproc_context['qas']:
             # is_impossible not supported at this point...
             if qa['is_impossible']:
                 continue
 
+            chunks = []
             curr_token_ix = 0
             window_start_token_offset = 0
             while curr_token_ix < len(unproc_context['context_tokens']):
@@ -102,7 +102,7 @@ class MRQAReader(DatasetReader):
                 context_char_offset = unproc_context['context_tokens'][curr_token_ix][1]
                 question_char_offset = len(qa['question']) + 5 + 1 + 1
                 num_of_wordpieces = 0
-                while num_of_wordpieces < MAX_WORDPIECES - num_of_question_wordpieces - 1 \
+                while num_of_wordpieces < self._MAX_WORDPIECES - num_of_question_wordpieces - 1 \
                         and curr_token_ix < len(unproc_context['context_tokens']):
                     curr_token = copy.deepcopy(unproc_context['context_tokens'][curr_token_ix])
 
@@ -120,7 +120,7 @@ class MRQAReader(DatasetReader):
 
                     word_pieces = self._bert_wordpiece_tokenizer(text)
                     num_of_wordpieces += len(word_pieces)
-                    if num_of_wordpieces < MAX_WORDPIECES - num_of_question_wordpieces - 1:
+                    if num_of_wordpieces < self._MAX_WORDPIECES - num_of_question_wordpieces - 1:
                         window_end_token_offset = curr_token_ix + 1
                         curr_context_tokens.append(curr_token)
                     curr_token_ix += 1
@@ -149,11 +149,14 @@ class MRQAReader(DatasetReader):
                                 inst['text'][inst['tokens'][inst['answers'][-1][0]][1]: \
                                 inst['tokens'][inst['answers'][-1][1] + 1][1]].strip() != answer['text']:
                             assert ValueError()
-                inst['metadata'] = qa_metadata
-                instances.append(inst)
 
-                window_start_token_offset += STRIDE
-        return instances
+                inst['metadata'] = qa_metadata
+                chunks.append(inst)
+
+                window_start_token_offset += self._STRIDE
+
+            per_question_chunks.append(chunks)
+        return per_question_chunks
 
 
     def gen_question_instances(self, header, question_instances):
@@ -181,9 +184,7 @@ class MRQAReader(DatasetReader):
 
     @overrides
     def _read(self, file_path: str):
-        logger.info("Reading the dataset")
-
-        # supporting multi dataset training:
+        # supporting multi-dataset training:
         datasets = []
         for ind, single_file_path in enumerate(file_path.split(',')):
             single_file_path_cached = cached_path(single_file_path)
@@ -192,7 +193,7 @@ class MRQAReader(DatasetReader):
             datasets.append({'single_file_path':single_file_path, 'zip_handle':zip_handle, \
                              'file_handle': zip_handle, \
                              'num_of_questions':0, 'inst_remainder':[], \
-                             'sample_ratio':1 if self._sampling_ratio is None else self._sampling_ratio[ind] })
+                             'num_to_sample':1 if self._sampling_ratio is None else self._sampling_ratio[ind] })
             datasets[ind]['header'] = json.loads(datasets[ind]['file_handle'].readline())['header']
 
         is_done = [False for _ in datasets]
@@ -201,28 +202,14 @@ class MRQAReader(DatasetReader):
                 if is_done[ind]:
                     continue
 
-                instances = []
-                iter_question_count = 0
                 for example in dataset['file_handle']:
-                    unproc_example = json.loads(example)
-
-                    instances += self.make_instances(unproc_example, datasets[ind]['header'])
-
-                    # MRQA uses all questions:
-                    dataset['header']['preproc.final_qas_used_fraction'] = 1.0
-
-                    instance_list = sorted(instances, key=lambda x: x['metadata']['question_id'])
-                    intances_question_id = [instance['metadata']['question_id'] for instance in instances]
-                    split_inds = [0] + list(np.cumsum(np.unique(intances_question_id, return_counts=True)[1]))
-                    per_question_instances = [instance_list[split_inds[ind]:split_inds[ind + 1]] for ind in range(len(split_inds) - 1)]
-
-                    for question_instance in per_question_instances:
-                        for instance in self.gen_question_instances(dataset['header'], question_instance):
+                    for question_chunks in self.make_chunks(json.loads(example), datasets[ind]['header']):
+                        for instance in self.gen_question_instances(dataset['header'], question_chunks):
                             yield instance
-                    dataset['num_of_questions'] += len(per_question_instances)
-                    iter_question_count += 1
+                        dataset['num_of_questions'] += 1
 
-                    if iter_question_count >= dataset['sample_ratio']:
+                    # supporting sampling of first #dataset['num_to_sample'] examples
+                    if dataset['num_of_questions'] >= dataset['num_to_sample']:
                         break
 
                 else:
@@ -234,6 +221,7 @@ class MRQAReader(DatasetReader):
                     is_done[ind] = True
 
         for dataset in datasets:
+            logger.info("Total number of processed questions for %s is %d",dataset['header']['dataset'], dataset['num_of_questions'])
             dataset['file_handle'].close()
             dataset['zip_handle'].close()
 
@@ -290,8 +278,7 @@ def make_multiqa_instance(question_tokens: List[Token],
     passage_field = TextField(tokenized_paragraph, token_indexers)
     fields['passage'] = passage_field
     fields['question'] = TextField(question_tokens, token_indexers)
-    metadata = {'qas_used_fraction':header['preproc.final_qas_used_fraction'],
-                'original_passage': paragraph,
+    metadata = {'original_passage': paragraph,
                 'answers_list': answers_list,
                 'token_offsets': passage_offsets,
                 'question_tokens': [token.text for token in question_tokens],
