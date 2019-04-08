@@ -10,12 +10,12 @@ from pytorch_pretrained_bert.tokenization import BertTokenizer
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.instance import Instance
-from allennlp.data.dataset_readers.reading_comprehension import util
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
 from allennlp.data.tokenizers import Token, Tokenizer, WordTokenizer
+from allennlp.data.fields import Field, TextField, IndexField, \
+    MetadataField, ListField
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
-
 
 @DatasetReader.register("mrqa_reader")
 class MRQAReader(DatasetReader):
@@ -43,11 +43,9 @@ class MRQAReader(DatasetReader):
     def __init__(self,
                  tokenizer: Tokenizer = None,
                  token_indexers: Dict[str, TokenIndexer] = None,
-                 use_one_inst_per_question = False,
-                 rewind_datasets: bool = False,
                  sampling_ratio = None,
                  lazy: bool = False,
-                 all_question_instances_in_batch = False,
+                 is_training = False,
                  sample_size: int = -1,
                  ) -> None:
         super().__init__(lazy)
@@ -56,11 +54,9 @@ class MRQAReader(DatasetReader):
         random.seed(0)
 
         self._tokenizer = tokenizer or WordTokenizer()
-        self._rewind_datasets = rewind_datasets
         self._sampling_ratio = sampling_ratio
         self._sample_size = sample_size
-        self._use_one_inst_per_question = use_one_inst_per_question
-        self._all_question_instances_in_batch = all_question_instances_in_batch
+        self._is_training = is_training
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         bert_tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
         self._bert_wordpiece_tokenizer = bert_tokenizer.wordpiece_tokenizer.tokenize
@@ -161,49 +157,25 @@ class MRQAReader(DatasetReader):
 
 
     def gen_question_instances(self, header, question_instances):
-
-
-        if self._all_question_instances_in_batch:
-            instances_to_add = question_instances
+        if self._is_training:
+            # When training randomly choose one chunk per example (training with shared norm (Clark and Gardner, 17)
+            # is not well defined when using sliding window )
+            instances_to_add = random.sample(question_instances, 1)
         else:
-            # choose at most 2 instances from the same question:
-            if len(question_instances) > 1 and self._use_one_inst_per_question:
-                inst_with_answers = [inst for inst in question_instances if inst['answers'] != []]
-                if len(inst_with_answers) > 0:
-                    instances_to_add = random.sample(inst_with_answers, 1)
-                else:
-                    instances_to_add = []
-            elif len(question_instances) > 2:
-                # This part is inspired by Clark and Gardner, 17 - oversample the highest ranking documents.
-                # In thier work they use only instances with answers, so we will find the highest
-                # ranking instance with an answer (this also insures we have at least one answer in the chosen instances)
+            instances_to_add = question_instances
 
-                inst_with_answers = [inst for inst in question_instances if inst['answers'] != []]
-                instances_to_add = random.sample(inst_with_answers[0:2], 1)
-                # we assume each question will be visited once in an epoch
-                question_instances.remove(instances_to_add[0])
-                instances_to_add += random.sample(question_instances, 1)
-
-            else:
-                instances_to_add = question_instances
-
-            # Require at least one answer:
-            #if not any(inst['answers'] != [] for inst in instances_to_add):
-            #    raise ValueError()
-
-        #logger.info("multiqa+: yielding %d instances ", len(filtered_instances))
         for inst_num, inst in enumerate(instances_to_add):
             tokenized_paragraph = [Token(text=t[0], idx=t[1]) for t in inst['tokens']]
             question_tokens = [Token(text=t[0], idx=t[1]) for t in inst['question_tokens']]
             new_passage = inst['text']
             new_answers = inst['answers']
-            instance = util.make_reading_comprehension_instance_multiqa(question_tokens,
-                                                                                 tokenized_paragraph,
-                                                                                 self._token_indexers,
-                                                                                 new_passage,
-                                                                                 new_answers,
-                                                                                 inst['metadata'],
-                                                                                 header)
+            instance = make_multiqa_instance(question_tokens,
+                                             tokenized_paragraph,
+                                             self._token_indexers,
+                                             new_passage,
+                                             new_answers,
+                                             inst['metadata'],
+                                             header)
 
             yield instance
 
@@ -255,15 +227,7 @@ class MRQAReader(DatasetReader):
 
                 else:
                     # No more lines to be read from file
-                    if self._rewind_datasets:
-                        logger.info('rewinding! %s', dataset['single_file_path'])
-                        # Reopening file (seek doesn't seem to work inside a zip)
-                        dataset['file_handle'].close()
-                        dataset['file_handle'] = dataset['zip_handle'].open(dataset['zip_handle'].namelist()[0])
-                        # Reading header
-                        _ = dataset['file_handle'].readline()
-                    else:
-                        is_done[ind] = True
+                    is_done[ind] = True
 
                 # per dataset sampling
                 if self._sample_size > -1 and dataset['num_of_questions'] >= self._sample_size:
@@ -272,5 +236,99 @@ class MRQAReader(DatasetReader):
         for dataset in datasets:
             dataset['file_handle'].close()
             dataset['zip_handle'].close()
+
+
+def make_multiqa_instance(question_tokens: List[Token],
+                                             tokenized_paragraph: List[List[Token]],
+                                             token_indexers: Dict[str, TokenIndexer],
+                                             paragraph: List[str],
+                                             answers_list: List[Tuple[int, int]] = None,
+                                             additional_metadata: Dict[str, Any] = None,
+                                             header = None,
+                                             use_multi_label_loss=False) -> Instance:
+    """
+    Converts a question, a passage, and an optional answer (or answers) to an ``Instance`` for use
+    in a reading comprehension model.
+
+    Note, this should be part of reading_comprehension/util.py
+
+    Creates an ``Instance`` with at least these fields: ``question`` and ``passage``, both
+    ``TextFields``; and ``metadata``, a ``MetadataField``.  Additionally, if both ``answer_texts``
+    and ``char_span_starts`` are given, the ``Instance`` has ``span_start`` and ``span_end``
+    fields, which are both ``IndexFields``.
+
+    Parameters
+    ----------
+    question_list_tokens : ``List[List[Token]]``
+        An already-tokenized list of questions. Each dialog have multiple questions.
+    passage_tokens : ``List[Token]``
+        An already-tokenized passage that contains the answer to the given question.
+    token_indexers : ``Dict[str, TokenIndexer]``
+        Determines how the question and passage ``TextFields`` will be converted into tensors that
+        get input to a model.  See :class:`TokenIndexer`.
+    passage_text : ``str``
+        The original passage text.  We need this so that we can recover the actual span from the
+        original passage that the model predicts as the answer to the question.  This is used in
+        official evaluation scripts.
+    token_spans_lists : ``List[List[Tuple[int, int]]]``, optional
+        Indices into ``passage_tokens`` to use as the answer to the question for training.  This is
+        a list of list, first because there is multiple questions per dialog, and
+        because there might be several possible correct answer spans in the passage.
+        Currently, we just select the last span in this list (i.e., QuAC has multiple
+        annotations on the dev set; this will select the last span, which was given by the original annotator).
+    additional_metadata : ``Dict[str, Any]``, optional
+        The constructed ``metadata`` field will by default contain ``original_passage``,
+        ``token_offsets``, ``question_tokens``, ``passage_tokens``, and ``answer_texts`` keys.  If
+        you want any other metadata to be associated with each instance, you can pass that in here.
+        This dictionary will get added to the ``metadata`` dictionary we already construct.
+    """
+    additional_metadata = additional_metadata or {}
+    fields: Dict[str, Field] = {}
+
+    passage_offsets = [(token.idx, token.idx + len(token.text)) for token in tokenized_paragraph]
+    # This is separate so we can reference it later with a known type.
+    passage_field = TextField(tokenized_paragraph, token_indexers)
+    fields['passage'] = passage_field
+    fields['question'] = TextField(question_tokens, token_indexers)
+    metadata = {'qas_used_fraction':header['preproc.final_qas_used_fraction'],
+                'original_passage': paragraph,
+                'answers_list': answers_list,
+                'token_offsets': passage_offsets,
+                'question_tokens': [token.text for token in question_tokens],
+                'passage_tokens': [token.text for token in tokenized_paragraph]}
+
+    if answers_list is not None:
+        if use_multi_label_loss:
+            span_start_list: List[Field] = []
+            span_end_list: List[Field] = []
+            if answers_list == []:
+                span_start_list.append(IndexField(-1, passage_field))
+                span_end_list.append(IndexField(-1, passage_field))
+            else:
+                for answer in answers_list:
+                    span_start_list.append(IndexField(answer[0], passage_field))
+                    span_end_list.append(IndexField(answer[1], passage_field))
+
+
+            fields['span_start'] = ListField(span_start_list)
+            fields['span_end'] = ListField(span_end_list)
+
+        else:
+            span_start_list: List[Field] = []
+            span_end_list: List[Field] = []
+            if answers_list == []:
+                span_start, span_end = -1, -1
+            else:
+                span_start, span_end, text = answers_list[0]
+
+            span_start_list.append(IndexField(span_start, passage_field))
+            span_end_list.append(IndexField(span_end, passage_field))
+
+            fields['span_start'] = ListField(span_start_list)
+            fields['span_end'] = ListField(span_end_list)
+
+    metadata.update(additional_metadata)
+    fields['metadata'] = MetadataField(metadata)
+    return Instance(fields)
 
 
