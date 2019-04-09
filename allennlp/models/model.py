@@ -139,8 +139,6 @@ class Model(torch.nn.Module, Registrable):
         ----------
         instances : List[Instance], required
             The instances to run the model on.
-        cuda_device : int, required
-            The GPU device to use.  -1 means use the CPU.
 
         Returns
         -------
