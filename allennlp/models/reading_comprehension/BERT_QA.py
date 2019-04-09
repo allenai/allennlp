@@ -74,19 +74,6 @@ class BERT_QA(Model):
         return -(torch.log((F.softmax(span_logits[instances_with_answer], dim=-1) * \
                             target.float()).sum(dim=1))).mean()
 
-    def shared_norm_cross_entropy_loss(self, span_logits, answers, passage_length):
-        target = torch.cuda.FloatTensor(1, passage_length * answers.size(0), device=span_logits.device) \
-            if torch.cuda.is_available() else torch.FloatTensor(1, passage_length * answers.size(0))
-        target.zero_()
-
-        answers = answers.squeeze().cpu() if len(answers) > 1 else answers.cpu()
-
-        for ind, q_target in enumerate(answers):
-            if len(np.argwhere(q_target.squeeze() >= 0))>0 :
-                target[0, q_target[(q_target >= 0) & (q_target < passage_length)] + passage_length * ind] = 1.0
-
-        return -(torch.log((F.softmax(torch.cat(tuple(span_logits)), dim=-1) *  target.float()).sum(dim=1))).mean()
-
     def forward(self,  # type: ignore
                 question: Dict[str, torch.LongTensor],
                 passage: Dict[str, torch.LongTensor],
@@ -95,10 +82,6 @@ class BERT_QA(Model):
                 metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
 
         batch_size, num_of_passage_tokens = passage['bert'].size()
-
-        if random.randint(1, 5) % 5 == 0:
-            for meta in metadata:
-                logger.info("%s %s", meta['dataset'], meta['question_id'])
 
         embedded_passage = self._text_field_embedder(passage)
         passage_length = embedded_passage.size(1)
@@ -153,25 +136,6 @@ class BERT_QA(Model):
                     output_dict["loss"] = loss
 
 
-            # TODO these are not updates
-            #self._span_start_accuracy(span_start_logits, span_start.view(-1))
-            #self._span_end_accuracy(span_end_logits, span_end.view(-1))
-            #self._span_accuracy(best_span[:, 0:2],torch.stack([span_start, span_end], -1).view(total_qa_count, 2))
-        # TODO: This is a patch, for dev question with no answer token found,
-        # but we would like to see if we still get F1 score for it...
-        # so in evaluation our loss is not Accurate! (however the question with no answer tokens will
-        # remain the same number so it is relatively accuracy)
-        if 'loss' not in output_dict:
-            if not self.training:
-                output_dict["loss"] = torch.cuda.FloatTensor([0], device=span_end_logits.device) \
-                    if torch.cuda.is_available() else torch.FloatTensor([0])
-            else:
-                output_dict["loss"] = torch.tensor([[1.]], requires_grad=True,device=span_end_logits.device) \
-                    if torch.cuda.is_available() else torch.tensor([[1.]], requires_grad=True)
-
-        # support for multi choice answers:
-        # TODO this does not handle prediction mode at all .....
-        # we iterate over document that do not contain the golden answer for validation and test setup.
         span_start_logits_numpy = span_start_logits.data.cpu().numpy()
         span_end_logits_numpy = span_end_logits.data.cpu().numpy()
 
@@ -180,17 +144,10 @@ class BERT_QA(Model):
         output_dict['best_span_str'] = []
         output_dict['qid'] = []
 
-        ## TODO UGLY PATCH FOR TESTING
-        #new_metadata = []
-        #for question_meta in metadata:
-        #    new_metadata += [question_meta for i in range(num_of_docs)]
-        #metadata = new_metadata
-
         # best_span is a vector of more than one span
         best_span_cpu = best_span.detach().cpu().numpy()
 
-        # Iterating over every question (which may contain multiple instances, one per document)
-
+        # Iterating over every question (which may contain multiple instances, one per chunk)
         for question_inds, question_instances_metadata in zip(per_question_inds, metadata):
             if len(question_inds) == 0:
                 continue
@@ -200,12 +157,6 @@ class BERT_QA(Model):
                       span_end_logits_numpy[question_inds, best_span_cpu[question_inds][:, 1]])
             best_span_logit = np.max(span_start_logits_numpy[question_inds, best_span_cpu[question_inds][:, 0]] +
                                       span_end_logits_numpy[question_inds, best_span_cpu[question_inds][:, 1]])
-
-            # TODO this shouldent happen - we should consider spans from passages not taken...
-            #if span_start.view(-1)[question_inds[best_span_ind]] == -1:
-            #    self._official_f1(100 * 0.0)
-            #    self._official_EM(100 * 0.0)
-            #    continue
 
             passage_str = question_instances_metadata[best_span_ind]['original_passage']
             offsets = question_instances_metadata[best_span_ind]['token_offsets']
@@ -219,20 +170,8 @@ class BERT_QA(Model):
             EM_score = 0.0
             gold_answer_texts = question_instances_metadata[best_span_ind]['answer_texts_list']
             if gold_answer_texts:
-                if len(gold_answer_texts) > 1:
-                    t_f1 = []
-                    t_EM = []
-                    for answer_index in range(len(gold_answer_texts)):
-                        idxes = list(range(len(gold_answer_texts)))
-
-                        refs = [gold_answer_texts[z] for z in idxes]
-                        t_f1.append(squad_eval.metric_max_over_ground_truths(squad_eval.f1_score,best_span_string,refs))
-                        t_EM.append(squad_eval.metric_max_over_ground_truths(squad_eval.exact_match_score,best_span_string,refs))
-                    f1_score = 1.0 * sum(t_f1) / len(t_f1)
-                    EM_score = 1.0 * sum(t_EM) / len(t_EM)
-                else:
-                    f1_score = squad_eval.metric_max_over_ground_truths(squad_eval.f1_score,best_span_string,gold_answer_texts)
-                    EM_score = squad_eval.metric_max_over_ground_truths(squad_eval.exact_match_score, best_span_string,gold_answer_texts)
+                f1_score = squad_eval.metric_max_over_ground_truths(squad_eval.f1_score,best_span_string,gold_answer_texts)
+                EM_score = squad_eval.metric_max_over_ground_truths(squad_eval.exact_match_score, best_span_string,gold_answer_texts)
             self._official_f1(100 * f1_score)
             self._official_EM(100 * EM_score)
 
@@ -245,19 +184,6 @@ class BERT_QA(Model):
                                 'best_span_string':best_span_string,\
                                 'gold_answer_texts':gold_answer_texts, \
                                 'qas_used_fraction':1.0}) + '\n')
-        #output_dict['qid'].append(per_dialog_query_id_list)
-        #output_dict['best_span_str'].append(per_dialog_best_span_list)
-
-        return output_dict
-
-    @overrides
-    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, Any]:
-        yesno_tags = [[self.vocab.get_token_from_index(x, namespace="yesno_labels") for x in yn_list] \
-                      for yn_list in output_dict.pop("yesno")]
-        followup_tags = [[self.vocab.get_token_from_index(x, namespace="followup_labels") for x in followup_list] \
-                         for followup_list in output_dict.pop("followup")]
-        output_dict['yesno'] = yesno_tags
-        output_dict['followup'] = followup_tags
         return output_dict
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
