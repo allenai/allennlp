@@ -62,6 +62,7 @@ class WordpieceIndexer(TokenIndexer[int]):
         length. Otherwise, they will be split apart and batched using a
         sliding window.
     """
+
     def __init__(self,
                  vocab: Dict[str, int],
                  wordpiece_tokenizer: Callable[[str], List[str]],
@@ -122,7 +123,7 @@ class WordpieceIndexer(TokenIndexer[int]):
     def tokens_to_indices(self,
                           tokens: List[Token],
                           vocabulary: Vocabulary,
-                          index_name: str) -> Dict[str, List[List[int]]]:
+                          index_name: str) -> Dict[str, List[int]]:
         if not self._added_to_vocabulary:
             self._add_encoding_to_vocabulary(vocabulary)
             self._added_to_vocabulary = True
@@ -134,32 +135,8 @@ class WordpieceIndexer(TokenIndexer[int]):
                 for token in tokens)
 
         # Obtain a nested sequence of wordpieces, each represented by a list of wordpiece ids
-        token_wordpiece_ids = [
-            [self.vocab[wordpiece] for wordpiece in self.wordpiece_tokenizer(token)]
-            for token in text
-        ]
-
-        # offsets[i] will give us the index into wordpiece_ids
-        # for the wordpiece "corresponding to" the i-th input token.
-        offsets = []
-
-        # If we're using initial offsets, we want to start at offset = len(text_tokens)
-        # so that the first offset is the index of the first wordpiece of tokens[0].
-        # Otherwise, we want to start at len(text_tokens) - 1, so that the "previous"
-        # offset is the last wordpiece of "tokens[-1]".
-        offset = len(self._start_piece_ids) if self.use_starting_offsets else len(self._start_piece_ids) - 1
-
-        for token in token_wordpiece_ids:
-            # For initial offsets, the current value of ``offset`` is the start of
-            # the current wordpiece, so add it to ``offsets`` and then increment it.
-            if self.use_starting_offsets:
-                offsets.append(offset)
-                offset += len(token)
-            # For final offsets, the current value of ``offset`` is the end of
-            # the previous wordpiece, so increment it and then add it to ``offsets``.
-            else:
-                offset += len(token)
-                offsets.append(offset)
+        token_wordpiece_ids = [[self.vocab[wordpiece] for wordpiece in self.wordpiece_tokenizer(token)]
+                               for token in text]
 
         # Flattened list of wordpieces. In the end, the output of the model (e.g., BERT) should
         # have a sequence length equal to the length of this list. However, it will first be split into
@@ -186,20 +163,48 @@ class WordpieceIndexer(TokenIndexer[int]):
         window_length = self.max_pieces - len(self._start_piece_ids) - len(self._end_piece_ids)
         stride = window_length // 2
 
+        # offsets[i] will give us the index into wordpiece_ids
+        # for the wordpiece "corresponding to" the i-th input token.
+        offsets = []
+
+        # If we're using initial offsets, we want to start at offset = len(text_tokens)
+        # so that the first offset is the index of the first wordpiece of tokens[0].
+        # Otherwise, we want to start at len(text_tokens) - 1, so that the "previous"
+        # offset is the last wordpiece of "tokens[-1]".
+        offset = len(self._start_piece_ids) if self.use_starting_offsets else len(self._start_piece_ids) - 1
+
+        for token in token_wordpiece_ids:
+            # Truncate the sequence if specified, which depends on where the offsets are
+            next_offset = 1 if self.use_starting_offsets else 0
+            if self._truncate_long_sequences and offset >= window_length + next_offset:
+                break
+
+            # For initial offsets, the current value of ``offset`` is the start of
+            # the current wordpiece, so add it to ``offsets`` and then increment it.
+            if self.use_starting_offsets:
+                offsets.append(offset)
+                offset += len(token)
+            # For final offsets, the current value of ``offset`` is the end of
+            # the previous wordpiece, so increment it and then add it to ``offsets``.
+            else:
+                offset += len(token)
+                offsets.append(offset)
+
         if len(flat_wordpiece_ids) <= window_length:
             # If all the wordpieces fit, then we don't need to do anything special
             wordpiece_windows = [self._start_piece_ids + flat_wordpiece_ids + self._end_piece_ids]
         elif self._truncate_long_sequences:
-            logger.warning("Too many wordpieces, truncating sequence. If you would like a rolling window, set"
-                           "`truncate_long_sequences` to False"
-                           f"{[token.text for token in tokens]}")
+            logger.warning("Too many wordpieces, truncating sequence. If you would like a sliding window, set"
+                           "`truncate_long_sequences` to False %s", str([token.text for token in tokens]))
             wordpiece_windows = [self._start_piece_ids + flat_wordpiece_ids[:window_length] + self._end_piece_ids]
         else:
             # Create a sliding window of wordpieces of length `max_pieces` that advances by `stride` steps and
             # add start/end wordpieces to each window
             # TODO: this currently does not respect word boundaries, so words may be cut in half between windows
             # However, this would increase complexity, as sequences would need to be padded/unpadded in the middle
-            wordpiece_windows = [self._start_piece_ids + flat_wordpiece_ids[i:i+window_length] + self._end_piece_ids
+            wordpiece_windows = [self._start_piece_ids +
+                                 flat_wordpiece_ids[i:i + window_length] +
+                                 self._end_piece_ids
                                  for i in range(0, len(flat_wordpiece_ids), stride)]
 
             # Check for overlap in the last window. Throw it away if it is redundant.
@@ -223,12 +228,10 @@ class WordpieceIndexer(TokenIndexer[int]):
         # is captured by the offsets.
         mask = [1 for _ in offsets]
 
-        return {
-                index_name: wordpiece_ids,
+        return {index_name: wordpiece_ids,
                 f"{index_name}-offsets": offsets,
                 f"{index_name}-type-ids": token_type_ids,
-                "mask": mask
-        }
+                "mask": mask}
 
     @overrides
     def get_padding_token(self) -> int:
@@ -289,6 +292,7 @@ class PretrainedBertIndexer(WordpieceIndexer):
         length. Otherwise, they will be split apart and batched using a
         sliding window.
     """
+
     def __init__(self,
                  pretrained_model: str,
                  use_starting_offsets: bool = False,

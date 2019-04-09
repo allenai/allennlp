@@ -146,8 +146,8 @@ class BertEmbedder(TokenEmbedder):
             # sentence. To do this, the indices will be the left half of each embedded window sub-sequence. E.g.,
             #  0     1 2    3  4   5     6     7  8   9     10 11
             # "[CLS] I went to the [SEP] [CLS] to the store to [SEP]"
-            # should now have indices [0, 1, 2, 7, 8]. The remaining code adds the final window indices (so the final
-            # indices should be [0, 1, 2, 7, 8, 9, 10, 11])
+            # should now have indices [0, 1, 2, 7, 8]. The remaining code adds the final window indices (so the
+            # final indices should be [0, 1, 2, 7, 8, 9, 10, 11])
 
             full_seq_len = unpacked_embeddings.size(-2) - self.max_pieces
             stride = self.max_pieces // 2
