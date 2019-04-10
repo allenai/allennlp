@@ -4,7 +4,9 @@ import numpy
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Token, Vocabulary
 from allennlp.data.fields import TextField, LabelField, ListField, IndexField, SequenceLabelField
+from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenCharactersIndexer
+from allennlp.data.tokenizers.word_tokenizer import WordTokenizer
 
 
 class TestListField(AllenNlpTestCase):
@@ -191,16 +193,11 @@ class TestListField(AllenNlpTestCase):
         assert [f for f in list_field] == [self.field1, self.field2, self.field3]
 
     def test_2660_repro(self):
-        from allennlp.data.token_indexers.single_id_token_indexer import SingleIdTokenIndexer
         token_indexers = {"tokens": SingleIdTokenIndexer()}
-        from allennlp.data.tokenizers.word_tokenizer import WordTokenizer
         tokenizer = WordTokenizer()
         tokens = tokenizer.tokenize("Foo")
-        from allennlp.data.fields.text_field import TextField
-        from allennlp.data.fields.list_field import ListField
         text_field = TextField(tokens, token_indexers)
         list_field = ListField([text_field.empty_field()])
         fields = {'list': list_field}
-        from allennlp.data.instance import Instance
         instance = Instance(fields)
         instance.as_tensor_dict()
