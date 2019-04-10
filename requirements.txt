@@ -106,7 +106,7 @@ moto>=1.3.4
 #### TESTING-RELATED PACKAGES ####
 
 # Checks style, syntax, and other useful errors.
-pylint==1.8.1
+pylint==1.9.4
 
 # Static type checking
 mypy==0.521
