@@ -122,7 +122,6 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
         padding_keys = {key for d in lengths for key in d.keys()}
         for padding_key in padding_keys:
             padding_lengths[padding_key] = max(x[padding_key] if padding_key in x else 0 for x in lengths)
-
         return padding_lengths
 
     @overrides
