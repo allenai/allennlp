@@ -150,7 +150,7 @@ def sort_batch_by_length(tensor: torch.Tensor, sequence_lengths: torch.Tensor):
     restoration_indices : torch.LongTensor
         Indices into the sorted_tensor such that
         ``sorted_tensor.index_select(0, restoration_indices) == original_tensor``
-    permuation_index : torch.LongTensor
+    permutation_index : torch.LongTensor
         The indices used to sort the tensor. This is useful if you want to sort many
         tensors using the same ordering.
     """
