@@ -234,6 +234,12 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
         cell_list = self.language.execute(logical_form)
         assert cell_list == ["4th_western"]
 
+    def test_execute_works_with_select_nested_in_filter_in(self):
+        logical_form = """(filter_in all_rows string_column:regular_season (select_string (first all_rows)
+                           string_column:regular_season))"""
+        row_list = self.language.execute(logical_form)
+        assert row_list == self.language.execute("(first all_rows)")
+
     def test_execute_works_with_filter_not_in(self):
         # Selecting "regular season" from rows that do not have "did not qualify" in "open cup" column.
         logical_form = """(select_string (filter_not_in all_rows string_column:open_cup string:did_not_qualify)
@@ -432,7 +438,7 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
                 "<List[Row],ComparableColumn:List[Row]>",
                 "<List[Row],Column:List[Row]>",
                 "<List[Row],List[Row],NumberColumn:Number>",
-                "<List[Row],StringColumn,str:List[Row]>",
+                "<List[Row],StringColumn,List[str]:List[Row]>",
                 "<Number,Number,Number:Date>",
                 "<List[Row],DateColumn,Date:List[Row]>",
                 "<List[Row],NumberColumn:Number>",
@@ -448,7 +454,7 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
                 "ComparableColumn",
                 "NumberColumn",
                 "DateColumn",
-                "str",
+                "List[str]",
                 }
 
         check_productions_match(productions['@start@'],
@@ -474,7 +480,7 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
         check_productions_match(productions['<List[Row],List[Row],NumberColumn:Number>'],
                                 ['diff'])
 
-        check_productions_match(productions['<List[Row],StringColumn,str:List[Row]>'],
+        check_productions_match(productions['<List[Row],StringColumn,List[str]:List[Row]>'],
                                 ['filter_in', 'filter_not_in'])
 
         check_productions_match(productions['<Number,Number,Number:Date>'],
@@ -495,17 +501,13 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
         check_productions_match(productions['<List[Row]:Number>'],
                                 ['count'])
 
-        check_productions_match(productions['List[str]'],
-                                ['[<List[Row],Column:List[str]>, List[Row], Column]',
-                                 '[<List[Row],StringColumn:List[str]>, List[Row], StringColumn]'])
-
         check_productions_match(productions['List[Row]'],
                                 ['all_rows',
                                  '[<List[Row],DateColumn,Date:List[Row]>, List[Row], DateColumn, Date]',
                                  '[<List[Row],Column:List[Row]>, List[Row], Column]',
                                  '[<List[Row],ComparableColumn:List[Row]>, List[Row], ComparableColumn]',
                                  '[<List[Row],NumberColumn,Number:List[Row]>, List[Row], NumberColumn, Number]',
-                                 '[<List[Row],StringColumn,str:List[Row]>, List[Row], StringColumn, str]',
+                                 '[<List[Row],StringColumn,List[str]:List[Row]>, List[Row], StringColumn, List[str]]',  # pylint: disable=line-too-long
                                  '[<List[Row]:List[Row]>, List[Row]]'])
 
         check_productions_match(productions['Date'],
@@ -574,7 +576,7 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
 
         # Strings come from the question - any span in the question that shows up as a cell in the
         # table is a valid string production.
-        check_productions_match(productions['str'],
+        check_productions_match(productions['List[str]'],
                                 ['string:quarterfinals',
                                  'string:did_not_qualify',
                                  'string:a_league',
@@ -583,7 +585,9 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
                                  'string:1',
                                  'string:2',
                                  'string:2005',
-                                 'string:2001'])
+                                 'string:2001',
+                                 '[<List[Row],Column:List[str]>, List[Row], Column]',
+                                 '[<List[Row],StringColumn:List[str]>, List[Row], StringColumn]'])
 
     def test_world_processes_logical_forms_correctly(self):
         logical_form = ("(select_date (filter_in all_rows string_column:league string:usl_a_league)"
@@ -597,12 +601,12 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
         expected_sequence = ['@start@ -> Date',
                              'Date -> [<List[Row],DateColumn:Date>, List[Row], DateColumn]',
                              '<List[Row],DateColumn:Date> -> select_date',
-                             'List[Row] -> [<List[Row],StringColumn,str:List[Row]>, '
-                                     'List[Row], StringColumn, str]',  # pylint: disable=bad-continuation
-                             '<List[Row],StringColumn,str:List[Row]> -> filter_in',
+                             'List[Row] -> [<List[Row],StringColumn,List[str]:List[Row]>, '
+                                     'List[Row], StringColumn, List[str]]',  # pylint: disable=bad-continuation
+                             '<List[Row],StringColumn,List[str]:List[Row]> -> filter_in',
                              'List[Row] -> all_rows',
                              'StringColumn -> string_column:league',
-                             'str -> string:usl_a_league',
+                             'List[str] -> string:usl_a_league',
                              'DateColumn -> date_column:year']
         assert self.language.logical_form_to_action_sequence(logical_form) == expected_sequence
 

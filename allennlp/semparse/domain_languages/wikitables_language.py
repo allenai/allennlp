@@ -42,11 +42,6 @@ class NumberColumn(ComparableColumn):
     pass
 
 
-# TODO(mattg, pradeep): We should probably coerce the question strings to have type `List[str]`, so
-# that the filter_in and filter_not_in functions can easily use the output of a `select` as input.
-# Also, there are updates to this language in `allennlp-weak-supervision-research` that need to be
-# included here.
-
 class WikiTablesLanguage(DomainLanguage):
     # pylint: disable=too-many-public-methods,no-self-use
     """
@@ -109,7 +104,9 @@ class WikiTablesLanguage(DomainLanguage):
         self._question_entities = [entity for entity, _ in question_entities]
         self._question_numbers = [number for number, _ in question_numbers]
         for entity in self._question_entities:
-            self.add_constant(entity, entity)
+            # Forcing the type of entities to be List[str] here to ensure that the language deals with the outputs
+            # of select-like statements and constants similarly.
+            self.add_constant(entity, entity, type_=List[str])
 
         for number in self._question_numbers:
             self.add_constant(str(number), float(number), type_=Number)
@@ -623,17 +620,37 @@ class WikiTablesLanguage(DomainLanguage):
     # in the cell or not, instead of using a numerical / date comparator.  We only add them to the
     # language if we see a string column in the table (which is basically always).
 
-    def filter_in(self, rows: List[Row], column: StringColumn, filter_value: str) -> List[Row]:
+    def filter_in(self, rows: List[Row], column: StringColumn, filter_values: List[str]) -> List[Row]:
+        # We accept a list of filter values instead of a single string to allow the outputs of select like
+        # operations to be passed in as filter values.
         # Assuming filter value has underscores for spaces. The cell values also have underscores
-        # for spaces, so we do not need to replace them here.  Also, we need to remove the
-        # "string:" that was prepended to the entity name in the language.
+        # for spaces, so we do not need to replace them here.
+        if not filter_values:
+            raise ExecutionError(f"Unexpected filter value: {filter_values}")
+        if isinstance(filter_values, str):
+            filter_value = filter_values
+        elif isinstance(filter_values, list):
+            filter_value = filter_values[0]
+        else:
+            raise ExecutionError(f"Unexpected filter value: {filter_values}")
+        # Also, we need to remove the "string:" that was prepended to the entity name in the language.
         filter_value = filter_value.lstrip('string:')
         return [row for row in rows if filter_value in row.values[column.name]]
 
-    def filter_not_in(self, rows: List[Row], column: StringColumn, filter_value: str) -> List[Row]:
+    def filter_not_in(self, rows: List[Row], column: StringColumn, filter_values: List[str]) -> List[Row]:
+        # We accept a list of filter values instead of a single string to allow the outputs of select like
+        # operations to be passed in as filter values.
         # Assuming filter value has underscores for spaces. The cell values also have underscores
-        # for spaces, so we do not need to replace them here.  Also, we need to remove the
-        # "string:" that was prepended to the entity name in the language.
+        # for spaces, so we do not need to replace them here.
+        if not filter_values:
+            raise ExecutionError(f"Unexpected filter value: {filter_values}")
+        if isinstance(filter_values, str):
+            filter_value = filter_values
+        elif isinstance(filter_values, list):
+            filter_value = filter_values[0]
+        else:
+            raise ExecutionError(f"Unexpected filter value: {filter_values}")
+        # Also, we need to remove the "string:" that was prepended to the entity name in the language.
         filter_value = filter_value.lstrip('string:')
         return [row for row in rows if filter_value not in row.values[column.name]]
 
