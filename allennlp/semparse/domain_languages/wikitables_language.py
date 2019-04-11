@@ -320,6 +320,21 @@ class WikiTablesLanguage(DomainLanguage):
                 agenda.append(f"Number -> {number}")
         return agenda
 
+    @staticmethod
+    def is_instance_specific_entity(entity_name: str) -> bool:
+        """
+        Instance specific entities are column names, strings and numbers. Returns True if the entity
+        is one of those.
+        """
+        entity_is_number = False
+        try:
+            float(entity_name)
+            entity_is_number = True
+        except ValueError:
+            pass
+        # Column names start with "*_column:", strings start with "string:"
+        return "_column:" in entity_name or entity_name.startswith("string:") or entity_is_number
+
     def evaluate_logical_form(self, logical_form: str, target_list: List[str]) -> bool:
         """
         Takes a logical form, and the list of target values as strings from the original lisp
