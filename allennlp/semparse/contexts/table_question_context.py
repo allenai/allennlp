@@ -181,7 +181,7 @@ class TableQuestionContext:
         for table_row in table_data:
             for column_name, cell_value in table_row.items():
                 if "string_column:" in column_name and cell_value is not None:
-                    string_column_mapping[cell_value].append(column_name)
+                    string_column_mapping[str(cell_value)].append(column_name)
         # We want the object to raise KeyError when checking if a specific string is a cell in the
         # table.
         self._string_column_mapping = dict(string_column_mapping)
@@ -371,7 +371,7 @@ class TableQuestionContext:
         for i, token in enumerate(tokens):
             token_text = token.text
             text = token.text.replace(',', '').lower()
-            number = NUMBER_WORDS.get(text, None)
+            number = float(NUMBER_WORDS[text]) if text in NUMBER_WORDS else None
 
             magnitude = 1
             if i < len(tokens) - 1:
