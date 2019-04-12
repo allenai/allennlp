@@ -1,21 +1,23 @@
 # pylint: disable=no-self-use,invalid-name
 import json
-import torch
 from typing import Iterator, List, Dict
 
-import numpy
+import torch
 
+from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Token, Vocabulary, DatasetReader
-from allennlp.data.fields import TextField, LabelField, ListField, IndexField, SequenceLabelField, SpanField
+from allennlp.data.fields import TextField, ListField, SpanField
 from allennlp.data.instance import Instance
-from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenCharactersIndexer
+from allennlp.data.iterators import BasicIterator
+from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.data.tokenizers.word_tokenizer import WordTokenizer
 from allennlp.models import Model
-from allennlp.modules import TextFieldEmbedder, Embedding
+from allennlp.modules import Embedding
 from allennlp.modules.span_extractors import EndpointSpanExtractor
 from allennlp.modules.text_field_embedders import BasicTextFieldEmbedder
 from allennlp.nn.util import get_text_field_mask, batched_index_select
+
 
 class SalienceReader(DatasetReader):
     def __init__(self):
@@ -86,9 +88,10 @@ class SalienceModel(Model):
     """
     def __init__(self, vocab: Vocabulary) -> None:
         super().__init__(vocab)
-        # In the real model this is pretrained.
-        token_embedding = Embedding(num_embeddings=vocab.get_vocab_size('tokens'),
-                                    embedding_dim=30)
+        params = Params({"embedding_dim": 50,
+                         "pretrained_file": "s3://allennlp/datasets/glove/glove.6B.50d.txt.gz",
+                         "trainable": False})
+        token_embedding = Embedding.from_params(vocab, params)
         self._embedder = BasicTextFieldEmbedder({"tokens": token_embedding})
 
     @classmethod
@@ -111,7 +114,6 @@ class SalienceModel(Model):
                 body: Dict[str, torch.LongTensor],
                 entity_name: Dict[str, torch.LongTensor],
                 entity_spans: torch.Tensor) -> Dict[str, torch.Tensor]:
-
         # Embed body
 
         # size: <batch_size, sequence_len>
@@ -139,22 +141,21 @@ class SalienceModel(Model):
         embedded_spans = extractor(embedded_body_tokens, entity_spans, span_indices_mask=span_mask)
 
         # size: <batch_size>
-        name_match_score = torch.cosine_similarity(embedded_body, embedded_name)
+        name_match_score = torch.nn.functional.cosine_similarity(embedded_body, embedded_name)
 
         # size: <batch_size, 2 * emb_dim, mentions_count>
         transposed_embedded_spans = embedded_spans.transpose(1, 2)
         # Note: Real model normalizes to give cosine similarity.
         # size: <batch_size, mentions_count>
-        span_match_scores = torch.matmul(embedded_body, transposed_embedded_spans)
+        span_match_scores = torch.bmm(embedded_body.unsqueeze(1), transposed_embedded_spans).squeeze(1)
         # size: <batch_size, mentions_count>
-        masked_span_match_scores = span_match_scores * span_mask
+        masked_span_match_scores = span_match_scores * span_mask.float()
         # Aggregate with max to get single score
         # size: <batch_size>
         span_match_score = masked_span_match_scores.max(dim=-1)[0].squeeze(-1)
 
         # Combine name match and span match scores.
         return {'score': name_match_score + span_match_score}
-
 
 class EmptyListTest(AllenNlpTestCase):
     def test_empty_list_can_be_tensorized(self):
@@ -166,3 +167,18 @@ class EmptyListTest(AllenNlpTestCase):
         fields = {'list': list_field}
         instance = Instance(fields)
         instance.as_tensor_dict()
+
+    def test_end_to_end(self):
+        reader = SalienceReader()
+        dataset = reader.read(self.FIXTURES_ROOT / 'end_to_end' / 'sample.json')
+        vocab = Vocabulary.from_instances(dataset)
+        model = SalienceModel(vocab)
+        model.eval()
+        iterator = BasicIterator(batch_size=2)
+        iterator.index_with(vocab)
+        batch = next(iterator(dataset, shuffle=False))
+        results = model.forward(**batch)["score"]
+        # For the sample data:
+        # {"body": "This is a test.", "entity_name": "exam", "entity_mentions": ["test", "quiz"]}
+        # {"body": "The dog went on a walk.", "entity_name": "animal", "entity_mentions": ["hound", "puppy"]}
+        assert results[0] > results[1]
