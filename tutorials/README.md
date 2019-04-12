@@ -2,7 +2,7 @@
 
 ### If you're just starting, please check out [the tutorial on our website](https://allennlp.org/tutorials). We've designed it to be the simplest and quickest way to get your toes wet with AllenNLP.
 
-The tutorials available here on the repo relate to the version of AllenNLP at the git commit SHA you are currently looking at (likely the HEAD commit of the master branch).  If you want to see the tutorials that relate to the latest pip release, please see https://github.com/allenai/allennlp/tree/v0.8.1/tutorials.
+The tutorials available here on the repo relate to the version of AllenNLP at the git commit SHA you are currently looking at (likely the HEAD commit of the master branch).  If you want to see the tutorials that relate to the latest pip release, please see https://github.com/allenai/allennlp/tree/v0.8.3/tutorials.
 
 Our 2018 EMNLP tutorial is available at https://github.com/allenai/writing-code-for-nlp-research-emnlp2018.
 

@@ -1287,7 +1287,7 @@ def add_positional_features(tensor: torch.Tensor,
 
 
 def clone(module: torch.nn.Module, num_copies: int) -> torch.nn.ModuleList:
-    "Produce N identical layers."
+    """Produce N identical layers."""
     return torch.nn.ModuleList([copy.deepcopy(module) for _ in range(num_copies)])
 
 

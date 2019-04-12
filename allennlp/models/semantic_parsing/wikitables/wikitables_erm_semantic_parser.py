@@ -229,6 +229,8 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
             ``ProductionRule`` using a ``ProductionRuleField``.  We will embed all of these
             and use the embeddings to determine which action to take at each timestep in the
             decoder.
+        agenda : ``torch.LongTensor``
+            Agenda of one instance of size ``(agenda_size, 1)``.
         example_lisp_string : ``List[str]``
             The example (lisp-formatted) string corresponding to the given input.  This comes
             directly from the ``.examples`` file provided with the dataset.  We pass this to SEMPRE
