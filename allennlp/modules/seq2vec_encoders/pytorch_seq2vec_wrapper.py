@@ -35,30 +35,30 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
     bugs around masking.  If you already have a ``PackedSequence`` you can pass ``None`` as the
     second parameter.
     """
-    def __init__(self, module: torch.nn.modules.RNNBase) -> None:
+    def __init__(self,
+                 module: torch.nn.modules.RNNBase,
+                 return_only_last: bool = True,
+                 return_tuple_if_state_is_tuple: bool = False) -> None:
         # Seq2VecEncoders cannot be stateful.
         super(PytorchSeq2VecWrapper, self).__init__(stateful=False)
         self._module = module
-        try:
-            if not self._module.batch_first:
-                raise ConfigurationError("Our encoder semantics assumes batch is always first!")
-        except AttributeError:
-            pass
+        self._return_only_last = return_only_last
+        self._return_tuple_if_state_is_tuple = return_tuple_if_state_is_tuple
+        if not getattr(self._module, 'batch_first', True):
+            raise ConfigurationError("Our encoder semantics assumes batch is always first!")
 
     def get_input_dim(self) -> int:
         return self._module.input_size
 
     def get_output_dim(self) -> int:
-        try:
-            is_bidirectional = self._module.bidirectional
-        except AttributeError:
-            is_bidirectional = False
-        return self._module.hidden_size * (2 if is_bidirectional else 1)
+        is_bidirectional = getattr(self._module, 'bidirectional', False)
+        num_layers = getattr(self._module, 'num_layers', 1)
+        return self._module.hidden_size * (2 if is_bidirectional else 1) * num_layers
 
     def forward(self,  # pylint: disable=arguments-differ
                 inputs: torch.Tensor,
                 mask: torch.Tensor,
-                hidden_state: torch.Tensor = None) -> torch.Tensor:
+                hidden_state: torch.Tensor = None) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
 
         if mask is None:
             # If a mask isn't passed, there is no padding in the batch of instances, so we can just
@@ -73,9 +73,16 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
             self.sort_and_run_forward(self._module, inputs, mask, hidden_state)
 
         # Deal with the fact the LSTM state is a tuple of (state, memory).
-        if isinstance(state, tuple):
-            state = state[0]
+        if isinstance(state, tuple) and self._return_tuple_if_state_is_tuple:
+            return self._restore_order_and_shape(batch_size, restoration_indices, state[0]), \
+                   self._restore_order_and_shape(batch_size, restoration_indices, state[1])
+        else:
+            return self._restore_order_and_shape(batch_size, restoration_indices, state)
 
+    def _restore_order_and_shape(self,
+                                 batch_size: int,
+                                 restoration_indices: torch.LongTensor,
+                                 state: torch.Tensor) -> torch.Tensor:
         num_layers_times_directions, num_valid, encoding_dim = state.size()
         # Add back invalid rows.
         if num_valid < batch_size:
@@ -97,13 +104,13 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
         # now of shape: (batch_size, num_layers * num_directions, hidden_size).
         unsorted_state = state.transpose(0, 1).index_select(0, restoration_indices)
 
-        # Extract the last hidden vector, including both forward and backward states
-        # if the cell is bidirectional. Then reshape by concatenation (in the case
-        # we have bidirectional states) or just squash the 1st dimension in the non-
-        # bidirectional case. Return tensor has shape (batch_size, hidden_size * num_directions).
-        try:
-            last_state_index = 2 if self._module.bidirectional else 1
-        except AttributeError:
-            last_state_index = 1
-        last_layer_state = unsorted_state[:, -last_state_index:, :]
-        return last_layer_state.contiguous().view([-1, self.get_output_dim()])
+        if self._return_only_last:
+            # Extract the last hidden vector, including both forward and backward states
+            # if the cell is bidirectional.
+            last_state_index = 2 if getattr(self._module, 'bidirectional', False) else 1
+            unsorted_state = unsorted_state[:, -last_state_index:, :]
+
+        # Reshape by concatenation (in the case we have bidirectional states) or just squash the 1st dimension in
+        # the non-bidirectional case. Return tensor has shape (batch_size, hidden_size * num_directions *
+        # num_layers).
+        return unsorted_state.contiguous().view([-1, self.get_output_dim()])

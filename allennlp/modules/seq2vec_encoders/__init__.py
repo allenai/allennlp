@@ -71,7 +71,10 @@ class _Seq2VecWrapper:
         if self._module_class in self.PYTORCH_MODELS:
             params['batch_first'] = True
         module = self._module_class(**params.as_dict())
-        return PytorchSeq2VecWrapper(module)
+        return_only_last = params.pop('return_only_last', True)
+        return_tuple_if_state_is_tuple = params.pop('return_tuple_if_state_is_tuple', False)
+        return PytorchSeq2VecWrapper(module, return_only_last=return_only_last,
+                                     return_tuple_if_state_is_tuple=return_tuple_if_state_is_tuple)
 
 # pylint: disable=protected-access
 Seq2VecEncoder.register("gru")(_Seq2VecWrapper(torch.nn.GRU))
