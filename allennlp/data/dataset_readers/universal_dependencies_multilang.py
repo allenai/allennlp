@@ -1,11 +1,14 @@
 from typing import Dict, Tuple, List
 import logging
 import itertools
+import glob
+import os
 from collections import defaultdict
 import numpy as np
 
 from overrides import overrides
 
+from allennlp.common.checks import ConfigurationError
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import Field, TextField, SequenceLabelField, MetadataField
 from allennlp.data.instance import Instance
@@ -16,33 +19,54 @@ from allennlp.data.dataset_readers.universal_dependencies import lazy_parse
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-def parse_file_paths(file_paths: Dict[str, str]):
+def get_file_paths(pathname: str, languages : List[str]):
     """
-    Converts from allennlp.params.Params to a python dict.
+    Gets a list of all files by the pathname with the given language ids.
+    Filenames are assumed to have the language identifier followed by a dash
+    as a prefix (e.g. en-train.conll).
 
     Parameters
     ----------
-    file_paths :  ``Dict[str, str]``, required.
-        The dictionary of identifier (e.g. "en" for English) to file path.
+    pathname :  ``str``, required.
+        An absolute or relative pathname (can contain shell-style wildcards)
+    languages : ``List[str]``, required
+        The language identifiers to use.
 
     Returns
     -------
-    A dictionary of identifier ("en","it" etc.) to file path.
+    A list of tuples (language id, file path).
     """
-    return dict(file_paths)
+    paths = []
+    for file_path in glob.glob(pathname):
+        base = os.path.splitext(os.path.basename(file_path))[0]
+        lang_id = base.split('-')[0]
+        if lang_id in languages:
+            paths.append((lang_id, file_path))
+
+    if len(paths) == 0:
+        raise ConfigurationError("No dataset files to read")
+
+    return paths
 
 
 @DatasetReader.register("universal_dependencies_multilang")
 class UniversalDependenciesMultiLangDatasetReader(DatasetReader):
     """
-    Wraps UniversalDependenciesDatasetReader to support multiple input files.
-    Reads consecutive cases from each input files by the given batch_size.
+    Reads multiple files in the conllu Universal Dependencies format.
+    All files should be in the same directory and the filenames should have
+    the language identifier followed by a dash as a prefix (e.g. en-universal.conll)
+    When using the alternate option, the reader alternates randomly between
+    the files every instances_per_file. The is_first_pass_for_vocab disables
+    this behaviour for the first pass (could be useful for a single full path
+    over the dataset in order to generate a vocabulary).
 
     Notice: when using the alternate option, one should also use the ``instances_per_epoch``
     option for the iterator. Otherwise, each epoch will loop infinitely.
 
     Parameters
     ----------
+    languages : ``List[str]``, required
+        The language identifiers to use.
     token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
         The token indexers to be applied to the words TextField.
     use_language_specific_pos : ``bool``, optional (default = False)
@@ -53,27 +77,28 @@ class UniversalDependenciesMultiLangDatasetReader(DatasetReader):
     is_first_pass_for_vocab : ``bool``, optional (default = True)
         Whether the first pass will be for generating the vocab. If true,
         the first pass will run over the entire dataset of each file (even if alternate is on).
-    batch_size : ``int``, optional (default = 32)
+    instances_per_file : ``int``, optional (default = 32)
         The amount of consecutive cases to sample from each input file when alternating.
     """
     def __init__(self,
+                 languages: List[str],
                  token_indexers: Dict[str, TokenIndexer] = None,
                  use_language_specific_pos: bool = False,
                  lazy: bool = False,
                  alternate: bool = True,
                  is_first_pass_for_vocab: bool = True,
-                 batch_size: int = 32) -> None:
+                 instances_per_file: int = 32) -> None:
         super().__init__(lazy)
+        self._languages = languages
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
-        self.use_language_specific_pos = use_language_specific_pos
+        self._use_language_specific_pos = use_language_specific_pos
 
-        self.is_first_pass_for_vocab = is_first_pass_for_vocab
-        self.alternate = alternate
-        self.batch_size = batch_size
+        self._is_first_pass_for_vocab = is_first_pass_for_vocab
+        self._alternate = alternate
+        self._instances_per_file = instances_per_file
 
-        self.is_first_pass = True
-        self.iterators = None
-        self.instances_per_lang = defaultdict(int)
+        self._is_first_pass = True
+        self._iterators = None
 
     def _read_one_file(self, lang: str, file_path: str):
         with open(file_path, 'r') as conllu_file:
@@ -90,41 +115,39 @@ class UniversalDependenciesMultiLangDatasetReader(DatasetReader):
                 heads = [x["head"] for x in annotation]
                 tags = [x["deprel"] for x in annotation]
                 words = [x["form"] for x in annotation]
-                if self.use_language_specific_pos:
+                if self._use_language_specific_pos:
                     pos_tags = [x["xpostag"] for x in annotation]
                 else:
                     pos_tags = [x["upostag"] for x in annotation]
                 yield self.text_to_instance(lang, words, pos_tags, list(zip(tags, heads)))
 
     @overrides
-    def _read(self, file_paths: Dict[str, str]):
-        file_paths = parse_file_paths(file_paths)
-        if (self.is_first_pass and self.is_first_pass_for_vocab) or (not self.alternate):
-            iterators = [(lang, iter(self._read_one_file(lang, value))) \
-                        for (lang, value) in file_paths.items()]
+    def _read(self, pathname: str):
+        file_paths = get_file_paths(pathname, self._languages)
+        if (self._is_first_pass and self._is_first_pass_for_vocab) or (not self._alternate):
+            iterators = [(lang, iter(self._read_one_file(lang, file_path))) \
+                        for (lang, file_path) in file_paths]
             _, iterators = zip(*iterators)
-            self.is_first_pass = False
+            self._is_first_pass = False
             for inst in itertools.chain(*iterators):
                 yield inst
 
-            self.instances_per_lang = defaultdict(int)
         else:
-            if self.iterators is None:
-                self.iterators = [(lang, iter(self._read_one_file(lang, value))) \
-                                for (lang, value) in file_paths.items()]
-            num_langs = len(file_paths)
+            if self._iterators is None:
+                self._iterators = [(lang, iter(self._read_one_file(lang, file_path))) \
+                                for (lang, file_path) in file_paths]
+            num_files = len(file_paths)
             while True:
-                lang_num = np.random.randint(num_langs)
-                lang, lang_iter = self.iterators[lang_num]
-                for _ in range(self.batch_size):
+                ind = np.random.randint(num_files)
+                lang, lang_iter = self._iterators[ind]
+                for _ in range(self._instances_per_file):
                     try:
                         yield lang_iter.__next__()
                     except StopIteration:
-                        lang_iter = iter(self._read_one_file(lang, file_paths[lang]))
-                        self.iterators[lang_num] = (lang, lang_iter)
+                        lang, file_path = file_paths[ind]
+                        lang_iter = iter(self._read_one_file(lang, file_path))
+                        self._iterators[ind] = (lang, lang_iter)
                         yield lang_iter.__next__()
-
-                    self.instances_per_lang[lang] += 1
 
     @overrides
     def text_to_instance(self,  # type: ignore

@@ -7,8 +7,9 @@
 {
     "dataset_reader": {
         "type": "universal_dependencies_multilang",
+        "languages": ["en", "de", "it", "fr", "pt", "sv"],
         "alternate": true,
-        "batch_size": 32,
+        "instances_per_file": 32,
         "is_first_pass_for_vocab": true,
         "lazy": true,
         "token_indexers": {
@@ -90,32 +91,9 @@
             }
         }
     },
-    "train_data_path": {
-        "de": "UNI_DEP_V2_PATH/universal/uni-dep-tb/universal_treebanks_v2.0/std/de/de-universal-train.conll",
-        "en": "UNI_DEP_V2_PATH/universal/uni-dep-tb/universal_treebanks_v2.0/std/en/en-univiersal-train.conll",
-        "fr": "UNI_DEP_V2_PATH/universal/uni-dep-tb/universal_treebanks_v2.0/std/fr/fr-universal-train.conll",
-        "it": "UNI_DEP_V2_PATH/universal/uni-dep-tb/universal_treebanks_v2.0/std/it/it-universal-train.conll",
-        "pt": "UNI_DEP_V2_PATH/universal/uni-dep-tb/universal_treebanks_v2.0/std/pt-br/pt-br-universal-train.conll",
-        "sv": "UNI_DEP_V2_PATH/universal/uni-dep-tb/universal_treebanks_v2.0/std/sv/sv-universal-train.conll"
-    },
-    "validation_data_path": {
-        "de": "UNI_DEP_V2_PATH/universal/uni-dep-tb/universal_treebanks_v2.0/std/de/de-universal-dev.conll",
-        "en": "UNI_DEP_V2_PATH/universal/uni-dep-tb/universal_treebanks_v2.0/std/en/en-univiersal-dev.conll",
-        "es": "UNI_DEP_V2_PATH/universal/uni-dep-tb/universal_treebanks_v2.0/std/es/es-universal-dev.conll",
-        "fr": "UNI_DEP_V2_PATH/universal/uni-dep-tb/universal_treebanks_v2.0/std/fr/fr-universal-dev.conll",
-        "it": "UNI_DEP_V2_PATH/universal/uni-dep-tb/universal_treebanks_v2.0/std/it/it-universal-dev.conll",
-        "pt": "UNI_DEP_V2_PATH/universal/uni-dep-tb/universal_treebanks_v2.0/std/pt-br/pt-br-universal-dev.conll",
-        "sv": "UNI_DEP_V2_PATH/universal/uni-dep-tb/universal_treebanks_v2.0/std/sv/sv-universal-dev.conll"
-    },
-    "test_data_path": {
-        "de": "UNI_DEP_V2_PATH/universal/uni-dep-tb/universal_treebanks_v2.0/std/de/de-universal-test.conll",
-        "en": "UNI_DEP_V2_PATH/universal/uni-dep-tb/universal_treebanks_v2.0/std/en/en-univiersal-test.conll",
-        "es": "UNI_DEP_V2_PATH/universal/uni-dep-tb/universal_treebanks_v2.0/std/es/es-universal-test.conll",
-        "fr": "UNI_DEP_V2_PATH/universal/uni-dep-tb/universal_treebanks_v2.0/std/fr/fr-universal-test.conll",
-        "it": "UNI_DEP_V2_PATH/universal/uni-dep-tb/universal_treebanks_v2.0/std/it/it-universal-test.conll",
-        "pt": "UNI_DEP_V2_PATH/universal/uni-dep-tb/universal_treebanks_v2.0/std/pt-br/pt-br-universal-test.conll",
-        "sv": "UNI_DEP_V2_PATH/universal/uni-dep-tb/universal_treebanks_v2.0/std/sv/sv-universal-test.conll"
-    },
+    "train_data_path": std.extVar("TRAIN_PATHNAME"),
+    "validation_data_path": std.extVar("DEV_PATHNAME"),
+    "test_data_path": std.extVar("TEST_PATHNAME"),
     "trainer": {
         "cuda_device": 0,
         "num_epochs": 40,
@@ -123,9 +101,9 @@
         "patience": 10,
         "validation_metric": "+LAS_AVG"
     },
-    "evaluate_on_test": true,
     "validation_dataset_reader": {
         "type": "universal_dependencies_multilang",
+        "languages": ["en", "es", "de", "it", "fr", "pt", "sv"],
         "alternate": false,
         "lazy": true,
         "token_indexers": {
