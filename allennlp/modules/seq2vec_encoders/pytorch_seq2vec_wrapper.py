@@ -37,13 +37,13 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
     """
     def __init__(self,
                  module: torch.nn.modules.RNNBase,
-                 return_only_last: bool = True,
-                 return_tuple_if_state_is_tuple: bool = False) -> None:
+                 return_all_layers: bool = False,
+                 return_all_hidden_states: bool = False) -> None:
         # Seq2VecEncoders cannot be stateful.
         super(PytorchSeq2VecWrapper, self).__init__(stateful=False)
         self._module = module
-        self._return_only_last = return_only_last
-        self._return_tuple_if_state_is_tuple = return_tuple_if_state_is_tuple
+        self._return_all_layers = return_all_layers
+        self._return_all_hidden_states = return_all_hidden_states
         if not getattr(self._module, 'batch_first', True):
             raise ConfigurationError("Our encoder semantics assumes batch is always first!")
 
@@ -73,7 +73,7 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
             self.sort_and_run_forward(self._module, inputs, mask, hidden_state)
 
         # Deal with the fact the LSTM state is a tuple of (state, memory).
-        if isinstance(state, tuple) and self._return_tuple_if_state_is_tuple:
+        if isinstance(state, tuple) and self._return_all_hidden_states:
             return self._restore_order_and_shape(batch_size, restoration_indices, state[0]), \
                    self._restore_order_and_shape(batch_size, restoration_indices, state[1])
         else:
@@ -104,7 +104,7 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
         # now of shape: (batch_size, num_layers * num_directions, hidden_size).
         unsorted_state = state.transpose(0, 1).index_select(0, restoration_indices)
 
-        if self._return_only_last:
+        if not self._return_all_layers:
             # Extract the last hidden vector, including both forward and backward states
             # if the cell is bidirectional.
             last_state_index = 2 if getattr(self._module, 'bidirectional', False) else 1
