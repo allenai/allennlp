@@ -70,9 +70,9 @@ class _Seq2VecWrapper:
             raise ConfigurationError("Our encoder semantics assumes batch is always first!")
         if self._module_class in self.PYTORCH_MODELS:
             params['batch_first'] = True
-        module = self._module_class(**params.as_dict())
         return_all_layers = params.pop('return_all_layers', False)
         return_all_hidden_states = params.pop('return_all_hidden_states', False)
+        module = self._module_class(**params.as_dict())
         return PytorchSeq2VecWrapper(module, return_all_layers=return_all_layers,
                                      return_all_hidden_states=return_all_hidden_states)
 
