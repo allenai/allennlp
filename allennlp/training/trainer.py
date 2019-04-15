@@ -508,7 +508,7 @@ class Trainer(TrainerBase):
 
             # Create overall metrics dict
             training_elapsed_time = time.time() - training_start_time
-            metrics["training_duration"] = time.strftime("%H:%M:%S", time.gmtime(training_elapsed_time))
+            metrics["training_duration"] = time.strftime("%d:%H:%M:%S", time.gmtime(training_elapsed_time))
             metrics["training_start_epoch"] = epoch_counter
             metrics["training_epochs"] = epochs_trained
             metrics["epoch"] = epoch
