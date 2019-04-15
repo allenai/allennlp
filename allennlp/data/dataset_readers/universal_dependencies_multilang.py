@@ -3,7 +3,6 @@ import logging
 import itertools
 import glob
 import os
-from collections import defaultdict
 import numpy as np
 
 from overrides import overrides
@@ -122,8 +121,8 @@ class UniversalDependenciesMultiLangDatasetReader(DatasetReader):
                 yield self.text_to_instance(lang, words, pos_tags, list(zip(tags, heads)))
 
     @overrides
-    def _read(self, pathname: str):
-        file_paths = get_file_paths(pathname, self._languages)
+    def _read(self, file_path: str):
+        file_paths = get_file_paths(file_path, self._languages)
         if (self._is_first_pass and self._is_first_pass_for_vocab) or (not self._alternate):
             iterators = [(lang, iter(self._read_one_file(lang, file_path))) \
                         for (lang, file_path) in file_paths]
