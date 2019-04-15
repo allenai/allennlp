@@ -3,14 +3,15 @@ import torch
 
 from allennlp.common.file_utils import cached_path
 from allennlp.common import Params
-from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
+from allennlp.common.checks import check_dimensions_match, ConfigurationError
+from allennlp.modules.token_embedders.token_embedder import TokenEmbedder, MultilangTokenEmbedder
 from allennlp.modules.elmo import Elmo
 from allennlp.modules.time_distributed import TimeDistributed
 from allennlp.data import Vocabulary
 
 
 @TokenEmbedder.register("elmo_token_embedder_multilang")
-class ElmoTokenEmbedderMultiLang(TokenEmbedder):
+class ElmoTokenEmbedderMultiLang(MultilangTokenEmbedder):
     """
     Extending ElmoTokenEmbedder for multiple languages. Each language has
     different weights for the ELMo model and an alignment matrix.
@@ -58,14 +59,16 @@ class ElmoTokenEmbedderMultiLang(TokenEmbedder):
                  aligning_files: Dict[str, str] = {}) -> None:
         super(ElmoTokenEmbedderMultiLang, self).__init__()
 
-        assert options_files.keys() == weight_files.keys()
-        output_dim = -1
+        if options_files.keys() != weight_files.keys():
+            raise ConfigurationError("Keys for Elmo's options files and weights files don't match")
+
+        output_dim = None
         for lang in weight_files.keys():
             name = 'elmo_%s' % lang
             elmo = Elmo(
                     options_files[lang],
                     weight_files[lang],
-                    1,
+                    1, # num_output_representations
                     do_layer_norm=do_layer_norm,
                     dropout=dropout,
                     requires_grad=requires_grad,
@@ -74,9 +77,12 @@ class ElmoTokenEmbedderMultiLang(TokenEmbedder):
             self.add_module(name, elmo)
 
             output_dim_tmp = elmo.get_output_dim()
-            if output_dim != -1:
+            if output_dim is not None:
                 # Verify that all ELMo embedders have the same output dimension.
-                assert output_dim_tmp == output_dim
+                check_dimensions_match(output_dim_tmp, output_dim,
+                                       "%s output dim" % name,
+                                       "elmo output dim")
+
             output_dim = output_dim_tmp
 
         self.output_dim = output_dim
@@ -102,8 +108,7 @@ class ElmoTokenEmbedderMultiLang(TokenEmbedder):
     def get_output_dim(self):
         return self.output_dim
 
-    def forward(
-            self,  # pylint: disable=arguments-differ
+    def forward(self,  # pylint: disable=arguments-differ
             inputs: torch.Tensor,
             lang: str,
             word_inputs: torch.Tensor = None) -> torch.Tensor:
