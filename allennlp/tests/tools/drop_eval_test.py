@@ -75,33 +75,37 @@ class TestDropEvalGetMetrics:
 
 class TestDropEvalFunctional:
     def test_json_loader(self):
-        annotation = {"qid1": {"answer": {"number": "1"}, "validated_answers": [{"number": "0"}]}}
+        annotation = {"pid1": {"qa_pairs":[{"answer": {"number": "1"}, "validated_answers": \
+                                                        [{"number": "0"}], "query_id":"qid1"}]}}
         prediction = {"qid1": "1"}
         assert evaluate_json(annotation, prediction) == (1.0, 1.0)
 
-        annotation = {"qid1": {"answer": {"spans": ["2"]}, "validated_answers": [{"number": "2"}]}}
+        annotation = {"pid1": {"qa_pairs":[{"answer": {"spans": ["2"]}, "validated_answers": \
+                                                        [{"number": "2"}], "query_id":"qid1"}]}}
         prediction = {"qid1": "2"}
         assert evaluate_json(annotation, prediction) == (1.0, 1.0)
 
-        annotation = {"qid1": {"answer": {"spans": ["0"]}, \
-                               "validated_answers": [{"number": "1"}, {"number": "2"}]}}
+        annotation = {"pid1": {"qa_pairs":[{"answer": {"spans": ["0"]}, "validated_answers": \
+                                        [{"number": "1"}, {"number": "2"}], "query_id":"qid1"}]}}
         prediction = {"qid1": "1"}
         assert evaluate_json(annotation, prediction) == (1.0, 1.0)
 
-        annotation = {"qid1": {"answer": {"date": {"day": "17", "month": "August", "year": ""}},\
-                                    "validated_answers": [{"spans": ["August"]}, {"number": "17"}]}}
+        annotation = {"pid1": {"qa_pairs":[{"answer": {"date": {"day": "17", "month": "August", "year": ""}},\
+                            "validated_answers": [{"spans": ["August"]}, {"number": "17"}], "query_id":"qid1"}]}}
         prediction = {"qid1": "17 August"}
         assert evaluate_json(annotation, prediction) == (1.0, 1.0)
 
-        annotation = {"qid1": {"answer": {"spans": ["span1", "span2"]}, \
-                                    "validated_answers": [{"spans": ["span2"]}]}}
+        annotation = {"pid1": {"qa_pairs":[{"answer": {"spans": ["span1", "span2"]}, "validated_answers": \
+                                        [{"spans": ["span2"]}], "query_id":"qid1"}]}}
         prediction = {"qid1": "span1"}
         assert evaluate_json(annotation, prediction) == (0.0, 0.5)
 
-        annotation = {"qid1": {"answer": {"spans": ["1"]}, "validated_answers": [{"number": "0"}]}}
+        annotation = {"pid1": {"qa_pairs":[{"answer": {"spans": ["1"]}, "validated_answers": [{"number": "0"}], \
+                                            "query_id":"qid1"}]}}
         prediction = {"qid0": "2"}
         assert evaluate_json(annotation, prediction) == (0.0, 0.0)
 
-        annotation = {"qid1": {"answer": {"spans": ["answer1"]}, "validated_answers": [{"spans": ["answer2"]}]}}
+        annotation = {"pid1": {"qa_pairs":[{"answer": {"spans": ["answer1"]}, "validated_answers": \
+                                        [{"spans": ["answer2"]}], "query_id":"qid1"}]}}
         prediction = {"qid1": "answer"}
         assert evaluate_json(annotation, prediction) == (0.0, 0.0)
