@@ -57,7 +57,7 @@ class BeamSearchTest(AllenNlpTestCase):
         )
 
         # This is what the log probs should look like for each item in the batch.
-        self.expected_log_probs = np.log(np.array([0.4, 0.3, 0.2]))
+        self.expected_log_probs = np.log(np.array([0.4, 0.3, 0.2]))  # pylint: disable=assignment-from-no-return
 
     def _check_results(self,
                        batch_size: int = 5,
@@ -129,7 +129,7 @@ class BeamSearchTest(AllenNlpTestCase):
     def test_greedy_search(self):
         beam_search = BeamSearch(self.end_index, beam_size=1)
         expected_top_k = np.array([[1, 2, 3, 4, 5]])
-        expected_log_probs = np.log(np.array([0.4]))
+        expected_log_probs = np.log(np.array([0.4]))  # pylint: disable=assignment-from-no-return
         self._check_results(expected_top_k=expected_top_k,
                             expected_log_probs=expected_log_probs,
                             beam_search=beam_search)
@@ -144,7 +144,7 @@ class BeamSearchTest(AllenNlpTestCase):
                  [2, 3, 4],
                  [3, 4, 5]]
         )
-        expected_log_probs = np.log(np.array([0.4, 0.3, 0.2]))
+        expected_log_probs = np.log(np.array([0.4, 0.3, 0.2]))  # pylint: disable=assignment-from-no-return
         self._check_results(expected_top_k=expected_top_k,
                             expected_log_probs=expected_log_probs,
                             beam_search=beam_search)
@@ -167,3 +167,24 @@ class BeamSearchTest(AllenNlpTestCase):
         beam_search = BeamSearch(self.end_index, beam_size=20)
         with pytest.raises(ConfigurationError):
             self._check_results(beam_search=beam_search)
+
+    def test_warn_for_bad_log_probs(self):
+        # The only valid next step from the initial predictions is the end index.
+        # But with a beam size of 3, the call to `topk` to find the 3 most likely
+        # next beams will result in 2 new beams that are invalid, in that have probability of 0.
+        # The beam search should warn us of this.
+        initial_predictions = torch.LongTensor([self.end_index-1, self.end_index-1])
+        with pytest.warns(RuntimeWarning, match="Infinite log probabilities"):
+            self.beam_search.search(initial_predictions, {}, take_step)
+
+    def test_empty_sequences(self):
+        initial_predictions = torch.LongTensor([self.end_index-1, self.end_index-1])
+        beam_search = BeamSearch(self.end_index, beam_size=1)
+        with pytest.warns(RuntimeWarning, match="Empty sequences predicted"):
+            predictions, log_probs = beam_search.search(initial_predictions, {}, take_step)
+        # predictions hould have shape `(batch_size, beam_size, max_predicted_length)`.
+        assert list(predictions.size()) == [2, 1, 1]
+        # log probs hould have shape `(batch_size, beam_size)`.
+        assert list(log_probs.size()) == [2, 1]
+        assert (predictions == self.end_index).all()
+        assert (log_probs == 0).all()

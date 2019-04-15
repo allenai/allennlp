@@ -109,10 +109,11 @@ Once you have [installed Docker](https://docs.docker.com/engine/installation/)
 just run the following command to get an environment that will run on either the cpu or gpu.
 
    ```bash
-   docker run -it -p 8000:8000 --rm allennlp/allennlp:v0.8.0
+   mkdir -p $HOME/.allennlp/
+   docker run --rm -v $HOME/.allennlp:/root/.allennlp allennlp/allennlp:v0.8.3
    ```
 
-You can test the Docker environment with `docker run -it -p 8000:8000 --rm allennlp/allennlp:v0.8.0 test-install`.
+You can test the Docker environment with `docker run --rm -v $HOME/.allennlp:/root/.allennlp allennlp/allennlp:v0.8.3 test-install`.
 
 ### Installing from source
 
@@ -122,25 +123,16 @@ You can also install AllenNLP by cloning our git repository:
   git clone https://github.com/allenai/allennlp.git
   ```
 
-Create a Python 3.6 virtual environment, and install the necessary requirements by running:
-
-  ```bash
-  INSTALL_TEST_REQUIREMENTS=true scripts/install_requirements.sh
-  ```
-
-Changing the flag to false if you don't want to be able to run
-tests. Once the requirements have been installed, run:
+Create a Python 3.6 virtual environment, and install AllenNLP in `editable` mode by running:
 
   ```bash
   pip install --editable .
   ```
 
-To install the AllenNLP library in `editable` mode into your
-environment.  This will make `allennlp` available on your
-system but it will use the sources from the local clone you
-made of the source repository.
+This will make `allennlp` available on your system but it will use the sources from the local clone
+you made of the source repository.
 
-You can test your installation with `bin/allennlp test-install`.
+You can test your installation with `allennlp test-install`.
 The full development environment also requires the JVM and `perl`,
 which must be installed separately.  `./scripts/verify.py` will run
 the full suite of tests used by our continuous build environment.
@@ -148,7 +140,7 @@ the full suite of tests used by our continuous build environment.
 ## Running AllenNLP
 
 Once you've installed AllenNLP, you can run the command-line interface either
-with the `allennlp` command (if you installed via `pip`) or `bin/allennlp` (if you installed via source).
+with the `allennlp` command (if you installed via `pip`) or `allennlp` (if you installed via source).
 
 ```bash
 $ allennlp
@@ -160,17 +152,18 @@ optional arguments:
 
 Commands:
 
-    configure   Generate configuration stubs.
-    train       Train a model
-    evaluate    Evaluate the specified model + dataset
+    configure   Run the configuration wizard.
+    train       Train a model.
+    evaluate    Evaluate the specified model + dataset.
     predict     Use a trained model to make predictions.
-    make-vocab  Create a vocabulary
+    make-vocab  Create a vocabulary.
     elmo        Create word vectors using a pretrained ELMo model.
-    fine-tune   Continue training a model on a new dataset
+    fine-tune   Continue training a model on a new dataset.
     dry-run     Create a vocabulary, compute dataset statistics and other
                 training utilities.
     test-install
                 Run the unit tests.
+    find-lr     Find a learning rate range.
 ```
 
 ## Docker images
@@ -203,6 +196,16 @@ allennlp/allennlp            latest              b66aee6cb593        5 minutes a
 You can run the image with `docker run --rm -it allennlp/allennlp:latest`.  The `--rm` flag cleans up the image on exit and the `-it` flags make the session interactive so you can use the bash shell the Docker image starts.
 
 You can test your installation by running  `allennlp test-install`.
+
+## Issues
+
+Everyone is welcome to file issues with either feature requests, bug reports, or general questions.  As a small team with our own internal goals, we may ask for contributions if a prompt fix doesn't fit into our roadmap.  We allow users a two week window to follow up on questions, after which we will close issues.  They can be re-opened if there is further discussion.
+
+## Contributions
+
+The AllenNLP team at AI2 (@allenai) welcomes contributions from the greater AllenNLP community, and, if you would like to get a change into the library, this is likely the fastest approach.  If you would like to contribute a larger feature, we recommend first creating an issue with a proposed design for discussion.  This will prevent you from spending significant time on an implementation which has a technical limitation someone could have pointed out early on.  Small contributions can be made directly in a pull request.
+
+Pull requests (PRs) must have one approving review and no requested changes before they are merged.  As AllenNLP is primarily driven by AI2 (@allenai) we reserve the right to reject or revert contributions that we don't think are good additions.
 
 ## Citing
 

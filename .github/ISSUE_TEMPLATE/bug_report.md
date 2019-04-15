@@ -20,7 +20,7 @@ A clear and concise description of what you expected to happen.
 **System (please complete the following information):**
  - OS: [e.g. OSX, Linux]
  - Python version: [if it's not 3.6.1 or later, that's probably your problem]
- - AllenNLP version: [e.g. v0.7.0, or "I installed from master"]
+ - AllenNLP version: [e.g. v0.8.3, or "I installed from master"]
  - PyTorch version: (if you installed it yourself)
 
 **Additional context**

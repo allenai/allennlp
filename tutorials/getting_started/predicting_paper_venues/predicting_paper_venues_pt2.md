@@ -35,9 +35,10 @@ accept JSON inputs and return JSON results.
 AllenNLP provides a [`Predictor`](https://github.com/allenai/allennlp/blob/master/allennlp/service/predictors/predictor.py)
 abstraction that wraps a model and does precisely this.
 Most of the functionality you need for a `Predictor` is already implemented in the base class.
-Usually you only need to implement the `_json_to_instance` function,
+Usually you only need to implement the `predict_json` function,
 which specifies how to turn a JSON dict of inputs into an AllenNLP
 [`Instance`](https://allenai.github.io/allennlp-docs/api/allennlp.data.instance.html).
+Since we want to return more than an Instance in this function, we use `predict_instance` serialize the Instance to JSON dict.
 And our `DatasetReader` already has a
 [`text_to_instance`](https://github.com/allenai/allennlp-as-a-library-example/blob/master/my_library/dataset_readers/semantic_scholar_papers.py#L68)
 method, which means all we have to do is extract what that method needs from the JSON.
@@ -49,7 +50,7 @@ This means our predictor [can be very simple](https://github.com/allenai/allennl
 class PaperClassifierPredictor(Predictor):
     """Predictor wrapper for the AcademicPaperClassifier"""
     @overrides
-    def _json_to_instance(self, json_dict: JsonDict) -> Tuple[Instance, JsonDict]:
+    def predict_json(self, json_dict: JsonDict) -> JsonDict:
         title = json_dict['title']
         abstract = json_dict['paperAbstract']
         instance = self._dataset_reader.text_to_instance(title=title, abstract=abstract)
@@ -59,7 +60,7 @@ class PaperClassifierPredictor(Predictor):
         # Convert it to list ["ACL", "AI", ...]
         all_labels = [label_dict[i] for i in range(len(label_dict))]
 
-        return instance, {"all_labels": all_labels}
+        return {"instance": self.predict_instance(instance), "all_labels": all_labels}
 ```
 
 To create each `Instance` it just pulls the `"title"` and `"paperAbstract"` fields
@@ -70,7 +71,7 @@ In this example we also would like to return the list of all possible labels
 We first get the mapping from indices to labels, and then we convert
 it to a list where position 0 is label 0, and so on.
 
-`_json_to_instance` returns a tuple, where the first element is
+`predict_json` returns a JSON dict, where the first element is
 the `Instance` and the second element is a `dict` that the elements
 of `Model.forward_on_instance` will be added to. Anything that we want
 in our JSON output that's not produced by `forward()` goes in it.
@@ -125,7 +126,7 @@ class TestPaperClassifierPredictor(TestCase):
 
         result = predictor.predict_json(inputs)
 
-        label = result.get("label")
+        label = result.get("all_labels")
         assert label in ['AI', 'ML', 'ACL']
 
         class_probabilities = result.get("class_probabilities")
@@ -189,7 +190,7 @@ allennlp predict \
 When you run this it will print the ten test inputs and their predictions, each of which looks like:
 
 ```
-prediction:  {"all_labels": ["AI", "ACL", "ML"], "logits": [0.008737504482269287, 0.22074833512306213, -0.005263201892375946], "class_probabilities": [0.31034138798713684, 0.38363200426101685, 0.3060266375541687], "label": "ACL"}
+prediction:  {"instance": {"logits": [0.008737504482269287, 0.22074833512306213, -0.005263201892375946], "class_probabilities": [0.31034138798713684, 0.38363200426101685, 0.3060266375541687], "label": "ACL"}, "all_labels": ["AI", "ACL", "ML"]}
 ```
 
 If you want your predictions to go to a file instead,
@@ -309,7 +310,7 @@ var pieChart = new Chart(ctx, {
     data: {
         labels: response['all_labels'],
         datasets: [{
-            data: response['class_probabilities'],
+            data: response['instance']['class_probabilities'],
             backgroundColor: ['red', 'green', 'blue']
         }]
     }

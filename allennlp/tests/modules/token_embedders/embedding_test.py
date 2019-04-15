@@ -140,7 +140,11 @@ class TestEmbedding(AllenNlpTestCase):
                 'pretrained_file': str(self.FIXTURES_ROOT / 'embeddings/multi-file-archive.zip'),
                 'embedding_dim': 5
                 })
-        with pytest.raises(ValueError, message="No ValueError when pretrained_file is a multi-file archive"):
+        with pytest.raises(ValueError,
+                           match="The archive .*/embeddings/multi-file-archive.zip contains multiple files, "
+                                 "so you must select one of the files inside "
+                                 "providing a uri of the type: "
+                                 "\\(path_or_url_to_archive\\)#path_inside_archive\\."):
             Embedding.from_params(vocab, params)
 
         for ext in ['.zip', '.tar.gz']:
@@ -219,3 +223,133 @@ class TestEmbedding(AllenNlpTestCase):
             uri = format_embeddings_file_uri(path1, path2)
             decoded = parse_embeddings_file_uri(uri)
             assert decoded == (path1, path2)
+
+    def test_embedding_vocab_extension_with_specified_namespace(self):
+        vocab = Vocabulary()
+        vocab.add_token_to_namespace('word1', 'tokens_a')
+        vocab.add_token_to_namespace('word2', 'tokens_a')
+        embedding_params = Params({"vocab_namespace": "tokens_a",
+                                   "embedding_dim": 10})
+        embedder = Embedding.from_params(vocab, embedding_params)
+        original_weight = embedder.weight
+
+        assert original_weight.shape[0] == 4
+
+        extension_counter = {"tokens_a": {"word3": 1}}
+        vocab._extend(extension_counter)
+
+        embedder.extend_vocab(vocab, "tokens_a") # specified namespace
+
+        extended_weight = embedder.weight
+        assert extended_weight.shape[0] == 5
+        assert torch.all(extended_weight[:4, :] == original_weight[:4, :])
+
+    def test_embedding_vocab_extension_with_default_namespace(self):
+        vocab = Vocabulary()
+        vocab.add_token_to_namespace('word1')
+        vocab.add_token_to_namespace('word2')
+        embedding_params = Params({"vocab_namespace": "tokens",
+                                   "embedding_dim": 10})
+        embedder = Embedding.from_params(vocab, embedding_params)
+        original_weight = embedder.weight
+
+        assert original_weight.shape[0] == 4
+
+        extension_counter = {"tokens": {"word3": 1}}
+        vocab._extend(extension_counter)
+
+        embedder.extend_vocab(vocab) # default namespace
+
+        extended_weight = embedder.weight
+        assert extended_weight.shape[0] == 5
+        assert torch.all(extended_weight[:4, :] == original_weight[:4, :])
+
+    def test_embedding_vocab_extension_without_stored_namespace(self):
+        vocab = Vocabulary()
+        vocab.add_token_to_namespace('word1', "tokens_a")
+        vocab.add_token_to_namespace('word2', "tokens_a")
+        embedding_params = Params({"vocab_namespace": "tokens_a", "embedding_dim": 10})
+        embedder = Embedding.from_params(vocab, embedding_params)
+
+        # Previous models won't have _vocab_namespace attribute. Force it to be None
+        embedder._vocab_namespace = None
+        original_weight = embedder.weight
+
+        assert original_weight.shape[0] == 4
+
+        extension_counter = {"tokens_a": {"word3": 1}}
+        vocab._extend(extension_counter)
+
+        embedder.extend_vocab(vocab, "tokens_a") # specified namespace
+
+        extended_weight = embedder.weight
+        assert extended_weight.shape[0] == 5
+        assert torch.all(extended_weight[:4, :] == original_weight[:4, :])
+
+    def test_embedding_vocab_extension_works_with_pretrained_embedding_file(self):
+        vocab = Vocabulary()
+        vocab.add_token_to_namespace('word1')
+        vocab.add_token_to_namespace('word2')
+
+        embeddings_filename = str(self.TEST_DIR / "embeddings2.gz")
+        with gzip.open(embeddings_filename, 'wb') as embeddings_file:
+            embeddings_file.write("word3 0.5 0.3 -6.0\n".encode('utf-8'))
+            embeddings_file.write("word4 1.0 2.3 -1.0\n".encode('utf-8'))
+            embeddings_file.write("word2 0.1 0.4 -4.0\n".encode('utf-8'))
+            embeddings_file.write("word1 1.0 2.3 -1.0\n".encode('utf-8'))
+
+        embedding_params = Params({"vocab_namespace": "tokens", "embedding_dim": 3,
+                                   "pretrained_file": embeddings_filename})
+        embedder = Embedding.from_params(vocab, embedding_params)
+
+        # Change weight to simulate embedding training
+        embedder.weight.data += 1
+        assert torch.all(embedder.weight[2:, :] == torch.Tensor([[2.0, 3.3, 0.0], [1.1, 1.4, -3.0]]))
+        original_weight = embedder.weight
+
+        assert tuple(original_weight.size()) == (4, 3)  # 4 because of padding and OOV
+
+        vocab.add_token_to_namespace('word3')
+        embedder.extend_vocab(vocab, extension_pretrained_file=embeddings_filename) # default namespace
+        extended_weight = embedder.weight
+
+        # Make sure extenstion happened for extra token in extended vocab
+        assert tuple(extended_weight.size()) == (5, 3)
+
+        # Make sure extension doesn't change original trained weights.
+        assert torch.all(original_weight[:4, :] == extended_weight[:4, :])
+
+        # Make sure extended weight is taken from the embedding file.
+        assert torch.all(extended_weight[4, :] == torch.Tensor([0.5, 0.3, -6.0]))
+
+    def test_embedding_vocab_extension_is_no_op_when_extension_should_not_happen(self):
+        # Case1: When vocab is already in sync with embeddings it should be a no-op.
+        vocab = Vocabulary({"tokens": {"word1": 1, "word2": 1}})
+        embedding_params = Params({"vocab_namespace": "tokens", "embedding_dim": 10})
+        embedder = Embedding.from_params(vocab, embedding_params)
+        original_weight = embedder.weight
+        embedder.extend_vocab(vocab, "tokens")
+        assert torch.all(embedder.weight == original_weight)
+
+        # Case2: Shouldn't wrongly assuming "tokens" namespace for extension if no
+        # information on vocab_namespece is available. Rather log a warning and be a no-op.
+        vocab = Vocabulary()
+        vocab.add_token_to_namespace('word1', "tokens")
+        vocab.add_token_to_namespace('word2', "tokens")
+        embedding_params = Params({"vocab_namespace": "tokens", "embedding_dim": 10})
+        embedder = Embedding.from_params(vocab, embedding_params)
+        # Previous models won't have _vocab_namespace attribute. Force it to be None
+        embedder._vocab_namespace = None
+        embedder.weight = torch.nn.Parameter(embedder.weight[:1, :])
+        assert embedder.weight.shape[0] == 1
+        embedder.extend_vocab(vocab) # Don't specify namespace
+        assert embedder.weight.shape[0] == 1
+
+    def test_embedding_vocab_extension_raises_error_for_incorrect_vocab(self):
+        # When vocab namespace of extension vocab is smaller than embeddings
+        # it should raise configuration error.
+        vocab = Vocabulary({"tokens": {"word1": 1, "word2": 1}})
+        embedding_params = Params({"vocab_namespace": "tokens", "embedding_dim": 10})
+        embedder = Embedding.from_params(vocab, embedding_params)
+        with pytest.raises(ConfigurationError):
+            embedder.extend_vocab(Vocabulary(), "tokens")

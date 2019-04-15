@@ -106,6 +106,16 @@ def cached_path(url_or_filename: Union[str, Path], cache_dir: str = None) -> str
         # Something unknown
         raise ValueError("unable to parse {} as a URL or as a local path".format(url_or_filename))
 
+def is_url_or_existing_file(url_or_filename: Union[str, Path, None]) -> bool:
+    """
+    Given something that might be a URL (or might be a local path),
+    determine check if it's url or an existing file path.
+    """
+    if url_or_filename is None:
+        return False
+    url_or_filename = os.path.expanduser(str(url_or_filename))
+    parsed = urlparse(url_or_filename)
+    return parsed.scheme in ('http', 'https', 's3') or os.path.exists(url_or_filename)
 
 def split_s3_path(url: str) -> Tuple[str, str]:
     """Split a full s3 path into the bucket name and path."""
@@ -227,10 +237,10 @@ def get_from_cache(url: str, cache_dir: str = None) -> str:
 
 
 def read_set_from_file(filename: str) -> Set[str]:
-    '''
+    """
     Extract a de-duped collection (set) of text from a file.
     Expected file format is one item per line.
-    '''
+    """
     collection = set()
     with open(filename, 'r') as file_:
         for line in file_:
