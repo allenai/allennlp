@@ -23,7 +23,7 @@ def get_file_paths(pathname: str, languages : List[str]):
     """
     Gets a list of all files by the pathname with the given language ids.
     Filenames are assumed to have the language identifier followed by a dash
-    as a prefix (e.g. en-train.conll).
+    as a prefix (e.g. en-universal.conll).
 
     Parameters
     ----------
@@ -104,7 +104,7 @@ class UniversalDependenciesMultiLangDatasetReader(DatasetReader):
         with open(file_path, 'r') as conllu_file:
             logger.info("Reading UD instances for %s language from conllu dataset at: %s", lang, file_path)
 
-            for annotation in  lazy_parse(conllu_file.read()):
+            for annotation in lazy_parse(conllu_file.read()):
                 # CoNLLU annotations sometimes add back in words that have been elided
                 # in the original sentence; we remove these, as we're just predicting
                 # dependencies for the original sentence.

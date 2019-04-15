@@ -111,7 +111,7 @@ class BiaffineDependencyParserMultiLang(BiaffineDependencyParser):
         # pylint: disable=arguments-differ
         """
         Embedding each language by the corresponding parameters for
-        ``TextFieldEmbedder``. Batches contain only samples from a
+        ``TextFieldEmbedder``. Batches should contain only samples from a
         single language.
 
         Parameters
@@ -161,8 +161,7 @@ class BiaffineDependencyParserMultiLang(BiaffineDependencyParser):
         """
         if 'lang' not in metadata[0]:
             raise ConfigurationError("metadata is missing 'lang' key.\
-            For multi lang, use universal_dependencies_multilang dataset_reader."
-                                     )
+            For multi lang, use universal_dependencies_multilang dataset_reader.")
 
         batch_lang = metadata[0]['lang']
         for entry in metadata:
@@ -170,7 +169,6 @@ class BiaffineDependencyParserMultiLang(BiaffineDependencyParser):
                 raise ConfigurationError("Two languages in the same batch.")
 
         embedded_text_input = self.text_field_embedder(words, lang=batch_lang)
-
         if pos_tags is not None and self._pos_tag_embedding is not None:
             embedded_pos_tags = self._pos_tag_embedding(pos_tags)
             embedded_text_input = torch.cat(
@@ -180,81 +178,22 @@ class BiaffineDependencyParserMultiLang(BiaffineDependencyParser):
                 "Model uses a POS embedding, but no POS tags were passed.")
 
         mask = get_text_field_mask(words)
-        embedded_text_input = self._input_dropout(embedded_text_input)
-        encoded_text = self.encoder(embedded_text_input, mask)
 
-        batch_size, _, encoding_dim = encoded_text.size()
+        predicted_heads, predicted_head_tags, arc_nll, tag_nll = self._parse(
+            embedded_text_input, mask, head_tags, head_indices)
 
-        head_sentinel = self._head_sentinel.expand(batch_size, 1, encoding_dim)
-        # Concatenate the head sentinel onto the sentence representation.
-        encoded_text = torch.cat([head_sentinel, encoded_text], 1)
-        mask = torch.cat([mask.new_ones(batch_size, 1), mask], 1)
-        if head_indices is not None:
-            head_indices = torch.cat(
-                [head_indices.new_zeros(batch_size, 1), head_indices], 1)
-        if head_tags is not None:
-            head_tags = torch.cat(
-                [head_tags.new_zeros(batch_size, 1), head_tags], 1)
-        float_mask = mask.float()
-        encoded_text = self._dropout(encoded_text)
+        loss = arc_nll + tag_nll
 
-        # shape (batch_size, sequence_length, arc_representation_dim)
-        head_arc_representation = self._dropout(
-            self.head_arc_feedforward(encoded_text))
-        child_arc_representation = self._dropout(
-            self.child_arc_feedforward(encoded_text))
-
-        # shape (batch_size, sequence_length, tag_representation_dim)
-        head_tag_representation = self._dropout(
-            self.head_tag_feedforward(encoded_text))
-        child_tag_representation = self._dropout(
-            self.child_tag_feedforward(encoded_text))
-        # shape (batch_size, sequence_length, sequence_length)
-        attended_arcs = self.arc_attention(head_arc_representation,
-                                           child_arc_representation)
-
-        minus_inf = -1e8
-        minus_mask = (1 - float_mask) * minus_inf
-        attended_arcs = attended_arcs + minus_mask.unsqueeze(
-            2) + minus_mask.unsqueeze(1)
-
-        if self.training or not self.use_mst_decoding_for_validation:
-            predicted_heads, predicted_head_tags = self._greedy_decode(
-                head_tag_representation, child_tag_representation,
-                attended_arcs, mask)
-        else:
-            predicted_heads, predicted_head_tags = self._mst_decode(
-                head_tag_representation, child_tag_representation,
-                attended_arcs, mask)
         if head_indices is not None and head_tags is not None:
-
-            arc_nll, tag_nll = self._construct_loss(
-                head_tag_representation=head_tag_representation,
-                child_tag_representation=child_tag_representation,
-                attended_arcs=attended_arcs,
-                head_indices=head_indices,
-                head_tags=head_tags,
-                mask=mask)
-            loss = arc_nll + tag_nll
-
-            evaluation_mask = self._get_mask_for_eval(mask[:, 1:], pos_tags)
+            evaluation_mask = self._get_mask_for_eval(mask, pos_tags)
             # We calculate attatchment scores for the whole sentence
             # but excluding the symbolic ROOT token at the start,
             # which is why we start from the second element in the sequence.
             self._attachment_scores[batch_lang](predicted_heads[:, 1:],
                                                 predicted_head_tags[:, 1:],
-                                                head_indices[:, 1:],
-                                                head_tags[:, 1:],
+                                                head_indices,
+                                                head_tags,
                                                 evaluation_mask)
-        else:
-            arc_nll, tag_nll = self._construct_loss(
-                head_tag_representation=head_tag_representation,
-                child_tag_representation=child_tag_representation,
-                attended_arcs=attended_arcs,
-                head_indices=predicted_heads.long(),
-                head_tags=predicted_head_tags.long(),
-                mask=mask)
-            loss = arc_nll + tag_nll
 
         output_dict = {
             "heads": predicted_heads,
