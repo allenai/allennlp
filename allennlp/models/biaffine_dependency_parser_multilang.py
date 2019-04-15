@@ -91,10 +91,10 @@ class BiaffineDependencyParserMultiLang(BiaffineDependencyParser):
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
         super(BiaffineDependencyParserMultiLang, self).__init__(
-            vocab, text_field_embedder, encoder, tag_representation_dim,
-            arc_representation_dim, tag_feedforward, arc_feedforward,
-            pos_tag_embedding, use_mst_decoding_for_validation, dropout,
-            input_dropout, initializer, regularizer)
+                vocab, text_field_embedder, encoder, tag_representation_dim,
+                arc_representation_dim, tag_feedforward, arc_feedforward,
+                pos_tag_embedding, use_mst_decoding_for_validation, dropout,
+                input_dropout, initializer, regularizer)
 
         self.langs_for_early_stop = langs_for_early_stop
 
@@ -172,20 +172,20 @@ class BiaffineDependencyParserMultiLang(BiaffineDependencyParser):
         if pos_tags is not None and self._pos_tag_embedding is not None:
             embedded_pos_tags = self._pos_tag_embedding(pos_tags)
             embedded_text_input = torch.cat(
-                [embedded_text_input, embedded_pos_tags], -1)
+                    [embedded_text_input, embedded_pos_tags], -1)
         elif self._pos_tag_embedding is not None:
             raise ConfigurationError(
-                "Model uses a POS embedding, but no POS tags were passed.")
+                    "Model uses a POS embedding, but no POS tags were passed.")
 
         mask = get_text_field_mask(words)
 
-        predicted_heads, predicted_head_tags, arc_nll, tag_nll = self._parse(
-            embedded_text_input, mask, head_tags, head_indices)
+        predicted_heads, predicted_head_tags, mask, arc_nll, tag_nll = self._parse(
+                embedded_text_input, mask, head_tags, head_indices)
 
         loss = arc_nll + tag_nll
 
         if head_indices is not None and head_tags is not None:
-            evaluation_mask = self._get_mask_for_eval(mask, pos_tags)
+            evaluation_mask = self._get_mask_for_eval(mask[:, 1:], pos_tags)
             # We calculate attatchment scores for the whole sentence
             # but excluding the symbolic ROOT token at the start,
             # which is why we start from the second element in the sequence.
@@ -196,14 +196,14 @@ class BiaffineDependencyParserMultiLang(BiaffineDependencyParser):
                                                 evaluation_mask)
 
         output_dict = {
-            "heads": predicted_heads,
-            "head_tags": predicted_head_tags,
-            "arc_loss": arc_nll,
-            "tag_loss": tag_nll,
-            "loss": loss,
-            "mask": mask,
-            "words": [meta["words"] for meta in metadata],
-            "pos": [meta["pos"] for meta in metadata]
+                "heads": predicted_heads,
+                "head_tags": predicted_head_tags,
+                "arc_loss": arc_nll,
+                "tag_loss": tag_nll,
+                "loss": loss,
+                "mask": mask,
+                "words": [meta["words"] for meta in metadata],
+                "pos": [meta["pos"] for meta in metadata]
         }
 
         return output_dict
@@ -232,7 +232,7 @@ class BiaffineDependencyParserMultiLang(BiaffineDependencyParser):
             metrics.update(metrics_wlang)
 
         metrics.update({
-            "UAS_AVG": numpy.mean(all_uas),
-            "LAS_AVG": numpy.mean(all_las)
+                "UAS_AVG": numpy.mean(all_uas),
+                "LAS_AVG": numpy.mean(all_las)
         })
         return metrics

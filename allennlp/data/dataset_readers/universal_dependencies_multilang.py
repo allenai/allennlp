@@ -19,7 +19,7 @@ from allennlp.data.dataset_readers.universal_dependencies import lazy_parse
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-def get_file_paths(pathname: str, languages : List[str]):
+def get_file_paths(pathname: str, languages: List[str]):
     """
     Gets a list of all files by the pathname with the given language ids.
     Filenames are assumed to have the language identifier followed by a dash
@@ -43,7 +43,7 @@ def get_file_paths(pathname: str, languages : List[str]):
         if lang_id in languages:
             paths.append((lang_id, file_path))
 
-    if len(paths) == 0:
+    if not paths:
         raise ConfigurationError("No dataset files to read")
 
     return paths

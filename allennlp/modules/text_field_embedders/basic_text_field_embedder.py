@@ -100,7 +100,7 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
             embedder = getattr(self, 'token_embedder_{}'.format(key))
             identifiers = {}
             if isinstance(embedder, MultilangTokenEmbedder):
-                identifiers['lang']=kwargs['lang']
+                identifiers['lang'] = kwargs['lang']
             for _ in range(num_wrapping_dims):
                 embedder = TimeDistributed(embedder)
             # If we pre-specified a mapping explictly, use that.

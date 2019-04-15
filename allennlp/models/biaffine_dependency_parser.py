@@ -210,20 +210,20 @@ class BiaffineDependencyParser(Model):
 
         mask = get_text_field_mask(words)
 
-        predicted_heads, predicted_head_tags, arc_nll, tag_nll = self._parse(
-            embedded_text_input, mask, head_tags, head_indices)
+        predicted_heads, predicted_head_tags, mask, arc_nll, tag_nll = self._parse(
+                embedded_text_input, mask, head_tags, head_indices)
 
         loss = arc_nll + tag_nll
 
         if head_indices is not None and head_tags is not None:
-            evaluation_mask = self._get_mask_for_eval(mask, pos_tags)
+            evaluation_mask = self._get_mask_for_eval(mask[:, 1:], pos_tags)
             # We calculate attatchment scores for the whole sentence
             # but excluding the symbolic ROOT token at the start,
             # which is why we start from the second element in the sequence.
             self._attachment_scores(predicted_heads[:, 1:],
                                     predicted_head_tags[:, 1:],
-                                    head_indices[:, 1:],
-                                    head_tags[:, 1:],
+                                    head_indices,
+                                    head_tags,
                                     evaluation_mask)
 
         output_dict = {
@@ -261,11 +261,11 @@ class BiaffineDependencyParser(Model):
         return output_dict
 
     def _parse(self,
-                embedded_text_input: torch.Tensor,
-                mask: torch.LongTensor,
-                head_tags: torch.LongTensor = None,
-                head_indices: torch.LongTensor = None
-                ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+               embedded_text_input: torch.Tensor,
+               mask: torch.LongTensor,
+               head_tags: torch.LongTensor = None,
+               head_indices: torch.LongTensor = None
+              ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
 
         embedded_text_input = self._input_dropout(embedded_text_input)
         encoded_text = self.encoder(embedded_text_input, mask)
@@ -324,7 +324,7 @@ class BiaffineDependencyParser(Model):
                                                     head_tags=predicted_head_tags.long(),
                                                     mask=mask)
 
-        return predicted_heads, predicted_head_tags, arc_nll, tag_nll
+        return predicted_heads, predicted_head_tags, mask, arc_nll, tag_nll
 
     def _construct_loss(self,
                         head_tag_representation: torch.Tensor,

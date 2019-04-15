@@ -109,9 +109,9 @@ class ElmoTokenEmbedderMultiLang(MultilangTokenEmbedder):
         return self.output_dim
 
     def forward(self,  # pylint: disable=arguments-differ
-            inputs: torch.Tensor,
-            lang: str,
-            word_inputs: torch.Tensor = None) -> torch.Tensor:
+                inputs: torch.Tensor,
+                lang: str,
+                word_inputs: torch.Tensor = None) -> torch.Tensor:
         """
         Parameters
         ----------
