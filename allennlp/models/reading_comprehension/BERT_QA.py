@@ -11,11 +11,9 @@ import random
 import traceback
 import json
 
-from allennlp.common.checks import check_dimensions_match
 from allennlp.data import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import Seq2SeqEncoder, TextFieldEmbedder
-from allennlp.modules.input_variational_dropout import InputVariationalDropout
 from allennlp.nn import InitializerApplicator, util
 from allennlp.tools import squad_eval
 from allennlp.training.metrics import Average, BooleanAccuracy, CategoricalAccuracy
@@ -41,7 +39,7 @@ class BERT_QA(Model):
         self._use_multi_label_loss = use_multi_label_loss
         self._predictions_file = predictions_file
 
-        # TODO get rid of this patch...
+        # TODO move to predict
         if predictions_file is not None and os.path.isfile(predictions_file):
             os.remove(predictions_file)
 
@@ -52,27 +50,8 @@ class BERT_QA(Model):
 
         initializer(self)
 
-        self._span_start_accuracy = CategoricalAccuracy()
-        self._span_end_accuracy = CategoricalAccuracy()
-        self._span_accuracy = BooleanAccuracy()
         self._official_f1 = Average()
         self._official_EM = Average()
-        self._variational_dropout = InputVariationalDropout(dropout)
-
-    def multi_label_cross_entropy_loss(self, span_logits, answers, passage_length):
-        instances_with_answer = np.argwhere(answers.squeeze().cpu() >= 0)[0].unique()
-        target = torch.cuda.FloatTensor(len(instances_with_answer), passage_length, device=span_logits.device) \
-            if torch.cuda.is_available() else torch.FloatTensor(len(instances_with_answer), passage_length)
-        target.zero_()
-
-        answers = answers[instances_with_answer].squeeze().cpu() if len(instances_with_answer)>1 \
-            else answers[instances_with_answer].cpu()
-
-        for ind, q_target in enumerate(answers):
-            target[ind, q_target[(q_target >= 0) & (q_target < passage_length)]] = 1.0
-
-        return -(torch.log((F.softmax(span_logits[instances_with_answer], dim=-1) * \
-                            target.float()).sum(dim=1))).mean()
 
     def forward(self,  # type: ignore
                 question: Dict[str, torch.LongTensor],
@@ -83,6 +62,8 @@ class BERT_QA(Model):
 
         batch_size, num_of_passage_tokens = passage['bert'].size()
 
+        # BERT for QA is a fully connected linear layer on top of BERT producing 2 vectors of
+        # start and end spans.
         embedded_passage = self._text_field_embedder(passage)
         passage_length = embedded_passage.size(1)
         logits = self.qa_outputs(embedded_passage)
@@ -90,17 +71,17 @@ class BERT_QA(Model):
         span_start_logits = start_logits.squeeze(-1)
         span_end_logits = end_logits.squeeze(-1)
 
+        # Adding some masks with numerically stable values
         passage_mask = util.get_text_field_mask(passage).float()
         repeated_passage_mask = passage_mask.unsqueeze(1).repeat(1, 1, 1)
         repeated_passage_mask = repeated_passage_mask.view(batch_size, passage_length)
-
         span_start_logits = util.replace_masked_values(span_start_logits, repeated_passage_mask, -1e7)
         span_end_logits = util.replace_masked_values(span_end_logits, repeated_passage_mask, -1e7)
 
-        best_span = self._get_example_predications(span_start_logits, span_end_logits,self._max_span_length)
 
         output_dict: Dict[str, Any] = {}
 
+        # We may have multiple instances per questions, moving to per-question
         intances_question_id = [insta_meta['question_id'] for insta_meta in metadata]
         question_instances_split_inds = np.cumsum(np.unique(intances_question_id, return_counts=True)[1])[:-1]
         per_question_inds = np.split(range(batch_size), question_instances_split_inds)
@@ -108,51 +89,31 @@ class BERT_QA(Model):
 
         # Compute the loss.
         if span_start is not None and len(np.argwhere(span_start.squeeze().cpu() >= 0)) > 0:
-            # Per instance loss
-            if self._use_multi_label_loss:
-                try:
-                    loss = self.multi_label_cross_entropy_loss(span_start_logits, span_start, passage_length)
-                    loss += self.multi_label_cross_entropy_loss(span_end_logits, span_end, passage_length)
-                    output_dict["loss"] = loss
-                except:
-                    ElasticLogger().write_log('INFO', 'Loss Error', context_dict={'span_start_logits':span_start_logits.cpu().size(),
-                        'span_end_logits_size':span_end_logits.cpu().size(),'span_start':span_start.squeeze().cpu().numpy().tolist(),
-                            'span_end':span_end.squeeze().cpu().numpy().tolist(),'error_message': traceback.format_exc(),
-                                                                'batch_size':batch_size, 'passage_length':passage_length},print_log=True)
-                    a = torch.autograd.Variable(torch.Tensor([[1, 2], [3, 4]]), requires_grad=True)
-                    loss = torch.sum(a ** 2)
-                    output_dict["loss"] = loss
-            else:
+            # in evaluation some instances may not contain the gold answer, so we need to compute
+            # loss only on those that do.
+            inds_with_gold_answer = np.argwhere(span_start.view(-1).cpu().numpy() >= 0)
+            inds_with_gold_answer = inds_with_gold_answer.squeeze() if len(inds_with_gold_answer) > 1 else inds_with_gold_answer
+            if len(inds_with_gold_answer)>0:
+                loss = nll_loss(util.masked_log_softmax(span_start_logits[inds_with_gold_answer], \
+                                                    repeated_passage_mask[inds_with_gold_answer]),\
+                                span_start.view(-1)[inds_with_gold_answer], ignore_index=-1)
+                loss += nll_loss(util.masked_log_softmax(span_end_logits[inds_with_gold_answer], \
+                                                    repeated_passage_mask[inds_with_gold_answer]),\
+                                span_end.view(-1)[inds_with_gold_answer], ignore_index=-1)
+                output_dict["loss"] = loss
 
-                inds_with_gold_answer = np.argwhere(span_start.view(-1).cpu().numpy() >= 0)
-                inds_with_gold_answer = inds_with_gold_answer.squeeze() if len(inds_with_gold_answer) > 1 else inds_with_gold_answer
-                if len(inds_with_gold_answer)>0:
-                    loss = nll_loss(util.masked_log_softmax(span_start_logits[inds_with_gold_answer], \
-                                                        repeated_passage_mask[inds_with_gold_answer]),\
-                                    span_start.view(-1)[inds_with_gold_answer], ignore_index=-1)
-                    loss += nll_loss(util.masked_log_softmax(span_end_logits[inds_with_gold_answer], \
-                                                        repeated_passage_mask[inds_with_gold_answer]),\
-                                    span_end.view(-1)[inds_with_gold_answer], ignore_index=-1)
-                    output_dict["loss"] = loss
+        # Compute F1 and preparing the output dictionary.
+        #output_dict['best_span_str'] = []
+        #output_dict['qid'] = []
 
+        # getting best span prediction for
+        best_span = self._get_example_predications(span_start_logits, span_end_logits, self._max_span_length)
+        best_span_cpu = best_span.detach().cpu().numpy()
 
         span_start_logits_numpy = span_start_logits.data.cpu().numpy()
         span_end_logits_numpy = span_end_logits.data.cpu().numpy()
-
-
-        # Compute F1 and preparing the output dictionary.
-        output_dict['best_span_str'] = []
-        output_dict['qid'] = []
-
-        # best_span is a vector of more than one span
-        best_span_cpu = best_span.detach().cpu().numpy()
-
         # Iterating over every question (which may contain multiple instances, one per chunk)
         for question_inds, question_instances_metadata in zip(per_question_inds, metadata):
-            if len(question_inds) == 0:
-                continue
-
-            # We need to perform softmax here !!
             best_span_ind = np.argmax(span_start_logits_numpy[question_inds, best_span_cpu[question_inds][:, 0]] +
                       span_end_logits_numpy[question_inds, best_span_cpu[question_inds][:, 1]])
             best_span_logit = np.max(span_start_logits_numpy[question_inds, best_span_cpu[question_inds][:, 0]] +
@@ -175,6 +136,7 @@ class BERT_QA(Model):
             self._official_f1(100 * f1_score)
             self._official_EM(100 * EM_score)
 
+            # TODO move to predict
             if self._predictions_file is not None:
                 with open(self._predictions_file,'a') as f:
                     f.write(json.dumps({'question_id':question_instances_metadata[best_span_ind]['question_id'], \

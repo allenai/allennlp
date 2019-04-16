@@ -139,7 +139,8 @@ class MRQAReader(DatasetReader):
 
                 window_start_token_offset += self._STRIDE
 
-            per_question_chunks.append(chunks)
+            if len([inst for inst in chunks if inst['answers'] != []])>0:
+                per_question_chunks.append(chunks)
         return per_question_chunks
 
 
@@ -153,17 +154,12 @@ class MRQAReader(DatasetReader):
             instances_to_add = question_chunks
 
         for inst_num, inst in enumerate(instances_to_add):
-            tokenized_paragraph = [Token(text=t[0], idx=t[1]) for t in inst['tokens']]
-            question_tokens = [Token(text=t[0], idx=t[1]) for t in inst['question_tokens']]
-            new_passage = inst['text']
-            new_answers = inst['answers']
-            instance = make_multiqa_instance(question_tokens,
-                                             tokenized_paragraph,
+            instance = make_multiqa_instance([Token(text=t[0], idx=t[1]) for t in inst['question_tokens']],
+                                             [Token(text=t[0], idx=t[1]) for t in inst['tokens']],
                                              self._token_indexers,
-                                             new_passage,
-                                             new_answers,
+                                             inst['text'],
+                                             inst['answers'],
                                              inst['metadata'])
-
             yield instance
 
     @overrides
@@ -213,8 +209,7 @@ def make_multiqa_instance(question_tokens: List[Token],
                                              token_indexers: Dict[str, TokenIndexer],
                                              paragraph: List[str],
                                              answers_list: List[Tuple[int, int]] = None,
-                                             additional_metadata: Dict[str, Any] = None,
-                                             use_multi_label_loss=False) -> Instance:
+                                             additional_metadata: Dict[str, Any] = None) -> Instance:
 
     additional_metadata = additional_metadata or {}
     fields: Dict[str, Field] = {}
@@ -231,34 +226,18 @@ def make_multiqa_instance(question_tokens: List[Token],
                 'passage_tokens': [token.text for token in tokenized_paragraph]}
 
     if answers_list is not None:
-        if use_multi_label_loss:
-            span_start_list: List[Field] = []
-            span_end_list: List[Field] = []
-            if answers_list == []:
-                span_start_list.append(IndexField(-1, passage_field))
-                span_end_list.append(IndexField(-1, passage_field))
-            else:
-                for answer in answers_list:
-                    span_start_list.append(IndexField(answer[0], passage_field))
-                    span_end_list.append(IndexField(answer[1], passage_field))
-
-
-            fields['span_start'] = ListField(span_start_list)
-            fields['span_end'] = ListField(span_end_list)
-
+        span_start_list: List[Field] = []
+        span_end_list: List[Field] = []
+        if answers_list == []:
+            span_start, span_end = -1, -1
         else:
-            span_start_list: List[Field] = []
-            span_end_list: List[Field] = []
-            if answers_list == []:
-                span_start, span_end = -1, -1
-            else:
-                span_start, span_end, text = answers_list[0]
+            span_start, span_end, text = answers_list[0]
 
-            span_start_list.append(IndexField(span_start, passage_field))
-            span_end_list.append(IndexField(span_end, passage_field))
+        span_start_list.append(IndexField(span_start, passage_field))
+        span_end_list.append(IndexField(span_end, passage_field))
 
-            fields['span_start'] = ListField(span_start_list)
-            fields['span_end'] = ListField(span_end_list)
+        fields['span_start'] = ListField(span_start_list)
+        fields['span_end'] = ListField(span_end_list)
 
     metadata.update(additional_metadata)
     fields['metadata'] = MetadataField(metadata)
