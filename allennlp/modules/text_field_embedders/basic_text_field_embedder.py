@@ -1,5 +1,6 @@
 import warnings
 from typing import Dict, List, Union, Any
+import inspect
 
 import torch
 from overrides import overrides
@@ -9,7 +10,7 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.data import Vocabulary
 from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
 from allennlp.modules.time_distributed import TimeDistributed
-from allennlp.modules.token_embedders.token_embedder import TokenEmbedder, MultilangTokenEmbedder
+from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 
 
 @TextFieldEmbedder.register("basic")
@@ -98,9 +99,12 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
             # Note: need to use getattr here so that the pytorch voodoo
             # with submodules works with multiple GPUs.
             embedder = getattr(self, 'token_embedder_{}'.format(key))
-            identifiers = {}
-            if isinstance(embedder, MultilangTokenEmbedder):
-                identifiers['lang'] = kwargs['lang']
+            fwd_params = inspect.signature(embedder.forward).parameters
+            fwd_params_values = {}
+            for param in fwd_params.keys():
+                if param in kwargs:
+                    fwd_params_values[param] = kwargs[param]
+
             for _ in range(num_wrapping_dims):
                 embedder = TimeDistributed(embedder)
             # If we pre-specified a mapping explictly, use that.
@@ -112,20 +116,20 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
                     # If `indexer_key` is None, we map it to `None`.
                     tensors = [(text_field_input[indexer_key] if indexer_key is not None else None)
                                for indexer_key in indexer_map]
-                    token_vectors = embedder(*tensors, **identifiers)
+                    token_vectors = embedder(*tensors, **fwd_params_values)
                 elif isinstance(indexer_map, dict):
                     tensors = {
                             name: text_field_input[argument]
                             for name, argument in indexer_map.items()
                     }
-                    token_vectors = embedder(**tensors, **identifiers)
+                    token_vectors = embedder(**tensors, **fwd_params_values)
                 else:
                     raise NotImplementedError
             else:
                 # otherwise, we assume the mapping between indexers and embedders
                 # is bijective and just use the key directly.
                 tensors = [text_field_input[key]]
-                token_vectors = embedder(*tensors, **identifiers)
+                token_vectors = embedder(*tensors, **fwd_params_values)
             embedded_representations.append(token_vectors)
         return torch.cat(embedded_representations, dim=-1)
 

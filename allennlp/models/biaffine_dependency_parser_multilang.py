@@ -101,67 +101,22 @@ class BiaffineDependencyParserMultiLang(BiaffineDependencyParser):
         self._attachment_scores = defaultdict(lambda: AttachmentScores())
 
     @overrides
-    def forward(
-            self,  # type: ignore
-            words: Dict[str, torch.LongTensor],
-            pos_tags: torch.LongTensor,
-            metadata: List[Dict[str, Any]],
-            head_tags: torch.LongTensor = None,
-            head_indices: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
+    def forward(self,  # type: ignore
+                words: Dict[str, torch.LongTensor],
+                pos_tags: torch.LongTensor,
+                metadata: List[Dict[str, Any]],
+                head_tags: torch.LongTensor = None,
+                head_indices: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
         Embedding each language by the corresponding parameters for
         ``TextFieldEmbedder``. Batches should contain only samples from a
         single language.
-
-        Parameters
-        ----------
-        words : Dict[str, torch.LongTensor], required
-            The output of ``TextField.as_array()``, which should typically be passed directly to a
-            ``TextFieldEmbedder``. This output is a dictionary mapping keys to ``TokenIndexer``
-            tensors.  At its most basic, using a ``SingleIdTokenIndexer`` this is: ``{"tokens":
-            Tensor(batch_size, sequence_length)}``. This dictionary will have the same keys as were used
-            for the ``TokenIndexers`` when you created the ``TextField`` representing your
-            sequence.  The dictionary is designed to be passed directly to a ``TextFieldEmbedder``,
-            which knows how to combine different word representations into a single vector per
-            token in your input.
-        pos_tags : ``torch.LongTensor``, required.
-            The output of a ``SequenceLabelField`` containing POS tags.
-            POS tags are required regardless of whether they are used in the model,
-            because they are used to filter the evaluation metric to only consider
-            heads of words which are not punctuation.
-        metadata :  ``List[Dict[str, Any]]``, required.
-            A dictionary storing metadata for each sample. Should have a
-            ``lang`` key, identifying the language of each example.
-        head_tags : torch.LongTensor, optional (default = None)
-            A torch tensor representing the sequence of integer gold class labels for the arcs
-            in the dependency parse. Has shape ``(batch_size, sequence_length)``.
-        head_indices : torch.LongTensor, optional (default = None)
-            A torch tensor representing the sequence of integer indices denoting the parent of every
-            word in the dependency parse. Has shape ``(batch_size, sequence_length)``.
-
-        Returns
-        -------
-        An output dictionary consisting of:
-        loss : ``torch.FloatTensor``, optional
-            A scalar loss to be optimised.
-        arc_loss : ``torch.FloatTensor``
-            The loss contribution from the unlabeled arcs.
-        loss : ``torch.FloatTensor``, optional
-            The loss contribution from predicting the dependency
-            tags for the gold arcs.
-        heads : ``torch.FloatTensor``
-            The predicted head indices for each word. A tensor
-            of shape (batch_size, sequence_length).
-        head_types : ``torch.FloatTensor``
-            The predicted head types for each arc. A tensor
-            of shape (batch_size, sequence_length).
-        mask : ``torch.LongTensor``
-            A mask denoting the padded elements in the batch.
+        Metadata should have a ``lang`` key.
         """
         if 'lang' not in metadata[0]:
-            raise ConfigurationError("metadata is missing 'lang' key.\
-            For multi lang, use universal_dependencies_multilang dataset_reader.")
+            raise ConfigurationError("metadata is missing 'lang' key; "
+            "Use the universal_dependencies_multilang dataset_reader.")
 
         batch_lang = metadata[0]['lang']
         for entry in metadata:

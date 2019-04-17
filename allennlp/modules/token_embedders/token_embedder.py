@@ -24,11 +24,3 @@ class TokenEmbedder(torch.nn.Module, Registrable):
         token.  This is `not` the shape of the returned tensor, but the last element of that shape.
         """
         raise NotImplementedError
-
-class MultilangTokenEmbedder(TokenEmbedder):
-    """
-    A ``TokenEmbedder`` that should get a language identifier and embed the input accordingly
-    """
-
-    def forward(self, *inputs, lang: str) -> torch.Tensor:  # pylint: disable=arguments-differ
-        raise NotImplementedError
