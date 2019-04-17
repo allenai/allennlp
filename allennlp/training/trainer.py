@@ -62,7 +62,8 @@ class Trainer(TrainerBase):
                  should_log_parameter_statistics: bool = True,
                  should_log_learning_rate: bool = False,
                  log_batch_size_period: Optional[int] = None,
-                 moving_average: Optional[MovingAverage] = None) -> None:
+                 moving_average: Optional[MovingAverage] = None,
+                 num_gradient_accumulation_steps: int = 1) -> None:
         """
         A trainer for doing supervised learning. It just takes a labeled dataset
         and a ``DataIterator``, and uses the supplied ``Optimizer`` to learn the weights
@@ -242,6 +243,15 @@ class Trainer(TrainerBase):
 
         self._last_log = 0.0  # time of last logging
 
+        self._num_gradient_accumulation_steps = num_gradient_accumulation_steps
+
+        if self._num_gradient_accumulation_steps > 1 and self._multiple_gpu:
+            raise ConfigurationError(
+                    "Gradient Accumulation helps to run batches that are larger than the GPU RAM size."
+                    "If there are more than one GPU, this may not be needed.")
+        
+        self._accumulate_gradients = self._num_gradient_accumulation_steps > 1
+
         # Enable activation logging.
         if histogram_interval is not None:
             self._tensorboard.enable_activation_logging(self.model)
@@ -290,14 +300,14 @@ class Trainer(TrainerBase):
         # Set the model to "train" mode.
         self.model.train()
 
-        num_gpus = len(self._cuda_devices)
+        num_batch_groups = self._num_gradient_accumulation_steps if self._accumulate_gradients else len(self._cuda_devices)
 
         # Get tqdm for the training batches
         raw_train_generator = self.iterator(self.train_data,
                                             num_epochs=1,
                                             shuffle=self.shuffle)
-        train_generator = lazy_groups_of(raw_train_generator, num_gpus)
-        num_training_batches = math.ceil(self.iterator.get_num_batches(self.train_data)/num_gpus)
+        train_generator = lazy_groups_of(raw_train_generator, num_batch_groups)
+        num_training_batches = math.ceil(self.iterator.get_num_batches(self.train_data)/num_batch_groups)
         self._last_log = time.time()
         last_save_time = time.time()
 
@@ -319,12 +329,32 @@ class Trainer(TrainerBase):
 
             self.optimizer.zero_grad()
 
-            loss = self.batch_loss(batch_group, for_training=True)
+            if not self._accumulate_gradients:
+                loss = self.batch_loss(batch_group, for_training=True)
 
-            if torch.isnan(loss):
-                raise ValueError("nan loss encountered")
+                if torch.isnan(loss):
+                    raise ValueError("nan loss encountered")
 
-            loss.backward()
+                loss.backward()
+            else:
+                # If gradient accumulation is configured, the actual batch size
+                # becomes configured `batch_size` * `accumulation_steps`. Hence,
+                # a group of batches of length `accumulation_steps` with each 
+                # batch item of size `batch_size` is created. Loss is calculated
+                # for every batch item in the group, normalized and gradient 
+                # computation is done. Repeated `loss.backward` takes care of 
+                # accumulation by itself. Refer Thomas Wolf's post[1] for details.
+                #
+                # [1] - "Training Neural Nets on Larger Batches: Practical Tips for 
+                # 1-GPU, Multi-GPU & Distributed setups"
+                for batch in batch_group:
+                    loss = self.batch_loss([batch], for_training=True)
+
+                    if torch.isnan(loss):
+                        raise ValueError("nan loss encountered")
+
+                    loss = loss / self._num_gradient_accumulation_steps
+                    loss.backward()
 
             train_loss += loss.item()
 
@@ -673,6 +703,7 @@ class Trainer(TrainerBase):
         grad_clipping = params.pop_float("grad_clipping", None)
         lr_scheduler_params = params.pop("learning_rate_scheduler", None)
         momentum_scheduler_params = params.pop("momentum_scheduler", None)
+        num_gradient_accumulation_steps = params.pop("num_steps_to_accumulate", 1)
 
         if isinstance(cuda_device, list):
             model_device = cuda_device[0]
@@ -743,7 +774,8 @@ class Trainer(TrainerBase):
                    should_log_parameter_statistics=should_log_parameter_statistics,
                    should_log_learning_rate=should_log_learning_rate,
                    log_batch_size_period=log_batch_size_period,
-                   moving_average=moving_average)
+                   moving_average=moving_average,
+                   num_gradient_accumulation_steps=num_gradient_accumulation_steps)
 
 
 class TrainerPieces(NamedTuple):
