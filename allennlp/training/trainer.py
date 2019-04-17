@@ -252,7 +252,7 @@ class Trainer(TrainerBase):
             raise ConfigurationError(
                     "Gradient Accumulation helps to run batches that are larger than the GPU RAM size."
                     "If there are more than one GPU, this may not be needed.")
-        
+
         self._accumulate_gradients = self._num_gradient_accumulation_steps > 1
 
         # Enable activation logging.
@@ -303,7 +303,8 @@ class Trainer(TrainerBase):
         # Set the model to "train" mode.
         self.model.train()
 
-        num_batch_groups = self._num_gradient_accumulation_steps if self._accumulate_gradients else len(self._cuda_devices)
+        num_batch_groups = self._num_gradient_accumulation_steps if self._accumulate_gradients \
+                                else len(self._cuda_devices)
 
         # Get tqdm for the training batches
         raw_train_generator = self.iterator(self.train_data,
@@ -342,13 +343,13 @@ class Trainer(TrainerBase):
             else:
                 # If gradient accumulation is configured, the actual batch size
                 # becomes configured `batch_size` * `accumulation_steps`. Hence,
-                # a group of batches of length `accumulation_steps` with each 
+                # a group of batches of length `accumulation_steps` with each
                 # batch item of size `batch_size` is created. Loss is calculated
-                # for every batch item in the group, normalized and gradient 
-                # computation is done. Repeated `loss.backward` takes care of 
+                # for every batch item in the group, normalized and gradient
+                # computation is done. Repeated `loss.backward` takes care of
                 # accumulation by itself. Refer Thomas Wolf's post[1] for details.
                 #
-                # [1] - "Training Neural Nets on Larger Batches: Practical Tips for 
+                # [1] - "Training Neural Nets on Larger Batches: Practical Tips for
                 # 1-GPU, Multi-GPU & Distributed setups"
                 for batch in batch_group:
                     loss = self.batch_loss([batch], for_training=True)
