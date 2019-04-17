@@ -174,6 +174,9 @@ class Trainer(TrainerBase):
             parameters. Be careful that when saving the checkpoint, we will save the moving averages of
             parameters. This is necessary because we want the saved model to perform as well as the validated
             model if we load it later. But this may cause problems if you restart the training from checkpoint.
+        num_gradient_accumulation_steps: ``int``, optional, (default = 1)
+            Gradients are accumulated for the given number of steps before doing an optimizer step. This can
+            be useful to accomodate batches that are larger than the RAM size.
         """
         super().__init__(serialization_dir, cuda_device)
 
