@@ -62,7 +62,7 @@ class BiaffineDependencyParserMultiLang(BiaffineDependencyParser):
     use_mst_decoding_for_validation : ``bool``, optional (default = True).
         Whether to use Edmond's algorithm to find the optimal minimum spanning tree during validation.
         If false, decoding is greedy.
-    langs_for_early_stop : ``List[str]``, optional, (default = ["en"])
+    langs_for_early_stop : ``List[str]``, optional, (default = [])
         Which languages to include in the averaged metrics
         (that could be used for early stopping).
     dropout : ``float``, optional, (default = 0.0)
@@ -85,7 +85,7 @@ class BiaffineDependencyParserMultiLang(BiaffineDependencyParser):
                  arc_feedforward: FeedForward = None,
                  pos_tag_embedding: Embedding = None,
                  use_mst_decoding_for_validation: bool = True,
-                 langs_for_early_stop: List[str] = ["en"],
+                 langs_for_early_stop: List[str] = None,
                  dropout: float = 0.0,
                  input_dropout: float = 0.0,
                  initializer: InitializerApplicator = InitializerApplicator(),
@@ -96,9 +96,10 @@ class BiaffineDependencyParserMultiLang(BiaffineDependencyParser):
                 pos_tag_embedding, use_mst_decoding_for_validation, dropout,
                 input_dropout, initializer, regularizer)
 
-        self.langs_for_early_stop = langs_for_early_stop
+        self._langs_for_early_stop = langs_for_early_stop or []
 
-        self._attachment_scores = defaultdict(lambda: AttachmentScores())
+        self._lang_attachment_scores: Dict[
+                str, AttachmentScores] = defaultdict(AttachmentScores)
 
     @overrides
     def forward(self,  # type: ignore
@@ -115,8 +116,9 @@ class BiaffineDependencyParserMultiLang(BiaffineDependencyParser):
         Metadata should have a ``lang`` key.
         """
         if 'lang' not in metadata[0]:
-            raise ConfigurationError("metadata is missing 'lang' key; "
-            "Use the universal_dependencies_multilang dataset_reader.")
+            raise ConfigurationError(
+                    "metadata is missing 'lang' key; "
+                    "Use the universal_dependencies_multilang dataset_reader.")
 
         batch_lang = metadata[0]['lang']
         for entry in metadata:
@@ -144,11 +146,11 @@ class BiaffineDependencyParserMultiLang(BiaffineDependencyParser):
             # We calculate attatchment scores for the whole sentence
             # but excluding the symbolic ROOT token at the start,
             # which is why we start from the second element in the sequence.
-            self._attachment_scores[batch_lang](predicted_heads[:, 1:],
-                                                predicted_head_tags[:, 1:],
-                                                head_indices,
-                                                head_tags,
-                                                evaluation_mask)
+            self._lang_attachment_scores[batch_lang](predicted_heads[:, 1:],
+                                                     predicted_head_tags[:, 1:],
+                                                     head_indices,
+                                                     head_tags,
+                                                     evaluation_mask)
 
         output_dict = {
                 "heads": predicted_heads,
@@ -168,7 +170,7 @@ class BiaffineDependencyParserMultiLang(BiaffineDependencyParser):
         metrics = {}
         all_uas = []
         all_las = []
-        for lang, scores in self._attachment_scores.items():
+        for lang, scores in self._lang_attachment_scores.items():
             lang_metrics = scores.get_metric(reset)
 
             # Add the specific language to the dict key.
@@ -180,14 +182,16 @@ class BiaffineDependencyParserMultiLang(BiaffineDependencyParser):
                                                  lang)] = lang_metrics[key]
 
             # Include in the average only languages that should count for early stopping.
-            if lang in self.langs_for_early_stop:
+            if lang in self._langs_for_early_stop:
                 all_uas.append(metrics_wlang["UAS_{}".format(lang)])
                 all_las.append(metrics_wlang["LAS_{}".format(lang)])
 
             metrics.update(metrics_wlang)
 
-        metrics.update({
-                "UAS_AVG": numpy.mean(all_uas),
-                "LAS_AVG": numpy.mean(all_las)
-        })
+        if self._langs_for_early_stop:
+            metrics.update({
+                    "UAS_AVG": numpy.mean(all_uas),
+                    "LAS_AVG": numpy.mean(all_las)
+            })
+
         return metrics

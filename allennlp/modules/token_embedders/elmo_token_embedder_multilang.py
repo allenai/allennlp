@@ -56,12 +56,13 @@ class ElmoTokenEmbedderMultiLang(TokenEmbedder):
                  projection_dim: int = None,
                  vocab_to_cache: List[str] = None,
                  scalar_mix_parameters: List[float] = None,
-                 aligning_files: Dict[str, str] = {}) -> None:
+                 aligning_files: Dict[str, str] = None) -> None:
         super(ElmoTokenEmbedderMultiLang, self).__init__()
 
         if options_files.keys() != weight_files.keys():
             raise ConfigurationError("Keys for Elmo's options files and weights files don't match")
 
+        aligning_files = aligning_files or {}
         output_dim = None
         for lang in weight_files.keys():
             name = 'elmo_%s' % lang
@@ -142,8 +143,8 @@ class ElmoTokenEmbedderMultiLang(TokenEmbedder):
 
     # Custom vocab_to_cache logic requires a from_params implementation.
     @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params
-                   ) -> 'ElmoTokenEmbedderMultiLang':  # type: ignore
+    def from_params(cls, vocab: Vocabulary, params: Params # type: ignore
+                   ) -> 'ElmoTokenEmbedderMultiLang':
         # pylint: disable=arguments-differ
         options_files = params.pop('options_files')
         weight_files = params.pop('weight_files')

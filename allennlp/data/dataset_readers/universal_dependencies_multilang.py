@@ -1,4 +1,4 @@
-from typing import Dict, Tuple, List
+from typing import Dict, Tuple, List, Iterator, Any
 import logging
 import itertools
 import glob
@@ -97,7 +97,7 @@ class UniversalDependenciesMultiLangDatasetReader(DatasetReader):
         self._instances_per_file = instances_per_file
 
         self._is_first_pass = True
-        self._iterators = None
+        self._iterators: List[Tuple[str, Iterator[Any]]] = None
 
     def _read_one_file(self, lang: str, file_path: str):
         with open(file_path, 'r') as conllu_file:

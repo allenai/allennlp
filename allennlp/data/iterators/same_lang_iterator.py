@@ -38,7 +38,8 @@ class SameLangIterator(DataIterator):
                 excess: Deque[Instance] = deque()
                 # Then break each memory-sized list into batches.
                 for batch_instances in lazy_groups_of(iterator, self._batch_size):
-                    for poss_smaller_batches in self._ensure_batch_is_sufficiently_small(batch_instances, excess):
+                    for poss_smaller_batches in self._ensure_batch_is_sufficiently_small( # type: ignore
+                            batch_instances, excess):
                         batch = Batch(poss_smaller_batches)
                         yield batch
                 if excess:
