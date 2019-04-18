@@ -35,8 +35,8 @@ class _CachedLazyInstances(Iterable):
     subsequent passes.
     """
     def __init__(self,
-                 read_from_file_method: Callable[[str], Iterator[Instance]],
-                 read_from_cache_method: Callable[[str], Iterator[Instance]],
+                 read_from_file_method: Callable[[str], Iterable[Instance]],
+                 read_from_cache_method: Callable[[str], Iterable[Instance]],
                  serialize_instance_method: Callable[[Instance], str],
                  file_path: str,
                  cache_file: str) -> None:
@@ -176,9 +176,9 @@ class DatasetReader(Registrable):
                 raise ConfigurationError("No instances were read from the given filepath {}. "
                                          "Is the path correct?".format(file_path))
             logger.info(f"Caching instances to {cache_file}")
-            with open(cache_file, 'w') as cache_file:
+            with open(cache_file, 'w') as cache:
                 for instance in Tqdm.tqdm(instances):
-                    cache_file.write(self.serialize_instance(instance) + '\n')
+                    cache.write(self.serialize_instance(instance) + '\n')
             return instances
 
     def _instances_from_cache_file(self, cache_filename: str) -> Iterable[Instance]:
@@ -212,6 +212,7 @@ class DatasetReader(Registrable):
         The default implementation is to use ``jsonpickle``.  If you would like some other format
         for your pre-processed data, override this method.
         """
+        # pylint: disable=no-self-use
         return jsonpickle.dumps(instance)
 
     def deserialize_instance(self, string: str) -> Instance:
@@ -222,4 +223,5 @@ class DatasetReader(Registrable):
         The default implementation is to use ``jsonpickle``.  If you would like some other format
         for your pre-processed data, override this method.
         """
+        # pylint: disable=no-self-use
         return jsonpickle.loads(string)  # type: ignore
