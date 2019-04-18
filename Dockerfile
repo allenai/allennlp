@@ -72,5 +72,12 @@ ENV ALLENNLP_SOURCE_COMMIT $SOURCE_COMMIT
 
 LABEL maintainer="allennlp-contact@allenai.org"
 
-EXPOSE 8000
-CMD ["/bin/bash"]
+RUN pip install awscli
+RUN pip install --upgrade boto3
+RUN mkdir ~/.aws
+COPY credentials credentials
+RUN cp credentials ~/.aws/credentials
+RUN export AWS_PROFILE=qa.research
+
+# ENTRYPOINT [ "python", "scripts/multiqa/allennlp_job_runner.py","GPU","--channe","test"]
+ENTRYPOINT ["/bin/bash"]

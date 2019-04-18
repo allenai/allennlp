@@ -32,12 +32,14 @@ class AllenNLP_Job_Dispatcher():
         s3 = boto3.client("s3")
 
         all_objects = s3.list_objects(Bucket='multiqa', Prefix='models/')
+        all_objects['Contents'] += s3.list_objects(Bucket='mrqa', Prefix='models/')['Contents']
         if 'Contents' in all_objects:
             self.s3_models = [obj['Key'] for obj in all_objects['Contents']]
         if len(self.s3_models) > 900:
             print('\n\n!!!!!!!!!!!!!!!!! approching S3 limit of 1000 results\n\n')
 
         all_objects = s3.list_objects(Bucket='multiqa', Prefix='preproc/')
+        all_objects['Contents'] += s3.list_objects(Bucket='mrqa', Prefix='data/')['Contents']
         if 'Contents' in all_objects:
             self.s3_preproc = [obj['Key'] for obj in all_objects['Contents']]
         if len(self.s3_preproc) > 900:
@@ -76,7 +78,7 @@ class AllenNLP_Job_Dispatcher():
         curr_time = datetime.datetime.utcnow()
         for exp in res['hits']['hits']:
             exp_time = datetime.datetime.strptime(exp['_source']['log_timestamp'],'%Y-%m-%dT%H:%M:%S.%f')
-            if curr_time - exp_time < datetime.timedelta(0,240):
+            if curr_time - exp_time < datetime.timedelta(0,120):
                 if 'experiment_name' in exp['_source']:
                     running_exp.append(exp['_source']['experiment_name'])
 
@@ -86,6 +88,7 @@ class AllenNLP_Job_Dispatcher():
     def get_s3_experiments(self, prefix):
         s3 = boto3.client("s3")
         all_objects = s3.list_objects(Bucket='multiqa',Prefix=prefix)
+        all_objects += s3.list_objects(Bucket='mrqa', Prefix=prefix)
         all_keys = []
         if 'Contents' in all_objects:
             for obj in all_objects['Contents']:
@@ -94,13 +97,18 @@ class AllenNLP_Job_Dispatcher():
         return all_keys
 
     def allennlp_include_packages(self):
-        return ' --include-package allennlp.models.reading_comprehension.docqa++ \
+        return '    --include-package allennlp.data.bert_mc_qa \
+                    --include-package allennlp.models.bert_mc_qa \
                    --include-package allennlp.data.iterators.multiqa_iterator \
+                   --include-package allennlp.data.iterators.mrqa_iterator  \
                    --include-package allennlp.data.dataset_readers.reading_comprehension.multiqa+ \
                    --include-package allennlp.data.dataset_readers.reading_comprehension.multiqa+combine \
                    --include-package allennlp.models.reading_comprehension.docqa++BERT \
                    --include-package allennlp.data.dataset_readers.reading_comprehension.multiqa_bert  \
-                   --include-package allennlp.data.dataset_readers.reading_comprehension.multiqa_bert_mix'
+                   --include-package allennlp.data.dataset_readers.reading_comprehension.multiqa_bert_mix  \
+                   --include-package allennlp.models.reading_comprehension.BERT_QA   \
+                   --include-package allennlp.data.dataset_readers.reading_comprehension.mrqa_reader'
+
 
     def read_config(self, filename):
         with open(filename, 'r') as f:
@@ -157,6 +165,7 @@ class AllenNLP_Job_Dispatcher():
 
     def replace_tag_params(self, exp_config, params):
         for key in params.keys():
+
             if "train_data_path" in exp_config['override_config']:
                 exp_config['override_config']["train_data_path"] = \
                     exp_config['override_config']["train_data_path"].replace('[' + key + ']', str(params[key]))
@@ -291,19 +300,19 @@ class AllenNLP_Job_Dispatcher():
     def check_s3_resource_exists(self, exp_config):
         if 'model' in exp_config and \
                 len([obj for obj in self.s3_models if exp_config['model'].endswith(obj)]) == 0:
-            if not self.QUIET_MODE:
+            if SHOW_MISSING_RESOURCES:
                 print('resource %s does not exists, not running ' % (exp_config['model']))
             return False
 
         if 'eval_set' in exp_config and \
                 len([obj for obj in self.s3_preproc if exp_config['eval_set'].endswith(obj)]) == 0:
-            if not self.QUIET_MODE:
+            if SHOW_MISSING_RESOURCES:
                 print('resource %s does not exists, not running ' % (exp_config['eval_set']))
             return False
 
         if 'source_model_path' in exp_config and \
                 len([obj for obj in self.s3_models if exp_config['source_model_path'].endswith(obj)]) == 0:
-            if not self.QUIET_MODE:
+            if SHOW_MISSING_RESOURCES:
                 print('resource %s does not exists, not running ' % (exp_config['source_model_path']))
             return False
 
@@ -311,14 +320,14 @@ class AllenNLP_Job_Dispatcher():
         if 'train_data_path' in exp_config['override_config']:
             for train_data_path in exp_config['override_config']['train_data_path'].split(','):
                 if len([obj for obj in self.s3_preproc if train_data_path.endswith(obj)]) == 0:
-                    if not self.QUIET_MODE:
+                    if SHOW_MISSING_RESOURCES:
                         print('resource %s does not exists, not running ' % (train_data_path))
                     return False
 
         if 'validation_data_path' in exp_config['override_config']:
             for validation_data_path in exp_config['override_config']['validation_data_path'].split(','):
                 if len([obj for obj in self.s3_preproc if validation_data_path.endswith(obj)]) == 0:
-                    if not self.QUIET_MODE:
+                    if SHOW_MISSING_RESOURCES:
                         print('resource %s does not exists, not running ' % (validation_data_path))
                     return False
         return True
@@ -344,6 +353,14 @@ class AllenNLP_Job_Dispatcher():
                 exp_config = self.dataset_specific_override(params['TARGET'], exp_config)
             elif 'DATASET' in params:
                 exp_config = self.dataset_specific_override(params['DATASET'], exp_config)
+
+            for key in params.keys():
+                if key == 'TARGET':
+                    params[key] += PREPROC_VERSION
+                if key == 'MODEL' and CHANGE_MODEL_VERSION:
+                    params[key] += PREPROC_VERSION
+                if key == 'EVAL_SET':
+                    params[key] += PREPROC_VERSION
 
             params['EXPERIMENT'] = experiment_name
             # adding execution time name
@@ -385,8 +402,9 @@ class AllenNLP_Job_Dispatcher():
                 runner_config['bash_command'] = self.build_finetune_bash_command(exp_config, run_name)
             runner_config['bash_command'] = self.replace_one_field_tags(runner_config['bash_command'], params)
 
+            print('-- Experiment Name = %s' % (run_name))
             if not self.QUIET_MODE or DRY_RUN == False:
-                print(run_name)
+
                 print('## bash_command= %s' % (runner_config['bash_command'].replace(',', ',\n').replace(' -', '\n-')))
                 if 'output_file_cloud' in exp_config:
                     print('## output_file_cloud= %s' % (exp_config['output_file_cloud']))
@@ -413,9 +431,9 @@ class AllenNLP_Job_Dispatcher():
             runnable_count = 0
             for experiment_name in experiment_names:
                 runnable_count += allennlp_dispatcher.run_job(experiment_name, DRY_RUN, queue, FORCE_RUN, run_only_one)
-                time.sleep(1)
+                time.sleep(0.5)
                 print('%d runnable experiments in %s' % (runnable_count, experiment_name))
-            time.sleep(60)
+            break
 
 
 experiment_name = []
@@ -426,19 +444,33 @@ experiment_name = []
 #Exp1
 experiment_name += ['011_BERT_exp1_finetune_small']
 experiment_name += ['012_BERT_exp1_finetune_75000']
+experiment_name += ['038_DocQA_exp1_train_75000']
 experiment_name += ['026_DocQA_exp1_train_small']
 experiment_name += ['027_DocQA_exp1_train_Full']
+experiment_name += ["019_BERT_train_Full"]
+
 
 #Exp2
 experiment_name += ['021_BERT_exp2_finetune_small_from_75K']
-experiment_name += ['028_DocQA_exp2_finetune_small_from_75K']
+experiment_name += ['016_DocQA_exp2_finetune_small_from_75K']
+experiment_name += ['043_BERT_exp2_finetune_full_from_mix']
+experiment_name += ['045_BERT_exp2_mix_small_and_75K']
 
 #Exp3
-experiment_name += ['016_GloVe_exp3_finetune_target_sizes']
+experiment_name += ['028_GloVe_exp3_finetune_target_sizes']
 experiment_name += ['025_GloVe_exp3_finetune_target_sizes_lr']
 experiment_name += ['029_BERT_exp3_finetune_target_sizes']
 experiment_name += ['035_BERT_exp3_train_sizes']
 experiment_name += ['036_DocQA_exp3_train_sizes']
+
+# Exp4
+experiment_name += ['037_BERT_exp4_train_mixes']
+
+# Exp6
+experiment_name += ['041_BERT_exp6_train_mixes_3']
+experiment_name += ['046_BERT_exp2_mix_evaluate']
+#experiment_name += ['047_BERTLarge_exp6_evaluate']
+#experiment_name += ['049_BERTLarge_exp6_GAS12_evaluate']
 
 
 # Evaluate
@@ -449,29 +481,32 @@ experiment_name += ['024_BERT_exp2_evaluate']
 experiment_name += ['023_DocQA_exp2_evaluate']
 experiment_name += ['031_BERT_exp2_evaluate_small']
 experiment_name += ['030_DocQA_exp2_evaluate_small']
+experiment_name += ['046_BERT_exp2_mix_evaluate']
 
 experiment_name += ['013_GloVe_exp3_evaluate_target_size_curves']
 experiment_name += ['032_BERT_exp3_evaluate_target_size_curves']
+experiment_name += ['039_BERT_exp3_evaluate_sizes']
+experiment_name += ['040_DocQA_exp3_evaluate_sizes']
 
 experiment_name += ['033_BERT_DocQA_exp5_adverserial_eval_finetuned']
 experiment_name += ['034_BERT_DocQA_exp5_adverserial_eval_trained']
 
-
-
 #experiment_name = ['035_BERT_exp3_train_sizes']
 
-run_only_one = False
+
 #queue = 'rack-jonathan-g02'
-# queue = 'rack-gamir-g03'
+#queue = 'rack-gamir-g04'
 queue = 'GPUs'
-if queue != 'GPUs':
+#queue = '4GPUs'
+if queue != 'GPUs' and queue != '4GPUs':
     print('\n!!!!!!!!!!! RUNNING ON A SPECIFIC MACHINE, ARE YOU SURE?? !!!!!!!!\n')
-    time.sleep(5)
+    time.sleep(3)
 
-FORCE_RUN = False
+FORCE_RUN = True
+SHOW_MISSING_RESOURCES = True
+run_only_one = False
 
 
-print('Running new job on queue = %s', queue)
 parse = argparse.ArgumentParser("")
 parse.add_argument("--DRY_RUN", type=str2bool, default=True, help="")
 args = parse.parse_args()
@@ -479,12 +514,45 @@ args = parse.parse_args()
 if not args.DRY_RUN:
     print('------------ EXECUTING -------------')
     print('------------ EXECUTING -------------')
-    time.sleep(5)
+    time.sleep(3)
+
+
+PREPROC_VERSION = ''
+CHANGE_MODEL_VERSION = False
 
 allennlp_dispatcher = AllenNLP_Job_Dispatcher(experiment_name)
 #allennlp_dispatcher.monitor_jobs(experiment_name, args.DRY_RUN , queue, FORCE_RUN, run_only_one)
 
-#experiment_name = '035_BERT_exp3_train_sizes'
-experiment_name = '037_BERT_exp4_train_mixes'
+#experiment_name = '019_BERT_train_Full'
+#experiment_name = '041_BERT_exp6_train_mixes_3'
+#experiment_name = '020_BERT_exp1_evaluate'
+#experiment_name = '046_BERT_exp2_mix_evaluate'
+#experiment_name = '047_BERTLarge_exp6_evaluate'
+#experiment_name = '049_BERTLarge_exp6_GAS12_evaluate'
+#experiment_name = '050_BERTLarge_exp6_finetune_full_from_mix'
+#experiment_name = '051_BERTLarge_exp6_train_mix5'
+#experiment_name = '052_BERT_exp6_train_7mix'
+#experiment_name = '053_BERTLarge_exp6_finetuned_evaluate'
+#experiment_name = '054_BERTLarge_exp6_TESTSET_evaluate'
+#experiment_name = '055_BERTLarge_exp6_finetuned_TESTSET_evaluate'
+#experiment_name = '056_BERTLarge_exp6_train'
+#experiment_name = '057_BERTLarge_exp6_train_mix_ALL'
+#experiment_name = '058_BERTLarge_answer2_exp6_train_mix6'
+#experiment_name = '059_BERTLarge_answer2_exp6_train_mix5'
+#experiment_name = '060_BERTLarge_answer2_exp6_train_mix5_hotpotqa'
+#experiment_name = '061_MRQA_BERT_train_Full'
+#experiment_name = '062_BERT_train_Full_exp'
+#experiment_name = '063_BERT_evaluate_MRQA'
+#experiment_name = '064_BERT_RL-CWQ_evaluate_exp'
+#experiment_name = '065_BERT_train_mix_MRQA'
+experiment_name = '066_CSQA_BERT_train'
+
+if experiment_name.find('BERTLarge') > -1 and experiment_name.find('evaluate') == -1:
+    queue = '4GPUs'
+#queue = 'rack-gamir-g03'
+#queue = 'rack-jonathan-g04'
+#queue = 'savant'
+
+print('Running new job on queue = %s', queue)
 allennlp_dispatcher.run_job(experiment_name, args.DRY_RUN , queue, FORCE_RUN, run_only_one)
 
