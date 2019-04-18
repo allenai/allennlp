@@ -56,6 +56,7 @@ class BertMCQAReader(DatasetReader):
                  context_syntax: str = "c#q#a",
                  sample: int = -1) -> None:
         super().__init__()
+        #self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         self._token_indexers = {'tokens': SingleIdTokenIndexer()}
         lower_case = not '-cased' in pretrained_model
         self._word_splitter = BertBasicWordSplitter(do_lower_case=lower_case)
@@ -153,74 +154,27 @@ class BertMCQAReader(DatasetReader):
                             and not any_correct:
                         continue
 
-                    if self._instance_per_choice:
-                        yield self.text_to_instance_per_choice(
-                            str(item_id)+'-'+str(choice_label),
-                            question_text,
-                            choice_text,
-                            is_correct,
-                            context,
-                            choice_context,
-                            debug)
 
                 if not any_correct and 'answerKey' in item_json:
                     raise ValueError("No correct answer found for {item_json}!")
 
-                if not self._instance_per_choice:
-                    answer_id = choice_label_to_id[item_json["answerKey"]]
-                    # Pad choices with empty strings if not right number
-                    if len(choice_text_list) != self._num_choices:
-                        choice_text_list = (choice_text_list + self._num_choices * [''])[:self._num_choices]
-                        choice_context_list = (choice_context_list + self._num_choices * [None])[:self._num_choices]
-                        if answer_id >= self._num_choices:
-                            logging.warning(f"Skipping question with more than {self._num_choices} answers: {item_json}")
-                            continue
+                answer_id = choice_label_to_id[item_json["answerKey"]]
+                # Pad choices with empty strings if not right number
+                if len(choice_text_list) != self._num_choices:
+                    choice_text_list = (choice_text_list + self._num_choices * [''])[:self._num_choices]
+                    choice_context_list = (choice_context_list + self._num_choices * [None])[:self._num_choices]
+                    if answer_id >= self._num_choices:
+                        logging.warning(f"Skipping question with more than {self._num_choices} answers: {item_json}")
+                        continue
 
-                    yield self.text_to_instance(
-                        item_id,
-                        question_text,
-                        choice_text_list,
-                        answer_id,
-                        context,
-                        choice_context_list,
-                        debug)
-
-
-    def text_to_instance_per_choice(self,  # type: ignore
-                         item_id: str,
-                         question: str,
-                         choice: str,
-                         is_correct: int,
-                         context: str,
-                         choice_context: str,
-                         debug: int = -1) -> Instance:
-        # pylint: disable=arguments-differ
-        fields: Dict[str, Field] = {}
-        context = choice_context or context
-        qa_tokens, segment_ids = self.bert_features_from_qa(question, choice, context)
-
-        qa_field = TextField(qa_tokens, self._token_indexers)
-        fields['question'] = qa_field
-        fields['segment_ids'] = SequenceLabelField(segment_ids, qa_field)
-        fields['label'] = LabelField(is_correct, skip_indexing=True)
-
-        metadata = {
-            "id": item_id,
-            "question_text": question,
-            "choice": choice,
-            "correct_answer_index": is_correct,
-            # "question_tokens": [x.text for x in question_tokens],
-            # "choice_tokens_list": [[x.text for x in ct] for ct in choices_tokens_list],
-        }
-
-        fields["metadata"] = MetadataField(metadata)
-
-        if debug > 0:
-            logger.info(f"qa_tokens = {qa_tokens}")
-            logger.info(f"label = {is_correct}")
-            logger.info(f"segment_ids = {segment_ids}")
-
-        return Instance(fields)
+                yield self.text_to_instance(
+                    item_id,
+                    question_text,
+                    choice_text_list,
+                    answer_id,
+                    context,
+                    choice_context_list,
+                    debug)
 
 
     @overrides
@@ -353,7 +307,10 @@ class BertMCQAReader(DatasetReader):
             question_tokens = context_tokens + [sep_token] + question_tokens
         choice_tokens = self._word_splitter.split_words(answer)
         question_tokens, choice_tokens = self._truncate_tokens(question_tokens, choice_tokens, self._max_pieces - 3)
+
         tokens = [cls_token] + question_tokens + [sep_token] + choice_tokens + [sep_token]
+        # AllenNLP already add [CLS]
+        #tokens = question_tokens + [sep_token] + choice_tokens
         segment_ids = list(itertools.repeat(0, len(question_tokens) + 2)) + \
                       list(itertools.repeat(1, len(choice_tokens) + 1))
         return tokens, segment_ids
