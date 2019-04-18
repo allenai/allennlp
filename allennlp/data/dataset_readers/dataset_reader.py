@@ -5,7 +5,7 @@ import os
 import jsonpickle
 
 from allennlp.data.instance import Instance
-from allennlp.common import Tqdm
+from allennlp.common import Tqdm, util
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.registrable import Registrable
 
@@ -74,22 +74,31 @@ class DatasetReader(Registrable):
     lazy : ``bool``, optional (default=False)
         If this is true, ``instances()`` will return an object whose ``__iter__`` method
         reloads the dataset each time it's called. Otherwise, ``instances()`` returns a list.
-    cache_suffix : ``str``, optional (default=None)
-        When provided, we add this suffix to each path passed to :func:`read` to get a location of
-        a file containing a cache of already-processed ``Instances`` in that path, serialized as
-        one string-formatted ``Instance`` per line.  If this file exists, we read the ``Instances``
-        from the cache instead of re-processing the data (using :func:`deserialize_instance`).  If
-        this file does `not` exist, we will `create` it on our first pass through the data (using
-        :func:`serialize_instance`).
-
-        IMPORTANT CAVEAT: if you change parameters in your dataset reader that are supposed to
-        affect how instances are processed, you `must` change this suffix, or clear the cache!
-        Otherwise you will think you are using your new parameters, but you are actually using
-        whatever parameters created the cache.
     """
-    def __init__(self, lazy: bool = False, cache_suffix: str = None) -> None:
+    def __init__(self, lazy: bool = False) -> None:
         self.lazy = lazy
-        self.cache_suffix = cache_suffix
+        self._cache_directory = None
+
+    def cache_data(self, cache_directory: str) -> None:
+        """
+        When you call this method, we will use this directory to store a cache of already-processed
+        ``Instances`` in every file passed to :func:`read`, serialized as one string-formatted
+        ``Instance`` per line.  If the cache file for a given ``file_path`` exists, we read the
+        ``Instances`` from the cache instead of re-processing the data (using
+        :func:`deserialize_instance`).  If the cache file does `not` exist, we will `create` it on
+        our first pass through the data (using :func:`serialize_instance`).
+
+        IMPORTANT CAVEAT: It is the `caller's` responsibility to make sure that this directory is
+        unique for any combination of code and parameters that you use.  That is, if you call this
+        method, we will use any existing cache files in that directory `regardless of the
+        parameters you set for this DatasetReader!`  If you use our commands, the ``Train`` command
+        is responsible for calling this method and ensuring that unique parameters correspond to
+        unique cache directories.  If you don't use our commands, that is your responsibility.
+        """
+        if not cache_directory.endswith('/'):
+            cache_directory += '/'
+        self._cache_directory = cache_directory
+        os.makedirs(self._cache_directory, exist_ok=True)
 
     def read(self, file_path: str) -> Iterable[Instance]:
         """
@@ -110,9 +119,8 @@ class DatasetReader(Registrable):
         but if you do your result should likewise be repeatedly iterable.
         """
         lazy = getattr(self, 'lazy', None)
-        cache_suffix = getattr(self, 'cache_suffix', None)
-        if cache_suffix:
-            cache_file = str(file_path) + cache_suffix
+        if self._cache_directory:
+            cache_file = self._get_cache_location_for_file_path(file_path)
             return self._read_cached(file_path, cache_file, lazy)
 
         if lazy is None:
@@ -129,6 +137,9 @@ class DatasetReader(Registrable):
                 raise ConfigurationError("No instances were read from the given filepath {}. "
                                          "Is the path correct?".format(file_path))
             return instances
+
+    def _get_cache_location_for_file_path(self, file_path: str) -> str:
+        return self._cache_directory + util.flatten_filename(str(file_path))
 
     def _read(self, file_path: str) -> Iterable[Instance]:
         """
