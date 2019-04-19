@@ -44,7 +44,7 @@ def subsequent_mask(size: int, device: str = 'cpu') -> torch.Tensor:
 
 
 class PositionalEncoding(torch.nn.Module):
-    "Implement the Positional Encoding function."
+    """Implement the Positional Encoding function."""
 
     def __init__(self, input_dim: int, max_len: int = 5000) -> None:
         super().__init__()
@@ -64,7 +64,7 @@ class PositionalEncoding(torch.nn.Module):
 
 
 class PositionwiseFeedForward(torch.nn.Module):
-    "Implements FFN equation."
+    """Implements FFN equation."""
 
     def __init__(self, input_dim: int, ff_dim: int, dropout: float = 0.1) -> None:
         super().__init__()
@@ -78,7 +78,7 @@ class PositionwiseFeedForward(torch.nn.Module):
 
 
 class TransformerEncoder(torch.nn.Module):
-    "Core encoder is a stack of N layers"
+    """Core encoder is a stack of N layers"""
 
     def __init__(self, layer: torch.nn.Module, num_layers: int, return_all_layers: bool = False) -> None:
         super().__init__()
@@ -87,7 +87,7 @@ class TransformerEncoder(torch.nn.Module):
         self.return_all_layers = return_all_layers
 
     def forward(self, x, mask):
-        "Pass the input (and mask) through each layer in turn."
+        """Pass the input (and mask) through each layer in turn."""
         all_layers = []
         for layer in self.layers:
             x = layer(x, mask)
@@ -112,12 +112,12 @@ class SublayerConnection(torch.nn.Module):
         self.dropout = torch.nn.Dropout(dropout)
 
     def forward(self, x: torch.Tensor, sublayer: Callable[[torch.Tensor], torch.Tensor]) -> torch.Tensor:
-        "Apply residual connection to any sublayer with the same size."
+        """Apply residual connection to any sublayer with the same size."""
         return x + self.dropout(sublayer(self.norm(x)))
 
 
 class EncoderLayer(torch.nn.Module):
-    "Encoder is made up of self-attn and feed forward (defined below)"
+    """Encoder is made up of self-attn and feed forward (defined below)"""
 
     def __init__(self,
                  size: int,
@@ -131,7 +131,7 @@ class EncoderLayer(torch.nn.Module):
         self.size = size
 
     def forward(self, x: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
-        "Follow Figure 1 (left) for connections."
+        """Follow Figure 1 (left) for connections."""
         x = self.sublayer[0](x, lambda x: self.self_attn(x, x, x, mask))
         return self.sublayer[1](x, self.feed_forward)
 
@@ -178,7 +178,7 @@ def make_model(num_layers: int = 6,
                heads: int = 8,
                dropout: float = 0.1,
                return_all_layers: bool = False) -> TransformerEncoder:
-    "Helper: Construct a model from hyperparameters."
+    """Helper: Construct a model from hyperparameters."""
     attn = MultiHeadedAttention(heads, input_size, dropout)
     ff = PositionwiseFeedForward(input_size, hidden_size, dropout)
     model = TransformerEncoder(EncoderLayer(input_size, attn, ff, dropout),
@@ -192,6 +192,7 @@ def make_model(num_layers: int = 6,
     return model
 
 
+@Seq2SeqEncoder.register('bidirectional_language_model_transformer')
 class BidirectionalLanguageModelTransformer(Seq2SeqEncoder):
     def __init__(self,
                  input_dim: int,

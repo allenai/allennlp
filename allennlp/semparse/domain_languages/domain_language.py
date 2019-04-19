@@ -1,7 +1,8 @@
 from collections import defaultdict
-from typing import Any, Callable, CallableMeta, Dict, GenericMeta, List, Set, Tuple, Type, Union  # type: ignore
+from typing import Any, Callable, Dict, List, Set, Tuple, Type, Union
 import inspect
 import logging
+import sys
 import traceback
 import types
 
@@ -11,6 +12,42 @@ from allennlp.common.util import START_SYMBOL
 from allennlp.semparse import util
 
 logger = logging.getLogger(__name__)
+
+
+# We rely heavily on the typing module and its type annotations for our grammar induction code.
+# Unfortunately, the behavior of the typing module changed somewhat substantially between python
+# 3.6 and 3.7, so we need to do some gymnastics to get some of our checks to work with both.
+# That's what these three methods are about.
+
+def is_callable(type_: Type) -> bool:
+    if sys.version_info < (3, 7):
+        from typing import CallableMeta  # type: ignore
+        return isinstance(type_, CallableMeta)  # type: ignore
+    else:
+        return getattr(type_, '_name', None) == 'Callable'
+
+
+# pylint: disable=no-name-in-module
+def is_generic(type_: Type) -> bool:
+    if sys.version_info < (3, 7):
+        from typing import GenericMeta  # type: ignore
+        return isinstance(type_, GenericMeta)  # type: ignore
+    else:
+        # pylint: disable=protected-access
+        from typing import _GenericAlias
+        return isinstance(type_, _GenericAlias) # type: ignore
+
+
+def get_generic_name(type_: Type) -> str:
+    if sys.version_info < (3, 7):
+        origin = type_.__origin__.__name__
+    else:
+        # In python 3.7, type_.__origin__ switched to the built-in class, instead of the typing
+        # class.
+        origin = type_._name  # pylint: disable=protected-access
+    args = type_.__args__
+    return f'{origin}[{",".join(arg.__name__ for arg in args)}]'
+
 
 class PredicateType:
     """
@@ -31,17 +68,15 @@ class PredicateType:
         those specially, so that the ``name`` for the ``BasicType`` remains ``List[str]``, as you
         would expect.
         """
-        if isinstance(type_, CallableMeta):
+        if is_callable(type_):
             callable_args = type_.__args__
             argument_types = [PredicateType.get_type(t) for t in callable_args[:-1]]
             return_type = PredicateType.get_type(callable_args[-1])
             return FunctionType(argument_types, return_type)
-        elif isinstance(type_, GenericMeta):
-            # This is something like List[int].  type_.__name__ will only give 'List', though, so
-            # we need to do some magic here.
-            origin = type_.__origin__
-            args = type_.__args__
-            name = f'{origin.__name__}[{",".join(arg.__name__ for arg in args)}]'
+        elif is_generic(type_):
+            # This is something like List[int].  type_.__name__ doesn't do the right thing (and
+            # crashes in python 3.7), so we need to do some magic here.
+            name = get_generic_name(type_)
         else:
             name = type_.__name__
         return BasicType(name)
@@ -144,6 +179,24 @@ def predicate(function: Callable) -> Callable:  # pylint: disable=invalid-name
     setattr(function, '_is_predicate', True)
     return function
 
+def predicate_with_side_args(side_arguments: List[str]) -> Callable:  # pylint: disable=invalid-name
+    """
+    Like :func:`predicate`, but used when some of the arguments to the function are meant to be
+    provided by the decoder or other state, instead of from the language.  For example, you might
+    want to have a function use the decoder's attention over some input text when a terminal was
+    predicted.  That attention won't show up in the language productions.  Use this decorator, and
+    pass in the required state to :func:`DomainLanguage.execute_action_sequence`, if you need to
+    ignore some arguments when doing grammar induction.
+
+    In order for this to work out, the side arguments `must` be after any non-side arguments.  This
+    is because we use ``*args`` to pass the non-side arguments, and ``**kwargs`` to pass the side
+    arguments, and python requires that ``*args`` be before ``**kwargs``.
+    """
+    def decorator(function: Callable) -> Callable:
+        setattr(function, '_side_arguments', side_arguments)
+        return predicate(function)
+    return decorator
+
 
 def nltk_tree_to_logical_form(tree: Tree) -> str:
     """
@@ -243,7 +296,8 @@ class DomainLanguage:
             if isinstance(getattr(self, name), types.MethodType):
                 function = getattr(self, name)
                 if getattr(function, '_is_predicate', False):
-                    self.add_predicate(name, function)
+                    side_arguments = getattr(function, '_side_arguments', None)
+                    self.add_predicate(name, function, side_arguments)
         if allowed_constants:
             for name, value in allowed_constants.items():
                 self.add_constant(name, value)
@@ -257,6 +311,26 @@ class DomainLanguage:
         logical_form = logical_form.replace(",", " ")
         expression = util.lisp_to_nested_expression(logical_form)
         return self._execute_expression(expression)
+
+    def execute_action_sequence(self, action_sequence: List[str], side_arguments: List[Dict] = None):
+        """
+        Executes the program defined by an action sequence directly, without needing the overhead
+        of translating to a logical form first.  For any given program, :func:`execute` and this
+        function are equivalent, they just take different representations of the program, so you
+        can use whichever is more efficient.
+
+        Also, if you have state or side arguments associated with particular production rules
+        (e.g., the decoder's attention on an input utterance when a predicate was predicted), you
+        `must` use this function to execute the logical form, instead of :func:`execute`, so that
+        we can match the side arguments with the right functions.
+        """
+        # We'll strip off the first action, because it doesn't matter for execution.
+        first_action = action_sequence[0]
+        left_side = first_action.split(' -> ')[0]
+        if left_side != '@start@':
+            raise ExecutionError('invalid action sequence')
+        remaining_side_args = side_arguments[1:] if side_arguments else None
+        return self._execute_sequence(action_sequence[1:], remaining_side_args)[0]
 
     def get_nonterminal_productions(self) -> Dict[str, List[str]]:
         """
@@ -361,15 +435,32 @@ class DomainLanguage:
             raise ParsingError("Extra actions in action sequence")
         return nltk_tree_to_logical_form(tree)
 
-    def add_predicate(self, name: str, function: Callable):
+    def add_predicate(self, name: str, function: Callable, side_arguments: List[str] = None):
         """
         Adds a predicate to this domain language.  Typically you do this with the ``@predicate``
         decorator on the methods in your class.  But, if you need to for whatever reason, you can
         also call this function yourself with a (type-annotated) function to add it to your
         language.
+
+        Parameters
+        ----------
+        name : ``str``
+            The name that we will use in the induced language for this function.
+        function : ``Callable``
+            The function that gets called when executing a predicate with the given name.
+        side_arguments : ``List[str]``, optional
+            If given, we will ignore these arguments for the purposes of grammar induction.  This
+            is to allow passing extra arguments from the decoder state that are not explicitly part
+            of the language the decoder produces, such as the decoder's attention over the question
+            when a terminal was predicted.  If you use this functionality, you also `must` use
+            ``language.execute_action_sequence()`` instead of ``language.execute()``, and you must
+            pass the additional side arguments needed to that function.  See
+            :func:`execute_action_sequence` for more information.
         """
+        side_arguments = side_arguments or []
         signature = inspect.signature(function)
-        argument_types = [param.annotation for param in signature.parameters.values()]
+        argument_types = [param.annotation for name, param in signature.parameters.items()
+                          if name not in side_arguments]
         return_type = signature.return_annotation
         argument_nltk_types: List[PredicateType] = [PredicateType.get_type(arg_type)
                                                     for arg_type in argument_types]
@@ -401,6 +492,7 @@ class DomainLanguage:
         nonterminal_productions = self.get_nonterminal_productions()
         return symbol in nonterminal_productions
 
+    # pylint: disable=inconsistent-return-statements
     def _execute_expression(self, expression: Any):
         """
         This does the bulk of the work of executing a logical form, recursively executing a single
@@ -422,7 +514,7 @@ class DomainLanguage:
             arguments = [self._execute_expression(arg) for arg in expression[1:]]
             try:
                 return function(*arguments)
-            except (TypeError, ValueError) as error:
+            except (TypeError, ValueError):
                 traceback.print_exc()
                 raise ExecutionError(f"Error executing expression {expression} (see stderr for stack trace)")
         elif isinstance(expression, str):
@@ -445,6 +537,74 @@ class DomainLanguage:
             return self._functions[expression]
         else:
             raise ExecutionError("Not sure how you got here. Please open a github issue with details.")
+
+    def _execute_sequence(self,
+                          action_sequence: List[str],
+                          side_arguments: List[Dict]) -> Tuple[Any, List[str], List[Dict]]:
+        """
+        This does the bulk of the work of :func:`execute_action_sequence`, recursively executing
+        the functions it finds and trimming actions off of the action sequence.  The return value
+        is a tuple of (execution, remaining_actions), where the second value is necessary to handle
+        the recursion.
+        """
+        first_action = action_sequence[0]
+        remaining_actions = action_sequence[1:]
+        remaining_side_args = side_arguments[1:] if side_arguments else None
+        right_side = first_action.split(' -> ')[1]
+        if right_side in self._functions:
+            function = self._functions[right_side]
+            # mypy doesn't like this check, saying that Callable isn't a reasonable thing to pass
+            # here.  But it works just fine; I'm not sure why mypy complains about it.
+            if isinstance(function, Callable):  # type: ignore
+                function_arguments = inspect.signature(function).parameters
+                if not function_arguments:
+                    # This was a zero-argument function / constant that was registered as a lambda
+                    # function, for consistency of execution in `execute()`.
+                    execution_value = function()
+                elif side_arguments:
+                    kwargs = {}
+                    non_kwargs = []
+                    for argument_name in function_arguments:
+                        if argument_name in side_arguments[0]:
+                            kwargs[argument_name] = side_arguments[0][argument_name]
+                        else:
+                            non_kwargs.append(argument_name)
+                    if kwargs and non_kwargs:
+                        # This is a function that has both side arguments and logical form
+                        # arguments - we curry the function so only the logical form arguments are
+                        # left.
+                        def curried_function(*args):
+                            return function(*args, **kwargs)
+                        execution_value = curried_function
+                    elif kwargs:
+                        # This is a function that _only_ has side arguments - we just call the
+                        # function and return a value.
+                        execution_value = function(**kwargs)
+                    else:
+                        # This is a function that has logical form arguments, but no side arguments
+                        # that match what we were given - just return the function itself.
+                        execution_value = function
+                else:
+                    execution_value = function
+            return execution_value, remaining_actions, remaining_side_args
+        else:
+            # This is a non-terminal expansion, like 'int -> [<int:int>, int, int]'.  We need to
+            # get the function and its arguments, then call the function with its arguments.
+            # Because we linearize the abstract syntax tree depth first, left-to-right, we can just
+            # recursively call `_execute_sequence` for the function and all of its arguments, and
+            # things will just work.
+            right_side_parts = right_side.split(', ')
+
+            # We don't really need to know what the types are, just how many of them there are, so
+            # we recurse the right number of times.
+            function, remaining_actions, remaining_side_args = self._execute_sequence(remaining_actions,
+                                                                                      remaining_side_args)
+            arguments = []
+            for _ in right_side_parts[1:]:
+                argument, remaining_actions, remaining_side_args = self._execute_sequence(remaining_actions,
+                                                                                          remaining_side_args)
+                arguments.append(argument)
+            return function(*arguments), remaining_actions, remaining_side_args
 
     def _get_transitions(self, expression: Any, expected_type: PredicateType) -> Tuple[List[str], PredicateType]:
         """

@@ -15,6 +15,7 @@ The available Seq2Seq encoders are
 * :class:`"stacked_self_attention" <allennlp.modules.stacked_self_attention.StackedSelfAttentionEncoder>`
 * :class:`"multi_head_self_attention" <allennlp.modules.multi_head_self_attention.MultiHeadSelfAttention>`
 * :class:`"pass_through" <allennlp.modules.pass_through_encoder.PassThroughEncoder>`
+* :class:`"feedforward" <allennlp.modules.feedforward_encoder.FeedforwardEncoder>`
 """
 
 from typing import Type
@@ -36,8 +37,12 @@ from allennlp.modules.stacked_bidirectional_lstm import StackedBidirectionalLstm
 from allennlp.modules.seq2seq_encoders.stacked_self_attention import StackedSelfAttentionEncoder
 from allennlp.modules.seq2seq_encoders.multi_head_self_attention import MultiHeadSelfAttention
 from allennlp.modules.seq2seq_encoders.pass_through_encoder import PassThroughEncoder
+from allennlp.modules.seq2seq_encoders.feedforward_encoder import FeedForwardEncoder
+from allennlp.modules.seq2seq_encoders.qanet_encoder import QaNetEncoder
+
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
 
 class _Seq2SeqWrapper:
     """
@@ -90,6 +95,3 @@ Seq2SeqEncoder.register("rnn")(_Seq2SeqWrapper(torch.nn.RNN))
 Seq2SeqEncoder.register("augmented_lstm")(_Seq2SeqWrapper(AugmentedLstm))
 Seq2SeqEncoder.register("alternating_lstm")(_Seq2SeqWrapper(StackedAlternatingLstm))
 Seq2SeqEncoder.register("stacked_bidirectional_lstm")(_Seq2SeqWrapper(StackedBidirectionalLstm))
-Seq2SeqEncoder.register("bidirectional_language_model_transformer")(
-        BidirectionalLanguageModelTransformer
-)

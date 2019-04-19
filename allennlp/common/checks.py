@@ -2,15 +2,13 @@
 Functions and exceptions for checking that
 AllenNLP and its models are configured correctly.
 """
-from typing import Union
+from typing import Union, List
 
 import logging
-import os
+import re
 import subprocess
 
 from torch import cuda
-
-from allennlp.common.file_utils import cached_path
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -50,15 +48,37 @@ def check_dimensions_match(dimension_1: int,
         raise ConfigurationError(f"{dim_1_name} must match {dim_2_name}, but got {dimension_1} "
                                  f"and {dimension_2} instead")
 
+def parse_cuda_device(cuda_device: Union[str, int, List[int]]) -> Union[int, List[int]]:
+    """
+    Disambiguates single GPU and multiple GPU settings for cuda_device param.
+    """
+    def from_list(strings):
+        if len(strings) > 1:
+            return [int(d) for d in strings]
+        elif len(strings) == 1:
+            return int(strings[0])
+        else:
+            return -1
+
+    if isinstance(cuda_device, str):
+        return from_list(re.split(r',\s*', cuda_device))
+    elif isinstance(cuda_device, int):
+        return cuda_device
+    elif isinstance(cuda_device, list):
+        return from_list(cuda_device)
+    else:
+        # TODO(brendanr): Determine why mypy can't tell that this matches the Union.
+        return int(cuda_device)  # type: ignore
 
 def check_for_gpu(device_id: Union[int, list]):
+    device_id = parse_cuda_device(device_id)
     if isinstance(device_id, list):
         for did in device_id:
             check_for_gpu(did)
     elif device_id is not None and device_id >= 0:
         num_devices_available = cuda.device_count()
         if num_devices_available == 0:
-            raise ConfigurationError("Experiment specified a GPU but none are available;"
+            raise ConfigurationError("Experiment specified a GPU but none is available;"
                                      " if you want to run on CPU use the override"
                                      " 'trainer.cuda_device=-1' in the json config file.")
         elif device_id >= num_devices_available:
@@ -73,12 +93,3 @@ def check_for_java() -> bool:
         return 'version' in java_version.decode()
     except FileNotFoundError:
         return False
-
-
-def check_for_data_path(data_path: str, dataset_name: str):
-    data_path = cached_path(data_path)
-    if not os.path.exists(data_path):
-        raise ConfigurationError(f"Experiment specified {dataset_name}, "
-                                 f"but {data_path} doesn't exist.")
-    # We should not check whether `data_path` is a file or not.
-    # Because a directory is also allowed.

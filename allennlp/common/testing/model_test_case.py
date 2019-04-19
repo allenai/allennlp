@@ -24,7 +24,7 @@ class ModelTestCase(AllenNlpTestCase):
 
         reader = DatasetReader.from_params(params['dataset_reader'])
         # The dataset reader might be lazy, but a lazy list here breaks some of our tests.
-        instances = list(reader.read(dataset_file))
+        instances = list(reader.read(str(dataset_file)))
         # Use parameters for vocabulary if they are present in the config file, so that choices like
         # "non_padded_namespaces", "min_count" etc. can be set if needed.
         if 'vocabulary' in params:
@@ -81,7 +81,7 @@ class ModelTestCase(AllenNlpTestCase):
             assert_allclose(model.state_dict()[key].cpu().numpy(),
                             loaded_model.state_dict()[key].cpu().numpy(),
                             err_msg=key)
-        params = Params.from_file(param_file)
+        params = Params.from_file(param_file, params_overrides=overrides)
         reader = DatasetReader.from_params(params['dataset_reader'])
 
         # Need to duplicate params because Iterator.from_params will consume.
