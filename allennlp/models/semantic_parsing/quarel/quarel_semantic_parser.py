@@ -213,10 +213,22 @@ class QuarelSemanticParser(Model):
             ``ProductionRule`` using a ``ProductionRuleField``.  We will embed all of these
             and use the embeddings to determine which action to take at each timestep in the
             decoder.
+        entity_bits : ``torch.Tensor``, optional (default=None)
+            Tensor encoding bits for the world entities.
+        denotation_target : ``torch.Tensor``, optional (default=None)
+            If model's field ``denotation_only`` is True, this is the tensor target denotation.
         target_action_sequences : torch.Tensor, optional (default=None)
            A list of possibly valid action sequences, where each action is an index into the list
            of possible actions.  This tensor has shape ``(batch_size, num_action_sequences,
            sequence_length)``.
+        metadata : List[Dict[str, Any]], optional (default=None).
+            A dictionary of metadata for each batch element which has keys:
+                question_tokens : ``List[str]``, optional.
+                    The original string tokens in the question.
+                world_extractions : ``nltk.Tree``, optional.
+                    Extracted worlds from the question.
+                answer_index : ``List[str]``, optional.
+                    Index of the correct answer.
         """
 
         table_text = table['text']

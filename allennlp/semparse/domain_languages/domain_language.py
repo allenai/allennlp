@@ -27,13 +27,14 @@ def is_callable(type_: Type) -> bool:
         return getattr(type_, '_name', None) == 'Callable'
 
 
+# pylint: disable=no-name-in-module
 def is_generic(type_: Type) -> bool:
     if sys.version_info < (3, 7):
         from typing import GenericMeta  # type: ignore
         return isinstance(type_, GenericMeta)  # type: ignore
     else:
         # pylint: disable=protected-access
-        from typing import _GenericAlias  # type: ignore
+        from typing import _GenericAlias
         return isinstance(type_, _GenericAlias) # type: ignore
 
 
@@ -325,7 +326,7 @@ class DomainLanguage:
         """
         # We'll strip off the first action, because it doesn't matter for execution.
         first_action = action_sequence[0]
-        left_side, right_side = first_action.split(' -> ')
+        left_side = first_action.split(' -> ')[0]
         if left_side != '@start@':
             raise ExecutionError('invalid action sequence')
         remaining_side_args = side_arguments[1:] if side_arguments else None
@@ -491,6 +492,7 @@ class DomainLanguage:
         nonterminal_productions = self.get_nonterminal_productions()
         return symbol in nonterminal_productions
 
+    # pylint: disable=inconsistent-return-statements
     def _execute_expression(self, expression: Any):
         """
         This does the bulk of the work of executing a logical form, recursively executing a single
@@ -512,7 +514,7 @@ class DomainLanguage:
             arguments = [self._execute_expression(arg) for arg in expression[1:]]
             try:
                 return function(*arguments)
-            except (TypeError, ValueError) as error:
+            except (TypeError, ValueError):
                 traceback.print_exc()
                 raise ExecutionError(f"Error executing expression {expression} (see stderr for stack trace)")
         elif isinstance(expression, str):
@@ -548,7 +550,7 @@ class DomainLanguage:
         first_action = action_sequence[0]
         remaining_actions = action_sequence[1:]
         remaining_side_args = side_arguments[1:] if side_arguments else None
-        left_side, right_side = first_action.split(' -> ')
+        right_side = first_action.split(' -> ')[1]
         if right_side in self._functions:
             function = self._functions[right_side]
             # mypy doesn't like this check, saying that Callable isn't a reasonable thing to pass
