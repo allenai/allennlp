@@ -16,7 +16,8 @@ class TestTrainerUtil(AllenNlpTestCase):
         params = Params({"dataset_reader": {"type": "snli"}, "train_data_path": snli_file})
         cache_directory = str(self.FIXTURES_ROOT / "data_cache")
         cache_prefix = "prefix"
-        datasets = util.datasets_from_params(params, cache_directory, cache_prefix)
+        _ = util.datasets_from_params(params, cache_directory, cache_prefix)
+
         expected_cache_file = f"{cache_directory}/{cache_prefix}/{common_util.flatten_filename(snli_file)}"
         try:
             assert os.path.exists(expected_cache_file)
@@ -29,7 +30,7 @@ class TestTrainerUtil(AllenNlpTestCase):
         snli_file = str(self.FIXTURES_ROOT / "data" / "snli.jsonl")
         params = Params({"dataset_reader": {"type": "snli"}, "train_data_path": snli_file})
         cache_directory = str(self.FIXTURES_ROOT / "data_cache")
-        datasets = util.datasets_from_params(params, cache_directory)
+        _ = util.datasets_from_params(params, cache_directory)
 
         cache_prefix = util._dataset_reader_param_hash(Params({"type": "snli"}))
         expected_cache_file = f"{cache_directory}/{cache_prefix}/{common_util.flatten_filename(snli_file)}"
