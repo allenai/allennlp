@@ -22,11 +22,11 @@ def split_by_language(instance_list):
 @DataIterator.register("same_language")
 class SameLanguageIterator(BucketIterator):
     """
-
     Splits batches into batches containing the same language.
-    Based on the basic iterator.
+    The language of each instance is determined by looking at the 'lang' value
+    in the metadata.
 
-    It takes the same parameters as :class:`allennlp.data.iterators.DataIterator`
+    It takes the same parameters as :class:`allennlp.data.iterators.BucketIterator`
     """
     def _create_batches(self, instances: Iterable[Instance], shuffle: bool) -> Iterable[Batch]:
         # First break the dataset into memory-sized lists:
