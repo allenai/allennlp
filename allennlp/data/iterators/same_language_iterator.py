@@ -6,11 +6,12 @@ import random
 from allennlp.common.util import lazy_groups_of
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator
+from allennlp.data.iterators.bucket_iterator import BucketIterator
 from allennlp.data.dataset import Batch
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
-def split_by_lang(instance_list):
+def split_by_language(instance_list):
     insts_by_lang = defaultdict(lambda: [])
     for inst in instance_list:
         inst_lang = inst.fields['metadata'].metadata['lang']
@@ -18,8 +19,8 @@ def split_by_lang(instance_list):
 
     return iter(insts_by_lang.values())
 
-@DataIterator.register("same_lang")
-class SameLangIterator(DataIterator):
+@DataIterator.register("same_language")
+class SameLanguageIterator(BucketIterator):
     """
 
     Splits batches into batches containing the same language.
@@ -32,7 +33,7 @@ class SameLangIterator(DataIterator):
         for instance_list in self._memory_sized_lists(instances):
             if shuffle:
                 random.shuffle(instance_list)
-            instance_list = split_by_lang(instance_list)
+            instance_list = split_by_language(instance_list)
             for same_lang_batch in instance_list:
                 iterator = iter(same_lang_batch)
                 excess: Deque[Instance] = deque()

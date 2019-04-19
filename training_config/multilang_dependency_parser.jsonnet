@@ -20,8 +20,9 @@
         "use_language_specific_pos": false
     },
     "iterator": {
-        "type": "same_lang",
+        "type": "same_language",
         "batch_size": 32,
+        "sorting_keys": [["words", "num_tokens"]],
         "instances_per_epoch": 32000
     },
     "model": {
@@ -54,13 +55,13 @@
                 "elmo": {
                     "type": "elmo_token_embedder_multilang",
                     "aligning_files": {
-                        "en": "https://www.dropbox.com/s/nufj4pxxgv5838r/en_best_mapping.pth?dl=1",
-                        "es": "https://www.dropbox.com/s/6kqot8ssy66d5u0/es_best_mapping.pth?dl=1",
-                        "fr": "https://www.dropbox.com/s/0zdlanjhajlgflm/fr_best_mapping.pth?dl=1",
-                        "it": "https://www.dropbox.com/s/gg985snnhajhm5i/it_best_mapping.pth?dl=1",
-                        "pt": "https://www.dropbox.com/s/skdfz6zfud24iup/pt_best_mapping.pth?dl=1",
-                        "sv": "https://www.dropbox.com/s/o7v64hciyifvs8k/sv_best_mapping.pth?dl=1",
-                        "de": "https://www.dropbox.com/s/u9cg19o81lpm0h0/de_best_mapping.pth?dl=1"
+                        "en": "https://s3-us-west-2.amazonaws.com/allennlp/models/multilingual_elmo/en_best_mapping.pth",
+                        "es": "https://s3-us-west-2.amazonaws.com/allennlp/models/multilingual_elmo/es_best_mapping.pth",
+                        "fr": "https://s3-us-west-2.amazonaws.com/allennlp/models/multilingual_elmo/fr_best_mapping.pth",
+                        "it": "https://s3-us-west-2.amazonaws.com/allennlp/models/multilingual_elmo/it_best_mapping.pth",
+                        "pt": "https://s3-us-west-2.amazonaws.com/allennlp/models/multilingual_elmo/pt_best_mapping.pth",
+                        "sv": "https://s3-us-west-2.amazonaws.com/allennlp/models/multilingual_elmo/sv_best_mapping.pth",
+                        "de": "https://s3-us-west-2.amazonaws.com/allennlp/models/multilingual_elmo/de_best_mapping.pth"
                     },
                     "do_layer_norm": false,
                     "dropout": 0.3,
@@ -70,27 +71,29 @@
                         -9e10
                     ],
                     "options_files": {
-                        "en": "https://www.dropbox.com/s/ypjuzlf7kj957g3/options262.json?dl=1",
-                        "es": "https://www.dropbox.com/s/ypjuzlf7kj957g3/options262.json?dl=1",
-                        "fr": "https://www.dropbox.com/s/ypjuzlf7kj957g3/options262.json?dl=1",
-                        "it": "https://www.dropbox.com/s/ypjuzlf7kj957g3/options262.json?dl=1",
-                        "pt": "https://www.dropbox.com/s/ypjuzlf7kj957g3/options262.json?dl=1",
-                        "sv": "https://www.dropbox.com/s/ypjuzlf7kj957g3/options262.json?dl=1",
-                        "de": "https://www.dropbox.com/s/ypjuzlf7kj957g3/options262.json?dl=1"
+                        "en": "https://s3-us-west-2.amazonaws.com/allennlp/models/multilingual_elmo/options262.json",
+                        "es": "https://s3-us-west-2.amazonaws.com/allennlp/models/multilingual_elmo/options262.json",
+                        "fr": "https://s3-us-west-2.amazonaws.com/allennlp/models/multilingual_elmo/options262.json",
+                        "it": "https://s3-us-west-2.amazonaws.com/allennlp/models/multilingual_elmo/options262.json",
+                        "pt": "https://s3-us-west-2.amazonaws.com/allennlp/models/multilingual_elmo/options262.json",
+                        "sv": "https://s3-us-west-2.amazonaws.com/allennlp/models/multilingual_elmo/options262.json",
+                        "de": "https://s3-us-west-2.amazonaws.com/allennlp/models/multilingual_elmo/options262.json"
                     },
                     "weight_files": {
-                        "en": "https://www.dropbox.com/s/1h62kc1qdcuyy2u/en_weights.hdf5?dl=1",
-                        "es": "https://www.dropbox.com/s/ygfjm7zmufl5gu2/es_weights.hdf5?dl=1",
-                        "fr": "https://www.dropbox.com/s/mm64goxb8wbawhj/fr_weights.hdf5?dl=1",
-                        "it": "https://www.dropbox.com/s/owfou7coi04dyxf/it_weights.hdf5?dl=1",
-                        "pt": "https://www.dropbox.com/s/ul82jsal1khfw5b/pt_weights.hdf5?dl=1",
-                        "sv": "https://www.dropbox.com/s/boptz21zrs4h3nw/sv_weights.hdf5?dl=1",
-                        "de": "https://www.dropbox.com/s/2kbjnvb12htgqk8/de_weights.hdf5?dl=1"
+                        "en": "https://s3-us-west-2.amazonaws.com/allennlp/models/multilingual_elmo/en_weights.hdf5",
+                        "es": "https://s3-us-west-2.amazonaws.com/allennlp/models/multilingual_elmo/es_weights.hdf5",
+                        "fr": "https://s3-us-west-2.amazonaws.com/allennlp/models/multilingual_elmo/fr_weights.hdf5",
+                        "it": "https://s3-us-west-2.amazonaws.com/allennlp/models/multilingual_elmo/it_weights.hdf5",
+                        "pt": "https://s3-us-west-2.amazonaws.com/allennlp/models/multilingual_elmo/pt_weights.hdf5",
+                        "sv": "https://s3-us-west-2.amazonaws.com/allennlp/models/multilingual_elmo/sv_weights.hdf5",
+                        "de": "https://s3-us-west-2.amazonaws.com/allennlp/models/multilingual_elmo/de_weights.hdf5"
                     }
                 }
             }
         }
     },
+    // UDTB v2.0 is available at https://github.com/ryanmcd/uni-dep-tb
+    // Set TRAIN_PATHNAME='std/**/*train.conll'
     "train_data_path": std.extVar("TRAIN_PATHNAME"),
     "validation_data_path": std.extVar("DEV_PATHNAME"),
     "test_data_path": std.extVar("TEST_PATHNAME"),
@@ -114,7 +117,8 @@
         "use_language_specific_pos": false
     },
     "validation_iterator": {
-        "type": "same_lang",
+        "type": "same_language",
+        "sorting_keys": [["words", "num_tokens"]],
         "batch_size": 32
     }
 }

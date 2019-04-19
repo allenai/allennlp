@@ -32,6 +32,7 @@ allennlp.data.dataset_readers
   allennlp.data.dataset_readers.snli
   allennlp.data.dataset_readers.stanford_sentiment_tree_bank
   allennlp.data.dataset_readers.universal_dependencies
+  allennlp.data.dataset_readers.universal_dependencies_multilang
   allennlp.data.dataset_readers.quora_paraphrase
   allennlp.data.dataset_readers.copynet_seq2seq
   allennlp.data.dataset_readers.text_classification_json

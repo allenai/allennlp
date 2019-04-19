@@ -173,20 +173,15 @@ class BiaffineDependencyParserMultiLang(BiaffineDependencyParser):
         for lang, scores in self._lang_attachment_scores.items():
             lang_metrics = scores.get_metric(reset)
 
-            # Add the specific language to the dict key.
-            metrics_wlang = {}
             for key in lang_metrics.keys():
                 # Store only those metrics.
                 if key in ['UAS', 'LAS', 'loss']:
-                    metrics_wlang["{}_{}".format(key,
-                                                 lang)] = lang_metrics[key]
+                    metrics["{}_{}".format(key, lang)] = lang_metrics[key]
 
             # Include in the average only languages that should count for early stopping.
             if lang in self._langs_for_early_stop:
-                all_uas.append(metrics_wlang["UAS_{}".format(lang)])
-                all_las.append(metrics_wlang["LAS_{}".format(lang)])
-
-            metrics.update(metrics_wlang)
+                all_uas.append(metrics["UAS_{}".format(lang)])
+                all_las.append(metrics["LAS_{}".format(lang)])
 
         if self._langs_for_early_stop:
             metrics.update({

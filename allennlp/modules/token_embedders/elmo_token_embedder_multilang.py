@@ -57,7 +57,7 @@ class ElmoTokenEmbedderMultiLang(TokenEmbedder):
                  vocab_to_cache: List[str] = None,
                  scalar_mix_parameters: List[float] = None,
                  aligning_files: Dict[str, str] = None) -> None:
-        super(ElmoTokenEmbedderMultiLang, self).__init__()
+        super().__init__()
 
         if options_files.keys() != weight_files.keys():
             raise ConfigurationError("Keys for Elmo's options files and weights files don't match")
@@ -69,7 +69,7 @@ class ElmoTokenEmbedderMultiLang(TokenEmbedder):
             elmo = Elmo(
                     options_files[lang],
                     weight_files[lang],
-                    1, # num_output_representations
+                    num_output_representations=1,
                     do_layer_norm=do_layer_norm,
                     dropout=dropout,
                     requires_grad=requires_grad,
