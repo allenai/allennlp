@@ -77,7 +77,7 @@ class DatasetReader(Registrable):
     """
     def __init__(self, lazy: bool = False) -> None:
         self.lazy = lazy
-        self._cache_directory = None
+        self._cache_directory: str = None
 
     def cache_data(self, cache_directory: str) -> None:
         """
