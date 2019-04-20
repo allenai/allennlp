@@ -4,6 +4,7 @@ import json
 import logging
 import numpy
 import re
+import random
 
 from overrides import overrides
 
@@ -81,6 +82,7 @@ class BertMCQAReader(DatasetReader):
 
         with open(file_path, 'r') as data_file:
             logger.info("Reading QA instances from jsonl dataset at: %s", file_path)
+            instances = []
             for line in data_file:
                 counter -= 1
                 debug -= 1
@@ -167,14 +169,18 @@ class BertMCQAReader(DatasetReader):
                         logging.warning(f"Skipping question with more than {self._num_choices} answers: {item_json}")
                         continue
 
-                yield self.text_to_instance(
+                instances.append(self.text_to_instance(
                     item_id,
                     question_text,
                     choice_text_list,
                     answer_id,
                     context,
                     choice_context_list,
-                    debug)
+                    debug))
+
+            random.shuffle(instances)
+            for instance in instances:
+                yield instance
 
 
     @overrides
