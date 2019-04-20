@@ -143,7 +143,6 @@ class MRQAReader(DatasetReader):
                 per_question_chunks.append(chunks)
         return per_question_chunks
 
-
     def gen_question_instances(self, question_chunks):
         if self._is_training:
             # When training randomly choose one chunk per example (training with shared norm (Clark and Gardner, 17)

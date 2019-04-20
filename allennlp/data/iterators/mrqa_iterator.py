@@ -1,6 +1,6 @@
 import logging
 from typing import List, Tuple, Iterable
-
+import random
 from overrides import overrides
 
 from allennlp.common.checks import ConfigurationError
@@ -44,6 +44,7 @@ class MRQAIterator(DataIterator):
     def _create_batches(self, instances: Iterable[Instance], shuffle: bool) -> Iterable[Batch]:
         for instance_list in self._memory_sized_lists(instances):
 
+
             # organizing instances per question
             intances_question_id = [instance.fields['metadata'].metadata['question_id'] for instance in instance_list]
             split_inds = [0]
@@ -52,6 +53,9 @@ class MRQAIterator(DataIterator):
                     split_inds.append(ind + 1)
             split_inds += [len(intances_question_id)]
             per_question_instances = [instance_list[split_inds[ind]:split_inds[ind + 1]] for ind in range(len(split_inds) - 1)]
+
+            if shuffle:
+                random.shuffle(per_question_instances)
 
             batch = []
             for question_instances in per_question_instances:
