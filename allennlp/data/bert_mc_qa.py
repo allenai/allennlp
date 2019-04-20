@@ -55,7 +55,8 @@ class BertMCQAReader(DatasetReader):
                  skip_id_regex: str = None,
                  ignore_context: bool = False,
                  context_syntax: str = "c#q#a",
-                 sample: int = -1) -> None:
+                 sample: int = -1,
+                 random_seed: int = 0) -> None:
         super().__init__()
         #self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         self._token_indexers = {'tokens': SingleIdTokenIndexer()}
@@ -71,7 +72,7 @@ class BertMCQAReader(DatasetReader):
         self._restrict_num_choices = restrict_num_choices
         self._skip_id_regex = skip_id_regex
         self._ignore_context = ignore_context
-
+        self._random_seed = random_seed
 
     @overrides
     def _read(self, file_path: str):
@@ -178,6 +179,7 @@ class BertMCQAReader(DatasetReader):
                     choice_context_list,
                     debug))
 
+            random.seed(self._random_seed)
             random.shuffle(instances)
             for instance in instances:
                 yield instance
