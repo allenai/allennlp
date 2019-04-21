@@ -102,6 +102,8 @@ class BERT_QA(Model):
                                 span_end.view(-1)[inds_with_gold_answer], ignore_index=-1)
                 output_dict["loss"] = loss
 
+        if "loss" not in output_dict:
+            print(intances_question_id)
         # Compute F1 and preparing the output dictionary.
         #output_dict['best_span_str'] = []
         #output_dict['qid'] = []
