@@ -13,10 +13,11 @@ from allennlp.training.metrics import CategoricalAccuracy
 class BasicClassifier(Model):
     """
     This ``Model`` implements a basic text classifier. After embedding the text into
-    a text field, we will optionally encode the embeddings with a Seq2SeqEncoder and/or
-    a Seq2VecEncoder and then pass the embeddings to a linear classification layer,
-    which projects into the label space. If neither Seq2SeqEncoder nor Seq2VecEncoder is
-    provided, we will pass the embedded text directly to the linear classification layer.
+    a text field, we will optionally encode the embeddings with a ``Seq2SeqEncoder``. The
+    resulting sequence is pooled using a ``Seq2VecEncoder`` and then passed to
+    a linear classification layer, which projects into the label space. If a
+    ``Seq2SeqEncoder`` is not provided, we will pass the embedded text directly to the
+    ``Seq2VecEncoder``.
 
     Parameters
     ----------
