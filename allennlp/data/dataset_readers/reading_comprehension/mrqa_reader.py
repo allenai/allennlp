@@ -90,6 +90,8 @@ class MRQAReader(DatasetReader):
                     num_of_question_wordpieces += num_of_wordpieces
 
                 curr_token_ix = window_start_token_offset
+                if curr_token_ix >= len(unproc_context['context_tokens']):
+                    continue
 
                 curr_context_tokens = qa['question_tokens'] + [['[SEP]',len(qa['question']) + 1]]
                 context_char_offset = unproc_context['context_tokens'][curr_token_ix][1]
