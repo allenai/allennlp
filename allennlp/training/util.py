@@ -3,6 +3,7 @@ Helper functions for Trainers
 """
 from typing import Any, Union, Dict, Iterable, List, Optional
 import datetime
+import json
 import logging
 import os
 import shutil
@@ -174,6 +175,21 @@ def datasets_from_params(params: Params,
             cache_prefix += '/'
         if not validation_cache_prefix.endswith('/'):
             validation_cache_prefix += '/'
+
+        # For easy human inspection of what parameters were used to create the cache.  This will
+        # overwrite old files, but they should be identical.  This could bite someone who gave
+        # their own prefix instead of letting us compute it, and then _re-used_ that name with
+        # different parameters, without clearing the cache first.  But correctly handling that case
+        # is more work than it's worth.
+        os.makedirs(cache_directory + cache_prefix, exist_ok=True)
+        with open(cache_directory + cache_prefix + 'params.json', 'w') as param_file:
+            json.dump(dataset_reader_params.as_dict(quiet=True), param_file)
+        os.makedirs(cache_directory + validation_cache_prefix, exist_ok=True)
+        with open(cache_directory + validation_cache_prefix + 'params.json', 'w') as param_file:
+            if validation_dataset_reader_params:
+                json.dump(validation_dataset_reader_params.as_dict(quiet=True), param_file)
+            else:
+                json.dump(dataset_reader_params.as_dict(quiet=True), param_file)
 
     dataset_reader = DatasetReader.from_params(dataset_reader_params)
 
