@@ -1,0 +1,7 @@
+@@UNKNOWN@@
+"
+the
+tokens
+were
+copied
+@COPY@

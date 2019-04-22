@@ -245,7 +245,7 @@ def make_reading_comprehension_instance_quac(question_list_tokens: List[List[Tok
         The original passage text.  We need this so that we can recover the actual span from the
         original passage that the model predicts as the answer to the question.  This is used in
         official evaluation scripts.
-    token_spans_lists : ``List[List[Tuple[int, int]]]``, optional
+    token_span_lists : ``List[List[Tuple[int, int]]]``, optional
         Indices into ``passage_tokens`` to use as the answer to the question for training.  This is
         a list of list, first because there is multiple questions per dialog, and
         because there might be several possible correct answer spans in the passage.
@@ -369,3 +369,42 @@ def handle_cannot(reference_answers: List[str]):
     else:
         reference_answers = [x for x in reference_answers if x != 'CANNOTANSWER']
     return reference_answers
+
+
+def split_token_by_delimiter(token: Token, delimiter: str) -> List[Token]:
+    split_tokens = []
+    char_offset = token.idx
+    for sub_str in token.text.split(delimiter):
+        if sub_str:
+            split_tokens.append(Token(text=sub_str, idx=char_offset))
+            char_offset += len(sub_str)
+        split_tokens.append(Token(text=delimiter, idx=char_offset))
+        char_offset += len(delimiter)
+    if split_tokens:
+        split_tokens.pop(-1)
+        char_offset -= len(delimiter)
+        return split_tokens
+    else:
+        return [token]
+
+
+def split_tokens_by_hyphen(tokens: List[Token]) -> List[Token]:
+    hyphens = ["-", "–", "~"]
+    new_tokens: List[Token] = []
+
+    for token in tokens:
+        if any(hyphen in token.text for hyphen in hyphens):
+            unsplit_tokens = [token]
+            split_tokens: List[Token] = []
+            for hyphen in hyphens:
+                for unsplit_token in unsplit_tokens:
+                    if hyphen in token.text:
+                        split_tokens += split_token_by_delimiter(unsplit_token, hyphen)
+                    else:
+                        split_tokens.append(unsplit_token)
+                unsplit_tokens, split_tokens = split_tokens, []
+            new_tokens += unsplit_tokens
+        else:
+            new_tokens.append(token)
+
+    return new_tokens

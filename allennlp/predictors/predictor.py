@@ -1,5 +1,6 @@
-from typing import List
+from typing import List, Iterator
 import json
+from contextlib import contextmanager
 
 from allennlp.common import Registrable
 from allennlp.common.checks import ConfigurationError
@@ -53,6 +54,40 @@ class Predictor(Registrable):
     def predict_json(self, inputs: JsonDict) -> JsonDict:
         instance = self._json_to_instance(inputs)
         return self.predict_instance(instance)
+
+    @contextmanager
+    def capture_model_internals(self) -> Iterator[dict]:
+        """
+        Context manager that captures the internal-module outputs of
+        this predictor's model. The idea is that you could use it as follows:
+
+        .. code-block:: python
+
+            with predictor.capture_model_internals() as internals:
+                outputs = predictor.predict_json(inputs)
+
+            return {**outputs, "model_internals": internals}
+        """
+        results = {}
+        hooks = []
+
+        # First we'll register hooks to add the outputs of each module to the results dict.
+        def add_output(idx: int):
+            def _add_output(mod, _, outputs):
+                results[idx] = {"name": str(mod), "output": sanitize(outputs)}
+            return _add_output
+
+        for idx, module in enumerate(self._model.modules()):
+            if module != self._model:
+                hook = module.register_forward_hook(add_output(idx))
+                hooks.append(hook)
+
+        # If you capture the return value of the context manager, you get the results dict.
+        yield results
+
+        # And then when you exit the context we remove all the hooks.
+        for hook in hooks:
+            hook.remove()
 
     def predict_instance(self, instance: Instance) -> JsonDict:
         outputs = self._model.forward_on_instance(instance)

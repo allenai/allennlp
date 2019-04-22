@@ -124,6 +124,9 @@ class BucketIterator(DataIterator):
             if excess:
                 batches.append(Batch(excess))
 
+            # TODO(brendanr): Add multi-GPU friendly grouping, i.e. group
+            # num_gpu batches together, shuffle and then expand the groups.
+            # This guards against imbalanced batches across GPUs.
             move_to_front = self._biggest_batch_first and len(batches) > 1
             if move_to_front:
                 # We'll actually pop the last _two_ batches, because the last one might not be full.
