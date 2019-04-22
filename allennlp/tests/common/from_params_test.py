@@ -1,5 +1,5 @@
 # pylint: disable=no-self-use,invalid-name,too-many-public-methods,protected-access
-from typing import Dict, Optional, List, Tuple, Set
+from typing import Dict, Optional, List, Set, Tuple, Union
 
 import pytest
 import torch
@@ -136,6 +136,36 @@ class TestFromParams(AllenNlpTestCase):
         params = Params({"type": "just_spaces"})
 
         WordSplitter.from_params(params)
+
+    def test_union(self):
+        class A(FromParams):
+            def __init__(self, a: Union[int, List[int]]) -> None:
+                self.a = a
+
+        class B(FromParams):
+            def __init__(self, b: Union[A, List[A]]) -> None:
+                # Really you would want to be sure that `self.b` has a consistent type, but for
+                # this test we'll ignore that.
+                self.b = b
+
+        params = Params({'a': 3})
+        a = A.from_params(params)
+        assert a.a == 3
+
+        params = Params({'a': [3, 4, 5]})
+        a = A.from_params(params)
+        assert a.a == [3, 4, 5]
+
+        params = Params({'b': {'a': 3}})
+        b = B.from_params(params)
+        assert isinstance(b.b, A)
+        assert b.b.a == 3
+
+        params = Params({'b': [{'a': 3}, {'a': [4, 5]}]})
+        b = B.from_params(params)
+        assert isinstance(b.b, list)
+        assert b.b[0].a == 3
+        assert b.b[1].a == [4, 5]
 
     def test_dict(self):
         # pylint: disable=unused-variable
