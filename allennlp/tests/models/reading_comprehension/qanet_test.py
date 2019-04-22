@@ -7,7 +7,7 @@ from numpy.testing import assert_almost_equal
 
 from allennlp.common import Params
 from allennlp.data import DatasetReader, Vocabulary
-from allennlp.common.testing import ModelTestCase, AllenNlpTestCase
+from allennlp.common.testing import ModelTestCase
 from allennlp.data.dataset import Batch
 from allennlp.models import Model
 from allennlp.data.iterators import BasicIterator
@@ -53,14 +53,17 @@ class QaNetTest(ModelTestCase):
                         reason="Need multiple GPUs.")
     def test_multigpu_qanet(self):
         params = Params.from_file(self.param_file)
-        reader = DatasetReader.from_params(params['dataset_reader'])
-        self.instances = reader.read(self.FIXTURES_ROOT / 'data' / 'squad.json')
         vocab = Vocabulary.from_instances(self.instances)
         model = Model.from_params(vocab=vocab, params=params['model']).cuda()
-        self.optimizer = torch.optim.SGD(self.model.parameters(), 0.01, momentum=0.9)
+        optimizer = torch.optim.SGD(self.model.parameters(), 0.01, momentum=0.9)
         multigpu_iterator = BasicIterator(batch_size=4)
         multigpu_iterator.index_with(model.vocab)
-        trainer = Trainer(model, self.optimizer, multigpu_iterator, self.instances, num_epochs=2, cuda_device=[0,1])
+        trainer = Trainer(model,
+                          optimizer,
+                          multigpu_iterator,
+                          self.instances,
+                          num_epochs=2,
+                          cuda_device=[0, 1])
         trainer.train()
 
     def test_batch_predictions_are_consistent(self):
