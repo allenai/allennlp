@@ -6,7 +6,7 @@ import torch
 from torch.nn.modules.linear import Linear
 import torch.nn.functional as F
 
-from allennlp.common.checks import check_dimensions_match
+from allennlp.common.checks import check_dimensions_match, ConfigurationError
 from allennlp.data import Vocabulary
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
 from allennlp.models.model import Model
