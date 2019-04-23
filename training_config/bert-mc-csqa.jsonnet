@@ -23,11 +23,6 @@ local bert_model = "bert-base-uncased";
           }
     }
   },
-  /*"vocabulary": {
-    //"type": "wordpiece",
-    "pretrained_model": bert_model,
-    "namespace": "tokens"
-  },*/
   "train_data_path": "s3://beatbert/data/datasets/PartOf_Asymmetric/disj_tsplit_train.jsonl",
   "validation_data_path": "s3://beatbert/data/datasets/PartOf_Asymmetric/disj_tsplit_dev.jsonl",
   //"test_data_path": "/inputs/OpenBookQA-V1/test.jsonl",
