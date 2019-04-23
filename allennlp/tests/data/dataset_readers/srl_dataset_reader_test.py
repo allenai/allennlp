@@ -19,6 +19,8 @@ class TestSrlReader:
         assert fields["verb_indicator"].labels[3] == 1
         assert fields["tags"].labels == ['B-ARG0', 'I-ARG0', 'I-ARG0', 'B-V', 'B-ARG1',
                                          'I-ARG1', 'I-ARG1', 'I-ARG1', 'I-ARG1', 'I-ARG1', 'O']
+        assert fields["metadata"].metadata["words"] == tokens
+        assert fields["metadata"].metadata["verb"] == tokens[3]
 
         fields = instances[1].fields
         tokens = [t.text for t in fields['tokens'].tokens]
@@ -27,6 +29,8 @@ class TestSrlReader:
         assert fields["verb_indicator"].labels[8] == 1
         assert fields["tags"].labels == ['O', 'O', 'O', 'O', 'B-ARG1', 'I-ARG1',
                                          'I-ARG1', 'I-ARG1', 'B-V', 'B-ARG2', 'O']
+        assert fields["metadata"].metadata["words"] == tokens
+        assert fields["metadata"].metadata["verb"] == tokens[8]
 
         fields = instances[2].fields
         tokens = [t.text for t in fields['tokens'].tokens]
@@ -36,6 +40,8 @@ class TestSrlReader:
         assert fields["tags"].labels == ['B-ARG0', 'I-ARG0', 'B-V', 'B-ARG1', 'I-ARG1', 'B-ARGM-TMP',
                                          'I-ARGM-TMP', 'B-ARGM-TMP', 'I-ARGM-TMP', 'I-ARGM-TMP',
                                          'I-ARGM-TMP', 'I-ARGM-TMP', 'O']
+        assert fields["metadata"].metadata["words"] == tokens
+        assert fields["metadata"].metadata["verb"] == tokens[2]
 
         fields = instances[3].fields
         tokens = [t.text for t in fields['tokens'].tokens]
@@ -43,6 +49,8 @@ class TestSrlReader:
                           'four', 'months', 'of', 'hearings', '.']
         assert fields["verb_indicator"].labels[11] == 1
         assert fields["tags"].labels == ['O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'B-V', 'O']
+        assert fields["metadata"].metadata["words"] == tokens
+        assert fields["metadata"].metadata["verb"] == tokens[11]
 
         # Tests a sentence with no verbal predicates.
         fields = instances[4].fields
@@ -50,6 +58,8 @@ class TestSrlReader:
         assert tokens == ["Denise", "Dillon", "Headline", "News", "."]
         assert fields["verb_indicator"].labels == [0, 0, 0, 0, 0]
         assert fields["tags"].labels == ['O', 'O', 'O', 'O', 'O']
+        assert fields["metadata"].metadata["words"] == tokens
+        assert fields["metadata"].metadata["verb"] == None
 
     def test_srl_reader_can_filter_by_domain(self):
 
