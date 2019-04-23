@@ -116,6 +116,12 @@ allennlp.training.metrics
    :undoc-members:
    :show-inheritance:
 
+.. _perplexity:
+.. automodule:: allennlp.training.metrics.perplexity
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 .. _sequence-accuracy:
 .. automodule:: allennlp.training.metrics.sequence_accuracy
    :members:
