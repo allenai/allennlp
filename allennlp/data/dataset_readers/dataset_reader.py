@@ -16,47 +16,36 @@ class _LazyInstances(Iterable):
     An ``Iterable`` that just wraps a thunk for generating instances and calls it for
     each call to ``__iter__``.
     """
-    def __init__(self, instance_generator: Callable[[], Iterator[Instance]]) -> None:
+    def __init__(self,
+                 instance_generator: Callable[[], Iterable[Instance]],
+                 cache_file: str = None,
+                 deserialize: Callable[[str], Instance] = None,
+                 serialize: Callable[[Instance], str] = None) -> None:
         super().__init__()
         self.instance_generator = instance_generator
-
-    def __iter__(self) -> Iterator[Instance]:
-        instances = self.instance_generator()
-        if isinstance(instances, list):
-            raise ConfigurationError("For a lazy dataset reader, _read() must return a generator")
-        return instances
-
-
-class _CachedLazyInstances(Iterable):
-    """
-    Like ``_LazyInstances``, but we take the actual input file that the instances come from, as
-    well as a cache file.  If the cache file exists, we read from that instead of from the main
-    file.  If the cache file `doesn't` exist, we create it on our first pass, and read it during
-    subsequent passes.
-    """
-    def __init__(self,
-                 read_from_file_method: Callable[[str], Iterable[Instance]],
-                 read_from_cache_method: Callable[[str], Iterable[Instance]],
-                 serialize_instance_method: Callable[[Instance], str],
-                 file_path: str,
-                 cache_file: str) -> None:
-        super().__init__()
-        self.read_from_file_method = read_from_file_method
-        self.read_from_cache_method = read_from_cache_method
-        self.serialize_instance_method = serialize_instance_method
-        self.file_path = file_path
         self.cache_file = cache_file
+        self.deserialize = deserialize
+        self.serialize = serialize
 
     def __iter__(self) -> Iterator[Instance]:
-        if os.path.exists(self.cache_file):
-            return self.read_from_cache_method(self.cache_file)
+        # Case 1: Use cached instances
+        if self.cache_file is not None and os.path.exists(self.cache_file):
+            with open(self.cache_file) as f:
+                for line in f:
+                    yield self.deserialize(line)
+        # Case 2: Need to cache instances
+        elif self.cache_file is not None:
+            with open(self.cache_file, 'w') as f:
+                for instance in self.instance_generator():
+                    f.write(self.serialize(instance))
+                    f.write("\n")
+                    yield instance
+        # Case 3: No cache
         else:
-            def iterator():
-                with open(self.cache_file, 'w') as cache_file:
-                    for instance in self.read_from_file_method(self.file_path):
-                        cache_file.write(self.serialize_instance_method(instance) + '\n')
-                        yield instance
-            return iterator()
+            instances = self.instance_generator()
+            if isinstance(instances, list):
+                raise ConfigurationError("For a lazy dataset reader, _read() must return a generator")
+            yield from instances
 
 
 class DatasetReader(Registrable):
@@ -119,23 +108,41 @@ class DatasetReader(Registrable):
         but if you do your result should likewise be repeatedly iterable.
         """
         lazy = getattr(self, 'lazy', None)
-        if self._cache_directory:
-            cache_file = self._get_cache_location_for_file_path(file_path)
-            return self._read_cached(file_path, cache_file, lazy)
 
         if lazy is None:
             logger.warning("DatasetReader.lazy is not set, "
                            "did you forget to call the superclass constructor?")
 
-        if lazy:
-            return _LazyInstances(lambda: iter(self._read(file_path)))
+        if self._cache_directory:
+            cache_file = self._get_cache_location_for_file_path(file_path)
         else:
-            instances = self._read(file_path)
+            cache_file = None
+
+        if lazy:
+            return _LazyInstances(lambda: self._read(file_path),
+                                  cache_file,
+                                  self.deserialize_instance,
+                                  self.serialize_instance)
+        else:
+            # First we read the instances, either from a cache or from the original file.
+            if cache_file and os.path.exists(cache_file):
+                instances = self._instances_from_cache_file(cache_file)
+            else:
+                instances = self._read(file_path)
+
+            # Then some validation.
             if not isinstance(instances, list):
                 instances = [instance for instance in Tqdm.tqdm(instances)]
             if not instances:
                 raise ConfigurationError("No instances were read from the given filepath {}. "
                                          "Is the path correct?".format(file_path))
+
+            # And finally we write to the cache if we need to.
+            if cache_file and not os.path.exists(cache_file):
+                logger.info(f"Caching instances to {cache_file}")
+                with open(cache_file, 'w') as cache:
+                    for instance in Tqdm.tqdm(instances):
+                        cache.write(self.serialize_instance(instance) + '\n')
             return instances
 
     def _get_cache_location_for_file_path(self, file_path: str) -> str:
@@ -149,37 +156,6 @@ class DatasetReader(Registrable):
         read a dataset in a lazy way, if they so choose.
         """
         raise NotImplementedError
-
-    def _read_cached(self, file_path: str, cache_file: str, lazy: bool) -> Iterable[Instance]:
-        if lazy:
-            return _CachedLazyInstances(self._read,
-                                        self._instances_from_cache_file,
-                                        self.serialize_instance,
-                                        file_path,
-                                        cache_file)
-        if os.path.exists(cache_file):
-            # We already have cached instances; just read them.
-            logger.info(f"Reading cached instances from {cache_file}")
-            instances = self._instances_from_cache_file(cache_file)
-            if not isinstance(instances, list):
-                instances = [instance for instance in Tqdm.tqdm(instances)]
-            if not instances:
-                raise ConfigurationError("No instances were read from the given filepath {}. "
-                                         "Is the path correct?".format(cache_file))
-            return instances
-        else:
-            # We don't have any cached instances yet, so we create them before returning.
-            instances = self._read(file_path)
-            if not isinstance(instances, list):
-                instances = [instance for instance in Tqdm.tqdm(instances)]
-            if not instances:
-                raise ConfigurationError("No instances were read from the given filepath {}. "
-                                         "Is the path correct?".format(file_path))
-            logger.info(f"Caching instances to {cache_file}")
-            with open(cache_file, 'w') as cache:
-                for instance in Tqdm.tqdm(instances):
-                    cache.write(self.serialize_instance(instance) + '\n')
-            return instances
 
     def _instances_from_cache_file(self, cache_filename: str) -> Iterable[Instance]:
         with open(cache_filename, 'r') as cache_file:
