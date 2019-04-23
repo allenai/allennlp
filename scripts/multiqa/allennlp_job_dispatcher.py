@@ -99,7 +99,7 @@ class AllenNLP_Job_Dispatcher():
         return all_keys
 
     def allennlp_include_packages(self):
-        return '    --include-package allennlp.data.bert_mc_qa \
+        return '    --include-package allennlp.data.dataset_readers.bert_mc_qa \
                     --include-package allennlp.models.bert_mc_qa \
                    --include-package allennlp.data.iterators.multiqa_iterator \
                    --include-package allennlp.data.iterators.mrqa_iterator  \
@@ -561,16 +561,17 @@ allennlp_dispatcher = AllenNLP_Job_Dispatcher(experiment_name)
 #experiment_name = '062_BERT_train_Full_exp'
 #experiment_name = '063_BERT_evaluate_MRQA'
 #experiment_name = '064_BERT_RL-CWQ_evaluate_exp'
-experiment_name = '065_BERT_train_mix_MRQA'
+#experiment_name = '065_BERT_train_mix_MRQA'
 #experiment_name = '066_CSQA_BERT_train'
 #experiment_name = '067_CSQA_BERTbase_grid_train'
 #experiment_name = '068_beatbert_asymmetric_train'
 #experiment_name = '069_BERTLarge_train_mix_MRQA'
+experiment_name = '070_CSQA_BERTLarge_train'
 
 if experiment_name.find('BERTLarge') > -1 and experiment_name.find('evaluate') == -1:
     queue = '4GPUs'
-#queue = 'rack-gamir-g07'
-#queue = 'rack-jonathan-g08'
+queue = 'rack-gamir-g04'
+#queue = 'rack-jonathan-g02'
 #queue = 'savant'
 
 FORCE_RUN = True
