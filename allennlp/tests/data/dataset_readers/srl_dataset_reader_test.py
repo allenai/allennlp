@@ -21,6 +21,7 @@ class TestSrlReader:
                                          'I-ARG1', 'I-ARG1', 'I-ARG1', 'I-ARG1', 'I-ARG1', 'O']
         assert fields["metadata"].metadata["words"] == tokens
         assert fields["metadata"].metadata["verb"] == tokens[3]
+        assert fields["metadata"].metadata["gold_tags"] == fields["tags"].labels
 
         fields = instances[1].fields
         tokens = [t.text for t in fields['tokens'].tokens]
@@ -31,6 +32,7 @@ class TestSrlReader:
                                          'I-ARG1', 'I-ARG1', 'B-V', 'B-ARG2', 'O']
         assert fields["metadata"].metadata["words"] == tokens
         assert fields["metadata"].metadata["verb"] == tokens[8]
+        assert fields["metadata"].metadata["gold_tags"] == fields["tags"].labels
 
         fields = instances[2].fields
         tokens = [t.text for t in fields['tokens'].tokens]
@@ -42,6 +44,7 @@ class TestSrlReader:
                                          'I-ARGM-TMP', 'I-ARGM-TMP', 'O']
         assert fields["metadata"].metadata["words"] == tokens
         assert fields["metadata"].metadata["verb"] == tokens[2]
+        assert fields["metadata"].metadata["gold_tags"] == fields["tags"].labels
 
         fields = instances[3].fields
         tokens = [t.text for t in fields['tokens'].tokens]
@@ -51,6 +54,7 @@ class TestSrlReader:
         assert fields["tags"].labels == ['O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'B-V', 'O']
         assert fields["metadata"].metadata["words"] == tokens
         assert fields["metadata"].metadata["verb"] == tokens[11]
+        assert fields["metadata"].metadata["gold_tags"] == fields["tags"].labels
 
         # Tests a sentence with no verbal predicates.
         fields = instances[4].fields
@@ -60,6 +64,7 @@ class TestSrlReader:
         assert fields["tags"].labels == ['O', 'O', 'O', 'O', 'O']
         assert fields["metadata"].metadata["words"] == tokens
         assert fields["metadata"].metadata["verb"] == None
+        assert fields["metadata"].metadata["gold_tags"] == fields["tags"].labels
 
     def test_srl_reader_can_filter_by_domain(self):
 
