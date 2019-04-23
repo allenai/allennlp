@@ -335,8 +335,7 @@ class FromParams:
                 # you've done the right thing in passing your parameters, and nothing else needs to
                 # be recursively constructed.
                 if not takes_arg(subclass, 'extras'):
-                    # Necessarily subclass.from_params is a custom implementation, so we need to
-                    # pass it only the args it's expecting.
+                    # We should only pass on the extras that the constructor actually expects.
                     extras = {k: v for k, v in extras.items() if takes_arg(subclass, k)}
                 constructor_args = {**params, **extras}
                 return subclass(**constructor_args)
