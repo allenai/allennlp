@@ -30,15 +30,15 @@ class _LazyInstances(Iterable):
     def __iter__(self) -> Iterator[Instance]:
         # Case 1: Use cached instances
         if self.cache_file is not None and os.path.exists(self.cache_file):
-            with open(self.cache_file) as f:
-                for line in f:
+            with open(self.cache_file) as data_file:
+                for line in data_file:
                     yield self.deserialize(line)
         # Case 2: Need to cache instances
         elif self.cache_file is not None:
-            with open(self.cache_file, 'w') as f:
+            with open(self.cache_file, 'w') as data_file:
                 for instance in self.instance_generator():
-                    f.write(self.serialize(instance))
-                    f.write("\n")
+                    data_file.write(self.serialize(instance))
+                    data_file.write("\n")
                     yield instance
         # Case 3: No cache
         else:
