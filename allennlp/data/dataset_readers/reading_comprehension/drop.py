@@ -132,11 +132,10 @@ class DropReader(DatasetReader):
                                                  answer_annotations,
                                                  passage_tokens)
                 if instance is not None:
-                    instances.append(instance)
+                    yield instance
                 else:
                     skip_count += 1
         logger.info(f"Skipped {skip_count} questions, kept {len(instances)} questions.")
-        return instances
 
     @overrides
     def text_to_instance(self,  # type: ignore
