@@ -135,6 +135,7 @@ def construct_arg(cls: Type[T],
     ``inspect.Parameter`` object directly, so that we can handle ``Union`` types using recursion on
     this method, trying the different annotation types in the union in turn.
     """
+    # pylint: disable=inconsistent-return-statements,too-many-return-statements
     from allennlp.models.archival import load_archive  # import here to avoid circular imports
 
     # We used `param_name` as the method argument to avoid conflicts with 'name' being a key in
@@ -194,21 +195,13 @@ def construct_arg(cls: Type[T],
     # If the parameter type is a Python primitive, just pop it off
     # using the correct casting pop_xyz operation.
     elif annotation == str:
-        return (params.pop(name, default)
-                        if optional
-                        else params.pop(name))
+        return (params.pop(name, default) if optional else params.pop(name))
     elif annotation == int:
-        return (params.pop_int(name, default)
-                        if optional
-                        else params.pop_int(name))
+        return (params.pop_int(name, default) if optional else params.pop_int(name))
     elif annotation == bool:
-        return (params.pop_bool(name, default)
-                        if optional
-                        else params.pop_bool(name))
+        return (params.pop_bool(name, default) if optional else params.pop_bool(name))
     elif annotation == float:
-        return (params.pop_float(name, default)
-                        if optional
-                        else params.pop_float(name))
+        return (params.pop_float(name, default) if optional else params.pop_float(name))
 
     # This is special logic for handling types like Dict[str, TokenIndexer],
     # List[TokenIndexer], Tuple[TokenIndexer, Tokenizer], and Set[TokenIndexer],
@@ -254,16 +247,20 @@ def construct_arg(cls: Type[T],
     elif origin == Union:
         # Storing this so we can recover it later if we need to.
         param_value = params.get(name, Params({}))
+        if isinstance(param_value, Params):
+            param_value = param_value.duplicate()
 
         # We'll try each of the given types in the union sequentially, returning the first one that
         # succeeds.
         for arg in args:
             try:
                 return construct_arg(cls, name, arg, default, params, **extras)
-            except (ValueError, TypeError, ConfigurationError, AttributeError) as e:
+            except (ValueError, TypeError, ConfigurationError, AttributeError):
                 # Our attempt to construct the argument may have popped `params[name]`, so we
                 # restore it here.
                 params[name] = param_value
+                if isinstance(param_value, Params):
+                    param_value = param_value.duplicate()
                 continue
 
         # If none of them succeeded, we crash.
@@ -341,8 +338,8 @@ class FromParams:
                     # Necessarily subclass.from_params is a custom implementation, so we need to
                     # pass it only the args it's expecting.
                     extras = {k: v for k, v in extras.items() if takes_arg(subclass, k)}
-                kwargs = {**params, **extras}
-                return subclass(**kwargs)
+                constructor_args = {**params, **extras}
+                return subclass(**constructor_args)
         else:
             # This is not a base class, so convert our params and extras into a dict of kwargs.
 
