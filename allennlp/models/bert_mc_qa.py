@@ -89,12 +89,16 @@ class BertMCQAModel(Model):
                     metadata: List[Dict[str, Any]] = None) -> torch.Tensor:
 
         self._debug -= 1
-        input_ids = question['tokens']
+        input_ids = question['bert']
 
-        batch_size = input_ids.size(0)
-        num_choices = input_ids.size(1)
+        batch_size, num_choices, _  = question['bert'].size()
+
+        #batch_size = input_ids.size(0)
+        #num_choices = input_ids.size(1)
 
         question_mask = (input_ids != 0).long()
+
+        token_type_ids = torch.zeros_like(input_ids)
 
         if self._debug > 0:
             print(f"batch_size = {batch_size}")
@@ -107,7 +111,7 @@ class BertMCQAModel(Model):
 
 
         encoded_layers, pooled_output = self._bert_model(input_ids=util.combine_initial_dims(input_ids),
-                                            token_type_ids=util.combine_initial_dims(segment_ids),
+                                            token_type_ids=util.combine_initial_dims(token_type_ids),
                                             attention_mask=util.combine_initial_dims(question_mask),
                                             output_all_encoded_layers=self._all_layers)
 
