@@ -86,7 +86,7 @@ class DatasetReader(Registrable):
         unique cache directories.  If you don't use our commands, that is your responsibility.
         """
         self._cache_directory = pathlib.Path(cache_directory)
-        self._cache_directory.mkdir(exist_ok=True)
+        os.makedirs(self._cache_directory, exist_ok=True)
 
     def read(self, file_path: str) -> Iterable[Instance]:
         """

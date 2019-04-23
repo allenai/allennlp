@@ -10,7 +10,7 @@ from allennlp.data.dataset_readers.dataset_reader import _LazyInstances
 class DatasetReaderTest(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
-        self.cache_directory = str(self.FIXTURES_ROOT / "data_cache")
+        self.cache_directory = str(self.FIXTURES_ROOT / "data_cache" / "with_prefix")
 
     def tearDown(self):
         super().tearDown()
