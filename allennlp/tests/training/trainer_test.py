@@ -678,6 +678,19 @@ class TestTrainer(AllenNlpTestCase):
         assert trainer._metric_tracker._best_so_far == 0.1
         assert trainer._metric_tracker._epochs_with_no_improvement == 1
 
+    def test_trainer_can_run_gradient_accumulation(self):
+        trainer = Trainer(model=self.model,
+                          optimizer=self.optimizer,
+                          iterator=self.iterator,
+                          train_dataset=self.instances,
+                          validation_dataset=self.instances,
+                          num_epochs=2,
+                          num_gradient_accumulation_steps=2)
+        assert trainer._num_gradient_accumulation_steps == 2
+        assert trainer._accumulate_gradients
+
+        trainer.train()
+
 class TestSparseClipGrad(AllenNlpTestCase):
     def test_sparse_clip_grad(self):
         # create a sparse embedding layer, then take gradient
