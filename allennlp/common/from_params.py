@@ -116,7 +116,7 @@ def create_kwargs(cls: Type[T], params: Params, **extras) -> Dict[str, Any]:
     params.assert_empty(cls.__name__)
     return kwargs
 
-def construct_arg(cls: Type[T],
+def construct_arg(cls: Type[T], # pylint: disable=inconsistent-return-statements,too-many-return-statements
                   param_name: str,
                   annotation: Type,
                   default: Any,
@@ -135,7 +135,6 @@ def construct_arg(cls: Type[T],
     ``inspect.Parameter`` object directly, so that we can handle ``Union`` types using recursion on
     this method, trying the different annotation types in the union in turn.
     """
-    # pylint: disable=inconsistent-return-statements,too-many-return-statements
     from allennlp.models.archival import load_archive  # import here to avoid circular imports
 
     # We used `param_name` as the method argument to avoid conflicts with 'name' being a key in
@@ -195,13 +194,13 @@ def construct_arg(cls: Type[T],
     # If the parameter type is a Python primitive, just pop it off
     # using the correct casting pop_xyz operation.
     elif annotation == str:
-        return (params.pop(name, default) if optional else params.pop(name))
+        return params.pop(name, default) if optional else params.pop(name)
     elif annotation == int:
-        return (params.pop_int(name, default) if optional else params.pop_int(name))
+        return params.pop_int(name, default) if optional else params.pop_int(name)
     elif annotation == bool:
-        return (params.pop_bool(name, default) if optional else params.pop_bool(name))
+        return params.pop_bool(name, default) if optional else params.pop_bool(name)
     elif annotation == float:
-        return (params.pop_float(name, default) if optional else params.pop_float(name))
+        return params.pop_float(name, default) if optional else params.pop_float(name)
 
     # This is special logic for handling types like Dict[str, TokenIndexer],
     # List[TokenIndexer], Tuple[TokenIndexer, Tokenizer], and Set[TokenIndexer],
