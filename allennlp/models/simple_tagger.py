@@ -74,6 +74,9 @@ class SimpleTagger(Model):
         check_dimensions_match(text_field_embedder.get_output_dim(), encoder.get_input_dim(),
                                "text field embedding dim", "encoder input dim")
 
+        # We keep calculate_span_f1 as a constructor argument for API consistency with
+        # the CrfTagger, even it is redundant in this class
+        # (label_encoding serves the same purpose).
         if calculate_span_f1 is None:
             calculate_span_f1 = label_encoding is not None
         self.label_encoding = label_encoding
