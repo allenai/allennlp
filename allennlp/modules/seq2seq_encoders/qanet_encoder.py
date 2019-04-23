@@ -1,9 +1,8 @@
-from typing import List
-
 from overrides import overrides
 import torch
 from torch.nn import Dropout
 from torch.nn import LayerNorm
+from torch.nn import ModuleList
 from allennlp.modules.feedforward import FeedForward
 from allennlp.modules.residual_with_layer_dropout import ResidualWithLayerDropout
 from allennlp.modules.seq2seq_encoders.multi_head_self_attention import MultiHeadSelfAttention
@@ -74,7 +73,7 @@ class QaNetEncoder(Seq2SeqEncoder):
         else:
             self._input_projection_layer = lambda x: x
 
-        self._encoder_blocks: List[QaNetEncoderBlock] = []
+        self._encoder_blocks = ModuleList([])
         for block_index in range(num_blocks):
             encoder_block = QaNetEncoderBlock(hidden_dim,
                                               hidden_dim,

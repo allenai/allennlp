@@ -143,7 +143,6 @@ def find_learning_rate_model(params: Params, serialization_dir: str,
 
     Parameters
     ----------
-    trainer: :class:`~allennlp.common.registrable.Registrable`
     params : ``Params``
         A parameter object specifying an AllenNLP Experiment.
     serialization_dir : ``str``

@@ -12,8 +12,8 @@ import torch
 import torch.optim.lr_scheduler
 
 from allennlp.common import Params
-from allennlp.common.checks import ConfigurationError
-from allennlp.common.util import (dump_metrics, gpu_memory_mb, parse_cuda_device, peak_memory_mb,
+from allennlp.common.checks import ConfigurationError, parse_cuda_device
+from allennlp.common.util import (dump_metrics, gpu_memory_mb, peak_memory_mb,
                                   get_frozen_and_tunable_parameter_names, lazy_groups_of)
 from allennlp.common.tqdm import Tqdm
 from allennlp.data.instance import Instance
@@ -508,7 +508,7 @@ class Trainer(TrainerBase):
 
             # Create overall metrics dict
             training_elapsed_time = time.time() - training_start_time
-            metrics["training_duration"] = time.strftime("%H:%M:%S", time.gmtime(training_elapsed_time))
+            metrics["training_duration"] = str(datetime.timedelta(seconds=training_elapsed_time))
             metrics["training_start_epoch"] = epoch_counter
             metrics["training_epochs"] = epochs_trained
             metrics["epoch"] = epoch
@@ -540,7 +540,7 @@ class Trainer(TrainerBase):
             self._save_checkpoint(epoch)
 
             epoch_elapsed_time = time.time() - epoch_start_time
-            logger.info("Epoch duration: %s", time.strftime("%H:%M:%S", time.gmtime(epoch_elapsed_time)))
+            logger.info("Epoch duration: %s", datetime.timedelta(seconds=epoch_elapsed_time))
 
             if epoch < self._num_epochs - 1:
                 training_elapsed_time = time.time() - training_start_time

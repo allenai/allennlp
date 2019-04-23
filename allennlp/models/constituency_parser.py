@@ -354,14 +354,14 @@ class SpanConstituencyParser(Model):
             A list of spans, where each span is a ``namedtuple`` containing the
             following attributes:
 
-        start : ``int``
-            The start index of the span.
-        end : ``int``
-            The exclusive end index of the span.
-        no_label_prob : ``float``
-            The probability of this span being assigned the ``NO-LABEL`` label.
-        label_prob : ``float``
-            The probability of the most likely label.
+            start : ``int``
+                The start index of the span.
+            end : ``int``
+                The exclusive end index of the span.
+            no_label_prob : ``float``
+                The probability of this span being assigned the ``NO-LABEL`` label.
+            label_prob : ``float``
+                The probability of the most likely label.
 
         Returns
         -------

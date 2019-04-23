@@ -3,7 +3,7 @@ A stacked LSTM with LSTM layers which alternate between going forwards over
 the sequence and going backwards.
 """
 
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 import torch
 from torch.nn.utils.rnn import PackedSequence
 from allennlp.modules.augmented_lstm import AugmentedLstm
@@ -71,7 +71,8 @@ class StackedAlternatingLstm(torch.nn.Module):
 
     def forward(self,  # pylint: disable=arguments-differ
                 inputs: PackedSequence,
-                initial_state: Optional[Tuple[torch.Tensor, torch.Tensor]] = None):
+                initial_state: Optional[Tuple[torch.Tensor, torch.Tensor]] = None) -> \
+            Tuple[Union[torch.Tensor, PackedSequence], Tuple[torch.Tensor, torch.Tensor]]:
         """
         Parameters
         ----------
@@ -85,7 +86,7 @@ class StackedAlternatingLstm(torch.nn.Module):
         -------
         output_sequence : PackedSequence
             The encoded sequence of shape (batch_size, sequence_length, hidden_size)
-        final_states: torch.Tensor
+        final_states: Tuple[torch.Tensor, torch.Tensor]
             The per-layer final (state, memory) states of the LSTM, each with shape
             (num_layers, batch_size, hidden_size).
         """
@@ -106,5 +107,5 @@ class StackedAlternatingLstm(torch.nn.Module):
             output_sequence, final_state = layer(output_sequence, state)
             final_states.append(final_state)
 
-        final_state_tuple = (torch.cat(state_list, 0) for state_list in zip(*final_states))
-        return output_sequence, final_state_tuple
+        final_hidden_state, final_cell_state = tuple(torch.cat(state_list, 0) for state_list in zip(*final_states))
+        return output_sequence, (final_hidden_state, final_cell_state)

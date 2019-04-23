@@ -16,6 +16,7 @@ allennlp.training.metrics
 * :ref:`DropEmAndF1<drop_em_and_f1>`
 * :ref:`Entropy<entropy>`
 * :ref:`EvalbBracketingScorer<evalb>`
+* :ref:`FBetaMeasure<fbeta-measure>`
 * :ref:`F1Measure<f1-measure>`
 * :ref:`MeanAbsoluteError<mean-absolute-error>`
 * :ref:`MentionRecall<mention-recall>`
@@ -92,6 +93,12 @@ allennlp.training.metrics
    :undoc-members:
    :show-inheritance:
 
+.. _fbeta-measure:
+.. automodule:: allennlp.training.metrics.fbeta_measure
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 .. _f1-measure:
 .. automodule:: allennlp.training.metrics.f1_measure
    :members:
@@ -112,6 +119,12 @@ allennlp.training.metrics
 
 .. _pearson-correlation:
 .. automodule:: allennlp.training.metrics.pearson_correlation
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. _perplexity:
+.. automodule:: allennlp.training.metrics.perplexity
    :members:
    :undoc-members:
    :show-inheritance:

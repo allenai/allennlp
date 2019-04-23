@@ -150,7 +150,7 @@ def sort_batch_by_length(tensor: torch.Tensor, sequence_lengths: torch.Tensor):
     restoration_indices : torch.LongTensor
         Indices into the sorted_tensor such that
         ``sorted_tensor.index_select(0, restoration_indices) == original_tensor``
-    permuation_index : torch.LongTensor
+    permutation_index : torch.LongTensor
         The indices used to sort the tensor. This is useful if you want to sort many
         tensors using the same ordering.
     """
@@ -1287,7 +1287,7 @@ def add_positional_features(tensor: torch.Tensor,
 
 
 def clone(module: torch.nn.Module, num_copies: int) -> torch.nn.ModuleList:
-    "Produce N identical layers."
+    """Produce N identical layers."""
     return torch.nn.ModuleList([copy.deepcopy(module) for _ in range(num_copies)])
 
 
