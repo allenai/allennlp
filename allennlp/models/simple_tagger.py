@@ -83,7 +83,6 @@ class SimpleTagger(Model):
                 "accuracy3": CategoricalAccuracy(top_k=3)
         }
 
-        self.calculate_span_f1 = calculate_span_f1
         if calculate_span_f1:
             if not label_encoding:
                 raise ConfigurationError("calculate_span_f1 is True, but "
@@ -148,7 +147,7 @@ class SimpleTagger(Model):
             loss = sequence_cross_entropy_with_logits(logits, tags, mask)
             for metric in self.metrics.values():
                 metric(logits, tags, mask.float())
-            if self.calculate_span_f1:
+            if self._f1_metric is not None:
                 self._f1_metric(logits, tags, mask.float())
             output_dict["loss"] = loss
 
@@ -182,7 +181,7 @@ class SimpleTagger(Model):
         metrics_to_return = {metric_name: metric.get_metric(reset) for
                              metric_name, metric in self.metrics.items()}
 
-        if self.calculate_span_f1:
+        if self._f1_metric is not None:
             f1_dict = self._f1_metric.get_metric(reset=reset)
             if self._verbose_metrics:
                 metrics_to_return.update(f1_dict)
