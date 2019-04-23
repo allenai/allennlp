@@ -42,7 +42,7 @@ def naqanet_dua_2019() -> predictors.BidafPredictor:
         warnings.simplefilter(action="ignore", category=DeprecationWarning)
         model = PretrainedModel('https://s3-us-west-2.amazonaws.com/allennlp/models/naqanet-2019.03.01.tar.gz',
                                 'machine-comprehension')
-        return model.predictor() # type: ignore
+        return model.predictor()  # type: ignore
 
 def open_information_extraction_stanovsky_2018() -> predictors.OpenIePredictor:
     model = PretrainedModel('https://s3-us-west-2.amazonaws.com/allennlp/models/openie-model.2018-08-20.tar.gz',
