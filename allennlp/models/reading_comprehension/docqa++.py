@@ -8,6 +8,7 @@ import torch.nn.functional as F
 from torch.nn.functional import nll_loss
 import inspect
 import random
+import json
 import traceback
 
 from allennlp.common.checks import check_dimensions_match
@@ -147,6 +148,8 @@ class DocQAPlus(Model):
         self._official_f1 = Average()
         self._official_EM = Average()
         self._variational_dropout = InputVariationalDropout(dropout)
+
+        self.predictions = {}
 
     def multi_label_cross_entropy_loss(self, span_logits, answers, passage_length):
         instances_with_answer = np.argwhere(answers.squeeze().cpu() >= 0)[0].unique()
@@ -529,6 +532,8 @@ class DocQAPlus(Model):
             end_offset = offsets[predicted_span[1]][1]
             best_span_string = passage_str[start_offset:end_offset]
 
+            self.predictions[question_instances_metadata[best_span_ind]['question_id'].split('#')[0]] = best_span_string
+
             f1_score = 0.0
             EM_score = 0.0
             gold_answer_texts = question_instances_metadata[best_span_ind]['answer_texts_list']
@@ -551,6 +556,9 @@ class DocQAPlus(Model):
             self._official_EM(100 * EM_score)
         #output_dict['qid'].append(per_dialog_query_id_list)
         output_dict['best_span_str'].append(best_span_string)
+
+        with open('predicitions.json', 'w') as f:
+            json.dump(self.predictions, f)
 
         return output_dict
 

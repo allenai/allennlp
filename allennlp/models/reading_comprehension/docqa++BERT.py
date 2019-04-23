@@ -14,20 +14,13 @@ import json
 from allennlp.common.checks import check_dimensions_match
 from allennlp.data import Vocabulary
 from allennlp.models.model import Model
-from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
+from allennlp.modules import Seq2SeqEncoder, TextFieldEmbedder
 from allennlp.modules.input_variational_dropout import InputVariationalDropout
-from allennlp.modules.matrix_attention.linear_matrix_attention import LinearMatrixAttention
 from allennlp.nn import InitializerApplicator, util
 from allennlp.tools import squad_eval
 from allennlp.training.metrics import Average, BooleanAccuracy, CategoricalAccuracy
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
-
-# ALON - for line profiler
-try:
-    profile
-except NameError:
-    profile = lambda x: x
 
 @Model.register("docqa++BERT")
 class DocQAPlusBERT(Model):
@@ -145,7 +138,6 @@ class DocQAPlusBERT(Model):
 
         return -(torch.log((F.softmax(torch.cat(tuple(span_logits)), dim=-1) *  target.float()).sum(dim=1))).mean()
 
-    @profile
     def forward(self,  # type: ignore
                 question: Dict[str, torch.LongTensor],
                 passage: Dict[str, torch.LongTensor],
@@ -192,23 +184,7 @@ class DocQAPlusBERT(Model):
         loss : torch.FloatTensor, optional
             A scalar loss to be optimised.
         """
-        # TODO remove this!!
-        #if len(set([insta_meta['question_id'] for insta_meta in metadata]) & set(['5a73c958554299623ed4ac5c#0', '5a776fc15542997042120a3a#0'])):
-        #output_dict: Dict[str, Any] = {}
-        #self._official_f1(0)
-        #self._official_EM(0)
-        #output_dict["loss"] = torch.cuda.FloatTensor([0], device=span_end_logits.device) \
-        #    if torch.cuda.is_available() else torch.FloatTensor([0])
-        #return output_dict
-
-
         batch_size, num_of_passage_tokens = passage['bert'].size()
-        #if passage['bert'].size(1) < 384:
-        #    passage['bert'] = torch.nn.functional.pad(passage['bert'], (0, 384 - passage['bert'].size(1)), "constant", 0)
-        #if passage['bert-offsets'].size(1) < 384:
-        #    passage['bert-offsets'] = torch.nn.functional.pad(passage['bert-offsets'], (0, 384 - passage['bert-offsets'].size(1)), "constant", 0)
-        #if passage['mask'].size(1) < 384:
-        #    passage['mask'] = torch.nn.functional.pad(passage['mask'], (0, 384 - passage['mask'].size(1)), "constant", 1)
 
         if random.randint(1, 5) % 5 == 0:
             for meta in metadata:

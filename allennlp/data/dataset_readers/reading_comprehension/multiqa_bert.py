@@ -75,6 +75,7 @@ class BERTQAReader(DatasetReader):
                  ) -> None:
         super().__init__(lazy)
         random.seed(0)
+        logger.info('----------------- NEW SEED ---------------')
         self._tokenizer = tokenizer or WordTokenizer()
         self._sample_size = sample_size
         self._use_one_inst_per_question = use_one_inst_per_question
@@ -170,7 +171,9 @@ class BERTQAReader(DatasetReader):
                         number_of_yielded_instances = 0
                         for line,example in enumerate(myfile):
                             # header
-                            instances.append(json.loads(example))
+                            curr_instance = json.loads(example)
+                            instances.append(curr_instance)
+
 
                             # making sure not to take all instances of the same question
                             if self._sample_size == -1 and len(instances)>10000 and instances[-1]['metadata']['question_id'] \

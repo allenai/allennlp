@@ -1,5 +1,6 @@
 import argparse
 import json
+import _jsonnet
 import pika
 import datetime
 import time
@@ -33,6 +34,7 @@ class AllenNLP_Job_Dispatcher():
 
         all_objects = s3.list_objects(Bucket='multiqa', Prefix='models/')
         all_objects['Contents'] += s3.list_objects(Bucket='mrqa', Prefix='models/')['Contents']
+        all_objects['Contents'] += s3.list_objects(Bucket='beatbert', Prefix='models/')['Contents']
         if 'Contents' in all_objects:
             self.s3_models = [obj['Key'] for obj in all_objects['Contents']]
         if len(self.s3_models) > 900:
@@ -40,12 +42,11 @@ class AllenNLP_Job_Dispatcher():
 
         all_objects = s3.list_objects(Bucket='multiqa', Prefix='preproc/')
         all_objects['Contents'] += s3.list_objects(Bucket='mrqa', Prefix='data/')['Contents']
+        all_objects['Contents'] += s3.list_objects(Bucket='beatbert', Prefix='data/')['Contents']
         if 'Contents' in all_objects:
             self.s3_preproc = [obj['Key'] for obj in all_objects['Contents']]
         if len(self.s3_preproc) > 900:
             print('\n\n!!!!!!!!!!!!!!!!! approching S3 limit of 1000 results\n\n')
-
-
 
     def get_config_file(self, filename):
         full_file = glob.glob(config_path + '*/*' + filename + '*' , recursive=True)
@@ -89,6 +90,7 @@ class AllenNLP_Job_Dispatcher():
         s3 = boto3.client("s3")
         all_objects = s3.list_objects(Bucket='multiqa',Prefix=prefix)
         all_objects += s3.list_objects(Bucket='mrqa', Prefix=prefix)
+        all_objects += s3.list_objects(Bucket='beatbert', Prefix=prefix)
         all_keys = []
         if 'Contents' in all_objects:
             for obj in all_objects['Contents']:
@@ -101,6 +103,7 @@ class AllenNLP_Job_Dispatcher():
                     --include-package allennlp.models.bert_mc_qa \
                    --include-package allennlp.data.iterators.multiqa_iterator \
                    --include-package allennlp.data.iterators.mrqa_iterator  \
+                    --include-package allennlp.data.wordpiece_vocabulary \
                    --include-package allennlp.data.dataset_readers.reading_comprehension.multiqa+ \
                    --include-package allennlp.data.dataset_readers.reading_comprehension.multiqa+combine \
                    --include-package allennlp.models.reading_comprehension.docqa++BERT \
@@ -109,10 +112,12 @@ class AllenNLP_Job_Dispatcher():
                    --include-package allennlp.models.reading_comprehension.BERT_QA   \
                    --include-package allennlp.data.dataset_readers.reading_comprehension.mrqa_reader'
 
-
     def read_config(self, filename):
-        with open(filename, 'r') as f:
-            return json.load(f)
+        if filename.find('jsonnet') > -1:
+            return json.loads(_jsonnet.evaluate_file(filename))
+        else:
+            with open(filename, 'r') as f:
+                return json.load(f)
 
     def add_model_dir(self, host):
         if host in ['savant', 'rack-gamir-g03', 'rack-gamir-g04', 'rack-gamir-g05']:
@@ -189,8 +194,9 @@ class AllenNLP_Job_Dispatcher():
         return exp_config
 
     def replace_one_field_tags(self, value, params):
-        for key in params.keys():
-            value = value.replace('[' + key + ']', str(params[key]))
+        if type(value) == str:
+            for key in params.keys():
+                value = value.replace('[' + key + ']', str(params[key]))
 
         return value
 
@@ -385,6 +391,19 @@ class AllenNLP_Job_Dispatcher():
                         currently_running_experiments, run_name, run_name_no_date, elastic_exp_results, params):
                     continue
 
+            # TODO this is a patch to calculate the BERT scheduler t_total
+            if 'bert_t_tatal_calc_train_size' in config:
+                bert_t_tatal_calc_train_size = float(self.replace_one_field_tags(config['bert_t_tatal_calc_train_size'], params))
+                exp_config['override_config']['iterator']['batch_size'] = \
+                    self.replace_one_field_tags(exp_config['override_config']['iterator']['batch_size'], params)
+                exp_config['override_config']['trainer']['num_epochs'] = \
+                    self.replace_one_field_tags(exp_config['override_config']['trainer']['num_epochs'], params)
+                exp_config['override_config']['trainer']['gradient_accumulation_steps'] = \
+                    self.replace_one_field_tags(exp_config['override_config']['trainer']['gradient_accumulation_steps'], params)
+                exp_config['override_config']['trainer']['optimizer']['t_total'] = \
+                    int(bert_t_tatal_calc_train_size / float(exp_config['override_config']['iterator']['batch_size']) \
+                        * float(exp_config['override_config']['trainer']['num_epochs']) \
+                        / float(exp_config['override_config']['trainer']['gradient_accumulation_steps']))
 
             # Building command
             runner_config = {'output_file': exp_config['output_file']}
@@ -502,9 +521,7 @@ if queue != 'GPUs' and queue != '4GPUs':
     print('\n!!!!!!!!!!! RUNNING ON A SPECIFIC MACHINE, ARE YOU SURE?? !!!!!!!!\n')
     time.sleep(3)
 
-FORCE_RUN = True
-SHOW_MISSING_RESOURCES = True
-run_only_one = False
+
 
 
 parse = argparse.ArgumentParser("")
@@ -544,14 +561,21 @@ allennlp_dispatcher = AllenNLP_Job_Dispatcher(experiment_name)
 #experiment_name = '062_BERT_train_Full_exp'
 #experiment_name = '063_BERT_evaluate_MRQA'
 #experiment_name = '064_BERT_RL-CWQ_evaluate_exp'
-#experiment_name = '065_BERT_train_mix_MRQA'
-experiment_name = '066_CSQA_BERT_train'
+experiment_name = '065_BERT_train_mix_MRQA'
+#experiment_name = '066_CSQA_BERT_train'
+#experiment_name = '067_CSQA_BERTbase_grid_train'
+#experiment_name = '068_beatbert_asymmetric_train'
+#experiment_name = '069_BERTLarge_train_mix_MRQA'
 
 if experiment_name.find('BERTLarge') > -1 and experiment_name.find('evaluate') == -1:
     queue = '4GPUs'
-#queue = 'rack-gamir-g03'
-#queue = 'rack-jonathan-g04'
+#queue = 'rack-gamir-g07'
+#queue = 'rack-jonathan-g08'
 #queue = 'savant'
+
+FORCE_RUN = True
+SHOW_MISSING_RESOURCES = True
+run_only_one = False
 
 print('Running new job on queue = %s', queue)
 allennlp_dispatcher.run_job(experiment_name, args.DRY_RUN , queue, FORCE_RUN, run_only_one)

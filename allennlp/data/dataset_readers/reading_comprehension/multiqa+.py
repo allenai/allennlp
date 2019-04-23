@@ -134,7 +134,7 @@ class MultiQAReader(DatasetReader):
                 with zipfile.ZipFile(single_file_path_cached, 'r') as myzip:
                     with myzip.open(myzip.namelist()[0]) as myfile:
                         header = json.loads(myfile.readline())['header']
-                        for line,example in enumerate(myfile):
+                        for line, example in enumerate(myfile):
                             # header
                             instances.append(json.loads(example))
 
