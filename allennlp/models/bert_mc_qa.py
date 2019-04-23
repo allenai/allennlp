@@ -90,25 +90,9 @@ class BertMCQAModel(Model):
 
         self._debug -= 1
         input_ids = question['bert']
-
         batch_size, num_choices, _  = question['bert'].size()
-
-        #batch_size = input_ids.size(0)
-        #num_choices = input_ids.size(1)
-
         question_mask = (input_ids != 0).long()
-
         token_type_ids = torch.zeros_like(input_ids)
-
-        if self._debug > 0:
-            print(f"batch_size = {batch_size}")
-            print(f"num_choices = {num_choices}")
-            print(f"question_mask = {question_mask}")
-            print(f"input_ids.size() = {input_ids.size()}")
-            print(f"input_ids = {input_ids}")
-            print(f"segment_ids = {segment_ids}")
-            print(f"label = {label}")
-
 
         encoded_layers, pooled_output = self._bert_model(input_ids=util.combine_initial_dims(input_ids),
                                             token_type_ids=util.combine_initial_dims(token_type_ids),
@@ -118,9 +102,6 @@ class BertMCQAModel(Model):
         if self._all_layers:
             mixed_layer = self._scalar_mix(encoded_layers, question_mask)
             pooled_output = self._bert_model.pooler(mixed_layer)
-
-        if self._debug > 0:
-            print(f"pooled_output = {pooled_output}")
 
         pooled_output = self._dropout(pooled_output)
         label_logits = self._classifier(pooled_output)
@@ -148,8 +129,6 @@ class BertMCQAModel(Model):
                 self._accuracy(label_logits, label)
             output_dict["loss"] = loss
 
-        if self._debug > 0:
-            print(output_dict)
         return output_dict
 
 

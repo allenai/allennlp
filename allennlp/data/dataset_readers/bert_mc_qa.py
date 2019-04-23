@@ -8,13 +8,12 @@ import random
 from overrides import overrides
 
 from allennlp.common.file_utils import cached_path
-from allennlp.common.util import JsonDict
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import ArrayField, Field, TextField, LabelField
 from allennlp.data.fields import ListField, MetadataField, SequenceLabelField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
-from allennlp.data.tokenizers import Token, Tokenizer, WordTokenizer
+from allennlp.data.tokenizers import Token
 from allennlp.data.tokenizers.word_splitter import BertBasicWordSplitter
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -46,31 +45,22 @@ class BertMCQAReader(DatasetReader):
     def __init__(self,
                  pretrained_model: str,
                  token_indexers: Dict[str, TokenIndexer] = None,
-                 instance_per_choice: bool = False,
                  max_pieces: int = 512,
                  num_choices: int = 5,
                  answer_only: bool = False,
-                 syntax: str = "arc",
                  restrict_num_choices: int = None,
-                 skip_id_regex: str = None,
                  ignore_context: bool = False,
-                 context_syntax: str = "c#q#a",
                  sample: int = -1,
                  random_seed: int = 0) -> None:
         super().__init__()
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
-        #self._token_indexers = {'tokens': SingleIdTokenIndexer()}
         lower_case = not '-cased' in pretrained_model
         self._word_splitter = BertBasicWordSplitter(do_lower_case=lower_case)
         self._max_pieces = max_pieces
-        self._instance_per_choice = instance_per_choice
         self._sample = sample
         self._num_choices = num_choices
-        self._syntax = syntax
-        self._context_syntax = context_syntax
         self._answer_only = answer_only
         self._restrict_num_choices = restrict_num_choices
-        self._skip_id_regex = skip_id_regex
         self._ignore_context = ignore_context
         self._random_seed = random_seed
 
@@ -94,25 +84,11 @@ class BertMCQAReader(DatasetReader):
                 if debug > 0:
                     logger.info(item_json)
 
-                if self._syntax == 'quarel' or self._syntax == 'quarel_preamble':
-                    item_json = self._normalize_mc(item_json)
-                    if debug > 0:
-                        logger.info(item_json)
-                elif self._syntax == 'vcr':
-                    item_json = self._normalize_vcr(item_json)
-                    if debug > 0:
-                        logger.info(item_json)
-
                 item_id = item_json["id"]
-                if self._skip_id_regex and re.match(self._skip_id_regex, item_id):
-                    continue
                 context = item_json.get("para")
                 if self._ignore_context:
                     context = None
                 question_text = item_json["question"]["stem"]
-
-                if self._syntax == 'quarel_preamble':
-                    context, question_text = question_text.split(". ", 1)
 
                 if self._answer_only:
                     question_text = ""
@@ -125,7 +101,6 @@ class BertMCQAReader(DatasetReader):
                 choice_id_correction = 0
 
                 for choice_id, choice_item in enumerate(item_json["question"]["choices"]):
-
                     if self._restrict_num_choices and len(choice_text_list) == self._restrict_num_choices:
                         if not any_correct:
                             choice_text_list.pop(-1)
@@ -145,9 +120,7 @@ class BertMCQAReader(DatasetReader):
                     choice_text_list.append(choice_text)
                     choice_context_list.append(choice_context)
 
-                    is_correct = 0
                     if item_json.get('answerKey') == choice_label:
-                        is_correct = 1
                         if any_correct:
                             raise ValueError("More than one correct answer found for {item_json}!")
                         any_correct = True
@@ -183,7 +156,6 @@ class BertMCQAReader(DatasetReader):
             random.shuffle(instances)
             for instance in instances:
                 yield instance
-
 
     @overrides
     def text_to_instance(self,  # type: ignore
@@ -225,8 +197,6 @@ class BertMCQAReader(DatasetReader):
             "choice_text_list": choice_list,
             "correct_answer_index": answer_id,
             "question_tokens_list": qa_tokens_list
-            # "question_tokens": [x.text for x in question_tokens],
-            # "choice_tokens_list": [[x.text for x in ct] for ct in choices_tokens_list],
         }
 
         if debug > 0:
@@ -249,63 +219,6 @@ class BertMCQAReader(DatasetReader):
                 tokens_b.pop()
         return tokens_a, tokens_b
 
-    def _normalize_mc(self, json: JsonDict) -> JsonDict:
-        split = self.split_mc_question(json['question'])
-        if split is None:
-            raise ValueError("No question split found for {json}!")
-            return None
-        answer_index = json['answer_index']
-        res = {"id": json['id'],
-               'question': split,
-               'answerKey': split['choices'][answer_index]['label']}
-        return res
-
-    def _normalize_vcr(self, json: JsonDict) -> JsonDict:
-        unisex_names = ["Avery", "Riley", "Jordan", "Angel", "Parker", "Sawyer", "Peyton",
-                        "Quinn", "Blake", "Hayden", "Taylor", "Alexis", "Rowan"]
-        obj = json['objects']
-        qa = [json['question']] + json['answer_choices']
-        qa_updated = []
-        for tokens in qa:
-            qa_new = []
-            for token in tokens:
-                if isinstance(token, str):
-                    qa_new.append(token)
-                else:
-                    entities = []
-                    for ref in token:
-                        entity = obj[ref]
-                        if entity == 'person':
-                            entity = unisex_names[ref % len(unisex_names)]
-                        entities.append(entity)
-                    qa_new.append(" and ".join(entities))
-            qa_updated.append(" ".join(qa_new))
-        answer_index = json['answer_label']
-        question = qa_updated[0]
-        choices = [{'text': answer, 'label': str(idx)} for idx, answer in enumerate(qa_updated[1:])]
-        return {"id": json['annot_id'],
-                "question": {"stem": question, "choices": choices},
-                "answerKey": str(answer_index)
-                }
-
-    @staticmethod
-    def split_mc_question(question, min_choices=2):
-        choice_sets = [["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N"],
-                       ["1", "2", "3", "4", "5"],
-                       ["G", "H", "J", "K"],
-                       ['a', 'b', 'c', 'd', 'e']]
-        patterns = [r'\(#\)', r'#\)', r'#\.']
-        for pattern in patterns:
-            for choice_set in choice_sets:
-                regex = pattern.replace("#","(["+"".join(choice_set)+"])")
-                labels = [m.group(1) for m in re.finditer(regex, question)]
-                if len(labels) >= min_choices and labels == choice_set[:len(labels)]:
-                    splits = [s.strip() for s in re.split(regex, question)]
-                    return {"stem": splits[0],
-                            "choices": [{"text": splits[i+1],
-                                         "label": splits[i]} for i in range(1, len(splits)-1, 2)]}
-        return None
-
     def bert_features_from_qa(self, question: str, answer: str, context: str = None):
         cls_token = Token("[CLS]")
         sep_token = Token("[SEP]")
@@ -317,8 +230,6 @@ class BertMCQAReader(DatasetReader):
         question_tokens, choice_tokens = self._truncate_tokens(question_tokens, choice_tokens, self._max_pieces - 3)
 
         tokens = [cls_token] + question_tokens + [sep_token] + choice_tokens + [sep_token]
-        # AllenNLP already add [CLS]
-        #tokens = question_tokens + [sep_token] + choice_tokens
         segment_ids = list(itertools.repeat(0, len(question_tokens) + 2)) + \
                       list(itertools.repeat(1, len(choice_tokens) + 1))
         return tokens, segment_ids
