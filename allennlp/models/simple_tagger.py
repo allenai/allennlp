@@ -77,19 +77,15 @@ class SimpleTagger(Model):
         # We keep calculate_span_f1 as a constructor argument for API consistency with
         # the CrfTagger, even it is redundant in this class
         # (label_encoding serves the same purpose).
-        if calculate_span_f1 is None:
-            calculate_span_f1 = label_encoding is not None
-        self.label_encoding = label_encoding
-
+        if calculate_span_f1 and not label_encoding:
+            raise ConfigurationError("calculate_span_f1 is True, but "
+                                     "no label_encoding was specified.")
         self.metrics = {
                 "accuracy": CategoricalAccuracy(),
                 "accuracy3": CategoricalAccuracy(top_k=3)
         }
 
-        if calculate_span_f1:
-            if not label_encoding:
-                raise ConfigurationError("calculate_span_f1 is True, but "
-                                         "no label_encoding was specified.")
+        if calculate_span_f1 or label_encoding:
             self._f1_metric = SpanBasedF1Measure(vocab,
                                                  tag_namespace=label_namespace,
                                                  label_encoding=label_encoding)
