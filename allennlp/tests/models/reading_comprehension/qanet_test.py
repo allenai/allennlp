@@ -1,4 +1,6 @@
 # pylint: disable=no-self-use,invalid-name
+import torch
+import pytest
 from flaky import flaky
 import numpy
 from numpy.testing import assert_almost_equal
@@ -8,6 +10,8 @@ from allennlp.data import DatasetReader, Vocabulary
 from allennlp.common.testing import ModelTestCase
 from allennlp.data.dataset import Batch
 from allennlp.models import Model
+from allennlp.data.iterators import BasicIterator
+from allennlp.training import Trainer
 
 
 class QaNetTest(ModelTestCase):
@@ -44,6 +48,23 @@ class QaNetTest(ModelTestCase):
     @flaky
     def test_model_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file, tolerance=1e-4)
+
+    @pytest.mark.skipif(torch.cuda.device_count() < 2,
+                        reason="Need multiple GPUs.")
+    def test_multigpu_qanet(self):
+        params = Params.from_file(self.param_file)
+        vocab = Vocabulary.from_instances(self.instances)
+        model = Model.from_params(vocab=vocab, params=params['model']).cuda()
+        optimizer = torch.optim.SGD(self.model.parameters(), 0.01, momentum=0.9)
+        multigpu_iterator = BasicIterator(batch_size=4)
+        multigpu_iterator.index_with(model.vocab)
+        trainer = Trainer(model,
+                          optimizer,
+                          multigpu_iterator,
+                          self.instances,
+                          num_epochs=2,
+                          cuda_device=[0, 1])
+        trainer.train()
 
     def test_batch_predictions_are_consistent(self):
         # The same issue as the bidaf test case.

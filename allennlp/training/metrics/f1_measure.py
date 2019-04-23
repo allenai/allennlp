@@ -1,13 +1,11 @@
-from typing import Optional
-
-import torch
+from typing import Tuple
 
 from allennlp.training.metrics.metric import Metric
-from allennlp.common.checks import ConfigurationError
+from allennlp.training.metrics.fbeta_measure import FBetaMeasure
 
 
 @Metric.register("f1")
-class F1Measure(Metric):
+class F1Measure(FBetaMeasure):
     """
     Computes Precision, Recall and F1 with respect to a given ``positive_label``.
     For example, for a BIO tagging scheme, you would pass the classification index of
@@ -15,63 +13,11 @@ class F1Measure(Metric):
     calculated for this tag only.
     """
     def __init__(self, positive_label: int) -> None:
-        self._positive_label = positive_label
-        self._true_positives = 0.0
-        self._true_negatives = 0.0
-        self._false_positives = 0.0
-        self._false_negatives = 0.0
+        super().__init__(beta=1,
+                         labels=[positive_label])
 
-    def __call__(self,
-                 predictions: torch.Tensor,
-                 gold_labels: torch.Tensor,
-                 mask: Optional[torch.Tensor] = None):
-        """
-        Parameters
-        ----------
-        predictions : ``torch.Tensor``, required.
-            A tensor of predictions of shape (batch_size, ..., num_classes).
-        gold_labels : ``torch.Tensor``, required.
-            A tensor of integer class label of shape (batch_size, ...). It must be the same
-            shape as the ``predictions`` tensor without the ``num_classes`` dimension.
-        mask: ``torch.Tensor``, optional (default = None).
-            A masking tensor the same size as ``gold_labels``.
-        """
-        predictions, gold_labels, mask = self.unwrap_to_tensors(predictions, gold_labels, mask)
-
-        num_classes = predictions.size(-1)
-        if (gold_labels >= num_classes).any():
-            raise ConfigurationError("A gold label passed to F1Measure contains an id >= {}, "
-                                     "the number of classes.".format(num_classes))
-        if mask is None:
-            mask = torch.ones_like(gold_labels)
-        mask = mask.float()
-        gold_labels = gold_labels.float()
-        positive_label_mask = gold_labels.eq(self._positive_label).float()
-        negative_label_mask = 1.0 - positive_label_mask
-
-        argmax_predictions = predictions.max(-1)[1].float().squeeze(-1)
-
-        # True Negatives: correct non-positive predictions.
-        correct_null_predictions = (argmax_predictions !=
-                                    self._positive_label).float() * negative_label_mask
-        self._true_negatives += (correct_null_predictions.float() * mask).sum()
-
-        # True Positives: correct positively labeled predictions.
-        correct_non_null_predictions = (argmax_predictions ==
-                                        self._positive_label).float() * positive_label_mask
-        self._true_positives += (correct_non_null_predictions * mask).sum()
-
-        # False Negatives: incorrect negatively labeled predictions.
-        incorrect_null_predictions = (argmax_predictions !=
-                                      self._positive_label).float() * positive_label_mask
-        self._false_negatives += (incorrect_null_predictions * mask).sum()
-
-        # False Positives: incorrect positively labeled predictions
-        incorrect_non_null_predictions = (argmax_predictions ==
-                                          self._positive_label).float() * negative_label_mask
-        self._false_positives += (incorrect_non_null_predictions * mask).sum()
-
-    def get_metric(self, reset: bool = False):
+    def get_metric(self,
+                   reset: bool = False) -> Tuple[float, float, float]:
         """
         Returns
         -------
@@ -80,15 +26,54 @@ class F1Measure(Metric):
         recall : float
         f1-measure : float
         """
-        precision = float(self._true_positives) / float(self._true_positives + self._false_positives + 1e-13)
-        recall = float(self._true_positives) / float(self._true_positives + self._false_negatives + 1e-13)
-        f1_measure = 2. * ((precision * recall) / (precision + recall + 1e-13))
-        if reset:
-            self.reset()
-        return precision, recall, f1_measure
+        metric = super().get_metric(reset=reset)
+        # Because we just care about the class `positive_label`
+        # there is just one item in `precision`, `recall`, `fscore`
+        precision = metric['precision'][0]
+        recall = metric['recall'][0]
+        fscore = metric['fscore'][0]
+        return precision, recall, fscore
 
-    def reset(self):
-        self._true_positives = 0.0
-        self._true_negatives = 0.0
-        self._false_positives = 0.0
-        self._false_negatives = 0.0
+    @property
+    def _true_positives(self):
+        # When this metric is never called, `self._true_positive_sum` is None,
+        # under which case we return 0.0 for backward compatibility.
+        if self._true_positive_sum is None:
+            return 0.0
+        else:
+            # Because we just care about the class `positive_label`,
+            # there is just one item in `self._true_positive_sum`.
+            return self._true_positive_sum[0]
+
+    @property
+    def _true_negatives(self):
+        # When this metric is never called, `self._true_negative_sum` is None,
+        # under which case we return 0.0 for backward compatibility.
+        if self._true_negative_sum is None:
+            return 0.0
+        else:
+            # Because we just care about the class `positive_label`,
+            # there is just one item in `self._true_negative_sum`.
+            return self._true_negative_sum[0]
+
+    @property
+    def _false_positives(self):
+        # When this metric is never called, `self._pred_sum` is None,
+        # under which case we return 0.0 for backward compatibility.
+        if self._pred_sum is None:
+            return 0.0
+        else:
+            # `self._pred_sum` is the total number of instances under each _predicted_ class,
+            # including true positives and false positives.
+            return self._pred_sum[0] - self._true_positives
+
+    @property
+    def _false_negatives(self):
+        # When this metric is never called, `self._true_sum` is None,
+        # under which case we return 0.0 for backward compatibility.
+        if self._true_sum is None:
+            return 0.0
+        else:
+            # `self._true_sum` is the total number of instances under each _true_ class,
+            # including true positives and false negatives.
+            return self._true_sum[0] - self._true_positives

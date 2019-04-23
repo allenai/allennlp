@@ -11,6 +11,7 @@ from allennlp.modules.sampled_softmax_loss import SampledSoftmaxLoss
 from allennlp.modules.seq2seq_encoders import Seq2SeqEncoder
 from allennlp.nn.util import get_text_field_mask
 from allennlp.nn import InitializerApplicator
+from allennlp.training.metrics import Perplexity
 
 
 class _SoftmaxLoss(torch.nn.Module):
@@ -127,8 +128,10 @@ class LanguageModel(Model):
             self._softmax_loss = _SoftmaxLoss(num_words=vocab.get_vocab_size(),
                                               embedding_dim=self._forward_dim)
 
-        # TODO(brendanr): Output perplexity here. e^loss
+        # This buffer is now unused and exists only for backwards compatibility reasons.
         self.register_buffer('_last_average_loss', torch.zeros(1))
+
+        self._perplexity = Perplexity()
 
         if dropout:
             self._dropout = torch.nn.Dropout(dropout)
@@ -300,8 +303,8 @@ class LanguageModel(Model):
                     average_loss = forward_loss / num_targets.float()
             else:
                 average_loss = torch.tensor(0.0).to(forward_targets.device)  # pylint: disable=not-callable
-            # this is stored to compute perplexity if needed
-            self._last_average_loss[0] = average_loss.detach().item()
+
+            self._perplexity(average_loss)
 
             if num_targets > 0:
                 return_dict.update({
@@ -327,3 +330,6 @@ class LanguageModel(Model):
         })
 
         return return_dict
+
+    def get_metrics(self, reset: bool = False):
+        return {"perplexity": self._perplexity.get_metric(reset=reset)}
