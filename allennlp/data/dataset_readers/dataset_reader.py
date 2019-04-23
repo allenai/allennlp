@@ -1,6 +1,7 @@
 from typing import Iterable, Iterator, Callable
 import logging
 import os
+import pathlib
 
 import jsonpickle
 
@@ -66,7 +67,7 @@ class DatasetReader(Registrable):
     """
     def __init__(self, lazy: bool = False) -> None:
         self.lazy = lazy
-        self._cache_directory: str = None
+        self._cache_directory: pathlib.Path = None
 
     def cache_data(self, cache_directory: str) -> None:
         """
@@ -84,10 +85,8 @@ class DatasetReader(Registrable):
         is responsible for calling this method and ensuring that unique parameters correspond to
         unique cache directories.  If you don't use our commands, that is your responsibility.
         """
-        if not cache_directory.endswith('/'):
-            cache_directory += '/'
-        self._cache_directory = cache_directory
-        os.makedirs(self._cache_directory, exist_ok=True)
+        self._cache_directory = pathlib.Path(cache_directory)
+        self._cache_directory.mkdir(exist_ok=True)
 
     def read(self, file_path: str) -> Iterable[Instance]:
         """
@@ -146,7 +145,7 @@ class DatasetReader(Registrable):
             return instances
 
     def _get_cache_location_for_file_path(self, file_path: str) -> str:
-        return self._cache_directory + util.flatten_filename(str(file_path))
+        return str(self._cache_directory / util.flatten_filename(str(file_path)))
 
     def _read(self, file_path: str) -> Iterable[Instance]:
         """
