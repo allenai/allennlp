@@ -176,7 +176,8 @@ class Trainer(TrainerBase):
             model if we load it later. But this may cause problems if you restart the training from checkpoint.
         num_gradient_accumulation_steps: ``int``, optional, (default = 1)
             Gradients are accumulated for the given number of steps before doing an optimizer step. This can
-            be useful to accomodate batches that are larger than the RAM size.
+            be useful to accommodate batches that are larger than the RAM size. Refer Thomas Wolf's
+            [post](https://tinyurl.com/y5mv44fw) for details on Gradient Accumulation.
         """
         super().__init__(serialization_dir, cuda_device)
 
@@ -249,9 +250,10 @@ class Trainer(TrainerBase):
         self._num_gradient_accumulation_steps = num_gradient_accumulation_steps
 
         if self._num_gradient_accumulation_steps > 1 and self._multiple_gpu:
-            raise ConfigurationError(
-                    "Gradient Accumulation helps to run batches that are larger than the GPU RAM size."
-                    "If there are more than one GPU, this may not be needed.")
+            logger.warning(
+                    "You have configured to use multiple GPUs along with gradient accumulation."
+                    "Because of this, the effective batch size will be "
+                    "batch_size * num_gradient_accumulation_steps * number of GPUs")
 
         self._accumulate_gradients = self._num_gradient_accumulation_steps > 1
 
@@ -303,8 +305,7 @@ class Trainer(TrainerBase):
         # Set the model to "train" mode.
         self.model.train()
 
-        num_batch_groups = self._num_gradient_accumulation_steps if self._accumulate_gradients \
-                                else len(self._cuda_devices)
+        num_batch_groups = self._num_gradient_accumulation_steps * len(self._cuda_devices)
 
         # Get tqdm for the training batches
         raw_train_generator = self.iterator(self.train_data,
@@ -333,32 +334,18 @@ class Trainer(TrainerBase):
 
             self.optimizer.zero_grad()
 
-            if not self._accumulate_gradients:
-                loss = self.batch_loss(batch_group, for_training=True)
+            # If num_accumulation_steps is 2 and num_gpus is 4, length of `batch_group`
+            # will be 8. This batch_group is split into 2 chunks each for a step, with each
+            # chunk consisting of 4 batches, 1 for each gpu.
+            batch_group_for_stepwise_accumulation = lazy_groups_of(iter(batch_group), len(self._cuda_devices))
+            for batch_for_step in batch_group_for_stepwise_accumulation:
+                loss = self.batch_loss(batch_for_step, for_training=True)
 
                 if torch.isnan(loss):
                     raise ValueError("nan loss encountered")
 
+                loss = loss / self._num_gradient_accumulation_steps
                 loss.backward()
-            else:
-                # If gradient accumulation is configured, the actual batch size
-                # becomes configured `batch_size` * `accumulation_steps`. Hence,
-                # a group of batches of length `accumulation_steps` with each
-                # batch item of size `batch_size` is created. Loss is calculated
-                # for every batch item in the group, normalized and gradient
-                # computation is done. Repeated `loss.backward` takes care of
-                # accumulation by itself. Refer Thomas Wolf's post[1] for details.
-                #
-                # [1] - "Training Neural Nets on Larger Batches: Practical Tips for
-                # 1-GPU, Multi-GPU & Distributed setups"
-                for batch in batch_group:
-                    loss = self.batch_loss([batch], for_training=True)
-
-                    if torch.isnan(loss):
-                        raise ValueError("nan loss encountered")
-
-                    loss = loss / self._num_gradient_accumulation_steps
-                    loss.backward()
 
             train_loss += loss.item()
 
