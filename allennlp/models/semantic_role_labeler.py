@@ -250,16 +250,50 @@ def write_to_conll_eval_file(prediction_file: TextIO,
     gold_labels : List[str], required.
         The gold BIO labels.
     """
+    conll_formatted_predictions = convert_bio_tags_to_conll_format(prediction)
+    conll_formatted_gold_labels = convert_bio_tags_to_conll_format(gold_labels)
+    write_conll_formatted_tags_to_file(prediction_file,
+                                       gold_file,
+                                       verb_index,
+                                       sentence,
+                                       conll_formatted_predictions,
+                                       conll_formatted_gold_labels)
+
+
+def write_conll_formatted_tags_to_file(prediction_file: TextIO,
+                                       gold_file: TextIO,
+                                       verb_index: Optional[int],
+                                       sentence: List[str],
+                                       conll_formatted_predictions: List[str],
+                                       conll_formatted_gold_labels: List[str]):
+    """
+    Prints predicate argument predictions and gold labels for a single verbal
+    predicate in a sentence to two provided file references.
+
+    Parameters
+    ----------
+    prediction_file : TextIO, required.
+        A file reference to print predictions to.
+    gold_file : TextIO, required.
+        A file reference to print gold labels to.
+    verb_index : Optional[int], required.
+        The index of the verbal predicate in the sentence which
+        the gold labels are the arguments for, or None if the sentence
+        contains no verbal predicate.
+    sentence : List[str], required.
+        The word tokens.
+    conll_formatted_predictions : List[str], required.
+        The predicted CoNLL-formatted labels.
+    conll_formatted_gold_labels : List[str], required.
+        The gold CoNLL-formatted labels.
+    """
     verb_only_sentence = ["-"] * len(sentence)
     if verb_index:
         verb_only_sentence[verb_index] = sentence[verb_index]
 
-    conll_format_predictions = convert_bio_tags_to_conll_format(prediction)
-    conll_format_gold_labels = convert_bio_tags_to_conll_format(gold_labels)
-
     for word, predicted, gold in zip(verb_only_sentence,
-                                     conll_format_predictions,
-                                     conll_format_gold_labels):
+                                     conll_formatted_predictions,
+                                     conll_formatted_gold_labels):
         prediction_file.write(word.ljust(15))
         prediction_file.write(predicted.rjust(15) + "\n")
         gold_file.write(word.ljust(15))
