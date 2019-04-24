@@ -42,11 +42,11 @@ class SrlEvalScorer(Metric):
         self._false_negatives: Dict[str, int] = defaultdict(int)
 
     @overrides
-    def __call__(self,
+    def __call__(self,  # type: ignore
                  batch_verb_indices: List[Optional[int]],
                  batch_sentences: List[List[str]],
                  batch_predicted_tags: List[List[str]],
-                 batch_gold_tags: List[List[str]]) -> None: # type: ignore
+                 batch_gold_tags: List[List[str]]) -> None:
         # pylint: disable=signature-differs
         """
         Parameters
