@@ -309,7 +309,7 @@ class Trainer(TrainerBase):
         # for an optimizer step. The length of a single chunk always pertains to
         # the configured `batch_size` param. However, the number of chunks in a
         # single `batch_group` corresponds to the way the trainer has been
-        # configured. The sizes of `batch_group` with possible configurations:
+        # configured. The lengths of `batch_group` with possible configurations are:
         #
         # Singe GPU:
         #   List of 1 chunk
@@ -355,9 +355,13 @@ class Trainer(TrainerBase):
 
             self.optimizer.zero_grad()
 
-            # If num_accumulation_steps is 2 and num_gpus is 4, length of `batch_group`
-            # will be 8. This batch_group is split into 2 chunks each for a step, with each
-            # chunk consisting of 4 batches, 1 for each gpu.
+            # batch_group consists of all the tensors necessary to compute a forward
+            # pass in a single batch. To do gradient accumulation in `n` steps, we split
+            # this group into sub groups further so that we can do forward pass in `n` iterations.
+            #
+            # In case of a single GPU, the size of this sub group essentially is 1. With multiple
+            # GPUs, every `self.batch_loss()` call should be passed with a group that has a length
+            # equal to the number of GPUs.
             batch_group_for_stepwise_accumulation = lazy_groups_of(iter(batch_group), len(self._cuda_devices))
             for batch_for_step in batch_group_for_stepwise_accumulation:
                 loss = self.batch_loss(batch_for_step, for_training=True)
