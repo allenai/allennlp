@@ -10,7 +10,7 @@ from overrides import overrides
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.training.metrics.metric import Metric
-from allennlp.models.semantic_role_labeler import write_to_conll_eval_file
+from allennlp.models.semantic_role_labeler import write_conll_formatted_tags_to_file
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -45,8 +45,8 @@ class SrlEvalScorer(Metric):
     def __call__(self,  # type: ignore
                  batch_verb_indices: List[Optional[int]],
                  batch_sentences: List[List[str]],
-                 batch_predicted_tags: List[List[str]],
-                 batch_gold_tags: List[List[str]]) -> None:
+                 batch_conll_formatted_predicted_tags: List[List[str]],
+                 batch_conll_formatted_gold_tags: List[List[str]]) -> None:
         # pylint: disable=signature-differs
         """
         Parameters
@@ -57,10 +57,16 @@ class SrlEvalScorer(Metric):
             contains no verbal predicate.
         batch_sentences : ``List[List[str]]``, required.
             The word tokens for each instance in the batch.
-        batch_predicted_tags : ``List[str]``, required.
-            A list of predicted SRL tags (itself a list) to compute score for.
-        batch_gold_tags : ``List[str]``, required.
-            A list of gold SRL tags (itself a list) to use as a reference.
+        batch_conll_formatted_predicted_tags : ``List[str]``, required.
+            A list of predicted CoNLL-formatted SRL tags (itself a list) to compute score for.
+            Use allennlp.models.semantic_role_labeler.convert_bio_tags_to_conll_format
+            to convert from BIO to CoNLL format before passing the tags into the metric,
+            if applicable.
+        batch_conll_formatted_gold_tags : ``List[str]``, required.
+            A list of gold CoNLL-formatted SRL tags (itself a list) to use as a reference.
+            Use allennlp.models.semantic_role_labeler.convert_bio_tags_to_conll_format
+            to convert from BIO to CoNLL format before passing the
+            tags into the metric, if applicable.
         """
         if not os.path.exists(self._srl_eval_path):
             raise ConfigurationError(f"srl-eval.pl not found at {self._srl_eval_path}.")
@@ -71,18 +77,21 @@ class SrlEvalScorer(Metric):
 
         with open(predicted_path, "w") as predicted_file, open(gold_path, "w") as gold_file:
             for verb_index, sentence, predicted_tag_sequence, gold_tag_sequence in zip(
-                    batch_verb_indices, batch_sentences, batch_predicted_tags, batch_gold_tags):
-                write_to_conll_eval_file(predicted_file,
-                                         gold_file,
-                                         verb_index,
-                                         sentence,
-                                         predicted_tag_sequence,
-                                         gold_tag_sequence)
-        perl_script_command = f"perl {self._srl_eval_path} {predicted_path} {gold_path} > {output_path}"
+                    batch_verb_indices,
+                    batch_sentences,
+                    batch_conll_formatted_predicted_tags,
+                    batch_conll_formatted_gold_tags):
+                write_conll_formatted_tags_to_file(predicted_file,
+                                                   gold_file,
+                                                   verb_index,
+                                                   sentence,
+                                                   predicted_tag_sequence,
+                                                   gold_tag_sequence)
+        perl_script_command = (f"perl {self._srl_eval_path} {predicted_path} {gold_path} "
+                               f"> {output_path}")
         subprocess.run(perl_script_command, shell=True, check=True)
         with open(output_path) as infile:
             for line in infile:
-                print(line)
                 stripped = line.strip().split()
                 if len(stripped) == 7:
                     tag = stripped[0]
