@@ -132,6 +132,30 @@ class TestFromParams(AllenNlpTestCase):
         assert c.name == "extra_c"
         assert c.size == 20
 
+    def test_extras_for_custom_classes(self):
+        class A(FromParams):
+            def __init__(self, a: int):
+                self.a = a
+
+            @classmethod
+            def from_params(cls, params: Params):
+                # A custom from params
+                a = params.pop_int("a")
+                params.assert_empty(cls.__name__)
+                return cls(a)
+
+        class B(FromParams):
+            def __init__(self, a: List[A]):
+                self.a = a
+        vals = [1, 2, 3]
+        params = Params({
+            "a": [{"a": vals[0]}, {"a": vals[1]}, {"a": vals[2]}]
+        })
+        b = B.from_params(params)
+
+        assert len(b.a) == len(vals)
+        assert all([x.a == y for x, y in zip(b.a, vals)])
+
     def test_no_constructor(self):
         params = Params({"type": "just_spaces"})
 

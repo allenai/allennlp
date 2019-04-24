@@ -116,6 +116,28 @@ def create_kwargs(cls: Type[T], params: Params, **extras) -> Dict[str, Any]:
     params.assert_empty(cls.__name__)
     return kwargs
 
+
+def create_extras(cls: Type[T],
+                  extras: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Given a dictionary of extra arguments, returns a dictionary of
+    kwargs that actually are a part of the signature of the cls.from_params
+    method.
+    """
+    subextras: Dict[str, Any] = {}
+    if takes_arg(cls.from_params, "extras"):
+        # If annotation.params accepts **extras, we need to pass them all along.
+        # For example, `BasicTextFieldEmbedder.from_params` requires a Vocabulary
+        # object, but `TextFieldEmbedder.from_params` does not.
+        subextras = extras
+    else:
+        # Otherwise, only supply the ones that are actual args; any additional ones
+        # will cause a TypeError.
+        subextras = {k: v for k, v in extras.items()
+                     if takes_arg(cls.from_params, k)}
+    return subextras
+
+
 def construct_arg(cls: Type[T], # pylint: disable=inconsistent-return-statements,too-many-return-statements
                   param_name: str,
                   annotation: Type,
@@ -169,15 +191,7 @@ def construct_arg(cls: Type[T], # pylint: disable=inconsistent-return-statements
             # Our params have an entry for this, so we use that.
             subparams = params.pop(name)
 
-            if takes_arg(annotation.from_params, 'extras'):
-                # If annotation.params accepts **extras, we need to pass them all along.
-                # For example, `BasicTextFieldEmbedder.from_params` requires a Vocabulary
-                # object, but `TextFieldEmbedder.from_params` does not.
-                subextras = extras
-            else:
-                # Otherwise, only supply the ones that are actual args; any additional ones
-                # will cause a TypeError.
-                subextras = {k: v for k, v in extras.items() if takes_arg(annotation.from_params, k)}
+            subextras = create_extras(annotation, extras)
 
             # In some cases we allow a string instead of a param dict, so
             # we need to handle that case separately.
@@ -211,7 +225,8 @@ def construct_arg(cls: Type[T], # pylint: disable=inconsistent-return-statements
         value_dict = {}
 
         for key, value_params in params.pop(name, Params({})).items():
-            value_dict[key] = value_cls.from_params(params=value_params, **extras)
+            subextras = create_extras(value_cls, extras)
+            value_dict[key] = value_cls.from_params(params=value_params, **subextras)
 
         return value_dict
 
@@ -221,7 +236,8 @@ def construct_arg(cls: Type[T], # pylint: disable=inconsistent-return-statements
         value_list = []
 
         for value_params in params.pop(name, Params({})):
-            value_list.append(value_cls.from_params(params=value_params, **extras))
+            subextras = create_extras(value_cls, extras)
+            value_list.append(value_cls.from_params(params=value_params, **subextras))
 
         return value_list
 
@@ -229,7 +245,8 @@ def construct_arg(cls: Type[T], # pylint: disable=inconsistent-return-statements
         value_list = []
 
         for value_cls, value_params in zip(annotation.__args__, params.pop(name, Params({}))):
-            value_list.append(value_cls.from_params(params=value_params, **extras))
+            subextras = create_extras(value_cls, extras)
+            value_list.append(value_cls.from_params(params=value_params, **subextras))
 
         return tuple(value_list)
 
@@ -239,7 +256,8 @@ def construct_arg(cls: Type[T], # pylint: disable=inconsistent-return-statements
         value_set = set()
 
         for value_params in params.pop(name, Params({})):
-            value_set.add(value_cls.from_params(params=value_params, **extras))
+            subextras = create_extras(value_cls, extras)
+            value_set.add(value_cls.from_params(params=value_params, **subextras))
 
         return value_set
 
