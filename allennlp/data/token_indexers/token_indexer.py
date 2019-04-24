@@ -80,3 +80,8 @@ class TokenIndexer(Generic[TokenType], Registrable):
         """
         # pylint: disable=no-self-use
         return [index_name]
+
+    def __eq__(self, other) -> bool:
+        if isinstance(self, other.__class__):
+            return self.__dict__ == other.__dict__
+        return NotImplemented

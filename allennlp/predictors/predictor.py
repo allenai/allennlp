@@ -23,6 +23,7 @@ DEFAULT_PREDICTORS = {
         'decomposable_attention': 'textual-entailment',
         'dialog_qa': 'dialog_qa',
         'event2mind': 'event2mind',
+        'naqanet': 'machine-comprehension',
         'simple_tagger': 'sentence-tagger',
         'srl': 'semantic-role-labeling',
         'quarel_parser': 'quarel-parser',

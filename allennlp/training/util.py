@@ -1,9 +1,11 @@
 """
 Helper functions for Trainers
 """
-from typing import Any, Union, Dict, Iterable, List, Optional
+from typing import Any, Union, Dict, Iterable, List, Optional, Tuple
 import datetime
+import json
 import logging
+import pathlib
 import os
 import shutil
 
@@ -122,17 +124,54 @@ def str_to_time(time_str: str) -> datetime.datetime:
     pieces: Any = [int(piece) for piece in time_str.split('-')]
     return datetime.datetime(*pieces)
 
-def datasets_from_params(params: Params) -> Dict[str, Iterable[Instance]]:
+
+def datasets_from_params(params: Params,
+                         cache_directory: str = None,
+                         cache_prefix: str = None) -> Dict[str, Iterable[Instance]]:
     """
     Load all the datasets specified by the config.
+
+    Parameters
+    ----------
+    params : ``Params``
+    cache_directory : ``str``, optional
+        If given, we will instruct the ``DatasetReaders`` that we construct to cache their
+        instances in this location (or read their instances from caches in this location, if a
+        suitable cache already exists).  This is essentially a `base` directory for the cache, as
+        we will additionally add the ``cache_prefix`` to this directory, giving an actual cache
+        location of ``cache_directory + cache_prefix``.
+    cache_prefix : ``str``, optional
+        This works in conjunction with the ``cache_directory``.  The idea is that the
+        ``cache_directory`` contains caches for all different parameter settings, while the
+        ``cache_prefix`` captures a specific set of parameters that led to a particular cache file.
+        That is, if you change the tokenization settings inside your ``DatasetReader``, you don't
+        want to read cached data that used the old settings.  In order to avoid this, we compute a
+        hash of the parameters used to construct each ``DatasetReader`` and use that as a "prefix"
+        to the cache files inside the base ``cache_directory``.  So, a given ``input_file`` would
+        be cached essentially as ``cache_directory + cache_prefix + input_file``, where you specify
+        a ``cache_directory``, the ``cache_prefix`` is based on the dataset reader parameters, and
+        the ``input_file`` is whatever path you provided to ``DatasetReader.read()``.  In order to
+        allow you to give recognizable names to these prefixes if you want them, you can manually
+        specify the ``cache_prefix``.  Note that in some rare cases this can be dangerous, as we'll
+        use the `same` prefix for both train and validation dataset readers.
     """
-    dataset_reader = DatasetReader.from_params(params.pop('dataset_reader'))
-    validation_dataset_reader_params = params.pop("validation_dataset_reader", None)
+    dataset_reader_params = params.pop('dataset_reader')
+    validation_dataset_reader_params = params.pop('validation_dataset_reader', None)
+    train_cache_dir, validation_cache_dir = _set_up_cache_files(dataset_reader_params,
+                                                                validation_dataset_reader_params,
+                                                                cache_directory,
+                                                                cache_prefix)
+
+    dataset_reader = DatasetReader.from_params(dataset_reader_params)
 
     validation_and_test_dataset_reader: DatasetReader = dataset_reader
     if validation_dataset_reader_params is not None:
         logger.info("Using a separate dataset reader to load validation and test data.")
         validation_and_test_dataset_reader = DatasetReader.from_params(validation_dataset_reader_params)
+
+    if train_cache_dir:
+        dataset_reader.cache_data(train_cache_dir)
+        validation_and_test_dataset_reader.cache_data(validation_cache_dir)
 
     train_data_path = params.pop('train_data_path')
     logger.info("Reading training data from %s", train_data_path)
@@ -153,6 +192,52 @@ def datasets_from_params(params: Params) -> Dict[str, Iterable[Instance]]:
         datasets["test"] = test_data
 
     return datasets
+
+
+def _set_up_cache_files(train_params: Params,
+                        validation_params: Params = None,
+                        cache_directory: str = None,
+                        cache_prefix: str = None) -> Tuple[str, str]:
+    if not cache_directory:
+        return None, None
+
+    # We need to compute the parameter hash before the parameters get destroyed when they're
+    # passed to `DatasetReader.from_params`.
+    if not cache_prefix:
+        cache_prefix = _dataset_reader_param_hash(train_params)
+        if validation_params:
+            validation_cache_prefix = _dataset_reader_param_hash(validation_params)
+        else:
+            validation_cache_prefix = cache_prefix
+    else:
+        validation_cache_prefix = cache_prefix
+
+    train_cache_dir = pathlib.Path(cache_directory) / cache_prefix
+    validation_cache_dir = pathlib.Path(cache_directory) / validation_cache_prefix
+
+    # For easy human inspection of what parameters were used to create the cache.  This will
+    # overwrite old files, but they should be identical.  This could bite someone who gave
+    # their own prefix instead of letting us compute it, and then _re-used_ that name with
+    # different parameters, without clearing the cache first.  But correctly handling that case
+    # is more work than it's worth.
+    os.makedirs(train_cache_dir, exist_ok=True)
+    with open(train_cache_dir / 'params.json', 'w') as param_file:
+        json.dump(train_params.as_dict(quiet=True), param_file)
+    os.makedirs(validation_cache_dir, exist_ok=True)
+    with open(validation_cache_dir / 'params.json', 'w') as param_file:
+        if validation_params:
+            json.dump(validation_params.as_dict(quiet=True), param_file)
+        else:
+            json.dump(train_params.as_dict(quiet=True), param_file)
+    return str(train_cache_dir), str(validation_cache_dir)
+
+
+def _dataset_reader_param_hash(params: Params) -> str:
+    copied_params = params.duplicate()
+    # Laziness doesn't affect how the data is computed, so it shouldn't affect the hash.
+    copied_params.pop('lazy', default=None)
+    return copied_params.get_hash()
+
 
 def create_serialization_dir(
         params: Params,
