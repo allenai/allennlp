@@ -63,7 +63,7 @@ class TestSrlReader:
         assert fields["verb_indicator"].labels == [0, 0, 0, 0, 0]
         assert fields["tags"].labels == ['O', 'O', 'O', 'O', 'O']
         assert fields["metadata"].metadata["words"] == tokens
-        assert fields["metadata"].metadata["verb"] == None
+        assert fields["metadata"].metadata["verb"] is None
         assert fields["metadata"].metadata["gold_tags"] == fields["tags"].labels
 
     def test_srl_reader_can_filter_by_domain(self):
