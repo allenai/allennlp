@@ -1,4 +1,3 @@
-from flaky import flaky
 import numpy
 
 from allennlp.common.testing import ModelTestCase

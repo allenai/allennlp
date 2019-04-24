@@ -128,7 +128,7 @@ class BasicClassifier(Model):
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
-        Does a simple argmax over the probabilities, converts index to string label, and 
+        Does a simple argmax over the probabilities, converts index to string label, and
         add ``"label"`` key to the dictionary with the result.
         """
         predictions = output_dict["probs"]

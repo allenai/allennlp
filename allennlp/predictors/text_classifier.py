@@ -16,7 +16,7 @@ class TextClassifierPredictor(Predictor):
     def __init__(self, model: Model, dataset_reader: DatasetReader) -> None:
         super().__init__(model, dataset_reader)
 
-    def predict(self, text: str) -> JsonDict:
+    def predict(self, sentence: str) -> JsonDict:
         return self.predict_json({"sentence": sentence})
 
     @overrides
