@@ -305,14 +305,35 @@ class Trainer(TrainerBase):
         # Set the model to "train" mode.
         self.model.train()
 
-        num_batch_groups = self._num_gradient_accumulation_steps * len(self._cuda_devices)
+        # A `batch_group` has chunks of tensors that form a single batch together
+        # for an optimizer step. The length of a single chunk always pertains to
+        # the configured `batch_size` param. However, the number of chunks in a
+        # single `batch_group` corresponds to the way the trainer has been
+        # configured. The sizes of `batch_group` with possible configurations:
+        #
+        # Singe GPU:
+        #   List of 1 chunk
+        #
+        # `n` GPUs:
+        #   Effective batch size here is `batch_size` * `n`. Hence it is a list of
+        #   `n` chunks.
+        #
+        # Single GPU with `n` accumulation steps:
+        #   Effective batch size here is `batch_size` * `n`. Hence `batch_group` is a
+        #   list of `n` chunks.
+        #
+        # `n` GPUs with `m` accumulation steps:
+        #   Effective batch size here is `batch_size` * `n` * `m`. Hence it is a
+        #   list of `n * m` chunks.
+
+        batch_group_length = self._num_gradient_accumulation_steps * len(self._cuda_devices)
 
         # Get tqdm for the training batches
         raw_train_generator = self.iterator(self.train_data,
                                             num_epochs=1,
                                             shuffle=self.shuffle)
-        train_generator = lazy_groups_of(raw_train_generator, num_batch_groups)
-        num_training_batches = math.ceil(self.iterator.get_num_batches(self.train_data)/num_batch_groups)
+        train_generator = lazy_groups_of(raw_train_generator, batch_group_length)
+        num_training_batches = math.ceil(self.iterator.get_num_batches(self.train_data)/batch_group_length)
         self._last_log = time.time()
         last_save_time = time.time()
 
