@@ -136,7 +136,7 @@ class BasicClassifier(Model):
             predictions_list = [predictions[i] for i in range(predictions.shape[0])]
         else:
             predictions_list = [predictions]
-        classes = list()
+        classes = []
         for prediction in predictions_list:
             label_idx = prediction.argmax(dim=-1).item()
             label_str = self.vocab.get_token_from_index(label_idx, namespace="labels")
