@@ -421,3 +421,6 @@ def dump_metrics(file_path: str, metrics: Dict[str, Any], log: bool = False) -> 
         metrics_file.write(metrics_json)
     if log:
         logger.info("Metrics: %s", metrics_json)
+
+def flatten_filename(file_path: str) -> str:
+    return file_path.replace('/', '_SLASH_')
