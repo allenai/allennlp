@@ -61,6 +61,7 @@ class StopwordFilter(WordFilter):
     """
     A ``StopwordFilter`` uses a list of stopwords to filter.
     If no file is specified, a default list of stopwords is used.
+    Words and stopwords are lowercased for comparison.
 
     Parameters
     ----------
@@ -74,9 +75,10 @@ class StopwordFilter(WordFilter):
                  tokens_to_add: List[str] = None) -> None:
         self._tokens_to_add = tokens_to_add or []
         if stopword_file is not None:
-            self.stopwords = read_set_from_file(stopword_file)
+            self.stopwords = {token.lower() for token in read_set_from_file(stopword_file)}
         else:
-            self.stopwords = set(['I', 'a', 'aboard', 'about', 'above', 'accordance', 'according',
+            self.stopwords = set([token.lower() for token in
+                                 ['I', 'a', 'aboard', 'about', 'above', 'accordance', 'according',
                                   'across', 'after', 'against', 'along', 'alongside', 'also', 'am',
                                   'amid', 'amidst', 'an', 'and', 'apart', 'are', 'around', 'as',
                                   'aside', 'astride', 'at', 'atop', 'back', 'be', 'because', 'before',
@@ -98,9 +100,9 @@ class StopwordFilter(WordFilter):
                                   'versus', 'via', 'was', 'we', 'were', 'what', 'when', 'where',
                                   'which', 'who', 'why', 'will', 'with', 'within', 'without', 'you',
                                   'your', 'yours', 'yourself', 'yourselves', ",", '.', ':', '!', ';',
-                                  "'", '"', '&', '$', '#', '@', '(', ')', '?'])
+                                  "'", '"', '&', '$', '#', '@', '(', ')', '?']])
         for token in self._tokens_to_add:
-            self.stopwords.add(token)
+            self.stopwords.add(token.lower())
 
     @overrides
     def filter_words(self, words: List[Token]) -> List[Token]:

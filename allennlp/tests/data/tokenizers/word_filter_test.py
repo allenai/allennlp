@@ -37,10 +37,11 @@ class TestWordFilter(AllenNlpTestCase):
     def test_filters_from_file_correctly(self):
         stopword_file = os.path.join(self.TEST_DIR, 'stopwords.txt')
         with open(stopword_file, 'w+') as file_:
-            for word in ["has", "this"]:
+            for word in ["has", "this", "I"]:
                 file_.write(word + "\n")
         filter_ = StopwordFilter(stopword_file=stopword_file,
-                                 tokens_to_add=["punctuations"])
+                                 tokens_to_add=["punctuations", "PUNCTUATIONS"])
+        assert filter_.stopwords == {"has", "this", "i", "punctuations"}
         expected_tokens = ['45', '(', 'sentence', ')', '9943434', '"', '"', '.']
         tokens = [t.text for t in filter_.filter_words(self.sentence)]
         assert tokens == expected_tokens
