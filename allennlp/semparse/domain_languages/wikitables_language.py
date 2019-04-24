@@ -11,7 +11,8 @@ from allennlp.semparse.domain_languages.domain_language import (DomainLanguage, 
                                                                 PredicateType, predicate)
 from allennlp.semparse.contexts.table_question_knowledge_graph import MONTH_NUMBERS
 from allennlp.semparse.contexts import TableQuestionContext
-from allennlp.semparse.contexts.table_question_context import Date, CellValueType
+from allennlp.semparse.contexts.table_question_context import CellValueType
+from allennlp.semparse.domain_languages.common import Date
 from allennlp.tools import wikitables_evaluator as evaluator
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -152,7 +153,7 @@ class WikiTablesLanguage(DomainLanguage):
             Setting this flag will return a subset of the agenda items that correspond to high
             confidence lexical matches. You'll need this if you are going to use this agenda to
             penalize a model for producing logical forms that do not contain some items in it. In
-            that case, you;ll want this agenda to have close to perfect precision, at the cost of a
+            that case, you'll want this agenda to have close to perfect precision, at the cost of a
             lower recall. You may not want to set this flag if you are sorting the output from a
             search procedure based on how much of this agenda is satisfied.
         """
@@ -350,12 +351,11 @@ class WikiTablesLanguage(DomainLanguage):
         return self.table_data
 
     @predicate
-    def select_string(self, rows: List[Row], column: Column) -> List[str]:
+    def select_string(self, rows: List[Row], column: StringColumn) -> List[str]:
         """
         Select function takes a list of rows and a column name and returns a list of strings as
         in cells.
         """
-        assert column.name.startswith("string_column:")
         return [str(row.values[column.name]) for row in rows if row.values[column.name] is not None]
 
     @predicate
@@ -364,7 +364,6 @@ class WikiTablesLanguage(DomainLanguage):
         Select function takes a row (as a list) and a column name and returns the number in that
         column. If multiple rows are given, will return the first number that is not None.
         """
-        assert column.name.startswith("number_column:") or column.name.startswith("num2_column")
         numbers: List[float] = []
         for row in rows:
             cell_value = row.values[column.name]
@@ -378,7 +377,6 @@ class WikiTablesLanguage(DomainLanguage):
         """
         Select function takes a row as a list and a column name and returns the date in that column.
         """
-        assert column.name.startswith("date_column:")
         dates: List[Date] = []
         for row in rows:
             cell_value = row.values[column.name]
@@ -541,8 +539,6 @@ class WikiTablesLanguage(DomainLanguage):
     # added to the language if we see a number column in the table.
 
     def filter_number_greater(self, rows: List[Row], column: NumberColumn, filter_value: Number) -> List[Row]:
-        if not isinstance(filter_value, Number):
-            raise ExecutionError("Filter value not a number")
         cell_row_pairs = [(row.values[column.name], row) for row in rows]
         return [row for cell_value, row in cell_row_pairs if cell_value > filter_value]  # type: ignore
 
@@ -550,14 +546,10 @@ class WikiTablesLanguage(DomainLanguage):
                                      rows: List[Row],
                                      column: NumberColumn,
                                      filter_value: Number) -> List[Row]:
-        if not isinstance(filter_value, Number):
-            raise ExecutionError("Filter value not a number")
         cell_row_pairs = [(row.values[column.name], row) for row in rows]
         return [row for cell_value, row in cell_row_pairs if cell_value >= filter_value]  # type: ignore
 
     def filter_number_lesser(self, rows: List[Row], column: NumberColumn, filter_value: Number) -> List[Row]:
-        if not isinstance(filter_value, Number):
-            raise ExecutionError("Filter value not a number")
         cell_row_pairs = [(row.values[column.name], row) for row in rows]
         return [row for cell_value, row in cell_row_pairs if cell_value < filter_value]  # type: ignore
 
@@ -565,20 +557,14 @@ class WikiTablesLanguage(DomainLanguage):
                                     rows: List[Row],
                                     column: NumberColumn,
                                     filter_value: Number) -> List[Row]:
-        if not isinstance(filter_value, Number):
-            raise ExecutionError("Filter value not a number")
         cell_row_pairs = [(row.values[column.name], row) for row in rows]
         return [row for cell_value, row in cell_row_pairs if cell_value <= filter_value]  # type: ignore
 
     def filter_number_equals(self, rows: List[Row], column: NumberColumn, filter_value: Number) -> List[Row]:
-        if not isinstance(filter_value, Number):
-            raise ExecutionError("Filter value not a number")
         cell_row_pairs = [(row.values[column.name], row) for row in rows]
         return [row for cell_value, row in cell_row_pairs if cell_value == filter_value]  # type: ignore
 
     def filter_number_not_equals(self, rows: List[Row], column: NumberColumn, filter_value: Number) -> List[Row]:
-        if not isinstance(filter_value, Number):
-            raise ExecutionError("Filter value not a number")
         cell_row_pairs = [(row.values[column.name], row) for row in rows]
         return [row for cell_value, row in cell_row_pairs if cell_value != filter_value]  # type: ignore
 
@@ -586,8 +572,6 @@ class WikiTablesLanguage(DomainLanguage):
     # language if we see a date column in the table.
 
     def filter_date_greater(self, rows: List[Row], column: DateColumn, filter_value: Date) -> List[Row]:
-        if not isinstance(filter_value, Date):
-            raise ExecutionError("Filter value not a date")
         cell_row_pairs: List[Tuple[Date, Row]] = []
         for row in rows:
             cell_value = row.values[column.name]
@@ -597,8 +581,6 @@ class WikiTablesLanguage(DomainLanguage):
         return [row for cell_value, row in cell_row_pairs if cell_value > filter_value]
 
     def filter_date_greater_equals(self, rows: List[Row], column: DateColumn, filter_value: Date) -> List[Row]:
-        if not isinstance(filter_value, Date):
-            raise ExecutionError("Filter value not a date")
         cell_row_pairs: List[Tuple[Date, Row]] = []
         for row in rows:
             cell_value = row.values[column.name]
@@ -607,8 +589,6 @@ class WikiTablesLanguage(DomainLanguage):
         return [row for cell_value, row in cell_row_pairs if cell_value >= filter_value]
 
     def filter_date_lesser(self, rows: List[Row], column: DateColumn, filter_value: Date) -> List[Row]:
-        if not isinstance(filter_value, Date):
-            raise ExecutionError("Filter value not a date")
         cell_row_pairs: List[Tuple[Date, Row]] = []
         for row in rows:
             cell_value = row.values[column.name]
@@ -617,8 +597,6 @@ class WikiTablesLanguage(DomainLanguage):
         return [row for cell_value, row in cell_row_pairs if cell_value < filter_value]
 
     def filter_date_lesser_equals(self, rows: List[Row], column: DateColumn, filter_value: Date) -> List[Row]:
-        if not isinstance(filter_value, Date):
-            raise ExecutionError("Filter value not a date")
         cell_row_pairs: List[Tuple[Date, Row]] = []
         for row in rows:
             cell_value = row.values[column.name]
@@ -627,8 +605,6 @@ class WikiTablesLanguage(DomainLanguage):
         return [row for cell_value, row in cell_row_pairs if cell_value <= filter_value]
 
     def filter_date_equals(self, rows: List[Row], column: DateColumn, filter_value: Date) -> List[Row]:
-        if not isinstance(filter_value, Date):
-            raise ExecutionError("Filter value not a date")
         cell_row_pairs: List[Tuple[Date, Row]] = []
         for row in rows:
             cell_value = row.values[column.name]
@@ -637,8 +613,6 @@ class WikiTablesLanguage(DomainLanguage):
         return [row for cell_value, row in cell_row_pairs if cell_value == filter_value]
 
     def filter_date_not_equals(self, rows: List[Row], column: DateColumn, filter_value: Date) -> List[Row]:
-        if not isinstance(filter_value, Date):
-            raise ExecutionError("Filter value not a date")
         cell_row_pairs: List[Tuple[Date, Row]] = []
         for row in rows:
             cell_value = row.values[column.name]
@@ -656,6 +630,7 @@ class WikiTablesLanguage(DomainLanguage):
         # operations to be passed in as filter values.
         # Assuming filter value has underscores for spaces. The cell values also have underscores
         # for spaces, so we do not need to replace them here.
+        # Note that if a list of filter values is passed, we only use the first one.
         if not filter_values:
             raise ExecutionError(f"Unexpected filter value: {filter_values}")
         if isinstance(filter_values, str):
@@ -678,6 +653,7 @@ class WikiTablesLanguage(DomainLanguage):
         # operations to be passed in as filter values.
         # Assuming filter value has underscores for spaces. The cell values also have underscores
         # for spaces, so we do not need to replace them here.
+        # Note that if a list of filter values is passed, we only use the first one.
         if not filter_values:
             raise ExecutionError(f"Unexpected filter value: {filter_values}")
         if isinstance(filter_values, str):
@@ -704,7 +680,7 @@ class WikiTablesLanguage(DomainLanguage):
         """
         cell_values = [row.values[column.name] for row in rows]
         if not cell_values:
-            return 0.0  # type: ignore
+            return Date(-1, -1, -1)
         if not all([isinstance(value, Date) for value in cell_values]):
             raise ExecutionError(f"Invalid values for date selection function: {cell_values}")
         return max(cell_values)  # type: ignore
@@ -716,7 +692,7 @@ class WikiTablesLanguage(DomainLanguage):
         """
         cell_values = [row.values[column.name] for row in rows]
         if not cell_values:
-            return 0.0  # type: ignore
+            return Date(-1, -1, -1)
         if not all([isinstance(value, Date) for value in cell_values]):
             raise ExecutionError(f"Invalid values for date selection function: {cell_values}")
         return min(cell_values)  # type: ignore

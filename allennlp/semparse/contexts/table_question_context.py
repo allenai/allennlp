@@ -5,7 +5,7 @@ from collections import defaultdict
 
 from unidecode import unidecode
 from allennlp.data.tokenizers import Token
-from allennlp.semparse.domain_languages.domain_language import ExecutionError
+from allennlp.semparse.domain_languages.common import Date
 from allennlp.semparse.contexts.knowledge_graph import KnowledgeGraph
 
 # == stop words that will be omitted by ContextGenerator
@@ -77,103 +77,25 @@ NUMBER_WORDS = {
         }
 
 
-class Date:
-    def __init__(self, year: int, month: int, day: int) -> None:
-        self.year = year
-        self.month = month
-        self.day = day
-
-    def __eq__(self, other) -> bool:
-        # Note that the logic below renders equality to be non-transitive. That is,
-        # Date(2018, -1, -1) == Date(2018, 2, 3) and Date(2018, -1, -1) == Date(2018, 4, 5)
-        # but Date(2018, 2, 3) != Date(2018, 4, 5).
-        if not isinstance(other, Date):
-            raise ExecutionError("only compare Dates with Dates")
-        year_is_same = self.year == -1 or other.year == -1 or self.year == other.year
-        month_is_same = self.month == -1 or other.month == -1 or self.month == other.month
-        day_is_same = self.day == -1 or other.day == -1 or self.day == other.day
-        return year_is_same and month_is_same and day_is_same
-
-    def __gt__(self, other) -> bool:
-        # pylint: disable=too-many-return-statements
-        # The logic below is tricky, and is based on some assumptions we make about date comparison.
-        # Year, month or day being -1 means that we do not know its value. In those cases, the
-        # we consider the comparison to be undefined, and return False if all the fields that are
-        # more significant than the field being compared are equal. However, when year is -1 for both
-        # dates being compared, it is safe to assume that the year is not specified because it is
-        # the same. So we make an exception just in that case. That is, we deem the comparison
-        # undefined only when one of the year values is -1, but not both.
-        if not isinstance(other, Date):
-            raise ExecutionError("only compare Dates with Dates")
-        # We're doing an exclusive or below.
-        if (self.year == -1) != (other.year == -1):
-            return False  # comparison undefined
-        # If both years are -1, we proceed.
-        if self.year != other.year:
-            return self.year > other.year
-        # The years are equal and not -1, or both are -1.
-        if self.month == -1 or other.month == -1:
-            return False
-        if self.month != other.month:
-            return self.month > other.month
-        # The months and years are equal and not -1
-        if self.day == -1 or other.day == -1:
-            return False
-        return self.day > other.day
-
-    def __ge__(self, other) -> bool:
-        if not isinstance(other, Date):
-            raise ExecutionError("only compare Dates with Dates")
-        return self > other or self == other
-
-    def __str__(self):
-        if (self.month, self.day) == (-1, -1):
-            # If we have only the year, return just that so that the official evaluator does the
-            # comparison against the target as if both are numbers.
-            return str(self.year)
-        return f"{self.year}-{self.month}-{self.day}"
-
-    def __hash__(self):
-        return hash(str(self))
-
-    @classmethod
-    def make_date(cls, string: str) -> 'Date':
-        year_string, month_string, day_string = string.split("-")
-        year = -1
-        month = -1
-        day = -1
-        try:
-            year = int(year_string)
-        except ValueError:
-            pass
-        try:
-            month = int(month_string)
-        except ValueError:
-            pass
-        try:
-            day = int(day_string)
-        except ValueError:
-            pass
-        return Date(year, month, day)
-
 CellValueType = Union[str, float, Date]  # pylint: disable=invalid-name
 
 
 class TableQuestionContext:
     """
-    A barebones implementation similar to
+    Representation of table context similar to the one used by Memory Augmented Policy Optimization (MAPO, Liang et
+    al., 2018). Most of the functionality is a reimplementation of
     https://github.com/crazydonkey200/neural-symbolic-machines/blob/master/table/wtq/preprocess.py
     for extracting entities from a question given a table and type its columns with <string> | <date> | <number>
     """
     def __init__(self,
                  table_data: List[Dict[str, CellValueType]],
-                 column_types: Dict[str, Set[str]],
+                 column_name_type_mapping: Dict[str, Set[str]],
                  column_names: Set[str],
                  question_tokens: List[Token]) -> None:
         self.table_data = table_data
         self.column_types: Set[str] = set()
         self.column_names = column_names
-        for types in column_types.values():
+        for types in column_name_type_mapping.values():
             self.column_types.update(types)
         self.question_tokens = question_tokens
         # Mapping from strings to the columns they are under.
@@ -201,7 +123,7 @@ class TableQuestionContext:
             # now, and later add number and string entities as needed.
             number_columns = []
             date_columns = []
-            for typed_column_name in self.table_data[0].keys():
+            for typed_column_name in self.column_names:
                 if "number_column:" in typed_column_name or "num2_column" in typed_column_name:
                     number_columns.append(typed_column_name)
 
@@ -211,7 +133,7 @@ class TableQuestionContext:
                 # Add column names to entities, with no neighbors yet.
                 entities.add(typed_column_name)
                 neighbors[typed_column_name] = []
-                entity_text[typed_column_name] = typed_column_name.split(":")[-1].replace("_", " ")
+                entity_text[typed_column_name] = typed_column_name.split(":", 1)[-1].replace("_", " ")
 
             string_entities, numbers = self.get_entities_from_question()
             for entity, column_names in string_entities:
@@ -261,7 +183,7 @@ class TableQuestionContext:
             column_name = column_name_sempre.replace('fb:row.row.', '')
             column_index_to_name[column_index] = column_name
             index += 1
-        column_types: Dict[str, Set[str]] = defaultdict(set)
+        column_name_type_mapping: Dict[str, Set[str]] = defaultdict(set)
         last_row_index = -1
         for current_line in lines[1:]:
             row_index = int(current_line[0])
@@ -274,19 +196,19 @@ class TableQuestionContext:
             cell_data: Dict[str, str] = {}
             column_name = column_index_to_name[column_index]
             if node_info['date']:
-                column_types[column_name].add("date")
+                column_name_type_mapping[column_name].add("date")
                 cell_data["date"] = node_info["date"]
 
             if node_info['number']:
-                column_types[column_name].add("number")
+                column_name_type_mapping[column_name].add("number")
                 cell_data["number"] = node_info["number"]
 
             if node_info['num2']:
-                column_types[column_name].add("num2")
+                column_name_type_mapping[column_name].add("num2")
                 cell_data["num2"] = node_info["num2"]
 
             if node_info['content'] != '—':
-                column_types[column_name].add("string")
+                column_name_type_mapping[column_name].add("string")
                 cell_data['string'] = node_info["content"]
 
             table_data[-1][column_name] = cell_data
@@ -297,7 +219,7 @@ class TableQuestionContext:
         for table_row in table_data:
             table_data_with_column_types.append({})
             for column_name, cell_data in table_row.items():
-                for column_type in column_types[column_name]:
+                for column_type in column_name_type_mapping[column_name]:
                     typed_column_name = f"{column_type}_column:{column_name}"
                     all_column_names.add(typed_column_name)
                     cell_value_string = cell_data.get(column_type, None)
@@ -318,7 +240,7 @@ class TableQuestionContext:
                         else:
                             normalized_string = cls.normalize_string(cell_value_string)
                         table_data_with_column_types[-1][typed_column_name] = normalized_string
-        return cls(table_data_with_column_types, column_types, all_column_names, question_tokens)
+        return cls(table_data_with_column_types, column_name_type_mapping, all_column_names, question_tokens)
 
     @classmethod
     def read_from_file(cls, filename: str, question_tokens: List[Token]) -> 'TableQuestionContext':
@@ -338,6 +260,9 @@ class TableQuestionContext:
                 continue
             token_columns = self._string_in_table(normalized_token_text)
             if token_columns:
+                # We need to keep track of the type of column this string occurs in. It is unlikely it occurs in
+                # columns of multiple types. So we just keep track of the first column type. Hence, the
+                # ``token_columns[0]``.
                 token_type = token_columns[0].split(":")[0].replace("_column", "")
                 entity_data.append({'value': normalized_token_text,
                                     'token_start': i,

@@ -8,7 +8,8 @@ from allennlp.data.tokenizers import Token
 from allennlp.data.tokenizers import WordTokenizer
 from allennlp.semparse.contexts import TableQuestionContext
 from allennlp.semparse.domain_languages.domain_language import ExecutionError
-from allennlp.semparse.domain_languages.wikitables_language import Date, WikiTablesLanguage
+from allennlp.semparse.domain_languages.common import Date
+from allennlp.semparse.domain_languages.wikitables_language import WikiTablesLanguage
 from allennlp.tests.semparse.domain_languages.domain_language_test import check_productions_match
 
 
@@ -137,16 +138,6 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
                                     (max_number all_rows number_column:avg_attendance)) string_column:league)"""
         cell_value_list = self.language.execute(logical_form)
         assert cell_value_list == ['usl_first_division']
-        # Replacing the filter value with an invalid value.
-        logical_form = """(select_string (filter_number_lesser all_rows date_column:year
-                                   (date 2005 -1 -1)) string_column:league)"""
-        with pytest.raises(ExecutionError):
-            self.language.execute(logical_form)
-        # Replacing the filter value with an invalid value.
-        logical_form = """(select_string (filter_number_lesser all_rows date_column:year
-                                          string:5th) string_column:league)"""
-        with pytest.raises(ExecutionError):
-            self.language.execute(logical_form)
 
     def test_execute_works_with_filter_date_lesser(self):
         # Selecting cell values from all rows that have date less that 2005 January
@@ -165,11 +156,6 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
         logical_form = """(count (filter_number_lesser_equals all_rows number_column:avg_attendance 8000))"""
         count_result = self.language.execute(logical_form)
         assert count_result == 2
-        # Replacing the filter value with an invalid value.
-        logical_form = """(select_string (filter_number_lesser_equals all_rows date_column:year
-                                   (date 2005 -1 -1)) string_column:league)"""
-        with pytest.raises(ExecutionError):
-            self.language.execute(logical_form)
 
     def test_execute_works_with_filter_date_lesser_equals(self):
         # Selecting cell values from all rows that have date less that or equal to 2001 February 23
@@ -188,10 +174,6 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
         logical_form = """(count (filter_number_equals all_rows number_column:avg_attendance 8000))"""
         count_result = self.language.execute(logical_form)
         assert count_result == 0
-        # Replacing the filter value with an invalid value.
-        logical_form = """(count (filter_number_equals all_rows date_column:year (date 2010 -1 -1)))"""
-        with pytest.raises(ExecutionError):
-            self.language.execute(logical_form)
 
     def test_execute_works_with_filter_date_equals(self):
         # Selecting cell values from all rows that have date not equal to 2001
@@ -210,10 +192,6 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
         logical_form = """(count (filter_number_not_equals all_rows number_column:avg_attendance 8000))"""
         count_result = self.language.execute(logical_form)
         assert count_result == 2
-        # Replacing the filter value with an invalid value.
-        logical_form = """(count (filter_number_not_equals all_rows date_column:year (date 2010 -1 -1)))"""
-        with pytest.raises(ExecutionError):
-            self.language.execute(logical_form)
 
     def test_execute_works_with_filter_date_not_equals(self):
         # Selecting cell values from all rows that have date not equal to 2001
@@ -378,31 +356,6 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
         with pytest.raises(ExecutionError):
             self.language.execute(logical_form)
 
-    def test_date_comparison_works(self):
-        assert Date(2013, 12, 31) > Date(2013, 12, 30)
-        assert Date(2013, 12, 31) == Date(2013, 12, -1)
-        assert Date(2013, -1, -1) >= Date(2013, 12, 31)
-        # pylint: disable=singleton-comparison
-        assert (Date(2013, 12, -1) > Date(2013, 12, 31)) == False
-        with pytest.raises(ExecutionError, match='only compare Dates with Dates'):
-            assert (Date(2013, 12, 31) > 2013) == False
-        with pytest.raises(ExecutionError, match='only compare Dates with Dates'):
-            assert (Date(2013, 12, 31) >= 2013) == False
-        with pytest.raises(ExecutionError, match='only compare Dates with Dates'):
-            assert Date(2013, 12, 31) != 2013
-        assert (Date(2018, 1, 1) >= Date(-1, 2, 1)) == False
-        assert (Date(2018, 1, 1) < Date(-1, 2, 1)) == False
-        # When year is unknown in both cases, we can compare months and days.
-        assert Date(-1, 2, 1) < Date(-1, 2, 3)
-        # If both year and month are not know in both cases, the comparison is undefined, and both
-        # < and >= return False.
-        assert (Date(-1, -1, 1) < Date(-1, -1, 3)) == False
-        assert (Date(-1, -1, 1) >= Date(-1, -1, 3)) == False
-        # Same when year is known, buth months are not.
-        assert (Date(2018, -1, 1) < Date(2018, -1, 3)) == False
-        # TODO (pradeep): Figure out whether this is expected behavior by looking at data.
-        assert (Date(2018, -1, 1) >= Date(2018, -1, 3)) == False
-
     def test_number_comparison_works(self):
         # TableQuestionContext normlaizes all strings according to some rules. We want to ensure
         # that the original numerical values of number cells is being correctly processed here.
@@ -432,7 +385,7 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
         productions = self.language.get_nonterminal_productions()
         assert set(productions.keys()) == {
                 "@start@",
-                "<List[Row],Column:List[str]>",
+                "<List[Row],StringColumn:List[str]>",
                 "<List[Row],DateColumn:Date>",
                 "<List[Row],NumberColumn,Number:List[Row]>",
                 "<List[Row],ComparableColumn:List[Row]>",
@@ -460,8 +413,8 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
         check_productions_match(productions['@start@'],
                                 ['Date', 'Number', 'List[str]'])
 
-        check_productions_match(productions['<List[Row],Column:List[str]>'],
-                                ['select_string'])
+        check_productions_match(productions['<List[Row],StringColumn:List[str]>'],
+                                ['select_string', 'mode_string'])
 
         check_productions_match(productions['<List[Row],DateColumn:Date>'],
                                 ['select_date', 'max_date', 'min_date', 'mode_date'])
@@ -586,7 +539,6 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
                                  'string:2',
                                  'string:2005',
                                  'string:2001',
-                                 '[<List[Row],Column:List[str]>, List[Row], Column]',
                                  '[<List[Row],StringColumn:List[str]>, List[Row], StringColumn]'])
 
     def test_world_processes_logical_forms_correctly(self):
