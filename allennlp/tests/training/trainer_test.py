@@ -682,8 +682,7 @@ class TestTrainer(AllenNlpTestCase):
     def test_trainer_can_run_gradient_accumulation(self):
         num_training_instances = 0
         with Path(self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv').open() as input_file:
-            for training_sample in input_file:
-                num_training_instances += 1
+            num_training_instances = sum(1 for i in input_file)
 
         steps_to_accumulate = 2
 
