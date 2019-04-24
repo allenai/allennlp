@@ -127,6 +127,8 @@ class MultiprocessDatasetReader(DatasetReader):
         ids into the queue).
         """
         shards = glob.glob(file_path)
+        # Ensure a consistent order before shuffling for testing.
+        shards.sort()
         num_shards = len(shards)
 
         # If we want multiple epochs per read, put shards in the queue multiple times.
