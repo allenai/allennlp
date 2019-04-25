@@ -506,6 +506,14 @@ class Params(MutableMapping):
 
         return order_dict(params_dict, order_func)
 
+    def get_hash(self) -> str:
+        """
+        Returns a hash code representing the current state of this ``Params`` object.  We don't
+        want to implement ``__hash__`` because that has deeper python implications (and this is a
+        mutable object), but this will give you a representation of the current state.
+        """
+        return str(hash(json.dumps(self.params, sort_keys=True)))
+
 
 def pop_choice(params: Dict[str, Any],
                key: str,

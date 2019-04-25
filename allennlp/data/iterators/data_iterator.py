@@ -85,7 +85,6 @@ class DataIterator(Registrable):
         # we use their id() as the key.
         self._cursors: Dict[int, Iterator[Instance]] = {}
 
-
     def __call__(self,
                  instances: Iterable[Instance],
                  num_epochs: int = None,
@@ -228,7 +227,6 @@ class DataIterator(Registrable):
         else:
             yield list(iterator)
 
-
     def _ensure_batch_is_sufficiently_small(
             self,
             batch_instances: Iterable[Instance],
@@ -298,7 +296,6 @@ class DataIterator(Registrable):
 
         return batches
 
-
     def get_num_batches(self, instances: Iterable[Instance]) -> int:
         """
         Returns the number of batches that ``dataset`` will be split into; if you want to track
@@ -313,7 +310,6 @@ class DataIterator(Registrable):
         else:
             # Not lazy, so can compute the list length.
             return math.ceil(len(ensure_list(instances)) / self._batch_size)
-
 
     def _create_batches(self, instances: Iterable[Instance], shuffle: bool) -> Iterable[Batch]:
         """

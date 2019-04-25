@@ -55,6 +55,5 @@ class ArrayField(Field[numpy.ndarray]):
                           padding_value=self.padding_value,
                           dtype=self.dtype)
 
-
     def __str__(self) -> str:
         return f"ArrayField with shape: {self.array.shape} and dtype: {self.dtype}."

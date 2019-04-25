@@ -133,6 +133,7 @@ setup(name='allennlp',
           'sqlparse>=0.2.4',
           'word2number>=1.1',
           'pytorch-pretrained-bert>=0.6.0',
+          'jsonpickle',
       ],
       entry_points={
           'console_scripts': [
