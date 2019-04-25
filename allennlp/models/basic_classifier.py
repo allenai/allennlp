@@ -1,6 +1,8 @@
 from typing import Dict
 
+from overrides import overrides
 import torch
+
 from allennlp.data import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import Seq2SeqEncoder, Seq2VecEncoder, TextFieldEmbedder
@@ -121,6 +123,25 @@ class BasicClassifier(Model):
             output_dict["loss"] = loss
             self._accuracy(logits, label)
 
+        return output_dict
+
+    @overrides
+    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+        """
+        Does a simple argmax over the probabilities, converts index to string label, and
+        add ``"label"`` key to the dictionary with the result.
+        """
+        predictions = output_dict["probs"]
+        if predictions.dim() == 2:
+            predictions_list = [predictions[i] for i in range(predictions.shape[0])]
+        else:
+            predictions_list = [predictions]
+        classes = []
+        for prediction in predictions_list:
+            label_idx = prediction.argmax(dim=-1).item()
+            label_str = self.vocab.get_token_from_index(label_idx, namespace="labels")
+            classes.append(label_str)
+        output_dict["label"] = classes
         return output_dict
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:

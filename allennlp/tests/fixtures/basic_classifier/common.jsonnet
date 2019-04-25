@@ -14,10 +14,12 @@
         },
         "max_sequence_length": 400
     },
+    "train_data_path": "allennlp/tests/fixtures/data/text_classification_json/imdb_corpus.jsonl",
+    "validation_data_path": "allennlp/tests/fixtures/data/text_classification_json/imdb_corpus.jsonl",
     "iterator": {
         "type": "bucket",
         "sorting_keys": [["tokens", "num_tokens"]],
-        "batch_size": 32
+        "batch_size": 5
     },
     "trainer": {
         "optimizer": {
@@ -25,16 +27,10 @@
             "lr": 0.001
         },
         "validation_metric": "+accuracy",
-        "num_serialized_models_to_keep": 2,
-        "num_epochs": 75,
+        "num_serialized_models_to_keep": 1,
+        "num_epochs": 3,
         "grad_norm": 10.0,
         "patience": 5,
-        "cuda_device": -1,
-        "learning_rate_scheduler": {
-            "type": "reduce_on_plateau",
-            "factor": 0.5,
-            "mode": "max",
-            "patience": 0
-        }
+        "cuda_device": -1
     }
 }

@@ -22,7 +22,7 @@ allennlp.predictors
 * :ref:`OpenIePredictor<open-information-extraction>`
 * :ref:`Event2MindPredictor<event2mind>`
 * :ref:`AtisParserPredictor<atis-parser>`
-
+* :ref:`TextClassifierPredictor<text_classifier>`
 
 .. _predictor:
 .. automodule:: allennlp.predictors.predictor
@@ -122,6 +122,12 @@ allennlp.predictors
 
 .. _atis-parser:
 .. automodule:: allennlp.predictors.atis_parser
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. _text_classifier:
+.. automodule:: allennlp.predictors.text_classifier
    :members:
    :undoc-members:
    :show-inheritance:
