@@ -73,7 +73,6 @@ class SrlEvalScorer(Metric):
         tempdir = tempfile.mkdtemp()
         gold_path = os.path.join(tempdir, "gold.txt")
         predicted_path = os.path.join(tempdir, "predicted.txt")
-        output_path = os.path.join(tempdir, "output.txt")
 
         with open(predicted_path, "w") as predicted_file, open(gold_path, "w") as gold_file:
             for verb_index, sentence, predicted_tag_sequence, gold_tag_sequence in zip(
