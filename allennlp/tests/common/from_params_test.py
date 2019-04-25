@@ -134,27 +134,101 @@ class TestFromParams(AllenNlpTestCase):
 
     def test_extras_for_custom_classes(self):
         class A(FromParams):
-            def __init__(self, a: int):
+            def __init__(self, a: int, b: int, val: str):
                 self.a = a
+                self.b = b
+                self.val = val
+
+            def __hash__(self):
+                return self.b
+
+            def __eq__(self, other):
+                return self.b == other.b
 
             @classmethod
-            def from_params(cls, params: Params):
+            def from_params(cls, a: int, params: Params):
                 # A custom from params
-                a = params.pop_int("a")
+                b = params.pop_int("b")
+                val = params.pop("val", "C")
                 params.assert_empty(cls.__name__)
-                return cls(a)
+                return cls(a=a, b=b, val=val)
 
         class B(FromParams):
-            def __init__(self, a: List[A]):
-                self.a = a
+            def __init__(self, c: int, b: int):
+                self.c = c
+                self.b = b
+
+            @classmethod
+            def from_params(cls, c: int, params: Params):
+                b = params.pop_int("b")
+                params.assert_empty(cls.__name__)
+                return cls(c=c, b=b)
+
+        class C(object):
+            def __init__(self):
+                pass
+
+        class D(FromParams):
+            def __init__(
+                self, extra: C,
+                a: int,
+                arg: List[A],
+                arg2: Tuple[A, B],
+                arg3: Dict[str, A],
+                arg4: Set[A]
+            ):
+                self.arg = arg
+                self.arg2 = arg2
+                self.arg3 = arg3
+                self.arg4 = arg4
+                self.extra = extra
+
         vals = [1, 2, 3]
         params = Params({
-            "a": [{"a": vals[0]}, {"a": vals[1]}, {"a": vals[2]}]
+            "arg": [{"b": vals[0]}, {"b": vals[1]}, {"b": vals[2]}],
+            "arg2": [{"b": vals[0]}, {"b": vals[0]}],
+            "arg3": {
+                "class_1": {"b": vals[0]},
+                "class_2": {"b": vals[1]}
+            },
+            "arg4": [
+                {"b": vals[0], "val": "M"},
+                {"b": vals[1], "val": "N"},
+                {"b": vals[1], "val": "N"}
+            ]
         })
-        b = B.from_params(params)
+        extra = C()
+        tval1 = 5
+        tval2 = 6
+        d = D.from_params(params=params, extra=extra, a=tval1, c=tval2)
 
-        assert len(b.a) == len(vals)
-        assert all([x.a == y for x, y in zip(b.a, vals)])
+        # Tests for List Parameters
+        assert len(d.arg) == len(vals)
+        assert isinstance(d.arg, list)
+        assert isinstance(d.arg[0], A)
+        assert all([x.b == y for x, y in zip(d.arg, vals)])
+        assert all([x.a == tval1 for x in d.arg])
+
+        # Tests for Tuple
+        assert isinstance(d.arg2, tuple)
+        assert isinstance(d.arg2[0], A)
+        assert isinstance(d.arg2[1], B)
+        assert d.arg2[0].a == tval1
+        assert d.arg2[1].c == tval2
+        assert d.arg2[0].b == d.arg2[1].b == vals[0]
+
+        # Tests for Dict
+        assert isinstance(d.arg3, dict)
+        assert isinstance(d.arg3["class_1"], A)
+        assert d.arg3["class_1"].a == d.arg3["class_2"].a == tval1
+        assert d.arg3["class_1"].b == vals[0]
+        assert d.arg3["class_2"].b == vals[1]
+
+        # Tests for Set
+        assert isinstance(d.arg4, set)
+        assert len(d.arg4) == 2
+        assert any(x.val == "M" for x in d.arg4)
+        assert any(x.val == "N" for x in d.arg4)
 
     def test_no_constructor(self):
         params = Params({"type": "just_spaces"})

@@ -122,10 +122,19 @@ def create_extras(cls: Type[T],
     """
     Given a dictionary of extra arguments, returns a dictionary of
     kwargs that actually are a part of the signature of the cls.from_params
-    method.
+    (or cls) method.
     """
     subextras: Dict[str, Any] = {}
-    if takes_arg(cls.from_params, "extras"):
+    if hasattr(cls, "from_params"):
+        from_params_method = cls.from_params
+    else:
+        # In some rare cases, we get a registered subclass that does _not_ have a
+        # from_params method (this happens with Activations, for instance, where we
+        # register pytorch modules directly).  This is a bit of a hack to make those work,
+        # instead of adding a `from_params` method for them somehow. Then the extras
+        # in the class constructor are what we are looking for, to pass on.
+        from_params_method = cls
+    if takes_arg(from_params_method, "extras"):
         # If annotation.params accepts **extras, we need to pass them all along.
         # For example, `BasicTextFieldEmbedder.from_params` requires a Vocabulary
         # object, but `TextFieldEmbedder.from_params` does not.
@@ -332,17 +341,8 @@ class FromParams:
             subclass = registered_subclasses[choice]
 
             if hasattr(subclass, 'from_params'):
-                # We want to call subclass.from_params. It's possible that it's just the "free"
-                # implementation here, in which case it accepts `**extras` and we are not able
-                # to make any assumptions about what extra parameters it needs.
-                #
-                # It's also possible that it has a custom `from_params` method. In that case it
-                # won't accept any **extra parameters and we'll need to filter them out.
-                if not takes_arg(subclass.from_params, 'extras'):
-                    # Necessarily subclass.from_params is a custom implementation, so we need to
-                    # pass it only the args it's expecting.
-                    extras = {k: v for k, v in extras.items() if takes_arg(subclass.from_params, k)}
-
+                # We want to call subclass.from_params
+                extras = create_extras(subclass, extras)
                 return subclass.from_params(params=params, **extras)
             else:
                 # In some rare cases, we get a registered subclass that does _not_ have a
@@ -351,9 +351,7 @@ class FromParams:
                 # instead of adding a `from_params` method for them somehow.  We just trust that
                 # you've done the right thing in passing your parameters, and nothing else needs to
                 # be recursively constructed.
-                if not takes_arg(subclass, 'extras'):
-                    # We should only pass on the extras that the constructor actually expects.
-                    extras = {k: v for k, v in extras.items() if takes_arg(subclass, k)}
+                extras = create_extras(subclass, extras)
                 constructor_args = {**params, **extras}
                 return subclass(**constructor_args)
         else:
