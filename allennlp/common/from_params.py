@@ -55,6 +55,7 @@ T = TypeVar('T')
 # this is what the inspect module returns.
 _NO_DEFAULT = inspect.Parameter.empty  # pylint: disable=invalid-name
 
+
 def takes_arg(obj, arg: str) -> bool:
     """
     Checks whether the provided obj takes a certain arg.
@@ -84,7 +85,7 @@ def takes_kwargs(obj) -> bool:
         signature = inspect.signature(obj)
     else:
         raise ConfigurationError(f"object {obj} is not callable")
-    if any([p.kind._name_ == "VAR_KEYWORD"
+    if any([p.kind == inspect._ParameterKind.VAR_KEYWORD
             for p in signature.parameters.values()]):
         return True
     else:
@@ -147,7 +148,7 @@ def create_extras(cls: Type[T],
     """
     subextras: Dict[str, Any] = {}
     if hasattr(cls, "from_params"):
-        from_params_method = cls.from_params
+        from_params_method = cls.from_params  # type: ignore
     else:
         # In some rare cases, we get a registered subclass that does _not_ have a
         # from_params method (this happens with Activations, for instance, where we

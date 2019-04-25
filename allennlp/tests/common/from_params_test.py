@@ -134,7 +134,7 @@ class TestFromParams(AllenNlpTestCase):
 
     def test_extras_for_custom_classes(self):
         class A(FromParams):
-            def __init__(self, a: int, b: int, val: str):
+            def __init__(self, a: int, b: int, val: str) -> None:
                 self.a = a
                 self.b = b
                 self.val = val
@@ -146,7 +146,7 @@ class TestFromParams(AllenNlpTestCase):
                 return self.b == other.b
 
             @classmethod
-            def from_params(cls, a: int, params: Params):
+            def from_params(cls, a: int, params: Params) -> 'A':
                 # A custom from params
                 b = params.pop_int("b")
                 val = params.pop("val", "C")
@@ -154,30 +154,30 @@ class TestFromParams(AllenNlpTestCase):
                 return cls(a=a, b=b, val=val)
 
         class B(FromParams):
-            def __init__(self, c: int, b: int):
+            def __init__(self, c: int, b: int) -> None:
                 self.c = c
                 self.b = b
 
             @classmethod
-            def from_params(cls, c: int, params: Params):
+            def from_params(cls, c: int, params: Params) -> 'B':
                 b = params.pop_int("b")
                 params.assert_empty(cls.__name__)
                 return cls(c=c, b=b)
 
         class E(FromParams):
-            def __init__(self, m: int, n: int):
+            def __init__(self, m: int, n: int) -> None:
                 self.m = m
                 self.n = n
 
             @classmethod
-            def from_params(cls, params: Params, **extras2):
+            def from_params(cls, params: Params, **extras2) -> 'E':
                 m = params.pop_int("m")
                 params.assert_empty(cls.__name__)
                 n = extras2["n"]
                 return cls(m=m, n=n)
 
         class C(object):
-            def __init__(self):
+            def __init__(self) -> None:
                 pass
 
         class D(FromParams):
@@ -189,7 +189,7 @@ class TestFromParams(AllenNlpTestCase):
                 arg3: Dict[str, A],
                 arg4: Set[A],
                 arg5: List[E]
-            ):
+            ) -> None:
                 self.arg = arg
                 self.arg2 = arg2
                 self.arg3 = arg3
@@ -198,20 +198,11 @@ class TestFromParams(AllenNlpTestCase):
                 self.extra = extra
 
         vals = [1, 2, 3]
-        params = Params({
-            "arg": [{"b": vals[0]}, {"b": vals[1]}, {"b": vals[2]}],
-            "arg2": [{"b": vals[0]}, {"b": vals[0]}],
-            "arg3": {
-                "class_1": {"b": vals[0]},
-                "class_2": {"b": vals[1]}
-            },
-            "arg4": [
-                {"b": vals[0], "val": "M"},
-                {"b": vals[1], "val": "N"},
-                {"b": vals[1], "val": "N"}
-            ],
-            "arg5": [{"m": 9}]
-        })
+        params = Params({"arg": [{"b": vals[0]}, {"b": vals[1]}, {"b": vals[2]}],
+                         "arg2": [{"b": vals[0]}, {"b": vals[0]}],
+                         "arg3": {"class_1": {"b": vals[0]}, "class_2": {"b": vals[1]}},
+                         "arg4": [{"b": vals[0], "val": "M"}, {"b": vals[1], "val": "N"}, {"b": vals[1], "val": "N"}],
+                         "arg5": [{"m": 9}]})
         extra = C()
         tval1 = 5
         tval2 = 6
