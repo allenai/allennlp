@@ -87,24 +87,23 @@ class SrlEvalScorer(Metric):
                                                    sentence,
                                                    predicted_tag_sequence,
                                                    gold_tag_sequence)
-        perl_script_command = (f"perl {self._srl_eval_path} {predicted_path} {gold_path} "
-                               f"> {output_path}")
-        subprocess.run(perl_script_command, shell=True, check=True)
-        with open(output_path) as infile:
-            for line in infile:
-                stripped = line.strip().split()
-                if len(stripped) == 7:
-                    tag = stripped[0]
-                    # overall metrics are calculated in get_metric
-                    if tag == "Overall":
-                        continue
-                    # This line contains results for a span
-                    num_correct = int(stripped[1])
-                    num_excess = int(stripped[2])
-                    num_missed = int(stripped[3])
-                    self._true_positives[tag] += num_correct
-                    self._false_positives[tag] += num_excess
-                    self._false_negatives[tag] += num_missed
+        perl_script_command = ["perl", self._srl_eval_path, predicted_path, gold_path]
+        completed_process = subprocess.run(perl_script_command, stdout=subprocess.PIPE,
+                                           universal_newlines=True, check=True)
+        for line in completed_process.stdout.split("\n"):
+            stripped = line.strip().split()
+            if len(stripped) == 7:
+                tag = stripped[0]
+                # overall metrics are calculated in get_metric
+                if tag == "Overall":
+                    continue
+                # This line contains results for a span
+                num_correct = int(stripped[1])
+                num_excess = int(stripped[2])
+                num_missed = int(stripped[3])
+                self._true_positives[tag] += num_correct
+                self._false_positives[tag] += num_excess
+                self._false_negatives[tag] += num_missed
         shutil.rmtree(tempdir)
 
     def get_metric(self, reset: bool = False):
