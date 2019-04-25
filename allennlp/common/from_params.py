@@ -85,7 +85,7 @@ def takes_kwargs(obj) -> bool:
         signature = inspect.signature(obj)
     else:
         raise ConfigurationError(f"object {obj} is not callable")
-    if any([p.kind == inspect._ParameterKind.VAR_KEYWORD
+    if any([p.kind == inspect._ParameterKind.VAR_KEYWORD  # type: ignore
             for p in signature.parameters.values()]):
         return True
     else:
@@ -157,7 +157,7 @@ def create_extras(cls: Type[T],
         # in the class constructor are what we are looking for, to pass on.
         from_params_method = cls
     if takes_kwargs(from_params_method):
-        # If annotation.params accepts **extras, we need to pass them all along.
+        # If annotation.params accepts **kwargs, we need to pass them all along.
         # For example, `BasicTextFieldEmbedder.from_params` requires a Vocabulary
         # object, but `TextFieldEmbedder.from_params` does not.
         subextras = extras

@@ -181,15 +181,10 @@ class TestFromParams(AllenNlpTestCase):
                 pass
 
         class D(FromParams):
-            def __init__(
-                self, extra: C,
-                a: int,
-                arg: List[A],
-                arg2: Tuple[A, B],
-                arg3: Dict[str, A],
-                arg4: Set[A],
-                arg5: List[E]
-            ) -> None:
+            def __init__(self, extra: C, a: int,
+                         arg: List[A], arg2: Tuple[A, B],
+                         arg3: Dict[str, A], arg4: Set[A],
+                         arg5: List[E]) -> None:
                 self.arg = arg
                 self.arg2 = arg2
                 self.arg3 = arg3
