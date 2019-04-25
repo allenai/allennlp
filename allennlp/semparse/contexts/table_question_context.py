@@ -163,6 +163,7 @@ class TableQuestionContext:
             self._table_knowledge_graph = KnowledgeGraph(entities, dict(neighbors), entity_text)
         return self._table_knowledge_graph
 
+    # TODO (pradeep): Make a ``read_from_json`` method similar to what we had in ``TableQuestionKnowledgeGraph``
     @classmethod
     def read_from_lines(cls,
                         lines: List[List[str]],
