@@ -143,7 +143,7 @@ def create_extras(cls: Type[T],
         # Otherwise, only supply the ones that are actual args; any additional ones
         # will cause a TypeError.
         subextras = {k: v for k, v in extras.items()
-                     if takes_arg(cls.from_params, k)}
+                     if takes_arg(from_params_method, k)}
     return subextras
 
 
