@@ -164,6 +164,18 @@ class TestFromParams(AllenNlpTestCase):
                 params.assert_empty(cls.__name__)
                 return cls(c=c, b=b)
 
+        class E(FromParams):
+            def __init__(self, m: int, n: int):
+                self.m = m
+                self.n = n
+
+            @classmethod
+            def from_params(cls, params: Params, **extras2):
+                m = params.pop_int("m")
+                params.assert_empty(cls.__name__)
+                n = extras2["n"]
+                return cls(m=m, n=n)
+
         class C(object):
             def __init__(self):
                 pass
@@ -175,12 +187,14 @@ class TestFromParams(AllenNlpTestCase):
                 arg: List[A],
                 arg2: Tuple[A, B],
                 arg3: Dict[str, A],
-                arg4: Set[A]
+                arg4: Set[A],
+                arg5: List[E]
             ):
                 self.arg = arg
                 self.arg2 = arg2
                 self.arg3 = arg3
                 self.arg4 = arg4
+                self.arg5 = arg5
                 self.extra = extra
 
         vals = [1, 2, 3]
@@ -195,12 +209,13 @@ class TestFromParams(AllenNlpTestCase):
                 {"b": vals[0], "val": "M"},
                 {"b": vals[1], "val": "N"},
                 {"b": vals[1], "val": "N"}
-            ]
+            ],
+            "arg5": [{"m": 9}]
         })
         extra = C()
         tval1 = 5
         tval2 = 6
-        d = D.from_params(params=params, extra=extra, a=tval1, c=tval2)
+        d = D.from_params(params=params, extra=extra, a=tval1, c=tval2, n=10)
 
         # Tests for List Parameters
         assert len(d.arg) == len(vals)
@@ -229,6 +244,12 @@ class TestFromParams(AllenNlpTestCase):
         assert len(d.arg4) == 2
         assert any(x.val == "M" for x in d.arg4)
         assert any(x.val == "N" for x in d.arg4)
+
+        # Tests for custom extras parameters
+        assert isinstance(d.arg5, list)
+        assert isinstance(d.arg5[0], E)
+        assert d.arg5[0].m == 9
+        assert d.arg5[0].n == 10
 
     def test_no_constructor(self):
         params = Params({"type": "just_spaces"})

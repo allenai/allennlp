@@ -70,6 +70,27 @@ def takes_arg(obj, arg: str) -> bool:
         raise ConfigurationError(f"object {obj} is not callable")
     return arg in signature.parameters
 
+
+def takes_kwargs(obj) -> bool:
+    """
+    Checks whether a provided object takes in any positional arguments.
+    Similar to takes_arg, we do this for both the __init__ function of
+    the classp or a function / method
+    Otherwise, we raise an error
+    """
+    if inspect.isclass(obj):
+        signature = inspect.signature(obj.__init__)
+    elif inspect.ismethod(obj) or inspect.isfunction(obj):
+        signature = inspect.signature(obj)
+    else:
+        raise ConfigurationError(f"object {obj} is not callable")
+    if any([p.kind._name_ == "VAR_KEYWORD"
+            for p in signature.parameters.values()]):
+        return True
+    else:
+        return False
+
+
 def remove_optional(annotation: type):
     """
     Optional[X] annotations are actually represented as Union[X, NoneType].
@@ -134,7 +155,7 @@ def create_extras(cls: Type[T],
         # instead of adding a `from_params` method for them somehow. Then the extras
         # in the class constructor are what we are looking for, to pass on.
         from_params_method = cls
-    if takes_arg(from_params_method, "extras"):
+    if takes_kwargs(from_params_method):
         # If annotation.params accepts **extras, we need to pass them all along.
         # For example, `BasicTextFieldEmbedder.from_params` requires a Vocabulary
         # object, but `TextFieldEmbedder.from_params` does not.
