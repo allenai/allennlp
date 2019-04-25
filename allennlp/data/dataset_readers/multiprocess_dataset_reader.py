@@ -59,6 +59,10 @@ class MultiprocessDatasetReader(DatasetReader):
     should be a glob, and that the dataset reader will return instances from all files
     matching the glob.
 
+    The order the files are processed in is a function of Numpy's random state
+    up to non-determinism caused by using multiple worker processes. This can
+    be avoided by setting ``num_workers`` to 1.
+
     Parameters
     ----------
     base_reader : ``DatasetReader``
