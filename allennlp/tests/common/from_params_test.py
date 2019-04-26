@@ -133,7 +133,17 @@ class TestFromParams(AllenNlpTestCase):
         assert c.size == 20
 
     def test_extras_for_custom_classes(self):
-        class A(FromParams):
+        # pylint: disable=unused-variable,arguments-differ
+        from allennlp.common.registrable import Registrable
+
+        class BaseClass(Registrable):
+            pass
+
+        class BaseClass2(Registrable):
+            pass
+
+        @BaseClass.register("A")
+        class A(BaseClass):
             def __init__(self, a: int, b: int, val: str) -> None:
                 self.a = a
                 self.b = b
@@ -146,25 +156,27 @@ class TestFromParams(AllenNlpTestCase):
                 return self.b == other.b
 
             @classmethod
-            def from_params(cls, a: int, params: Params) -> 'A':
+            def from_params(cls, params: Params, a: int) -> 'A':
                 # A custom from params
                 b = params.pop_int("b")
                 val = params.pop("val", "C")
                 params.assert_empty(cls.__name__)
                 return cls(a=a, b=b, val=val)
 
-        class B(FromParams):
+        @BaseClass2.register("B")
+        class B(BaseClass):
             def __init__(self, c: int, b: int) -> None:
                 self.c = c
                 self.b = b
 
             @classmethod
-            def from_params(cls, c: int, params: Params) -> 'B':
+            def from_params(cls, params: Params, c: int) -> 'B':
                 b = params.pop_int("b")
                 params.assert_empty(cls.__name__)
                 return cls(c=c, b=b)
 
-        class E(FromParams):
+        @BaseClass.register("E")
+        class E(BaseClass):
             def __init__(self, m: int, n: int) -> None:
                 self.m = m
                 self.n = n
@@ -177,15 +189,15 @@ class TestFromParams(AllenNlpTestCase):
                 return cls(m=m, n=n)
 
         class C(object):
-            def __init__(self) -> None:
-                pass
+            pass
 
-        class D(FromParams):
+        @BaseClass.register("D")
+        class D(BaseClass):
             def __init__(self, extra: C, a: int,
-                         arg: List[A], arg2: Tuple[A, B],
-                         arg3: Dict[str, A], arg4: Set[A],
-                         arg5: List[E]) -> None:
-                self.arg = arg
+                         arg1: List[BaseClass], arg2: Tuple[BaseClass, BaseClass2],
+                         arg3: Dict[str, BaseClass], arg4: Set[BaseClass],
+                         arg5: List[BaseClass]) -> None:
+                self.arg1 = arg1
                 self.arg2 = arg2
                 self.arg3 = arg3
                 self.arg4 = arg4
@@ -193,22 +205,23 @@ class TestFromParams(AllenNlpTestCase):
                 self.extra = extra
 
         vals = [1, 2, 3]
-        params = Params({"arg": [{"b": vals[0]}, {"b": vals[1]}, {"b": vals[2]}],
-                         "arg2": [{"b": vals[0]}, {"b": vals[0]}],
-                         "arg3": {"class_1": {"b": vals[0]}, "class_2": {"b": vals[1]}},
-                         "arg4": [{"b": vals[0], "val": "M"}, {"b": vals[1], "val": "N"}, {"b": vals[1], "val": "N"}],
-                         "arg5": [{"m": 9}]})
+        params = Params({"type": "D",
+                         "arg1": [{"type": "A", "b": vals[0]}, {"type": "A", "b": vals[1]}, {"type": "A", "b": vals[2]}],
+                         "arg2": [{"type": "A", "b": vals[0]}, {"type": "B", "b": vals[0]}],
+                         "arg3": {"class_1": {"type": "A", "b": vals[0]}, "class_2": {"type": "A", "b": vals[1]}},
+                         "arg4": [{"type": "A", "b": vals[0], "val": "M"}, {"type": "A", "b": vals[1], "val": "N"}, {"type": "A", "b": vals[1], "val": "N"}],
+                         "arg5": [{"type": "E", "m": 9}]})
         extra = C()
         tval1 = 5
         tval2 = 6
-        d = D.from_params(params=params, extra=extra, a=tval1, c=tval2, n=10)
+        d = BaseClass.from_params(params=params, extra=extra, a=tval1, c=tval2, n=10)
 
         # Tests for List Parameters
-        assert len(d.arg) == len(vals)
-        assert isinstance(d.arg, list)
-        assert isinstance(d.arg[0], A)
-        assert all([x.b == y for x, y in zip(d.arg, vals)])
-        assert all([x.a == tval1 for x in d.arg])
+        assert len(d.arg1) == len(vals)
+        assert isinstance(d.arg1, list)
+        assert isinstance(d.arg1[0], A)
+        assert all([x.b == y for x, y in zip(d.arg1, vals)])
+        assert all([x.a == tval1 for x in d.arg1])
 
         # Tests for Tuple
         assert isinstance(d.arg2, tuple)
