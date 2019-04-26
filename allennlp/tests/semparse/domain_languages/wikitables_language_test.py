@@ -581,8 +581,8 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
         # "year" column does not match because "years" occurs in the question.
         assert set(world.get_agenda()) == {'Number -> 2001',
                                            'Number -> 2005',
-                                           'str -> string:2005',
-                                           'str -> string:2001',
+                                           'List[str] -> string:2005',
+                                           'List[str] -> string:2001',
                                            '<List[Row],DateColumn,Date:List[Row]> -> filter_date_equals',
                                            '<List[Row],List[Row],NumberColumn:Number> -> diff'}
         # Conservative agenda does not have strings and numbers because they have multiple types.
@@ -595,8 +595,8 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
         world = self._get_world_with_question_tokens(tokens)
         assert set(world.get_agenda()) == {'Number -> 2001',
                                            'Number -> 2005',
-                                           'str -> string:2005',
-                                           'str -> string:2001',
+                                           'List[str] -> string:2005',
+                                           'List[str] -> string:2001',
                                            '<List[Row],NumberColumn:Number> -> sum',
                                            '<List[Row],DateColumn,Date:List[Row]> -> filter_date_equals',
                                            'StringColumn -> string_column:avg_attendance',
@@ -674,11 +674,11 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
         assert set(world.get_agenda()) == {'StringColumn -> string_column:avg_attendance',
                                            'NumberColumn -> number_column:avg_attendance',
                                            'StringColumn -> string_column:league',
-                                           'str -> string:usl_a_league',
+                                           'List[str] -> string:usl_a_league',
                                            '<List[Row],Column:List[Row]> -> same_as',
                                            '<List[Row],DateColumn:Date> -> select_date'}
         assert set(world.get_agenda(conservative=True)) == {'StringColumn -> string_column:league',
-                                                            'str -> string:usl_a_league',
+                                                            'List[str] -> string:usl_a_league',
                                                             '<List[Row],Column:List[Row]> -> same_as',
                                                             '<List[Row],DateColumn:Date> -> select_date'}
 
@@ -691,9 +691,9 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
 
         tokens = [Token(x) for x in ['when', 'did', 'the', 'team', 'not', 'qualify', '?']]
         world = self._get_world_with_question_tokens(tokens)
-        assert set(world.get_agenda()) == {'<List[Row],DateColumn:Date> -> select_date', 'str -> string:qualify'}
+        assert set(world.get_agenda()) == {'<List[Row],DateColumn:Date> -> select_date', 'List[str] -> string:qualify'}
         assert set(world.get_agenda(conservative=True)) == {'<List[Row],DateColumn:Date> -> select_date',
-                                                            'str -> string:qualify'}
+                                                            'List[str] -> string:qualify'}
 
         tokens = [Token(x) for x in ['when', 'was', 'the', 'avg.', 'attendance', 'at', 'least',
                                      '7000', '?']]

@@ -2,13 +2,12 @@
   "dataset_reader": {
     "type": "wikitables",
     "tables_directory": "allennlp/tests/fixtures/data/wikitables/",
-    "dpd_output_directory": "allennlp/tests/fixtures/data/wikitables/dpd_output/"
+    "offline_logical_forms_directory": "allennlp/tests/fixtures/data/wikitables/action_space_walker_output/"
   },
   "train_data_path": "allennlp/tests/fixtures/data/wikitables/sample_data.examples",
   "validation_data_path": "allennlp/tests/fixtures/data/wikitables/sample_data.examples",
   "model": {
     "type": "wikitables_mml_parser",
-    "tables_directory": "allennlp/tests/fixtures/data/wikitables/",
     "question_embedder": {
       "token_embedders": {
         "tokens": {

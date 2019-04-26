@@ -309,7 +309,7 @@ class WikiTablesLanguage(DomainLanguage):
         # Adding all productions that lead to entities and numbers extracted from the question.
         for entity in refined_entities:
             if entity.replace("string:", "") not in tokens_in_column_names:
-                agenda.append(f"str -> {entity}")
+                agenda.append(f"List[str] -> {entity}")
 
         for number in refined_numbers:
             # The reason we check for the presence of the number in the question again is because
