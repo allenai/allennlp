@@ -118,6 +118,7 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
                 sequence_mask: torch.LongTensor = None,
                 span_indices_mask: torch.LongTensor = None) -> torch.FloatTensor:
 
+
         # Both of shape (batch_size, sequence_length, embedding_size / 2)
         forward_sequence, backward_sequence = sequence_tensor.split(int(self._input_dim / 2), dim=-1)
         forward_sequence = forward_sequence.contiguous()
@@ -150,7 +151,7 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
                                 sequence_tensor.size(1))
 
         # shape (batch_size, num_spans, 1)
-        end_sentinel_mask = (exclusive_span_ends == sequence_lengths.unsqueeze(-1)).long().unsqueeze(-1)
+        end_sentinel_mask = (exclusive_span_ends >= sequence_lengths.unsqueeze(-1)).long().unsqueeze(-1)
 
         # As we added 1 to the span_ends to make them exclusive, which might have caused indices
         # equal to the sequence_length to become out of bounds, we multiply by the inverse of the
