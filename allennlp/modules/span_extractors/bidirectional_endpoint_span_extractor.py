@@ -118,7 +118,6 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
                 sequence_mask: torch.LongTensor = None,
                 span_indices_mask: torch.LongTensor = None) -> torch.FloatTensor:
 
-
         # Both of shape (batch_size, sequence_length, embedding_size / 2)
         forward_sequence, backward_sequence = sequence_tensor.split(int(self._input_dim / 2), dim=-1)
         forward_sequence = forward_sequence.contiguous()
