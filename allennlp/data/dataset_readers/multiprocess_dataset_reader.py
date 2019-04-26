@@ -1,8 +1,8 @@
 from typing import List, Iterable, Iterator
 import glob
 import logging
-import random
 
+import numpy as np
 from torch.multiprocessing import Manager, Process, Queue, log_to_stderr
 
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
@@ -58,6 +58,10 @@ class MultiprocessDatasetReader(DatasetReader):
     using multiple processes. Note that in this case the ``file_path`` passed to ``read()``
     should be a glob, and that the dataset reader will return instances from all files
     matching the glob.
+
+    The order the files are processed in is a function of Numpy's random state
+    up to non-determinism caused by using multiple worker processes. This can
+    be avoided by setting ``num_workers`` to 1.
 
     Parameters
     ----------
@@ -127,12 +131,14 @@ class MultiprocessDatasetReader(DatasetReader):
         ids into the queue).
         """
         shards = glob.glob(file_path)
+        # Ensure a consistent order before shuffling for testing.
+        shards.sort()
         num_shards = len(shards)
 
         # If we want multiple epochs per read, put shards in the queue multiple times.
         input_queue = manager.Queue(num_shards * self.epochs_per_read + self.num_workers)
         for _ in range(self.epochs_per_read):
-            random.shuffle(shards)
+            np.random.shuffle(shards)
             for shard in shards:
                 input_queue.put(shard)
 

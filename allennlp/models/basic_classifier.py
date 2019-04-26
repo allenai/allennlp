@@ -1,6 +1,8 @@
 from typing import Dict
 
+from overrides import overrides
 import torch
+
 from allennlp.data import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import Seq2SeqEncoder, Seq2VecEncoder, TextFieldEmbedder
@@ -13,10 +15,11 @@ from allennlp.training.metrics import CategoricalAccuracy
 class BasicClassifier(Model):
     """
     This ``Model`` implements a basic text classifier. After embedding the text into
-    a text field, we will optionally encode the embeddings with a Seq2SeqEncoder and/or
-    a Seq2VecEncoder and then pass the embeddings to a linear classification layer,
-    which projects into the label space. If neither Seq2SeqEncoder nor Seq2VecEncoder is
-    provided, we will pass the embedded text directly to the linear classification layer.
+    a text field, we will optionally encode the embeddings with a ``Seq2SeqEncoder``. The
+    resulting sequence is pooled using a ``Seq2VecEncoder`` and then passed to
+    a linear classification layer, which projects into the label space. If a
+    ``Seq2SeqEncoder`` is not provided, we will pass the embedded text directly to the
+    ``Seq2VecEncoder``.
 
     Parameters
     ----------
@@ -120,6 +123,25 @@ class BasicClassifier(Model):
             output_dict["loss"] = loss
             self._accuracy(logits, label)
 
+        return output_dict
+
+    @overrides
+    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+        """
+        Does a simple argmax over the probabilities, converts index to string label, and
+        add ``"label"`` key to the dictionary with the result.
+        """
+        predictions = output_dict["probs"]
+        if predictions.dim() == 2:
+            predictions_list = [predictions[i] for i in range(predictions.shape[0])]
+        else:
+            predictions_list = [predictions]
+        classes = []
+        for prediction in predictions_list:
+            label_idx = prediction.argmax(dim=-1).item()
+            label_str = self.vocab.get_token_from_index(label_idx, namespace="labels")
+            classes.append(label_str)
+        output_dict["label"] = classes
         return output_dict
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:

@@ -508,7 +508,7 @@ class Trainer(TrainerBase):
 
             # Create overall metrics dict
             training_elapsed_time = time.time() - training_start_time
-            metrics["training_duration"] = time.strftime("%H:%M:%S", time.gmtime(training_elapsed_time))
+            metrics["training_duration"] = str(datetime.timedelta(seconds=training_elapsed_time))
             metrics["training_start_epoch"] = epoch_counter
             metrics["training_epochs"] = epochs_trained
             metrics["epoch"] = epoch
@@ -540,7 +540,7 @@ class Trainer(TrainerBase):
             self._save_checkpoint(epoch)
 
             epoch_elapsed_time = time.time() - epoch_start_time
-            logger.info("Epoch duration: %s", time.strftime("%H:%M:%S", time.gmtime(epoch_elapsed_time)))
+            logger.info("Epoch duration: %s", datetime.timedelta(seconds=epoch_elapsed_time))
 
             if epoch < self._num_epochs - 1:
                 training_elapsed_time = time.time() - training_start_time
@@ -764,8 +764,12 @@ class TrainerPieces(NamedTuple):
     params: Params
 
     @staticmethod
-    def from_params(params: Params, serialization_dir: str, recover: bool = False) -> 'TrainerPieces':
-        all_datasets = training_util.datasets_from_params(params)
+    def from_params(params: Params,
+                    serialization_dir: str,
+                    recover: bool = False,
+                    cache_directory: str = None,
+                    cache_prefix: str = None) -> 'TrainerPieces':
+        all_datasets = training_util.datasets_from_params(params, cache_directory, cache_prefix)
         datasets_for_vocab_creation = set(params.pop("datasets_for_vocab_creation", all_datasets))
 
         for dataset in datasets_for_vocab_creation:

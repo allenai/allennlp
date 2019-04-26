@@ -84,7 +84,6 @@ class EvalbBracketingScorer(Metric):
         tempdir = tempfile.mkdtemp()
         gold_path = os.path.join(tempdir, "gold.txt")
         predicted_path = os.path.join(tempdir, "predicted.txt")
-        output_path = os.path.join(tempdir, "output.txt")
         with open(gold_path, "w") as gold_file:
             for tree in gold_trees:
                 gold_file.write(f"{tree.pformat(margin=1000000)}\n")
@@ -93,19 +92,19 @@ class EvalbBracketingScorer(Metric):
             for tree in predicted_trees:
                 predicted_file.write(f"{tree.pformat(margin=1000000)}\n")
 
-        command = f"{self._evalb_program_path} -p {self._evalb_param_path} " \
-                  f"{gold_path} {predicted_path} > {output_path}"
-        subprocess.run(command, shell=True, check=True)
+        command = [self._evalb_program_path, "-p", self._evalb_param_path,
+                   gold_path, predicted_path]
+        completed_process = subprocess.run(command, stdout=subprocess.PIPE,
+                                           universal_newlines=True, check=True)
 
-        with open(output_path) as infile:
-            for line in infile:
-                stripped = line.strip().split()
-                if len(stripped) == 12 and stripped != self._header_line:
-                    # This line contains results for a single tree.
-                    numeric_line = [float(x) for x in stripped]
-                    self._correct_predicted_brackets += numeric_line[5]
-                    self._gold_brackets += numeric_line[6]
-                    self._predicted_brackets += numeric_line[7]
+        for line in completed_process.stdout.split("\n"):
+            stripped = line.strip().split()
+            if len(stripped) == 12 and stripped != self._header_line:
+                # This line contains results for a single tree.
+                numeric_line = [float(x) for x in stripped]
+                self._correct_predicted_brackets += numeric_line[5]
+                self._gold_brackets += numeric_line[6]
+                self._predicted_brackets += numeric_line[7]
 
         shutil.rmtree(tempdir)
 
