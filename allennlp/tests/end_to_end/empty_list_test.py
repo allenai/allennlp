@@ -107,10 +107,13 @@ class SalienceModel(Model):
     """
     def __init__(self, vocab: Vocabulary) -> None:
         super().__init__(vocab)
-        params = Params({"embedding_dim": 50,
-                         "pretrained_file": "s3://allennlp/datasets/glove/glove.6B.50d.txt.gz",
-                         "trainable": False})
-        token_embedding = Embedding.from_params(vocab, params)
+        # Dummy weights
+        weight = torch.ones(vocab.get_vocab_size(), 10)
+        token_embedding = Embedding(
+                num_embeddings=vocab.get_vocab_size(),
+                embedding_dim=10,
+                weight=weight,
+                trainable=False)
         self.embedder = BasicTextFieldEmbedder({"tokens": token_embedding})
         self.fixed_length_embedding = FixedLengthEmbedding()
 
