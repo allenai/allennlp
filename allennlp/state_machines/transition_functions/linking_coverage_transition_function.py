@@ -94,7 +94,7 @@ class LinkingCoverageTransitionFunction(CoverageTransitionFunction):
         for group_index in range(group_size):
             instance_actions = actions[group_index]
             predicted_action_embedding = predicted_action_embeddings[group_index]
-            action_ids = []
+            action_ids: List[int] = []
             if "global" in instance_actions:
                 action_embeddings, output_action_embeddings, embedded_actions = instance_actions['global']
 

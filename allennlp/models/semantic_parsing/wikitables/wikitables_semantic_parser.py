@@ -634,7 +634,7 @@ class WikiTablesSemanticParser(Model):
         outputs['best_action_sequence'] = []
         outputs['debug_info'] = []
         outputs['entities'] = []
-        outputs['logical_form']: List[List[str]] = []
+        outputs['logical_form'] = []
         for i in range(batch_size):
             # Decoding may not have terminated with any completed logical forms, if `num_steps`
             # isn't long enough (or if the model is not trained enough and gets into an

@@ -691,7 +691,8 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
 
         tokens = [Token(x) for x in ['when', 'did', 'the', 'team', 'not', 'qualify', '?']]
         world = self._get_world_with_question_tokens(tokens)
-        assert set(world.get_agenda()) == {'<List[Row],DateColumn:Date> -> select_date', 'List[str] -> string:qualify'}
+        assert set(world.get_agenda()) == {'<List[Row],DateColumn:Date> -> select_date',
+                                           'List[str] -> string:qualify'}
         assert set(world.get_agenda(conservative=True)) == {'<List[Row],DateColumn:Date> -> select_date',
                                                             'List[str] -> string:qualify'}
 
