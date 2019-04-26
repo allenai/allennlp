@@ -105,8 +105,8 @@ class BERT_QA(Model):
         #if "loss" not in output_dict:
         #    print(intances_question_id)
         # Compute F1 and preparing the output dictionary.
-        #output_dict['best_span_str'] = []
-        #output_dict['qid'] = []
+        output_dict['best_span_str'] = []
+        output_dict['qid'] = []
 
         # getting best span prediction for
         best_span = self._get_example_predications(span_start_logits, span_end_logits, self._max_span_length)
@@ -129,6 +129,12 @@ class BERT_QA(Model):
             end_offset = offsets[predicted_span[1]][1]
             best_span_string = passage_str[start_offset:end_offset]
 
+            # Note: this is a hack, because AllenNLP, when predicting, expects a value for each instance.
+            # But we may have more than 1 chunk per question, and thus less output strings than instances
+            for i in range(len(question_inds)):
+                output_dict['best_span_str'].append(best_span_string)
+                output_dict['qid'].append(question_instances_metadata[best_span_ind]['question_id'])
+
             f1_score = 0.0
             EM_score = 0.0
             gold_answer_texts = question_instances_metadata[best_span_ind]['answer_texts_list']
@@ -148,6 +154,7 @@ class BERT_QA(Model):
                                 'best_span_string':best_span_string,\
                                 'gold_answer_texts':gold_answer_texts, \
                                 'qas_used_fraction':1.0}) + '\n')
+
         return output_dict
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
