@@ -30,7 +30,7 @@ class SrlEvalScorer(Metric):
 
     Parameters
     ----------
-    srl_eval_path : ``str``, required.
+    srl_eval_path : ``str``, optional.
         The path to the srl-eval.pl script.
     """
     def __init__(self,
