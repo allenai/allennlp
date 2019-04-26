@@ -58,12 +58,12 @@ class SrlEvalScorer(Metric):
             contains no verbal predicate.
         batch_sentences : ``List[List[str]]``, required.
             The word tokens for each instance in the batch.
-        batch_conll_formatted_predicted_tags : ``List[str]``, required.
+        batch_conll_formatted_predicted_tags : ``List[List[str]]``, required.
             A list of predicted CoNLL-formatted SRL tags (itself a list) to compute score for.
             Use allennlp.models.semantic_role_labeler.convert_bio_tags_to_conll_format
             to convert from BIO to CoNLL format before passing the tags into the metric,
             if applicable.
-        batch_conll_formatted_gold_tags : ``List[str]``, required.
+        batch_conll_formatted_gold_tags : ``List[List[str]]``, required.
             A list of gold CoNLL-formatted SRL tags (itself a list) to use as a reference.
             Use allennlp.models.semantic_role_labeler.convert_bio_tags_to_conll_format
             to convert from BIO to CoNLL format before passing the
