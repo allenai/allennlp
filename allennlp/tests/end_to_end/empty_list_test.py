@@ -1,13 +1,12 @@
 # pylint: disable=no-self-use,invalid-name
 import json
-from typing import Iterator, List, Dict
+from typing import Iterator, List, Dict, Any, MutableMapping
 
 import torch
 from torch.nn import Module
 
-from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data import Token, Vocabulary, DatasetReader
+from allennlp.data import Token, Vocabulary, DatasetReader, Field
 from allennlp.data.fields import TextField, ListField
 from allennlp.data.instance import Instance
 from allennlp.data.iterators import BasicIterator
@@ -43,10 +42,11 @@ class SalienceReader(DatasetReader):
                 return False
         return True
 
-    def text_to_instance(self,
+    def text_to_instance(self, # type: ignore
                          body: str,
                          entity_name: str,
                          entity_mentions: List[str]) -> Instance:
+        # pylint: disable=arguments-differ
         """
         Generates an instance based on a body of text, an entity with a
         given name (which need not be in the body) and series of entity
@@ -55,7 +55,7 @@ class SalienceReader(DatasetReader):
         TextFields.
         """
 
-        fields = {}
+        fields: MutableMapping[str, Field[Any]] = {}
 
         body_tokens = self._tokenizer.tokenize(body)
         fields['body'] = TextField(body_tokens, self._token_indexers)
@@ -81,14 +81,15 @@ class SalienceReader(DatasetReader):
         return Instance(fields)
 
 class FixedLengthEmbedding(Module):
-    def forward(cls, mask, embedded_tokens):
+    def forward(self, mask, embedded_tokens):
+        # pylint: disable=arguments-differ
         """
         Create a very simple fixed length embedding of a sequence by
         concatenating the first and last embedded tokens.
         """
         sequence_lengths = mask.sum(dim=1)
         # size: <batch_size, emb_dim>
-        embedded_first_tokens = embedded_tokens[:,0,:]
+        embedded_first_tokens = embedded_tokens[:, 0, :]
         # size: <batch_size>
         indices = sequence_lengths - 1
         # size: <batch_size>
@@ -117,10 +118,12 @@ class SalienceModel(Model):
         self.embedder = BasicTextFieldEmbedder({"tokens": token_embedding})
         self.fixed_length_embedding = FixedLengthEmbedding()
 
-    def forward(self,
+    def forward(self, # type: ignore
                 body: Dict[str, torch.LongTensor],
                 entity_name: Dict[str, torch.LongTensor],
                 entity_mentions: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+        # pylint: disable=arguments-differ
+
         # Embed body
 
         # size: <batch_size, sequence_len>
@@ -196,7 +199,7 @@ class EmptyListTest(AllenNlpTestCase):
         iterator = BasicIterator(batch_size=2)
         iterator.index_with(vocab)
         batch = next(iterator(dataset, shuffle=False))
-        model.forward(**batch)["score"]
+        model.forward(**batch)
 
     # A mixed batch with some empty lists.
     def test_end_to_end_works_in_master(self):
