@@ -18,7 +18,7 @@ from allennlp.models.semantic_parsing.wikitables.wikitables_semantic_parser \
 @Model.register("wikitables_mml_parser")
 class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
     """
-    A ``WikiTablesMmlParser`` is a :class:`WikiTablesSemanticParser` which is trained to
+    A ``WikiTablesMmlSemanticParser`` is a :class:`WikiTablesSemanticParser` which is trained to
     maximize the marginal likelihood of an approximate set of logical forms which give the correct
     denotation. This is a re-implementation of the model used for the paper `Neural Semantic Parsing with Type
     Constraints for Semi-Structured Tables
