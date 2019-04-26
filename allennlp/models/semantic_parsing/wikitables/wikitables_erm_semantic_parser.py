@@ -374,15 +374,10 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         logical_form = world.action_sequence_to_logical_form(action_strings)
         target_values = state.extras[batch_index]
         evaluation = False
-        try:
-            executor_logger = \
-                    logging.getLogger('allennlp.semparse.domain_languages.wikitables_language')
-            executor_logger.setLevel(logging.ERROR)
-            evaluation = world.evaluate_logical_form(logical_form, target_values)
-        except IndexError:
-            # TODO(pradeep): This happens due to a bug in "filter_in" and "filter_no_in" functions.
-            # The value evaluation, if it is a list, could be an empty one. Fix it there!
-            pass
+        executor_logger = \
+                logging.getLogger('allennlp.semparse.domain_languages.wikitables_language')
+        executor_logger.setLevel(logging.ERROR)
+        evaluation = world.evaluate_logical_form(logical_form, target_values)
         if evaluation:
             cost = checklist_cost
         else:
