@@ -1,4 +1,5 @@
 from typing import Dict, List, TextIO, Optional, Any
+import warnings
 
 from overrides import overrides
 import torch
@@ -229,6 +230,48 @@ def write_to_conll_eval_file(prediction_file: TextIO,
                              sentence: List[str],
                              prediction: List[str],
                              gold_labels: List[str]):
+    """
+    .. deprecated:: 0.8.4
+       The ``write_to_conll_eval_file`` function was deprecated in favor of the
+       identical ``write_bio_formatted_tags_to_file`` in version 0.8.4.
+
+    Prints predicate argument predictions and gold labels for a single verbal
+    predicate in a sentence to two provided file references.
+
+    Parameters
+    ----------
+    prediction_file : TextIO, required.
+        A file reference to print predictions to.
+    gold_file : TextIO, required.
+        A file reference to print gold labels to.
+    verb_index : Optional[int], required.
+        The index of the verbal predicate in the sentence which
+        the gold labels are the arguments for, or None if the sentence
+        contains no verbal predicate.
+    sentence : List[str], required.
+        The word tokens.
+    prediction : List[str], required.
+        The predicted BIO labels.
+    gold_labels : List[str], required.
+        The gold BIO labels.
+    """
+    warnings.warn("The 'write_to_conll_eval_file' function has been deprecated in favor of "
+                  "the identical 'write_bio_formatted_tags_to_file' function.",
+                  DeprecationWarning)
+    write_bio_formatted_tags_to_file(prediction_file,
+                                     gold_file,
+                                     verb_index,
+                                     sentence,
+                                     prediction,
+                                     gold_labels)
+
+
+def write_bio_formatted_tags_to_file(prediction_file: TextIO,
+                                     gold_file: TextIO,
+                                     verb_index: Optional[int],
+                                     sentence: List[str],
+                                     prediction: List[str],
+                                     gold_labels: List[str]):
     """
     Prints predicate argument predictions and gold labels for a single verbal
     predicate in a sentence to two provided file references.
