@@ -164,7 +164,7 @@ class TestFromParams(AllenNlpTestCase):
                 return cls(a=a, b=b, val=val)
 
         @BaseClass2.register("B")
-        class B(BaseClass):
+        class B(BaseClass2):
             def __init__(self, c: int, b: int) -> None:
                 self.c = c
                 self.b = b
