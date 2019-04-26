@@ -94,7 +94,7 @@ class SrlEvalScorer(Metric):
             stripped = line.strip().split()
             if len(stripped) == 7:
                 tag = stripped[0]
-                # overall metrics are calculated in get_metric
+                # Overall metrics are calculated in get_metric, skip them here.
                 if tag == "Overall":
                     continue
                 # This line contains results for a span
@@ -124,6 +124,9 @@ class SrlEvalScorer(Metric):
         all_tags.update(self._false_negatives.keys())
         all_metrics = {}
         for tag in all_tags:
+            if tag == "overall":
+                raise ValueError("'overall' is disallowed as a tag type, "
+                                 "rename the tag type to something else if necessary.")
             precision, recall, f1_measure = self._compute_metrics(self._true_positives[tag],
                                                                   self._false_positives[tag],
                                                                   self._false_negatives[tag])
