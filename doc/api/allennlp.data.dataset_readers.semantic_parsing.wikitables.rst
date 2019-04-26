@@ -11,11 +11,6 @@ allennlp.data.dataset_readers.semantic_parsing.wikitables
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: allennlp.data.dataset_readers.semantic_parsing.wikitables.wikitables_variable_free
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 .. automodule:: allennlp.data.dataset_readers.semantic_parsing.wikitables.util
    :members:
    :undoc-members:
