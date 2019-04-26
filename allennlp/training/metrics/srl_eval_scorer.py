@@ -22,11 +22,12 @@ class SrlEvalScorer(Metric):
     """
     This class uses the external srl-eval.pl script for computing the CoNLL SRL metrics.
 
-    AllenNLP contains the srl-eval.pl script, but you will need a compatible version of perl.
+    AllenNLP contains the srl-eval.pl script, but you will need perl 5.x.
 
-    Note that this metric reads and writes from disk quite a bit. You probably don't
-    want to include it in your training loop; instead, you should calculate this on
-    a validation set only.
+    Note that this metric reads and writes from disk quite a bit. In particular, it
+    writes and subsequently reads two files per __call__, which is typically invoked
+    once per batch. You probably don't want to include it in your training loop;
+    instead, you should calculate this on a validation set only.
 
     Parameters
     ----------
