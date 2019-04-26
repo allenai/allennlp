@@ -73,7 +73,6 @@ def takes_arg(obj, arg: str) -> bool:
 
 
 def takes_kwargs(obj) -> bool:
-    # pylint: disable=protected-access,simplifiable-if-statement
     """
     Checks whether a provided object takes in any positional arguments.
     Similar to takes_arg, we do this for both the __init__ function of
@@ -86,7 +85,7 @@ def takes_kwargs(obj) -> bool:
         signature = inspect.signature(obj)
     else:
         raise ConfigurationError(f"object {obj} is not callable")
-    return bool(any([p.kind == inspect._ParameterKind.VAR_KEYWORD  # type: ignore
+    return bool(any([p.kind == inspect.Parameter.VAR_KEYWORD  # type: ignore
                      for p in signature.parameters.values()]))
 
 
