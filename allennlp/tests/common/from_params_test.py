@@ -156,7 +156,7 @@ class TestFromParams(AllenNlpTestCase):
                 return self.b == other.b
 
             @classmethod
-            def from_params(cls, params: Params, a: int) -> 'A':
+            def from_params(cls, params: Params, a: int) -> 'A':  # type: ignore
                 # A custom from params
                 b = params.pop_int("b")
                 val = params.pop("val", "C")
@@ -170,7 +170,7 @@ class TestFromParams(AllenNlpTestCase):
                 self.b = b
 
             @classmethod
-            def from_params(cls, params: Params, c: int) -> 'B':
+            def from_params(cls, params: Params, c: int) -> 'B':  # type: ignore
                 b = params.pop_int("b")
                 params.assert_empty(cls.__name__)
                 return cls(c=c, b=b)
@@ -182,7 +182,7 @@ class TestFromParams(AllenNlpTestCase):
                 self.n = n
 
             @classmethod
-            def from_params(cls, params: Params, **extras2) -> 'E':
+            def from_params(cls, params: Params, **extras2) -> 'E':  # type: ignore
                 m = params.pop_int("m")
                 params.assert_empty(cls.__name__)
                 n = extras2["n"]
@@ -206,10 +206,16 @@ class TestFromParams(AllenNlpTestCase):
 
         vals = [1, 2, 3]
         params = Params({"type": "D",
-                         "arg1": [{"type": "A", "b": vals[0]}, {"type": "A", "b": vals[1]}, {"type": "A", "b": vals[2]}],
-                         "arg2": [{"type": "A", "b": vals[0]}, {"type": "B", "b": vals[0]}],
-                         "arg3": {"class_1": {"type": "A", "b": vals[0]}, "class_2": {"type": "A", "b": vals[1]}},
-                         "arg4": [{"type": "A", "b": vals[0], "val": "M"}, {"type": "A", "b": vals[1], "val": "N"}, {"type": "A", "b": vals[1], "val": "N"}],
+                         "arg1": [{"type": "A", "b": vals[0]},
+                                  {"type": "A", "b": vals[1]},
+                                  {"type": "A", "b": vals[2]}],
+                         "arg2": [{"type": "A", "b": vals[0]},
+                                  {"type": "B", "b": vals[0]}],
+                         "arg3": {"class_1": {"type": "A", "b": vals[0]},
+                                  "class_2": {"type": "A", "b": vals[1]}},
+                         "arg4": [{"type": "A", "b": vals[0], "val": "M"},
+                                  {"type": "A", "b": vals[1], "val": "N"},
+                                  {"type": "A", "b": vals[1], "val": "N"}],
                          "arg5": [{"type": "E", "m": 9}]})
         extra = C()
         tval1 = 5
