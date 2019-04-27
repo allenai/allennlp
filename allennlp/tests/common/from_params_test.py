@@ -193,8 +193,8 @@ class TestFromParams(AllenNlpTestCase):
 
         @BaseClass.register("D")
         class D(BaseClass):
-            def __init__(self, extra: C, a: int,
-                         arg1: List[BaseClass], arg2: Tuple[BaseClass, BaseClass2],
+            def __init__(self, arg1: List[BaseClass],
+                         arg2: Tuple[BaseClass, BaseClass2],
                          arg3: Dict[str, BaseClass], arg4: Set[BaseClass],
                          arg5: List[BaseClass]) -> None:
                 self.arg1 = arg1
@@ -202,7 +202,6 @@ class TestFromParams(AllenNlpTestCase):
                 self.arg3 = arg3
                 self.arg4 = arg4
                 self.arg5 = arg5
-                self.extra = extra
 
         vals = [1, 2, 3]
         params = Params({"type": "D",
