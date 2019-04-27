@@ -40,10 +40,9 @@
         },
         "encoder": {
             "type": "gru",
-            "input_size": 818,  // 50 + 768
+            "input_size": 50 + 768,
             "hidden_size": 25,
             "num_layers": 1,
-            "dropout": 0.5,
             "bidirectional": true
         },
         "regularizer": [
