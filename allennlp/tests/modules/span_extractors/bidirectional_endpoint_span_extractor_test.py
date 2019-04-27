@@ -190,7 +190,7 @@ class TestBidirectonalEndpointSpanExtractor:
                                          span_indices_mask=span_indices_mask)
         numpy.testing.assert_array_equal(span_representations.detach(),
                                          torch.FloatTensor([[[0., 0., 0., 0.]]]))
-        
+
     def test_forward_raises_with_invalid_indices(self):
         sequence_tensor = torch.randn([2, 5, 8])
         extractor = BidirectionalEndpointSpanExtractor(input_dim=8)
