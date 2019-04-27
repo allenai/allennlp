@@ -185,7 +185,9 @@ class TestBidirectonalEndpointSpanExtractor:
         extractor = BidirectionalEndpointSpanExtractor(input_dim=2,
                                                        forward_combination="x,y",
                                                        backward_combination="x,y")
-        span_representations = extractor(sequence_tensor, span_indices, sequence_mask=sequence_mask, span_indices_mask=span_indices_mask)
+        span_representations = extractor(sequence_tensor, span_indices,
+                                         sequence_mask=sequence_mask,
+                                         span_indices_mask=span_indices_mask)
         numpy.testing.assert_array_equal(span_representations.detach(),
                                          torch.FloatTensor([[[0., 0., 0., 0.]]]))
         
