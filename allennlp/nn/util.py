@@ -983,6 +983,8 @@ def flatten_and_batch_shift_indices(indices: torch.Tensor,
     offset_indices : ``torch.LongTensor``
     """
     # Shape: (batch_size)
+    if torch.max(indices) >= sequence_length:
+        raise ConfigurationError("Any elem in indices should not exceed sequence length.")
     offsets = get_range_vector(indices.size(0), get_device_of(indices)) * sequence_length
     for _ in range(len(indices.size()) - 1):
         offsets = offsets.unsqueeze(1)
