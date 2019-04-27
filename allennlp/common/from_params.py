@@ -76,7 +76,7 @@ def takes_kwargs(obj) -> bool:
     """
     Checks whether a provided object takes in any positional arguments.
     Similar to takes_arg, we do this for both the __init__ function of
-    the classp or a function / method
+    the class or a function / method
     Otherwise, we raise an error
     """
     if inspect.isclass(obj):
