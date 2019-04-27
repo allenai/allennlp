@@ -186,8 +186,8 @@ class TestBidirectonalEndpointSpanExtractor:
                                                        forward_combination="x,y",
                                                        backward_combination="x,y")
         span_representations = extractor(sequence_tensor, span_indices, sequence_mask=sequence_mask, span_indices_mask=span_indices_mask)
-        numpy.testing.assert_array_equal(span_representations,
-                                         tensor.FloatTensor([[[0., 0., 0., 0.]]]))
+        numpy.testing.assert_array_equal(span_representations.detach(),
+                                         torch.FloatTensor([[[0., 0., 0., 0.]]]))
         
     def test_forward_raises_with_invalid_indices(self):
         sequence_tensor = torch.randn([2, 5, 8])
