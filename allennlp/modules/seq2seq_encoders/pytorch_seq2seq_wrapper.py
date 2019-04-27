@@ -66,7 +66,7 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
     @overrides
     def forward(self,  # pylint: disable=arguments-differ
                 inputs: torch.Tensor,
-                mask: torch.Tensor,
+                mask: torch.Tensor = None,
                 hidden_state: torch.Tensor = None) -> torch.Tensor:
 
         if self.stateful and mask is None:
