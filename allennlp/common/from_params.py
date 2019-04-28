@@ -55,6 +55,7 @@ T = TypeVar('T')
 # this is what the inspect module returns.
 _NO_DEFAULT = inspect.Parameter.empty  # pylint: disable=invalid-name
 
+
 def takes_arg(obj, arg: str) -> bool:
     """
     Checks whether the provided obj takes a certain arg.
@@ -69,6 +70,24 @@ def takes_arg(obj, arg: str) -> bool:
     else:
         raise ConfigurationError(f"object {obj} is not callable")
     return arg in signature.parameters
+
+
+def takes_kwargs(obj) -> bool:
+    """
+    Checks whether a provided object takes in any positional arguments.
+    Similar to takes_arg, we do this for both the __init__ function of
+    the class or a function / method
+    Otherwise, we raise an error
+    """
+    if inspect.isclass(obj):
+        signature = inspect.signature(obj.__init__)
+    elif inspect.ismethod(obj) or inspect.isfunction(obj):
+        signature = inspect.signature(obj)
+    else:
+        raise ConfigurationError(f"object {obj} is not callable")
+    return bool(any([p.kind == inspect.Parameter.VAR_KEYWORD  # type: ignore
+                     for p in signature.parameters.values()]))
+
 
 def remove_optional(annotation: type):
     """
@@ -115,6 +134,37 @@ def create_kwargs(cls: Type[T], params: Params, **extras) -> Dict[str, Any]:
 
     params.assert_empty(cls.__name__)
     return kwargs
+
+
+def create_extras(cls: Type[T],
+                  extras: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Given a dictionary of extra arguments, returns a dictionary of
+    kwargs that actually are a part of the signature of the cls.from_params
+    (or cls) method.
+    """
+    subextras: Dict[str, Any] = {}
+    if hasattr(cls, "from_params"):
+        from_params_method = cls.from_params  # type: ignore
+    else:
+        # In some rare cases, we get a registered subclass that does _not_ have a
+        # from_params method (this happens with Activations, for instance, where we
+        # register pytorch modules directly).  This is a bit of a hack to make those work,
+        # instead of adding a `from_params` method for them somehow. Then the extras
+        # in the class constructor are what we are looking for, to pass on.
+        from_params_method = cls
+    if takes_kwargs(from_params_method):
+        # If annotation.params accepts **kwargs, we need to pass them all along.
+        # For example, `BasicTextFieldEmbedder.from_params` requires a Vocabulary
+        # object, but `TextFieldEmbedder.from_params` does not.
+        subextras = extras
+    else:
+        # Otherwise, only supply the ones that are actual args; any additional ones
+        # will cause a TypeError.
+        subextras = {k: v for k, v in extras.items()
+                     if takes_arg(from_params_method, k)}
+    return subextras
+
 
 def construct_arg(cls: Type[T], # pylint: disable=inconsistent-return-statements,too-many-return-statements
                   param_name: str,
@@ -169,15 +219,7 @@ def construct_arg(cls: Type[T], # pylint: disable=inconsistent-return-statements
             # Our params have an entry for this, so we use that.
             subparams = params.pop(name)
 
-            if takes_arg(annotation.from_params, 'extras'):
-                # If annotation.params accepts **extras, we need to pass them all along.
-                # For example, `BasicTextFieldEmbedder.from_params` requires a Vocabulary
-                # object, but `TextFieldEmbedder.from_params` does not.
-                subextras = extras
-            else:
-                # Otherwise, only supply the ones that are actual args; any additional ones
-                # will cause a TypeError.
-                subextras = {k: v for k, v in extras.items() if takes_arg(annotation.from_params, k)}
+            subextras = create_extras(annotation, extras)
 
             # In some cases we allow a string instead of a param dict, so
             # we need to handle that case separately.
@@ -211,7 +253,8 @@ def construct_arg(cls: Type[T], # pylint: disable=inconsistent-return-statements
         value_dict = {}
 
         for key, value_params in params.pop(name, Params({})).items():
-            value_dict[key] = value_cls.from_params(params=value_params, **extras)
+            subextras = create_extras(value_cls, extras)
+            value_dict[key] = value_cls.from_params(params=value_params, **subextras)
 
         return value_dict
 
@@ -221,7 +264,8 @@ def construct_arg(cls: Type[T], # pylint: disable=inconsistent-return-statements
         value_list = []
 
         for value_params in params.pop(name, Params({})):
-            value_list.append(value_cls.from_params(params=value_params, **extras))
+            subextras = create_extras(value_cls, extras)
+            value_list.append(value_cls.from_params(params=value_params, **subextras))
 
         return value_list
 
@@ -229,7 +273,8 @@ def construct_arg(cls: Type[T], # pylint: disable=inconsistent-return-statements
         value_list = []
 
         for value_cls, value_params in zip(annotation.__args__, params.pop(name, Params({}))):
-            value_list.append(value_cls.from_params(params=value_params, **extras))
+            subextras = create_extras(value_cls, extras)
+            value_list.append(value_cls.from_params(params=value_params, **subextras))
 
         return tuple(value_list)
 
@@ -239,7 +284,8 @@ def construct_arg(cls: Type[T], # pylint: disable=inconsistent-return-statements
         value_set = set()
 
         for value_params in params.pop(name, Params({})):
-            value_set.add(value_cls.from_params(params=value_params, **extras))
+            subextras = create_extras(value_cls, extras)
+            value_set.add(value_cls.from_params(params=value_params, **subextras))
 
         return value_set
 
@@ -314,17 +360,8 @@ class FromParams:
             subclass = registered_subclasses[choice]
 
             if hasattr(subclass, 'from_params'):
-                # We want to call subclass.from_params. It's possible that it's just the "free"
-                # implementation here, in which case it accepts `**extras` and we are not able
-                # to make any assumptions about what extra parameters it needs.
-                #
-                # It's also possible that it has a custom `from_params` method. In that case it
-                # won't accept any **extra parameters and we'll need to filter them out.
-                if not takes_arg(subclass.from_params, 'extras'):
-                    # Necessarily subclass.from_params is a custom implementation, so we need to
-                    # pass it only the args it's expecting.
-                    extras = {k: v for k, v in extras.items() if takes_arg(subclass.from_params, k)}
-
+                # We want to call subclass.from_params
+                extras = create_extras(subclass, extras)
                 return subclass.from_params(params=params, **extras)
             else:
                 # In some rare cases, we get a registered subclass that does _not_ have a
@@ -333,9 +370,7 @@ class FromParams:
                 # instead of adding a `from_params` method for them somehow.  We just trust that
                 # you've done the right thing in passing your parameters, and nothing else needs to
                 # be recursively constructed.
-                if not takes_arg(subclass, 'extras'):
-                    # We should only pass on the extras that the constructor actually expects.
-                    extras = {k: v for k, v in extras.items() if takes_arg(subclass, k)}
+                extras = create_extras(subclass, extras)
                 constructor_args = {**params, **extras}
                 return subclass(**constructor_args)
         else:
