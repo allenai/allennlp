@@ -1,5 +1,4 @@
 import logging
-from allennlp.common.elastic_logger import ElasticLogger
 from typing import Any, Dict, List
 import numpy as np
 from overrides import overrides
