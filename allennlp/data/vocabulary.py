@@ -15,6 +15,7 @@ from allennlp.common.util import namespace_match
 from allennlp.common import Params, Registrable
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.tqdm import Tqdm
+from allennlp.common.file_utils import cached_path
 from allennlp.data import instance as adi  # pylint: disable=unused-import
 
 
@@ -301,7 +302,35 @@ class Vocabulary(Registrable):
         directory : ``str``
             The directory containing the serialized vocabulary.
         """
+        import os
+        import tempfile
+        import tarfile
+        import shutil
+        import atexit
+
+        def _cleanup(path: str):
+            if os.path.exists(path):
+                logger.info("removing temporary unarchived model dir at %s", path)
+                shutil.rmtree(path)
+
         logger.info("Loading token dictionary from %s.", directory)
+
+        # download and decompress if needed
+        directory = cached_path(directory)
+
+        if os.path.isdir(directory):
+            pass
+        else:
+            # Extract to temp dir
+            tempdir = tempfile.mkdtemp()
+            logger.info(f"extracting file {directory} to temp dir {tempdir}")
+            with tarfile.open(directory, 'r:gz') as archive:
+                archive.extractall(tempdir)
+            # Postpone cleanup until exit in case the unarchived contents are needed outside
+            # this function.
+            atexit.register(_cleanup, tempdir)
+            directory = tempdir
+
         with codecs.open(os.path.join(directory, NAMESPACE_PADDING_FILE), 'r', 'utf-8') as namespace_file:
             non_padded_namespaces = [namespace_str.strip() for namespace_str in namespace_file]
 
