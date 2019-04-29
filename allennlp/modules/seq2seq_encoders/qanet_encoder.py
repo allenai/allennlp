@@ -86,7 +86,6 @@ class QaNetEncoder(Seq2SeqEncoder):
                                               dropout_prob,
                                               layer_dropout_undecayed_prob,
                                               attention_dropout_prob)
-            self.add_module(f"encoder_block_{block_index}", encoder_block)
             self._encoder_blocks.append(encoder_block)
 
         self._input_dim = input_dim
