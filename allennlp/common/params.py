@@ -534,10 +534,13 @@ def pop_choice(params: Dict[str, Any],
     return value
 
 
-def _replace_none(dictionary: Dict[str, Any]) -> Dict[str, Any]:
-    for key in dictionary.keys():
-        if dictionary[key] == "None":
-            dictionary[key] = None
-        elif isinstance(dictionary[key], dict):
-            dictionary[key] = _replace_none(dictionary[key])
-    return dictionary
+def _replace_none(params: Any) -> Any:
+    if params == "None":
+        return None
+    elif isinstance(params, dict):
+        for key, value in params.items():
+            params[key] = _replace_none(value)
+        return params
+    elif isinstance(params, list):
+        return [_replace_none(value) for value in params]
+    return params
