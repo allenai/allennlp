@@ -174,10 +174,10 @@ class TestBidirectonalEndpointSpanExtractor:
 
 
     def test_forward_doesnt_raise_with_empty_sequence(self):
-        # size: (batch_size=1, sequence_length=1, emb_dim=2)
+        # size: (batch_size=1, sequence_length=2, emb_dim=2)
         sequence_tensor = torch.FloatTensor([[[0., 0.], [0., 0.]]])
-        # size: (batch_size=1, sequence_length=1)
-        sequence_mask = torch.LongTensor([[0]])
+        # size: (batch_size=1, sequence_length=2)
+        sequence_mask = torch.LongTensor([[0, 0]])
         # size: (batch_size=1, spans_count=1, 2)
         span_indices = torch.LongTensor([[[-1, -1]]])
         # size: (batch_size=1, spans_count=1)
