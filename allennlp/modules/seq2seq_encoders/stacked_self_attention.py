@@ -1,5 +1,3 @@
-from typing import List
-
 from overrides import overrides
 import torch
 from torch.nn import Dropout
@@ -73,13 +71,13 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
         super(StackedSelfAttentionEncoder, self).__init__()
 
         self._use_positional_encoding = use_positional_encoding
-        self._attention_layers = ModuleList([]) 
+        self._attention_layers = ModuleList([])
         self._feedfoward_layers = ModuleList([])
         self._layer_norm_layers = ModuleList([])
         self._feed_forward_layer_norm_layers = ModuleList([])
 
         feedfoward_input_dim = input_dim
-        for i in range(num_layers):
+        for _ in range(num_layers):
             feedfoward = FeedForward(feedfoward_input_dim,
                                      activations=[Activation.by_name('relu')(),
                                                   Activation.by_name('linear')()],
