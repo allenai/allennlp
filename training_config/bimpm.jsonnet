@@ -42,7 +42,6 @@
           "input_size": 20,
           "hidden_size": 50,
           "num_layers": 1,
-          "dropout": 0.1,
           "bidirectional": true
         }
       }
@@ -58,8 +57,7 @@
       "bidirectional": true,
       "input_size": 400,
       "hidden_size": 200,
-      "num_layers": 1,
-      "dropout": 0.1
+      "num_layers": 1
     },
     "matcher_forward1": {
       "is_forward": true,
@@ -76,8 +74,7 @@
       "bidirectional": true,
       "input_size": 400,
       "hidden_size": 200,
-      "num_layers": 1,
-      "dropout": 0.1
+      "num_layers": 1
     },
     "matcher_forward2": {
       "is_forward": true,
