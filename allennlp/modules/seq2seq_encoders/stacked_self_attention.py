@@ -3,6 +3,7 @@ from typing import List
 from overrides import overrides
 import torch
 from torch.nn import Dropout
+from torch.nn import ModuleList
 
 from allennlp.modules.feedforward import FeedForward
 from allennlp.modules.layer_norm import LayerNorm
@@ -72,10 +73,10 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
         super(StackedSelfAttentionEncoder, self).__init__()
 
         self._use_positional_encoding = use_positional_encoding
-        self._attention_layers: List[MultiHeadSelfAttention] = []
-        self._feedfoward_layers: List[FeedForward] = []
-        self._layer_norm_layers: List[LayerNorm] = []
-        self._feed_forward_layer_norm_layers: List[LayerNorm] = []
+        self._attention_layers = ModuleList([]) 
+        self._feedfoward_layers = ModuleList([])
+        self._layer_norm_layers = ModuleList([])
+        self._feed_forward_layer_norm_layers = ModuleList([])
 
         feedfoward_input_dim = input_dim
         for i in range(num_layers):
