@@ -279,8 +279,7 @@ class TableQuestionContext:
                         question_tokens: List[Token]) -> 'TableQuestionContext':
 
         header = lines[0]
-        if header == ['row', 'col', 'id', 'content', 'tokens', 'lemmaTokens', 'posTags', 'nerTags', 'number',
-                      'date', 'num2', 'list', 'listId']:
+        if header[:6] == ['row', 'col', 'id', 'content', 'tokens', 'lemmaTokens']:
             # These lines are from the tagged table file from the official dataset.
             table_data, column_name_type_mapping = cls.get_table_data_from_tagged_lines(lines)
         else:
