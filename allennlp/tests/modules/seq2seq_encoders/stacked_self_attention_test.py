@@ -17,7 +17,7 @@ class TestStackedSelfAttention(ModelTestCase):
     @pytest.mark.skipif(torch.cuda.device_count() < 2,
                         reason="Need multiple GPUs.")
     def test_works_on_multiple_gpus(self):
-        save_dir = self.TEST_DIR / "save_and_load_test"
+        save_dir = self.TEST_DIR / "train_test"
         archive_file = save_dir / "model.tar.gz"
         train_model_from_file(self.param_file, save_dir)
 
