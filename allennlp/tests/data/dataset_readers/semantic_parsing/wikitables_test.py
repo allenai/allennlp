@@ -58,7 +58,7 @@ def assert_dataset_correct(dataset):
                        'NumberColumn -> number_column:year']
 
 
-class WikiTablesVariableFreeDatasetReaderTest(AllenNlpTestCase):
+class WikiTablesDatasetReaderTest(AllenNlpTestCase):
     def test_reader_reads(self):
         offline_search_directory = self.FIXTURES_ROOT / "data" / "wikitables" / "action_space_walker_output"
         params = {

@@ -166,7 +166,8 @@ class TableQuestionContext:
     # TODO (pradeep): Make a ``read_from_json`` method similar to what we had in ``TableQuestionKnowledgeGraph``
     @classmethod
     def get_table_data_from_tagged_lines(cls,
-                                         lines: List[List[str]]) -> List[Dict[str, Dict[str, str]]]:
+                                         lines: List[List[str]]) -> Tuple[List[Dict[str, Dict[str, str]]],
+                                                                          Dict[str, Set[str]]]:
         column_index_to_name = {}
         header = lines[0]  # the first line is the header ("row\tcol\t...")
         index = 1
@@ -214,7 +215,8 @@ class TableQuestionContext:
 
     @classmethod
     def get_table_data_from_untagged_lines(cls,
-                                           lines: List[List[str]]) -> List[Dict[str, Dict[str, str]]]:
+                                           lines: List[List[str]]) -> Tuple[List[Dict[str, Dict[str, str]]],
+                                                                            Dict[str, Set[str]]]:
         """
         This method will be called only when we do not have tagged information from CoreNLP. That is, when we are
         running the parser on data outside the WikiTableQuestions dataset. We try to do the same processing that
@@ -230,7 +232,7 @@ class TableQuestionContext:
         column_name_type_mapping: Dict[str, Set[str]] = defaultdict(set)
         for row in lines[1:]:
             table_data.append({})
-            for column_index, cell_value in enumerate(row.split('\t')):
+            for column_index, cell_value in enumerate(row):
                 column_name = column_index_to_name[column_index]
                 cell_data: Dict[str, str] = {}
 
@@ -275,17 +277,18 @@ class TableQuestionContext:
 
     @classmethod
     def read_from_lines(cls,
-                        lines: List[List[str]],
+                        lines: List,
                         question_tokens: List[Token]) -> 'TableQuestionContext':
 
         header = lines[0]
-        if header[:6] == ['row', 'col', 'id', 'content', 'tokens', 'lemmaTokens']:
+        if isinstance(header, list) and header[:6] == ['row', 'col', 'id', 'content', 'tokens', 'lemmaTokens']:
             # These lines are from the tagged table file from the official dataset.
             table_data, column_name_type_mapping = cls.get_table_data_from_tagged_lines(lines)
         else:
-            # We assume that the lines are just the table date, with rows being newline separated, and columns
+            # We assume that the lines are just the table data, with rows being newline separated, and columns
             # being tab-separated.
-            table_data, column_name_type_mapping = cls.get_table_data_from_untagged_lines(lines)
+            rows = [line.split('\t') for line in lines]  # type: ignore
+            table_data, column_name_type_mapping = cls.get_table_data_from_untagged_lines(rows)
         # Each row is a mapping from column names to cell data. Cell data is a dict, where keys are
         # "string", "number", "num2" and "date", and the values are the corresponding values
         # extracted by CoreNLP.
