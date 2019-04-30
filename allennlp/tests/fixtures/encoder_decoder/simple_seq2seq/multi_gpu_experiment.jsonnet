@@ -14,6 +14,6 @@ config + {
     }
   },
   "trainer"+: {
-    "cuda_device": [0]
+    "cuda_device": [0, 1]
   }
 }
