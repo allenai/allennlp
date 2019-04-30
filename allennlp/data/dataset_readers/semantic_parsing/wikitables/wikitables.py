@@ -186,7 +186,7 @@ class WikiTablesDatasetReader(DatasetReader):
     def text_to_instance(self,  # type: ignore
                          question: str,
                          table_lines: List[List[str]],
-                         target_values: List[str],
+                         target_values: List[str] = None,
                          offline_search_output: List[str] = None) -> Instance:
         """
         Reads text inputs and makes an instance. WikitableQuestions dataset provides tables as
@@ -199,8 +199,9 @@ class WikiTablesDatasetReader(DatasetReader):
         table_lines : ``List[List[str]]``
             The table content preprocessed by CoreNLP. See ``TableQuestionContext.read_from_lines``
             for the expected format.
-        target_values : ``List[str]``
-        offline_search_output : List[str], optional
+        target_values : ``List[str]``, optional
+            Target values for the denotations the logical forms should execute to. Not required for testing.
+        offline_search_output : ``List[str]``, optional
             List of logical forms, produced by offline search. Not required during test.
         """
         # pylint: disable=arguments-differ
