@@ -11,14 +11,14 @@ from allennlp.modules.seq2seq_encoders import StackedSelfAttentionEncoder
 class TestStackedSelfAttention(ModelTestCase):
     def setUp(self):
         super().setUp()
-        self.set_up_model(self.FIXTURES_ROOT / "encoder_decoder" / "simple_seq2seq" / "multi_gpu_experiment.jsonnet",
-                          self.FIXTURES_ROOT / "data" / "seq2seq_copy.tsv")
+        self.set_up_model(
+                self.FIXTURES_ROOT / "encoder_decoder" / "simple_seq2seq" / "multi_gpu_experiment.jsonnet",
+                self.FIXTURES_ROOT / "data" / "seq2seq_copy.tsv")
 
     @pytest.mark.skipif(torch.cuda.device_count() < 2,
                         reason="Need multiple GPUs.")
     def test_works_on_multiple_gpus(self):
         save_dir = self.TEST_DIR / "train_test"
-        archive_file = save_dir / "model.tar.gz"
         train_model_from_file(self.param_file, save_dir)
 
     def test_get_dimension_is_correct(self):
