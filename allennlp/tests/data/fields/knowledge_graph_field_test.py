@@ -11,7 +11,7 @@ from allennlp.data.fields import KnowledgeGraphField
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenCharactersIndexer
 from allennlp.data.tokenizers import WordTokenizer
 from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
-from allennlp.semparse.contexts import TableQuestionKnowledgeGraph
+from allennlp.semparse.contexts import TableQuestionContext
 
 
 class KnowledgeGraphFieldTest(AllenNlpTestCase):
@@ -20,13 +20,8 @@ class KnowledgeGraphFieldTest(AllenNlpTestCase):
         self.utterance = self.tokenizer.tokenize("where is mersin?")
         self.token_indexers = {"tokens": SingleIdTokenIndexer("tokens")}
 
-        json = {
-                'question': self.utterance,
-                'columns': ['Name in English', 'Location in English'],
-                'cells': [['Paradeniz', 'Mersin'],
-                          ['Lake Gala', 'Edirne']]
-                }
-        self.graph = TableQuestionKnowledgeGraph.read_from_json(json)
+        table_file = self.FIXTURES_ROOT / "data" / "wikitables" / "tables" / "341.tagged"
+        self.graph = TableQuestionContext.read_from_file(table_file, self.utterance).get_table_knowledge_graph()
         self.vocab = Vocabulary()
         self.name_index = self.vocab.add_token_to_namespace("name", namespace='tokens')
         self.in_index = self.vocab.add_token_to_namespace("in", namespace='tokens')
