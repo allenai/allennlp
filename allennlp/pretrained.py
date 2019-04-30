@@ -40,7 +40,7 @@ def bidirectional_attention_flow_seo_2017() -> predictors.BidafPredictor:
 def naqanet_dua_2019() -> predictors.BidafPredictor:
     with warnings.catch_warnings():
         warnings.simplefilter(action="ignore", category=DeprecationWarning)
-        model = PretrainedModel('https://s3-us-west-2.amazonaws.com/allennlp/models/naqanet-2019.03.01.tar.gz',
+        model = PretrainedModel('https://s3-us-west-2.amazonaws.com/allennlp/models/naqanet-2019.04.29-fixed-weight-names.tar.gz',
                                 'machine-comprehension')
         return model.predictor()  # type: ignore
 

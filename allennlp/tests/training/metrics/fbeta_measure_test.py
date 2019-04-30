@@ -161,3 +161,17 @@ class FBetaMeasureTest(AllenNlpTestCase):
         numpy.testing.assert_almost_equal(precisions, desired_precisions, decimal=2)
         numpy.testing.assert_almost_equal(recalls, desired_recalls, decimal=2)
         numpy.testing.assert_almost_equal(fscores, desired_fscores, decimal=2)
+
+    def test_fbeta_handles_batch_size_of_one(self):
+        predictions = torch.Tensor([[0.2862, 0.3479, 0.1627, 0.2033]])
+        targets = torch.Tensor([1])
+        mask = torch.Tensor([1])
+
+        fbeta = FBetaMeasure()
+        fbeta(predictions, targets, mask)
+        metric = fbeta.get_metric()
+        precisions = metric['precision']
+        recalls = metric['recall']
+
+        numpy.testing.assert_almost_equal(precisions, [0.0, 1.0, 0.0, 0.0])
+        numpy.testing.assert_almost_equal(recalls, [0.0, 1.0, 0.0, 0.0])
