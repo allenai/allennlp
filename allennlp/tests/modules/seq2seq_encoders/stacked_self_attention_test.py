@@ -1,20 +1,29 @@
 # pylint: disable=no-self-use,invalid-name
 import torch
 
-from allennlp.common.testing import AllenNlpTestCase
+import pytest
+
+from allennlp.common.testing import ModelTestCase
 from allennlp.modules.seq2seq_encoders import StackedSelfAttentionEncoder
 
 
 class TestStackedSelfAttention(ModelTestCase):
     def setUp(self):
         super().setUp()
-        self.set_up_model(self.FIXTURES_ROOT / "encoder_decoder" / "simple_seq2seq" / "multi_gpu_experiment.json",
+        self.set_up_model(self.FIXTURES_ROOT / "encoder_decoder" / "simple_seq2seq" / "multi_gpu_experiment.jsonnet",
                           self.FIXTURES_ROOT / "data" / "seq2seq_copy.tsv")
 
     @pytest.mark.skipif(torch.cuda.device_count() < 2,
                         reason="Need multiple GPUs.")
     def test_works_on_multiple_gpus(self):
-	self.ensure_model_can_train_save_and_load(self.param_file, tolerance=1e-2)
+        self.ensure_model_can_train_save_and_load(
+                self.param_file,
+                tolerance=1e-2,
+                gradients_to_ignore=[
+                    "_encoder._feed_forward_layer_norm_layers.0.gamma",
+                    "_encoder._feed_forward_layer_norm_layers.0.beta"
+                    ]
+                )
 
     def test_get_dimension_is_correct(self):
         encoder = StackedSelfAttentionEncoder(input_dim=9,
