@@ -1,26 +1,14 @@
 # pylint: disable=no-self-use,invalid-name
 import torch
+from torch.nn.parallel.data_parallel import DataParallel
 
 import pytest
 
-from allennlp.commands.train import train_model_from_file
-from allennlp.common.testing import ModelTestCase
+from allennlp.common.testing import AllenNlpTestCase
 from allennlp.modules.seq2seq_encoders import StackedSelfAttentionEncoder
 
 
-class TestStackedSelfAttention(ModelTestCase):
-    def setUp(self):
-        super().setUp()
-        self.set_up_model(
-                self.FIXTURES_ROOT / "encoder_decoder" / "simple_seq2seq" / "multi_gpu_experiment.jsonnet",
-                self.FIXTURES_ROOT / "data" / "seq2seq_copy.tsv")
-
-    @pytest.mark.skipif(torch.cuda.device_count() < 2,
-                        reason="Need multiple GPUs.")
-    def test_works_on_multiple_gpus(self):
-        save_dir = self.TEST_DIR / "train_test"
-        train_model_from_file(self.param_file, save_dir)
-
+class TestStackedSelfAttention(AllenNlpTestCase):
     def test_get_dimension_is_correct(self):
         encoder = StackedSelfAttentionEncoder(input_dim=9,
                                               hidden_dim=12,
@@ -43,4 +31,18 @@ class TestStackedSelfAttention(ModelTestCase):
                                               num_attention_heads=3)
         inputs = torch.randn([3, 5, 9])
         encoder_output = encoder(inputs, None)
+        assert list(encoder_output.size()) == [3, 5, 12]
+
+    @pytest.mark.skipif(torch.cuda.device_count() < 2,
+                        reason="Need multiple GPUs.")
+    def test_stacked_self_attention_can_run_foward_on_multiple_gpus(self):
+        encoder = StackedSelfAttentionEncoder(input_dim=9,
+                                              hidden_dim=12,
+                                              projection_dim=9,
+                                              feedforward_hidden_dim=5,
+                                              num_layers=3,
+                                              num_attention_heads=3).to(0)
+        parallel_encoder = DataParallel(encoder, device_ids=[0, 1])
+        inputs = torch.randn([3, 5, 9]).to(0)
+        encoder_output = parallel_encoder(inputs, None)
         assert list(encoder_output.size()) == [3, 5, 12]
