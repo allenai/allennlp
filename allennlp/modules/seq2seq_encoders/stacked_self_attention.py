@@ -1,7 +1,8 @@
+from typing import List
+
 from overrides import overrides
 import torch
 from torch.nn import Dropout
-from torch.nn import ModuleList
 
 from allennlp.modules.feedforward import FeedForward
 from allennlp.modules.layer_norm import LayerNorm
@@ -71,13 +72,13 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
         super(StackedSelfAttentionEncoder, self).__init__()
 
         self._use_positional_encoding = use_positional_encoding
-        self._attention_layers = ModuleList([])
-        self._feedfoward_layers = ModuleList([])
-        self._layer_norm_layers = ModuleList([])
-        self._feed_forward_layer_norm_layers = ModuleList([])
+        self._attention_layers: List[MultiHeadSelfAttention] = []
+        self._feedfoward_layers: List[FeedForward] = []
+        self._layer_norm_layers: List[LayerNorm] = []
+        self._feed_forward_layer_norm_layers: List[LayerNorm] = []
 
         feedfoward_input_dim = input_dim
-        for _ in range(num_layers):
+        for i in range(num_layers):
             feedfoward = FeedForward(feedfoward_input_dim,
                                      activations=[Activation.by_name('relu')(),
                                                   Activation.by_name('linear')()],
@@ -85,9 +86,11 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
                                      num_layers=2,
                                      dropout=dropout_prob)
 
+            self.add_module(f"feedforward_{i}", feedfoward)
             self._feedfoward_layers.append(feedfoward)
 
             feedforward_layer_norm = LayerNorm(feedfoward.get_output_dim())
+            self.add_module(f"feedforward_layer_norm_{i}", feedforward_layer_norm)
             self._feed_forward_layer_norm_layers.append(feedforward_layer_norm)
 
             self_attention = MultiHeadSelfAttention(num_heads=num_attention_heads,
@@ -95,9 +98,11 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
                                                     attention_dim=projection_dim,
                                                     values_dim=projection_dim,
                                                     attention_dropout_prob=attention_dropout_prob)
+            self.add_module(f"self_attention_{i}", self_attention)
             self._attention_layers.append(self_attention)
 
             layer_norm = LayerNorm(self_attention.get_output_dim())
+            self.add_module(f"layer_norm_{i}", layer_norm)
             self._layer_norm_layers.append(layer_norm)
 
             feedfoward_input_dim = hidden_dim
