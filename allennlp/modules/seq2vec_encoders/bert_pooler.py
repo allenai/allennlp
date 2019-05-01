@@ -1,3 +1,5 @@
+from typing import Union
+
 from overrides import overrides
 
 import torch
@@ -18,15 +20,21 @@ class BertPooler(Seq2VecEncoder):
 
     Parameters
     ----------
-    pretrained_model: ``str``
-        The pretrained BERT model to use.
+    pretrained_model: ``Union[str, BertModel]``
+        The pretrained BERT model to use. If this is a string,
+        we will call ``BertModel.from_pretrained(pretrained_model)``
+        and use that.
     """
-    def __init__(self, pretrained_model: str) -> None:
+    def __init__(self, pretrained_model: Union[str, BertModel]) -> None:
         super().__init__()
 
         # TODO(joelgrus): it's inefficient to load the model here and (presumably) also in the
         # BertTokenEmbedder, is there a way to load it only once?
-        model = BertModel.from_pretrained(pretrained_model)
+        if isinstance(pretrained_model, str):
+            model = BertModel.from_pretrained(pretrained_model)
+        else:
+            model = pretrained_model
+
         self.pooler = model.pooler
         self._embedding_dim = model.config.hidden_size
 
