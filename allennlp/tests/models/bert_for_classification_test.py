@@ -1,4 +1,4 @@
-# pylint: disable=abstract-method
+# pylint: disable=abstract-method,no-self-use
 from typing import Dict
 
 from pytorch_pretrained_bert.modeling import BertConfig, BertModel
@@ -50,9 +50,7 @@ class TestBertForClassification(ModelTestCase):
         # monkeypatch the PretrainedBertModel to return the tiny test fixture model
         config_path = self.FIXTURES_ROOT / 'bert' / 'config.json'
         config = BertConfig(str(config_path))
-        monkeypatch.setattr(PretrainedBertModel,
-                            'load',
-                            lambda _: BertModel(config))
+        monkeypatch.setattr(BertModel, 'from_pretrained', lambda _: BertModel(config))
 
     def test_model_can_train_save_and_load(self):
         param_file = self.FIXTURES_ROOT / 'bert' / 'bert_for_classification.jsonnet'
@@ -73,3 +71,16 @@ class TestBertForClassification(ModelTestCase):
 
         self.set_up_model(param_file, "")
         self.ensure_model_can_train_save_and_load(param_file)
+
+    def test_caching(self):
+        model1 = PretrainedBertModel.load("testing caching")
+        model2 = PretrainedBertModel.load("testing caching")
+        assert model1 is model2
+
+        model3 = PretrainedBertModel.load("testing not caching", cache_model=False)
+        model4 = PretrainedBertModel.load("testing not caching", cache_model=False)
+        assert model3 is not model4
+
+        model5 = PretrainedBertModel.load("name1")
+        model6 = PretrainedBertModel.load("name2")
+        assert model5 is not model6
