@@ -41,6 +41,7 @@ class AllenNLP_Job_Dispatcher():
             print('\n\n!!!!!!!!!!!!!!!!! approching S3 limit of 1000 results\n\n')
 
         all_objects = s3.list_objects(Bucket='multiqa', Prefix='preproc/')
+        all_objects['Contents'] += s3.list_objects(Bucket='commensenseqa', Prefix='crowdsense/')['Contents']
         all_objects['Contents'] += s3.list_objects(Bucket='mrqa', Prefix='data/')['Contents']
         all_objects['Contents'] += s3.list_objects(Bucket='beatbert', Prefix='data/')['Contents']
         if 'Contents' in all_objects:
@@ -90,6 +91,7 @@ class AllenNLP_Job_Dispatcher():
         s3 = boto3.client("s3")
         all_objects = s3.list_objects(Bucket='multiqa',Prefix=prefix)
         all_objects += s3.list_objects(Bucket='mrqa', Prefix=prefix)
+        all_objects += s3.list_objects(Bucket='commensenseqa', Prefix=prefix)
         all_objects += s3.list_objects(Bucket='beatbert', Prefix=prefix)
         all_keys = []
         if 'Contents' in all_objects:
@@ -562,15 +564,15 @@ allennlp_dispatcher = AllenNLP_Job_Dispatcher(experiment_name)
 #experiment_name = '063_BERT_evaluate_MRQA'
 #experiment_name = '064_BERT_RL-CWQ_evaluate_exp'
 #experiment_name = '065_BERT_train_mix_MRQA'
-#experiment_name = '066_CSQA_BERT_train'
+experiment_name = '066_CSQA_BERT_train'
 #experiment_name = '067_CSQA_BERTbase_grid_train'
 #experiment_name = '068_beatbert_asymmetric_train'
 #experiment_name = '069_BERTLarge_train_mix_MRQA'
-experiment_name = '070_CSQA_BERTLarge_train'
+#experiment_name = '070_CSQA_BERTLarge_train'
 
 if experiment_name.find('BERTLarge') > -1 and experiment_name.find('evaluate') == -1:
     queue = '4GPUs'
-queue = 'rack-gamir-g04'
+#queue = 'rack-gamir-g07'
 #queue = 'rack-jonathan-g02'
 #queue = 'savant'
 
