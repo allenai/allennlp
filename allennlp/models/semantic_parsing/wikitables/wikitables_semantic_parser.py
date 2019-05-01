@@ -357,7 +357,7 @@ class WikiTablesSemanticParser(Model):
 
         Parameters
         ----------
-        worlds : ``List[WikiTablesWorld]``
+        worlds : ``List[WikiTablesLanguage]``
         num_entities : ``int``
         tensor : ``torch.Tensor``
             Used for copying the constructed list onto the right device.
@@ -409,7 +409,7 @@ class WikiTablesSemanticParser(Model):
 
         Parameters
         ----------
-        worlds : ``List[WikiTablesWorld]``
+        worlds : ``List[WikiTablesLanguage]``
         linking_scores : ``torch.FloatTensor``
             Has shape (batch_size, num_question_tokens, num_entities).
         question_mask: ``torch.LongTensor``

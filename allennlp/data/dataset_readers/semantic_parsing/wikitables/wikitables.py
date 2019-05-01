@@ -189,15 +189,17 @@ class WikiTablesDatasetReader(DatasetReader):
                          target_values: List[str] = None,
                          offline_search_output: List[str] = None) -> Instance:
         """
-        Reads text inputs and makes an instance. WikitableQuestions dataset provides tables as
-        TSV files pre-tagged using CoreNLP, which we use for training.
+        Reads text inputs and makes an instance. We pass the ``table_lines`` to
+        ``TableQuestionContext.read_from_lines``, and that method accepts this field either as lines from CoreNLP
+        processed "*.tagged" files that come with the dataset, or simply in a tsv format where each line
+        corresponds to a row and the cells are tab-separated.
 
         Parameters
         ----------
         question : ``str``
             Input question
         table_lines : ``List[List[str]]``
-            The table content preprocessed by CoreNLP. See ``TableQuestionContext.read_from_lines``
+            The table content optionally preprocessed by CoreNLP. See ``TableQuestionContext.read_from_lines``
             for the expected format.
         target_values : ``List[str]``, optional
             Target values for the denotations the logical forms should execute to. Not required for testing.

@@ -141,11 +141,11 @@ class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
             ``KnowledgeGraphField``.  This output is similar to a ``TextField`` output, where each
             entity in the table is treated as a "token", and we will use a ``TextFieldEmbedder`` to
             get embeddings for each entity.
-        world : ``List[WikiTablesWorld]``
-            We use a ``MetadataField`` to get the ``World`` for each input instance.  Because of
-            how ``MetadataField`` works, this gets passed to us as a ``List[WikiTablesWorld]``,
+        world : ``List[WikiTablesLanguage]``
+            We use a ``MetadataField`` to get the ``WikiTablesLanguage`` object for each input instance.
+            Because of how ``MetadataField`` works, this gets passed to us as a ``List[WikiTablesLanguage]``,
         actions : ``List[List[ProductionRuleArray]]``
-            A list of all possible actions for each ``World`` in the batch, indexed into a
+            A list of all possible actions for each ``world`` in the batch, indexed into a
             ``ProductionRuleArray`` using a ``ProductionRuleField``.  We will embed all of these
             and use the embeddings to determine which action to take at each timestep in the
             decoder.

@@ -22,6 +22,8 @@ class WikiTablesParserPredictor(Predictor):
         question_text = json_dict["question"]
         table_rows = json_dict["table"].split('\n')
 
+        # We are directly passing the raw table rows here. The code in ``TableQuestionContext`` will do some
+        # minimal processing to extract dates and numbers from the cells.
         # pylint: enable=protected-access
         instance = self._dataset_reader.text_to_instance(question_text,  # type: ignore
                                                          table_rows)

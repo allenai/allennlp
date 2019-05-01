@@ -206,14 +206,17 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
             ``KnowledgeGraphField``.  This output is similar to a ``TextField`` output, where each
             entity in the table is treated as a "token", and we will use a ``TextFieldEmbedder`` to
             get embeddings for each entity.
-        world : ``List[WikiTablesWorld]``
-            We use a ``MetadataField`` to get the ``World`` for each input instance.  Because of
-            how ``MetadataField`` works, this gets passed to us as a ``List[WikiTablesWorld]``,
+        world : ``List[WikiTablesLanguage]``
+            We use a ``MetadataField`` to get the ``WikiTablesLanguage`` object for each input instance.
+            Because of how ``MetadataField`` works, this gets passed to us as a ``List[WikiTablesLanguage]``,
         actions : ``List[List[ProductionRule]]``
-            A list of all possible actions for each ``World`` in the batch, indexed into a
+            A list of all possible actions for each ``world`` in the batch, indexed into a
             ``ProductionRule`` using a ``ProductionRuleField``.  We will embed all of these
             and use the embeddings to determine which action to take at each timestep in the
             decoder.
+        agenda : ``torch.LongTensor``
+            Agenda vectors that the checklist vectors will be compared against to compute the checklist
+            cost.
         target_values : ``List[List[str]]``, optional (default = None)
             For each instance, a list of target values taken from the example lisp string. We pass
             this list to the evaluator along with logical forms to compute denotation accuracy.
@@ -371,13 +374,12 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         action_history = state.action_history[0]
         batch_index = state.batch_indices[0]
         action_strings = [state.possible_actions[batch_index][i][0] for i in action_history]
-        logical_form = world.action_sequence_to_logical_form(action_strings)
         target_values = state.extras[batch_index]
         evaluation = False
         executor_logger = \
                 logging.getLogger('allennlp.semparse.domain_languages.wikitables_language')
         executor_logger.setLevel(logging.ERROR)
-        evaluation = world.evaluate_logical_form(logical_form, target_values)
+        evaluation = world.evaluate_action_sequence(action_strings, target_values)
         if evaluation:
             cost = checklist_cost
         else:

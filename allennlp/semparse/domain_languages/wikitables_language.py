@@ -341,14 +341,34 @@ class WikiTablesLanguage(DomainLanguage):
         string, and returns True iff the logical form executes to the target list, using the
         official WikiTableQuestions evaluation script.
         """
-        normalized_target_list = [TableQuestionContext.normalize_string(value) for value in
-                                  target_list]
-        target_value_list = evaluator.to_value_list(normalized_target_list)
         try:
             denotation = self.execute(logical_form)
         except ExecutionError:
             logger.warning(f'Failed to execute: {logical_form}')
             return False
+        return self.evaluate_denotation(denotation, target_list)
+
+    def evaluate_action_sequence(self, action_sequence: List[str], target_list: List[str]) -> bool:
+        """
+        Similar to ``evaluate_logical_form`` except that it takes an action sequence instead. The reason this is
+        separate is because there is a separate method ``DomainLanguage.execute_action_sequence`` that executes the
+        action sequence directly.
+        """
+        try:
+            denotation = self.execute_action_sequence(action_sequence)
+        except ExecutionError:
+            logger.warning(f'Failed to execute action sequence: {action_sequence}')
+            return False
+        return self.evaluate_denotation(denotation, target_list)
+
+    def evaluate_denotation(self, denotation: Any, target_list: List[str]) -> bool:
+        """
+        Compares denotation with a target list and returns whether they are both the same according to the official
+        evaluator.
+        """
+        normalized_target_list = [TableQuestionContext.normalize_string(value) for value in
+                                  target_list]
+        target_value_list = evaluator.to_value_list(normalized_target_list)
         if isinstance(denotation, list):
             denotation_list = [str(denotation_item) for denotation_item in denotation]
         else:
