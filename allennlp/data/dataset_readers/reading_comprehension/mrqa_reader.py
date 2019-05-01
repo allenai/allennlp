@@ -76,10 +76,6 @@ class MRQAReader(DatasetReader):
         # adds the [CLS] and [SEP] token pieces automatically)
         per_question_chunks = []
         for qa in unproc_context['qas']:
-            # is_impossible not supported at this point...
-            if qa['is_impossible']:
-                continue
-
             chunks = []
             curr_token_ix = 0
             window_start_token_offset = 0
