@@ -86,11 +86,11 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
                                      num_layers=2,
                                      dropout=dropout_prob)
 
-            self.add_module(f"feedforward_{i}", feedfoward)
+            setattr(self, f"feedforward_{i}", feedfoward)
             self._feedfoward_layers.append(feedfoward)
 
             feedforward_layer_norm = LayerNorm(feedfoward.get_output_dim())
-            self.add_module(f"feedforward_layer_norm_{i}", feedforward_layer_norm)
+            setattr(self, f"feedforward_layer_norm_{i}", feedforward_layer_norm)
             self._feed_forward_layer_norm_layers.append(feedforward_layer_norm)
 
             self_attention = MultiHeadSelfAttention(num_heads=num_attention_heads,
@@ -98,11 +98,11 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
                                                     attention_dim=projection_dim,
                                                     values_dim=projection_dim,
                                                     attention_dropout_prob=attention_dropout_prob)
-            self.add_module(f"self_attention_{i}", self_attention)
+            setattr(self, f"self_attention_{i}", self_attention)
             self._attention_layers.append(self_attention)
 
             layer_norm = LayerNorm(self_attention.get_output_dim())
-            self.add_module(f"layer_norm_{i}", layer_norm)
+            setattr(self, f"layer_norm_{i}", layer_norm)
             self._layer_norm_layers.append(layer_norm)
 
             feedfoward_input_dim = hidden_dim
@@ -129,13 +129,11 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
             output = add_positional_features(inputs)
         else:
             output = inputs
-        for (attention,
-             feedforward,
-             feedforward_layer_norm,
-             layer_norm) in zip(self._attention_layers,
-                                self._feedfoward_layers,
-                                self._feed_forward_layer_norm_layers,
-                                self._layer_norm_layers):
+        for i in range(len(self._attention_layers)):
+            attention = getattr(self, f"self_attention_{i}")
+            feedforward = getattr(self, f"feedforward_{i}")
+            feedforward_layer_norm = getattr(self, f"feedforward_layer_norm_{i}")
+            layer_norm = getattr(self, f"layer_norm_{i}")
             cached_input = output
             # Project output of attention encoder through a feedforward
             # network and back to the input size for the next layer.
