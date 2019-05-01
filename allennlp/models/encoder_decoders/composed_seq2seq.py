@@ -84,7 +84,7 @@ class ComposedSeq2Seq(Model):
         """
         state = self._encode(source_tokens)
 
-        return self.decoder.forward(state, target_tokens)
+        return self.decoder(state, target_tokens)
 
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:

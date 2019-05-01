@@ -9,3 +9,4 @@ The available Seq2Seq decoders are
 """
 from allennlp.modules.seq2seq_decoders.lstm_decoder_cell import LstmDecoderCell
 from allennlp.modules.seq2seq_decoders.rnn_seq_decoder import RnnSeqDecoder
+from allennlp.modules.seq2seq_decoders.stacked_self_attention import StackedSelfAttentionSeqDecoder

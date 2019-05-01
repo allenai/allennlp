@@ -39,23 +39,6 @@ class SeqDecoder(Module, Registrable):
                                     BLEU(exclude_indices={self._pad_index, self._end_index, self._start_index})
         self._token_based_metric = token_based_metric
 
-    def _forward_beam_search(self, state: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
-        """Make forward pass during prediction using a beam search."""
-        raise NotImplementedError()
-
-    def _forward_loss(self,
-                      state: Dict[str, torch.Tensor],
-                      target_tokens: Dict[str, torch.LongTensor] = None) -> Dict[str, torch.Tensor]:
-        """
-        Make forward pass during training or do greedy search during prediction.
-
-        Notes
-        -----
-        We really only use the predictions from the method to test that beam search
-        with a beam size of 1 gives the same results.
-        """
-        raise NotImplementedError()
-
     def get_output_dim(self):
         raise NotImplementedError()
 
