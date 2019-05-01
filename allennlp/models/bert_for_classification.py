@@ -16,9 +16,10 @@ class BertForClassification(Model):
     An AllenNLP Model that runs pretrained BERT,
     takes the pooled output, and adds a Linear layer on top.
     If you want an easy way to use BERT for classification, this is it.
-    Note that this is a non-AllenNLP-ish model architecture, in the sense
-    that it goes straight from indexed tokens to pooled output without
-    ever (explicitly) using the token embeddings.
+    Note that this is a somewhat non-AllenNLP-ish model architecture,
+    in the sense that it goes straight from indexed tokens to pooled output
+    without using a ``TextFieldEmbedder`` or ``TokenEmbedder``; and as such it
+    implicitly assumes that you used the bert-pretrained token indexer.
 
     Parameters
     ----------
