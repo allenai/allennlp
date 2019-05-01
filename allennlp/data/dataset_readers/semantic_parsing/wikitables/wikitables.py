@@ -189,10 +189,9 @@ class WikiTablesDatasetReader(DatasetReader):
                          target_values: List[str] = None,
                          offline_search_output: List[str] = None) -> Instance:
         """
-        Reads text inputs and makes an instance. We pass the ``table_lines`` to
-        ``TableQuestionContext.read_from_lines``, and that method accepts this field either as lines from CoreNLP
-        processed "*.tagged" files that come with the dataset, or simply in a tsv format where each line
-        corresponds to a row and the cells are tab-separated.
+        Reads text inputs and makes an instance. We pass the ``table_lines`` to ``TableQuestionContext``, and that
+        method accepts this field either as lines from CoreNLP processed tagged files that come with the dataset,
+        or simply in a tsv format where each line corresponds to a row and the cells are tab-separated.
 
         Parameters
         ----------
