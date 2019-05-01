@@ -6,6 +6,7 @@ from pytorch_pretrained_bert.modeling import BertModel
 
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.model import Model
+from allennlp.modules.token_embedders.bert_token_embedder import PretrainedBertModel
 from allennlp.nn.initializers import InitializerApplicator
 from allennlp.training.metrics import CategoricalAccuracy
 
@@ -17,9 +18,8 @@ class BertForClassification(Model):
     takes the pooled output, and adds a Linear layer on top.
     If you want an easy way to use BERT for classification, this is it.
     Note that this is a somewhat non-AllenNLP-ish model architecture,
-    in the sense that it goes straight from indexed tokens to pooled output
-    without using a ``TextFieldEmbedder`` or ``TokenEmbedder``; and as such it
-    implicitly assumes that you used the bert-pretrained token indexer.
+    in that it essentially requires you to use the "bert-pretrained"
+    token indexer, rather than configuring whatever indexing scheme you like.
 
     Parameters
     ----------
@@ -43,6 +43,7 @@ class BertForClassification(Model):
     def __init__(self,
                  vocab: Vocabulary,
                  bert_model: Union[str, BertModel],
+                 dropout: float = None,
                  num_labels: int = None,
                  index: str = "bert",
                  label_namespace: str = "labels",
@@ -51,7 +52,7 @@ class BertForClassification(Model):
         super().__init__(vocab)
 
         if isinstance(bert_model, str):
-            self.bert_model = BertModel.from_pretrained(bert_model)
+            self.bert_model = PretrainedBertModel.load(bert_model)
         else:
             self.bert_model = bert_model
 
@@ -63,6 +64,11 @@ class BertForClassification(Model):
             out_features = num_labels
         else:
             out_features = vocab.get_vocab_size(label_namespace)
+
+        if dropout is not None:
+            self._dropout = torch.nn.Dropout(p=dropout)
+        else:
+            self._dropout = None
 
         self._classification_layer = torch.nn.Linear(in_features, out_features)
         self._accuracy = CategoricalAccuracy()
@@ -102,6 +108,9 @@ class BertForClassification(Model):
         _, pooled = self.bert_model(input_ids=input_ids,
                                     token_type_ids=token_type_ids,
                                     attention_mask=input_mask)
+
+        if self._dropout is not None:
+            pooled = self._dropout(pooled)
 
         # apply classification layer
         logits = self._classification_layer(pooled)

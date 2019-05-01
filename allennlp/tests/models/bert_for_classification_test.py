@@ -10,6 +10,7 @@ from allennlp.data.fields import TextField, LabelField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import TokenIndexer
 from allennlp.data.tokenizers import WordTokenizer
+from allennlp.modules.token_embedders.bert_token_embedder import PretrainedBertModel
 
 
 @DatasetReader.register("bert_classification_test")
@@ -46,16 +47,26 @@ class TestBertForClassification(ModelTestCase):
         super().setUp()
         monkeypatch = MonkeyPatch()
 
-        # monkeypatch BertModel.from_pretrained to return the tiny test fixture model
+        # monkeypatch the PretrainedBertModel to return the tiny test fixture model
         config_path = self.FIXTURES_ROOT / 'bert' / 'config.json'
         config = BertConfig(str(config_path))
-        monkeypatch.setattr(BertModel, 'from_pretrained', lambda _: BertModel(config))
+        monkeypatch.setattr(PretrainedBertModel,
+                            'load',
+                            lambda _: BertModel(config))
 
     def test_model_can_train_save_and_load(self):
         param_file = self.FIXTURES_ROOT / 'bert' / 'bert_for_classification.jsonnet'
 
         self.set_up_model(param_file, "")
         self.ensure_model_can_train_save_and_load(param_file)
+
+    def test_decode(self):
+        param_file = self.FIXTURES_ROOT / 'bert' / 'bert_for_classification.jsonnet'
+        self.set_up_model(param_file, "")
+        padding_lengths = self.dataset.get_padding_lengths()
+        tensors = self.model(**self.dataset.as_tensor_dict(padding_lengths))
+        decoded = self.model.decode(tensors)
+        assert "label" in decoded
 
     def test_bert_pooler_can_train_save_and_load(self):
         param_file = self.FIXTURES_ROOT / 'bert' / 'bert_pooler.jsonnet'

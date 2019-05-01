@@ -16,7 +16,8 @@
     "validation_data_path": "also doesn't matter",
     "model": {
         "type": "bert_for_classification",
-        "bert_model": "it doesn't matter because we're monkeypatching this"
+        "bert_model": "it doesn't matter because we're monkeypatching this",
+        "dropout": 0.2
     },
     "iterator": {
         "type": "bucket",

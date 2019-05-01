@@ -24,13 +24,16 @@
             "token_embedders": {
                 "bert": {
                     "type": "bert-pretrained",
-                    "pretrained_model": "doesn't matter"
+                    "pretrained_model": "doesn't matter",
+                    "top_layer_only": true,
+                    "requires_grad": false
                 }
             }
         },
         "seq2vec_encoder": {
            "type": "bert_pooler",
-           "pretrained_model": "also doesn't matter"
+           "pretrained_model": "also doesn't matter",
+           "requires_grad": false
         }
     },
     "iterator": {

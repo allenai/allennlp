@@ -6,6 +6,8 @@ import torch
 from pytorch_pretrained_bert import BertModel
 
 from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
+from allennlp.modules.token_embedders.bert_token_embedder import PretrainedBertModel
+
 
 @Seq2VecEncoder.register("bert_pooler")
 class BertPooler(Seq2VecEncoder):
@@ -20,22 +22,24 @@ class BertPooler(Seq2VecEncoder):
 
     Parameters
     ----------
-    pretrained_model: ``Union[str, BertModel]``
+    pretrained_model : ``Union[str, BertModel]``
         The pretrained BERT model to use. If this is a string,
         we will call ``BertModel.from_pretrained(pretrained_model)``
         and use that.
+    requires_grad : ``bool``, optional, (default = True)
+        If True, the weights of the pooler will be updated during training.
+        Otherwise they will not.
     """
-    def __init__(self, pretrained_model: Union[str, BertModel]) -> None:
+    def __init__(self, pretrained_model: Union[str, BertModel], requires_grad: bool = True) -> None:
         super().__init__()
 
-        # TODO(joelgrus): it's inefficient to load the model here and (presumably) also in the
-        # BertTokenEmbedder, is there a way to load it only once?
         if isinstance(pretrained_model, str):
-            model = BertModel.from_pretrained(pretrained_model)
+            model = PretrainedBertModel.load(pretrained_model)
         else:
             model = pretrained_model
 
         self.pooler = model.pooler
+        self.pooler.requires_grad = requires_grad
         self._embedding_dim = model.config.hidden_size
 
     @overrides
