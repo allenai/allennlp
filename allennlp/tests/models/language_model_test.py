@@ -77,8 +77,8 @@ class TestUnidirectionalLanguageModelTransformer(TestUnidirectionalLanguageModel
         # they are not used.
         self.ensure_model_can_train_save_and_load(
                 self.param_file, gradients_to_ignore={
-                        "_contextualizer.feedforward_layer_norm_0.gamma",
-                        "_contextualizer.feedforward_layer_norm_0.beta"})
+                        "_contextualizer._feed_forward_layer_norm_layers.0.gamma",
+                        "_contextualizer._feed_forward_layer_norm_layers.0.beta"})
 
 class TestBidirectionalLanguageModel(TestUnidirectionalLanguageModel):
     def setUp(self):
