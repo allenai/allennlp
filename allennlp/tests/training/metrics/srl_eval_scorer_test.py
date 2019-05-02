@@ -59,3 +59,34 @@ class SrlEvalScorerTest(AllenNlpTestCase):
         assert_allclose(metrics['precision-overall'], 1.0)
         assert_allclose(metrics['recall-overall'], 1.0)
         assert_allclose(metrics['f1-measure-overall'], 1.0)
+
+    def test_span_metrics_are_computed_correctly(self):
+        batch_verb_indices = [2]
+        batch_sentences = [["The", "cat", "loves", "hats", "."]]
+        batch_bio_predicted_tags = [["B-ARG0", "B-ARG1", "B-V", "B-ARG1", "O"]]
+        batch_conll_predicted_tags = [convert_bio_tags_to_conll_format(tags) for
+                                      tags in batch_bio_predicted_tags]
+        batch_bio_gold_tags = [["B-ARG0", "I-ARG0", "B-V", "B-ARG1", "O"]]
+        batch_conll_gold_tags = [convert_bio_tags_to_conll_format(tags) for
+                                 tags in batch_bio_gold_tags]
+
+        srl_scorer = SrlEvalScorer()
+        srl_scorer(batch_verb_indices,
+                   batch_sentences,
+                   batch_conll_predicted_tags,
+                   batch_conll_gold_tags)
+        metrics = srl_scorer.get_metric()
+        assert len(metrics) == 12
+        assert_allclose(metrics['precision-ARG0'], 0.0)
+        assert_allclose(metrics['recall-ARG0'], 0.0)
+        assert_allclose(metrics['f1-measure-ARG0'], 0.0)
+        assert_allclose(metrics['precision-ARG1'], 0.5)
+        assert_allclose(metrics['recall-ARG1'], 1.0)
+        assert_allclose(metrics['f1-measure-ARG1'], 2/3)
+        assert_allclose(metrics['precision-V'], 1.0)
+        assert_allclose(metrics['recall-V'], 1.0)
+        assert_allclose(metrics['f1-measure-V'], 1.0)
+        assert_allclose(metrics['precision-overall'], 1/2)
+        assert_allclose(metrics['recall-overall'], 2/3)
+        assert_allclose(metrics['f1-measure-overall'],
+                        (2 * (2/3) * (1/2)) / ((2/3) + (1/2)))

@@ -87,7 +87,7 @@ class SrlEvalScorer(Metric):
                                                    sentence,
                                                    predicted_tag_sequence,
                                                    gold_tag_sequence)
-        perl_script_command = ["perl", self._srl_eval_path, predicted_path, gold_path]
+        perl_script_command = ["perl", self._srl_eval_path, gold_path, predicted_path]
         completed_process = subprocess.run(perl_script_command, stdout=subprocess.PIPE,
                                            universal_newlines=True, check=True)
         for line in completed_process.stdout.split("\n"):
