@@ -86,6 +86,9 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
                                      num_layers=2,
                                      dropout=dropout_prob)
 
+            # Note: Please use `ModuleList` in new code. It provides better
+            # support for running on multiple GPUs. We've kept `add_module` here
+            # solely for backwards compatibility with existing serialized models.
             self.add_module(f"feedforward_{i}", feedfoward)
             self._feedfoward_layers.append(feedfoward)
 
@@ -130,6 +133,12 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
         else:
             output = inputs
         for i in range(len(self._attention_layers)):
+            # It's necessary to use `getattr` here because the elements stored
+            # in the lists are not replicated by torch.nn.parallel.replicate
+            # when running on multiple GPUs. Please use `ModuleList` in new
+            # code. It handles this issue transparently. We've kept `add_module`
+            # (in conjunction with `getattr`) solely for backwards compatibility
+            # with existing serialized models.
             attention = getattr(self, f"self_attention_{i}")
             feedforward = getattr(self, f"feedforward_{i}")
             feedforward_layer_norm = getattr(self, f"feedforward_layer_norm_{i}")
