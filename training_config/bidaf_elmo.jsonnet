@@ -64,8 +64,7 @@
       "bidirectional": true,
       "input_size": 1224,
       "hidden_size": 100,
-      "num_layers": 1,
-      "dropout": 0.2
+      "num_layers": 1
     },
     "similarity_function": {
       "type": "linear",
@@ -86,8 +85,7 @@
       "bidirectional": true,
       "input_size": 1400,
       "hidden_size": 100,
-      "num_layers": 1,
-      "dropout": 0.2
+      "num_layers": 1
     },
     "dropout": 0.2
   },

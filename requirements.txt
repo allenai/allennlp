@@ -65,6 +65,9 @@ word2number>=1.1
 # To use the BERT model
 pytorch-pretrained-bert>=0.6.0
 
+# For caching processed data
+jsonpickle
+
 #### ESSENTIAL LIBRARIES USED IN SCRIPTS ####
 
 # Plot graphs for learning rate finder
@@ -106,7 +109,7 @@ moto>=1.3.4
 #### TESTING-RELATED PACKAGES ####
 
 # Checks style, syntax, and other useful errors.
-pylint==1.8.1
+pylint==1.9.4
 
 # Static type checking
 mypy==0.521

@@ -25,3 +25,13 @@ allennlp.semparse.domain_languages
    :members:
    :undoc-members:
    :show-inheritance:
+
+.. automodule:: allennlp.semparse.domain_languages.common
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: allennlp.semparse.domain_languages.common.date
+   :members:
+   :undoc-members:
+   :show-inheritance:

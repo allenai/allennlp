@@ -506,6 +506,14 @@ class Params(MutableMapping):
 
         return order_dict(params_dict, order_func)
 
+    def get_hash(self) -> str:
+        """
+        Returns a hash code representing the current state of this ``Params`` object.  We don't
+        want to implement ``__hash__`` because that has deeper python implications (and this is a
+        mutable object), but this will give you a representation of the current state.
+        """
+        return str(hash(json.dumps(self.params, sort_keys=True)))
+
 
 def pop_choice(params: Dict[str, Any],
                key: str,
@@ -526,10 +534,13 @@ def pop_choice(params: Dict[str, Any],
     return value
 
 
-def _replace_none(dictionary: Dict[str, Any]) -> Dict[str, Any]:
-    for key in dictionary.keys():
-        if dictionary[key] == "None":
-            dictionary[key] = None
-        elif isinstance(dictionary[key], dict):
-            dictionary[key] = _replace_none(dictionary[key])
-    return dictionary
+def _replace_none(params: Any) -> Any:
+    if params == "None":
+        return None
+    elif isinstance(params, dict):
+        for key, value in params.items():
+            params[key] = _replace_none(value)
+        return params
+    elif isinstance(params, list):
+        return [_replace_none(value) for value in params]
+    return params

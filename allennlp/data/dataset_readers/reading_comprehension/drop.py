@@ -111,7 +111,7 @@ class DropReader(DatasetReader):
         with open(file_path) as dataset_file:
             dataset = json.load(dataset_file)
         logger.info("Reading the dataset")
-        instances, skip_count = [], 0
+        kept_count, skip_count = 0, 0
         for passage_id, passage_info in dataset.items():
             passage_text = passage_info["passage"]
             passage_tokens = self._tokenizer.tokenize(passage_text)
@@ -132,11 +132,11 @@ class DropReader(DatasetReader):
                                                  answer_annotations,
                                                  passage_tokens)
                 if instance is not None:
-                    instances.append(instance)
+                    kept_count += 1
+                    yield instance
                 else:
                     skip_count += 1
-        logger.info(f"Skipped {skip_count} questions, kept {len(instances)} questions.")
-        return instances
+        logger.info(f"Skipped {skip_count} questions, kept {kept_count} questions.")
 
     @overrides
     def text_to_instance(self,  # type: ignore
