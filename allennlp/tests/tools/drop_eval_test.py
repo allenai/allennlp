@@ -109,3 +109,8 @@ class TestDropEvalFunctional:
                                         [{"spans": ["answer2"]}], "query_id":"qid1"}]}}
         prediction = {"qid1": "answer"}
         assert evaluate_json(annotation, prediction) == (0.0, 0.0)
+
+        annotation = {"pid1": {"qa_pairs":[{"answer": {"spans": ["answer1"]}, "query_id":"qid1"},\
+                                        {"answer": {"spans": ["answer2"]}, "query_id":"qid2"}]}}
+        prediction = {"qid1": "answer", "qid2": "answer2"}
+        assert evaluate_json(annotation, prediction) == (0.5, 0.5)

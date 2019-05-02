@@ -207,10 +207,10 @@ def evaluate_json(annotations: Dict[str, Any], predicted_answers: Dict[str, Any]
                     max_type = "number"
                 max_em_score = 0.0
                 max_f1_score = 0.0
-        instance_exact_match.append(max_em_score)
-        instance_f1.append(max_f1_score)
-        type_to_em[max_type].append(max_em_score)
-        type_to_f1[max_type].append(max_f1_score)
+            instance_exact_match.append(max_em_score)
+            instance_f1.append(max_f1_score)
+            type_to_em[max_type].append(max_em_score)
+            type_to_f1[max_type].append(max_f1_score)
 
     global_em = np.mean(instance_exact_match)
     global_f1 = np.mean(instance_f1)
