@@ -1,3 +1,6 @@
+# For a real model you'd want to use "bert-base-uncased" or similar.
+local bert_model = "allennlp/tests/fixtures/bert/vocab.txt";
+
 {
     "dataset_reader": {
         "lazy": false,
@@ -8,12 +11,12 @@
         "token_indexers": {
             "bert": {
                 "type": "bert-pretrained",
-                "pretrained_model": "allennlp/tests/fixtures/bert/vocab.txt"
+                "pretrained_model": bert_model
             }
         }
     },
-    "train_data_path": "doesn't matter, we're using precanned examples",
-    "validation_data_path": "also doesn't matter",
+    "train_data_path": "/path/to/training/data",
+    "validation_data_path": "/path/to/validation/data",
     "model": {
         "type": "basic_classifier",
         "text_field_embedder": {
@@ -24,7 +27,7 @@
             "token_embedders": {
                 "bert": {
                     "type": "bert-pretrained",
-                    "pretrained_model": "doesn't matter",
+                    "pretrained_model": bert_model,
                     "top_layer_only": true,
                     "requires_grad": false
                 }
@@ -32,7 +35,7 @@
         },
         "seq2vec_encoder": {
            "type": "bert_pooler",
-           "pretrained_model": "also doesn't matter",
+           "pretrained_model": bert_model,
            "requires_grad": false
         }
     },

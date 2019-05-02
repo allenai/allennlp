@@ -21,6 +21,9 @@ class BertForClassification(Model):
     in that it essentially requires you to use the "bert-pretrained"
     token indexer, rather than configuring whatever indexing scheme you like.
 
+    See `allennlp/tests/fixtures/bert/bert_for_classification.jsonnet`
+    for an example of what your config might look like.
+
     Parameters
     ----------
     vocab : ``Vocabulary``

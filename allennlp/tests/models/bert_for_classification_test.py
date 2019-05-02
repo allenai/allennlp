@@ -14,7 +14,7 @@ from allennlp.modules.token_embedders.bert_token_embedder import PretrainedBertM
 
 
 @DatasetReader.register("bert_classification_test")
-class TestReader(DatasetReader):
+class BertClassificationTestReader(DatasetReader):
     def __init__(self,
                  lazy: bool = False,
                  token_indexers: Dict[str, TokenIndexer] = None,
