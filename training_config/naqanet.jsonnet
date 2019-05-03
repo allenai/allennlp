@@ -45,7 +45,7 @@
     "train_data_path": "drop_dataset_train.json",
     "validation_data_path": "drop_dataset_dev.json",
     "model": {
-        "type": "augmented_qanet",
+        "type": "naqanet",
         "text_field_embedder": {
             "token_embedders": {
                 "tokens": {
