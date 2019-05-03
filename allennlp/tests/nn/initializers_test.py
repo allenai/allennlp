@@ -26,6 +26,9 @@ class TestInitializers(AllenNlpTestCase):
     def test_from_params_string(self):
         Initializer.from_params(params="eye")
 
+    def test_from_params_none(self):
+        Initializer.from_params(params=None)
+
     def test_regex_matches_are_initialized_correctly(self):
         class Net(torch.nn.Module):
             def __init__(self):

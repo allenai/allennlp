@@ -83,3 +83,21 @@ class TestEvaluate(AllenNlpTestCase):
         with open(output_file, 'r') as file:
             saved_metrics = json.load(file)
         assert computed_metrics == saved_metrics
+
+    def test_evaluate_works_with_vocab_expansion(self):
+        archive_path = str(self.FIXTURES_ROOT / "decomposable_attention" / "serialization" / "model.tar.gz")
+        # snli2 has a extra token ("seahorse") in it.
+        evaluate_data_path = str(self.FIXTURES_ROOT / 'data' / 'snli2.jsonl')
+        embeddings_filename = str(self.FIXTURES_ROOT / 'data' / 'seahorse_embeddings.gz') #has only seahorse vector
+        embedding_sources_mapping = json.dumps({"_text_field_embedder.token_embedder_tokens": embeddings_filename})
+        kebab_args = ["evaluate", archive_path, evaluate_data_path, "--cuda-device", "-1"]
+
+        # Evaluate 1 with no vocab expansion,
+        # Evaluate 2 with vocab expansion with no pretrained embedding file.
+        # Evaluate 3 with vocab expansion with given pretrained embedding file.
+        metrics_1 = evaluate_from_args(self.parser.parse_args(kebab_args))
+        metrics_2 = evaluate_from_args(self.parser.parse_args(kebab_args + ["--extend-vocab"]))
+        metrics_3 = evaluate_from_args(self.parser.parse_args(kebab_args + ["--embedding-sources-mapping",
+                                                                            embedding_sources_mapping]))
+        assert metrics_1 != metrics_2
+        assert metrics_2 != metrics_3

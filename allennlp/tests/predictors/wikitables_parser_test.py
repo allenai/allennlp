@@ -1,4 +1,4 @@
-# pylint: disable=no-self-use,invalid-name
+# pylint: disable=no-self-use,invalid-name,protected-access
 import os
 import pytest
 
@@ -6,6 +6,7 @@ from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor
 from allennlp.predictors.wikitables_parser import (SEMPRE_ABBREVIATIONS_PATH, SEMPRE_GRAMMAR_PATH)
+
 
 @pytest.mark.java
 class TestWikiTablesParserPredictor(AllenNlpTestCase):
@@ -59,6 +60,49 @@ class TestWikiTablesParserPredictor(AllenNlpTestCase):
         result = predictor.predict_json(inputs)
         answer = result.get("answer")
         assert answer is not None
+
+    def test_interactive_beam_search(self):
+        inputs = {
+                "question": "Who is 18 years old?",
+                "table": "Name\tAge\nShallan\t16\nKaladin\t18"
+        }
+
+        archive_path = self.FIXTURES_ROOT / 'semantic_parsing' / 'wikitables' / 'serialization' / 'model.tar.gz'
+        archive = load_archive(archive_path)
+        predictor = Predictor.from_archive(archive, 'wikitables-parser')
+
+        # This is not the start of the best sequence, but it will be once we force it.
+        initial_tokens = ['@start@ -> p', 'p -> [<#1,#1>, p]']
+
+        # First let's try an unforced one. Its initial tokens should not be ours.
+        result = predictor.predict_json(inputs)
+        best_action_sequence = result['best_action_sequence']
+        assert best_action_sequence
+        assert best_action_sequence[:2] != initial_tokens
+
+        # Now let's try forcing it down the path of `initial_sequence`
+        inputs["initial_sequence"] = initial_tokens
+        result = predictor.predict_json(inputs)
+        best_action_sequence = result['best_action_sequence']
+        assert best_action_sequence[:2] == initial_tokens
+
+        # Should get choices back from beam search
+        beam_search_choices = result["choices"]
+
+        # Make sure that our forced choices appear as beam_search_choices.
+        for choices, initial_token in zip(beam_search_choices, initial_tokens):
+            assert any(token == initial_token for _, token in choices)
+
+        # Should get back beams too
+        beam_snapshots = result["beam_snapshots"]
+        assert len(beam_snapshots) == 1
+        assert 0 in beam_snapshots
+        beams = beam_snapshots[0]
+
+        for idx, (beam, action) in enumerate(zip(beams, best_action_sequence)):
+            # First beam should have 1-element sequences, etc...
+            assert all(len(sequence) == idx + 1 for _, sequence in beam)
+            assert any(sequence[-1] == action for _, sequence in beam)
 
     def test_answer_present_with_batch_predict(self):
         inputs = [{

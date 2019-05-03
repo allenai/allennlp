@@ -137,8 +137,12 @@ class GraphParser(Model):
         ----------
         tokens : Dict[str, torch.LongTensor], required
             The output of ``TextField.as_array()``.
-        pos_tags : ``torch.LongTensor``, optional, (default = None).
+        pos_tags : torch.LongTensor, optional (default = None)
             The output of a ``SequenceLabelField`` containing POS tags.
+        metadata : List[Dict[str, Any]], optional (default = None)
+            A dictionary of metadata for each batch element which has keys:
+                tokens : ``List[str]``, required.
+                    The original string tokens in the sentence.
         arc_tags : torch.LongTensor, optional (default = None)
             A torch tensor representing the sequence of integer indices denoting the parent of every
             word in the dependency parse. Has shape ``(batch_size, sequence_length, sequence_length)``.
@@ -189,8 +193,10 @@ class GraphParser(Model):
                 "arc_probs": arc_probs,
                 "arc_tag_probs": arc_tag_probs,
                 "mask": mask,
-                "tokens": [meta["tokens"] for meta in metadata],
                 }
+
+        if metadata:
+            output_dict["tokens"] = [meta["tokens"] for meta in metadata]
 
         if arc_tags is not None:
             arc_nll, tag_nll = self._construct_loss(arc_scores=arc_scores,

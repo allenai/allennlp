@@ -25,7 +25,6 @@ from allennlp.data.fields import Field, TextField, IndexField, \
     MetadataField, ListField
 
 # Globals
-MAX_LENGTH = 800
 SEPARATORS = ['[PAR]', '[DOC]', '[TLE]']
 
 # Process-local tokenizer
@@ -48,10 +47,7 @@ def read_corpus(split):
 
     data = original_dataset
     contexts = []
-    for example in tqdm(data, total=len(data), ncols=80):
-        if example['type'] == 'comparison':
-            continue
-
+    for example in tqdm.tqdm(data, total=len(data), ncols=80):
         # choosing only the gold paragraphs
         gold_paragraphs = []
         for supp_fact in example['supporting_facts']:
@@ -185,19 +181,18 @@ def char_to_token(tokens, char_start, char_end):
 
 def process_example(example):
     """Process a single context with question example.
-    1) Truncate to MAX_LENGTH tokens.
-    2) Find answer spans for question pairs (that don't already have).
-    3) Discard questions that don't have exact match spans.
+    1) Find answer spans for question pairs (that don't already have).
+    2) Discard questions that don't have exact match spans.
     """
     # Record stats on filtered questions.
     num_skipped = 0
 
     # Skip zero length contexts
-    if len(example['context']) == 0:
-        return None, len(example['qas'])
+    #if len(example['context']) == 0:
+    #    return None, len(example['qas'])
 
     # Truncate
-    context_tokens = tokenize(example['context'])[:MAX_LENGTH]
+    context_tokens = tokenize(example['context'])
     context = ''.join([t.text_with_ws for t in context_tokens])
     example['context'] = context
 
@@ -244,22 +239,13 @@ def process_example(example):
                     text = answer['text']
                     answer_tokens = tokenize(text)
 
-                    # Discard empty answers.
-                    if len(answer_tokens) == 0:
-                        warn('Empty answer')
-                        continue
-
-                    # Apply filter rules.
-                    if filter(question_tokens, answer_tokens):
-                        warn('Filtering: %s\t%s' % (qa['question'], answer['text']))
-
                     # Find spans (by token matches).
                     token_spans = find_all_spans([t.text for t in context_tokens],
                                                  [t.text for t in answer_tokens])
 
                     # Skip if could not find span
-                    if not token_spans:
-                        continue
+                    #if not token_spans:
+                    #    continue
                     answer['token_spans'] = token_spans
 
                     char_spans = []
@@ -293,8 +279,16 @@ def process_and_dump(examples, filename , header=None, processes=None, upload=No
     """Run over all examples, with multiprocessing.
     Examples should be provided in the form of an iterable.
     """
-    dirname = os.path.dirname(filename)
-    pathlib.Path(dirname).mkdir(parents=True, exist_ok=True)
+    if filename.startswith('s3'):
+        dirname = '.'
+        local_filename = 'temp.jsonl.gz'
+        cloudbucket = filename.split('/')[2]
+        cloudfile = '/'.join(filename.split('/')[3:])
+    else:
+        local_filename = filename
+        dirname = '/'.join(filename.split('/')[0:-1])
+        pathlib.Path(dirname).mkdir(parents=True, exist_ok=True)
+
     if processes is None or processes > 1:
         process = processes or cpu_count() - 1
         workers = Pool(processes, initializer=init_worker)
@@ -308,14 +302,12 @@ def process_and_dump(examples, filename , header=None, processes=None, upload=No
         N = None
 
     stats = {'total': 0, 'original_skipped': 0, 'avg_context_tokens': 0, 'impossible': 0}
-    filename = filename + '.gz'
-    with tqdm.tqdm(total=N) as pbar, gzip.open(filename, 'wb') as f:
+    with tqdm.tqdm(total=N) as pbar, gzip.open(local_filename, 'wb') as f:
         f.write((json.dumps({'header': header}) + '\n').encode('utf-8'))
         for ex, num_skipped in map_fn(process_example, examples):
             stats['original_skipped'] += num_skipped
             if ex is not None:
                 stats['total'] += len(ex['qas'])
-                stats['impossible'] += len([q for q in ex['qas'] if q['is_impossible']])
                 stats['avg_context_tokens'] += len(ex['context_tokens']) * len(ex['qas'])
                 output = json.dumps(ex) + '\n'
                 f.write(output.encode('utf-8'))
@@ -328,21 +320,14 @@ def process_and_dump(examples, filename , header=None, processes=None, upload=No
           (stats['total'], original_total, stats['total'] / original_total * 100, stats['original_skipped']))
 
     # Upload to S3
-    upload = bool_flag(os.environ.get('MRQA_S3_UPLOAD', '0')) if upload is None else upload
-    if upload:
+    if filename.startswith('s3'):
         print('Uploading to S3, this may take some time ... ')
         s3 = boto3.client('s3')
-        if header is not None:
-            dataset_name = header['dataset'] + '.' + header['original_split']
-            path = os.path.join('data', header['mrqa_split'], dataset_name + '.jsonl.gz')
-            s3.upload_file(filename, 'mrqa', path, ExtraArgs={'ACL': 'public-read'})
-            stats['aws_path'] = os.path.join('https://s3.us-east-2.amazonaws.com/mrqa/', path)
-            stats['md5sum'] = get_hash(filename)
-            update_manifest(dataset_name, stats)
+        s3.upload_file(local_filename, cloudbucket, cloudfile, ExtraArgs={'ACL':'public-read'})
+        os.remove(local_filename)
 
-        else:
-            s3.upload_file(filename, 'mrqa', filename, ExtraArgs={'ACL':'public-read'})
-
+    ## TODO this is a hack, waiting for caching feature to be integrated in AllenNLP
+    return Instance({})
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -360,6 +345,8 @@ class MRQAReader(DatasetReader):
                  tokenizer: Tokenizer = None,
                  token_indexers: Dict[str, TokenIndexer] = None,
                  dataset_weight = None,
+                 preproc_outputfile: str = None,
+                 n_processes: int = None,
                  lazy: bool = False,
                  is_training = False,
                  sample_size: int = -1,
@@ -370,7 +357,7 @@ class MRQAReader(DatasetReader):
 
         # make sure results may be reproduced when sampling...
         random.seed(0)
-
+        self._preproc_outputfile = preproc_outputfile
         self._STRIDE = STRIDE
         # NOTE AllenNLP automatically adds [CLS] and [SEP] word peices in the begining and end of the context,
         # therefore we need to subtract 2
@@ -379,6 +366,7 @@ class MRQAReader(DatasetReader):
         self._dataset_weight = dataset_weight
         self._sample_size = sample_size
         self._is_training = is_training
+        self._n_processes = n_processes
 
         # BERT specific init
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
@@ -458,7 +446,7 @@ class MRQAReader(DatasetReader):
                 qa_metadata = {'has_answer': False, 'dataset': header['dataset'], "question_id": qa['qid'], \
                                'answer_texts_list': list(set(qa['answers']))}
                 for answer in qa['detected_answers']:
-                    if answer['token_spans'][0][0] >= window_start_token_offset and \
+                    if len(answer['token_spans']) > 0 and answer['token_spans'][0][0] >= window_start_token_offset and \
                         answer['token_spans'][0][1] < window_end_token_offset:
                         qa_metadata['has_answer'] = True
                         answer_token_offset = len(qa['question_tokens']) + 1 - window_start_token_offset
@@ -471,8 +459,8 @@ class MRQAReader(DatasetReader):
 
                 window_start_token_offset += self._STRIDE
 
-            if len([inst for inst in chunks if inst['answers'] != []])>0:
-                per_question_chunks.append(chunks)
+            #if len([inst for inst in chunks if inst['answers'] != []])>0:
+            per_question_chunks.append(chunks)
         return per_question_chunks
 
     def gen_question_instances(self, question_chunks):
@@ -506,22 +494,23 @@ class MRQAReader(DatasetReader):
         split = 'train' if self._is_training else 'evaluation'
         header = {"dataset": 'HotpotQA'}
 
+        single_file_path = cached_path(file_path)
         with open(single_file_path, 'r') as myfile:
             original_dataset = json.load(myfile)
 
         data = original_dataset
         contexts = []
-        for example in tqdm(data, total=len(data), ncols=80):
+        for example in tqdm.tqdm(data, total=len(data), ncols=80):
             # choosing only the gold paragraphs
-            gold_paragraphs = []
-            for supp_fact in example['supporting_facts']:
-                for context in example['context']:
-                    # finding the gold context
-                    if context[0] == supp_fact[0]:
-                        gold_paragraphs.append(context)
+            #gold_paragraphs = []
+            #for supp_fact in example['supporting_facts']:
+            #    for context in example['context']:
+            #        # finding the gold context
+            #        if context[0] == supp_fact[0]:
+            #            gold_paragraphs.append(context)
 
             context = ''
-            for para in gold_paragraphs:
+            for para in example['context']:
                 context += '[PAR] [TLE] ' + para[0] + ' [SEP] '
                 context += ' '.join(para[1]) + ' '
             answers = [{'text': example['answer']}]
@@ -531,9 +520,12 @@ class MRQAReader(DatasetReader):
                     "answers": answers,
                     }]
 
+            if self._sample_size != -1 and len(contexts) > self._sample_size:
+                break
+
             contexts.append({"id": example['_id'], "context": context, "qas": qas})
 
-        process_and_dump(contexts, file_path, header)
+        yield process_and_dump(contexts, self._preproc_outputfile, header, processes=self._n_processes)
 
     def _read_preprocessed_file(self, file_path: str):
         # supporting multi-dataset training:

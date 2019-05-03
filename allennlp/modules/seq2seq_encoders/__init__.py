@@ -38,6 +38,8 @@ from allennlp.modules.seq2seq_encoders.stacked_self_attention import StackedSelf
 from allennlp.modules.seq2seq_encoders.multi_head_self_attention import MultiHeadSelfAttention
 from allennlp.modules.seq2seq_encoders.pass_through_encoder import PassThroughEncoder
 from allennlp.modules.seq2seq_encoders.feedforward_encoder import FeedForwardEncoder
+from allennlp.modules.seq2seq_encoders.qanet_encoder import QaNetEncoder
+
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -93,6 +95,3 @@ Seq2SeqEncoder.register("rnn")(_Seq2SeqWrapper(torch.nn.RNN))
 Seq2SeqEncoder.register("augmented_lstm")(_Seq2SeqWrapper(AugmentedLstm))
 Seq2SeqEncoder.register("alternating_lstm")(_Seq2SeqWrapper(StackedAlternatingLstm))
 Seq2SeqEncoder.register("stacked_bidirectional_lstm")(_Seq2SeqWrapper(StackedBidirectionalLstm))
-Seq2SeqEncoder.register("bidirectional_language_model_transformer")(
-        BidirectionalLanguageModelTransformer
-)

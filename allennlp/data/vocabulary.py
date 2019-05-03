@@ -116,6 +116,8 @@ def _read_pretrained_tokens(embeddings_file_uri: str) -> List[str]:
 
 def pop_max_vocab_size(params: Params) -> Union[int, Dict[str, int]]:
     """
+    max_vocab_size limits the size of the vocabulary, not including the @@UNKNOWN@@ token.
+
     max_vocab_size is allowed to be either an int or a Dict[str, int] (or nothing).
     But it could also be a string representing an int (in the case of environment variable
     substitution). So we need some complex logic to handle it.

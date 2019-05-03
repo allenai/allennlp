@@ -2,7 +2,7 @@
 Various utilities that don't fit anwhere else.
 """
 from itertools import zip_longest, islice
-from typing import Any, Callable, Dict, List, Tuple, TypeVar, Iterable, Iterator, Union
+from typing import Any, Callable, Dict, List, Tuple, TypeVar, Iterable, Iterator
 import importlib
 import json
 import logging
@@ -11,7 +11,6 @@ import random
 import subprocess
 import sys
 import os
-import re
 
 try:
     import resource
@@ -66,12 +65,12 @@ def sanitize(x: Any) -> Any:  # pylint: disable=invalid-name,too-many-return-sta
     elif isinstance(x, dict):
         # Dicts need their values sanitized
         return {key: sanitize(value) for key, value in x.items()}
-    elif isinstance(x, (list, tuple)):
-        # Lists and Tuples need their values sanitized
-        return [sanitize(x_i) for x_i in x]
     elif isinstance(x, (spacy.tokens.Token, allennlp.data.Token)):
         # Tokens get sanitized to just their text.
         return x.text
+    elif isinstance(x, (list, tuple)):
+        # Lists and Tuples need their values sanitized
+        return [sanitize(x_i) for x_i in x]
     elif x is None:
         return "None"
     elif hasattr(x, 'to_json'):
@@ -291,6 +290,16 @@ def get_spacy_model(spacy_model_name: str, pos_tags: bool, parse: bool, ner: boo
         except OSError:
             logger.warning(f"Spacy models '{spacy_model_name}' not found.  Downloading and installing.")
             spacy_download(spacy_model_name)
+            # NOTE(mattg): The following four lines are a workaround suggested by Ines for spacy
+            # 2.1.0, which removed the linking that was done in spacy 2.0.  importlib doesn't find
+            # packages that were installed in the same python session, so the way `spacy_download`
+            # works in 2.1.0 is broken for this use case.  These four lines can probably be removed
+            # at some point in the future, once spacy has figured out a better way to handle this.
+            # See https://github.com/explosion/spaCy/issues/3435.
+            from spacy.cli import link
+            from spacy.util import get_package_path
+            package_path = get_package_path(spacy_model_name)
+            link(spacy_model_name, spacy_model_name, model_path=package_path)
             spacy_model = spacy.load(spacy_model_name, disable=disable)
 
         LOADED_SPACY_MODELS[options] = spacy_model
@@ -304,6 +313,11 @@ def import_submodules(package_name: str) -> None:
     classes get loaded and registered.
     """
     importlib.invalidate_caches()
+
+    # For some reason, python doesn't always add this by default to your path, but you pretty much
+    # always want it when using `--include-package`.  And if it's already there, adding it again at
+    # the end won't hurt anything.
+    sys.path.append('.')
 
     # Import at top level
     module = importlib.import_module(package_name)
@@ -391,28 +405,6 @@ def is_lazy(iterable: Iterable[A]) -> bool:
     """
     return not isinstance(iterable, list)
 
-def parse_cuda_device(cuda_device: Union[str, int, List[int]]) -> Union[int, List[int]]:
-    """
-    Disambiguates single GPU and multiple GPU settings for cuda_device param.
-    """
-    def from_list(strings):
-        if len(strings) > 1:
-            return [int(d) for d in strings]
-        elif len(strings) == 1:
-            return int(strings[0])
-        else:
-            return -1
-
-    if isinstance(cuda_device, str):
-        return from_list(re.split(r',\s*', cuda_device))
-    elif isinstance(cuda_device, int):
-        return cuda_device
-    elif isinstance(cuda_device, list):
-        return from_list(cuda_device)
-    else:
-        # TODO(brendanr): Determine why mypy can't tell that this matches the Union.
-        return int(cuda_device)  # type: ignore
-
 def get_frozen_and_tunable_parameter_names(model: torch.nn.Module) -> List:
     frozen_parameter_names = []
     tunable_parameter_names = []
@@ -429,3 +421,6 @@ def dump_metrics(file_path: str, metrics: Dict[str, Any], log: bool = False) -> 
         metrics_file.write(metrics_json)
     if log:
         logger.info("Metrics: %s", metrics_json)
+
+def flatten_filename(file_path: str) -> str:
+    return file_path.replace('/', '_SLASH_')

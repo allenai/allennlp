@@ -12,7 +12,7 @@ from allennlp.models.archival import load_archive
 from allennlp.data.iterators import BasicIterator
 from allennlp.data import DatasetReader
 from allennlp.models import Model
-from allennlp.models.semantic_role_labeler import write_to_conll_eval_file
+from allennlp.models.semantic_role_labeler import write_bio_formatted_tags_to_file
 from allennlp.modules.elmo import Elmo
 
 def main(serialization_directory: int,
@@ -84,8 +84,8 @@ def main(serialization_directory: int,
             gold_tags = fields["tags"].labels
             sentence = [x.text for x in fields["tokens"].tokens]
 
-            write_to_conll_eval_file(prediction_file, gold_file,
-                                     verb_index, sentence, prediction, gold_tags)
+            write_bio_formatted_tags_to_file(prediction_file, gold_file,
+                                             verb_index, sentence, prediction, gold_tags)
         prediction_file.close()
         gold_file.close()
 

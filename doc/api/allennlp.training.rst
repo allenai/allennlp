@@ -13,6 +13,7 @@ for training AllenNLP models.
    allennlp.training.metric_tracker
    allennlp.training.metrics
    allennlp.training.moving_average
+   allennlp.training.no_op_trainer
    allennlp.training.optimizers
    allennlp.training.tensorboard_writer
    allennlp.training.trainer
