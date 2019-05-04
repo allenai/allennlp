@@ -11,6 +11,8 @@ import spacy
 import boto3
 import gzip
 import hashlib
+import string
+import numpy as np
 from multiprocessing import Pool, cpu_count
 
 from overrides import overrides
@@ -23,6 +25,9 @@ from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
 from allennlp.data.tokenizers import Token, Tokenizer, WordTokenizer
 from allennlp.data.fields import Field, TextField, IndexField, \
     MetadataField, ListField
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics import pairwise_distances
+from nltk.corpus import stopwords
 
 # ALON - for line profiler
 try:
@@ -38,6 +43,70 @@ spacy_tok = None
 
 # Punctuation to be stripped
 STRIP_CHARS = '!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~‘’´`_'
+
+class NltkPlusStopWords():
+    """ Configurablable access to stop word """
+
+    def __init__(self, punctuation=False):
+        self._words = None
+        self.punctuation = punctuation
+
+    @property
+    def words(self):
+        if self._words is None:
+            self._words = set(stopwords.words('english'))
+            # Common question words we probably want to ignore, "de" was suprisingly common
+            # due to its appearance in person names
+            self._words.update(["many", "how", "de"])
+            if self.punctuation:
+                self._words.update(string.punctuation)
+                self._words.update(["£", "€", "¥", "¢", "₹", "\u2212",
+                                    "\u2014", "\u2013", "\ud01C", "\u2019", "\u201D", "\u2018", "\u00B0"])
+        return self._words
+
+class Paragraph_TfIdf_Scoring():
+    # Hard coded weight learned from a logistic regression classifier
+    TFIDF_W = 5.13365065
+    LOG_WORD_START_W = 0.46022765
+    FIRST_W = -0.08611607
+    LOWER_WORD_W = 0.0499123
+    WORD_W = -0.15537181
+
+    def __init__(self):
+        self._stop = NltkPlusStopWords(True).words
+        self._stop.remove('퀜')
+        self._tfidf = TfidfVectorizer(strip_accents="unicode", stop_words=self._stop)
+
+    def score_paragraphs(self, question, paragraphs):
+        tfidf = self._tfidf
+        text = paragraphs
+        para_features = tfidf.fit_transform(text)
+        q_features = tfidf.transform(question)
+
+        q_words = {x for x in question if x.lower() not in self._stop}
+        q_words_lower = {x.lower() for x in q_words}
+        word_matches_features = np.zeros((len(paragraphs), 2))
+        for para_ix, para in enumerate(paragraphs):
+            found = set()
+            found_lower = set()
+            for sent in para:
+                for word in sent:
+                    if word in q_words:
+                        found.add(word)
+                    elif word.lower() in q_words_lower:
+                        found_lower.add(word.lower())
+            word_matches_features[para_ix, 0] = len(found)
+            word_matches_features[para_ix, 1] = len(found_lower)
+
+        tfidf = pairwise_distances(q_features, para_features, "cosine").ravel()
+        # TODO 0 represents if this paragraph start a real paragraph (number > 0 represents the
+        # paragraph was split. when we split paragraphs we need to take care of this...
+        starts = np.array([0 for p in paragraphs])
+        log_word_start = np.log(starts/400.0 + 1)
+        first = starts == 0
+        scores = tfidf * self.TFIDF_W + self.LOG_WORD_START_W * log_word_start + self.FIRST_W * first +\
+                 self.LOWER_WORD_W * word_matches_features[:, 1] + self.WORD_W * word_matches_features[:, 0]
+        return scores
 
 def warn(message):
     print('WARNING: %s' % message, file=sys.stderr)
@@ -198,7 +267,7 @@ def process_example(example):
     #    return None, len(example['qas'])
 
     # Truncate
-    context_tokens = tokenize(example['context'])
+    context_tokens = tokenize(example['context'])[:800]
     context = ''.join([t.text_with_ws for t in context_tokens])
     example['context'] = context
 
@@ -336,8 +405,8 @@ def process_and_dump(examples, filename , header=None, processes=None, upload=No
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
-@DatasetReader.register("mrqa_reader")
-class MRQAReader(DatasetReader):
+@DatasetReader.register("hotpotqa_reader")
+class HotpotQAReader(DatasetReader):
     """
     Reads MRQA formatted datasets files, and creates AllenNLP instances.
     This code supports comma separated list of datasets to perform Multi-Task training.
@@ -506,20 +575,26 @@ class MRQAReader(DatasetReader):
             original_dataset = json.load(myfile)
 
         data = original_dataset
+        _para_tfidf_scoring = Paragraph_TfIdf_Scoring()
         contexts = []
         for example in tqdm.tqdm(data, total=len(data), ncols=80):
             # choosing only the gold paragraphs
-            gold_paragraphs = []
-            for supp_fact in example['supporting_facts']:
-                for context in example['context']:
-                    # finding the gold context
-                    if context[0] == supp_fact[0]:
-                        gold_paragraphs.append(context)
+            #gold_paragraphs = []
+            #for supp_fact in example['supporting_facts']:
+            #    for context in example['context']:
+            #        # finding the gold context
+            #        if context[0] == supp_fact[0]:
+            #            gold_paragraphs.append(context)
 
+            all_sentances = []
+            for para in example['context']:
+                all_sentances += [sentance for sentance in para[1]]
+
+            doc_scores = _para_tfidf_scoring.score_paragraphs([example['question']], all_sentances)
             context = ''
-            for para in gold_paragraphs:
-                context += '[PAR] [TLE] ' + para[0] + ' [SEP] '
-                context += ' '.join(para[1]) + ' '
+            for sentance_ind in list(np.argsort(doc_scores)):
+                context += '[PAR] ' + all_sentances[sentance_ind] + ' '
+
             answers = [{'text': example['answer']}]
 
             qas = [{"id": example['_id'] + "#0",
