@@ -101,8 +101,10 @@ class BERT_QA(Model):
                                 span_end.view(-1)[inds_with_gold_answer], ignore_index=-1)
                 output_dict["loss"] = loss
 
-        #if "loss" not in output_dict:
-        #    print(intances_question_id)
+        # This is a hack for cases in which gold answer is not provided so we cannot compute loss...
+        if 'loss' not in output_dict:
+            output_dict["loss"] = torch.cuda.FloatTensor([0], device=span_end_logits.device) \
+                if torch.cuda.is_available() else torch.FloatTensor([0])
         # Compute F1 and preparing the output dictionary.
         output_dict['best_span_str'] = []
         output_dict['qid'] = []

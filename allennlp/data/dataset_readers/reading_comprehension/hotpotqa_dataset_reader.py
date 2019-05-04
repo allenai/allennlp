@@ -24,6 +24,12 @@ from allennlp.data.tokenizers import Token, Tokenizer, WordTokenizer
 from allennlp.data.fields import Field, TextField, IndexField, \
     MetadataField, ListField
 
+# ALON - for line profiler
+try:
+    profile
+except NameError:
+    profile = lambda x: x
+
 # Globals
 SEPARATORS = ['[PAR]', '[DOC]', '[TLE]']
 
@@ -206,7 +212,6 @@ def process_example(example):
     # Iterate questions, keeping ones with valid answers.
     # Tokenize questions as well.
     for qa in example['qas']:
-        qa['qid'] = uuid.uuid4().hex
         question_tokens = tokenize(qa['question'])
         qa['question_tokens'] = [(t.text, t.idx) for t in question_tokens]
 
@@ -381,6 +386,7 @@ class MRQAReader(DatasetReader):
         word_pieces = self._bert_wordpiece_tokenizer(text)
         return len(word_pieces), word_pieces
 
+    @profile
     def make_chunks(self, unproc_context, header, _bert_do_lowercase=True):
         """
         Each instance is a single Question-Answer-Chunk. A Chunk is a single context for the model, where
@@ -394,10 +400,6 @@ class MRQAReader(DatasetReader):
         # adds the [CLS] and [SEP] token pieces automatically)
         per_question_chunks = []
         for qa in unproc_context['qas']:
-            # is_impossible not supported at this point...
-            if qa['is_impossible']:
-                continue
-
             chunks = []
             curr_token_ix = 0
             window_start_token_offset = 0
@@ -418,22 +420,24 @@ class MRQAReader(DatasetReader):
                 num_of_wordpieces = 0
                 while num_of_wordpieces < self._MAX_WORDPIECES - num_of_question_wordpieces - 1 \
                         and curr_token_ix < len(unproc_context['context_tokens']):
-                    curr_token = copy.deepcopy(unproc_context['context_tokens'][curr_token_ix])
+                    curr_token = unproc_context['context_tokens'][curr_token_ix]
 
                     # BERT has only [SEP] in it's word piece vocabulary. because we keps all separators char length 5
                     # we can replace all of them with [SEP] without modifying the offset
-                    if curr_token[0] in ['[TLE]','[PAR]','[DOC]']:
-                        curr_token[0] = '[SEP]'
+                    curr_token_text = curr_token[0]
+                    if curr_token_text in ['[TLE]','[PAR]','[DOC]']:
+                        curr_token_text = '[SEP]'
 
                     # fixing the car offset of each token
-                    curr_token[1] += question_char_offset - context_char_offset
+                    curr_token_offset = curr_token[1]
+                    curr_token_offset += question_char_offset - context_char_offset
 
                     _, word_pieces = self.token_to_wordpieces(curr_token)
 
                     num_of_wordpieces += len(word_pieces)
                     if num_of_wordpieces < self._MAX_WORDPIECES - num_of_question_wordpieces - 1:
                         window_end_token_offset = curr_token_ix + 1
-                        curr_context_tokens.append(curr_token)
+                        curr_context_tokens.append((curr_token_text,curr_token_offset))
                     curr_token_ix += 1
 
 
@@ -443,7 +447,7 @@ class MRQAReader(DatasetReader):
                 inst['text'] = qa['question'] + ' [SEP] ' + unproc_context['context'][context_char_offset: \
                             context_char_offset + curr_context_tokens[-1][1] + len(curr_context_tokens[-1][0]) + 1]
                 inst['answers'] = []
-                qa_metadata = {'has_answer': False, 'dataset': header['dataset'], "question_id": qa['qid'], \
+                qa_metadata = {'has_answer': False, 'dataset': header['dataset'], "question_id": qa['id'], \
                                'answer_texts_list': list(set(qa['answers']))}
                 for answer in qa['detected_answers']:
                     if len(answer['token_spans']) > 0 and answer['token_spans'][0][0] >= window_start_token_offset and \
@@ -459,11 +463,14 @@ class MRQAReader(DatasetReader):
 
                 window_start_token_offset += self._STRIDE
 
-            #if len([inst for inst in chunks if inst['answers'] != []])>0:
-            per_question_chunks.append(chunks)
+            # In training we need examples with answer only
+            if not self._is_training or len([inst for inst in chunks if inst['answers'] != []])>0:
+                per_question_chunks.append(chunks)
         return per_question_chunks
 
+    @profile
     def gen_question_instances(self, question_chunks):
+        instances_to_add = []
         if self._is_training:
             # When training randomly choose one chunk per example (training with shared norm (Clark and Gardner, 17)
             # is not well defined when using sliding window )
@@ -502,15 +509,15 @@ class MRQAReader(DatasetReader):
         contexts = []
         for example in tqdm.tqdm(data, total=len(data), ncols=80):
             # choosing only the gold paragraphs
-            #gold_paragraphs = []
-            #for supp_fact in example['supporting_facts']:
-            #    for context in example['context']:
-            #        # finding the gold context
-            #        if context[0] == supp_fact[0]:
-            #            gold_paragraphs.append(context)
+            gold_paragraphs = []
+            for supp_fact in example['supporting_facts']:
+                for context in example['context']:
+                    # finding the gold context
+                    if context[0] == supp_fact[0]:
+                        gold_paragraphs.append(context)
 
             context = ''
-            for para in example['context']:
+            for para in gold_paragraphs:
                 context += '[PAR] [TLE] ' + para[0] + ' [SEP] '
                 context += ' '.join(para[1]) + ' '
             answers = [{'text': example['answer']}]
@@ -527,6 +534,7 @@ class MRQAReader(DatasetReader):
 
         yield process_and_dump(contexts, self._preproc_outputfile, header, processes=self._n_processes)
 
+    @profile
     def _read_preprocessed_file(self, file_path: str):
         # supporting multi-dataset training:
         datasets = []
