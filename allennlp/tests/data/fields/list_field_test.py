@@ -1,9 +1,8 @@
 # pylint: disable=no-self-use,invalid-name,arguments-differ
 from typing import Dict
 
-import torch
-
 import numpy
+import torch
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Token, Vocabulary, Instance
@@ -14,6 +13,7 @@ from allennlp.data.tokenizers import WordTokenizer
 from allennlp.models import Model
 from allennlp.modules import Embedding
 from allennlp.modules.text_field_embedders import BasicTextFieldEmbedder
+
 
 class DummyModel(Model):
     """
