@@ -71,11 +71,11 @@ class TestListField(AllenNlpTestCase):
         tokens = tokenizer.tokenize("Foo")
         text_field = TextField(tokens, self.word_indexer)
         empty_list_field = ListField([text_field.empty_field()])
-        empty_fields = {'list': empty_list_field}
+        empty_fields = {'list_tensor': empty_list_field}
         self.empty_instance = Instance(empty_fields)
 
         non_empty_list_field = ListField([text_field])
-        non_empty_fields = {'list': non_empty_list_field}
+        non_empty_fields = {'list_tensor': non_empty_list_field}
         self.non_empty_instance = Instance(non_empty_fields)
 
         super(TestListField, self).setUp()
