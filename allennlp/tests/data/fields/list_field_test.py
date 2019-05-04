@@ -1,4 +1,4 @@
-# pylint: disable=no-self-use,invalid-name
+# pylint: disable=no-self-use,invalid-name,arguments-differ
 from typing import Dict
 
 import torch
@@ -31,8 +31,8 @@ class DummyModel(Model):
         self.embedder = BasicTextFieldEmbedder({"words": token_embedding})
 
     def forward(self, # type: ignore
-                list: Dict[str, torch.LongTensor]) -> Dict[str, torch.Tensor]:
-        self.embedder(list)
+                list_tensor: Dict[str, torch.LongTensor]) -> Dict[str, torch.Tensor]:
+        self.embedder(list_tensor)
         return {"loss": 1.0}
 
 class TestListField(AllenNlpTestCase):
