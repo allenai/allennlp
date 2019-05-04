@@ -45,6 +45,8 @@ def move_to_device(obj, cuda_device: int):
         return {key: move_to_device(value, cuda_device) for key, value in obj.items()}
     elif isinstance(obj, list):
         return [move_to_device(item, cuda_device) for item in obj]
+    elif isinstance(obj, NamedTuple):
+        return obj.__class__(*[move_to_device(item, cuda_device) for item in obj])
     elif isinstance(obj, tuple):
         return tuple([move_to_device(item, cuda_device) for item in obj])
     else:
