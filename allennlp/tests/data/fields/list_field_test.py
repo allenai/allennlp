@@ -249,6 +249,12 @@ class TestListField(AllenNlpTestCase):
         batch = next(iterator(dataset, shuffle=False))
         model.forward(**batch)
 
+    # This use case may seem a bit peculiar. It's intended for situations where
+    # you have sparse inputs that are used as additional features for some
+    # prediction, and they are sparse enough that they can be empty for some
+    # cases. It would be silly to try to handle these as None in your model; it
+    # makes a whole lot more sense to just have a minimally-sized tensor that
+    # gets entirely masked and has no effect on the rest of the model.
     def test_batch_of_entirely_empty_lists_works(self):
         dataset = [self.empty_instance, self.empty_instance]
 
