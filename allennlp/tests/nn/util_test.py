@@ -1,4 +1,4 @@
-# pylint: disable=invalid-name,no-self-use,too-many-public-methods,not-callable,too-many-lines
+# pylint: disable=invalid-name,no-self-use,too-many-public-methods,not-callable,too-many-lines,protected-access
 from typing import NamedTuple
 
 import numpy
@@ -995,6 +995,7 @@ class TestNnUtil(AllenNlpTestCase):
         # We're faking the tensor here so that we can test the calls to .cuda() without actually
         # needing a GPU.
         class FakeTensor(torch.Tensor):
+            # pylint: disable=abstract-method,super-init-not-called
             def __init__(self):
                 self._device = None
             def cuda(self, device):
