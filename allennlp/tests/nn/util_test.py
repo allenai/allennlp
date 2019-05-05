@@ -4,6 +4,8 @@ from numpy.testing import assert_array_almost_equal, assert_almost_equal
 import torch
 import pytest
 
+from typing import NamedTuple
+
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.nn import util
@@ -988,3 +990,23 @@ class TestNnUtil(AllenNlpTestCase):
 
         embedding = util.uncombine_initial_dims(embedding2d, torch.Size((4, 10, 20, 17, 5)))
         assert list(embedding.size()) == [4, 10, 20, 17, 5, 12]
+
+    def test_move_to_device(self):
+        if torch.cuda.is_available():
+            class A(NamedTuple):
+                a: int
+                b: torch.Tensor
+
+            structured_obj = {'a': [A(1, torch.ones([2, 4], device=1)), A(2, torch.ones([2, 4], device=1))],
+                              'b': torch.ones([2, 4], device=1), 'c': (1, torch.ones([2, 4], device=1))}
+            new_device_number = 4
+            new_device = torch.device('cuda:4')
+            moved_obj = util.move_to_device(structured_obj, new_device_number)
+            assert moved_obj['a'][0].a == 1
+            assert moved_obj['a'][0].b.device == new_device
+            assert moved_obj['a'][1].b.device == new_device
+            assert moved_obj['b'].device == new_device
+            assert moved_obj['c'][0] == 1
+            assert moved_obj['c'][1].device == new_device
+        else:
+            pass
