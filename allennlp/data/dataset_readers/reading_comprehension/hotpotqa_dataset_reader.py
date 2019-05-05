@@ -579,25 +579,30 @@ class HotpotQAReader(DatasetReader):
         contexts = []
         for example in tqdm.tqdm(data, total=len(data), ncols=80):
             # choosing only the gold paragraphs
-            #gold_paragraphs = []
-            #for supp_fact in example['supporting_facts']:
-            #    for context in example['context']:
-            #        # finding the gold context
-            #        if context[0] == supp_fact[0]:
-            #            gold_paragraphs.append(context)
+            gold_paragraphs = []
+            for supp_fact in example['supporting_facts']:
+                for context in example['context']:
+                    # finding the gold context
+                    if context[0] == supp_fact[0]:
+                        gold_paragraphs.append(context)
 
-            all_sentances = []
-            for para in example['context']:
-                all_sentances += [sentance for sentance in para[1]]
+            #all_sentances = []
+            #for para in example['context']:
+            #    all_sentances += [sentance for sentance in para[1]]
 
-            doc_scores = _para_tfidf_scoring.score_paragraphs([example['question']], all_sentances)
+            #doc_scores = _para_tfidf_scoring.score_paragraphs([example['question']], all_sentances)
+            #context = ''
+            #for sentance_ind in list(np.argsort(doc_scores)):
+            #    context += '[PAR] ' + all_sentances[sentance_ind] + ' '
+
             context = ''
-            for sentance_ind in list(np.argsort(doc_scores)):
-                context += '[PAR] ' + all_sentances[sentance_ind] + ' '
+            for para in gold_paragraphs:
+                context += '[PAR] [TLE] ' + para[0] + ' [SEP] '
+                context += ' '.join(para[1]) + ' '
 
             answers = [{'text': example['answer']}]
 
-            qas = [{"id": example['_id'] + "#0",
+            qas = [{"id": example['_id'],
                     "question": example['question'],
                     "answers": answers,
                     }]
