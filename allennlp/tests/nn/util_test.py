@@ -4,6 +4,8 @@ from numpy.testing import assert_array_almost_equal, assert_almost_equal
 import torch
 import pytest
 
+from typing import NamedTuple
+
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.nn import util
