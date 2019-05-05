@@ -992,21 +992,27 @@ class TestNnUtil(AllenNlpTestCase):
         assert list(embedding.size()) == [4, 10, 20, 17, 5, 12]
 
     def test_move_to_device(self):
-        if torch.cuda.is_available():
-            class A(NamedTuple):
-                a: int
-                b: torch.Tensor
+        # We're faking the tensor here so that we can test the calls to .cuda() without actually
+        # needing a GPU.
+        class FakeTensor(torch.Tensor):
+            def __init__(self):
+                self._device = None
+            def cuda(self, device):
+                self._device = device
+                return self
 
-            structured_obj = {'a': [A(1, torch.ones([2, 4], device=1)), A(2, torch.ones([2, 4], device=1))],
-                              'b': torch.ones([2, 4], device=1), 'c': (1, torch.ones([2, 4], device=1))}
-            new_device_number = 4
-            new_device = torch.device('cuda:4')
-            moved_obj = util.move_to_device(structured_obj, new_device_number)
-            assert moved_obj['a'][0].a == 1
-            assert moved_obj['a'][0].b.device == new_device
-            assert moved_obj['a'][1].b.device == new_device
-            assert moved_obj['b'].device == new_device
-            assert moved_obj['c'][0] == 1
-            assert moved_obj['c'][1].device == new_device
-        else:
-            pass
+        class A(NamedTuple):
+            a: int
+            b: torch.Tensor
+
+        structured_obj = {'a': [A(1, FakeTensor()), A(2, FakeTensor())],
+                          'b': FakeTensor(),
+                          'c': (1, FakeTensor())}
+        new_device = 4
+        moved_obj = util.move_to_device(structured_obj, new_device)
+        assert moved_obj['a'][0].a == 1
+        assert moved_obj['a'][0].b._device == new_device
+        assert moved_obj['a'][1].b._device == new_device
+        assert moved_obj['b']._device == new_device
+        assert moved_obj['c'][0] == 1
+        assert moved_obj['c'][1]._device == new_device

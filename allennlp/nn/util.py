@@ -46,6 +46,7 @@ def move_to_device(obj, cuda_device: int):
     elif isinstance(obj, list):
         return [move_to_device(item, cuda_device) for item in obj]
     elif isinstance(obj, tuple) and hasattr(obj, '_fields'):
+        # This is the best way to detect a NamedTuple, it turns out.
         return obj.__class__(*[move_to_device(item, cuda_device) for item in obj])
     elif isinstance(obj, tuple):
         return tuple([move_to_device(item, cuda_device) for item in obj])
