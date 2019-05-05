@@ -1,10 +1,10 @@
-# pylint: disable=invalid-name,no-self-use,too-many-public-methods,not-callable
+# pylint: disable=invalid-name,no-self-use,too-many-public-methods,not-callable,too-many-lines
+from typing import NamedTuple
+
 import numpy
 from numpy.testing import assert_array_almost_equal, assert_almost_equal
 import torch
 import pytest
-
-from typing import NamedTuple
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase

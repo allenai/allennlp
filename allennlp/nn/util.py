@@ -37,6 +37,7 @@ def move_to_device(obj, cuda_device: int):
     Given a structure (possibly) containing Tensors on the CPU,
     move all the Tensors to the specified GPU (or do nothing, if they should be on the CPU).
     """
+    # pylint: disable=too-many-return-statements
     if cuda_device < 0 or not has_tensor(obj):
         return obj
     elif isinstance(obj, torch.Tensor):
