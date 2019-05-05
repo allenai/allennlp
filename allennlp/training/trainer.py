@@ -382,6 +382,7 @@ class Trainer(TrainerBase):
             elastic_train_metrics = {'epoch_metrics/'+key:elastic_metrics[key] for key in elastic_metrics}
             elastic_train_metrics.update({'batch_num_total': batch_num_total, 'gpu': self._cuda_devices[0]})
             elastic_train_metrics.update({'experiment_name': '/'.join(self._serialization_dir.split('/')[-2:])})
+            elastic_train_metrics.pop('optimizer', None)
 
             if elastic_train_metrics['batch_num_total'] % 100 == 1:
                 ElasticLogger().write_log('INFO', 'train_metric', context_dict=elastic_train_metrics)
@@ -544,6 +545,7 @@ class Trainer(TrainerBase):
                 {'optimizer': str(type(self.optimizer)), 'serialization_dir': self._serialization_dir, \
                  'target_number_of_epochs': self._num_epochs, 'iterator_type': self.iterator.default_implementation})
             elastic_val_metrics.update(self.optimizer.defaults)
+            elastic_val_metrics.pop('optimizer', None)
             ElasticLogger().write_log('INFO', 'val_metric', context_dict=elastic_val_metrics)
 
 
