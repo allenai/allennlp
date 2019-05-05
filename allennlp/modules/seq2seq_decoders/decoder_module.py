@@ -9,7 +9,7 @@ class DecoderModule(torch.nn.Module, Registrable):
     def __init__(self, decoding_dim: int, target_embedding_dim: int, is_sequential: bool):
         super(DecoderModule, self).__init__()
         self.target_embedding_dim = target_embedding_dim
-        self._decoding_dim = decoding_dim
+        self.decoding_dim = decoding_dim
         self.is_sequential = is_sequential
 
     def get_output_dim(self) -> int:
@@ -17,7 +17,7 @@ class DecoderModule(torch.nn.Module, Registrable):
         Returns the dimension of each vector in the sequence output by this ``DecoderModule``.
         This is `not` the shape of the returned tensor, but the last element of that shape.
         """
-        return self._decoding_dim
+        return self.decoding_dim
 
     def init_decoder_state(self, encoder_out: Dict[str, torch.LongTensor]) -> Dict[str, torch.Tensor]:
 

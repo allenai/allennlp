@@ -53,9 +53,6 @@ class ComposedSeq2Seq(Model):
         # Encodes the sequence of source embeddings into a sequence of hidden states.
         self._encoder = encoder
 
-        print(type(self._encoder))
-        print(type(self.decoder))
-
         if self._encoder.get_output_dim() != self.decoder.get_output_dim():
             raise ConfigurationError(
                 f"Encoder hidden dimension {self._encoder.get_output_dim()} should be"

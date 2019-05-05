@@ -30,9 +30,9 @@ class LstmCellModule(DecoderModule):
     def __init__(self,
                  decoding_dim: int,
                  target_embedding_dim: int,
-                 attention: Attention = None,
-                 bidirectional_input: bool = False,
-                 ):
+                 attention: Optional[Attention] = None,
+                 bidirectional_input: bool = False):
+
         super(LstmCellModule, self).__init__(
             decoding_dim=decoding_dim,
             target_embedding_dim=target_embedding_dim,
@@ -41,22 +41,20 @@ class LstmCellModule(DecoderModule):
 
         # In this particular type of decoder output of previous step passes directly to the input of current step
         # We also assume that sequence decoder output dimensionality is equal to the encoder output dimensionality
-        self._sequence_encoding_dim = self._decoding_dim
-        self._decoder_input_dim = self.target_embedding_dim
-        self._decoder_output_dim = self._decoding_dim
+        decoder_input_dim = self.target_embedding_dim
 
         # Attention mechanism applied to the encoder output for each step.
-        self._attention: Attention = attention
+        self._attention = attention
 
         if self._attention:
             # If using attention, a weighted average over encoder outputs will be concatenated
             # to the previous target embedding to form the input to the decoder at each
-            # time step.
-            self._decoder_input_dim = self._decoder_input_dim + self._sequence_encoding_dim
+            # time step. encoder output dim will be same as decoding_dim
+            decoder_input_dim += decoding_dim
 
         # We'll use an LSTM cell as the recurrent cell that produces a hidden state
         # for the decoder at each time step.
-        self._decoder_cell = LSTMCell(self._decoder_input_dim, self._decoder_output_dim)
+        self._decoder_cell = LSTMCell(decoder_input_dim, self.decoding_dim)
         self._bidirectional_input = bidirectional_input
 
     def _prepare_attended_input(self,
@@ -94,7 +92,7 @@ class LstmCellModule(DecoderModule):
             "decoder_hidden": final_encoder_output,  # shape: (batch_size, decoder_output_dim)
             "decoder_context": final_encoder_output.new_zeros(
                 batch_size,
-                self._decoder_output_dim
+                self.decoding_dim
             )  # shape: (batch_size, decoder_output_dim)
         }
 

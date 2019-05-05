@@ -31,6 +31,7 @@ class DefaultSeqDecoder(SeqDecoder):
 
         super(DefaultSeqDecoder, self).__init__(
             vocab=vocab,
+            target_embedder=target_embedder,
             target_namespace=target_namespace,
             tensor_based_metric=tensor_based_metric,
             token_based_metric=token_based_metric
@@ -46,19 +47,10 @@ class DefaultSeqDecoder(SeqDecoder):
         # Decodes the sequence of encoded hidden states into e new sequence of hidden states.
         self.decoder_module = decoder_module
 
-        # Decoder output dim needs to be the same as the encoder output dim since we initialize the
-        # hidden state of the decoder with the final hidden state of the encoder.
-        # We arbitrarily set the decoder's input dimension to be the same as the output dimension.
-        self.decoder_output_dim = self.decoder_module.get_output_dim()
-        self.decoder_input_dim = self.decoder_output_dim
-        self.encoder_output_dim = self.decoder_input_dim
-
         target_vocab_size = self.vocab.get_vocab_size(self._target_namespace)
 
-        if target_embedder.get_output_dim() != self.decoder_module.target_embedding_dim:
-            raise ConfigurationError("Target Embedder output_dim doesn't match decoder cell's input.")
-
-        self._target_embedder = target_embedder
+        if self.target_embedder.get_output_dim() != self.decoder_module.target_embedding_dim:
+            raise ConfigurationError("Target Embedder output_dim doesn't match decoder module's input.")
 
         # We project the hidden state from the decoder into the output vocabulary space
         # in order to get log probabilities of each target token, at each time step.
@@ -102,7 +94,7 @@ class DefaultSeqDecoder(SeqDecoder):
 
         # Prepare embeddings for targets. They will be used as gold embeddings during decoder training
         # shape: (batch_size, max_target_sequence_length, embedding_dim)
-        target_embedding = self._target_embedder(targets)
+        target_embedding = self.target_embedder(targets)
 
         # shape: (batch_size, max_target_batch_sequence_length)
         target_mask = util.get_text_field_mask(target_tokens)
@@ -167,7 +159,7 @@ class DefaultSeqDecoder(SeqDecoder):
                 last_predictions = predicted_classes
 
                 # shape: (batch_size, 1, target_embedding_dim)
-                last_predictions_embeddings = self._target_embedder(last_predictions).unsqueeze(1)
+                last_predictions_embeddings = self.target_embedder(last_predictions).unsqueeze(1)
 
                 # This step is required, since we want to keep up two different prediction history: gold and real
                 if steps_embeddings.shape[-1] == 0:
@@ -186,7 +178,7 @@ class DefaultSeqDecoder(SeqDecoder):
         loss = self._get_loss(logits, targets, target_mask)
 
         # TODO: We will be using beam search to get predictions for validation, but if beam size in 1
-        # we could consider taking the last_predictions here and building step_predictions 
+        # we could consider taking the last_predictions here and building step_predictions
         # and use that instead of running beam search again, if performance in validation is taking a hit
         output_dict = {
             'loss': loss
@@ -215,7 +207,7 @@ class DefaultSeqDecoder(SeqDecoder):
         previous_steps_predictions = state.get("previous_steps_predictions")
 
         # shape: (batch_size, 1, target_embedding_dim)
-        last_predictions_embeddings = self._target_embedder(last_predictions).unsqueeze(1)
+        last_predictions_embeddings = self.target_embedder(last_predictions).unsqueeze(1)
 
         if previous_steps_predictions is None or previous_steps_predictions.shape[-1] == 0:
             # There is no previous steps, except for start vectors in ``last_predictions``

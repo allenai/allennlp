@@ -77,7 +77,7 @@
         "decoder_module": {
             "type": "lstm_cell",
             "decoding_dim": 10,
-            "target_embedding_dim": 10,
+            "target_embedding_dim": 20,
             "attention": {
                 "type": "dot_product"
             }
@@ -86,7 +86,7 @@
       "target_namespace": "target_tokens",
       "target_embedder": {
          "vocab_namespace": "target_tokens",
-         "embedding_dim": 10
+         "embedding_dim": 20
       },
       "scheduled_sampling_ratio": 0.9,
       "beam_size": 5

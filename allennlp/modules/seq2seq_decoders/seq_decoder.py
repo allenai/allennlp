@@ -5,6 +5,7 @@ import torch
 from torch.nn import Module
 
 from allennlp.common import Registrable
+from allennlp.modules import TokenEmbedder
 from allennlp.common.util import END_SYMBOL, START_SYMBOL
 from allennlp.data import Vocabulary
 from allennlp.training.metrics import Metric
@@ -19,6 +20,7 @@ class SeqDecoder(Module, Registrable):
     def __init__(
             self,
             vocab: Vocabulary,
+            target_embedder: TokenEmbedder,
             target_namespace: str = "tokens",
             tensor_based_metric: Metric = None,
             token_based_metric: Metric = None,
@@ -27,6 +29,8 @@ class SeqDecoder(Module, Registrable):
         self._target_namespace = target_namespace
 
         self.vocab = vocab
+
+        self.target_embedder = target_embedder
 
         # We need the start symbol to provide as the input at the first timestep of decoding, and
         # end symbol as a way to indicate the end of the decoded sequence.
