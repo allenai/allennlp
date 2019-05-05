@@ -2,61 +2,26 @@ from typing import Dict, List, Tuple
 
 import torch
 import torch.nn.functional as F
-from torch.nn import Linear
+from torch.nn import Linear, Module
 
 from allennlp.common import Registrable
 from allennlp.modules.seq2seq_decoders.seq_decoder import SeqDecoder
 from allennlp.data import Vocabulary
-from allennlp.modules import Embedding
-from allennlp.modules.seq2seq_decoders.decoder_cell import DecoderCell
+from allennlp.modules import TokenEmbedder
+from allennlp.modules.seq2seq_decoders.decoder_module import DecoderModule
 from allennlp.nn import util
 from allennlp.nn.beam_search import BeamSearch
 from allennlp.training.metrics import Metric
 
 
-@SeqDecoder.register("rnn_seq_decoder")
-class RnnSeqDecoder(SeqDecoder):
-    """
-
-    Parameters
-    ----------
-    vocab : ``Vocabulary``, required
-        Vocabulary containing source and target vocabularies. They may be under the same namespace
-        (`tokens`) or the target tokens can have a different namespace, in which case it needs to
-        be specified as `target_namespace`.
-    decoder_cell : ``DecoderCell``, required
-        Module that contains implementation of neural network for decoding output elements
-    max_decoding_steps : ``int``
-        Maximum length of decoded sequences.
-    bidirectional_input : ``bool``
-        If input encoded sequence was produced by bidirectional encoder.
-        If True, the first encode step of back direction will be used as initial hidden state.
-        If not, the will be used the last step only.
-    target_namespace : ``str``, optional (default = 'target_tokens')
-        If the target side vocabulary is different from the source side's, you need to specify the
-        target's namespace here. If not, we'll assume it is "tokens", which is also the default
-        choice for the source side, and this might cause them to share vocabularies.
-    beam_size : ``int``, optional (default = None)
-        Width of the beam for beam search. If not specified, greedy decoding is used.
-    tensor_based_metric : ``Metric``, optional (default = BLEU)
-        A metric to track on validation data that takes raw tensors when its called.
-        This metric must accept two arguments when called: a batched tensor
-        of predicted token indices, and a batched tensor of gold token indices.
-    token_based_metric : ``Metric``, optional (default = None)
-        A metric to track on validation data that takes lists of lists of tokens
-        as input. This metric must accept two arguments when called, both
-        of type `List[List[str]]`. The first is a predicted sequence for each item
-        in the batch and the second is a gold sequence for each item in the batch.
-    scheduled_sampling_ratio : ``float``
-        Defines ratio between teacher forced training and real output usage.
-    """
-
+@SeqDecoder.register("default_seq_decoder")
+class DefaultSeqDecoder(SeqDecoder):
     def __init__(
             self,
             vocab: Vocabulary,
-            decoder_cell: DecoderCell,
+            decoder_module: DecoderModule,
             max_decoding_steps: int,
-            bidirectional_input: bool = False,
+            target_embedder: TokenEmbedder,
             beam_size: int = None,
             target_namespace: str = "tokens",
             tensor_based_metric: Metric = None,
@@ -64,14 +29,12 @@ class RnnSeqDecoder(SeqDecoder):
             scheduled_sampling_ratio: float = 0.,
     ):
 
-        super(RnnSeqDecoder, self).__init__(
+        super(DefaultSeqDecoder, self).__init__(
             vocab=vocab,
             target_namespace=target_namespace,
             tensor_based_metric=tensor_based_metric,
             token_based_metric=token_based_metric
         )
-
-        self.bidirectional_input = bidirectional_input
 
         self._target_vocab_size = self.vocab.get_vocab_size(self._target_namespace)
 
@@ -81,31 +44,25 @@ class RnnSeqDecoder(SeqDecoder):
         self._beam_search = BeamSearch(self._end_index, max_steps=max_decoding_steps, beam_size=beam_size)
 
         # Decodes the sequence of encoded hidden states into e new sequence of hidden states.
-        self.decoder_cell = decoder_cell
+        self.decoder_module = decoder_module
 
         # Decoder output dim needs to be the same as the encoder output dim since we initialize the
         # hidden state of the decoder with the final hidden state of the encoder.
         # We arbitrarily set the decoder's input dimension to be the same as the output dimension.
-        self.decoder_output_dim = self.decoder_cell.get_output_dim()
+        self.decoder_output_dim = self.decoder_module.get_output_dim()
         self.decoder_input_dim = self.decoder_output_dim
         self.encoder_output_dim = self.decoder_input_dim
 
         target_vocab_size = self.vocab.get_vocab_size(self._target_namespace)
 
-        # The decoder input will be a function of the embedding of the previous predicted token,
-        # an attended encoder hidden state called the "attentive read", and another
-        # weighted sum of the encoder hidden state called the "selective read".
-        # While the weights for the attentive read are calculated by an `Attention` module,
-        # the weights for the selective read are simply the predicted probabilities
-        # corresponding to each token in the source sentence that matches the target
-        # token from the previous timestep.
+        if target_embedder.get_output_dim() != self.decoder_module.target_embedding_dim:
+            raise ConfigurationError("Target Embedder output_dim doesn't match decoder cell's input.")
 
-        # Dense embedding of vocab words in the target space.
-        self._target_embedder = Embedding(target_vocab_size, self.decoder_cell.target_embedding_dim)
+        self._target_embedder = target_embedder
 
         # We project the hidden state from the decoder into the output vocabulary space
         # in order to get log probabilities of each target token, at each time step.
-        self._output_projection_layer = Linear(self.decoder_cell.get_output_dim(), target_vocab_size)
+        self._output_projection_layer = Linear(self.decoder_module.get_output_dim(), target_vocab_size)
 
         self._scheduled_sampling_ratio = scheduled_sampling_ratio
 
@@ -124,7 +81,7 @@ class RnnSeqDecoder(SeqDecoder):
         }
         return output_dict
 
-    def _forward_loss(self, state: Dict[str, torch.Tensor], target_tokens: Dict[str, torch.LongTensor] = None) -> Dict[
+    def _forward_loss(self, state: Dict[str, torch.Tensor], target_tokens: Dict[str, torch.LongTensor]) -> Dict[
         str, torch.Tensor]:
         """
         Make forward pass during training or do greedy search during prediction.
@@ -134,103 +91,106 @@ class RnnSeqDecoder(SeqDecoder):
         We really only use the predictions from the method to test that beam search
         with a beam size of 1 gives the same results.
         """
+        # shape: (batch_size, max_input_sequence_length, encoder_output_dim)
+        encoder_outputs = state["encoder_outputs"]
+
         # shape: (batch_size, max_input_sequence_length)
         source_mask = state["source_mask"]
 
-        batch_size = source_mask.size()[0]
+        # shape: (batch_size, max_target_sequence_length)
+        targets = target_tokens["tokens"]
 
-        if target_tokens:
-            # shape: (batch_size, max_target_sequence_length)
-            targets = target_tokens["tokens"]
+        # Prepare embeddings for targets. They will be used as gold embeddings during decoder training
+        # shape: (batch_size, max_target_sequence_length, embedding_dim)
+        target_embedding = self._target_embedder(targets)
 
+        # shape: (batch_size, max_target_batch_sequence_length)
+        target_mask = util.get_text_field_mask(target_tokens)
+
+        if self._scheduled_sampling_ratio == 0 and not self.decoder_module.is_sequential:
+            _, decoder_output = self.decoder_module(
+                previous_state=state,
+                previous_steps_predictions=target_embedding[:,:-1,:],
+                encoder_outputs=encoder_outputs,
+                source_mask=source_mask,
+                previous_steps_mask=target_mask[:,:-1]
+            )
+
+            # shape: (group_size, max_target_sequence_length, num_classes)
+            logits = self._output_projection_layer(decoder_output)
+        else:
+            batch_size = source_mask.size()[0]
             _, target_sequence_length = targets.size()
 
             # The last input from the target is either padding or the end symbol.
             # Either way, we don't have to process it.
             num_decoding_steps = target_sequence_length - 1
 
-            # Prepare embeddings for targets. They will be used as gold embeddings during decoder training
-            # shape: (batch_size, max_target_sequence_length, embedding_dim)
-            target_embeddings = self._target_embedder(targets)
-        else:
-            num_decoding_steps = self._max_decoding_steps
+            # Initialize target predictions with the start index.
+            # shape: (batch_size,)
+            last_predictions = source_mask.new_full((batch_size,), fill_value=self._start_index)
 
-        # Initialize target predictions with the start index.
-        # shape: (batch_size,)
-        last_predictions = source_mask.new_full((batch_size,), fill_value=self._start_index)
+            # shape: (steps, batch_size, target_embedding_dim)
+            steps_embeddings = torch.tensor([])
 
-        # shape: (steps, batch_size, target_embedding_dim)
-        steps_embeddings = torch.tensor([])
+            step_logits: List[torch.Tensor] = []
 
-        step_logits: List[torch.Tensor] = []
-        step_predictions: List[torch.Tensor] = []
-        for timestep in range(num_decoding_steps):
-            if self.training and torch.rand(1).item() < self._scheduled_sampling_ratio:
-                # Use gold tokens at test time and at a rate of 1 - _scheduled_sampling_ratio
-                # during training.
-                # shape: (batch_size, steps, target_embedding_dim)
-                state['previous_steps_predictions'] = steps_embeddings
-
-                # shape: (batch_size, )
-                effective_last_prediction = last_predictions
-            elif not target_tokens:
-                # shape: (batch_size, steps, target_embedding_dim)
-                state['previous_steps_predictions'] = steps_embeddings
-
-                # shape: (batch_size, )
-                effective_last_prediction = last_predictions
-            else:
-                # shape: (batch_size, )
-                effective_last_prediction = targets[:, timestep]
-
-                if timestep == 0:
-                    state['previous_steps_predictions'] = torch.tensor([])
-                else:
+            for timestep in range(num_decoding_steps):
+                if self.training and torch.rand(1).item() < self._scheduled_sampling_ratio:
+                    # Use gold tokens at test time and at a rate of 1 - _scheduled_sampling_ratio
+                    # during training.
                     # shape: (batch_size, steps, target_embedding_dim)
-                    state['previous_steps_predictions'] = target_embeddings[:, :timestep]
+                    state['previous_steps_predictions'] = steps_embeddings
 
-            # shape: (batch_size, num_classes)
-            output_projections, state = self._prepare_output_projections(effective_last_prediction, state)
+                    # shape: (batch_size, )
+                    effective_last_prediction = last_predictions
+                else:
+                    # shape: (batch_size, )
+                    effective_last_prediction = targets[:, timestep]
 
-            # list of tensors, shape: (batch_size, 1, num_classes)
-            step_logits.append(output_projections.unsqueeze(1))
+                    if timestep == 0:
+                        state['previous_steps_predictions'] = torch.tensor([])
+                    else:
+                        # shape: (batch_size, steps, target_embedding_dim)
+                        state['previous_steps_predictions'] = target_embedding[:, :timestep]
 
-            # shape: (batch_size, num_classes)
-            class_probabilities = F.softmax(output_projections, dim=-1)
+                # shape: (batch_size, num_classes)
+                output_projections, state = self._prepare_output_projections(effective_last_prediction, state)
 
-            # shape (predicted_classes): (batch_size,)
-            _, predicted_classes = torch.max(class_probabilities, 1)
+                # list of tensors, shape: (batch_size, 1, num_classes)
+                step_logits.append(output_projections.unsqueeze(1))
 
-            # shape (predicted_classes): (batch_size,)
-            last_predictions = predicted_classes
+                # shape (predicted_classes): (batch_size,)
+                _, predicted_classes = torch.max(output_projections, 1)
 
-            # shape: (batch_size, 1, target_embedding_dim)
-            last_predictions_embeddings = self._target_embedder(last_predictions).unsqueeze(1)
+                # shape (predicted_classes): (batch_size,)
+                last_predictions = predicted_classes
 
-            # This step is required, since we want to keep up two different prediction history: gold and real
-            if steps_embeddings.shape[-1] == 0:
-                # There is no previous steps, except for start vectors in ``last_predictions``
-                # shape: (group_size, 1, target_embedding_dim)
-                steps_embeddings = last_predictions_embeddings
-            else:
-                # shape: (group_size, steps_count, target_embedding_dim)
-                steps_embeddings = torch.cat([steps_embeddings, last_predictions_embeddings], 1)
+                # shape: (batch_size, 1, target_embedding_dim)
+                last_predictions_embeddings = self._target_embedder(last_predictions).unsqueeze(1)
 
-            step_predictions.append(last_predictions.unsqueeze(1))
+                # This step is required, since we want to keep up two different prediction history: gold and real
+                if steps_embeddings.shape[-1] == 0:
+                    # There is no previous steps, except for start vectors in ``last_predictions``
+                    # shape: (group_size, 1, target_embedding_dim)
+                    steps_embeddings = last_predictions_embeddings
+                else:
+                    # shape: (group_size, steps_count, target_embedding_dim)
+                    steps_embeddings = torch.cat([steps_embeddings, last_predictions_embeddings], 1)
 
-        # shape: (batch_size, num_decoding_steps)
-        predictions = torch.cat(step_predictions, 1)
-
-        output_dict = {"predictions": predictions}
-
-        if target_tokens:
             # shape: (batch_size, num_decoding_steps, num_classes)
             logits = torch.cat(step_logits, 1)
 
-            # Compute loss.
-            target_mask = util.get_text_field_mask(target_tokens)
-            loss = self._get_loss(logits, targets, target_mask)
-            output_dict["loss"] = loss
+        # Compute loss.
+        target_mask = util.get_text_field_mask(target_tokens)
+        loss = self._get_loss(logits, targets, target_mask)
+
+        # TODO: We will be using beam search to get predictions for validation, but if beam size in 1
+        # we could consider taking the last_predictions here and building step_predictions 
+        # and use that instead of running beam search again, if performance in validation is taking a hit
+        output_dict = {
+            'loss': loss
+        }
 
         return output_dict
 
@@ -265,7 +225,7 @@ class RnnSeqDecoder(SeqDecoder):
             # shape: (group_size, steps_count, target_embedding_dim)
             previous_steps_predictions = torch.cat([previous_steps_predictions, last_predictions_embeddings], 1)
 
-        decoder_state, decoder_output = self.decoder_cell(
+        decoder_state, decoder_output = self.decoder_module(
             previous_steps_predictions=previous_steps_predictions,
             encoder_outputs=encoder_outputs,
             source_mask=source_mask,
@@ -276,6 +236,9 @@ class RnnSeqDecoder(SeqDecoder):
 
         # Update state with new decoder state, override previous state
         state.update(decoder_state)
+
+        if not self.decoder_module.is_sequential:
+            decoder_output = decoder_output[:,-1,:]
 
         # shape: (group_size, num_classes)
         output_projections = self._output_projection_layer(decoder_output)
@@ -319,26 +282,8 @@ class RnnSeqDecoder(SeqDecoder):
 
         return util.sequence_cross_entropy_with_logits(logits, relevant_targets, relevant_mask)
 
-    def _init_decoder_state(self, state: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
-        """
-        Initialize the encoded state to be passed to the first decoding time step.
-        """
-        batch_size, _ = state["source_mask"].size()
-
-        # Initialize the decoder hidden state with the final output of the encoder,
-        # and the decoder context with zeros.
-        # shape: (batch_size, encoder_output_dim)
-        final_encoder_output = util.get_final_encoder_states(
-            state["encoder_outputs"],
-            state["source_mask"],
-            bidirectional=self.bidirectional_input)
-
-        state.update(self.decoder_cell.init_decoder_state(batch_size, final_encoder_output))
-
-        return state
-
     def get_output_dim(self):
-        return self.decoder_cell.get_output_dim()
+        return self.decoder_module.get_output_dim()
 
     def take_step(self,
                   last_predictions: torch.Tensor,
@@ -386,17 +331,16 @@ class RnnSeqDecoder(SeqDecoder):
                 target_tokens: Dict[str, torch.LongTensor] = None):
 
         state = encoder_out
+        state.update(
+            self.decoder_module.init_decoder_state(state)
+        )
 
         if target_tokens:
-            state = self._init_decoder_state(encoder_out)
-            # The `_forward_loop` decodes the input sequence and computes the loss during training
-            # and validation.
             output_dict = self._forward_loss(state, target_tokens)
         else:
             output_dict = {}
 
         if not self.training:
-            state = self._init_decoder_state(state)
             predictions = self._forward_beam_search(state)
             output_dict.update(predictions)
 

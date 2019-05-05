@@ -73,17 +73,22 @@
       "num_layers": 1
     },
     "decoder": {
-      "type": "rnn_seq_decoder",
-      "decoder_cell": {
-        "type": "lstm_decoder_cell",
-        "decoding_dim": 10,
-        "target_embedding_dim": 30,
-        "attention": {
-          "type": "dot_product"
-        }
+      "type": "default_seq_decoder",
+      "decoder_module": {
+          "type": "stacked_self_attention",
+          "decoding_dim": 10,
+          "target_embedding_dim": 10,
+          "feedforward_hidden_dim": 20,
+          "num_layers": 2,
+          "num_attention_heads": 2
       },
-      "max_decoding_steps": 20,
       "target_namespace": "target_tokens",
+      "target_embedder": {
+         "vocab_namespace": "target_tokens",
+         "embedding_dim": 10
+      },
+      "max_decoding_steps": 120,
+      "scheduled_sampling_ratio": 0.9,
       "beam_size": 5
     }
   },

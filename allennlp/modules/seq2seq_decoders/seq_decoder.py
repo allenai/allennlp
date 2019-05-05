@@ -7,13 +7,14 @@ from torch.nn import Module
 from allennlp.common import Registrable
 from allennlp.common.util import END_SYMBOL, START_SYMBOL
 from allennlp.data import Vocabulary
-from allennlp.training.metrics import Metric, BLEU
+from allennlp.training.metrics import Metric
 
 
 class SeqDecoder(Module, Registrable):
     """
     A ``SeqDecoder`` is a base class for different types of Seq decoding modules
     """
+    default_implementation = 'default_seq_decoder'
 
     def __init__(
             self,
@@ -35,8 +36,7 @@ class SeqDecoder(Module, Registrable):
                                                      self._target_namespace)  # pylint: disable=protected-access
 
         # This metrics will be updated during training and validation
-        self._tensor_based_metric = tensor_based_metric or \
-                                    BLEU(exclude_indices={self._pad_index, self._end_index, self._start_index})
+        self._tensor_based_metric = tensor_based_metric
         self._token_based_metric = token_based_metric
 
     def get_output_dim(self):

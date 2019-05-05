@@ -1,15 +1,15 @@
 import torch
-from typing import Tuple, Generic, Dict, Any
+from typing import Tuple, Generic, Dict, Any, Optional
 
 from torch.nn import LSTMCell
 
 from allennlp.modules import Attention
-from allennlp.modules.seq2seq_decoders.decoder_cell import DecoderCell, CellState
+from allennlp.modules.seq2seq_decoders.decoder_module import DecoderModule
 from allennlp.nn import util
 
 
-@DecoderCell.register("lstm_decoder_cell")
-class LstmDecoderCell(DecoderCell):
+@DecoderModule.register("lstm_cell")
+class LstmCellModule(DecoderModule):
     """
     This decoder cell implements simple decoding network with LSTMCell and Attention
         as it was implemented in ``ComposedSeq2Seq``
@@ -30,9 +30,14 @@ class LstmDecoderCell(DecoderCell):
     def __init__(self,
                  decoding_dim: int,
                  target_embedding_dim: int,
-                 attention: Attention = None
+                 attention: Attention = None,
+                 bidirectional_input: bool = False,
                  ):
-        super(LstmDecoderCell, self).__init__(decoding_dim=decoding_dim, target_embedding_dim=target_embedding_dim)
+        super(LstmCellModule, self).__init__(
+            decoding_dim=decoding_dim,
+            target_embedding_dim=target_embedding_dim,
+            is_sequential=True
+        )
 
         # In this particular type of decoder output of previous step passes directly to the input of current step
         # We also assume that sequence decoder output dimensionality is equal to the encoder output dimensionality
@@ -52,6 +57,7 @@ class LstmDecoderCell(DecoderCell):
         # We'll use an LSTM cell as the recurrent cell that produces a hidden state
         # for the decoder at each time step.
         self._decoder_cell = LSTMCell(self._decoder_input_dim, self._decoder_output_dim)
+        self._bidirectional_input = bidirectional_input
 
     def _prepare_attended_input(self,
                                 decoder_hidden_state: torch.Tensor = None,
@@ -72,7 +78,17 @@ class LstmDecoderCell(DecoderCell):
 
         return attended_input
 
-    def init_decoder_state(self, batch_size: int, final_encoder_output: torch.Tensor) -> CellState:
+    def init_decoder_state(self, encoder_out: Dict[str, torch.LongTensor]) -> Dict[str, torch.Tensor]:
+
+        batch_size, _ = encoder_out["source_mask"].size()
+
+        # Initialize the decoder hidden state with the final output of the encoder,
+        # and the decoder context with zeros.
+        # shape: (batch_size, encoder_output_dim)
+        final_encoder_output = util.get_final_encoder_states(
+            encoder_out["encoder_outputs"],
+            encoder_out["source_mask"],
+            bidirectional=self._bidirectional_input)
 
         return {
             "decoder_hidden": final_encoder_output,  # shape: (batch_size, decoder_output_dim)
@@ -83,10 +99,12 @@ class LstmDecoderCell(DecoderCell):
         }
 
     def forward(self,
-                previous_steps_predictions: torch.Tensor,
+                previous_state: Dict[str, torch.Tensor],
                 encoder_outputs: torch.Tensor,
                 source_mask: torch.Tensor,
-                previous_state: CellState) -> Tuple[CellState, torch.Tensor]:
+                previous_steps_predictions: torch.Tensor,
+                previous_steps_mask: Optional[torch.Tensor] = None,
+    ) -> Tuple[Dict[str, torch.Tensor], torch.Tensor]:
 
         decoder_hidden = previous_state['decoder_hidden']
         decoder_context = previous_state['decoder_context']
@@ -105,7 +123,7 @@ class LstmDecoderCell(DecoderCell):
             decoder_input = last_predictions_embedding
 
         # shape (decoder_hidden): (batch_size, decoder_output_dim)
-        # shape (decoder_context): (batch_size, decoder_output_dim)_decoder_output_dim
+        # shape (decoder_context): (batch_size, decoder_output_dim)
         decoder_hidden, decoder_context = self._decoder_cell(
             decoder_input,
             (decoder_hidden, decoder_context))
