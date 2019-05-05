@@ -46,7 +46,7 @@ class BertForClassification(Model):
     def __init__(self,
                  vocab: Vocabulary,
                  bert_model: Union[str, BertModel],
-                 dropout: float = None,
+                 dropout: float = 0.0,
                  num_labels: int = None,
                  index: str = "bert",
                  label_namespace: str = "labels",
@@ -68,10 +68,7 @@ class BertForClassification(Model):
         else:
             out_features = vocab.get_vocab_size(label_namespace)
 
-        if dropout is not None:
-            self._dropout = torch.nn.Dropout(p=dropout)
-        else:
-            self._dropout = None
+        self._dropout = torch.nn.Dropout(p=dropout)
 
         self._classification_layer = torch.nn.Linear(in_features, out_features)
         self._accuracy = CategoricalAccuracy()
@@ -112,8 +109,7 @@ class BertForClassification(Model):
                                     token_type_ids=token_type_ids,
                                     attention_mask=input_mask)
 
-        if self._dropout is not None:
-            pooled = self._dropout(pooled)
+        pooled = self._dropout(pooled)
 
         # apply classification layer
         logits = self._classification_layer(pooled)
