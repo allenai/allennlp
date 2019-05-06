@@ -1,4 +1,6 @@
-# pylint: disable=invalid-name,no-self-use,too-many-public-methods,not-callable
+# pylint: disable=invalid-name,no-self-use,too-many-public-methods,not-callable,too-many-lines,protected-access
+from typing import NamedTuple
+
 import numpy
 from numpy.testing import assert_array_almost_equal, assert_almost_equal
 import torch
@@ -988,3 +990,30 @@ class TestNnUtil(AllenNlpTestCase):
 
         embedding = util.uncombine_initial_dims(embedding2d, torch.Size((4, 10, 20, 17, 5)))
         assert list(embedding.size()) == [4, 10, 20, 17, 5, 12]
+
+    def test_move_to_device(self):
+        # We're faking the tensor here so that we can test the calls to .cuda() without actually
+        # needing a GPU.
+        class FakeTensor(torch.Tensor):
+            # pylint: disable=abstract-method,super-init-not-called
+            def __init__(self):
+                self._device = None
+            def cuda(self, device):
+                self._device = device
+                return self
+
+        class A(NamedTuple):
+            a: int
+            b: torch.Tensor
+
+        structured_obj = {'a': [A(1, FakeTensor()), A(2, FakeTensor())],
+                          'b': FakeTensor(),
+                          'c': (1, FakeTensor())}
+        new_device = 4
+        moved_obj = util.move_to_device(structured_obj, new_device)
+        assert moved_obj['a'][0].a == 1
+        assert moved_obj['a'][0].b._device == new_device
+        assert moved_obj['a'][1].b._device == new_device
+        assert moved_obj['b']._device == new_device
+        assert moved_obj['c'][0] == 1
+        assert moved_obj['c'][1]._device == new_device
