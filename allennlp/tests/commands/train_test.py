@@ -110,10 +110,7 @@ class TestTrain(AllenNlpTestCase):
                 }
         })
 
-        with pytest.raises(ConfigurationError,
-                           match="Experiment specified a GPU but none is available;"
-                                 " if you want to run on CPU use the override"
-                                 " 'trainer.cuda_device=-1' in the json config file."):
+        with pytest.raises(ConfigurationError, match="Experiment specified"):
             train_model(params, serialization_dir=os.path.join(self.TEST_DIR, 'test_train_model'))
 
     def test_train_with_test_set(self):
@@ -178,7 +175,7 @@ class LazyFakeReader(DatasetReader):
     # pylint: disable=abstract-method
     def __init__(self) -> None:
         super().__init__(lazy=True)
-        self.reader = DatasetReader.from_params(Params({'type': 'sequence_tagging'}))
+        self.reader = DatasetReader.from_params(Params({'type': 'sequence_tagging', 'lazy': True}))
 
     def _read(self, file_path: str) -> Iterable[Instance]:
         """

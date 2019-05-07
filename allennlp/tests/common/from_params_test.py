@@ -1,5 +1,5 @@
 # pylint: disable=no-self-use,invalid-name,too-many-public-methods,protected-access
-from typing import Dict, Optional, List, Tuple, Set
+from typing import Dict, Optional, List, Set, Tuple, Union
 
 import pytest
 import torch
@@ -132,10 +132,179 @@ class TestFromParams(AllenNlpTestCase):
         assert c.name == "extra_c"
         assert c.size == 20
 
+    def test_extras_for_custom_classes(self):
+        # pylint: disable=unused-variable,arguments-differ
+        from allennlp.common.registrable import Registrable
+
+        class BaseClass(Registrable):
+            pass
+
+        class BaseClass2(Registrable):
+            pass
+
+        @BaseClass.register("A")
+        class A(BaseClass):
+            def __init__(self, a: int, b: int, val: str) -> None:
+                self.a = a
+                self.b = b
+                self.val = val
+
+            def __hash__(self):
+                return self.b
+
+            def __eq__(self, other):
+                return self.b == other.b
+
+            @classmethod
+            def from_params(cls, params: Params, a: int) -> 'A':  # type: ignore
+                # A custom from params
+                b = params.pop_int("b")
+                val = params.pop("val", "C")
+                params.assert_empty(cls.__name__)
+                return cls(a=a, b=b, val=val)
+
+        @BaseClass2.register("B")
+        class B(BaseClass2):
+            def __init__(self, c: int, b: int) -> None:
+                self.c = c
+                self.b = b
+
+            @classmethod
+            def from_params(cls, params: Params, c: int) -> 'B':  # type: ignore
+                b = params.pop_int("b")
+                params.assert_empty(cls.__name__)
+                return cls(c=c, b=b)
+
+        @BaseClass.register("E")
+        class E(BaseClass):
+            def __init__(self, m: int, n: int) -> None:
+                self.m = m
+                self.n = n
+
+            @classmethod
+            def from_params(cls, params: Params, **extras2) -> 'E':  # type: ignore
+                m = params.pop_int("m")
+                params.assert_empty(cls.__name__)
+                n = extras2["n"]
+                return cls(m=m, n=n)
+
+        class C(object):
+            pass
+
+        @BaseClass.register("D")
+        class D(BaseClass):
+            def __init__(self, arg1: List[BaseClass],
+                         arg2: Tuple[BaseClass, BaseClass2],
+                         arg3: Dict[str, BaseClass], arg4: Set[BaseClass],
+                         arg5: List[BaseClass]) -> None:
+                self.arg1 = arg1
+                self.arg2 = arg2
+                self.arg3 = arg3
+                self.arg4 = arg4
+                self.arg5 = arg5
+
+        vals = [1, 2, 3]
+        params = Params({"type": "D",
+                         "arg1": [{"type": "A", "b": vals[0]},
+                                  {"type": "A", "b": vals[1]},
+                                  {"type": "A", "b": vals[2]}],
+                         "arg2": [{"type": "A", "b": vals[0]},
+                                  {"type": "B", "b": vals[0]}],
+                         "arg3": {"class_1": {"type": "A", "b": vals[0]},
+                                  "class_2": {"type": "A", "b": vals[1]}},
+                         "arg4": [{"type": "A", "b": vals[0], "val": "M"},
+                                  {"type": "A", "b": vals[1], "val": "N"},
+                                  {"type": "A", "b": vals[1], "val": "N"}],
+                         "arg5": [{"type": "E", "m": 9}]})
+        extra = C()
+        tval1 = 5
+        tval2 = 6
+        d = BaseClass.from_params(params=params, extra=extra, a=tval1, c=tval2, n=10)
+
+        # Tests for List Parameters
+        assert len(d.arg1) == len(vals)
+        assert isinstance(d.arg1, list)
+        assert isinstance(d.arg1[0], A)
+        assert all([x.b == y for x, y in zip(d.arg1, vals)])
+        assert all([x.a == tval1 for x in d.arg1])
+
+        # Tests for Tuple
+        assert isinstance(d.arg2, tuple)
+        assert isinstance(d.arg2[0], A)
+        assert isinstance(d.arg2[1], B)
+        assert d.arg2[0].a == tval1
+        assert d.arg2[1].c == tval2
+        assert d.arg2[0].b == d.arg2[1].b == vals[0]
+
+        # Tests for Dict
+        assert isinstance(d.arg3, dict)
+        assert isinstance(d.arg3["class_1"], A)
+        assert d.arg3["class_1"].a == d.arg3["class_2"].a == tval1
+        assert d.arg3["class_1"].b == vals[0]
+        assert d.arg3["class_2"].b == vals[1]
+
+        # Tests for Set
+        assert isinstance(d.arg4, set)
+        assert len(d.arg4) == 2
+        assert any(x.val == "M" for x in d.arg4)
+        assert any(x.val == "N" for x in d.arg4)
+
+        # Tests for custom extras parameters
+        assert isinstance(d.arg5, list)
+        assert isinstance(d.arg5[0], E)
+        assert d.arg5[0].m == 9
+        assert d.arg5[0].n == 10
+
     def test_no_constructor(self):
         params = Params({"type": "just_spaces"})
 
         WordSplitter.from_params(params)
+
+    def test_union(self):
+        class A(FromParams):
+            def __init__(self, a: Union[int, List[int]]) -> None:
+                self.a = a
+
+        class B(FromParams):
+            def __init__(self, b: Union[A, List[A]]) -> None:
+                # Really you would want to be sure that `self.b` has a consistent type, but for
+                # this test we'll ignore that.
+                self.b = b
+
+        class C(FromParams):
+            def __init__(self, c: Union[A, B, Dict[str, A]]) -> None:
+                # Really you would want to be sure that `self.c` has a consistent type, but for
+                # this test we'll ignore that.
+                self.c = c
+
+        params = Params({'a': 3})
+        a = A.from_params(params)
+        assert a.a == 3
+
+        params = Params({'a': [3, 4, 5]})
+        a = A.from_params(params)
+        assert a.a == [3, 4, 5]
+
+        params = Params({'b': {'a': 3}})
+        b = B.from_params(params)
+        assert isinstance(b.b, A)
+        assert b.b.a == 3
+
+        params = Params({'b': [{'a': 3}, {'a': [4, 5]}]})
+        b = B.from_params(params)
+        assert isinstance(b.b, list)
+        assert b.b[0].a == 3
+        assert b.b[1].a == [4, 5]
+
+        # This is a contrived, ugly example (why would you want to duplicate names in a nested
+        # structure like this??), but it demonstrates a potential bug when dealing with mutatable
+        # parameters.  If you're not careful about keeping the parameters un-mutated in two
+        # separate places, you'll end up with a B, or with a dict that's missing the 'b' key.
+        params = Params({'c': {'a': {'a': 3}, 'b': {'a': [4, 5]}}})
+        c = C.from_params(params)
+        assert isinstance(c.c, dict)
+        assert c.c['a'].a == 3
+        assert c.c['b'].a == [4, 5]
 
     def test_dict(self):
         # pylint: disable=unused-variable

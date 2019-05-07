@@ -98,9 +98,9 @@ def make_vocab_from_params(params: Params, serialization_dir: str):
     logger.info("From dataset instances, %s will be considered for vocabulary creation.",
                 ", ".join(datasets_for_vocab_creation))
 
-    instances = [instance for key, dataset in all_datasets.items()
+    instances = (instance for key, dataset in all_datasets.items()
                  for instance in dataset
-                 if key in datasets_for_vocab_creation]
+                 if key in datasets_for_vocab_creation)
 
     vocab = Vocabulary.from_params(vocab_params, instances)
 

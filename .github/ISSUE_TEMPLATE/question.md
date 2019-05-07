@@ -9,7 +9,7 @@ Please first search our GitHub repository for similar questions.  If you don't f
 **System (please complete the following information):**
  - OS: [e.g. OSX, Linux]
  - Python version: [e.g. 3.6.1]
- - AllenNLP version: [e.g. v0.8.2, or "I installed from master"]
+ - AllenNLP version: [e.g. v0.8.3, or "I installed from master"]
  - PyTorch version: (if you installed it yourself)
 
 **Question**

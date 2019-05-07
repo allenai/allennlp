@@ -1,4 +1,4 @@
-# pylint: disable=no-self-use,invalid-name
+# pylint: disable=no-self-use,invalid-name,protected-access
 from numpy.testing import assert_almost_equal
 import pytest
 import torch
@@ -11,6 +11,42 @@ from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestFeedForward(AllenNlpTestCase):
+    def test_can_construct_from_params(self):
+        params = Params({
+                'input_dim': 2,
+                'hidden_dims': 3,
+                'activations': 'relu',
+                'num_layers': 2,
+                })
+        feedforward = FeedForward.from_params(params)
+        assert len(feedforward._activations) == 2
+        assert [isinstance(a, torch.nn.ReLU) for a in feedforward._activations]
+        assert len(feedforward._linear_layers) == 2
+        assert [l.weight.size(-1) == 3 for l in feedforward._linear_layers]
+
+        params = Params({
+                'input_dim': 2,
+                'hidden_dims': [3, 4, 5],
+                'activations': ['relu', 'relu', 'linear'],
+                'dropout': .2,
+                'num_layers': 3,
+                })
+        feedforward = FeedForward.from_params(params)
+        assert len(feedforward._activations) == 3
+        assert isinstance(feedforward._activations[0], torch.nn.ReLU)
+        assert isinstance(feedforward._activations[1], torch.nn.ReLU)
+        # It's hard to check that the last activation is the lambda function we use for `linear`,
+        # so this is good enough.
+        assert not isinstance(feedforward._activations[2], torch.nn.ReLU)
+
+        assert len(feedforward._linear_layers) == 3
+        assert feedforward._linear_layers[0].weight.size(0) == 3
+        assert feedforward._linear_layers[1].weight.size(0) == 4
+        assert feedforward._linear_layers[2].weight.size(0) == 5
+
+        assert len(feedforward._dropout) == 3
+        assert [d.p == 0.2 for d in feedforward._dropout]
+
     def test_init_checks_hidden_dim_consistency(self):
         with pytest.raises(ConfigurationError):
             FeedForward(2, 4, [5, 5], Activation.by_name('relu')())

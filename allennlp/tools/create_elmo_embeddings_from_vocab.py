@@ -1,20 +1,16 @@
 # pylint: disable=no-self-use
-
-import os
 import argparse
-import sys
-
-sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
-
 import gzip
+import os
+
 import numpy
 import torch
 
-from allennlp.data.token_indexers import ELMoTokenCharactersIndexer
-from allennlp.modules.elmo import _ElmoCharacterEncoder
-from allennlp.data import Token, Vocabulary
-from allennlp.data.vocabulary import DEFAULT_OOV_TOKEN
 from allennlp.common.checks import ConfigurationError
+from allennlp.data import Token, Vocabulary
+from allennlp.data.token_indexers import ELMoTokenCharactersIndexer
+from allennlp.data.vocabulary import DEFAULT_OOV_TOKEN
+from allennlp.modules.elmo import _ElmoCharacterEncoder
 
 
 def main(vocab_path: str,
@@ -97,9 +93,12 @@ def main(vocab_path: str,
         for word in tokens:
             new_vocab_file.write(f"{word}\n")
 
+
 if __name__ == "__main__":
+    # pylint: disable=invalid-name
     parser = argparse.ArgumentParser(description='Generate CNN representations for a vocabulary '
-                                                 'using ELMo')
+                                                 'using ELMo',
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--vocab_path', type=str, help='A path to a vocabulary file to generate '
                                                        'representations for.')
     parser.add_argument('--elmo_config', type=str, help='The path to a directory containing an '
