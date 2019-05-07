@@ -381,7 +381,6 @@ class TestTrainer(AllenNlpTestCase):
         assert new_trainer._momentum_scheduler.last_epoch == 3
         new_trainer.train()
 
-
     def test_trainer_can_run_with_lr_scheduler(self):
         lr_params = Params({"type": "reduce_on_plateau"})
         lr_scheduler = LearningRateScheduler.from_params(self.optimizer, lr_params)

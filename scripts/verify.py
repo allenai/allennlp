@@ -4,7 +4,6 @@
 """
 
 import argparse
-
 import os
 import shutil
 from subprocess import run
@@ -57,16 +56,12 @@ def main(checks):
         sys.exit(1)
 
 if __name__ == "__main__":
-    checks = ['pytest', 'pylint', 'mypy', 'build-docs', 'check-docs', 'check-links', 'check-requirements', 'check-large-files']
+    checks = ['pytest', 'pylint', 'mypy', 'build-docs', 'check-docs', 'check-links', 'check-requirements',
+              'check-large-files']
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--checks', type=str, required=False, nargs='+', choices=checks)
+    parser.add_argument('--checks', default=checks, nargs='+', choices=checks)
 
     args = parser.parse_args()
 
-    if args.checks:
-        run_checks = args.checks
-    else:
-        run_checks = checks
-
-    main(run_checks)
+    main(args.checks)

@@ -10,6 +10,7 @@ import copy
 import json
 import logging
 import os
+import zlib
 
 from overrides import overrides
 
@@ -343,6 +344,8 @@ class Params(MutableMapping):
         ----------
         quiet: bool, optional (default = False)
             Whether to log the parameters before returning them as a dict.
+        infer_type_and_cast : bool, optional (default = False)
+            If True, we infer types and cast (e.g. things that look like floats to floats).
         """
         if infer_type_and_cast:
             params_as_dict = infer_and_cast(self.params)
@@ -504,6 +507,19 @@ class Params(MutableMapping):
 
         return order_dict(params_dict, order_func)
 
+    def get_hash(self) -> str:
+        """
+        Returns a hash code representing the current state of this ``Params`` object.  We don't
+        want to implement ``__hash__`` because that has deeper python implications (and this is a
+        mutable object), but this will give you a representation of the current state.
+        We use `zlib.adler32` instead of Python's builtin `hash` because the random seed for the
+        latter is reset on each new program invocation, as discussed here:
+        https://stackoverflow.com/questions/27954892/deterministic-hashing-in-python-3.
+        """
+        dumped = json.dumps(self.params, sort_keys=True)
+        hashed = zlib.adler32(dumped.encode())
+        return str(hashed)
+
 
 def pop_choice(params: Dict[str, Any],
                key: str,
@@ -524,10 +540,13 @@ def pop_choice(params: Dict[str, Any],
     return value
 
 
-def _replace_none(dictionary: Dict[str, Any]) -> Dict[str, Any]:
-    for key in dictionary.keys():
-        if dictionary[key] == "None":
-            dictionary[key] = None
-        elif isinstance(dictionary[key], dict):
-            dictionary[key] = _replace_none(dictionary[key])
-    return dictionary
+def _replace_none(params: Any) -> Any:
+    if params == "None":
+        return None
+    elif isinstance(params, dict):
+        for key, value in params.items():
+            params[key] = _replace_none(value)
+        return params
+    elif isinstance(params, list):
+        return [_replace_none(value) for value in params]
+    return params

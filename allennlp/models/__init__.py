@@ -5,6 +5,7 @@ all of which are subclasses of :class:`~allennlp.models.model.Model`.
 
 from allennlp.models.model import Model
 from allennlp.models.archival import archive_model, load_archive, Archive
+from allennlp.models.bert_for_classification import BertForClassification
 from allennlp.models.biattentive_classification_network import BiattentiveClassificationNetwork
 from allennlp.models.constituency_parser import SpanConstituencyParser
 from allennlp.models.biaffine_dependency_parser import BiaffineDependencyParser

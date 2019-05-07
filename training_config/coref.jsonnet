@@ -48,8 +48,7 @@
         "bidirectional": true,
         "input_size": 400,
         "hidden_size": 200,
-        "num_layers": 1,
-        "dropout": 0.2
+        "num_layers": 1
     },
     "mention_feedforward": {
         "input_dim": 1220,
