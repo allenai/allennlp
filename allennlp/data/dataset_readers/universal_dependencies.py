@@ -48,7 +48,7 @@ class UniversalDependenciesDatasetReader(DatasetReader):
         # if `file_path` is a URL, redirect to the cache
         file_path = cached_path(file_path)
 
-        with open(file_path, 'r') as conllu_file:
+        with open(file_path, 'r', encoding='UTF-8') as conllu_file:
             logger.info("Reading UD instances from conllu dataset at: %s", file_path)
 
             for annotation in  lazy_parse(conllu_file.read()):

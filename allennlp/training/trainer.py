@@ -318,7 +318,7 @@ class Trainer(TrainerBase):
             batch_num_total = self._batch_num_total
 
             self.optimizer.zero_grad()
-
+            start_time = time.time()
             loss = self.batch_loss(batch_group, for_training=True)
 
             if torch.isnan(loss):
@@ -353,6 +353,8 @@ class Trainer(TrainerBase):
             else:
                 self.optimizer.step()
 
+            time_elapsed = time.time() - start_time
+
             # Update moving averages
             if self._moving_average is not None:
                 self._moving_average.apply(batch_num_total)
@@ -380,6 +382,7 @@ class Trainer(TrainerBase):
                 if (batches_this_epoch - 1) % self._log_batch_size_period == 0:
                     average = cumulative_batch_size/batches_this_epoch
                     logger.info(f"current batch size: {cur_batch} mean batch size: {average}")
+                    logger.info("step_time: (%.4f sec/step)", time_elapsed)
                     self._tensorboard.add_train_scalar("current_batch_size", cur_batch)
                     self._tensorboard.add_train_scalar("mean_batch_size", average)
 
