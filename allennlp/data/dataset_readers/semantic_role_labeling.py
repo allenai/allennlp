@@ -99,13 +99,15 @@ class SrlReader(DatasetReader):
         text_field = TextField(tokens, token_indexers=self._token_indexers)
         fields['tokens'] = text_field
         fields['verb_indicator'] = SequenceLabelField(verb_label, text_field)
-        if tags:
-            fields['tags'] = SequenceLabelField(tags, text_field)
 
         if all([x == 0 for x in verb_label]):
             verb = None
         else:
             verb = tokens[verb_label.index(1)].text
-        fields["metadata"] = MetadataField({"words": [x.text for x in tokens],
-                                            "verb": verb})
+        metadata_dict = {"words": [x.text for x in tokens],
+                         "verb": verb}
+        if tags:
+            fields['tags'] = SequenceLabelField(tags, text_field)
+            metadata_dict["gold_tags"] = tags
+        fields["metadata"] = MetadataField(metadata_dict)
         return Instance(fields)

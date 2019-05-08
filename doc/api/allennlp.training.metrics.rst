@@ -8,6 +8,7 @@ allennlp.training.metrics
 
 * :ref:`Metric<metric>`
 * :ref:`AttachmentScores<attachment-scores>`
+* :ref:`AUC<auc>`
 * :ref:`Average<average>`
 * :ref:`BooleanAccuracy<boolean-accuracy>`
 * :ref:`CategoricalAccuracy<categorical-accuracy>`
@@ -24,6 +25,7 @@ allennlp.training.metrics
 * :ref:`SequenceAccuracy<sequence-accuracy>`
 * :ref:`SpanBasedF1Measure<span-based-f1-measure>`
 * :ref:`SquadEmAndF1<squad-em-and-f1>`
+* :ref:`SrlEvalScorer<srl-eval>`
 * :ref:`UnigramRecall<unigram-recall>`
 
 
@@ -35,6 +37,12 @@ allennlp.training.metrics
 
 .. _attachment-scores:
 .. automodule:: allennlp.training.metrics.attachment_scores
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. _auc:
+.. automodule:: allennlp.training.metrics.auc
    :members:
    :undoc-members:
    :show-inheritance:
@@ -147,14 +155,14 @@ allennlp.training.metrics
    :undoc-members:
    :show-inheritance:
 
-.. _unigram-recall:
-.. automodule:: allennlp.training.metrics.unigram_recall
+.. _srl-eval:
+.. automodule:: allennlp.training.metrics.srl_eval_scorer
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. _auc:
-.. automodule:: allennlp.training.metrics.auc
+.. _unigram-recall:
+.. automodule:: allennlp.training.metrics.unigram_recall
    :members:
    :undoc-members:
    :show-inheritance:
