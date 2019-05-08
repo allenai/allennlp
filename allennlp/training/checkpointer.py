@@ -8,11 +8,12 @@ import time
 
 import torch
 
+from allennlp.common.registrable import Registrable
 from allennlp.nn import util as nn_util
 
 logger = logging.getLogger(__name__)
 
-class Checkpointer:
+class Checkpointer(Registrable):
     """
     This class implements the functionality for checkpointing your model and trainer state
     during training. It is agnostic as to what those states look like (they are typed as
@@ -65,7 +66,8 @@ class Checkpointer:
                             self._last_permanent_saved_checkpoint_time = save_time
                     if remove_path:
                         for fname in paths_to_remove[1:]:
-                            os.remove(fname)
+                            if os.path.isfile(fname):
+                                os.remove(fname)
 
     def find_latest_checkpoint(self) -> Tuple[str, str]:
         """

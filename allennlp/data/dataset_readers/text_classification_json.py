@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Union
 import logging
 import json
 from overrides import overrides
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 class TextClassificationJsonReader(DatasetReader):
     """
     Reads tokens and their labels from a labeled text classification dataset.
-    Expects a "tokens" field and a "category" field in JSON format.
+    Expects a "text" field and a "label" field in JSON format.
 
     The output of ``read`` is a list of ``Instance`` s with the fields:
         tokens: ``TextField`` and
@@ -67,7 +67,15 @@ class TextClassificationJsonReader(DatasetReader):
                     continue
                 items = json.loads(line)
                 text = items["text"]
-                label = str(items["label"])
+                label = items.get("label", None)
+                if label is not None:
+                    if self._skip_label_indexing:
+                        try:
+                            label = int(label)
+                        except ValueError:
+                            raise ValueError('Labels must be integers if skip_label_indexing is True.')
+                    else:
+                        label = str(label)
                 instance = self.text_to_instance(text=text, label=label)
                 if instance is not None:
                     yield instance
@@ -81,13 +89,13 @@ class TextClassificationJsonReader(DatasetReader):
         return tokens
 
     @overrides
-    def text_to_instance(self, text: str, label: str = None) -> Instance:  # type: ignore
+    def text_to_instance(self, text: str, label: Union[str, int] = None) -> Instance:  # type: ignore
         """
         Parameters
         ----------
         text : ``str``, required.
             The text to classify
-        label ``str``, optional, (default = None).
+        label : ``str``, optional, (default = None).
             The label for this text.
 
         Returns

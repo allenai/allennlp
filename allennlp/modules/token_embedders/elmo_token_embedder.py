@@ -25,7 +25,7 @@ class ElmoTokenEmbedder(TokenEmbedder):
         An ELMo hdf5 weight file.
     do_layer_norm : ``bool``, optional.
         Should we apply layer normalization (passed to ``ScalarMix``)?
-    dropout : ``float``, optional.
+    dropout : ``float``, optional, (default = 0.5).
         The dropout value to be applied to the ELMo representations.
     requires_grad : ``bool``, optional
         If True, compute gradient of ELMo parameters for fine tuning.
@@ -33,7 +33,7 @@ class ElmoTokenEmbedder(TokenEmbedder):
         If given, we will project the ELMo embedding down to this dimension.  We recommend that you
         try using ELMo with a lot of dropout and no projection first, but we have found a few cases
         where projection helps (particularly where there is very limited training data).
-    vocab_to_cache : ``List[str]``, optional, (default = 0.5).
+    vocab_to_cache : ``List[str]``, optional.
         A list of words to pre-compute and cache character convolutions
         for. If you use this option, the ElmoTokenEmbedder expects that you pass word
         indices of shape (batch_size, timesteps) to forward, instead

@@ -22,4 +22,5 @@ from allennlp.predictors.semantic_role_labeler import SemanticRoleLabelerPredict
 from allennlp.predictors.sentence_tagger import SentenceTaggerPredictor
 from allennlp.predictors.seq2seq import Seq2SeqPredictor
 from allennlp.predictors.simple_seq2seq import SimpleSeq2SeqPredictor
+from allennlp.predictors.text_classifier import TextClassifierPredictor
 from allennlp.predictors.wikitables_parser import WikiTablesParserPredictor
