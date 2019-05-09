@@ -24,8 +24,8 @@ class TokenIndexer(Generic[TokenType], Registrable):
         The minimum padding length required for the :class:`TokenIndexer`. For example,
         the minimum padding length of :class:`SingleIdTokenIndexer` is the largest size of
         filter when using :class:`CnnEncoder`.
-        Note that if you set this for one TokenIndexer, you likely have to set it for `all`
-        :class:`TokenIndexer`s for the same field, otherwise you'll get mismatched tensor sizes.
+        Note that if you set this for one TokenIndexer, you likely have to set it for all
+        :class:`TokenIndexer` for the same field, otherwise you'll get mismatched tensor sizes.
     """
     default_implementation = 'single_id'
 
