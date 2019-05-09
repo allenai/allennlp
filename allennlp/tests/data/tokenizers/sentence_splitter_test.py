@@ -1,4 +1,6 @@
 # pylint: disable=no-self-use,invalid-name
+import pytest
+import spacy
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.tokenizers.sentence_splitter import SpacySentenceSplitter
@@ -18,12 +20,13 @@ class TestSentenceSplitter(AllenNlpTestCase):
                            "Here's the '3rd' sentence - yes, it is.", "And yes; this is a fourth sentence?"]
         assert tokens == expected_tokens
 
+    @pytest.mark.skipif(spacy.__version__ < "2.1", reason="this model changed from 2.0 to 2.1")
     def test_dep_parse_splitter_passes_through_correctly(self):
         text = ("This is the first sentence. This is the second sentence! "
                 "Here's the '3rd' sentence - yes, it is. And yes; this is a fourth sentence?")
         tokens = self.dep_parse_splitter.split_sentences(text)
         expected_tokens = ["This is the first sentence.", "This is the second sentence!",
-                           "Here's the '3rd' sentence -", "yes, it is.", "And yes; this is a fourth sentence?"]
+                           "Here's the '3rd' sentence - yes, it is.", "And yes; this is a fourth sentence?"]
         assert tokens == expected_tokens
 
     def test_batch_rule_based_sentence_splitting(self):

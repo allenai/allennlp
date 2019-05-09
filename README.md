@@ -109,10 +109,11 @@ Once you have [installed Docker](https://docs.docker.com/engine/installation/)
 just run the following command to get an environment that will run on either the cpu or gpu.
 
    ```bash
-   docker run -it -p 8000:8000 --rm allennlp/allennlp:v0.8.2
+   mkdir -p $HOME/.allennlp/
+   docker run --rm -v $HOME/.allennlp:/root/.allennlp allennlp/allennlp:v0.8.3
    ```
 
-You can test the Docker environment with `docker run -it -p 8000:8000 --rm allennlp/allennlp:v0.8.2 test-install`.
+You can test the Docker environment with `docker run --rm -v $HOME/.allennlp:/root/.allennlp allennlp/allennlp:v0.8.3 test-install`.
 
 ### Installing from source
 
@@ -122,23 +123,14 @@ You can also install AllenNLP by cloning our git repository:
   git clone https://github.com/allenai/allennlp.git
   ```
 
-Create a Python 3.6 virtual environment, and install the necessary requirements by running:
-
-  ```bash
-  INSTALL_TEST_REQUIREMENTS=true scripts/install_requirements.sh
-  ```
-
-Changing the flag to false if you don't want to be able to run
-tests. Once the requirements have been installed, run:
+Create a Python 3.6 virtual environment, and install AllenNLP in `editable` mode by running:
 
   ```bash
   pip install --editable .
   ```
 
-To install the AllenNLP library in `editable` mode into your
-environment.  This will make `allennlp` available on your
-system but it will use the sources from the local clone you
-made of the source repository.
+This will make `allennlp` available on your system but it will use the sources from the local clone
+you made of the source repository.
 
 You can test your installation with `allennlp test-install`.
 The full development environment also requires the JVM and `perl`,

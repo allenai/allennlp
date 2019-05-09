@@ -91,7 +91,7 @@ class StanfordSentimentTreeBankDatasetReader(DatasetReader):
         ----------
         tokens : ``List[str]``, required.
             The tokens in a given sentence.
-        sentiment ``str``, optional, (default = None).
+        sentiment : ``str``, optional, (default = None).
             The sentiment for this sentence.
 
         Returns

@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Tuple, Union
+from typing import Dict, Optional, Tuple, Union, List
 import torch
 
 from allennlp.common.registrable import Registrable
@@ -26,7 +26,7 @@ class Metric(Registrable):
         """
         raise NotImplementedError
 
-    def get_metric(self, reset: bool) -> Union[float, Tuple[float, ...], Dict[str, float]]:
+    def get_metric(self, reset: bool) -> Union[float, Tuple[float, ...], Dict[str, float], Dict[str, List[float]]]:
         """
         Compute and return the metric. Optionally also call :func:`self.reset`.
         """
