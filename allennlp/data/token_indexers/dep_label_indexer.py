@@ -21,9 +21,13 @@ class DepLabelIndexer(TokenIndexer[int]):
     ----------
     namespace : ``str``, optional (default=``dep_labels``)
         We will use this namespace in the :class:`Vocabulary` to map strings to indices.
+    token_min_padding_length : ``int``, optional (default=``0``)
+        See :class:`TokenIndexer`.
     """
     # pylint: disable=no-self-use
-    def __init__(self, namespace: str = 'dep_labels') -> None:
+    def __init__(self, namespace: str = 'dep_labels',
+                 token_min_padding_length: int = 0) -> None:
+        super().__init__(token_min_padding_length)
         self.namespace = namespace
         self._logged_errors: Set[str] = set()
 

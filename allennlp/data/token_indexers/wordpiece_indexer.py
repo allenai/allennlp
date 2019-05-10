@@ -57,6 +57,8 @@ class WordpieceIndexer(TokenIndexer[int]):
         These are appended to the tokens provided to ``tokens_to_indices``.
     separator_token : ``str``, optional (default=``[SEP]``)
         This token indicates the segments in the sequence.
+    token_min_padding_length : ``int``, optional (default=``0``)
+        See :class:`TokenIndexer`.
     """
     def __init__(self,
                  vocab: Dict[str, int],
@@ -68,7 +70,9 @@ class WordpieceIndexer(TokenIndexer[int]):
                  never_lowercase: List[str] = None,
                  start_tokens: List[str] = None,
                  end_tokens: List[str] = None,
-                 separator_token: str = "[SEP]") -> None:
+                 separator_token: str = "[SEP]",
+                 token_min_padding_length: int = 0) -> None:
+        super().__init__(token_min_padding_length)
         self.vocab = vocab
 
         # The BERT code itself does a two-step tokenization:

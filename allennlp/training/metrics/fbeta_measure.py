@@ -122,7 +122,7 @@ class FBetaMeasure(Metric):
         mask = mask.to(torch.uint8)
         gold_labels = gold_labels.float()
 
-        argmax_predictions = predictions.max(dim=-1)[1].float().squeeze(dim=-1)
+        argmax_predictions = predictions.max(dim=-1)[1].float()
         true_positives = (gold_labels == argmax_predictions) * mask
         true_positives_bins = gold_labels[true_positives]
 
