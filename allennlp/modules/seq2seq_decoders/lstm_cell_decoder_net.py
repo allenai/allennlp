@@ -4,16 +4,14 @@ from typing import Tuple, Generic, Dict, Any, Optional
 from torch.nn import LSTMCell
 
 from allennlp.modules import Attention
-from allennlp.modules.seq2seq_decoders.decoder_module import DecoderModule
+from allennlp.modules.seq2seq_decoders.decoder_net import DecoderNet
 from allennlp.nn import util
 
 
-@DecoderModule.register("lstm_cell")
-class LstmCellModule(DecoderModule):
+@DecoderNet.register("lstm_cell")
+class LstmCellDecoderNet(DecoderNet):
     """
-    This decoder cell implements simple decoding network with LSTMCell and Attention
-        as it was implemented in ``ComposedSeq2Seq``
-
+    This decoder net implements simple decoding network with LSTMCell and Attention.
     Parameters
     ----------
     decoding_dim : ``int``, required
@@ -33,10 +31,10 @@ class LstmCellModule(DecoderModule):
                  attention: Optional[Attention] = None,
                  bidirectional_input: bool = False):
 
-        super(LstmCellModule, self).__init__(
+        super(LstmCellDecoderNet, self).__init__(
             decoding_dim=decoding_dim,
             target_embedding_dim=target_embedding_dim,
-            is_sequential=True
+            decodes_parallel=False
         )
 
         # In this particular type of decoder output of previous step passes directly to the input of current step

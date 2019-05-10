@@ -5,15 +5,14 @@ import math
 from torch.autograd import Variable
 import torch.nn.functional as F
 
-from allennlp.modules.seq2seq_decoders.decoder_module import DecoderModule
+from allennlp.modules.seq2seq_decoders.decoder_net import DecoderNet
 from allennlp.nn import util
 
 
-@DecoderModule.register("stacked_self_attention")
-class StackedSelfAttentionDecoderModule(DecoderModule):
+@DecoderNet.register("stacked_self_attention")
+class StackedSelfAttentionDecoderNet(DecoderNet):
     """
-    This decoder cell implements simple decoding network with LSTMCell and Attention
-        as it was implemented in ``ComposedSeq2Seq``
+    A Stacked self-attention decoder implementation.
 
     Parameters
     ----------
@@ -22,10 +21,24 @@ class StackedSelfAttentionDecoderModule(DecoderModule):
     target_embedding_dim : ``int``, required
         Defines dimensionality of input target embeddings.  Since this model takes it's output on a previous step
         as input of following step, this is also an input dimensionality.
-    attention : ``Attention``, optional (default = None)
-        If you want to use attention to get a dynamic summary of the encoder outputs at each step
-        of decoding, this is the function used to compute similarity between the decoder hidden
-        state and encoder outputs.
+    feedforward_hidden_dim : ``int``, required.
+        The middle dimension of the FeedForward network. The input and output
+        dimensions are fixed to ensure sizes match up for the self attention layers.
+    num_layers : ``int``, required.
+        The number of stacked self attention -> feedfoward -> layer normalisation blocks.
+    num_attention_heads : ``int``, required.
+        The number of attention heads to use per layer.
+    use_positional_encoding: ``bool``, optional, (default = True)
+        Whether to add sinusoidal frequencies to the input tensor. This is strongly recommended,
+        as without this feature, the self attention layers have no idea of absolute or relative
+        position (as they are just computing pairwise similarity between vectors of elements),
+        which can be important features for many tasks.
+    dropout_prob : ``float``, optional, (default = 0.1)
+        The dropout probability for the feedforward network.
+    residual_dropout_prob : ``float``, optional, (default = 0.2)
+        The dropout probability for the residual connections.
+    attention_dropout_prob : ``float``, optional, (default = 0.1)
+        The dropout probability for the attention distributions in each attention layer.
     """
 
     def __init__(self,
@@ -34,21 +47,22 @@ class StackedSelfAttentionDecoderModule(DecoderModule):
                  feedforward_hidden_dim: int,
                  num_layers: int,
                  num_attention_heads: int,
+                 use_positional_encoding: bool = True,
                  dropout_prob: float = 0.1,
                  residual_dropout_prob: float = 0.2,
                  attention_dropout_prob: float = 0.1,):
 
-        super(StackedSelfAttentionDecoderModule, self).__init__(
+        super(StackedSelfAttentionDecoderNet, self).__init__(
             decoding_dim=decoding_dim,
             target_embedding_dim=target_embedding_dim,
-            is_sequential=False
+            decodes_parallel=True
         )
 
         c = copy.deepcopy
         attn = MultiHeadedAttention(num_attention_heads, decoding_dim, attention_dropout_prob)
         ff = PositionwiseFeedForward(decoding_dim, feedforward_hidden_dim, dropout_prob)
         self._embed_scale = math.sqrt(decoding_dim)
-        self._positional_embedder = PositionalEncoding(decoding_dim, dropout_prob)
+        self._positional_embedder = PositionalEncoding(decoding_dim, dropout_prob) if use_positional_encoding else None
         self._self_attn_decoder = Decoder(DecoderLayer(decoding_dim, c(attn), c(attn),
                                              ff, residual_dropout_prob), num_layers)
 
@@ -71,14 +85,14 @@ class StackedSelfAttentionDecoderModule(DecoderModule):
         else:
             previous_steps_mask = previous_steps_mask.unsqueeze(-2) & future_mask
         previous_steps_predictions *= self._embed_scale
-        previous_steps_predictions = self._positional_embedder(previous_steps_predictions)
+        if self._positional_embedder:
+            previous_steps_predictions = self._positional_embedder(previous_steps_predictions)
         decoded = self._self_attn_decoder(
             previous_steps_predictions,
             encoder_outputs,
             source_mask,
             previous_steps_mask
         )
-
         return {}, decoded
 
 

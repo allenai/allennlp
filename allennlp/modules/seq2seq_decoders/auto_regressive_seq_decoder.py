@@ -8,28 +8,62 @@ from allennlp.common import Registrable
 from allennlp.modules.seq2seq_decoders.seq_decoder import SeqDecoder
 from allennlp.data import Vocabulary
 from allennlp.modules import TokenEmbedder
-from allennlp.modules.seq2seq_decoders.decoder_module import DecoderModule
+from allennlp.modules.seq2seq_decoders.decoder_net import DecoderNet
 from allennlp.nn import util
 from allennlp.nn.beam_search import BeamSearch
 from allennlp.training.metrics import Metric
 
 
-@SeqDecoder.register("default_seq_decoder")
-class DefaultSeqDecoder(SeqDecoder):
+@SeqDecoder.register("auto_regressive_seq_decoder")
+class AutoRegressiveSeqDecoder(SeqDecoder):
+    """
+    An autoregressive decoder that can be used for most seq2seq tasks.
+    Parameters
+    ----------
+    vocab : ``Vocabulary``, required
+        Vocabulary containing source and target vocabularies. They may be under the same namespace
+        (`tokens`) or the target tokens can have a different namespace, in which case it needs to
+        be specified as `target_namespace`.
+    decoder_net : ``DecoderNet``, required
+        Module that contains implementation of neural network for decoding output elements
+    max_decoding_steps : ``int``
+        Maximum length of decoded sequences.
+    target_embedder : ``TokenEmbedder``
+        Embedder for target tokens.
+    target_namespace : ``str``, optional (default = 'target_tokens')
+        If the target side vocabulary is different from the source side's, you need to specify the
+        target's namespace here. If not, we'll assume it is "tokens", which is also the default
+        choice for the source side, and this might cause them to share vocabularies.
+    beam_size : ``int``, optional (default = None)
+        Width of the beam for beam search. If not specified, greedy decoding is used.
+    tensor_based_metric : ``Metric``, optional (default = None)
+        A metric to track on validation data that takes raw tensors when its called.
+        This metric must accept two arguments when called: a batched tensor
+        of predicted token indices, and a batched tensor of gold token indices.
+    token_based_metric : ``Metric``, optional (default = None)
+        A metric to track on validation data that takes lists of lists of tokens
+        as input. This metric must accept two arguments when called, both
+        of type `List[List[str]]`. The first is a predicted sequence for each item
+        in the batch and the second is a gold sequence for each item in the batch.
+    scheduled_sampling_ratio : ``float`` optional (default = 0)
+        Defines ratio between teacher forced training and real output usage. If its zero (teacher forcing only) and `decoder_net`
+        supports parallel decoding, we get the output predictions in a single forward pass of the `decoder_net`.
+    """
+
     def __init__(
             self,
             vocab: Vocabulary,
-            decoder_module: DecoderModule,
+            decoder_net: DecoderNet,
             max_decoding_steps: int,
             target_embedder: TokenEmbedder,
-            beam_size: int = None,
             target_namespace: str = "tokens",
+            beam_size: int = None,
             tensor_based_metric: Metric = None,
             token_based_metric: Metric = None,
-            scheduled_sampling_ratio: float = 0.,
+            scheduled_sampling_ratio: float = 0,
     ):
 
-        super(DefaultSeqDecoder, self).__init__(
+        super(AutoRegressiveSeqDecoder, self).__init__(
             vocab=vocab,
             target_embedder=target_embedder,
             target_namespace=target_namespace,
@@ -45,20 +79,23 @@ class DefaultSeqDecoder(SeqDecoder):
         self._beam_search = BeamSearch(self._end_index, max_steps=max_decoding_steps, beam_size=beam_size)
 
         # Decodes the sequence of encoded hidden states into e new sequence of hidden states.
-        self.decoder_module = decoder_module
+        self._decoder_net = decoder_net
 
         target_vocab_size = self.vocab.get_vocab_size(self._target_namespace)
 
-        if self.target_embedder.get_output_dim() != self.decoder_module.target_embedding_dim:
+        if self.target_embedder.get_output_dim() != self._decoder_net.target_embedding_dim:
             raise ConfigurationError("Target Embedder output_dim doesn't match decoder module's input.")
 
         # We project the hidden state from the decoder into the output vocabulary space
         # in order to get log probabilities of each target token, at each time step.
-        self._output_projection_layer = Linear(self.decoder_module.get_output_dim(), target_vocab_size)
+        self._output_projection_layer = Linear(self._decoder_net.get_output_dim(), target_vocab_size)
 
         self._scheduled_sampling_ratio = scheduled_sampling_ratio
 
     def _forward_beam_search(self, state: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+        """
+        Prepare inputs for the beam search, does beam search and returns beam search results.
+        """
         batch_size = state["source_mask"].size()[0]
         start_predictions = state["source_mask"].new_full((batch_size,), fill_value=self._start_index)
 
@@ -99,8 +136,8 @@ class DefaultSeqDecoder(SeqDecoder):
         # shape: (batch_size, max_target_batch_sequence_length)
         target_mask = util.get_text_field_mask(target_tokens)
 
-        if self._scheduled_sampling_ratio == 0 and not self.decoder_module.is_sequential:
-            _, decoder_output = self.decoder_module(
+        if self._scheduled_sampling_ratio == 0 and self._decoder_net.decodes_parallel:
+            _, decoder_output = self._decoder_net(
                 previous_state=state,
                 previous_steps_predictions=target_embedding[:,:-1,:],
                 encoder_outputs=encoder_outputs,
@@ -186,10 +223,11 @@ class DefaultSeqDecoder(SeqDecoder):
 
         return output_dict
 
-    def _prepare_output_projections(self,
-                                    last_predictions: torch.Tensor,
-                                    state: Dict[str, torch.Tensor]) -> Tuple[
-        torch.Tensor, Dict[str, torch.Tensor]]:  # pylint: disable=line-too-long
+    def _prepare_output_projections(
+            self,
+            last_predictions: torch.Tensor,
+            state: Dict[str, torch.Tensor]
+    ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
         """
         Decode current state and last prediction to produce produce projections
         into the target space, which can then be used to get probabilities of
@@ -217,7 +255,7 @@ class DefaultSeqDecoder(SeqDecoder):
             # shape: (group_size, steps_count, target_embedding_dim)
             previous_steps_predictions = torch.cat([previous_steps_predictions, last_predictions_embeddings], 1)
 
-        decoder_state, decoder_output = self.decoder_module(
+        decoder_state, decoder_output = self._decoder_net(
             previous_steps_predictions=previous_steps_predictions,
             encoder_outputs=encoder_outputs,
             source_mask=source_mask,
@@ -229,7 +267,7 @@ class DefaultSeqDecoder(SeqDecoder):
         # Update state with new decoder state, override previous state
         state.update(decoder_state)
 
-        if not self.decoder_module.is_sequential:
+        if self._decoder_net.decodes_parallel:
             decoder_output = decoder_output[:,-1,:]
 
         # shape: (group_size, num_classes)
@@ -275,7 +313,7 @@ class DefaultSeqDecoder(SeqDecoder):
         return util.sequence_cross_entropy_with_logits(logits, relevant_targets, relevant_mask)
 
     def get_output_dim(self):
-        return self.decoder_module.get_output_dim()
+        return self._decoder_net.get_output_dim()
 
     def take_step(self,
                   last_predictions: torch.Tensor,
@@ -324,7 +362,7 @@ class DefaultSeqDecoder(SeqDecoder):
 
         state = encoder_out
         state.update(
-            self.decoder_module.init_decoder_state(state)
+            self._decoder_net.init_decoder_state(state)
         )
 
         if target_tokens:

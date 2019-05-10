@@ -15,7 +15,7 @@ class SeqDecoder(Module, Registrable):
     """
     A ``SeqDecoder`` is a base class for different types of Seq decoding modules
     """
-    default_implementation = 'default_seq_decoder'
+    default_implementation = 'auto_regressive_seq_decoder'
 
     def __init__(
             self,
