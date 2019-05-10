@@ -1,6 +1,6 @@
 # Training Transformer ELMo
 
-This document describes how to train and use a transformer-based version of ELMo with `allennlp`. The model is a port of the the one described in [Dissecting Contextual Word Embeddings: Architecture and Representation](https://www.semanticscholar.org/paper/4dc99343fdc57cf974746e9549c6ee56f013cee5) by Peters et al.
+This document describes how to train and use a transformer-based version of ELMo with `allennlp`. The model is a port of the the one described in [Dissecting Contextual Word Embeddings: Architecture and Representation](https://www.semanticscholar.org/paper/4dc99343fdc57cf974746e9549c6ee56f013cee5) by Peters et al. You can find a pretrained version of this model [here](https://s3-us-west-2.amazonaws.com/allennlp/models/transformer-elmo-2019.01.10.tar.gz).
 
 ## Training
 

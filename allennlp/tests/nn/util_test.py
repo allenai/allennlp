@@ -726,6 +726,23 @@ class TestNnUtil(AllenNlpTestCase):
         numpy.testing.assert_array_equal(selected[1, 1, 0, :].data.numpy(), ones * 14)
         numpy.testing.assert_array_equal(selected[1, 1, 1, :].data.numpy(), ones * 16)
 
+        indices = numpy.array([[[1, 11],
+                                [3, 4]],
+                               [[5, 6],
+                                [7, 8]]])
+        indices = torch.tensor(indices, dtype=torch.long)
+        with pytest.raises(ConfigurationError):
+            util.batched_index_select(targets, indices)
+
+        indices = numpy.array([[[1, -1],
+                                [3, 4]],
+                               [[5, 6],
+                                [7, 8]]])
+        indices = torch.tensor(indices, dtype=torch.long)
+        with pytest.raises(ConfigurationError):
+            util.batched_index_select(targets, indices)
+
+
     def test_flattened_index_select(self):
         indices = numpy.array([[1, 2],
                                [3, 4]])

@@ -34,6 +34,8 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
     min_padding_length: ``int``, optional (default=``0``)
         We use this value as the minimum length of padding. Usually used with :class:``CnnEncoder``, its
         value should be set to the maximum value of ``ngram_filter_sizes`` correspondingly.
+    token_min_padding_length : ``int``, optional (default=``0``)
+        See :class:`TokenIndexer`.
     """
     # pylint: disable=no-self-use
     def __init__(self,
@@ -41,7 +43,9 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
                  character_tokenizer: CharacterTokenizer = CharacterTokenizer(),
                  start_tokens: List[str] = None,
                  end_tokens: List[str] = None,
-                 min_padding_length: int = 0) -> None:
+                 min_padding_length: int = 0,
+                 token_min_padding_length: int = 0) -> None:
+        super().__init__(token_min_padding_length)
         if min_padding_length == 0:
             url = "https://github.com/allenai/allennlp/issues/1954"
             warnings.warn("You are using the default value (0) of `min_padding_length`, "
