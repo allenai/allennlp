@@ -818,8 +818,7 @@ class TrainerPieces(NamedTuple):
             if any(re.search(regex, name) for regex in no_grad_regexes):
                 parameter.requires_grad_(False)
 
-        frozen_parameter_names, tunable_parameter_names = \
-                    get_frozen_and_tunable_parameter_names(model)
+        frozen_parameter_names, tunable_parameter_names = get_frozen_and_tunable_parameter_names(model)
         logger.info("Following parameters are Frozen  (without gradient):")
         for name in frozen_parameter_names:
             logger.info(name)
