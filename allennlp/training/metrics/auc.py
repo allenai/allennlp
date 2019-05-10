@@ -37,7 +37,7 @@ class Auc(Metric):
             A one-dimensional label tensor of shape (batch_size).
         """
 
-        predictions, gold_labels = self.unwrap_to_tensors(predictions, gold_labels)
+        predictions, gold_labels, mask = self.unwrap_to_tensors(predictions, gold_labels, mask)
 
         # Sanity checks.
         if gold_labels.dim() != 1:
