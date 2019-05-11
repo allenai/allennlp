@@ -149,6 +149,7 @@ class CrossValidationTrainer(TrainerBase):
             # archive_model(serialization_dir)  # TODO
 
             if not fold_metrics:
+                # pylint: disable=protected-access
                 fold_metrics = training_util.evaluate(self.model, validation_dataset, self.iterator,
                                                       cuda_device=subtrainer._cuda_devices[0], batch_weight_key='')
 
@@ -202,7 +203,7 @@ class CrossValidationTrainer(TrainerBase):
                    subtrainer_params=subtrainer_params,
                    cross_validation_splitter=cross_validation_splitter,
                    serialization_dir=serialization_dir,
-                   validation_dataset=trainer_pieces.validation_dataset,
+                   validation_dataset=trainer_pieces.validation_dataset,  # type: ignore
                    group_key=group_key,
                    leave_model_trained=leave_model_trained,
                    recover=recover)
