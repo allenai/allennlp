@@ -61,29 +61,25 @@ class CrossValidationTrainer(TrainerBase):
 
     def __init__(self,
                  model: Model,
-                 dataset: List[Instance],
+                 train_dataset: List[Instance],
                  iterator: DataIterator,
                  subtrainer_params: Params,
                  cross_validation_splitter: CrossValidationSplitter,
                  serialization_dir: str,
+                 validation_dataset: Optional[List[Instance]] = None,
                  group_key: Optional[str] = None,
                  leave_model_trained: bool = False,
-                 final_validation_dataset: Optional[Iterable[Instance]] = None,
                  recover: bool = False) -> None:  # FIXME: does recover make sense? Maybe to continue the CV.
         super().__init__(serialization_dir, cuda_device=-1)
         self.model = model
-        self.dataset = dataset
+        self.train_dataset = train_dataset
         self.iterator = iterator
         self.subtrainer_params = subtrainer_params
         self.cross_validation_splitter = cross_validation_splitter
         self.group_key = group_key
         self.leave_model_trained = leave_model_trained
-        self.final_validation_dataset = final_validation_dataset
+        self.validation_dataset = validation_dataset
         self.recover = recover
-
-        if not self.leave_model_trained and self.final_validation_dataset:
-            raise ValueError("The final validation dataset can only be set if the model is set be to be left"
-                             " trained.")
 
     def _build_subtrainer(self, serialization_dir: str, train_dataset: Iterable[Instance],
                           validation_dataset: Optional[Iterable[Instance]] = None) -> TrainerBase:
@@ -104,32 +100,38 @@ class CrossValidationTrainer(TrainerBase):
             raise ValueError(f"Subtrainer type '{subtrainer_type}' not supported."
                              f" Supported types are: {self.SUPPORTED_SUBTRAINER_TYPES}")
 
-    def _get_groups(self) -> Optional[List[torch.Tensor]]:
+    def _get_groups(self, dataset: Iterable[Instance]) -> Optional[List[torch.Tensor]]:
         if self.group_key:
-            for instance in self.dataset:
+            for instance in dataset:
                 instance.index_fields(self.iterator.vocab)
 
             return [instance[self.group_key].as_tensor(instance.get_padding_lengths()[self.group_key])
-                    for instance in self.dataset]
+                    for instance in dataset]
         else:
             return None
 
     @overrides
-    def train(self) -> Dict[str, Any]:
+    def train(self) -> Dict[str, float]:
         metrics_by_fold = []
 
-        groups = self._get_groups()
+        if self.validation_dataset:
+            logger.info("Using the concatenation of the training and the validation datasets for cross-validation.")
+            dataset = self.train_dataset + self.validation_dataset
+        else:
+            dataset = self.train_dataset
 
-        n_splits = self.cross_validation_splitter.get_n_splits(self.dataset, groups=groups)
+        groups = self._get_groups(dataset)
 
-        for fold_index, (train_indices, validation_indices) in enumerate(self.cross_validation_splitter(
-                self.dataset, groups=groups)):
+        n_splits = self.cross_validation_splitter.get_n_splits(dataset, groups=groups)
+
+        for fold_index, (train_indices, validation_indices) in enumerate(self.cross_validation_splitter(dataset,
+                                                                                                        groups=groups)):
             logger.info("Fold %d/%d", fold_index, n_splits - 1)
             serialization_dir = os.path.join(self._serialization_dir, f'fold_{fold_index}')
             os.makedirs(serialization_dir, exist_ok=True)
 
-            train_dataset = [self.dataset[i] for i in train_indices]
-            validation_dataset = [self.dataset[i] for i in validation_indices]
+            train_dataset = [dataset[i] for i in train_indices]
+            validation_dataset = [dataset[i] for i in validation_indices]
 
             subtrainer = self._build_subtrainer(serialization_dir, train_dataset, validation_dataset)
 
@@ -146,7 +148,6 @@ class CrossValidationTrainer(TrainerBase):
             # archive_model(serialization_dir)  # TODO
 
             if not fold_metrics:
-                # pylint: disable=protected-access
                 fold_metrics = training_util.evaluate(self.model, validation_dataset, self.iterator,
                                                       cuda_device=subtrainer._cuda_devices[0], batch_weight_key='')
 
@@ -166,8 +167,7 @@ class CrossValidationTrainer(TrainerBase):
                 metrics[f'average_{metric_key}'] = average.get_metric()
 
         if self.leave_model_trained:
-            subtrainer = self._build_subtrainer(self._serialization_dir, self.dataset,
-                                                self.final_validation_dataset)
+            subtrainer = self._build_subtrainer(self._serialization_dir, self.train_dataset, self.validation_dataset)
             subtrainer.train()
 
         return metrics
@@ -179,9 +179,11 @@ class CrossValidationTrainer(TrainerBase):
                     serialization_dir: str,
                     recover: bool = False) -> 'CrossValidationTrainer':
         # pylint: disable=arguments-differ
-        trainer_pieces = TrainerPieces.from_params(params, serialization_dir, recover)
+        trainer_pieces = TrainerPieces.from_params(params, serialization_dir, recover)  # pylint: disable=no-member
         if not isinstance(trainer_pieces.train_dataset, list):
             raise ValueError("The training dataset must be a list. DatasetReader's lazy mode is not supported.")
+        if trainer_pieces.validation_dataset and not isinstance(trainer_pieces.validation_dataset, list):
+            raise ValueError("The validation dataset must be a list. DatasetReader's lazy mode is not supported.")
 
         trainer_params = trainer_pieces.params
         subtrainer_params = trainer_params.pop('trainer')
@@ -193,12 +195,12 @@ class CrossValidationTrainer(TrainerBase):
 
         params.assert_empty(__name__)
         return cls(model=trainer_pieces.model,
-                   dataset=trainer_pieces.train_dataset,
+                   train_dataset=trainer_pieces.train_dataset,
                    iterator=trainer_pieces.iterator,
                    subtrainer_params=subtrainer_params,
                    cross_validation_splitter=cross_validation_splitter,
                    serialization_dir=serialization_dir,
+                   validation_dataset=trainer_pieces.validation_dataset,
                    group_key=group_key,
                    leave_model_trained=leave_model_trained,
-                   final_validation_dataset=trainer_pieces.validation_dataset,
                    recover=recover)
