@@ -64,6 +64,17 @@ class DryRun(Subcommand):
                                default="",
                                help='a JSON structure used to override the experiment configuration')
 
+        subparser.add_argument('--cache-directory',
+                               type=str,
+                               default='',
+                               help='Location to store cache of data preprocessing')
+
+        subparser.add_argument('--cache-prefix',
+                               type=str,
+                               default='',
+                               help='Prefix to use for data caching, giving current parameter '
+                                    'settings a name in the cache, instead of computing a hash')
+
         subparser.set_defaults(func=dry_run_from_args)
 
         return subparser
@@ -76,12 +87,27 @@ def dry_run_from_args(args: argparse.Namespace):
     parameter_path = args.param_path
     serialization_dir = args.serialization_dir
     overrides = args.overrides
+    cache_directory = args.cache_directory
+    cache_prefix = args.cache_prefix
 
     params = Params.from_file(parameter_path, overrides)
 
-    dry_run_from_params(params, serialization_dir)
+    dry_run_from_params(params, serialization_dir, cache_directory,
+                          cache_prefix)
 
-def dry_run_from_params(params: Params, serialization_dir: str) -> None:
+def dry_run_from_params(params: Params, serialization_dir: str,
+                cache_directory: str = None,
+                cache_prefix: str = None) -> None:
+
+    """
+    :param params:
+    :param serialization_dir:
+    cache_directory : ``str``, optional
+        For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
+    cache_prefix : ``str``, optional
+        For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
+    :return:
+    """
     prepare_environment(params)
 
     vocab_params = params.pop("vocabulary", {})
@@ -92,7 +118,7 @@ def dry_run_from_params(params: Params, serialization_dir: str) -> None:
         raise ConfigurationError("The 'vocabulary' directory in the provided "
                                  "serialization directory is non-empty")
 
-    all_datasets = datasets_from_params(params)
+    all_datasets = datasets_from_params(params, cache_directory, cache_prefix)
     datasets_for_vocab_creation = set(params.pop("datasets_for_vocab_creation", all_datasets))
 
     for dataset in datasets_for_vocab_creation:

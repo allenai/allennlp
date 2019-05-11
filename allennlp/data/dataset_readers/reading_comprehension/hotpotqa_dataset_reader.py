@@ -267,7 +267,7 @@ def process_example(example):
     #    return None, len(example['qas'])
 
     # Truncate
-    context_tokens = tokenize(example['context'])[:800]
+    context_tokens = tokenize(example['context'])
     context = ''.join([t.text_with_ws for t in context_tokens])
     example['context'] = context
 
@@ -579,26 +579,26 @@ class HotpotQAReader(DatasetReader):
         contexts = []
         for example in tqdm.tqdm(data, total=len(data), ncols=80):
             # choosing only the gold paragraphs
-            gold_paragraphs = []
-            for supp_fact in example['supporting_facts']:
-                for context in example['context']:
-                    # finding the gold context
-                    if context[0] == supp_fact[0]:
-                        gold_paragraphs.append(context)
+            #gold_paragraphs = []
+            #for supp_fact in example['supporting_facts']:
+            #    for context in example['context']:
+            #        # finding the gold context
+            #        if context[0] == supp_fact[0]:
+            #            gold_paragraphs.append(context)
 
-            #all_sentances = []
-            #for para in example['context']:
-            #    all_sentances += [sentance for sentance in para[1]]
+            # context = ''
+            #for para in gold_paragraphs:
+            #   context += '[PAR] [TLE] ' + para[0] + ' [SEP] '
+            #   context += ' '.join(para[1]) + ' '
 
-            #doc_scores = _para_tfidf_scoring.score_paragraphs([example['question']], all_sentances)
-            #context = ''
-            #for sentance_ind in list(np.argsort(doc_scores)):
-            #    context += '[PAR] ' + all_sentances[sentance_ind] + ' '
+            paragraphs_text = []
+            for para in example['context']:
+                paragraphs_text.append('[PAR] [TLE] ' + para[0] + ' [SEP] ' + ' '.join(para[1]) + ' ')
 
+            para_scores = _para_tfidf_scoring.score_paragraphs([example['question']], paragraphs_text)
             context = ''
-            for para in gold_paragraphs:
-                context += '[PAR] [TLE] ' + para[0] + ' [SEP] '
-                context += ' '.join(para[1]) + ' '
+            for ind in list(np.argsort(para_scores)):
+                context += paragraphs_text[ind] + ' '
 
             answers = [{'text': example['answer']}]
 
