@@ -18,17 +18,20 @@ a model.
 
     optional arguments:
     -h, --help            show this help message and exit
-    -s SERIALIZATION_DIR, --serialization-dir SERIALIZATION_DIR
+    -f, --force           overwrite the output directory if it exists
+     -s SERIALIZATION_DIR, --serialization-dir SERIALIZATION_DIR
                             directory in which to save the output of the dry run.
     -o OVERRIDES, --overrides OVERRIDES
                             a JSON structure used to override the experiment
                             configuration
     --include-package INCLUDE_PACKAGE
                             additional packages to include
+
 """
 import argparse
 import logging
 import os
+import shutil
 import re
 
 from allennlp.commands.subcommand import Subcommand
@@ -38,7 +41,7 @@ from allennlp.common.util import prepare_environment, get_frozen_and_tunable_par
 from allennlp.data import Vocabulary
 from allennlp.data.dataset import Batch
 from allennlp.models import Model
-from allennlp.training.util import datasets_from_params
+from allennlp.training.util import datasets_from_params, create_serialization_dir
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -74,6 +77,10 @@ class DryRun(Subcommand):
                                default='',
                                help='Prefix to use for data caching, giving current parameter '
                                     'settings a name in the cache, instead of computing a hash')
+        subparser.add_argument('-f', '--force',
+                               action='store_true',
+                               required=False,
+                               help='overwrite the output directory if it exists')
 
         subparser.set_defaults(func=dry_run_from_args)
 
@@ -89,19 +96,23 @@ def dry_run_from_args(args: argparse.Namespace):
     overrides = args.overrides
     cache_directory = args.cache_directory
     cache_prefix = args.cache_prefix
+    force = args.force
 
     params = Params.from_file(parameter_path, overrides)
 
-    dry_run_from_params(params, serialization_dir, cache_directory,
+    dry_run_from_params(params, serialization_dir, force, cache_directory,
                           cache_prefix)
 
 def dry_run_from_params(params: Params, serialization_dir: str,
+                force: bool = False,
                 cache_directory: str = None,
                 cache_prefix: str = None) -> None:
 
     """
     :param params:
     :param serialization_dir:
+    force : ``bool``, optional (default=False)
+        If ``True``, we will overwrite the serialization directory if it already exists.
     cache_directory : ``str``, optional
         For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
     cache_prefix : ``str``, optional
@@ -113,6 +124,9 @@ def dry_run_from_params(params: Params, serialization_dir: str,
     vocab_params = params.pop("vocabulary", {})
     os.makedirs(serialization_dir, exist_ok=True)
     vocab_dir = os.path.join(serialization_dir, "vocabulary")
+
+    if os.path.exists(serialization_dir) and force:
+        shutil.rmtree(serialization_dir)
 
     if os.path.isdir(vocab_dir) and os.listdir(vocab_dir) is not None:
         raise ConfigurationError("The 'vocabulary' directory in the provided "

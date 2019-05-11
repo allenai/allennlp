@@ -267,7 +267,7 @@ def process_example(example):
     #    return None, len(example['qas'])
 
     # Truncate
-    context_tokens = tokenize(example['context'])
+    context_tokens = tokenize(example['context'])[0:800]
     context = ''.join([t.text_with_ws for t in context_tokens])
     example['context'] = context
 
@@ -349,7 +349,7 @@ def process_example(example):
 
     return example, num_skipped
 
-def process_and_dump(examples, filename , header=None, processes=None, upload=None):
+def process_and_dump(examples, filename, header=None, processes=None, upload=None):
     """Run over all examples, with multiprocessing.
     Examples should be provided in the form of an iterable.
     """
