@@ -115,7 +115,8 @@ class CrossValidationTrainer(TrainerBase):
         metrics_by_fold = []
 
         if self.validation_dataset:
-            logger.info("Using the concatenation of the training and the validation datasets for cross-validation.")
+            logger.info("Using the concatenation of the training and the validation datasets for"
+                        " cross-validation.")
             dataset = self.train_dataset + self.validation_dataset
         else:
             dataset = self.train_dataset
@@ -124,8 +125,8 @@ class CrossValidationTrainer(TrainerBase):
 
         n_splits = self.cross_validation_splitter.get_n_splits(dataset, groups=groups)
 
-        for fold_index, (train_indices, validation_indices) in enumerate(self.cross_validation_splitter(dataset,
-                                                                                                        groups=groups)):
+        for fold_index, (train_indices, validation_indices) in enumerate(
+                self.cross_validation_splitter(dataset, groups=groups)):
             logger.info("Fold %d/%d", fold_index, n_splits - 1)
             serialization_dir = os.path.join(self._serialization_dir, f'fold_{fold_index}')
             os.makedirs(serialization_dir, exist_ok=True)
@@ -167,7 +168,8 @@ class CrossValidationTrainer(TrainerBase):
                 metrics[f'average_{metric_key}'] = average.get_metric()
 
         if self.leave_model_trained:
-            subtrainer = self._build_subtrainer(self._serialization_dir, self.train_dataset, self.validation_dataset)
+            subtrainer = self._build_subtrainer(self._serialization_dir, self.train_dataset,
+                                                self.validation_dataset)
             subtrainer.train()
 
         return metrics
