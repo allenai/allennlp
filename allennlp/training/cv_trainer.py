@@ -197,13 +197,13 @@ class CrossValidationTrainer(TrainerBase):
         trainer_params.assert_empty(__name__)
 
         params.assert_empty(__name__)
-        return cls(model=trainer_pieces.model,
+        return cls(model=trainer_pieces.model,  # type: ignore
                    train_dataset=trainer_pieces.train_dataset,
                    iterator=trainer_pieces.iterator,
                    subtrainer_params=subtrainer_params,
                    cross_validation_splitter=cross_validation_splitter,
                    serialization_dir=serialization_dir,
-                   validation_dataset=trainer_pieces.validation_dataset,  # type: ignore
+                   validation_dataset=trainer_pieces.validation_dataset,
                    group_key=group_key,
                    leave_model_trained=leave_model_trained,
                    recover=recover)
