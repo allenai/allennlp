@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Optional
 
 import torch
 from overrides import overrides
@@ -8,7 +8,7 @@ from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder
 from allennlp.modules.seq2seq_decoders.seq_decoder import SeqDecoder
-from allennlp.nn import util
+from allennlp.nn import util, InitializerApplicator, RegularizerApplicator
 
 
 @Model.register("composed_seq2seq")
@@ -34,6 +34,10 @@ class ComposedSeq2Seq(Model):
         The encoder of the "encoder/decoder" model
     decoder : ``SeqDecoder``, required
         The decoder of the "encoder/decoder" model
+    initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
+        Used to initialize the model parameters.
+    regularizer : ``RegularizerApplicator``, optional (default=``None``)
+        If provided, will be used to calculate the regularization penalty during training.
     """
 
     def __init__(self,
@@ -41,9 +45,10 @@ class ComposedSeq2Seq(Model):
                  source_embedder: TextFieldEmbedder,
                  encoder: Seq2SeqEncoder,
                  decoder: SeqDecoder,
-                 ) -> None:
+                 initializer: InitializerApplicator = InitializerApplicator(),
+                 regularizer: Optional[RegularizerApplicator] = None)-> None:
 
-        super(ComposedSeq2Seq, self).__init__(vocab)
+        super(ComposedSeq2Seq, self).__init__(vocab, regularizer)
 
         self.decoder = decoder
 
@@ -57,6 +62,7 @@ class ComposedSeq2Seq(Model):
             raise ConfigurationError(
                 f"Encoder hidden dimension {self._encoder.get_output_dim()} should be"
                 f" equal to decoder dimension {self.decoder.get_output_dim()}.")
+        initializer(self)
 
     @overrides
     def forward(self,  # type: ignore
