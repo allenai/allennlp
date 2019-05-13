@@ -81,21 +81,21 @@ class CrossValidationTrainer(TrainerBase):
         self.validation_dataset = validation_dataset
         self.recover = recover
 
-    def _build_subtrainer(self, serialization_dir: str, train_dataset: Iterable[Instance],
+    def _build_subtrainer(self, serialization_dir: str, model: Model, train_dataset: Iterable[Instance],
                           validation_dataset: Optional[Iterable[Instance]] = None) -> TrainerBase:
         params = self.subtrainer_params.duplicate()
 
         subtrainer_type = params.pop('type', 'default')
 
         if subtrainer_type == 'default':
-            return Trainer.from_params(model=copy.deepcopy(self.model),
+            return Trainer.from_params(model=model,
                                        serialization_dir=serialization_dir,
                                        iterator=self.iterator,
                                        train_data=train_dataset,
                                        validation_data=validation_dataset,
                                        params=params)
         elif subtrainer_type == 'no_op':
-            return NoOpTrainer(serialization_dir, self.model)
+            return NoOpTrainer(serialization_dir, model)
         else:
             raise ValueError(f"Subtrainer type '{subtrainer_type}' not supported."
                              f" Supported types are: {self.SUPPORTED_SUBTRAINER_TYPES}")
@@ -134,7 +134,8 @@ class CrossValidationTrainer(TrainerBase):
             train_dataset = [dataset[i] for i in train_indices]
             validation_dataset = [dataset[i] for i in validation_indices]
 
-            subtrainer = self._build_subtrainer(serialization_dir, train_dataset, validation_dataset)
+            subtrainer = self._build_subtrainer(serialization_dir, copy.deepcopy(self.model), train_dataset,
+                                                validation_dataset)
 
             # try:
             fold_metrics = subtrainer.train()
@@ -169,7 +170,7 @@ class CrossValidationTrainer(TrainerBase):
                 metrics[f'average_{metric_key}'] = average.get_metric()
 
         if self.leave_model_trained:
-            subtrainer = self._build_subtrainer(self._serialization_dir, self.train_dataset,
+            subtrainer = self._build_subtrainer(self._serialization_dir, self.model, self.train_dataset,
                                                 self.validation_dataset)
             subtrainer.train()
 
