@@ -268,6 +268,29 @@ class TestTextField(AllenNlpTestCase):
         assert list(tensors['words'].shape) == [4]
         assert list(tensors['characters'].shape) == [4, 8]
 
+    def test_token_padding_lengths_are_computed_correctly(self):
+        field = TextField([Token(t) for t in ["A", "sentence"]],
+                          token_indexers={"field_with_dict": DictReturningTokenIndexer(token_min_padding_length=3),
+                                          "words": SingleIdTokenIndexer("words",
+                                                                        token_min_padding_length=3),
+                                          "characters": TokenCharactersIndexer("characters",
+                                                                               min_padding_length=1,
+                                                                               token_min_padding_length=3)})
+        field.index(self.vocab)
+        padding_lengths = field.get_padding_lengths()
+        assert padding_lengths == {
+                'token_ids_length': 5,
+                'additional_key_length': 3,
+                'words_length': 3,
+                'characters_length': 3,
+                'num_token_characters': 8,
+                'num_tokens': 5,
+        }
+        tensors = field.as_tensor(padding_lengths)
+        assert tensors['additional_key'].tolist()[-1] == 0
+        assert tensors['words'].tolist()[-1] == 0
+        assert tensors['characters'].tolist()[-1] == [0] * 8
+
     def test_sequence_methods(self):
         field = TextField([Token(t) for t in ["This", "is", "a", "sentence", "."]], {})
 

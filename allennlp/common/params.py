@@ -193,7 +193,7 @@ class Params(MutableMapping):
     """
 
     # This allows us to check for the presence of "None" as a default argument,
-    # which we require because we make a distinction bewteen passing a value of "None"
+    # which we require because we make a distinction between passing a value of "None"
     # and passing no value to the default parameter of "pop".
     DEFAULT = object()
 

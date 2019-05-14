@@ -25,13 +25,17 @@ class SingleIdTokenIndexer(TokenIndexer[int]):
         These are prepended to the tokens provided to ``tokens_to_indices``.
     end_tokens : ``List[str]``, optional (default=``None``)
         These are appended to the tokens provided to ``tokens_to_indices``.
+    token_min_padding_length : ``int``, optional (default=``0``)
+        See :class:`TokenIndexer`.
     """
     # pylint: disable=no-self-use
     def __init__(self,
                  namespace: str = 'tokens',
                  lowercase_tokens: bool = False,
                  start_tokens: List[str] = None,
-                 end_tokens: List[str] = None) -> None:
+                 end_tokens: List[str] = None,
+                 token_min_padding_length: int = 0) -> None:
+        super().__init__(token_min_padding_length)
         self.namespace = namespace
         self.lowercase_tokens = lowercase_tokens
 
