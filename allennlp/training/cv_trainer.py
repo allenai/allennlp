@@ -3,10 +3,10 @@ import logging
 import os
 from typing import Any, Dict, Iterable, List, Optional, Tuple, Type
 
-import numpy as np
 from overrides import overrides
 from sklearn.model_selection import BaseCrossValidator, GroupKFold, KFold, LeaveOneGroupOut, LeaveOneOut, \
     LeavePGroupsOut, LeavePOut, StratifiedKFold, TimeSeriesSplit
+from sklearn.model_selection._split import _BaseKFold
 import torch
 
 from allennlp.common import Params, Registrable
@@ -23,17 +23,52 @@ from allennlp.training.trainer_base import TrainerBase
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
+CV_CLASSES = [_BaseKFold, LeaveOneGroupOut, LeaveOneOut, LeavePGroupsOut, LeavePOut]
+
+
 class CrossValidationSplitter(Registrable):
-    def __init__(self, cross_validator: BaseCrossValidator) -> None:
+    def __init__(self, cross_validator: BaseCrossValidator, generate_validation_sets: bool = False) -> None:
         super().__init__()
         self.cross_validator = cross_validator
+        self.cross_validator_for_validation_sets = \
+            self._create_cross_validator_for_validation_set(self.cross_validator) if generate_validation_sets \
+            else None
 
-    def __call__(self, instances: List[Instance], groups: Optional[Any] = None) -> Iterable[Tuple[np.ndarray,
-                                                                                                  np.ndarray]]:
-        return self.cross_validator.split(instances, groups=groups)
+    def __call__(self, instances: List[Instance],
+                 groups: Optional[List[Any]] = None) -> Iterable[Tuple[Iterable[int], Iterable[int],
+                                                                       Iterable[int]]]:
+        if self.cross_validator_for_validation_sets:
+            for train_and_validation_indices, test_indices in self.cross_validator.split(instances, groups=groups):
+                train_and_validation_groups = [groups[i] for i in train_and_validation_indices]
 
-    def get_n_splits(self, instances: List[Instance], groups: Optional[Any] = None) -> int:
+                train_indices_indices, validation_indices_indices = \
+                    next(self.cross_validator_for_validation_sets.split(train_and_validation_indices,
+                                                                        groups=train_and_validation_groups))
+                train_indices = [train_and_validation_indices[i] for i in train_indices_indices]
+                validation_indices = [train_and_validation_indices[i] for i in validation_indices_indices]
+
+                yield train_indices, validation_indices, test_indices
+        else:
+            for train_indices, test_indices in self.cross_validator.split(instances, groups=groups):
+                yield train_indices, (), test_indices
+
+    def get_n_splits(self, instances: List[Instance], groups: Optional[List[Any]] = None) -> int:
         return self.cross_validator.get_n_splits(instances, groups=groups)
+
+    @classmethod
+    def _create_cross_validator_for_validation_set(cls, cross_validator: BaseCrossValidator)\
+            -> Optional[BaseCrossValidator]:
+        if all(not isinstance(cross_validator, type_) for type_ in CV_CLASSES):
+            logger.error("Can't generate cross-validator for the early stopping validation set for type"
+                         " %r. Will not use a validation set.", type(cross_validator))
+            return None
+
+        cross_validator_for_validation_set = copy.deepcopy(cross_validator)
+
+        if isinstance(cross_validator, _BaseKFold):
+            cross_validator_for_validation_set.n_splits -= 1
+
+        return cross_validator_for_validation_set
 
 
 class _CrossValidationSplitterWrapper:
@@ -42,8 +77,9 @@ class _CrossValidationSplitterWrapper:
         self.cross_validator_class = cross_validator_class
 
     def from_params(self, params: Params) -> CrossValidationSplitter:
+        generate_validation_sets = params.pop_bool('generate_validation_sets', False)
         cross_validator = self.cross_validator_class(**params.as_dict())
-        return CrossValidationSplitter(cross_validator)
+        return CrossValidationSplitter(cross_validator, generate_validation_sets=generate_validation_sets)
 
 
 CrossValidationSplitter.register('group_k_fold')(_CrossValidationSplitterWrapper(GroupKFold))
@@ -67,9 +103,9 @@ class CrossValidationTrainer(TrainerBase):
                  subtrainer_params: Params,
                  cross_validation_splitter: CrossValidationSplitter,
                  serialization_dir: str,
-                 validation_dataset: Optional[List[Instance]] = None,
                  group_key: Optional[str] = None,
                  leave_model_trained: bool = False,
+                 validation_dataset: Optional[List[Instance]] = None,
                  recover: bool = False) -> None:  # FIXME: does recover make sense? Maybe to continue the CV.
         # To use the same device as the subtrainers, in case `self._cuda_devices` is queried.
         cuda_device = parse_cuda_device(subtrainer_params.get('cuda_device', -1))
@@ -128,17 +164,18 @@ class CrossValidationTrainer(TrainerBase):
 
         n_splits = self.cross_validation_splitter.get_n_splits(dataset, groups=groups)
 
-        for fold_index, (train_indices, validation_indices) in enumerate(
+        for fold_index, (train_indices, validation_indices, test_indices) in enumerate(
                 self.cross_validation_splitter(dataset, groups=groups)):
             logger.info("Fold %d/%d", fold_index, n_splits - 1)
             serialization_dir = os.path.join(self._serialization_dir, f'fold_{fold_index}')
             os.makedirs(serialization_dir, exist_ok=True)
 
             train_dataset = [dataset[i] for i in train_indices]
-            validation_dataset = [dataset[i] for i in validation_indices]
+            validation_dataset = [dataset[i] for i in validation_indices] or None
+            test_dataset = [dataset[i] for i in test_indices]
 
-            subtrainer = self._build_subtrainer(serialization_dir, copy.deepcopy(self.model), train_dataset,
-                                                validation_dataset)
+            model = copy.deepcopy(self.model)
+            subtrainer = self._build_subtrainer(serialization_dir, model, train_dataset, validation_dataset)
 
             # try:
             fold_metrics = subtrainer.train()
@@ -152,10 +189,13 @@ class CrossValidationTrainer(TrainerBase):
 
             # archive_model(serialization_dir)  # TODO
 
-            if not fold_metrics:
-                # pylint: disable=protected-access
-                fold_metrics = training_util.evaluate(self.model, validation_dataset, self.iterator,
-                                                      cuda_device=subtrainer._cuda_devices[0], batch_weight_key='')
+            for metric_key, metric_value in training_util.evaluate(model, test_dataset, self.iterator,
+                                                                   cuda_device=self._cuda_devices[0],
+                                                                   batch_weight_key='').items():
+                if metric_key in fold_metrics:
+                    fold_metrics[f'test_{metric_key}'] = metric_value
+                else:
+                    fold_metrics[metric_key] = metric_value
 
             dump_metrics(os.path.join(serialization_dir, 'metrics.json'), fold_metrics, log=True)
 
@@ -197,7 +237,7 @@ class CrossValidationTrainer(TrainerBase):
         cross_validation_splitter = CrossValidationSplitter.from_params(trainer_params.pop('splitter'))
         group_key = trainer_params.pop('group_key', None)
         # If there's a test dataset then probably we want to leave the model trained with all the data at the end.
-        leave_model_trained = trainer_params.pop('leave_model_trained', bool(trainer_pieces.test_dataset))
+        leave_model_trained = trainer_params.pop_bool('leave_model_trained', bool(trainer_pieces.test_dataset))
         trainer_params.assert_empty(__name__)
 
         params.assert_empty(__name__)
@@ -207,7 +247,7 @@ class CrossValidationTrainer(TrainerBase):
                    subtrainer_params=subtrainer_params,
                    cross_validation_splitter=cross_validation_splitter,
                    serialization_dir=serialization_dir,
-                   validation_dataset=trainer_pieces.validation_dataset,
                    group_key=group_key,
                    leave_model_trained=leave_model_trained,
+                   validation_dataset=trainer_pieces.validation_dataset,
                    recover=recover)
