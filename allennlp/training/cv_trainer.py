@@ -150,7 +150,7 @@ class CrossValidationTrainer(TrainerBase):
             return None
 
     @overrides
-    def train(self) -> Dict[str, float]:
+    def train(self) -> Dict[str, Any]:
         metrics_by_fold = []
 
         if self.validation_dataset:
@@ -211,6 +211,9 @@ class CrossValidationTrainer(TrainerBase):
                     metrics[f'fold{fold_index}_{metric_key}'] = metric_value
                     average(metric_value)
                 metrics[f'average_{metric_key}'] = average.get_metric()
+            else:
+                for fold_index, fold_metrics in enumerate(metrics_by_fold):
+                    metrics[f'fold{fold_index}_{metric_key}'] = fold_metrics[metric_key]
 
         if self.leave_model_trained:
             subtrainer = self._build_subtrainer(self._serialization_dir, self.model, self.train_dataset,
