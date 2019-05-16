@@ -1,7 +1,6 @@
 #!/usr/bin/python
 
 from collections import defaultdict
-from scipy.optimize import linear_sum_assignment
 from typing import Any, Dict, List, Set, Tuple, Union
 import json
 import argparse
@@ -9,6 +8,7 @@ import string
 import re
 
 import numpy as np
+from scipy.optimize import linear_sum_assignment
 
 
 # From here through _normalize_answer was originally copied from:
@@ -78,14 +78,14 @@ def _align_bags(predicted: List[Set[str]], gold: List[Set[str]]) -> List[float]:
     """
     scores = np.zeros([len(gold), len(predicted)])
     for gold_index, gold_item in enumerate(gold):
-      for pred_index, pred_item in enumerate(predicted):
-        if _match_numbers_if_present(gold_item, pred_item):
-          scores[gold_index, pred_index] = _compute_f1(pred_item, gold_item)
+        for pred_index, pred_item in enumerate(predicted):
+            if _match_numbers_if_present(gold_item, pred_item):
+                scores[gold_index, pred_index] = _compute_f1(pred_item, gold_item)
     row_ind, col_ind = linear_sum_assignment(-scores)
 
     max_scores = np.zeros([len(gold)])
     for row, column in zip(row_ind, col_ind):
-      max_scores[row] = max(max_scores[row], scores[row, column])
+        max_scores[row] = max(max_scores[row], scores[row, column])
     return max_scores
 
 
