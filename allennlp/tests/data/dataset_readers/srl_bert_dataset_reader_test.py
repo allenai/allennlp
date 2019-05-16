@@ -16,15 +16,17 @@ class TestBertSrlReader(AllenNlpTestCase):
 
     def test_convert_tags_to_wordpiece_tags(self):
         offsets = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-        original = ['B-ARG0', 'I-ARG0', 'I-ARG0', 'B-V', 'B-ARG1', 'I-ARG1', 'I-ARG1', 'I-ARG1', 'I-ARG1', 'I-ARG1', 'O']
-        wordpiece_tags = ['O', 'B-ARG0', 'I-ARG0', 'I-ARG0', 'B-V', 'B-ARG1', 'I-ARG1', 'I-ARG1', 'I-ARG1', 'I-ARG1', 'I-ARG1', 'O', 'O']
+        original = ['B-ARG0', 'I-ARG0', 'I-ARG0', 'B-V', 'B-ARG1', 'I-ARG1',
+                    'I-ARG1', 'I-ARG1', 'I-ARG1', 'I-ARG1', 'O']
+        wordpiece_tags = ['O', 'B-ARG0', 'I-ARG0', 'I-ARG0', 'B-V', 'B-ARG1',
+                          'I-ARG1', 'I-ARG1', 'I-ARG1', 'I-ARG1', 'I-ARG1', 'O', 'O']
         converted = self.reader._convert_tags_to_wordpiece_tags(original, offsets)
         assert converted == wordpiece_tags
 
         offsets = [2, 3, 4, 5, 6, 7, 8, 9, 10, 12]
         converted = self.reader._convert_tags_to_wordpiece_tags(original, offsets)
-        assert converted == ['O', 'B-ARG0', 'I-ARG0', 'I-ARG0', 'B-V', 'B-ARG1', 'I-ARG1', 'I-ARG1', 'I-ARG1', 'I-ARG1', 'I-ARG1', 'I-ARG1', 'O']
-
+        assert converted == ['O', 'B-ARG0', 'I-ARG0', 'I-ARG0', 'B-V', 'B-ARG1',
+                             'I-ARG1', 'I-ARG1', 'I-ARG1', 'I-ARG1', 'I-ARG1', 'I-ARG1', 'O']
 
         offsets = [2, 4, 6]
         original = ["B-ARG", "B-V", "O"]
@@ -48,7 +50,6 @@ class TestBertSrlReader(AllenNlpTestCase):
 
         assert fields["tags"].labels == ['O', 'B-ARG0', 'I-ARG0', 'I-ARG0', 'B-V', 'B-ARG1',
                                          'I-ARG1', 'I-ARG1', 'I-ARG1', 'I-ARG1', 'I-ARG1', 'I-ARG1', 'O', 'O']
-        assert fields["verb_indicator"].labels == list(fields["segment_ids"].labels)
 
         fields = instances[1].fields
         tokens = fields["metadata"]["words"]
@@ -57,7 +58,6 @@ class TestBertSrlReader(AllenNlpTestCase):
         assert fields["verb_indicator"].labels[10] == 1
         assert fields["tags"].labels == ['O', 'O', 'O', 'O', 'O', 'B-ARG1', 'I-ARG1', 'I-ARG1',
                                          'I-ARG1', 'I-ARG1', 'B-V', 'B-ARG2', 'O', 'O']
-        assert fields["verb_indicator"].labels == list(fields["segment_ids"].labels)
 
         fields = instances[2].fields
         tokens = fields["metadata"]["words"]
@@ -67,17 +67,14 @@ class TestBertSrlReader(AllenNlpTestCase):
         assert fields["tags"].labels == ['O', 'B-ARG0', 'I-ARG0', 'B-V', 'B-ARG1', 'I-ARG1', 'B-ARGM-TMP',
                                          'I-ARGM-TMP', 'B-ARGM-TMP', 'I-ARGM-TMP', 'I-ARGM-TMP',
                                          'I-ARGM-TMP', 'I-ARGM-TMP', 'O', 'O']
-        assert fields["verb_indicator"].labels == list(fields["segment_ids"].labels)
 
 
         fields = instances[3].fields
         tokens = fields["metadata"]["words"]
         assert tokens == ['The', 'prosecution', 'rested', 'its', 'case', 'last', 'month', 'after',
                           'four', 'months', 'of', 'hearings', '.']
-        print(fields["tags"].labels)
         assert fields["verb_indicator"].labels[12] == 1
         assert fields["tags"].labels == ['O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'B-V', 'O', 'O']
-        assert fields["verb_indicator"].labels == list(fields["segment_ids"].labels)
 
         # Tests a sentence with no verbal predicates.
         fields = instances[4].fields
@@ -85,6 +82,5 @@ class TestBertSrlReader(AllenNlpTestCase):
         assert tokens == ["Denise", "Dillon", "Headline", "News", "."]
         assert fields["verb_indicator"].labels == [0, 0, 0, 0, 0, 0, 0]
         assert fields["tags"].labels == ['O', 'O', 'O', 'O', 'O', 'O', 'O']
-        assert fields["verb_indicator"].labels == list(fields["segment_ids"].labels)
 
 

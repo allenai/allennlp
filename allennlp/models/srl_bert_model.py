@@ -1,9 +1,10 @@
-from typing import Dict, List, TextIO, Optional, Any
+from typing import Dict, List, TextIO, Optional, Any, Union
 
 from overrides import overrides
 import torch
 from torch.nn.modules import Linear, Dropout
 import torch.nn.functional as F
+from pytorch_pretrained_bert.modeling import BertModel
 
 from allennlp.common.checks import check_dimensions_match
 from allennlp.data import Vocabulary
@@ -15,7 +16,6 @@ from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_lo
 from allennlp.nn.util import get_lengths_from_binary_sequence_mask, viterbi_decode
 from allennlp.training.metrics import SpanBasedF1Measure
 
-
 @Model.register("srl_bert")
 class SrlBert(Model):
     """
@@ -24,12 +24,10 @@ class SrlBert(Model):
     ----------
     vocab : ``Vocabulary``, required
         A Vocabulary, required in order to compute sizes for input/output projections.
-    model : Model, required.
-        A BERT or KERMIT model.
+    model : ``Union[str, BertModel]``, required.
+        A string describing the BERT model to load or an already constructed BertModel.
     bert_dim : int, required.
-        The dimension of the contextual representations from either bert or kermit.
-    binary_feature_dim : int, required.
-        The dimensionality of the embedding of the binary verb predicate features.
+        The dimension of the contextual representations from BERT.
     initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
         Used to initialize the model parameters.
     regularizer : ``RegularizerApplicator``, optional (default=``None``)
@@ -51,7 +49,7 @@ class SrlBert(Model):
         super(SrlBert, self).__init__(vocab, regularizer)
 
         if isinstance(bert_model, str):
-            self.bert_model = PretrainedBertModel.load(bert_model)
+            self.bert_model = BertModel.from_pretrained(bert_model)
         else:
             self.bert_model = bert_model
 
@@ -59,7 +57,6 @@ class SrlBert(Model):
         # For the span based evaluation, we don't want to consider labels
         # for verb, because the verb index is provided to the model.
         self.span_metric = SpanBasedF1Measure(vocab, tag_namespace="labels", ignore_classes=["V"])
-
         self.tag_projection_layer = Linear(bert_dim, self.num_classes)
 
         self.embedding_dropout = Dropout(p=embedding_dropout)
@@ -68,9 +65,8 @@ class SrlBert(Model):
         initializer(self)
 
     def forward(self,
-                tokens: Dict[torch.Tensor],
-                segment_ids=None,
-                verb_indicator = None,
+                tokens: Dict[str, torch.Tensor],
+                verb_indicator: torch.Tensor,
                 metadata: List[Any],
                 tags: torch.LongTensor = None):
         # pylint: disable=arguments-differ
@@ -103,13 +99,13 @@ class SrlBert(Model):
             a distribution of the tag classes per word.
         loss : torch.FloatTensor, optional
             A scalar loss to be optimised.
-
         """
         tokens = tokens["tokens"]
-        mask = tokens['tokens'] > 0
-        bert_embeddings, _ = self.bert_model(tokens=tokens,
-                                             token_type_ids=segment_ids,
-                                             attention_mask=mask)
+        mask = tokens > 0
+        bert_embeddings, _ = self.bert_model(input_ids=tokens,
+                                             token_type_ids=verb_indicator,
+                                             attention_mask=mask,
+                                             output_all_encoded_layers=False)
 
         embedded_text_input = self.embedding_dropout(bert_embeddings)
         batch_size, sequence_length, _ = embedded_text_input.size()
@@ -135,7 +131,7 @@ class SrlBert(Model):
         output_dict["mask"] = mask
 
         # We add in the offsets here so we can compute the un-wordpieced tags.
-        words, verbs, offsets = zip(*[(x["words"], x["verb"], x["offsets_a"]) for x in metadata])
+        words, verbs, offsets = zip(*[(x["words"], x["verb"], x["offsets"]) for x in metadata])
         output_dict["words"] = list(words)
         output_dict["verb"] = list(verbs)
         output_dict["wordpiece_offsets"] = list(offsets)
@@ -167,6 +163,7 @@ class SrlBert(Model):
             tags = [self.vocab.get_token_from_index(x, namespace="labels")
                     for x in max_likelihood_sequence]
             wordpiece_tags.append(tags)
+            # Offset due to exclusive end indices.
             word_tags.append([tags[i - 1] for i in offsets])
         output_dict['wordpiece_tags'] = wordpiece_tags
         output_dict['tags'] = word_tags

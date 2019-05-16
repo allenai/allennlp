@@ -4,6 +4,7 @@ from typing import Dict, List, Iterable
 from overrides import overrides
 
 from allennlp.common.file_utils import cached_path
+from allennlp.common.checks import ConfigurationError
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.dataset_readers.semantic_role_labeling import SrlReader
 from allennlp.data.fields import Field, TextField, SequenceLabelField, MetadataField
@@ -23,11 +24,12 @@ sep_token = "[SEP]"
 class SrlBertReader(SrlReader):
     """
     This DatasetReader is designed to read in the English OntoNotes v5.0 data
-    for semantic role labelling. It returns a dataset of instances with the
-    following fields:
+    for semantic role labelling using a BERT pretrained model.
+    It returns a dataset of instances with the following fields:
 
     tokens : ``TextField``
-        The tokens in the sentence.
+        The tokens in the sentence. For this reader, these tokens are always
+        BERT wordpiece ids.
     verb_indicator : ``SequenceLabelField``
         A sequence of binary indicators for whether the word is the verb for this frame.
     tags : ``SequenceLabelField``
@@ -48,20 +50,24 @@ class SrlBertReader(SrlReader):
     """
     def __init__(self,
                  bert_model_name: str,
+                 lowercase_input: bool = True,
                  token_indexers: Dict[str, TokenIndexer] = None,
                  domain_identifier: str = None,
                  lazy: bool = False) -> None:
 
-        if token_indexers is not None:
+        if token_indexers:
             raise ConfigurationError("The SrlBertReader has a fixed input representation. Do not pass a token_indexer.")
         super().__init__(token_indexers, domain_identifier, lazy)
-        self.bert_tokenizer = BertTokenizer.from_pretrained(bert_model_name, do_lower_case=True)
+        self.bert_tokenizer = BertTokenizer.from_pretrained(bert_model_name)
+        self.lowercase_input = lowercase_input
 
     def _tokenize_input(self, tokens: List[str]):
         word_piece_tokens = []
         offsets = [0]
         for token in tokens:
-            word_pieces = self.bert_tokenizer.wordpiece_tokenizer.tokenize(token.lower())
+            if self.lowercase_input:
+                token = token.lower()
+            word_pieces = self.bert_tokenizer.wordpiece_tokenizer.tokenize(token)
             offsets.append(offsets[-1] + len(word_pieces))
             word_piece_tokens.extend(word_pieces)
         del offsets[0]
@@ -114,10 +120,8 @@ class SrlBertReader(SrlReader):
 
         new_tags = self._convert_tags_to_wordpiece_tags(tags, offsets)
         new_verbs = [1 if  "-V" in tag else 0 for tag in new_tags]
-        print(tokens)
-        print(wordpieces)
-        print(tags)
-        print(new_verbs)
+        # In order to override the indexing mechanism, we need to set the `text_id`
+        # attribute directly. This causes the indexing to use this id.
         token_field = TextField([Token(t, text_id=self.bert_tokenizer.vocab[t]) for t in wordpieces],
                                  token_indexers=self._token_indexers)
 
@@ -125,7 +129,6 @@ class SrlBertReader(SrlReader):
         fields["tokens"] = token_field
         # pylint: disable=arguments-differ
         fields['verb_indicator'] = SequenceLabelField(new_verbs, token_field)
-        fields['segment_ids'] = SequenceLabelField(new_verbs, token_field)
         if tags:
             fields['tags'] = SequenceLabelField(new_tags, token_field)
 
