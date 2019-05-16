@@ -8,6 +8,7 @@ import string
 import re
 
 import numpy as np
+from scipy.optimize import linear_sum_assignment
 
 
 # From here through _normalize_answer was originally copied from:
@@ -72,31 +73,20 @@ def _answer_to_bags(answer: Union[str, List[str], Tuple[str, ...]]) -> Tuple[Set
 
 def _align_bags(predicted: List[Set[str]], gold: List[Set[str]]) -> List[float]:
     """
-    Takes gold and predicted answer sets and first finds a greedy 1-1 alignment
+    Takes gold and predicted answer sets and first finds the optimal 1-1 alignment
     between them and gets maximum metric values over all the answers
     """
-    f1_scores = []
+    scores = np.zeros([len(gold), len(predicted)])
     for gold_index, gold_item in enumerate(gold):
-        max_f1 = 0.0
-        max_index = None
-        best_alignment: Tuple[Set[str], Set[str]] = (set(), set())
-        if predicted:
-            for pred_index, pred_item in enumerate(predicted):
-                current_f1 = _compute_f1(pred_item, gold_item)
-                if current_f1 >= max_f1:
-                    best_alignment = (gold_item, pred_item)
-                    max_f1 = current_f1
-                    max_index = pred_index
-            match_flag = _match_numbers_if_present(*best_alignment)
-            gold[gold_index] = set()
-            predicted[max_index] = set()
-        else:
-            match_flag = False
-        if match_flag:
-            f1_scores.append(max_f1)
-        else:
-            f1_scores.append(0.0)
-    return f1_scores
+        for pred_index, pred_item in enumerate(predicted):
+            if _match_numbers_if_present(gold_item, pred_item):
+                scores[gold_index, pred_index] = _compute_f1(pred_item, gold_item)
+    row_ind, col_ind = linear_sum_assignment(-scores)
+
+    max_scores = np.zeros([len(gold)])
+    for row, column in zip(row_ind, col_ind):
+        max_scores[row] = max(max_scores[row], scores[row, column])
+    return max_scores
 
 
 def _compute_f1(predicted_bag: Set[str], gold_bag: Set[str]) -> float:

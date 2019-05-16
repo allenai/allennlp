@@ -73,6 +73,12 @@ class TestDropEvalGetMetrics:
         assert get_metrics(["ottoman", "Kantakouzenous"],
                            ["ottoman", "army of Kantakouzenous"]) == (0.0, 0.75)
 
+    def test_order_invariance(self):
+        assert get_metrics(["a"], ["a", "b"]) == (0, 0.5)
+        assert get_metrics(["b"], ["a", "b"]) == (0, 0.5)
+        assert get_metrics(["b"], ["b", "a"]) == (0, 0.5)
+
+
 class TestDropEvalFunctional:
     def test_json_loader(self):
         annotation = {"pid1": {"qa_pairs":[{"answer": {"number": "1"}, "validated_answers": \
