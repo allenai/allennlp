@@ -1,4 +1,4 @@
-from typing import Dict, List, TextIO, Optional, Any, Union
+from typing import Dict, List, Optional, Any, Union
 
 from overrides import overrides
 import torch
@@ -6,10 +6,7 @@ from torch.nn.modules import Linear, Dropout
 import torch.nn.functional as F
 from pytorch_pretrained_bert.modeling import BertModel
 
-from allennlp.common.checks import check_dimensions_match
 from allennlp.data import Vocabulary
-from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
-from allennlp.modules.token_embedders import Embedding
 from allennlp.models.model import Model
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
 from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits
@@ -37,7 +34,7 @@ class SrlBert(Model):
     ignore_span_metric: ``bool``, optional (default = False)
         Whether to calculate span loss, which is irrelevant when predicting BIO for Open Information Extraction.
     """
-    def __init__(self, 
+    def __init__(self,
                  vocab: Vocabulary,
                  bert_model: Union[str, BertModel],
                  bert_dim: int,
@@ -64,7 +61,7 @@ class SrlBert(Model):
         self.ignore_span_metric = ignore_span_metric
         initializer(self)
 
-    def forward(self,
+    def forward(self, # type: ignore
                 tokens: Dict[str, torch.Tensor],
                 verb_indicator: torch.Tensor,
                 metadata: List[Any],
@@ -100,9 +97,8 @@ class SrlBert(Model):
         loss : torch.FloatTensor, optional
             A scalar loss to be optimised.
         """
-        tokens = tokens["tokens"]
-        mask = tokens > 0
-        bert_embeddings, _ = self.bert_model(input_ids=tokens,
+        mask = get_text_field_mask(tokens)
+        bert_embeddings, _ = self.bert_model(input_ids=tokens["tokens"],
                                              token_type_ids=verb_indicator,
                                              attention_mask=mask,
                                              output_all_encoded_layers=False)

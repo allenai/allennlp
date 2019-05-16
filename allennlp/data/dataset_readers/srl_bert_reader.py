@@ -1,24 +1,22 @@
 import logging
-from typing import Dict, List, Iterable
+from typing import Dict, List
 
 from overrides import overrides
+from pytorch_pretrained_bert.tokenization import BertTokenizer
 
-from allennlp.common.file_utils import cached_path
 from allennlp.common.checks import ConfigurationError
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.dataset_readers.semantic_role_labeling import SrlReader
 from allennlp.data.fields import Field, TextField, SequenceLabelField, MetadataField
 from allennlp.data.instance import Instance
-from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
+from allennlp.data.token_indexers import TokenIndexer
 from allennlp.data.tokenizers import Token
-from allennlp.data.dataset_readers.dataset_utils import Ontonotes, OntonotesSentence
 
-from pytorch_pretrained_bert.tokenization import BertTokenizer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
-start_token = "[CLS]"
-sep_token = "[SEP]"
+START_TOKEN = "[CLS]"
+SEP_TOKEN = "[SEP]"
 
 @DatasetReader.register("srl_bert")
 class SrlBertReader(SrlReader):
@@ -56,13 +54,14 @@ class SrlBertReader(SrlReader):
                  lazy: bool = False) -> None:
 
         if token_indexers:
-            raise ConfigurationError("The SrlBertReader has a fixed input representation. Do not pass a token_indexer.")
+            raise ConfigurationError("The SrlBertReader has a fixed input "
+                                     "representation. Do not pass a token_indexer.")
         super().__init__(token_indexers, domain_identifier, lazy)
         self.bert_tokenizer = BertTokenizer.from_pretrained(bert_model_name)
         self.lowercase_input = lowercase_input
 
     def _tokenize_input(self, tokens: List[str]):
-        word_piece_tokens = []
+        word_piece_tokens: List[str] = []
         offsets = [0]
         for token in tokens:
             if self.lowercase_input:
@@ -72,12 +71,13 @@ class SrlBertReader(SrlReader):
             word_piece_tokens.extend(word_pieces)
         del offsets[0]
 
-        wordpieces = [start_token] + word_piece_tokens + [sep_token]
+        wordpieces = [START_TOKEN] + word_piece_tokens + [SEP_TOKEN]
 
         offsets = [x + 1 for x in offsets]
         return wordpieces, offsets
 
-    def _convert_tags_to_wordpiece_tags(self, tags: List[str], offsets: List[int]):
+    @staticmethod
+    def _convert_tags_to_wordpiece_tags(tags: List[str], offsets: List[int]):
         # account for the fact the offsets are with respect to
         # additional cls token at the start.
         offsets = [x - 1 for x in offsets]
@@ -123,7 +123,7 @@ class SrlBertReader(SrlReader):
         # In order to override the indexing mechanism, we need to set the `text_id`
         # attribute directly. This causes the indexing to use this id.
         token_field = TextField([Token(t, text_id=self.bert_tokenizer.vocab[t]) for t in wordpieces],
-                                 token_indexers=self._token_indexers)
+                                token_indexers=self._token_indexers)
 
         fields: Dict[str, Field] = {}
         fields["tokens"] = token_field
