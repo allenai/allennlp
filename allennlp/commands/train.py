@@ -224,13 +224,18 @@ def train_model(params: Params,
                 validation_data=pieces.validation_dataset,
                 params=pieces.params,
                 validation_iterator=pieces.validation_iterator)
-        evaluation_iterator = pieces.validation_iterator or pieces.iterator
-        evaluation_dataset = pieces.test_dataset
-
     else:
+        # Workaround to obtain the evaluation parts.
+        pieces = TrainerPieces.from_params(params.duplicate(),  # pylint: disable=no-member
+                                           serialization_dir,
+                                           recover,
+                                           cache_directory,
+                                           cache_prefix)
+
         trainer = TrainerBase.from_params(params, serialization_dir, recover)
-        # TODO(joelgrus): handle evaluation in the general case
-        evaluation_iterator = evaluation_dataset = None
+
+    evaluation_iterator = pieces.validation_iterator or pieces.iterator
+    evaluation_dataset = pieces.test_dataset
 
     params.assert_empty('base train command')
 
@@ -248,7 +253,7 @@ def train_model(params: Params,
     if evaluation_dataset and evaluate_on_test:
         logger.info("The model will be evaluated using the best epoch weights.")
         test_metrics = evaluate(trainer.model, evaluation_dataset, evaluation_iterator,
-                                cuda_device=trainer._cuda_devices[0], # pylint: disable=protected-access,
+                                cuda_device=trainer._cuda_devices[0],  # pylint: disable=protected-access,
                                 # TODO(brendanr): Pass in an arg following Joel's trainer refactor.
                                 batch_weight_key="")
 

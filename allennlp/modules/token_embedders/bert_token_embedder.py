@@ -7,6 +7,7 @@ At its core it uses Hugging Face's PyTorch implementation
 (https://github.com/huggingface/pytorch-pretrained-BERT),
 so thanks to them!
 """
+from typing import Dict
 import logging
 
 import torch
@@ -18,6 +19,26 @@ from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 from allennlp.nn import util
 
 logger = logging.getLogger(__name__)
+
+
+class PretrainedBertModel:
+    """
+    In some instances you may want to load the same BERT model twice
+    (e.g. to use as a token embedder and also as a pooling layer).
+    This factory provides a cache so that you don't actually have to load the model twice.
+    """
+    _cache: Dict[str, BertModel] = {}
+
+    @classmethod
+    def load(cls, model_name: str, cache_model: bool = True) -> BertModel:
+        if model_name in cls._cache:
+            return PretrainedBertModel._cache[model_name]
+
+        model = BertModel.from_pretrained(model_name)
+        if cache_model:
+            cls._cache[model_name] = model
+
+        return model
 
 
 class BertEmbedder(TokenEmbedder):
@@ -130,7 +151,7 @@ class PretrainedBertEmbedder(BertEmbedder):
         If ``True``, then only return the top layer instead of apply the scalar mix.
     """
     def __init__(self, pretrained_model: str, requires_grad: bool = False, top_layer_only: bool = False) -> None:
-        model = BertModel.from_pretrained(pretrained_model)
+        model = PretrainedBertModel.load(pretrained_model)
 
         for param in model.parameters():
             param.requires_grad = requires_grad
