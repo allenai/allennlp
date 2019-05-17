@@ -235,7 +235,7 @@ def evaluate_prediction_file(prediction_path: str, gold_path: str, output_path: 
     output_dict = {"global_em": global_em,
                    "global_f1": global_f1}
 
-    with open(output_path, "w", encoding = "utf8") as outfile:
+    with open(output_path, "w", encoding="utf8") as outfile:
         json.dump(output_dict, outfile)
 
     return (global_em, global_f1)
