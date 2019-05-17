@@ -7,12 +7,10 @@
 
 # This installs Pytorch for CUDA 8 only. If you are using a newer version,
 # please visit http://pytorch.org/ and install the relevant version.
-# For now AllenNLP works with both PyTorch 1.0 and 0.4.1. Expect that in
-# the future only >=1.0 will be supported.
-torch>=0.4.1
+torch>=1.0.0
 
 # Parameter parsing (but not on Windows).
-jsonnet>=0.10.0 ; sys.platform != 'win32'
+jsonnet==0.12.1 ; sys.platform != 'win32'
 
 # Adds an @overrides decorator for better documentation and error checking when using subclasses.
 overrides
@@ -39,7 +37,7 @@ scikit-learn
 tensorboardX>=1.2
 
 # aws commandline tools for running on Docker remotely.
-awscli>=1.11.91
+awscli>=1.16.160
 
 # Accessing files from S3 directly.
 boto3
