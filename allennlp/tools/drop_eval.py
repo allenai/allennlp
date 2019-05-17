@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 from collections import defaultdict
-from typing import Any, Dict, List, Set, Tuple, Union
+from typing import Any, Dict, List, Set, Tuple, Union, Optional
 import json
 import argparse
 import string
@@ -217,7 +217,7 @@ def evaluate_json(annotations: Dict[str, Any], predicted_answers: Dict[str, Any]
     return global_em, global_f1
 
 
-def evaluate_prediction_file(prediction_path: str, gold_path: str, output_path: str) -> Tuple[float, float]:
+def evaluate_prediction_file(prediction_path: str, gold_path: str, output_path: Optional[str]) -> Tuple[float, float]:
     """
     Takes a prediction file and a gold file and evaluates the predictions for each question in the
     gold file.  Both files must be json formatted and must have query_id keys, which are used to
@@ -235,8 +235,9 @@ def evaluate_prediction_file(prediction_path: str, gold_path: str, output_path: 
     output_dict = {"global_em": global_em,
                    "global_f1": global_f1}
 
-    with open(output_path, "w", encoding="utf8") as outfile:
-        json.dump(output_dict, outfile)
+    if output_path is not None:
+        with open(output_path, "w", encoding="utf8") as outfile:
+            json.dump(output_dict, outfile)
 
     return (global_em, global_f1)
 
@@ -257,7 +258,7 @@ if __name__ == "__main__":
     parser.add_argument("--output_path",
                         type=str,
                         required=False,
-                        default=os.devnull,
+                        default=None,
                         help='location of the output metrics file')
 
     args = parser.parse_args()
