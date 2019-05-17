@@ -226,13 +226,6 @@ def evaluate_prediction_file(prediction_path: str, gold_path: str, output_path: 
     where the value is either a JSON dictionary with an "answer" key, or just a string (or list of
     strings) that is the answer. Writes a json with global_em and global_f1 metrics to file at
     the specified output path.
-    Takes a prediction file and a gold file and evaluates the predictions for each question in the
-    gold file.  Both files must be json formatted and must have query_id keys, which are used to
-    match predictions to gold annotations.  The gold file is assumed to have the format of the dev
-    set in the DROP data release.  The prediction file must be a JSON dictionary keyed by query id,
-    where the value is either a JSON dictionary with an "answer" key, or just a string (or list of
-    strings) that is the answer. Writes a json with global_em and global_f1 metrics to file at
-    the specified output path.
     """
     predicted_answers = json.load(open(prediction_path, encoding='utf-8'))
     annotations = json.load(open(gold_path, encoding='utf-8'))
