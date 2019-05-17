@@ -74,6 +74,11 @@ class FineTune(Subcommand):
                                default="",
                                help='If non-empty, name of metric used to weight the loss on a per-batch basis.')
 
+        subparser.add_argument('--cache-directory',
+                               type=str,
+                               default='',
+                               help='Location to store cache of data preprocessing')
+
         subparser.add_argument('--embedding-sources-mapping',
                                type=str,
                                default="",
@@ -97,7 +102,8 @@ def fine_tune_model_from_args(args: argparse.Namespace):
                                     extend_vocab=args.extend_vocab,
                                     file_friendly_logging=args.file_friendly_logging,
                                     batch_weight_key=args.batch_weight_key,
-                                    embedding_sources_mapping=args.embedding_sources_mapping)
+                                    embedding_sources_mapping=args.embedding_sources_mapping,
+                                    cache_directory=args.cache_directory)
 
 
 def fine_tune_model_from_file_paths(model_archive_path: str,
@@ -107,7 +113,8 @@ def fine_tune_model_from_file_paths(model_archive_path: str,
                                     extend_vocab: bool = False,
                                     file_friendly_logging: bool = False,
                                     batch_weight_key: str = "",
-                                    embedding_sources_mapping: str = "") -> Model:
+                                    embedding_sources_mapping: str = "",
+                                    cache_directory: str = None) -> Model:
     """
     A wrapper around :func:`fine_tune_model` which loads the model archive from a file.
 
@@ -147,7 +154,8 @@ def fine_tune_model_from_file_paths(model_archive_path: str,
                            extend_vocab=extend_vocab,
                            file_friendly_logging=file_friendly_logging,
                            batch_weight_key=batch_weight_key,
-                           embedding_sources_mapping=embedding_sources)
+                           embedding_sources_mapping=embedding_sources,
+                           cache_directory=cache_directory)
 
 def fine_tune_model(model: Model,
                     params: Params,
@@ -155,7 +163,8 @@ def fine_tune_model(model: Model,
                     extend_vocab: bool = False,
                     file_friendly_logging: bool = False,
                     batch_weight_key: str = "",
-                    embedding_sources_mapping: Dict[str, str] = None) -> Model:
+                    embedding_sources_mapping: Dict[str, str] = None,
+                    cache_directory: str = None) -> Model:
     """
     Fine tunes the given model, using a set of parameters that is largely identical to those used
     for :func:`~allennlp.commands.train.train_model`, except that the ``model`` section is ignored,
@@ -205,7 +214,7 @@ def fine_tune_model(model: Model,
         logger.warning("You passed `directory_path` in parameters for the vocabulary in "
                        "your configuration file, but it will be ignored. ")
 
-    all_datasets = datasets_from_params(params)
+    all_datasets = datasets_from_params(params, cache_directory=cache_directory)
     vocab = model.vocab
 
     if extend_vocab:

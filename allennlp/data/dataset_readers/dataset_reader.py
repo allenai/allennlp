@@ -4,6 +4,7 @@ import os
 import pathlib
 
 import jsonpickle
+import pickle as pkl
 
 from allennlp.data.instance import Instance
 from allennlp.common import Tqdm, util
@@ -139,9 +140,10 @@ class DatasetReader(Registrable):
             # And finally we write to the cache if we need to.
             if cache_file and not os.path.exists(cache_file):
                 logger.info(f"Caching instances to {cache_file}")
-                with open(cache_file, 'w') as cache:
-                    for instance in Tqdm.tqdm(instances):
-                        cache.write(self.serialize_instance(instance) + '\n')
+                with open(cache_file, 'wb') as cache:
+                    # for instance in Tqdm.tqdm(instances):
+                    #     cache.write(self.serialize_instance(instance) + '\n')
+                    pkl.dump(instances, cache, protocol=pkl.HIGHEST_PROTOCOL)
             return instances
 
     def _get_cache_location_for_file_path(self, file_path: str) -> str:
@@ -157,9 +159,11 @@ class DatasetReader(Registrable):
         raise NotImplementedError
 
     def _instances_from_cache_file(self, cache_filename: str) -> Iterable[Instance]:
-        with open(cache_filename, 'r') as cache_file:
-            for line in cache_file:
-                yield self.deserialize_instance(line.strip())
+        # with open(cache_filename, 'r') as cache_file:
+        #     for line in cache_file:
+        #         yield self.deserialize_instance(line.strip())
+        with open(cache_filename, 'rb') as cache_file:
+            return pkl.load(cache_file)
 
     def text_to_instance(self, *inputs) -> Instance:
         """
