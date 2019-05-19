@@ -74,7 +74,7 @@ def _answer_to_bags(answer: Union[str, List[str], Tuple[str, ...]]) -> Tuple[Lis
 def _align_bags(predicted: List[Set[str]], gold: List[Set[str]]) -> List[float]:
     """
     Takes gold and predicted answer sets and first finds the optimal 1-1 alignment
-    between them and gets maximum metric values over all the answers
+    between them and gets maximum metric values over all the answers.
     """
     scores = np.zeros([len(gold), len(predicted)])
     for gold_index, gold_item in enumerate(gold):
@@ -83,7 +83,7 @@ def _align_bags(predicted: List[Set[str]], gold: List[Set[str]]) -> List[float]:
                 scores[gold_index, pred_index] = _compute_f1(pred_item, gold_item)
     row_ind, col_ind = linear_sum_assignment(-scores)
 
-    max_scores = np.zeros([len(gold)])
+    max_scores = np.zeros([max(len(gold), len(predicted))])
     for row, column in zip(row_ind, col_ind):
         max_scores[row] = max(max_scores[row], scores[row, column])
     return max_scores
