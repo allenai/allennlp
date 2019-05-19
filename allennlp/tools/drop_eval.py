@@ -6,7 +6,6 @@ import json
 import argparse
 import string
 import re
-import os
 
 import numpy as np
 from scipy.optimize import linear_sum_assignment
@@ -217,7 +216,8 @@ def evaluate_json(annotations: Dict[str, Any], predicted_answers: Dict[str, Any]
     return global_em, global_f1
 
 
-def evaluate_prediction_file(prediction_path: str, gold_path: str, output_path: Optional[str] = None) -> Tuple[float, float]:
+def evaluate_prediction_file(prediction_path: str, gold_path: str,
+                             output_path: Optional[str] = None) -> Tuple[float, float]:
     """
     Takes a prediction file and a gold file and evaluates the predictions for each question in the
     gold file.  Both files must be json formatted and must have query_id keys, which are used to
