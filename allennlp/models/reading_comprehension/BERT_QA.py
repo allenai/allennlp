@@ -72,6 +72,13 @@ class BERT_QA(Model):
 
         # Adding some masks with numerically stable values
         passage_mask = util.get_text_field_mask(passage).float()
+
+        # TODO replace this with a options for MC same chunk BERT....
+        if passage_length < 60:
+            for qind, m in enumerate(metadata):
+                sep_inds = [ind for ind, token in enumerate(m['question_tokens']) if token == '[SEP]']
+                passage_mask[qind][0:sep_inds[0]] = 0.0
+
         repeated_passage_mask = passage_mask.unsqueeze(1).repeat(1, 1, 1)
         repeated_passage_mask = repeated_passage_mask.view(batch_size, passage_length)
         span_start_logits = util.replace_masked_values(span_start_logits, repeated_passage_mask, -1e7)
