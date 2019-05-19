@@ -175,8 +175,11 @@ class BertSameChunkMCQAReader(DatasetReader):
         passage_offsets = []
         offset = 0
         for token in tokenized_chunk:
-            passage_offsets.append((offset, offset + len(token.text)))
-            offset += len(token.text) + 1
+            passage_offsets.append((offset, offset + len(token.text) + 1))
+            if chunk[offset + len(token.text)] == ' ':
+                offset += len(token.text) + 1
+            else:
+                offset += len(token.text)
 
         # This is separate so we can reference it later with a known type.
         passage_field = TextField(tokenized_chunk, self._token_indexers)
