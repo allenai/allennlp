@@ -244,7 +244,7 @@ class BertSameChunkMCQAReader(DatasetReader):
         # question_tokens, choice_tokens = self._truncate_tokens(question_tokens, choice_tokens, self._max_pieces - 3)
 
         tokens = [cls_token] + question_tokens + [sep_token]
-        text = "[CLS] " + question + "[SEP] "
+        text = "[CLS] " + question + " [SEP] "
         for ind, choice in enumerate(choices):
             choice_tokens = self._word_splitter.split_words(choice)
             if answer_id is not None and ind == answer_id:
