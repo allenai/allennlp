@@ -18,6 +18,19 @@ class TestDropEvalGetMetrics:
     def test_float_numbers(self):
         assert get_metrics(["78"], ["78.0"]) == (1.0, 1.0)
 
+    def test_metric_is_length_aware(self):
+        # EM is 0.0 here.
+        # F1 between gold[0] and predicted[0] is 1.0
+        # F1 between gold[1] and predicted[1] is 0.0 (since predicted[1] doesn't exist).
+        # So, overall F1 is 0.5 (the mean of [1.0, 0.0]).
+        assert get_metrics(predicted=["td"], gold=["td", "td"]) == (0.0, 0.5)
+        assert get_metrics("td", ["td", "td"]) == (0.0, 0.5)
+        # EM is 0.0 here.
+        # F1 between gold[0] and predicted[0] is 1.0.
+        # So, overall F1 is 1.0 (mean of [1.0]).
+        assert get_metrics(predicted=["td", "td"], gold=["td"]) == (0.0, 1.0)
+        assert get_metrics(predicted=["td", "td"], gold="td") == (0.0, 1.0)
+
     def test_articles_are_ignored(self):
         assert get_metrics(["td"], ["the td"]) == (1.0, 1.0)
         assert get_metrics(["the a NOT an ARTICLE the an a"], ["NOT ARTICLE"]) == (1.0, 1.0)
