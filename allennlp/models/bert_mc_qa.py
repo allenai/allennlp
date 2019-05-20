@@ -14,6 +14,7 @@ from allennlp.modules.scalar_mix import ScalarMix
 from allennlp.nn import RegularizerApplicator
 import allennlp.nn.util as util
 from allennlp.training.metrics import BooleanAccuracy, CategoricalAccuracy
+import torch.nn.functional as F
 
 
 @Model.register("bert_mc_qa")
@@ -55,8 +56,12 @@ class BertMCQAModel(Model):
             self._classifier = bert_model_loaded.model._classifier
         else:
             final_output_dim = 1
-            self._classifier = Linear(self._output_dim, final_output_dim)
-            self._classifier.apply(self._bert_model.init_bert_weights)
+            #self.qa_first_layer = torch.nn.Linear(self._text_field_embedder.get_output_dim(), 10)
+            #self.qa_outputs = torch.nn.Linear(10, 2)
+
+            self._classifier1 = Linear(self._output_dim, 5)
+            self._classifier2 = Linear(5, final_output_dim)
+            self._classifier1.apply(self._bert_model.init_bert_weights)
         self._all_layers = not top_layer_only
         if self._all_layers:
             if bert_weights_model and hasattr(bert_model_loaded.model, "_scalar_mix") \
@@ -104,7 +109,8 @@ class BertMCQAModel(Model):
             pooled_output = self._bert_model.pooler(mixed_layer)
 
         pooled_output = self._dropout(pooled_output)
-        label_logits = self._classifier(pooled_output)
+        layer1 = F.relu(self._classifier1(pooled_output))
+        label_logits = self._classifier2(layer1)
         label_logits_flat = label_logits.squeeze(1)
         label_logits = label_logits.view(-1, num_choices)
 
