@@ -6,6 +6,7 @@ from allennlp.data.vocabulary import Vocabulary
 
 TokenType = TypeVar("TokenType", int, List[int])  # pylint: disable=invalid-name
 
+
 class TokenIndexer(Generic[TokenType], Registrable):
     """
     A ``TokenIndexer`` determines how string tokens get represented as arrays of indices in a model.
@@ -16,8 +17,21 @@ class TokenIndexer(Generic[TokenType], Registrable):
     34), or as lists of character IDs (e.g., "cat" gets represented by the numbers [23, 10, 18]),
     or in some other way that you can come up with (e.g., if you have some structured input you
     want to represent in a special way in your data arrays, you can do that here).
+
+    Parameters
+    ----------
+    token_min_padding_length : ``int``, optional (default=``0``)
+        The minimum padding length required for the :class:`TokenIndexer`. For example,
+        the minimum padding length of :class:`SingleIdTokenIndexer` is the largest size of
+        filter when using :class:`CnnEncoder`.
+        Note that if you set this for one TokenIndexer, you likely have to set it for all
+        :class:`TokenIndexer` for the same field, otherwise you'll get mismatched tensor sizes.
     """
     default_implementation = 'single_id'
+
+    def __init__(self,
+                 token_min_padding_length: int = 0) -> None:
+        self._token_min_padding_length: int = token_min_padding_length
 
     def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):
         """
@@ -59,6 +73,14 @@ class TokenIndexer(Generic[TokenType], Registrable):
         """
         raise NotImplementedError
 
+    def get_token_min_padding_length(self) -> int:
+        """
+        This method returns the minimum padding length required for this TokenIndexer.
+        For example, the minimum padding length of `SingleIdTokenIndexer` is the largest
+        size of filter when using `CnnEncoder`.
+        """
+        return self._token_min_padding_length
+
     def pad_token_sequence(self,
                            tokens: Dict[str, List[TokenType]],
                            desired_num_tokens: Dict[str, int],
@@ -80,3 +102,8 @@ class TokenIndexer(Generic[TokenType], Registrable):
         """
         # pylint: disable=no-self-use
         return [index_name]
+
+    def __eq__(self, other) -> bool:
+        if isinstance(self, other.__class__):
+            return self.__dict__ == other.__dict__
+        return NotImplemented

@@ -8,7 +8,7 @@ import numpy
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Vocabulary
 from allennlp.training.metrics import SpanBasedF1Measure, Metric
-from allennlp.models.semantic_role_labeler import write_to_conll_eval_file
+from allennlp.models.semantic_role_labeler import write_bio_formatted_tags_to_file
 from allennlp.common.params import Params
 from allennlp.common.checks import ConfigurationError
 
@@ -260,7 +260,7 @@ class SpanBasedF1Test(AllenNlpTestCase):
         with open(gold_file_path, "a+") as gold_file, open(prediction_file_path, "a+") as prediction_file:
             # Use the same bio tags as prediction vs gold to make it obvious by looking
             # at the perl script output if something is wrong.
-            write_to_conll_eval_file(gold_file, prediction_file, 4, sentence, bio_tags, bio_tags)
+            write_bio_formatted_tags_to_file(gold_file, prediction_file, 4, sentence, bio_tags, bio_tags)
         # Run the official perl script and collect stdout.
         perl_script_command = ["perl", str(self.TOOLS_ROOT / "srl-eval.pl"), prediction_file_path, gold_file_path]
         stdout = subprocess.check_output(perl_script_command, universal_newlines=True)

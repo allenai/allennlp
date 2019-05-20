@@ -61,6 +61,8 @@ class WordpieceIndexer(TokenIndexer[int]):
         By default, long sequences will be truncated to the maximum sequence
         length. Otherwise, they will be split apart and batched using a
         sliding window.
+    token_min_padding_length : ``int``, optional (default=``0``)
+        See :class:`TokenIndexer`.
     """
 
     def __init__(self,
@@ -74,7 +76,9 @@ class WordpieceIndexer(TokenIndexer[int]):
                  start_tokens: List[str] = None,
                  end_tokens: List[str] = None,
                  separator_token: str = "[SEP]",
-                 truncate_long_sequences: bool = True) -> None:
+                 truncate_long_sequences: bool = True,
+                 token_min_padding_length: int = 0) -> None:
+        super().__init__(token_min_padding_length)
         self.vocab = vocab
 
         # The BERT code itself does a two-step tokenization:

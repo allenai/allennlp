@@ -175,7 +175,7 @@ class LazyFakeReader(DatasetReader):
     # pylint: disable=abstract-method
     def __init__(self) -> None:
         super().__init__(lazy=True)
-        self.reader = DatasetReader.from_params(Params({'type': 'sequence_tagging'}))
+        self.reader = DatasetReader.from_params(Params({'type': 'sequence_tagging', 'lazy': True}))
 
     def _read(self, file_path: str) -> Iterable[Instance]:
         """
