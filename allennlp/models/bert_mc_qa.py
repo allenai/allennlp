@@ -110,19 +110,16 @@ class BertMCQAModel(Model):
 
         pooled_output = self._dropout(pooled_output)
         label_logits1 = self._classifier1(pooled_output)
-        label_logits_flat = label_logits1.squeeze(1)
         label_logits1 = label_logits1.view(-1, num_choices)
-        label_logits = self._classifier2(F.relu(label_logits1))
+        label_logits = self._classifier2(label_logits1)
+
+
 
 
         output_dict = {}
         output_dict['label_logits'] = label_logits
-        if self._per_choice_loss:
-            output_dict['label_probs'] = torch.sigmoid(label_logits_flat).view(-1, num_choices)
-            output_dict['answer_index'] = (label_logits_flat > 0).view(-1, num_choices)
-        else:
-            output_dict['label_probs'] = torch.nn.functional.softmax(label_logits, dim=1)
-            output_dict['answer_index'] = label_logits.argmax(1)
+        output_dict['label_probs'] = torch.nn.functional.softmax(label_logits, dim=1)
+        output_dict['answer_index'] = label_logits.argmax(1)
 
         if label is not None:
             if self._per_choice_loss:
