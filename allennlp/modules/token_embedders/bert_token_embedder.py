@@ -173,7 +173,7 @@ class BertEmbedder(TokenEmbedder):
 
             # Find the stride as half the max pieces, ignoring the special start and end tokens
             # Calculate an offset to extract the centermost embeddings of each window
-            stride = self.max_pieces // 2 - self.start_tokens - self.end_tokens
+            stride = (self.max_pieces - self.start_tokens - self.end_tokens) // 2
             stride_offset = stride // 2 + self.start_tokens
 
             first_window = list(range(stride_offset))
