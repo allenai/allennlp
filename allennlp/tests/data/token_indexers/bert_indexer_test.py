@@ -145,7 +145,7 @@ class TestBertIndexer(ModelTestCase):
     def test_sliding_window(self):
         tokenizer = WordTokenizer(word_splitter=BertBasicWordSplitter())
 
-        sentence = "the quickest quick brown fox jumped over the lazy dog"
+        sentence = "the quickest quick brown [SEP] jumped over the lazy dog"
         tokens = tokenizer.tokenize(sentence)
 
         vocab = Vocabulary()
@@ -159,8 +159,11 @@ class TestBertIndexer(ModelTestCase):
 
         # 16 = [CLS], 17 = [SEP]
         # 1 full window + 1 half window with start/end tokens
-        assert indexed_tokens["bert"] == [16, 2, 3, 4, 3, 5, 6, 8, 9, 17, 16, 5, 6, 8, 9, 2, 14, 12, 17]
+        assert indexed_tokens["bert"] == [16, 2, 3, 4, 3, 5, 17, 8, 9, 17, 16, 5, 17, 8, 9, 2, 14, 12, 17]
         assert indexed_tokens["bert-offsets"] == [1, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+
+        # The extra [SEP]s shouldn't pollute the token-type-ids
+        assert set(indexed_tokens["bert-type-ids"]) == {0, 1}
 
     def test_truncate_window(self):
         tokenizer = WordTokenizer(word_splitter=BertBasicWordSplitter())
