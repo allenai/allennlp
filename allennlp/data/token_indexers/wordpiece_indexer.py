@@ -148,6 +148,10 @@ class WordpieceIndexer(TokenIndexer[int]):
         # and passing through the model, it should be unpacked to represent the wordpieces in this list.
         flat_wordpiece_ids = [wordpiece for token in token_wordpiece_ids for wordpiece in token]
 
+        # Similarly, we want to compute the token_type_ids from the flattened wordpiece ids before
+        # we do the windowing; otherwise [SEP] tokens would get counted multiple times.
+        flat_token_type_ids = _get_token_type_ids(flat_wordpiece_ids, self._separator_ids)
+
         # The code below will (possibly) pack the wordpiece sequence into multiple sub-sequences by using a sliding
         # window `window_length` that overlaps with previous windows according to the `stride`. Suppose we have
         # the following sentence: "I went to the store to buy some milk". Then a sliding window of length 4 and
@@ -196,32 +200,38 @@ class WordpieceIndexer(TokenIndexer[int]):
 
         if len(flat_wordpiece_ids) <= window_length:
             # If all the wordpieces fit, then we don't need to do anything special
-            wordpiece_windows = [self._start_piece_ids + flat_wordpiece_ids + self._end_piece_ids]
+            wordpiece_windows = [self._add_start_and_end(flat_wordpiece_ids)]
+            token_type_ids = self._extend(flat_token_type_ids)
         elif self._truncate_long_sequences:
             logger.warning("Too many wordpieces, truncating sequence. If you would like a sliding window, set"
                            "`truncate_long_sequences` to False %s", str([token.text for token in tokens]))
-            wordpiece_windows = [self._start_piece_ids + flat_wordpiece_ids[:window_length] + self._end_piece_ids]
+            wordpiece_windows = [self._add_start_and_end(flat_wordpiece_ids[:window_length])]
+            token_type_ids = self._extend(flat_token_type_ids)
         else:
             # Create a sliding window of wordpieces of length `max_pieces` that advances by `stride` steps and
             # add start/end wordpieces to each window
             # TODO: this currently does not respect word boundaries, so words may be cut in half between windows
-            # However, this would increase complexity, as sequences would need to be padded/unpadded in the middle
-            wordpiece_windows = [self._start_piece_ids +
-                                 flat_wordpiece_ids[i:i + window_length] +
-                                 self._end_piece_ids
+            # However, this would i
+            #
+            # ncrease complexity, as sequences would need to be padded/unpadded in the middle
+            wordpiece_windows = [self._add_start_and_end(flat_wordpiece_ids[i:i + window_length])
                                  for i in range(0, len(flat_wordpiece_ids), stride)]
+
+            token_type_windows = [self._extend(flat_token_type_ids[i:i + window_length])
+                                  for i in range(0, len(flat_token_type_ids), stride)]
 
             # Check for overlap in the last window. Throw it away if it is redundant.
             last_window = wordpiece_windows[-1][1:]
             penultimate_window = wordpiece_windows[-2]
             if last_window == penultimate_window[-len(last_window):]:
                 wordpiece_windows = wordpiece_windows[:-1]
+                token_type_windows = token_type_windows[:-1]
+
+            token_type_ids = [token_type for window in token_type_windows for token_type in window]
 
         # Flatten the wordpiece windows
         wordpiece_ids = [wordpiece for sequence in wordpiece_windows for wordpiece in sequence]
 
-        # Constructing `token_type_ids` by `self._separator`
-        token_type_ids = _get_token_type_ids(wordpiece_ids, self._separator_ids)
 
         # Our mask should correspond to the original tokens,
         # because calling util.get_text_field_mask on the
@@ -236,6 +246,21 @@ class WordpieceIndexer(TokenIndexer[int]):
                 f"{index_name}-offsets": offsets,
                 f"{index_name}-type-ids": token_type_ids,
                 "mask": mask}
+
+    def _add_start_and_end(self, wordpiece_ids: List[int]) -> List[int]:
+        return self._start_piece_ids + wordpiece_ids + self._end_piece_ids
+
+    def _extend(self, token_type_ids: List[int]) -> List[int]:
+        """
+        Extend the token type ids by len(start_piece_ids) on the left
+        and len(end_piece_ids) on the right.
+        """
+        first = token_type_ids[0]
+        last = token_type_ids[-1]
+        return ([first for _ in self._start_piece_ids] +
+                token_type_ids +
+                [last for _ in self._end_piece_ids])
+
 
     @overrides
     def get_padding_token(self) -> int:
