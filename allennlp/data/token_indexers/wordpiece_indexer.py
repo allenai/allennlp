@@ -211,9 +211,7 @@ class WordpieceIndexer(TokenIndexer[int]):
             # Create a sliding window of wordpieces of length `max_pieces` that advances by `stride` steps and
             # add start/end wordpieces to each window
             # TODO: this currently does not respect word boundaries, so words may be cut in half between windows
-            # However, this would i
-            #
-            # ncrease complexity, as sequences would need to be padded/unpadded in the middle
+            # However, this would increase complexity, as sequences would need to be padded/unpadded in the middle
             wordpiece_windows = [self._add_start_and_end(flat_wordpiece_ids[i:i + window_length])
                                  for i in range(0, len(flat_wordpiece_ids), stride)]
 

@@ -1,4 +1,4 @@
-# pylint: disable=no-self-use,invalid-name,protected-access,bad-whitespace
+# pylint: disable=no-self-use,invalid-name,protected-access,bad-whitespace,bad-continuation
 from allennlp.common.testing import ModelTestCase
 from allennlp.data.token_indexers.wordpiece_indexer import PretrainedBertIndexer, _get_token_type_ids
 from allennlp.data.tokenizers import WordTokenizer, Token
