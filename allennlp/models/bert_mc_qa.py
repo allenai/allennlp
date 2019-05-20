@@ -59,8 +59,8 @@ class BertMCQAModel(Model):
             #self.qa_first_layer = torch.nn.Linear(self._text_field_embedder.get_output_dim(), 10)
             #self.qa_outputs = torch.nn.Linear(10, 2)
 
-            self._classifier1 = Linear(self._output_dim, 5)
-            self._classifier2 = Linear(5, final_output_dim)
+            self._classifier1 = Linear(self._output_dim, final_output_dim)
+            self._classifier2 = Linear(3, 3)
             self._classifier1.apply(self._bert_model.init_bert_weights)
         self._all_layers = not top_layer_only
         if self._all_layers:
@@ -109,10 +109,11 @@ class BertMCQAModel(Model):
             pooled_output = self._bert_model.pooler(mixed_layer)
 
         pooled_output = self._dropout(pooled_output)
-        layer1 = F.relu(self._classifier1(pooled_output))
-        label_logits = self._classifier2(layer1)
+        label_logits = self._classifier1(pooled_output)
         label_logits_flat = label_logits.squeeze(1)
         label_logits = label_logits.view(-1, num_choices)
+        label_logits = self._classifier2(F.relu(label_logits))
+
 
         output_dict = {}
         output_dict['label_logits'] = label_logits
