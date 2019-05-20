@@ -12,7 +12,7 @@ import pytest
 from allennlp.common.checks import ConfigurationError
 
 from allennlp.common.testing import AllenNlpTestCase, ModelTestCase
-from allennlp.training.trainer import Trainer
+from allennlp.training.trainer2 import Trainer
 from allennlp.training.trainer_base import TrainerBase
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
 from allennlp.training.momentum_schedulers import MomentumScheduler
@@ -27,7 +27,7 @@ from allennlp.models.model import Model
 from allennlp.training.moving_average import ExponentialMovingAverage
 
 
-class TestTrainer(AllenNlpTestCase):
+class TestTrainer2(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
         self.instances = SequenceTaggingDatasetReader().read(self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv')
@@ -554,7 +554,8 @@ class TestTrainer(AllenNlpTestCase):
         epoch = restore_trainer._restore_checkpoint()
         assert epoch == 2
         # One batch per epoch.
-        assert restore_trainer._batch_num_total == 2
+        #assert restore_trainer._batch_num_total == 2
+        assert restore_trainer.handler.state.batch_num_total == 2
 
     def test_trainer_from_base_class_params(self):
         params = Params.from_file(self.FIXTURES_ROOT / 'simple_tagger' / 'experiment.json')
