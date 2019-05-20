@@ -62,23 +62,23 @@ class BertEmbedder(TokenEmbedder):
         and padded appropriately by this length, the embedder will split them into a
         large batch, feed them into BERT, and recombine the output as if it was a
         longer sequence.
-    start_tokens : int, optional (default: 1)
+    num_start_tokens : int, optional (default: 1)
         The number of starting special tokens input to BERT (usually 1, i.e., [CLS])
-    end_tokens : int, optional (default: 1)
+    num_end_tokens : int, optional (default: 1)
         The number of ending tokens input to BERT (usually 1, i.e., [SEP])
     """
     def __init__(self,
                  bert_model: BertModel,
                  top_layer_only: bool = False,
                  max_pieces: int = 512,
-                 start_tokens: int = 1,
-                 end_tokens: int = 1) -> None:
+                 num_start_tokens: int = 1,
+                 num_end_tokens: int = 1) -> None:
         super().__init__()
         self.bert_model = bert_model
         self.output_dim = bert_model.config.hidden_size
         self.max_pieces = max_pieces
-        self.start_tokens = start_tokens
-        self.end_tokens = end_tokens
+        self.num_start_tokens = num_start_tokens
+        self.num_end_tokens = num_end_tokens
 
         if not top_layer_only:
             self._scalar_mix = ScalarMix(bert_model.config.num_hidden_layers,
@@ -173,8 +173,8 @@ class BertEmbedder(TokenEmbedder):
 
             # Find the stride as half the max pieces, ignoring the special start and end tokens
             # Calculate an offset to extract the centermost embeddings of each window
-            stride = (self.max_pieces - self.start_tokens - self.end_tokens) // 2
-            stride_offset = stride // 2 + self.start_tokens
+            stride = (self.max_pieces - self.num_start_tokens - self.num_end_tokens) // 2
+            stride_offset = stride // 2 + self.num_start_tokens
 
             first_window = list(range(stride_offset))
 
