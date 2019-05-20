@@ -74,7 +74,7 @@ def named_entity_recognition_with_elmo_peters_2018() -> predictors.SentenceTagge
         return predictor  # type: ignore
 
 def fine_grained_named_entity_recognition_with_elmo_peters_2018() -> predictors.SentenceTaggerPredictor:
-    model = PretrainedModel('https://s3-us-west-2.amazonaws.com/allennlp/models/fine-grained-ner-model-elmo-2018.08.31.tar.gz',
+    model = PretrainedModel('https://s3-us-west-2.amazonaws.com/allennlp/models/fine-grained-ner-model-elmo-2018.12.21.tar.gz',
                             'sentence-tagger')
     predictor = model.predictor()
     # pylint: disable=protected-access
