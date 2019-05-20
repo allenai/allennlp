@@ -8,7 +8,7 @@ from allennlp.data.dataset import Batch
 from allennlp.data.fields import TextField, ListField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers.wordpiece_indexer import PretrainedBertIndexer
-from allennlp.data.tokenizers import WordTokenizer
+from allennlp.data.tokenizers import WordTokenizer, Token
 from allennlp.data.tokenizers.word_splitter import BertBasicWordSplitter
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.modules.token_embedders.bert_token_embedder import BertEmbedder
@@ -264,3 +264,31 @@ class TestBertEmbedder(ModelTestCase):
 
         bert_vectors = token_embedder(tokens["bert"], offsets=tokens["bert-offsets"])
         assert list(bert_vectors.shape) == [1, 10, 12]
+
+    def test_sliding_window_with_batch(self):
+        tokenizer = WordTokenizer(word_splitter=BertBasicWordSplitter())
+
+        sentence = "the quickest quick brown fox jumped over the lazy dog"
+        tokens = tokenizer.tokenize(sentence)
+
+        vocab = Vocabulary()
+
+        vocab_path = self.FIXTURES_ROOT / 'bert' / 'vocab.txt'
+        token_indexer = PretrainedBertIndexer(str(vocab_path), truncate_long_sequences=False, max_pieces=8)
+
+        config_path = self.FIXTURES_ROOT / 'bert' / 'config.json'
+        config = BertConfig(str(config_path))
+        bert_model = BertModel(config)
+        token_embedder = BertEmbedder(bert_model, max_pieces=8)
+
+        instance = Instance({"tokens": TextField(tokens, {"bert": token_indexer})})
+        instance2 = Instance({"tokens": TextField(tokens + tokens + tokens, {"bert": token_indexer})})
+
+        batch = Batch([instance, instance2])
+        batch.index_instances(vocab)
+
+        padding_lengths = batch.get_padding_lengths()
+        tensor_dict = batch.as_tensor_dict(padding_lengths)
+        tokens = tensor_dict["tokens"]
+        bert_vectors = token_embedder(tokens["bert"], offsets=tokens["bert-offsets"])
+        assert bert_vectors is not None
