@@ -109,10 +109,10 @@ class BertMCQAModel(Model):
             pooled_output = self._bert_model.pooler(mixed_layer)
 
         pooled_output = self._dropout(pooled_output)
-        label_logits = self._classifier1(pooled_output)
-        label_logits_flat = label_logits.squeeze(1)
-        label_logits = label_logits.view(-1, num_choices)
-        label_logits = self._classifier2(F.relu(label_logits))
+        label_logits1 = self._classifier1(pooled_output)
+        label_logits_flat = label_logits1.squeeze(1)
+        label_logits1 = label_logits1.view(-1, num_choices)
+        label_logits = self._classifier2(F.relu(label_logits1))
 
 
         output_dict = {}
