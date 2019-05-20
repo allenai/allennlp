@@ -164,21 +164,27 @@ class BertEmbedder(TokenEmbedder):
             unpacked_embeddings = torch.cat(unpacked_embeddings, dim=2)
 
             # Next, select indices of the sequence such that it will result in embeddings representing the original
-            # sentence. To do this, the indices will be the left half of each embedded window sub-sequence. E.g.,
-            #  0     1 2    3  4   5     6     7  8   9     10 11
-            # "[CLS] I went to the [SEP] [CLS] to the store to [SEP]"
-            # should now have indices [0, 1, 2, 7, 8]. The remaining code adds the final window indices (so the
-            # final indices should be [0, 1, 2, 7, 8, 9, 10, 11])
+            # sentence. To capture maximal context, the indices will be the middle part of each embedded window
+            # sub-sequence (plus any leftover start and final edge windows), e.g.,
+            #  0     1 2    3  4   5    6    7     8     9   10   11   12    13 14  15
+            # "[CLS] I went to the very fine [SEP] [CLS] the very fine store to eat [SEP]"
+            # with max_pieces = 8 should produce max context indices [2, 3, 4, 10, 11, 12] with additional start
+            # and final windows with indices [0, 1] and [14, 15] respectively.
 
-            full_seq_len = unpacked_embeddings.size(-2) - self.max_pieces
-            stride = self.max_pieces // 2
-            select_indices = [0]
-            select_indices.extend(i for i in range(full_seq_len)
-                                  if self.start_tokens - 1 < i % self.max_pieces < stride)
+            # Find the stride as half the max pieces, ignoring the special start and end tokens
+            # Calculate an offset to extract the centermost embeddings of each window
+            stride = self.max_pieces // 2 - self.start_tokens - self.end_tokens
+            stride_offset = stride // 2 + self.start_tokens
 
-            # Add the final window indices
-            final_window_size = last_window_size - self.start_tokens + self.end_tokens
-            select_indices.extend(full_seq_len + i for i in range(self.start_tokens, final_window_size))
+            first_window = list(range(stride_offset))
+
+            max_context_windows = [i for i in range(full_seq_len)
+                                   if stride_offset - 1 < i % self.max_pieces < stride_offset + stride]
+
+            final_window_start = full_seq_len - (full_seq_len % self.max_pieces) + stride_offset + stride
+            final_window = list(range(final_window_start, full_seq_len))
+
+            select_indices = first_window + max_context_windows + final_window
 
             initial_dims.append(len(select_indices))
 

@@ -236,12 +236,12 @@ class TestBertEmbedder(ModelTestCase):
         vocab = Vocabulary()
 
         vocab_path = self.FIXTURES_ROOT / 'bert' / 'vocab.txt'
-        token_indexer = PretrainedBertIndexer(str(vocab_path), truncate_long_sequences=False, max_pieces=10)
+        token_indexer = PretrainedBertIndexer(str(vocab_path), truncate_long_sequences=False, max_pieces=8)
 
         config_path = self.FIXTURES_ROOT / 'bert' / 'config.json'
         config = BertConfig(str(config_path))
         bert_model = BertModel(config)
-        token_embedder = BertEmbedder(bert_model, max_pieces=10)
+        token_embedder = BertEmbedder(bert_model, max_pieces=8)
 
         instance = Instance({"tokens": TextField(tokens, {"bert": token_indexer})})
 
@@ -254,8 +254,9 @@ class TestBertEmbedder(ModelTestCase):
 
         # 16 = [CLS], 17 = [SEP]
         # 1 full window + 1 half window with start/end tokens
-        assert tokens["bert"].tolist() == [[16, 2, 3, 4, 3, 5, 6, 8, 9, 17, 16, 5, 6, 8, 9, 2, 14, 12, 17]]
-
+        assert tokens["bert"].tolist() == [[16, 2, 3, 4, 3, 5, 6, 17,
+                                            16, 3, 5, 6, 8, 9, 2, 17,
+                                            16, 8, 9, 2, 14, 12, 17]]
         assert tokens["bert-offsets"].tolist() == [[1, 3, 4, 5, 6, 7, 8, 9, 10, 11]]
 
         bert_vectors = token_embedder(tokens["bert"])
