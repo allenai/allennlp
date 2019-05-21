@@ -66,6 +66,7 @@ f1: 0.630
 
 ### [ner-model-2018.12.18.tar.gz](https://allennlp.s3.amazonaws.com/models/ner-model-2018.12.18.tar.gz) (711.3 MB)
 
+
 Based on [Deep contextualized word representations](https://arxiv.org/abs/1802.05365)
 
 ```
@@ -73,6 +74,7 @@ f1: 0.925
 ```
 
 ### [fine-grained-ner-model-elmo-2018.12.21.tar.gz](https://allennlp.s3.amazonaws.com/models/fine-grained-ner-model-elmo-2018.12.21.tar.gz) (724.6 MB)
+
 
 
 ## Constituency Parsing
