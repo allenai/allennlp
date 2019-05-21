@@ -8,7 +8,7 @@ from allennlp.data.dataset import Batch
 from allennlp.data.fields import TextField, ListField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers.wordpiece_indexer import PretrainedBertIndexer
-from allennlp.data.tokenizers import WordTokenizer, Token
+from allennlp.data.tokenizers import WordTokenizer
 from allennlp.data.tokenizers.word_splitter import BertBasicWordSplitter
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.modules.token_embedders.bert_token_embedder import BertEmbedder
