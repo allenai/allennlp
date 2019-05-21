@@ -206,7 +206,7 @@ class WordpieceIndexer(TokenIndexer[int]):
             logger.warning("Too many wordpieces, truncating sequence. If you would like a sliding window, set"
                            "`truncate_long_sequences` to False %s", str([token.text for token in tokens]))
             wordpiece_windows = [self._add_start_and_end(flat_wordpiece_ids[:window_length])]
-            token_type_ids = self._extend(flat_token_type_ids)
+            token_type_ids = self._extend(flat_token_type_ids[:window_length])
         else:
             # Create a sliding window of wordpieces of length `max_pieces` that advances by `stride` steps and
             # add start/end wordpieces to each window
