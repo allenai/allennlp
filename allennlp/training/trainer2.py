@@ -1,18 +1,16 @@
-
 import logging
+import copy
 import math
 import os
 import time
 import re
 import datetime
 import traceback
-import types
 from typing import Dict, Optional, List, Tuple, Union, Any, NamedTuple, Iterable, Set
-from typing_extensions import Protocol
 
+from typing_extensions import Protocol
 import torch
 import torch.optim.lr_scheduler
-from dataclasses import dataclass
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError, parse_cuda_device
@@ -74,11 +72,11 @@ class TensorboardState(Protocol):
     tensorboard: TensorboardWriter
     optimizer: Optimizer
     batch_grad_norm: float
-    metrics: dict
     batch_group: list
     cumulative_batch_size: int
-    train_metrics: dict
-    val_metrics: dict
+    current_metrics: dict   # mid-epoch
+    train_metrics: dict     # end-of-epoch
+    val_metrics: dict       # end-of-epoch
 
 
 class LogTensorboard(Callback[TensorboardState]):
@@ -86,7 +84,7 @@ class LogTensorboard(Callback[TensorboardState]):
         self.log_batch_size_period = log_batch_size_period
         self.epoch = 1
 
-    def __call__(self, event: str, state: LogToTensorboardState) -> None:
+    def __call__(self, event: str, state: TensorboardState) -> None:
         # At epoch start get parameters for histogram logging
         if event == Events.BATCH_END:
             # Log parameter values to tensorboard
@@ -94,8 +92,8 @@ class LogTensorboard(Callback[TensorboardState]):
                 state.tensorboard.log_parameter_and_gradient_statistics(state.model, state.batch_grad_norm)
                 state.tensorboard.log_learning_rates(state.model, state.optimizer)
 
-                state.tensorboard.add_train_scalar("loss/loss_train", state.metrics["loss"])
-                state.tensorboard.log_metrics({"epoch_metrics/" + k: v for k, v in state.metrics.items()})
+                state.tensorboard.add_train_scalar("loss/loss_train", state.current_metrics["loss"])
+                state.tensorboard.log_metrics({"epoch_metrics/" + k: v for k, v in state.current_metrics.items()})
 
 
             if self.log_batch_size_period:
@@ -113,35 +111,6 @@ class LogTensorboard(Callback[TensorboardState]):
                                           log_to_console=True,
                                           epoch=self.epoch)
             self.epoch += 1
-
-
-@dataclass
-class TrainerState:
-    model: Model
-    iterator: DataIterator
-    validation_iterator: DataIterator
-    shuffle: bool
-    optimizer: Optimizer
-    train_dataset: Iterable[Instance]
-    validation_dataset: Iterable[Instance]
-    train_metrics: dict
-    val_metrics: dict
-    metrics: dict
-    batch_num_total: int
-    cumulative_batch_size: int
-    batch_group: List[TensorDict] = None
-    metric_tracker: MetricTracker
-    validation_metric: str
-    num_epochs: int
-    checkpointer: Checkpointer
-    model_save_interval: Optional[float] = None
-    grad_norm: Optional[float] = None
-    grad_clipping: Optional[float] = None
-    learning_rate_scheduler: Optional[LearningRateScheduler] = None
-    momentum_scheduler: Optional[MomentumScheduler] = None
-    moving_average: Optional[MovingAverage] = None
-    tensorboard: Optional[TensorboardWriter] = None
-    last_log: float = 0.0
 
 
 
@@ -309,7 +278,7 @@ class Trainer(TrainerBase):
                                      'or None (if you want to disable early stopping)'.format(patience))
 
         tensorboard = TensorboardWriter(
-                get_batch_num_total=lambda: self.state.batch_num_total,
+                get_batch_num_total=lambda: self.batch_num_total,
                 serialization_dir=serialization_dir,
                 summary_interval=summary_interval,
                 histogram_interval=histogram_interval,
@@ -320,51 +289,50 @@ class Trainer(TrainerBase):
         if histogram_interval is not None:
             tensorboard.enable_activation_logging(model)
 
-
-        # All Trainer state will live in the state object so that it can be shared with callbacks
-        self.state = TrainerState(
-                # I am not calling move_to_gpu here, because if the model is
-                # not already on the GPU then the optimizer is going to be wrong.
-                model=model,
-                iterator=iterator,
-                validation_iterator=validation_iterator or iterator,
-                shuffle=shuffle,
-                optimizer=optimizer,
-                train_dataset=train_dataset,
-                validation_dataset=validation_dataset,
-                train_metrics={},
-                val_metrics={},
-                metrics={},
-                batch_num_total=0,
-                cumulative_batch_size=0,
-                batch_group=None,
-                # For tracking is_best_so_far and should_stop_early
-                metric_tracker=MetricTracker(patience, validation_metric),
-                # Get rid of + or -
-                validation_metric=validation_metric[1:],
-                num_epochs=num_epochs,
-                checkpointer=checkpointer,
-                model_save_interval=model_save_interval,
-                grad_norm=grad_norm,
-                grad_clipping=grad_clipping,
-                learning_rate_scheduler=learning_rate_scheduler,
-                momentum_scheduler=momentum_scheduler,
-                moving_average=moving_average,
-                tensorboard=tensorboard,
-                last_log=0.0
-        )
+        # This is all state that the callbacks might want:
+        # I am not calling move_to_gpu here, because if the model is
+        # not already on the GPU then the optimizer is going to be wrong.
+        self.model = model
+        self.iterator = iterator
+        self.validation_iterator = validation_iterator or iterator
+        self.shuffle = shuffle
+        self.optimizer = optimizer
+        self.train_data = train_dataset
+        self.validation_data = validation_dataset
+        self.train_metrics: Dict[str, float] = {}
+        self.val_metrics: Dict[str, float] = {}
+        self.metrics: Dict[str, Any] = {}
+        self.current_metrics: Dict[str, Any] = {}
+        self.batch_num_total = 0
+        self.cumulative_batch_size = 0
+        self.batch_group = None
+        self.batches_this_epoch = 0
+        # For tracking is_best_so_far and should_stop_early
+        self.metric_tracker = MetricTracker(patience, validation_metric)
+        # Get rid of + or -
+        self.validation_metric = validation_metric[1:]
+        self.num_epochs = num_epochs
+        self.checkpointer = checkpointer
+        self.model_save_interval = model_save_interval
+        self.grad_norm = grad_norm
+        self.grad_clipping = grad_clipping
+        self.learning_rate_scheduler = learning_rate_scheduler
+        self.momentum_scheduler = momentum_scheduler
+        self.moving_average = moving_average
+        self.tensorboard = tensorboard
+        self.last_log = 0.0
 
         # Set up callback handler
-        callbacks = [
+        callbacks: List[Callback] = [
                 LogTensorboard(log_batch_size_period),
                 LogTensorboardHistograms()
         ]
 
-        self.handler = CallbackHandler(callbacks, self.state)
+        self.handler = CallbackHandler(callbacks, self)
 
 
     def rescale_gradients(self) -> Optional[float]:
-        return training_util.rescale_gradients(self.model, self._grad_norm)
+        return training_util.rescale_gradients(self.model, self.grad_norm)
 
     def batch_loss(self, batch_group: List[TensorDict], for_training: bool) -> torch.Tensor:
         """
@@ -395,7 +363,7 @@ class Trainer(TrainerBase):
         """
         Trains one epoch and returns metrics.
         """
-        logger.info("Epoch %d/%d", epoch, self._num_epochs - 1)
+        logger.info("Epoch %d/%d", epoch, self.num_epochs - 1)
         peak_cpu_usage = peak_memory_mb()
         logger.info(f"Peak CPU memory usage MB: {peak_cpu_usage}")
         gpu_usage = []
@@ -415,10 +383,8 @@ class Trainer(TrainerBase):
                                             shuffle=self.shuffle)
         train_generator = lazy_groups_of(raw_train_generator, num_gpus)
         num_training_batches = math.ceil(self.iterator.get_num_batches(self.train_data)/num_gpus)
-        self._last_log = time.time()
+        self.last_log = time.time()
         last_save_time = time.time()
-
-        self.handler.state.batches_this_epoch = 0
 
         logger.info("Training")
         train_generator_tqdm = Tqdm.tqdm(train_generator,
@@ -446,30 +412,30 @@ class Trainer(TrainerBase):
 
             train_loss += loss.item()
 
-            self.handler.state.batch_grad_norm = self.rescale_gradients()
+            self.batch_grad_norm = self.rescale_gradients()
 
             # This does nothing if batch_num_total is None or you are using a
             # scheduler which doesn't update per batch.
-            if self._learning_rate_scheduler:
-                self._learning_rate_scheduler.step_batch(self.handler.state.batch_num_total)
-            if self._momentum_scheduler:
-                self._momentum_scheduler.step_batch(self.handler.state.batch_num_total)
+            if self.learning_rate_scheduler:
+                self.learning_rate_scheduler.step_batch(self.handler.state.batch_num_total)
+            if self.momentum_scheduler:
+                self.momentum_scheduler.step_batch(self.handler.state.batch_num_total)
 
             self.optimizer.step()
 
             # Update moving averages
-            if self._moving_average is not None:
-                self._moving_average.apply(self.handler.state.batch_num_total)
+            if self.moving_average is not None:
+                self.moving_average.apply(self.handler.state.batch_num_total)
 
             # Update the description with the latest metrics
-            self.handler.state.metrics = training_util.get_metrics(self.model, train_loss, self.handler.state.batches_this_epoch)
-            description = training_util.description_from_metrics(self.handler.state.metrics)
+            self.current_metrics = training_util.get_metrics(self.model, train_loss, self.batches_this_epoch)
+            description = training_util.description_from_metrics(self.current_metrics)
 
             train_generator_tqdm.set_description(description, refresh=False)
 
             # Save model if needed.
-            if self._model_save_interval is not None and (
-                    time.time() - last_save_time > self._model_save_interval
+            if self.model_save_interval is not None and (
+                    time.time() - last_save_time > self.model_save_interval
             ):
                 last_save_time = time.time()
                 self._save_checkpoint(
@@ -478,8 +444,10 @@ class Trainer(TrainerBase):
 
             self.handler.fire_event(Events.BATCH_END)
 
-        metrics = self.handler.state.metrics
-        metrics.update(training_util.get_metrics(self.model, train_loss, self.handler.state.batches_this_epoch, reset=True))
+        metrics = training_util.get_metrics(self.model,
+                                            train_loss,
+                                            self.batches_this_epoch,
+                                            reset=True)
         metrics['cpu_memory_MB'] = peak_cpu_usage
         for (gpu_num, memory) in gpu_usage:
             metrics['gpu_'+str(gpu_num)+'_memory_MB'] = memory
@@ -494,21 +462,21 @@ class Trainer(TrainerBase):
         self.model.eval()
 
         # Replace parameter values with the shadow values from the moving averages.
-        if self._moving_average is not None:
-            self._moving_average.assign_average_value()
+        if self.moving_average is not None:
+            self.moving_average.assign_average_value()
 
-        if self._validation_iterator is not None:
-            val_iterator = self._validation_iterator
+        if self.validation_iterator is not None:
+            val_iterator = self.validation_iterator
         else:
             val_iterator = self.iterator
 
         num_gpus = len(self._cuda_devices)
 
-        raw_val_generator = val_iterator(self._validation_data,
+        raw_val_generator = val_iterator(self.validation_data,
                                          num_epochs=1,
                                          shuffle=False)
         val_generator = lazy_groups_of(raw_val_generator, num_gpus)
-        num_validation_batches = math.ceil(val_iterator.get_num_batches(self._validation_data)/num_gpus)
+        num_validation_batches = math.ceil(val_iterator.get_num_batches(self.validation_data)/num_gpus)
         val_generator_tqdm = Tqdm.tqdm(val_generator,
                                        total=num_validation_batches)
         batches_this_epoch = 0
@@ -531,8 +499,8 @@ class Trainer(TrainerBase):
             val_generator_tqdm.set_description(description, refresh=False)
 
         # Now restore the original parameter values.
-        if self._moving_average is not None:
-            self._moving_average.restore()
+        if self.moving_average is not None:
+            self.moving_average.restore()
 
         return val_loss, batches_this_epoch
 
@@ -548,90 +516,87 @@ class Trainer(TrainerBase):
                                      "a different serialization directory or delete the existing serialization "
                                      "directory?")
 
-        training_util.enable_gradient_clipping(self.model, self._grad_clipping)
+        training_util.enable_gradient_clipping(self.model, self.grad_clipping)
 
         logger.info("Beginning training.")
         self.handler.fire_event(Events.TRAINING_START)
 
-        train_metrics: Dict[str, float] = self.handler.state.train_metrics
-        val_metrics: Dict[str, float] = self.handler.state.val_metrics
         this_epoch_val_metric: float = None
-        metrics: Dict[str, Any] = self.handler.state.metrics
         epochs_trained = 0
         training_start_time = time.time()
 
-        metrics['best_epoch'] = self._metric_tracker.best_epoch or 0
-        for key, value in self._metric_tracker.best_epoch_metrics.items():
-            metrics["best_validation_" + key] = value
+        self.metrics['best_epoch'] = self.metric_tracker.best_epoch or 0
+        for key, value in self.metric_tracker.best_epoch_metrics.items():
+            self.metrics["best_validation_" + key] = value
 
-        for epoch in range(epoch_counter, self._num_epochs):
+        for epoch in range(epoch_counter, self.num_epochs):
             self.handler.fire_event(Events.EPOCH_START)
             epoch_start_time = time.time()
-            train_metrics.update(self._train_epoch(epoch))
+            self.train_metrics = self._train_epoch(epoch)
 
             # get peak of memory usage
-            if 'cpu_memory_MB' in train_metrics:
-                metrics['peak_cpu_memory_MB'] = max(metrics.get('peak_cpu_memory_MB', 0),
-                                                    train_metrics['cpu_memory_MB'])
-            for key, value in train_metrics.items():
+            if 'cpu_memory_MB' in self.train_metrics:
+                self.metrics['peak_cpu_memory_MB'] = max(self.metrics.get('peak_cpu_memory_MB', 0),
+                                                         self.train_metrics['cpu_memory_MB'])
+            for key, value in self.train_metrics.items():
                 if key.startswith('gpu_'):
-                    metrics["peak_"+key] = max(metrics.get("peak_"+key, 0), value)
+                    self.metrics["peak_"+key] = max(self.metrics.get("peak_"+key, 0), value)
 
-            if self._validation_data is not None:
+            if self.validation_data is not None:
                 with torch.no_grad():
                     # We have a validation set, so compute all the metrics on it.
                     val_loss, num_batches = self._validation_loss()
-                    val_metrics.update(training_util.get_metrics(self.model, val_loss, num_batches, reset=True))
+                    self.val_metrics = training_util.get_metrics(self.model, val_loss, num_batches, reset=True)
 
                     # Check validation metric for early stopping
-                    this_epoch_val_metric = val_metrics[self._validation_metric]
-                    self._metric_tracker.add_metric(this_epoch_val_metric)
+                    this_epoch_val_metric = self.val_metrics[self.validation_metric]
+                    self.metric_tracker.add_metric(this_epoch_val_metric)
 
-                    if self._metric_tracker.should_stop_early():
+                    if self.metric_tracker.should_stop_early():
                         logger.info("Ran out of patience.  Stopping training.")
                         break
 
 
             # Create overall metrics dict
             training_elapsed_time = time.time() - training_start_time
-            metrics["training_duration"] = str(datetime.timedelta(seconds=training_elapsed_time))
-            metrics["training_start_epoch"] = epoch_counter
-            metrics["training_epochs"] = epochs_trained
-            metrics["epoch"] = epoch
+            self.metrics["training_duration"] = str(datetime.timedelta(seconds=training_elapsed_time))
+            self.metrics["training_start_epoch"] = epoch_counter
+            self.metrics["training_epochs"] = epochs_trained
+            self.metrics["epoch"] = epoch
 
-            for key, value in train_metrics.items():
-                metrics["training_" + key] = value
-            for key, value in val_metrics.items():
-                metrics["validation_" + key] = value
+            for key, value in self.train_metrics.items():
+                self.metrics["training_" + key] = value
+            for key, value in self.val_metrics.items():
+                self.metrics["validation_" + key] = value
 
-            if self._metric_tracker.is_best_so_far():
+            if self.metric_tracker.is_best_so_far():
                 # Update all the best_ metrics.
                 # (Otherwise they just stay the same as they were.)
-                metrics['best_epoch'] = epoch
-                for key, value in val_metrics.items():
-                    metrics["best_validation_" + key] = value
+                self.metrics['best_epoch'] = epoch
+                for key, value in self.val_metrics.items():
+                    self.metrics["best_validation_" + key] = value
 
-                self._metric_tracker.best_epoch_metrics = val_metrics
+                self.metric_tracker.best_epoch_metrics = copy.deepcopy(self.val_metrics)
 
             if self._serialization_dir:
-                dump_metrics(os.path.join(self._serialization_dir, f'metrics_epoch_{epoch}.json'), metrics)
+                dump_metrics(os.path.join(self._serialization_dir, f'metrics_epoch_{epoch}.json'), self.metrics)
 
             # The Scheduler API is agnostic to whether your schedule requires a validation metric -
             # if it doesn't, the validation metric passed here is ignored.
-            if self._learning_rate_scheduler:
-                self._learning_rate_scheduler.step(this_epoch_val_metric, epoch)
-            if self._momentum_scheduler:
-                self._momentum_scheduler.step(this_epoch_val_metric, epoch)
+            if self.learning_rate_scheduler:
+                self.learning_rate_scheduler.step(this_epoch_val_metric, epoch)
+            if self.momentum_scheduler:
+                self.momentum_scheduler.step(this_epoch_val_metric, epoch)
 
             self._save_checkpoint(epoch)
 
             epoch_elapsed_time = time.time() - epoch_start_time
             logger.info("Epoch duration: %s", datetime.timedelta(seconds=epoch_elapsed_time))
 
-            if epoch < self._num_epochs - 1:
+            if epoch < self.num_epochs - 1:
                 training_elapsed_time = time.time() - training_start_time
                 estimated_time_remaining = training_elapsed_time * \
-                    ((self._num_epochs - epoch_counter) / float(epoch - epoch_counter + 1) - 1)
+                    ((self.num_epochs - epoch_counter) / float(epoch - epoch_counter + 1) - 1)
                 formatted_time = str(datetime.timedelta(seconds=int(estimated_time_remaining)))
                 logger.info("Estimated training time remaining: %s", formatted_time)
 
@@ -640,13 +605,13 @@ class Trainer(TrainerBase):
             self.handler.fire_event(Events.EPOCH_END)
 
         # Load the best model state before returning
-        best_model_state = self._checkpointer.best_model_state()
+        best_model_state = self.checkpointer.best_model_state()
         if best_model_state:
             self.model.load_state_dict(best_model_state)
 
         self.handler.fire_event(Events.TRAINING_END)
 
-        return metrics
+        return self.metrics
 
     def _save_checkpoint(self, epoch: Union[int, str]) -> None:
         """
@@ -661,31 +626,31 @@ class Trainer(TrainerBase):
         """
         # If moving averages are used for parameters, we save
         # the moving average values into checkpoint, instead of the current values.
-        if self._moving_average is not None:
-            self._moving_average.assign_average_value()
+        if self.moving_average is not None:
+            self.moving_average.assign_average_value()
 
         # These are the training states we need to persist.
         training_states = {
-                "metric_tracker": self._metric_tracker.state_dict(),
+                "metric_tracker": self.metric_tracker.state_dict(),
                 "optimizer": self.optimizer.state_dict(),
-                "batch_num_total": self.handler.state.batch_num_total
+                "batch_num_total": self.batch_num_total
         }
 
         # If we have a learning rate or momentum scheduler, we should persist them too.
-        if self._learning_rate_scheduler is not None:
-            training_states["learning_rate_scheduler"] = self._learning_rate_scheduler.state_dict()
-        if self._momentum_scheduler is not None:
-            training_states["momentum_scheduler"] = self._momentum_scheduler.state_dict()
+        if self.learning_rate_scheduler is not None:
+            training_states["learning_rate_scheduler"] = self.learning_rate_scheduler.state_dict()
+        if self.momentum_scheduler is not None:
+            training_states["momentum_scheduler"] = self.momentum_scheduler.state_dict()
 
-        self._checkpointer.save_checkpoint(
+        self.checkpointer.save_checkpoint(
                 model_state=self.model.state_dict(),
                 epoch=epoch,
                 training_states=training_states,
-                is_best_so_far=self._metric_tracker.is_best_so_far())
+                is_best_so_far=self.metric_tracker.is_best_so_far())
 
         # Restore the original values for parameters so that training will not be affected.
-        if self._moving_average is not None:
-            self._moving_average.restore()
+        if self.moving_average is not None:
+            self.moving_average.restore()
 
     def _restore_checkpoint(self) -> int:
         """
@@ -705,7 +670,7 @@ class Trainer(TrainerBase):
             The epoch at which to resume training, which should be one after the epoch
             in the saved training state.
         """
-        model_state, training_state = self._checkpointer.restore_checkpoint()
+        model_state, training_state = self.checkpointer.restore_checkpoint()
 
         if not training_state:
             # No checkpoint to restore, start at 0
@@ -713,22 +678,22 @@ class Trainer(TrainerBase):
 
         self.model.load_state_dict(model_state)
         self.optimizer.load_state_dict(training_state["optimizer"])
-        if self._learning_rate_scheduler is not None and "learning_rate_scheduler" in training_state:
-            self._learning_rate_scheduler.load_state_dict(training_state["learning_rate_scheduler"])
-        if self._momentum_scheduler is not None and "momentum_scheduler" in training_state:
-            self._momentum_scheduler.load_state_dict(training_state["momentum_scheduler"])
+        if self.learning_rate_scheduler is not None and "learning_rate_scheduler" in training_state:
+            self.learning_rate_scheduler.load_state_dict(training_state["learning_rate_scheduler"])
+        if self.momentum_scheduler is not None and "momentum_scheduler" in training_state:
+            self.momentum_scheduler.load_state_dict(training_state["momentum_scheduler"])
         training_util.move_optimizer_to_cuda(self.optimizer)
 
         # Currently the ``training_state`` contains a serialized ``MetricTracker``.
         if "metric_tracker" in training_state:
-            self._metric_tracker.load_state_dict(training_state["metric_tracker"])
+            self.metric_tracker.load_state_dict(training_state["metric_tracker"])
         # It used to be the case that we tracked ``val_metric_per_epoch``.
         elif "val_metric_per_epoch" in training_state:
-            self._metric_tracker.clear()
-            self._metric_tracker.add_metrics(training_state["val_metric_per_epoch"])
+            self.metric_tracker.clear()
+            self.metric_tracker.add_metrics(training_state["val_metric_per_epoch"])
         # And before that we didn't track anything.
         else:
-            self._metric_tracker.clear()
+            self.metric_tracker.clear()
 
         if isinstance(training_state["epoch"], int):
             epoch_to_return = training_state["epoch"] + 1

@@ -68,6 +68,9 @@ pytorch-pretrained-bert>=0.6.0
 # For caching processed data
 jsonpickle
 
+# Used for the structural subtyping in the event-based trainer
+typing_extensions
+
 #### ESSENTIAL LIBRARIES USED IN SCRIPTS ####
 
 # Plot graphs for learning rate finder

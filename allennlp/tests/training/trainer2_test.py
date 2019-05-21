@@ -27,7 +27,7 @@ from allennlp.models.model import Model
 from allennlp.training.moving_average import ExponentialMovingAverage
 
 
-class TestTrainer2(AllenNlpTestCase):
+class TestT2rainer(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
         self.instances = SequenceTaggingDatasetReader().read(self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv')
@@ -54,7 +54,7 @@ class TestTrainer2(AllenNlpTestCase):
         self.iterator = BasicIterator(batch_size=2)
         self.iterator.index_with(vocab)
 
-    def test_trainer_can_run(self):
+    def test_trainer_can_run2(self):
         trainer = Trainer(model=self.model,
                           optimizer=self.optimizer,
                           iterator=self.iterator,
@@ -177,7 +177,7 @@ class TestTrainer2(AllenNlpTestCase):
         epoch = new_trainer._restore_checkpoint()
         assert epoch == 1
 
-        tracker = trainer._metric_tracker
+        tracker = trainer.metric_tracker
         assert tracker.is_best_so_far()
         assert tracker._best_so_far is not None
 
@@ -203,7 +203,7 @@ class TestTrainer2(AllenNlpTestCase):
         epoch = new_trainer._restore_checkpoint()  # pylint: disable=protected-access
         assert epoch == 1
 
-        tracker = trainer._metric_tracker  # pylint: disable=protected-access
+        tracker = trainer.metric_tracker  # pylint: disable=protected-access
         assert tracker.is_best_so_far()
         assert tracker._best_so_far is not None  # pylint: disable=protected-access
 
@@ -216,7 +216,7 @@ class TestTrainer2(AllenNlpTestCase):
                               validation_dataset=self.instances,
                               num_epochs=3, serialization_dir=self.TEST_DIR,
                               patience=5, validation_metric="+test")
-        tracker = new_trainer._metric_tracker
+        tracker = new_trainer.metric_tracker
 
         # when it is the only metric it should be considered the best
         new_tracker = copy.deepcopy(tracker)
@@ -244,7 +244,7 @@ class TestTrainer2(AllenNlpTestCase):
                               validation_dataset=self.instances,
                               num_epochs=3, serialization_dir=self.TEST_DIR,
                               patience=5, validation_metric="-test")
-        tracker = new_trainer._metric_tracker
+        tracker = new_trainer.metric_tracker
 
         # when it is the only metric it should be considered the best
         new_tracker = copy.deepcopy(tracker)
@@ -272,7 +272,7 @@ class TestTrainer2(AllenNlpTestCase):
                               num_epochs=3, serialization_dir=self.TEST_DIR,
                               patience=5, validation_metric="+test")
 
-        tracker = new_trainer._metric_tracker
+        tracker = new_trainer.metric_tracker
 
         new_tracker = copy.deepcopy(tracker)
         new_tracker.add_metrics([.5, .3, .2, .1, .4, .4])
@@ -290,7 +290,7 @@ class TestTrainer2(AllenNlpTestCase):
                           num_epochs=3,
                           serialization_dir=self.TEST_DIR,
                           patience=5,
-                          validation_metric="+test")._metric_tracker
+                          validation_metric="+test").metric_tracker
         tracker.add_metrics(flatline)
         assert tracker.should_stop_early
 
@@ -300,7 +300,7 @@ class TestTrainer2(AllenNlpTestCase):
                           num_epochs=3,
                           serialization_dir=self.TEST_DIR,
                           patience=5,
-                          validation_metric="-test")._metric_tracker
+                          validation_metric="-test").metric_tracker
         tracker.add_metrics(flatline)
         assert tracker.should_stop_early
 
@@ -310,7 +310,7 @@ class TestTrainer2(AllenNlpTestCase):
                               validation_dataset=self.instances,
                               num_epochs=3, serialization_dir=self.TEST_DIR,
                               patience=5, validation_metric="-test")
-        tracker = new_trainer._metric_tracker
+        tracker = new_trainer.metric_tracker
 
         new_tracker = copy.deepcopy(tracker)
         new_tracker.add_metrics([.02, .3, .2, .1, .4, .4])
@@ -329,7 +329,7 @@ class TestTrainer2(AllenNlpTestCase):
         trainer = Trainer(self.model, self.optimizer, self.iterator, self.instances,
                           validation_dataset=self.instances, num_epochs=100,
                           patience=None, validation_metric="+test")
-        tracker = trainer._metric_tracker
+        tracker = trainer.metric_tracker
         tracker.add_metrics([float(i) for i in reversed(range(20))])
         assert not tracker.should_stop_early()
 
@@ -337,7 +337,7 @@ class TestTrainer2(AllenNlpTestCase):
         trainer = Trainer(self.model, self.optimizer, self.iterator, self.instances,
                           validation_dataset=self.instances, num_epochs=100,
                           patience=None, validation_metric="-test")
-        tracker = trainer._metric_tracker
+        tracker = trainer.metric_tracker
         tracker.add_metrics([float(i) for i in range(20)])
         assert not tracker.should_stop_early()
 
@@ -378,7 +378,7 @@ class TestTrainer2(AllenNlpTestCase):
                               serialization_dir=self.TEST_DIR)
         epoch = new_trainer._restore_checkpoint()
         assert epoch == 4
-        assert new_trainer._momentum_scheduler.last_epoch == 3
+        assert new_trainer.momentum_scheduler.last_epoch == 3
         new_trainer.train()
 
     def test_trainer_can_run_with_lr_scheduler(self):
@@ -417,7 +417,7 @@ class TestTrainer2(AllenNlpTestCase):
                               num_epochs=4, serialization_dir=self.TEST_DIR)
         epoch = new_trainer._restore_checkpoint()
         assert epoch == 2
-        assert new_trainer._learning_rate_scheduler.lr_scheduler.last_epoch == 1
+        assert new_trainer.learning_rate_scheduler.lr_scheduler.last_epoch == 1
         new_trainer.train()
 
     def test_trainer_raises_on_model_with_no_loss_key(self):
@@ -573,8 +573,8 @@ class TestTrainer2(AllenNlpTestCase):
                           num_epochs=1, serialization_dir=self.TEST_DIR)
         trainer.train()
         _ = trainer._restore_checkpoint()
-        best_epoch_1 = trainer._metric_tracker.best_epoch
-        best_validation_metrics_epoch_1 = trainer._metric_tracker.best_epoch_metrics
+        best_epoch_1 = trainer.metric_tracker.best_epoch
+        best_validation_metrics_epoch_1 = trainer.metric_tracker.best_epoch_metrics
         # best_validation_metrics_epoch_1: {'accuracy': 0.75, 'accuracy3': 1.0, 'loss': 0.6243013441562653}
         assert isinstance(best_validation_metrics_epoch_1, dict)
         assert "loss" in best_validation_metrics_epoch_1
@@ -587,8 +587,8 @@ class TestTrainer2(AllenNlpTestCase):
                                   num_epochs=2, serialization_dir=self.TEST_DIR)
         restore_trainer.train()
         _ = restore_trainer._restore_checkpoint()
-        best_epoch_2 = restore_trainer._metric_tracker.best_epoch
-        best_validation_metrics_epoch_2 = restore_trainer._metric_tracker.best_epoch_metrics
+        best_epoch_2 = restore_trainer.metric_tracker.best_epoch
+        best_validation_metrics_epoch_2 = restore_trainer.metric_tracker.best_epoch_metrics
 
         # Because of using -loss, 2nd epoch would be better than 1st. So best val metrics should not be same.
         assert best_epoch_1 == 0 and best_epoch_2 == 1
@@ -605,8 +605,8 @@ class TestTrainer2(AllenNlpTestCase):
         trainer.train()
 
         _ = trainer._restore_checkpoint()
-        best_epoch_1 = trainer._metric_tracker.best_epoch
-        best_validation_metrics_epoch_1 = trainer._metric_tracker.best_epoch_metrics
+        best_epoch_1 = trainer.metric_tracker.best_epoch
+        best_validation_metrics_epoch_1 = trainer.metric_tracker.best_epoch_metrics
         # best_validation_metrics_epoch_1: {'accuracy': 0.75, 'accuracy3': 1.0, 'loss': 0.6243013441562653}
         assert isinstance(best_validation_metrics_epoch_1, dict)
         assert "loss" in best_validation_metrics_epoch_1
@@ -619,8 +619,8 @@ class TestTrainer2(AllenNlpTestCase):
                                   num_epochs=2, serialization_dir=self.TEST_DIR)
         restore_trainer.train()
         _ = restore_trainer._restore_checkpoint()
-        best_epoch_2 = restore_trainer._metric_tracker.best_epoch
-        best_validation_metrics_epoch_2 = restore_trainer._metric_tracker.best_epoch_metrics
+        best_epoch_2 = restore_trainer.metric_tracker.best_epoch
+        best_validation_metrics_epoch_2 = restore_trainer.metric_tracker.best_epoch_metrics
 
         # Because of using +loss, 2nd epoch won't be better than 1st. So best val metrics should be same.
         assert best_epoch_1 == best_epoch_2 == 0
@@ -670,13 +670,13 @@ class TestTrainer2(AllenNlpTestCase):
             torch.save(state, path)
 
         next_epoch = trainer._restore_checkpoint()
-        best_epoch = trainer._metric_tracker.best_epoch
+        best_epoch = trainer.metric_tracker.best_epoch
 
         # Loss decreases in 3 epochs, but because we hard fed the val metrics as above:
         assert next_epoch == 3
         assert best_epoch == 1
-        assert trainer._metric_tracker._best_so_far == 0.1
-        assert trainer._metric_tracker._epochs_with_no_improvement == 1
+        assert trainer.metric_tracker._best_so_far == 0.1
+        assert trainer.metric_tracker._epochs_with_no_improvement == 1
 
 class TestSparseClipGrad(AllenNlpTestCase):
     def test_sparse_clip_grad(self):
