@@ -181,7 +181,13 @@ class BertEmbedder(TokenEmbedder):
             max_context_windows = [i for i in range(full_seq_len)
                                    if stride_offset - 1 < i % self.max_pieces < stride_offset + stride]
 
-            final_window_start = full_seq_len - (full_seq_len % self.max_pieces) + stride_offset + stride
+            # Lookback what's left, unless it's the whole self.max_pieces window
+            if full_seq_len % self.max_pieces == 0:
+                lookback = self.max_pieces
+            else:
+                lookback = full_seq_len % self.max_pieces
+
+            final_window_start = full_seq_len - lookback + stride_offset + stride
             final_window = list(range(final_window_start, full_seq_len))
 
             select_indices = first_window + max_context_windows + final_window
