@@ -40,9 +40,9 @@ class WordpieceIndexer(TokenIndexer[int]):
         they will instead correspond to the first wordpiece in each word.
     max_pieces : int, optional (default: 512)
         The BERT embedder uses positional embeddings and so has a corresponding
-        maximum length for its input ids. Currently any inputs longer than this
-        will be truncated. If this behavior is undesirable to you, you should
-        consider filtering them out in your dataset reader.
+        maximum length for its input ids. Any inputs longer than this will
+        either be truncated (default), or be split apart and batched using a
+        sliding window.
     do_lowercase : ``bool``, optional (default=``False``)
         Should we lowercase the provided tokens before getting the indices?
         You would need to do this if you are using an -uncased BERT model
@@ -57,9 +57,14 @@ class WordpieceIndexer(TokenIndexer[int]):
         These are appended to the tokens provided to ``tokens_to_indices``.
     separator_token : ``str``, optional (default=``[SEP]``)
         This token indicates the segments in the sequence.
+    truncate_long_sequences : ``bool``, optional (default=``True``)
+        By default, long sequences will be truncated to the maximum sequence
+        length. Otherwise, they will be split apart and batched using a
+        sliding window.
     token_min_padding_length : ``int``, optional (default=``0``)
         See :class:`TokenIndexer`.
     """
+
     def __init__(self,
                  vocab: Dict[str, int],
                  wordpiece_tokenizer: Callable[[str], List[str]],
@@ -71,6 +76,7 @@ class WordpieceIndexer(TokenIndexer[int]):
                  start_tokens: List[str] = None,
                  end_tokens: List[str] = None,
                  separator_token: str = "[SEP]",
+                 truncate_long_sequences: bool = True,
                  token_min_padding_length: int = 0) -> None:
         super().__init__(token_min_padding_length)
         self.vocab = vocab
@@ -86,6 +92,7 @@ class WordpieceIndexer(TokenIndexer[int]):
         self.max_pieces = max_pieces
         self.use_starting_offsets = use_starting_offsets
         self._do_lowercase = do_lowercase
+        self._truncate_long_sequences = truncate_long_sequences
 
         if never_lowercase is None:
             # Use the defaults
@@ -125,9 +132,44 @@ class WordpieceIndexer(TokenIndexer[int]):
             self._add_encoding_to_vocabulary(vocabulary)
             self._added_to_vocabulary = True
 
-        # The array of wordpiece_ids to return.
-        # Start with a copy of the start_piece_ids
-        wordpiece_ids: List[int] = self._start_piece_ids[:]
+        # This lowercases tokens if necessary
+        text = (token.text.lower()
+                if self._do_lowercase and token.text not in self._never_lowercase
+                else token.text
+                for token in tokens)
+
+        # Obtain a nested sequence of wordpieces, each represented by a list of wordpiece ids
+        token_wordpiece_ids = [[self.vocab[wordpiece] for wordpiece in self.wordpiece_tokenizer(token)]
+                               for token in text]
+
+        # Flattened list of wordpieces. In the end, the output of the model (e.g., BERT) should
+        # have a sequence length equal to the length of this list. However, it will first be split into
+        # chunks of length `self.max_pieces` so that they can be fit through the model. After packing
+        # and passing through the model, it should be unpacked to represent the wordpieces in this list.
+        flat_wordpiece_ids = [wordpiece for token in token_wordpiece_ids for wordpiece in token]
+
+        # Similarly, we want to compute the token_type_ids from the flattened wordpiece ids before
+        # we do the windowing; otherwise [SEP] tokens would get counted multiple times.
+        flat_token_type_ids = _get_token_type_ids(flat_wordpiece_ids, self._separator_ids)
+
+        # The code below will (possibly) pack the wordpiece sequence into multiple sub-sequences by using a sliding
+        # window `window_length` that overlaps with previous windows according to the `stride`. Suppose we have
+        # the following sentence: "I went to the store to buy some milk". Then a sliding window of length 4 and
+        # stride of length 2 will split them up into:
+
+        # "[I went to the] [to the store to] [store to buy some] [buy some milk [PAD]]".
+
+        # This is to ensure that the model has context of as much of the sentence as possible to get accurate
+        # embeddings. Finally, the sequences will be padded with any start/end piece ids, e.g.,
+
+        # "[CLS] I went to the [SEP] [CLS] to the store to [SEP] ...".
+
+        # The embedder should then be able to split this token sequence by the window length,
+        # pass them through the model, and recombine them.
+
+        # Specify the stride to be half of `self.max_pieces`, minus any additional start/end wordpieces
+        window_length = self.max_pieces - len(self._start_piece_ids) - len(self._end_piece_ids)
+        stride = window_length // 2
 
         # offsets[i] will give us the index into wordpiece_ids
         # for the wordpiece "corresponding to" the i-th input token.
@@ -137,39 +179,57 @@ class WordpieceIndexer(TokenIndexer[int]):
         # so that the first offset is the index of the first wordpiece of tokens[0].
         # Otherwise, we want to start at len(text_tokens) - 1, so that the "previous"
         # offset is the last wordpiece of "tokens[-1]".
-        offset = len(wordpiece_ids) if self.use_starting_offsets else len(wordpiece_ids) - 1
+        offset = len(self._start_piece_ids) if self.use_starting_offsets else len(self._start_piece_ids) - 1
 
-        for token in tokens:
-            # Lowercase if necessary
-            text = (token.text.lower()
-                    if self._do_lowercase and token.text not in self._never_lowercase
-                    else token.text)
-            token_wordpiece_ids = [self.vocab[wordpiece]
-                                   for wordpiece in self.wordpiece_tokenizer(text)]
-            # If we have enough room to add these ids *and also* the end_token ids.
-            if len(wordpiece_ids) + len(token_wordpiece_ids) + len(self._end_piece_ids) <= self.max_pieces:
-                # For initial offsets, the current value of ``offset`` is the start of
-                # the current wordpiece, so add it to ``offsets`` and then increment it.
-                if self.use_starting_offsets:
-                    offsets.append(offset)
-                    offset += len(token_wordpiece_ids)
-                # For final offsets, the current value of ``offset`` is the end of
-                # the previous wordpiece, so increment it and then add it to ``offsets``.
-                else:
-                    offset += len(token_wordpiece_ids)
-                    offsets.append(offset)
-                # And add the token_wordpiece_ids to the output list.
-                wordpiece_ids.extend(token_wordpiece_ids)
-            else:
-                # TODO(joelgrus): figure out a better way to handle this
-                logger.warning(f"Too many wordpieces, truncating: {[token.text for token in tokens]}")
+        for token in token_wordpiece_ids:
+            # Truncate the sequence if specified, which depends on where the offsets are
+            next_offset = 1 if self.use_starting_offsets else 0
+            if self._truncate_long_sequences and offset >= window_length + next_offset:
                 break
 
-        # By construction, we still have enough room to add the end_token ids.
-        wordpiece_ids.extend(self._end_piece_ids)
-        # Constructing `token_type_ids` by `self._separator`
-        token_type_ids = _get_token_type_ids(wordpiece_ids,
-                                             self._separator_ids)
+            # For initial offsets, the current value of ``offset`` is the start of
+            # the current wordpiece, so add it to ``offsets`` and then increment it.
+            if self.use_starting_offsets:
+                offsets.append(offset)
+                offset += len(token)
+            # For final offsets, the current value of ``offset`` is the end of
+            # the previous wordpiece, so increment it and then add it to ``offsets``.
+            else:
+                offset += len(token)
+                offsets.append(offset)
+
+        if len(flat_wordpiece_ids) <= window_length:
+            # If all the wordpieces fit, then we don't need to do anything special
+            wordpiece_windows = [self._add_start_and_end(flat_wordpiece_ids)]
+            token_type_ids = self._extend(flat_token_type_ids)
+        elif self._truncate_long_sequences:
+            logger.warning("Too many wordpieces, truncating sequence. If you would like a sliding window, set"
+                           "`truncate_long_sequences` to False %s", str([token.text for token in tokens]))
+            wordpiece_windows = [self._add_start_and_end(flat_wordpiece_ids[:window_length])]
+            token_type_ids = self._extend(flat_token_type_ids)
+        else:
+            # Create a sliding window of wordpieces of length `max_pieces` that advances by `stride` steps and
+            # add start/end wordpieces to each window
+            # TODO: this currently does not respect word boundaries, so words may be cut in half between windows
+            # However, this would increase complexity, as sequences would need to be padded/unpadded in the middle
+            wordpiece_windows = [self._add_start_and_end(flat_wordpiece_ids[i:i + window_length])
+                                 for i in range(0, len(flat_wordpiece_ids), stride)]
+
+            token_type_windows = [self._extend(flat_token_type_ids[i:i + window_length])
+                                  for i in range(0, len(flat_token_type_ids), stride)]
+
+            # Check for overlap in the last window. Throw it away if it is redundant.
+            last_window = wordpiece_windows[-1][1:]
+            penultimate_window = wordpiece_windows[-2]
+            if last_window == penultimate_window[-len(last_window):]:
+                wordpiece_windows = wordpiece_windows[:-1]
+                token_type_windows = token_type_windows[:-1]
+
+            token_type_ids = [token_type for window in token_type_windows for token_type in window]
+
+        # Flatten the wordpiece windows
+        wordpiece_ids = [wordpiece for sequence in wordpiece_windows for wordpiece in sequence]
+
 
         # Our mask should correspond to the original tokens,
         # because calling util.get_text_field_mask on the
@@ -180,12 +240,25 @@ class WordpieceIndexer(TokenIndexer[int]):
         # is captured by the offsets.
         mask = [1 for _ in offsets]
 
-        return {
-                index_name: wordpiece_ids,
+        return {index_name: wordpiece_ids,
                 f"{index_name}-offsets": offsets,
                 f"{index_name}-type-ids": token_type_ids,
-                "mask": mask
-        }
+                "mask": mask}
+
+    def _add_start_and_end(self, wordpiece_ids: List[int]) -> List[int]:
+        return self._start_piece_ids + wordpiece_ids + self._end_piece_ids
+
+    def _extend(self, token_type_ids: List[int]) -> List[int]:
+        """
+        Extend the token type ids by len(start_piece_ids) on the left
+        and len(end_piece_ids) on the right.
+        """
+        first = token_type_ids[0]
+        last = token_type_ids[-1]
+        return ([first for _ in self._start_piece_ids] +
+                token_type_ids +
+                [last for _ in self._end_piece_ids])
+
 
     @overrides
     def get_padding_token(self) -> int:
@@ -238,16 +311,22 @@ class PretrainedBertIndexer(WordpieceIndexer):
         ['[UNK]', '[SEP]', '[PAD]', '[CLS]', '[MASK]'].
     max_pieces: int, optional (default: 512)
         The BERT embedder uses positional embeddings and so has a corresponding
-        maximum length for its input ids. Currently any inputs longer than this
-        will be truncated. If this behavior is undesirable to you, you should
-        consider filtering them out in your dataset reader.
+        maximum length for its input ids. Any inputs longer than this will
+        either be truncated (default), or be split apart and batched using a
+        sliding window.
+    truncate_long_sequences : ``bool``, optional (default=``True``)
+        By default, long sequences will be truncated to the maximum sequence
+        length. Otherwise, they will be split apart and batched using a
+        sliding window.
     """
+
     def __init__(self,
                  pretrained_model: str,
                  use_starting_offsets: bool = False,
                  do_lowercase: bool = True,
                  never_lowercase: List[str] = None,
-                 max_pieces: int = 512) -> None:
+                 max_pieces: int = 512,
+                 truncate_long_sequences: bool = True) -> None:
         if pretrained_model.endswith("-cased") and do_lowercase:
             logger.warning("Your BERT model appears to be cased, "
                            "but your indexer is lowercasing tokens.")
@@ -265,7 +344,8 @@ class PretrainedBertIndexer(WordpieceIndexer):
                          never_lowercase=never_lowercase,
                          start_tokens=["[CLS]"],
                          end_tokens=["[SEP]"],
-                         separator_token="[SEP]")
+                         separator_token="[SEP]",
+                         truncate_long_sequences=truncate_long_sequences)
 
 
 def _get_token_type_ids(wordpiece_ids: List[int],

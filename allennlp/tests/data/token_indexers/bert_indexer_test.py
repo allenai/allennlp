@@ -1,4 +1,4 @@
-# pylint: disable=no-self-use,invalid-name,protected-access
+# pylint: disable=no-self-use,invalid-name,protected-access,bad-whitespace,bad-continuation
 from allennlp.common.testing import ModelTestCase
 from allennlp.data.token_indexers.wordpiece_indexer import PretrainedBertIndexer, _get_token_type_ids
 from allennlp.data.tokenizers import WordTokenizer, Token
@@ -139,5 +139,66 @@ class TestBertIndexer(ModelTestCase):
 
         indexed_tokens = token_indexer.tokens_to_indices(tokens, vocab, "bert")
 
-        #                                                [CLS] 2, 15, 10, 11, 6, 17, 2  15, 10, 11, 6, [SEP]
+        #                                          [CLS] 2, 15, 10, 11, 6, 17, 2  15, 10, 11, 6, [SEP]
         assert indexed_tokens["bert-type-ids"] == [0,    0, 0,  0,  0,  0, 0,  1, 1,  1,  1,  1, 1]  #pylint: disable=bad-whitespace
+
+    def test_sliding_window(self):
+        tokenizer = WordTokenizer(word_splitter=BertBasicWordSplitter())
+
+        sentence = "the quickest quick brown [SEP] jumped over the lazy dog"
+        tokens = tokenizer.tokenize(sentence)
+
+        vocab = Vocabulary()
+        vocab_path = self.FIXTURES_ROOT / 'bert' / 'vocab.txt'
+        token_indexer = PretrainedBertIndexer(str(vocab_path),
+                                              truncate_long_sequences=False,
+                                              use_starting_offsets=False,
+                                              max_pieces=10)
+
+        indexed_tokens = token_indexer.tokens_to_indices(tokens, vocab, "bert")
+
+        # 16 = [CLS], 17 = [SEP]
+        # 1 full window + 1 half window with start/end tokens
+                                        # [CLS] the quick est quick brown [SEP] jumped over [SEP]
+        assert indexed_tokens["bert"] == [16,   2,  3,    4,  3,    5,    17,   8,     9,   17,
+                                        # [CLS] brown [SEP] jumped over the lazy dog [SEP]
+                                          16,   5,    17,   8,     9,   2,  14,  12, 17]
+        assert indexed_tokens["bert-offsets"] == [1, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+
+        # The extra [SEP]s shouldn't pollute the token-type-ids
+                                                 # [CLS] the quick est quick brown [SEP] jumped over [SEP]
+        assert indexed_tokens["bert-type-ids"] == [0,    0,  0,    0,  0,    0,    0,    1,     1,   1,
+                                                 # [CLS] brown [SEP] jumped over the lazy dog [SEP]
+                                                   0,    0,    0,    1,     1,   1,  1,   1,  1]
+
+    def test_truncate_window(self):
+        tokenizer = WordTokenizer(word_splitter=BertBasicWordSplitter())
+
+        sentence = "the quickest quick brown fox jumped over the lazy dog"
+        tokens = tokenizer.tokenize(sentence)
+
+        vocab = Vocabulary()
+        vocab_path = self.FIXTURES_ROOT / 'bert' / 'vocab.txt'
+        token_indexer = PretrainedBertIndexer(str(vocab_path),
+                                              truncate_long_sequences=True,
+                                              use_starting_offsets=True,
+                                              max_pieces=10)
+
+        indexed_tokens = token_indexer.tokens_to_indices(tokens, vocab, "bert")
+
+        # 16 = [CLS], 17 = [SEP]
+        # 1 full window + 1 half window with start/end tokens
+        assert indexed_tokens["bert"] == [16, 2, 3, 4, 3, 5, 6, 8, 9, 17]
+        assert indexed_tokens["bert-offsets"] == [1, 2, 4, 5, 6, 7, 8]
+
+        token_indexer = PretrainedBertIndexer(str(vocab_path),
+                                              truncate_long_sequences=True,
+                                              use_starting_offsets=False,
+                                              max_pieces=10)
+
+        indexed_tokens = token_indexer.tokens_to_indices(tokens, vocab, "bert")
+
+        # 16 = [CLS], 17 = [SEP]
+        # 1 full window + 1 half window with start/end tokens
+        assert indexed_tokens["bert"] == [16, 2, 3, 4, 3, 5, 6, 8, 9, 17]
+        assert indexed_tokens["bert-offsets"] == [1, 3, 4, 5, 6, 7, 8]
