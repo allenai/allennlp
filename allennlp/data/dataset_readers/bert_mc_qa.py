@@ -51,6 +51,7 @@ class BertMCQAReader(DatasetReader):
                  answer_only: bool = False,
                  restrict_num_choices: int = None,
                  ignore_context: bool = False,
+                 all_choices_in_context : bool = False,
                  sample: int = -1,
                  random_seed: int = 0) -> None:
         super().__init__()
@@ -64,6 +65,7 @@ class BertMCQAReader(DatasetReader):
         self._restrict_num_choices = restrict_num_choices
         self._ignore_context = ignore_context
         self._random_seed = random_seed
+        self._all_choices_in_context = all_choices_in_context
 
     @overrides
     def _read(self, file_path: str):
@@ -178,9 +180,13 @@ class BertMCQAReader(DatasetReader):
             if choice_context_list is not None and choice_context_list[idx] is not None:
                 choice_context = choice_context_list[idx]
 
-            other_choices = copy.copy(choice_list)
-            other_choices.remove(choice)
-            qa_tokens, segment_ids = self.bert_features_from_qa(question, choice, choice_context, other_choices[0], other_choices[1])
+            if self._all_choices_in_context:
+                other_choices = copy.copy(choice_list)
+                other_choices.remove(choice)
+                qa_tokens, segment_ids = self.bert_features_from_qa(question, choice, choice_context, other_choices[0], other_choices[1])
+            else:
+                qa_tokens, segment_ids = self.bert_features_from_qa(question, choice, choice_context)
+
             qa_field = TextField(qa_tokens, self._token_indexers)
             segment_ids_field = SequenceLabelField(segment_ids, qa_field)
             qa_fields.append(qa_field)
@@ -239,11 +245,11 @@ class BertMCQAReader(DatasetReader):
 
         if choice1 is not None:
             choice1_tokens = self._word_splitter.split_words(choice1)
-            tokens += choice1_tokens + [sep_token]
-            segment_ids += list(itertools.repeat(1, len(choice1_tokens) + 1))
+            tokens += [Token("|")] + choice1_tokens + [sep_token]
+            segment_ids += list(itertools.repeat(1, len(choice1_tokens) + 2))
         if choice2 is not None:
             choice2_tokens = self._word_splitter.split_words(choice2)
-            tokens += choice2_tokens + [sep_token]
-            segment_ids += list(itertools.repeat(1, len(choice2_tokens) + 1))
+            tokens += [Token("|")] + choice2_tokens + [sep_token]
+            segment_ids += list(itertools.repeat(1, len(choice2_tokens) + 2))
 
         return tokens, segment_ids
