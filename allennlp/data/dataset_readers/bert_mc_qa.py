@@ -4,6 +4,7 @@ import json
 import logging
 import numpy
 import re
+import copy
 import random
 from overrides import overrides
 
@@ -176,7 +177,10 @@ class BertMCQAReader(DatasetReader):
             choice_context = context
             if choice_context_list is not None and choice_context_list[idx] is not None:
                 choice_context = choice_context_list[idx]
-            qa_tokens, segment_ids = self.bert_features_from_qa(question, choice, choice_context)
+
+            other_choices = copy.copy(choice_list)
+            other_choices.remove(choice)
+            qa_tokens, segment_ids = self.bert_features_from_qa(question, choice, choice_context, other_choices[0], other_choices[1])
             qa_field = TextField(qa_tokens, self._token_indexers)
             segment_ids_field = SequenceLabelField(segment_ids, qa_field)
             qa_fields.append(qa_field)
@@ -219,7 +223,7 @@ class BertMCQAReader(DatasetReader):
                 tokens_b.pop()
         return tokens_a, tokens_b
 
-    def bert_features_from_qa(self, question: str, answer: str, context: str = None):
+    def bert_features_from_qa(self, question: str, answer: str, context: str = None, choice1: str = None , choice2: str = None):
         cls_token = Token("[CLS]")
         sep_token = Token("[SEP]")
         question_tokens = self._word_splitter.split_words(question)
@@ -232,4 +236,14 @@ class BertMCQAReader(DatasetReader):
         tokens = [cls_token] + question_tokens + [sep_token] + choice_tokens + [sep_token]
         segment_ids = list(itertools.repeat(0, len(question_tokens) + 2)) + \
                       list(itertools.repeat(1, len(choice_tokens) + 1))
+
+        if choice1 is not None:
+            choice1_tokens = self._word_splitter.split_words(choice1)
+            tokens += choice1_tokens + [sep_token]
+            segment_ids += list(itertools.repeat(1, len(choice1_tokens) + 1))
+        if choice2 is not None:
+            choice2_tokens = self._word_splitter.split_words(choice2)
+            tokens += choice2_tokens + [sep_token]
+            segment_ids += list(itertools.repeat(1, len(choice2_tokens) + 1))
+
         return tokens, segment_ids
