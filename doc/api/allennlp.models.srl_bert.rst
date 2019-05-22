@@ -1,7 +1,7 @@
-allennlp.models.bert_srl
+allennlp.models.srl_bert
 ========================
 
-.. automodule:: allennlp.models.bert_srl
+.. automodule:: allennlp.models.srl_bert
    :members:
    :undoc-members:
    :show-inheritance:
