@@ -11,17 +11,22 @@ from allennlp.nn.util import get_lengths_from_binary_sequence_mask
 class BertSrlTest(ModelTestCase):
     def setUp(self):
 
-        monkeypatch = MonkeyPatch()
+        self.monkeypatch = MonkeyPatch()
         # monkeypatch the PretrainedBertModel to return the tiny test fixture model
         config_path = self.FIXTURES_ROOT / 'bert' / 'config.json'
         vocab_path = self.FIXTURES_ROOT / 'bert' / 'vocab.txt'
         config = BertConfig(str(config_path))
-        monkeypatch.setattr(BertModel, 'from_pretrained', lambda _: BertModel(config))
-        monkeypatch.setattr(BertTokenizer, 'from_pretrained', lambda _: BertTokenizer(vocab_path))
+        self.monkeypatch.setattr(BertModel, 'from_pretrained', lambda _: BertModel(config))
+        self.monkeypatch.setattr(BertTokenizer, 'from_pretrained', lambda _: BertTokenizer(vocab_path))
 
         super(BertSrlTest, self).setUp()
         self.set_up_model(self.FIXTURES_ROOT / 'bert_srl' / 'experiment.jsonnet',
                           self.FIXTURES_ROOT / 'conll_2012')
+
+    def tearDown(self):
+        self.monkeypatch.undo()
+        self.monkeypatch.undo()
+        super().tearDown()
 
     def test_bert_srl_model_can_train_save_and_load(self):
         ignore_grads = {"bert_model.pooler.dense.weight", "bert_model.pooler.dense.bias"}
