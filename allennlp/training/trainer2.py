@@ -74,9 +74,8 @@ class TensorboardState(Protocol):
     batch_grad_norm: float
     batch_group: list
     cumulative_batch_size: int
-    current_metrics: dict   # mid-epoch
-    train_metrics: dict     # end-of-epoch
-    val_metrics: dict       # end-of-epoch
+    train_metrics: dict
+    val_metrics: dict
 
 
 class LogTensorboard(Callback[TensorboardState]):
@@ -92,8 +91,8 @@ class LogTensorboard(Callback[TensorboardState]):
                 state.tensorboard.log_parameter_and_gradient_statistics(state.model, state.batch_grad_norm)
                 state.tensorboard.log_learning_rates(state.model, state.optimizer)
 
-                state.tensorboard.add_train_scalar("loss/loss_train", state.current_metrics["loss"])
-                state.tensorboard.log_metrics({"epoch_metrics/" + k: v for k, v in state.current_metrics.items()})
+                state.tensorboard.add_train_scalar("loss/loss_train", state.train_metrics["loss"])
+                state.tensorboard.log_metrics({"epoch_metrics/" + k: v for k, v in state.train_metrics.items()})
 
 
             if self.log_batch_size_period:
@@ -111,6 +110,56 @@ class LogTensorboard(Callback[TensorboardState]):
                                           log_to_console=True,
                                           epoch=self.epoch)
             self.epoch += 1
+
+
+class LrsState(Protocol):
+    learning_rate_scheduler: LearningRateScheduler
+    batch_num_total: int
+    epoch_number: int
+    val_metrics: dict
+    validation_metric: str
+
+class LrsCallback(Callback[LrsState]):
+    def __call__(self, event: str, state: LrsState) -> None:
+        # Don't do anything if there's no lr_scheduler
+        if state.learning_rate_scheduler is None:
+            return
+
+        if event == Events.AFTER_BACKWARD:
+            state.learning_rate_scheduler.step_batch(state.batch_num_total)
+        elif event == Events.EPOCH_END:
+            state.learning_rate_scheduler.step(state.val_metrics[state.validation_metric],
+                                               state.epoch_number)
+
+class CheckpointState(Protocol):
+    checkpointer: Checkpointer
+    checkpoint_epoch: Union[int, str]
+    model: Model
+    metric_tracker: MetricTracker
+    epoch_number: int
+
+class CheckpointCallback(Callback[CheckpointState]):
+    def __init__(self,
+                 state_dict_attrs: List[str] = None,
+                 other_attrs: List[str] = None) -> None:
+        self.state_dict_attrs = state_dict_attrs or []
+        self.other_attrs = other_attrs or []
+
+    def __call__(self, event: str, state: CheckpointState) -> None:
+        if event == Events.SAVE_CHECKPOINT:
+            training_states = {}
+            for attr in self.state_dict_attrs:
+                state_attr = getattr(state, attr)
+                if state_attr is not None:
+                    training_states[attr] = state_attr.state_dict()
+            for attr in self.other_attrs:
+                training_states[attr] = getattr(state, attr)
+
+            state.checkpointer.save_checkpoint(
+                    model_state=state.model.state_dict(),
+                    epoch=state.checkpoint_epoch,
+                    training_states=training_states,
+                    is_best_so_far=state.metric_tracker.is_best_so_far())
 
 
 
@@ -299,10 +348,14 @@ class Trainer(TrainerBase):
         self.optimizer = optimizer
         self.train_data = train_dataset
         self.validation_data = validation_dataset
+
+        # For capturing mid / end-of-epoch metrics
         self.train_metrics: Dict[str, float] = {}
         self.val_metrics: Dict[str, float] = {}
+
+        # For capturing overall metrics
         self.metrics: Dict[str, Any] = {}
-        self.current_metrics: Dict[str, Any] = {}
+
         self.batch_num_total = 0
         self.cumulative_batch_size = 0
         self.batch_group = None
@@ -312,8 +365,11 @@ class Trainer(TrainerBase):
         # Get rid of + or -
         self.validation_metric = validation_metric[1:]
         self.num_epochs = num_epochs
+
         self.checkpointer = checkpointer
+        self.checkpoint_epoch: Union[int, str] = 0
         self.model_save_interval = model_save_interval
+
         self.grad_norm = grad_norm
         self.grad_clipping = grad_clipping
         self.learning_rate_scheduler = learning_rate_scheduler
@@ -321,11 +377,24 @@ class Trainer(TrainerBase):
         self.moving_average = moving_average
         self.tensorboard = tensorboard
         self.last_log = 0.0
+        self.epoch_number = 0
 
         # Set up callback handler
         callbacks: List[Callback] = [
                 LogTensorboard(log_batch_size_period),
-                LogTensorboardHistograms()
+                LogTensorboardHistograms(),
+                LrsCallback(),
+                CheckpointCallback(
+                        state_dict_attrs=[
+                                'metric_tracker',
+                                'learning_rate_scheduler',
+                                'momentum_scheduler',
+                                'optimizer'
+                        ],
+                        other_attrs=[
+                                'batch_num_total',
+                        ]
+                )
         ]
 
         self.handler = CallbackHandler(callbacks, self)
@@ -359,7 +428,7 @@ class Trainer(TrainerBase):
 
         return loss
 
-    def _train_epoch(self, epoch: int) -> Dict[str, float]:
+    def _train_epoch(self, epoch: int) -> None:
         """
         Trains one epoch and returns metrics.
         """
@@ -416,8 +485,6 @@ class Trainer(TrainerBase):
 
             # This does nothing if batch_num_total is None or you are using a
             # scheduler which doesn't update per batch.
-            if self.learning_rate_scheduler:
-                self.learning_rate_scheduler.step_batch(self.handler.state.batch_num_total)
             if self.momentum_scheduler:
                 self.momentum_scheduler.step_batch(self.handler.state.batch_num_total)
 
@@ -428,8 +495,8 @@ class Trainer(TrainerBase):
                 self.moving_average.apply(self.handler.state.batch_num_total)
 
             # Update the description with the latest metrics
-            self.current_metrics = training_util.get_metrics(self.model, train_loss, self.batches_this_epoch)
-            description = training_util.description_from_metrics(self.current_metrics)
+            self.train_metrics = training_util.get_metrics(self.model, train_loss, self.batches_this_epoch)
+            description = training_util.description_from_metrics(self.train_metrics)
 
             train_generator_tqdm.set_description(description, refresh=False)
 
@@ -444,14 +511,13 @@ class Trainer(TrainerBase):
 
             self.handler.fire_event(Events.BATCH_END)
 
-        metrics = training_util.get_metrics(self.model,
-                                            train_loss,
-                                            self.batches_this_epoch,
-                                            reset=True)
-        metrics['cpu_memory_MB'] = peak_cpu_usage
+        self.train_metrics = training_util.get_metrics(self.model,
+                                                       train_loss,
+                                                       self.batches_this_epoch,
+                                                       reset=True)
+        self.train_metrics['cpu_memory_MB'] = peak_cpu_usage
         for (gpu_num, memory) in gpu_usage:
-            metrics['gpu_'+str(gpu_num)+'_memory_MB'] = memory
-        return metrics
+            self.train_metrics['gpu_'+str(gpu_num)+'_memory_MB'] = memory
 
     def _validation_loss(self) -> Tuple[float, int]:
         """
@@ -530,9 +596,10 @@ class Trainer(TrainerBase):
             self.metrics["best_validation_" + key] = value
 
         for epoch in range(epoch_counter, self.num_epochs):
+            self.epoch_number = epoch
             self.handler.fire_event(Events.EPOCH_START)
             epoch_start_time = time.time()
-            self.train_metrics = self._train_epoch(epoch)
+            self._train_epoch(epoch)
 
             # get peak of memory usage
             if 'cpu_memory_MB' in self.train_metrics:
@@ -583,12 +650,8 @@ class Trainer(TrainerBase):
 
             # The Scheduler API is agnostic to whether your schedule requires a validation metric -
             # if it doesn't, the validation metric passed here is ignored.
-            if self.learning_rate_scheduler:
-                self.learning_rate_scheduler.step(this_epoch_val_metric, epoch)
             if self.momentum_scheduler:
                 self.momentum_scheduler.step(this_epoch_val_metric, epoch)
-
-            self._save_checkpoint(epoch)
 
             epoch_elapsed_time = time.time() - epoch_start_time
             logger.info("Epoch duration: %s", datetime.timedelta(seconds=epoch_elapsed_time))
@@ -603,6 +666,8 @@ class Trainer(TrainerBase):
             epochs_trained += 1
 
             self.handler.fire_event(Events.EPOCH_END)
+
+            self._save_checkpoint(epoch)
 
         # Load the best model state before returning
         best_model_state = self.checkpointer.best_model_state()
@@ -629,24 +694,10 @@ class Trainer(TrainerBase):
         if self.moving_average is not None:
             self.moving_average.assign_average_value()
 
-        # These are the training states we need to persist.
-        training_states = {
-                "metric_tracker": self.metric_tracker.state_dict(),
-                "optimizer": self.optimizer.state_dict(),
-                "batch_num_total": self.batch_num_total
-        }
-
-        # If we have a learning rate or momentum scheduler, we should persist them too.
-        if self.learning_rate_scheduler is not None:
-            training_states["learning_rate_scheduler"] = self.learning_rate_scheduler.state_dict()
-        if self.momentum_scheduler is not None:
-            training_states["momentum_scheduler"] = self.momentum_scheduler.state_dict()
-
-        self.checkpointer.save_checkpoint(
-                model_state=self.model.state_dict(),
-                epoch=epoch,
-                training_states=training_states,
-                is_best_so_far=self.metric_tracker.is_best_so_far())
+        self.checkpoint_epoch = epoch
+        self.handler.fire_event(Events.BEFORE_SAVE_CHECKPOINT)
+        self.handler.fire_event(Events.SAVE_CHECKPOINT)
+        self.handler.fire_event(Events.AFTER_SAVE_CHECKPOINT)
 
         # Restore the original values for parameters so that training will not be affected.
         if self.moving_average is not None:
