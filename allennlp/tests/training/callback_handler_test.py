@@ -3,7 +3,6 @@ from typing import Iterable, Callable, Optional, List
 from typing_extensions import Protocol
 
 import torch
-from dataclasses import dataclass
 
 from allennlp.common.params import Params
 from allennlp.common.testing import AllenNlpTestCase
@@ -50,7 +49,7 @@ class Validate(Callback[ValidateState]):
                 loss += output["loss"]
 
             metrics = state.model.get_metrics(reset=True)
-            metrics["loss"] = loss.sum().item()
+            metrics["loss"] = torch.sum(loss).item()
             state.validation_metrics.append(metrics)
             state.model.train()
 
@@ -74,14 +73,13 @@ class MarkDone(Callback[MarkDoneState]):
             state.done = True
 
 
-@dataclass
 class State:
-    model: Model
-    validation_metrics: List[dict] = None
-    early_stopping_metric: Optional[str] = None
-    terminate: bool = False
-    done: bool = False
-
+    def __init__(self, model: Model) -> None:
+        self.model = model
+        self.validation_metrics: List[dict] = None
+        self.early_stopping_metric: Optional[str] = None
+        self.terminate: bool = False
+        self.done: bool = False
 
 class TestCallbackHandler(AllenNlpTestCase):
     def setUp(self):

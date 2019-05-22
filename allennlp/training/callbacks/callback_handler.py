@@ -26,3 +26,7 @@ class CallbackHandler(Registrable, Generic[State]):
     def fire_event(self, event: str) -> None:
         for callback in self.callbacks:
             callback(event, self.state)
+
+    def fire_events(self, events: Iterable[str]) -> None:
+        for event in events:
+            self.fire_event(event)

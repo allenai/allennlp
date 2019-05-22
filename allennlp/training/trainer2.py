@@ -5,10 +5,8 @@ import os
 import time
 import re
 import datetime
-import traceback
-from typing import Dict, Optional, List, Tuple, Union, Any, NamedTuple, Iterable, Set
+from typing import Dict, Optional, List, Union, Any, NamedTuple, Iterable
 
-from typing_extensions import Protocol
 import torch
 import torch.optim.lr_scheduler
 
@@ -23,6 +21,9 @@ from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.model import Model
 from allennlp.nn import util as nn_util
 from allennlp.training.callbacks import Callback, CallbackHandler, Events
+from allennlp.training.callbacks.callbacks import (
+        LogTensorboard, LogTensorboardHistograms, LrsCallback, CheckpointCallback, Validate, MovingAverageCallback
+)
 from allennlp.training.checkpointer import Checkpointer
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
 from allennlp.training.momentum_schedulers import MomentumScheduler
@@ -34,133 +35,6 @@ from allennlp.training import util as training_util
 from allennlp.training.moving_average import MovingAverage
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
-
-
-class TensorboardHistogramsState(Protocol):
-    model: Model
-    tensorboard: TensorboardWriter
-
-class LogTensorboardHistograms(Callback[TensorboardHistogramsState]):
-    def __init__(self):
-        self.histogram_parameters: Set[str] = set()
-        self.param_updates: Dict[str, torch.Tensor] = {}
-
-    def __call__(self, event: str, state: TensorboardHistogramsState) -> None:
-        if event == Events.TRAINING_START:
-            self.histogram_parameters = set(
-                    state.model.get_parameters_for_histogram_tensorboard_logging()
-            )
-        elif event == Events.BATCH_START and state.tensorboard.should_log_histograms_this_batch():
-            # get the magnitude of parameter updates for logging
-            # We need a copy of current parameters to compute magnitude of updates,
-            # and copy them to CPU so large models won't go OOM on the GPU.
-            self.param_updates = {name: param.detach().cpu().clone()
-                                  for name, param in state.model.named_parameters()}
-        elif event == Events.BATCH_END and state.tensorboard.should_log_histograms_this_batch():
-            for name, param in state.model.named_parameters():
-                self.param_updates[name].sub_(param.detach().cpu())
-                update_norm = torch.norm(self.param_updates[name].view(-1, ))
-                param_norm = torch.norm(param.view(-1, )).cpu()
-                state.tensorboard.add_train_scalar("gradient_update/" + name,
-                                                   update_norm / (param_norm + 1e-7))
-            self.param_updates.clear()
-            state.tensorboard.log_histograms(state.model, self.histogram_parameters)
-
-
-class TensorboardState(Protocol):
-    model: Model
-    tensorboard: TensorboardWriter
-    optimizer: Optimizer
-    batch_grad_norm: float
-    batch_group: list
-    cumulative_batch_size: int
-    train_metrics: dict
-    val_metrics: dict
-
-
-class LogTensorboard(Callback[TensorboardState]):
-    def __init__(self, log_batch_size_period: int = None) -> None:
-        self.log_batch_size_period = log_batch_size_period
-        self.epoch = 1
-
-    def __call__(self, event: str, state: TensorboardState) -> None:
-        # At epoch start get parameters for histogram logging
-        if event == Events.BATCH_END:
-            # Log parameter values to tensorboard
-            if state.tensorboard.should_log_this_batch():
-                state.tensorboard.log_parameter_and_gradient_statistics(state.model, state.batch_grad_norm)
-                state.tensorboard.log_learning_rates(state.model, state.optimizer)
-
-                state.tensorboard.add_train_scalar("loss/loss_train", state.train_metrics["loss"])
-                state.tensorboard.log_metrics({"epoch_metrics/" + k: v for k, v in state.train_metrics.items()})
-
-
-            if self.log_batch_size_period:
-                cur_batch = sum([training_util.get_batch_size(batch) for batch in state.batch_group])
-                state.cumulative_batch_size += cur_batch
-                if (state.batches_this_epoch - 1) % self.log_batch_size_period == 0:
-                    average = state.cumulative_batch_size / state.batches_this_epoch
-                    logger.info(f"current batch size: {cur_batch} mean batch size: {average}")
-                    state.tensorboard.add_train_scalar("current_batch_size", cur_batch)
-                    state.tensorboard.add_train_scalar("mean_batch_size", average)
-
-        elif event == Events.EPOCH_END:
-            state.tensorboard.log_metrics(state.train_metrics,
-                                          val_metrics=state.val_metrics,
-                                          log_to_console=True,
-                                          epoch=self.epoch)
-            self.epoch += 1
-
-
-class LrsState(Protocol):
-    learning_rate_scheduler: LearningRateScheduler
-    batch_num_total: int
-    epoch_number: int
-    val_metrics: dict
-    validation_metric: str
-
-class LrsCallback(Callback[LrsState]):
-    def __call__(self, event: str, state: LrsState) -> None:
-        # Don't do anything if there's no lr_scheduler
-        if state.learning_rate_scheduler is None:
-            return
-
-        if event == Events.AFTER_BACKWARD:
-            state.learning_rate_scheduler.step_batch(state.batch_num_total)
-        elif event == Events.EPOCH_END:
-            state.learning_rate_scheduler.step(state.val_metrics[state.validation_metric],
-                                               state.epoch_number)
-
-class CheckpointState(Protocol):
-    checkpointer: Checkpointer
-    checkpoint_epoch: Union[int, str]
-    model: Model
-    metric_tracker: MetricTracker
-    epoch_number: int
-
-class CheckpointCallback(Callback[CheckpointState]):
-    def __init__(self,
-                 state_dict_attrs: List[str] = None,
-                 other_attrs: List[str] = None) -> None:
-        self.state_dict_attrs = state_dict_attrs or []
-        self.other_attrs = other_attrs or []
-
-    def __call__(self, event: str, state: CheckpointState) -> None:
-        if event == Events.SAVE_CHECKPOINT:
-            training_states = {}
-            for attr in self.state_dict_attrs:
-                state_attr = getattr(state, attr)
-                if state_attr is not None:
-                    training_states[attr] = state_attr.state_dict()
-            for attr in self.other_attrs:
-                training_states[attr] = getattr(state, attr)
-
-            state.checkpointer.save_checkpoint(
-                    model_state=state.model.state_dict(),
-                    epoch=state.checkpoint_epoch,
-                    training_states=training_states,
-                    is_best_so_far=state.metric_tracker.is_best_so_far())
-
 
 
 @TrainerBase.register("default")
@@ -378,23 +252,16 @@ class Trainer(TrainerBase):
         self.tensorboard = tensorboard
         self.last_log = 0.0
         self.epoch_number = 0
+        self.batch_grad_norm: Optional[float] = None
 
         # Set up callback handler
         callbacks: List[Callback] = [
                 LogTensorboard(log_batch_size_period),
                 LogTensorboardHistograms(),
                 LrsCallback(),
-                CheckpointCallback(
-                        state_dict_attrs=[
-                                'metric_tracker',
-                                'learning_rate_scheduler',
-                                'momentum_scheduler',
-                                'optimizer'
-                        ],
-                        other_attrs=[
-                                'batch_num_total',
-                        ]
-                )
+                CheckpointCallback(),
+                MovingAverageCallback(),
+                Validate()
         ]
 
         self.handler = CallbackHandler(callbacks, self)
@@ -490,10 +357,6 @@ class Trainer(TrainerBase):
 
             self.optimizer.step()
 
-            # Update moving averages
-            if self.moving_average is not None:
-                self.moving_average.apply(self.handler.state.batch_num_total)
-
             # Update the description with the latest metrics
             self.train_metrics = training_util.get_metrics(self.model, train_loss, self.batches_this_epoch)
             description = training_util.description_from_metrics(self.train_metrics)
@@ -519,68 +382,13 @@ class Trainer(TrainerBase):
         for (gpu_num, memory) in gpu_usage:
             self.train_metrics['gpu_'+str(gpu_num)+'_memory_MB'] = memory
 
-    def _validation_loss(self) -> Tuple[float, int]:
-        """
-        Computes the validation loss. Returns it and the number of batches.
-        """
-        logger.info("Validating")
-
-        self.model.eval()
-
-        # Replace parameter values with the shadow values from the moving averages.
-        if self.moving_average is not None:
-            self.moving_average.assign_average_value()
-
-        if self.validation_iterator is not None:
-            val_iterator = self.validation_iterator
-        else:
-            val_iterator = self.iterator
-
-        num_gpus = len(self._cuda_devices)
-
-        raw_val_generator = val_iterator(self.validation_data,
-                                         num_epochs=1,
-                                         shuffle=False)
-        val_generator = lazy_groups_of(raw_val_generator, num_gpus)
-        num_validation_batches = math.ceil(val_iterator.get_num_batches(self.validation_data)/num_gpus)
-        val_generator_tqdm = Tqdm.tqdm(val_generator,
-                                       total=num_validation_batches)
-        batches_this_epoch = 0
-        val_loss = 0
-        for batch_group in val_generator_tqdm:
-
-            loss = self.batch_loss(batch_group, for_training=False)
-            if loss is not None:
-                # You shouldn't necessarily have to compute a loss for validation, so we allow for
-                # `loss` to be None.  We need to be careful, though - `batches_this_epoch` is
-                # currently only used as the divisor for the loss function, so we can safely only
-                # count those batches for which we actually have a loss.  If this variable ever
-                # gets used for something else, we might need to change things around a bit.
-                batches_this_epoch += 1
-                val_loss += loss.detach().cpu().numpy()
-
-            # Update the description with the latest metrics
-            val_metrics = training_util.get_metrics(self.model, val_loss, batches_this_epoch)
-            description = training_util.description_from_metrics(val_metrics)
-            val_generator_tqdm.set_description(description, refresh=False)
-
-        # Now restore the original parameter values.
-        if self.moving_average is not None:
-            self.moving_average.restore()
-
-        return val_loss, batches_this_epoch
 
     def train(self) -> Dict[str, Any]:
         """
         Trains the supplied model with the supplied parameters.
         """
-        try:
-            epoch_counter = self._restore_checkpoint()
-        except RuntimeError:
-            traceback.print_exc()
-            raise ConfigurationError("Could not recover training from the checkpoint.  Did you mean to output to "
-                                     "a different serialization directory or delete the existing serialization "
-                                     "directory?")
+        self.handler.fire_event(Events.RESTORE_CHECKPOINT)
+        epoch_counter = self.epoch_number
 
         training_util.enable_gradient_clipping(self.model, self.grad_clipping)
 
@@ -609,19 +417,11 @@ class Trainer(TrainerBase):
                 if key.startswith('gpu_'):
                     self.metrics["peak_"+key] = max(self.metrics.get("peak_"+key, 0), value)
 
-            if self.validation_data is not None:
-                with torch.no_grad():
-                    # We have a validation set, so compute all the metrics on it.
-                    val_loss, num_batches = self._validation_loss()
-                    self.val_metrics = training_util.get_metrics(self.model, val_loss, num_batches, reset=True)
+            self.handler.fire_events([Events.BEFORE_VALIDATE, Events.VALIDATE, Events.AFTER_VALIDATE])
 
-                    # Check validation metric for early stopping
-                    this_epoch_val_metric = self.val_metrics[self.validation_metric]
-                    self.metric_tracker.add_metric(this_epoch_val_metric)
-
-                    if self.metric_tracker.should_stop_early():
-                        logger.info("Ran out of patience.  Stopping training.")
-                        break
+            if self.metric_tracker.should_stop_early():
+                logger.info("Ran out of patience.  Stopping training.")
+                break
 
 
             # Create overall metrics dict
@@ -689,75 +489,10 @@ class Trainer(TrainerBase):
             The epoch of training.  If the checkpoint is saved in the middle
             of an epoch, the parameter is a string with the epoch and timestamp.
         """
-        # If moving averages are used for parameters, we save
-        # the moving average values into checkpoint, instead of the current values.
-        if self.moving_average is not None:
-            self.moving_average.assign_average_value()
-
         self.checkpoint_epoch = epoch
-        self.handler.fire_event(Events.BEFORE_SAVE_CHECKPOINT)
-        self.handler.fire_event(Events.SAVE_CHECKPOINT)
-        self.handler.fire_event(Events.AFTER_SAVE_CHECKPOINT)
-
-        # Restore the original values for parameters so that training will not be affected.
-        if self.moving_average is not None:
-            self.moving_average.restore()
-
-    def _restore_checkpoint(self) -> int:
-        """
-        Restores the model and training state from the last saved checkpoint.
-        This includes an epoch count and optimizer state, which is serialized separately
-        from model parameters. This function should only be used to continue training -
-        if you wish to load a model for inference/load parts of a model into a new
-        computation graph, you should use the native Pytorch functions:
-        `` model.load_state_dict(torch.load("/path/to/model/weights.th"))``
-
-        If ``self._serialization_dir`` does not exist or does not contain any checkpointed weights,
-        this function will do nothing and return 0.
-
-        Returns
-        -------
-        epoch: int
-            The epoch at which to resume training, which should be one after the epoch
-            in the saved training state.
-        """
-        model_state, training_state = self.checkpointer.restore_checkpoint()
-
-        if not training_state:
-            # No checkpoint to restore, start at 0
-            return 0
-
-        self.model.load_state_dict(model_state)
-        self.optimizer.load_state_dict(training_state["optimizer"])
-        if self.learning_rate_scheduler is not None and "learning_rate_scheduler" in training_state:
-            self.learning_rate_scheduler.load_state_dict(training_state["learning_rate_scheduler"])
-        if self.momentum_scheduler is not None and "momentum_scheduler" in training_state:
-            self.momentum_scheduler.load_state_dict(training_state["momentum_scheduler"])
-        training_util.move_optimizer_to_cuda(self.optimizer)
-
-        # Currently the ``training_state`` contains a serialized ``MetricTracker``.
-        if "metric_tracker" in training_state:
-            self.metric_tracker.load_state_dict(training_state["metric_tracker"])
-        # It used to be the case that we tracked ``val_metric_per_epoch``.
-        elif "val_metric_per_epoch" in training_state:
-            self.metric_tracker.clear()
-            self.metric_tracker.add_metrics(training_state["val_metric_per_epoch"])
-        # And before that we didn't track anything.
-        else:
-            self.metric_tracker.clear()
-
-        if isinstance(training_state["epoch"], int):
-            epoch_to_return = training_state["epoch"] + 1
-        else:
-            epoch_to_return = int(training_state["epoch"].split('.')[0]) + 1
-
-        # For older checkpoints with batch_num_total missing, default to old behavior where
-        # it is unchanged.
-        batch_num_total = training_state.get('batch_num_total')
-        if batch_num_total is not None:
-            self.handler.state.batch_num_total = batch_num_total
-
-        return epoch_to_return
+        self.handler.fire_events([Events.BEFORE_SAVE_CHECKPOINT,
+                                  Events.SAVE_CHECKPOINT,
+                                  Events.AFTER_SAVE_CHECKPOINT])
 
     # Requires custom from_params.
     @classmethod
