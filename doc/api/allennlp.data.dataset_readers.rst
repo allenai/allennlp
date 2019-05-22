@@ -35,3 +35,4 @@ allennlp.data.dataset_readers
   allennlp.data.dataset_readers.quora_paraphrase
   allennlp.data.dataset_readers.copynet_seq2seq
   allennlp.data.dataset_readers.text_classification_json
+  allennlp.data.dataset_readers.srl_bert_reader
