@@ -37,7 +37,7 @@ from allennlp.training.moving_average import MovingAverage
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-@TrainerBase.register("default")
+@TrainerBase.register("trainer2")
 class Trainer(TrainerBase):
     def __init__(self,
                  model: Model,
