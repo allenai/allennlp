@@ -64,7 +64,7 @@ f1: 0.630
 
 ## Named Entity Recognition
 
-### [ner-model-2018.04.26.tar.gz](https://s3-us-west-2.amazonaws.com/allennlp/models/ner-model-2018.04.26.tar.gz) (678.9 MB)
+### [ner-model-2018.12.18.tar.gz](https://s3-us-west-2.amazonaws.com/allennlp/models/ner-model-2018.12.18.tar.gz) (711.3 MB)
 
 Based on [Deep contextualized word representations](https://arxiv.org/abs/1802.05365)
 
@@ -72,7 +72,7 @@ Based on [Deep contextualized word representations](https://arxiv.org/abs/1802.0
 f1: 0.925
 ```
 
-### [fine-grained-ner-model-elmo-2018.08.31.tar.gz](https://s3-us-west-2.amazonaws.com/allennlp/models/fine-grained-ner-model-elmo-2018.08.31.tar.gz) (691 MB)
+### [fine-grained-ner-model-elmo-2018.12.21.tar.gz](https://s3-us-west-2.amazonaws.com/allennlp/models/fine-grained-ner-model-elmo-2018.12.21.tar.gz) (724.6 MB)
 
 
 ## Constituency Parsing
