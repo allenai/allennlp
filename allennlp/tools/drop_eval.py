@@ -57,24 +57,24 @@ def _normalize_number(text: str) -> str:
         return text
 
 
-def _answer_to_bags(answer: Union[str, List[str], Tuple[str, ...]]) -> Tuple[Set[str], List[Set[str]]]:
+def _answer_to_bags(answer: Union[str, List[str], Tuple[str, ...]]) -> Tuple[List[str], List[Set[str]]]:
     if isinstance(answer, (list, tuple)):
         raw_spans = answer
     else:
         raw_spans = [answer]
-    span_bag: Set[str] = set()
-    token_bag = []
+    normalized_spans: List[str] = []
+    token_bags = []
     for raw_span in raw_spans:
-        span = _normalize_answer(raw_span)
-        span_bag.add(span)
-        token_bag.append(set(span.split()))
-    return span_bag, token_bag
+        normalized_span = _normalize_answer(raw_span)
+        normalized_spans.append(normalized_span)
+        token_bags.append(set(normalized_span.split()))
+    return normalized_spans, token_bags
 
 
 def _align_bags(predicted: List[Set[str]], gold: List[Set[str]]) -> List[float]:
     """
     Takes gold and predicted answer sets and first finds the optimal 1-1 alignment
-    between them and gets maximum metric values over all the answers
+    between them and gets maximum metric values over all the answers.
     """
     scores = np.zeros([len(gold), len(predicted)])
     for gold_index, gold_item in enumerate(gold):
@@ -83,7 +83,7 @@ def _align_bags(predicted: List[Set[str]], gold: List[Set[str]]) -> List[float]:
                 scores[gold_index, pred_index] = _compute_f1(pred_item, gold_item)
     row_ind, col_ind = linear_sum_assignment(-scores)
 
-    max_scores = np.zeros([len(gold)])
+    max_scores = np.zeros([max(len(gold), len(predicted))])
     for row, column in zip(row_ind, col_ind):
         max_scores[row] = max(max_scores[row], scores[row, column])
     return max_scores
@@ -129,7 +129,10 @@ def get_metrics(predicted: Union[str, List[str], Tuple[str, ...]],
     predicted_bags = _answer_to_bags(predicted)
     gold_bags = _answer_to_bags(gold)
 
-    exact_match = 1.0 if predicted_bags[0] == gold_bags[0] else 0
+    if set(predicted_bags[0]) == set(gold_bags[0]) and len(predicted_bags[0]) == len(gold_bags[0]):
+        exact_match = 1.0
+    else:
+        exact_match = 0.0
 
     f1_per_bag = _align_bags(predicted_bags[1], gold_bags[1])
     f1 = np.mean(f1_per_bag)
