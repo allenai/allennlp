@@ -21,7 +21,7 @@ from allennlp.common.params import Params
 
 def main(param_file: str, args: argparse.Namespace):
     commit = subprocess.check_output(["git", "rev-parse", "HEAD"], universal_newlines=True).strip()
-    image = f"allennlp/allennlp:{commit}"
+    docker_image = f"allennlp/allennlp:{commit}"
     overrides = ""
 
     # Reads params and sets environment.
@@ -42,18 +42,18 @@ def main(param_file: str, args: argparse.Namespace):
     result = subprocess.run('git diff-index --quiet HEAD --', shell=True)
     if result.returncode != 0:
         dirty_hash = "%x" % random_int
-        image += "-" + dirty_hash
+        docker_image += "-" + dirty_hash
 
     if args.image:
         image = args.image
         print(f"Using the specified image: {image}")
     else:
-        print(f"Building the Docker image ({image})...")
-        subprocess.run(f'docker build -t {image} .', shell=True, check=True)
+        print(f"Building the Docker image ({docker_image})...")
+        subprocess.run(f'docker build -t {docker_image} .', shell=True, check=True)
 
         print(f"Create a Beaker image...")
         image = subprocess.check_output(f'beaker image create --quiet {image}', shell=True,
-                                            universal_newlines=True).strip()
+                                        universal_newlines=True).strip()
         print(f"  Image created: {image}")
 
     config_dataset_id = subprocess.check_output(f'beaker dataset create --quiet {param_file}', shell=True, universal_newlines=True).strip()
