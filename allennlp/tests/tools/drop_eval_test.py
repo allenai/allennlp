@@ -18,6 +18,23 @@ class TestDropEvalGetMetrics:
     def test_float_numbers(self):
         assert get_metrics(["78"], ["78.0"]) == (1.0, 1.0)
 
+    def test_metric_is_length_aware(self):
+        # Overall F1 should be mean([1.0, 0.0])
+        assert get_metrics(predicted=["td"], gold=["td", "td"]) == (0.0, 0.5)
+        assert get_metrics("td", ["td", "td"]) == (0.0, 0.5)
+        # Overall F1 should be mean ([1.0, 0.0]) = 0.5
+        assert get_metrics(predicted=["td", "td"], gold=["td"]) == (0.0, 0.5)
+        assert get_metrics(predicted=["td", "td"], gold="td") == (0.0, 0.5)
+
+        # F1 score is mean([0.0, 0.0, 1.0, 0.0, 0.0, 0.0])
+        assert get_metrics(predicted=["the", "fat", "cat", "the fat", "fat cat", "the fat cat"],
+                           gold=["cat"]) == (0.0, 0.17)
+        assert get_metrics(predicted=["cat"],
+                           gold=["the", "fat", "cat", "the fat", "fat cat", "the fat cat"]) == (0.0, 0.17)
+        # F1 score is mean([1.0, 0.5, 0.0, 0.0, 0.0, 0.0])
+        assert get_metrics(predicted=["the", "fat", "cat", "the fat", "fat cat", "the fat cat"],
+                           gold=["cat", "cat dog"]) == (0.0, 0.25)
+
     def test_articles_are_ignored(self):
         assert get_metrics(["td"], ["the td"]) == (1.0, 1.0)
         assert get_metrics(["the a NOT an ARTICLE the an a"], ["NOT ARTICLE"]) == (1.0, 1.0)
@@ -58,10 +75,12 @@ class TestDropEvalGetMetrics:
 
     def test_multi_span_overlap_in_incorrect_cases(self):
         # only consider bags with matching numbers if they are present
+        # F1 scores of:     1.0        2/3   0.0   0.0   0.0   0.0
+        # Average them to get F1 of 0.28
         assert get_metrics(["78-yard", "56", "28", "40", "44", "touchdown"],
-                           ["78-yard", "56 yard", "1 yard touchdown"]) == (0.0, 0.56)
+                           ["78-yard", "56 yard", "1 yard touchdown"]) == (0.0, 0.28)
 
-        # two copies of same value will account for only one match (using greedy 1-1 bag alignment)
+        # two copies of same value will account for only one match (using optimal 1-1 bag alignment)
         assert get_metrics(["23", "23 yard"],
                            ["23-yard", "56 yards"]) == (0.0, 0.5)
 
