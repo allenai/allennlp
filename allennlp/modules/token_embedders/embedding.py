@@ -241,6 +241,7 @@ class Embedding(TokenEmbedder):
         device = self.weight.data.device
         extended_weight = torch.cat([self.weight.data, extra_weight.to(device)], dim=0)
         self.weight = torch.nn.Parameter(extended_weight, requires_grad=self.weight.requires_grad)
+        self.num_embeddings = self.weight.shape[0]
 
     # Custom logic requires custom from_params.
     @classmethod
@@ -312,7 +313,8 @@ class Embedding(TokenEmbedder):
                    norm_type=norm_type,
                    scale_grad_by_freq=scale_grad_by_freq,
                    sparse=sparse,
-                   vocab_namespace=vocab_namespace)
+                   vocab_namespace=vocab_namespace,
+                   pretrained_file=pretrained_file)
 
 
 def _read_pretrained_embeddings_file(file_uri: str,
