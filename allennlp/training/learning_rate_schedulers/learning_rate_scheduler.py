@@ -25,15 +25,12 @@ class LearningRateScheduler(Scheduler, Registrable):
     def from_params(cls, optimizer: torch.optim.Optimizer, params: Params):  # type: ignore
         # pylint: disable=arguments-differ
         scheduler_type = params.pop_choice("type", LearningRateScheduler.list_available())
-        mode = params.pop("mode", None)
-        # Think of a better way of doing this
-        if scheduler_type == "reduce_on_plateau" and mode is None:
+        if scheduler_type == "reduce_on_plateau" and "mode" not in params:
             raise ConfigurationError("ReduceLROnPlateau requires a mode to be specified."
                                      " This ensures that there are no accidental side effects like"
                                      " mode not being faithful to the metric being tracked")
 
         scheduler = LearningRateScheduler.by_name(scheduler_type)(optimizer=optimizer,
-                                                                  mode=mode,
                                                                   **params.as_dict())  # type: ignore
         if isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
             return _PyTorchLearningRateSchedulerWithMetricsWrapper(scheduler)
