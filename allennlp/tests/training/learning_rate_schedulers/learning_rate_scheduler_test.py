@@ -26,13 +26,15 @@ class LearningRateSchedulersTest(AllenNlpTestCase):
         with self.assertRaises(ConfigurationError) as context:
             LearningRateScheduler.from_params(Optimizer.from_params(self.model.named_parameters(),
                                                                     Params({"type": "adam"})),
-                                              Params({"type": "reduce_on_plateau", "mode": "min"})).step(None, None)
+                                              Params({"type": "reduce_on_plateau",
+                                                      "mode": "min"})).step(None, None)
         assert "learning rate scheduler requires a validation metric" in str(context.exception)
 
     def test_reduce_on_plateau_works_when_metrics_exist(self):
         LearningRateScheduler.from_params(Optimizer.from_params(self.model.named_parameters(),
                                                                 Params({"type": "adam"})),
-                                          Params({"type": "reduce_on_plateau", "mode": "max"})).step(10, None)
+                                          Params({"type": "reduce_on_plateau",
+                                                  "mode": "max"})).step(10, None)
 
     def test_no_metric_wrapper_can_support_none_for_metrics(self):
         lrs = LearningRateScheduler.from_params(Optimizer.from_params(self.model.named_parameters(),

@@ -663,7 +663,7 @@ class Trainer(TrainerBase):
                     validation_data: Optional[Iterable[Instance]],
                     params: Params,
                     validation_iterator: DataIterator = None) -> 'Trainer':
-        # pylint: disable=arguments-differ
+        # pylint: disable=arguments-differ,protected-access
         patience = params.pop_int("patience", None)
         validation_metric = params.pop("validation_metric", "-loss")
         shuffle = params.pop_bool("shuffle", True)
@@ -680,13 +680,11 @@ class Trainer(TrainerBase):
             raise ConfigurationError("metric_name must start with + or -")
 
         lr_scheduler_params = training_util._update_scheduler_params(
-            params.pop("learning_rate_scheduler", None),
-            should_decrease
-        )
+                params.pop("learning_rate_scheduler", None),
+                should_decrease)
         momentum_scheduler_params = training_util._update_scheduler_params(
-            params.pop("momentum_scheduler", None),
-            should_decrease
-        )
+                params.pop("momentum_scheduler", None),
+                should_decrease)
 
         if isinstance(cuda_device, list):
             model_device = cuda_device[0]
