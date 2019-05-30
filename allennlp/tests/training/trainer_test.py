@@ -398,12 +398,11 @@ class TestTrainer(AllenNlpTestCase):
         # pylint: disable=protected-access
         for metric in ["+acc", "-loss"]:
             trainer_params = Params({
-                "validation_metric": metric,
-                "learning_rate_scheduler": {
-                    "type": "reduce_on_plateau"
-                },
-                "optimizer": {"type": "adam", "lr": 0.01}
-            })
+                    "validation_metric": metric,
+                    "learning_rate_scheduler": {
+                            "type": "reduce_on_plateau"
+                    },
+                    "optimizer": {"type": "adam", "lr": 0.01}})
             trainer = Trainer.from_params(model=self.model,
                                           serialization_dir=self.TEST_DIR,
                                           iterator=self.iterator,
@@ -421,13 +420,12 @@ class TestTrainer(AllenNlpTestCase):
         # pylint: disable=protected-access
         for mode, metric in [("min", "-custom"), ("max", "+custom")]:
             trainer_params = Params({
-                "validation_metric": metric,
-                "learning_rate_scheduler": {
-                    "type": "reduce_on_plateau",
-                    "mode": mode
-                },
-                "optimizer": {"type": "adam", "lr": 0.01}
-            })
+                    "validation_metric": metric,
+                    "learning_rate_scheduler": {
+                            "type": "reduce_on_plateau",
+                            "mode": mode
+                    },
+                    "optimizer": {"type": "adam", "lr": 0.01}})
             trainer = Trainer.from_params(model=self.model,
                                           serialization_dir=self.TEST_DIR,
                                           iterator=self.iterator,
@@ -440,13 +438,12 @@ class TestTrainer(AllenNlpTestCase):
         # pylint: disable=protected-access
         for mode, metric in [("max", "-custom"), ("min", "+custom")]:
             trainer_params = Params({
-                "validation_metric": metric,
-                "learning_rate_scheduler": {
-                    "type": "reduce_on_plateau",
-                    "mode": mode
-                },
-                "optimizer": {"type": "adam", "lr": 0.01}
-            })
+                    "validation_metric": metric,
+                    "learning_rate_scheduler": {
+                            "type": "reduce_on_plateau",
+                            "mode": mode
+                    },
+                    "optimizer": {"type": "adam", "lr": 0.01}})
             with self.assertLogs(logger="allennlp.training.util", level="WARNING"):
                 # we warn when the metric and the mode don't agree
                 trainer = Trainer.from_params(model=self.model,
