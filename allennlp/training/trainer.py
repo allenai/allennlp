@@ -663,7 +663,7 @@ class Trainer(TrainerBase):
                     validation_data: Optional[Iterable[Instance]],
                     params: Params,
                     validation_iterator: DataIterator = None) -> 'Trainer':
-        # pylint: disable=arguments-differ,protected-access
+        # pylint: disable=arguments-differ
         patience = params.pop_int("patience", None)
         validation_metric = params.pop("validation_metric", "-loss")
         shuffle = params.pop_bool("shuffle", True)
@@ -679,10 +679,10 @@ class Trainer(TrainerBase):
         else:
             raise ConfigurationError("metric_name must start with + or -")
 
-        lr_scheduler_params = training_util._update_scheduler_params(
+        lr_scheduler_params = training_util.update_scheduler_params(
                 params.pop("learning_rate_scheduler", None),
                 should_decrease)
-        momentum_scheduler_params = training_util._update_scheduler_params(
+        momentum_scheduler_params = training_util.update_scheduler_params(
                 params.pop("momentum_scheduler", None),
                 should_decrease)
 
