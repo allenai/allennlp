@@ -54,7 +54,7 @@ def _normalize(self, grads: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
         total_score_pos = 0
         total_score_neg = 0
         for idx, score in enumerate(grad):
-            if s < 0:
+            if score < 0:
                 total_score_neg = total_score_neg + math.fabs(score)
             else:
                 total_score_pos = total_score_pos + score
