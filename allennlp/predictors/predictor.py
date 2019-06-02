@@ -68,19 +68,19 @@ class Predictor(Registrable):
         Uses the gradients from :func:`get_gradients` to provide 
         normalized interpretations for specific models. 
         """
-        raise RuntimeError("You need to implement this method if you want to give model interpretations.")
+        raise RuntimeError("you need to implement this method if you want to give model interpretations")
 
     def attack_from_json(self, inputs: JsonDict) -> JsonDict:
         """
         Uses the gradients from :func:`get_gradients` to provide 
         adversarial attacks for specific models. 
         """
-        raise RuntimeError("You need to implement this method if you want to give model attacks.")
+        raise RuntimeError("you need to implement this method if you want to give model attacks")
 
-    def inputs_to_labeled_instances(self, inputs: JsonDict) -> List[Instance]:
+    def inputs_to_label_instances(self, inputs: JsonDict) -> List[Instance]:
         """
         Converts incoming json to a :class:`~allennlp.data.instance.Instance`,
-        runs the model with the newly created instance, and adds labels to the
+        runs the model on the newly created instance, and adds labels to the 
         :class:`~allennlp.data.instance.Instance`s given by the model's output. 
 
         Returns
@@ -157,10 +157,8 @@ class Predictor(Registrable):
 
         # Register the hooks
         for module in self._model.modules():
-            # We register on BasicTextFieldEmbedder as this seems to 
-            # be more general; just "Embedding" does not work
-            # for Elmo 
             if isinstance(module, TextFieldEmbedder):
+                backward_hook = module.register_backward_hook(hook_layers)
                 self.hooks.append(backward_hook)
 
     @contextmanager
@@ -168,9 +166,12 @@ class Predictor(Registrable):
         """
         Context manager that captures the internal-module outputs of
         this predictor's model. The idea is that you could use it as follows:
+
         .. code-block:: python
+
             with predictor.capture_model_internals() as internals:
                 outputs = predictor.predict_json(inputs)
+
             return {**outputs, "model_internals": internals}
         """
         results = {}
@@ -210,7 +211,7 @@ class Predictor(Registrable):
         """
         Adds labels to the :class:`~allennlp.data.instance.Instance`s passed in.
         """
-        raise RuntimeError("You need to implement this method if you want to give the model interpretations or attacks.") 
+        raise RuntimeError("you need to implement this method if you want to give model interpretations or attacks")
 
     def predict_batch_json(self, inputs: List[JsonDict]) -> List[JsonDict]:
         instances = self._batch_json_to_instances(inputs)
@@ -238,8 +239,10 @@ class Predictor(Registrable):
     def from_path(cls, archive_path: str, predictor_name: str = None) -> 'Predictor':
         """
         Instantiate a :class:`Predictor` from an archive path.
+
         If you need more detailed configuration options, such as running the predictor on the GPU,
         please use `from_archive`.
+
         Parameters
         ----------
         archive_path The path to the archive.
@@ -273,12 +276,4 @@ class Predictor(Registrable):
         model = archive.model
         model.eval()
 
-<<<<<<< Updated upstream
         return Predictor.by_name(predictor_name)(model, dataset_reader)
-=======
-        return Predictor.by_name(predictor_name)(model, dataset_reader)
-<<<<<<< Updated upstream
-=======
-        
->>>>>>> Stashed changes
->>>>>>> Stashed changes
