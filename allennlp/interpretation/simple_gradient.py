@@ -1,7 +1,7 @@
 from allennlp.common.util import JsonDict, sanitize, normalize
 from allennlp.interpretation import Interpreter
 
-@Interpreter.register('simple-gradient-interpreter')
+@Interpreter.register('simple-gradients-interpreter')
 class SimpleGradient(Interpreter):
   def __init__(self, predictor):
     super().__init__(predictor)
@@ -11,4 +11,4 @@ class SimpleGradient(Interpreter):
     Gets the gradients of the loss with respect to the input and
     returns them normalized and sanitized.  
     """
-    return sanitize(normalize(self.get_gradients(self.get_model_predictions(inputs))[0]))
+    return sanitize(normalize(self.predictor.get_gradients(self.predictor.inputs_to_labeled_instances(inputs))[0]))

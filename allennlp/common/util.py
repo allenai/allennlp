@@ -11,6 +11,7 @@ import random
 import subprocess
 import sys
 import os
+import math 
 
 try:
     import resource
@@ -44,13 +45,13 @@ JsonDict = Dict[str, Any]  # pylint: disable=invalid-name
 START_SYMBOL = '@start@'
 END_SYMBOL = '@end@'
 
-def normalize(self, grads: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
+def normalize(grads: Dict[str, numpy.ndarray]) -> Dict[str, numpy.ndarray]:
     """
     Normalize the gradients into the range [0,1]. 
     """
 
     for key, grad in grads.items():
-        grad = np.sum(grad, axis=1)
+        grad = numpy.sum(grad, axis=1)
         total_score_pos = 0
         total_score_neg = 0
         for idx, score in enumerate(grad):
