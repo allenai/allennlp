@@ -44,6 +44,30 @@ JsonDict = Dict[str, Any]  # pylint: disable=invalid-name
 START_SYMBOL = '@start@'
 END_SYMBOL = '@end@'
 
+def _normalize(self, grads: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
+    """
+    Normalize the gradients into the range [0,1]. 
+    """
+
+    for key, grad in grads.items():
+        grad = np.sum(grad, axis=1)
+        total_score_pos = 0
+        total_score_neg = 0
+        for idx, score in enumerate(grad):
+            if score < 0:
+                total_score_neg = total_score_neg + math.fabs(score)
+            else:
+                total_score_pos = total_score_pos + score
+        for idx, score in enumerate(grad):
+            if score < 0:
+                # / by 2 to get max of -0.5
+                grad[idx] = (score / total_score_neg) / 2  
+            else:
+                grad[idx] = (score / total_score_pos) / 2
+        # center scores
+        grad = [0.5 + score for score in grad]  
+        grads[key] = grad 
+    return grads 
 
 def sanitize(x: Any) -> Any:  # pylint: disable=invalid-name,too-many-return-statements
     """

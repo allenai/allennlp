@@ -6,7 +6,7 @@ import numpy as np
 import torch 
 import math 
 
-from allennlp.modules.text_field_embedders import BasicTextFieldEmbedder
+from allennlp.modules.text_field_embedders import TextFieldEmbedder
 from allennlp.common import Registrable
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import JsonDict, sanitize
@@ -67,33 +67,21 @@ class Predictor(Registrable):
         """
         Uses the gradients from :func:`get_gradients` to provide 
         normalized interpretations for specific models. 
-
-        Raises
-        ------
-        NotImplementedError
-            This method should be overriden by the specific predictor class of each
-            predictor.
         """
-        raise NotImplementedError
+        raise RuntimeError("You need to implement this method if you want to give model interpretations.")
 
     def attack_from_json(self, inputs: JsonDict) -> JsonDict:
         """
         Uses the gradients from :func:`get_gradients` to provide 
         adversarial attacks for specific models. 
-
-        Raises
-        ------
-        NotImplementedError
-            This method should be overriden by the specific predictor class of each
-            predictor.
         """
-        raise NotImplementedError
+        raise RuntimeError("You need to implement this method if you want to give model attacks.")
 
-    def get_model_predictions(self, inputs: JsonDict) -> List[Instance]:
+    def inputs_to_labeled_instances(self, inputs: JsonDict) -> List[Instance]:
         """
-        Converts incoming json to a :class:`~allennlp.data.instance.Instance`
-        and adds labels to the :class:`~allennlp.data.instance.Instance`s given
-        by the model's output. 
+        Converts incoming json to a :class:`~allennlp.data.instance.Instance`,
+        runs the model with the newly created instance, and adds labels to the
+        :class:`~allennlp.data.instance.Instance`s given by the model's output. 
 
         Returns
         -------
@@ -169,42 +157,11 @@ class Predictor(Registrable):
 
         # Register the hooks
         for module in self._model.modules():
-            if isinstance(module, BasicTextFieldEmbedder):
-                backward_hook = module.register_backward_hook(hook_layers)
+            # We register on BasicTextFieldEmbedder as this seems to 
+            # be more general; just "Embedding" does not work
+            # for Elmo 
+            if isinstance(module, TextFieldEmbedder):
                 self.hooks.append(backward_hook)
-
-    def _normalize(self, grads: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
-        """
-        Normalize the gradients into the range [0,1] for visualization. 
-        Notes
-        -----
-        0.0 is dark red and 1.0 is dark blue. 0.5 is no highlight. 
-        This normalization step is very rarely discussed in the 
-        literature and the interpretation is actually quite sensitive to it. 
-        In the code below, we normalize scores across the words, doing positive 
-        and negatives seperately.
-        """
-
-        for key, grad in grads.items():
-            grad = np.sum(grad, axis=1)
-            total_score_pos = 0
-            total_score_neg = 0
-            for idx, s in enumerate(grad):
-                if s < 0:
-                    total_score_neg = total_score_neg + math.fabs(s)
-                else:
-                    total_score_pos = total_score_pos + s
-            for idx, s in enumerate(grad):
-                if s < 0:
-                    # / by 2 to get max of -0.5
-                    grad[idx] = (s / total_score_neg) / 2  
-                else:
-                    grad[idx] = (s / total_score_pos) / 2
-            # center scores
-            grad = [0.5 + n for n in grad]  
-            grads[key] = grad 
-        return grads 
-
 
     @contextmanager
     def capture_model_internals(self) -> Iterator[dict]:
@@ -249,17 +206,11 @@ class Predictor(Registrable):
         """
         raise NotImplementedError
 
-    def predictions_to_labels(self, instance: Instance, outputs: Dict[str, np.ndarray]) -> List[Instance]:
+    def predictions_to_labeled_instances(self, instance: Instance, outputs: Dict[str, np.ndarray]) -> List[Instance]:
         """
         Adds labels to the :class:`~allennlp.data.instance.Instance`s passed in.
-
-        Raises
-        ------
-        NotImplementedError
-            This method should be overriden by the specific predictor class of each
-            predictor.
         """
-        raise NotImplementedError 
+        raise RuntimeError("You need to implement this method if you want to give the model interpretations or attacks.") 
 
     def predict_batch_json(self, inputs: List[JsonDict]) -> List[JsonDict]:
         instances = self._batch_json_to_instances(inputs)
@@ -292,6 +243,7 @@ class Predictor(Registrable):
         Parameters
         ----------
         archive_path The path to the archive.
+
         Returns
         -------
         A Predictor instance.
@@ -321,4 +273,12 @@ class Predictor(Registrable):
         model = archive.model
         model.eval()
 
+<<<<<<< Updated upstream
         return Predictor.by_name(predictor_name)(model, dataset_reader)
+=======
+        return Predictor.by_name(predictor_name)(model, dataset_reader)
+<<<<<<< Updated upstream
+=======
+        
+>>>>>>> Stashed changes
+>>>>>>> Stashed changes
