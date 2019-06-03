@@ -10,7 +10,7 @@ from allennlp.training.callbacks.callback import Callback
 State = TypeVar('State')  # pylint: disable=invalid-name
 
 class CallbackHandler(Registrable, Generic[State]):
-    def __init__(self, callbacks: Iterable[Callback], state: State) -> None:
+    def __init__(self, callbacks: Iterable[Callback[State]], state: State) -> None:
         # Set up callbacks
         self.callbacks = list(callbacks or [])
         self.callbacks.sort(key=lambda cb: cb.priority)

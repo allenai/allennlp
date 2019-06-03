@@ -134,7 +134,6 @@ setup(name='allennlp',
           'word2number>=1.1',
           'pytorch-pretrained-bert>=0.6.0',
           'jsonpickle',
-          'typing_extensions',
       ],
       entry_points={
           'console_scripts': [

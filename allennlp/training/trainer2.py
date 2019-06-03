@@ -3,9 +3,8 @@ import copy
 import math
 import os
 import time
-import re
 import datetime
-from typing import Dict, Optional, List, Union, Any, NamedTuple, Iterable
+from typing import Dict, Optional, List, Union, Any, Iterable
 
 import torch
 import torch.optim.lr_scheduler
@@ -13,26 +12,27 @@ import torch.optim.lr_scheduler
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError, parse_cuda_device
 from allennlp.common.util import (dump_metrics, gpu_memory_mb, peak_memory_mb,
-                                  get_frozen_and_tunable_parameter_names, lazy_groups_of)
+                                  lazy_groups_of)
 from allennlp.common.tqdm import Tqdm
+from allennlp.data.dataset import Batch
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator, TensorDict
-from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.model import Model
 from allennlp.nn import util as nn_util
+from allennlp.training import util as training_util
 from allennlp.training.callbacks import Callback, CallbackHandler, Events
 from allennlp.training.callbacks.callbacks import (
         LogTensorboard, LogTensorboardHistograms, LrsCallback, CheckpointCallback, Validate, MovingAverageCallback
 )
 from allennlp.training.checkpointer import Checkpointer
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
-from allennlp.training.momentum_schedulers import MomentumScheduler
 from allennlp.training.metric_tracker import MetricTracker
+from allennlp.training.momentum_schedulers import MomentumScheduler
+from allennlp.training.moving_average import MovingAverage
 from allennlp.training.optimizers import Optimizer
 from allennlp.training.tensorboard_writer import TensorboardWriter
+from allennlp.training.trainer_pieces import TrainerPieces
 from allennlp.training.trainer_base import TrainerBase
-from allennlp.training import util as training_util
-from allennlp.training.moving_average import MovingAverage
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -65,7 +65,8 @@ class Trainer(TrainerBase):
                  should_log_parameter_statistics: bool = True,
                  should_log_learning_rate: bool = False,
                  log_batch_size_period: Optional[int] = None,
-                 moving_average: Optional[MovingAverage] = None) -> None:
+                 moving_average: Optional[MovingAverage] = None,
+                 callbacks: List[Callback['Trainer']] = None) -> None:
         """
         A trainer for doing supervised learning. It just takes a labeled dataset
         and a ``DataIterator``, and uses the supplied ``Optimizer`` to learn the weights
@@ -232,7 +233,7 @@ class Trainer(TrainerBase):
 
         self.batch_num_total = 0
         self.cumulative_batch_size = 0
-        self.batch_group = None
+        self.batch_group: List[List[Batch]] = []
         self.batches_this_epoch = 0
         # For tracking is_best_so_far and should_stop_early
         self.metric_tracker = MetricTracker(patience, validation_metric)
@@ -254,15 +255,16 @@ class Trainer(TrainerBase):
         self.epoch_number = 0
         self.batch_grad_norm: Optional[float] = None
 
-        # Set up callback handler
-        callbacks: List[Callback] = [
-                LogTensorboard(log_batch_size_period),
-                LogTensorboardHistograms(),
-                LrsCallback(),
-                CheckpointCallback(),
-                MovingAverageCallback(),
-                Validate()
-        ]
+        # Default set of callbacks
+        if callbacks is None:
+            callbacks = [
+                    LogTensorboard(log_batch_size_period),
+                    LogTensorboardHistograms(),
+                    LrsCallback(),
+                    CheckpointCallback(),
+                    MovingAverageCallback(),
+                    Validate()
+            ]
 
         self.handler = CallbackHandler(callbacks, self)
 
@@ -295,11 +297,11 @@ class Trainer(TrainerBase):
 
         return loss
 
-    def _train_epoch(self, epoch: int) -> None:
+    def _train_epoch(self) -> None:
         """
         Trains one epoch and returns metrics.
         """
-        logger.info("Epoch %d/%d", epoch, self.num_epochs - 1)
+        logger.info("Epoch %d/%d", self.epoch_number, self.num_epochs - 1)
         peak_cpu_usage = peak_memory_mb()
         logger.info(f"Peak CPU memory usage MB: {peak_cpu_usage}")
         gpu_usage = []
@@ -334,7 +336,6 @@ class Trainer(TrainerBase):
             self.handler.state.batch_num_total += 1
 
             self.optimizer.zero_grad()
-
             loss = self.batch_loss(batch_group, for_training=True)
 
             self.handler.fire_event(Events.AFTER_FORWARD)
@@ -369,7 +370,7 @@ class Trainer(TrainerBase):
             ):
                 last_save_time = time.time()
                 self._save_checkpoint(
-                        '{0}.{1}'.format(epoch, training_util.time_to_str(int(last_save_time)))
+                        '{0}.{1}'.format(self.epoch_number, training_util.time_to_str(int(last_save_time)))
                 )
 
             self.handler.fire_event(Events.BATCH_END)
@@ -381,7 +382,6 @@ class Trainer(TrainerBase):
         self.train_metrics['cpu_memory_MB'] = peak_cpu_usage
         for (gpu_num, memory) in gpu_usage:
             self.train_metrics['gpu_'+str(gpu_num)+'_memory_MB'] = memory
-
 
     def train(self) -> Dict[str, Any]:
         """
@@ -403,11 +403,10 @@ class Trainer(TrainerBase):
         for key, value in self.metric_tracker.best_epoch_metrics.items():
             self.metrics["best_validation_" + key] = value
 
-        for epoch in range(epoch_counter, self.num_epochs):
-            self.epoch_number = epoch
-            self.handler.fire_event(Events.EPOCH_START)
+        for self.epoch_number in range(epoch_counter, self.num_epochs):
             epoch_start_time = time.time()
-            self._train_epoch(epoch)
+            self.handler.fire_event(Events.EPOCH_START)
+            self._train_epoch()
 
             # get peak of memory usage
             if 'cpu_memory_MB' in self.train_metrics:
@@ -429,7 +428,7 @@ class Trainer(TrainerBase):
             self.metrics["training_duration"] = str(datetime.timedelta(seconds=training_elapsed_time))
             self.metrics["training_start_epoch"] = epoch_counter
             self.metrics["training_epochs"] = epochs_trained
-            self.metrics["epoch"] = epoch
+            self.metrics["epoch"] = self.epoch_number
 
             for key, value in self.train_metrics.items():
                 self.metrics["training_" + key] = value
@@ -439,27 +438,28 @@ class Trainer(TrainerBase):
             if self.metric_tracker.is_best_so_far():
                 # Update all the best_ metrics.
                 # (Otherwise they just stay the same as they were.)
-                self.metrics['best_epoch'] = epoch
+                self.metrics['best_epoch'] = self.epoch_number
                 for key, value in self.val_metrics.items():
                     self.metrics["best_validation_" + key] = value
 
                 self.metric_tracker.best_epoch_metrics = copy.deepcopy(self.val_metrics)
 
             if self._serialization_dir:
-                dump_metrics(os.path.join(self._serialization_dir, f'metrics_epoch_{epoch}.json'), self.metrics)
+                dump_metrics(os.path.join(self._serialization_dir, f'metrics_epoch_{self.epoch_number}.json'),
+                             self.metrics)
 
             # The Scheduler API is agnostic to whether your schedule requires a validation metric -
             # if it doesn't, the validation metric passed here is ignored.
             if self.momentum_scheduler:
-                self.momentum_scheduler.step(this_epoch_val_metric, epoch)
+                self.momentum_scheduler.step(this_epoch_val_metric, self.epoch_number)
 
             epoch_elapsed_time = time.time() - epoch_start_time
             logger.info("Epoch duration: %s", datetime.timedelta(seconds=epoch_elapsed_time))
 
-            if epoch < self.num_epochs - 1:
+            if self.epoch_number < self.num_epochs - 1:
                 training_elapsed_time = time.time() - training_start_time
                 estimated_time_remaining = training_elapsed_time * \
-                    ((self.num_epochs - epoch_counter) / float(epoch - epoch_counter + 1) - 1)
+                    ((self.num_epochs - epoch_counter) / float(self.epoch_number - epoch_counter + 1) - 1)
                 formatted_time = str(datetime.timedelta(seconds=int(estimated_time_remaining)))
                 logger.info("Estimated training time remaining: %s", formatted_time)
 
@@ -467,7 +467,7 @@ class Trainer(TrainerBase):
 
             self.handler.fire_event(Events.EPOCH_END)
 
-            self._save_checkpoint(epoch)
+            self._save_checkpoint(self.epoch_number)
 
         # Load the best model state before returning
         best_model_state = self.checkpointer.best_model_state()
@@ -497,14 +497,17 @@ class Trainer(TrainerBase):
     # Requires custom from_params.
     @classmethod
     def from_params(cls,  # type: ignore
-                    model: Model,
-                    serialization_dir: str,
-                    iterator: DataIterator,
-                    train_data: Iterable[Instance],
-                    validation_data: Optional[Iterable[Instance]],
                     params: Params,
-                    validation_iterator: DataIterator = None) -> 'Trainer':
-        # pylint: disable=arguments-differ
+                    serialization_dir: str,
+                    recover: bool = False) -> 'Trainer':
+        pieces = TrainerPieces.from_params(params, serialization_dir, recover)  # pylint: disable=no-member
+        model = pieces.model
+        iterator = pieces.iterator
+        train_data = pieces.train_dataset
+        validation_data = pieces.validation_dataset
+        params = pieces.params
+        validation_iterator = pieces.validation_iterator
+
         patience = params.pop_int("patience", None)
         validation_metric = params.pop("validation_metric", "-loss")
         shuffle = params.pop_bool("shuffle", True)
@@ -563,6 +566,14 @@ class Trainer(TrainerBase):
         should_log_learning_rate = params.pop_bool("should_log_learning_rate", False)
         log_batch_size_period = params.pop_int("log_batch_size_period", None)
 
+        callbacks_params = params.pop("callbacks", None)
+
+        if callbacks_params is None:
+            callbacks = None
+        else:
+            callbacks = [Callback.from_params(callback_params)
+                         for callback_params in callbacks_params]
+
         params.assert_empty(cls.__name__)
         return cls(model, optimizer, iterator,
                    train_data, validation_data,
@@ -584,90 +595,5 @@ class Trainer(TrainerBase):
                    should_log_parameter_statistics=should_log_parameter_statistics,
                    should_log_learning_rate=should_log_learning_rate,
                    log_batch_size_period=log_batch_size_period,
-                   moving_average=moving_average)
-
-
-class TrainerPieces(NamedTuple):
-    """
-    We would like to avoid having complex instantiation logic taking place
-    in `Trainer.from_params`. This helper class has a `from_params` that
-    instantiates a model, loads train (and possibly validation and test) datasets,
-    constructs a Vocabulary, creates data iterators, and handles a little bit
-    of bookkeeping. If you're creating your own alternative training regime
-    you might be able to use this.
-    """
-    model: Model
-    iterator: DataIterator
-    train_dataset: Iterable[Instance]
-    validation_dataset: Iterable[Instance]
-    test_dataset: Iterable[Instance]
-    validation_iterator: DataIterator
-    params: Params
-
-    @staticmethod
-    def from_params(params: Params,
-                    serialization_dir: str,
-                    recover: bool = False,
-                    cache_directory: str = None,
-                    cache_prefix: str = None) -> 'TrainerPieces':
-        all_datasets = training_util.datasets_from_params(params, cache_directory, cache_prefix)
-        datasets_for_vocab_creation = set(params.pop("datasets_for_vocab_creation", all_datasets))
-
-        for dataset in datasets_for_vocab_creation:
-            if dataset not in all_datasets:
-                raise ConfigurationError(f"invalid 'dataset_for_vocab_creation' {dataset}")
-
-        logger.info("From dataset instances, %s will be considered for vocabulary creation.",
-                    ", ".join(datasets_for_vocab_creation))
-
-        if recover and os.path.exists(os.path.join(serialization_dir, "vocabulary")):
-            vocab = Vocabulary.from_files(os.path.join(serialization_dir, "vocabulary"))
-            params.pop("vocabulary", {})
-        else:
-            vocab = Vocabulary.from_params(
-                    params.pop("vocabulary", {}),
-                    (instance for key, dataset in all_datasets.items()
-                     for instance in dataset
-                     if key in datasets_for_vocab_creation)
-            )
-
-        model = Model.from_params(vocab=vocab, params=params.pop('model'))
-
-        # If vocab extension is ON for training, embedding extension should also be
-        # done. If vocab and embeddings are already in sync, it would be a no-op.
-        model.extend_embedder_vocab()
-
-        # Initializing the model can have side effect of expanding the vocabulary
-        vocab.save_to_files(os.path.join(serialization_dir, "vocabulary"))
-
-        iterator = DataIterator.from_params(params.pop("iterator"))
-        iterator.index_with(model.vocab)
-        validation_iterator_params = params.pop("validation_iterator", None)
-        if validation_iterator_params:
-            validation_iterator = DataIterator.from_params(validation_iterator_params)
-            validation_iterator.index_with(model.vocab)
-        else:
-            validation_iterator = None
-
-        train_data = all_datasets['train']
-        validation_data = all_datasets.get('validation')
-        test_data = all_datasets.get('test')
-
-        trainer_params = params.pop("trainer")
-        no_grad_regexes = trainer_params.pop("no_grad", ())
-        for name, parameter in model.named_parameters():
-            if any(re.search(regex, name) for regex in no_grad_regexes):
-                parameter.requires_grad_(False)
-
-        frozen_parameter_names, tunable_parameter_names = \
-                    get_frozen_and_tunable_parameter_names(model)
-        logger.info("Following parameters are Frozen  (without gradient):")
-        for name in frozen_parameter_names:
-            logger.info(name)
-        logger.info("Following parameters are Tunable (with gradient):")
-        for name in tunable_parameter_names:
-            logger.info(name)
-
-        return TrainerPieces(model, iterator,
-                             train_data, validation_data, test_data,
-                             validation_iterator, trainer_params)
+                   moving_average=moving_average,
+                   callbacks=callbacks)

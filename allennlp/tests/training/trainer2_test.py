@@ -55,6 +55,51 @@ class TestT2rainer(AllenNlpTestCase):
         self.iterator = BasicIterator(batch_size=2)
         self.iterator.index_with(vocab)
 
+    def test_trainer_can_run_from_params(self):
+        # pylint: disable=bad-continuation
+        from allennlp.commands.train import train_model
+
+        params = Params({
+                "trainer": {
+                    "type": "trainer2",
+                    "optimizer": {"type": "sgd", "lr": 0.01, "momentum": 0.9},
+                    "num_epochs": 2
+                },
+                "dataset_reader": {"type": "sequence_tagging"},
+                "train_data_path": str(self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv'),
+                "validation_data_path": str(self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv'),
+                "model": {
+                    "type": "simple_tagger",
+                    "text_field_embedder": {
+                        "token_embedders": {
+                            "tokens": {
+                                "type": "embedding",
+                                "embedding_dim": 5
+                            }
+                        }
+                    },
+                    "encoder": {
+                        "type": "lstm",
+                        "input_size": 5,
+                        "hidden_size": 7,
+                        "num_layers": 2
+                    }
+                },
+                "iterator": {"type": "basic", "batch_size": 2}
+        })
+
+        train_model(params, self.TEST_DIR)
+        with open(self.TEST_DIR / 'metrics.json') as f:
+            metrics = json.load(f)
+        assert 'best_validation_loss' in metrics
+        assert isinstance(metrics['best_validation_loss'], float)
+        assert 'best_validation_accuracy' in metrics
+        assert isinstance(metrics['best_validation_accuracy'], float)
+        assert 'best_validation_accuracy3' in metrics
+        assert isinstance(metrics['best_validation_accuracy3'], float)
+        assert 'best_epoch' in metrics
+        assert isinstance(metrics['best_epoch'], int)
+
     def test_trainer_can_run2(self):
         trainer = Trainer(model=self.model,
                           optimizer=self.optimizer,

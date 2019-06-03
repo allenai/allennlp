@@ -1,39 +1,27 @@
-from typing import Set, Dict, List, Union, Iterable
+from typing import Set, Dict, List
 import logging
 import math
 import traceback
-from typing_extensions import Protocol
 
 import torch
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.tqdm import Tqdm
 from allennlp.common.util import lazy_groups_of
-from allennlp.data.iterators.data_iterator import DataIterator, TensorDict
-from allennlp.data.instance import Instance
-from allennlp.models import Model
 from allennlp.training import util as training_util
+from allennlp.training import trainer2  # pylint: disable=unused-import
 from allennlp.training.callbacks import Callback, Events
-from allennlp.training.checkpointer import Checkpointer
-from allennlp.training.learning_rate_schedulers import LearningRateScheduler
-from allennlp.training.metric_tracker import MetricTracker
-from allennlp.training.moving_average import MovingAverage
-from allennlp.training.optimizers import Optimizer
-from allennlp.training.tensorboard_writer import TensorboardWriter
 
 logger = logging.getLogger(__name__)
 
 
-class TensorboardHistogramsState(Protocol):
-    model: Model
-    tensorboard: TensorboardWriter
-
-class LogTensorboardHistograms(Callback[TensorboardHistogramsState]):
+@Callback.register("log-tensorboard-histograms")
+class LogTensorboardHistograms(Callback['trainer2.Trainer']):
     def __init__(self):
         self.histogram_parameters: Set[str] = set()
         self.param_updates: Dict[str, torch.Tensor] = {}
 
-    def __call__(self, event: str, state: TensorboardHistogramsState) -> None:
+    def __call__(self, event: str, state: 'trainer2.Trainer') -> None:
         if event == Events.TRAINING_START:
             self.histogram_parameters = set(
                     state.model.get_parameters_for_histogram_tensorboard_logging()
@@ -55,23 +43,13 @@ class LogTensorboardHistograms(Callback[TensorboardHistogramsState]):
             state.tensorboard.log_histograms(state.model, self.histogram_parameters)
 
 
-class TensorboardState(Protocol):
-    model: Model
-    tensorboard: TensorboardWriter
-    optimizer: Optimizer
-    batch_grad_norm: float
-    batch_group: list
-    cumulative_batch_size: int
-    train_metrics: dict
-    val_metrics: dict
-
-
-class LogTensorboard(Callback[TensorboardState]):
+@Callback.register("log-tensorboard")
+class LogTensorboard(Callback['trainer2.Trainer']):
     def __init__(self, log_batch_size_period: int = None) -> None:
         self.log_batch_size_period = log_batch_size_period
         self.epoch = 1
 
-    def __call__(self, event: str, state: TensorboardState) -> None:
+    def __call__(self, event: str, state: 'trainer2.Trainer') -> None:
         # At epoch start get parameters for histogram logging
         if event == Events.BATCH_END:
             # Log parameter values to tensorboard
@@ -100,15 +78,9 @@ class LogTensorboard(Callback[TensorboardState]):
             self.epoch += 1
 
 
-class LrsState(Protocol):
-    learning_rate_scheduler: LearningRateScheduler
-    batch_num_total: int
-    epoch_number: int
-    val_metrics: dict
-    validation_metric: str
-
-class LrsCallback(Callback[LrsState]):
-    def __call__(self, event: str, state: LrsState) -> None:
+@Callback.register("learning-rate-scheduler")
+class LrsCallback(Callback['trainer2.Trainer']):
+    def __call__(self, event: str, state: 'trainer2.Trainer') -> None:
         # Don't do anything if there's no lr_scheduler
         if state.learning_rate_scheduler is None:
             return
@@ -119,12 +91,6 @@ class LrsCallback(Callback[LrsState]):
             state.learning_rate_scheduler.step(state.val_metrics[state.validation_metric],
                                                state.epoch_number)
 
-class CheckpointState(Protocol):
-    checkpointer: Checkpointer
-    checkpoint_epoch: Union[int, str]
-    model: Model
-    metric_tracker: MetricTracker
-    epoch_number: int
 
 _DEFAULT_STATE_DICT_ATTRS = ['metric_tracker',
                              'learning_rate_scheduler',
@@ -134,14 +100,15 @@ _DEFAULT_STATE_DICT_ATTRS = ['metric_tracker',
 _DEFAULT_OTHER_ATTRS = ['batch_num_total']
 
 
-class CheckpointCallback(Callback[CheckpointState]):
+@Callback.register("checkpoint")
+class CheckpointCallback(Callback['trainer2.Trainer']):
     def __init__(self,
                  state_dict_attrs: List[str] = None,
                  other_attrs: List[str] = None) -> None:
         self.state_dict_attrs = state_dict_attrs or _DEFAULT_STATE_DICT_ATTRS
         self.other_attrs = other_attrs or _DEFAULT_OTHER_ATTRS
 
-    def __call__(self, event: str, state: CheckpointState) -> None:
+    def __call__(self, event: str, state: 'trainer2.Trainer') -> None:
         if event == Events.SAVE_CHECKPOINT:
             training_states = {}
             for attr in self.state_dict_attrs:
@@ -159,17 +126,15 @@ class CheckpointCallback(Callback[CheckpointState]):
 
 
         elif event == Events.RESTORE_CHECKPOINT:
-            """
-            Restores the model and training state from the last saved checkpoint.
-            This includes an epoch count and optimizer state, which is serialized separately
-            from model parameters. This function should only be used to continue training -
-            if you wish to load a model for inference/load parts of a model into a new
-            computation graph, you should use the native Pytorch functions:
-            `` model.load_state_dict(torch.load("/path/to/model/weights.th"))``
+            # Restores the model and training state from the last saved checkpoint.
+            # This includes an epoch count and optimizer state, which is serialized separately
+            # from model parameters. This function should only be used to continue training -
+            # if you wish to load a model for inference/load parts of a model into a new
+            # computation graph, you should use the native Pytorch functions:
+            # `` model.load_state_dict(torch.load("/path/to/model/weights.th"))``
 
-            If ``self._serialization_dir`` does not exist or does not contain any checkpointed weights,
-            this will do nothing.
-            """
+            # If ``self._serialization_dir`` does not exist or does not contain any checkpointed weights,
+            # this will do nothing.
             try:
                 model_state, training_state = state.checkpointer.restore_checkpoint()
             except RuntimeError:
@@ -199,12 +164,9 @@ class CheckpointCallback(Callback[CheckpointState]):
                 state.epoch_number = int(training_state["epoch"].split('.')[0]) + 1
 
 
-class MovingAverageState(Protocol):
-    moving_average: MovingAverage
-    batch_num_total: int
-
-class MovingAverageCallback(Callback[MovingAverageState]):
-    def __call__(self, event: str, state: MovingAverageState) -> None:
+@Callback.register("moving-average")
+class MovingAverageCallback(Callback['trainer2.Trainer']):
+    def __call__(self, event: str, state: 'trainer2.Trainer') -> None:
         if state.moving_average is None:
             return
 
@@ -221,20 +183,9 @@ class MovingAverageCallback(Callback[MovingAverageState]):
             state.moving_average.restore()
 
 
-class ValidateState(Protocol):
-    model: Model
-    validation_iterator: DataIterator
-    validation_data: Iterable[Instance]
-    validation_metric: str
-    metric_tracker: MetricTracker
-    val_metrics: dict
-    _cuda_devices: list
-
-    # pylint: disable=unused-argument,no-self-use,multiple-statements,pointless-statement
-    def batch_loss(self, batch_group: List[TensorDict], for_training: bool) -> torch.Tensor: ...
-
-class Validate(Callback[ValidateState]):
-    def __call__(self, event: str, state: ValidateState) -> None:
+@Callback.register("validate")
+class Validate(Callback['trainer2.Trainer']):
+    def __call__(self, event: str, state: 'trainer2.Trainer') -> None:
         if event == Events.VALIDATE:
             if state.validation_data is None:
                 return
