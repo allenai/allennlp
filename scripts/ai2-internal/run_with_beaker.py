@@ -52,9 +52,9 @@ def main(param_file: str, args: argparse.Namespace):
         subprocess.run(f'docker build -t {docker_image} .', shell=True, check=True)
 
         print(f"Create a Beaker image...")
-        image = subprocess.check_output(f'beaker image create --quiet {image}', shell=True,
+        image = subprocess.check_output(f'beaker image create --quiet {docker_image}', shell=True,
                                         universal_newlines=True).strip()
-        print(f"  Image created: {image}")
+        print(f"  Image created: {docker_image}")
 
     config_dataset_id = subprocess.check_output(f'beaker dataset create --quiet {param_file}', shell=True, universal_newlines=True).strip()
 
