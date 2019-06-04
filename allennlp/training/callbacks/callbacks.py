@@ -9,12 +9,14 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.common.tqdm import Tqdm
 from allennlp.common.util import lazy_groups_of
+from allennlp.models import Model
 from allennlp.training.optimizers import Optimizer
 from allennlp.training import util as training_util
 from allennlp.training import trainer2  # pylint: disable=unused-import
 from allennlp.training.callbacks import Callback, Events
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
 from allennlp.training.momentum_schedulers import MomentumScheduler
+from allennlp.training.moving_average import MovingAverage
 
 logger = logging.getLogger(__name__)
 
@@ -242,21 +244,31 @@ class CheckpointCallback(Callback['trainer2.Trainer']):
 
 @Callback.register("moving_average")
 class MovingAverageCallback(Callback['trainer2.Trainer']):
+    def __init__(self, moving_average: MovingAverage) -> None:
+        self.moving_average = moving_average
+
     def __call__(self, event: str, state: 'trainer2.Trainer') -> None:
-        if state.moving_average is None:
+        if self.moving_average is None:
             return
 
         if event == Events.BATCH_END:
-            state.moving_average.apply(state.batch_num_total)
+            self.moving_average.apply(state.batch_num_total)
 
         elif event in [Events.BEFORE_SAVE_CHECKPOINT, Events.BEFORE_VALIDATE]:
             # If moving averages are used for parameters, we save
             # the moving average values into checkpoint, instead of the current values.
-            state.moving_average.assign_average_value()
+            self.moving_average.assign_average_value()
 
         elif event in [Events.AFTER_SAVE_CHECKPOINT, Events.AFTER_VALIDATE]:
             # Restore the original values for parameters so that training will not be affected.
-            state.moving_average.restore()
+            self.moving_average.restore()
+
+    @classmethod
+    def from_params(cls, params: Params, model: Model) -> 'MovingAverageCallback':
+        parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
+        moving_average = MovingAverage.from_params(params.pop("moving_average"), parameters=parameters)
+        return MovingAverageCallback(moving_average)
+
 
 
 @Callback.register("validate")

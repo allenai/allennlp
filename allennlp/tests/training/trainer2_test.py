@@ -39,7 +39,6 @@ def default_callbacks():
             LogTensorboard(log_batch_size_period=10),
             LogTensorboardHistograms(),
             CheckpointCallback(),
-            MovingAverageCallback(),
             Validate()
     ]
 
@@ -85,7 +84,6 @@ class TestT2rainer(AllenNlpTestCase):
                         {"type": "log_tensorboard", "log_batch_size_period": 10},
                         {"type": "log_tensorboard_histograms"},
                         {"type": "checkpoint"},
-                        {"type": "moving_average"},
                         {"type": "validate"}
                     ]
                 },
@@ -166,14 +164,14 @@ class TestT2rainer(AllenNlpTestCase):
 
     def test_trainer_can_run_exponential_moving_average(self):
         moving_average = ExponentialMovingAverage(self.model.named_parameters(), decay=0.9999)
+        callbacks = default_callbacks() + [MovingAverageCallback(moving_average)]
         trainer = Trainer(model=self.model,
                           optimizer=self.optimizer,
                           iterator=self.iterator,
                           train_dataset=self.instances,
                           validation_dataset=self.instances,
                           num_epochs=2,
-                          callbacks=default_callbacks(),
-                          moving_average=moving_average)
+                          callbacks=callbacks)
         trainer.train()
 
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="No CUDA device registered.")
@@ -262,22 +260,23 @@ class TestT2rainer(AllenNlpTestCase):
 
     def test_trainer_can_resume_training_for_exponential_moving_average(self):
         moving_average = ExponentialMovingAverage(self.model.named_parameters())
+        callbacks = default_callbacks() + [MovingAverageCallback(moving_average)]
 
         trainer = Trainer(self.model, self.optimizer,
                           self.iterator, self.instances,
                           validation_dataset=self.instances,
                           num_epochs=1, serialization_dir=self.TEST_DIR,
-                          callbacks=default_callbacks(),
-                          moving_average=moving_average)
+                          callbacks=callbacks)
         trainer.train()
 
         new_moving_average = ExponentialMovingAverage(self.model.named_parameters())
+        new_callbacks = default_callbacks() + [MovingAverageCallback(new_moving_average)]
+
         new_trainer = Trainer(self.model, self.optimizer,
                               self.iterator, self.instances,
                               validation_dataset=self.instances,
                               num_epochs=3, serialization_dir=self.TEST_DIR,
-                              callbacks=default_callbacks(),
-                              moving_average=new_moving_average)
+                              callbacks=new_callbacks)
 
         new_trainer.handler.fire_event(Events.RESTORE_CHECKPOINT)  # pylint: disable=protected-access
         assert new_trainer.epoch_number == 1

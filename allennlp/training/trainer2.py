@@ -22,7 +22,6 @@ from allennlp.training import util as training_util
 from allennlp.training.callbacks import Callback, CallbackHandler, Events
 from allennlp.training.checkpointer import Checkpointer
 from allennlp.training.metric_tracker import MetricTracker
-from allennlp.training.moving_average import MovingAverage
 from allennlp.training.optimizers import Optimizer
 from allennlp.training.tensorboard_writer import TensorboardWriter
 from allennlp.training.trainer_pieces import TrainerPieces
@@ -56,7 +55,6 @@ class Trainer(TrainerBase):
                  histogram_interval: int = None,
                  should_log_parameter_statistics: bool = True,
                  should_log_learning_rate: bool = False,
-                 moving_average: Optional[MovingAverage] = None,
                  callbacks: List[Callback['Trainer']] = None) -> None:
         """
         A trainer for doing supervised learning. It just takes a labeled dataset
@@ -151,13 +149,6 @@ class Trainer(TrainerBase):
             Whether to send parameter specific learning rate to tensorboard.
         log_batch_size_period : ``int``, optional, (default = ``None``)
             If defined, how often to log the average batch size.
-        moving_average: ``MovingAverage``, optional, (default = None)
-            If provided, we will maintain moving averages for all parameters. During training, we
-            employ a shadow variable for each parameter, which maintains the moving average. During
-            evaluation, we backup the original parameters and assign the moving averages to corresponding
-            parameters. Be careful that when saving the checkpoint, we will save the moving averages of
-            parameters. This is necessary because we want the saved model to perform as well as the validated
-            model if we load it later. But this may cause problems if you restart the training from checkpoint.
         """
         super().__init__(serialization_dir, cuda_device)
 
@@ -227,7 +218,6 @@ class Trainer(TrainerBase):
 
         self.grad_norm = grad_norm
         self.grad_clipping = grad_clipping
-        self.moving_average = moving_average
         self.tensorboard = tensorboard
         self.last_log = 0.0
         self.epoch_number = 0
@@ -486,10 +476,6 @@ class Trainer(TrainerBase):
 
         parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
         optimizer = Optimizer.from_params(parameters, params.pop("optimizer"))
-        if "moving_average" in params:
-            moving_average = MovingAverage.from_params(params.pop("moving_average"), parameters=parameters)
-        else:
-            moving_average = None
 
         if 'checkpointer' in params:
             if 'keep_serialized_model_every_num_seconds' in params or \
@@ -519,6 +505,7 @@ class Trainer(TrainerBase):
             callbacks = None
         else:
             callbacks = [Callback.from_params(params=callback_params,
+                                              model=model,
                                               optimizer=optimizer)
                          for callback_params in callbacks_params]
 
@@ -540,5 +527,4 @@ class Trainer(TrainerBase):
                    histogram_interval=histogram_interval,
                    should_log_parameter_statistics=should_log_parameter_statistics,
                    should_log_learning_rate=should_log_learning_rate,
-                   moving_average=moving_average,
                    callbacks=callbacks)
