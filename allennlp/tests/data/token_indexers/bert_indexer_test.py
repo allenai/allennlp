@@ -190,6 +190,7 @@ class TestBertIndexer(ModelTestCase):
         # 1 full window + 1 half window with start/end tokens
         assert indexed_tokens["bert"] == [16, 2, 3, 4, 3, 5, 6, 8, 9, 17]
         assert indexed_tokens["bert-offsets"] == [1, 2, 4, 5, 6, 7, 8]
+        assert indexed_tokens["bert-type-ids"] == [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
         token_indexer = PretrainedBertIndexer(str(vocab_path),
                                               truncate_long_sequences=True,
