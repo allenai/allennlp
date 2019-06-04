@@ -7,7 +7,6 @@ import datetime
 from typing import Dict, Optional, List, Union, Any, Iterable
 
 import torch
-import torch.optim.lr_scheduler
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError, parse_cuda_device
@@ -21,11 +20,7 @@ from allennlp.models.model import Model
 from allennlp.nn import util as nn_util
 from allennlp.training import util as training_util
 from allennlp.training.callbacks import Callback, CallbackHandler, Events
-from allennlp.training.callbacks.callbacks import (
-        LogTensorboard, LogTensorboardHistograms, LrsCallback, CheckpointCallback, Validate, MovingAverageCallback
-)
 from allennlp.training.checkpointer import Checkpointer
-from allennlp.training.learning_rate_schedulers import LearningRateScheduler
 from allennlp.training.metric_tracker import MetricTracker
 from allennlp.training.momentum_schedulers import MomentumScheduler
 from allennlp.training.moving_average import MovingAverage
@@ -58,7 +53,6 @@ class Trainer(TrainerBase):
                  cuda_device: Union[int, List] = -1,
                  grad_norm: Optional[float] = None,
                  grad_clipping: Optional[float] = None,
-                 learning_rate_scheduler: Optional[LearningRateScheduler] = None,
                  momentum_scheduler: Optional[MomentumScheduler] = None,
                  summary_interval: int = 100,
                  histogram_interval: int = None,
@@ -137,13 +131,6 @@ class Trainer(TrainerBase):
             If provided, gradients will be clipped `during the backward pass` to have an (absolute)
             maximum of this value.  If you are getting ``NaNs`` in your gradients during training
             that are not solved by using ``grad_norm``, you may need this.
-        learning_rate_scheduler : ``LearningRateScheduler``, optional (default = None)
-            If specified, the learning rate will be decayed with respect to
-            this schedule at the end of each epoch (or batch, if the scheduler implements
-            the ``step_batch`` method). If you use :class:`torch.optim.lr_scheduler.ReduceLROnPlateau`,
-            this will use the ``validation_metric`` provided to determine if learning has plateaued.
-            To support updating the learning rate on every batch, this can optionally implement
-            ``step_batch(batch_num_total)`` which updates the learning rate given the batch number.
         momentum_scheduler : ``MomentumScheduler``, optional (default = None)
             If specified, the momentum will be updated at the end of each batch or epoch
             according to the schedule.
@@ -232,7 +219,6 @@ class Trainer(TrainerBase):
         self.metrics: Dict[str, Any] = {}
 
         self.batch_num_total = 0
-        self.cumulative_batch_size = 0
         self.batch_group: List[List[Batch]] = []
         self.batches_this_epoch = 0
         # For tracking is_best_so_far and should_stop_early
@@ -247,7 +233,6 @@ class Trainer(TrainerBase):
 
         self.grad_norm = grad_norm
         self.grad_clipping = grad_clipping
-        self.learning_rate_scheduler = learning_rate_scheduler
         self.momentum_scheduler = momentum_scheduler
         self.moving_average = moving_average
         self.tensorboard = tensorboard
@@ -255,16 +240,16 @@ class Trainer(TrainerBase):
         self.epoch_number = 0
         self.batch_grad_norm: Optional[float] = None
 
-        # Default set of callbacks
-        if callbacks is None:
-            callbacks = [
-                    LogTensorboard(log_batch_size_period),
-                    LogTensorboardHistograms(),
-                    LrsCallback(),
-                    CheckpointCallback(),
-                    MovingAverageCallback(),
-                    Validate()
-            ]
+        # # Default set of callbacks
+        # if callbacks is None:
+        #     callbacks = [
+        #             LogTensorboard(log_batch_size_period),
+        #             LogTensorboardHistograms(),
+        #             LrsCallback(),
+        #             CheckpointCallback(),
+        #             MovingAverageCallback(),
+        #         h    Validate()
+        #     ]
 
         self.handler = CallbackHandler(callbacks, self)
 
@@ -297,22 +282,10 @@ class Trainer(TrainerBase):
 
         return loss
 
-    def _train_epoch(self) -> None:
+    def generate_batch_groups(self) -> Iterable[List[Batch]]:
         """
-        Trains one epoch and returns metrics.
+        Returns an iterable over the batch groups
         """
-        logger.info("Epoch %d/%d", self.epoch_number, self.num_epochs - 1)
-        peak_cpu_usage = peak_memory_mb()
-        logger.info(f"Peak CPU memory usage MB: {peak_cpu_usage}")
-        gpu_usage = []
-        for gpu, memory in gpu_memory_mb().items():
-            gpu_usage.append((gpu, memory))
-            logger.info(f"GPU {gpu} memory usage MB: {memory}")
-
-        train_loss = 0.0
-        # Set the model to "train" mode.
-        self.model.train()
-
         num_gpus = len(self._cuda_devices)
 
         # Get tqdm for the training batches
@@ -320,75 +293,19 @@ class Trainer(TrainerBase):
                                             num_epochs=1,
                                             shuffle=self.shuffle)
         train_generator = lazy_groups_of(raw_train_generator, num_gpus)
-        num_training_batches = math.ceil(self.iterator.get_num_batches(self.train_data)/num_gpus)
-        self.last_log = time.time()
-        last_save_time = time.time()
+        return train_generator
 
-        logger.info("Training")
-        train_generator_tqdm = Tqdm.tqdm(train_generator,
-                                         total=num_training_batches)
-        self.handler.state.cumulative_batch_size = 0
-        for batch_group in train_generator_tqdm:
-
-            self.handler.fire_event(Events.BATCH_START)
-
-            self.handler.state.batches_this_epoch += 1
-            self.handler.state.batch_num_total += 1
-
-            self.optimizer.zero_grad()
-            loss = self.batch_loss(batch_group, for_training=True)
-
-            self.handler.fire_event(Events.AFTER_FORWARD)
-
-            if torch.isnan(loss):
-                raise ValueError("nan loss encountered")
-
-            loss.backward()
-
-            self.handler.fire_event(Events.AFTER_BACKWARD)
-
-            train_loss += loss.item()
-
-            self.batch_grad_norm = self.rescale_gradients()
-
-            # This does nothing if batch_num_total is None or you are using a
-            # scheduler which doesn't update per batch.
-            if self.momentum_scheduler:
-                self.momentum_scheduler.step_batch(self.handler.state.batch_num_total)
-
-            self.optimizer.step()
-
-            # Update the description with the latest metrics
-            self.train_metrics = training_util.get_metrics(self.model, train_loss, self.batches_this_epoch)
-            description = training_util.description_from_metrics(self.train_metrics)
-
-            train_generator_tqdm.set_description(description, refresh=False)
-
-            # Save model if needed.
-            if self.model_save_interval is not None and (
-                    time.time() - last_save_time > self.model_save_interval
-            ):
-                last_save_time = time.time()
-                self._save_checkpoint(
-                        '{0}.{1}'.format(self.epoch_number, training_util.time_to_str(int(last_save_time)))
-                )
-
-            self.handler.fire_event(Events.BATCH_END)
-
-        self.train_metrics = training_util.get_metrics(self.model,
-                                                       train_loss,
-                                                       self.batches_this_epoch,
-                                                       reset=True)
-        self.train_metrics['cpu_memory_MB'] = peak_cpu_usage
-        for (gpu_num, memory) in gpu_usage:
-            self.train_metrics['gpu_'+str(gpu_num)+'_memory_MB'] = memory
+    def num_training_batches(self) -> int:
+        num_gpus = len(self._cuda_devices)
+        return math.ceil(self.iterator.get_num_batches(self.train_data) / num_gpus)
 
     def train(self) -> Dict[str, Any]:
         """
         Trains the supplied model with the supplied parameters.
         """
+        ####
         self.handler.fire_event(Events.RESTORE_CHECKPOINT)
-        epoch_counter = self.epoch_number
+        starting_epoch = self.epoch_number
 
         training_util.enable_gradient_clipping(self.model, self.grad_clipping)
 
@@ -403,10 +320,87 @@ class Trainer(TrainerBase):
         for key, value in self.metric_tracker.best_epoch_metrics.items():
             self.metrics["best_validation_" + key] = value
 
-        for self.epoch_number in range(epoch_counter, self.num_epochs):
+        for self.epoch_number in range(starting_epoch, self.num_epochs):
             epoch_start_time = time.time()
+            ####
             self.handler.fire_event(Events.EPOCH_START)
-            self._train_epoch()
+
+            # This used to be in train_epoch()
+            logger.info("Epoch %d/%d", self.epoch_number, self.num_epochs - 1)
+            peak_cpu_usage = peak_memory_mb()
+            logger.info(f"Peak CPU memory usage MB: {peak_cpu_usage}")
+            gpu_usage = []
+            for gpu, memory in gpu_memory_mb().items():
+                gpu_usage.append((gpu, memory))
+                logger.info(f"GPU {gpu} memory usage MB: {memory}")
+
+            train_loss = 0.0
+            # Set the model to "train" mode.
+            self.model.train()
+
+            self.last_log = time.time()
+            last_save_time = time.time()
+
+            logger.info("Training")
+            self.batches_this_epoch = 0
+            batch_groups_tqdm = Tqdm.tqdm(self.generate_batch_groups(),
+                                          total=self.num_training_batches())
+
+            for self.batch_group in batch_groups_tqdm:
+                self.handler.fire_event(Events.BATCH_START)
+
+                self.batches_this_epoch += 1
+                self.batch_num_total += 1
+
+                self.optimizer.zero_grad()
+                loss = self.batch_loss(self.batch_group, for_training=True)
+
+                ####
+                self.handler.fire_event(Events.AFTER_FORWARD)
+
+                if torch.isnan(loss):
+                    raise ValueError("nan loss encountered")
+
+                loss.backward()
+
+                ####
+                self.handler.fire_event(Events.AFTER_BACKWARD)
+
+                train_loss += loss.item()
+
+                self.batch_grad_norm = self.rescale_gradients()
+
+                # This does nothing if batch_num_total is None or you are using a
+                # scheduler which doesn't update per batch.
+                if self.momentum_scheduler:
+                    self.momentum_scheduler.step_batch(self.batch_num_total)
+
+                self.optimizer.step()
+
+                # Update the description with the latest metrics
+                self.train_metrics = training_util.get_metrics(self.model, train_loss, self.batches_this_epoch)
+                description = training_util.description_from_metrics(self.train_metrics)
+
+                batch_groups_tqdm.set_description(description, refresh=False)
+
+                # Save model if needed.
+                if self.model_save_interval is not None and (
+                        time.time() - last_save_time > self.model_save_interval
+                ):
+                    last_save_time = time.time()
+                    self.checkpoint_epoch = f"{self.epoch_number}.{training_util.time_to_str(int(last_save_time))}"
+                    self.handler.fire_sequence(Events.SAVE_CHECKPOINT)
+
+                ####
+                self.handler.fire_event(Events.BATCH_END)
+
+            self.train_metrics = training_util.get_metrics(self.model,
+                                                           train_loss,
+                                                           self.batches_this_epoch,
+                                                           reset=True)
+            self.train_metrics['cpu_memory_MB'] = peak_cpu_usage
+            for (gpu_num, memory) in gpu_usage:
+                self.train_metrics['gpu_'+str(gpu_num)+'_memory_MB'] = memory
 
             # get peak of memory usage
             if 'cpu_memory_MB' in self.train_metrics:
@@ -416,7 +410,8 @@ class Trainer(TrainerBase):
                 if key.startswith('gpu_'):
                     self.metrics["peak_"+key] = max(self.metrics.get("peak_"+key, 0), value)
 
-            self.handler.fire_events([Events.BEFORE_VALIDATE, Events.VALIDATE, Events.AFTER_VALIDATE])
+            ####
+            self.handler.fire_sequence(Events.VALIDATE)
 
             if self.metric_tracker.should_stop_early():
                 logger.info("Ran out of patience.  Stopping training.")
@@ -426,7 +421,7 @@ class Trainer(TrainerBase):
             # Create overall metrics dict
             training_elapsed_time = time.time() - training_start_time
             self.metrics["training_duration"] = str(datetime.timedelta(seconds=training_elapsed_time))
-            self.metrics["training_start_epoch"] = epoch_counter
+            self.metrics["training_start_epoch"] = starting_epoch
             self.metrics["training_epochs"] = epochs_trained
             self.metrics["epoch"] = self.epoch_number
 
@@ -459,40 +454,22 @@ class Trainer(TrainerBase):
             if self.epoch_number < self.num_epochs - 1:
                 training_elapsed_time = time.time() - training_start_time
                 estimated_time_remaining = training_elapsed_time * \
-                    ((self.num_epochs - epoch_counter) / float(self.epoch_number - epoch_counter + 1) - 1)
+                    ((self.num_epochs - starting_epoch) / float(self.epoch_number - starting_epoch + 1) - 1)
                 formatted_time = str(datetime.timedelta(seconds=int(estimated_time_remaining)))
                 logger.info("Estimated training time remaining: %s", formatted_time)
 
             epochs_trained += 1
 
+            ####
             self.handler.fire_event(Events.EPOCH_END)
 
-            self._save_checkpoint(self.epoch_number)
+            self.checkpoint_epoch = self.epoch_number
+            self.handler.fire_sequence(Events.SAVE_CHECKPOINT)
 
-        # Load the best model state before returning
-        best_model_state = self.checkpointer.best_model_state()
-        if best_model_state:
-            self.model.load_state_dict(best_model_state)
-
+        ####
         self.handler.fire_event(Events.TRAINING_END)
 
         return self.metrics
-
-    def _save_checkpoint(self, epoch: Union[int, str]) -> None:
-        """
-        Saves a checkpoint of the model to self._serialization_dir.
-        Is a no-op if self._serialization_dir is None.
-
-        Parameters
-        ----------
-        epoch : Union[int, str], required.
-            The epoch of training.  If the checkpoint is saved in the middle
-            of an epoch, the parameter is a string with the epoch and timestamp.
-        """
-        self.checkpoint_epoch = epoch
-        self.handler.fire_events([Events.BEFORE_SAVE_CHECKPOINT,
-                                  Events.SAVE_CHECKPOINT,
-                                  Events.AFTER_SAVE_CHECKPOINT])
 
     # Requires custom from_params.
     @classmethod
@@ -515,7 +492,6 @@ class Trainer(TrainerBase):
         cuda_device = parse_cuda_device(params.pop("cuda_device", -1))
         grad_norm = params.pop_float("grad_norm", None)
         grad_clipping = params.pop_float("grad_clipping", None)
-        lr_scheduler_params = params.pop("learning_rate_scheduler", None)
         momentum_scheduler_params = params.pop("momentum_scheduler", None)
 
         if isinstance(cuda_device, list):
@@ -534,10 +510,6 @@ class Trainer(TrainerBase):
         else:
             moving_average = None
 
-        if lr_scheduler_params:
-            lr_scheduler = LearningRateScheduler.from_params(optimizer, lr_scheduler_params)
-        else:
-            lr_scheduler = None
         if momentum_scheduler_params:
             momentum_scheduler = MomentumScheduler.from_params(optimizer, momentum_scheduler_params)
         else:
@@ -571,7 +543,8 @@ class Trainer(TrainerBase):
         if callbacks_params is None:
             callbacks = None
         else:
-            callbacks = [Callback.from_params(callback_params)
+            callbacks = [Callback.from_params(params=callback_params,
+                                              optimizer=optimizer)
                          for callback_params in callbacks_params]
 
         params.assert_empty(cls.__name__)
@@ -586,7 +559,6 @@ class Trainer(TrainerBase):
                    cuda_device=cuda_device,
                    grad_norm=grad_norm,
                    grad_clipping=grad_clipping,
-                   learning_rate_scheduler=lr_scheduler,
                    momentum_scheduler=momentum_scheduler,
                    checkpointer=checkpointer,
                    model_save_interval=model_save_interval,

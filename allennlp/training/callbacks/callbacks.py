@@ -6,16 +6,19 @@ import traceback
 import torch
 
 from allennlp.common.checks import ConfigurationError
+from allennlp.common.params import Params
 from allennlp.common.tqdm import Tqdm
 from allennlp.common.util import lazy_groups_of
+from allennlp.training.optimizers import Optimizer
 from allennlp.training import util as training_util
 from allennlp.training import trainer2  # pylint: disable=unused-import
 from allennlp.training.callbacks import Callback, Events
+from allennlp.training.learning_rate_schedulers import LearningRateScheduler
 
 logger = logging.getLogger(__name__)
 
 
-@Callback.register("log-tensorboard-histograms")
+@Callback.register("log_tensorboard_histograms")
 class LogTensorboardHistograms(Callback['trainer2.Trainer']):
     def __init__(self):
         self.histogram_parameters: Set[str] = set()
@@ -43,11 +46,12 @@ class LogTensorboardHistograms(Callback['trainer2.Trainer']):
             state.tensorboard.log_histograms(state.model, self.histogram_parameters)
 
 
-@Callback.register("log-tensorboard")
+@Callback.register("log_tensorboard")
 class LogTensorboard(Callback['trainer2.Trainer']):
     def __init__(self, log_batch_size_period: int = None) -> None:
         self.log_batch_size_period = log_batch_size_period
         self.epoch = 1
+        self.cumulative_batch_size = 0
 
     def __call__(self, event: str, state: 'trainer2.Trainer') -> None:
         # At epoch start get parameters for histogram logging
@@ -63,9 +67,9 @@ class LogTensorboard(Callback['trainer2.Trainer']):
 
             if self.log_batch_size_period:
                 cur_batch = sum([training_util.get_batch_size(batch) for batch in state.batch_group])
-                state.cumulative_batch_size += cur_batch
+                self.cumulative_batch_size += cur_batch
                 if (state.batches_this_epoch - 1) % self.log_batch_size_period == 0:
-                    average = state.cumulative_batch_size / state.batches_this_epoch
+                    average = self.cumulative_batch_size / state.batches_this_epoch
                     logger.info(f"current batch size: {cur_batch} mean batch size: {average}")
                     state.tensorboard.add_train_scalar("current_batch_size", cur_batch)
                     state.tensorboard.add_train_scalar("mean_batch_size", average)
@@ -78,22 +82,41 @@ class LogTensorboard(Callback['trainer2.Trainer']):
             self.epoch += 1
 
 
-@Callback.register("learning-rate-scheduler")
+@Callback.register("learning_rate_scheduler")
 class LrsCallback(Callback['trainer2.Trainer']):
+    def __init__(self, learning_rate_scheduler: LearningRateScheduler) -> None:
+        self.learning_rate_scheduler = learning_rate_scheduler
+
     def __call__(self, event: str, state: 'trainer2.Trainer') -> None:
         # Don't do anything if there's no lr_scheduler
-        if state.learning_rate_scheduler is None:
+        if self.learning_rate_scheduler is None:
             return
 
         if event == Events.AFTER_BACKWARD:
-            state.learning_rate_scheduler.step_batch(state.batch_num_total)
+            self.learning_rate_scheduler.step_batch(state.batch_num_total)
         elif event == Events.EPOCH_END:
-            state.learning_rate_scheduler.step(state.val_metrics[state.validation_metric],
-                                               state.epoch_number)
+            self.learning_rate_scheduler.step(state.val_metrics[state.validation_metric],
+                                              state.epoch_number)
+
+    def get_training_state(self) -> dict:
+        return {"learning_rate_scheduler": self.learning_rate_scheduler.state_dict()}
+
+    def restore_training_state(self, training_state: dict) -> None:
+        state_dict = training_state.pop("learning_rate_scheduler", None)
+
+        if state_dict:
+            self.learning_rate_scheduler.load_state_dict(state_dict)
+
+
+
+    @classmethod
+    def from_params(cls, params: Params, optimizer: Optimizer) -> 'LrsCallback':
+        learning_rate_scheduler = LearningRateScheduler.from_params(params.pop("learning_rate_scheduler"),
+                                                                    optimizer=optimizer)
+        return LrsCallback(learning_rate_scheduler)
 
 
 _DEFAULT_STATE_DICT_ATTRS = ['metric_tracker',
-                             'learning_rate_scheduler',
                              'momentum_scheduler',
                              'optimizer']
 
@@ -111,12 +134,20 @@ class CheckpointCallback(Callback['trainer2.Trainer']):
     def __call__(self, event: str, state: 'trainer2.Trainer') -> None:
         if event == Events.SAVE_CHECKPOINT:
             training_states = {}
+
+            # Add state_dict attributes
             for attr in self.state_dict_attrs:
                 state_attr = getattr(state, attr)
                 if state_attr is not None:
                     training_states[attr] = state_attr.state_dict()
+
+            # Add other attributes
             for attr in self.other_attrs:
                 training_states[attr] = getattr(state, attr)
+
+            # Get attributes from callbacks
+            for callback in state.handler.callbacks:
+                training_states.update(callback.get_training_state())
 
             state.checkpointer.save_checkpoint(
                     model_state=state.model.state_dict(),
@@ -150,21 +181,34 @@ class CheckpointCallback(Callback['trainer2.Trainer']):
 
             state.model.load_state_dict(model_state)
 
+            # Restore state_dict attrs
             for attr in self.state_dict_attrs:
                 state_attr = getattr(state, attr)
                 if state_attr is not None:
                     state_attr.load_state_dict(training_state[attr])
 
+            # Restore other attrs
             for attr in self.other_attrs:
                 setattr(state, attr, training_state[attr])
+
+            # Restore callback attrs
+            for callback in state.handler.callbacks:
+                print(callback)
+                callback.restore_training_state(training_state)
 
             if isinstance(training_state["epoch"], int):
                 state.epoch_number = training_state["epoch"] + 1
             else:
                 state.epoch_number = int(training_state["epoch"].split('.')[0]) + 1
 
+        elif event == Events.TRAINING_END:
+            # Load the best model state before returning
+            best_model_state = state.checkpointer.best_model_state()
+            if best_model_state:
+                state.model.load_state_dict(best_model_state)
 
-@Callback.register("moving-average")
+
+@Callback.register("moving_average")
 class MovingAverageCallback(Callback['trainer2.Trainer']):
     def __call__(self, event: str, state: 'trainer2.Trainer') -> None:
         if state.moving_average is None:

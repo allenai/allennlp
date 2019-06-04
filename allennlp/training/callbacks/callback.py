@@ -10,3 +10,9 @@ class Callback(Registrable, Generic[State]):
 
     def __call__(self, event: str, state: State) -> None:
         raise NotImplementedError
+
+    def get_training_state(self) -> dict:
+        return {}
+
+    def restore_training_state(self, training_state: dict) -> None:
+        pass
