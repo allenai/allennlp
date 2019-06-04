@@ -14,6 +14,7 @@ from allennlp.training import util as training_util
 from allennlp.training import trainer2  # pylint: disable=unused-import
 from allennlp.training.callbacks import Callback, Events
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
+from allennlp.training.momentum_schedulers import MomentumScheduler
 
 logger = logging.getLogger(__name__)
 
@@ -116,8 +117,39 @@ class LrsCallback(Callback['trainer2.Trainer']):
         return LrsCallback(learning_rate_scheduler)
 
 
+@Callback.register("momentum_scheduler")
+class MomentumSchedulerCallback(Callback['trainer2.Trainer']):
+    def __init__(self, momentum_scheduler: MomentumScheduler) -> None:
+        self.momentum_scheduler = momentum_scheduler
+
+    def __call__(self, event: str, state: 'trainer2.Trainer') -> None:
+        # Don't do anything if there's no momentum_scheduler
+        if self.momentum_scheduler is None:
+            return
+
+        if event == Events.AFTER_BACKWARD:
+            self.momentum_scheduler.step_batch(state.batch_num_total)
+        elif event == Events.EPOCH_END:
+            self.momentum_scheduler.step(state.val_metrics[state.validation_metric],
+                                         state.epoch_number)
+
+    def get_training_state(self) -> dict:
+        return {"momentum_scheduler": self.momentum_scheduler.state_dict()}
+
+    def restore_training_state(self, training_state: dict) -> None:
+        state_dict = training_state.pop("momentum_scheduler", None)
+
+        if state_dict:
+            self.momentum_scheduler.load_state_dict(state_dict)
+
+    @classmethod
+    def from_params(cls, params: Params, optimizer: Optimizer) -> 'LrsCallback':
+        learning_rate_scheduler = LearningRateScheduler.from_params(params.pop("learning_rate_scheduler"),
+                                                                    optimizer=optimizer)
+        return LrsCallback(learning_rate_scheduler)
+
+
 _DEFAULT_STATE_DICT_ATTRS = ['metric_tracker',
-                             'momentum_scheduler',
                              'optimizer']
 
 _DEFAULT_OTHER_ATTRS = ['batch_num_total']

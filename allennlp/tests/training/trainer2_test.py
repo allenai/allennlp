@@ -16,7 +16,7 @@ from allennlp.training.callbacks import Events
 
 from allennlp.training.callbacks.callbacks import (
         LogTensorboard, LogTensorboardHistograms, CheckpointCallback, MovingAverageCallback, Validate,
-        LrsCallback
+        LrsCallback, MomentumSchedulerCallback
 )
 
 from allennlp.training.trainer2 import Trainer
@@ -441,33 +441,33 @@ class TestT2rainer(AllenNlpTestCase):
     def test_trainer_can_run_and_resume_with_momentum_scheduler(self):
         scheduler = MomentumScheduler.from_params(
                 self.optimizer, Params({"type": "inverted_triangular", "cool_down": 2, "warm_up": 2}))
+        callbacks = default_callbacks() + [MomentumSchedulerCallback(scheduler)]
         trainer = Trainer(model=self.model,
                           optimizer=self.optimizer,
                           iterator=self.iterator,
-                          momentum_scheduler=scheduler,
                           validation_metric="-loss",
                           train_dataset=self.instances,
                           validation_dataset=self.instances,
                           num_epochs=4,
-                          callbacks=default_callbacks(),
+                          callbacks=callbacks,
                           serialization_dir=self.TEST_DIR)
         trainer.train()
 
         new_scheduler = MomentumScheduler.from_params(
                 self.optimizer, Params({"type": "inverted_triangular", "cool_down": 2, "warm_up": 2}))
+        new_callbacks = default_callbacks() + [MomentumSchedulerCallback(new_scheduler)]
         new_trainer = Trainer(model=self.model,
                               optimizer=self.optimizer,
                               iterator=self.iterator,
-                              momentum_scheduler=new_scheduler,
                               validation_metric="-loss",
                               train_dataset=self.instances,
                               validation_dataset=self.instances,
                               num_epochs=6,
-                              callbacks=default_callbacks(),
+                              callbacks=new_callbacks,
                               serialization_dir=self.TEST_DIR)
         new_trainer.handler.fire_event(Events.RESTORE_CHECKPOINT)
         assert new_trainer.epoch_number == 4
-        assert new_trainer.momentum_scheduler.last_epoch == 3
+        assert new_scheduler.last_epoch == 3
         new_trainer.train()
 
     def test_trainer_can_run_with_lr_scheduler(self):

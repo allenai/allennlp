@@ -22,7 +22,6 @@ from allennlp.training import util as training_util
 from allennlp.training.callbacks import Callback, CallbackHandler, Events
 from allennlp.training.checkpointer import Checkpointer
 from allennlp.training.metric_tracker import MetricTracker
-from allennlp.training.momentum_schedulers import MomentumScheduler
 from allennlp.training.moving_average import MovingAverage
 from allennlp.training.optimizers import Optimizer
 from allennlp.training.tensorboard_writer import TensorboardWriter
@@ -53,12 +52,10 @@ class Trainer(TrainerBase):
                  cuda_device: Union[int, List] = -1,
                  grad_norm: Optional[float] = None,
                  grad_clipping: Optional[float] = None,
-                 momentum_scheduler: Optional[MomentumScheduler] = None,
                  summary_interval: int = 100,
                  histogram_interval: int = None,
                  should_log_parameter_statistics: bool = True,
                  should_log_learning_rate: bool = False,
-                 log_batch_size_period: Optional[int] = None,
                  moving_average: Optional[MovingAverage] = None,
                  callbacks: List[Callback['Trainer']] = None) -> None:
         """
@@ -131,9 +128,6 @@ class Trainer(TrainerBase):
             If provided, gradients will be clipped `during the backward pass` to have an (absolute)
             maximum of this value.  If you are getting ``NaNs`` in your gradients during training
             that are not solved by using ``grad_norm``, you may need this.
-        momentum_scheduler : ``MomentumScheduler``, optional (default = None)
-            If specified, the momentum will be updated at the end of each batch or epoch
-            according to the schedule.
         summary_interval: ``int``, optional, (default = 100)
             Number of batches between logging scalars to tensorboard
         histogram_interval : ``int``, optional, (default = ``None``)
@@ -233,7 +227,6 @@ class Trainer(TrainerBase):
 
         self.grad_norm = grad_norm
         self.grad_clipping = grad_clipping
-        self.momentum_scheduler = momentum_scheduler
         self.moving_average = moving_average
         self.tensorboard = tensorboard
         self.last_log = 0.0
@@ -312,7 +305,6 @@ class Trainer(TrainerBase):
         logger.info("Beginning training.")
         self.handler.fire_event(Events.TRAINING_START)
 
-        this_epoch_val_metric: float = None
         epochs_trained = 0
         training_start_time = time.time()
 
@@ -369,11 +361,6 @@ class Trainer(TrainerBase):
                 train_loss += loss.item()
 
                 self.batch_grad_norm = self.rescale_gradients()
-
-                # This does nothing if batch_num_total is None or you are using a
-                # scheduler which doesn't update per batch.
-                if self.momentum_scheduler:
-                    self.momentum_scheduler.step_batch(self.batch_num_total)
 
                 self.optimizer.step()
 
@@ -443,11 +430,6 @@ class Trainer(TrainerBase):
                 dump_metrics(os.path.join(self._serialization_dir, f'metrics_epoch_{self.epoch_number}.json'),
                              self.metrics)
 
-            # The Scheduler API is agnostic to whether your schedule requires a validation metric -
-            # if it doesn't, the validation metric passed here is ignored.
-            if self.momentum_scheduler:
-                self.momentum_scheduler.step(this_epoch_val_metric, self.epoch_number)
-
             epoch_elapsed_time = time.time() - epoch_start_time
             logger.info("Epoch duration: %s", datetime.timedelta(seconds=epoch_elapsed_time))
 
@@ -492,7 +474,6 @@ class Trainer(TrainerBase):
         cuda_device = parse_cuda_device(params.pop("cuda_device", -1))
         grad_norm = params.pop_float("grad_norm", None)
         grad_clipping = params.pop_float("grad_clipping", None)
-        momentum_scheduler_params = params.pop("momentum_scheduler", None)
 
         if isinstance(cuda_device, list):
             model_device = cuda_device[0]
@@ -509,11 +490,6 @@ class Trainer(TrainerBase):
             moving_average = MovingAverage.from_params(params.pop("moving_average"), parameters=parameters)
         else:
             moving_average = None
-
-        if momentum_scheduler_params:
-            momentum_scheduler = MomentumScheduler.from_params(optimizer, momentum_scheduler_params)
-        else:
-            momentum_scheduler = None
 
         if 'checkpointer' in params:
             if 'keep_serialized_model_every_num_seconds' in params or \
@@ -536,7 +512,6 @@ class Trainer(TrainerBase):
         histogram_interval = params.pop_int("histogram_interval", None)
         should_log_parameter_statistics = params.pop_bool("should_log_parameter_statistics", True)
         should_log_learning_rate = params.pop_bool("should_log_learning_rate", False)
-        log_batch_size_period = params.pop_int("log_batch_size_period", None)
 
         callbacks_params = params.pop("callbacks", None)
 
@@ -559,13 +534,11 @@ class Trainer(TrainerBase):
                    cuda_device=cuda_device,
                    grad_norm=grad_norm,
                    grad_clipping=grad_clipping,
-                   momentum_scheduler=momentum_scheduler,
                    checkpointer=checkpointer,
                    model_save_interval=model_save_interval,
                    summary_interval=summary_interval,
                    histogram_interval=histogram_interval,
                    should_log_parameter_statistics=should_log_parameter_statistics,
                    should_log_learning_rate=should_log_learning_rate,
-                   log_batch_size_period=log_batch_size_period,
                    moving_average=moving_average,
                    callbacks=callbacks)
