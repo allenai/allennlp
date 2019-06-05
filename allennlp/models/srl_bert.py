@@ -23,8 +23,6 @@ class SrlBert(Model):
         A Vocabulary, required in order to compute sizes for input/output projections.
     model : ``Union[str, BertModel]``, required.
         A string describing the BERT model to load or an already constructed BertModel.
-    bert_dim : int, required.
-        The dimension of the contextual representations from BERT.
     initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
         Used to initialize the model parameters.
     regularizer : ``RegularizerApplicator``, optional (default=``None``)
@@ -37,7 +35,6 @@ class SrlBert(Model):
     def __init__(self,
                  vocab: Vocabulary,
                  bert_model: Union[str, BertModel],
-                 bert_dim: int,
                  embedding_dropout: float = 0.0,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None,
@@ -54,7 +51,7 @@ class SrlBert(Model):
         # For the span based evaluation, we don't want to consider labels
         # for verb, because the verb index is provided to the model.
         self.span_metric = SpanBasedF1Measure(vocab, tag_namespace="labels", ignore_classes=["V"])
-        self.tag_projection_layer = Linear(bert_dim, self.num_classes)
+        self.tag_projection_layer = Linear(self.bert_model.config.hidden_size, self.num_classes)
 
         self.embedding_dropout = Dropout(p=embedding_dropout)
         self._label_smoothing = label_smoothing

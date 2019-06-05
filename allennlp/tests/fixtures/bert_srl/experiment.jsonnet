@@ -1,7 +1,7 @@
 local bert_model = "allennlp/tests/fixtures/bert/vocab.txt";
 {
   "dataset_reader":{
-      "type":"srl_bert",
+      "type":"srl",
       "bert_model_name": "bert-base-uncased"
     },
   "train_data_path": "allennlp/tests/fixtures/data/srl",
@@ -9,7 +9,6 @@ local bert_model = "allennlp/tests/fixtures/bert/vocab.txt";
     "model": {
         "type": "srl_bert",
         "bert_model": bert_model,
-        "bert_dim": 12,
         "embedding_dropout": 0.0
     },
     "iterator": {

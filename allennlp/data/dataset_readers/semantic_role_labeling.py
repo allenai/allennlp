@@ -86,6 +86,10 @@ class SrlReader(DatasetReader):
     domain_identifier: ``str``, (default = None)
         A string denoting a sub-domain of the Ontonotes 5.0 dataset to use. If present, only
         conll files under paths containing this domain identifier will be processed.
+    bert_model_name : ``Optional[str]``, (default = None)
+        The BERT model to be wrapped, which we use to wordpiece-tokenize the data correctly.
+        If a bert model name is passed, we will also convert the BIO tags and verb indices
+        to be faithful to the wordpieces generated from the tokenizer.
 
     Returns
     -------
