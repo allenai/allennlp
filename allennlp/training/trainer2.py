@@ -10,7 +10,6 @@ from allennlp.common import Params
 from allennlp.common.checks import parse_cuda_device
 from allennlp.common.util import lazy_groups_of
 from allennlp.common.tqdm import Tqdm
-from allennlp.data.dataset import Batch
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator, TensorDict
 from allennlp.models.model import Model
@@ -130,7 +129,7 @@ class Trainer(TrainerBase):
         self.metrics: Dict[str, Any] = {}
 
         self.batch_num_total = 0
-        self.batch_group: List[List[Batch]] = []
+        self.batch_group: List[TensorDict] = []
         self.batches_this_epoch = 0
         self.should_stop_early = False
         self.num_epochs = num_epochs
