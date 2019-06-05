@@ -648,7 +648,9 @@ class CopyNetSeq2Seq(Model):
             selected_generation_log_probs = generation_log_probs.gather(1, source_to_target_slice.unsqueeze(-1))
             combined_scores = util.logsumexp(
                     torch.cat((selected_generation_log_probs, copy_log_probs_to_add), dim=1))
-            generation_log_probs.scatter_(-1, source_to_target_slice.unsqueeze(-1), combined_scores.unsqueeze(-1))
+            generation_log_probs = generation_log_probs.scatter(-1,
+                                                                source_to_target_slice.unsqueeze(-1),
+                                                                combined_scores.unsqueeze(-1))
             # We have to combine copy scores for duplicate source tokens so that
             # we can find the overall most likely source token. So, if this is the first
             # occurence of this particular source token, we add the log_probs from all other
