@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, List, Iterable
+from typing import Dict, List, Iterable, Tuple, Any
 
 from overrides import overrides
 
@@ -11,8 +11,57 @@ from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
 from allennlp.data.tokenizers import Token
 from allennlp.data.dataset_readers.dataset_utils import Ontonotes, OntonotesSentence
 
+from pytorch_pretrained_bert.tokenization import BertTokenizer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
+START_TOKEN = "[CLS]"
+SEP_TOKEN = "[SEP]"
+
+def _convert_tags_to_wordpiece_tags(tags: List[str], offsets: List[int]):
+    # account for the fact the offsets are with respect to
+    # additional cls token at the start.
+    offsets = [x - 1 for x in offsets]
+    new_tags = []
+    j = 0
+    for i, offset in enumerate(offsets):
+        tag = tags[i]
+        is_o = tag == "O"
+        is_start = True
+        while j < offset:
+            if is_o:
+                new_tags.append("O")
+
+            elif tag.startswith("I"):
+                new_tags.append(tag)
+
+            elif is_start and tag.startswith("B"):
+                new_tags.append(tag)
+                is_start = False
+
+            elif tag.startswith("B"):
+                _, label = tag.split("-", 1)
+                new_tags.append("I-" + label)
+            j += 1
+
+    # Add O tags for cls and sep tokens.
+    return ["O"] + new_tags + ["O"]
+
+
+def _convert_verb_indices_to_wordpiece_indices(verb_indices: List[int], offsets: List[int]):
+    # account for the fact the offsets are with respect to
+    # additional cls token at the start.
+    offsets = [x - 1 for x in offsets]
+    j = 0
+    new_verb_indices = []
+    for i, offset in enumerate(offsets):
+        indicator = verb_indices[i]
+        while j < offset:
+            new_verb_indices.append(indicator)
+            j += 1
+
+    # Add 0 indicators for cls and sep tokens.
+    return [0] + new_verb_indices + [0]
 
 
 @DatasetReader.register("srl")
@@ -46,10 +95,34 @@ class SrlReader(DatasetReader):
     def __init__(self,
                  token_indexers: Dict[str, TokenIndexer] = None,
                  domain_identifier: str = None,
-                 lazy: bool = False) -> None:
+                 lazy: bool = False,
+                 bert_model_name: str = None) -> None:
         super().__init__(lazy)
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._domain_identifier = domain_identifier
+
+        if bert_model_name is not None:
+            self.bert_tokenizer = BertTokenizer.from_pretrained(bert_model_name)
+            self.lowercase_input = "uncased" in bert_model_name
+        else:
+            self.bert_tokenizer = None
+            self.lowercase_input = False
+
+    def _tokenize_input(self, tokens: List[str]) -> Tuple[List[str], List[str]]:
+        word_piece_tokens: List[str] = []
+        offsets = [0]
+        for token in tokens:
+            if self.lowercase_input:
+                token = token.lower()
+            word_pieces = self.bert_tokenizer.wordpiece_tokenizer.tokenize(token)
+            offsets.append(offsets[-1] + len(word_pieces))
+            word_piece_tokens.extend(word_pieces)
+        del offsets[0]
+
+        wordpieces = [START_TOKEN] + word_piece_tokens + [SEP_TOKEN]
+
+        offsets = [x + 1 for x in offsets]
+        return wordpieces, offsets
 
     @overrides
     def _read(self, file_path: str):
@@ -94,20 +167,40 @@ class SrlReader(DatasetReader):
         one-hot binary vector, the same length as the tokens, indicating the position of the verb
         to find arguments for.
         """
+        metadata_dict: Dict[str, Any] = {}
+        if self.bert_tokenizer is not None:
+            wordpieces, offsets = self._tokenize_input([t.text for t in tokens])
+            new_verbs = _convert_verb_indices_to_wordpiece_indices(verb_label, offsets)
+            metadata_dict["offsets"] = offsets
+            # In order to override the indexing mechanism, we need to set the `text_id`
+            # attribute directly. This causes the indexing to use this id.
+            text_field = TextField([Token(t, text_id=self.bert_tokenizer.vocab[t]) for t in wordpieces],
+                                    token_indexers=self._token_indexers)
+            verb_indicator = SequenceLabelField(new_verbs, text_field)
+
+        else:
+            text_field = TextField(tokens, token_indexers=self._token_indexers)
+            verb_indicator = SequenceLabelField(verb_label, text_field)
         # pylint: disable=arguments-differ
         fields: Dict[str, Field] = {}
-        text_field = TextField(tokens, token_indexers=self._token_indexers)
         fields['tokens'] = text_field
-        fields['verb_indicator'] = SequenceLabelField(verb_label, text_field)
+        fields['verb_indicator'] = verb_indicator
 
         if all([x == 0 for x in verb_label]):
             verb = None
         else:
             verb = tokens[verb_label.index(1)].text
-        metadata_dict = {"words": [x.text for x in tokens],
-                         "verb": verb}
+
+        metadata_dict["words"] = [x.text for x in tokens]
+        metadata_dict["verb"] = verb
+
         if tags:
-            fields['tags'] = SequenceLabelField(tags, text_field)
+            if self.bert_tokenizer is not None:
+                new_tags = _convert_tags_to_wordpiece_tags(tags, offsets)
+                fields['tags'] = SequenceLabelField(new_tags, text_field)
+            else:
+                fields['tags'] = SequenceLabelField(tags, text_field)
             metadata_dict["gold_tags"] = tags
+
         fields["metadata"] = MetadataField(metadata_dict)
         return Instance(fields)
