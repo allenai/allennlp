@@ -1,7 +1,5 @@
 import logging
-import copy
 import math
-import os
 import time
 import datetime
 from typing import Dict, Optional, List, Union, Any, Iterable
@@ -9,9 +7,8 @@ from typing import Dict, Optional, List, Union, Any, Iterable
 import torch
 
 from allennlp.common import Params
-from allennlp.common.checks import ConfigurationError, parse_cuda_device
-from allennlp.common.util import (dump_metrics, gpu_memory_mb, peak_memory_mb,
-                                  lazy_groups_of)
+from allennlp.common.checks import parse_cuda_device
+from allennlp.common.util import lazy_groups_of
 from allennlp.common.tqdm import Tqdm
 from allennlp.data.dataset import Batch
 from allennlp.data.instance import Instance
@@ -20,10 +17,7 @@ from allennlp.models.model import Model
 from allennlp.nn import util as nn_util
 from allennlp.training import util as training_util
 from allennlp.training.callbacks import Callback, CallbackHandler, Events
-from allennlp.training.checkpointer import Checkpointer
-from allennlp.training.metric_tracker import MetricTracker
 from allennlp.training.optimizers import Optimizer
-from allennlp.training.tensorboard_writer import TensorboardWriter
 from allennlp.training.trainer_pieces import TrainerPieces
 from allennlp.training.trainer_base import TrainerBase
 
@@ -38,23 +32,14 @@ class Trainer(TrainerBase):
                  iterator: DataIterator,
                  train_dataset: Iterable[Instance],
                  validation_dataset: Optional[Iterable[Instance]] = None,
-                 patience: Optional[int] = None,
-                 validation_metric: str = "-loss",
                  validation_iterator: DataIterator = None,
                  shuffle: bool = True,
                  num_epochs: int = 20,
                  serialization_dir: Optional[str] = None,
-                 num_serialized_models_to_keep: int = 20,
-                 keep_serialized_model_every_num_seconds: int = None,
-                 checkpointer: Checkpointer = None,
                  model_save_interval: float = None,
                  cuda_device: Union[int, List] = -1,
                  grad_norm: Optional[float] = None,
                  grad_clipping: Optional[float] = None,
-                 summary_interval: int = 100,
-                 histogram_interval: int = None,
-                 should_log_parameter_statistics: bool = True,
-                 should_log_learning_rate: bool = False,
                  callbacks: List[Callback['Trainer']] = None) -> None:
         """
         A trainer for doing supervised learning. It just takes a labeled dataset
@@ -109,11 +94,6 @@ class Trainer(TrainerBase):
             To do so, specify keep_serialized_model_every_num_seconds as the number of seconds
             between permanently saved checkpoints.  Note that this option is only used if
             num_serialized_models_to_keep is not None, otherwise all checkpoints are kept.
-        checkpointer : ``Checkpointer``, optional (default=None)
-            An instance of class Checkpointer to use instead of the default. If a checkpointer is specified,
-            the arguments num_serialized_models_to_keep and keep_serialized_model_every_num_seconds should
-            not be specified. The caller is responsible for initializing the checkpointer so that it is
-            consistent with serialization_dir.
         model_save_interval : ``float``, optional (default=None)
             If provided, then serialize models every ``model_save_interval``
             seconds within single epochs.  In all cases, models are also saved
@@ -126,64 +106,8 @@ class Trainer(TrainerBase):
             If provided, gradients will be clipped `during the backward pass` to have an (absolute)
             maximum of this value.  If you are getting ``NaNs`` in your gradients during training
             that are not solved by using ``grad_norm``, you may need this.
-        summary_interval: ``int``, optional, (default = 100)
-            Number of batches between logging scalars to tensorboard
-        histogram_interval : ``int``, optional, (default = ``None``)
-            If not None, then log histograms to tensorboard every ``histogram_interval`` batches.
-            When this parameter is specified, the following additional logging is enabled:
-                * Histograms of model parameters
-                * The ratio of parameter update norm to parameter norm
-                * Histogram of layer activations
-            We log histograms of the parameters returned by
-            ``model.get_parameters_for_histogram_tensorboard_logging``.
-            The layer activations are logged for any modules in the ``Model`` that have
-            the attribute ``should_log_activations`` set to ``True``.  Logging
-            histograms requires a number of GPU-CPU copies during training and is typically
-            slow, so we recommend logging histograms relatively infrequently.
-            Note: only Modules that return tensors, tuples of tensors or dicts
-            with tensors as values currently support activation logging.
-        should_log_parameter_statistics : ``bool``, optional, (default = True)
-            Whether to send parameter statistics (mean and standard deviation
-            of parameters and gradients) to tensorboard.
-        should_log_learning_rate : ``bool``, optional, (default = False)
-            Whether to send parameter specific learning rate to tensorboard.
-        log_batch_size_period : ``int``, optional, (default = ``None``)
-            If defined, how often to log the average batch size.
         """
         super().__init__(serialization_dir, cuda_device)
-
-        if checkpointer is not None:
-            # We can't easily check if these parameters were passed in, so check against their default values.
-            # We don't check against serialization_dir since it is also used by the parent class.
-            if num_serialized_models_to_keep != 20 or \
-                    keep_serialized_model_every_num_seconds is not None:
-                raise ConfigurationError(
-                        "When passing a custom Checkpointer, you may not also pass in separate checkpointer "
-                        "args 'num_serialized_models_to_keep' or 'keep_serialized_model_every_num_seconds'.")
-        else:
-            checkpointer = Checkpointer(serialization_dir,
-                                        keep_serialized_model_every_num_seconds,
-                                        num_serialized_models_to_keep)
-
-        if patience is None:  # no early stopping
-            if validation_dataset:
-                logger.warning('You provided a validation dataset but patience was set to None, '
-                               'meaning that early stopping is disabled')
-        elif (not isinstance(patience, int)) or patience <= 0:
-            raise ConfigurationError('{} is an invalid value for "patience": it must be a positive integer '
-                                     'or None (if you want to disable early stopping)'.format(patience))
-
-        tensorboard = TensorboardWriter(
-                get_batch_num_total=lambda: self.batch_num_total,
-                serialization_dir=serialization_dir,
-                summary_interval=summary_interval,
-                histogram_interval=histogram_interval,
-                should_log_parameter_statistics=should_log_parameter_statistics,
-                should_log_learning_rate=should_log_learning_rate)
-
-        # Enable activation logging.
-        if histogram_interval is not None:
-            tensorboard.enable_activation_logging(model)
 
         # This is all state that the callbacks might want:
         # I am not calling move_to_gpu here, because if the model is
@@ -199,6 +123,8 @@ class Trainer(TrainerBase):
         # For capturing mid / end-of-epoch metrics
         self.train_metrics: Dict[str, float] = {}
         self.val_metrics: Dict[str, float] = {}
+        self.latest_val_metric = 0.0
+        self.train_loss = 0.0
 
         # For capturing overall metrics
         self.metrics: Dict[str, Any] = {}
@@ -206,19 +132,15 @@ class Trainer(TrainerBase):
         self.batch_num_total = 0
         self.batch_group: List[List[Batch]] = []
         self.batches_this_epoch = 0
-        # For tracking is_best_so_far and should_stop_early
-        self.metric_tracker = MetricTracker(patience, validation_metric)
-        # Get rid of + or -
-        self.validation_metric = validation_metric[1:]
+        self.should_stop_early = False
         self.num_epochs = num_epochs
 
-        self.checkpointer = checkpointer
+        self.training_start_time = 0.0
         self.checkpoint_epoch: Union[int, str] = 0
         self.model_save_interval = model_save_interval
 
         self.grad_norm = grad_norm
         self.grad_clipping = grad_clipping
-        self.tensorboard = tensorboard
         self.last_log = 0.0
         self.epoch_number = 0
         self.batch_grad_norm: Optional[float] = None
@@ -249,7 +171,7 @@ class Trainer(TrainerBase):
 
         return loss
 
-    def generate_batch_groups(self) -> Iterable[List[Batch]]:
+    def generate_batch_groups(self) -> Iterable[List[TensorDict]]:
         """
         Returns an iterable over the batch groups
         """
@@ -278,28 +200,14 @@ class Trainer(TrainerBase):
         logger.info("Beginning training.")
         self.handler.fire_event(Events.TRAINING_START)
 
-        epochs_trained = 0
-        training_start_time = time.time()
-
-        self.metrics['best_epoch'] = self.metric_tracker.best_epoch or 0
-        for key, value in self.metric_tracker.best_epoch_metrics.items():
-            self.metrics["best_validation_" + key] = value
+        self.training_start_time = time.time()
 
         for self.epoch_number in range(starting_epoch, self.num_epochs):
             epoch_start_time = time.time()
             ####
             self.handler.fire_event(Events.EPOCH_START)
 
-            # This used to be in train_epoch()
-            logger.info("Epoch %d/%d", self.epoch_number, self.num_epochs - 1)
-            peak_cpu_usage = peak_memory_mb()
-            logger.info(f"Peak CPU memory usage MB: {peak_cpu_usage}")
-            gpu_usage = []
-            for gpu, memory in gpu_memory_mb().items():
-                gpu_usage.append((gpu, memory))
-                logger.info(f"GPU {gpu} memory usage MB: {memory}")
-
-            train_loss = 0.0
+            self.train_loss = 0.0
             # Set the model to "train" mode.
             self.model.train()
 
@@ -331,14 +239,16 @@ class Trainer(TrainerBase):
                 ####
                 self.handler.fire_event(Events.AFTER_BACKWARD)
 
-                train_loss += loss.item()
+                self.train_loss += loss.item()
 
                 self.batch_grad_norm = training_util.rescale_gradients(self.model, self.grad_norm)
 
                 self.optimizer.step()
 
                 # Update the description with the latest metrics
-                self.train_metrics = training_util.get_metrics(self.model, train_loss, self.batches_this_epoch)
+                self.train_metrics.update(
+                        training_util.get_metrics(self.model, self.train_loss, self.batches_this_epoch)
+                )
                 description = training_util.description_from_metrics(self.train_metrics)
 
                 batch_groups_tqdm.set_description(description, refresh=False)
@@ -354,72 +264,30 @@ class Trainer(TrainerBase):
                 ####
                 self.handler.fire_event(Events.BATCH_END)
 
-            self.train_metrics = training_util.get_metrics(self.model,
-                                                           train_loss,
-                                                           self.batches_this_epoch,
-                                                           reset=True)
-            self.train_metrics['cpu_memory_MB'] = peak_cpu_usage
-            for (gpu_num, memory) in gpu_usage:
-                self.train_metrics['gpu_'+str(gpu_num)+'_memory_MB'] = memory
-
-            # get peak of memory usage
-            if 'cpu_memory_MB' in self.train_metrics:
-                self.metrics['peak_cpu_memory_MB'] = max(self.metrics.get('peak_cpu_memory_MB', 0),
-                                                         self.train_metrics['cpu_memory_MB'])
-            for key, value in self.train_metrics.items():
-                if key.startswith('gpu_'):
-                    self.metrics["peak_"+key] = max(self.metrics.get("peak_"+key, 0), value)
-
             ####
             self.handler.fire_sequence(Events.VALIDATE)
-
-            if self.metric_tracker.should_stop_early():
-                logger.info("Ran out of patience.  Stopping training.")
-                break
-
-
-            # Create overall metrics dict
-            training_elapsed_time = time.time() - training_start_time
-            self.metrics["training_duration"] = str(datetime.timedelta(seconds=training_elapsed_time))
-            self.metrics["training_start_epoch"] = starting_epoch
-            self.metrics["training_epochs"] = epochs_trained
-            self.metrics["epoch"] = self.epoch_number
-
-            for key, value in self.train_metrics.items():
-                self.metrics["training_" + key] = value
-            for key, value in self.val_metrics.items():
-                self.metrics["validation_" + key] = value
-
-            if self.metric_tracker.is_best_so_far():
-                # Update all the best_ metrics.
-                # (Otherwise they just stay the same as they were.)
-                self.metrics['best_epoch'] = self.epoch_number
-                for key, value in self.val_metrics.items():
-                    self.metrics["best_validation_" + key] = value
-
-                self.metric_tracker.best_epoch_metrics = copy.deepcopy(self.val_metrics)
-
-            if self._serialization_dir:
-                dump_metrics(os.path.join(self._serialization_dir, f'metrics_epoch_{self.epoch_number}.json'),
-                             self.metrics)
 
             epoch_elapsed_time = time.time() - epoch_start_time
             logger.info("Epoch duration: %s", datetime.timedelta(seconds=epoch_elapsed_time))
 
             if self.epoch_number < self.num_epochs - 1:
-                training_elapsed_time = time.time() - training_start_time
+                training_elapsed_time = time.time() - self.training_start_time
                 estimated_time_remaining = training_elapsed_time * \
                     ((self.num_epochs - starting_epoch) / float(self.epoch_number - starting_epoch + 1) - 1)
                 formatted_time = str(datetime.timedelta(seconds=int(estimated_time_remaining)))
                 logger.info("Estimated training time remaining: %s", formatted_time)
 
-            epochs_trained += 1
-
             ####
             self.handler.fire_event(Events.EPOCH_END)
 
             self.checkpoint_epoch = self.epoch_number
+
             self.handler.fire_sequence(Events.SAVE_CHECKPOINT)
+
+            if self.should_stop_early:
+                logger.info("Ran out of patience.  Stopping training.")
+                break
+
 
         ####
         self.handler.fire_event(Events.TRAINING_END)
@@ -440,8 +308,6 @@ class Trainer(TrainerBase):
         params = pieces.params
         validation_iterator = pieces.validation_iterator
 
-        patience = params.pop_int("patience", None)
-        validation_metric = params.pop("validation_metric", "-loss")
         shuffle = params.pop_bool("shuffle", True)
         num_epochs = params.pop_int("num_epochs", 20)
         cuda_device = parse_cuda_device(params.pop("cuda_device", -1))
@@ -460,39 +326,18 @@ class Trainer(TrainerBase):
         parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
         optimizer = Optimizer.from_params(parameters, params.pop("optimizer"))
 
-        if 'checkpointer' in params:
-            if 'keep_serialized_model_every_num_seconds' in params or \
-                    'num_serialized_models_to_keep' in params:
-                raise ConfigurationError(
-                        "Checkpointer may be initialized either from the 'checkpointer' key or from the "
-                        "keys 'num_serialized_models_to_keep' and 'keep_serialized_model_every_num_seconds'"
-                        " but the passed config uses both methods.")
-            checkpointer = Checkpointer.from_params(params.pop("checkpointer"))
-        else:
-            num_serialized_models_to_keep = params.pop_int("num_serialized_models_to_keep", 20)
-            keep_serialized_model_every_num_seconds = params.pop_int(
-                    "keep_serialized_model_every_num_seconds", None)
-            checkpointer = Checkpointer(
-                    serialization_dir=serialization_dir,
-                    num_serialized_models_to_keep=num_serialized_models_to_keep,
-                    keep_serialized_model_every_num_seconds=keep_serialized_model_every_num_seconds)
         model_save_interval = params.pop_float("model_save_interval", None)
-        summary_interval = params.pop_int("summary_interval", 100)
-        histogram_interval = params.pop_int("histogram_interval", None)
-        should_log_parameter_statistics = params.pop_bool("should_log_parameter_statistics", True)
-        should_log_learning_rate = params.pop_bool("should_log_learning_rate", False)
 
         callbacks_params = params.pop("callbacks", [])
-        callbacks = [Callback.from_params(params=callback_params,
-                                          model=model,
-                                          optimizer=optimizer)
-                     for callback_params in callbacks_params]
+        callbacks: List[Callback] = [Callback.from_params(params=callback_params,
+                                                          model=model,
+                                                          optimizer=optimizer,
+                                                          serialization_dir=serialization_dir)
+                                     for callback_params in callbacks_params]
 
         params.assert_empty(cls.__name__)
         return cls(model, optimizer, iterator,
                    train_data, validation_data,
-                   patience=patience,
-                   validation_metric=validation_metric,
                    validation_iterator=validation_iterator,
                    shuffle=shuffle,
                    num_epochs=num_epochs,
@@ -500,10 +345,5 @@ class Trainer(TrainerBase):
                    cuda_device=cuda_device,
                    grad_norm=grad_norm,
                    grad_clipping=grad_clipping,
-                   checkpointer=checkpointer,
                    model_save_interval=model_save_interval,
-                   summary_interval=summary_interval,
-                   histogram_interval=histogram_interval,
-                   should_log_parameter_statistics=should_log_parameter_statistics,
-                   should_log_learning_rate=should_log_learning_rate,
                    callbacks=callbacks)
