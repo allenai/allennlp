@@ -627,7 +627,7 @@ class CopyNetSeq2Seq(Model):
         source_token_ids = state["source_token_ids"]
 
         # shape: [(batch_size, *)]
-        modified_log_probs_list: List[torch.Tensor] = [generation_log_probs]
+        modified_log_probs_list: List[torch.Tensor] = []
         for i in range(trimmed_source_length):
             # shape: (group_size,)
             copy_log_probs_slice = copy_log_probs[:, i]
@@ -678,6 +678,7 @@ class CopyNetSeq2Seq(Model):
             # shape: (group_size,)
             left_over_copy_log_probs = copy_log_probs_slice + (1.0 - copy_log_probs_to_add_mask + 1e-45).log()
             modified_log_probs_list.append(left_over_copy_log_probs.unsqueeze(-1))
+        modified_log_probs_list.insert(0, generation_log_probs)
 
         # shape: (group_size, target_vocab_size + trimmed_source_length)
         modified_log_probs = torch.cat(modified_log_probs_list, dim=-1)
