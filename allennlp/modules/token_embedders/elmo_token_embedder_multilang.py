@@ -13,9 +13,8 @@ from allennlp.data import Vocabulary
 @TokenEmbedder.register("elmo_token_embedder_multilang")
 class ElmoTokenEmbedderMultiLang(TokenEmbedder):
     """
-    Extending ElmoTokenEmbedder for multiple languages. Each language has
-    different weights for the ELMo model and an alignment matrix.
-    Compute a single layer of ELMo representations.
+    A multilingual ELMo embedder - extending ElmoTokenEmbedder for multiple languages.
+    Each language has different weights for the ELMo model and an alignment matrix.
 
     Parameters
     ----------
