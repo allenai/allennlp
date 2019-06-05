@@ -1,10 +1,8 @@
-from typing import List, Iterator, Dict 
+from typing import List, Iterator, Dict
 import json
 from contextlib import contextmanager
 
 import numpy as np
-import torch 
-import math 
 
 from allennlp.modules.text_field_embedders import TextFieldEmbedder
 from allennlp.common import Registrable
@@ -45,6 +43,11 @@ class Predictor(Registrable):
         self._model = model
         self._dataset_reader = dataset_reader
 
+        # For multiple inputs, the hook will be called multiple times
+        # so we append the incoming gradients to a list
+        self.extracted_grads = []
+        self.hooks = []
+
     def load_line(self, line: str) -> JsonDict:  # pylint: disable=no-self-use
         """
         If your inputs are not in JSON-lines format (e.g. you have a CSV)
@@ -66,8 +69,8 @@ class Predictor(Registrable):
     def inputs_to_labeled_instances(self, inputs: JsonDict) -> List[Instance]:
         """
         Converts incoming json to a :class:`~allennlp.data.instance.Instance`,
-        runs the model on the newly created instance, and adds labels to the 
-        :class:`~allennlp.data.instance.Instance`s given by the model's output. 
+        runs the model on the newly created instance, and adds labels to the
+        :class:`~allennlp.data.instance.Instance`s given by the model's output.
 
         Returns
         -------
@@ -81,7 +84,7 @@ class Predictor(Registrable):
 
     def get_gradients(self, instances: List[Instance]) -> Dict[str, np.ndarray]:
         """
-        Gets the gradients of the loss with respect to the model inputs. 
+        Gets the gradients of the loss with respect to the model inputs.
 
         Parameters
         ----------
@@ -92,21 +95,21 @@ class Predictor(Registrable):
         Dict[str, np.ndarray]
             Dictionary of gradient entries for each input fed into the model.
             The keys have the form ``{grad_input_1: ..., grad_input_2: ... }``
-            up to the number of inputs given. 
-            
+            up to the number of inputs given.
+
         Notes
         -----
         Takes a ``JsonDict`` representing the inputs of the model and converts
         them to :class:`~allennlp.data.instance.Instance`s, sends these through
         the model :func:`forward` function after registering hooks on the embedding
         layer of the model. Calls :func:`backward` on the loss and then removes the
-        hooks. 
+        hooks.
         """
         self._register_hooks()
 
         dataset = Batch(instances)
         dataset.index_instances(self._model.vocab)
- 
+
         outputs = self._model.decode(self._model.forward(**dataset.as_tensor_dict()))
 
         loss = outputs['loss']
@@ -115,7 +118,7 @@ class Predictor(Registrable):
 
         loss.backward()
 
-        # Remove hooks 
+        # Remove hooks
         for hook in self.hooks:
             hook.remove()
 
@@ -125,20 +128,16 @@ class Predictor(Registrable):
             # Squeeze to remove batch dimension
             grad_dict[key] = grad.squeeze_(0).detach().cpu().numpy()
 
-        return grad_dict, outputs 
+        return grad_dict, outputs
 
     def _register_hooks(self):
         """
-        Registers a backward hook on the 
+        Registers a backward hook on the
         :class:`~allennlp.modules.text_field_embedder.basic_text_field_embbedder.BasicTextFieldEmbedder`
-        class. 
+        class.
         """
-        # For multiple inputs, the hook will be called multiple times
-        # so we append the incoming gradients to a list
-        self.extracted_grads = []
-        self.hooks = []
 
-        def hook_layers(module, grad_in, grad_out):
+        def hook_layers(module, grad_in, grad_out): # pylint: disable=unused-argument
             self.extracted_grads.append(grad_out[0])
 
         # Register the hooks
@@ -193,7 +192,7 @@ class Predictor(Registrable):
         """
         raise NotImplementedError
 
-    def predictions_to_labeled_instances(self, instance: Instance, outputs: Dict[str, np.ndarray]) -> List[Instance]:
+    def predictions_to_labeled_instances(self, instance: Instance, outputs: Dict[str, np.ndarray]) -> List[Instance]: # pylint: disable=no-self-use, unused-argument
         """
         Adds labels to the :class:`~allennlp.data.instance.Instance`s passed in.
         """

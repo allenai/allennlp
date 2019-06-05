@@ -11,7 +11,6 @@ import random
 import subprocess
 import sys
 import os
-import math 
 
 try:
     import resource
