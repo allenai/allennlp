@@ -1,4 +1,6 @@
-from typing import Set, Dict, List, Tuple
+# These should probably all live in separate files
+
+from typing import Set, Dict, List, Tuple, Optional
 import copy
 import datetime
 import logging
@@ -28,15 +30,17 @@ from allennlp.training.tensorboard_writer import TensorboardWriter
 logger = logging.getLogger(__name__)
 
 
-@Callback.register("log_tensorboard")
-class LogTensorboard(Callback['trainer2.Trainer']):
+@Callback.register("log_to_tensorboard")
+class LogToTensorboard(Callback['trainer2.Trainer']):
+    """
+    Callback that handles all Tensorboard logging.
+    """
     def __init__(self,
                  tensorboard: TensorboardWriter,
                  log_batch_size_period: int = None) -> None:
         self.log_batch_size_period = log_batch_size_period
         self.tensorboard = tensorboard
 
-        self.epoch = 1
         self.cumulative_batch_size = 0
 
         # For logging histograms
@@ -45,7 +49,10 @@ class LogTensorboard(Callback['trainer2.Trainer']):
 
     def __call__(self, event: str, trainer: 'trainer2.Trainer') -> None:
         if event == Events.TRAINING_START:
-            # Bad hack to get the tensorboard instance to know about the trainer
+            # This is an ugly hack to get the tensorboard instance to know about the trainer, because
+            # the callbacks are defined before the trainer.
+            # TODO: figure out a better way to handle this.
+
             # pylint: disable=protected-access
             self.tensorboard._get_batch_num_total = lambda: trainer.batch_num_total
 
@@ -59,7 +66,7 @@ class LogTensorboard(Callback['trainer2.Trainer']):
                 self.tensorboard.enable_activation_logging(trainer.model)
 
         elif event == Events.BATCH_START and self.tensorboard.should_log_histograms_this_batch():
-            # get the magnitude of parameter updates for logging
+            # Get the magnitude of parameter updates for logging
             # We need a copy of current parameters to compute magnitude of updates,
             # and copy them to CPU so large models won't go OOM on the GPU.
             self.param_updates = {name: param.detach().cpu().clone()
@@ -98,34 +105,35 @@ class LogTensorboard(Callback['trainer2.Trainer']):
             self.tensorboard.log_metrics(trainer.train_metrics,
                                          val_metrics=trainer.val_metrics,
                                          log_to_console=True,
-                                         epoch=self.epoch)
-            self.epoch += 1
+                                         epoch=trainer.epoch_number + 1)
 
     @classmethod
-    def from_params(cls, serialization_dir: str, params: Params) -> 'LogTensorboard':  # type: ignore
+    def from_params(cls, serialization_dir: str, params: Params) -> 'LogToTensorboard':  # type: ignore
         log_batch_size_period = params.pop_int("log_batch_size_period", None)
         tensorboard = TensorboardWriter.from_params(params=params,
                                                     serialization_dir=serialization_dir,
                                                     get_batch_num_total=lambda: None)
-        return LogTensorboard(tensorboard, log_batch_size_period)
+        return LogToTensorboard(tensorboard, log_batch_size_period)
 
 
 @Callback.register("learning_rate_scheduler")
 class LrsCallback(Callback['trainer2.Trainer']):
+    """
+    Callback that handles the learning rate scheduler.
+    """
     def __init__(self, learning_rate_scheduler: LearningRateScheduler) -> None:
         self.learning_rate_scheduler = learning_rate_scheduler
 
     def __call__(self, event: str, trainer: 'trainer2.Trainer') -> None:
-        # Don't do anything if there's no lr_scheduler
-        if self.learning_rate_scheduler is None:
-            return
-
         if event == Events.AFTER_BACKWARD:
             self.learning_rate_scheduler.step_batch(trainer.batch_num_total)
         elif event == Events.EPOCH_END:
             self.learning_rate_scheduler.step(trainer.latest_val_metric, trainer.epoch_number)
 
     def get_training_state(self) -> dict:
+        """
+        We need to persist the learning_rate_scheduler state as training state.
+        """
         return {"learning_rate_scheduler": self.learning_rate_scheduler.state_dict()}
 
     def restore_training_state(self, training_trainer: dict) -> None:
@@ -145,14 +153,14 @@ class LrsCallback(Callback['trainer2.Trainer']):
 
 @Callback.register("momentum_scheduler")
 class MomentumSchedulerCallback(Callback['trainer2.Trainer']):
+    """
+    Callback that runs a Momentum Scheduler.
+    TODO: this looks almost exactly like the LrsCallback, could we share code?
+    """
     def __init__(self, momentum_scheduler: MomentumScheduler) -> None:
         self.momentum_scheduler = momentum_scheduler
 
     def __call__(self, event: str, trainer: 'trainer2.Trainer') -> None:
-        # Don't do anything if there's no momentum_scheduler
-        if self.momentum_scheduler is None:
-            return
-
         if event == Events.AFTER_BACKWARD:
             self.momentum_scheduler.step_batch(trainer.batch_num_total)
         elif event == Events.EPOCH_END:
@@ -174,11 +182,6 @@ class MomentumSchedulerCallback(Callback['trainer2.Trainer']):
         return LrsCallback(learning_rate_scheduler)
 
 
-_DEFAULT_STATE_DICT_ATTRS = ['optimizer']
-
-_DEFAULT_OTHER_ATTRS = ['batch_num_total']
-
-
 @Callback.register("checkpoint")
 class CheckpointCallback(Callback['trainer2.Trainer']):
     def __init__(self,
@@ -186,8 +189,8 @@ class CheckpointCallback(Callback['trainer2.Trainer']):
                  state_dict_attrs: List[str] = None,
                  other_attrs: List[str] = None) -> None:
         self.checkpointer = checkpointer
-        self.state_dict_attrs = state_dict_attrs or _DEFAULT_STATE_DICT_ATTRS
-        self.other_attrs = other_attrs or _DEFAULT_OTHER_ATTRS
+        self.state_dict_attrs = state_dict_attrs or ['optimizer']
+        self.other_attrs = other_attrs or ['batch_num_total']
 
     def __call__(self, event: str, trainer: 'trainer2.Trainer') -> None:
         if event == Events.SAVE_CHECKPOINT:
@@ -358,8 +361,8 @@ class Validate(Callback['trainer2.Trainer']):
 @Callback.register("track_metrics")
 class TrackMetrics(Callback['trainer2.Trainer']):
     # We want this to happen last, generally.
-
     priority = 100
+
     def __init__(self,
                  patience: int = None,
                  validation_metric: str = "-loss") -> None:
@@ -466,3 +469,44 @@ class TrackMetrics(Callback['trainer2.Trainer']):
                 dump_metrics(os.path.join(trainer._serialization_dir,
                                           f'metrics_epoch_{trainer.epoch_number}.json'),
                              trainer.metrics)
+
+
+@Callback.register("train_supervised")
+class TrainSupervised(Callback['trainer2.Trainer']):
+    """
+    This callback actually does the forward / backward part of the training.
+    """
+    def __init__(self,
+                 grad_norm: Optional[float] = None,
+                 grad_clipping: Optional[float] = None) -> None:
+        self.loss: torch.Tensor = 0.0
+        self.grad_norm = grad_norm
+        self.grad_clipping = grad_clipping
+
+    def __call__(self, event: str, trainer: 'trainer2.Trainer') -> None:
+
+        if event == Events.TRAINING_START:
+            training_util.enable_gradient_clipping(trainer.model, self.grad_clipping)
+
+        elif event == Events.BATCH_START:
+            # TODO: gradient accumulation
+            trainer.optimizer.zero_grad()
+
+        elif event == Events.FORWARD:
+            self.loss = trainer.batch_loss(trainer.batch_group, for_training=True)
+
+            if torch.isnan(self.loss):
+                raise ValueError("nan loss encountered")
+
+        elif event == Events.BACKWARD:
+            self.loss.backward()
+            trainer.train_loss += self.loss.item()
+
+        elif event == Events.AFTER_BACKWARD:
+            trainer.batch_grad_norm = training_util.rescale_gradients(trainer.model, self.grad_norm)
+            trainer.optimizer.step()
+
+            # Update the description with the latest metrics
+            trainer.train_metrics.update(
+                    training_util.get_metrics(trainer.model, trainer.train_loss, trainer.batches_this_epoch)
+            )

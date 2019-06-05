@@ -17,8 +17,8 @@ from allennlp.training.callbacks import Events
 from allennlp.training.checkpointer import Checkpointer
 
 from allennlp.training.callbacks.callbacks import (
-        LogTensorboard, CheckpointCallback, MovingAverageCallback, Validate,
-        LrsCallback, MomentumSchedulerCallback, TrackMetrics
+        LogToTensorboard, CheckpointCallback, MovingAverageCallback, Validate,
+        LrsCallback, MomentumSchedulerCallback, TrackMetrics, TrainSupervised
 )
 
 from allennlp.training.trainer2 import Trainer
@@ -87,10 +87,11 @@ class TestT2rainer(AllenNlpTestCase):
                                     max_checkpoints)
         tensorboard = TensorboardWriter(get_batch_num_total=lambda: None)
         return [
-                LogTensorboard(log_batch_size_period=10, tensorboard=tensorboard),
+                LogToTensorboard(log_batch_size_period=10, tensorboard=tensorboard),
                 CheckpointCallback(checkpointer),
                 Validate(),
-                TrackMetrics(patience, validation_metric)
+                TrackMetrics(patience, validation_metric),
+                TrainSupervised()
         ]
 
 
@@ -105,7 +106,7 @@ class TestT2rainer(AllenNlpTestCase):
                     "optimizer": {"type": "sgd", "lr": 0.01, "momentum": 0.9},
                     "num_epochs": 2,
                     "callbacks": [
-                        {"type": "log_tensorboard", "log_batch_size_period": 10},
+                        {"type": "log_to_tensorboard", "log_batch_size_period": 10},
                         {"type": "checkpoint"},
                         {"type": "validate"},
                         {"type": "track_metrics"}
@@ -520,10 +521,10 @@ class TestT2rainer(AllenNlpTestCase):
         for module in self.model.modules():
             module.should_log_activations = True
 
-        callbacks = [cb for cb in self.default_callbacks() if not isinstance(cb, LogTensorboard)]
+        callbacks = [cb for cb in self.default_callbacks() if not isinstance(cb, LogToTensorboard)]
         # The lambda: None is unfortunate, but it will get replaced by the callback.
         tensorboard = TensorboardWriter(lambda: None, histogram_interval=2)
-        callbacks.append(LogTensorboard(tensorboard))
+        callbacks.append(LogToTensorboard(tensorboard))
 
         trainer = Trainer(self.model, self.optimizer,
                           self.iterator, self.instances, num_epochs=3,
@@ -598,10 +599,10 @@ class TestT2rainer(AllenNlpTestCase):
         iterator = BasicIterator(batch_size=4)
         iterator.index_with(self.vocab)
 
-        callbacks = [cb for cb in self.default_callbacks() if not isinstance(cb, LogTensorboard)]
+        callbacks = [cb for cb in self.default_callbacks() if not isinstance(cb, LogToTensorboard)]
         # The lambda: None is unfortunate, but it will get replaced by the callback.
         tensorboard = TensorboardWriter(lambda: None, should_log_learning_rate=True, summary_interval=2)
-        callbacks.append(LogTensorboard(tensorboard))
+        callbacks.append(LogToTensorboard(tensorboard))
 
         trainer = Trainer(self.model, self.optimizer,
                           iterator, self.instances, num_epochs=2,

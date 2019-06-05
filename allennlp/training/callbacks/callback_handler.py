@@ -5,7 +5,6 @@ from typing import Iterable, TypeVar, Generic
 
 from allennlp.common.registrable import Registrable
 from allennlp.training.callbacks.callback import Callback
-from allennlp.training.callbacks.events import Events
 
 State = TypeVar('State')  # pylint: disable=invalid-name
 
@@ -24,11 +23,11 @@ class CallbackHandler(Registrable, Generic[State]):
         self.callbacks = [cb for cb in self.callbacks if cb != callback]
 
     def fire_event(self, event: str) -> None:
+        print(event)
         for callback in self.callbacks:
             callback(event, self.state)
 
     def fire_sequence(self, event: str) -> None:
-        if event in (Events.SAVE_CHECKPOINT, Events.VALIDATE):
-            self.fire_event(f"BEFORE_{event}")
-            self.fire_event(event)
-            self.fire_event(f"AFTER_{event}")
+        self.fire_event(f"BEFORE_{event}")
+        self.fire_event(event)
+        self.fire_event(f"AFTER_{event}")

@@ -37,8 +37,6 @@ class Trainer(TrainerBase):
                  serialization_dir: Optional[str] = None,
                  model_save_interval: float = None,
                  cuda_device: Union[int, List] = -1,
-                 grad_norm: Optional[float] = None,
-                 grad_clipping: Optional[float] = None,
                  callbacks: List[Callback['Trainer']] = None) -> None:
         """
         A trainer for doing supervised learning. It just takes a labeled dataset
@@ -65,15 +63,6 @@ class Trainer(TrainerBase):
             A ``Dataset`` to train on. The dataset should have already been indexed.
         validation_dataset : ``Dataset``, optional, (default = None).
             A ``Dataset`` to evaluate on. The dataset should have already been indexed.
-        patience : Optional[int] > 0, optional (default=None)
-            Number of epochs to be patient before early stopping: the training is stopped
-            after ``patience`` epochs with no improvement. If given, it must be ``> 0``.
-            If None, early stopping is disabled.
-        validation_metric : str, optional (default="loss")
-            Validation metric to measure for whether to stop training using patience
-            and whether to serialize an ``is_best`` model each epoch. The metric name
-            must be prepended with either "+" or "-", which specifies whether the metric
-            is an increasing or decreasing function.
         validation_iterator : ``DataIterator``, optional (default=None)
             An iterator to use for the validation set.  If ``None``, then
             use the training `iterator`.
@@ -84,27 +73,12 @@ class Trainer(TrainerBase):
         serialization_dir : str, optional (default=None)
             Path to directory for saving and loading model files. Models will not be saved if
             this parameter is not passed.
-        num_serialized_models_to_keep : ``int``, optional (default=20)
-            Number of previous model checkpoints to retain.  Default is to keep 20 checkpoints.
-            A value of None or -1 means all checkpoints will be kept.
-        keep_serialized_model_every_num_seconds : ``int``, optional (default=None)
-            If num_serialized_models_to_keep is not None, then occasionally it's useful to
-            save models at a given interval in addition to the last num_serialized_models_to_keep.
-            To do so, specify keep_serialized_model_every_num_seconds as the number of seconds
-            between permanently saved checkpoints.  Note that this option is only used if
-            num_serialized_models_to_keep is not None, otherwise all checkpoints are kept.
         model_save_interval : ``float``, optional (default=None)
             If provided, then serialize models every ``model_save_interval``
             seconds within single epochs.  In all cases, models are also saved
             at the end of every epoch if ``serialization_dir`` is provided.
         cuda_device : ``Union[int, List[int]]``, optional (default = -1)
             An integer or list of integers specifying the CUDA device(s) to use. If -1, the CPU is used.
-        grad_norm : ``float``, optional, (default = None).
-            If provided, gradient norms will be rescaled to have a maximum of this value.
-        grad_clipping : ``float``, optional (default = ``None``).
-            If provided, gradients will be clipped `during the backward pass` to have an (absolute)
-            maximum of this value.  If you are getting ``NaNs`` in your gradients during training
-            that are not solved by using ``grad_norm``, you may need this.
         """
         super().__init__(serialization_dir, cuda_device)
 
@@ -138,8 +112,6 @@ class Trainer(TrainerBase):
         self.checkpoint_epoch: Union[int, str] = 0
         self.model_save_interval = model_save_interval
 
-        self.grad_norm = grad_norm
-        self.grad_clipping = grad_clipping
         self.last_log = 0.0
         self.epoch_number = 0
         self.batch_grad_norm: Optional[float] = None
@@ -194,8 +166,6 @@ class Trainer(TrainerBase):
         self.handler.fire_event(Events.RESTORE_CHECKPOINT)
         starting_epoch = self.epoch_number
 
-        training_util.enable_gradient_clipping(self.model, self.grad_clipping)
-
         logger.info("Beginning training.")
         self.handler.fire_event(Events.TRAINING_START)
 
@@ -224,30 +194,9 @@ class Trainer(TrainerBase):
                 self.batches_this_epoch += 1
                 self.batch_num_total += 1
 
-                self.optimizer.zero_grad()
-                loss = self.batch_loss(self.batch_group, for_training=True)
+                self.handler.fire_sequence(Events.FORWARD)
+                self.handler.fire_sequence(Events.BACKWARD)
 
-                ####
-                self.handler.fire_event(Events.AFTER_FORWARD)
-
-                if torch.isnan(loss):
-                    raise ValueError("nan loss encountered")
-
-                loss.backward()
-
-                ####
-                self.handler.fire_event(Events.AFTER_BACKWARD)
-
-                self.train_loss += loss.item()
-
-                self.batch_grad_norm = training_util.rescale_gradients(self.model, self.grad_norm)
-
-                self.optimizer.step()
-
-                # Update the description with the latest metrics
-                self.train_metrics.update(
-                        training_util.get_metrics(self.model, self.train_loss, self.batches_this_epoch)
-                )
                 description = training_util.description_from_metrics(self.train_metrics)
 
                 batch_groups_tqdm.set_description(description, refresh=False)
@@ -260,10 +209,8 @@ class Trainer(TrainerBase):
                     self.checkpoint_epoch = f"{self.epoch_number}.{training_util.time_to_str(int(last_save_time))}"
                     self.handler.fire_sequence(Events.SAVE_CHECKPOINT)
 
-                ####
                 self.handler.fire_event(Events.BATCH_END)
 
-            ####
             self.handler.fire_sequence(Events.VALIDATE)
 
             epoch_elapsed_time = time.time() - epoch_start_time
@@ -276,19 +223,15 @@ class Trainer(TrainerBase):
                 formatted_time = str(datetime.timedelta(seconds=int(estimated_time_remaining)))
                 logger.info("Estimated training time remaining: %s", formatted_time)
 
-            ####
             self.handler.fire_event(Events.EPOCH_END)
 
             self.checkpoint_epoch = self.epoch_number
-
             self.handler.fire_sequence(Events.SAVE_CHECKPOINT)
 
             if self.should_stop_early:
                 logger.info("Ran out of patience.  Stopping training.")
                 break
 
-
-        ####
         self.handler.fire_event(Events.TRAINING_END)
 
         return self.metrics
@@ -310,8 +253,6 @@ class Trainer(TrainerBase):
         shuffle = params.pop_bool("shuffle", True)
         num_epochs = params.pop_int("num_epochs", 20)
         cuda_device = parse_cuda_device(params.pop("cuda_device", -1))
-        grad_norm = params.pop_float("grad_norm", None)
-        grad_clipping = params.pop_float("grad_clipping", None)
 
         if isinstance(cuda_device, list):
             model_device = cuda_device[0]
@@ -342,7 +283,5 @@ class Trainer(TrainerBase):
                    num_epochs=num_epochs,
                    serialization_dir=serialization_dir,
                    cuda_device=cuda_device,
-                   grad_norm=grad_norm,
-                   grad_clipping=grad_clipping,
                    model_save_interval=model_save_interval,
                    callbacks=callbacks)
