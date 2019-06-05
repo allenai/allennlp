@@ -222,23 +222,7 @@ class Trainer(TrainerBase):
         self.last_log = 0.0
         self.epoch_number = 0
         self.batch_grad_norm: Optional[float] = None
-
-        # # Default set of callbacks
-        # if callbacks is None:
-        #     callbacks = [
-        #             LogTensorboard(log_batch_size_period),
-        #             LogTensorboardHistograms(),
-        #             LrsCallback(),
-        #             CheckpointCallback(),
-        #             MovingAverageCallback(),
-        #         h    Validate()
-        #     ]
-
         self.handler = CallbackHandler(callbacks, self)
-
-
-    def rescale_gradients(self) -> Optional[float]:
-        return training_util.rescale_gradients(self.model, self.grad_norm)
 
     def batch_loss(self, batch_group: List[TensorDict], for_training: bool) -> torch.Tensor:
         """
@@ -286,7 +270,6 @@ class Trainer(TrainerBase):
         """
         Trains the supplied model with the supplied parameters.
         """
-        ####
         self.handler.fire_event(Events.RESTORE_CHECKPOINT)
         starting_epoch = self.epoch_number
 
@@ -350,7 +333,7 @@ class Trainer(TrainerBase):
 
                 train_loss += loss.item()
 
-                self.batch_grad_norm = self.rescale_gradients()
+                self.batch_grad_norm = training_util.rescale_gradients(self.model, self.grad_norm)
 
                 self.optimizer.step()
 
@@ -499,15 +482,11 @@ class Trainer(TrainerBase):
         should_log_parameter_statistics = params.pop_bool("should_log_parameter_statistics", True)
         should_log_learning_rate = params.pop_bool("should_log_learning_rate", False)
 
-        callbacks_params = params.pop("callbacks", None)
-
-        if callbacks_params is None:
-            callbacks = None
-        else:
-            callbacks = [Callback.from_params(params=callback_params,
-                                              model=model,
-                                              optimizer=optimizer)
-                         for callback_params in callbacks_params]
+        callbacks_params = params.pop("callbacks", [])
+        callbacks = [Callback.from_params(params=callback_params,
+                                          model=model,
+                                          optimizer=optimizer)
+                     for callback_params in callbacks_params]
 
         params.assert_empty(cls.__name__)
         return cls(model, optimizer, iterator,
