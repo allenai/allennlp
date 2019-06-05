@@ -63,20 +63,6 @@ class Predictor(Registrable):
         instance = self._json_to_instance(inputs)
         return self.predict_instance(instance)
 
-    def interpret_from_json(self, inputs: JsonDict) -> JsonDict:
-        """
-        Uses the gradients from :func:`get_gradients` to provide 
-        normalized interpretations for specific models. 
-        """
-        raise RuntimeError("you need to implement this method if you want to give model interpretations")
-
-    def attack_from_json(self, inputs: JsonDict) -> JsonDict:
-        """
-        Uses the gradients from :func:`get_gradients` to provide 
-        adversarial attacks for specific models. 
-        """
-        raise RuntimeError("you need to implement this method if you want to give model attacks")
-
     def inputs_to_labeled_instances(self, inputs: JsonDict) -> List[Instance]:
         """
         Converts incoming json to a :class:`~allennlp.data.instance.Instance`,

@@ -1,2 +1,0 @@
-from allennlp.interpretation.interpreter import Interpreter
-from allennlp.interpretation.simple_gradient import SimpleGradient
