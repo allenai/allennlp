@@ -68,7 +68,7 @@ class BertForClassification(Model):
         if num_labels:
             out_features = num_labels
         else:
-            out_features = vocab.get_vocab_size(namespace=label_namespace)
+            out_features = vocab.get_vocab_size(namespace=self._label_namespace)
 
         self._dropout = torch.nn.Dropout(p=dropout)
 
@@ -142,7 +142,7 @@ class BertForClassification(Model):
         for prediction in predictions_list:
             label_idx = prediction.argmax(dim=-1).item()
             label_str = (self.vocab.get_index_to_token_vocabulary(self._label_namespace)
-                .get(label_idx, str(label_idx)))
+                         .get(label_idx, str(label_idx)))
             classes.append(label_str)
         output_dict["label"] = classes
         return output_dict
