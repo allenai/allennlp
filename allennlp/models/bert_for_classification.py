@@ -59,7 +59,8 @@ class BertForClassification(Model):
         else:
             self.bert_model = bert_model
 
-        self.bert_model.requires_grad = trainable
+        for param in self.bert_model.parameters():
+            param.requires_grad = trainable
 
         in_features = self.bert_model.config.hidden_size
 
