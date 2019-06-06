@@ -73,7 +73,7 @@ class BasicClassifier(Model):
         if num_labels:
             self._num_labels = num_labels
         else:
-            self._num_labels = vocab.get_vocab_size(namespace=label_namespace)
+            self._num_labels = vocab.get_vocab_size(namespace=self._label_namespace)
         self._classification_layer = torch.nn.Linear(self._classifier_input_dim, self._num_labels)
         self._accuracy = CategoricalAccuracy()
         self._loss = torch.nn.CrossEntropyLoss()
@@ -142,7 +142,7 @@ class BasicClassifier(Model):
         for prediction in predictions_list:
             label_idx = prediction.argmax(dim=-1).item()
             label_str = (self.vocab.get_index_to_token_vocabulary(self._label_namespace)
-                .get(label_idx, str(label_idx)))
+                         .get(label_idx, str(label_idx)))
             classes.append(label_str)
         output_dict["label"] = classes
         return output_dict
