@@ -21,7 +21,7 @@ from allennlp.common.params import Params
 
 def main(param_file: str, args: argparse.Namespace):
     commit = subprocess.check_output(["git", "rev-parse", "HEAD"], universal_newlines=True).strip()
-    image = f"allennlp/allennlp:{commit}"
+    docker_image = f"allennlp/allennlp:{commit}"
     overrides = ""
 
     # Reads params and sets environment.
@@ -42,18 +42,19 @@ def main(param_file: str, args: argparse.Namespace):
     result = subprocess.run('git diff-index --quiet HEAD --', shell=True)
     if result.returncode != 0:
         dirty_hash = "%x" % random_int
-        image += "-" + dirty_hash
+        docker_image += "-" + dirty_hash
 
-    if args.blueprint:
-        blueprint = args.blueprint
-        print(f"Using the specified blueprint: {blueprint}")
+    if args.image:
+        image = args.image
+        print(f"Using the specified image: {image}")
     else:
-        print(f"Building the Docker image ({image})...")
-        subprocess.run(f'docker build -t {image} .', shell=True, check=True)
+        print(f"Building the Docker image ({docker_image})...")
+        subprocess.run(f'docker build -t {docker_image} .', shell=True, check=True)
 
-        print(f"Create a Beaker blueprint...")
-        blueprint = subprocess.check_output(f'beaker blueprint create --quiet {image}', shell=True, universal_newlines=True).strip()
-        print(f"  Blueprint created: {blueprint}")
+        print(f"Create a Beaker image...")
+        image = subprocess.check_output(f'beaker image create --quiet {docker_image}', shell=True,
+                                        universal_newlines=True).strip()
+        print(f"  Image created: {docker_image}")
 
     config_dataset_id = subprocess.check_output(f'beaker dataset create --quiet {param_file}', shell=True, universal_newlines=True).strip()
 
@@ -89,7 +90,7 @@ def main(param_file: str, args: argparse.Namespace):
         requirements["gpuCount"] = int(args.gpu_count)
     config_spec = {
         "description": args.desc,
-        "blueprint": blueprint,
+        "image": image,
         "resultPath": "/output",
         "args": allennlp_command,
         "datasetMounts": dataset_mounts,
@@ -128,7 +129,7 @@ if __name__ == "__main__":
     parser.add_argument('--name', type=str, help='A name for the experiment.')
     parser.add_argument('--spec_output_path', type=str, help='The destination to write the experiment spec.')
     parser.add_argument('--dry-run', action='store_true', help='If specified, an experiment will not be created.')
-    parser.add_argument('--blueprint', type=str, help='The Blueprint to use (if unspecified one will be built)')
+    parser.add_argument('--image', type=str, help='The image to use (if unspecified one will be built)')
     parser.add_argument('--desc', type=str, help='A description for the experiment.')
     parser.add_argument('--env', action='append', default=[], help='Set environment variables (e.g. NAME=value or NAME)')
     parser.add_argument('--source', action='append', default=[], help='Bind a remote data source (e.g. source-id:/target/path)')
