@@ -15,10 +15,26 @@ from allennlp.data.dataset_readers.dataset_utils import Ontonotes, OntonotesSent
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
-START_TOKEN = "[CLS]"
-SEP_TOKEN = "[SEP]"
 
-def _convert_tags_to_wordpiece_tags(tags: List[str], offsets: List[int]):
+def _convert_tags_to_wordpiece_tags(tags: List[str], offsets: List[int]) -> List[str]:
+    """
+    Converts a series of BIO tags to account for a wordpiece tokenizer,
+    extending/modifying BIO tags where appropriate to deal with words which
+    are split into multiple wordpieces by the tokenizer.
+
+    This is only used if you pass a `bert_model_name` to the dataset reader below.
+
+    Parameters
+    ----------
+    tags : `List[str]`
+        The BIO formatted tags to convert to BIO tags for wordpieces
+    offsets : `List[int]`
+        The wordpiece offsets.
+
+    Returns
+    -------
+    The new BIO tags.
+    """
     # account for the fact the offsets are with respect to
     # additional cls token at the start.
     offsets = [x - 1 for x in offsets]
@@ -49,6 +65,24 @@ def _convert_tags_to_wordpiece_tags(tags: List[str], offsets: List[int]):
 
 
 def _convert_verb_indices_to_wordpiece_indices(verb_indices: List[int], offsets: List[int]): # pylint: disable=invalid-name
+    """
+    Converts binary verb indicators to account for a wordpiece tokenizer,
+    extending/modifying BIO tags where appropriate to deal with words which
+    are split into multiple wordpieces by the tokenizer.
+
+    This is only used if you pass a `bert_model_name` to the dataset reader below.
+
+    Parameters
+    ----------
+    verb_indices : `List[int]`
+        The binary verb indicators, 0 for not a verb, 1 for verb.
+    offsets : `List[int]`
+        The wordpiece offsets.
+
+    Returns
+    -------
+    The new verb indices.
+    """
     # account for the fact the offsets are with respect to
     # additional cls token at the start.
     offsets = [x - 1 for x in offsets]
@@ -87,9 +121,10 @@ class SrlReader(DatasetReader):
         A string denoting a sub-domain of the Ontonotes 5.0 dataset to use. If present, only
         conll files under paths containing this domain identifier will be processed.
     bert_model_name : ``Optional[str]``, (default = None)
-        The BERT model to be wrapped, which we use to wordpiece-tokenize the data correctly.
-        If a bert model name is passed, we will also convert the BIO tags and verb indices
-        to be faithful to the wordpieces generated from the tokenizer.
+        The BERT model to be wrapped. If you specify a bert_model here, then we will
+        assume you want to use BERT throughout; we will use the bert tokenizer,
+        and will expand your tags and verb indicators accordingly. If not,
+        the tokens will be indexed as normal with the token_indexers.
 
     Returns
     -------
@@ -112,18 +147,23 @@ class SrlReader(DatasetReader):
             self.bert_tokenizer = None
             self.lowercase_input = False
 
-    def _tokenize_input(self, tokens: List[str]) -> Tuple[List[str], List[int]]:
+    def _wordpiece_tokenize_input(self, tokens: List[str]) -> Tuple[List[str], List[int]]:
+        """
+        Convert a list of tokens to wordpiece tokens and offsets, as well as adding
+        BERT CLS and SEP tokens to the begining and end of the sentence.
+        """
         word_piece_tokens: List[str] = []
-        offsets = [0]
+        offsets = []
+        cumulative = 0
         for token in tokens:
             if self.lowercase_input:
                 token = token.lower()
             word_pieces = self.bert_tokenizer.wordpiece_tokenizer.tokenize(token)
-            offsets.append(offsets[-1] + len(word_pieces))
+            cumulative += len(word_pieces)
+            offsets.append(cumulative)
             word_piece_tokens.extend(word_pieces)
-        del offsets[0]
 
-        wordpieces = [START_TOKEN] + word_piece_tokens + [SEP_TOKEN]
+        wordpieces = ["[CLS]"] + word_piece_tokens + ["[SEP]"]
 
         offsets = [x + 1 for x in offsets]
         return wordpieces, offsets
@@ -174,7 +214,7 @@ class SrlReader(DatasetReader):
         # pylint: disable=arguments-differ
         metadata_dict: Dict[str, Any] = {}
         if self.bert_tokenizer is not None:
-            wordpieces, offsets = self._tokenize_input([t.text for t in tokens])
+            wordpieces, offsets = self._wordpiece_tokenize_input([t.text for t in tokens])
             new_verbs = _convert_verb_indices_to_wordpiece_indices(verb_label, offsets)
             metadata_dict["offsets"] = offsets
             # In order to override the indexing mechanism, we need to set the `text_id`
