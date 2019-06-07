@@ -216,6 +216,16 @@ class TestTextField(AllenNlpTestCase):
         numpy.testing.assert_array_almost_equal(tensor_dict["characters"].detach().cpu().numpy(),
                                                 expected_character_array)
 
+    def test_as_tensor_handles_characters_if_empty_field(self):
+        field = TextField([], token_indexers={"characters": TokenCharactersIndexer("characters",
+                                                                                   min_padding_length=1)})
+        field.index(self.vocab)
+        padding_lengths = field.get_padding_lengths()
+        tensor_dict = field.as_tensor(padding_lengths)
+        expected_character_array = numpy.array([])
+        numpy.testing.assert_array_almost_equal(tensor_dict["characters"].detach().cpu().numpy(),
+                                                expected_character_array)
+
     def test_as_tensor_handles_words_and_characters_with_longer_lengths(self):
         field = TextField([Token(t) for t in ["a", "sentence", "."]],
                           token_indexers={"words": SingleIdTokenIndexer("words"),

@@ -331,7 +331,7 @@ class Model(torch.nn.Module, Registrable):
         Iterates through all embedding modules in the model and assures it can embed
         with the extended vocab. This is required in fine-tuning or transfer learning
         scenarios where model was trained with original vocabulary but during
-        fine-tuning/tranfer-learning, it will have it work with extended vocabulary
+        fine-tuning/transfer-learning, it will have it work with extended vocabulary
         (original + new-data vocabulary).
 
         Parameters
