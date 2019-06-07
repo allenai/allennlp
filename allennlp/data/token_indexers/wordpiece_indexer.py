@@ -184,7 +184,7 @@ class WordpieceIndexer(TokenIndexer[int]):
         for token in token_wordpiece_ids:
             # Truncate the sequence if specified, which depends on where the offsets are
             next_offset = 1 if self.use_starting_offsets else 0
-            if self._truncate_long_sequences and offset >= window_length + next_offset:
+            if self._truncate_long_sequences and offset + len(token) - 1 >= window_length + next_offset:
                 break
 
             # For initial offsets, the current value of ``offset`` is the start of

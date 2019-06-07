@@ -203,3 +203,69 @@ class TestBertIndexer(ModelTestCase):
         # 1 full window + 1 half window with start/end tokens
         assert indexed_tokens["bert"] == [16, 2, 3, 4, 3, 5, 6, 8, 9, 17]
         assert indexed_tokens["bert-offsets"] == [1, 3, 4, 5, 6, 7, 8]
+
+    def test_truncate_window_2(self):
+        tokenizer = WordTokenizer(word_splitter=BertBasicWordSplitter())
+
+        sentence = "the quickest quick brown fox jumped over the quickest dog"
+        tokens = tokenizer.tokenize(sentence)
+
+        vocab = Vocabulary()
+        vocab_path = self.FIXTURES_ROOT / 'bert' / 'vocab.txt'
+        token_indexer = PretrainedBertIndexer(str(vocab_path),
+                                              truncate_long_sequences=True,
+                                              use_starting_offsets=True,
+                                              max_pieces=12)
+
+        indexed_tokens = token_indexer.tokens_to_indices(tokens, vocab, "bert")
+
+        # 16 = [CLS], 17 = [SEP]
+        # 1 full window + 1 half window with start/end tokens
+        assert indexed_tokens["bert"] == [16, 2, 3, 4, 3, 5, 6, 8, 9, 2, 3, 17]
+        assert indexed_tokens["bert-offsets"] == [1, 2, 4, 5, 6, 7, 8, 9]
+        assert indexed_tokens["bert-type-ids"] == [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+        token_indexer = PretrainedBertIndexer(str(vocab_path),
+                                              truncate_long_sequences=True,
+                                              use_starting_offsets=False,
+                                              max_pieces=12)
+
+        indexed_tokens = token_indexer.tokens_to_indices(tokens, vocab, "bert")
+
+        # 16 = [CLS], 17 = [SEP]
+        # 1 full window + 1 half window with start/end tokens
+        assert indexed_tokens["bert"] == [16, 2, 3, 4, 3, 5, 6, 8, 9, 2, 3, 17]
+        assert indexed_tokens["bert-offsets"] == [1, 3, 4, 5, 6, 7, 8, 9]
+
+    def test_truncate_window_3(self):
+        tokenizer = WordTokenizer(word_splitter=BertBasicWordSplitter())
+
+        sentence = "the quickest quick brown fox jumped over the quickest dog"
+        tokens = tokenizer.tokenize(sentence)
+
+        vocab = Vocabulary()
+        vocab_path = self.FIXTURES_ROOT / 'bert' / 'vocab.txt'
+        token_indexer = PretrainedBertIndexer(str(vocab_path),
+                                              truncate_long_sequences=True,
+                                              use_starting_offsets=True,
+                                              max_pieces=13)
+
+        indexed_tokens = token_indexer.tokens_to_indices(tokens, vocab, "bert")
+
+        # 16 = [CLS], 17 = [SEP]
+        # 1 full window + 1 half window with start/end tokens
+        assert indexed_tokens["bert"] == [16, 2, 3, 4, 3, 5, 6, 8, 9, 2, 3, 4, 17]
+        assert indexed_tokens["bert-offsets"] == [1, 2, 4, 5, 6, 7, 8, 9, 10]
+        assert indexed_tokens["bert-type-ids"] == [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+        token_indexer = PretrainedBertIndexer(str(vocab_path),
+                                              truncate_long_sequences=True,
+                                              use_starting_offsets=False,
+                                              max_pieces=13)
+
+        indexed_tokens = token_indexer.tokens_to_indices(tokens, vocab, "bert")
+
+        # 16 = [CLS], 17 = [SEP]
+        # 1 full window + 1 half window with start/end tokens
+        assert indexed_tokens["bert"] == [16, 2, 3, 4, 3, 5, 6, 8, 9, 2, 3, 4, 17]
+        assert indexed_tokens["bert-offsets"] == [1, 3, 4, 5, 6, 7, 8, 9, 11]
