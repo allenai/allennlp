@@ -26,7 +26,7 @@ class TestConfiguration(AllenNlpTestCase):
 
         items = {item.name: item for item in config.items}
 
-        assert len(items) == 3
+        assert len(items) == 4
 
         assert 'token_indexers' in items
         token_indexers = items['token_indexers']
@@ -34,6 +34,11 @@ class TestConfiguration(AllenNlpTestCase):
 
         assert 'domain_identifier' in items
         domain_identifier = items['domain_identifier']
+        assert domain_identifier.annotation == str
+        assert domain_identifier.default_value is None
+
+        assert 'bert_model_name' in items
+        domain_identifier = items['bert_model_name']
         assert domain_identifier.annotation == str
         assert domain_identifier.default_value is None
 
