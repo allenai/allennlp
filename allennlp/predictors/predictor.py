@@ -192,11 +192,16 @@ class Predictor(Registrable):
         """
         raise NotImplementedError
 
-    def predictions_to_labeled_instances(self, instance: Instance, outputs: Dict[str, np.ndarray]) -> List[Instance]: # pylint: disable=no-self-use, unused-argument
+    def predictions_to_labeled_instances(self, inst: Instance, outputs: Dict[str, np.ndarray]) -> List[Instance]: # pylint: disable=no-self-use, unused-argument
         """
         Adds labels to the :class:`~allennlp.data.instance.Instance`s passed in.
+
+        Notes
+        -----
+        This is an optional method and needs to be implemented if you want to give the model
+        interpretations or attacks.
         """
-        raise RuntimeError("you need to implement this method if you want to give model interpretations or attacks")
+        raise RuntimeError("You need to implement this method if you want model interpretations or attacks")
 
     def predict_batch_json(self, inputs: List[JsonDict]) -> List[JsonDict]:
         instances = self._batch_json_to_instances(inputs)
