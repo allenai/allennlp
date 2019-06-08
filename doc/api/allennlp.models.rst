@@ -29,3 +29,4 @@ allennlp.models
   allennlp.models.semantic_role_labeler
   allennlp.models.language_model
   allennlp.models.simple_tagger
+  allennlp.models.srl_bert
