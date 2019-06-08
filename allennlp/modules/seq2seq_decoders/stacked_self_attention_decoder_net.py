@@ -92,7 +92,7 @@ class StackedSelfAttentionDecoderNet(DecoderNet):
             previous_steps_mask = future_mask
         else:
             previous_steps_mask = previous_steps_mask.unsqueeze(-2) & future_mask
-        previous_steps_predictions *= self._embed_scale
+        previous_steps_predictions = previous_steps_predictions * self._embed_scale
         if self._positional_embedder:
             previous_steps_predictions = self._positional_embedder(previous_steps_predictions)
         previous_steps_predictions = self._dropout(previous_steps_predictions)
