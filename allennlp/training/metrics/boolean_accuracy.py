@@ -41,6 +41,15 @@ class BooleanAccuracy(Metric):
             A tensor of the same shape as ``predictions``.
         """
         predictions, gold_labels, mask = self.unwrap_to_tensors(predictions, gold_labels, mask)
+
+        # Some sanity checks.
+        if gold_labels.size() != predictions.size():
+            raise ValueError("gold_labels must have shape == predictions.size() but "
+                             "found tensor of shape: {}".format(gold_labels.size()))
+        if mask is not None and mask.size() != predictions.size():
+            raise ValueError("mask must have shape == predictions.size() but "
+                             "found tensor of shape: {}".format(mask.size()))
+
         batch_size = predictions.size(0)
 
         if mask is not None:
