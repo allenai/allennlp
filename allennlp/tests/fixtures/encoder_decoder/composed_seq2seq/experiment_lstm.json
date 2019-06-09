@@ -41,7 +41,7 @@
   "validation_data_path": "allennlp/tests/fixtures/data/seq2seq_copy.tsv",
   "model": {
     "type": "composed_seq2seq",
-    "source_embedder": {
+    "source_text_embedder": {
       "token_embedders": {
         "tokens": {
           "type": "embedding",

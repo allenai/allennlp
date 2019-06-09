@@ -1,13 +1,15 @@
-from typing import Dict, List, Tuple
+from overrides import overrides
+from typing import Dict, List, Tuple, Optional
 
 import torch
 import torch.nn.functional as F
 from torch.nn import Linear, Module
 
 from allennlp.common import Registrable
+from allennlp.common.util import END_SYMBOL, START_SYMBOL
 from allennlp.modules.seq2seq_decoders.seq_decoder import SeqDecoder
 from allennlp.data import Vocabulary
-from allennlp.modules import TokenEmbedder
+from allennlp.modules import Embedding
 from allennlp.modules.seq2seq_decoders.decoder_net import DecoderNet
 from allennlp.nn import util
 from allennlp.nn.beam_search import BeamSearch
@@ -28,14 +30,14 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
         Module that contains implementation of neural network for decoding output elements
     max_decoding_steps : ``int``
         Maximum length of decoded sequences.
-    target_embedder : ``TokenEmbedder``
+    target_embedder : ``Embedding``
         Embedder for target tokens.
     target_namespace : ``str``, optional (default = 'target_tokens')
         If the target side vocabulary is different from the source side's, you need to specify the
         target's namespace here. If not, we'll assume it is "tokens", which is also the default
         choice for the source side, and this might cause them to share vocabularies.
-    beam_size : ``int``, optional (default = None)
-        Width of the beam for beam search. If not specified, greedy decoding is used.
+    beam_size : ``int``, optional (default = 4)
+        Width of the beam for beam search.
     tensor_based_metric : ``Metric``, optional (default = None)
         A metric to track on validation data that takes raw tensors when its called.
         This metric must accept two arguments when called: a batched tensor
@@ -55,33 +57,33 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
             vocab: Vocabulary,
             decoder_net: DecoderNet,
             max_decoding_steps: int,
-            target_embedder: TokenEmbedder,
+            target_embedder: Embedding,
             target_namespace: str = "tokens",
-            beam_size: int = None,
+            tie_output_embedding: bool = False,
+            scheduled_sampling_ratio: float = 0,
+            label_smoothing_ratio: Optional[float] = None,
+            beam_size: int = 4,
             tensor_based_metric: Metric = None,
             token_based_metric: Metric = None,
-            scheduled_sampling_ratio: float = 0,
     ):
+        super().__init__(target_embedder)
 
-        super(AutoRegressiveSeqDecoder, self).__init__(
-            vocab=vocab,
-            target_embedder=target_embedder,
-            target_namespace=target_namespace,
-            tensor_based_metric=tensor_based_metric,
-            token_based_metric=token_based_metric
-        )
-
-        self._target_vocab_size = self.vocab.get_vocab_size(self._target_namespace)
-
-        # At prediction time, we use a beam search to find the most likely sequence of target tokens.
-        beam_size = beam_size or 1
-        self._max_decoding_steps = max_decoding_steps
-        self._beam_search = BeamSearch(self._end_index, max_steps=max_decoding_steps, beam_size=beam_size)
+        self._vocab = vocab
 
         # Decodes the sequence of encoded hidden states into e new sequence of hidden states.
         self._decoder_net = decoder_net
+        self._max_decoding_steps = max_decoding_steps
+        self._target_namespace = target_namespace
+        self._label_smoothing_ratio = label_smoothing_ratio
 
-        target_vocab_size = self.vocab.get_vocab_size(self._target_namespace)
+        # At prediction time, we use a beam search to find the most likely sequence of target tokens.
+        # We need the start symbol to provide as the input at the first timestep of decoding, and
+        # end symbol as a way to indicate the end of the decoded sequence.
+        self._start_index = self._vocab.get_token_index(START_SYMBOL, self._target_namespace)
+        self._end_index = self._vocab.get_token_index(END_SYMBOL, self._target_namespace)
+        self._beam_search = BeamSearch(self._end_index, max_steps=max_decoding_steps, beam_size=beam_size)
+
+        target_vocab_size = self._vocab.get_vocab_size(self._target_namespace)
 
         if self.target_embedder.get_output_dim() != self._decoder_net.target_embedding_dim:
             raise ConfigurationError("Target Embedder output_dim doesn't match decoder module's input.")
@@ -89,6 +91,15 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
         # We project the hidden state from the decoder into the output vocabulary space
         # in order to get log probabilities of each target token, at each time step.
         self._output_projection_layer = Linear(self._decoder_net.get_output_dim(), target_vocab_size)
+
+        if tie_output_embedding:
+            if self._output_projection_layer.weight.shape != self.target_embedder.weight.shape:
+                raise ConfigurationError("Can't tie embeddings with output linear layer, due to shape mismatch")
+            self._output_projection_layer.weight = self.target_embedder.weight
+
+        # These metrics will be updated during training and validation
+        self._tensor_based_metric = tensor_based_metric
+        self._token_based_metric = token_based_metric
 
         self._scheduled_sampling_ratio = scheduled_sampling_ratio
 
@@ -275,8 +286,8 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
 
         return output_projections, state
 
-    @staticmethod
-    def _get_loss(logits: torch.LongTensor,
+    def _get_loss(self,
+                  logits: torch.LongTensor,
                   targets: torch.LongTensor,
                   target_mask: torch.LongTensor) -> torch.Tensor:
         """
@@ -310,7 +321,10 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
         # shape: (batch_size, num_decoding_steps)
         relevant_mask = target_mask[:, 1:].contiguous()
 
-        return util.sequence_cross_entropy_with_logits(logits, relevant_targets, relevant_mask)
+        return util.sequence_cross_entropy_with_logits(logits,
+                                                       relevant_targets,
+                                                       relevant_mask,
+                                                       label_smoothing=self._label_smoothing_ratio)
 
     def get_output_dim(self):
         return self._decoder_net.get_output_dim()
@@ -356,6 +370,17 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
 
         return class_log_probabilities, state
 
+    @overrides
+    def get_metrics(self, reset: bool = False) -> Dict[str, float]:
+        all_metrics: Dict[str, float] = {}
+        if not self.training:
+            if self._tensor_based_metric is not None:
+                all_metrics.update(self._tensor_based_metric.get_metric(reset=reset))  # type: ignore
+            if self._token_based_metric is not None:
+                all_metrics.update(self._token_based_metric.get_metric(reset=reset))  # type: ignore
+        return all_metrics
+
+    @overrides
     def forward(self,
                 encoder_out: Dict[str, torch.LongTensor],
                 target_tokens: Dict[str, torch.LongTensor] = None):
@@ -391,4 +416,29 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
                     self._token_based_metric(predicted_tokens,  # type: ignore
                                              [y.text for y in target_tokens["tokens"][1:-1]])
 
+        return output_dict
+
+    @overrides
+    def post_process(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+        """
+        This method trims the output predictions to the first end symbol, replaces indices with
+        corresponding tokens, and adds a field called ``predicted_tokens`` to the ``output_dict``.
+        """
+        predicted_indices = output_dict["predictions"]
+        if not isinstance(predicted_indices, numpy.ndarray):
+            predicted_indices = predicted_indices.detach().cpu().numpy()
+        all_predicted_tokens = []
+        for indices in predicted_indices:
+            # Beam search gives us the top k results for each source sentence in the batch
+            # but we just want the single best.
+            if len(indices.shape) > 1:
+                indices = indices[0]
+            indices = list(indices)
+            # Collect indices till the first end_symbol
+            if self._end_index in indices:
+                indices = indices[:indices.index(self._end_index)]
+            predicted_tokens = [self._vocab.get_token_from_index(x, namespace=self._target_namespace)
+                                for x in indices]
+            all_predicted_tokens.append(predicted_tokens)
+        output_dict["predicted_tokens"] = all_predicted_tokens
         return output_dict

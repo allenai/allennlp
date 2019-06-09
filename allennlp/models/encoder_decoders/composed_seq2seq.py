@@ -6,7 +6,8 @@ from overrides import overrides
 from allennlp.common.checks import ConfigurationError
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.model import Model
-from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder
+from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder, Embedding
+from allennlp.modules.text_field_embedders import BasicTextFieldEmbedder
 from allennlp.modules.seq2seq_decoders.seq_decoder import SeqDecoder
 from allennlp.nn import util, InitializerApplicator, RegularizerApplicator
 
@@ -28,12 +29,15 @@ class ComposedSeq2Seq(Model):
         Vocabulary containing source and target vocabularies. They may be under the same namespace
         (`tokens`) or the target tokens can have a different namespace, in which case it needs to
         be specified as `target_namespace`.
-    source_embedder : ``TextFieldEmbedder``, required
-        Embedder for source side sequences
+    source_text_embedders : ``TextFieldEmbedder``, required
+        Embedders for source side sequences
     encoder : ``Seq2SeqEncoder``, required
         The encoder of the "encoder/decoder" model
     decoder : ``SeqDecoder``, required
         The decoder of the "encoder/decoder" model
+    tied_source_embedder_key : ``str``, optional (default=``None``)
+        If specified, this key is used to obtain token_embedder in `source_text_embedder` and
+        the weights are shared/tied with the decoder's target embedding weights.
     initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
         Used to initialize the model parameters.
     regularizer : ``RegularizerApplicator``, optional (default=``None``)
@@ -42,26 +46,39 @@ class ComposedSeq2Seq(Model):
 
     def __init__(self,
                  vocab: Vocabulary,
-                 source_embedder: TextFieldEmbedder,
+                 source_text_embedder: TextFieldEmbedder,
                  encoder: Seq2SeqEncoder,
                  decoder: SeqDecoder,
+                 tied_source_embedder_key: Optional[str] = None,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None)-> None:
 
         super(ComposedSeq2Seq, self).__init__(vocab, regularizer)
 
-        self.decoder = decoder
-
-        # Dense embedding of source vocab tokens.
-        self._source_embedder = source_embedder
-
-        # Encodes the sequence of source embeddings into a sequence of hidden states.
+        self._source_text_embedder = source_text_embedder
         self._encoder = encoder
+        self._decoder = decoder
 
-        if self._encoder.get_output_dim() != self.decoder.get_output_dim():
+        if self._encoder.get_output_dim() != self._decoder.get_output_dim():
             raise ConfigurationError(
-                f"Encoder hidden dimension {self._encoder.get_output_dim()} should be"
-                f" equal to decoder dimension {self.decoder.get_output_dim()}.")
+                f"Encoder output dimension {self._encoder.get_output_dim()} should be"
+                f" equal to decoder dimension {self._decoder.get_output_dim()}.")
+        if tied_source_embedder_key:
+            # Very ugly way to tie Embeddings
+            if not isinstance(self._source_text_embedder, BasicTextFieldEmbedder):
+                raise ConfigurationError("Unable to tie embeddings,"
+                                         "Source text embedder is not an instance of `BasicTextFieldEmbedder`.")
+            source_embedder = self._source_text_embedder._token_embedders[tied_source_embedder_key]
+            if not isinstance(source_embedder, Embedding):
+                raise ConfigurationError("Unable to tie embeddings,"
+                                         "Selected source embedder is not an instance of `Embedding`.")
+            source_weight_shape = source_embedder.weight.shape
+            target_weight_shape = self._decoder.target_embedder.weight.shape
+            if  source_weight_shape != target_weight_shape :
+                raise ConfigurationError(f"Unable to tie embeddings due to mismatch in shared weights."
+                                         f"source  -  {source_weight_shape}"
+                                         f"target  -  {target_weight_shape}")
+            source_embedder.weight = self._decoder.target_embedder.weight
         initializer(self)
 
     @overrides
@@ -87,18 +104,18 @@ class ComposedSeq2Seq(Model):
         """
         state = self._encode(source_tokens)
 
-        return self.decoder(state, target_tokens)
+        return self._decoder(state, target_tokens)
 
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
         Finalize predictions.
         """
-        return self.decoder.decode(output_dict)
+        return self._decoder.post_process(output_dict)
 
     def _encode(self, source_tokens: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         # shape: (batch_size, max_input_sequence_length, encoder_input_dim)
-        embedded_input = self._source_embedder(source_tokens)
+        embedded_input = self._source_text_embedder(source_tokens)
         # shape: (batch_size, max_input_sequence_length)
         source_mask = util.get_text_field_mask(source_tokens)
         # shape: (batch_size, max_input_sequence_length, encoder_output_dim)
@@ -110,4 +127,4 @@ class ComposedSeq2Seq(Model):
 
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
-        return self.decoder.get_metrics(reset)
+        return self._decoder.get_metrics(reset)

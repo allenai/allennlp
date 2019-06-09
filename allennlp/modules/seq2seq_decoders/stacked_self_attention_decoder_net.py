@@ -59,7 +59,7 @@ class StackedSelfAttentionDecoderNet(DecoderNet):
                  residual_dropout_prob: float = 0.2,
                  attention_dropout_prob: float = 0.1,):
 
-        super(StackedSelfAttentionDecoderNet, self).__init__(
+        super().__init__(
             decoding_dim=decoding_dim,
             target_embedding_dim=target_embedding_dim,
             decodes_parallel=True
@@ -71,7 +71,7 @@ class StackedSelfAttentionDecoderNet(DecoderNet):
         self._embed_scale = math.sqrt(decoding_dim)
         self._positional_embedder = PositionalEncoding(decoding_dim, positional_encoding_max_steps) if use_positional_encoding else None
         self._dropout = nn.Dropout(dropout_prob)
-        self._self_attn_decoder = Decoder(DecoderLayer(decoding_dim, c(attn), c(attn),
+        self._self_attention = Decoder(DecoderLayer(decoding_dim, c(attn), c(attn),
                                              ff, residual_dropout_prob), num_layers)
 
     def init_decoder_state(self, encoder_out: Dict[str, torch.LongTensor]) -> Dict[str, torch.Tensor]:
@@ -85,7 +85,6 @@ class StackedSelfAttentionDecoderNet(DecoderNet):
                 source_mask: torch.Tensor,
                 previous_steps_mask: Optional[torch.Tensor] = None,
     ) -> Tuple[Dict[str, torch.Tensor], torch.Tensor]:
-
         source_mask = source_mask.unsqueeze(-2)
         future_mask = Variable(subsequent_mask(previous_steps_predictions.size(-2), device=source_mask.device).type_as(source_mask.data))
         if previous_steps_mask is None:
@@ -96,7 +95,7 @@ class StackedSelfAttentionDecoderNet(DecoderNet):
         if self._positional_embedder:
             previous_steps_predictions = self._positional_embedder(previous_steps_predictions)
         previous_steps_predictions = self._dropout(previous_steps_predictions)
-        decoded = self._self_attn_decoder(
+        decoded = self._self_attention(
             previous_steps_predictions,
             encoder_outputs,
             source_mask,

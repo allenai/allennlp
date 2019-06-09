@@ -66,7 +66,7 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
         return output_dim
 
     def forward(self, text_field_input: Dict[str, torch.Tensor], num_wrapping_dims: int = 0) -> torch.Tensor:
-        embedder_keys = self._token_embedders.keys()
+        embedder_keys = self.token_embedders.keys()
         input_keys = text_field_input.keys()
 
         # Check for unmatched keys
@@ -84,9 +84,9 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
                            f"between your token indexers and token embedders.")
                 raise ConfigurationError(message)
 
-            elif self._token_embedders.keys() != text_field_input.keys():
+            elif self.token_embedders.keys() != text_field_input.keys():
                 # some other mismatch
-                message = "Mismatched token keys: %s and %s" % (str(self._token_embedders.keys()),
+                message = "Mismatched token keys: %s and %s" % (str(self.token_embedders.keys()),
                                                                 str(text_field_input.keys()))
                 raise ConfigurationError(message)
 
