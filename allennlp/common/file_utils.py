@@ -14,6 +14,7 @@ from hashlib import sha256
 from functools import wraps
 
 import boto3
+import botocore
 from botocore.exceptions import ClientError
 import requests
 
@@ -149,21 +150,31 @@ def s3_request(func: Callable):
     return wrapper
 
 
+def get_s3_client():
+    session = boto3.session.Session()
+    if session.get_credentials() is None:
+        # Use unsigned requests.
+        s3_client = boto3.client("s3", config=botocore.client.Config(signature_version=botocore.UNSIGNED))
+    else:
+        s3_client = boto3.client("s3")
+    return s3_client
+
+
 @s3_request
 def s3_etag(url: str) -> Optional[str]:
     """Check ETag on S3 object."""
-    s3_resource = boto3.resource("s3")
     bucket_name, s3_path = split_s3_path(url)
-    s3_object = s3_resource.Object(bucket_name, s3_path)
-    return s3_object.e_tag
+    s3_client = get_s3_client()
+    s3_object = s3_client.head_object(Bucket=bucket_name, Key=s3_path)
+    return s3_object["ETag"]
 
 
 @s3_request
 def s3_get(url: str, temp_file: IO) -> None:
     """Pull a file directly from S3."""
-    s3_resource = boto3.resource("s3")
     bucket_name, s3_path = split_s3_path(url)
-    s3_resource.Bucket(bucket_name).download_fileobj(s3_path, temp_file)
+    s3_client = get_s3_client()
+    s3_client.download_fileobj(bucket_name, s3_path, temp_file)
 
 
 def http_get(url: str, temp_file: IO) -> None:
