@@ -44,11 +44,11 @@ class BooleanAccuracy(Metric):
 
         # Some sanity checks.
         if gold_labels.size() != predictions.size():
-            raise ValueError("gold_labels must have shape == predictions.size() but "
-                             "found tensor of shape: {}".format(gold_labels.size()))
+            raise ValueError(f"gold_labels must have shape == predictions.size() but "
+                             f"found tensor of shape: {gold_labels.size()}")
         if mask is not None and mask.size() != predictions.size():
-            raise ValueError("mask must have shape == predictions.size() but "
-                             "found tensor of shape: {}".format(mask.size()))
+            raise ValueError(f"mask must have shape == predictions.size() but "
+                             f"found tensor of shape: {mask.size()}")
 
         batch_size = predictions.size(0)
 

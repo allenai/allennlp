@@ -61,6 +61,6 @@ class BooleanAccuracyTest(AllenNlpTestCase):
         accuracy = BooleanAccuracy()
         predictions = torch.rand([5, 7])
         labels = torch.rand([5, 7])
-        incorrect_shape_mask = torch.rand([5, 8])
+        incorrect_shape_mask = torch.randint(0, 2, [5, 8])
         with pytest.raises(ValueError):
             accuracy(predictions, labels, incorrect_shape_mask)
