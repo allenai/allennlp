@@ -1,4 +1,4 @@
-from allennlp.semparse.domain_languages.domain_language import ExecutionError
+from allennlp.semparse.common.errors import ExecutionError
 
 
 class Date:

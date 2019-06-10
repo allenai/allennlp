@@ -15,7 +15,7 @@ from allennlp.nn import util
 from allennlp.semparse.type_declarations import type_declaration
 from allennlp.semparse.type_declarations.type_declaration import START_SYMBOL
 from allennlp.semparse.worlds.quarel_world import QuarelWorld
-from allennlp.semparse import ParsingError
+from allennlp.semparse.common.errors import ParsingError
 from allennlp.state_machines import BeamSearch
 from allennlp.state_machines.states import GrammarBasedState, GrammarStatelet, RnnStatelet
 from allennlp.state_machines.trainers import MaximumMarginalLikelihood
