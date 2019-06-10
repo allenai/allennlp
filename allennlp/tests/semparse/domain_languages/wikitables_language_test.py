@@ -8,7 +8,7 @@ from allennlp.data.tokenizers import Token
 from allennlp.data.tokenizers import WordTokenizer
 from allennlp.semparse.contexts import TableQuestionContext
 from allennlp.semparse.domain_languages.domain_language import ExecutionError
-from allennlp.semparse.domain_languages.common import Date
+from allennlp.semparse.common import Date
 from allennlp.semparse.domain_languages.wikitables_language import WikiTablesLanguage
 from allennlp.tests.semparse.domain_languages.domain_language_test import check_productions_match
 
