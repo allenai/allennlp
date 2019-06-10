@@ -39,7 +39,8 @@ class BertPooler(Seq2VecEncoder):
             model = pretrained_model
 
         self.pooler = model.pooler
-        self.pooler.requires_grad = requires_grad
+        for param in self.pooler.parameters():
+            param.requires_grad = requires_grad
         self._embedding_dim = model.config.hidden_size
 
     @overrides
