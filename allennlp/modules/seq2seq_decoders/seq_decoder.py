@@ -18,7 +18,7 @@ class SeqDecoder(Module, Registrable):
     default_implementation = 'auto_regressive_seq_decoder'
 
     def __init__(self,
-                 target_embedder: Embedding):
+                 target_embedder: Embedding) -> None:
         super().__init__()
         self.target_embedder = target_embedder
 

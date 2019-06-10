@@ -1,6 +1,7 @@
-import torch
 from typing import Tuple, Generic, Dict, Any, Optional
+from overrides import overrides
 
+import torch
 from torch.nn import LSTMCell
 
 from allennlp.modules import Attention
@@ -29,9 +30,9 @@ class LstmCellDecoderNet(DecoderNet):
                  decoding_dim: int,
                  target_embedding_dim: int,
                  attention: Optional[Attention] = None,
-                 bidirectional_input: bool = False):
+                 bidirectional_input: bool = False) -> None:
 
-        super(LstmCellDecoderNet, self).__init__(
+        super().__init__(
             decoding_dim=decoding_dim,
             target_embedding_dim=target_embedding_dim,
             decodes_parallel=False
@@ -94,6 +95,7 @@ class LstmCellDecoderNet(DecoderNet):
             )  # shape: (batch_size, decoder_output_dim)
         }
 
+    @overrides
     def forward(self,
                 previous_state: Dict[str, torch.Tensor],
                 encoder_outputs: torch.Tensor,

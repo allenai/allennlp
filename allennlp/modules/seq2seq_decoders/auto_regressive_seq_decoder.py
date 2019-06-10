@@ -1,11 +1,13 @@
 from overrides import overrides
 from typing import Dict, List, Tuple, Optional
 
+import numpy
 import torch
 import torch.nn.functional as F
 from torch.nn import Linear, Module
 
 from allennlp.common import Registrable
+from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import END_SYMBOL, START_SYMBOL
 from allennlp.modules.seq2seq_decoders.seq_decoder import SeqDecoder
 from allennlp.data import Vocabulary
@@ -65,7 +67,7 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
             beam_size: int = 4,
             tensor_based_metric: Metric = None,
             token_based_metric: Metric = None,
-    ):
+    ) -> None:
         super().__init__(target_embedder)
 
         self._vocab = vocab

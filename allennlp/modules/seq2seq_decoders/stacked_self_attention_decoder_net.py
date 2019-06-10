@@ -1,13 +1,13 @@
-import torch
 from typing import Tuple, Generic, Dict, Any, Optional
 import copy
 import math
+from overrides import overrides
+
+import numpy as np
+import torch
+from torch import nn
 from torch.autograd import Variable
 import torch.nn.functional as F
-from torch import nn
-import torch
-import numpy as np
-
 
 from allennlp.modules.seq2seq_encoders.bidirectional_language_model_transformer import attention, subsequent_mask, PositionwiseFeedForward, SublayerConnection, PositionalEncoding, MultiHeadedAttention
 from allennlp.modules.seq2seq_decoders.decoder_net import DecoderNet
@@ -57,7 +57,7 @@ class StackedSelfAttentionDecoderNet(DecoderNet):
                  positional_encoding_max_steps: int = 5000,
                  dropout_prob: float = 0.1,
                  residual_dropout_prob: float = 0.2,
-                 attention_dropout_prob: float = 0.1,):
+                 attention_dropout_prob: float = 0.1,) -> None:
 
         super().__init__(
             decoding_dim=decoding_dim,
@@ -73,16 +73,17 @@ class StackedSelfAttentionDecoderNet(DecoderNet):
         self._dropout = nn.Dropout(dropout_prob)
         self._self_attention = Decoder(DecoderLayer(decoding_dim, c(attn), c(attn),
                                              ff, residual_dropout_prob), num_layers)
-
+    @overrides
     def init_decoder_state(self, encoder_out: Dict[str, torch.LongTensor]) -> Dict[str, torch.Tensor]:
         return {
         }
 
+    @overrides
     def forward(self,
                 previous_state: Dict[str, torch.Tensor],
                 encoder_outputs: torch.Tensor,
-                previous_steps_predictions: torch.Tensor,
                 source_mask: torch.Tensor,
+                previous_steps_predictions: torch.Tensor,
                 previous_steps_mask: Optional[torch.Tensor] = None,
     ) -> Tuple[Dict[str, torch.Tensor], torch.Tensor]:
         source_mask = source_mask.unsqueeze(-2)
@@ -112,19 +113,23 @@ def clones(module, N):
 class Decoder(nn.Module):
     "Generic N layer decoder with masking."
 
-    def __init__(self, layer, N):
-        super(Decoder, self).__init__()
+    def __init__(self, layer, N) -> None:
+        super().__init__()
         self.layers = clones(layer, N)
         self.norm = LayerNorm(layer.size)
 
-    def forward(self, x: torch.Tensor, memory: torch.Tensor, src_mask: torch.Tensor, tgt_mask: torch.Tensor):
+    @overrides
+    def forward(self, x: torch.Tensor, memory: torch.Tensor,
+                src_mask: torch.Tensor, tgt_mask: torch.Tensor) -> torch.Tensor:
         for layer in self.layers:
             x = layer(x, memory, src_mask, tgt_mask)
         return self.norm(x)
 
 class DecoderLayer(nn.Module):
     "Decoder is made of self-attn, src-attn, and feed forward (defined below)"
-    def __init__(self, size: int, self_attn: MultiHeadedAttention, src_attn: MultiHeadedAttention, feed_forward: F, dropout):
+    def __init__(self,
+                 size: int, self_attn: MultiHeadedAttention,
+                 src_attn: MultiHeadedAttention, feed_forward: F, dropout: float) -> None:
         super(DecoderLayer, self).__init__()
         self.size = size
         self.self_attn = self_attn
@@ -132,7 +137,8 @@ class DecoderLayer(nn.Module):
         self.feed_forward = feed_forward
         self.sublayer = clones(SublayerConnection(size, dropout), 3)
 
-    def forward(self, x: torch.Tensor, memory: torch.Tensor, src_mask: torch.Tensor, tgt_mask: torch.Tensor):
+    def forward(self, x: torch.Tensor, memory: torch.Tensor,
+                src_mask: torch.Tensor, tgt_mask: torch.Tensor) -> torch.Tensor:
         "Follow Figure 1 (right) for connections."
         m = memory
         x = self.sublayer[0](x, lambda x: self.self_attn(x, x, x, tgt_mask))
