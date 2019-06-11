@@ -105,8 +105,8 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
                     # This is a padding edge case and occurs when we want to pad a ListField of
                     # TextFields. In order to pad the list field, we need to be able to have an
                     # _empty_ TextField, but if this is the case, token_lengths will be an empty
-                    # list, so we add the default empty padding dictionary to the list instead.
-                    token_lengths = [{}]
+                    # list, so we add the padding for a token of length 0 to the list instead.
+                    token_lengths = [indexer.get_padding_lengths([])]
                 # Iterate over the keys and find the maximum token length.
                 # It's fine to iterate over the keys of the first token since all tokens have the same keys.
                 for key in token_lengths[0]:
