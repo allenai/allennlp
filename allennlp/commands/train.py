@@ -86,6 +86,17 @@ class Train(Subcommand):
                                default=False,
                                help='outputs tqdm status on separate lines and slows tqdm refresh rate')
 
+        subparser.add_argument('--cache-directory',
+                               type=str,
+                               default='',
+                               help='Location to store cache of data preprocessing')
+
+        subparser.add_argument('--cache-prefix',
+                               type=str,
+                               default='',
+                               help='Prefix to use for data caching, giving current parameter '
+                               'settings a name in the cache, instead of computing a hash')
+
         subparser.set_defaults(func=train_model_from_args)
 
         return subparser
@@ -100,7 +111,9 @@ def train_model_from_args(args: argparse.Namespace):
                           args.overrides,
                           args.file_friendly_logging,
                           args.recover,
-                          args.force)
+                          args.force,
+                          args.cache_directory,
+                          args.cache_prefix)
 
 
 def train_model_from_file(parameter_filename: str,
@@ -108,7 +121,9 @@ def train_model_from_file(parameter_filename: str,
                           overrides: str = "",
                           file_friendly_logging: bool = False,
                           recover: bool = False,
-                          force: bool = False) -> Model:
+                          force: bool = False,
+                          cache_directory: str = None,
+                          cache_prefix: str = None) -> Model:
     """
     A wrapper around :func:`train_model` which loads the params from a file.
 
@@ -130,17 +145,28 @@ def train_model_from_file(parameter_filename: str,
         of a run.  For continuing training a model on new data, see the ``fine-tune`` command.
     force : ``bool``, optional (default=False)
         If ``True``, we will overwrite the serialization directory if it already exists.
+    cache_directory : ``str``, optional
+        For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
+    cache_prefix : ``str``, optional
+        For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
     """
     # Load the experiment config from a file and pass it to ``train_model``.
     params = Params.from_file(parameter_filename, overrides)
-    return train_model(params, serialization_dir, file_friendly_logging, recover, force)
+    return train_model(params,
+                       serialization_dir,
+                       file_friendly_logging,
+                       recover,
+                       force,
+                       cache_directory, cache_prefix)
 
 
 def train_model(params: Params,
                 serialization_dir: str,
                 file_friendly_logging: bool = False,
                 recover: bool = False,
-                force: bool = False) -> Model:
+                force: bool = False,
+                cache_directory: str = None,
+                cache_prefix: str = None) -> Model:
     """
     Trains the model specified in the given :class:`Params` object, using the data and training
     parameters also specified in that object, and saves the results in ``serialization_dir``.
@@ -160,15 +186,19 @@ def train_model(params: Params,
         of a run.  For continuing training a model on new data, see the ``fine-tune`` command.
     force : ``bool``, optional (default=False)
         If ``True``, we will overwrite the serialization directory if it already exists.
+    cache_directory : ``str``, optional
+        For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
+    cache_prefix : ``str``, optional
+        For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
 
     Returns
     -------
     best_model: ``Model``
         The model with the best epoch weights.
     """
-    prepare_environment(params)
     create_serialization_dir(params, serialization_dir, recover, force)
     stdout_handler = prepare_global_logging(serialization_dir, file_friendly_logging)
+    prepare_environment(params)
 
     cuda_device = params.params.get('trainer').get('cuda_device', -1)
     check_for_gpu(cuda_device)
@@ -181,7 +211,11 @@ def train_model(params: Params,
 
     if trainer_type == "default":
         # Special logic to instantiate backward-compatible trainer.
-        pieces = TrainerPieces.from_params(params, serialization_dir, recover)  # pylint: disable=no-member
+        pieces = TrainerPieces.from_params(params,  # pylint: disable=no-member
+                                           serialization_dir,
+                                           recover,
+                                           cache_directory,
+                                           cache_prefix)
         trainer = Trainer.from_params(
                 model=pieces.model,
                 serialization_dir=serialization_dir,
@@ -190,13 +224,18 @@ def train_model(params: Params,
                 validation_data=pieces.validation_dataset,
                 params=pieces.params,
                 validation_iterator=pieces.validation_iterator)
-        evaluation_iterator = pieces.validation_iterator or pieces.iterator
-        evaluation_dataset = pieces.test_dataset
-
     else:
+        # Workaround to obtain the evaluation parts.
+        pieces = TrainerPieces.from_params(params.duplicate(),  # pylint: disable=no-member
+                                           serialization_dir,
+                                           recover,
+                                           cache_directory,
+                                           cache_prefix)
+
         trainer = TrainerBase.from_params(params, serialization_dir, recover)
-        # TODO(joelgrus): handle evaluation in the general case
-        evaluation_iterator = evaluation_dataset = None
+
+    evaluation_iterator = pieces.validation_iterator or pieces.iterator
+    evaluation_dataset = pieces.test_dataset
 
     params.assert_empty('base train command')
 
@@ -214,7 +253,7 @@ def train_model(params: Params,
     if evaluation_dataset and evaluate_on_test:
         logger.info("The model will be evaluated using the best epoch weights.")
         test_metrics = evaluate(trainer.model, evaluation_dataset, evaluation_iterator,
-                                cuda_device=trainer._cuda_devices[0], # pylint: disable=protected-access,
+                                cuda_device=trainer._cuda_devices[0],  # pylint: disable=protected-access,
                                 # TODO(brendanr): Pass in an arg following Joel's trainer refactor.
                                 batch_weight_key="")
 

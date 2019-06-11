@@ -4,7 +4,7 @@
 // this configuration replaces the original Senna word embeddings with
 // 50d GloVe embeddings.
 //
-// There is a trained model available at https://s3-us-west-2.amazonaws.com/allennlp/models/ner-model-2018.04.30.tar.gz
+// There is a trained model available at https://s3-us-west-2.amazonaws.com/allennlp/models/ner-model-2018.12.18.tar.gz
 // with test set F1 of 92.51 compared to the single model reported
 // result of 92.22 +/- 0.10.
 {

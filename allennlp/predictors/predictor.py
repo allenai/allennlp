@@ -12,6 +12,7 @@ from allennlp.models.archival import Archive, load_archive
 # a mapping from model `type` to the default Predictor for that type
 DEFAULT_PREDICTORS = {
         'atis_parser' : 'atis_parser',
+        'basic_classifier': 'text_classifier',
         'biaffine_parser': 'biaffine-dependency-parser',
         'bidaf': 'machine-comprehension',
         'bidaf-ensemble': 'machine-comprehension',
@@ -22,6 +23,7 @@ DEFAULT_PREDICTORS = {
         'decomposable_attention': 'textual-entailment',
         'dialog_qa': 'dialog_qa',
         'event2mind': 'event2mind',
+        'naqanet': 'machine-comprehension',
         'simple_tagger': 'sentence-tagger',
         'srl': 'semantic-role-labeling',
         'quarel_parser': 'quarel-parser',

@@ -37,6 +37,13 @@ def bidirectional_attention_flow_seo_2017() -> predictors.BidafPredictor:
                                 'machine-comprehension')
         return model.predictor() # type: ignore
 
+def naqanet_dua_2019() -> predictors.BidafPredictor:
+    with warnings.catch_warnings():
+        warnings.simplefilter(action="ignore", category=DeprecationWarning)
+        model = PretrainedModel('https://s3-us-west-2.amazonaws.com/allennlp/models/naqanet-2019.04.29-fixed-weight-names.tar.gz',
+                                'machine-comprehension')
+        return model.predictor()  # type: ignore
+
 def open_information_extraction_stanovsky_2018() -> predictors.OpenIePredictor:
     model = PretrainedModel('https://s3-us-west-2.amazonaws.com/allennlp/models/openie-model.2018-08-20.tar.gz',
                             'open-information-extraction')
@@ -54,7 +61,10 @@ def neural_coreference_resolution_lee_2017() -> predictors.CorefPredictor:
         warnings.simplefilter(action="ignore", category=DeprecationWarning)
         model = PretrainedModel('https://s3-us-west-2.amazonaws.com/allennlp/models/coref-model-2018.02.05.tar.gz',
                                 'coreference-resolution')
-        return model.predictor() # type: ignore
+        predictor = model.predictor()
+        # pylint: disable=protected-access
+        predictor._dataset_reader._token_indexers['token_characters']._min_padding_length = 5  # type: ignore
+        return predictor  # type: ignore
 
 def named_entity_recognition_with_elmo_peters_2018() -> predictors.SentenceTaggerPredictor:
     with warnings.catch_warnings():
@@ -67,7 +77,7 @@ def named_entity_recognition_with_elmo_peters_2018() -> predictors.SentenceTagge
         return predictor  # type: ignore
 
 def fine_grained_named_entity_recognition_with_elmo_peters_2018() -> predictors.SentenceTaggerPredictor:
-    model = PretrainedModel('https://s3-us-west-2.amazonaws.com/allennlp/models/fine-grained-ner-model-elmo-2018.08.31.tar.gz',
+    model = PretrainedModel('https://s3-us-west-2.amazonaws.com/allennlp/models/fine-grained-ner-model-elmo-2018.12.21.tar.gz',
                             'sentence-tagger')
     predictor = model.predictor()
     # pylint: disable=protected-access
