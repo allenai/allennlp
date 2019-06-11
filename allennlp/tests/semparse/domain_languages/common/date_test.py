@@ -1,7 +1,7 @@
 import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.semparse.common.errors import ExecutionError
+from allennlp.semparse import ExecutionError
 from allennlp.semparse.common import Date
 
 

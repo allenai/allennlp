@@ -11,7 +11,7 @@ from allennlp.models.model import Model
 from allennlp.modules import Embedding, Seq2SeqEncoder, Seq2VecEncoder, TextFieldEmbedder, TimeDistributed
 from allennlp.modules.seq2vec_encoders import BagOfEmbeddingsEncoder
 from allennlp.nn import util
-from allennlp.semparse.common.errors import ParsingError
+from allennlp.semparse import ParsingError
 from allennlp.semparse.executors import WikiTablesSempreExecutor
 from allennlp.semparse.type_declarations import type_declaration
 from allennlp.semparse.type_declarations.type_declaration import START_SYMBOL

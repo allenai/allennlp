@@ -3,7 +3,7 @@ from overrides import overrides
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.tokenizers import Token
-from allennlp.semparse.common.errors import ParsingError
+from allennlp.semparse import ParsingError
 from allennlp.semparse import World
 from allennlp.semparse.contexts import TableQuestionKnowledgeGraph
 from allennlp.semparse.worlds import WikiTablesWorld
