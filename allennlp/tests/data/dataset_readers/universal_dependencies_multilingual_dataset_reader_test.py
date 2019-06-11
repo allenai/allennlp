@@ -86,6 +86,9 @@ class TestUniversalDependenciesMultilangDatasetReader(AllenNlpTestCase):
         assert 'es' in processed_langs and 'fr' in processed_langs and 'it' in processed_langs
 
     def test_read_from_files_first_pass_false(self):
+        '''
+        Note: assumes that each data file contains two trees
+        '''
         reader = UniversalDependenciesMultiLangDatasetReader(languages=['es', 'fr', 'it'],
                                                              is_first_pass_for_vocab=False,
                                                              instances_per_file=1,

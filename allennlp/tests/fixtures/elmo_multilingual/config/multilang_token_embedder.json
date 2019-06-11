@@ -1,0 +1,93 @@
+{
+    "dataset_reader": {
+        "type": "universal_dependencies_multilang",
+        "languages": ["en", "fr"],
+        "alternate": false,
+        "instances_per_file": 32,
+        "is_first_pass_for_vocab": true,
+        "token_indexers": {
+            "elmo": {
+                "type": "elmo_characters"
+            }
+        },
+        "use_language_specific_pos": false
+    },
+    "iterator": {
+        "type": "same_language",
+        "batch_size": 32,
+        "sorting_keys": [["words", "num_tokens"]],
+        "instances_per_epoch": 32
+    },
+    "model": {
+        "type": "biaffine_parser_multilang",
+        "arc_representation_dim": 10,
+        "dropout": 0.33,
+        "encoder": {
+            "type": "lstm",
+            "bidirectional": true,
+            "dropout": 0.33,
+            "hidden_size": 20,
+            "input_size": 42,
+            "num_layers": 1
+        },
+        "langs_for_early_stop": [
+            "en"
+        ],
+        "pos_tag_embedding": {
+            "embedding_dim": 10,
+            "vocab_namespace": "pos"
+        },
+        "tag_representation_dim": 100,
+        "text_field_embedder": {
+            "token_embedders": {
+                "elmo": {
+                    "type": "elmo_token_embedder_multilang",
+                    "aligning_files": {
+                        "en": "allennlp/tests/fixtures/elmo_multilingual/en/align.pth",
+                        "fr": "allennlp/tests/fixtures/elmo_multilingual/fr/align.pth"
+                    },
+                    "do_layer_norm": false,
+                    "dropout": 0.3,
+                    "scalar_mix_parameters": [
+                        -9e10,
+                        1,
+                        -9e10
+                    ],
+                    "options_files": {
+                        "en": "allennlp/tests/fixtures/elmo/options.json",
+                        "fr": "allennlp/tests/fixtures/elmo_multilingual/fr/options.json"
+                    },
+                    "weight_files": {
+                        "en": "allennlp/tests/fixtures/elmo/lm_weights.hdf5",
+                        "fr": "allennlp/tests/fixtures/elmo_multilingual/fr/weights.hdf5"
+                    }
+                }
+            }
+        }
+    },
+    "train_data_path": "allennlp/tests/fixtures/data/dependencies_multilang/*",
+    "validation_data_path": "allennlp/tests/fixtures/data/dependencies_multilang/*",
+    "trainer": {
+        "cuda_device": -1,
+        "num_epochs": 1,
+        "optimizer": "adam",
+        "patience": 1,
+        "validation_metric": "+LAS_AVG"
+    },
+    "validation_dataset_reader": {
+        "type": "universal_dependencies_multilang",
+        "languages": ["en", "fr"],
+        "alternate": false,
+        "token_indexers": {
+            "elmo": {
+                "type": "elmo_characters"
+            }
+        },
+        "use_language_specific_pos": false
+    },
+    "validation_iterator": {
+        "type": "same_language",
+        "sorting_keys": [["words", "num_tokens"]],
+        "batch_size": 32
+    }
+}
