@@ -146,6 +146,16 @@ class BertEmbedder(TokenEmbedder):
             # Now combine the sequences along the batch dimension
             input_ids = torch.cat(split_input_ids, dim=0)
 
+            if token_type_ids is not None:
+                # Same for token_type_ids
+                split_token_type_ids = list(token_type_ids.split(self.max_pieces, dim=-1))
+
+                last_window_size = split_token_type_ids[-1].size(-1)
+                padding_amount = self.max_pieces - last_window_size
+                split_token_type_ids[-1] = F.pad(split_token_type_ids[-1], pad=[0, padding_amount], value=0)
+
+                token_type_ids = torch.cat(split_token_type_ids, dim=0)
+
         if token_type_ids is None:
             token_type_ids = torch.zeros_like(input_ids)
 
