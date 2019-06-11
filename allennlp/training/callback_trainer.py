@@ -1,5 +1,4 @@
 import logging
-import math
 import time
 import datetime
 from typing import Dict, Optional, List, Union, Any, Iterable
@@ -8,10 +7,8 @@ import torch
 
 from allennlp.common import Params
 from allennlp.common.checks import parse_cuda_device
-from allennlp.common.util import lazy_groups_of
 from allennlp.common.tqdm import Tqdm
-from allennlp.data.instance import Instance
-from allennlp.data.iterators.data_iterator import DataIterator, TensorDict
+from allennlp.data.iterators.data_iterator import TensorDict
 from allennlp.models.model import Model
 from allennlp.nn import util as nn_util
 from allennlp.training import util as training_util
@@ -23,21 +20,16 @@ from allennlp.training.trainer_base import TrainerBase
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-@TrainerBase.register("trainer2")
-class Trainer(TrainerBase):
+@TrainerBase.register("callback")
+class CallbackTrainer(TrainerBase):
     def __init__(self,
                  model: Model,
                  optimizer: torch.optim.Optimizer,
-                 iterator: DataIterator,
-                 train_dataset: Iterable[Instance],
-                 validation_dataset: Optional[Iterable[Instance]] = None,
-                 validation_iterator: DataIterator = None,
-                 shuffle: bool = True,
                  num_epochs: int = 20,
                  serialization_dir: Optional[str] = None,
                  model_save_interval: float = None,
                  cuda_device: Union[int, List] = -1,
-                 callbacks: List[Callback['Trainer']] = None) -> None:
+                 callbacks: List[Callback] = None) -> None:
         """
         A trainer for doing supervised learning. It just takes a labeled dataset
         and a ``DataIterator``, and uses the supplied ``Optimizer`` to learn the weights
@@ -57,17 +49,6 @@ class Trainer(TrainerBase):
         optimizer : ``torch.nn.Optimizer``, required.
             An instance of a Pytorch Optimizer, instantiated with the parameters of the
             model to be optimized.
-        iterator : ``DataIterator``, required.
-            A method for iterating over a ``Dataset``, yielding padded indexed batches.
-        train_dataset : ``Dataset``, required.
-            A ``Dataset`` to train on. The dataset should have already been indexed.
-        validation_dataset : ``Dataset``, optional, (default = None).
-            A ``Dataset`` to evaluate on. The dataset should have already been indexed.
-        validation_iterator : ``DataIterator``, optional (default=None)
-            An iterator to use for the validation set.  If ``None``, then
-            use the training `iterator`.
-        shuffle: ``bool``, optional (default=True)
-            Whether to shuffle the instances in the iterator or not.
         num_epochs : int, optional (default = 20)
             Number of training epochs.
         serialization_dir : str, optional (default=None)
@@ -86,12 +67,8 @@ class Trainer(TrainerBase):
         # I am not calling move_to_gpu here, because if the model is
         # not already on the GPU then the optimizer is going to be wrong.
         self.model = model
-        self.iterator = iterator
-        self.validation_iterator = validation_iterator or iterator
-        self.shuffle = shuffle
         self.optimizer = optimizer
-        self.train_data = train_dataset
-        self.validation_data = validation_dataset
+        self.validate = False
 
         # For capturing mid / end-of-epoch metrics
         self.train_metrics: Dict[str, float] = {}
@@ -105,6 +82,10 @@ class Trainer(TrainerBase):
         self.batch_num_total = 0
         self.batch_group: List[TensorDict] = []
         self.batches_this_epoch = 0
+
+        self.training_batches: Iterable[List[TensorDict]] = ()
+        self.num_training_batches = 0
+
         self.should_stop_early = False
         self.num_epochs = num_epochs
 
@@ -142,23 +123,6 @@ class Trainer(TrainerBase):
 
         return loss
 
-    def generate_batch_groups(self) -> Iterable[List[TensorDict]]:
-        """
-        Returns an iterable over the batch groups
-        """
-        num_gpus = len(self._cuda_devices)
-
-        # Get tqdm for the training batches
-        raw_train_generator = self.iterator(self.train_data,
-                                            num_epochs=1,
-                                            shuffle=self.shuffle)
-        train_generator = lazy_groups_of(raw_train_generator, num_gpus)
-        return train_generator
-
-    def num_training_batches(self) -> int:
-        num_gpus = len(self._cuda_devices)
-        return math.ceil(self.iterator.get_num_batches(self.train_data) / num_gpus)
-
     def train(self) -> Dict[str, Any]:
         """
         Trains the supplied model with the supplied parameters.
@@ -185,8 +149,8 @@ class Trainer(TrainerBase):
 
             logger.info("Training")
             self.batches_this_epoch = 0
-            batch_groups_tqdm = Tqdm.tqdm(self.generate_batch_groups(),
-                                          total=self.num_training_batches())
+
+            batch_groups_tqdm = Tqdm.tqdm(self.training_batches, total=self.num_training_batches)
 
             for self.batch_group in batch_groups_tqdm:
                 self.handler.fire_event(Events.BATCH_START)
@@ -241,14 +205,11 @@ class Trainer(TrainerBase):
     def from_params(cls,  # type: ignore
                     params: Params,
                     serialization_dir: str,
-                    recover: bool = False) -> 'Trainer':
+                    recover: bool = False) -> 'CallbackTrainer':
         pieces = TrainerPieces.from_params(params, serialization_dir, recover)  # pylint: disable=no-member
         model = pieces.model
-        iterator = pieces.iterator
-        train_data = pieces.train_dataset
-        validation_data = pieces.validation_dataset
         params = pieces.params
-        validation_iterator = pieces.validation_iterator
+        validation_iterator = pieces.validation_iterator or pieces.iterator
 
         shuffle = params.pop_bool("shuffle", True)
         num_epochs = params.pop_int("num_epochs", 20)
@@ -272,14 +233,16 @@ class Trainer(TrainerBase):
         callbacks: List[Callback] = [Callback.from_params(params=callback_params,
                                                           model=model,
                                                           optimizer=optimizer,
+                                                          instances=pieces.train_dataset,
+                                                          iterator=pieces.iterator,
+                                                          shuffle=shuffle,
+                                                          validation_data=pieces.validation_dataset,
+                                                          validation_iterator=validation_iterator,
                                                           serialization_dir=serialization_dir)
                                      for callback_params in callbacks_params]
 
         params.assert_empty(cls.__name__)
-        return cls(model, optimizer, iterator,
-                   train_data, validation_data,
-                   validation_iterator=validation_iterator,
-                   shuffle=shuffle,
+        return cls(model, optimizer,
                    num_epochs=num_epochs,
                    serialization_dir=serialization_dir,
                    cuda_device=cuda_device,

@@ -1,15 +1,16 @@
-from typing import TypeVar, Generic
-
 from allennlp.common.registrable import Registrable
 
-TrainerType = TypeVar('TrainerType')  # pylint: disable=invalid-name
+def handle_event(event: str, priority: int = 0):
+    def wrapper(method):
+        setattr(method, '_event', event)
+        setattr(method, '_priority', priority)
+        return method
 
-class Callback(Registrable, Generic[TrainerType]):
+    return wrapper
+
+class Callback(Registrable):
     # Lower priority comes first
     priority = 0
-
-    def __call__(self, event: str, trainer: TrainerType) -> None:
-        raise NotImplementedError
 
     def get_training_state(self) -> dict:
         """

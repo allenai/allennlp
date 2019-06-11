@@ -5,7 +5,7 @@ import json
 import os
 import re
 import time
-from typing import Dict
+from typing import Dict, Iterable
 
 import torch
 import pytest
@@ -13,15 +13,17 @@ import pytest
 from allennlp.common.checks import ConfigurationError
 
 from allennlp.common.testing import AllenNlpTestCase, ModelTestCase
+from allennlp.data.instance import Instance
+from allennlp.data.iterators import DataIterator
 from allennlp.training.callbacks import Events
 from allennlp.training.checkpointer import Checkpointer
 
 from allennlp.training.callbacks.callbacks import (
         LogToTensorboard, CheckpointCallback, MovingAverageCallback, Validate,
-        LrsCallback, MomentumSchedulerCallback, TrackMetrics, TrainSupervised
+        LrsCallback, MomentumSchedulerCallback, TrackMetrics, TrainSupervised, GenerateTrainingBatches
 )
 
-from allennlp.training.trainer2 import Trainer
+from allennlp.training.callback_trainer import CallbackTrainer
 from allennlp.training.trainer_base import TrainerBase
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
 from allennlp.training.momentum_schedulers import MomentumScheduler
@@ -37,18 +39,19 @@ from allennlp.models.model import Model
 from allennlp.training.moving_average import ExponentialMovingAverage
 
 
-
-class TestT2rainer(AllenNlpTestCase):
+class TestCallbackTrainer(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
 
-        def metric_tracker(self: Trainer):
-            for callback in self.handler.callbacks:
+        # a lot of the tests want access to the metric tracker
+        # let's get it
+        def metric_tracker(self: CallbackTrainer):
+            for callback in self.handler.callbacks():
                 if isinstance(callback, TrackMetrics):
                     return callback.metric_tracker
             return None
 
-        Trainer.metric_tracker = property(metric_tracker)
+        CallbackTrainer.metric_tracker = property(metric_tracker)
 
         self.instances = SequenceTaggingDatasetReader().read(self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv')
         vocab = Vocabulary.from_instances(self.instances)
@@ -71,27 +74,40 @@ class TestT2rainer(AllenNlpTestCase):
                 })
         self.model = SimpleTagger.from_params(vocab=self.vocab, params=self.model_params)
         self.optimizer = torch.optim.SGD(self.model.parameters(), 0.01, momentum=0.9)
-        self.iterator = BasicIterator(batch_size=2)
-        self.iterator.index_with(vocab)
+
+    def tearDown(self):
+        super().tearDown()
+        delattr(CallbackTrainer, 'metric_tracker')
 
     def default_callbacks(self,
                           validation_metric: str = "-loss",
                           patience: int = None,
                           max_checkpoints: int = 20,
                           checkpoint_every: int = None,
-                          serialization_dir: str = "__DEFAULT__"):
+                          serialization_dir: str = "__DEFAULT__",
+                          iterator: DataIterator = None,
+                          validation_data: Iterable[Instance] = None,
+                          validation_iterator: DataIterator = None,
+                          batch_size: int = 2):
         if serialization_dir == "__DEFAULT__":
             serialization_dir = self.TEST_DIR
         checkpointer = Checkpointer(serialization_dir,
                                     checkpoint_every,
                                     max_checkpoints)
         tensorboard = TensorboardWriter(get_batch_num_total=lambda: None)
+
+        if iterator is None:
+            iterator = BasicIterator(batch_size=batch_size)
+            iterator.index_with(self.vocab)
+
         return [
                 LogToTensorboard(log_batch_size_period=10, tensorboard=tensorboard),
                 CheckpointCallback(checkpointer),
-                Validate(),
+                Validate(validation_data=self.instances if validation_data is None else validation_data,
+                         validation_iterator=iterator if validation_iterator is None else validation_iterator),
                 TrackMetrics(patience, validation_metric),
-                TrainSupervised()
+                TrainSupervised(),
+                GenerateTrainingBatches(self.instances, iterator, True)
         ]
 
 
@@ -102,7 +118,7 @@ class TestT2rainer(AllenNlpTestCase):
 
         params = Params({
                 "trainer": {
-                    "type": "trainer2",
+                    "type": "callback",
                     "optimizer": {"type": "sgd", "lr": 0.01, "momentum": 0.9},
                     "num_epochs": 2,
                     "callbacks": [
@@ -148,13 +164,10 @@ class TestT2rainer(AllenNlpTestCase):
         assert isinstance(metrics['best_epoch'], int)
 
     def test_trainer_can_run2(self):
-        trainer = Trainer(model=self.model,
-                          optimizer=self.optimizer,
-                          iterator=self.iterator,
-                          train_dataset=self.instances,
-                          validation_dataset=self.instances,
-                          callbacks=self.default_callbacks(serialization_dir=None),
-                          num_epochs=2)
+        trainer = CallbackTrainer(model=self.model,
+                                  optimizer=self.optimizer,
+                                  callbacks=self.default_callbacks(serialization_dir=None),
+                                  num_epochs=2)
         metrics = trainer.train()
         assert 'best_validation_loss' in metrics
         assert isinstance(metrics['best_validation_loss'], float)
@@ -167,14 +180,11 @@ class TestT2rainer(AllenNlpTestCase):
         assert 'peak_cpu_memory_MB' in metrics
 
         # Making sure that both increasing and decreasing validation metrics work.
-        trainer = Trainer(model=self.model,
-                          optimizer=self.optimizer,
-                          iterator=self.iterator,
-                          train_dataset=self.instances,
-                          validation_dataset=self.instances,
-                          callbacks=self.default_callbacks(validation_metric="+loss",
-                                                           serialization_dir=None),
-                          num_epochs=2)
+        trainer = CallbackTrainer(model=self.model,
+                                  optimizer=self.optimizer,
+                                  callbacks=self.default_callbacks(validation_metric="+loss",
+                                                                   serialization_dir=None),
+                                  num_epochs=2)
         metrics = trainer.train()
         assert 'best_validation_loss' in metrics
         assert isinstance(metrics['best_validation_loss'], float)
@@ -191,22 +201,19 @@ class TestT2rainer(AllenNlpTestCase):
     def test_trainer_can_run_exponential_moving_average(self):
         moving_average = ExponentialMovingAverage(self.model.named_parameters(), decay=0.9999)
         callbacks = self.default_callbacks() + [MovingAverageCallback(moving_average)]
-        trainer = Trainer(model=self.model,
-                          optimizer=self.optimizer,
-                          iterator=self.iterator,
-                          train_dataset=self.instances,
-                          validation_dataset=self.instances,
-                          num_epochs=2,
-                          callbacks=callbacks)
+        trainer = CallbackTrainer(model=self.model,
+                                  optimizer=self.optimizer,
+                                  num_epochs=2,
+                                  callbacks=callbacks)
         trainer.train()
 
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="No CUDA device registered.")
     def test_trainer_can_run_cuda(self):
         self.model.cuda()
-        trainer = Trainer(self.model, self.optimizer,
-                          self.iterator, self.instances, num_epochs=2,
-                          callbacks=self.default_callbacks(),
-                          cuda_device=0)
+        trainer = CallbackTrainer(self.model, self.optimizer,
+                                  num_epochs=2,
+                                  callbacks=self.default_callbacks(),
+                                  cuda_device=0)
         trainer.train()
 
     @pytest.mark.skipif(torch.cuda.device_count() < 2,
@@ -233,10 +240,10 @@ class TestT2rainer(AllenNlpTestCase):
 
         multigpu_iterator = BasicIterator(batch_size=4)
         multigpu_iterator.index_with(self.vocab)
-        trainer = Trainer(MetaDataCheckWrapper(self.model), self.optimizer,
-                          multigpu_iterator, self.instances, num_epochs=2,
-                          callbacks=self.default_callbacks(),
-                          cuda_device=[0, 1])
+        trainer = CallbackTrainer(MetaDataCheckWrapper(self.model), self.optimizer,
+                                  num_epochs=2,
+                                  callbacks=self.default_callbacks(iterator=multigpu_iterator),
+                                  cuda_device=[0, 1])
         metrics = trainer.train()
         assert 'peak_cpu_memory_MB' in metrics
         assert isinstance(metrics['peak_cpu_memory_MB'], float)
@@ -259,26 +266,37 @@ class TestT2rainer(AllenNlpTestCase):
 
         multigpu_iterator = BasicIterator(batch_size=4)
         multigpu_iterator.index_with(model.vocab)
-        trainer = Trainer(model, self.optimizer, multigpu_iterator, instances, num_epochs=2, cuda_device=[0, 1])
+
+
+        trainer = CallbackTrainer(
+                model,
+                self.optimizer,
+                num_epochs=2,
+                cuda_device=[0, 1],
+                callbacks=[
+                        GenerateTrainingBatches(instances, multigpu_iterator),
+                        TrainSupervised()
+                ])
         trainer.train()
 
     def test_trainer_can_resume_training(self):
-        trainer = Trainer(self.model, self.optimizer,
-                          self.iterator, self.instances,
-                          validation_dataset=self.instances,
-                          callbacks=self.default_callbacks(),
-                          num_epochs=1, serialization_dir=self.TEST_DIR)
+        trainer = CallbackTrainer(self.model, self.optimizer,
+                                  callbacks=self.default_callbacks(),
+                                  num_epochs=1, serialization_dir=self.TEST_DIR)
         trainer.train()
-        new_trainer = Trainer(self.model, self.optimizer,
-                              self.iterator, self.instances,
-                              validation_dataset=self.instances,
-                              callbacks=self.default_callbacks(),
-                              num_epochs=3, serialization_dir=self.TEST_DIR)
+
+
+        new_trainer = CallbackTrainer(self.model, self.optimizer,
+                                      callbacks=self.default_callbacks(),
+                                      num_epochs=3, serialization_dir=self.TEST_DIR)
 
         new_trainer.handler.fire_event(Events.RESTORE_CHECKPOINT)
+
         assert new_trainer.epoch_number == 1
 
-        tracker = trainer.metric_tracker
+        tracker = new_trainer.metric_tracker
+
+        assert tracker is not None
         assert tracker.is_best_so_far()
         assert tracker._best_so_far is not None
 
@@ -288,21 +306,17 @@ class TestT2rainer(AllenNlpTestCase):
         moving_average = ExponentialMovingAverage(self.model.named_parameters())
         callbacks = self.default_callbacks() + [MovingAverageCallback(moving_average)]
 
-        trainer = Trainer(self.model, self.optimizer,
-                          self.iterator, self.instances,
-                          validation_dataset=self.instances,
-                          num_epochs=1, serialization_dir=self.TEST_DIR,
-                          callbacks=callbacks)
+        trainer = CallbackTrainer(self.model, self.optimizer,
+                                  num_epochs=1, serialization_dir=self.TEST_DIR,
+                                  callbacks=callbacks)
         trainer.train()
 
         new_moving_average = ExponentialMovingAverage(self.model.named_parameters())
         new_callbacks = self.default_callbacks() + [MovingAverageCallback(new_moving_average)]
 
-        new_trainer = Trainer(self.model, self.optimizer,
-                              self.iterator, self.instances,
-                              validation_dataset=self.instances,
-                              num_epochs=3, serialization_dir=self.TEST_DIR,
-                              callbacks=new_callbacks)
+        new_trainer = CallbackTrainer(self.model, self.optimizer,
+                                      num_epochs=3, serialization_dir=self.TEST_DIR,
+                                      callbacks=new_callbacks)
 
         new_trainer.handler.fire_event(Events.RESTORE_CHECKPOINT)  # pylint: disable=protected-access
         assert new_trainer.epoch_number == 1
@@ -315,11 +329,9 @@ class TestT2rainer(AllenNlpTestCase):
 
     def test_metric_only_considered_best_so_far_when_strictly_better_than_those_before_it_increasing_metric(
             self):
-        new_trainer = Trainer(self.model, self.optimizer,
-                              self.iterator, self.instances,
-                              validation_dataset=self.instances,
-                              num_epochs=3, serialization_dir=self.TEST_DIR,
-                              callbacks=self.default_callbacks("+test", patience=5))
+        new_trainer = CallbackTrainer(self.model, self.optimizer,
+                                      num_epochs=3, serialization_dir=self.TEST_DIR,
+                                      callbacks=self.default_callbacks("+test", patience=5))
         tracker = new_trainer.metric_tracker
 
         # when it is the only metric it should be considered the best
@@ -343,11 +355,9 @@ class TestT2rainer(AllenNlpTestCase):
         assert not new_tracker.is_best_so_far()
 
     def test_metric_only_considered_best_so_far_when_strictly_better_than_those_before_it_decreasing_metric(self):
-        new_trainer = Trainer(self.model, self.optimizer,
-                              self.iterator, self.instances,
-                              validation_dataset=self.instances,
-                              num_epochs=3, serialization_dir=self.TEST_DIR,
-                              callbacks=self.default_callbacks(patience=5))
+        new_trainer = CallbackTrainer(self.model, self.optimizer,
+                                      num_epochs=3, serialization_dir=self.TEST_DIR,
+                                      callbacks=self.default_callbacks(patience=5))
         tracker = new_trainer.metric_tracker
 
         # when it is the only metric it should be considered the best
@@ -370,11 +380,9 @@ class TestT2rainer(AllenNlpTestCase):
         new_tracker.add_metrics([.3, .3, .3, .2, .5, .1, 13])
 
     def test_should_stop_early_with_increasing_metric(self):
-        new_trainer = Trainer(self.model, self.optimizer,
-                              self.iterator, self.instances,
-                              validation_dataset=self.instances,
-                              num_epochs=3, serialization_dir=self.TEST_DIR,
-                              callbacks=self.default_callbacks(patience=5, validation_metric="+test"))
+        new_trainer = CallbackTrainer(self.model, self.optimizer,
+                                      num_epochs=3, serialization_dir=self.TEST_DIR,
+                                      callbacks=self.default_callbacks(patience=5, validation_metric="+test"))
 
         tracker = new_trainer.metric_tracker
 
@@ -388,11 +396,9 @@ class TestT2rainer(AllenNlpTestCase):
 
 
     def test_should_stop_early_with_decreasing_metric(self):
-        new_trainer = Trainer(self.model, self.optimizer,
-                              self.iterator, self.instances,
-                              validation_dataset=self.instances,
-                              num_epochs=3, serialization_dir=self.TEST_DIR,
-                              callbacks=self.default_callbacks(patience=5))
+        new_trainer = CallbackTrainer(self.model, self.optimizer,
+                                      num_epochs=3, serialization_dir=self.TEST_DIR,
+                                      callbacks=self.default_callbacks(patience=5))
         tracker = new_trainer.metric_tracker
 
         new_tracker = copy.deepcopy(tracker)
@@ -409,17 +415,17 @@ class TestT2rainer(AllenNlpTestCase):
 
     def test_should_stop_early_with_early_stopping_disabled(self):
         # Increasing metric
-        trainer = Trainer(self.model, self.optimizer, self.iterator, self.instances,
-                          validation_dataset=self.instances, num_epochs=100,
-                          callbacks=self.default_callbacks(validation_metric="+test"))
+        trainer = CallbackTrainer(self.model, self.optimizer,
+                                  num_epochs=100,
+                                  callbacks=self.default_callbacks(validation_metric="+test"))
         tracker = trainer.metric_tracker
         tracker.add_metrics([float(i) for i in reversed(range(20))])
         assert not tracker.should_stop_early()
 
         # Decreasing metric
-        trainer = Trainer(self.model, self.optimizer, self.iterator, self.instances,
-                          validation_dataset=self.instances, num_epochs=100,
-                          callbacks=self.default_callbacks(validation_metric="-test"))
+        trainer = CallbackTrainer(self.model, self.optimizer,
+                                  num_epochs=100,
+                                  callbacks=self.default_callbacks(validation_metric="-test"))
         tracker = trainer.metric_tracker
         tracker.add_metrics([float(i) for i in range(20)])
         assert not tracker.should_stop_early()
@@ -427,35 +433,29 @@ class TestT2rainer(AllenNlpTestCase):
     def test_should_stop_early_with_invalid_patience(self):
         for patience in [0, -1, -2, 1.5, 'None']:
             with pytest.raises(ConfigurationError):
-                Trainer(self.model, self.optimizer, self.iterator, self.instances,
-                        validation_dataset=self.instances, num_epochs=100,
-                        callbacks=self.default_callbacks(patience=patience, validation_metric="+test"))
+                CallbackTrainer(self.model, self.optimizer,
+                                num_epochs=100,
+                                callbacks=self.default_callbacks(patience=patience, validation_metric="+test"))
 
     def test_trainer_can_run_and_resume_with_momentum_scheduler(self):
         scheduler = MomentumScheduler.from_params(
                 self.optimizer, Params({"type": "inverted_triangular", "cool_down": 2, "warm_up": 2}))
         callbacks = self.default_callbacks() + [MomentumSchedulerCallback(scheduler)]
-        trainer = Trainer(model=self.model,
-                          optimizer=self.optimizer,
-                          iterator=self.iterator,
-                          train_dataset=self.instances,
-                          validation_dataset=self.instances,
-                          num_epochs=4,
-                          callbacks=callbacks,
-                          serialization_dir=self.TEST_DIR)
+        trainer = CallbackTrainer(model=self.model,
+                                  optimizer=self.optimizer,
+                                  num_epochs=4,
+                                  callbacks=callbacks,
+                                  serialization_dir=self.TEST_DIR)
         trainer.train()
 
         new_scheduler = MomentumScheduler.from_params(
                 self.optimizer, Params({"type": "inverted_triangular", "cool_down": 2, "warm_up": 2}))
         new_callbacks = self.default_callbacks() + [MomentumSchedulerCallback(new_scheduler)]
-        new_trainer = Trainer(model=self.model,
-                              optimizer=self.optimizer,
-                              iterator=self.iterator,
-                              train_dataset=self.instances,
-                              validation_dataset=self.instances,
-                              num_epochs=6,
-                              callbacks=new_callbacks,
-                              serialization_dir=self.TEST_DIR)
+        new_trainer = CallbackTrainer(model=self.model,
+                                      optimizer=self.optimizer,
+                                      num_epochs=6,
+                                      callbacks=new_callbacks,
+                                      serialization_dir=self.TEST_DIR)
         new_trainer.handler.fire_event(Events.RESTORE_CHECKPOINT)
         assert new_trainer.epoch_number == 4
         assert new_scheduler.last_epoch == 3
@@ -466,13 +466,10 @@ class TestT2rainer(AllenNlpTestCase):
         lr_scheduler = LearningRateScheduler.from_params(self.optimizer, lr_params)
         callbacks = self.default_callbacks() + [LrsCallback(lr_scheduler)]
 
-        trainer = Trainer(model=self.model,
-                          optimizer=self.optimizer,
-                          iterator=self.iterator,
-                          train_dataset=self.instances,
-                          validation_dataset=self.instances,
-                          callbacks=callbacks,
-                          num_epochs=2)
+        trainer = CallbackTrainer(model=self.model,
+                                  optimizer=self.optimizer,
+                                  callbacks=callbacks,
+                                  num_epochs=2)
         trainer.train()
 
     def test_trainer_can_resume_with_lr_scheduler(self):
@@ -480,26 +477,20 @@ class TestT2rainer(AllenNlpTestCase):
                 self.optimizer, Params({"type": "exponential", "gamma": 0.5}))
         callbacks = self.default_callbacks() + [LrsCallback(lr_scheduler)]
 
-        trainer = Trainer(model=self.model,
-                          optimizer=self.optimizer,
-                          iterator=self.iterator,
-                          train_dataset=self.instances,
-                          validation_dataset=self.instances,
-                          callbacks=callbacks,
-                          num_epochs=2, serialization_dir=self.TEST_DIR)
+        trainer = CallbackTrainer(model=self.model,
+                                  optimizer=self.optimizer,
+                                  callbacks=callbacks,
+                                  num_epochs=2, serialization_dir=self.TEST_DIR)
         trainer.train()
 
         new_lr_scheduler = LearningRateScheduler.from_params(
                 self.optimizer, Params({"type": "exponential", "gamma": 0.5}))
         callbacks = self.default_callbacks() + [LrsCallback(new_lr_scheduler)]
 
-        new_trainer = Trainer(model=self.model,
-                              optimizer=self.optimizer,
-                              iterator=self.iterator,
-                              train_dataset=self.instances,
-                              validation_dataset=self.instances,
-                              callbacks=callbacks,
-                              num_epochs=4, serialization_dir=self.TEST_DIR)
+        new_trainer = CallbackTrainer(model=self.model,
+                                      optimizer=self.optimizer,
+                                      callbacks=callbacks,
+                                      num_epochs=4, serialization_dir=self.TEST_DIR)
         new_trainer.handler.fire_event(Events.RESTORE_CHECKPOINT)
         assert new_trainer.epoch_number == 2
         assert new_lr_scheduler.lr_scheduler.last_epoch == 1
@@ -510,10 +501,9 @@ class TestT2rainer(AllenNlpTestCase):
             def forward(self, **kwargs):  # pylint: disable=arguments-differ,unused-argument
                 return {}
         with pytest.raises(RuntimeError):
-            trainer = Trainer(FakeModel(None), self.optimizer,
-                              self.iterator, self.instances,
-                              callbacks=self.default_callbacks(),
-                              num_epochs=2, serialization_dir=self.TEST_DIR)
+            trainer = CallbackTrainer(FakeModel(None), self.optimizer,
+                                      callbacks=self.default_callbacks(),
+                                      num_epochs=2, serialization_dir=self.TEST_DIR)
             trainer.train()
 
     def test_trainer_can_log_histograms(self):
@@ -526,17 +516,17 @@ class TestT2rainer(AllenNlpTestCase):
         tensorboard = TensorboardWriter(lambda: None, histogram_interval=2)
         callbacks.append(LogToTensorboard(tensorboard))
 
-        trainer = Trainer(self.model, self.optimizer,
-                          self.iterator, self.instances, num_epochs=3,
-                          serialization_dir=self.TEST_DIR,
-                          callbacks=callbacks)
+        trainer = CallbackTrainer(self.model, self.optimizer,
+                                  num_epochs=3,
+                                  serialization_dir=self.TEST_DIR,
+                                  callbacks=callbacks)
         trainer.train()
 
     def test_trainer_respects_num_serialized_models_to_keep(self):
-        trainer = Trainer(self.model, self.optimizer,
-                          self.iterator, self.instances, num_epochs=5,
-                          serialization_dir=self.TEST_DIR,
-                          callbacks=self.default_callbacks(max_checkpoints=3))
+        trainer = CallbackTrainer(self.model, self.optimizer,
+                                  num_epochs=5,
+                                  serialization_dir=self.TEST_DIR,
+                                  callbacks=self.default_callbacks(max_checkpoints=3))
         trainer.train()
 
         # Now check the serialized files
@@ -547,14 +537,11 @@ class TestT2rainer(AllenNlpTestCase):
             assert sorted(epochs) == [2, 3, 4]
 
     def test_trainer_saves_metrics_every_epoch(self):
-        trainer = Trainer(model=self.model,
-                          optimizer=self.optimizer,
-                          iterator=self.iterator,
-                          train_dataset=self.instances,
-                          validation_dataset=self.instances,
-                          num_epochs=5,
-                          serialization_dir=self.TEST_DIR,
-                          callbacks=self.default_callbacks(max_checkpoints=3))
+        trainer = CallbackTrainer(model=self.model,
+                                  optimizer=self.optimizer,
+                                  num_epochs=5,
+                                  serialization_dir=self.TEST_DIR,
+                                  callbacks=self.default_callbacks(max_checkpoints=3))
         trainer.train()
 
         for epoch in range(5):
@@ -581,10 +568,17 @@ class TestT2rainer(AllenNlpTestCase):
         iterator = WaitingIterator(batch_size=2)
         iterator.index_with(self.vocab)
 
-        trainer = Trainer(self.model, self.optimizer,
-                          iterator, self.instances, num_epochs=6,
-                          serialization_dir=self.TEST_DIR,
-                          callbacks=self.default_callbacks(max_checkpoints=2, checkpoint_every=5))
+        # Don't want validation iterator to wait.
+        viterator = BasicIterator(batch_size=2)
+        viterator.index_with(self.vocab)
+
+        trainer = CallbackTrainer(self.model, self.optimizer,
+                                  num_epochs=6,
+                                  serialization_dir=self.TEST_DIR,
+                                  callbacks=self.default_callbacks(max_checkpoints=2,
+                                                                   checkpoint_every=5,
+                                                                   iterator=iterator,
+                                                                   validation_iterator=viterator))
         trainer.train()
 
         # Now check the serialized files
@@ -596,30 +590,24 @@ class TestT2rainer(AllenNlpTestCase):
             assert sorted(epochs) == [1, 3, 4, 5]
 
     def test_trainer_can_log_learning_rates_tensorboard(self):
-        iterator = BasicIterator(batch_size=4)
-        iterator.index_with(self.vocab)
-
         callbacks = [cb for cb in self.default_callbacks() if not isinstance(cb, LogToTensorboard)]
         # The lambda: None is unfortunate, but it will get replaced by the callback.
         tensorboard = TensorboardWriter(lambda: None, should_log_learning_rate=True, summary_interval=2)
         callbacks.append(LogToTensorboard(tensorboard))
 
-        trainer = Trainer(self.model, self.optimizer,
-                          iterator, self.instances, num_epochs=2,
-                          serialization_dir=self.TEST_DIR,
-                          callbacks=callbacks)
+        trainer = CallbackTrainer(self.model, self.optimizer,
+                                  num_epochs=2,
+                                  serialization_dir=self.TEST_DIR,
+                                  callbacks=callbacks)
 
         trainer.train()
 
     def test_trainer_saves_models_at_specified_interval(self):
-        iterator = BasicIterator(batch_size=4)
-        iterator.index_with(self.vocab)
-
-        trainer = Trainer(self.model, self.optimizer,
-                          iterator, self.instances, num_epochs=2,
-                          serialization_dir=self.TEST_DIR,
-                          callbacks=self.default_callbacks(),
-                          model_save_interval=0.0001)
+        trainer = CallbackTrainer(self.model, self.optimizer,
+                                  num_epochs=2,
+                                  serialization_dir=self.TEST_DIR,
+                                  callbacks=self.default_callbacks(batch_size=4),
+                                  model_save_interval=0.0001)
 
         trainer.train()
 
@@ -642,16 +630,16 @@ class TestT2rainer(AllenNlpTestCase):
             os.remove(os.path.join(self.TEST_DIR, 'training_state_epoch_{}.th'.format(k)))
         os.remove(os.path.join(self.TEST_DIR, 'best.th'))
 
-        restore_trainer = Trainer(self.model, self.optimizer,
-                                  self.iterator, self.instances, num_epochs=2,
-                                  serialization_dir=self.TEST_DIR,
-                                  callbacks=self.default_callbacks(),
-                                  model_save_interval=0.0001)
+        restore_trainer = CallbackTrainer(
+                self.model, self.optimizer,
+                num_epochs=2,
+                serialization_dir=self.TEST_DIR,
+                callbacks=self.default_callbacks(),
+                model_save_interval=0.0001)
         restore_trainer.handler.fire_event(Events.RESTORE_CHECKPOINT)
         assert restore_trainer.epoch_number == 2
         # One batch per epoch.
-        #assert restore_trainer._batch_num_total == 2
-        assert restore_trainer.handler.state.batch_num_total == 2
+        assert restore_trainer.batch_num_total == 2
 
     def test_trainer_from_base_class_params(self):
         params = Params.from_file(self.FIXTURES_ROOT / 'simple_tagger' / 'experiment.json')
@@ -662,11 +650,10 @@ class TestT2rainer(AllenNlpTestCase):
     def test_trainer_saves_and_loads_best_validation_metrics_correctly_1(self):
         # Use -loss and run 1 epoch of original-training, and one of restored-training
         # Run 1 epoch of original training.
-        trainer = Trainer(self.model, self.optimizer,
-                          self.iterator, self.instances,
-                          validation_dataset=self.instances,
-                          callbacks=self.default_callbacks(),
-                          num_epochs=1, serialization_dir=self.TEST_DIR)
+        trainer = CallbackTrainer(
+                self.model, self.optimizer,
+                callbacks=self.default_callbacks(),
+                num_epochs=1, serialization_dir=self.TEST_DIR)
         trainer.train()
         _ = trainer.handler.fire_event(Events.RESTORE_CHECKPOINT)
         best_epoch_1 = trainer.metric_tracker.best_epoch
@@ -676,11 +663,10 @@ class TestT2rainer(AllenNlpTestCase):
         assert "loss" in best_validation_metrics_epoch_1
 
         # Run 1 epoch of restored training.
-        restore_trainer = Trainer(self.model, self.optimizer,
-                                  self.iterator, self.instances,
-                                  validation_dataset=self.instances,
-                                  callbacks=self.default_callbacks(),
-                                  num_epochs=2, serialization_dir=self.TEST_DIR)
+        restore_trainer = CallbackTrainer(
+                self.model, self.optimizer,
+                callbacks=self.default_callbacks(),
+                num_epochs=2, serialization_dir=self.TEST_DIR)
         restore_trainer.train()
         _ = restore_trainer.handler.fire_event(Events.RESTORE_CHECKPOINT)
         best_epoch_2 = restore_trainer.metric_tracker.best_epoch
@@ -693,11 +679,10 @@ class TestT2rainer(AllenNlpTestCase):
     def test_trainer_saves_and_loads_best_validation_metrics_correctly_2(self):
         # Use -loss and run 1 epoch of original-training, and one of restored-training
         # Run 1 epoch of original training.
-        trainer = Trainer(self.model, self.optimizer,
-                          self.iterator, self.instances,
-                          validation_dataset=self.instances,
-                          callbacks=self.default_callbacks(validation_metric="+loss"),
-                          num_epochs=1, serialization_dir=self.TEST_DIR)
+        trainer = CallbackTrainer(
+                self.model, self.optimizer,
+                callbacks=self.default_callbacks(validation_metric="+loss"),
+                num_epochs=1, serialization_dir=self.TEST_DIR)
         trainer.train()
 
         _ = trainer.handler.fire_event(Events.RESTORE_CHECKPOINT)
@@ -708,11 +693,10 @@ class TestT2rainer(AllenNlpTestCase):
         assert "loss" in best_validation_metrics_epoch_1
 
         # Run 1 more epoch of restored training.
-        restore_trainer = Trainer(self.model, self.optimizer,
-                                  self.iterator, self.instances,
-                                  validation_dataset=self.instances,
-                                  callbacks=self.default_callbacks(validation_metric="+loss"),
-                                  num_epochs=2, serialization_dir=self.TEST_DIR)
+        restore_trainer = CallbackTrainer(
+                self.model, self.optimizer,
+                callbacks=self.default_callbacks(validation_metric="+loss"),
+                num_epochs=2, serialization_dir=self.TEST_DIR)
         restore_trainer.train()
         _ = restore_trainer.handler.fire_event(Events.RESTORE_CHECKPOINT)
         best_epoch_2 = restore_trainer.metric_tracker.best_epoch
@@ -725,19 +709,16 @@ class TestT2rainer(AllenNlpTestCase):
     def test_restored_training_returns_best_epoch_metrics_even_if_no_better_epoch_is_found_after_restoring(self):
         # Instead of -loss, use +loss to assure 2nd epoch is considered worse.
         # Run 1 epoch of original training.
-        original_trainer = Trainer(self.model, self.optimizer,
-                                   self.iterator, self.instances,
-                                   validation_dataset=self.instances,
-                                   callbacks=self.default_callbacks(validation_metric="+loss"),
-                                   num_epochs=1, serialization_dir=self.TEST_DIR)
+        original_trainer = CallbackTrainer(self.model, self.optimizer,
+                                           callbacks=self.default_callbacks(validation_metric="+loss"),
+                                           num_epochs=1, serialization_dir=self.TEST_DIR)
         training_metrics = original_trainer.train()
 
         # Run 1 epoch of restored training.
-        restored_trainer = Trainer(self.model, self.optimizer,
-                                   self.iterator, self.instances,
-                                   validation_dataset=self.instances,
-                                   callbacks=self.default_callbacks(validation_metric="+loss"),
-                                   num_epochs=2, serialization_dir=self.TEST_DIR)
+        restored_trainer = CallbackTrainer(
+                self.model, self.optimizer,
+                callbacks=self.default_callbacks(validation_metric="+loss"),
+                num_epochs=2, serialization_dir=self.TEST_DIR)
         restored_metrics = restored_trainer.train()
 
         assert "best_validation_loss" in restored_metrics
@@ -752,11 +733,10 @@ class TestT2rainer(AllenNlpTestCase):
 
     @pytest.mark.skip("the new trainer doesn't work with older checkpointing")
     def test_restoring_works_with_older_checkpointing(self):
-        trainer = Trainer(self.model, self.optimizer,
-                          self.iterator, self.instances,
-                          validation_dataset=self.instances,
-                          callbacks=self.default_callbacks(),
-                          num_epochs=3, serialization_dir=self.TEST_DIR)
+        trainer = CallbackTrainer(
+                self.model, self.optimizer,
+                callbacks=self.default_callbacks(),
+                num_epochs=3, serialization_dir=self.TEST_DIR)
         trainer.train()
 
         for index in range(3):
