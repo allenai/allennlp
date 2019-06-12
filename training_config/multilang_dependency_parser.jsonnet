@@ -1,6 +1,6 @@
 // Configuration for the multi-lingual dependency parser model based on:
 // Schuster et al. "Cross-Lingual Alignment of Contextual Word Embeddings, with Applications to Zero-shot Dependency Parsing"
-// https://arxiv.org/abs/1902.09492 (NAACL 2019)
+// https://www.aclweb.org/anthology/papers/N/N19/N19-1162 (NAACL 2019)
 //
 // To recompute alignemts for ELMo, refer to: https://github.com/TalSchuster/CrossLingualELMo
 // For the dataset, refer to https://github.com/ryanmcd/uni-dep-tb

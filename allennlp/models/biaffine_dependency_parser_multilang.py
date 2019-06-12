@@ -25,7 +25,7 @@ class BiaffineDependencyParserMultiLang(BiaffineDependencyParser):
     This dependency parser implements the multi-lingual extension
     of the Dozat and Manning (2016) model as described in
     `Cross-Lingual Alignment of Contextual Word Embeddings, with Applications to Zero-shot
-    Dependency Parsing (Schuster et al., 2019) <https://arxiv.org/abs/1902.09492>`_ .
+    Dependency Parsing (Schuster et al., 2019) <https://www.aclweb.org/anthology/papers/N/N19/N19-1162>`_ .
     Also, please refer to the `alignment computation code
     <https://github.com/TalSchuster/CrossLingualELMo>`_.
 
