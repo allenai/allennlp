@@ -6,7 +6,7 @@ from allennlp.common.testing import AllenNlpTestCase
 class SameLanguageIteratorTest(AllenNlpTestCase):
     data_path = AllenNlpTestCase.FIXTURES_ROOT / "data" / "dependencies_multilang" / "*"
 
-    def test_assert_instances_of_different_languages_are_in_different_batches(self):
+    def test_instances_of_different_languages_are_in_different_batches(self):
         reader = UniversalDependenciesMultiLangDatasetReader(languages=['es', 'fr', 'it'])
         iterator = SameLanguageIterator(batch_size=2, sorting_keys=[["words", "num_tokens"]])
         instances = list(reader.read(str(self.data_path)))

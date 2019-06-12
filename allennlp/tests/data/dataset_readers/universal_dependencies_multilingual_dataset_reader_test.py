@@ -6,8 +6,8 @@ from allennlp.common.testing import AllenNlpTestCase
 class TestUniversalDependenciesMultilangDatasetReader(AllenNlpTestCase):
     data_path = AllenNlpTestCase.FIXTURES_ROOT / "data" / "dependencies_multilang" / "*"
 
-    def check_two_instances(self, inst1, inst2):
-        fields1, fields2 = inst1.fields, inst2.fields
+    def check_two_instances(self, instance1, instance2):
+        fields1, fields2 = instance1.fields, instance2.fields
         assert fields1['metadata'].metadata['lang'] == fields2['metadata'].metadata['lang']
 
         lang = fields1['metadata'].metadata['lang']
@@ -71,7 +71,7 @@ class TestUniversalDependenciesMultilangDatasetReader(AllenNlpTestCase):
 
         return lang
 
-    def test_read_from_files_first_pass_true(self):
+    def test_iterate_once_per_file_when_first_pass_for_vocab_is_true(self):
         reader = UniversalDependenciesMultiLangDatasetReader(
                 languages=['es', 'fr', 'it'], is_first_pass_for_vocab=True)
         instances = list(reader.read(str(self.data_path)))
@@ -85,28 +85,28 @@ class TestUniversalDependenciesMultilangDatasetReader(AllenNlpTestCase):
 
         assert 'es' in processed_langs and 'fr' in processed_langs and 'it' in processed_langs
 
-    def test_read_from_files_first_pass_false(self):
+    def test_iterate_forever_when_first_pass_for_vocab_is_false(self):
         '''
-        Note: assumes that each data file contains two trees
+        Note: assumes that each data file contains no more than 20 trees.
         '''
         reader = UniversalDependenciesMultiLangDatasetReader(languages=['es', 'fr', 'it'],
                                                              is_first_pass_for_vocab=False,
                                                              instances_per_file=1,
                                                              lazy=True)
-        coun_es, coun_fr, coun_it = 0, 0, 0
+        counter_es, counter_fr, counter_it = 0, 0, 0
         for instance in reader.read(str(self.data_path)):
             lang = instance.fields['metadata'].metadata['lang']
             if lang == 'es':
-                coun_es += 1
-                if coun_es > 2:
+                counter_es += 1
+                if counter_es > 20:
                     break
             if lang == 'fr':
-                coun_fr += 1
-                if coun_fr > 2:
+                counter_fr += 1
+                if counter_fr > 20:
                     break
             if lang == 'it':
-                coun_it += 1
-                if coun_it > 2:
+                counter_it += 1
+                if counter_it > 20:
                     break
-        # Asserting that the reader didn't stop after finishing reading the three files
-        assert (coun_es > 2 or coun_fr > 2 or coun_it > 2)
+        # Asserting that the reader didn't stop after reading the three files once.
+        assert (counter_es > 20 or counter_fr > 20 or counter_it > 20)
