@@ -12,6 +12,7 @@ allennlp.models
   allennlp.models.archival
   allennlp.models.bert_for_classification
   allennlp.models.biaffine_dependency_parser
+  allennlp.models.biaffine_dependency_parser_multilang
   allennlp.models.biattentive_classification_network
   allennlp.models.bimpm
   allennlp.models.basic_classifier
