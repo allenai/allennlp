@@ -1,18 +1,17 @@
-allennlp.semparse.domain_languages
-==================================
+allennlp.semparse.common
+========================
 
-.. automodule:: allennlp.semparse.domain_languages.common
+.. automodule:: allennlp.semparse.common
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: allennlp.semparse.domain_languages.common.date
+.. automodule:: allennlp.semparse.common.date
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: allennlp.semparse.domain_languages.common.errors
+.. automodule:: allennlp.semparse.common.errors
    :members:
    :undoc-members:
    :show-inheritance:
-
