@@ -389,7 +389,8 @@ class TestVocabulary(AllenNlpTestCase):
     def test_invalid_vocab_extension(self):
         vocab_dir = self.TEST_DIR / 'vocab_save'
         original_vocab = Vocabulary(non_padded_namespaces=["tokens1"])
-        original_vocab.add_tokens_to_namespace(["a", "b", "p"], namespace="tokens1")
+        original_vocab.add_tokens_to_namespace(["a", "b"], namespace="tokens1")
+        original_vocab.add_token_to_namespace("p", namespace="tokens2")
         original_vocab.save_to_files(vocab_dir)
         text_field1 = TextField([Token(t) for t in ["a" "c"]],
                                 {"tokens1": SingleIdTokenIndexer("tokens1")})
