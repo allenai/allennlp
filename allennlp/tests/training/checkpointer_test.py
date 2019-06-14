@@ -102,7 +102,7 @@ class TestCheckpointer(AllenNlpTestCase):
                     keep_serialized_model_every_num_seconds=2,
                     checkpointer=Checkpointer(serialization_dir=self.TEST_DIR,
                                               num_serialized_models_to_keep=40,
-                                               keep_serialized_model_every_num_seconds=2))
+                                              keep_serialized_model_every_num_seconds=2))
         try:
             Trainer(None, None, None, None,
                     checkpointer=Checkpointer(serialization_dir=self.TEST_DIR,
