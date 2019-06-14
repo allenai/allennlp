@@ -3,7 +3,6 @@ from typing import Dict
 import torch
 
 from allennlp.common import Registrable
-from allennlp.data import Vocabulary
 
 class TextFieldEmbedder(torch.nn.Module, Registrable):
     """
@@ -26,7 +25,8 @@ class TextFieldEmbedder(torch.nn.Module, Registrable):
 
     def forward(self,  # pylint: disable=arguments-differ
                 text_field_input: Dict[str, torch.Tensor],
-                num_wrapping_dims: int = 0) -> torch.Tensor:
+                num_wrapping_dims: int = 0,
+                **kwargs) -> torch.Tensor:
         """
         Parameters
         ----------
@@ -49,10 +49,3 @@ class TextFieldEmbedder(torch.nn.Module, Registrable):
         that shape.
         """
         raise NotImplementedError
-
-    def extend_vocab(self, extended_vocab: Vocabulary) -> None:
-        """
-        Assures that this ``TextFieldEmbedder`` can work with extended vocabulary.
-        Unless overridden by concrete ``TextFieldEmbedder``, it is no-op.
-        """
-        pass

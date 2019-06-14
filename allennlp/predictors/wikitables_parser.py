@@ -6,6 +6,7 @@ import shutil
 import requests
 
 from overrides import overrides
+import torch
 
 from allennlp.common.file_utils import cached_path
 from allennlp.common.util import JsonDict, sanitize
@@ -19,9 +20,9 @@ from allennlp.common.checks import check_for_java
 # process.  This requires modifying the scala `wikitables-executor` code to also return the
 # denotation when running it as a server, and updating the model to parse the output correctly, but
 # that shouldn't be too hard.
-DEFAULT_EXECUTOR_JAR = "https://s3-us-west-2.amazonaws.com/allennlp/misc/wikitables-executor-0.1.0.jar"
-ABBREVIATIONS_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/misc/wikitables-abbreviations.tsv"
-GROW_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/misc/wikitables-grow.grammar"
+DEFAULT_EXECUTOR_JAR = "https://allennlp.s3.amazonaws.com/misc/wikitables-executor-0.1.0.jar"
+ABBREVIATIONS_FILE = "https://allennlp.s3.amazonaws.com/misc/wikitables-abbreviations.tsv"
+GROW_FILE = "https://allennlp.s3.amazonaws.com/misc/wikitables-grow.grammar"
 SEMPRE_DIR = str(pathlib.Path('data/'))
 SEMPRE_ABBREVIATIONS_PATH = os.path.join(SEMPRE_DIR, "abbreviations.tsv")
 SEMPRE_GRAMMAR_PATH = os.path.join(SEMPRE_DIR, "grow.grammar")
@@ -65,6 +66,61 @@ class WikiTablesParserPredictor(Predictor):
                                                          table_rows,
                                                          tokenized_question=tokenized_question)
         return instance
+
+    @overrides
+    def predict_json(self, inputs: JsonDict) -> JsonDict:
+        """
+        We need to override this because of the interactive beam search aspects.
+        """
+        # pylint: disable=protected-access,not-callable
+        instance = self._json_to_instance(inputs)
+
+        # Get the rules out of the instance
+        index_to_rule = [production_rule_field.rule
+                         for production_rule_field in instance.fields['actions'].field_list]
+        rule_to_index = {rule: i for i, rule in enumerate(index_to_rule)}
+
+        # A sequence of strings to force, then convert them to ints
+        initial_tokens = inputs.get("initial_sequence", [])
+
+        # Want to get initial_sequence on the same device as the model.
+        initial_sequence = torch.tensor([rule_to_index[token] for token in initial_tokens],
+                                        device=next(self._model.parameters()).device)
+
+        # Replace beam search with one that forces the initial sequence
+        original_beam_search = self._model._beam_search
+        interactive_beam_search = original_beam_search.constrained_to(initial_sequence)
+        self._model._beam_search = interactive_beam_search
+
+        # Now get results
+        results = self.predict_instance(instance)
+
+        # And add in the choices. Need to convert from idxs to rules.
+        results["choices"] = [
+                [(probability, action)
+                 for probability, action in zip(pa["action_probabilities"], pa["considered_actions"])]
+                for pa in results["predicted_actions"]
+        ]
+
+        results["beam_snapshots"] = {
+                # For each batch_index, we get a list of beam snapshots
+                batch_index: [
+                        # Each beam_snapshots consists of a list of timesteps,
+                        # each of which is a list of pairs (score, sequence).
+                        # The sequence is the *indices* of the rules, which we
+                        # want to convert to the string representations.
+                        [(score, [index_to_rule[idx] for idx in sequence])
+                         for score, sequence in timestep_snapshot]
+                        for timestep_snapshot in beam_snapshots
+                ]
+                for batch_index, beam_snapshots in interactive_beam_search.beam_snapshots.items()
+        }
+
+        # Restore original beam search
+        self._model._beam_search = original_beam_search
+
+        return results
+
 
     @overrides
     def predict_instance(self, instance: Instance) -> JsonDict:

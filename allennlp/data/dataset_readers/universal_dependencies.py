@@ -14,7 +14,7 @@ from allennlp.data.tokenizers import Token
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-def lazy_parse(text: str, fields: Tuple = DEFAULT_FIELDS):
+def lazy_parse(text: str, fields: Tuple[str, ...]=DEFAULT_FIELDS):
     for sentence in text.split("\n\n"):
         if sentence:
             yield [parse_line(line, fields)
@@ -81,7 +81,7 @@ class UniversalDependenciesDatasetReader(DatasetReader):
             The words in the sentence to be encoded.
         upos_tags : ``List[str]``, required.
             The universal dependencies POS tags for each word.
-        dependencies ``List[Tuple[str, int]]``, optional (default = None)
+        dependencies : ``List[Tuple[str, int]]``, optional (default = None)
             A list of  (head tag, head index) tuples. Indices are 1 indexed,
             meaning an index of 0 corresponds to that word being the root of
             the dependency tree.

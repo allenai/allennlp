@@ -1,7 +1,7 @@
 # This Dockerfile creates an environment suitable for downstream usage of AllenNLP.
 # It creates an environment that includes a pip installation of allennlp.
 
-FROM python:3.6.8-jessie
+FROM python:3.6.8-stretch
 
 ENV LC_ALL=C.UTF-8
 ENV LANG=C.UTF-8

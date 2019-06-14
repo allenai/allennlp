@@ -107,7 +107,7 @@ class Event2MindDatasetReader(DatasetReader):
                     for xintent in xintents:
                         # NOTE: source_sequence should really be broken out and deduplicated. We're
                         # adding it here to ensure we generate the same vocabulary as the model at
-                        # https://s3-us-west-2.amazonaws.com/allennlp/models/event2mind-2018.10.05.tar.gz
+                        # https://allennlp.s3.amazonaws.com/models/event2mind-2018.10.05.tar.gz
                         # was trained against.
                         yield self.text_to_instance(source_sequence, xintent, "none", "none")
                     for xreact in xreacts:

@@ -18,8 +18,9 @@ def format_grammar_string(grammar_dictionary: Dict[str, List[str]]) -> str:
     Formats a dictionary of production rules into the string format expected
     by the Parsimonious Grammar class.
     """
-    return '\n'.join([f"{nonterminal} = {' / '.join(right_hand_side)}"
-                      for nonterminal, right_hand_side in grammar_dictionary.items()])
+    grammar_string = '\n'.join([f"{nonterminal} = {' / '.join(right_hand_side)}"
+                                for nonterminal, right_hand_side in grammar_dictionary.items()])
+    return grammar_string.replace("\\", "\\\\")
 
 
 def initialize_valid_actions(grammar: Grammar,

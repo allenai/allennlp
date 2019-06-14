@@ -144,14 +144,14 @@ def get_explanation(logical_form: str,
         nl_world['world1'] = 'world1'
         nl_world['world2'] = 'world2'
     parse = semparse_util.lisp_to_nested_expression(logical_form)
-    if parse[0][0] != "infer":
+    if parse[0] != "infer":
         return None
-    setup = parse[0][1]
+    setup = parse[1]
     output.append({
             "header": "The question is stating",
             "content": nl_arg(setup, nl_world)
     })
-    answers = parse[0][2:]
+    answers = parse[2:]
     output.append({
             "header": "The answer options are stating",
             "content": ["A: " + " and ".join(nl_arg(answers[0], nl_world)),

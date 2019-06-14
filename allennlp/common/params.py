@@ -10,6 +10,7 @@ import copy
 import json
 import logging
 import os
+import zlib
 
 from overrides import overrides
 
@@ -122,6 +123,26 @@ def with_fallback(preferred: Dict[str, Any], fallback: Dict[str, Any]) -> Dict[s
     """
     Deep merge two dicts, preferring values from `preferred`.
     """
+    def merge(preferred_value: Any, fallback_value: Any) -> Any:
+        if isinstance(preferred_value, dict) and isinstance(fallback_value, dict):
+            return with_fallback(preferred_value, fallback_value)
+        elif isinstance(preferred_value, dict) and isinstance(fallback_value, list):
+            # treat preferred_value as a sparse list, where each key is an index to be overridden
+            merged_list = fallback_value
+            for elem_key, preferred_element in preferred_value.items():
+                try:
+                    index = int(elem_key)
+                    merged_list[index] = merge(preferred_element, fallback_value[index])
+                except ValueError:
+                    raise ConfigurationError("could not merge dicts - the preferred dict contains "
+                                             f"invalid keys (key {elem_key} is not a valid list index)")
+                except IndexError:
+                    raise ConfigurationError("could not merge dicts - the preferred dict contains "
+                                             f"invalid keys (key {index} is out of bounds)")
+            return merged_list
+        else:
+            return copy.deepcopy(preferred_value)
+
     preferred_keys = set(preferred.keys())
     fallback_keys = set(fallback.keys())
     common_keys = preferred_keys & fallback_keys
@@ -137,16 +158,13 @@ def with_fallback(preferred: Dict[str, Any], fallback: Dict[str, Any]) -> Dict[s
         preferred_value = preferred[key]
         fallback_value = fallback[key]
 
-        if isinstance(preferred_value, dict) and isinstance(fallback_value, dict):
-            merged[key] = with_fallback(preferred_value, fallback_value)
-        else:
-            merged[key] = copy.deepcopy(preferred_value)
-
+        merged[key] = merge(preferred_value, fallback_value)
     return merged
 
 def parse_overrides(serialized_overrides: str) -> Dict[str, Any]:
     if serialized_overrides:
         ext_vars = _environment_variables()
+
         return unflatten(json.loads(evaluate_snippet("", serialized_overrides, ext_vars=ext_vars)))
     else:
         return {}
@@ -175,7 +193,7 @@ class Params(MutableMapping):
     """
 
     # This allows us to check for the presence of "None" as a default argument,
-    # which we require because we make a distinction bewteen passing a value of "None"
+    # which we require because we make a distinction between passing a value of "None"
     # and passing no value to the default parameter of "pop".
     DEFAULT = object()
 
@@ -326,6 +344,8 @@ class Params(MutableMapping):
         ----------
         quiet: bool, optional (default = False)
             Whether to log the parameters before returning them as a dict.
+        infer_type_and_cast : bool, optional (default = False)
+            If True, we infer types and cast (e.g. things that look like floats to floats).
         """
         if infer_type_and_cast:
             params_as_dict = infer_and_cast(self.params)
@@ -410,7 +430,7 @@ class Params(MutableMapping):
                           loading_from_archive=self.loading_from_archive,
                           files_to_archive=self.files_to_archive)
         if isinstance(value, list):
-            value = [self._check_is_dict(new_history + '.list', v) for v in value]
+            value = [self._check_is_dict(f"{new_history}.{i}", v) for i, v in enumerate(value)]
         return value
 
     @staticmethod
@@ -487,6 +507,19 @@ class Params(MutableMapping):
 
         return order_dict(params_dict, order_func)
 
+    def get_hash(self) -> str:
+        """
+        Returns a hash code representing the current state of this ``Params`` object.  We don't
+        want to implement ``__hash__`` because that has deeper python implications (and this is a
+        mutable object), but this will give you a representation of the current state.
+        We use `zlib.adler32` instead of Python's builtin `hash` because the random seed for the
+        latter is reset on each new program invocation, as discussed here:
+        https://stackoverflow.com/questions/27954892/deterministic-hashing-in-python-3.
+        """
+        dumped = json.dumps(self.params, sort_keys=True)
+        hashed = zlib.adler32(dumped.encode())
+        return str(hashed)
+
 
 def pop_choice(params: Dict[str, Any],
                key: str,
@@ -507,10 +540,13 @@ def pop_choice(params: Dict[str, Any],
     return value
 
 
-def _replace_none(dictionary: Dict[str, Any]) -> Dict[str, Any]:
-    for key in dictionary.keys():
-        if dictionary[key] == "None":
-            dictionary[key] = None
-        elif isinstance(dictionary[key], dict):
-            dictionary[key] = _replace_none(dictionary[key])
-    return dictionary
+def _replace_none(params: Any) -> Any:
+    if params == "None":
+        return None
+    elif isinstance(params, dict):
+        for key, value in params.items():
+            params[key] = _replace_none(value)
+        return params
+    elif isinstance(params, list):
+        return [_replace_none(value) for value in params]
+    return params

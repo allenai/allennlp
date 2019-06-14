@@ -38,8 +38,6 @@ class TrainerBase(Registrable):
             raise ConfigurationError("Expected an int or list for cuda_device, got {}".format(cuda_device))
 
         if isinstance(cuda_device, list):
-            logger.warning(f"Multiple GPU support is experimental not recommended for use. "
-                           "In some cases it may lead to incorrect results or undefined behavior.")
             self._multiple_gpu = True
             self._cuda_devices = cuda_device
         else:
@@ -79,4 +77,8 @@ class TrainerBase(Registrable):
                                        params=pieces.params,
                                        validation_iterator=pieces.validation_iterator)
         else:
-            return TrainerBase.by_name(typ3).from_params(params, serialization_dir, recover)
+            klass = TrainerBase.by_name(typ3)
+            # Explicit check to prevent recursion.
+            is_overriden = klass.from_params.__func__ != TrainerBase.from_params.__func__ # type: ignore
+            assert is_overriden, f"Class {klass.__name__} must override `from_params`."
+            return klass.from_params(params, serialization_dir, recover)

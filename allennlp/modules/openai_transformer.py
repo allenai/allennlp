@@ -99,7 +99,7 @@ class TransformerConfig(NamedTuple):
 
 
 class LayerNorm(torch.nn.Module):
-    "Construct a layernorm module in the OpenAI style (epsilon inside the square root)."
+    """Construct a layernorm module in the OpenAI style (epsilon inside the square root)."""
 
     def __init__(self, n_state, e=1e-5):
         super().__init__()

@@ -11,7 +11,7 @@ from allennlp.common.params import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.models.semantic_role_labeler import convert_bio_tags_to_conll_format
 from allennlp.models import Model
-from allennlp.models.semantic_role_labeler import write_to_conll_eval_file
+from allennlp.models.semantic_role_labeler import write_bio_formatted_tags_to_file
 from allennlp.nn.util import get_lengths_from_binary_sequence_mask
 
 
@@ -47,7 +47,6 @@ class SemanticRoleLabelerTest(ModelTestCase):
         for prediction, length in zip(decode_output_dict["tags"], lengths):
             assert len(prediction) == length
 
-
     def test_bio_tags_correctly_convert_to_conll_format(self):
         bio_tags = ["B-ARG-1", "I-ARG-1", "O", "B-V", "B-ARGM-ADJ", "O"]
         conll_tags = convert_bio_tags_to_conll_format(bio_tags)
@@ -63,8 +62,8 @@ class SemanticRoleLabelerTest(ModelTestCase):
             # Use the same bio tags as prediction vs gold to make it obvious by looking
             # at the perl script output if something is wrong. Write them twice to
             # ensure that the perl script deals with multiple sentences.
-            write_to_conll_eval_file(gold_file, prediction_file, 4, sentence, bio_tags, bio_tags)
-            write_to_conll_eval_file(gold_file, prediction_file, 4, sentence, bio_tags, bio_tags)
+            write_bio_formatted_tags_to_file(gold_file, prediction_file, 4, sentence, bio_tags, bio_tags)
+            write_bio_formatted_tags_to_file(gold_file, prediction_file, 4, sentence, bio_tags, bio_tags)
 
         perl_script_command = ["perl", str(self.TOOLS_ROOT / "srl-eval.pl"), prediction_file_path, gold_file_path]
         exit_code = subprocess.check_call(perl_script_command)

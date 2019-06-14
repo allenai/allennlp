@@ -23,7 +23,7 @@ from allennlp.data.dataset_readers.semantic_parsing.wikitables import util
 from allennlp.semparse.contexts import TableQuestionKnowledgeGraph
 from allennlp.semparse.type_declarations import wikitables_lambda_dcs as wt_types
 from allennlp.semparse.worlds import WikiTablesWorld
-from allennlp.semparse.worlds.world import ParsingError
+from allennlp.semparse.common.errors import ParsingError
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -409,7 +409,7 @@ class WikiTablesDatasetReader(DatasetReader):
 
     @staticmethod
     def _read_tokens_from_json_list(json_list) -> List[Token]:
-        return [Token(text=json_obj['text'], lemma=json_obj['lemma']) for json_obj in json_list]
+        return [Token(text=json_obj['text'], lemma_=json_obj['lemma']) for json_obj in json_list]
 
     @staticmethod
     def _should_keep_logical_form(logical_form: str) -> bool:

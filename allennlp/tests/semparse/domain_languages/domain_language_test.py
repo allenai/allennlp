@@ -4,8 +4,8 @@ from typing import Callable, List
 import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.semparse import (DomainLanguage, ExecutionError, ParsingError,
-                               predicate, predicate_with_side_args)
+from allennlp.semparse import ExecutionError, ParsingError
+from allennlp.semparse import DomainLanguage, predicate, predicate_with_side_args
 
 class Arithmetic(DomainLanguage):
     def __init__(self):

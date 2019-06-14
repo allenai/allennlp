@@ -38,6 +38,7 @@ def move_to_device(obj, cuda_device: int):
     Given a structure (possibly) containing Tensors on the CPU,
     move all the Tensors to the specified GPU (or do nothing, if they should be on the CPU).
     """
+    # pylint: disable=too-many-return-statements
     if cuda_device < 0 or not has_tensor(obj):
         return obj
     elif isinstance(obj, torch.Tensor):
@@ -46,6 +47,9 @@ def move_to_device(obj, cuda_device: int):
         return {key: move_to_device(value, cuda_device) for key, value in obj.items()}
     elif isinstance(obj, list):
         return [move_to_device(item, cuda_device) for item in obj]
+    elif isinstance(obj, tuple) and hasattr(obj, '_fields'):
+        # This is the best way to detect a NamedTuple, it turns out.
+        return obj.__class__(*[move_to_device(item, cuda_device) for item in obj])
     elif isinstance(obj, tuple):
         return tuple([move_to_device(item, cuda_device) for item in obj])
     else:
@@ -151,7 +155,7 @@ def sort_batch_by_length(tensor: torch.Tensor, sequence_lengths: torch.Tensor):
     restoration_indices : torch.LongTensor
         Indices into the sorted_tensor such that
         ``sorted_tensor.index_select(0, restoration_indices) == original_tensor``
-    permuation_index : torch.LongTensor
+    permutation_index : torch.LongTensor
         The indices used to sort the tensor. This is useful if you want to sort many
         tensors using the same ordering.
     """
@@ -984,6 +988,8 @@ def flatten_and_batch_shift_indices(indices: torch.Tensor,
     offset_indices : ``torch.LongTensor``
     """
     # Shape: (batch_size)
+    if torch.max(indices) >= sequence_length or torch.min(indices) < 0:
+        raise ConfigurationError(f"All elements in indices should be in range (0, {sequence_length - 1})")
     offsets = get_range_vector(indices.size(0), get_device_of(indices)) * sequence_length
     for _ in range(len(indices.size()) - 1):
         offsets = offsets.unsqueeze(1)
@@ -1288,7 +1294,7 @@ def add_positional_features(tensor: torch.Tensor,
 
 
 def clone(module: torch.nn.Module, num_copies: int) -> torch.nn.ModuleList:
-    "Produce N identical layers."
+    """Produce N identical layers."""
     return torch.nn.ModuleList([copy.deepcopy(module) for _ in range(num_copies)])
 
 

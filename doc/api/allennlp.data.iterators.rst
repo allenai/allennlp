@@ -11,6 +11,7 @@ allennlp.data.iterators
 * :ref:`BucketIterator<bucket-iterator>`
 * :ref:`MultiprocessIterator<multiprocess-iterator>`
 * :ref:`HomogeneousBatchIterator<homogeneous-batch-iterator>`
+* :ref:`SameLanguageIterator<same-language-iterator>`
 
 .. _data-iterator:
 .. automodule:: allennlp.data.iterators.data_iterator
@@ -38,6 +39,12 @@ allennlp.data.iterators
 
 .. _homogeneous-batch-iterator:
 .. automodule:: allennlp.data.iterators.homogeneous_batch_iterator
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   
+.. _same-language-iterator:
+.. automodule:: allennlp.data.iterators.same_language_iterator
    :members:
    :undoc-members:
    :show-inheritance:
