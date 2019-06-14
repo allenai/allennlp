@@ -1,7 +1,7 @@
 # pylint: disable=unused-variable,arguments-differ
 
 # These should probably all live in separate files
-from typing import Set, Dict
+from typing import Set, Dict, TYPE_CHECKING
 import logging
 
 import torch
@@ -11,6 +11,9 @@ from allennlp.training import util as training_util
 from allennlp.training.callbacks.callback import Callback, handle_event
 from allennlp.training.callbacks.events import Events
 from allennlp.training.tensorboard_writer import TensorboardWriter
+
+if TYPE_CHECKING:
+    from allennlp.training.callback_trainer import CallbackTrainer  # pylint:disable=unused-import
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +44,7 @@ class LogToTensorboard(Callback):
         self.param_updates: Dict[str, torch.Tensor] = {}
 
     @handle_event(Events.TRAINING_START)
-    def training_start(self, trainer):
+    def training_start(self, trainer: 'CallbackTrainer'):
         # pylint: disable=protected-access
 
         # This is an ugly hack to get the tensorboard instance to know about the trainer, because
@@ -59,7 +62,7 @@ class LogToTensorboard(Callback):
             self.tensorboard.enable_activation_logging(trainer.model)
 
     @handle_event(Events.BATCH_START)
-    def copy_current_parameters(self, trainer):
+    def copy_current_parameters(self, trainer: 'CallbackTrainer'):
         if self.tensorboard.should_log_histograms_this_batch():
             # Get the magnitude of parameter updates for logging
             # We need a copy of current parameters to compute magnitude of updates,
@@ -68,7 +71,7 @@ class LogToTensorboard(Callback):
                                   for name, param in trainer.model.named_parameters()}
 
     @handle_event(Events.BATCH_END)
-    def batch_end_logging(self, trainer):
+    def batch_end_logging(self, trainer: 'CallbackTrainer'):
         # Log parameter values to tensorboard
         if self.tensorboard.should_log_this_batch():
             self.tensorboard.log_parameter_and_gradient_statistics(trainer.model, trainer.batch_grad_norm)
@@ -98,7 +101,7 @@ class LogToTensorboard(Callback):
             self.tensorboard.log_histograms(trainer.model, self.histogram_parameters)
 
     @handle_event(Events.EPOCH_END)
-    def epoch_end_logging(self, trainer):
+    def epoch_end_logging(self, trainer: 'CallbackTrainer'):
         self.tensorboard.log_metrics(trainer.train_metrics,
                                      val_metrics=trainer.val_metrics,
                                      log_to_console=True,

@@ -1,4 +1,4 @@
-from typing import Iterable
+from typing import Iterable, TYPE_CHECKING
 import logging
 import math
 
@@ -11,6 +11,9 @@ from allennlp.data.iterators import DataIterator
 from allennlp.training import util as training_util
 from allennlp.training.callbacks.callback import Callback, handle_event
 from allennlp.training.callbacks.events import Events
+
+if TYPE_CHECKING:
+    from allennlp.training.callback_trainer import CallbackTrainer  # pylint:disable=unused-import
 
 logger = logging.getLogger(__name__)
 
@@ -35,12 +38,12 @@ class Validate(Callback):
         self.iterator = validation_iterator
 
     @handle_event(Events.TRAINING_START)
-    def set_validate(self, trainer):
+    def set_validate(self, trainer: 'CallbackTrainer'):
         # pylint: disable=no-self-use
         trainer.validate = True
 
     @handle_event(Events.VALIDATE)
-    def validate(self, trainer):
+    def validate(self, trainer: 'CallbackTrainer'):
         with torch.no_grad():
             # We have a validation set, so compute all the metrics on it.
             logger.info("Validating")

@@ -1,6 +1,11 @@
+from typing import TYPE_CHECKING
+
 from allennlp.training.callbacks.callback import Callback, handle_event
 from allennlp.training.callbacks.events import Events
 from allennlp.training.momentum_schedulers import MomentumScheduler
+
+if TYPE_CHECKING:
+    from allennlp.training.callback_trainer import CallbackTrainer  # pylint:disable=unused-import
 
 
 @Callback.register("momentum_scheduler")
@@ -17,11 +22,11 @@ class MomentumSchedulerCallback(Callback):
         self.momentum_scheduler = momentum_scheduler
 
     @handle_event(Events.BACKWARD, priority=1000)
-    def step_batch(self, trainer):
+    def step_batch(self, trainer: 'CallbackTrainer'):
         self.momentum_scheduler.step_batch(trainer.batch_num_total)
 
     @handle_event(Events.EPOCH_END)
-    def step(self, trainer):
+    def step(self, trainer: 'CallbackTrainer'):
         self.momentum_scheduler.step(trainer.latest_val_metric, trainer.epoch_number)
 
     def get_training_state(self) -> dict:

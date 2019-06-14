@@ -1,5 +1,5 @@
 # pylint: disable=unused-variable,arguments-differ
-from typing import Iterable
+from typing import Iterable, TYPE_CHECKING
 import logging
 import math
 
@@ -8,6 +8,9 @@ from allennlp.data.instance import Instance
 from allennlp.data.iterators import DataIterator
 from allennlp.training.callbacks.callback import Callback, handle_event
 from allennlp.training.callbacks.events import Events
+
+if TYPE_CHECKING:
+    from allennlp.training.callback_trainer import CallbackTrainer  # pylint:disable=unused-import
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +38,7 @@ class GenerateTrainingBatches(Callback):
         self.shuffle = shuffle
 
     @handle_event(Events.EPOCH_START)
-    def generate_batches(self, trainer):
+    def generate_batches(self, trainer: 'CallbackTrainer'):
         # pylint: disable=protected-access
         num_gpus = len(trainer._cuda_devices)
 

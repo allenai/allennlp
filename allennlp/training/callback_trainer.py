@@ -12,7 +12,9 @@ from allennlp.data.iterators.data_iterator import TensorDict
 from allennlp.models.model import Model
 from allennlp.nn import util as nn_util
 from allennlp.training import util as training_util
-from allennlp.training.callbacks import Callback, CallbackHandler, Events
+from allennlp.training.callbacks.callback import Callback
+from allennlp.training.callbacks.callback_handler import CallbackHandler
+from allennlp.training.callbacks.events import Events
 from allennlp.training.optimizers import Optimizer
 from allennlp.training.trainer_pieces import TrainerPieces
 from allennlp.training.trainer_base import TrainerBase

@@ -1,5 +1,5 @@
 # pylint: disable=unused-variable,arguments-differ
-from typing import List, Tuple
+from typing import List, Tuple, TYPE_CHECKING
 import copy
 import datetime
 import logging
@@ -12,6 +12,9 @@ from allennlp.training import util as training_util
 from allennlp.training.callbacks.callback import Callback, handle_event
 from allennlp.training.callbacks.events import Events
 from allennlp.training.metric_tracker import MetricTracker
+
+if TYPE_CHECKING:
+    from allennlp.training.callback_trainer import CallbackTrainer  # pylint:disable=unused-import
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +64,7 @@ class TrackMetrics(Callback):
             self.metric_tracker.load_state_dict(state_dict)
 
     @handle_event(Events.TRAINING_START, priority=100)
-    def set_up_metrics(self, trainer):
+    def set_up_metrics(self, trainer: 'CallbackTrainer'):
         # Keep track of starting epoch
         self.starting_epoch = trainer.epoch_number
 
@@ -74,7 +77,7 @@ class TrackMetrics(Callback):
             trainer.metrics["best_validation_" + key] = value
 
     @handle_event(Events.EPOCH_START, priority=100)
-    def measure_cpu_gpu(self, trainer):
+    def measure_cpu_gpu(self, trainer: 'CallbackTrainer'):
         # This used to be in train_epoch()
         logger.info("Epoch %d/%d", trainer.epoch_number, trainer.num_epochs - 1)
         self.peak_cpu_usage = peak_memory_mb()
@@ -86,7 +89,7 @@ class TrackMetrics(Callback):
 
 
     @handle_event(Events.VALIDATE, priority=100)
-    def collect_metrics(self, trainer):
+    def collect_metrics(self, trainer: 'CallbackTrainer'):
         trainer.train_metrics = training_util.get_metrics(trainer.model,
                                                           trainer.train_loss,
                                                           trainer.batches_this_epoch,
@@ -112,7 +115,7 @@ class TrackMetrics(Callback):
                 trainer.should_stop_early = True
 
     @handle_event(Events.EPOCH_END, priority=100)
-    def end_of_epoch(self, trainer):
+    def end_of_epoch(self, trainer: 'CallbackTrainer'):
         # Create overall metrics dict
         training_elapsed_time = time.time() - trainer.training_start_time
         trainer.metrics["training_duration"] = str(datetime.timedelta(seconds=training_elapsed_time))

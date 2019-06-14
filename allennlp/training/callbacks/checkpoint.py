@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, TYPE_CHECKING
 import traceback
 
 from allennlp.common.checks import ConfigurationError
@@ -6,6 +6,9 @@ from allennlp.common.params import Params
 from allennlp.training.checkpointer import Checkpointer
 from allennlp.training.callbacks.callback import Callback, handle_event
 from allennlp.training.callbacks.events import Events
+
+if TYPE_CHECKING:
+    from allennlp.training.callback_trainer import CallbackTrainer  # pylint:disable=unused-import
 
 
 @Callback.register("checkpoint")
@@ -33,7 +36,7 @@ class CheckpointCallback(Callback):
         self.other_attrs = other_attrs or ['batch_num_total']
 
     @handle_event(Events.SAVE_CHECKPOINT)
-    def save_checkpoint(self, trainer):
+    def save_checkpoint(self, trainer: 'CallbackTrainer'):
         training_states = {}
 
         # Add state_dict attributes
@@ -58,7 +61,7 @@ class CheckpointCallback(Callback):
                 is_best_so_far=is_best_so_far)
 
     @handle_event(Events.RESTORE_CHECKPOINT)
-    def restore_checkpoint(self, trainer):
+    def restore_checkpoint(self, trainer: 'CallbackTrainer'):
         # Restores the model and training state from the last saved checkpoint.
         # This includes an epoch count and optimizer state, which is serialized separately
         # from model parameters. This function should only be used to continue training -
@@ -103,7 +106,7 @@ class CheckpointCallback(Callback):
             trainer.epoch_number = int(training_state["epoch"].split('.')[0]) + 1
 
     @handle_event(Events.TRAINING_END)
-    def load_best_model_state(self, trainer):
+    def load_best_model_state(self, trainer: 'CallbackTrainer'):
         # Load the best model state before returning
         best_model_state = self.checkpointer.best_model_state()
         if best_model_state:

@@ -4,24 +4,23 @@ A toy example of how one might train a GAN using AllenNLP.
 
 Based on https://github.com/devnag/pytorch-generative-adversarial-networks.
 
-We use one dataset reader to sample from the "true" distribution N(4, 1.25),
-and a second to sample uniform noise. We'll then adversarially train a generator `Model`
+We use a dataset reader to sample from both the "true" distribution N(4, 1.25),
+and from uniform noise. We'll then adversarially train a generator `Model`
 to transform the noise into something that (hopefully) looks like the true distribution
 and a discriminator `Model` to (hopefully) distinguish between the "true" and generated data.
 """
 # pylint: disable=bad-continuation,redefined-outer-name
 
-from typing import Iterable, List
+from typing import Iterable, List, Iterator
 import tempfile
 
 import torch
 
 from allennlp.commands.train import train_model
 from allennlp.common.params import Params
-from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common.testing import ModelTestCase
 from allennlp.data import Instance
-from allennlp.data.dataset import Batch
-from allennlp.data.dataset_readers import DatasetReader
+from allennlp.data.dataset_readers.dataset_reader import DatasetReader, _LazyInstances
 from allennlp.data.fields import ArrayField, MetadataField
 from allennlp.models import Model
 from allennlp.training.callbacks import Callback, Events, handle_event
@@ -51,14 +50,6 @@ class Gan(Model):
         self.generator = generator
         self.discriminator = discriminator
 
-def make_batch(sampler: InputSampler, batch_size: int, stage: str) -> Batch:
-    return Batch([
-        Instance({
-            "array": ArrayField(sampler.sample(1)),
-            "stage": MetadataField(stage)
-        })
-        for _ in range(batch_size)
-    ])
 
 @Optimizer.register("gan")
 class GanOptimizer(torch.optim.Optimizer):
@@ -104,28 +95,36 @@ class GanOptimizer(torch.optim.Optimizer):
         return cls(generator_optimizer=generator_optimizer, discriminator_optimizer=discriminator_optimizer)
 
 
-@Callback.register("generate-gan-training-batches")
-class GenerateGanTrainingBatches(Callback):
+@DatasetReader.register("gan-callback")
+class GanCallbackDatasetReader(DatasetReader):
+    # pylint: disable=abstract-method
     def __init__(self,
                  sampler: InputSampler,
                  noise_sampler: InputSampler,
                  batch_size: int,
                  batches_per_epoch: int) -> None:
+        super().__init__(lazy=False)
         self.sampler = sampler
         self.noise_sampler = noise_sampler
         self.batch_size = batch_size
         self.batches_per_epoch = batches_per_epoch
 
-    def batches(self) -> Iterable[Batch]:
-        for _ in range(self.batches_per_epoch):
-            yield make_batch(self.sampler, self.batch_size, "discriminator_real")
-            yield make_batch(self.noise_sampler, self.batch_size, "discriminator_fake")
-            yield make_batch(self.noise_sampler, self.batch_size, "generator")
+    def _make_instances(self, stage: str) -> Iterator[Instance]:
+        sampler = self.sampler if stage == "discriminator_real" else self.noise_sampler
+        stage_field = MetadataField(stage)
 
-    @handle_event(Events.EPOCH_START)
-    def setup_batches(self, trainer):
-        trainer.training_batches = ([batch.as_tensor_dict()] for batch in self.batches())
-        trainer.num_training_batches = self.batches_per_epoch * 3
+        for _ in range(self.batch_size):
+            array_field = ArrayField(sampler.sample(1))
+            yield Instance({"array": array_field, "stage": stage_field})
+
+    def _one_epoch(self) -> Iterator[Instance]:
+        for _ in range(self.batches_per_epoch):
+            yield from self._make_instances("discriminator_real")
+            yield from self._make_instances("discriminator_fake")
+            yield from self._make_instances("generator")
+
+    def read(self, file_path: str) -> Iterable[Instance]:
+        return _LazyInstances(self._one_epoch)
 
 
 @Callback.register("train-gan")
@@ -157,6 +156,11 @@ class TrainGan(Callback):
     def compute_loss(self, trainer):
         batch, = trainer.batch_group
         array = batch["array"]
+
+        # We should not have mixed batches:
+        if len(set(batch["stage"])) != 1:
+            raise ValueError("mixed batch")
+
         stage = batch["stage"][0]
         trainer.optimizer.stage = stage
 
@@ -202,24 +206,27 @@ class TrainGan(Callback):
             "stdev": self.fake_stdev / max(self.count, 1)
         }
 
-@DatasetReader.register("nil")
-class NilDatasetReader(DatasetReader):
-    # pylint: disable=abstract-method
-    def _read(self, file_path):
-        return [Instance({})]
-
 
 def config(sample_size: int = 500,
            batches_per_epoch: int = 40,
            num_epochs: int = 50,
            learning_rate: float = 0.05) -> Params:
     return Params({
-        # These are unnecessary but the TrainerPieces.from_params expects them
-        "iterator": {"type": "basic"},
-        "dataset_reader": {"type": "nil"},
+        "dataset_reader": {
+            "type": "gan-callback",
+            "batch_size": sample_size,
+            "batches_per_epoch": batches_per_epoch,
+            "sampler": {
+                "type": "normal",
+                "mean": 4.0,
+                "stdev": 1.25
+            },
+                "noise_sampler": {
+                "type": "uniform"
+            }
+        },
+        "iterator": {"type": "basic", "batch_size": sample_size},
         "train_data_path": "",
-
-        # These are necessary
         "model": {
             "type": "gan",
             "generator": {
@@ -237,6 +244,7 @@ def config(sample_size: int = 500,
         },
         "trainer": {
             "type": "callback",
+            "shuffle": False,
             "optimizer": {
                 "type": "gan",
                 "generator_optimizer": {
@@ -250,29 +258,15 @@ def config(sample_size: int = 500,
             },
             "num_epochs": num_epochs,
             "callbacks": [
-                {
-                    "type": "train-gan"
-                },
-                {
-                    "type": "generate-gan-training-batches",
-                    "batch_size": sample_size,
-                    "batches_per_epoch": batches_per_epoch,
-                    "sampler": {
-                        "type": "normal",
-                        "mean": 4.0,
-                        "stdev": 1.25
-                    },
-                    "noise_sampler": {
-                        "type": "uniform"
-                    }
-                }
+                "generate_training_batches",
+                "train-gan",
+                "track_metrics"
             ]
-
         }
     })
 
 
-class GanCallbackTrainerTest(AllenNlpTestCase):
+class GanCallbackTrainerTest(ModelTestCase):
     def test_gan_can_train(self):
         params = config(batches_per_epoch=2, num_epochs=2)
         train_model(params, self.TEST_DIR)

@@ -13,7 +13,7 @@ import pytest
 
 from allennlp.common.checks import ConfigurationError
 
-from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common.testing import ModelTestCase
 from allennlp.data.instance import Instance
 from allennlp.data.iterators import DataIterator
 from allennlp.data import Vocabulary
@@ -36,7 +36,7 @@ from allennlp.training.moving_average import ExponentialMovingAverage
 from allennlp.training.tensorboard_writer import TensorboardWriter
 
 
-class TestCallbackTrainer(AllenNlpTestCase):
+class TestCallbackTrainer(ModelTestCase):
     def setUp(self):
         super().setUp()
 
@@ -107,6 +107,10 @@ class TestCallbackTrainer(AllenNlpTestCase):
                 TrainSupervised(),
                 GenerateTrainingBatches(self.instances, iterator, True)
         ]
+
+    def test_end_to_end(self):
+        self.ensure_model_can_train_save_and_load(
+                self.FIXTURES_ROOT / 'simple_tagger' / 'experiment_callback_trainer.json')
 
     def test_trainer_can_run_from_params(self):
         # pylint: disable=bad-continuation
