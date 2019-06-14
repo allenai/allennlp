@@ -102,6 +102,9 @@ class CallbackTrainer(TrainerBase):
         """
         Does a forward pass on the given batches and returns the ``loss`` value in the result.
         If ``for_training`` is `True` also applies regularization penalty.
+
+        This is a method on the trainer so that it can be used both in training and validation
+        (which are handled separately).
         """
         if self._multiple_gpu:
             output_dict = training_util.data_parallel(batch_group, self.model, self._cuda_devices)
@@ -158,8 +161,8 @@ class CallbackTrainer(TrainerBase):
                 self.batches_this_epoch += 1
                 self.batch_num_total += 1
 
-                self.handler.fire_sequence(Events.FORWARD)
-                self.handler.fire_sequence(Events.BACKWARD)
+                self.handler.fire_event(Events.FORWARD)
+                self.handler.fire_event(Events.BACKWARD)
 
                 description = training_util.description_from_metrics(self.train_metrics)
 
@@ -171,11 +174,11 @@ class CallbackTrainer(TrainerBase):
                 ):
                     last_save_time = time.time()
                     self.checkpoint_epoch = f"{self.epoch_number}.{training_util.time_to_str(int(last_save_time))}"
-                    self.handler.fire_sequence(Events.SAVE_CHECKPOINT)
+                    self.handler.fire_event(Events.SAVE_CHECKPOINT)
 
                 self.handler.fire_event(Events.BATCH_END)
 
-            self.handler.fire_sequence(Events.VALIDATE)
+            self.handler.fire_event(Events.VALIDATE)
 
             epoch_elapsed_time = time.time() - epoch_start_time
             logger.info("Epoch duration: %s", datetime.timedelta(seconds=epoch_elapsed_time))
@@ -190,7 +193,7 @@ class CallbackTrainer(TrainerBase):
             self.handler.fire_event(Events.EPOCH_END)
 
             self.checkpoint_epoch = self.epoch_number
-            self.handler.fire_sequence(Events.SAVE_CHECKPOINT)
+            self.handler.fire_event(Events.SAVE_CHECKPOINT)
 
             if self.should_stop_early:
                 logger.info("Ran out of patience.  Stopping training.")

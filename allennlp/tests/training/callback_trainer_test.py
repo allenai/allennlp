@@ -1,4 +1,4 @@
-# pylint: disable=invalid-name,too-many-public-methods,protected-access
+# pylint: disable=invalid-name,too-many-public-methods,protected-access,no-member
 import copy
 import glob
 import json
@@ -8,27 +8,14 @@ import time
 from typing import Dict, Iterable
 
 import torch
+import responses
 import pytest
 
 from allennlp.common.checks import ConfigurationError
 
-from allennlp.common.testing import AllenNlpTestCase, ModelTestCase
+from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.instance import Instance
 from allennlp.data.iterators import DataIterator
-from allennlp.training.callbacks import Events
-from allennlp.training.checkpointer import Checkpointer
-
-from allennlp.training.callbacks.callbacks import (
-        LogToTensorboard, CheckpointCallback, MovingAverageCallback, Validate,
-        LrsCallback, MomentumSchedulerCallback, TrackMetrics, TrainSupervised, GenerateTrainingBatches
-)
-
-from allennlp.training.callback_trainer import CallbackTrainer
-from allennlp.training.trainer_base import TrainerBase
-from allennlp.training.learning_rate_schedulers import LearningRateScheduler
-from allennlp.training.momentum_schedulers import MomentumScheduler
-from allennlp.training.tensorboard_writer import TensorboardWriter
-from allennlp.training.util import sparse_clip_norm
 from allennlp.data import Vocabulary
 from allennlp.common.params import Params
 from allennlp.models.simple_tagger import SimpleTagger
@@ -36,22 +23,33 @@ from allennlp.data.iterators import BasicIterator
 from allennlp.data.dataset_readers import SequenceTaggingDatasetReader, WikiTablesDatasetReader
 from allennlp.models.archival import load_archive
 from allennlp.models.model import Model
+from allennlp.training.callback_trainer import CallbackTrainer
+from allennlp.training.callbacks import (
+        Events,
+        LogToTensorboard, CheckpointCallback, MovingAverageCallback, Validate, PostToUrl,
+        LrsCallback, MomentumSchedulerCallback, TrackMetrics, TrainSupervised, GenerateTrainingBatches
+)
+from allennlp.training.checkpointer import Checkpointer
+from allennlp.training.learning_rate_schedulers import LearningRateScheduler
+from allennlp.training.momentum_schedulers import MomentumScheduler
 from allennlp.training.moving_average import ExponentialMovingAverage
+from allennlp.training.tensorboard_writer import TensorboardWriter
 
 
 class TestCallbackTrainer(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
 
-        # a lot of the tests want access to the metric tracker
-        # let's get it
+        # A lot of the tests want access to the metric tracker
+        # so we add a property that gets it by grabbing it from
+        # the relevant callback.
         def metric_tracker(self: CallbackTrainer):
             for callback in self.handler.callbacks():
                 if isinstance(callback, TrackMetrics):
                     return callback.metric_tracker
             return None
 
-        CallbackTrainer.metric_tracker = property(metric_tracker)
+        setattr(CallbackTrainer, 'metric_tracker', property(metric_tracker))
 
         self.instances = SequenceTaggingDatasetReader().read(self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv')
         vocab = Vocabulary.from_instances(self.instances)
@@ -110,8 +108,6 @@ class TestCallbackTrainer(AllenNlpTestCase):
                 GenerateTrainingBatches(self.instances, iterator, True)
         ]
 
-
-
     def test_trainer_can_run_from_params(self):
         # pylint: disable=bad-continuation
         from allennlp.commands.train import train_model
@@ -122,10 +118,12 @@ class TestCallbackTrainer(AllenNlpTestCase):
                     "optimizer": {"type": "sgd", "lr": 0.01, "momentum": 0.9},
                     "num_epochs": 2,
                     "callbacks": [
-                        {"type": "log_to_tensorboard", "log_batch_size_period": 10},
-                        {"type": "checkpoint"},
-                        {"type": "validate"},
-                        {"type": "track_metrics"}
+                        "generate_training_batches",
+                        "train_supervised",
+                        "checkpoint",
+                        "track_metrics",
+                        "validate",
+                        {"type": "log_to_tensorboard", "log_batch_size_period": 10}
                     ]
                 },
                 "dataset_reader": {"type": "sequence_tagging"},
@@ -163,7 +161,7 @@ class TestCallbackTrainer(AllenNlpTestCase):
         assert 'best_epoch' in metrics
         assert isinstance(metrics['best_epoch'], int)
 
-    def test_trainer_can_run2(self):
+    def test_trainer_can_run(self):
         trainer = CallbackTrainer(model=self.model,
                                   optimizer=self.optimizer,
                                   callbacks=self.default_callbacks(serialization_dir=None),
@@ -197,6 +195,22 @@ class TestCallbackTrainer(AllenNlpTestCase):
         assert 'peak_cpu_memory_MB' in metrics
         assert isinstance(metrics['peak_cpu_memory_MB'], float)
         assert metrics['peak_cpu_memory_MB'] > 0
+
+    @responses.activate
+    def test_trainer_posts_to_url(self):
+        url = 'http://slack.com?webhook=ewifjweoiwjef'
+        responses.add(responses.POST, url)
+        post_to_url = PostToUrl(url, message="only a test")
+        callbacks = self.default_callbacks() + [post_to_url]
+        trainer = CallbackTrainer(model=self.model,
+                                  optimizer=self.optimizer,
+                                  num_epochs=2,
+                                  callbacks=callbacks)
+        trainer.train()
+
+        assert len(responses.calls) == 1
+        assert responses.calls[0].response.request.body == b'{"text": "only a test"}'
+
 
     def test_trainer_can_run_exponential_moving_average(self):
         moving_average = ExponentialMovingAverage(self.model.named_parameters(), decay=0.9999)
@@ -641,12 +655,6 @@ class TestCallbackTrainer(AllenNlpTestCase):
         # One batch per epoch.
         assert restore_trainer.batch_num_total == 2
 
-    def test_trainer_from_base_class_params(self):
-        params = Params.from_file(self.FIXTURES_ROOT / 'simple_tagger' / 'experiment.json')
-
-        # Can instantiate from base class params
-        TrainerBase.from_params(params, self.TEST_DIR)
-
     def test_trainer_saves_and_loads_best_validation_metrics_correctly_1(self):
         # Use -loss and run 1 epoch of original-training, and one of restored-training
         # Run 1 epoch of original training.
@@ -756,32 +764,3 @@ class TestCallbackTrainer(AllenNlpTestCase):
         assert best_epoch == 1
         assert trainer.metric_tracker._best_so_far == 0.1
         assert trainer.metric_tracker._epochs_with_no_improvement == 1
-
-class TestSparseClipGrad(AllenNlpTestCase):
-    def test_sparse_clip_grad(self):
-        # create a sparse embedding layer, then take gradient
-        embedding = torch.nn.Embedding(100, 16, sparse=True)
-        embedding.zero_grad()
-        ids = (torch.rand(17) * 100).long()
-        # Set some of the ids to the same value so that the sparse gradient
-        # has repeated indices.  This tests some additional logic.
-        ids[:5] = 5
-        loss = embedding(ids).sum()
-        loss.backward()
-        assert embedding.weight.grad.is_sparse  # pylint: disable=no-member
-
-        # Now try to clip the gradients.
-        _ = sparse_clip_norm([embedding.weight], 1.5)
-        # Final norm should be 1.5
-        grad = embedding.weight.grad.coalesce()  # pylint: disable=no-member
-        self.assertAlmostEqual(grad._values().norm(2.0).item(), 1.5, places=5)
-
-class TestLanguageModelWithMultiprocessDatasetReader(ModelTestCase):
-    def setUp(self):
-        super().setUp()
-        self.set_up_model(self.FIXTURES_ROOT / 'language_model' / 'experiment_multiprocessing_reader.jsonnet',
-                          # Note the glob on the end of this path.
-                          self.FIXTURES_ROOT / 'language_model' / 'sentences*')
-
-    def test_unidirectional_language_model_can_train_save_and_load(self):
-        self.ensure_model_can_train_save_and_load(self.param_file)

@@ -9,19 +9,14 @@ and a second to sample uniform noise. We'll then adversarially train a generator
 to transform the noise into something that (hopefully) looks like the true distribution
 and a discriminator `Model` to (hopefully) distinguish between the "true" and generated data.
 """
-# pylint: disable=bad-continuation
+# pylint: disable=bad-continuation,redefined-outer-name
 
-from typing import Dict, Iterable, List
+from typing import Iterable, List
 import tempfile
 
 import torch
-import numpy as np
-
-from _pytest.monkeypatch import MonkeyPatch
 
 from allennlp.commands.train import train_model
-from allennlp.common import Registrable
-from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Instance
@@ -29,134 +24,10 @@ from allennlp.data.dataset import Batch
 from allennlp.data.dataset_readers import DatasetReader
 from allennlp.data.fields import ArrayField, MetadataField
 from allennlp.models import Model
-from allennlp.nn.activations import Activation
 from allennlp.training.callbacks import Callback, Events, handle_event
 from allennlp.training.optimizers import Optimizer
 
-
-class InputSampler(Registrable):
-    """
-    Abstract base class for sampling from a distribution.
-    """
-    def sample(self, *dims: int) -> np.ndarray:
-        raise NotImplementedError
-
-
-@InputSampler.register('uniform')
-class UniformSampler(InputSampler):
-    """
-    Sample from the uniform [0, 1] distribution.
-    """
-    def sample(self, *dims: int) -> np.ndarray:
-        return np.random.uniform(0, 1, dims)
-
-
-@InputSampler.register('normal')
-class NormalSampler(InputSampler):
-    """
-    Sample from the normal distribution.
-    """
-    def __init__(self, mean: float = 0, stdev: float = 1.0) -> None:
-        self.mean = mean
-        self.stdev = stdev
-
-    def sample(self, *dims: int) -> np.ndarray:
-        return np.random.normal(self.mean, self.stdev, dims)
-
-
-@Model.register("generator2-test")
-class Generator(Model):
-    """
-    A model that takes random noise (batch_size, input_dim)
-    and transforms it to (batch_size, output_dim).
-
-    If its forward pass is provided with a discriminator,
-    it computes a loss based on the idea that it wants
-    to trick the discriminator into predicting that its output is genuine.
-    """
-    def __init__(self,
-                 input_dim: int,
-                 hidden_dim: int,
-                 output_dim: int,
-                 activation: Activation = torch.nn.Tanh()) -> None:
-        super().__init__(None)
-        self.linear1 = torch.nn.Linear(input_dim, hidden_dim)
-        self.linear2 = torch.nn.Linear(hidden_dim, hidden_dim)
-        self.linear3 = torch.nn.Linear(hidden_dim, output_dim)
-        self.activation = activation
-        self.loss = torch.nn.BCELoss()
-
-    def forward(self,  # type: ignore
-                inputs: torch.Tensor, discriminator: Model = None) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
-        hidden1 = self.activation(self.linear1(inputs))
-        hidden2 = self.activation(self.linear2(hidden1))
-        output = self.linear3(hidden2)
-        output_dict = {"output": output}
-
-        if discriminator is not None:
-            predicted = discriminator(output)["output"]
-            # We desire for the discriminator to think this is real.
-            desired = torch.ones_like(predicted)
-            output_dict["loss"] = self.loss(predicted, desired)
-
-        return output_dict
-
-def get_moments(dist: torch.Tensor) -> torch.Tensor:
-    """
-    Returns the first 4 moments of the input data.
-    We'll (potentially) use this as the input to our discriminator.
-    """
-    mean = torch.mean(dist)
-    diffs = dist - mean
-    var = torch.mean(torch.pow(diffs, 2.0))
-    std = torch.pow(var, 0.5)
-    zscores = diffs / std
-    skews = torch.mean(torch.pow(zscores, 3.0))
-    kurtoses = torch.mean(torch.pow(zscores, 4.0)) - 3.0  # excess kurtosis, should be 0 for Gaussian
-    final = torch.cat((mean.reshape(1,), std.reshape(1,), skews.reshape(1,), kurtoses.reshape(1,)))
-    return final
-
-
-@Model.register("discriminator2-test")
-class Discriminator(Model):
-    """
-    A model that takes a sample (input_dim,) and tries to predict 1
-    if it's from the true distribution and 0 if it's from the generator.
-    """
-    def __init__(self,
-                 input_dim: int,
-                 hidden_dim: int,
-                 activation: Activation = torch.nn.Sigmoid(),
-                 preprocessing: str = None) -> None:
-        super().__init__(None)
-        if preprocessing is None:
-            self.preprocess = lambda x: x
-        elif preprocessing == "moments":
-            self.preprocess = get_moments
-            input_dim = 4
-        else:
-            raise ConfigurationError("unknown preprocessing")
-
-        self.linear1 = torch.nn.Linear(input_dim, hidden_dim)
-        self.linear2 = torch.nn.Linear(hidden_dim, hidden_dim)
-        self.linear3 = torch.nn.Linear(hidden_dim, 1)
-        self.activation = activation
-        self.loss = torch.nn.BCELoss()
-
-    def forward(self, # type: ignore
-                inputs: torch.Tensor, label: torch.Tensor = None) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
-        inputs = inputs.squeeze(-1)
-        hidden1 = self.activation(self.linear1(self.preprocess(inputs)))
-        hidden2 = self.activation(self.linear2(hidden1))
-        output = self.activation(self.linear3(hidden2))
-        output_dict = {"output": output}
-        if label is not None:
-            output_dict["loss"] = self.loss(output, label)
-
-        return output_dict
-
+from allennlp.tests.training.gan_trainer_test import InputSampler
 
 @Model.register("gan")
 class Gan(Model):
@@ -169,6 +40,14 @@ class Gan(Model):
                  generator: Model,
                  discriminator: Model) -> None:
         super().__init__(None)
+
+        # We need our optimizer to know which parameters came from
+        # which model, so we cheat by adding tags to them.
+        for param in generator.parameters():
+            setattr(param, '_generator', True)
+        for param in discriminator.parameters():
+            setattr(param, '_discriminator', True)
+
         self.generator = generator
         self.discriminator = discriminator
 
@@ -212,10 +91,11 @@ class GanOptimizer(torch.optim.Optimizer):
         self.discriminator_optimizer.zero_grad()
 
     @classmethod
-    def from_params(cls, model_parameters: List, params: Params) -> 'GanOptimizer':
-        # This is a slight abuse, because we want different optimizers to have different params.
-        generator_parameters = [[n, p] for n, p in model_parameters if n.startswith("generator.")]
-        discriminator_parameters = [[n, p] for n, p in model_parameters if n.startswith("discriminator.")]
+    def from_params(cls, parameters: List, params: Params) -> 'GanOptimizer':
+        # Because we "tagged" the parameters, we can use getattr to figure out
+        # which ones go with which model.
+        generator_parameters = [("", param) for param in parameters if hasattr(param, '_generator')]
+        discriminator_parameters = [("", param) for param in parameters if hasattr(param, '_discriminator')]
 
         generator_optimizer = Optimizer.from_params(generator_parameters, params.pop("generator_optimizer"))
         discriminator_optimizer = Optimizer.from_params(discriminator_parameters,
@@ -281,17 +161,18 @@ class TrainGan(Callback):
         trainer.optimizer.stage = stage
 
         if stage == "discriminator_real":
-            # Want discriminator to predict 1
+            # Generate real data and expect the discriminator to predict 1.
             output = trainer.model.discriminator(array, torch.ones(1))
             self.loss = output["loss"]
             self.discriminator_real_loss += self.loss.sum().item()
         elif stage == "discriminator_fake":
-            # Want discriminator to predict 0
+            # Generate fake data and expect the discriminator to predict 0.
             fake_data = trainer.model.generator(array)
             output = trainer.model.discriminator(fake_data["output"], torch.zeros(1))
             self.loss = output["loss"]
             self.discriminator_fake_loss += self.loss.sum().item()
         elif stage == "generator":
+            # Generate fake data and try to fool the discriminator.
             generated = trainer.model.generator(array, trainer.model.discriminator)
             fake_data = generated["output"]
             self.loss = generated["loss"]
@@ -306,7 +187,7 @@ class TrainGan(Callback):
         self.loss.backward()
         trainer.train_loss += self.loss.item()
 
-    @handle_event(Events.AFTER_BACKWARD)
+    @handle_event(Events.BACKWARD, priority=1000)
     def optimize(self, trainer):
         # pylint: disable=no-self-use
         trainer.optimizer.step()
@@ -321,25 +202,6 @@ class TrainGan(Callback):
             "stdev": self.fake_stdev / max(self.count, 1)
         }
 
-# This is bad, I have to monkeypatch Optimizer.from_params
-_original_optimizer_from_params = Optimizer.from_params  # pylint: disable=invalid-name
-
-def _optimizer_from_params(model_parameters: List, params: Params) -> Optimizer:
-    typ3 = params.get("type")
-    if typ3 == "gan":
-        generator_parameters = [[n, p] for n, p in model_parameters if n.startswith("generator.")]
-        discriminator_parameters = [[n, p] for n, p in model_parameters if n.startswith("discriminator.")]
-
-        return GanOptimizer(
-                generator_optimizer=_original_optimizer_from_params(generator_parameters,
-                                                                    params.pop("generator_optimizer")),
-                discriminator_optimizer=_original_optimizer_from_params(discriminator_parameters,
-                                                                        params.pop("discriminator_optimizer"))
-        )
-    else:
-        return _original_optimizer_from_params(model_parameters, params)
-
-# This is also bad, I have to provide a do-nothing dataset reader.
 @DatasetReader.register("nil")
 class NilDatasetReader(DatasetReader):
     # pylint: disable=abstract-method
@@ -361,13 +223,13 @@ def config(sample_size: int = 500,
         "model": {
             "type": "gan",
             "generator": {
-                "type": "generator2-test",
+                "type": "generator-test",
                 "input_dim": 1,
                 "hidden_dim": 5,
                 "output_dim": 1
             },
             "discriminator": {
-                "type": "discriminator2-test",
+                "type": "discriminator-test",
                 "input_dim": sample_size,
                 "hidden_dim": 5,
                 "preprocessing": "moments"
@@ -411,10 +273,6 @@ def config(sample_size: int = 500,
 
 
 class GanCallbackTrainerTest(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
-        MonkeyPatch().setattr(Optimizer, 'from_params', _optimizer_from_params)
-
     def test_gan_can_train(self):
         params = config(batches_per_epoch=2, num_epochs=2)
         train_model(params, self.TEST_DIR)
@@ -426,14 +284,11 @@ if __name__ == "__main__":
     # python -m allennlp.tests.training.gan_callback_trainer_test
     #
     # pylint: disable=invalid-name
-    MonkeyPatch().setattr(Optimizer, 'from_params', _optimizer_from_params)
-
-
     from allennlp.training.trainer_base import TrainerBase
-    serialization_dir_ = tempfile.mkdtemp()
+    serialization_dir = tempfile.mkdtemp()
 
-    params_ = config()
-    trainer_ = TrainerBase.from_params(params_, serialization_dir_)
+    params = config()
+    trainer = TrainerBase.from_params(params, serialization_dir)
 
-    metrics_ = trainer_.train()
-    print(metrics_)
+    metrics = trainer.train()
+    print(metrics)
