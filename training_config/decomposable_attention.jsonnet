@@ -13,8 +13,8 @@
       "end_tokens": ["@@NULL@@"]
     }
   },
-  "train_data_path": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/snli/snli_1.0_train.jsonl",
-  "validation_data_path": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/snli/snli_1.0_dev.jsonl",
+  "train_data_path": "https://allennlp.s3.amazonaws.com/datasets/snli/snli_1.0_train.jsonl",
+  "validation_data_path": "https://allennlp.s3.amazonaws.com/datasets/snli/snli_1.0_dev.jsonl",
   "model": {
     "type": "decomposable_attention",
     "text_field_embedder": {
@@ -22,7 +22,7 @@
         "tokens": {
             "type": "embedding",
             "projection_dim": 200,
-            "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.300d.txt.gz",
+            "pretrained_file": "https://allennlp.s3.amazonaws.com/datasets/glove/glove.6B.300d.txt.gz",
             "embedding_dim": 300,
             "trainable": false
         }

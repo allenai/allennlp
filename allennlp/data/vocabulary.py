@@ -616,6 +616,13 @@ class Vocabulary(Registrable):
         else:
             return self._token_to_index[namespace][token]
 
+    def add_tokens_to_namespace(self, tokens: List[str], namespace: str = 'tokens') -> List[int]:
+        """
+        Adds ``tokens`` to the index, if they are not already present.  Either way, we return the
+        indices of the tokens in the order that they were given.
+        """
+        return [self.add_token_to_namespace(token, namespace) for token in tokens]
+
     def get_index_to_token_vocabulary(self, namespace: str = 'tokens') -> Dict[int, str]:
         return self._index_to_token[namespace]
 

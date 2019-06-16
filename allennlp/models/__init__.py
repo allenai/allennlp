@@ -5,9 +5,11 @@ all of which are subclasses of :class:`~allennlp.models.model.Model`.
 
 from allennlp.models.model import Model
 from allennlp.models.archival import archive_model, load_archive, Archive
+from allennlp.models.bert_for_classification import BertForClassification
 from allennlp.models.biattentive_classification_network import BiattentiveClassificationNetwork
 from allennlp.models.constituency_parser import SpanConstituencyParser
 from allennlp.models.biaffine_dependency_parser import BiaffineDependencyParser
+from allennlp.models.biaffine_dependency_parser_multilang import BiaffineDependencyParserMultiLang
 from allennlp.models.coreference_resolution.coref import CoreferenceResolver
 from allennlp.models.crf_tagger import CrfTagger
 from allennlp.models.decomposable_attention import DecomposableAttention
@@ -31,3 +33,4 @@ from allennlp.models.graph_parser import GraphParser
 from allennlp.models.bidirectional_lm import BidirectionalLanguageModel
 from allennlp.models.language_model import LanguageModel
 from allennlp.models.basic_classifier import BasicClassifier
+from allennlp.models.srl_bert import SrlBert

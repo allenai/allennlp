@@ -26,6 +26,7 @@ venv/
 allennlp/tools/EVALB/evalb.dSYM/
 doc/_build/
 *.swp
+.DS_Store
 
 
 # python

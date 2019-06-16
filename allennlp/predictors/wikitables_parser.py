@@ -20,9 +20,9 @@ from allennlp.common.checks import check_for_java
 # process.  This requires modifying the scala `wikitables-executor` code to also return the
 # denotation when running it as a server, and updating the model to parse the output correctly, but
 # that shouldn't be too hard.
-DEFAULT_EXECUTOR_JAR = "https://s3-us-west-2.amazonaws.com/allennlp/misc/wikitables-executor-0.1.0.jar"
-ABBREVIATIONS_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/misc/wikitables-abbreviations.tsv"
-GROW_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/misc/wikitables-grow.grammar"
+DEFAULT_EXECUTOR_JAR = "https://allennlp.s3.amazonaws.com/misc/wikitables-executor-0.1.0.jar"
+ABBREVIATIONS_FILE = "https://allennlp.s3.amazonaws.com/misc/wikitables-abbreviations.tsv"
+GROW_FILE = "https://allennlp.s3.amazonaws.com/misc/wikitables-grow.grammar"
 SEMPRE_DIR = str(pathlib.Path('data/'))
 SEMPRE_ABBREVIATIONS_PATH = os.path.join(SEMPRE_DIR, "abbreviations.tsv")
 SEMPRE_GRAMMAR_PATH = os.path.join(SEMPRE_DIR, "grow.grammar")

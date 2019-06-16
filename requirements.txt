@@ -103,8 +103,6 @@ flaky
 # Required to mock out `requests` calls
 responses>=0.7
 
-# For mocking s3.
-moto>=1.3.4
 
 #### TESTING-RELATED PACKAGES ####
 

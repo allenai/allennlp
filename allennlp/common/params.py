@@ -10,6 +10,7 @@ import copy
 import json
 import logging
 import os
+import zlib
 
 from overrides import overrides
 
@@ -192,7 +193,7 @@ class Params(MutableMapping):
     """
 
     # This allows us to check for the presence of "None" as a default argument,
-    # which we require because we make a distinction bewteen passing a value of "None"
+    # which we require because we make a distinction between passing a value of "None"
     # and passing no value to the default parameter of "pop".
     DEFAULT = object()
 
@@ -511,8 +512,13 @@ class Params(MutableMapping):
         Returns a hash code representing the current state of this ``Params`` object.  We don't
         want to implement ``__hash__`` because that has deeper python implications (and this is a
         mutable object), but this will give you a representation of the current state.
+        We use `zlib.adler32` instead of Python's builtin `hash` because the random seed for the
+        latter is reset on each new program invocation, as discussed here:
+        https://stackoverflow.com/questions/27954892/deterministic-hashing-in-python-3.
         """
-        return str(hash(json.dumps(self.params, sort_keys=True)))
+        dumped = json.dumps(self.params, sort_keys=True)
+        hashed = zlib.adler32(dumped.encode())
+        return str(hashed)
 
 
 def pop_choice(params: Dict[str, Any],

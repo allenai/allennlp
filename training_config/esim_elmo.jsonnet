@@ -4,7 +4,7 @@
 // this configuration only includes one layer of ELMo representations
 // and removes GloVe embeddings.
 //
-// There is a trained model available at https://s3-us-west-2.amazonaws.com/allennlp/models/esim-elmo-2018.05.17.tar.gz
+// There is a trained model available at https://allennlp.s3.amazonaws.com/models/esim-elmo-2018.05.17.tar.gz
 // with test set accuracy of 88.5%, compared to the single model reported
 // result of 88.7 +/- 0.17.
 {
@@ -16,8 +16,8 @@
      }
     }
   },
-  "train_data_path": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/snli/snli_1.0_train.jsonl",
-  "validation_data_path": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/snli/snli_1.0_dev.jsonl",
+  "train_data_path": "https://allennlp.s3.amazonaws.com/datasets/snli/snli_1.0_train.jsonl",
+  "validation_data_path": "https://allennlp.s3.amazonaws.com/datasets/snli/snli_1.0_dev.jsonl",
   "model": {
     "type": "esim",
     "dropout": 0.5,
@@ -25,8 +25,8 @@
       "token_embedders": {
         "elmo":{
             "type": "elmo_token_embedder",
-        "options_file": "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json",
-        "weight_file": "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5",
+        "options_file": "https://allennlp.s3.amazonaws.com/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json",
+        "weight_file": "https://allennlp.s3.amazonaws.com/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5",
             "do_layer_norm": false,
             "dropout": 0.0
         }

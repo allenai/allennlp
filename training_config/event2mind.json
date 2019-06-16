@@ -31,7 +31,7 @@
         "tokens": {
           "type": "embedding",
           "vocab_namespace": "source_tokens",
-          "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/word2vec/GoogleNews-vectors-negative300.txt.gz",
+          "pretrained_file": "https://allennlp.s3.amazonaws.com/datasets/word2vec/GoogleNews-vectors-negative300.txt.gz",
           "embedding_dim": 300,
           "trainable": false
         }

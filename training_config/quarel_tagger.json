@@ -19,8 +19,8 @@
     "pretrained_files": {"tokens": "/inputs/glove/glove.6B.100d.txt.gz"},
     "min_pretrained_embeddings": {"tokens": 30000}
   },
-  "train_data_path": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/quarel/quarel-v1-train.jsonl",
-  "validation_data_path": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/quarel/quarel-v1-dev.jsonl",
+  "train_data_path": "https://allennlp.s3.amazonaws.com/datasets/quarel/quarel-v1-train.jsonl",
+  "validation_data_path": "https://allennlp.s3.amazonaws.com/datasets/quarel/quarel-v1-dev.jsonl",
   "model": {
     "type": "crf_tagger",
     "label_encoding": "BIO",

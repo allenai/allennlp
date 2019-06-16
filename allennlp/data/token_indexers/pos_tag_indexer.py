@@ -24,9 +24,14 @@ class PosTagIndexer(TokenIndexer[int]):
         We will use this namespace in the :class:`Vocabulary` to map strings to indices.
     coarse_tags : ``bool``, optional (default=``False``)
         If ``True``, we will use coarse POS tags instead of the default fine-grained POS tags.
+    token_min_padding_length : ``int``, optional (default=``0``)
+        See :class:`TokenIndexer`.
     """
     # pylint: disable=no-self-use
-    def __init__(self, namespace: str = 'pos_tokens', coarse_tags: bool = False) -> None:
+    def __init__(self, namespace: str = 'pos_tokens',
+                 coarse_tags: bool = False,
+                 token_min_padding_length: int = 0) -> None:
+        super().__init__(token_min_padding_length)
         self._namespace = namespace
         self._coarse_tags = coarse_tags
         self._logged_errors: Set[str] = set()
