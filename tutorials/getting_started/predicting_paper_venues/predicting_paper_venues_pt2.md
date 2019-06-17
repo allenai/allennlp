@@ -10,7 +10,7 @@ Here we'll be working with the paper classification model
 we developed in [Part 1](./predicting_paper_venues_pt1.md) of this
 tutorial. All the code for that model is [on GitHub](https://github.com/allenai/allennlp-as-a-library-example/tree/master).
 You can either train it yourself or download a
-[trained model](https://s3-us-west-2.amazonaws.com/allennlp/models/tutorial-s2-classification-model-2018-02-01.tar.gz),
+[trained model](https://allennlp.s3.amazonaws.com/models/tutorial-s2-classification-model-2018-02-01.tar.gz),
 although in this tutorial we'll just use the tiny model that's included
 [as a test fixture](https://github.com/allenai/allennlp-as-a-library-example/tree/master/tests/fixtures).
 

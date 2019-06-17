@@ -4,7 +4,7 @@ from allennlp.semparse.executors import SqlExecutor
 class SqlExecutorTest(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
-        self._database_file = "https://s3-us-west-2.amazonaws.com/allennlp/datasets/atis/atis.db"
+        self._database_file = "https://allennlp.s3.amazonaws.com/datasets/atis/atis.db"
 
     def test_sql_accuracy_is_scored_correctly(self):
         sql_query_label = ("( SELECT airport_service . airport_code "

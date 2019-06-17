@@ -262,7 +262,15 @@ class TestBertEmbedder(ModelTestCase):
         bert_vectors = token_embedder(tokens["bert"])
         assert list(bert_vectors.shape) == [1, 13, 12]
 
-        bert_vectors = token_embedder(tokens["bert"], offsets=tokens["bert-offsets"])
+        # Testing without token_type_ids
+        bert_vectors = token_embedder(tokens["bert"],
+                                      offsets=tokens["bert-offsets"])
+        assert list(bert_vectors.shape) == [1, 10, 12]
+
+        # Testing with token_type_ids
+        bert_vectors = token_embedder(tokens["bert"],
+                                      offsets=tokens["bert-offsets"],
+                                      token_type_ids=tokens["bert-type-ids"])
         assert list(bert_vectors.shape) == [1, 10, 12]
 
     def test_sliding_window_with_batch(self):
@@ -290,5 +298,14 @@ class TestBertEmbedder(ModelTestCase):
         padding_lengths = batch.get_padding_lengths()
         tensor_dict = batch.as_tensor_dict(padding_lengths)
         tokens = tensor_dict["tokens"]
-        bert_vectors = token_embedder(tokens["bert"], offsets=tokens["bert-offsets"])
+
+        # Testing without token_type_ids
+        bert_vectors = token_embedder(tokens["bert"],
+                                      offsets=tokens["bert-offsets"])
+        assert bert_vectors is not None
+
+        # Testing with token_type_ids
+        bert_vectors = token_embedder(tokens["bert"],
+                                      offsets=tokens["bert-offsets"],
+                                      token_type_ids=tokens["bert-type-ids"])
         assert bert_vectors is not None
