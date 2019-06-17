@@ -429,7 +429,7 @@ class WikiTablesLanguage(DomainLanguage):
         Takes a row and a column and returns a list of rows from the full set of rows that contain
         the same value under the given column as the given row.
         """
-        return_list = []
+        return_list: List[Row] = []
         if not rows:
             return return_list
         cell_value = rows[0].values[column.name]
@@ -796,7 +796,7 @@ class WikiTablesLanguage(DomainLanguage):
         if isinstance(first_value, float) and isinstance(second_value, float):
             return first_value - second_value  # type: ignore
         elif first_value is None or second_value is None:
-            return 0.0
+            return 0.0  # type: ignore
         else:
             raise ExecutionError(f"Invalid column for diff: {column.name}")
 
