@@ -2,7 +2,7 @@ import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.semparse import ExecutionError
-from allennlp.semparse.domain_languages.common import Date
+from allennlp.semparse.common import Date
 
 
 class TestDate(AllenNlpTestCase):

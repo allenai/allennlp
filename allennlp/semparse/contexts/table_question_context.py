@@ -5,7 +5,7 @@ from collections import defaultdict
 
 from unidecode import unidecode
 from allennlp.data.tokenizers import Token
-from allennlp.semparse.domain_languages.common import Date
+from allennlp.semparse.common import Date
 from allennlp.semparse.contexts.knowledge_graph import KnowledgeGraph
 
 # == stop words that will be omitted by ContextGenerator
