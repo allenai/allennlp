@@ -11,8 +11,8 @@
         "sorting_keys": [["tokens", "num_tokens"]]
     },
 
-    "train_data_path": std.extVar("ONTONOTES_TRAIN_PATH"),
-    "validation_data_path": std.extVar("ONTONOTES_DEV_PATH"),
+    "train_data_path": std.extVar("SRL_TRAIN_DATA_PATH"),
+    "validation_data_path": std.extVar("SRL_VALIDATION_DATA_PATH"),
 
     "model": {
         "type": "srl_bert",
