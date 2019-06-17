@@ -63,7 +63,7 @@ class CallbackTrainer(TrainerBase):
         cuda_device : ``Union[int, List[int]]``, optional (default=-1)
             An integer or list of integers specifying the CUDA device(s) to use. If -1, the CPU is used.
         callbacks : ``List[Callback]``, optional (default=None)
-            A list callbacks to be called based on training events.
+            A list of callbacks that will be called based on training events.
         """
         super().__init__(serialization_dir, cuda_device)
 
