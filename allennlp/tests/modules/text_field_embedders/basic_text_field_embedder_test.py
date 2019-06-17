@@ -196,25 +196,6 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
         token_embedder(inputs)
 
     def test_old_from_params_new_from_params(self):
-        old_params = Params({
-                "words1": {
-                        "type": "embedding",
-                        "embedding_dim": 2
-                        },
-                "words2": {
-                        "type": "embedding",
-                        "embedding_dim": 5
-                        },
-                "words3": {
-                        "type": "embedding",
-                        "embedding_dim": 3
-                        }
-                })
-
-        # Allow loading the parameters in the old format
-        with pytest.warns(DeprecationWarning):
-            old_embedder = BasicTextFieldEmbedder.from_params(params=old_params, vocab=self.vocab)
-
         new_params = Params({
                 "token_embedders": {
                         "words1": {
