@@ -30,6 +30,15 @@ def srl_with_elmo_luheng_2018() -> predictors.SemanticRoleLabelerPredictor:
                                 'semantic-role-labeling')
         return model.predictor() # type: ignore
 
+
+def bert_srl_shi_2019() -> predictors.SemanticRoleLabelerPredictor:
+    with warnings.catch_warnings():
+        warnings.simplefilter(action="ignore", category=DeprecationWarning)
+        model = PretrainedModel('https://s3-us-west-2.amazonaws.com/allennlp/models/bert-base-srl-2019.06.17.tar.gz',
+                                'semantic-role-labeling')
+        return model.predictor() # type: ignore
+
+
 def bidirectional_attention_flow_seo_2017() -> predictors.BidafPredictor:
     with warnings.catch_warnings():
         warnings.simplefilter(action="ignore", category=DeprecationWarning)
