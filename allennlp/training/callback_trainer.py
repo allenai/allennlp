@@ -29,7 +29,7 @@ class CallbackTrainer(TrainerBase):
                  optimizer: torch.optim.Optimizer,
                  num_epochs: int = 20,
                  serialization_dir: Optional[str] = None,
-                 model_save_interval: float = None,
+                 model_save_interval: Optional[float] = None,
                  cuda_device: Union[int, List] = -1,
                  callbacks: List[Callback] = None) -> None:
         """
@@ -51,7 +51,7 @@ class CallbackTrainer(TrainerBase):
         optimizer : ``torch.nn.Optimizer``, required.
             An instance of a Pytorch Optimizer, instantiated with the parameters of the
             model to be optimized.
-        num_epochs : int, optional (default = 20)
+        num_epochs : int, optional (default=20)
             Number of training epochs.
         serialization_dir : str, optional (default=None)
             Path to directory for saving and loading model files. Models will not be saved if
@@ -60,8 +60,10 @@ class CallbackTrainer(TrainerBase):
             If provided, then serialize models every ``model_save_interval``
             seconds within single epochs.  In all cases, models are also saved
             at the end of every epoch if ``serialization_dir`` is provided.
-        cuda_device : ``Union[int, List[int]]``, optional (default = -1)
+        cuda_device : ``Union[int, List[int]]``, optional (default=-1)
             An integer or list of integers specifying the CUDA device(s) to use. If -1, the CPU is used.
+        callbacks : ``List[Callback]``, optional (default=None)
+            A list of callbacks that will be called based on training events.
         """
         super().__init__(serialization_dir, cuda_device)
 

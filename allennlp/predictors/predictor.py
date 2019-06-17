@@ -26,6 +26,7 @@ DEFAULT_PREDICTORS = {
         'naqanet': 'machine-comprehension',
         'simple_tagger': 'sentence-tagger',
         'srl': 'semantic-role-labeling',
+        'srl_bert': 'semantic-role-labeling',
         'quarel_parser': 'quarel-parser',
         'wikitables_mml_parser': 'wikitables-parser'
 }
