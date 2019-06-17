@@ -215,6 +215,5 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
 
         # But also allow loading the parameters in the new format
         new_embedder = BasicTextFieldEmbedder.from_params(params=new_params, vocab=self.vocab)
-        assert old_embedder._token_embedders.keys() == new_embedder._token_embedders.keys()
 
         assert new_embedder(self.inputs).size() == (1, 4, 10)
