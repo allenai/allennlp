@@ -742,29 +742,3 @@ class TestCallbackTrainer(ModelTestCase):
         assert training_metrics["best_validation_loss"] == restored_metrics["best_validation_loss"]
         assert training_metrics["best_epoch"] == 0
         assert training_metrics["validation_loss"] > restored_metrics["validation_loss"]
-
-    @pytest.mark.skip("the new trainer doesn't work with older checkpointing")
-    def test_restoring_works_with_older_checkpointing(self):
-        trainer = CallbackTrainer(
-                self.model, self.optimizer,
-                callbacks=self.default_callbacks(),
-                num_epochs=3, serialization_dir=self.TEST_DIR)
-        trainer.train()
-
-        for index in range(3):
-            path = str(self.TEST_DIR / "training_state_epoch_{}.th".format(index))
-            state = torch.load(path)
-            state.pop("metric_tracker")
-            state.pop("batch_num_total")
-            state["val_metric_per_epoch"] = [0.4, 0.1, 0.8]
-            torch.save(state, path)
-
-        trainer.handler.fire_event(Events.RESTORE_CHECKPOINT)
-        next_epoch = trainer.epoch_number
-        best_epoch = trainer.metric_tracker.best_epoch
-
-        # Loss decreases in 3 epochs, but because we hard fed the val metrics as above:
-        assert next_epoch == 3
-        assert best_epoch == 1
-        assert trainer.metric_tracker._best_so_far == 0.1
-        assert trainer.metric_tracker._epochs_with_no_improvement == 1
