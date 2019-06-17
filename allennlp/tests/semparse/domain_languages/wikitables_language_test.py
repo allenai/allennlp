@@ -409,8 +409,8 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
                 "Number",
                 "StringColumn",
                 "NumberColumn",
-                #"ComparableColumn",
-                #"Column",
+                "ComparableColumn",
+                "Column",
                 "DateColumn",
                 "List[str]",
                 }
@@ -461,11 +461,9 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
 
         check_productions_match(productions['List[Row]'],
                                 ['all_rows',
-                                 '[<List[Row],Column:List[Row]>, List[Row], NumberColumn]',
-                                 '[<List[Row],Column:List[Row]>, List[Row], StringColumn]',
-                                 '[<List[Row],Column:List[Row]>, List[Row], DateColumn]',
-                                 '[<List[Row],ComparableColumn:List[Row]>, List[Row], DateColumn]',
-                                 '[<List[Row],ComparableColumn:List[Row]>, List[Row], NumberColumn]',
+                                 '[<List[Row],Column:List[Row]>, List[Row], Column]',
+                                 '[<List[Row],DateColumn,Date:List[Row]>, List[Row], DateColumn, Date]',
+                                 '[<List[Row],ComparableColumn:List[Row]>, List[Row], ComparableColumn]',
                                  '[<List[Row],NumberColumn,Number:List[Row]>, List[Row], NumberColumn, Number]',
                                  '[<List[Row],StringColumn,List[str]:List[Row]>, List[Row], StringColumn, List[str]]',  # pylint: disable=line-too-long
                                  '[<List[Row]:List[Row]>, List[Row]]'])
@@ -511,7 +509,6 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
                                  'number_column:division',
                                  'number_column:year'])
 
-        """
         check_productions_match(productions['ComparableColumn'],
                                 ['date_column:year',
                                  'number_column:avg_attendance',
@@ -534,7 +531,6 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
                                  'number_column:regular_season',
                                  'number_column:division',
                                  'number_column:year'])
-        """
 
         # Strings come from the question - any span in the question that shows up as a cell in the
         # table is a valid string production.

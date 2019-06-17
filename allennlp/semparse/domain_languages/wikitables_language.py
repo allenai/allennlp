@@ -127,14 +127,14 @@ class WikiTablesLanguage(DomainLanguage):
             column: Column = None
             if column_type == 'string':
                 column = StringColumn(column_name)
-                super_types = [Column]
             elif column_type == 'date':
                 column = DateColumn(column_name)
-                super_types = [ComparableColumn, Column]
+                self.add_constant(column_name, column, type_=ComparableColumn)
             elif column_type == 'number' or column_type == "num2":
                 column = NumberColumn(column_name)
-                super_types = [ComparableColumn, Column]
-            self.add_constant(column_name, column, super_types=super_types)
+                self.add_constant(column_name, column, type_=ComparableColumn)
+            self.add_constant(column_name, column, type_=Column)
+            self.add_constant(column_name, column)
             column_type_name = str(PredicateType.get_type(type(column)))
             self._column_productions_for_agenda[column_name] = f"{column_type_name} -> {column_name}"
 
