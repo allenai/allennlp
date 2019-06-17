@@ -26,40 +26,40 @@ class PretrainedModel:
 def srl_with_elmo_luheng_2018() -> predictors.SemanticRoleLabelerPredictor:
     with warnings.catch_warnings():
         warnings.simplefilter(action="ignore", category=DeprecationWarning)
-        model = PretrainedModel('https://s3-us-west-2.amazonaws.com/allennlp/models/srl-model-2018.05.25.tar.gz',
+        model = PretrainedModel('https://allennlp.s3.amazonaws.com/models/srl-model-2018.05.25.tar.gz',
                                 'semantic-role-labeling')
         return model.predictor() # type: ignore
 
 def bidirectional_attention_flow_seo_2017() -> predictors.BidafPredictor:
     with warnings.catch_warnings():
         warnings.simplefilter(action="ignore", category=DeprecationWarning)
-        model = PretrainedModel('https://s3-us-west-2.amazonaws.com/allennlp/models/bidaf-model-2017.09.15-charpad.tar.gz',
+        model = PretrainedModel('https://allennlp.s3.amazonaws.com/models/bidaf-model-2017.09.15-charpad.tar.gz',
                                 'machine-comprehension')
         return model.predictor() # type: ignore
 
 def naqanet_dua_2019() -> predictors.BidafPredictor:
     with warnings.catch_warnings():
         warnings.simplefilter(action="ignore", category=DeprecationWarning)
-        model = PretrainedModel('https://s3-us-west-2.amazonaws.com/allennlp/models/naqanet-2019.04.29-fixed-weight-names.tar.gz',
+        model = PretrainedModel('https://allennlp.s3.amazonaws.com/models/naqanet-2019.04.29-fixed-weight-names.tar.gz',
                                 'machine-comprehension')
         return model.predictor()  # type: ignore
 
 def open_information_extraction_stanovsky_2018() -> predictors.OpenIePredictor:
-    model = PretrainedModel('https://s3-us-west-2.amazonaws.com/allennlp/models/openie-model.2018-08-20.tar.gz',
+    model = PretrainedModel('https://allennlp.s3.amazonaws.com/models/openie-model.2018-08-20.tar.gz',
                             'open-information-extraction')
     return model.predictor() # type: ignore
 
 def decomposable_attention_with_elmo_parikh_2017() -> predictors.DecomposableAttentionPredictor:
     with warnings.catch_warnings():
         warnings.simplefilter(action="ignore", category=DeprecationWarning)
-        model = PretrainedModel('https://s3-us-west-2.amazonaws.com/allennlp/models/decomposable-attention-elmo-2018.02.19.tar.gz',
+        model = PretrainedModel('https://allennlp.s3.amazonaws.com/models/decomposable-attention-elmo-2018.02.19.tar.gz',
                                 'textual-entailment')
         return model.predictor() # type: ignore
 
 def neural_coreference_resolution_lee_2017() -> predictors.CorefPredictor:
     with warnings.catch_warnings():
         warnings.simplefilter(action="ignore", category=DeprecationWarning)
-        model = PretrainedModel('https://s3-us-west-2.amazonaws.com/allennlp/models/coref-model-2018.02.05.tar.gz',
+        model = PretrainedModel('https://allennlp.s3.amazonaws.com/models/coref-model-2018.02.05.tar.gz',
                                 'coreference-resolution')
         predictor = model.predictor()
         # pylint: disable=protected-access
@@ -69,7 +69,7 @@ def neural_coreference_resolution_lee_2017() -> predictors.CorefPredictor:
 def named_entity_recognition_with_elmo_peters_2018() -> predictors.SentenceTaggerPredictor:
     with warnings.catch_warnings():
         warnings.simplefilter(action="ignore", category=DeprecationWarning)
-        model = PretrainedModel('https://s3-us-west-2.amazonaws.com/allennlp/models/ner-model-2018.12.18.tar.gz',
+        model = PretrainedModel('https://allennlp.s3.amazonaws.com/models/ner-model-2018.12.18.tar.gz',
                                 'sentence-tagger')
         predictor = model.predictor()
         # pylint: disable=protected-access
@@ -77,7 +77,7 @@ def named_entity_recognition_with_elmo_peters_2018() -> predictors.SentenceTagge
         return predictor  # type: ignore
 
 def fine_grained_named_entity_recognition_with_elmo_peters_2018() -> predictors.SentenceTaggerPredictor:
-    model = PretrainedModel('https://s3-us-west-2.amazonaws.com/allennlp/models/fine-grained-ner-model-elmo-2018.12.21.tar.gz',
+    model = PretrainedModel('https://allennlp.s3.amazonaws.com/models/fine-grained-ner-model-elmo-2018.12.21.tar.gz',
                             'sentence-tagger')
     predictor = model.predictor()
     # pylint: disable=protected-access
@@ -87,14 +87,14 @@ def fine_grained_named_entity_recognition_with_elmo_peters_2018() -> predictors.
 def span_based_constituency_parsing_with_elmo_joshi_2018() -> predictors.ConstituencyParserPredictor:
     with warnings.catch_warnings():
         warnings.simplefilter(action="ignore", category=DeprecationWarning)
-        model = PretrainedModel('https://s3-us-west-2.amazonaws.com/allennlp/models/elmo-constituency-parser-2018.03.14.tar.gz',
+        model = PretrainedModel('https://allennlp.s3.amazonaws.com/models/elmo-constituency-parser-2018.03.14.tar.gz',
                                 'constituency-parser')
         return model.predictor() # type: ignore
 
 def biaffine_parser_stanford_dependencies_todzat_2017() -> predictors.BiaffineDependencyParserPredictor:
     with warnings.catch_warnings():
         warnings.simplefilter(action="ignore", category=DeprecationWarning)
-        model = PretrainedModel('https://s3-us-west-2.amazonaws.com/allennlp/models/biaffine-dependency-parser-ptb-2018.08.23.tar.gz',
+        model = PretrainedModel('https://allennlp.s3.amazonaws.com/models/biaffine-dependency-parser-ptb-2018.08.23.tar.gz',
                                 'biaffine-dependency-parser')
         return model.predictor() # type: ignore
 
@@ -103,13 +103,13 @@ def biaffine_parser_stanford_dependencies_todzat_2017() -> predictors.BiaffineDe
 def biaffine_parser_universal_dependencies_todzat_2017() -> predictors.BiaffineDependencyParserPredictor:
     with warnings.catch_warnings():
         warnings.simplefilter(action="ignore", category=DeprecationWarning)
-        model = PretrainedModel('https://s3-us-west-2.amazonaws.com/allennlp/models/biaffine-dependency-parser-ud-2018.08.23.tar.gz',
+        model = PretrainedModel('https://allennlp.s3.amazonaws.com/models/biaffine-dependency-parser-ud-2018.08.23.tar.gz',
                                 'biaffine-dependency-parser')
         return model.predictor() # type: ignore
 
 def esim_nli_with_elmo_chen_2017() -> predictors.DecomposableAttentionPredictor:
     with warnings.catch_warnings():
         warnings.simplefilter(action="ignore", category=DeprecationWarning)
-        model = PretrainedModel('https://s3-us-west-2.amazonaws.com/allennlp/models/esim-elmo-2018.05.17.tar.gz',
+        model = PretrainedModel('https://allennlp.s3.amazonaws.com/models/esim-elmo-2018.05.17.tar.gz',
                                 'textual-entailment')
         return model.predictor() # type: ignore

@@ -9,7 +9,8 @@ import re
 from nltk.sem.logic import Type
 from overrides import overrides
 
-from allennlp.semparse.worlds.world import ParsingError, World
+from allennlp.semparse.worlds.world import World
+from allennlp.semparse.common.errors import ParsingError
 from allennlp.semparse.type_declarations import wikitables_lambda_dcs as types
 from allennlp.semparse.contexts import TableQuestionKnowledgeGraph
 

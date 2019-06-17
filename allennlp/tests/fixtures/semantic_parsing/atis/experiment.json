@@ -1,11 +1,11 @@
 {
   "dataset_reader": {
     "type": "atis",
-    "database_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/atis/atis.db"
+    "database_file": "https://allennlp.s3.amazonaws.com/datasets/atis/atis.db"
   },
   "validation_dataset_reader": {
     "type": "atis",
-    "database_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/atis/atis.db",
+    "database_file": "https://allennlp.s3.amazonaws.com/datasets/atis/atis.db",
     "keep_if_unparseable": true
   },
   "train_data_path": "allennlp/tests/fixtures/data/atis/sample.json",
@@ -36,7 +36,7 @@
     "max_decoding_steps": 10,
     "input_attention": {"type": "dot_product"},
     "dropout": 0.5,
-    "database_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/atis/atis.db"
+    "database_file": "https://allennlp.s3.amazonaws.com/datasets/atis/atis.db"
   },
   "iterator": {
     "type": "basic",
