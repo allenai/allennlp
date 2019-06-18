@@ -3,7 +3,6 @@ import pathlib
 from subprocess import run
 from typing import List
 import shutil
-import requests
 
 from overrides import overrides
 import torch
@@ -40,6 +39,7 @@ class WikiTablesParserPredictor(Predictor):
         # Load auxiliary sempre files during startup for faster logical form execution.
         os.makedirs(SEMPRE_DIR, exist_ok=True)
         abbreviations_path = os.path.join(SEMPRE_DIR, 'abbreviations.tsv')
+        grammar_path = os.path.join(SEMPRE_DIR, 'grow.grammar')
 
         with session_with_backoff() as session:
             if not os.path.exists(abbreviations_path):
@@ -47,7 +47,6 @@ class WikiTablesParserPredictor(Predictor):
                 with open(abbreviations_path, 'wb') as downloaded_file:
                     downloaded_file.write(result.content)
 
-            grammar_path = os.path.join(SEMPRE_DIR, 'grow.grammar')
             if not os.path.exists(grammar_path):
                 result = session.get(GROW_FILE)
                 with open(grammar_path, 'wb') as downloaded_file:
