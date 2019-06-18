@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 
 
 @Callback.register("update_learning_rate")
-class LrsCallback(Callback):
+class UpdateLearningRate(Callback):
     """
     Callback that runs the learning rate scheduler.
 

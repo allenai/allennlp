@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 
 
 @Callback.register("update_momentum")
-class MomentumSchedulerCallback(Callback):
+class UpdateMomentum(Callback):
     """
     Callback that runs a Momentum Scheduler.
 
