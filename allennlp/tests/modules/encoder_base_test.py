@@ -195,7 +195,7 @@ class TestEncoderBase(AllenNlpTestCase):
         self.encoder_base._update_states(initial_states, self.restoration_indices)
 
         # Check that only some of the states are reset when a mask is provided.
-        mask = torch.tensor([1, 1, 0, 0, 0])
+        mask = torch.FloatTensor([1, 1, 0, 0, 0])
         self.encoder_base.reset_states(mask)
         # First two states should be zeros
         numpy.testing.assert_array_equal(self.encoder_base._states[0][:, :2, :].data.numpy(),
@@ -209,7 +209,7 @@ class TestEncoderBase(AllenNlpTestCase):
                                          index_selected_initial_states[1][:, 2:, :].data.numpy())
 
         # Check that error is raised if mask has wrong batch size.
-        bad_mask = torch.tensor([1,1,0])
+        bad_mask = torch.tensor([1, 1, 0])
         with self.assertRaises(ValueError):
             self.encoder_base.reset_states(bad_mask)
 
