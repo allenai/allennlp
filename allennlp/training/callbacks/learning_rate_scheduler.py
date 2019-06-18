@@ -8,7 +8,7 @@ if TYPE_CHECKING:
     from allennlp.training.callback_trainer import CallbackTrainer  # pylint:disable=unused-import
 
 
-@Callback.register("learning_rate_scheduler")
+@Callback.register("update_learning_rate")
 class LrsCallback(Callback):
     """
     Callback that runs the learning rate scheduler.
