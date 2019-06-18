@@ -31,9 +31,6 @@ DEPRECATED_CACHE_DIRECTORY = str(CACHE_ROOT / "datasets")
 # all types of files (datasets, models, etc.)
 DATASET_CACHE = CACHE_DIRECTORY
 
-# How long to wait before expiring etags in in-memory cache.
-ETAG_CACHE_EXPIRY_SECONDS = 60
-
 # Warn if the user is still using the deprecated cache directory.
 if os.path.exists(DEPRECATED_CACHE_DIRECTORY):
     logger = logging.getLogger(__name__) # pylint: disable=invalid-name
@@ -193,13 +190,20 @@ def http_get(url: str, temp_file: IO) -> None:
     progress.close()
 
 def get_etag(url):
-    response = requests.head(url, allow_redirects=True)
-    if response.status_code != 200:
-        raise IOError("HEAD request failed for url {} with status code {}"
-                      .format(url, response.status_code))
-    return response.headers.get("ETag")
+    """ Get eTag to add to filename, if it exists. """
+    if url.startswith("s3://"):
+        return s3_etag(url)
+    else:
+        response = requests.head(url, allow_redirects=True)
+        if response.status_code != 200:
+            raise IOError("HEAD request failed for url {} with status code {}"
+                          .format(url, response.status_code))
+        return response.headers.get("ETag")
 
+# In-memory cache for etags -- separate from the on-disk file cache -- that
+# persists for the duration of the process.
 etag_cache = {}
+
 # TODO(joelgrus): do we want to do checksums or anything like that?
 def get_from_cache(url: str, cache_dir: str = None) -> str:
     """
@@ -211,16 +215,11 @@ def get_from_cache(url: str, cache_dir: str = None) -> str:
 
     os.makedirs(cache_dir, exist_ok=True)
 
-    # Get eTag to add to filename, if it exists.
-    if url.startswith("s3://"):
-        etag = s3_etag(url)
+    if url in etag_cache:
+        etag = etag_cache[url]
     else:
-        cur_timestamp = time.time()
-        if url in etag_cache and cur_timestamp - etag_cache[url][0] < ETAG_CACHE_EXPIRY_SECONDS:
-            etag = etag_cache[url][1]
-        else:
-            etag = get_etag(url)
-            etag_cache[url] = (cur_timestamp, etag)
+        etag = get_etag(url)
+        etag_cache[url] = etag
 
     filename = url_to_filename(url, etag)
 
