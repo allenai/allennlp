@@ -9,7 +9,7 @@ import tempfile
 import json
 from urllib.parse import urlparse
 from pathlib import Path
-from typing import Optional, Tuple, Union, IO, Callable, Set
+from typing import Optional, Tuple, Union, IO, Callable, Set, Dict
 from hashlib import sha256
 from functools import wraps
 
@@ -218,7 +218,7 @@ def get_etag(url: str) -> str:
 
 # In-memory cache for etags -- separate from the on-disk file cache -- that
 # persists for the duration of the process.
-etag_cache = {}
+ETAG_CACHE: Dict[str, str] = {}
 
 # TODO(joelgrus): do we want to do checksums or anything like that?
 def get_from_cache(url: str, cache_dir: str = None) -> str:
@@ -232,11 +232,11 @@ def get_from_cache(url: str, cache_dir: str = None) -> str:
     os.makedirs(cache_dir, exist_ok=True)
 
     # Obtain ETags at most once per URL per process to add to the filename.
-    if url in etag_cache:
-        etag = etag_cache[url]
+    if url in ETAG_CACHE:
+        etag = ETAG_CACHE[url]
     else:
         etag = get_etag(url)
-        etag_cache[url] = etag
+        ETAG_CACHE[url] = etag
 
     filename = url_to_filename(url, etag)
 

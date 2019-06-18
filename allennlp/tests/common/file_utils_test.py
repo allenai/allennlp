@@ -7,6 +7,7 @@ import json
 import pytest
 import responses
 
+from allennlp.common import file_utils
 from allennlp.common.file_utils import (
         url_to_filename, filename_to_url, get_from_cache, cached_path, split_s3_path,
         )
@@ -55,6 +56,8 @@ class TestFileUtils(AllenNlpTestCase):
         self.glove_file = self.FIXTURES_ROOT / 'embeddings/glove.6B.100d.sample.txt.gz'
         with open(self.glove_file, 'rb') as glove:
             self.glove_bytes = glove.read()
+        # Reset this to make tests independent.
+        file_utils.ETAG_CACHE = {}
 
     def test_url_to_filename(self):
         for url in ['http://allenai.org', 'http://allennlp.org',
@@ -128,28 +131,28 @@ class TestFileUtils(AllenNlpTestCase):
         with open(filename, 'rb') as cached_file:
             assert cached_file.read() == self.glove_bytes
 
-        # A second call to `get_from_cache` should make another HEAD call
-        # but not another GET call.
+        # A second call to `get_from_cache` will use the ETag cache and thus
+        # not make another HEAD call.
         filename2 = get_from_cache(url, cache_dir=self.TEST_DIR)
         assert filename2 == filename
 
         method_counts = Counter(call.request.method for call in responses.calls)
         assert len(method_counts) == 2
-        assert method_counts['HEAD'] == 2
+        assert method_counts['HEAD'] == 1
         assert method_counts['GET'] == 1
 
         with open(filename2, 'rb') as cached_file:
             assert cached_file.read() == self.glove_bytes
 
-        # A third call should have a different ETag and should force a new download,
-        # which means another HEAD call and another GET call.
+        # A third call should have a different ETag, but this will not force a
+        # new download as the ETag was cached.
         filename3 = get_from_cache(url, cache_dir=self.TEST_DIR)
-        assert filename3 == os.path.join(self.TEST_DIR, url_to_filename(url, etag="1"))
+        assert filename3 == filename
 
         method_counts = Counter(call.request.method for call in responses.calls)
         assert len(method_counts) == 2
-        assert method_counts['HEAD'] == 3
-        assert method_counts['GET'] == 2
+        assert method_counts['HEAD'] == 1
+        assert method_counts['GET'] == 1
 
         with open(filename3, 'rb') as cached_file:
             assert cached_file.read() == self.glove_bytes
