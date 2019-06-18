@@ -210,7 +210,10 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
                         "embedding_dim": 3
                         }
                 })
+        
+        # Allow loading the parameters in the old format
         old_embedder = BasicTextFieldEmbedder.from_params(params=old_params, vocab=self.vocab)
+        
         new_params = Params({
                 "token_embedders": {
                         "words1": {
