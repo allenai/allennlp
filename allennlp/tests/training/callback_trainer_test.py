@@ -26,7 +26,7 @@ from allennlp.models.model import Model
 from allennlp.training.callback_trainer import CallbackTrainer
 from allennlp.training.callbacks import (
         Events,
-        LogToTensorboard, CheckpointCallback, MovingAverageCallback, Validate, PostToUrl,
+        LogToTensorboard, Checkpoint, ComputeMovingAverage, Validate, PostToUrl,
         UpdateLearningRate, UpdateMomentum, TrackMetrics, TrainSupervised, GenerateTrainingBatches
 )
 from allennlp.training.checkpointer import Checkpointer
@@ -100,7 +100,7 @@ class TestCallbackTrainer(ModelTestCase):
 
         return [
                 LogToTensorboard(log_batch_size_period=10, tensorboard=tensorboard),
-                CheckpointCallback(checkpointer),
+                Checkpoint(checkpointer),
                 Validate(validation_data=self.instances if validation_data is None else validation_data,
                          validation_iterator=iterator if validation_iterator is None else validation_iterator),
                 TrackMetrics(patience, validation_metric),
@@ -218,7 +218,7 @@ class TestCallbackTrainer(ModelTestCase):
 
     def test_trainer_can_run_exponential_moving_average(self):
         moving_average = ExponentialMovingAverage(self.model.named_parameters(), decay=0.9999)
-        callbacks = self.default_callbacks() + [MovingAverageCallback(moving_average)]
+        callbacks = self.default_callbacks() + [ComputeMovingAverage(moving_average)]
         trainer = CallbackTrainer(model=self.model,
                                   optimizer=self.optimizer,
                                   num_epochs=2,
@@ -322,7 +322,7 @@ class TestCallbackTrainer(ModelTestCase):
 
     def test_trainer_can_resume_training_for_exponential_moving_average(self):
         moving_average = ExponentialMovingAverage(self.model.named_parameters())
-        callbacks = self.default_callbacks() + [MovingAverageCallback(moving_average)]
+        callbacks = self.default_callbacks() + [ComputeMovingAverage(moving_average)]
 
         trainer = CallbackTrainer(self.model, self.optimizer,
                                   num_epochs=1, serialization_dir=self.TEST_DIR,
@@ -330,7 +330,7 @@ class TestCallbackTrainer(ModelTestCase):
         trainer.train()
 
         new_moving_average = ExponentialMovingAverage(self.model.named_parameters())
-        new_callbacks = self.default_callbacks() + [MovingAverageCallback(new_moving_average)]
+        new_callbacks = self.default_callbacks() + [ComputeMovingAverage(new_moving_average)]
 
         new_trainer = CallbackTrainer(self.model, self.optimizer,
                                       num_epochs=3, serialization_dir=self.TEST_DIR,
