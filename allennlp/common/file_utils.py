@@ -7,7 +7,6 @@ import logging
 import shutil
 import tempfile
 import json
-import time
 from urllib.parse import urlparse
 from pathlib import Path
 from typing import Optional, Tuple, Union, IO, Callable, Set
