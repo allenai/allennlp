@@ -7,6 +7,7 @@ import logging
 import shutil
 import tempfile
 import json
+import time
 from urllib.parse import urlparse
 from pathlib import Path
 from typing import Optional, Tuple, Union, IO, Callable, Set
@@ -29,6 +30,9 @@ DEPRECATED_CACHE_DIRECTORY = str(CACHE_ROOT / "datasets")
 # This variable was deprecated in 0.7.2 since we use a single folder for caching
 # all types of files (datasets, models, etc.)
 DATASET_CACHE = CACHE_DIRECTORY
+
+# How long to wait before expiring etags in in-memory cache.
+ETAG_CACHE_EXPIRY_SECONDS = 60
 
 # Warn if the user is still using the deprecated cache directory.
 if os.path.exists(DEPRECATED_CACHE_DIRECTORY):
@@ -188,7 +192,14 @@ def http_get(url: str, temp_file: IO) -> None:
             temp_file.write(chunk)
     progress.close()
 
+def get_etag(url):
+    response = requests.head(url, allow_redirects=True)
+    if response.status_code != 200:
+        raise IOError("HEAD request failed for url {} with status code {}"
+                      .format(url, response.status_code))
+    return response.headers.get("ETag")
 
+etag_cache = {}
 # TODO(joelgrus): do we want to do checksums or anything like that?
 def get_from_cache(url: str, cache_dir: str = None) -> str:
     """
@@ -204,11 +215,12 @@ def get_from_cache(url: str, cache_dir: str = None) -> str:
     if url.startswith("s3://"):
         etag = s3_etag(url)
     else:
-        response = requests.head(url, allow_redirects=True)
-        if response.status_code != 200:
-            raise IOError("HEAD request failed for url {} with status code {}"
-                          .format(url, response.status_code))
-        etag = response.headers.get("ETag")
+        cur_timestamp = time.time()
+        if url in etag_cache and cur_timestamp - etag_cache[url][0] < ETAG_CACHE_EXPIRY_SECONDS:
+            etag = etag_cache[url][1]
+        else:
+            etag = get_etag(url)
+            etag_cache[url] = (cur_timestamp, etag)
 
     filename = url_to_filename(url, etag)
 
