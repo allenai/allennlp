@@ -27,7 +27,7 @@ allennlp.training.callbacks
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: allennlp.training.callbacks.learning_rate_scheduler
+.. automodule:: allennlp.training.callbacks.update_learning_rate
    :members:
    :undoc-members:
    :show-inheritance:
@@ -37,7 +37,7 @@ allennlp.training.callbacks
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: allennlp.training.callbacks.momentum_scheduler
+.. automodule:: allennlp.training.callbacks.update_momentum
    :members:
    :undoc-members:
    :show-inheritance:

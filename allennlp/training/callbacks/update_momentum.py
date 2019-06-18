@@ -8,8 +8,8 @@ if TYPE_CHECKING:
     from allennlp.training.callback_trainer import CallbackTrainer  # pylint:disable=unused-import
 
 
-@Callback.register("momentum_scheduler")
-class MomentumSchedulerCallback(Callback):
+@Callback.register("update_momentum")
+class UpdateMomentum(Callback):
     """
     Callback that runs a Momentum Scheduler.
 

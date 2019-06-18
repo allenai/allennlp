@@ -3,8 +3,8 @@ from allennlp.training.callbacks.callback_handler import CallbackHandler
 from allennlp.training.callbacks.events import Events
 
 from allennlp.training.callbacks.log_to_tensorboard import LogToTensorboard
-from allennlp.training.callbacks.learning_rate_scheduler import LrsCallback
-from allennlp.training.callbacks.momentum_scheduler import MomentumSchedulerCallback
+from allennlp.training.callbacks.update_learning_rate import UpdateLearningRate
+from allennlp.training.callbacks.update_momentum import UpdateMomentum
 from allennlp.training.callbacks.checkpoint import CheckpointCallback
 from allennlp.training.callbacks.moving_average import MovingAverageCallback
 from allennlp.training.callbacks.validate import Validate
