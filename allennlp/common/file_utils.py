@@ -18,8 +18,7 @@ import botocore
 from botocore.exceptions import ClientError
 import requests
 from requests.adapters import HTTPAdapter
-from requests.packages.urllib3.util.retry import Retry
-
+from requests.packages.urllib3.util.retry import Retry  # pylint: disable=import-error
 
 from allennlp.common.tqdm import Tqdm
 
@@ -80,7 +79,6 @@ def filename_to_url(filename: str, cache_dir: str = None) -> Tuple[str, str]:
     etag = metadata['etag']
 
     return url, etag
-
 
 def cached_path(url_or_filename: Union[str, Path], cache_dir: str = None) -> str:
     """
@@ -179,8 +177,14 @@ def s3_get(url: str, temp_file: IO) -> None:
     bucket_name, s3_path = split_s3_path(url)
     s3_resource.Bucket(bucket_name).download_fileobj(s3_path, temp_file)
 
-def _backoff_session() -> requests.Session:
-    # stackoverflow.com/questions/23267409/how-to-implement-retry-mechanism-into-python-requests-library?rq=1
+def session_with_backoff() -> requests.Session:
+    """
+    We ran into an issue where http requests to s3 were timing out,
+    possibly because we were making too many requests too quickly.
+    This helper function returns a requests session that has retry-with-backoff
+    built in.
+    see stackoverflow.com/questions/23267409/how-to-implement-retry-mechanism-into-python-requests-library
+    """
     session = requests.Session()
     retries = Retry(total=5, backoff_factor=1, status_forcelist=[502, 503, 504])
     session.mount('http://', HTTPAdapter(max_retries=retries))
@@ -188,9 +192,8 @@ def _backoff_session() -> requests.Session:
 
     return session
 
-
 def http_get(url: str, temp_file: IO) -> None:
-    with _backoff_session() as session:
+    with session_with_backoff() as session:
         req = session.get(url, stream=True)
         content_length = req.headers.get('Content-Length')
         total = int(content_length) if content_length is not None else None
@@ -217,7 +220,7 @@ def get_from_cache(url: str, cache_dir: str = None) -> str:
     if url.startswith("s3://"):
         etag = s3_etag(url)
     else:
-        with _backoff_session() as session:
+        with session_with_backoff() as session:
             response = session.head(url, allow_redirects=True)
         if response.status_code != 200:
             raise IOError("HEAD request failed for url {} with status code {}"
