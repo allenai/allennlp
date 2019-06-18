@@ -17,6 +17,9 @@ import boto3
 import botocore
 from botocore.exceptions import ClientError
 import requests
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
+
 
 from allennlp.common.tqdm import Tqdm
 
@@ -178,7 +181,13 @@ def s3_get(url: str, temp_file: IO) -> None:
 
 
 def http_get(url: str, temp_file: IO) -> None:
-    req = requests.get(url, stream=True)
+    # stackoverflow.com/questions/23267409/how-to-implement-retry-mechanism-into-python-requests-library?rq=1
+    session = requests.Session()
+    retries = Retry(total=5, backoff_factor=1, status_forcelist=[502, 503, 504])
+    session.mount('http://', HTTPAdapter(max_retries=retries))
+    session.mount('https://', HTTPAdapter(max_retries=retries))
+
+    req = session.get(url, stream=True)
     content_length = req.headers.get('Content-Length')
     total = int(content_length) if content_length is not None else None
     progress = Tqdm.tqdm(unit="B", total=total)
