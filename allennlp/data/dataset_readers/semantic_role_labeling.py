@@ -233,11 +233,14 @@ class SrlReader(DatasetReader):
 
         if all([x == 0 for x in verb_label]):
             verb = None
+            verb_index = None
         else:
-            verb = tokens[verb_label.index(1)].text
+            verb_index = verb_label.index(1)
+            verb = tokens[verb_index].text
 
         metadata_dict["words"] = [x.text for x in tokens]
         metadata_dict["verb"] = verb
+        metadata_dict["verb_index"] = verb_index
 
         if tags:
             if self.bert_tokenizer is not None:

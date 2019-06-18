@@ -3,12 +3,11 @@ import pathlib
 from subprocess import run
 from typing import List
 import shutil
-import requests
 
 from overrides import overrides
 import torch
 
-from allennlp.common.file_utils import cached_path
+from allennlp.common.file_utils import cached_path, session_with_backoff
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import DatasetReader, Instance
 from allennlp.models import Model
@@ -40,16 +39,18 @@ class WikiTablesParserPredictor(Predictor):
         # Load auxiliary sempre files during startup for faster logical form execution.
         os.makedirs(SEMPRE_DIR, exist_ok=True)
         abbreviations_path = os.path.join(SEMPRE_DIR, 'abbreviations.tsv')
-        if not os.path.exists(abbreviations_path):
-            result = requests.get(ABBREVIATIONS_FILE)
-            with open(abbreviations_path, 'wb') as downloaded_file:
-                downloaded_file.write(result.content)
-
         grammar_path = os.path.join(SEMPRE_DIR, 'grow.grammar')
-        if not os.path.exists(grammar_path):
-            result = requests.get(GROW_FILE)
-            with open(grammar_path, 'wb') as downloaded_file:
-                downloaded_file.write(result.content)
+
+        with session_with_backoff() as session:
+            if not os.path.exists(abbreviations_path):
+                result = session.get(ABBREVIATIONS_FILE)
+                with open(abbreviations_path, 'wb') as downloaded_file:
+                    downloaded_file.write(result.content)
+
+            if not os.path.exists(grammar_path):
+                result = session.get(GROW_FILE)
+                with open(grammar_path, 'wb') as downloaded_file:
+                    downloaded_file.write(result.content)
 
     @overrides
     def _json_to_instance(self, json_dict: JsonDict) -> Instance:
