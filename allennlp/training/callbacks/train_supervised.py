@@ -79,10 +79,10 @@ class TrainSupervised(Callback):
     @handle_event(Events.VALIDATE, priority=-1000)
     def optimize_last_batch(self, trainer: 'CallbackTrainer'):
         """
-        There may be leftover gradients if the final batch is incomplete.
-        We need to take an optimizer step for these as well. We do this
-        with very early priority on the VALIDATE event, which happens right
-        after the last batch.
+        There will be leftover gradients if the number of batches is not
+        divisible by `gradient_accumulation_period`. We need to take an
+        optimizer step for these as well. We do this with very early priority on
+        the VALIDATE event, which happens right after the last batch.
         """
         if self.accumulated_batches > 0:
             self._optimize(trainer)
