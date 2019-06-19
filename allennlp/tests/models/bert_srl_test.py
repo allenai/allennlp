@@ -6,7 +6,7 @@ from pytorch_pretrained_bert.tokenization import BertTokenizer
 
 from allennlp.common.testing import ModelTestCase
 from allennlp.nn.util import get_lengths_from_binary_sequence_mask
-
+from allennlp.data.dataset_readers.dataset_utils.span_utils import to_bioul
 
 class BertSrlTest(ModelTestCase):
     def setUp(self):
@@ -54,3 +54,12 @@ class BertSrlTest(ModelTestCase):
         # of the individual instances, rather than the max length.
         for prediction, length in zip(decode_output_dict["wordpiece_tags"], lengths):
             assert len(prediction) == length
+
+        for prediction, length, words, wordpiece_tags in zip(decode_output_dict["tags"], lengths, decode_output_dict["words"], decode_output_dict["wordpiece_tags"]):
+
+            # to_bioul throws an exception if the tag sequence is not well formed,
+            # so here we can easily check that the sequence we produce is good.
+            print(words)
+            print(wordpiece_tags)
+            print(prediction)
+            to_bioul(prediction, encoding="BIO")
