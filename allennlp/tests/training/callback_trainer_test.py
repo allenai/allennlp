@@ -6,6 +6,7 @@ import os
 import re
 import time
 from typing import Dict, Iterable
+from unittest.mock import MagicMock
 
 import torch
 import responses
@@ -86,7 +87,8 @@ class TestCallbackTrainer(ModelTestCase):
                           iterator: DataIterator = None,
                           validation_data: Iterable[Instance] = None,
                           validation_iterator: DataIterator = None,
-                          batch_size: int = 2):
+                          batch_size: int = 2,
+                          gradient_accumulation_period: int = 1):
         if serialization_dir == "__DEFAULT__":
             serialization_dir = self.TEST_DIR
         checkpointer = Checkpointer(serialization_dir,
@@ -104,7 +106,7 @@ class TestCallbackTrainer(ModelTestCase):
                 Validate(validation_data=self.instances if validation_data is None else validation_data,
                          validation_iterator=iterator if validation_iterator is None else validation_iterator),
                 TrackMetrics(patience, validation_metric),
-                TrainSupervised(),
+                TrainSupervised(gradient_accumulation_period=gradient_accumulation_period),
                 GenerateTrainingBatches(self.instances, iterator, True)
         ]
 
@@ -742,3 +744,26 @@ class TestCallbackTrainer(ModelTestCase):
         assert training_metrics["best_validation_loss"] == restored_metrics["best_validation_loss"]
         assert training_metrics["best_epoch"] == 0
         assert training_metrics["validation_loss"] > restored_metrics["validation_loss"]
+
+    def test_gradient_accumulation(self):
+        callbacks = self.default_callbacks(batch_size=1, gradient_accumulation_period=3)
+
+        # We'll record trainer.batch_num_total each time optimizer.step is called.
+        batch_nums_total = []
+        side_effect = lambda: batch_nums_total.append(trainer.batch_num_total)
+        self.optimizer.step = MagicMock(return_value=None, side_effect=side_effect)
+
+        trainer = CallbackTrainer(model=self.model,
+                                  optimizer=self.optimizer,
+                                  callbacks=callbacks,
+                                  num_epochs=2)
+        trainer.train()
+
+        # There are 8 batches (2 epochs * 4 instances / batch_size 1)
+        # but optimizer.step should only get called 4 times.
+        assert len(self.optimizer.step.mock_calls) == 4
+
+        # And it should get called at the end of batch 3, then at the end
+        # of the epoch (batch 4), then at the end of batch 7, then at the
+        # end of the second epoch (batch 8).
+        assert batch_nums_total == [3, 4, 7, 8]
