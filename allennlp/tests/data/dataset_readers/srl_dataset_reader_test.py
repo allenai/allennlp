@@ -112,8 +112,8 @@ class TestBertSrlReader(AllenNlpTestCase):
 
 
     def test_wordpiece_tokenize_input(self):
-        wordpieces, offsets, start_offsets = self.reader._wordpiece_tokenize_input(
-            "This is a sentenceandsomepieces with a reallylongword".split(" "))
+        wordpieces, offsets, start_offsets = self.reader._wordpiece_tokenize_input( # pylint: disable=protected-access
+                "This is a sentenceandsomepieces with a reallylongword".split(" "))
 
         assert wordpieces == ['[CLS]', 'this', 'is', 'a', 'sentence', '##ands', '##ome',
                               '##piece', '##s', 'with', 'a', 'really', '##long', '##word', '[SEP]']

@@ -123,7 +123,6 @@ class SrlReader(DatasetReader):
     Returns
     -------
     A ``Dataset`` of ``Instances`` for Semantic Role Labelling.
-
     """
     def __init__(self,
                  token_indexers: Dict[str, TokenIndexer] = None,
@@ -131,8 +130,6 @@ class SrlReader(DatasetReader):
                  lazy: bool = False,
                  bert_model_name: str = None) -> None:
         super().__init__(lazy)
-
-
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._domain_identifier = domain_identifier
 
@@ -150,14 +147,14 @@ class SrlReader(DatasetReader):
 
         A slight oddity with this function is that it also returns the wordpiece offsets
         corresponding to the _start_ of words as well as the end.
-        
+
         We need both of these offsets (or at least, it's easiest to use both), because we need
         to convert the labels to tags using the end_offsets. However, when we are decoding a
         BIO sequence inside the SRL model itself, it's important that we use the start_offsets,
         because otherwise we might select an ill-formed BIO sequence from the BIO sequence on top of
         wordpieces (this happens in the case that a word is split into multiple word pieces,
         and then we take the last tag of the word, which might correspond to, e.g, I-V, which
-        would not be allowed as it is not preceeded by a B tag). 
+        would not be allowed as it is not preceeded by a B tag).
 
         Returns
         -------

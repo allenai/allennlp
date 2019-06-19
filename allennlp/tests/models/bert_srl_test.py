@@ -55,11 +55,7 @@ class BertSrlTest(ModelTestCase):
         for prediction, length in zip(decode_output_dict["wordpiece_tags"], lengths):
             assert len(prediction) == length
 
-        for prediction, length, words, wordpiece_tags in zip(decode_output_dict["tags"], lengths, decode_output_dict["words"], decode_output_dict["wordpiece_tags"]):
-
+        for prediction, length in zip(decode_output_dict["tags"], lengths):
             # to_bioul throws an exception if the tag sequence is not well formed,
             # so here we can easily check that the sequence we produce is good.
-            print(words)
-            print(wordpiece_tags)
-            print(prediction)
             to_bioul(prediction, encoding="BIO")

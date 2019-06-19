@@ -48,7 +48,8 @@ class SemanticRoleLabelerTest(ModelTestCase):
         for prediction, length in zip(decode_output_dict["tags"], lengths):
             assert len(prediction) == length
 
-            # Checks that the output is a well formed BIO sequence, as otherwise an exception is thrown.
+            # Checks that the output is a well formed BIO sequence,
+            # as otherwise an exception is thrown.
             to_bioul(prediction, encoding="BIO")
 
     def test_bio_tags_correctly_convert_to_conll_format(self):

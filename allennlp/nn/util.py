@@ -424,7 +424,7 @@ def viterbi_decode(tag_sequence: torch.Tensor,
         warning, but the responsibility for providing self-consistent evidence ultimately
         lies with the user.
     allowed_start_transitions : torch.Tensor, optional, (default = None)
-        An optional tensor of shape (num_tags,) describing which tags the START token 
+        An optional tensor of shape (num_tags,) describing which tags the START token
         may transition TO. If provided, additional transition constraints will be used for
         determining the start element of the sequence.
     allowed_end_transitions : torch.Tensor, optional, (default = None)
@@ -455,8 +455,10 @@ def viterbi_decode(tag_sequence: torch.Tensor,
         new_transition_matrix[:-2, :-2] = transition_matrix
 
         # Start and end transitions are fully defined, but cannot transition between each other.
+        # pylint: disable=not-callable
         allowed_start_transitions = torch.cat([allowed_start_transitions, torch.tensor([-math.inf, -math.inf])])
         allowed_end_transitions = torch.cat([allowed_end_transitions, torch.tensor([-math.inf, -math.inf])])
+        # pylint: enable=not-callable
 
         # First define how we may transition FROM the start and end tags.
         new_transition_matrix[-2, :] = allowed_start_transitions
@@ -467,7 +469,7 @@ def viterbi_decode(tag_sequence: torch.Tensor,
         # We cannot transition to the start tag from any tag.
         new_transition_matrix[:, -2] = -math.inf
 
-        transition_matrix = new_transition_matrix       
+        transition_matrix = new_transition_matrix
 
     if tag_observations:
         if len(tag_observations) != sequence_length:
