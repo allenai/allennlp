@@ -140,7 +140,8 @@ class SrlBert(Model):
 
         NOTE: First, we decode a BIO sequence on top of the wordpieces. This is important; viterbi
         decoding produces low quality output if you decode on top of word representations directly,
-        because the model already learns very strong preferences for the BIO tag type.
+        because the model gets confused by the 'missing' positions (which is sensible as it is trained
+        to perform tagging on wordpieces, not words).
 
         Secondly, it's important that the indices we use to recover words from the wordpieces are the
         start_offsets (i.e offsets which correspond to using the first wordpiece of words which are

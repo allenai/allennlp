@@ -425,10 +425,10 @@ def viterbi_decode(tag_sequence: torch.Tensor,
         lies with the user.
     allowed_start_transitions : torch.Tensor, optional, (default = None)
         An optional tensor of shape (num_tags,) describing which tags the START token
-        may transition TO. If provided, additional transition constraints will be used for
+        may transition *to*. If provided, additional transition constraints will be used for
         determining the start element of the sequence.
     allowed_end_transitions : torch.Tensor, optional, (default = None)
-        An optional tensor of shape (num_tags,) describing which tags may transition TO the
+        An optional tensor of shape (num_tags,) describing which tags may transition *to* the
         end tag. If provided, additional transition constraints will be used for determining
         the end element of the sequence.
 

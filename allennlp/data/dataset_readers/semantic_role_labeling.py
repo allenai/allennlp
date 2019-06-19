@@ -156,6 +156,13 @@ class SrlReader(DatasetReader):
         and then we take the last tag of the word, which might correspond to, e.g, I-V, which
         would not be allowed as it is not preceeded by a B tag).
 
+        For example:
+
+        `annotate` will be bert tokenized as ["anno", "##tate"].
+        If this is tagged as [B-V, I-V] as it should be, we need to select the
+        _first_ wordpiece label to be the label for the token, because otherwise
+        we may end up with invalid tag sequences (we cannot start a new tag with an I).
+
         Returns
         -------
         wordpieces : List[str]
