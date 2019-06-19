@@ -79,8 +79,9 @@ class SrlBert(Model):
             A torch tensor representing the sequence of integer gold class labels
             of shape ``(batch_size, num_tokens)``
         metadata : ``List[Dict[str, Any]]``, optional, (default = None)
-            metadata containg the original words in the sentence and the verb to compute the
-            frame for, under 'words' and 'verb' keys, respectively.
+            metadata containg the original words in the sentence, the verb to compute the
+            frame for, and start offsets for converting wordpieces back to a sequence of words,
+            under 'words', 'verb' and 'offsets' keys, respectively.
 
         Returns
         -------
@@ -136,6 +137,17 @@ class SrlBert(Model):
         Does constrained viterbi decoding on class probabilities output in :func:`forward`.  The
         constraint simply specifies that the output tags must be a valid BIO sequence.  We add a
         ``"tags"`` key to the dictionary with the result.
+
+        NOTE: First, we decode a BIO sequence on top of the wordpieces. This is important; viterbi
+        decoding produces low quality output if you decode on top of word representations directly,
+        because the model already learns very strong preferences for the BIO tag type.
+
+        Secondly, it's important that the indices we use to recover words from the wordpieces are the
+        start_offsets (i.e offsets which correspond to using the first wordpiece of words which are
+        tokenized into multiple wordpieces) as otherwise, we might get an ill-formed BIO sequence
+        when we select out the word tags from the wordpiece tags. This happens in the case that a word
+        is split into multiple word pieces, and then we take the last tag of the word, which might
+        correspond to, e.g, I-V, which would not be allowed as it is not preceeded by a B tag.
         """
         all_predictions = output_dict['class_probabilities']
         sequence_lengths = get_lengths_from_binary_sequence_mask(output_dict["mask"]).data.tolist()
@@ -156,8 +168,7 @@ class SrlBert(Model):
             tags = [self.vocab.get_token_from_index(x, namespace="labels")
                     for x in max_likelihood_sequence]
             wordpiece_tags.append(tags)
-            # Offset due to exclusive end indices.
-            word_tags.append([tags[i - 1] for i in offsets])
+            word_tags.append([tags[i] for i in offsets])
         output_dict['wordpiece_tags'] = wordpiece_tags
         output_dict['tags'] = word_tags
         return output_dict
