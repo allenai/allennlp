@@ -1,3 +1,4 @@
+# pylint: disable=no-self-use
 from typing import Optional, TYPE_CHECKING
 import logging
 
