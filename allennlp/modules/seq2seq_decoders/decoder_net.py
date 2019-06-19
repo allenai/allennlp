@@ -1,6 +1,5 @@
+from typing import Tuple, Dict, Optional
 import torch
-from typing import Tuple, TypeVar, Generic, Dict, Any, Optional
-from allennlp.nn import util
 from allennlp.common import Registrable
 
 class DecoderNet(torch.nn.Module, Registrable):
@@ -8,7 +7,7 @@ class DecoderNet(torch.nn.Module, Registrable):
     """
     A ``DecoderNet`` is a ``Module`` that takes as input a result of ``Seq2SeqEncoder`` and returns a
     new sequence of vectors.
-    Decoder should implement function to perform a decoding step. 
+    Decoder should implement function to perform a decoding step.
     Parameters
     ----------
     decoding_dim : ``int``, required
@@ -59,12 +58,13 @@ class DecoderNet(torch.nn.Module, Registrable):
                 encoder_outputs: torch.Tensor,
                 source_mask: torch.Tensor,
                 previous_steps_predictions: torch.Tensor,
-                previous_steps_mask: Optional[torch.Tensor] = None,
-    ) -> Tuple[Dict[str, torch.Tensor], torch.Tensor]:
+                previous_steps_mask: Optional[torch.Tensor] = None) -> Tuple[Dict[str, torch.Tensor],
+                                                                             torch.Tensor]:
+        # pylint: disable=arguments-differ
         """
         Performs a decoding step, and returns dictionary with decoder hidden state or cache and the decoder output.
-        The decoder output is a 3d tensor (group_size, steps_count, decoder_output_dim) if `self.decodes_parallel` is True,
-        else it is a 2d tensor with (group_size, decoder_output_dim).
+       The decoder output is a 3d tensor (group_size, steps_count, decoder_output_dim)
+        if `self.decodes_parallel` is True, else it is a 2d tensor with (group_size, decoder_output_dim).
 
         Parameters
         ----------

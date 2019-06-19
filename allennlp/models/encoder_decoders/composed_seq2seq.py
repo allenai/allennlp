@@ -60,21 +60,21 @@ class ComposedSeq2Seq(Model):
         self._decoder = decoder
 
         if self._encoder.get_output_dim() != self._decoder.get_output_dim():
-            raise ConfigurationError(
-                f"Encoder output dimension {self._encoder.get_output_dim()} should be"
-                f" equal to decoder dimension {self._decoder.get_output_dim()}.")
+            raise ConfigurationError(f"Encoder output dimension {self._encoder.get_output_dim()} should be"
+                                     f" equal to decoder dimension {self._decoder.get_output_dim()}.")
         if tied_source_embedder_key:
             # Very ugly way to tie Embeddings
             if not isinstance(self._source_text_embedder, BasicTextFieldEmbedder):
                 raise ConfigurationError("Unable to tie embeddings,"
                                          "Source text embedder is not an instance of `BasicTextFieldEmbedder`.")
+            # pylint: disable=protected-access
             source_embedder = self._source_text_embedder._token_embedders[tied_source_embedder_key]
             if not isinstance(source_embedder, Embedding):
                 raise ConfigurationError("Unable to tie embeddings,"
                                          "Selected source embedder is not an instance of `Embedding`.")
             source_weight_shape = source_embedder.weight.shape
             target_weight_shape = self._decoder.target_embedder.weight.shape
-            if  source_weight_shape != target_weight_shape :
+            if  source_weight_shape != target_weight_shape:
                 raise ConfigurationError(f"Unable to tie embeddings due to mismatch in shared weights."
                                          f"source  -  {source_weight_shape}"
                                          f"target  -  {target_weight_shape}")
@@ -121,8 +121,8 @@ class ComposedSeq2Seq(Model):
         # shape: (batch_size, max_input_sequence_length, encoder_output_dim)
         encoder_outputs = self._encoder(embedded_input, source_mask)
         return {
-            "source_mask": source_mask,
-            "encoder_outputs": encoder_outputs,
+                "source_mask": source_mask,
+                "encoder_outputs": encoder_outputs,
         }
 
     @overrides

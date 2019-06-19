@@ -21,11 +21,13 @@ class ComposedSeq2SeqTest(ModelTestCase):
         self.ensure_model_can_train_save_and_load(self.param_file, tolerance=1e-2)
 
     def test_bidirectional_model_can_train_save_and_load(self):
+        # pylint: disable=bad-continuation
         param_overrides = json.dumps({
             "model": {
                 "encoder": {"bidirectional": True},
                 "decoder": {"decoder_cell": {"decoding_dim": 20}, 'bidirectional_input': True}
-            }})
+            }
+        })
         self.ensure_model_can_train_save_and_load(self.param_file,
                                                   tolerance=1e-2,
                                                   overrides=param_overrides)
@@ -76,7 +78,9 @@ class ComposedSeq2SeqTest(ModelTestCase):
 
     def test_greedy_decode_matches_beam_search(self):
         # pylint: disable=protected-access
-        beam_search = BeamSearch(self.model.decoder._end_index, max_steps=self.model.decoder._max_decoding_steps, beam_size=1)
+        beam_search = BeamSearch(self.model.decoder._end_index,
+                                 max_steps=self.model.decoder._max_decoding_steps,
+                                 beam_size=1)
         training_tensors = self.dataset.as_tensor_dict()
 
         # Get greedy predictions from _forward_loop method of model.
@@ -89,7 +93,8 @@ class ComposedSeq2SeqTest(ModelTestCase):
         state = self.model._encode(training_tensors["source_tokens"])
         state = self.model.decoder._init_decoder_state(state)
         batch_size = state["source_mask"].size()[0]
-        start_predictions = state["source_mask"].new_full((batch_size,), fill_value=self.model.decoder._start_index)
+        start_predictions = state["source_mask"].new_full((batch_size,),
+                                                          fill_value=self.model.decoder._start_index)
         all_top_k_predictions, _ = beam_search.search(
                 start_predictions, state, self.model.decoder.take_step)
         output_dict_beam_search = {

@@ -31,6 +31,7 @@ class SeqDecoder(Module, Registrable):
     def forward(self,
                 encoder_out: Dict[str, torch.LongTensor],
                 target_tokens: Dict[str, torch.LongTensor] = None) -> Dict[str, torch.Tensor]:
+        # pylint: disable=arguments-differ
         raise NotImplementedError()
 
     def post_process(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:

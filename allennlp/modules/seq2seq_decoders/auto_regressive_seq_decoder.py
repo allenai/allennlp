@@ -1,12 +1,11 @@
-from overrides import overrides
 from typing import Dict, List, Tuple, Optional
+from overrides import overrides
 
 import numpy
 import torch
 import torch.nn.functional as F
-from torch.nn import Linear, Module
+from torch.nn import Linear
 
-from allennlp.common import Registrable
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import END_SYMBOL, START_SYMBOL
 from allennlp.modules.seq2seq_decoders.seq_decoder import SeqDecoder
@@ -50,8 +49,9 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
         of type `List[List[str]]`. The first is a predicted sequence for each item
         in the batch and the second is a gold sequence for each item in the batch.
     scheduled_sampling_ratio : ``float`` optional (default = 0)
-        Defines ratio between teacher forced training and real output usage. If its zero (teacher forcing only) and `decoder_net`
-        supports parallel decoding, we get the output predictions in a single forward pass of the `decoder_net`.
+        Defines ratio between teacher forced training and real output usage. If its zero
+        (teacher forcing only) and `decoder_net`supports parallel decoding, we get the output
+        predictions in a single forward pass of the `decoder_net`.
     """
 
     def __init__(
@@ -114,17 +114,17 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
 
         # shape (all_top_k_predictions): (batch_size, beam_size, num_decoding_steps)
         # shape (log_probabilities): (batch_size, beam_size)
-        all_top_k_predictions, log_probabilities = self._beam_search.search(
-            start_predictions, state, self.take_step)
+        all_top_k_predictions, log_probabilities = self._beam_search.search(start_predictions,
+                                                                            state, self.take_step)
 
         output_dict = {
-            "class_log_probabilities": log_probabilities,
-            "predictions": all_top_k_predictions,
+                "class_log_probabilities": log_probabilities,
+                "predictions": all_top_k_predictions,
         }
         return output_dict
 
-    def _forward_loss(self, state: Dict[str, torch.Tensor], target_tokens: Dict[str, torch.LongTensor]) -> Dict[
-        str, torch.Tensor]:
+    def _forward_loss(self, state: Dict[str, torch.Tensor],
+                      target_tokens: Dict[str, torch.LongTensor]) -> Dict[str, torch.Tensor]:
         """
         Make forward pass during training or do greedy search during prediction.
 
@@ -173,7 +173,7 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
             last_predictions = source_mask.new_full((batch_size,), fill_value=self._start_index)
 
             # shape: (steps, batch_size, target_embedding_dim)
-            steps_embeddings = torch.tensor([])
+            steps_embeddings = torch.Tensor([])
 
             step_logits: List[torch.Tensor] = []
 
@@ -191,7 +191,7 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
                     effective_last_prediction = targets[:, timestep]
 
                     if timestep == 0:
-                        state['previous_steps_predictions'] = torch.tensor([])
+                        state['previous_steps_predictions'] = torch.Tensor([])
                     else:
                         # shape: (batch_size, steps, target_embedding_dim)
                         state['previous_steps_predictions'] = target_embedding[:, :timestep]
@@ -388,9 +388,8 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
                 target_tokens: Dict[str, torch.LongTensor] = None):
 
         state = encoder_out
-        state.update(
-            self._decoder_net.init_decoder_state(state)
-        )
+        decoder_init_state = self._decoder_net.init_decoder_state(state)
+        state.update(decoder_init_state)
 
         if target_tokens:
             output_dict = self._forward_loss(state, target_tokens)

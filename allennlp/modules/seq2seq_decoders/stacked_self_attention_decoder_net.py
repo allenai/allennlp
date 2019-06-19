@@ -1,18 +1,20 @@
-from typing import Tuple, Generic, Dict, Any, Optional
+from typing import Tuple, Dict, Optional
 import copy
 import math
 from overrides import overrides
 
-import numpy as np
 import torch
 from torch import nn
 from torch.autograd import Variable
 import torch.nn.functional as F
 
-from allennlp.modules.seq2seq_encoders.bidirectional_language_model_transformer import attention, subsequent_mask, PositionwiseFeedForward, SublayerConnection, PositionalEncoding, MultiHeadedAttention
+from allennlp.modules.seq2seq_encoders.bidirectional_language_model_transformer import (subsequent_mask,
+                                                                                        PositionwiseFeedForward,
+                                                                                        SublayerConnection,
+                                                                                        PositionalEncoding,
+                                                                                        MultiHeadedAttention)
 from allennlp.modules.seq2seq_decoders.decoder_net import DecoderNet
 from allennlp.modules.layer_norm import LayerNorm
-from allennlp.nn import util
 
 
 @DecoderNet.register("stacked_self_attention")
@@ -59,24 +61,24 @@ class StackedSelfAttentionDecoderNet(DecoderNet):
                  residual_dropout_prob: float = 0.2,
                  attention_dropout_prob: float = 0.1,) -> None:
 
-        super().__init__(
-            decoding_dim=decoding_dim,
-            target_embedding_dim=target_embedding_dim,
-            decodes_parallel=True
-        )
+        super().__init__(decoding_dim=decoding_dim,
+                         target_embedding_dim=target_embedding_dim,
+                         decodes_parallel=True)
 
-        c = copy.deepcopy
+        deep_copy = copy.deepcopy
         attn = MultiHeadedAttention(num_attention_heads, decoding_dim, attention_dropout_prob)
-        ff = PositionwiseFeedForward(decoding_dim, feedforward_hidden_dim, dropout_prob)
+        feed_forward = PositionwiseFeedForward(decoding_dim, feedforward_hidden_dim, dropout_prob)
         self._embed_scale = math.sqrt(decoding_dim)
-        self._positional_embedder = PositionalEncoding(decoding_dim, positional_encoding_max_steps) if use_positional_encoding else None
+        self._positional_embedder = PositionalEncoding(decoding_dim,
+                                                       positional_encoding_max_steps) \
+                                                       if use_positional_encoding else None
         self._dropout = nn.Dropout(dropout_prob)
-        self._self_attention = Decoder(DecoderLayer(decoding_dim, c(attn), c(attn),
-                                             ff, residual_dropout_prob), num_layers)
+        self._self_attention = Decoder(DecoderLayer(decoding_dim, deep_copy(attn), deep_copy(attn),
+                                                    feed_forward, residual_dropout_prob), num_layers)
+
     @overrides
     def init_decoder_state(self, encoder_out: Dict[str, torch.LongTensor]) -> Dict[str, torch.Tensor]:
-        return {
-        }
+        return {}
 
     @overrides
     def forward(self,
@@ -84,10 +86,12 @@ class StackedSelfAttentionDecoderNet(DecoderNet):
                 encoder_outputs: torch.Tensor,
                 source_mask: torch.Tensor,
                 previous_steps_predictions: torch.Tensor,
-                previous_steps_mask: Optional[torch.Tensor] = None,
-    ) -> Tuple[Dict[str, torch.Tensor], torch.Tensor]:
+                previous_steps_mask: Optional[torch.Tensor] = None) -> Tuple[Dict[str, torch.Tensor],
+                                                                             torch.Tensor]:
+
         source_mask = source_mask.unsqueeze(-2)
-        future_mask = Variable(subsequent_mask(previous_steps_predictions.size(-2), device=source_mask.device).type_as(source_mask.data))
+        future_mask = Variable(subsequent_mask(previous_steps_predictions.size(-2),
+                                               device=source_mask.device).type_as(source_mask.data))
         if previous_steps_mask is None:
             previous_steps_mask = future_mask
         else:
@@ -96,12 +100,10 @@ class StackedSelfAttentionDecoderNet(DecoderNet):
         if self._positional_embedder:
             previous_steps_predictions = self._positional_embedder(previous_steps_predictions)
         previous_steps_predictions = self._dropout(previous_steps_predictions)
-        decoded = self._self_attention(
-            previous_steps_predictions,
-            encoder_outputs,
-            source_mask,
-            previous_steps_mask
-        )
+        decoded = self._self_attention(previous_steps_predictions,
+                                       encoder_outputs,
+                                       source_mask,
+                                       previous_steps_mask)
         return {}, decoded
 
 
@@ -121,6 +123,7 @@ class Decoder(nn.Module):
     @overrides
     def forward(self, x: torch.Tensor, memory: torch.Tensor,
                 src_mask: torch.Tensor, tgt_mask: torch.Tensor) -> torch.Tensor:
+        # pylint: disable=arguments-differ
         for layer in self.layers:
             x = layer(x, memory, src_mask, tgt_mask)
         return self.norm(x)
@@ -139,6 +142,7 @@ class DecoderLayer(nn.Module):
 
     def forward(self, x: torch.Tensor, memory: torch.Tensor,
                 src_mask: torch.Tensor, tgt_mask: torch.Tensor) -> torch.Tensor:
+        # pylint: disable=arguments-differ
         "Follow Figure 1 (right) for connections."
         m = memory
         x = self.sublayer[0](x, lambda x: self.self_attn(x, x, x, tgt_mask))
