@@ -164,7 +164,7 @@ def sanitize_label(label: str) -> str:
     labels sometimes having some noise, as parentheses.
     """
     if "-" in label:
-        prefix, suffix = label.split("-")
+        prefix, suffix = label.split("-", 1)
         suffix = suffix.split("(")[-1]
         return f"{prefix}-{suffix}"
     else:

@@ -2,7 +2,7 @@
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor
-from allennlp.predictors.open_information_extraction import consolidate_predictions, get_predicate_text
+from allennlp.predictors.open_information_extraction import consolidate_predictions, get_predicate_text, sanitize_label
 from allennlp.data.tokenizers import WordTokenizer
 from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
 
@@ -36,6 +36,10 @@ class TestOpenIePredictor(AllenNlpTestCase):
             assert isinstance(tags, list)
             assert all(isinstance(tag, str) for tag in tags)
             assert len(tags) == num_words
+
+    def test_sanitize_label(self):
+
+        assert sanitize_label("B-ARGV-MOD") == "B-ARGV-MOD"
 
 
     def test_prediction_with_no_verbs(self):
