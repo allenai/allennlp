@@ -517,6 +517,21 @@ class TestNnUtil(AllenNlpTestCase):
         _, argmax_indices = torch.max(sequence_logits, 1)
         assert indices == argmax_indices.data.squeeze().tolist()
 
+        # Test Viterbi decoding works with start and end transitions
+        sequence_logits = torch.nn.functional.softmax(torch.rand([5, 9]), dim=-1)
+        transition_matrix = torch.zeros([9, 9])
+        allowed_start_transitions = torch.zeros([9])
+        # Force start tag to be an 8
+        allowed_start_transitions[:8] = float("-inf")
+        allowed_end_transitions = torch.zeros([9])
+        # Force end tag to be a 0
+        allowed_end_transitions[1:] = float("-inf")
+        indices, _ = util.viterbi_decode(sequence_logits.data, transition_matrix,
+                                         allowed_end_transitions=allowed_end_transitions,
+                                         allowed_start_transitions=allowed_start_transitions)
+        assert indices[0] == 8
+        assert indices[-1] == 0
+
         # Test that pairwise potentials affect the sequence correctly and that
         # viterbi_decode can handle -inf values.
         sequence_logits = torch.FloatTensor([[0, 0, 0, 3, 5],
