@@ -159,14 +159,17 @@ class SrlBert(Model):
         wordpiece_tags = []
         word_tags = []
         transition_matrix = self.get_viterbi_pairwise_potentials()
+        start_transitions = self.get_start_transitions()
         # **************** Different ********************
         # We add in the offsets here so we can compute the un-wordpieced tags.
         for predictions, length, offsets in zip(predictions_list,
                                                 sequence_lengths,
                                                 output_dict["wordpiece_offsets"]):
-            max_likelihood_sequence, _ = viterbi_decode(predictions[:length], transition_matrix)
+            max_likelihood_sequence, _ = viterbi_decode(predictions[:length], transition_matrix,
+                                                        allowed_start_transitions=start_transitions)
             tags = [self.vocab.get_token_from_index(x, namespace="labels")
                     for x in max_likelihood_sequence]
+
             wordpiece_tags.append(tags)
             word_tags.append([tags[i] for i in offsets])
         output_dict['wordpiece_tags'] = wordpiece_tags
@@ -210,3 +213,26 @@ class SrlBert(Model):
                 if i != j and label[0] == 'I' and not previous_label == 'B' + label[1:]:
                     transition_matrix[i, j] = float("-inf")
         return transition_matrix
+
+
+    def get_start_transitions(self):
+        """
+        In the BIO sequence, we cannot start the sequence with an I-XXX tag.
+        This transition sequence is passed to viterbi_decode to specify this constraint.
+
+        Returns
+        -------
+        start_transitions : torch.Tensor
+            The pairwise potentials between a START token and
+            the first token of the sequence.
+        """
+        all_labels = self.vocab.get_index_to_token_vocabulary("labels")
+        num_labels = len(all_labels)
+
+        start_transitions = torch.zeros(num_labels)
+
+        for i, label in all_labels.items():
+            if label[0] == "I":
+                start_transitions[i] = float("-inf")
+
+        return start_transitions

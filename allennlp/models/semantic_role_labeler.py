@@ -180,8 +180,10 @@ class SemanticRoleLabeler(Model):
             predictions_list = [all_predictions]
         all_tags = []
         transition_matrix = self.get_viterbi_pairwise_potentials()
+        start_transitions = self.get_start_transitions()
         for predictions, length in zip(predictions_list, sequence_lengths):
-            max_likelihood_sequence, _ = viterbi_decode(predictions[:length], transition_matrix)
+            max_likelihood_sequence, _ = viterbi_decode(predictions[:length], transition_matrix,
+                                                        allowed_start_transitions=start_transitions)
             tags = [self.vocab.get_token_from_index(x, namespace="labels")
                     for x in max_likelihood_sequence]
             all_tags.append(tags)
@@ -226,6 +228,27 @@ class SemanticRoleLabeler(Model):
                     transition_matrix[i, j] = float("-inf")
         return transition_matrix
 
+    def get_start_transitions(self):
+        """
+        In the BIO sequence, we cannot start the sequence with an I-XXX tag.
+        This transition sequence is passed to viterbi_decode to specify this constraint.
+
+        Returns
+        -------
+        start_transitions : torch.Tensor
+            The pairwise potentials between a START token and
+            the first token of the sequence.
+        """
+        all_labels = self.vocab.get_index_to_token_vocabulary("labels")
+        num_labels = len(all_labels)
+
+        start_transitions = torch.zeros(num_labels)
+
+        for i, label in all_labels.items():
+            if label[0] == "I":
+                start_transitions[i] = float("-inf")
+
+        return start_transitions
 
 def write_to_conll_eval_file(prediction_file: TextIO,
                              gold_file: TextIO,
