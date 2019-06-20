@@ -509,7 +509,7 @@ def viterbi_decode(tag_sequence: torch.Tensor,
         observation = tag_observations[timestep]
         # Warn the user if they have passed
         # invalid/extremely unlikely evidence.
-        if tag_observations[timestep - 1] != -1:
+        if tag_observations[timestep - 1] != -1 and observation != -1:
             if transition_matrix[tag_observations[timestep - 1], observation] < -10000:
                 logger.warning("The pairwise potential between tags you have passed as "
                                "observations is extremely unlikely. Double check your evidence "
