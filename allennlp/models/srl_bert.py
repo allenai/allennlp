@@ -79,8 +79,9 @@ class SrlBert(Model):
             A torch tensor representing the sequence of integer gold class labels
             of shape ``(batch_size, num_tokens)``
         metadata : ``List[Dict[str, Any]]``, optional, (default = None)
-            metadata containg the original words in the sentence and the verb to compute the
-            frame for, under 'words' and 'verb' keys, respectively.
+            metadata containg the original words in the sentence, the verb to compute the
+            frame for, and start offsets for converting wordpieces back to a sequence of words,
+            under 'words', 'verb' and 'offsets' keys, respectively.
 
         Returns
         -------
@@ -136,6 +137,18 @@ class SrlBert(Model):
         Does constrained viterbi decoding on class probabilities output in :func:`forward`.  The
         constraint simply specifies that the output tags must be a valid BIO sequence.  We add a
         ``"tags"`` key to the dictionary with the result.
+
+        NOTE: First, we decode a BIO sequence on top of the wordpieces. This is important; viterbi
+        decoding produces low quality output if you decode on top of word representations directly,
+        because the model gets confused by the 'missing' positions (which is sensible as it is trained
+        to perform tagging on wordpieces, not words).
+
+        Secondly, it's important that the indices we use to recover words from the wordpieces are the
+        start_offsets (i.e offsets which correspond to using the first wordpiece of words which are
+        tokenized into multiple wordpieces) as otherwise, we might get an ill-formed BIO sequence
+        when we select out the word tags from the wordpiece tags. This happens in the case that a word
+        is split into multiple word pieces, and then we take the last tag of the word, which might
+        correspond to, e.g, I-V, which would not be allowed as it is not preceeded by a B tag.
         """
         all_predictions = output_dict['class_probabilities']
         sequence_lengths = get_lengths_from_binary_sequence_mask(output_dict["mask"]).data.tolist()
@@ -147,17 +160,19 @@ class SrlBert(Model):
         wordpiece_tags = []
         word_tags = []
         transition_matrix = self.get_viterbi_pairwise_potentials()
+        start_transitions = self.get_start_transitions()
         # **************** Different ********************
         # We add in the offsets here so we can compute the un-wordpieced tags.
         for predictions, length, offsets in zip(predictions_list,
                                                 sequence_lengths,
                                                 output_dict["wordpiece_offsets"]):
-            max_likelihood_sequence, _ = viterbi_decode(predictions[:length], transition_matrix)
+            max_likelihood_sequence, _ = viterbi_decode(predictions[:length], transition_matrix,
+                                                        allowed_start_transitions=start_transitions)
             tags = [self.vocab.get_token_from_index(x, namespace="labels")
                     for x in max_likelihood_sequence]
+
             wordpiece_tags.append(tags)
-            # Offset due to exclusive end indices.
-            word_tags.append([tags[i - 1] for i in offsets])
+            word_tags.append([tags[i] for i in offsets])
         output_dict['wordpiece_tags'] = wordpiece_tags
         output_dict['tags'] = word_tags
         return output_dict
@@ -199,3 +214,26 @@ class SrlBert(Model):
                 if i != j and label[0] == 'I' and not previous_label == 'B' + label[1:]:
                     transition_matrix[i, j] = float("-inf")
         return transition_matrix
+
+
+    def get_start_transitions(self):
+        """
+        In the BIO sequence, we cannot start the sequence with an I-XXX tag.
+        This transition sequence is passed to viterbi_decode to specify this constraint.
+
+        Returns
+        -------
+        start_transitions : torch.Tensor
+            The pairwise potentials between a START token and
+            the first token of the sequence.
+        """
+        all_labels = self.vocab.get_index_to_token_vocabulary("labels")
+        num_labels = len(all_labels)
+
+        start_transitions = torch.zeros(num_labels)
+
+        for i, label in all_labels.items():
+            if label[0] == "I":
+                start_transitions[i] = float("-inf")
+
+        return start_transitions

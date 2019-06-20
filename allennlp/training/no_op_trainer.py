@@ -4,8 +4,9 @@ from typing import Dict, Any
 from allennlp.common import Params
 from allennlp.models import Model
 from allennlp.training.checkpointer import Checkpointer
-from allennlp.training.trainer import TrainerPieces
 from allennlp.training.trainer_base import TrainerBase
+from allennlp.training.trainer_pieces import TrainerPieces
+
 
 @TrainerBase.register("no_op")
 class NoOpTrainer(TrainerBase):

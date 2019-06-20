@@ -212,8 +212,7 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
                 })
 
         # Allow loading the parameters in the old format
-        with pytest.warns(DeprecationWarning):
-            old_embedder = BasicTextFieldEmbedder.from_params(params=old_params, vocab=self.vocab)
+        old_embedder = BasicTextFieldEmbedder.from_params(params=old_params, vocab=self.vocab)
 
         new_params = Params({
                 "token_embedders": {

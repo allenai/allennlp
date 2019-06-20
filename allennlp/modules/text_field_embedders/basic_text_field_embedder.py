@@ -1,4 +1,3 @@
-import warnings
 from typing import Dict, List, Union, Any
 import inspect
 
@@ -162,11 +161,6 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
             }
 
         else:
-            # Warn that the original behavior is deprecated
-            warnings.warn(DeprecationWarning("the token embedders for BasicTextFieldEmbedder should now "
-                                             "be specified as a dict under the 'token_embedders' key, "
-                                             "not as top-level key-value pairs"))
-
             token_embedders = {}
             keys = list(params.keys())
             for key in keys:
