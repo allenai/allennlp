@@ -111,7 +111,7 @@ class TestOpenAiTransformerEmbedderCorrectWithFixture(AllenNlpTestCase):
     Test that the implementation produces same embeddings as tensorflow model
     """
     def test_openai_transformer_matches_tensorflow(self):
-        model_path = "https://s3-us-west-2.amazonaws.com/allennlp/models/openai-transformer-lm-2018.07.23.tar.gz"
+        model_path = "https://allennlp.s3.amazonaws.com/models/openai-transformer-lm-2018.07.23.tar.gz"
         indexer = OpenaiTransformerBytePairIndexer(model_path=model_path)
         transformer = OpenaiTransformer(model_path=model_path)
 

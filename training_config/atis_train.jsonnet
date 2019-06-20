@@ -1,3 +1,4 @@
+// The ATIS model uses the preprocessed data from https://github.com/clic-lab/atis
 {
   "dataset_reader": {
     "type": "atis",

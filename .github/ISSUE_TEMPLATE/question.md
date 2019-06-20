@@ -1,6 +1,9 @@
 ---
 name: Question
 about: Ask about something you don't understand
+title: ''
+labels: ''
+assignees: ''
 
 ---
 

@@ -59,7 +59,7 @@ class TestFileUtils(AllenNlpTestCase):
     def test_url_to_filename(self):
         for url in ['http://allenai.org', 'http://allennlp.org',
                     'https://www.google.com', 'http://pytorch.org',
-                    'https://s3-us-west-2.amazonaws.com/allennlp' + '/long' * 20 + '/url']:
+                    'https://allennlp.s3.amazonaws.com' + '/long' * 20 + '/url']:
             filename = url_to_filename(url)
             assert "http" not in filename
             with pytest.raises(FileNotFoundError):

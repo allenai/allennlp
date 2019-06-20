@@ -14,6 +14,7 @@ from allennlp.models import Model
 from allennlp.models.semantic_role_labeler import write_bio_formatted_tags_to_file
 from allennlp.nn.util import get_lengths_from_binary_sequence_mask
 
+from allennlp.data.dataset_readers.dataset_utils.span_utils import to_bioul
 
 class SemanticRoleLabelerTest(ModelTestCase):
     def setUp(self):
@@ -46,6 +47,10 @@ class SemanticRoleLabelerTest(ModelTestCase):
         # of the individual instances, rather than the max length.
         for prediction, length in zip(decode_output_dict["tags"], lengths):
             assert len(prediction) == length
+
+            # Checks that the output is a well formed BIO sequence,
+            # as otherwise an exception is thrown.
+            to_bioul(prediction, encoding="BIO")
 
     def test_bio_tags_correctly_convert_to_conll_format(self):
         bio_tags = ["B-ARG-1", "I-ARG-1", "O", "B-V", "B-ARGM-ADJ", "O"]
