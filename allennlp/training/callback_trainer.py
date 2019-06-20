@@ -102,6 +102,9 @@ class CallbackTrainer(TrainerBase):
         self.batch_grad_norm: Optional[float] = None
         self.handler = CallbackHandler(callbacks, self)
 
+        # For capturing errors that occur during the train loop.
+        self.exception: Optional[Exception] = None
+
     def batch_loss(self, batch_group: List[TensorDict], for_training: bool) -> torch.Tensor:
         """
         Does a forward pass on the given batches and returns the ``loss`` value in the result.
@@ -134,76 +137,82 @@ class CallbackTrainer(TrainerBase):
         """
         Trains the supplied model with the supplied parameters.
         """
-        self.handler.fire_event(Events.RESTORE_CHECKPOINT)
-        starting_epoch = self.epoch_number
+        try:
+            self.handler.fire_event(Events.RESTORE_CHECKPOINT)
+            starting_epoch = self.epoch_number
 
-        logger.info("Beginning training.")
-        self.handler.fire_event(Events.TRAINING_START)
+            logger.info("Beginning training.")
+            self.handler.fire_event(Events.TRAINING_START)
 
-        self.training_start_time = time.time()
+            self.training_start_time = time.time()
 
-        for self.epoch_number in range(starting_epoch, self.num_epochs):
-            epoch_start_time = time.time()
-            ####
-            self.handler.fire_event(Events.EPOCH_START)
+            for self.epoch_number in range(starting_epoch, self.num_epochs):
+                epoch_start_time = time.time()
+                ####
+                self.handler.fire_event(Events.EPOCH_START)
 
-            self.train_loss = 0.0
-            # Set the model to "train" mode.
-            self.model.train()
+                self.train_loss = 0.0
+                # Set the model to "train" mode.
+                self.model.train()
 
-            self.last_log = time.time()
-            last_save_time = time.time()
+                self.last_log = time.time()
+                last_save_time = time.time()
 
-            logger.info("Training")
-            self.batches_this_epoch = 0
+                logger.info("Training")
+                self.batches_this_epoch = 0
 
-            batch_groups_tqdm = Tqdm.tqdm(self.training_batches, total=self.num_training_batches)
+                batch_groups_tqdm = Tqdm.tqdm(self.training_batches, total=self.num_training_batches)
 
-            for self.batch_group in batch_groups_tqdm:
-                self.handler.fire_event(Events.BATCH_START)
+                for self.batch_group in batch_groups_tqdm:
+                    self.handler.fire_event(Events.BATCH_START)
 
-                self.batches_this_epoch += 1
-                self.batch_num_total += 1
+                    self.batches_this_epoch += 1
+                    self.batch_num_total += 1
 
-                self.handler.fire_event(Events.FORWARD)
-                self.handler.fire_event(Events.BACKWARD)
+                    self.handler.fire_event(Events.FORWARD)
+                    self.handler.fire_event(Events.BACKWARD)
 
-                description = training_util.description_from_metrics(self.train_metrics)
+                    description = training_util.description_from_metrics(self.train_metrics)
 
-                batch_groups_tqdm.set_description(description, refresh=False)
+                    batch_groups_tqdm.set_description(description, refresh=False)
 
-                # Save model if needed.
-                if self.model_save_interval is not None and (
-                        time.time() - last_save_time > self.model_save_interval
-                ):
-                    last_save_time = time.time()
-                    self.checkpoint_epoch = f"{self.epoch_number}.{training_util.time_to_str(int(last_save_time))}"
-                    self.handler.fire_event(Events.SAVE_CHECKPOINT)
+                    # Save model if needed.
+                    if self.model_save_interval is not None and (
+                            time.time() - last_save_time > self.model_save_interval
+                    ):
+                        last_save_time = time.time()
+                        last_save_time_str = training_util.time_to_str(int(last_save_time))
+                        self.checkpoint_epoch = f"{self.epoch_number}.{last_save_time_str}"
+                        self.handler.fire_event(Events.SAVE_CHECKPOINT)
 
-                self.handler.fire_event(Events.BATCH_END)
+                    self.handler.fire_event(Events.BATCH_END)
 
-            self.handler.fire_event(Events.VALIDATE)
+                self.handler.fire_event(Events.VALIDATE)
 
-            epoch_elapsed_time = time.time() - epoch_start_time
-            logger.info("Epoch duration: %s", datetime.timedelta(seconds=epoch_elapsed_time))
+                epoch_elapsed_time = time.time() - epoch_start_time
+                logger.info("Epoch duration: %s", datetime.timedelta(seconds=epoch_elapsed_time))
 
-            if self.epoch_number < self.num_epochs - 1:
-                training_elapsed_time = time.time() - self.training_start_time
-                estimated_time_remaining = training_elapsed_time * \
-                    ((self.num_epochs - starting_epoch) / float(self.epoch_number - starting_epoch + 1) - 1)
-                formatted_time = str(datetime.timedelta(seconds=int(estimated_time_remaining)))
-                logger.info("Estimated training time remaining: %s", formatted_time)
+                if self.epoch_number < self.num_epochs - 1:
+                    training_elapsed_time = time.time() - self.training_start_time
+                    estimated_time_remaining = training_elapsed_time * \
+                        ((self.num_epochs - starting_epoch) / float(self.epoch_number - starting_epoch + 1) - 1)
+                    formatted_time = str(datetime.timedelta(seconds=int(estimated_time_remaining)))
+                    logger.info("Estimated training time remaining: %s", formatted_time)
 
-            self.handler.fire_event(Events.EPOCH_END)
+                self.handler.fire_event(Events.EPOCH_END)
 
-            self.checkpoint_epoch = self.epoch_number
-            self.handler.fire_event(Events.SAVE_CHECKPOINT)
+                self.checkpoint_epoch = self.epoch_number
+                self.handler.fire_event(Events.SAVE_CHECKPOINT)
 
-            if self.should_stop_early:
-                logger.info("Ran out of patience.  Stopping training.")
-                break
+                if self.should_stop_early:
+                    logger.info("Ran out of patience.  Stopping training.")
+                    break
 
-        self.handler.fire_event(Events.TRAINING_END)
+            self.handler.fire_event(Events.TRAINING_END)
+        except Exception as exc:
+            self.exception = exc
+            self.handler.fire_event(Events.TRAINING_FAIL)
+            raise
 
         return self.metrics
 
