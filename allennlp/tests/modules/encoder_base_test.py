@@ -209,7 +209,7 @@ class TestEncoderBase(AllenNlpTestCase):
                                          index_selected_initial_states[1][:, 2:, :].data.numpy())
 
         # Check that error is raised if mask has wrong batch size.
-        bad_mask = torch.tensor([1, 1, 0])
+        bad_mask = torch.FloatTensor([1, 1, 0])
         with self.assertRaises(ValueError):
             self.encoder_base.reset_states(bad_mask)
 
