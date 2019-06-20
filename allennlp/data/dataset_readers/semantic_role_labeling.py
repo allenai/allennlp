@@ -35,9 +35,6 @@ def _convert_tags_to_wordpiece_tags(tags: List[str], offsets: List[int]) -> List
     -------
     The new BIO tags.
     """
-    # account for the fact the offsets are with respect to
-    # additional cls token at the start.
-    offsets = [x - 1 for x in offsets]
     new_tags = []
     j = 0
     for i, offset in enumerate(offsets):
@@ -83,9 +80,6 @@ def _convert_verb_indices_to_wordpiece_indices(verb_indices: List[int], offsets:
     -------
     The new verb indices.
     """
-    # account for the fact the offsets are with respect to
-    # additional cls token at the start.
-    offsets = [x - 1 for x in offsets]
     j = 0
     new_verb_indices = []
     for i, offset in enumerate(offsets):
@@ -129,7 +123,6 @@ class SrlReader(DatasetReader):
     Returns
     -------
     A ``Dataset`` of ``Instances`` for Semantic Role Labelling.
-
     """
     def __init__(self,
                  token_indexers: Dict[str, TokenIndexer] = None,
@@ -147,26 +140,56 @@ class SrlReader(DatasetReader):
             self.bert_tokenizer = None
             self.lowercase_input = False
 
-    def _wordpiece_tokenize_input(self, tokens: List[str]) -> Tuple[List[str], List[int]]:
+    def _wordpiece_tokenize_input(self, tokens: List[str]) -> Tuple[List[str], List[int], List[int]]:
         """
         Convert a list of tokens to wordpiece tokens and offsets, as well as adding
         BERT CLS and SEP tokens to the begining and end of the sentence.
+
+        A slight oddity with this function is that it also returns the wordpiece offsets
+        corresponding to the _start_ of words as well as the end.
+
+        We need both of these offsets (or at least, it's easiest to use both), because we need
+        to convert the labels to tags using the end_offsets. However, when we are decoding a
+        BIO sequence inside the SRL model itself, it's important that we use the start_offsets,
+        because otherwise we might select an ill-formed BIO sequence from the BIO sequence on top of
+        wordpieces (this happens in the case that a word is split into multiple word pieces,
+        and then we take the last tag of the word, which might correspond to, e.g, I-V, which
+        would not be allowed as it is not preceeded by a B tag).
+
+        For example:
+
+        `annotate` will be bert tokenized as ["anno", "##tate"].
+        If this is tagged as [B-V, I-V] as it should be, we need to select the
+        _first_ wordpiece label to be the label for the token, because otherwise
+        we may end up with invalid tag sequences (we cannot start a new tag with an I).
+
+        Returns
+        -------
+        wordpieces : List[str]
+            The BERT wordpieces from the words in the sentence.
+        end_offsets : List[int]
+            Indices into wordpieces such that `[wordpieces[i] for i in end_offsets]`
+            results in the end wordpiece of each word being chosen.
+        start_offsets : List[int]
+            Indices into wordpieces such that `[wordpieces[i] for i in start_offsets]`
+            results in the start wordpiece of each word being chosen.
         """
         word_piece_tokens: List[str] = []
-        offsets = []
+        end_offsets = []
+        start_offsets = []
         cumulative = 0
         for token in tokens:
             if self.lowercase_input:
                 token = token.lower()
             word_pieces = self.bert_tokenizer.wordpiece_tokenizer.tokenize(token)
+            start_offsets.append(cumulative + 1)
             cumulative += len(word_pieces)
-            offsets.append(cumulative)
+            end_offsets.append(cumulative)
             word_piece_tokens.extend(word_pieces)
 
         wordpieces = ["[CLS]"] + word_piece_tokens + ["[SEP]"]
 
-        offsets = [x + 1 for x in offsets]
-        return wordpieces, offsets
+        return wordpieces, end_offsets, start_offsets
 
     @overrides
     def _read(self, file_path: str):
@@ -214,9 +237,9 @@ class SrlReader(DatasetReader):
         # pylint: disable=arguments-differ
         metadata_dict: Dict[str, Any] = {}
         if self.bert_tokenizer is not None:
-            wordpieces, offsets = self._wordpiece_tokenize_input([t.text for t in tokens])
+            wordpieces, offsets, start_offsets = self._wordpiece_tokenize_input([t.text for t in tokens])
             new_verbs = _convert_verb_indices_to_wordpiece_indices(verb_label, offsets)
-            metadata_dict["offsets"] = offsets
+            metadata_dict["offsets"] = start_offsets
             # In order to override the indexing mechanism, we need to set the `text_id`
             # attribute directly. This causes the indexing to use this id.
             text_field = TextField([Token(t, text_id=self.bert_tokenizer.vocab[t]) for t in wordpieces],

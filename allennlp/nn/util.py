@@ -398,7 +398,9 @@ def masked_flip(padded_sequence: torch.Tensor,
 
 def viterbi_decode(tag_sequence: torch.Tensor,
                    transition_matrix: torch.Tensor,
-                   tag_observations: Optional[List[int]] = None):
+                   tag_observations: Optional[List[int]] = None,
+                   allowed_start_transitions: torch.Tensor = None,
+                   allowed_end_transitions: torch.Tensor = None):
     """
     Perform Viterbi decoding in log space over a sequence given a transition matrix
     specifying pairwise (transition) potentials between tags and a matrix of shape
@@ -421,6 +423,14 @@ def viterbi_decode(tag_sequence: torch.Tensor,
         other, or those transitions are extremely unlikely. In this situation we log a
         warning, but the responsibility for providing self-consistent evidence ultimately
         lies with the user.
+    allowed_start_transitions : torch.Tensor, optional, (default = None)
+        An optional tensor of shape (num_tags,) describing which tags the START token
+        may transition *to*. If provided, additional transition constraints will be used for
+        determining the start element of the sequence.
+    allowed_end_transitions : torch.Tensor, optional, (default = None)
+        An optional tensor of shape (num_tags,) describing which tags may transition *to* the
+        end tag. If provided, additional transition constraints will be used for determining
+        the end element of the sequence.
 
     Returns
     -------
@@ -430,6 +440,37 @@ def viterbi_decode(tag_sequence: torch.Tensor,
         The score of the viterbi path.
     """
     sequence_length, num_tags = list(tag_sequence.size())
+
+    has_start_end_restrictions = allowed_end_transitions is not None or allowed_start_transitions is not None
+
+    if has_start_end_restrictions:
+
+        if allowed_end_transitions is None:
+            allowed_end_transitions = torch.zeros(num_tags)
+        if allowed_start_transitions is None:
+            allowed_start_transitions = torch.zeros(num_tags)
+
+        num_tags = num_tags + 2
+        new_transition_matrix = torch.zeros(num_tags, num_tags)
+        new_transition_matrix[:-2, :-2] = transition_matrix
+
+        # Start and end transitions are fully defined, but cannot transition between each other.
+        # pylint: disable=not-callable
+        allowed_start_transitions = torch.cat([allowed_start_transitions, torch.tensor([-math.inf, -math.inf])])
+        allowed_end_transitions = torch.cat([allowed_end_transitions, torch.tensor([-math.inf, -math.inf])])
+        # pylint: enable=not-callable
+
+        # First define how we may transition FROM the start and end tags.
+        new_transition_matrix[-2, :] = allowed_start_transitions
+        # We cannot transition from the end tag to any tag.
+        new_transition_matrix[-1, :] = -math.inf
+
+        new_transition_matrix[:, -1] = allowed_end_transitions
+        # We cannot transition to the start tag from any tag.
+        new_transition_matrix[:, -2] = -math.inf
+
+        transition_matrix = new_transition_matrix
+
     if tag_observations:
         if len(tag_observations) != sequence_length:
             raise ConfigurationError("Observations were provided, but they were not the same length "
@@ -437,6 +478,15 @@ def viterbi_decode(tag_sequence: torch.Tensor,
                                      .format(sequence_length, tag_observations))
     else:
         tag_observations = [-1 for _ in range(sequence_length)]
+
+
+    if has_start_end_restrictions:
+        tag_observations = [num_tags - 2] + tag_observations + [num_tags - 1]
+        zero_sentinel = torch.zeros(1, num_tags)
+        extra_tags_sentinel = torch.ones(sequence_length, 2) * -math.inf
+        tag_sequence = torch.cat([tag_sequence, extra_tags_sentinel], -1)
+        tag_sequence = torch.cat([zero_sentinel, tag_sequence, zero_sentinel], 0)
+        sequence_length = tag_sequence.size(0)
 
     path_scores = []
     path_indices = []
@@ -479,6 +529,9 @@ def viterbi_decode(tag_sequence: torch.Tensor,
         viterbi_path.append(int(backward_timestep[viterbi_path[-1]]))
     # Reverse the backward path.
     viterbi_path.reverse()
+
+    if has_start_end_restrictions:
+        viterbi_path = viterbi_path[1:-1]
     return viterbi_path, viterbi_score
 
 
