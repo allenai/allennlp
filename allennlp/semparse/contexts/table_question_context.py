@@ -164,16 +164,12 @@ class TableQuestionContext:
         return self._table_knowledge_graph
 
     @classmethod
-    def read_from_lines(cls,
-                        lines: List[List[str]],
-                        question_tokens: List[Token]) -> 'TableQuestionContext':
+    def get_table_data_from_tagged_lines(cls,
+                                         lines: List[List[str]]) -> Tuple[List[Dict[str, Dict[str, str]]],
+                                                                          Dict[str, Set[str]]]:
         column_index_to_name = {}
-
-        header = lines[0] # the first line is the header
+        header = lines[0]  # the first line is the header ("row\tcol\t...")
         index = 1
-        # Each row is a mapping from column names to cell data. Cell data is a dict, where keys are
-        # "string", "number", "num2" and "date", and the values are the corresponding values
-        # extracted by CoreNLP.
         table_data: List[Dict[str, Dict[str, str]]] = []
         while lines[index][0] == '-1':
             # column names start with fb:row.row.
@@ -213,6 +209,88 @@ class TableQuestionContext:
 
             table_data[-1][column_name] = cell_data
             last_row_index = row_index
+
+        return table_data, column_name_type_mapping
+
+    @classmethod
+    def get_table_data_from_untagged_lines(cls,
+                                           lines: List[List[str]]) -> Tuple[List[Dict[str, Dict[str, str]]],
+                                                                            Dict[str, Set[str]]]:
+        """
+        This method will be called only when we do not have tagged information from CoreNLP. That is, when we are
+        running the parser on data outside the WikiTableQuestions dataset. We try to do the same processing that
+        CoreNLP does for WTQ, but what we do here may not be as effective.
+        """
+        table_data: List[Dict[str, Dict[str, str]]] = []
+        column_index_to_name = {}
+        column_names = lines[0]
+        for column_index, column_name in enumerate(column_names):
+            normalized_name = cls.normalize_string(column_name)
+            column_index_to_name[column_index] = normalized_name
+
+        column_name_type_mapping: Dict[str, Set[str]] = defaultdict(set)
+        for row in lines[1:]:
+            table_data.append({})
+            for column_index, cell_value in enumerate(row):
+                column_name = column_index_to_name[column_index]
+                cell_data: Dict[str, str] = {}
+
+                # Interpret the content as a date.
+                try:
+                    potential_date_string = str(Date.make_date(cell_value))
+                    if potential_date_string != "-1":
+                        # This means the string is a really a date.
+                        cell_data["date"] = cell_value
+                        column_name_type_mapping[column_name].add("date")
+                except ValueError:
+                    pass
+
+                # Interpret the content as a number.
+                try:
+                    float(cell_value)
+                    cell_data["number"] = cell_value
+                    column_name_type_mapping[column_name].add("number")
+                except ValueError:
+                    pass
+
+                # Interpret the content as a range or a score to get number and num2 out.
+                if "-" in cell_value and len(cell_value.split("-")) == 2:
+                    # This could be a number range or a score
+                    cell_parts = cell_value.split("-")
+                    try:
+                        float(cell_parts[0])
+                        float(cell_parts[1])
+                        cell_data["number"] = cell_parts[0]
+                        cell_data["num2"] = cell_parts[1]
+                        column_name_type_mapping[column_name].add("number")
+                        column_name_type_mapping[column_name].add("num2")
+                    except ValueError:
+                        pass
+
+                # Interpret the content as a string.
+                cell_data["string"] = cell_value
+                column_name_type_mapping[column_name].add("string")
+                table_data[-1][column_name] = cell_data
+
+        return table_data, column_name_type_mapping
+
+    @classmethod
+    def read_from_lines(cls,
+                        lines: List,
+                        question_tokens: List[Token]) -> 'TableQuestionContext':
+
+        header = lines[0]
+        if isinstance(header, list) and header[:6] == ['row', 'col', 'id', 'content', 'tokens', 'lemmaTokens']:
+            # These lines are from the tagged table file from the official dataset.
+            table_data, column_name_type_mapping = cls.get_table_data_from_tagged_lines(lines)
+        else:
+            # We assume that the lines are just the table data, with rows being newline separated, and columns
+            # being tab-separated.
+            rows = [line.split('\t') for line in lines]  # type: ignore
+            table_data, column_name_type_mapping = cls.get_table_data_from_untagged_lines(rows)
+        # Each row is a mapping from column names to cell data. Cell data is a dict, where keys are
+        # "string", "number", "num2" and "date", and the values are the corresponding values
+        # extracted by CoreNLP.
         # Table data with each column split into different ones, depending on the types they have.
         table_data_with_column_types: List[Dict[str, CellValueType]] = []
         all_column_names: Set[str] = set()

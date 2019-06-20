@@ -8,12 +8,10 @@ from allennlp.semparse.type_declarations.type_declaration import (
         NamedBasicType,
         UnaryOpType,
         )
-from allennlp.semparse.type_declarations import wikitables_lambda_dcs as wt_types
-from allennlp.semparse.type_declarations.wikitables_lambda_dcs import (
-        CELL_TYPE,
-        ROW_TYPE,
-        )
 
+
+ROW_TYPE = NamedBasicType('row')
+CELL_TYPE = NamedBasicType('cell')
 
 class TestTypeDeclaration(AllenNlpTestCase):
     def test_basic_types_conflict_on_names(self):
@@ -116,11 +114,3 @@ class TestTypeDeclaration(AllenNlpTestCase):
         assert valid_actions["<r,r>"] == ["<r,r> -> sample_function"]
         assert valid_actions["r"] == ["r -> [<d,r>, d]", "r -> [<e,r>, e]", "r -> [<r,r>, r]"]
         assert valid_actions["@start@"] == ["@start@ -> d", "@start@ -> e", "@start@ -> r"]
-
-    def test_get_valid_actions_with_reverse(self):
-        valid_actions = types.get_valid_actions(wt_types.COMMON_NAME_MAPPING,
-                                                wt_types.COMMON_TYPE_SIGNATURE,
-                                                wt_types.BASIC_TYPES)
-        assert valid_actions['<n,c>'] == ['<n,c> -> [<<#1,#2>,<#2,#1>>, <c,n>]',
-                                          '<n,c> -> fb:cell.cell.num2',
-                                          '<n,c> -> fb:cell.cell.number']

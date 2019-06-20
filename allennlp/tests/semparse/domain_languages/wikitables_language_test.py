@@ -297,6 +297,11 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
         logical_form = """(mode_number all_rows number_column:division)"""
         cell_list = self.language.execute(logical_form)
         assert cell_list == 2.0
+        logical_form = """(mode_number
+                            (filter_in all_rows string_column:league string:a_league)
+                           number_column:division)"""
+        cell_list = self.language.execute(logical_form)
+        assert cell_list == 2.0
 
     def test_execute_works_with_mode_string(self):
         logical_form = """(mode_string all_rows string_column:league)"""
@@ -402,10 +407,10 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
                 "List[Row]",
                 "Date",
                 "Number",
-                "Column",
                 "StringColumn",
-                "ComparableColumn",
                 "NumberColumn",
+                "ComparableColumn",
+                "Column",
                 "DateColumn",
                 "List[str]",
                 }
@@ -456,8 +461,8 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
 
         check_productions_match(productions['List[Row]'],
                                 ['all_rows',
-                                 '[<List[Row],DateColumn,Date:List[Row]>, List[Row], DateColumn, Date]',
                                  '[<List[Row],Column:List[Row]>, List[Row], Column]',
+                                 '[<List[Row],DateColumn,Date:List[Row]>, List[Row], DateColumn, Date]',
                                  '[<List[Row],ComparableColumn:List[Row]>, List[Row], ComparableColumn]',
                                  '[<List[Row],NumberColumn,Number:List[Row]>, List[Row], NumberColumn, Number]',
                                  '[<List[Row],StringColumn,List[str]:List[Row]>, List[Row], StringColumn, List[str]]',  # pylint: disable=line-too-long
@@ -485,21 +490,6 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
                                  '[<List[Row]:Number>, List[Row]]'])
 
         # These are the columns in table, and are instance specific.
-        check_productions_match(productions['Column'],
-                                ['string_column:league',
-                                 'string_column:playoffs',
-                                 'string_column:open_cup',
-                                 'string_column:regular_season',
-                                 'string_column:division',
-                                 'string_column:avg_attendance',
-                                 'string_column:year',
-                                 'date_column:year',
-                                 'number_column:open_cup',
-                                 'number_column:regular_season',
-                                 'number_column:avg_attendance',
-                                 'number_column:division',
-                                 'number_column:year'])
-
         check_productions_match(productions['StringColumn'],
                                 ['string_column:league',
                                  'string_column:playoffs',
@@ -509,19 +499,34 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
                                  'string_column:avg_attendance',
                                  'string_column:regular_season'])
 
-        check_productions_match(productions['ComparableColumn'],
-                                ['date_column:year',
-                                 'number_column:open_cup',
-                                 'number_column:regular_season',
-                                 'number_column:avg_attendance',
-                                 'number_column:division',
-                                 'number_column:year'])
-
         check_productions_match(productions['DateColumn'],
                                 ['date_column:year'])
 
         check_productions_match(productions['NumberColumn'],
                                 ['number_column:avg_attendance',
+                                 'number_column:open_cup',
+                                 'number_column:regular_season',
+                                 'number_column:division',
+                                 'number_column:year'])
+
+        check_productions_match(productions['ComparableColumn'],
+                                ['date_column:year',
+                                 'number_column:avg_attendance',
+                                 'number_column:open_cup',
+                                 'number_column:regular_season',
+                                 'number_column:division',
+                                 'number_column:year'])
+
+        check_productions_match(productions['Column'],
+                                ['string_column:league',
+                                 'string_column:playoffs',
+                                 'string_column:open_cup',
+                                 'string_column:year',
+                                 'string_column:division',
+                                 'string_column:avg_attendance',
+                                 'string_column:regular_season',
+                                 'date_column:year',
+                                 'number_column:avg_attendance',
                                  'number_column:open_cup',
                                  'number_column:regular_season',
                                  'number_column:division',
@@ -574,6 +579,11 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
         action_sequence = self.language.logical_form_to_action_sequence(logical_form)
         assert self.language.action_sequence_to_logical_form(action_sequence) == logical_form
 
+    def test_world_processes_logical_forms_with_generic_function_correctly(self):
+        logical_form = ("(select_string (argmax all_rows date_column:year) string_column:league)")
+        action_sequence = self.language.logical_form_to_action_sequence(logical_form)
+        assert self.language.action_sequence_to_logical_form(action_sequence) == logical_form
+
     def test_get_agenda(self):
         tokens = [Token(x) for x in ['what', 'was', 'the', 'difference', 'in', 'attendance',
                                      'between', 'years', '2001', 'and', '2005', '?']]
@@ -581,8 +591,8 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
         # "year" column does not match because "years" occurs in the question.
         assert set(world.get_agenda()) == {'Number -> 2001',
                                            'Number -> 2005',
-                                           'str -> string:2005',
-                                           'str -> string:2001',
+                                           'List[str] -> string:2005',
+                                           'List[str] -> string:2001',
                                            '<List[Row],DateColumn,Date:List[Row]> -> filter_date_equals',
                                            '<List[Row],List[Row],NumberColumn:Number> -> diff'}
         # Conservative agenda does not have strings and numbers because they have multiple types.
@@ -595,8 +605,8 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
         world = self._get_world_with_question_tokens(tokens)
         assert set(world.get_agenda()) == {'Number -> 2001',
                                            'Number -> 2005',
-                                           'str -> string:2005',
-                                           'str -> string:2001',
+                                           'List[str] -> string:2005',
+                                           'List[str] -> string:2001',
                                            '<List[Row],NumberColumn:Number> -> sum',
                                            '<List[Row],DateColumn,Date:List[Row]> -> filter_date_equals',
                                            'StringColumn -> string_column:avg_attendance',
@@ -674,11 +684,11 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
         assert set(world.get_agenda()) == {'StringColumn -> string_column:avg_attendance',
                                            'NumberColumn -> number_column:avg_attendance',
                                            'StringColumn -> string_column:league',
-                                           'str -> string:usl_a_league',
+                                           'List[str] -> string:usl_a_league',
                                            '<List[Row],Column:List[Row]> -> same_as',
                                            '<List[Row],DateColumn:Date> -> select_date'}
         assert set(world.get_agenda(conservative=True)) == {'StringColumn -> string_column:league',
-                                                            'str -> string:usl_a_league',
+                                                            'List[str] -> string:usl_a_league',
                                                             '<List[Row],Column:List[Row]> -> same_as',
                                                             '<List[Row],DateColumn:Date> -> select_date'}
 
@@ -691,9 +701,10 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
 
         tokens = [Token(x) for x in ['when', 'did', 'the', 'team', 'not', 'qualify', '?']]
         world = self._get_world_with_question_tokens(tokens)
-        assert set(world.get_agenda()) == {'<List[Row],DateColumn:Date> -> select_date', 'str -> string:qualify'}
+        assert set(world.get_agenda()) == {'<List[Row],DateColumn:Date> -> select_date',
+                                           'List[str] -> string:qualify'}
         assert set(world.get_agenda(conservative=True)) == {'<List[Row],DateColumn:Date> -> select_date',
-                                                            'str -> string:qualify'}
+                                                            'List[str] -> string:qualify'}
 
         tokens = [Token(x) for x in ['when', 'was', 'the', 'avg.', 'attendance', 'at', 'least',
                                      '7000', '?']]
