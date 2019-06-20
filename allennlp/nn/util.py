@@ -1339,10 +1339,10 @@ def inspect_parameters(module: torch.nn.Module, quiet: bool = False) -> Dict[str
             "_text_field_embedder": {
                 "token_embedder_tokens": {
                     "_projection": {
-                        "bias": "parameter:tunable",
-                        "weight": "parameter:tunable"
+                        "bias": "tunable",
+                        "weight": "tunable"
                     },
-                    "weight": "parameter:frozen"
+                    "weight": "frozen"
                 }
             }
         }
