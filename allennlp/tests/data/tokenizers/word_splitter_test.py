@@ -7,7 +7,7 @@ from allennlp.data.tokenizers.word_splitter import LettersDigitsWordSplitter
 from allennlp.data.tokenizers.word_splitter import SimpleWordSplitter
 from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
 from allennlp.data.tokenizers.word_splitter import OpenAISplitter
-
+from allennlp.data.tokenizers.word_splitter import BertBasicWordSplitter
 
 class TestSimpleWordSplitter(AllenNlpTestCase):
     def setUp(self):
@@ -175,4 +175,24 @@ class TestOpenAiWordSplitter(AllenNlpTestCase):
         sentence = "This sentence ?a!?!"
         expected_tokens = ['This', 'sentence', '?', 'a', '!', '?', '!']
         tokens = [t.text for t in self.word_splitter.split_words(sentence)]
+        assert tokens == expected_tokens
+
+
+class TestBertBasicWordSplitter(AllenNlpTestCase):
+    def setUp(self):
+        super(TestBertBasicWordSplitter, self).setUp()
+        self.word_splitter = BertBasicWordSplitter()
+
+    def test_never_split(self):
+        sentence = "[unused0] [UNK] [SEP] [PAD] [CLS] [MASK]"
+        expected_tokens = ["[", "unused0", "]", "[UNK]", "[SEP]", "[PAD]", "[CLS]", "[MASK]"]
+        tokens = [token.text for token in self.word_splitter.split_words(sentence)]
+        assert tokens == expected_tokens
+
+    def test_do_lower_case(self):
+        # BertBasicWordSplitter makes every token not in `never_split` to lowercase by default
+        word_splitter = BertBasicWordSplitter(never_split=["[UNUSED0]"])
+        sentence = "[UNUSED0] [UNK] [unused0]"
+        expected_tokens = ["[UNUSED0]", "[", "unk", "]", "[", "unused0", "]"]
+        tokens = [token.text for token in word_splitter.split_words(sentence)]
         assert tokens == expected_tokens
