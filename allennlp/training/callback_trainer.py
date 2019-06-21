@@ -1,7 +1,8 @@
 import logging
 import time
 import datetime
-from typing import Dict, Optional, List, Union, Any, Iterable
+import functools
+from typing import Dict, Optional, List, Union, Any, Iterable, Callable
 
 import torch
 
@@ -20,6 +21,23 @@ from allennlp.training.trainer_pieces import TrainerPieces
 from allennlp.training.trainer_base import TrainerBase
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
+def handle_errors(method: Callable):
+    """
+    Decorator that wraps a method in a try / catch,
+    and that fires off `Events.ERROR` if an exception is
+    encountered.
+    """
+    @functools.wraps(method)
+    def with_errors_handled(self, *args, **kwargs):
+        try:
+            return method(self, *args, **kwargs)
+        except Exception as exc:
+            self.exception = exc
+            self.handler.fire_event(Events.ERROR)
+            raise
+
+    return with_errors_handled
 
 
 @TrainerBase.register("callback")
@@ -133,15 +151,8 @@ class CallbackTrainer(TrainerBase):
 
         return loss
 
+    @handle_errors
     def train(self) -> Dict[str, Any]:
-        try:
-            return self._train()
-        except Exception as exc:
-            self.exception = exc
-            self.handler.fire_event(Events.ERROR)
-            raise
-
-    def _train(self) -> Dict[str, Any]:
         """
         Trains the supplied model with the supplied parameters.
         """
