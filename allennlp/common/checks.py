@@ -2,9 +2,10 @@
 Functions and exceptions for checking that
 AllenNLP and its models are configured correctly.
 """
-from typing import Union
+from typing import Union, List
 
 import logging
+import re
 import subprocess
 
 from torch import cuda
@@ -47,8 +48,30 @@ def check_dimensions_match(dimension_1: int,
         raise ConfigurationError(f"{dim_1_name} must match {dim_2_name}, but got {dimension_1} "
                                  f"and {dimension_2} instead")
 
+def parse_cuda_device(cuda_device: Union[str, int, List[int]]) -> Union[int, List[int]]:
+    """
+    Disambiguates single GPU and multiple GPU settings for cuda_device param.
+    """
+    def from_list(strings):
+        if len(strings) > 1:
+            return [int(d) for d in strings]
+        elif len(strings) == 1:
+            return int(strings[0])
+        else:
+            return -1
+
+    if isinstance(cuda_device, str):
+        return from_list(re.split(r',\s*', cuda_device))
+    elif isinstance(cuda_device, int):
+        return cuda_device
+    elif isinstance(cuda_device, list):
+        return from_list(cuda_device)
+    else:
+        # TODO(brendanr): Determine why mypy can't tell that this matches the Union.
+        return int(cuda_device)  # type: ignore
 
 def check_for_gpu(device_id: Union[int, list]):
+    device_id = parse_cuda_device(device_id)
     if isinstance(device_id, list):
         for did in device_id:
             check_for_gpu(did)

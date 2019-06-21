@@ -64,15 +64,11 @@ class TestBertEmbedder(ModelTestCase):
         tokens = tensor_dict["tokens"]
 
         # 16 = [CLS], 17 = [SEP]
-        assert tokens["bert"].tolist() == [
-                [16, 2, 3, 4, 3, 5, 6, 8, 9, 2, 14, 12, 17, 0],
-                [16, 2, 3, 5, 6, 8, 9, 2, 15, 10, 11, 14, 1, 17]
-        ]
+        assert tokens["bert"].tolist() == [[16, 2, 3, 4, 3, 5, 6, 8, 9, 2, 14, 12, 17, 0],
+                                           [16, 2, 3, 5, 6, 8, 9, 2, 15, 10, 11, 14, 1, 17]]
 
-        assert tokens["bert-offsets"].tolist() == [
-                [1, 3, 4, 5, 6, 7, 8, 9, 10, 11],
-                [1, 2, 3, 4, 5, 6, 7, 10, 11, 12]
-        ]
+        assert tokens["bert-offsets"].tolist() == [[1, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+                                                   [1, 2, 3, 4, 5, 6, 7, 10, 11, 12]]
 
         # No offsets, should get 14 vectors back ([CLS] + 12 token wordpieces + [SEP])
         bert_vectors = self.token_embedder(tokens["bert"])
@@ -82,7 +78,7 @@ class TestBertEmbedder(ModelTestCase):
         bert_vectors = self.token_embedder(tokens["bert"], offsets=tokens["bert-offsets"])
         assert list(bert_vectors.shape) == [2, 10, 12]
 
-        ## Now try top_layer_only = True
+        # Now try top_layer_only = True
         tlo_embedder = BertEmbedder(self.bert_model, top_layer_only=True)
         bert_vectors = tlo_embedder(tokens["bert"])
         assert list(bert_vectors.shape) == [2, 14, 12]
@@ -108,13 +104,9 @@ class TestBertEmbedder(ModelTestCase):
         tensor_dict = batch.as_tensor_dict(padding_lengths)
         tokens = tensor_dict["tokens"]
 
-        assert tokens["bert"].tolist() == [
-                [16, 2, 3, 5, 6, 8, 9, 2, 14, 12, 17]
-        ]
+        assert tokens["bert"].tolist() == [[16, 2, 3, 5, 6, 8, 9, 2, 14, 12, 17]]
 
-        assert tokens["bert-offsets"].tolist() == [
-                [1, 2, 3, 4, 5, 6, 7, 8, 9]
-        ]
+        assert tokens["bert-offsets"].tolist() == [[1, 2, 3, 4, 5, 6, 7, 8, 9]]
 
     def test_squad_with_unwordpieceable_passage(self):
         # pylint: disable=line-too-long
@@ -227,10 +219,93 @@ class TestBertEmbedder(ModelTestCase):
         bert_vectors = self.token_embedder(tokens["bert"], offsets=tokens["bert-offsets"])
         assert list(bert_vectors.shape) == [2, 2, 10, 12]
 
-        ## Now try top_layer_only = True
+        # Now try top_layer_only = True
         tlo_embedder = BertEmbedder(self.bert_model, top_layer_only=True)
         bert_vectors = tlo_embedder(tokens["bert"])
         assert list(bert_vectors.shape) == [2, 2, 14, 12]
 
         bert_vectors = tlo_embedder(tokens["bert"], offsets=tokens["bert-offsets"])
         assert list(bert_vectors.shape) == [2, 2, 10, 12]
+
+    def test_sliding_window(self):
+        tokenizer = WordTokenizer(word_splitter=BertBasicWordSplitter())
+
+        sentence = "the quickest quick brown fox jumped over the lazy dog"
+        tokens = tokenizer.tokenize(sentence)
+
+        vocab = Vocabulary()
+
+        vocab_path = self.FIXTURES_ROOT / 'bert' / 'vocab.txt'
+        token_indexer = PretrainedBertIndexer(str(vocab_path), truncate_long_sequences=False, max_pieces=8)
+
+        config_path = self.FIXTURES_ROOT / 'bert' / 'config.json'
+        config = BertConfig(str(config_path))
+        bert_model = BertModel(config)
+        token_embedder = BertEmbedder(bert_model, max_pieces=8)
+
+        instance = Instance({"tokens": TextField(tokens, {"bert": token_indexer})})
+
+        batch = Batch([instance])
+        batch.index_instances(vocab)
+
+        padding_lengths = batch.get_padding_lengths()
+        tensor_dict = batch.as_tensor_dict(padding_lengths)
+        tokens = tensor_dict["tokens"]
+
+        # 16 = [CLS], 17 = [SEP]
+        # 1 full window + 1 half window with start/end tokens
+        assert tokens["bert"].tolist() == [[16, 2, 3, 4, 3, 5, 6, 17,
+                                            16, 3, 5, 6, 8, 9, 2, 17,
+                                            16, 8, 9, 2, 14, 12, 17]]
+        assert tokens["bert-offsets"].tolist() == [[1, 3, 4, 5, 6, 7, 8, 9, 10, 11]]
+
+        bert_vectors = token_embedder(tokens["bert"])
+        assert list(bert_vectors.shape) == [1, 13, 12]
+
+        # Testing without token_type_ids
+        bert_vectors = token_embedder(tokens["bert"],
+                                      offsets=tokens["bert-offsets"])
+        assert list(bert_vectors.shape) == [1, 10, 12]
+
+        # Testing with token_type_ids
+        bert_vectors = token_embedder(tokens["bert"],
+                                      offsets=tokens["bert-offsets"],
+                                      token_type_ids=tokens["bert-type-ids"])
+        assert list(bert_vectors.shape) == [1, 10, 12]
+
+    def test_sliding_window_with_batch(self):
+        tokenizer = WordTokenizer(word_splitter=BertBasicWordSplitter())
+
+        sentence = "the quickest quick brown fox jumped over the lazy dog"
+        tokens = tokenizer.tokenize(sentence)
+
+        vocab = Vocabulary()
+
+        vocab_path = self.FIXTURES_ROOT / 'bert' / 'vocab.txt'
+        token_indexer = PretrainedBertIndexer(str(vocab_path), truncate_long_sequences=False, max_pieces=8)
+
+        config_path = self.FIXTURES_ROOT / 'bert' / 'config.json'
+        config = BertConfig(str(config_path))
+        bert_model = BertModel(config)
+        token_embedder = BertEmbedder(bert_model, max_pieces=8)
+
+        instance = Instance({"tokens": TextField(tokens, {"bert": token_indexer})})
+        instance2 = Instance({"tokens": TextField(tokens + tokens + tokens, {"bert": token_indexer})})
+
+        batch = Batch([instance, instance2])
+        batch.index_instances(vocab)
+
+        padding_lengths = batch.get_padding_lengths()
+        tensor_dict = batch.as_tensor_dict(padding_lengths)
+        tokens = tensor_dict["tokens"]
+
+        # Testing without token_type_ids
+        bert_vectors = token_embedder(tokens["bert"],
+                                      offsets=tokens["bert-offsets"])
+        assert bert_vectors is not None
+
+        # Testing with token_type_ids
+        bert_vectors = token_embedder(tokens["bert"],
+                                      offsets=tokens["bert-offsets"],
+                                      token_type_ids=tokens["bert-type-ids"])
+        assert bert_vectors is not None

@@ -1,10 +1,10 @@
 import os
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
 import argparse
 
 import torch
+sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
 
 from allennlp.common.tqdm import Tqdm
 from allennlp.common import Params
@@ -13,7 +13,7 @@ from allennlp.data.iterators import BasicIterator
 from allennlp.data import DatasetReader
 from allennlp.models import Model
 from allennlp.models.semantic_role_labeler import write_to_conll_eval_file
-from allennlp.modules.elmo import Elmo
+from allennlp.nn.util import move_to_device
 
 def main(serialization_directory: int,
          device: int,
@@ -67,23 +67,18 @@ def main(serialization_directory: int,
         iterator.index_with(model.vocab)
 
         model_predictions = []
-        batches = iterator(instances, num_epochs=1, shuffle=False, cuda_device=device)
+        batches = iterator(instances, num_epochs=1, shuffle=False)
         for batch in Tqdm.tqdm(batches):
+            batch = move_to_device(batch, device)
             result = model(**batch)
             predictions = model.decode(result)
             model_predictions.extend(predictions["tags"])
 
         for instance, prediction in zip(instances, model_predictions):
             fields = instance.fields
-            try:
-                # Most sentences have a verbal predicate, but not all.
-                verb_index = fields["verb_indicator"].labels.index(1)
-            except ValueError:
-                verb_index = None
-
-            gold_tags = fields["tags"].labels
-            sentence = [x.text for x in fields["tokens"].tokens]
-
+            verb_index = fields["metadata"]["verb_index"]
+            gold_tags = fields["metadata"]["gold_tags"]
+            sentence = fields["metadata"]["words"]
             write_to_conll_eval_file(prediction_file, gold_file,
                                      verb_index, sentence, prediction, gold_tags)
         prediction_file.close()

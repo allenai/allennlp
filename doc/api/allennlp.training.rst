@@ -6,6 +6,8 @@ for training AllenNLP models.
 
 .. toctree::
 
+   allennlp.training.callbacks
+   allennlp.training.callback_trainer
    allennlp.training.checkpointer
    allennlp.training.scheduler
    allennlp.training.learning_rate_schedulers
@@ -13,10 +15,12 @@ for training AllenNLP models.
    allennlp.training.metric_tracker
    allennlp.training.metrics
    allennlp.training.moving_average
+   allennlp.training.no_op_trainer
    allennlp.training.optimizers
    allennlp.training.tensorboard_writer
    allennlp.training.trainer
    allennlp.training.trainer_base
+   allennlp.training.trainer_pieces
    allennlp.training.util
 
 .. automodule:: allennlp.training

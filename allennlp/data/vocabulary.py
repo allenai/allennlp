@@ -116,6 +116,8 @@ def _read_pretrained_tokens(embeddings_file_uri: str) -> List[str]:
 
 def pop_max_vocab_size(params: Params) -> Union[int, Dict[str, int]]:
     """
+    max_vocab_size limits the size of the vocabulary, not including the @@UNKNOWN@@ token.
+
     max_vocab_size is allowed to be either an int or a Dict[str, int] (or nothing).
     But it could also be a string representing an int (in the case of environment variable
     substitution). So we need some complex logic to handle it.
@@ -613,6 +615,13 @@ class Vocabulary(Registrable):
             return index
         else:
             return self._token_to_index[namespace][token]
+
+    def add_tokens_to_namespace(self, tokens: List[str], namespace: str = 'tokens') -> List[int]:
+        """
+        Adds ``tokens`` to the index, if they are not already present.  Either way, we return the
+        indices of the tokens in the order that they were given.
+        """
+        return [self.add_token_to_namespace(token, namespace) for token in tokens]
 
     def get_index_to_token_vocabulary(self, namespace: str = 'tokens') -> Dict[int, str]:
         return self._index_to_token[namespace]

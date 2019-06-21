@@ -68,6 +68,11 @@ class ListField(SequenceField[DataArray]):
             # when we construct the dictionary from the list of fields, we add something to the
             # name, and we remove it when padding the list of fields.
             padding_lengths['list_' + key] = max(x[key] if key in x else 0 for x in field_lengths)
+
+        # Set minimum padding length to handle empty list fields.
+        for padding_key in padding_lengths:
+            padding_lengths[padding_key] = max(padding_lengths[padding_key], 1)
+
         return padding_lengths
 
     @overrides

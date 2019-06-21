@@ -30,14 +30,15 @@ class RegularizerApplicator:
             The module to regularize.
         """
         accumulator = 0.0
-        # For each parameter find the first matching regex.
         for name, parameter in module.named_parameters():
-            for regex, regularizer in self._regularizers:
-                if re.search(regex, name):
-                    penalty = regularizer(parameter)
-                    accumulator = accumulator + penalty
-                    break
-
+            # We first check if the parameter needs gradient updates or not
+            if parameter.requires_grad:
+                # For each parameter find the first matching regex.
+                for regex, regularizer in self._regularizers:
+                    if re.search(regex, name):
+                        penalty = regularizer(parameter)
+                        accumulator = accumulator + penalty
+                        break
         return accumulator
 
     # Requires custom from_params because of complex logic.
@@ -47,7 +48,7 @@ class RegularizerApplicator:
         Converts a List of pairs (regex, params) into an RegularizerApplicator.
         This list should look like
 
-        [["regex1": {"type": "l2", "alpha": 0.01}], ["regex2": "l1"]]
+        [["regex1", {"type": "l2", "alpha": 0.01}], ["regex2", "l1"]]
 
         where each parameter receives the penalty corresponding to the first regex
         that matches its name (which may be no regex and hence no penalty).

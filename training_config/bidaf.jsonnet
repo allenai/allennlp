@@ -20,33 +20,33 @@
       }
     }
   },
-  "train_data_path": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/squad/squad-train-v1.1.json",
-  "validation_data_path": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/squad/squad-dev-v1.1.json",
+  "train_data_path": "https://allennlp.s3.amazonaws.com/datasets/squad/squad-train-v1.1.json",
+  "validation_data_path": "https://allennlp.s3.amazonaws.com/datasets/squad/squad-dev-v1.1.json",
   "model": {
     "type": "bidaf",
     "text_field_embedder": {
-        "token_embedders": {
-            "tokens": {
-                "type": "embedding",
-                "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.100d.txt.gz",
-                "embedding_dim": 100,
-                "trainable": false
-            },
-            "token_characters": {
-                "type": "character_encoding",
-                "embedding": {
-                "num_embeddings": 262,
-                "embedding_dim": 16
-                },
-                "encoder": {
-                "type": "cnn",
-                "embedding_dim": 16,
-                "num_filters": 100,
-                "ngram_filter_sizes": [5]
-                },
-                "dropout": 0.2
-            }
+      "token_embedders": {
+        "tokens": {
+          "type": "embedding",
+          "pretrained_file": "https://allennlp.s3.amazonaws.com/datasets/glove/glove.6B.100d.txt.gz",
+          "embedding_dim": 100,
+          "trainable": false
+        },
+        "token_characters": {
+          "type": "character_encoding",
+          "embedding": {
+            "num_embeddings": 262,
+            "embedding_dim": 16
+          },
+          "encoder": {
+            "type": "cnn",
+            "embedding_dim": 16,
+            "num_filters": 100,
+            "ngram_filter_sizes": [5]
+          },
+          "dropout": 0.2
         }
+      }
     },
     "num_highway_layers": 2,
     "phrase_layer": {
@@ -54,8 +54,7 @@
       "bidirectional": true,
       "input_size": 200,
       "hidden_size": 100,
-      "num_layers": 1,
-      "dropout": 0.2
+      "num_layers": 1
     },
     "similarity_function": {
       "type": "linear",
@@ -76,8 +75,7 @@
       "bidirectional": true,
       "input_size": 1400,
       "hidden_size": 100,
-      "num_layers": 1,
-      "dropout": 0.2
+      "num_layers": 1
     },
     "dropout": 0.2
   },

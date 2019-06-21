@@ -1,10 +1,11 @@
 import re
 import csv
-from typing import Dict, List, Optional, Tuple, Union, Set
+from typing import Union, Dict, List, Tuple, Set
 from collections import defaultdict
 
 from unidecode import unidecode
 from allennlp.data.tokenizers import Token
+from allennlp.semparse.common import Date
 from allennlp.semparse.contexts.knowledge_graph import KnowledgeGraph
 
 # == stop words that will be omitted by ContextGenerator
@@ -76,30 +77,37 @@ NUMBER_WORDS = {
         }
 
 
+CellValueType = Union[str, float, Date]  # pylint: disable=invalid-name
+
+
 class TableQuestionContext:
     """
-    A barebones implementation similar to
+    Representation of table context similar to the one used by Memory Augmented Policy Optimization (MAPO, Liang et
+    al., 2018). Most of the functionality is a reimplementation of
     https://github.com/crazydonkey200/neural-symbolic-machines/blob/master/table/wtq/preprocess.py
     for extracting entities from a question given a table and type its columns with <string> | <date> | <number>
     """
     def __init__(self,
-                 table_data: List[Dict[str, str]],
-                 column_types: Dict[str, str],
+                 table_data: List[Dict[str, CellValueType]],
+                 column_name_type_mapping: Dict[str, Set[str]],
+                 column_names: Set[str],
                  question_tokens: List[Token]) -> None:
         self.table_data = table_data
-        self.column_types = column_types
+        self.column_types: Set[str] = set()
+        self.column_names = column_names
+        for types in column_name_type_mapping.values():
+            self.column_types.update(types)
         self.question_tokens = question_tokens
-        # Mapping from cell values to the the columns they are under.
-        cell_value_column_mapping: Dict[str, List[str]] = defaultdict(list)
+        # Mapping from strings to the columns they are under.
+        string_column_mapping: Dict[str, List[str]] = defaultdict(list)
         for table_row in table_data:
             for column_name, cell_value in table_row.items():
-                cell_value_column_mapping[cell_value].append(column_name)
+                if "string_column:" in column_name and cell_value is not None:
+                    string_column_mapping[str(cell_value)].append(column_name)
         # We want the object to raise KeyError when checking if a specific string is a cell in the
         # table.
-        self._cell_value_column_mapping = dict(cell_value_column_mapping)
+        self._string_column_mapping = dict(string_column_mapping)
         self._table_knowledge_graph: KnowledgeGraph = None
-
-    MAX_TOKENS_FOR_NUM_CELL = 2
 
     def __eq__(self, other):
         if not isinstance(other, TableQuestionContext):
@@ -115,25 +123,24 @@ class TableQuestionContext:
             # now, and later add number and string entities as needed.
             number_columns = []
             date_columns = []
-            for column, column_type in self.column_types.items():
-                if column_type == "number":
-                    column_name = f"number_column:{column}"
-                    number_columns.append(column_name)
-                elif column_type == "date":
-                    column_name = f"date_column:{column}"
-                    date_columns.append(column_name)
-                else:
-                    column_name = f"string_column:{column}"
+            for typed_column_name in self.column_names:
+                if "number_column:" in typed_column_name or "num2_column" in typed_column_name:
+                    number_columns.append(typed_column_name)
+
+                if "date_column:" in typed_column_name:
+                    date_columns.append(typed_column_name)
+
                 # Add column names to entities, with no neighbors yet.
-                entities.add(column_name)
-                neighbors[column_name] = []
-                entity_text[column_name] = column.replace("_", " ")
+                entities.add(typed_column_name)
+                neighbors[typed_column_name] = []
+                entity_text[typed_column_name] = typed_column_name.split(":", 1)[-1].replace("_", " ")
 
             string_entities, numbers = self.get_entities_from_question()
-            for entity, column_name in string_entities:
+            for entity, column_names in string_entities:
                 entities.add(entity)
-                neighbors[entity].append(column_name)
-                neighbors[column_name].append(entity)
+                for column_name in column_names:
+                    neighbors[entity].append(column_name)
+                    neighbors[column_name].append(entity)
                 entity_text[entity] = entity.replace("string:", "").replace("_", " ")
             # For all numbers (except -1), we add all number and date columns as their neighbors.
             for number, _ in numbers:
@@ -157,14 +164,13 @@ class TableQuestionContext:
         return self._table_knowledge_graph
 
     @classmethod
-    def read_from_lines(cls,
-                        lines: List[List[str]],
-                        question_tokens: List[Token]) -> 'TableQuestionContext':
+    def get_table_data_from_tagged_lines(cls,
+                                         lines: List[List[str]]) -> Tuple[List[Dict[str, Dict[str, str]]],
+                                                                          Dict[str, Set[str]]]:
         column_index_to_name = {}
-
-        header = lines[0] # the first line is the header
+        header = lines[0]  # the first line is the header ("row\tcol\t...")
         index = 1
-        table_data: List[Dict[str, str]] = []
+        table_data: List[Dict[str, Dict[str, str]]] = []
         while lines[index][0] == '-1':
             # column names start with fb:row.row.
             current_line = lines[index]
@@ -173,8 +179,7 @@ class TableQuestionContext:
             column_name = column_name_sempre.replace('fb:row.row.', '')
             column_index_to_name[column_index] = column_name
             index += 1
-        column_node_type_info = [{'string' : 0, 'number' : 0, 'date' : 0}
-                                 for col in column_index_to_name]
+        column_name_type_mapping: Dict[str, Set[str]] = defaultdict(set)
         last_row_index = -1
         for current_line in lines[1:]:
             row_index = int(current_line[0])
@@ -184,37 +189,136 @@ class TableQuestionContext:
             if row_index != last_row_index:
                 table_data.append({})
             node_info = dict(zip(header, current_line))
-            cell_value = cls.normalize_string(node_info['content'])
+            cell_data: Dict[str, str] = {}
             column_name = column_index_to_name[column_index]
-            table_data[-1][column_name] = cell_value
-            num_tokens = len(node_info['tokens'].split('|'))
             if node_info['date']:
-                column_node_type_info[column_index]['date'] += 1
-            # If cell contains too many tokens, then likely not number
-            elif node_info['number'] and num_tokens <= cls.MAX_TOKENS_FOR_NUM_CELL:
-                column_node_type_info[column_index]['number'] += 1
-            elif node_info['content'] != '—':
-                column_node_type_info[column_index]['string'] += 1
+                column_name_type_mapping[column_name].add("date")
+                cell_data["date"] = node_info["date"]
+
+            if node_info['number']:
+                column_name_type_mapping[column_name].add("number")
+                cell_data["number"] = node_info["number"]
+
+            if node_info['num2']:
+                column_name_type_mapping[column_name].add("num2")
+                cell_data["num2"] = node_info["num2"]
+
+            if node_info['content'] != '—':
+                column_name_type_mapping[column_name].add("string")
+                cell_data['string'] = node_info["content"]
+
+            table_data[-1][column_name] = cell_data
             last_row_index = row_index
-        column_types: Dict[str, str] = {}
-        for column_index, column_name in column_index_to_name.items():
-            current_column_type_info = column_node_type_info[column_index]
-            if current_column_type_info["string"] > 0:
-                # There is at least one value that is neither date nor number.
-                column_types[column_name] = "string"
-            elif current_column_type_info["date"] > current_column_type_info["number"]:
-                column_types[column_name] = "date"
-            else:
-                column_types[column_name] = "number"
-        # Now that we determined the column types, let us prefix the column names with those.
-        table_data_with_column_types: List[Dict[str, str]] = []
+
+        return table_data, column_name_type_mapping
+
+    @classmethod
+    def get_table_data_from_untagged_lines(cls,
+                                           lines: List[List[str]]) -> Tuple[List[Dict[str, Dict[str, str]]],
+                                                                            Dict[str, Set[str]]]:
+        """
+        This method will be called only when we do not have tagged information from CoreNLP. That is, when we are
+        running the parser on data outside the WikiTableQuestions dataset. We try to do the same processing that
+        CoreNLP does for WTQ, but what we do here may not be as effective.
+        """
+        table_data: List[Dict[str, Dict[str, str]]] = []
+        column_index_to_name = {}
+        column_names = lines[0]
+        for column_index, column_name in enumerate(column_names):
+            normalized_name = cls.normalize_string(column_name)
+            column_index_to_name[column_index] = normalized_name
+
+        column_name_type_mapping: Dict[str, Set[str]] = defaultdict(set)
+        for row in lines[1:]:
+            table_data.append({})
+            for column_index, cell_value in enumerate(row):
+                column_name = column_index_to_name[column_index]
+                cell_data: Dict[str, str] = {}
+
+                # Interpret the content as a date.
+                try:
+                    potential_date_string = str(Date.make_date(cell_value))
+                    if potential_date_string != "-1":
+                        # This means the string is a really a date.
+                        cell_data["date"] = cell_value
+                        column_name_type_mapping[column_name].add("date")
+                except ValueError:
+                    pass
+
+                # Interpret the content as a number.
+                try:
+                    float(cell_value)
+                    cell_data["number"] = cell_value
+                    column_name_type_mapping[column_name].add("number")
+                except ValueError:
+                    pass
+
+                # Interpret the content as a range or a score to get number and num2 out.
+                if "-" in cell_value and len(cell_value.split("-")) == 2:
+                    # This could be a number range or a score
+                    cell_parts = cell_value.split("-")
+                    try:
+                        float(cell_parts[0])
+                        float(cell_parts[1])
+                        cell_data["number"] = cell_parts[0]
+                        cell_data["num2"] = cell_parts[1]
+                        column_name_type_mapping[column_name].add("number")
+                        column_name_type_mapping[column_name].add("num2")
+                    except ValueError:
+                        pass
+
+                # Interpret the content as a string.
+                cell_data["string"] = cell_value
+                column_name_type_mapping[column_name].add("string")
+                table_data[-1][column_name] = cell_data
+
+        return table_data, column_name_type_mapping
+
+    @classmethod
+    def read_from_lines(cls,
+                        lines: List,
+                        question_tokens: List[Token]) -> 'TableQuestionContext':
+
+        header = lines[0]
+        if isinstance(header, list) and header[:6] == ['row', 'col', 'id', 'content', 'tokens', 'lemmaTokens']:
+            # These lines are from the tagged table file from the official dataset.
+            table_data, column_name_type_mapping = cls.get_table_data_from_tagged_lines(lines)
+        else:
+            # We assume that the lines are just the table data, with rows being newline separated, and columns
+            # being tab-separated.
+            rows = [line.split('\t') for line in lines]  # type: ignore
+            table_data, column_name_type_mapping = cls.get_table_data_from_untagged_lines(rows)
+        # Each row is a mapping from column names to cell data. Cell data is a dict, where keys are
+        # "string", "number", "num2" and "date", and the values are the corresponding values
+        # extracted by CoreNLP.
+        # Table data with each column split into different ones, depending on the types they have.
+        table_data_with_column_types: List[Dict[str, CellValueType]] = []
+        all_column_names: Set[str] = set()
         for table_row in table_data:
             table_data_with_column_types.append({})
-            for column_name, cell_value in table_row.items():
-                column_type = column_types[column_name]
-                typed_column_name = f"{column_type}_column:{column_name}"
-                table_data_with_column_types[-1][typed_column_name] = cell_value
-        return cls(table_data_with_column_types, column_types, question_tokens)
+            for column_name, cell_data in table_row.items():
+                for column_type in column_name_type_mapping[column_name]:
+                    typed_column_name = f"{column_type}_column:{column_name}"
+                    all_column_names.add(typed_column_name)
+                    cell_value_string = cell_data.get(column_type, None)
+                    if column_type in ["number", "num2"]:
+                        try:
+                            cell_number = float(cell_value_string)
+                        except (ValueError, TypeError):
+                            cell_number = None
+                        table_data_with_column_types[-1][typed_column_name] = cell_number
+                    elif column_type == "date":
+                        cell_date = None
+                        if cell_value_string is not None:
+                            cell_date = Date.make_date(cell_value_string)
+                        table_data_with_column_types[-1][typed_column_name] = cell_date
+                    else:
+                        if cell_value_string is None:
+                            normalized_string = None
+                        else:
+                            normalized_string = cls.normalize_string(cell_value_string)
+                        table_data_with_column_types[-1][typed_column_name] = normalized_string
+        return cls(table_data_with_column_types, column_name_type_mapping, all_column_names, question_tokens)
 
     @classmethod
     def read_from_file(cls, filename: str, question_tokens: List[Token]) -> 'TableQuestionContext':
@@ -232,21 +336,24 @@ class TableQuestionContext:
             normalized_token_text = self.normalize_string(token_text)
             if not normalized_token_text:
                 continue
-            token_column = self._string_in_table(normalized_token_text)
-            if token_column:
-                token_type = token_column.split(":")[0].replace("_column", "")
+            token_columns = self._string_in_table(normalized_token_text)
+            if token_columns:
+                # We need to keep track of the type of column this string occurs in. It is unlikely it occurs in
+                # columns of multiple types. So we just keep track of the first column type. Hence, the
+                # ``token_columns[0]``.
+                token_type = token_columns[0].split(":")[0].replace("_column", "")
                 entity_data.append({'value': normalized_token_text,
                                     'token_start': i,
                                     'token_end': i+1,
                                     'token_type': token_type,
-                                    'token_in_column': token_column})
+                                    'token_in_columns': token_columns})
 
         extracted_numbers = self._get_numbers_from_tokens(self.question_tokens)
         # filter out number entities to avoid repetition
         expanded_entities = []
         for entity in self._expand_entities(self.question_tokens, entity_data):
             if entity["token_type"] == "string":
-                expanded_entities.append((f"string:{entity['value']}", entity['token_in_column']))
+                expanded_entities.append((f"string:{entity['value']}", entity['token_in_columns']))
         return expanded_entities, extracted_numbers  #TODO(shikhar) Handle conjunctions
 
     @staticmethod
@@ -265,11 +372,9 @@ class TableQuestionContext:
         """
         numbers = []
         for i, token in enumerate(tokens):
-            number: Union[int, float] = None
             token_text = token.text
             text = token.text.replace(',', '').lower()
-            if text in NUMBER_WORDS:
-                number = NUMBER_WORDS[text]
+            number = float(NUMBER_WORDS[text]) if text in NUMBER_WORDS else None
 
             magnitude = 1
             if i < len(tokens) - 1:
@@ -312,28 +417,22 @@ class TableQuestionContext:
                     numbers.append((str(int(number + 10 ** num_zeros)), i))
         return numbers
 
-    def _string_in_table(self, candidate: str) -> Optional[str]:
+    def _string_in_table(self, candidate: str) -> List[str]:
         """
-        Checks if the string occurs in the table, and if it does, returns the name of the column
-        under which it occurs. If it does not, returns None.
+        Checks if the string occurs in the table, and if it does, returns the names of the columns
+        under which it occurs. If it does not, returns an empty list.
         """
         candidate_column_names: List[str] = []
         # First check if the entire candidate occurs as a cell.
-        if candidate in self._cell_value_column_mapping:
-            candidate_column_names = self._cell_value_column_mapping[candidate]
+        if candidate in self._string_column_mapping:
+            candidate_column_names = self._string_column_mapping[candidate]
         # If not, check if it is a substring pf any cell value.
         if not candidate_column_names:
-            for cell_value, column_names in self._cell_value_column_mapping.items():
+            for cell_value, column_names in self._string_column_mapping.items():
                 if candidate in cell_value:
-                    candidate_column_names = column_names
-                    break
-        if not candidate_column_names:
-            return None
+                    candidate_column_names.extend(column_names)
         candidate_column_names = list(set(candidate_column_names))
-        # Note: if candidate_column_names is now a list with more than one element, it means that
-        # the candidate matched a cell value that occurs under multiple columns. This is
-        # unusual, and we are ignoring such cases, and simply returning the first name.
-        return candidate_column_names[0]
+        return candidate_column_names
 
     def _process_conjunction(self, entity_data):
         raise NotImplementedError
@@ -348,7 +447,7 @@ class TableQuestionContext:
             current_end = entity['token_end']
             current_token = entity['value']
             current_token_type = entity['token_type']
-            current_token_column = entity['token_in_column']
+            current_token_columns = entity['token_in_columns']
 
             while current_end < len(question):
                 next_token = question[current_end].text
@@ -357,22 +456,22 @@ class TableQuestionContext:
                     current_end += 1
                     continue
                 candidate = "%s_%s" %(current_token, next_token_normalized)
-                candidate_column = self._string_in_table(candidate)
-                if candidate_column is None:
-                    candidate_type = None
-                else:
-                    candidate_type = candidate_column.split(":")[0].replace("_column", "")
-                if candidate_type is not None and candidate_type == current_token_type:
-                    current_end += 1
-                    current_token = candidate
-                else:
+                candidate_columns = self._string_in_table(candidate)
+                candidate_columns = list(set(candidate_columns).intersection(current_token_columns))
+                if not candidate_columns:
                     break
+                candidate_type = candidate_columns[0].split(":")[0].replace("_column", "")
+                if candidate_type != current_token_type:
+                    break
+                current_end += 1
+                current_token = candidate
+                current_token_columns = candidate_columns
 
             new_entities.append({'token_start' : current_start,
                                  'token_end' : current_end,
                                  'value' : current_token,
                                  'token_type': current_token_type,
-                                 'token_in_column': current_token_column})
+                                 'token_in_columns': current_token_columns})
         return new_entities
 
     @staticmethod

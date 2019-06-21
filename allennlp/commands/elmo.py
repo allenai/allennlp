@@ -78,8 +78,8 @@ from allennlp.commands.subcommand import Subcommand
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
-DEFAULT_OPTIONS_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json" # pylint: disable=line-too-long
-DEFAULT_WEIGHT_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5" # pylint: disable=line-too-long
+DEFAULT_OPTIONS_FILE = "https://allennlp.s3.amazonaws.com/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json" # pylint: disable=line-too-long
+DEFAULT_WEIGHT_FILE = "https://allennlp.s3.amazonaws.com/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5" # pylint: disable=line-too-long
 DEFAULT_BATCH_SIZE = 64
 
 
@@ -97,7 +97,8 @@ class Elmo(Subcommand):
         subparser = parser.add_parser(
                 name, description=description, help='Create word vectors using a pretrained ELMo model.')
 
-        subparser.add_argument('input_file', type=argparse.FileType('r'), help='The path to the input file.')
+        subparser.add_argument('input_file', type=argparse.FileType('r', encoding='utf-8'),
+                               help='The path to the input file.')
         subparser.add_argument('output_file', type=str, help='The path to the output file.')
 
         group = subparser.add_mutually_exclusive_group(required=True)

@@ -139,8 +139,6 @@ class Model(torch.nn.Module, Registrable):
         ----------
         instances : List[Instance], required
             The instances to run the model on.
-        cuda_device : int, required
-            The GPU device to use.  -1 means use the CPU.
 
         Returns
         -------
@@ -321,7 +319,7 @@ class Model(torch.nn.Module, Registrable):
         """
 
         # Peak at the class of the model.
-        model_type = config["model"]["type"]
+        model_type = config["model"] if isinstance(config["model"], str) else config["model"]["type"]
 
         # Load using an overridable _load method.
         # This allows subclasses of Model to override _load.
@@ -333,7 +331,7 @@ class Model(torch.nn.Module, Registrable):
         Iterates through all embedding modules in the model and assures it can embed
         with the extended vocab. This is required in fine-tuning or transfer learning
         scenarios where model was trained with original vocabulary but during
-        fine-tuning/tranfer-learning, it will have it work with extended vocabulary
+        fine-tuning/transfer-learning, it will have it work with extended vocabulary
         (original + new-data vocabulary).
 
         Parameters
@@ -356,9 +354,10 @@ class Model(torch.nn.Module, Registrable):
                                     model_path=model_path)
 
 def remove_pretrained_embedding_params(params: Params):
-    keys = params.keys()
-    if 'pretrained_file' in keys:
-        del params['pretrained_file']
-    for value in params.values():
-        if isinstance(value, Params):
-            remove_pretrained_embedding_params(value)
+    if isinstance(params, Params):  # The model could possible be a string, for example.
+        keys = params.keys()
+        if 'pretrained_file' in keys:
+            del params['pretrained_file']
+        for value in params.values():
+            if isinstance(value, Params):
+                remove_pretrained_embedding_params(value)

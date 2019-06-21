@@ -8,7 +8,6 @@
   "validation_data_path": "allennlp/tests/fixtures/data/wikitables/sample_data.examples",
   "model": {
     "type": "wikitables_erm_parser",
-    "tables_directory": "allennlp/tests/fixtures/data/wikitables/",
     "question_embedder": {
       "token_embedders": {
         "tokens": {
@@ -32,10 +31,9 @@
     },
     "checklist_cost_weight": 0.6,
     "max_decoding_steps": 10,
-    "decoder_beam_size": 20,
-    "decoder_num_finished_states": 200,
-    "attention": {"type": "dot_product"},
-    "mml_model_file": "allennlp/tests/fixtures/semantic_parsing/wikitables/serialization/model.tar.gz"
+    "decoder_beam_size": 50,
+    "decoder_num_finished_states": 100,
+    "attention": {"type": "dot_product"}
   },
   "iterator": {
     "type": "bucket",

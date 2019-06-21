@@ -10,9 +10,12 @@ allennlp.models
 
   allennlp.models.model
   allennlp.models.archival
+  allennlp.models.bert_for_classification
   allennlp.models.biaffine_dependency_parser
+  allennlp.models.biaffine_dependency_parser_multilang
   allennlp.models.biattentive_classification_network
   allennlp.models.bimpm
+  allennlp.models.basic_classifier
   allennlp.models.constituency_parser
   allennlp.models.coreference_resolution
   allennlp.models.crf_tagger
@@ -27,3 +30,4 @@ allennlp.models
   allennlp.models.semantic_role_labeler
   allennlp.models.language_model
   allennlp.models.simple_tagger
+  allennlp.models.srl_bert

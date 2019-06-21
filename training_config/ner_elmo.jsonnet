@@ -4,7 +4,7 @@
 // this configuration replaces the original Senna word embeddings with
 // 50d GloVe embeddings.
 //
-// There is a trained model available at https://s3-us-west-2.amazonaws.com/allennlp/models/ner-model-2018.04.30.tar.gz
+// There is a trained model available at https://allennlp.s3.amazonaws.com/models/ner-model-2018.12.18.tar.gz
 // with test set F1 of 92.51 compared to the single model reported
 // result of 92.22 +/- 0.10.
 {
@@ -39,13 +39,13 @@
         "tokens": {
             "type": "embedding",
             "embedding_dim": 50,
-            "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.50d.txt.gz",
+            "pretrained_file": "https://allennlp.s3.amazonaws.com/datasets/glove/glove.6B.50d.txt.gz",
             "trainable": true
         },
         "elmo":{
             "type": "elmo_token_embedder",
-        "options_file": "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json",
-        "weight_file": "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5",
+        "options_file": "https://allennlp.s3.amazonaws.com/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json",
+        "weight_file": "https://allennlp.s3.amazonaws.com/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5",
             "do_layer_norm": false,
             "dropout": 0.0
         },

@@ -1,4 +1,4 @@
-FROM python:3.6.8-jessie
+FROM python:3.6.8-stretch
 
 ENV LC_ALL=C.UTF-8
 ENV LANG=C.UTF-8
@@ -33,16 +33,10 @@ RUN apt-get update --fix-missing && apt-get install -y \
     build-essential && \
     rm -rf /var/lib/apt/lists/*
 
-# Install Java.
-RUN echo "deb http://http.debian.net/debian jessie-backports main" >>/etc/apt/sources.list
-RUN apt-get update
-RUN apt-get install -y -t jessie-backports openjdk-8-jdk
-
 # Copy select files needed for installing requirements.
 # We only copy what we need here so small changes to the repository does not trigger re-installation of the requirements.
 COPY requirements.txt .
-COPY scripts/install_requirements.sh scripts/install_requirements.sh
-RUN ./scripts/install_requirements.sh
+RUN pip install -r requirements.txt
 
 COPY scripts/ scripts/
 COPY allennlp/ allennlp/

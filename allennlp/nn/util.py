@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple, TypeVar
 import logging
 import copy
 import math
+import json
 
 import torch
 
@@ -37,6 +38,7 @@ def move_to_device(obj, cuda_device: int):
     Given a structure (possibly) containing Tensors on the CPU,
     move all the Tensors to the specified GPU (or do nothing, if they should be on the CPU).
     """
+    # pylint: disable=too-many-return-statements
     if cuda_device < 0 or not has_tensor(obj):
         return obj
     elif isinstance(obj, torch.Tensor):
@@ -45,6 +47,9 @@ def move_to_device(obj, cuda_device: int):
         return {key: move_to_device(value, cuda_device) for key, value in obj.items()}
     elif isinstance(obj, list):
         return [move_to_device(item, cuda_device) for item in obj]
+    elif isinstance(obj, tuple) and hasattr(obj, '_fields'):
+        # This is the best way to detect a NamedTuple, it turns out.
+        return obj.__class__(*[move_to_device(item, cuda_device) for item in obj])
     elif isinstance(obj, tuple):
         return tuple([move_to_device(item, cuda_device) for item in obj])
     else:
@@ -150,7 +155,7 @@ def sort_batch_by_length(tensor: torch.Tensor, sequence_lengths: torch.Tensor):
     restoration_indices : torch.LongTensor
         Indices into the sorted_tensor such that
         ``sorted_tensor.index_select(0, restoration_indices) == original_tensor``
-    permuation_index : torch.LongTensor
+    permutation_index : torch.LongTensor
         The indices used to sort the tensor. This is useful if you want to sort many
         tensors using the same ordering.
     """
@@ -394,7 +399,9 @@ def masked_flip(padded_sequence: torch.Tensor,
 
 def viterbi_decode(tag_sequence: torch.Tensor,
                    transition_matrix: torch.Tensor,
-                   tag_observations: Optional[List[int]] = None):
+                   tag_observations: Optional[List[int]] = None,
+                   allowed_start_transitions: torch.Tensor = None,
+                   allowed_end_transitions: torch.Tensor = None):
     """
     Perform Viterbi decoding in log space over a sequence given a transition matrix
     specifying pairwise (transition) potentials between tags and a matrix of shape
@@ -417,6 +424,14 @@ def viterbi_decode(tag_sequence: torch.Tensor,
         other, or those transitions are extremely unlikely. In this situation we log a
         warning, but the responsibility for providing self-consistent evidence ultimately
         lies with the user.
+    allowed_start_transitions : torch.Tensor, optional, (default = None)
+        An optional tensor of shape (num_tags,) describing which tags the START token
+        may transition *to*. If provided, additional transition constraints will be used for
+        determining the start element of the sequence.
+    allowed_end_transitions : torch.Tensor, optional, (default = None)
+        An optional tensor of shape (num_tags,) describing which tags may transition *to* the
+        end tag. If provided, additional transition constraints will be used for determining
+        the end element of the sequence.
 
     Returns
     -------
@@ -426,6 +441,37 @@ def viterbi_decode(tag_sequence: torch.Tensor,
         The score of the viterbi path.
     """
     sequence_length, num_tags = list(tag_sequence.size())
+
+    has_start_end_restrictions = allowed_end_transitions is not None or allowed_start_transitions is not None
+
+    if has_start_end_restrictions:
+
+        if allowed_end_transitions is None:
+            allowed_end_transitions = torch.zeros(num_tags)
+        if allowed_start_transitions is None:
+            allowed_start_transitions = torch.zeros(num_tags)
+
+        num_tags = num_tags + 2
+        new_transition_matrix = torch.zeros(num_tags, num_tags)
+        new_transition_matrix[:-2, :-2] = transition_matrix
+
+        # Start and end transitions are fully defined, but cannot transition between each other.
+        # pylint: disable=not-callable
+        allowed_start_transitions = torch.cat([allowed_start_transitions, torch.tensor([-math.inf, -math.inf])])
+        allowed_end_transitions = torch.cat([allowed_end_transitions, torch.tensor([-math.inf, -math.inf])])
+        # pylint: enable=not-callable
+
+        # First define how we may transition FROM the start and end tags.
+        new_transition_matrix[-2, :] = allowed_start_transitions
+        # We cannot transition from the end tag to any tag.
+        new_transition_matrix[-1, :] = -math.inf
+
+        new_transition_matrix[:, -1] = allowed_end_transitions
+        # We cannot transition to the start tag from any tag.
+        new_transition_matrix[:, -2] = -math.inf
+
+        transition_matrix = new_transition_matrix
+
     if tag_observations:
         if len(tag_observations) != sequence_length:
             raise ConfigurationError("Observations were provided, but they were not the same length "
@@ -433,6 +479,15 @@ def viterbi_decode(tag_sequence: torch.Tensor,
                                      .format(sequence_length, tag_observations))
     else:
         tag_observations = [-1 for _ in range(sequence_length)]
+
+
+    if has_start_end_restrictions:
+        tag_observations = [num_tags - 2] + tag_observations + [num_tags - 1]
+        zero_sentinel = torch.zeros(1, num_tags)
+        extra_tags_sentinel = torch.ones(sequence_length, 2) * -math.inf
+        tag_sequence = torch.cat([tag_sequence, extra_tags_sentinel], -1)
+        tag_sequence = torch.cat([zero_sentinel, tag_sequence, zero_sentinel], 0)
+        sequence_length = tag_sequence.size(0)
 
     path_scores = []
     path_indices = []
@@ -455,7 +510,7 @@ def viterbi_decode(tag_sequence: torch.Tensor,
         observation = tag_observations[timestep]
         # Warn the user if they have passed
         # invalid/extremely unlikely evidence.
-        if tag_observations[timestep - 1] != -1:
+        if tag_observations[timestep - 1] != -1 and observation != -1:
             if transition_matrix[tag_observations[timestep - 1], observation] < -10000:
                 logger.warning("The pairwise potential between tags you have passed as "
                                "observations is extremely unlikely. Double check your evidence "
@@ -475,6 +530,9 @@ def viterbi_decode(tag_sequence: torch.Tensor,
         viterbi_path.append(int(backward_timestep[viterbi_path[-1]]))
     # Reverse the backward path.
     viterbi_path.reverse()
+
+    if has_start_end_restrictions:
+        viterbi_path = viterbi_path[1:-1]
     return viterbi_path, viterbi_score
 
 
@@ -983,6 +1041,8 @@ def flatten_and_batch_shift_indices(indices: torch.Tensor,
     offset_indices : ``torch.LongTensor``
     """
     # Shape: (batch_size)
+    if torch.max(indices) >= sequence_length or torch.min(indices) < 0:
+        raise ConfigurationError(f"All elements in indices should be in range (0, {sequence_length - 1})")
     offsets = get_range_vector(indices.size(0), get_device_of(indices)) * sequence_length
     for _ in range(len(indices.size()) - 1):
         offsets = offsets.unsqueeze(1)
@@ -1287,7 +1347,7 @@ def add_positional_features(tensor: torch.Tensor,
 
 
 def clone(module: torch.nn.Module, num_copies: int) -> torch.nn.ModuleList:
-    "Produce N identical layers."
+    """Produce N identical layers."""
     return torch.nn.ModuleList([copy.deepcopy(module) for _ in range(num_copies)])
 
 
@@ -1319,3 +1379,37 @@ def uncombine_initial_dims(tensor: torch.Tensor, original_size: torch.Size) -> t
     else:
         view_args = list(original_size) + [tensor.size(-1)]
         return tensor.view(*view_args)
+
+
+def inspect_parameters(module: torch.nn.Module, quiet: bool = False) -> Dict[str, Any]:
+    """
+    Inspects the model/module parameters and their tunability. The output is structured
+    in a nested dict so that parameters in same sub-modules are grouped together.
+    This can be helpful to setup module path based regex, for example in initializer.
+    It prints it by default (optional) and returns the inspection dict. Eg. output::
+
+        {
+            "_text_field_embedder": {
+                "token_embedder_tokens": {
+                    "_projection": {
+                        "bias": "tunable",
+                        "weight": "tunable"
+                    },
+                    "weight": "frozen"
+                }
+            }
+        }
+
+    """
+    results: Dict[str, Any] = {}
+    for name, param in sorted(module.named_parameters()):
+        keys = name.split(".")
+        write_to = results
+        for key in keys[:-1]:
+            if key not in write_to:
+                write_to[key] = {}
+            write_to = write_to[key]
+        write_to[keys[-1]] = "tunable" if param.requires_grad else "frozen"
+    if not quiet:
+        print(json.dumps(results, indent=4))
+    return results

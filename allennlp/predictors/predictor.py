@@ -1,5 +1,6 @@
-from typing import List
+from typing import List, Iterator
 import json
+from contextlib import contextmanager
 
 from allennlp.common import Registrable
 from allennlp.common.checks import ConfigurationError
@@ -11,6 +12,7 @@ from allennlp.models.archival import Archive, load_archive
 # a mapping from model `type` to the default Predictor for that type
 DEFAULT_PREDICTORS = {
         'atis_parser' : 'atis_parser',
+        'basic_classifier': 'text_classifier',
         'biaffine_parser': 'biaffine-dependency-parser',
         'bidaf': 'machine-comprehension',
         'bidaf-ensemble': 'machine-comprehension',
@@ -21,8 +23,10 @@ DEFAULT_PREDICTORS = {
         'decomposable_attention': 'textual-entailment',
         'dialog_qa': 'dialog_qa',
         'event2mind': 'event2mind',
+        'naqanet': 'machine-comprehension',
         'simple_tagger': 'sentence-tagger',
         'srl': 'semantic-role-labeling',
+        'srl_bert': 'semantic-role-labeling',
         'quarel_parser': 'quarel-parser',
         'wikitables_mml_parser': 'wikitables-parser'
 }
@@ -53,6 +57,40 @@ class Predictor(Registrable):
     def predict_json(self, inputs: JsonDict) -> JsonDict:
         instance = self._json_to_instance(inputs)
         return self.predict_instance(instance)
+
+    @contextmanager
+    def capture_model_internals(self) -> Iterator[dict]:
+        """
+        Context manager that captures the internal-module outputs of
+        this predictor's model. The idea is that you could use it as follows:
+
+        .. code-block:: python
+
+            with predictor.capture_model_internals() as internals:
+                outputs = predictor.predict_json(inputs)
+
+            return {**outputs, "model_internals": internals}
+        """
+        results = {}
+        hooks = []
+
+        # First we'll register hooks to add the outputs of each module to the results dict.
+        def add_output(idx: int):
+            def _add_output(mod, _, outputs):
+                results[idx] = {"name": str(mod), "output": sanitize(outputs)}
+            return _add_output
+
+        for idx, module in enumerate(self._model.modules()):
+            if module != self._model:
+                hook = module.register_forward_hook(add_output(idx))
+                hooks.append(hook)
+
+        # If you capture the return value of the context manager, you get the results dict.
+        yield results
+
+        # And then when you exit the context we remove all the hooks.
+        for hook in hooks:
+            hook.remove()
 
     def predict_instance(self, instance: Instance) -> JsonDict:
         outputs = self._model.forward_on_instance(instance)
@@ -89,22 +127,29 @@ class Predictor(Registrable):
         return instances
 
     @classmethod
-    def from_path(cls, archive_path: str, predictor_name: str = None) -> 'Predictor':
+    def from_path(cls, archive_path: str, predictor_name: str = None, cuda_device: int = -1) -> 'Predictor':
         """
         Instantiate a :class:`Predictor` from an archive path.
 
-        If you need more detailed configuration options, such as running the predictor on the GPU,
+        If you need more detailed configuration options, such as overrides,
         please use `from_archive`.
 
         Parameters
         ----------
-        archive_path The path to the archive.
+        archive_path: ``str``
+            The path to the archive.
+        predictor_name: ``str``, optional (default=None)
+            Name that the predictor is registered as, or None to use the
+            predictor associated with the model.
+        cuda_device: ``int``, optional (default=-1)
+            If `cuda_device` is >= 0, the model will be loaded onto the
+            corresponding GPU. Otherwise it will be loaded onto the CPU.
 
         Returns
         -------
         A Predictor instance.
         """
-        return Predictor.from_archive(load_archive(archive_path), predictor_name)
+        return Predictor.from_archive(load_archive(archive_path, cuda_device=cuda_device), predictor_name)
 
     @classmethod
     def from_archive(cls, archive: Archive, predictor_name: str = None) -> 'Predictor':
