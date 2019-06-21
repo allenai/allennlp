@@ -1,0 +1,78 @@
+row	col	id	content	tokens	lemmaTokens	posTags	nerTags	nerValues	number	date	num2	list	listId
+-1	0	fb:row.row.null	#	#	#	#	O						
+-1	1	fb:row.row.date	Date	date	date	NN	O						
+-1	2	fb:row.row.venue	Venue	venue	venue	NN	O						
+-1	3	fb:row.row.opponent	Opponent	opponent	opponent	NN	O						
+-1	4	fb:row.row.result	Result	result	result	NN	O						
+-1	5	fb:row.row.competition	Competition	competition	competition	NN	O						
+-1	6	fb:row.row.scored	Scored	scored	score	VBN	O						
+0	0	fb:cell.1	1	1	1	CD	NUMBER	1.0	1.0				
+0	1	fb:cell.5_march_2002	5 March 2002	5|march|2002	5|March|2002	CD|NNP|CD	DATE|DATE|DATE	2002-03-05|2002-03-05|2002-03-05	5.0	2002-03-05	2002.0		
+0	2	fb:cell.lagos	Lagos	lagos	Lagos	NNP	LOCATION					Lagos	fb:part.lagos
+0	3	fb:cell.sweden	Sweden	sweden	Sweden	NNP	LOCATION						
+0	4	fb:cell.3_6	3–6	3|--|6	3|--|6	CD|:|CD	NUMBER|O|NUMBER	3.0||6.0	3.0		6.0		
+0	5	fb:cell.algarve_cup	Algarve Cup	algarve|cup	Algarve|Cup	NNP|NNP	MISC|MISC	|					
+0	6	fb:cell.1	1	1	1	CD	NUMBER	1.0	1.0				
+1	0	fb:cell.2	2	2	2	CD	NUMBER	2.0	2.0				
+1	1	fb:cell.22_september_2002	22 September 2002	22|september|2002	22|September|2002	CD|NNP|CD	DATE|DATE|DATE	2002-09-22|2002-09-22|2002-09-22	22.0	2002-09-22	2002.0		
+1	2	fb:cell.st_andrew_s_birmingham	St Andrew's, Birmingham	st|andrew|'s|,|birmingham	St|Andrew|'s|,|Birmingham	NNP|NNP|POS|,|NNP	PERSON|PERSON|O|O|LOCATION	||||				St Andrew's|Birmingham	fb:part.st_andrew_s|fb:part.birmingham
+1	3	fb:cell.iceland	Iceland	iceland	Iceland	NNP	LOCATION						
+1	4	fb:cell.1_0	1–0	1|--|0	1|--|0	CD|:|CD	NUMBER|O|NUMBER	1.0||0.0	1.0		0.0		
+1	5	fb:cell.2003_fifa_world_cup_qual	2003 FIFA World Cup Qual.	2003|fifa|world|cup|qual|.	2003|FIFA|World|Cup|Qual|.	CD|NNP|NNP|NNP|NNP|.	DATE|ORGANIZATION|O|O|O|O	2003|||||	2003.0				
+1	6	fb:cell.1	1	1	1	CD	NUMBER	1.0	1.0				
+2	0	fb:cell.3	3	3	3	CD	NUMBER	3.0	3.0				
+2	1	fb:cell.21_october_2003	21 October 2003	21|october|2003	21|October|2003	CD|NNP|CD	DATE|DATE|DATE	2003-10-21|2003-10-21|2003-10-21	21.0	2003-10-21	2003.0		
+2	2	fb:cell.kryoia_soveto_moscow	Kryoia Soveto, Moscow	kryoia|soveto|,|moscow	Kryoia|Soveto|,|Moscow	NNP|NNP|,|NNP	PERSON|PERSON|O|LOCATION	|||				Kryoia Soveto|Moscow	fb:part.kryoia_soveto|fb:part.moscow
+2	3	fb:cell.russia	Russia	russia	Russia	NNP	LOCATION						
+2	4	fb:cell.2_2	2–2	2|--|2	2|--|2	CD|:|CD	NUMBER|O|NUMBER	2.0||2.0	2.0		2.0		
+2	5	fb:cell.friendly	Friendly	friendly	friendly	JJ	O						
+2	6	fb:cell.1	1	1	1	CD	NUMBER	1.0	1.0				
+3	0	fb:cell.4	4	4	4	CD	NUMBER	4.0	4.0				
+3	1	fb:cell.14_november_2003	14 November 2003	14|november|2003	14|November|2003	CD|NNP|CD	DATE|DATE|DATE	2003-11-14|2003-11-14|2003-11-14	14.0	2003-11-14	2003.0		
+3	2	fb:cell.deepdale_preston	Deepdale, Preston	deepdale|,|preston	Deepdale|,|Preston	NNP|,|NNP	O|O|PERSON	||				Deepdale|Preston	fb:part.deepdale|fb:part.preston
+3	3	fb:cell.scotland	Scotland	scotland	Scotland	NNP	LOCATION						
+3	4	fb:cell.5_0	5–0	5|--|0	5|--|0	CD|:|CD	NUMBER|O|NUMBER	5.0||0.0	5.0		0.0		
+3	5	fb:cell.friendly	Friendly	friendly	friendly	JJ	O						
+3	6	fb:cell.1	1	1	1	CD	NUMBER	1.0	1.0				
+4	0	fb:cell.5	5	5	5	CD	NUMBER	5.0	5.0				
+4	1	fb:cell.16_september_2004	16 September 2004	16|september|2004	16|September|2004	CD|NNP|CD	DATE|DATE|DATE	2004-09-16|2004-09-16|2004-09-16	16.0	2004-09-16	2004.0		
+4	2	fb:cell.sportpark_de_wending_heerhugowaard	Sportpark De Wending, Heerhugowaard	sportpark|de|wending|,|heerhugowaard	Sportpark|De|Wending|,|Heerhugowaard	NNP|NNP|NNP|,|NNP	O|O|O|O|PERSON	||||				Sportpark De Wending|Heerhugowaard	fb:part.sportpark_de_wending|fb:part.heerhugowaard
+4	3	fb:cell.netherlands	Netherlands	netherlands	Netherlands	NNP	LOCATION						
+4	4	fb:cell.2_1	2–1	2|--|1	2|--|1	CD|:|CD	NUMBER|O|NUMBER	2.0||1.0	2.0		1.0		
+4	5	fb:cell.friendly	Friendly	friendly	friendly	JJ	O						
+4	6	fb:cell.1	1	1	1	CD	NUMBER	1.0	1.0				
+5	0	fb:cell.6	6	6	6	CD	NUMBER	6.0	6.0				
+5	1	fb:cell.17_february_2005	17 February 2005	17|february|2005	17|February|2005	CD|NNP|CD	DATE|DATE|DATE	2005-02-17|2005-02-17|2005-02-17	17.0	2005-02-17	2005.0		
+5	2	fb:cell.national_hockey_stadium_milton_keynes	National Hockey Stadium, Milton Keynes	national|hockey|stadium|,|milton|keynes	National|hockey|stadium|,|Milton|Keynes	NNP|NN|NN|,|NNP|NNP	O|O|O|O|PERSON|PERSON	|||||				National Hockey Stadium|Milton Keynes	fb:part.national_hockey_stadium|fb:part.milton_keynes
+5	3	fb:cell.italy	Italy	italy	Italy	NNP	LOCATION						
+5	4	fb:cell.4_1	4–1	4|--|1	4|--|1	CD|:|CD	NUMBER|O|NUMBER	4.0||1.0	4.0		1.0		
+5	5	fb:cell.friendly	Friendly	friendly	friendly	JJ	O						
+5	6	fb:cell.1	1	1	1	CD	NUMBER	1.0	1.0				
+6	0	fb:cell.7	7	7	7	CD	NUMBER	7.0	7.0				
+6	1	fb:cell.9_march_2005	9 March 2005	9|march|2005	9|March|2005	CD|NNP|CD	DATE|DATE|DATE	2005-03-09|2005-03-09|2005-03-09	9.0	2005-03-09	2005.0		
+6	2	fb:cell.faro	Faro	faro	Faro	NNP	PERSON					Faro	fb:part.faro
+6	3	fb:cell.portugal	Portugal	portugal	Portugal	NNP	LOCATION						
+6	4	fb:cell.4_0	4–0	4|--|0	4|--|0	CD|:|CD	NUMBER|O|NUMBER	4.0||0.0	4.0		0.0		
+6	5	fb:cell.algarve_cup	Algarve Cup	algarve|cup	Algarve|Cup	NNP|NNP	MISC|MISC	|					
+6	6	fb:cell.1	1	1	1	CD	NUMBER	1.0	1.0				
+7	0	fb:cell.8	8	8	8	CD	NUMBER	8.0	8.0				
+7	1	fb:cell.21_april_2005	21 April 2005	21|april|2005	21|April|2005	CD|NNP|CD	DATE|DATE|DATE	2005-04-21|2005-04-21|2005-04-21	21.0	2005-04-21	2005.0		
+7	2	fb:cell.prenton_park_tranmere	Prenton Park, Tranmere	prenton|park|,|tranmere	Prenton|Park|,|Tranmere	NNP|NNP|,|NNP	O|O|O|ORGANIZATION	|||				Prenton Park|Tranmere	fb:part.prenton_park|fb:part.tranmere
+7	3	fb:cell.scotland	Scotland	scotland	Scotland	NNP	LOCATION						
+7	4	fb:cell.2_1	2–1	2|--|1	2|--|1	CD|:|CD	NUMBER|O|NUMBER	2.0||1.0	2.0		1.0		
+7	5	fb:cell.friendly	Friendly	friendly	friendly	JJ	O						
+7	6	fb:cell.1	1	1	1	CD	NUMBER	1.0	1.0				
+8	0	fb:cell.9	9	9	9	CD	NUMBER	9.0	9.0				
+8	1	fb:cell.5_june_2005	5 June 2005	5|june|2005	5|June|2005	CD|NNP|CD	DATE|DATE|DATE	2005-06-05|2005-06-05|2005-06-05	5.0	2005-06-05	2005.0		
+8	2	fb:cell.city_of_manchester_stadium_manchester	City of Manchester Stadium, Manchester	city|of|manchester|stadium|,|manchester	City|of|Manchester|Stadium|,|Manchester	NNP|IN|NNP|NNP|,|NNP	O|O|LOCATION|LOCATION|O|LOCATION	|||||				City of Manchester Stadium|Manchester	fb:part.city_of_manchester_stadium|fb:part.manchester
+8	3	fb:cell.finland	Finland	finland	Finland	NNP	LOCATION						
+8	4	fb:cell.3_2	3–2	3|--|2	3|--|2	CD|:|CD	NUMBER|O|NUMBER	3.0||2.0	3.0		2.0		
+8	5	fb:cell.2005_uefa_championship	2005 UEFA Championship	2005|uefa|championship	2005|UEFA|Championship	CD|NNP|NNP	DATE|MISC|MISC	2005||	2005.0				
+8	6	fb:cell.1	1	1	1	CD	NUMBER	1.0	1.0				
+9	0	fb:cell.10	10	10	10	CD	NUMBER	10.0	10.0				
+9	1	fb:cell.1_september_2005	1 September 2005	1|september|2005	1|September|2005	CD|NNP|CD	DATE|DATE|DATE	2005-09-01|2005-09-01|2005-09-01	1.0	2005-09-01	2005.0		
+9	2	fb:cell.ertl_glas_stadion_amstetten	Ertl-Glas-Stadion, Amstetten	ertl|glas|stadion|,|amstetten	Ertl|Glas|Stadion|,|Amstetten	NNP|NNP|NNP|,|NNP	O|O|O|O|LOCATION	||||				Ertl-Glas-Stadion|Amstetten	fb:part.ertl_glas_stadion|fb:part.amstetten
+9	3	fb:cell.austria	Austria	austria	Austria	NNP	LOCATION						
+9	4	fb:cell.4_1	4–1	4|--|1	4|--|1	CD|:|CD	NUMBER|O|NUMBER	4.0||1.0	4.0		1.0		
+9	5	fb:cell.2007_fifa_world_cup_qual	2007 FIFA World Cup Qual.	2007|fifa|world|cup|qual|.	2007|FIFA|World|Cup|Qual|.	CD|NNP|NNP|NNP|NNP|.	DATE|MISC|MISC|MISC|O|O	2007|||||	2007.0				
+9	6	fb:cell.1	1	1	1	CD	NUMBER	1.0	1.0				

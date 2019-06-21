@@ -26,8 +26,8 @@ from allennlp.models.model import Model
 from allennlp.training.callback_trainer import CallbackTrainer
 from allennlp.training.callbacks import (
         Events,
-        LogToTensorboard, CheckpointCallback, MovingAverageCallback, Validate, PostToUrl,
-        LrsCallback, MomentumSchedulerCallback, TrackMetrics, TrainSupervised, GenerateTrainingBatches
+        LogToTensorboard, Checkpoint, ComputeMovingAverage, Validate, PostToUrl,
+        UpdateLearningRate, UpdateMomentum, TrackMetrics, TrainSupervised, GenerateTrainingBatches
 )
 from allennlp.training.checkpointer import Checkpointer
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
@@ -100,7 +100,7 @@ class TestCallbackTrainer(ModelTestCase):
 
         return [
                 LogToTensorboard(log_batch_size_period=10, tensorboard=tensorboard),
-                CheckpointCallback(checkpointer),
+                Checkpoint(checkpointer),
                 Validate(validation_data=self.instances if validation_data is None else validation_data,
                          validation_iterator=iterator if validation_iterator is None else validation_iterator),
                 TrackMetrics(patience, validation_metric),
@@ -218,7 +218,7 @@ class TestCallbackTrainer(ModelTestCase):
 
     def test_trainer_can_run_exponential_moving_average(self):
         moving_average = ExponentialMovingAverage(self.model.named_parameters(), decay=0.9999)
-        callbacks = self.default_callbacks() + [MovingAverageCallback(moving_average)]
+        callbacks = self.default_callbacks() + [ComputeMovingAverage(moving_average)]
         trainer = CallbackTrainer(model=self.model,
                                   optimizer=self.optimizer,
                                   num_epochs=2,
@@ -275,8 +275,9 @@ class TestCallbackTrainer(ModelTestCase):
                         reason="Need multiple GPUs.")
     def test_production_rule_field_with_multiple_gpus(self):
         wikitables_dir = 'allennlp/tests/fixtures/data/wikitables/'
+        offline_lf_directory = wikitables_dir + 'action_space_walker_output/'
         wikitables_reader = WikiTablesDatasetReader(tables_directory=wikitables_dir,
-                                                    dpd_output_directory=wikitables_dir + 'dpd_output/')
+                                                    offline_logical_forms_directory=offline_lf_directory)
         instances = wikitables_reader.read(wikitables_dir + 'sample_data.examples')
         archive_path = self.FIXTURES_ROOT / 'semantic_parsing' / 'wikitables' / 'serialization' / 'model.tar.gz'
         model = load_archive(archive_path).model
@@ -322,7 +323,7 @@ class TestCallbackTrainer(ModelTestCase):
 
     def test_trainer_can_resume_training_for_exponential_moving_average(self):
         moving_average = ExponentialMovingAverage(self.model.named_parameters())
-        callbacks = self.default_callbacks() + [MovingAverageCallback(moving_average)]
+        callbacks = self.default_callbacks() + [ComputeMovingAverage(moving_average)]
 
         trainer = CallbackTrainer(self.model, self.optimizer,
                                   num_epochs=1, serialization_dir=self.TEST_DIR,
@@ -330,7 +331,7 @@ class TestCallbackTrainer(ModelTestCase):
         trainer.train()
 
         new_moving_average = ExponentialMovingAverage(self.model.named_parameters())
-        new_callbacks = self.default_callbacks() + [MovingAverageCallback(new_moving_average)]
+        new_callbacks = self.default_callbacks() + [ComputeMovingAverage(new_moving_average)]
 
         new_trainer = CallbackTrainer(self.model, self.optimizer,
                                       num_epochs=3, serialization_dir=self.TEST_DIR,
@@ -458,7 +459,7 @@ class TestCallbackTrainer(ModelTestCase):
     def test_trainer_can_run_and_resume_with_momentum_scheduler(self):
         scheduler = MomentumScheduler.from_params(
                 self.optimizer, Params({"type": "inverted_triangular", "cool_down": 2, "warm_up": 2}))
-        callbacks = self.default_callbacks() + [MomentumSchedulerCallback(scheduler)]
+        callbacks = self.default_callbacks() + [UpdateMomentum(scheduler)]
         trainer = CallbackTrainer(model=self.model,
                                   optimizer=self.optimizer,
                                   num_epochs=4,
@@ -468,7 +469,7 @@ class TestCallbackTrainer(ModelTestCase):
 
         new_scheduler = MomentumScheduler.from_params(
                 self.optimizer, Params({"type": "inverted_triangular", "cool_down": 2, "warm_up": 2}))
-        new_callbacks = self.default_callbacks() + [MomentumSchedulerCallback(new_scheduler)]
+        new_callbacks = self.default_callbacks() + [UpdateMomentum(new_scheduler)]
         new_trainer = CallbackTrainer(model=self.model,
                                       optimizer=self.optimizer,
                                       num_epochs=6,
@@ -482,7 +483,7 @@ class TestCallbackTrainer(ModelTestCase):
     def test_trainer_can_run_with_lr_scheduler(self):
         lr_params = Params({"type": "reduce_on_plateau"})
         lr_scheduler = LearningRateScheduler.from_params(self.optimizer, lr_params)
-        callbacks = self.default_callbacks() + [LrsCallback(lr_scheduler)]
+        callbacks = self.default_callbacks() + [UpdateLearningRate(lr_scheduler)]
 
         trainer = CallbackTrainer(model=self.model,
                                   optimizer=self.optimizer,
@@ -493,7 +494,7 @@ class TestCallbackTrainer(ModelTestCase):
     def test_trainer_can_resume_with_lr_scheduler(self):
         lr_scheduler = LearningRateScheduler.from_params(
                 self.optimizer, Params({"type": "exponential", "gamma": 0.5}))
-        callbacks = self.default_callbacks() + [LrsCallback(lr_scheduler)]
+        callbacks = self.default_callbacks() + [UpdateLearningRate(lr_scheduler)]
 
         trainer = CallbackTrainer(model=self.model,
                                   optimizer=self.optimizer,
@@ -503,7 +504,7 @@ class TestCallbackTrainer(ModelTestCase):
 
         new_lr_scheduler = LearningRateScheduler.from_params(
                 self.optimizer, Params({"type": "exponential", "gamma": 0.5}))
-        callbacks = self.default_callbacks() + [LrsCallback(new_lr_scheduler)]
+        callbacks = self.default_callbacks() + [UpdateLearningRate(new_lr_scheduler)]
 
         new_trainer = CallbackTrainer(model=self.model,
                                       optimizer=self.optimizer,

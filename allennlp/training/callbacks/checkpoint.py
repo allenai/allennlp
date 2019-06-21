@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 
 @Callback.register("checkpoint")
-class CheckpointCallback(Callback):
+class Checkpoint(Callback):
     """
     Callback that orchestrates checkpointing of your model and training state.
 
@@ -124,4 +124,4 @@ class CheckpointCallback(Callback):
         state_dict_attrs = params.pop("state_dict_attrs", None)
         other_attrs = params.pop("other_attrs", None)
 
-        return CheckpointCallback(checkpointer, state_dict_attrs, other_attrs)
+        return Checkpoint(checkpointer, state_dict_attrs, other_attrs)

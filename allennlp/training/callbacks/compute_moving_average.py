@@ -11,8 +11,8 @@ if TYPE_CHECKING:
     from allennlp.training.callback_trainer import CallbackTrainer  # pylint:disable=unused-import
 
 
-@Callback.register("moving_average")
-class MovingAverageCallback(Callback):
+@Callback.register("compute_moving_average")
+class ComputeMovingAverage(Callback):
     """
     Callback that handles computing a moving average the model parameters.
     The timings for this one are slightly delicate, as every time we either
@@ -58,4 +58,4 @@ class MovingAverageCallback(Callback):
     def from_params(cls, params: Params, model: Model) -> 'MovingAverageCallback':  # type: ignore
         parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
         moving_average = MovingAverage.from_params(params.pop("moving_average"), parameters=parameters)
-        return MovingAverageCallback(moving_average)
+        return ComputeMovingAverage(moving_average)

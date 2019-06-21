@@ -127,22 +127,29 @@ class Predictor(Registrable):
         return instances
 
     @classmethod
-    def from_path(cls, archive_path: str, predictor_name: str = None) -> 'Predictor':
+    def from_path(cls, archive_path: str, predictor_name: str = None, cuda_device: int = -1) -> 'Predictor':
         """
         Instantiate a :class:`Predictor` from an archive path.
 
-        If you need more detailed configuration options, such as running the predictor on the GPU,
+        If you need more detailed configuration options, such as overrides,
         please use `from_archive`.
 
         Parameters
         ----------
-        archive_path The path to the archive.
+        archive_path: ``str``
+            The path to the archive.
+        predictor_name: ``str``, optional (default=None)
+            Name that the predictor is registered as, or None to use the
+            predictor associated with the model.
+        cuda_device: ``int``, optional (default=-1)
+            If `cuda_device` is >= 0, the model will be loaded onto the
+            corresponding GPU. Otherwise it will be loaded onto the CPU.
 
         Returns
         -------
         A Predictor instance.
         """
-        return Predictor.from_archive(load_archive(archive_path), predictor_name)
+        return Predictor.from_archive(load_archive(archive_path, cuda_device=cuda_device), predictor_name)
 
     @classmethod
     def from_archive(cls, archive: Archive, predictor_name: str = None) -> 'Predictor':
