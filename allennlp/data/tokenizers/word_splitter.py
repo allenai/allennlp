@@ -1,5 +1,5 @@
 import re
-from typing import List, Tuple
+from typing import List, Optional
 
 from overrides import overrides
 import spacy
@@ -211,8 +211,12 @@ class BertBasicWordSplitter(WordSplitter):
     """
     def __init__(self,
                  do_lower_case: bool = True,
-                 never_split: List[str] = ("[UNK]", "[SEP]", "[PAD]", "[CLS]", "[MASK]")) -> None:
-        self.basic_tokenizer = BertTokenizer(do_lower_case, never_split)
+                 never_split: Optional[List[str]] = None) -> None:
+        if never_split is None:
+            # Let BertTokenizer use its default
+            self.basic_tokenizer = BertTokenizer(do_lower_case)
+        else:
+            self.basic_tokenizer = BertTokenizer(do_lower_case, never_split)
 
     @overrides
     def split_words(self, sentence: str) -> List[Token]:
