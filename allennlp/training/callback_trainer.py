@@ -1,8 +1,8 @@
 import logging
 import time
 import datetime
-import functools
-from typing import Dict, Optional, List, Union, Any, Iterable, Callable
+import sys
+from typing import Dict, Optional, List, Union, Any, Iterable
 
 import torch
 
@@ -21,23 +21,6 @@ from allennlp.training.trainer_pieces import TrainerPieces
 from allennlp.training.trainer_base import TrainerBase
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
-
-def handle_errors(method: Callable):
-    """
-    Decorator that wraps a method in a try / catch,
-    and that fires off `Events.ERROR` if an exception is
-    encountered.
-    """
-    @functools.wraps(method)
-    def with_errors_handled(self, *args, **kwargs):
-        try:
-            return method(self, *args, **kwargs)
-        except Exception as exc:
-            self.exception = exc
-            self.handler.fire_event(Events.ERROR)
-            raise
-
-    return with_errors_handled
 
 
 @TrainerBase.register("callback")
@@ -123,6 +106,13 @@ class CallbackTrainer(TrainerBase):
         # For capturing errors that occur during the train loop.
         self.exception: Optional[Exception] = None
 
+        # Replace sys.excepthook with our version that fires off an error event
+        sys.excepthook = self._excepthook
+
+    def __del__(self):
+        # Restore the original excepthook when this object gets garbage collected.
+        sys.excepthook = sys.__excepthook__
+
     def batch_loss(self, batch_group: List[TensorDict], for_training: bool) -> torch.Tensor:
         """
         Does a forward pass on the given batches and returns the ``loss`` value in the result.
@@ -151,7 +141,16 @@ class CallbackTrainer(TrainerBase):
 
         return loss
 
-    @handle_errors
+    def _excepthook(self, typ, value, traceback):
+        """
+        Modify sys.excepthook so that when an unhandled exception occurs
+        we grab the exception and fire off `Events.ERROR`
+        before handing the exception back to the standard excepthook.
+        """
+        self.exception = value
+        self.handler.fire_event(Events.ERROR)
+        sys.__excepthook__(typ, value, traceback)
+
     def train(self) -> Dict[str, Any]:
         """
         Trains the supplied model with the supplied parameters.

@@ -779,9 +779,9 @@ class TestCallbackTrainer(ModelTestCase):
         with pytest.raises(RuntimeError):
             original_trainer.train()
 
-        # The callback should have captured the exception.
-        assert error_test.exc is not None
-        assert error_test.exc.args == ("problem starting batch",)
+            # The callback should have captured the exception.
+            assert error_test.exc is not None
+            assert error_test.exc.args == ("problem starting batch",)
 
-        # The "finished" flag should never have been set to True.
-        assert not error_test.finished_training
+            # The "finished" flag should never have been set to True.
+            assert not error_test.finished_training
