@@ -133,11 +133,14 @@ class BertMCQAReader(DatasetReader):
                             and not any_correct:
                         continue
 
+                # TODO this is a patch to enable binary class prediction with the same format
+                if not any_correct and 'answerKey' in item_json and self._num_choices == 1:
+                    answer_id = item_json["answerKey"]
+                else:
+                    if not any_correct and 'answerKey' in item_json:
+                        raise ValueError("No correct answer found for {item_json}!")
 
-                if not any_correct and 'answerKey' in item_json:
-                    raise ValueError("No correct answer found for {item_json}!")
-
-                answer_id = choice_label_to_id[item_json["answerKey"]]
+                    answer_id = choice_label_to_id[item_json["answerKey"]]
                 # Pad choices with empty strings if not right number
                 if len(choice_text_list) != self._num_choices:
                     choice_text_list = (choice_text_list + self._num_choices * [''])[:self._num_choices]
