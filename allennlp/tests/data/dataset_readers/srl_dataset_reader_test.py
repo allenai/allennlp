@@ -85,6 +85,7 @@ class TestBertSrlReader(AllenNlpTestCase):
     def test_convert_tags_to_wordpiece_tags(self):
         # pylint: disable=protected-access
         offsets = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+        offsets = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
         original = ['B-ARG0', 'I-ARG0', 'I-ARG0', 'B-V', 'B-ARG1', 'I-ARG1',
                     'I-ARG1', 'I-ARG1', 'I-ARG1', 'I-ARG1', 'O']
         wordpiece_tags = ['O', 'B-ARG0', 'I-ARG0', 'I-ARG0', 'B-V', 'B-ARG1',
@@ -93,20 +94,32 @@ class TestBertSrlReader(AllenNlpTestCase):
         assert converted == wordpiece_tags
 
         offsets = [2, 3, 4, 5, 6, 7, 8, 9, 10, 12]
+        offsets = [1, 2, 3, 4, 5, 6, 7, 8, 9, 11]
         converted = _convert_tags_to_wordpiece_tags(original, offsets)
         assert converted == ['O', 'B-ARG0', 'I-ARG0', 'I-ARG0', 'B-V', 'B-ARG1',
                              'I-ARG1', 'I-ARG1', 'I-ARG1', 'I-ARG1', 'I-ARG1', 'I-ARG1', 'O']
 
-        offsets = [2, 4, 6]
+        offsets = [1, 3, 5]
         original = ["B-ARG", "B-V", "O"]
         converted = _convert_tags_to_wordpiece_tags(original, offsets)
         assert converted == ['O', 'B-ARG', 'B-V', 'I-V', 'O', 'O', 'O']
 
-        offsets = [3, 4, 6]
+        offsets = [2, 3, 5]
         original = ["B-ARG", "I-ARG", "O"]
         converted = _convert_tags_to_wordpiece_tags(original, offsets)
         assert converted == ['O', 'B-ARG', 'I-ARG', 'I-ARG', 'O', 'O', 'O']
         # pylint: enable=protected-access
+
+
+    def test_wordpiece_tokenize_input(self):
+        wordpieces, offsets, start_offsets = self.reader._wordpiece_tokenize_input( # pylint: disable=protected-access
+                "This is a sentenceandsomepieces with a reallylongword".split(" "))
+
+        assert wordpieces == ['[CLS]', 'this', 'is', 'a', 'sentence', '##ands', '##ome',
+                              '##piece', '##s', 'with', 'a', 'really', '##long', '##word', '[SEP]']
+        assert [wordpieces[i] for i in offsets] == ['this', 'is', 'a', '##s', 'with', 'a', '##word']
+        assert [wordpieces[i] for i in start_offsets] == ['this', 'is', 'a', 'sentence', 'with', 'a', 'really']
+
 
     def test_read_from_file(self):
         conll_reader = self.reader

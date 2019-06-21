@@ -181,10 +181,12 @@ class WordpieceIndexer(TokenIndexer[int]):
         # offset is the last wordpiece of "tokens[-1]".
         offset = len(self._start_piece_ids) if self.use_starting_offsets else len(self._start_piece_ids) - 1
 
+        # Count amount of wordpieces accumulated
+        pieces_accumulated = 0
         for token in token_wordpiece_ids:
             # Truncate the sequence if specified, which depends on where the offsets are
             next_offset = 1 if self.use_starting_offsets else 0
-            if self._truncate_long_sequences and offset >= window_length + next_offset:
+            if self._truncate_long_sequences and offset + len(token) - 1 >= window_length + next_offset:
                 break
 
             # For initial offsets, the current value of ``offset`` is the start of
@@ -198,6 +200,8 @@ class WordpieceIndexer(TokenIndexer[int]):
                 offset += len(token)
                 offsets.append(offset)
 
+            pieces_accumulated += len(token)
+
         if len(flat_wordpiece_ids) <= window_length:
             # If all the wordpieces fit, then we don't need to do anything special
             wordpiece_windows = [self._add_start_and_end(flat_wordpiece_ids)]
@@ -205,8 +209,8 @@ class WordpieceIndexer(TokenIndexer[int]):
         elif self._truncate_long_sequences:
             logger.warning("Too many wordpieces, truncating sequence. If you would like a sliding window, set"
                            "`truncate_long_sequences` to False %s", str([token.text for token in tokens]))
-            wordpiece_windows = [self._add_start_and_end(flat_wordpiece_ids[:window_length])]
-            token_type_ids = self._extend(flat_token_type_ids[:window_length])
+            wordpiece_windows = [self._add_start_and_end(flat_wordpiece_ids[:pieces_accumulated])]
+            token_type_ids = self._extend(flat_token_type_ids[:pieces_accumulated])
         else:
             # Create a sliding window of wordpieces of length `max_pieces` that advances by `stride` steps and
             # add start/end wordpieces to each window

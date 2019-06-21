@@ -42,7 +42,7 @@ allennlp.training.callbacks
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: allennlp.training.callbacks.moving_average
+.. automodule:: allennlp.training.callbacks.compute_moving_average
    :members:
    :undoc-members:
    :show-inheritance:
