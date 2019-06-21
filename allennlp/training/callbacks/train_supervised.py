@@ -48,8 +48,8 @@ class TrainSupervised(Callback):
 
     @handle_event(Events.FORWARD)
     def compute_loss(self, trainer: 'CallbackTrainer'):
-        self.loss = trainer.batch_loss(trainer.batch_group, for_training=True)
-
+        self.loss = (trainer.batch_loss(trainer.batch_group, for_training=True) /
+                     self.gradient_accumulation_period)
         if torch.isnan(self.loss):
             raise ValueError("nan loss encountered")
 
