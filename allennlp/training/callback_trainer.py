@@ -134,20 +134,15 @@ class CallbackTrainer(TrainerBase):
 
         return loss
 
-    @staticmethod
-    def handle_errors(method):
-        @wraps(method)
-        def wrapped_method(self: CallbackTrainer, *args, **kwargs):
-            try:
-                return method(self, *args, **kwargs)
-            except Exception as exc:
-                self.exception = exc
-                self.handler.fire_event(Events.ERROR)
-                raise
-        return wrapped_method
-
-    @handle_errors
     def train(self) -> Dict[str, Any]:
+        try:
+            return self._train()
+        except Exception as exc:
+            self.exception = exc
+            self.handler.fire_event(Events.ERROR)
+            raise
+
+    def _train(self) -> Dict[str, Any]:
         """
         Trains the supplied model with the supplied parameters.
         """
