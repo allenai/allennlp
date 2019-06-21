@@ -1,6 +1,7 @@
 import logging
 import time
 import datetime
+from functools import wraps
 from typing import Dict, Optional, List, Union, Any, Iterable
 
 import torch
@@ -133,15 +134,20 @@ class CallbackTrainer(TrainerBase):
 
         return loss
 
-    def train(self) -> Dict[str, Any]:
-        try:
-            return self._train()
-        except Exception as exc:
-            self.exception = exc
-            self.handler.fire_event(Events.ERROR)
-            raise
+    @staticmethod
+    def handle_errors(method):
+        @wraps(method)
+        def wrapped_method(self: CallbackTrainer, *args, **kwargs):
+            try:
+                return method(self, *args, **kwargs)
+            except Exception as exc:
+                self.exception = exc
+                self.handler.fire_event(Events.ERROR)
+                raise
+        return wrapped_method
 
-    def _train(self) -> Dict[str, Any]:
+    @handle_errors
+    def train(self) -> Dict[str, Any]:
         """
         Trains the supplied model with the supplied parameters.
         """
@@ -188,8 +194,7 @@ class CallbackTrainer(TrainerBase):
                         time.time() - last_save_time > self.model_save_interval
                 ):
                     last_save_time = time.time()
-                    last_save_time_str = training_util.time_to_str(int(last_save_time))
-                    self.checkpoint_epoch = f"{self.epoch_number}.{last_save_time_str}"
+                    self.checkpoint_epoch = f"{self.epoch_number}.{training_util.time_to_str(int(last_save_time))}"
                     self.handler.fire_event(Events.SAVE_CHECKPOINT)
 
                 self.handler.fire_event(Events.BATCH_END)
