@@ -50,6 +50,7 @@ from allennlp.common.util import lazy_groups_of
 from allennlp.models.archival import load_archive
 from allennlp.predictors.predictor import Predictor, JsonDict
 from allennlp.data import Instance
+from allennlp.common.file_utils import cached_path
 
 class Predict(Subcommand):
     def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
@@ -157,6 +158,9 @@ class _PredictManager:
                 if not line.isspace():
                     yield self._predictor.load_line(line)
         else:
+            if self._input_file.startswith('s3'):
+                self._input_file = cached_path(self._input_file)
+
             with open(self._input_file, "r") as file_input:
                 for line in file_input:
                     if not line.isspace():
