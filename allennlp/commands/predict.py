@@ -159,10 +159,11 @@ class _PredictManager:
                 if not line.isspace():
                     yield self._predictor.load_line(line)
         else:
+            org_input_file = self._input_file
             if self._input_file.startswith('s3'):
                 self._input_file = cached_path(self._input_file)
 
-            if self._input_file.endswith('gz'):
+            if org_input_file.endswith('gz'):
                 with gzip.open(self._input_file, 'rb') as file_input:
                     for line in file_input:
                         if not line.isspace():
