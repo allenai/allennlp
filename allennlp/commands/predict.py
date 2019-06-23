@@ -44,6 +44,7 @@ import argparse
 import sys
 import json
 import gzip
+import tqdm
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.checks import check_for_gpu, ConfigurationError
@@ -165,12 +166,12 @@ class _PredictManager:
 
             if org_input_file.endswith('gz'):
                 with gzip.open(self._input_file, 'rb') as file_input:
-                    for line in file_input:
+                    for line in tqdm.tqdm(file_input):
                         if not line.isspace():
                             yield self._predictor.load_line(line)
             else:
                 with open(self._input_file, "r") as file_input:
-                    for line in file_input:
+                    for line in tqdm.tqdm(file_input):
                         if not line.isspace():
                             yield self._predictor.load_line(line)
 
