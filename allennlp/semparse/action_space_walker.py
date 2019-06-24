@@ -111,17 +111,31 @@ class ActionSpaceWalker:
 
     def get_logical_forms_with_agenda(self,
                                       agenda: List[str],
-                                      max_num_logical_forms: int = None) -> List[str]:
+                                      max_num_logical_forms: int = None,
+                                      allow_partial_match: bool = False) -> List[str]:
+        """
+        Parameters
+        ----------
+        agenda : ``List[str]``
+        max_num_logical_forms : ``int`` (optional)
+        allow_partial_match : ``bool`` (optional, defaul=False)
+            If set, this method will return logical forms which contain not necessarily all the
+            items on the agenda. The returned list will be sorted by how many items the logical
+            forms match.
+        """
         if not agenda:
-            logger.warning("Agenda is empty! Returning all paths instead.")
-            return self.get_all_logical_forms(max_num_logical_forms)
+            if allow_partial_match:
+                logger.warning("Agenda is empty! Returning all paths instead.")
+                return self.get_all_logical_forms(max_num_logical_forms)
+            return []
         if self._completed_paths is None:
             self._walk()
         agenda_path_indices = [self._terminal_path_index[action] for action in agenda]
         if all([not path_indices for path_indices in agenda_path_indices]):
-            logger.warning("""None of the agenda items is in any of the paths found. Returning all
-                            paths.""")
-            return self.get_all_logical_forms(max_num_logical_forms)
+            if allow_partial_match:
+                logger.warning("""Agenda items not in any of the paths found. Returning all paths.""")
+                return self.get_all_logical_forms(max_num_logical_forms)
+            return []
         # We omit any agenda items that are not in any of the paths, since they would cause the
         # final intersection to be null.
         # TODO (pradeep): Sort the indices and do intersections in order, so that we can return the
@@ -132,12 +146,30 @@ class ActionSpaceWalker:
                 logger.warning(f"{agenda_item} is not in any of the paths found! Ignoring it.")
                 continue
             filtered_path_indices.append(path_indices)
-        return_set = filtered_path_indices[0]
-        for next_set in filtered_path_indices[1:]:
-            return_set = return_set.intersection(next_set)
-        paths = [self._completed_paths[index] for index in return_set]
+        index_to_num_items: Dict[int, int] = defaultdict(int)
+        for indices in filtered_path_indices:
+            for index in indices:
+                index_to_num_items[index] += 1
+        if allow_partial_match:
+            num_items_grouped_paths: Dict[int, List[List[str]]] = defaultdict(list)
+            for index, num_items in index_to_num_items.items():
+                num_items_grouped_paths[num_items].append(self._completed_paths[index])
+            paths = []
+            # Sort by number of agenda items present in the paths.
+            for num_items, corresponding_paths in sorted(num_items_grouped_paths.items(),
+                                                         reverse=True):
+                # Given those paths, sort them by length, so that the first path in ``paths`` will
+                # be the shortest path with the most agenda items.
+                paths.extend(sorted(corresponding_paths, key=len))
+        else:
+            indices_to_return = []
+            for index, num_items in index_to_num_items.items():
+                if num_items == len(filtered_path_indices):
+                    indices_to_return.append(index)
+            # Sort all the paths by length
+            paths = sorted([self._completed_paths[index] for index in indices_to_return], key=len)
         if max_num_logical_forms is not None:
-            paths = sorted(paths, key=len)[:max_num_logical_forms]
+            paths = paths[:max_num_logical_forms]
         logical_forms = [self._world.get_logical_form(path) for path in paths]
         return logical_forms
 
