@@ -111,7 +111,7 @@ class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
                                                        action_embedding_dim=action_embedding_dim,
                                                        input_attention=attention,
                                                        num_start_types=self._num_start_types,
-                                                       predict_start_type_separately=True,
+                                                       predict_start_type_separately=False,
                                                        add_action_bias=self._add_action_bias,
                                                        mixture_feedforward=mixture_feedforward,
                                                        dropout=dropout)

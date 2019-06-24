@@ -3,7 +3,7 @@ from collections import defaultdict
 # Unfortunately, mypy doesn't like this very much, so we have to "type: ignore" a bunch of things.
 # But it makes for a nicer induced grammar, so it's worth it.
 from numbers import Number
-from typing import Dict, List, NamedTuple, Set, Tuple, Any
+from typing import Dict, List, NamedTuple, Set, Type, Tuple, Any
 import logging
 import re
 
@@ -54,13 +54,7 @@ class WikiTablesLanguage(DomainLanguage):
     the language using ``add_predicate`` if, e.g., there is a column with dates in it.
     """
     def __init__(self, table_context: TableQuestionContext) -> None:
-        # TODO (pradeep): We do not want the start types to be a static set. We want it to depend on the table
-        # context instead, and include start types only when columns of a given type are present in the table.
-        # Currently, allowing all start types lets the parser produce action sequences like ["@start -> Date"],
-        # with just one action, when there are no dates in the table. These will obviously just be parsing errors.
-        # However, changing this set to contain just the required start types is not starightforward because that
-        # messes the start action prediction in the parser.
-        super().__init__(start_types={Date, Number, List[str]})
+        super().__init__(start_types=self._get_start_types_in_context(table_context))
         self.table_context = table_context
         self.table_data = [Row(row) for row in table_context.table_data]
 
@@ -144,6 +138,16 @@ class WikiTablesLanguage(DomainLanguage):
         self.terminal_productions: Dict[str, str] = {}
         for name, types in self._function_types.items():
             self.terminal_productions[name] = "%s -> %s" % (types[0], name)
+
+    def _get_start_types_in_context(self, table_context: TableQuestionContext) -> Set[Type]:
+        start_types: Set[Type] = set()
+        if "string" in table_context.column_types:
+            start_types.add(List[str])
+        if "number" in table_context.column_types or "num2" in table_context.column_types:
+            start_types.add(Number)
+        if "date" in table_context.column_types:
+            start_types.add(Date)
+        return start_types
 
     def get_agenda(self,
                    conservative: bool = False):
@@ -346,8 +350,8 @@ class WikiTablesLanguage(DomainLanguage):
         """
         try:
             denotation = self.execute(logical_form)
-        except ExecutionError:
-            logger.warning(f'Failed to execute: {logical_form}')
+        except ExecutionError as error:
+            logger.warning(f'Failed to execute: {logical_form}. Error: {error}')
             return False
         return self.evaluate_denotation(denotation, target_list)
 
@@ -434,7 +438,10 @@ class WikiTablesLanguage(DomainLanguage):
             return return_list
         cell_value = rows[0].values[column.name]
         for table_row in self.table_data:
-            if table_row.values[column.name] == cell_value:
+            new_cell_value = table_row.values[column.name]
+            if new_cell_value is None or not isinstance(new_cell_value, type(cell_value)):
+                continue
+            if new_cell_value == cell_value:
                 return_list.append(table_row)
         return return_list
 
