@@ -225,18 +225,19 @@ def train_model(params: Params,
                 validation_data=pieces.validation_dataset,
                 params=pieces.params,
                 validation_iterator=pieces.validation_iterator)
+
+        evaluation_iterator = pieces.validation_iterator or pieces.iterator
+        evaluation_dataset = pieces.test_dataset
+
     else:
-        # Workaround to obtain the evaluation parts.
-        pieces = TrainerPieces.from_params(params.duplicate(),  # pylint: disable=no-member
-                                           serialization_dir,
-                                           recover,
-                                           cache_directory,
-                                           cache_prefix)
+        if evaluate_on_test:
+            raise ValueError("--evaluate-on-test only works with the default Trainer. "
+                             "If you're using the CallbackTrainer you can use a callback "
+                             "to evaluate at Events.TRAINING_END; otherwise you'll have "
+                             "to run allennlp evaluate separately.")
 
         trainer = TrainerBase.from_params(params, serialization_dir, recover)
-
-    evaluation_iterator = pieces.validation_iterator or pieces.iterator
-    evaluation_dataset = pieces.test_dataset
+        evaluation_dataset = None
 
     params.assert_empty('base train command')
 
