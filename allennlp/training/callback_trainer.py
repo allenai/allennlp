@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 def train_and_handle_errors(self: 'CallbackTrainer') -> Dict[str, Any]:
     # pylint: disable=protected-access
     try:
-        self._original_train()
+        return self._original_train()
     except Exception as exc:
         self.exception = exc
         self.handler.fire_event(Events.ERROR)
@@ -119,7 +119,7 @@ class CallbackTrainer(TrainerBase):
         # See https://stackoverflow.com/a/50600307/1076346
         if self.handler.has_event(Events.ERROR):
             self._original_train = self.train
-            self.train = MethodType(train_and_handle_errors, self)
+            self.train = MethodType(train_and_handle_errors, self)  # type: ignore
 
     def batch_loss(self, batch_group: List[TensorDict], for_training: bool) -> torch.Tensor:
         """
