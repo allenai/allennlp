@@ -777,6 +777,7 @@ class TestCallbackTrainer(ModelTestCase):
                                            num_epochs=1, serialization_dir=self.TEST_DIR)
 
         with pytest.raises(RuntimeError):
+            # pylint: disable=not-callable
             original_trainer.train()
 
         # The callback should have captured the exception.

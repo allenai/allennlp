@@ -149,14 +149,6 @@ class CallbackTrainer(TrainerBase):
 
         return loss
 
-    def try_with_errors(self, method) -> Dict[str, Any]:
-        try:
-            return method()
-        except Exception as exc:
-            self.exception = exc
-            self.handler.fire_event(Events.ERROR)
-            raise
-
     def train(self) -> Dict[str, Any]:
         """
         Trains the supplied model with the supplied parameters.
