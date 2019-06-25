@@ -1,8 +1,8 @@
 import logging
 import time
 import datetime
+import functools
 from typing import Dict, Optional, List, Union, Any, Iterable
-from types import MethodType
 
 import torch
 
@@ -22,14 +22,17 @@ from allennlp.training.trainer_base import TrainerBase
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
-def train_and_handle_errors(self: 'CallbackTrainer') -> Dict[str, Any]:
-    # pylint: disable=protected-access
-    try:
-        return self._original_train()
-    except Exception as exc:
-        self.exception = exc
-        self.handler.fire_event(Events.ERROR)
-        raise
+def handle_errors(method):
+    @functools.wraps(method)
+    def train_and_handle_errors(self: 'CallbackTrainer') -> Dict[str, Any]:
+        try:
+            return method(self)
+        except Exception as exc:
+            self.exception = exc
+            self.handler.fire_event(Events.ERROR)
+            raise
+
+    return train_and_handle_errors
 
 
 @TrainerBase.register("callback")
@@ -115,12 +118,6 @@ class CallbackTrainer(TrainerBase):
         # For capturing errors that occur during the train loop.
         self.exception: Optional[Exception] = None
 
-        # If there's an error event to handle, replace train with the error-handling version.
-        # See https://stackoverflow.com/a/50600307/1076346
-        if self.handler.has_event(Events.ERROR):
-            self._original_train = self.train
-            self.train = MethodType(train_and_handle_errors, self)  # type: ignore
-
     def batch_loss(self, batch_group: List[TensorDict], for_training: bool) -> torch.Tensor:
         """
         Does a forward pass on the given batches and returns the ``loss`` value in the result.
@@ -149,11 +146,11 @@ class CallbackTrainer(TrainerBase):
 
         return loss
 
+    @handle_errors
     def train(self) -> Dict[str, Any]:
         """
         Trains the supplied model with the supplied parameters.
         """
-        # pylint: disable=method-hidden
         self.handler.fire_event(Events.RESTORE_CHECKPOINT)
         starting_epoch = self.epoch_number
 

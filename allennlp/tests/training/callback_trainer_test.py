@@ -1,4 +1,4 @@
-# pylint: disable=invalid-name,too-many-public-methods,protected-access,no-member,not-callable
+# pylint: disable=invalid-name,too-many-public-methods,protected-access,no-member
 import copy
 import glob
 import json
