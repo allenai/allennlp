@@ -68,6 +68,12 @@ class CallbackHandler:
             self._callbacks[event].append(EventHandler(name, callback, method, priority))
             self._callbacks[event].sort(key=lambda eh: eh.priority)
 
+    def has_event(self, event: str) -> bool:
+        """
+        Does this handler have any callbacks that respond to `event`?
+        """
+        return event in self._callbacks
+
     def fire_event(self, event: str) -> None:
         """
         Runs every callback registered for the provided event,

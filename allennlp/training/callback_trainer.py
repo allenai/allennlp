@@ -1,8 +1,9 @@
 import logging
 import time
 import datetime
-import sys
+import functools
 from typing import Dict, Optional, List, Union, Any, Iterable
+from types import MethodType
 
 import torch
 
@@ -21,6 +22,14 @@ from allennlp.training.trainer_pieces import TrainerPieces
 from allennlp.training.trainer_base import TrainerBase
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
+def train_and_handle_errors(self: 'CallbackTrainer') -> Dict[str, Any]:
+    try:
+        self._original_train()
+    except Exception as exc:
+        self.exception = exc
+        self.handler.fire_event(Events.ERROR)
+        raise
 
 
 @TrainerBase.register("callback")
@@ -106,12 +115,11 @@ class CallbackTrainer(TrainerBase):
         # For capturing errors that occur during the train loop.
         self.exception: Optional[Exception] = None
 
-        # Replace sys.excepthook with our version that fires off an error event
-        sys.excepthook = self._excepthook
-
-    def __del__(self):
-        # Restore the original excepthook when this object gets garbage collected.
-        sys.excepthook = sys.__excepthook__
+        # If there's an error event to handle, replace train with the error-handling version.
+        # See https://stackoverflow.com/a/50600307/1076346
+        if self.handler.has_event(Events.ERROR):
+            self._original_train = self.train
+            self.train = MethodType(train_and_handle_errors, self)
 
     def batch_loss(self, batch_group: List[TensorDict], for_training: bool) -> torch.Tensor:
         """
@@ -141,20 +149,19 @@ class CallbackTrainer(TrainerBase):
 
         return loss
 
-    def _excepthook(self, typ, value, traceback):
-        """
-        Modify sys.excepthook so that when an unhandled exception occurs
-        we grab the exception and fire off `Events.ERROR`
-        before handing the exception back to the standard excepthook.
-        """
-        self.exception = value
-        self.handler.fire_event(Events.ERROR)
-        sys.__excepthook__(typ, value, traceback)
+    def try_with_errors(self, method) -> Dict[str, Any]:
+        try:
+            return method()
+        except Exception as exc:
+            self.exception = exc
+            self.handler.fire_event(Events.ERROR)
+            raise
 
     def train(self) -> Dict[str, Any]:
         """
         Trains the supplied model with the supplied parameters.
         """
+        # pylint: disable=method-hidden
         self.handler.fire_event(Events.RESTORE_CHECKPOINT)
         starting_epoch = self.epoch_number
 
