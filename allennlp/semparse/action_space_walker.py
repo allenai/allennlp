@@ -3,8 +3,7 @@ from typing import List, Dict, Set
 import logging
 
 from allennlp.common.util import START_SYMBOL
-from allennlp.semparse.worlds.world import World
-from allennlp.semparse.type_declarations import type_declaration as types
+from allennlp.semparse.domain_languages.domain_language import DomainLanguage
 
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -19,13 +18,13 @@ class ActionSpaceWalker:
 
     Parameters
     ----------
-    world : ``World``
-        The world from which valid actions will be taken.
+    world : ``DomainLanguage``
+        The world (domain language instantiation) from which valid actions will be taken.
     max_path_length : ``int``
         The maximum path length till which the action space will be explored. Paths longer than this
         length will be discarded.
     """
-    def __init__(self, world: World, max_path_length: int) -> None:
+    def __init__(self, world: DomainLanguage, max_path_length: int) -> None:
         self._world = world
         self._max_path_length = max_path_length
         self._completed_paths: List[List[str]] = None
@@ -36,14 +35,12 @@ class ActionSpaceWalker:
         """
         Walk over action space to collect completed paths of at most ``self._max_path_length`` steps.
         """
+        actions = self._world.get_nonterminal_productions()
+        start_productions = actions[START_SYMBOL]
         # Buffer of NTs to expand, previous actions
-        incomplete_paths = [([str(type_)], [f"{START_SYMBOL} -> {type_}"]) for type_ in
-                            self._world.get_valid_starting_types()]
-
+        incomplete_paths = [([start_production.split(' -> ')[-1]], [start_production])
+                            for start_production in start_productions]
         self._completed_paths = []
-        actions = self._world.get_valid_actions()
-        # Keeps track of `MultiMatchNamedBasicTypes` to substitute them with appropriate types.
-        multi_match_substitutions = self._world.get_multi_match_mapping()
         # Overview: We keep track of the buffer of non-terminals to expand, and the action history
         # for each incomplete path. At every iteration in the while loop below, we iterate over all
         # incomplete paths, expand one non-terminal from the buffer in a depth-first fashion, get
@@ -60,11 +57,7 @@ class ActionSpaceWalker:
                 # Taking the last non-terminal added to the buffer. We're going depth-first.
                 nonterminal = nonterminal_buffer.pop()
                 next_actions = []
-                if nonterminal in multi_match_substitutions:
-                    for current_nonterminal in [nonterminal] + multi_match_substitutions[nonterminal]:
-                        if current_nonterminal in actions:
-                            next_actions.extend(actions[current_nonterminal])
-                elif nonterminal not in actions:
+                if nonterminal not in actions:
                     # This happens when the nonterminal corresponds to a type that does not exist in
                     # the context. For example, in the variable free variant of the WikiTables
                     # world, there are nonterminals for specific column types (like date). Say we
@@ -81,7 +74,7 @@ class ActionSpaceWalker:
                     # Since we expand the last action added to the buffer, the left child should be
                     # added after the right child.
                     for right_side_part in reversed(self._get_right_side_parts(action)):
-                        if types.is_nonterminal(right_side_part):
+                        if self._world.is_nonterminal(right_side_part):
                             new_nonterminal_buffer.append(right_side_part)
                     next_paths.append((new_nonterminal_buffer, new_history))
             incomplete_paths = []
@@ -92,7 +85,7 @@ class ActionSpaceWalker:
                     next_path_index = len(self._completed_paths)
                     for action in path:
                         for value in self._get_right_side_parts(action):
-                            if not types.is_nonterminal(value):
+                            if not self._world.is_nonterminal(value):
                                 self._terminal_path_index[action].add(next_path_index)
                     self._completed_paths.append(path)
                 # We're adding to incomplete_paths for the next iteration, only those paths that are
@@ -103,7 +96,7 @@ class ActionSpaceWalker:
     @staticmethod
     def _get_right_side_parts(action: str) -> List[str]:
         _, right_side = action.split(" -> ")
-        if "[" in right_side:
+        if right_side.startswith("["):
             right_side_parts = right_side[1:-1].split(", ")
         else:
             right_side_parts = [right_side]
@@ -170,7 +163,7 @@ class ActionSpaceWalker:
             paths = sorted([self._completed_paths[index] for index in indices_to_return], key=len)
         if max_num_logical_forms is not None:
             paths = paths[:max_num_logical_forms]
-        logical_forms = [self._world.get_logical_form(path) for path in paths]
+        logical_forms = [self._world.action_sequence_to_logical_form(path) for path in paths]
         return logical_forms
 
     def get_all_logical_forms(self,
@@ -182,5 +175,5 @@ class ActionSpaceWalker:
             if self._length_sorted_paths is None:
                 self._length_sorted_paths = sorted(self._completed_paths, key=len)
             paths = self._length_sorted_paths[:max_num_logical_forms]
-        logical_forms = [self._world.get_logical_form(path) for path in paths]
+        logical_forms = [self._world.action_sequence_to_logical_form(path) for path in paths]
         return logical_forms
