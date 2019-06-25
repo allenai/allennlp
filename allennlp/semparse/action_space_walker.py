@@ -129,21 +129,26 @@ class ActionSpaceWalker:
                 logger.warning("""Agenda items not in any of the paths found. Returning all paths.""")
                 return self.get_all_logical_forms(max_num_logical_forms)
             return []
-        # We omit any agenda items that are not in any of the paths, since they would cause the
-        # final intersection to be null.
         # TODO (pradeep): Sort the indices and do intersections in order, so that we can return the
         # set with maximal coverage if the full intersection is null.
-        filtered_path_indices = []
+
+        # This list contains for each agenda item the list of indices of paths that contain that agenda item. Note
+        # that we omit agenda items that are not in any paths to avoid the final intersection being null. So there
+        # will not be any empty sub-lists in the list below.
+        filtered_path_indices: List[List[int]] = []
         for agenda_item, path_indices in zip(agenda, agenda_path_indices):
             if not path_indices:
                 logger.warning(f"{agenda_item} is not in any of the paths found! Ignoring it.")
                 continue
             filtered_path_indices.append(path_indices)
+
+        # This mapping is from a path index to the number of items in the agenda that the path contains.
         index_to_num_items: Dict[int, int] = defaultdict(int)
         for indices in filtered_path_indices:
             for index in indices:
                 index_to_num_items[index] += 1
         if allow_partial_match:
+            # We group the paths based on how many agenda items they contain, and output them in a sorted order.
             num_items_grouped_paths: Dict[int, List[List[str]]] = defaultdict(list)
             for index, num_items in index_to_num_items.items():
                 num_items_grouped_paths[num_items].append(self._completed_paths[index])

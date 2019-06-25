@@ -20,7 +20,7 @@ from allennlp.data.tokenizers.tokenizer import Tokenizer
 from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
-from allennlp.semparse.domain_languages import ParsingError
+from allennlp.semparse import ParsingError
 from allennlp.semparse.contexts import TableQuestionContext
 from allennlp.semparse.domain_languages import WikiTablesLanguage
 
