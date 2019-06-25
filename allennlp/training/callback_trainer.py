@@ -1,7 +1,6 @@
 import logging
 import time
 import datetime
-import functools
 from typing import Dict, Optional, List, Union, Any, Iterable
 from types import MethodType
 
@@ -24,6 +23,7 @@ from allennlp.training.trainer_base import TrainerBase
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 def train_and_handle_errors(self: 'CallbackTrainer') -> Dict[str, Any]:
+    # pylint: disable=protected-access
     try:
         self._original_train()
     except Exception as exc:
