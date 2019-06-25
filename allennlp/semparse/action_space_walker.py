@@ -135,7 +135,7 @@ class ActionSpaceWalker:
         # This list contains for each agenda item the list of indices of paths that contain that agenda item. Note
         # that we omit agenda items that are not in any paths to avoid the final intersection being null. So there
         # will not be any empty sub-lists in the list below.
-        filtered_path_indices: List[List[int]] = []
+        filtered_path_indices: List[Set[int]] = []
         for agenda_item, path_indices in zip(agenda, agenda_path_indices):
             if not path_indices:
                 logger.warning(f"{agenda_item} is not in any of the paths found! Ignoring it.")
