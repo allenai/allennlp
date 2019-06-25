@@ -346,6 +346,48 @@ class TestCallbackTrainer(ModelTestCase):
 
         new_trainer.train()
 
+    def test_training_metrics_consistent_with_and_without_validation(self):
+        default_callbacks = self.default_callbacks(serialization_dir=None)
+        default_callbacks_without_validation = [callback for callback in default_callbacks if type(callback).__name__ != 'Validate']
+        trainer1 = CallbackTrainer(copy.deepcopy(self.model), copy.deepcopy(self.optimizer),
+                                   callbacks=default_callbacks_without_validation,
+                                   num_epochs=1, serialization_dir=None)
+
+        trainer1.train()
+
+        trainer2 = CallbackTrainer(copy.deepcopy(self.model), copy.deepcopy(self.optimizer),
+                                   callbacks=default_callbacks,
+                                   num_epochs=1, serialization_dir=None)
+
+        trainer2.train()
+        metrics1 = trainer1.train_metrics
+        metrics2 = trainer2.train_metrics
+        assert metrics1.keys() == metrics2.keys()
+        threshold = 1e-6
+        for key in metrics1:
+            assert abs(metrics1[key] - metrics2[key]) < threshold
+
+    def test_validation_metrics_consistent_with_and_without_tracking(self):
+        default_callbacks = self.default_callbacks(serialization_dir=None)
+        default_callbacks_without_tracking = [callback for callback in default_callbacks if type(callback).__name__ != 'TrackMetrics']
+        trainer1 = CallbackTrainer(copy.deepcopy(self.model), copy.deepcopy(self.optimizer),
+                                   callbacks=default_callbacks_without_tracking,
+                                   num_epochs=1, serialization_dir=None)
+
+        trainer1.train()
+
+        trainer2 = CallbackTrainer(copy.deepcopy(self.model), copy.deepcopy(self.optimizer),
+                                   callbacks=default_callbacks,
+                                   num_epochs=1, serialization_dir=None)
+
+        trainer2.train()
+        metrics1 = trainer1.val_metrics
+        metrics2 = trainer2.val_metrics
+        assert metrics1.keys() == metrics2.keys()
+        threshold = 1e-6
+        for key in metrics1:
+            assert abs(metrics1[key] - metrics2[key]) < threshold
+
     def test_metric_only_considered_best_so_far_when_strictly_better_than_those_before_it_increasing_metric(
             self):
         new_trainer = CallbackTrainer(self.model, self.optimizer,
