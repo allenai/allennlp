@@ -60,6 +60,6 @@ class TrainSupervised(Callback):
         trainer.optimizer.step()
 
         # Update the description with the latest metrics
-        trainer.train_metrics.update(
-                training_util.get_metrics(trainer.model, trainer.train_loss, trainer.batches_this_epoch)
-        )
+        trainer.train_metrics = training_util.get_metrics(trainer.model,
+                                                          trainer.train_loss,
+                                                          trainer.batches_this_epoch)
