@@ -42,9 +42,20 @@ class TrainSupervised(Callback):
     def enable_gradient_clipping(self, trainer: 'CallbackTrainer'):
         training_util.enable_gradient_clipping(trainer.model, self.grad_clipping)
 
+        # This is necessary to prevent a crash in the gradient accumulation case.
+        trainer.train_metrics["loss"] = 0.0
+
     @handle_event(Events.EPOCH_START)
     def zero_grad(self, trainer: 'CallbackTrainer'):
         trainer.optimizer.zero_grad()
+        trainer.batches_this_epoch = 0
+
+    @handle_event(Events.BATCH_START)
+    def increment_counters(self, trainer: 'CallbackTrainer'):
+        self.accumulated_batches += 1
+        if self.accumulated_batches >= self.gradient_accumulation_period:
+            trainer.batches_this_epoch += 1
+            trainer.batch_num_total += 1
 
     @handle_event(Events.FORWARD)
     def compute_loss(self, trainer: 'CallbackTrainer'):
@@ -57,7 +68,6 @@ class TrainSupervised(Callback):
     def backpropagate_errors(self, trainer: 'CallbackTrainer'):
         self.loss.backward()
         trainer.train_loss += self.loss.item()
-        self.accumulated_batches += 1
 
     def _optimize(self, trainer: 'CallbackTrainer'):
         trainer.batch_grad_norm = training_util.rescale_gradients(trainer.model, self.grad_norm)
@@ -87,3 +97,6 @@ class TrainSupervised(Callback):
         """
         if self.accumulated_batches > 0:
             self._optimize(trainer)
+            # Have to increment counters separately
+            trainer.batch_num_total += 1
+            trainer.batches_this_epoch += 1

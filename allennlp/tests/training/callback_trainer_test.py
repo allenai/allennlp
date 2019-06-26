@@ -26,7 +26,7 @@ from allennlp.models.archival import load_archive
 from allennlp.models.model import Model
 from allennlp.training.callback_trainer import CallbackTrainer
 from allennlp.training.callbacks import (
-        Events,
+        Events, Callback, handle_event,
         LogToTensorboard, Checkpoint, ComputeMovingAverage, Validate, PostToUrl,
         UpdateLearningRate, UpdateMomentum, TrackMetrics, TrainSupervised, GenerateTrainingBatches
 )
@@ -746,11 +746,30 @@ class TestCallbackTrainer(ModelTestCase):
         assert training_metrics["validation_loss"] > restored_metrics["validation_loss"]
 
     def test_gradient_accumulation(self):
-        callbacks = self.default_callbacks(batch_size=1, gradient_accumulation_period=3)
 
-        # We'll record trainer.batch_num_total each time optimizer.step is called.
+        # We'll track how many times forward was called:
+        class CountForward(Callback):
+            def __init__(self) -> None:
+                self.count = 0
+
+            @handle_event(Events.FORWARD)
+            def increment(self, _):
+                self.count += 1
+
+        count_forward = CountForward()
+
+        callbacks = [*self.default_callbacks(batch_size=1, gradient_accumulation_period=3),
+                     count_forward]
+
+        # We'll record batch_num_total and forward count each time
+        # optimizer.step is called.
         batch_nums_total = []
-        side_effect = lambda: batch_nums_total.append(trainer.batch_num_total)
+        forwards_total = []
+
+        def side_effect():
+            batch_nums_total.append(trainer.batch_num_total)
+            forwards_total.append(count_forward.count)
+
         self.optimizer.step = MagicMock(return_value=None, side_effect=side_effect)
 
         trainer = CallbackTrainer(model=self.model,
@@ -766,4 +785,5 @@ class TestCallbackTrainer(ModelTestCase):
         # And it should get called at the end of batch 3, then at the end
         # of the epoch (batch 4), then at the end of batch 7, then at the
         # end of the second epoch (batch 8).
-        assert batch_nums_total == [3, 4, 7, 8]
+        assert batch_nums_total == [1, 1, 3, 3]
+        assert forwards_total == [3, 4, 7, 8]

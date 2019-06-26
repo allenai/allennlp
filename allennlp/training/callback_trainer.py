@@ -155,15 +155,11 @@ class CallbackTrainer(TrainerBase):
             last_save_time = time.time()
 
             logger.info("Training")
-            self.batches_this_epoch = 0
 
             batch_groups_tqdm = Tqdm.tqdm(self.training_batches, total=self.num_training_batches)
 
             for self.batch_group in batch_groups_tqdm:
                 self.handler.fire_event(Events.BATCH_START)
-
-                self.batches_this_epoch += 1
-                self.batch_num_total += 1
 
                 self.handler.fire_event(Events.FORWARD)
                 self.handler.fire_event(Events.BACKWARD)
