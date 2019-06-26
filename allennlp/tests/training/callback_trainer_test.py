@@ -10,6 +10,7 @@ from typing import Dict, Iterable
 import torch
 import responses
 import pytest
+import numpy as np
 
 from allennlp.common.checks import ConfigurationError
 
@@ -348,7 +349,8 @@ class TestCallbackTrainer(ModelTestCase):
 
     def test_training_metrics_consistent_with_and_without_validation(self):
         default_callbacks = self.default_callbacks(serialization_dir=None)
-        default_callbacks_without_validation = [callback for callback in default_callbacks if type(callback).__name__ != 'Validate']
+        default_callbacks_without_validation = [callback for callback in default_callbacks
+                                                if not isinstance(callback, Validate)]
         trainer1 = CallbackTrainer(copy.deepcopy(self.model), copy.deepcopy(self.optimizer),
                                    callbacks=default_callbacks_without_validation,
                                    num_epochs=1, serialization_dir=None)
@@ -363,13 +365,13 @@ class TestCallbackTrainer(ModelTestCase):
         metrics1 = trainer1.train_metrics
         metrics2 = trainer2.train_metrics
         assert metrics1.keys() == metrics2.keys()
-        threshold = 1e-6
-        for key in metrics1:
-            assert abs(metrics1[key] - metrics2[key]) < threshold
+        for key in ['accuracy', 'accuracy3', 'loss']:
+            np.testing.assert_almost_equal(metrics1[key], metrics2[key])
 
     def test_validation_metrics_consistent_with_and_without_tracking(self):
         default_callbacks = self.default_callbacks(serialization_dir=None)
-        default_callbacks_without_tracking = [callback for callback in default_callbacks if type(callback).__name__ != 'TrackMetrics']
+        default_callbacks_without_tracking = [callback for callback in default_callbacks
+                                              if not isinstance(callback, TrackMetrics)]
         trainer1 = CallbackTrainer(copy.deepcopy(self.model), copy.deepcopy(self.optimizer),
                                    callbacks=default_callbacks_without_tracking,
                                    num_epochs=1, serialization_dir=None)
@@ -384,9 +386,8 @@ class TestCallbackTrainer(ModelTestCase):
         metrics1 = trainer1.val_metrics
         metrics2 = trainer2.val_metrics
         assert metrics1.keys() == metrics2.keys()
-        threshold = 1e-6
-        for key in metrics1:
-            assert abs(metrics1[key] - metrics2[key]) < threshold
+        for key in ['accuracy', 'accuracy3', 'loss']:
+            np.testing.assert_almost_equal(metrics1[key], metrics2[key])
 
     def test_metric_only_considered_best_so_far_when_strictly_better_than_those_before_it_increasing_metric(
             self):
