@@ -60,6 +60,9 @@ class Date:
     def __hash__(self):
         return hash(str(self))
 
+    def to_json(self):
+        return str(self)
+
     @classmethod
     def make_date(cls, string: str) -> 'Date':
         year_string, month_string, day_string = string.split("-")
