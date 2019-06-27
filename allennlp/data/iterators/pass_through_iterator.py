@@ -1,6 +1,7 @@
 from typing import Dict, Iterable, Iterator, Union
 import logging
 
+from overrides import overrides
 import torch
 
 from allennlp.data.dataset import Batch
@@ -11,10 +12,10 @@ from allennlp.data.iterators.data_iterator import DataIterator, TensorDict
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-def _remove_batch_dim(singleton: Union[TensorDict, torch.Tensor]) -> TensorDict:
+def _remove_batch_dim(singleton: Union[TensorDict, torch.Tensor]) -> Union[TensorDict, torch.Tensor]:
     """Recursively removes the batch dimension from tensors in a TensorDict."""
     if isinstance(singleton, dict):
-        return {key: _remove_batch_dim(value) for key, value in singleton.items()}
+        return {key: _remove_batch_dim(value) for key, value in singleton.items()}  # type: ignore
     elif isinstance(singleton, torch.Tensor):
         return singleton.squeeze(0)
     # TODO(rloganiv): Not sure if this is appropriate for Fields whose as_tensor and batch_tensor
@@ -62,6 +63,7 @@ class PassThroughIterator(BasicIterator):
                          track_epoch=track_epoch,
                          maximum_samples_per_batch=None)
 
+    @overrides
     def __call__(self,
                  instances: Iterable[Instance],
                  num_epochs: int = None,
@@ -73,6 +75,7 @@ class PassThroughIterator(BasicIterator):
         for tensor_dict in super().__call__(instances, num_epochs, shuffle):
             yield _remove_batch_dim(tensor_dict)
 
+    @overrides
     def _create_batches(self, instances: Iterable[Instance], shuffle: bool) -> Iterable[Batch]:
         if shuffle:
             logger.warning("PassThroughIterator does not shuffle instances. If shuffling is "
