@@ -14,7 +14,7 @@ class TestAtisWorld(AllenNlpTestCase):
         super().setUp()
         test_filename = self.FIXTURES_ROOT / "data" / "atis" / "sample.json"
         self.data = open(test_filename).readlines()
-        self.database_file = cached_path("https://s3-us-west-2.amazonaws.com/allennlp/datasets/atis/atis.db")
+        self.database_file = cached_path("https://allennlp.s3.amazonaws.com/datasets/atis/atis.db")
 
     def test_atis_global_actions(self): # pylint: disable=no-self-use
         world = AtisWorld(utterances=[])

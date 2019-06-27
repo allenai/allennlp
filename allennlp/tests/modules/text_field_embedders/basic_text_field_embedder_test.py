@@ -93,6 +93,26 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
                 }
         assert token_embedder(inputs, num_wrapping_dims=2).size() == (3, 4, 5, 6, 12)
 
+    def test_forward_runs_with_forward_params(self):
+        elmo_fixtures_path = self.FIXTURES_ROOT / 'elmo_multilingual' / 'es'
+        options_file = str(elmo_fixtures_path / 'options.json')
+        weight_file = str(elmo_fixtures_path / 'weights.hdf5')
+        params = Params({
+                "token_embedders": {
+                        "elmo": {
+                                "type": "elmo_token_embedder_multilang",
+                                "options_files": {"es" : options_file},
+                                "weight_files": {"es" : weight_file}
+                                },
+                        },
+                })
+        token_embedder = BasicTextFieldEmbedder.from_params(self.vocab, params)
+        inputs = {
+                'elmo': (torch.rand(3, 6, 50) * 15).long(),
+                }
+        kwargs = {'lang' : 'es'}
+        token_embedder(inputs, **kwargs)
+
     def test_forward_runs_with_non_bijective_mapping(self):
         elmo_fixtures_path = self.FIXTURES_ROOT / 'elmo'
         options_file = str(elmo_fixtures_path / 'options.json')
@@ -192,8 +212,7 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
                 })
 
         # Allow loading the parameters in the old format
-        with pytest.warns(DeprecationWarning):
-            old_embedder = BasicTextFieldEmbedder.from_params(params=old_params, vocab=self.vocab)
+        old_embedder = BasicTextFieldEmbedder.from_params(params=old_params, vocab=self.vocab)
 
         new_params = Params({
                 "token_embedders": {

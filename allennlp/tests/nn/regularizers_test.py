@@ -1,5 +1,7 @@
 # pylint: disable=no-self-use,invalid-name
+import re
 import torch
+
 from allennlp.common.params import Params
 from allennlp.nn import InitializerApplicator, Initializer
 from allennlp.nn.regularizers import L1Regularizer, L2Regularizer, RegularizerApplicator
@@ -57,3 +59,19 @@ class TestRegularizers(AllenNlpTestCase):
         assert isinstance(conv, L1Regularizer)
         assert isinstance(linear, L2Regularizer)
         assert linear.alpha == 10
+
+    def test_frozen_params(self):
+        model = torch.nn.Sequential(
+                torch.nn.Linear(5, 10),
+                torch.nn.Linear(10, 5)
+        )
+        constant_init = Initializer.from_params(Params({"type": "constant", "val": -1}))
+        initializer = InitializerApplicator([(".*", constant_init)])
+        initializer(model)
+        # freeze the parameters of the first linear
+        for name, param in model.named_parameters():
+            if re.search(r"0.*$", name):
+                param.requires_grad = False
+        value = RegularizerApplicator([("", L1Regularizer(1.0))])(model)
+        # 55 because of bias (5*10 + 5)
+        assert value.data.numpy() == 55
