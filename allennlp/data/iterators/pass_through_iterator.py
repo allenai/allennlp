@@ -1,4 +1,4 @@
-from typing import Dict, Iterable, Iterator, Union
+from typing import Iterable, Iterator, Union
 import logging
 
 from overrides import overrides
@@ -6,7 +6,7 @@ import torch
 
 from allennlp.data.dataset import Batch
 from allennlp.data.instance import Instance
-from allennlp.data.iterators import BasicIterator
+from allennlp.data.iterators.basic_iterator import BasicIterator
 from allennlp.data.iterators.data_iterator import DataIterator, TensorDict
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name

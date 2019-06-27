@@ -2,10 +2,7 @@
 import numpy as np
 import torch
 
-from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data import Instance, Token, Vocabulary
-from allennlp.data.fields import ListField, TextField
-from allennlp.data.iterators import BasicIterator, PassThroughIterator
+from allennlp.data.iterators import PassThroughIterator
 from allennlp.data.iterators.pass_through_iterator import _remove_batch_dim, logger
 from allennlp.tests.data.iterators.basic_iterator_test import IteratorTest
 
