@@ -2,30 +2,8 @@
 import numpy as np
 import torch
 
-from allennlp.data.iterators import PassThroughIterator
-from allennlp.data.iterators.pass_through_iterator import _remove_batch_dim, logger
+from allennlp.data.iterators.pass_through_iterator import PassThroughIterator, logger
 from allennlp.tests.data.iterators.basic_iterator_test import IteratorTest
-
-
-def test_remove_batch_dim():
-    # Check that first dimension of a tensor is removed
-    tensor_with_extra_batch_dim = torch.LongTensor([[1, 2, 3, 4]])
-    observed_output = _remove_batch_dim(tensor_with_extra_batch_dim).data.numpy()
-    expected_output = np.array([1, 2, 3, 4])
-    np.testing.assert_almost_equal(observed_output, expected_output)
-
-    # Check that first dimension of a tensor in a dictionary is removed
-    tensor_dict_with_extra_batch_dim = {'tensor': tensor_with_extra_batch_dim}
-    observed_output = _remove_batch_dim(tensor_dict_with_extra_batch_dim)
-    np.testing.assert_almost_equal(observed_output['tensor'].data.numpy(),
-                                   expected_output)
-
-    # Chek that other input types are unaffected
-    non_tensor = 'should be ignored'
-    assert _remove_batch_dim(non_tensor)
-
-    dict_with_non_tensor = {'non_tensor': non_tensor}
-    assert _remove_batch_dim(dict_with_non_tensor) == dict_with_non_tensor
 
 
 class TestPassThroughIterator(IteratorTest):
