@@ -44,6 +44,10 @@ class Validate(Callback):
 
     @handle_event(Events.VALIDATE)
     def validate(self, trainer: 'CallbackTrainer'):
+        # If the trainer has a moving average, replace with its values
+        if trainer.moving_average:
+            trainer.moving_average.assign_average_value()
+
         with torch.no_grad():
             # We have a validation set, so compute all the metrics on it.
             logger.info("Validating")
@@ -84,3 +88,7 @@ class Validate(Callback):
                                                             val_loss,
                                                             batches_this_epoch,
                                                             reset=True)
+
+        # If the trainer has a moving average, restore
+        if trainer.moving_average:
+            trainer.moving_average.restore()

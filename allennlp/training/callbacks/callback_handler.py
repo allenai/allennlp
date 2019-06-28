@@ -75,5 +75,5 @@ class CallbackHandler:
         """
         for event_handler in self._callbacks.get(event, []):
             if self.verbose:
-                logger.info(f"event {event} -> {event_handler}")
+                print(f"event {event} -> {event_handler.name}")
             event_handler.handler(self.state)

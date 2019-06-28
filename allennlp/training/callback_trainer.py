@@ -15,6 +15,7 @@ from allennlp.training import util as training_util
 from allennlp.training.callbacks.callback import Callback
 from allennlp.training.callbacks.callback_handler import CallbackHandler
 from allennlp.training.callbacks.events import Events
+from allennlp.training.moving_average import MovingAverage
 from allennlp.training.optimizers import Optimizer
 from allennlp.training.trainer_pieces import TrainerPieces
 from allennlp.training.trainer_base import TrainerBase
@@ -29,8 +30,8 @@ class CallbackTrainer(TrainerBase):
                  optimizer: torch.optim.Optimizer,
                  num_epochs: int = 20,
                  serialization_dir: Optional[str] = None,
-                 model_save_interval: Optional[float] = None,
                  cuda_device: Union[int, List] = -1,
+                 moving_average: Optional[MovingAverage] = None,
                  callbacks: List[Callback] = None) -> None:
         """
         A trainer for doing supervised learning. It just takes a labeled dataset
@@ -56,16 +57,19 @@ class CallbackTrainer(TrainerBase):
         serialization_dir : str, optional (default=None)
             Path to directory for saving and loading model files. Models will not be saved if
             this parameter is not passed.
-        model_save_interval : ``float``, optional (default=None)
-            If provided, then serialize models every ``model_save_interval``
-            seconds within single epochs.  In all cases, models are also saved
-            at the end of every epoch if ``serialization_dir`` is provided.
         cuda_device : ``Union[int, List[int]]``, optional (default=-1)
             An integer or list of integers specifying the CUDA device(s) to use. If -1, the CPU is used.
+        moving_average : ``MovingAverage``, optional (default = None)
+            If provided, will be used to maintain a moving average of all trainable model parameters,
+            which should be substituted in before checkpointing or validation or anything else that
+            requires it.
         callbacks : ``List[Callback]``, optional (default=None)
             A list of callbacks that will be called based on training events.
         """
         super().__init__(serialization_dir, cuda_device)
+
+        logger.warning("The CallbackTrainer should be considered 'experimental' code "
+                       "and its behavior may change as use it more and iterate on it.")
 
         # This is all state that the callbacks might want:
         # I am not calling move_to_gpu here, because if the model is
@@ -82,6 +86,7 @@ class CallbackTrainer(TrainerBase):
 
         # For capturing overall metrics
         self.metrics: Dict[str, Any] = {}
+        self.moving_average = moving_average
 
         self.batch_num_total = 0
         self.batch_group: List[TensorDict] = []
@@ -94,8 +99,6 @@ class CallbackTrainer(TrainerBase):
         self.num_epochs = num_epochs
 
         self.training_start_time = 0.0
-        self.checkpoint_epoch: Union[int, str] = 0
-        self.model_save_interval = model_save_interval
 
         self.last_log = 0.0
         self.epoch_number = 0
@@ -130,19 +133,21 @@ class CallbackTrainer(TrainerBase):
 
         return loss
 
+    def _apply_moving_average(self) -> None:
+        if self.moving_average is not None:
+            self.moving_average.apply(self.batch_num_total)
+
     def train(self) -> Dict[str, Any]:
         """
         Trains the supplied model with the supplied parameters.
         """
-        self.handler.fire_event(Events.RESTORE_CHECKPOINT)
-        starting_epoch = self.epoch_number
-
         logger.info("Beginning training.")
         self.handler.fire_event(Events.TRAINING_START)
 
         self.training_start_time = time.time()
+        starting_epoch = self.epoch_number
 
-        for self.epoch_number in range(starting_epoch, self.num_epochs):
+        for self.epoch_number in range(self.epoch_number, self.num_epochs):
             epoch_start_time = time.time()
             ####
             self.handler.fire_event(Events.EPOCH_START)
@@ -152,7 +157,6 @@ class CallbackTrainer(TrainerBase):
             self.model.train()
 
             self.last_log = time.time()
-            last_save_time = time.time()
 
             logger.info("Training")
             self.batches_this_epoch = 0
@@ -172,14 +176,7 @@ class CallbackTrainer(TrainerBase):
 
                 batch_groups_tqdm.set_description(description, refresh=False)
 
-                # Save model if needed.
-                if self.model_save_interval is not None and (
-                        time.time() - last_save_time > self.model_save_interval
-                ):
-                    last_save_time = time.time()
-                    self.checkpoint_epoch = f"{self.epoch_number}.{training_util.time_to_str(int(last_save_time))}"
-                    self.handler.fire_event(Events.SAVE_CHECKPOINT)
-
+                self._apply_moving_average()
                 self.handler.fire_event(Events.BATCH_END)
 
             self.handler.fire_event(Events.VALIDATE)
@@ -195,9 +192,6 @@ class CallbackTrainer(TrainerBase):
                 logger.info("Estimated training time remaining: %s", formatted_time)
 
             self.handler.fire_event(Events.EPOCH_END)
-
-            self.checkpoint_epoch = self.epoch_number
-            self.handler.fire_event(Events.SAVE_CHECKPOINT)
 
             if self.should_stop_early:
                 logger.info("Ran out of patience.  Stopping training.")
@@ -234,7 +228,10 @@ class CallbackTrainer(TrainerBase):
         parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
         optimizer = Optimizer.from_params(parameters, params.pop("optimizer"))
 
-        model_save_interval = params.pop_float("model_save_interval", None)
+        if "moving_average" in params:
+            moving_average = MovingAverage.from_params(params.pop("moving_average"), parameters=parameters)
+        else:
+            moving_average = None
 
         callbacks_params = params.pop("callbacks", [])
         callbacks: List[Callback] = [Callback.from_params(params=callback_params,
@@ -253,5 +250,5 @@ class CallbackTrainer(TrainerBase):
                    num_epochs=num_epochs,
                    serialization_dir=serialization_dir,
                    cuda_device=cuda_device,
-                   model_save_interval=model_save_interval,
+                   moving_average=moving_average,
                    callbacks=callbacks)

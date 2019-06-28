@@ -27,7 +27,7 @@ from allennlp.models.model import Model
 from allennlp.training.callback_trainer import CallbackTrainer
 from allennlp.training.callbacks import (
         Events,
-        LogToTensorboard, Checkpoint, ComputeMovingAverage, Validate, PostToUrl,
+        LogToTensorboard, Checkpoint, Validate, PostToUrl,
         UpdateLearningRate, UpdateMomentum, TrackMetrics, TrainSupervised, GenerateTrainingBatches
 )
 from allennlp.training.checkpointer import Checkpointer
@@ -83,6 +83,7 @@ class TestCallbackTrainer(ModelTestCase):
                           patience: int = None,
                           max_checkpoints: int = 20,
                           checkpoint_every: int = None,
+                          model_save_interval: float = None,
                           serialization_dir: str = "__DEFAULT__",
                           iterator: DataIterator = None,
                           validation_data: Iterable[Instance] = None,
@@ -101,7 +102,7 @@ class TestCallbackTrainer(ModelTestCase):
 
         return [
                 LogToTensorboard(log_batch_size_period=10, tensorboard=tensorboard),
-                Checkpoint(checkpointer),
+                Checkpoint(checkpointer, model_save_interval),
                 Validate(validation_data=self.instances if validation_data is None else validation_data,
                          validation_iterator=iterator if validation_iterator is None else validation_iterator),
                 TrackMetrics(patience, validation_metric),
@@ -219,10 +220,11 @@ class TestCallbackTrainer(ModelTestCase):
 
     def test_trainer_can_run_exponential_moving_average(self):
         moving_average = ExponentialMovingAverage(self.model.named_parameters(), decay=0.9999)
-        callbacks = self.default_callbacks() + [ComputeMovingAverage(moving_average)]
+        callbacks = self.default_callbacks()
         trainer = CallbackTrainer(model=self.model,
                                   optimizer=self.optimizer,
                                   num_epochs=2,
+                                  moving_average=moving_average,
                                   callbacks=callbacks)
         trainer.train()
 
@@ -310,7 +312,7 @@ class TestCallbackTrainer(ModelTestCase):
                                       callbacks=self.default_callbacks(),
                                       num_epochs=3, serialization_dir=self.TEST_DIR)
 
-        new_trainer.handler.fire_event(Events.RESTORE_CHECKPOINT)
+        new_trainer.handler.fire_event(Events.TRAINING_START)
 
         assert new_trainer.epoch_number == 1
 
@@ -324,21 +326,23 @@ class TestCallbackTrainer(ModelTestCase):
 
     def test_trainer_can_resume_training_for_exponential_moving_average(self):
         moving_average = ExponentialMovingAverage(self.model.named_parameters())
-        callbacks = self.default_callbacks() + [ComputeMovingAverage(moving_average)]
+        callbacks = self.default_callbacks()
 
         trainer = CallbackTrainer(self.model, self.optimizer,
                                   num_epochs=1, serialization_dir=self.TEST_DIR,
+                                  moving_average=moving_average,
                                   callbacks=callbacks)
         trainer.train()
 
         new_moving_average = ExponentialMovingAverage(self.model.named_parameters())
-        new_callbacks = self.default_callbacks() + [ComputeMovingAverage(new_moving_average)]
+        new_callbacks = self.default_callbacks()
 
         new_trainer = CallbackTrainer(self.model, self.optimizer,
                                       num_epochs=3, serialization_dir=self.TEST_DIR,
+                                      moving_average=new_moving_average,
                                       callbacks=new_callbacks)
 
-        new_trainer.handler.fire_event(Events.RESTORE_CHECKPOINT)  # pylint: disable=protected-access
+        new_trainer.handler.fire_event(Events.TRAINING_START)  # pylint: disable=protected-access
         assert new_trainer.epoch_number == 1
 
         tracker = trainer.metric_tracker  # pylint: disable=protected-access
@@ -518,7 +522,7 @@ class TestCallbackTrainer(ModelTestCase):
                                       num_epochs=6,
                                       callbacks=new_callbacks,
                                       serialization_dir=self.TEST_DIR)
-        new_trainer.handler.fire_event(Events.RESTORE_CHECKPOINT)
+        new_trainer.handler.fire_event(Events.TRAINING_START)
         assert new_trainer.epoch_number == 4
         assert new_scheduler.last_epoch == 3
         new_trainer.train()
@@ -553,7 +557,7 @@ class TestCallbackTrainer(ModelTestCase):
                                       optimizer=self.optimizer,
                                       callbacks=callbacks,
                                       num_epochs=4, serialization_dir=self.TEST_DIR)
-        new_trainer.handler.fire_event(Events.RESTORE_CHECKPOINT)
+        new_trainer.handler.fire_event(Events.TRAINING_START)
         assert new_trainer.epoch_number == 2
         assert new_lr_scheduler.lr_scheduler.last_epoch == 1
         new_trainer.train()
@@ -668,8 +672,8 @@ class TestCallbackTrainer(ModelTestCase):
         trainer = CallbackTrainer(self.model, self.optimizer,
                                   num_epochs=2,
                                   serialization_dir=self.TEST_DIR,
-                                  callbacks=self.default_callbacks(batch_size=4),
-                                  model_save_interval=0.0001)
+                                  callbacks=self.default_callbacks(batch_size=4,
+                                                                   model_save_interval=0.0001))
 
         trainer.train()
 
@@ -696,9 +700,8 @@ class TestCallbackTrainer(ModelTestCase):
                 self.model, self.optimizer,
                 num_epochs=2,
                 serialization_dir=self.TEST_DIR,
-                callbacks=self.default_callbacks(),
-                model_save_interval=0.0001)
-        restore_trainer.handler.fire_event(Events.RESTORE_CHECKPOINT)
+                callbacks=self.default_callbacks(model_save_interval=0.0001))
+        restore_trainer.handler.fire_event(Events.TRAINING_START)
         assert restore_trainer.epoch_number == 2
         # One batch per epoch.
         assert restore_trainer.batch_num_total == 2
@@ -711,7 +714,7 @@ class TestCallbackTrainer(ModelTestCase):
                 callbacks=self.default_callbacks(),
                 num_epochs=1, serialization_dir=self.TEST_DIR)
         trainer.train()
-        _ = trainer.handler.fire_event(Events.RESTORE_CHECKPOINT)
+        _ = trainer.handler.fire_event(Events.TRAINING_START)
         best_epoch_1 = trainer.metric_tracker.best_epoch
         best_validation_metrics_epoch_1 = trainer.metric_tracker.best_epoch_metrics
         # best_validation_metrics_epoch_1: {'accuracy': 0.75, 'accuracy3': 1.0, 'loss': 0.6243013441562653}
@@ -724,7 +727,7 @@ class TestCallbackTrainer(ModelTestCase):
                 callbacks=self.default_callbacks(),
                 num_epochs=2, serialization_dir=self.TEST_DIR)
         restore_trainer.train()
-        _ = restore_trainer.handler.fire_event(Events.RESTORE_CHECKPOINT)
+        _ = restore_trainer.handler.fire_event(Events.TRAINING_START)
         best_epoch_2 = restore_trainer.metric_tracker.best_epoch
         best_validation_metrics_epoch_2 = restore_trainer.metric_tracker.best_epoch_metrics
 
@@ -739,9 +742,10 @@ class TestCallbackTrainer(ModelTestCase):
                 self.model, self.optimizer,
                 callbacks=self.default_callbacks(validation_metric="+loss"),
                 num_epochs=1, serialization_dir=self.TEST_DIR)
+        trainer.handler.verbose = True
         trainer.train()
 
-        _ = trainer.handler.fire_event(Events.RESTORE_CHECKPOINT)
+        _ = trainer.handler.fire_event(Events.TRAINING_START)
         best_epoch_1 = trainer.metric_tracker.best_epoch
         best_validation_metrics_epoch_1 = trainer.metric_tracker.best_epoch_metrics
         # best_validation_metrics_epoch_1: {'accuracy': 0.75, 'accuracy3': 1.0, 'loss': 0.6243013441562653}
@@ -753,8 +757,10 @@ class TestCallbackTrainer(ModelTestCase):
                 self.model, self.optimizer,
                 callbacks=self.default_callbacks(validation_metric="+loss"),
                 num_epochs=2, serialization_dir=self.TEST_DIR)
+        print("restore trainer")
+        restore_trainer.handler.verbose = True
         restore_trainer.train()
-        _ = restore_trainer.handler.fire_event(Events.RESTORE_CHECKPOINT)
+        _ = restore_trainer.handler.fire_event(Events.TRAINING_START)
         best_epoch_2 = restore_trainer.metric_tracker.best_epoch
         best_validation_metrics_epoch_2 = restore_trainer.metric_tracker.best_epoch_metrics
 
