@@ -298,7 +298,7 @@ class InitializerApplicator:
             for initializer_regex, initializer in self._initializers:
                 allow = self._prevent_regex is None or not bool(re.search(self._prevent_regex, name))
                 if allow and re.search(initializer_regex, name):
-                    logger.info("Initializing %s using %s intitializer", name, initializer_regex)
+                    logger.info("Initializing %s using %s initializer", name, initializer_regex)
                     initializer(parameter, parameter_name=name)
                     unused_regexes.discard(initializer_regex)
                     break

@@ -1,5 +1,5 @@
-import warnings
 from typing import Dict, List, Union, Any
+import inspect
 
 import torch
 from overrides import overrides
@@ -65,7 +65,9 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
             output_dim += embedder.get_output_dim()
         return output_dim
 
-    def forward(self, text_field_input: Dict[str, torch.Tensor], num_wrapping_dims: int = 0) -> torch.Tensor:
+    def forward(self, text_field_input: Dict[str, torch.Tensor],
+                num_wrapping_dims: int = 0,
+                **kwargs) -> torch.Tensor:
         embedder_keys = self._token_embedders.keys()
         input_keys = text_field_input.keys()
 
@@ -96,6 +98,12 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
             # Note: need to use getattr here so that the pytorch voodoo
             # with submodules works with multiple GPUs.
             embedder = getattr(self, 'token_embedder_{}'.format(key))
+            forward_params = inspect.signature(embedder.forward).parameters
+            forward_params_values = {}
+            for param in forward_params.keys():
+                if param in kwargs:
+                    forward_params_values[param] = kwargs[param]
+
             for _ in range(num_wrapping_dims):
                 embedder = TimeDistributed(embedder)
             # If we pre-specified a mapping explictly, use that.
@@ -107,20 +115,20 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
                     # If `indexer_key` is None, we map it to `None`.
                     tensors = [(text_field_input[indexer_key] if indexer_key is not None else None)
                                for indexer_key in indexer_map]
-                    token_vectors = embedder(*tensors)
+                    token_vectors = embedder(*tensors, **forward_params_values)
                 elif isinstance(indexer_map, dict):
                     tensors = {
                             name: text_field_input[argument]
                             for name, argument in indexer_map.items()
                     }
-                    token_vectors = embedder(**tensors)
+                    token_vectors = embedder(**tensors, **forward_params_values)
                 else:
                     raise NotImplementedError
             else:
                 # otherwise, we assume the mapping between indexers and embedders
                 # is bijective and just use the key directly.
                 tensors = [text_field_input[key]]
-                token_vectors = embedder(*tensors)
+                token_vectors = embedder(*tensors, **forward_params_values)
             embedded_representations.append(token_vectors)
         return torch.cat(embedded_representations, dim=-1)
 
@@ -153,11 +161,6 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
             }
 
         else:
-            # Warn that the original behavior is deprecated
-            warnings.warn(DeprecationWarning("the token embedders for BasicTextFieldEmbedder should now "
-                                             "be specified as a dict under the 'token_embedders' key, "
-                                             "not as top-level key-value pairs"))
-
             token_embedders = {}
             keys = list(params.keys())
             for key in keys:

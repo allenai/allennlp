@@ -25,7 +25,8 @@ class TextFieldEmbedder(torch.nn.Module, Registrable):
 
     def forward(self,  # pylint: disable=arguments-differ
                 text_field_input: Dict[str, torch.Tensor],
-                num_wrapping_dims: int = 0) -> torch.Tensor:
+                num_wrapping_dims: int = 0,
+                **kwargs) -> torch.Tensor:
         """
         Parameters
         ----------

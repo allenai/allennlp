@@ -5,7 +5,7 @@
     "sample": -1,
     "replace_world_entities": true,
     "align_world_extractions": true,
-    "world_extraction_model": "https://s3-us-west-2.amazonaws.com/allennlp/models/quarel-tagger-2018.10.03.tar.gz",
+    "world_extraction_model": "https://allennlp.s3.amazonaws.com/models/quarel-tagger-2018.10.03.tar.gz",
     "lf_syntax": "quarel_v1_attr_entities",
     "lexical_cues": ["synonyms", "values"],
     "question_token_indexers": {
@@ -24,7 +24,7 @@
     "sample": -1,
     "replace_world_entities": true,
     "align_world_extractions": false,
-    "world_extraction_model": "https://s3-us-west-2.amazonaws.com/allennlp/models/quarel-tagger-2018.10.03.tar.gz",
+    "world_extraction_model": "https://allennlp.s3.amazonaws.com/models/quarel-tagger-2018.10.03.tar.gz",
     "lf_syntax": "quarel_v1_attr_entities",
     "lexical_cues": ["synonyms", "values"],
     "question_token_indexers": {
@@ -42,8 +42,8 @@
     "pretrained_files": {"tokens": "/inputs/glove/glove.6B.100d.txt.gz"},
     "min_pretrained_embeddings": {"tokens": 30000}
   },
-  "train_data_path": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/quarel/quarel-v1-train.jsonl",
-  "validation_data_path": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/quarel/quarel-v1-dev.jsonl",
+  "train_data_path": "https://allennlp.s3.amazonaws.com/datasets/quarel/quarel-v1-train.jsonl",
+  "validation_data_path": "https://allennlp.s3.amazonaws.com/datasets/quarel/quarel-v1-dev.jsonl",
   "model": {
     "type": "quarel_parser",
     "use_entities": true,
@@ -58,8 +58,8 @@
       },
       "elmo":{
         "type": "elmo_token_embedder",
-        "options_file": "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json",
-        "weight_file": "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5",
+        "options_file": "https://allennlp.s3.amazonaws.com/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json",
+        "weight_file": "https://allennlp.s3.amazonaws.com/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5",
         "do_layer_norm": false,
         "dropout": 0.5
       }

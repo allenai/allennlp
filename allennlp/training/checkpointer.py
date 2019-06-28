@@ -49,7 +49,7 @@ class Checkpointer(Registrable):
                             "Copying weights to '%s/best.th'.", self._serialization_dir)
                 shutil.copyfile(model_path, os.path.join(self._serialization_dir, "best.th"))
 
-            if self._num_serialized_models_to_keep and self._num_serialized_models_to_keep >= 0:
+            if self._num_serialized_models_to_keep is not None and self._num_serialized_models_to_keep >= 0:
                 self._serialized_paths.append((time.time(), model_path, training_path))
                 if len(self._serialized_paths) > self._num_serialized_models_to_keep:
                     paths_to_remove = self._serialized_paths.pop(0)

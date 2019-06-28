@@ -122,7 +122,7 @@ class TestOpenaiTransformerBytePairIndexer(AllenNlpTestCase):
 
     @pytest.mark.skip()
     def test_for_correctness_with_fixture(self):
-        bpe_path = "https://s3-us-west-2.amazonaws.com/allennlp/models/openai-transformer-lm-2018.07.23.tar.gz"
+        bpe_path = "https://allennlp.s3.amazonaws.com/models/openai-transformer-lm-2018.07.23.tar.gz"
         indexer = OpenaiTransformerBytePairIndexer(model_path=bpe_path)
 
         with open(self.FIXTURES_ROOT / 'openai_transformer' / 'text.txt', 'r') as fin:

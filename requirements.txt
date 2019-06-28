@@ -125,7 +125,7 @@ aiohttp
 #### DOC-RELATED PACKAGES ####
 
 # Builds our documentation.
-sphinx>=1.5.3
+sphinx>=2.1.1
 
 # Watches the documentation directory and rebuilds on changes.
 sphinx-autobuild
