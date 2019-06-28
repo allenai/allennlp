@@ -2,6 +2,8 @@ from typing import Iterable, Iterator
 import itertools
 import logging
 
+from overrides import overrides
+
 from allennlp.data.dataset import Batch
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator, TensorDict
@@ -24,6 +26,7 @@ class PassThroughIterator(DataIterator):
     def __init__(self):
         super().__init__(batch_size=1)
 
+    @overrides
     def _create_batches(self, instances: Iterable[Instance], shuffle: bool) -> Iterable[Batch]:
         raise RuntimeError("PassThroughIterator doesn't use create_batches")
 
