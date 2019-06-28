@@ -18,7 +18,7 @@ class PassThroughIterator(DataIterator):
     This is essentially the same as a BasicIterator with shuffling disabled, the batch size set
     to 1, and maximum samples per batch disabled. The only difference is that this iterator
     removes the batch dimension. This can be useful for rare situations where batching is best
-    performed within the dataset reader (e.g. for continguous language modeling, or for other
+    performed within the dataset reader (e.g. for contiguous language modeling, or for other
     problems where state is shared across batches).
     """
     def __init__(self):
