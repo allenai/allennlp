@@ -1,9 +1,6 @@
-from typing import Iterable, Iterator, Union
+from typing import Iterable, Iterator
 import itertools
 import logging
-
-from overrides import overrides
-import torch
 
 from allennlp.data.dataset import Batch
 from allennlp.data.instance import Instance

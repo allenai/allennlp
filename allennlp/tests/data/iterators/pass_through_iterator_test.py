@@ -1,7 +1,4 @@
 # pylint: disable=no-self-use,invalid-name
-import numpy as np
-import torch
-
 from allennlp.data.iterators.pass_through_iterator import PassThroughIterator, logger
 from allennlp.tests.data.iterators.basic_iterator_test import IteratorTest
 
