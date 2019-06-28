@@ -50,12 +50,27 @@ class TrainSupervised(Callback):
         trainer.optimizer.zero_grad()
         trainer.batches_this_epoch = 0
 
+        # At the start of an epoch, `is_batch_start` is always True.
+        trainer.is_batch_start = True
+
+        # At the start of an epoch, `is_batch_end` is True only if the
+        # gradient accumulation period equals 1.
+        trainer.is_batch_end = self.gradient_accumulation_period == 1
+
     @handle_event(Events.BATCH_START)
     def increment_counters(self, trainer: 'CallbackTrainer'):
+        trainer.batches_this_epoch += 1
+        trainer.batch_num_total += 1
+
+    @handle_event(Events.FORWARD, priority=-1000)
+    def increment_accumulated_batches(self, trainer: 'CallbackTrainer'):
+        """
+        Before doing FORWARD, set trainer.is_batch_start and trainer.is_batch_end
+        and increment the accumulated batches counter.
+        """
         self.accumulated_batches += 1
-        if self.accumulated_batches >= self.gradient_accumulation_period:
-            trainer.batches_this_epoch += 1
-            trainer.batch_num_total += 1
+        trainer.is_batch_start = self.accumulated_batches >= self.gradient_accumulation_period
+        trainer.is_batch_end = self.accumulated_batches >= self.gradient_accumulation_period
 
     @handle_event(Events.FORWARD)
     def compute_loss(self, trainer: 'CallbackTrainer'):
@@ -69,7 +84,8 @@ class TrainSupervised(Callback):
         self.loss.backward()
         trainer.train_loss += self.loss.item()
 
-    def _optimize(self, trainer: 'CallbackTrainer'):
+    @handle_event(Events.BATCH_END, priority=-1000)
+    def optimize(self, trainer: 'CallbackTrainer'):
         trainer.batch_grad_norm = training_util.rescale_gradients(trainer.model, self.grad_norm)
         trainer.optimizer.step()
 
@@ -82,10 +98,9 @@ class TrainSupervised(Callback):
         trainer.optimizer.zero_grad()
         self.accumulated_batches = 0
 
-    @handle_event(Events.BACKWARD, priority=1000)
-    def optimize_batch(self, trainer: 'CallbackTrainer'):
-        if self.accumulated_batches >= self.gradient_accumulation_period:
-            self._optimize(trainer)
+        trainer.is_batch_start = True
+        trainer.is_batch_end = self.gradient_accumulation_period == 1
+
 
     @handle_event(Events.VALIDATE, priority=-1000)
     def optimize_last_batch(self, trainer: 'CallbackTrainer'):
@@ -96,7 +111,5 @@ class TrainSupervised(Callback):
         the VALIDATE event, which happens right after the last batch.
         """
         if self.accumulated_batches > 0:
-            self._optimize(trainer)
-            # Have to increment counters separately
-            trainer.batch_num_total += 1
-            trainer.batches_this_epoch += 1
+            # Force fire a BATCH_END event
+            trainer.handler.fire_event(Events.BATCH_END)

@@ -776,14 +776,15 @@ class TestCallbackTrainer(ModelTestCase):
                                   optimizer=self.optimizer,
                                   callbacks=callbacks,
                                   num_epochs=2)
+        trainer.handler.verbose = True
         trainer.train()
 
-        # There are 8 batches (2 epochs * 4 instances / batch_size 1)
+        # There are 8 batch_groups (2 epochs * 4 instances / batch_size 1)
         # but optimizer.step should only get called 4 times.
         assert len(self.optimizer.step.mock_calls) == 4
 
-        # And it should get called at the end of batch 3, then at the end
-        # of the epoch (batch 4), then at the end of batch 7, then at the
-        # end of the second epoch (batch 8).
-        assert batch_nums_total == [1, 1, 3, 3]
+        # And it should get called at the end of batch_group 3, then at the end
+        # of the epoch (batch_group 4), then at the end of batch_group 7, then at the
+        # end of the second epoch (batch_group 8).
+        assert batch_nums_total == [1, 2, 3, 4]
         assert forwards_total == [3, 4, 7, 8]

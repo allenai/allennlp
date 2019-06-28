@@ -87,6 +87,12 @@ class CallbackTrainer(TrainerBase):
         self.batch_group: List[TensorDict] = []
         self.batches_this_epoch = 0
 
+        # If you are using e.g. gradient accumulation, you may not want to
+        # fire off the BATCH_START and BATCH_END events all the time.
+        # A callback can disable and enable these to fudge the definition of a "batch".
+        self.is_batch_start = True
+        self.is_batch_end = True
+
         self.training_batches: Iterable[List[TensorDict]] = ()
         self.num_training_batches = 0
 
@@ -159,13 +165,13 @@ class CallbackTrainer(TrainerBase):
             batch_groups_tqdm = Tqdm.tqdm(self.training_batches, total=self.num_training_batches)
 
             for self.batch_group in batch_groups_tqdm:
-                self.handler.fire_event(Events.BATCH_START)
+                if self.is_batch_start:
+                    self.handler.fire_event(Events.BATCH_START)
 
                 self.handler.fire_event(Events.FORWARD)
                 self.handler.fire_event(Events.BACKWARD)
 
                 description = training_util.description_from_metrics(self.train_metrics)
-
                 batch_groups_tqdm.set_description(description, refresh=False)
 
                 # Save model if needed.
@@ -176,7 +182,8 @@ class CallbackTrainer(TrainerBase):
                     self.checkpoint_epoch = f"{self.epoch_number}.{training_util.time_to_str(int(last_save_time))}"
                     self.handler.fire_event(Events.SAVE_CHECKPOINT)
 
-                self.handler.fire_event(Events.BATCH_END)
+                if self.is_batch_end:
+                    self.handler.fire_event(Events.BATCH_END)
 
             self.handler.fire_event(Events.VALIDATE)
 
