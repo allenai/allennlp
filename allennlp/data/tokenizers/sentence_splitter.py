@@ -15,13 +15,12 @@ class SentenceSplitter(Registrable):
 
     def split_sentences(self, text: str) -> List[str]:
         """
-        Splits ``texts`` into a list of :class:`Token` objects.
+        Splits the ``text`` :class:`str` as a paragraph of text into a list of :class:`str`, each be a sentence.
         """
         raise NotImplementedError
 
     def batch_split_sentences(self, texts: List[str]) -> List[List[str]]:
         """
-        This method lets you take advantage of spacy's batch processing.
         Default implementation is to just iterate over the texts and call ``split_sentences``.
         """
         return [self.split_sentences(text) for text in texts]
@@ -59,4 +58,7 @@ class SpacySentenceSplitter(SentenceSplitter):
 
     @overrides
     def batch_split_sentences(self, texts: List[str]) -> List[List[str]]:
+        """
+        This method lets you take advantage of spacy's batch processing.
+        """
         return [[sentence.string.strip() for sentence in doc.sents] for doc in self.spacy.pipe(texts)]
