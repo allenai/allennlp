@@ -11,6 +11,7 @@ This document describes how to train and use a transformer-based version of ELMo
     ```
 2. Obtain vocab.
     ```
+    pip install --user awscli
     mkdir vocabulary
     export BIDIRECTIONAL_LM_VOCAB_PATH=$PWD'/vocabulary'
     cd $BIDIRECTIONAL_LM_VOCAB_PATH
