@@ -1,6 +1,11 @@
+"""
+The ``CallbackTrainer`` should be considered experimental code.
+Its API may change at any time, and it may disappear altogether.
+"""
 import logging
 import time
 import datetime
+import math
 from typing import Dict, Optional, List, Union, Any, Iterable
 
 import torch
@@ -8,7 +13,9 @@ import torch
 from allennlp.common import Params
 from allennlp.common.checks import parse_cuda_device
 from allennlp.common.tqdm import Tqdm
-from allennlp.data.iterators.data_iterator import TensorDict
+from allennlp.common.util import lazy_groups_of
+from allennlp.data.instance import Instance
+from allennlp.data.iterators.data_iterator import DataIterator, TensorDict
 from allennlp.models.model import Model
 from allennlp.nn import util as nn_util
 from allennlp.training import util as training_util
@@ -27,8 +34,11 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 class CallbackTrainer(TrainerBase):
     def __init__(self,
                  model: Model,
+                 training_data: Iterable[Instance],
+                 iterator: DataIterator,
                  optimizer: torch.optim.Optimizer,
                  num_epochs: int = 20,
+                 shuffle: bool = True,
                  serialization_dir: Optional[str] = None,
                  cuda_device: Union[int, List] = -1,
                  moving_average: Optional[MovingAverage] = None,
@@ -36,8 +46,13 @@ class CallbackTrainer(TrainerBase):
         """
         A trainer for doing supervised learning. It just takes a labeled dataset
         and a ``DataIterator``, and uses the supplied ``Optimizer`` to learn the weights
-        for your model over some fixed number of epochs. You can also pass in a validation
-        dataset and enable early stopping. There are many other bells and whistles as well.
+        for your model over some fixed number of epochs. It uses callbacks to handle various
+        things ancillary to training, like tracking metrics, validation, early stopping,
+        logging to tensorboard, and so on.
+
+        It's easy to create your own callbacks; for example, if you wanted to get a Slack
+        notification when training finishes. For more complicated variations, you might have
+        to create your own subclass, in which case make sure to fire off all the training events.
 
         Parameters
         ----------
@@ -49,11 +64,17 @@ class CallbackTrainer(TrainerBase):
             If you are training your model using GPUs, your model should already be
             on the correct device. (If you use `Trainer.from_params` this will be
             handled for you.)
+        training_data : ``Iterable[Instance]``, required
+            The instances that you want to train your model on.
+        iterator : ``DataIterator``, required
+            The iterator for batching / epoch-ing the instances.
         optimizer : ``torch.nn.Optimizer``, required.
             An instance of a Pytorch Optimizer, instantiated with the parameters of the
             model to be optimized.
         num_epochs : int, optional (default=20)
             Number of training epochs.
+        shuffle : bool, optional (default=True)
+            Whether to shuffle the instances each epoch.
         serialization_dir : str, optional (default=None)
             Path to directory for saving and loading model files. Models will not be saved if
             this parameter is not passed.
@@ -68,8 +89,8 @@ class CallbackTrainer(TrainerBase):
         """
         super().__init__(serialization_dir, cuda_device)
 
-        logger.warning("The CallbackTrainer should be considered 'experimental' code "
-                       "and its behavior may change as use it more and iterate on it.")
+        logger.warning("The CallbackTrainer should be considered 'experimental' code, "
+                       "and its behavior may change as we use it more and iterate on it.")
 
         # This is all state that the callbacks might want:
         # I am not calling move_to_gpu here, because if the model is
@@ -103,7 +124,24 @@ class CallbackTrainer(TrainerBase):
         self.last_log = 0.0
         self.epoch_number = 0
         self.batch_grad_norm: Optional[float] = None
+
+        self.training_data = training_data
+        self.iterator = iterator
+        self.shuffle = shuffle
         self.handler = CallbackHandler(callbacks, self)
+
+    def generate_training_batches(self):
+        """
+        Generates one epoch worth of training data. Stores it in trainer instance variables
+        so that callbacks can access it.
+        """
+        num_gpus = len(self._cuda_devices)
+
+        raw_train_generator = self.iterator(self.training_data,
+                                            num_epochs=1,
+                                            shuffle=self.shuffle)
+        self.training_batches = lazy_groups_of(raw_train_generator, num_gpus)
+        self.num_training_batches = math.ceil(self.iterator.get_num_batches(self.training_data) / num_gpus)
 
     def batch_loss(self, batch_group: List[TensorDict], for_training: bool) -> torch.Tensor:
         """
@@ -137,9 +175,73 @@ class CallbackTrainer(TrainerBase):
         if self.moving_average is not None:
             self.moving_average.apply(self.batch_num_total)
 
+    def train_one_batch_group(self, batch_group: List[TensorDict]) -> str:
+        """
+        Handles the training for a single batch group.
+        Fires off the events BATCH_START, FORWARD, BACKWARD, and BATCH_END.
+        """
+        self.handler.fire_event(Events.BATCH_START)
+        self.optimizer.zero_grad()
+
+        self.batches_this_epoch += 1
+        self.batch_num_total += 1
+
+        self.handler.fire_event(Events.FORWARD)
+        loss = self.batch_loss(batch_group, for_training=True)
+
+        if torch.isnan(loss):
+            raise ValueError("nan loss encountered")
+
+        loss.backward()
+        self.train_loss += loss.item()
+
+        self.handler.fire_event(Events.BACKWARD)
+
+        self.optimizer.step()
+
+        # Update the description with the latest metrics
+        self.train_metrics = training_util.get_metrics(self.model,
+                                                       self.train_loss,
+                                                       self.batches_this_epoch)
+
+        self._apply_moving_average()
+        self.handler.fire_event(Events.BATCH_END)
+
+        return training_util.description_from_metrics(self.train_metrics)
+
+
+    def train_one_epoch(self) -> None:
+        """
+        Trains the model for a single epoch.
+        Fires off the events EPOCH_START and EPOCH_END,
+        and repeatedly calls self.train_one_batch_group().
+        """
+        self.handler.fire_event(Events.EPOCH_START)
+
+        self.train_loss = 0.0
+        # Set the model to "train" mode.
+        self.model.train()
+
+        self.last_log = time.time()
+
+        logger.info("Training")
+        self.batches_this_epoch = 0
+
+        batch_groups_tqdm = Tqdm.tqdm(self.training_batches, total=self.num_training_batches)
+
+        for self.batch_group in batch_groups_tqdm:
+            description = self.train_one_batch_group(self.batch_group)
+            batch_groups_tqdm.set_description(description, refresh=False)
+
+        self.handler.fire_event(Events.VALIDATE)
+        self.handler.fire_event(Events.EPOCH_END)
+
+
     def train(self) -> Dict[str, Any]:
         """
         Trains the supplied model with the supplied parameters.
+        Fires off the events TRAINING_START and TRAINING END,
+        and repeatedly calls `self.train_one_epoch()`.
         """
         logger.info("Beginning training.")
         self.handler.fire_event(Events.TRAINING_START)
@@ -149,37 +251,9 @@ class CallbackTrainer(TrainerBase):
 
         for self.epoch_number in range(self.epoch_number, self.num_epochs):
             epoch_start_time = time.time()
-            ####
-            self.handler.fire_event(Events.EPOCH_START)
 
-            self.train_loss = 0.0
-            # Set the model to "train" mode.
-            self.model.train()
-
-            self.last_log = time.time()
-
-            logger.info("Training")
-            self.batches_this_epoch = 0
-
-            batch_groups_tqdm = Tqdm.tqdm(self.training_batches, total=self.num_training_batches)
-
-            for self.batch_group in batch_groups_tqdm:
-                self.handler.fire_event(Events.BATCH_START)
-
-                self.batches_this_epoch += 1
-                self.batch_num_total += 1
-
-                self.handler.fire_event(Events.FORWARD)
-                self.handler.fire_event(Events.BACKWARD)
-
-                description = training_util.description_from_metrics(self.train_metrics)
-
-                batch_groups_tqdm.set_description(description, refresh=False)
-
-                self._apply_moving_average()
-                self.handler.fire_event(Events.BATCH_END)
-
-            self.handler.fire_event(Events.VALIDATE)
+            self.generate_training_batches()
+            self.train_one_epoch()
 
             epoch_elapsed_time = time.time() - epoch_start_time
             logger.info("Epoch duration: %s", datetime.timedelta(seconds=epoch_elapsed_time))
@@ -190,8 +264,6 @@ class CallbackTrainer(TrainerBase):
                     ((self.num_epochs - starting_epoch) / float(self.epoch_number - starting_epoch + 1) - 1)
                 formatted_time = str(datetime.timedelta(seconds=int(estimated_time_remaining)))
                 logger.info("Estimated training time remaining: %s", formatted_time)
-
-            self.handler.fire_event(Events.EPOCH_END)
 
             if self.should_stop_early:
                 logger.info("Ran out of patience.  Stopping training.")
@@ -246,8 +318,12 @@ class CallbackTrainer(TrainerBase):
                                      for callback_params in callbacks_params]
 
         params.assert_empty(cls.__name__)
-        return cls(model, optimizer,
+        return cls(model,
+                   pieces.train_dataset,
+                   pieces.iterator,
+                   optimizer,
                    num_epochs=num_epochs,
+                   shuffle=shuffle,
                    serialization_dir=serialization_dir,
                    cuda_device=cuda_device,
                    moving_average=moving_average,

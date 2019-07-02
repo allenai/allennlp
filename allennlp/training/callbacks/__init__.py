@@ -8,6 +8,5 @@ from allennlp.training.callbacks.update_momentum import UpdateMomentum
 from allennlp.training.callbacks.checkpoint import Checkpoint
 from allennlp.training.callbacks.validate import Validate
 from allennlp.training.callbacks.track_metrics import TrackMetrics
-from allennlp.training.callbacks.train_supervised import TrainSupervised
-from allennlp.training.callbacks.generate_training_batches import GenerateTrainingBatches
+from allennlp.training.callbacks.gradient_norm_and_clip import GradientNormAndClip
 from allennlp.training.callbacks.post_to_url import PostToUrl
