@@ -155,6 +155,7 @@ class MultiQAReader(DatasetReader):
         word_pieces = self._bert_wordpiece_tokenizer(text)
         return len(word_pieces), word_pieces
 
+    @profile
     def combine_context(self, context):
         offsets = []
         context_tokens = []
@@ -290,7 +291,8 @@ class MultiQAReader(DatasetReader):
                 window_start_token_offset += self._STRIDE
 
             # In training we need examples with answer only
-            if not self._is_training or len([inst for inst in chunks if inst['answers'] != []])>0:
+            # not self._is_training or
+            if  len([inst for inst in chunks if inst['answers'] != []])>0:
                 per_question_chunks.append(chunks)
         return per_question_chunks
 
