@@ -123,7 +123,8 @@ class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
                 world: List[WikiTablesLanguage],
                 actions: List[List[ProductionRuleArray]],
                 target_values: List[List[str]] = None,
-                target_action_sequences: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
+                target_action_sequences: torch.LongTensor = None,
+                metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
         In this method we encode the table entities, link them to words in the question, then
@@ -156,6 +157,8 @@ class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
            A list of possibly valid action sequences, where each action is an index into the list
            of possible actions.  This tensor has shape ``(batch_size, num_action_sequences,
            sequence_length)``.
+        metadata : ``List[Dict[str, Any]]``, optional (default = None)
+            Metadata containing the original tokenized question within a 'question_tokens' field.
         """
         outputs: Dict[str, Any] = {}
         rnn_state, grammar_state = self._get_initial_rnn_and_grammar_state(question,
@@ -212,7 +215,6 @@ class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
                         sequence_in_targets = self._action_history_match(best_action_indices, targets)
                         self._action_sequence_accuracy(sequence_in_targets)
 
-            metadata = None
             self._compute_validation_outputs(actions,
                                              best_final_states,
                                              world,
