@@ -35,6 +35,7 @@ class AllenNLP_Job_Dispatcher():
         all_objects = s3.list_objects(Bucket='multiqa', Prefix='models/')
         all_objects['Contents'] += s3.list_objects(Bucket='mrqa', Prefix='models/')['Contents']
         all_objects['Contents'] += s3.list_objects(Bucket='beatbert', Prefix='models/')['Contents']
+        all_objects['Contents'] += s3.list_objects(Bucket='multiqa', Prefix='models_new/')['Contents']
         if 'Contents' in all_objects:
             self.s3_models = [obj['Key'] for obj in all_objects['Contents']]
         if len(self.s3_models) > 900:
@@ -42,8 +43,10 @@ class AllenNLP_Job_Dispatcher():
 
         all_objects = s3.list_objects(Bucket='multiqa', Prefix='preproc/')
         all_objects['Contents'] += s3.list_objects(Bucket='commensenseqa', Prefix='crowdsense/')['Contents']
+        all_objects['Contents'] += s3.list_objects(Bucket='multiqa', Prefix='data/')['Contents']
         all_objects['Contents'] += s3.list_objects(Bucket='mrqa', Prefix='data/')['Contents']
         all_objects['Contents'] += s3.list_objects(Bucket='beatbert', Prefix='data/')['Contents']
+        all_objects['Contents'] += s3.list_objects(Bucket='multiqa', Prefix='allennlp_preproc/')['Contents']
         if 'Contents' in all_objects:
             self.s3_preproc = [obj['Key'] for obj in all_objects['Contents']]
         if len(self.s3_preproc) > 900:
@@ -103,16 +106,21 @@ class AllenNLP_Job_Dispatcher():
     def allennlp_include_packages(self):
         return '    --include-package allennlp.data.dataset_readers.bert_mc_qa \
                     --include-package allennlp.models.bert_mc_qa \
+                    --include-package allennlp.models.bert_binary_class \
                    --include-package allennlp.data.iterators.multiqa_iterator \
                    --include-package allennlp.data.iterators.mrqa_iterator  \
-                    --include-package allennlp.data.wordpiece_vocabulary \
+                    --include-package allennlp.predictors.bert_binary_class \
                    --include-package allennlp.data.dataset_readers.reading_comprehension.multiqa+ \
                    --include-package allennlp.data.dataset_readers.reading_comprehension.multiqa+combine \
-                   --include-package allennlp.models.reading_comprehension.docqa++BERT \
                    --include-package allennlp.data.dataset_readers.reading_comprehension.multiqa_bert  \
                    --include-package allennlp.data.dataset_readers.reading_comprehension.multiqa_bert_mix  \
                    --include-package allennlp.models.reading_comprehension.BERT_QA   \
-                   --include-package allennlp.data.dataset_readers.reading_comprehension.mrqa_reader'
+                   --include-package allennlp.data.dataset_readers.reading_comprehension.mrqa_reader \
+                    --include-package allennlp.models.reading_comprehension.multiqa_bert \
+                    --include-package allennlp.data.dataset_readers.reading_comprehension.hotpotqa_dataset_reader \
+                    --include-package allennlp.data.dataset_readers.multiqa_reader \
+                    --include-package allennlp.data.dataset_readers.bert_same_chunk_mc_qa '
+
 
     def read_config(self, filename):
         if filename.find('jsonnet') > -1:
@@ -249,11 +257,29 @@ class AllenNLP_Job_Dispatcher():
         bash_command += self.allennlp_include_packages()
         return bash_command
 
+    def build_dry_run_bash_command(self, exp_config, run_name):
+        bash_command = 'python -m allennlp.run dry-run ' + exp_config['master_config'] + ' '
+        bash_command += '-s ' + '[MODEL_DIR]' + run_name + ' '
+        bash_command += '-o "' + str(exp_config['override_config']).replace('True', 'true').replace('False', 'false') + '" '
+        bash_command += self.allennlp_include_packages()
+        return bash_command
+
     def build_finetune_bash_command(self, exp_config, run_name):
         bash_command = 'python -m allennlp.run fine-tune -m ' + exp_config['source_model_path'] + ' '
         bash_command += '-c ' + exp_config['master_config'] + ' '
         bash_command += '-s ' + '[MODEL_DIR]' + run_name + ' '
         bash_command += '-o "' + str(exp_config['override_config']).replace('True', 'true').replace('False', 'false') + '" '
+        bash_command += self.allennlp_include_packages()
+        return bash_command
+
+    def build_predict_bash_command(self, exp_config, run_name):
+        bash_command = 'python -m allennlp.run predict ' + exp_config['model'] + ' '
+        bash_command += exp_config['eval_set'] + ' '
+        bash_command += '--output-file ' + exp_config['output_file'] + ' '
+        bash_command += '--predictor ' + exp_config['predictor'] + ' '
+        bash_command += ' --silent '
+        bash_command += '-o "' + str(exp_config['override_config']).replace('True', 'true').replace('False', 'false') + '" '
+        bash_command += ' --cuda-device [GPU_ID]'
         bash_command += self.allennlp_include_packages()
         return bash_command
 
@@ -295,7 +321,7 @@ class AllenNLP_Job_Dispatcher():
                 return True
 
         else:
-            if '/'.join(exp_config['output_file_cloud'].split('/')[3:]) in s3_done_experiments:
+            if 'output_file_cloud' in exp_config and '/'.join(exp_config['output_file_cloud'].split('/')[3:]) in s3_done_experiments:
                 if not self.QUIET_MODE:
                     print('!! %s already found in s3, NOT RUNNING. \n' % (run_name))
                 return True
@@ -325,14 +351,14 @@ class AllenNLP_Job_Dispatcher():
             return False
 
 
-        if 'train_data_path' in exp_config['override_config']:
+        if 'train_data_path' in exp_config['override_config'] and exp_config['override_config']['train_data_path'].startswith('s3'):
             for train_data_path in exp_config['override_config']['train_data_path'].split(','):
                 if len([obj for obj in self.s3_preproc if train_data_path.endswith(obj)]) == 0:
                     if SHOW_MISSING_RESOURCES:
                         print('resource %s does not exists, not running ' % (train_data_path))
                     return False
 
-        if 'validation_data_path' in exp_config['override_config']:
+        if 'validation_data_path' in exp_config['override_config'] and exp_config['override_config']['validation_data_path'].startswith('s3'):
             for validation_data_path in exp_config['override_config']['validation_data_path'].split(','):
                 if len([obj for obj in self.s3_preproc if validation_data_path.endswith(obj)]) == 0:
                     if SHOW_MISSING_RESOURCES:
@@ -419,8 +445,13 @@ class AllenNLP_Job_Dispatcher():
                 runner_config['bash_command'] = self.build_evaluate_bash_command(exp_config, run_name)
             elif job_type == 'train':
                 runner_config['bash_command'] = self.build_train_bash_command(exp_config, run_name)
+            elif job_type == 'dry-run':
+                runner_config['bash_command'] = self.build_dry_run_bash_command(exp_config, run_name)
             elif job_type == 'finetune':
                 runner_config['bash_command'] = self.build_finetune_bash_command(exp_config, run_name)
+            elif job_type == 'predict':
+                runner_config['bash_command'] = self.build_predict_bash_command(exp_config, run_name)
+
             runner_config['bash_command'] = self.replace_one_field_tags(runner_config['bash_command'], params)
 
             print('-- Experiment Name = %s' % (run_name))
@@ -560,20 +591,28 @@ allennlp_dispatcher = AllenNLP_Job_Dispatcher(experiment_name)
 #experiment_name = '059_BERTLarge_answer2_exp6_train_mix5'
 #experiment_name = '060_BERTLarge_answer2_exp6_train_mix5_hotpotqa'
 #experiment_name = '061_MRQA_BERT_train_Full'
-#experiment_name = '062_BERT_train_Full_exp'
+#experiment_name = '062_BERT_train_Full_rlcwq'
 #experiment_name = '063_BERT_evaluate_MRQA'
 #experiment_name = '064_BERT_RL-CWQ_evaluate_exp'
 #experiment_name = '065_BERT_train_mix_MRQA'
 #experiment_name = '066_CSQA_BERT_train'
 #experiment_name = '067_CSQA_BERTbase_grid_train'
-#experiment_name = '068_beatbert_asymmetric_train'
+#experiment_name = '068_beatbert_train'
 #experiment_name = '069_BERTLarge_train_mix_MRQA'
-experiment_name = '070_CSQA_BERTLarge_train'
+#experiment_name = '070_CSQA_BERTLarge_train'
+#experiment_name = '071_BERT_preproc_rlcwq'
+#experiment_name = '072_BERT_evaluate_crowdsense'
+#experiment_name = '073_beatbert_nettrain_large'
+#experiment_name = '074_CSQA_BERTLarge_samechunk_train'
+#experiment_name = '075_CSQA_BERT_samechunk_train'
+#experiment_name = '076_beatbert_predict'
+experiment_name = '077_MultiQA_BERTBase_train'
 
-if experiment_name.find('BERTLarge') > -1 and experiment_name.find('evaluate') == -1:
-    queue = '4GPUs'
-#queue = 'rack-gamir-g07'
-#queue = 'rack-jonathan-g02'
+#if experiment_name.find('BERTLarge') > -1 and experiment_name.find('evaluate') == -1:
+#    queue = '4GPUs'
+#queue = '4GPUs'
+#queue = 'rack-gamir-g05'
+#queue = 'rack-jonathan-g08'
 #queue = 'savant'
 
 FORCE_RUN = True

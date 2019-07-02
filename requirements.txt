@@ -38,9 +38,6 @@ scikit-learn
 # Install the Tensorboard application separately (part of tensorflow) to view them.
 tensorboardX>=1.2
 
-# aws commandline tools for running on Docker remotely.
-awscli>=1.11.91
-
 # Accessing files from S3 directly.
 boto3
 
@@ -125,7 +122,7 @@ aiohttp
 #### DOC-RELATED PACKAGES ####
 
 # Builds our documentation.
-sphinx>=1.5.3
+sphinx>=2.1.1
 
 # Watches the documentation directory and rebuilds on changes.
 sphinx-autobuild

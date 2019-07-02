@@ -5,12 +5,13 @@ import os
 from tensorboardX import SummaryWriter
 import torch
 
+from allennlp.common.from_params import FromParams
 from allennlp.models.model import Model
 
 logger = logging.getLogger(__name__)
 
 
-class TensorboardWriter:
+class TensorboardWriter(FromParams):
     """
     Class that handles Tensorboard (and other) logging.
 

@@ -43,6 +43,51 @@ class TestTableQuestionContext(AllenNlpTestCase):
                                                       'number_column:avg_attendance': 6028.0,
                                                       'string_column:avg_attendance': '6_028'}]
 
+    def test_table_data_from_untagged_file(self):
+        question = "what was the attendance when usl a league played?"
+        question_tokens = self.tokenizer.tokenize(question)
+        test_file = f'{self.FIXTURES_ROOT}/data/wikitables/sample_table.tsv'
+        table_lines = [line.strip() for line in open(test_file).readlines()]
+        table_question_context = TableQuestionContext.read_from_lines(table_lines, question_tokens)
+        # The content in the table represented by the untagged file we are reading here is the same as the one we
+        # had in the tagged file above, except that we have a "Score" column instead of "Avg. Attendance" column,
+        # which is changed to test the num2 extraction logic. I've shown the values not being extracted here as
+        # well and commented them out.
+        assert table_question_context.table_data == [{'number_column:year': 2001.0,
+                                                      # The value extraction logic we have for untagged lines does
+                                                      # not extract this value as a date.
+                                                      #'date_column:year': Date(2001, -1, -1),
+                                                      'string_column:year': '2001',
+                                                      'number_column:division': 2.0,
+                                                      'string_column:division': '2',
+                                                      'string_column:league': 'usl_a_league',
+                                                      'string_column:regular_season': '4th_western',
+                                                      # We only check for strings that are entirely numbers. So 4.0
+                                                      # will not be extracted.
+                                                      #'number_column:regular_season': 4.0,
+                                                      'string_column:playoffs': 'quarterfinals',
+                                                      'string_column:open_cup': 'did_not_qualify',
+                                                      #'number_column:open_cup': None,
+                                                      'number_column:score': 20.0,
+                                                      'num2_column:score': 30.0,
+                                                      'string_column:score': '20_30'},
+                                                     {'number_column:year': 2005.0,
+                                                      #'date_column:year': Date(2005, -1, -1),
+                                                      'string_column:year': '2005',
+                                                      'number_column:division': 2.0,
+                                                      'string_column:division': '2',
+                                                      'string_column:league': 'usl_first_division',
+                                                      'string_column:regular_season': '5th',
+                                                      # Same here as in the "division" column for the first row.
+                                                      # 5.0 will not be extracted from "5th".
+                                                      #'number_column:regular_season': 5.0,
+                                                      'string_column:playoffs': 'quarterfinals',
+                                                      'string_column:open_cup': '4th_round',
+                                                      #'number_column:open_cup': 4.0,
+                                                      'number_column:score': 50.0,
+                                                      'num2_column:score': 40.0,
+                                                      'string_column:score': '50_40'}]
+
     def test_number_extraction(self):
         question = """how many players on the 191617 illinois fighting illini men's basketball team
                       had more than 100 points scored?"""

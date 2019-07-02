@@ -72,9 +72,6 @@ class CopyNetDatasetReader(DatasetReader):
     source_token_indexers : ``Dict[str, TokenIndexer]``, optional
         Indexers used to define input (source side) token representations. Defaults to
         ``{"tokens": SingleIdTokenIndexer()}``.
-    target_token_indexers : ``Dict[str, TokenIndexer]``, optional
-        Indexers used to define output (target side) token representations. Defaults to
-        ``source_token_indexers``.
 
     Notes
     -----

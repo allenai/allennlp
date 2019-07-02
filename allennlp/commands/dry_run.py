@@ -119,14 +119,15 @@ def dry_run_from_params(params: Params, serialization_dir: str,
         For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
     :return:
     """
+
+    if os.path.exists(serialization_dir) and force:
+        shutil.rmtree(serialization_dir)
+
     prepare_environment(params)
 
     vocab_params = params.pop("vocabulary", {})
     os.makedirs(serialization_dir, exist_ok=True)
     vocab_dir = os.path.join(serialization_dir, "vocabulary")
-
-    if os.path.exists(serialization_dir) and force:
-        shutil.rmtree(serialization_dir)
 
     if os.path.isdir(vocab_dir) and os.listdir(vocab_dir) is not None:
         raise ConfigurationError("The 'vocabulary' directory in the provided "

@@ -214,14 +214,14 @@ def make_reading_comprehension_instance(question_tokens: List[Token],
     return Instance(fields)
 
 
-def make_reading_comprehension_instance_multiqa(question_tokens: List[Token],
-                                             tokenized_paragraph: List[List[Token]],
-                                             token_indexers: Dict[str, TokenIndexer],
-                                             paragraph: List[str],
-                                             answers_list: List[Tuple[int, int]] = None,
-                                             additional_metadata: Dict[str, Any] = None,
-                                             header = None,
-                                             use_multi_label_loss=False) -> Instance:
+def make_multiqa_instance(question_tokens: List[Token],
+                         tokenized_paragraph: List[List[Token]],
+                         token_indexers: Dict[str, TokenIndexer],
+                         paragraph: List[str],
+                         answers_list: List[Tuple[int, int]] = None,
+                         additional_metadata: Dict[str, Any] = None,
+                         header = None,
+                         use_multi_label_loss=False) -> Instance:
     """
     Converts a question, a passage, and an optional answer (or answers) to an ``Instance`` for use
     in a reading comprehension model.

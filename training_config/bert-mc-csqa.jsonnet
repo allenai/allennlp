@@ -1,4 +1,4 @@
-local train_size = 9741;
+local train_size = 1000;
 local batch_size = 6;
 local grad_accumulate = 1;
 local num_epochs = 3;
@@ -8,9 +8,10 @@ local bert_model = "bert-base-uncased";
 
 {
   "dataset_reader": {
-    "answer_only": true,
+    "answer_only": false,
     "type": "bert_mc_qa",
-    "sample": 100,
+    "num_choices": 3,
+    "sample": 1000,
     "random_seed" : "1",
     "pretrained_model": bert_model,
     "max_pieces": 128,

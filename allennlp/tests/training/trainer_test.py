@@ -151,8 +151,9 @@ class TestTrainer(AllenNlpTestCase):
                         reason="Need multiple GPUs.")
     def test_production_rule_field_with_multiple_gpus(self):
         wikitables_dir = 'allennlp/tests/fixtures/data/wikitables/'
+        search_output_directory = wikitables_dir + 'action_space_walker_output/'
         wikitables_reader = WikiTablesDatasetReader(tables_directory=wikitables_dir,
-                                                    dpd_output_directory=wikitables_dir + 'dpd_output/')
+                                                    offline_logical_forms_directory=search_output_directory)
         instances = wikitables_reader.read(wikitables_dir + 'sample_data.examples')
         archive_path = self.FIXTURES_ROOT / 'semantic_parsing' / 'wikitables' / 'serialization' / 'model.tar.gz'
         model = load_archive(archive_path).model
