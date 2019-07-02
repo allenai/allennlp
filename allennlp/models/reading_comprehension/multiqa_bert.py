@@ -128,7 +128,10 @@ class MultiQA_BERT(Model):
 
             predicted_span = best_span_cpu[question_inds[best_span_ind]]
             start_offset = offsets[predicted_span[0]][0]
-            end_offset = offsets[predicted_span[1] + 1][1]
+            if predicted_span[1] + 1 < len(offsets):
+                end_offset = offsets[predicted_span[1] + 1][1]
+            else:
+                end_offset = len(passage_str)
             best_span_string = passage_str[start_offset:end_offset]
 
             # Note: this is a hack, because AllenNLP, when predicting, expects a value for each instance.
