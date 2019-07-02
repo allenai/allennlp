@@ -34,14 +34,6 @@ class BasicTransitionFunction(TransitionFunction[GrammarBasedState]):
     input_attention : ``Attention``
     activation : ``Activation``, optional (default=relu)
         The activation that gets applied to the decoder LSTM input and to the action query.
-    predict_start_type_separately : ``bool``, optional (default=True)
-        If ``True``, we will predict the initial action (which is typically the base type of the
-        logical form) using a different mechanism than our typical action decoder.  We basically
-        just do a projection of the hidden state, and don't update the decoder RNN.
-    num_start_types : ``int``, optional (default=None)
-        If ``predict_start_type_separately`` is ``True``, this is the number of start types that
-        are in the grammar.  We need this so we can construct parameters with the right shape.
-        This is unused if ``predict_start_type_separately`` is ``False``.
     add_action_bias : ``bool``, optional (default=True)
         If ``True``, there has been a bias dimension added to the embedding of each action, which
         gets used when predicting the next action.  We add a dimension of ones to our predicted
@@ -55,8 +47,6 @@ class BasicTransitionFunction(TransitionFunction[GrammarBasedState]):
                  action_embedding_dim: int,
                  input_attention: Attention,
                  activation: Activation = Activation.by_name('relu')(),
-                 predict_start_type_separately: bool = True,
-                 num_start_types: int = None,
                  add_action_bias: bool = True,
                  dropout: float = 0.0,
                  num_layers: int = 1) -> None:
@@ -65,14 +55,6 @@ class BasicTransitionFunction(TransitionFunction[GrammarBasedState]):
         self._add_action_bias = add_action_bias
         self._activation = activation
         self._num_layers = num_layers
-
-        self._predict_start_type_separately = predict_start_type_separately
-        if predict_start_type_separately:
-            self._start_type_predictor = Linear(encoder_output_dim, num_start_types)
-            self._num_start_types = num_start_types
-        else:
-            self._start_type_predictor = None
-            self._num_start_types = None
 
         # Decoder output dim needs to be the same as the encoder output dim since we initialize the
         # hidden state of the decoder with the final hidden state of the encoder.
@@ -103,12 +85,6 @@ class BasicTransitionFunction(TransitionFunction[GrammarBasedState]):
                   state: GrammarBasedState,
                   max_actions: int = None,
                   allowed_actions: List[Set[int]] = None) -> List[GrammarBasedState]:
-        if self._predict_start_type_separately and not state.action_history[0]:
-            # The wikitables parser did something different when predicting the start type, which
-            # is our first action.  So in this case we break out into a different function.  We'll
-            # ignore max_actions on our first step, assuming there aren't that many start types.
-            return self._take_first_step(state, allowed_actions)
-
         # Taking a step in the decoder consists of three main parts.  First, we'll construct the
         # input to the decoder and update the decoder's hidden state.  Second, we'll use this new
         # hidden state (and maybe other information) to predict an action.  Finally, we will
@@ -321,73 +297,6 @@ class BasicTransitionFunction(TransitionFunction[GrammarBasedState]):
                     batch_states = batch_states[:max_actions]
                 for _, group_index, log_prob, action_embedding, action in batch_states:
                     new_states.append(make_state(group_index, action, log_prob, action_embedding))
-        return new_states
-
-    def _take_first_step(self,
-                         state: GrammarBasedState,
-                         allowed_actions: List[Set[int]] = None) -> List[GrammarBasedState]:
-        # We'll just do a projection from the current hidden state (which was initialized with the
-        # final encoder output) to the number of start actions that we have, normalize those
-        # logits, and use that as our score.  We end up duplicating some of the logic from
-        # `_compute_new_states` here, but we do things slightly differently, and it's easier to
-        # just copy the parts we need than to try to re-use that code.
-
-        # (group_size, hidden_dim)
-        hidden_state = torch.stack([rnn_state.hidden_state for rnn_state in state.rnn_state])
-        # (group_size, num_start_type)
-        start_action_logits = self._start_type_predictor(hidden_state)
-        log_probs = torch.nn.functional.log_softmax(start_action_logits, dim=-1)
-        sorted_log_probs, sorted_actions = log_probs.sort(dim=-1, descending=True)
-
-        sorted_actions = sorted_actions.detach().cpu().numpy().tolist()
-        if state.debug_info is not None:
-            probs_cpu = log_probs.exp().detach().cpu().numpy().tolist()
-        else:
-            probs_cpu = [None] * len(state.batch_indices)
-
-        # state.get_valid_actions() will return a list that is consistently sorted, so as along as
-        # the set of valid start actions never changes, we can just match up the log prob indices
-        # above with the position of each considered action, and we're good.
-        valid_actions = state.get_valid_actions()
-        considered_actions = [actions['global'][2] for actions in valid_actions]
-        if len(considered_actions[0]) != self._num_start_types:
-            raise RuntimeError("Calculated wrong number of initial actions.  Expected "
-                               f"{self._num_start_types}, found {len(considered_actions[0])}.")
-
-        best_next_states: Dict[int, List[Tuple[int, int, int]]] = defaultdict(list)
-        for group_index, (batch_index, group_actions) in enumerate(zip(state.batch_indices, sorted_actions)):
-            for action_index, action in enumerate(group_actions):
-                # `action` is currently the index in `log_probs`, not the actual action ID.  To get
-                # the action ID, we need to go through `considered_actions`.
-                action = considered_actions[group_index][action]
-                if allowed_actions is not None and action not in allowed_actions[group_index]:
-                    # This happens when our _decoder trainer_ wants us to only evaluate certain
-                    # actions, likely because they are the gold actions in this state.  We just skip
-                    # emitting any state that isn't allowed by the trainer, because constructing the
-                    # new state can be expensive.
-                    continue
-                best_next_states[batch_index].append((group_index, action_index, action))
-
-        new_states = []
-        for batch_index, best_states in sorted(best_next_states.items()):
-            for group_index, action_index, action in best_states:
-                # We'll yield a bunch of states here that all have a `group_size` of 1, so that the
-                # learning algorithm can decide how many of these it wants to keep, and it can just
-                # regroup them later, as that's a really easy operation.
-                new_score = state.score[group_index] + sorted_log_probs[group_index, action_index]
-
-                # This part is different from `_compute_new_states` - we're just passing through
-                # the previous RNN state, as predicting the start type wasn't included in the
-                # decoder RNN in the original model.
-                new_rnn_state = state.rnn_state[group_index]
-                new_state = state.new_state_from_group_index(group_index,
-                                                             action,
-                                                             new_score,
-                                                             new_rnn_state,
-                                                             considered_actions[group_index],
-                                                             probs_cpu[group_index],
-                                                             None)
-                new_states.append(new_state)
         return new_states
 
     def attend_on_question(self,

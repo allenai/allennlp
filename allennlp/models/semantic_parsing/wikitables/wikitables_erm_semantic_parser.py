@@ -122,8 +122,6 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         self._decoder_step = LinkingCoverageTransitionFunction(encoder_output_dim=self._encoder.get_output_dim(),
                                                                action_embedding_dim=action_embedding_dim,
                                                                input_attention=attention,
-                                                               num_start_types=self._num_start_types,
-                                                               predict_start_type_separately=False,
                                                                add_action_bias=self._add_action_bias,
                                                                mixture_feedforward=mixture_feedforward,
                                                                dropout=dropout)
