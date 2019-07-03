@@ -198,7 +198,7 @@ class MultiQAReader(DatasetReader):
                                 detected_answer = {}
                                 # checking if the answer has been detected
                                 if "token_offset" in offsets[instance["doc_id"]][instance["doc_part"]]:
-                                    answer_token_offset = offsets[instance["doc_id"]][instance["part"]]['token_offset']
+                                    answer_token_offset = offsets[instance["doc_id"]][instance["doc_part"]]['token_offset']
                                     detected_answer["token_spans"] = (instance['token_inds'][0] + answer_token_offset,
                                                                       instance['token_inds'][1] + answer_token_offset)
                                     detected_answer['text'] = instance["text"]
