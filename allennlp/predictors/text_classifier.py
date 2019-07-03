@@ -23,3 +23,9 @@ class TextClassifierPredictor(Predictor):
         """
         sentence = json_dict["sentence"]
         return self._dataset_reader.text_to_instance(sentence)
+
+    @overrides        
+    def predictions_to_labeled_instances(self, instance: Instance, outputs: Dict[str, numpy.ndarray]) -> List[Instance]:        
+        label = numpy.argmax(outputs['probs'])
+        instance.add_field('label', LabelField(int(label), skip_indexing=True))                    
+        return [instance]
