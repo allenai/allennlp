@@ -58,7 +58,8 @@ class TestWikiTablesParserPredictor(AllenNlpTestCase):
         predictor = Predictor.from_archive(archive, 'wikitables-parser')
 
         # This is not the start of the best sequence, but it will be once we force it.
-        initial_tokens = ['@start@ -> Date', 'Date -> [<Number,Number,Number:Date>, Number, Number, Number]']
+        initial_tokens = ['@start@ -> Number',
+                          'Number -> [<List[Row],NumberColumn:Number>, List[Row], NumberColumn]']
 
         # First let's try an unforced one. Its initial tokens should not be ours.
         result = predictor.predict_json(inputs)
