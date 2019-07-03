@@ -302,7 +302,7 @@ class MultiQAReader(DatasetReader):
             # When training randomly choose one chunk per example (training with shared norm (Clark and Gardner, 17)
             # is not well defined when using sliding window )
             chunks_with_answers = [inst for inst in question_chunks if inst['answers'] != []]
-            instances_to_add = random.sample(chunks_with_answers, 0)
+            instances_to_add = random.sample(chunks_with_answers, 1)
         else:
             instances_to_add = question_chunks
 
