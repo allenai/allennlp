@@ -122,8 +122,6 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         self._decoder_step = LinkingCoverageTransitionFunction(encoder_output_dim=self._encoder.get_output_dim(),
                                                                action_embedding_dim=action_embedding_dim,
                                                                input_attention=attention,
-                                                               num_start_types=self._num_start_types,
-                                                               predict_start_type_separately=True,
                                                                add_action_bias=self._add_action_bias,
                                                                mixture_feedforward=mixture_feedforward,
                                                                dropout=dropout)
@@ -193,7 +191,8 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                 world: List[WikiTablesLanguage],
                 actions: List[List[ProductionRule]],
                 agenda: torch.LongTensor,
-                target_values: List[List[str]] = None) -> Dict[str, torch.Tensor]:
+                target_values: List[List[str]] = None,
+                metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
         Parameters
@@ -220,6 +219,8 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         target_values : ``List[List[str]]``, optional (default = None)
             For each instance, a list of target values taken from the example lisp string. We pass
             this list to the evaluator along with logical forms to compute denotation accuracy.
+        metadata : ``List[Dict[str, Any]]``, optional (default = None)
+            Metadata containing the original tokenized question within a 'question_tokens' field.
         """
         batch_size = list(question.values())[0].size(0)
         # Each instance's agenda is of size (agenda_size, 1)
@@ -299,7 +300,6 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                         in_agenda_ratio = sum(actions_in_agenda) / len(actions_in_agenda)
                 self._agenda_coverage(in_agenda_ratio)
 
-            metadata = None
             self._compute_validation_outputs(actions,
                                              best_final_states,
                                              world,
