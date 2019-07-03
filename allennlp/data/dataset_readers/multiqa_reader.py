@@ -197,7 +197,7 @@ class MultiQAReader(DatasetReader):
                             for instance in ac['extractive']["single_answer"]["instances"]:
                                 detected_answer = {}
                                 # checking if the answer has been detected
-                                if "token_offset" in offsets[instance["doc_id"]][instance["part"]]:
+                                if "token_offset" in offsets[instance["doc_id"]][instance["doc_part"]]:
                                     answer_token_offset = offsets[instance["doc_id"]][instance["part"]]['token_offset']
                                     detected_answer["token_spans"] = (instance['token_inds'][0] + answer_token_offset,
                                                                       instance['token_inds'][1] + answer_token_offset)
@@ -291,6 +291,7 @@ class MultiQAReader(DatasetReader):
                 window_start_token_offset += self._STRIDE
 
             # In training we need examples with answer only
+            # TODO change this back
             # not self._is_training or
             if  len([inst for inst in chunks if inst['answers'] != []])>0:
                 per_question_chunks.append(chunks)
@@ -303,7 +304,7 @@ class MultiQAReader(DatasetReader):
             # When training randomly choose one chunk per example (training with shared norm (Clark and Gardner, 17)
             # is not well defined when using sliding window )
             chunks_with_answers = [inst for inst in question_chunks if inst['answers'] != []]
-            instances_to_add = random.sample(chunks_with_answers, 1)
+            instances_to_add = random.sample(chunks_with_answers, 0)
         else:
             instances_to_add = question_chunks
 
