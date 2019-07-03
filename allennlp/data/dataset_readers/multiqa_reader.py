@@ -147,6 +147,7 @@ class MultiQAReader(DatasetReader):
         self._never_lowercase = ['[UNK]', '[SEP]', '[PAD]', '[CLS]', '[MASK]']
 
         self.sep_tokens = {'title':'[TLE]', 'text':'[DOC]'}
+        self._para_tfidf_scoring = Paragraph_TfIdf_Scoring
 
     def token_to_wordpieces(self, token, _bert_do_lowercase=True):
         text = (token[0].lower()
@@ -157,6 +158,11 @@ class MultiQAReader(DatasetReader):
 
     @profile
     def combine_context(self, context):
+        ## reording the documents using TF-IDF distance to the questions
+        # documents are usually from different sources so there order can usually be modified
+        #docs = [doc['title'] + ' ' + doc['text'] for doc in context['context']['documents']]
+        #doc_scores = self._para_tfidf_scoring.score_paragraphs([context['qas'][0]['question']], docs)
+
         offsets = []
         context_tokens = []
         context_text = ''
@@ -197,8 +203,8 @@ class MultiQAReader(DatasetReader):
                             for instance in ac['extractive']["single_answer"]["instances"]:
                                 detected_answer = {}
                                 # checking if the answer has been detected
-                                if "token_offset" in offsets[instance["doc_id"]][instance["doc_part"]]:
-                                    answer_token_offset = offsets[instance["doc_id"]][instance["doc_part"]]['token_offset']
+                                if "token_offset" in offsets[instance["doc_id"]][instance["part"]]:
+                                    answer_token_offset = offsets[instance["doc_id"]][instance["part"]]['token_offset']
                                     detected_answer["token_spans"] = (instance['token_inds'][0] + answer_token_offset,
                                                                       instance['token_inds'][1] + answer_token_offset)
                                     detected_answer['text'] = instance["text"]
