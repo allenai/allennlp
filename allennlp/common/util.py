@@ -11,6 +11,7 @@ import random
 import subprocess
 import sys
 import os
+import math 
 
 try:
     import resource
@@ -44,6 +45,19 @@ JsonDict = Dict[str, Any]  # pylint: disable=invalid-name
 START_SYMBOL = '@start@'
 END_SYMBOL = '@end@'
 
+def normalize_by_total_score(interpretation_scores: numpy.ndarray) -> numpy.ndarray:
+    """
+    Given a list of saliency scores for each token, normalize them into the range [0,1] by dividing by L1-norm.  
+    """
+    total_score = 0.0
+    for score in interpretation_scores:
+        total_score += math.fabs(score)
+
+    normalized_scores = numpy.copy(interpretation_scores)
+    for idx, score in enumerate(interpretation_scores):
+        normalized_scores[idx] = math.fabs(score) / total_score
+        
+    return normalized_scores
 
 def sanitize(x: Any) -> Any:  # pylint: disable=invalid-name,too-many-return-statements
     """

@@ -1,5 +1,6 @@
-from typing import List, Iterator
+from typing import List, Iterator, Dict
 import json
+import numpy as np
 from contextlib import contextmanager
 
 from allennlp.common import Registrable
@@ -8,6 +9,8 @@ from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import DatasetReader, Instance
 from allennlp.models import Model
 from allennlp.models.archival import Archive, load_archive
+from allennlp.modules.text_field_embedders import TextFieldEmbedder
+from allennlp.data.dataset import Batch
 
 # a mapping from model `type` to the default Predictor for that type
 DEFAULT_PREDICTORS = {
@@ -58,6 +61,89 @@ class Predictor(Registrable):
         instance = self._json_to_instance(inputs)
         return self.predict_instance(instance)
 
+    def saliency_interpret_from_json(self, inputs: JsonDict) -> JsonDict:
+        """
+        Implemented by a `SaliencyInterpreter`, which uses the gradients from :func:`get_gradients` to provide saliency interpretations for specific models. 
+        """
+        raise RuntimeError("you need to implement this method if you want to give saliency model interpretations")
+
+    def inputs_to_labeled_instances(self, inputs: JsonDict) -> List[Instance]:
+        """
+        Converts incoming json to a :class:`~allennlp.data.instance.Instance`,
+        runs the model on the newly created instance, and adds labels to the
+        :class:`~allennlp.data.instance.Instance`s given by the model's output.
+        Returns
+        -------
+        List[instance]
+            A list of :class:`~allennlp.data.instance.Instance`s
+        """
+        instance = self._json_to_instance(inputs)
+        outputs = self._model.forward_on_instance(instance)
+        new_instances = self.predictions_to_labeled_instances(instance, outputs)
+        return new_instances
+
+    def get_gradients(self, instances: List[Instance]) -> Dict[str, np.ndarray]:
+        """
+        Gets the gradients of the loss with respect to the model inputs.
+        Parameters
+        ----------
+        instances: List[Instance]
+        Returns
+        -------
+        Dict[str, np.ndarray]
+            Dictionary of gradient entries for each input fed into the model.
+            The keys have the form ``{grad_input_1: ..., grad_input_2: ... }``
+            up to the number of inputs given.
+        Notes
+        -----
+        Takes a ``JsonDict`` representing the inputs of the model and converts
+        them to :class:`~allennlp.data.instance.Instance`s, sends these through
+        the model :func:`forward` function after registering hooks on the embedding
+        layer of the model. Calls :func:`backward` on the loss and then removes the
+        hooks. 
+        """
+        self._register_hooks()
+
+        dataset = Batch(instances)
+        dataset.index_instances(self._model.vocab) 
+        outputs = self._model.decode(self._model.forward(**dataset.as_tensor_dict()))
+
+        loss = outputs['loss']
+        self._model.zero_grad()
+        loss.backward()
+
+        for hook in self.hooks:
+            hook.remove()
+
+        grad_dict = dict()
+        for idx, grad in enumerate(self.extracted_grads):
+            key = 'grad_input_' + str(idx + 1)
+            grad_dict[key] = grad.squeeze_(0).detach().cpu().numpy()
+
+        return grad_dict, outputs 
+
+    def _register_hooks(self):
+        """
+        Registers a backward hook on the 
+        :class:`~allennlp.modules.text_field_embedder.basic_text_field_embbedder.BasicTextFieldEmbedder`
+        class. Used to save the gradients of the embeddings for use in get_gradients()
+        """
+
+        """ When there are multiple inputs (e.g., a passage and question), the hook
+        will be called multiple times. We append all the embeddings gradients
+        to a list """
+        self.extracted_grads = []
+        self.hooks = []
+
+        def hook_layers(module, grad_in, grad_out):
+            self.extracted_grads.append(grad_out[0])
+
+        # Register the hooks
+        for module in self._model.modules():
+            if isinstance(module, TextFieldEmbedder):
+                backward_hook = module.register_backward_hook(hook_layers)
+                self.hooks.append(backward_hook)
+
     @contextmanager
     def capture_model_internals(self) -> Iterator[dict]:
         """
@@ -95,6 +181,12 @@ class Predictor(Registrable):
     def predict_instance(self, instance: Instance) -> JsonDict:
         outputs = self._model.forward_on_instance(instance)
         return sanitize(outputs)
+
+    def predictions_to_labeled_instances(self, instance: Instance, outputs: Dict[str, np.ndarray]) -> List[Instance]:
+        """
+        Adds labels to the :class:`~allennlp.data.instance.Instance`s passed in.
+        """
+        raise RuntimeError("you need to implement this method if you want to give model interpretations or attacks")
 
     def _json_to_instance(self, json_dict: JsonDict) -> Instance:
         """

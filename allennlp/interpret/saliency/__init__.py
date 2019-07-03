@@ -1,0 +1,4 @@
+from allennlp.interpret.saliency.saliency_interpreter import SaliencyInterpreter
+from allennlp.interpret.saliency.simple_gradient import SimpleGradient
+from allennlp.interpret.saliency.integrated_gradient import IntegratedGradient
+from allennlp.interpret.saliency.smooth_gradient import SmoothGradient
