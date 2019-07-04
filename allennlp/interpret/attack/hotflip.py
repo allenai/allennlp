@@ -16,60 +16,50 @@ from collections import defaultdict
 @Attacker.register('hotflip')
 class Hotflip(Attacker):
     def __init__(self, predictor):
-        super().__init__(predictor)        
-        for module in self.predictor._model.modules():
-            if isinstance(module, TextFieldEmbedder):
-                M = module        
-        
-        vocab = self.predictor._model.vocab
-        self.vocab = vocab
-        all_tokens = list(vocab._token_to_index["tokens"].keys())
-
-        a = [x for x in vocab._index_to_token["tokens"].keys()]
-        b = torch.LongTensor(a)
-        b = b.unsqueeze(0)
-        c = {"tokens":b}                
-        if "token_characters" in self.predictor._dataset_reader._token_indexers:
-            tokenizer = self.predictor._dataset_reader._token_indexers["token_characters"]._character_tokenizer
-            t = tokenizer.batch_tokenize(all_tokens)            
-            tt = tokenizer.tokenize("How")            
-            index = self.vocab.get_token_index("H", self.predictor._dataset_reader._token_indexers["token_characters"]._namespace)
-            index2 = self.vocab.get_token_index("o", self.predictor._dataset_reader._token_indexers["token_characters"]._namespace)            
-
-            character_tokens = []
-            pad_length = max([len(x) for x in t])            
-            if getattr(t[0][0], 'text_id', None) is not None:                
-                for each in t:
-                    tmp = [x.text_id for x in each]                    
-                    tmp = tmp + [0] * (pad_length-len(tmp))
-                    character_tokens.append(tmp)            
-                character_tokens = torch.LongTensor(character_tokens)
-                c["token_characters"] = character_tokens.unsqueeze(0)
+        """
+        TODO
+        """
+        super().__init__(predictor)                                          
+        self.vocab = self.predictor._model.vocab
+        # Gets all tokens in the vocab and their corresponding IDs
+        all_tokens = list(self.vocab._token_to_index["tokens"].keys())            
+        all_inputs = {"tokens":torch.LongTensor([x for x in self.vocab._index_to_token["tokens"].keys()]).unsqueeze(0)}          
+        # handle when a model uses character-level inputs, e.g., ELMo or a CharCNN
+        if "token_characters" in self.predictor._dataset_reader._token_indexers:            
+            all_tokens_tokenized = self.predictor._dataset_reader._token_indexers["token_characters"]._character_tokenizer.batch_tokenize(all_tokens)                        
+            pad_length = max([len(x) for x in all_tokens_tokenized])    
+            character_tokens = []            
+            if getattr(all_tokens_tokenized[0][0], 'text_id', None) is not None:                
+                for tok in all_tokens_tokenized:
+                    tmp = [x.text_id for x in tok]                    
+                    tmp += [0] * (pad_length-len(tmp))
+                    character_tokens.append(tmp)                            
             else:
-                for each in t:
-                    tmp = [self.vocab.get_token_index(x.text,self.predictor._dataset_reader._token_indexers["token_characters"]._namespace) for x in each]                    
-                    tmp = tmp + [0] * (pad_length-len(tmp))
+                for tok in all_tokens_tokenized:
+                    tmp = [self.vocab.get_token_index(x.text,self.predictor._dataset_reader._token_indexers["token_characters"]._namespace) for x in tok]                    
+                    tmp += [0] * (pad_length-len(tmp))
                     character_tokens.append(tmp)                
-                character_tokens = torch.LongTensor(character_tokens)
-                c["token_characters"] = character_tokens.unsqueeze(0)
+            character_tokens = torch.LongTensor(character_tokens)
+            all_inputs["token_characters"] = character_tokens.unsqueeze(0)
 
             if "elmo" in self.predictor._dataset_reader._token_indexers:
-                pad_length = pad_length + 2
-                lltokens = []
-                elmo_tokens = []
-                for each in all_tokens:
-                    ltokens = [Token(text=each)]                    
-                    tmp = self.predictor._dataset_reader._token_indexers["elmo"].tokens_to_indices(ltokens, self.vocab,"sentence")
-                    tmp = tmp["sentence"]                
-                    lltokens.append(tmp[0])                
-                lltokens = torch.LongTensor(lltokens)
-                c["elmo"] = lltokens.unsqueeze(0)                
-        embedding_matrix = M(c)
-        embedding_matrix = embedding_matrix.squeeze()                
-        self.token_embedding = Embedding(num_embeddings=vocab.get_vocab_size('tokens'), embedding_dim=embedding_matrix.shape[1], weight=embedding_matrix,trainable=False)
+                pad_length = pad_length + 2 # elmo has start/end word
+                elmo_tokens = []                
+                for tok in all_tokens:                    
+                    tmp = self.predictor._dataset_reader._token_indexers["elmo"].tokens_to_indices([Token(text=tok)], self.vocab,"sentence")["sentence"]                                    
+                    elmo_tokens.append(tmp[0])                
+                all_inputs["elmo"] = torch.LongTensor(elmo_tokens).unsqueeze(0)                 
 
+        for module in self.predictor._model.modules():
+            if isinstance(module, TextFieldEmbedder):
+                model = module  
+        embedding_matrix = model(all_inputs).squeeze()                        
+        self.token_embedding = Embedding(num_embeddings=self.vocab.get_vocab_size('tokens'), embedding_dim=embedding_matrix.shape[1], weight=embedding_matrix, trainable=False)
 
     def attack_from_json(self, inputs:JsonDict, target_field: str, gradient_index:str):        
+        """       
+        TODO
+        """
         og_instances = self.predictor.inputs_to_labeled_instances(inputs)        
         original = list(og_instances[0][target_field].tokens)        
         final_tokens = []        
