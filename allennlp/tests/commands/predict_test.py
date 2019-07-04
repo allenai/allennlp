@@ -166,6 +166,18 @@ class TestPredict(AllenNlpTestCase):
             results = [json.loads(line) for line in f]
             assert results[0]['keep_if_unparseable'] == True
 
+        # No --use-dataset-reader flag, fails because the loading logic
+        # is not implemented in the testing predictor
+        sys.argv = ["run.py",      # executable
+                    "predict",     # command
+                    str(self.atis_model_path),
+                    str(self.atis_data_path),     # input_file
+                    "--output-file", str(self.outfile),
+                    "--silent",
+                    "--predictor", "test-predictor"]
+        with self.assertRaises(NotImplementedError):
+            main()
+
     def test_batch_prediction_works_with_known_model(self):
         with open(self.infile, 'w') as f:
             f.write("""{"passage": "the seahawks won the super bowl in 2016", """
