@@ -127,7 +127,7 @@ class Predictor(Registrable):
         return instances
 
     @classmethod
-    def from_path(cls, archive_path: str, predictor_name: str = None, cuda_device: int = -1) -> 'Predictor':
+    def from_path(cls, archive_path: str, predictor_name: str = None, cuda_device: int = -1, dataset_reader_to_load: str = 'train') -> 'Predictor':
         """
         Instantiate a :class:`Predictor` from an archive path.
 
@@ -144,12 +144,15 @@ class Predictor(Registrable):
         cuda_device: ``int``, optional (default=-1)
             If `cuda_device` is >= 0, the model will be loaded onto the
             corresponding GPU. Otherwise it will be loaded onto the CPU.
+        dataset_reader_to_load: ``str``, optional (default="train")
+            Which dataset reader to load from the archive, either "train" or
+            "validation".
 
         Returns
         -------
         A Predictor instance.
         """
-        return Predictor.from_archive(load_archive(archive_path, cuda_device=cuda_device), predictor_name)
+        return Predictor.from_archive(load_archive(archive_path, cuda_device=cuda_device), predictor_name, dataset_reader_to_load=dataset_reader_to_load)
 
     @classmethod
     def from_archive(cls, archive: Archive, predictor_name: str = None, dataset_reader_to_load: str = None) -> 'Predictor':
