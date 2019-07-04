@@ -8,6 +8,7 @@ from allennlp.predictors.predictor import Predictor
 from overrides import overrides
 from typing import List, Dict 
 import numpy as np
+from copy import deepcopy
 
 @Predictor.register('sentence-tagger')
 class SentenceTaggerPredictor(Predictor):
@@ -79,7 +80,7 @@ class SentenceTaggerPredictor(Predictor):
         # Creates a new instance for each contiguous tag
         instance_list = []
         for tags in tag_list:
-            new_instance = copy.deepcopy(instance)
+            new_instance = deepcopy(instance)
             new_instance.add_field('tags', ListField([LabelField(tag) for tag in tags]), self._model.vocab)
             instance_list.append(new_instance)
 
