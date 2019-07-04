@@ -16,7 +16,7 @@ from allennlp.common.util import JsonDict
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.commands import main
 from allennlp.commands.predict import Predict
-from allennlp.predictors import Predictor, AtisParserPredictor, BidafPredictor
+from allennlp.predictors import Predictor, BidafPredictor
 
 
 class TestPredict(AllenNlpTestCase):
