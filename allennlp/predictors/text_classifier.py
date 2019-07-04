@@ -1,9 +1,9 @@
 from overrides import overrides
-
 from allennlp.common.util import JsonDict
 from allennlp.data import Instance
 from allennlp.predictors.predictor import Predictor
-
+from typing import List, Dict
+import numpy as np
 
 @Predictor.register('text_classifier')
 class TextClassifierPredictor(Predictor):
@@ -25,7 +25,7 @@ class TextClassifierPredictor(Predictor):
         return self._dataset_reader.text_to_instance(sentence)
 
     @overrides        
-    def predictions_to_labeled_instances(self, instance: Instance, outputs: Dict[str, numpy.ndarray]) -> List[Instance]:        
-        label = numpy.argmax(outputs['probs'])
+    def predictions_to_labeled_instances(self, instance: Instance, outputs: Dict[str, np.ndarray]) -> List[Instance]:        
+        label = np.argmax(outputs['probs'])
         instance.add_field('label', LabelField(int(label), skip_indexing=True))                    
         return [instance]

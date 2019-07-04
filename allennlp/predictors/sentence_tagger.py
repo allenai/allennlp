@@ -7,6 +7,7 @@ from allennlp.models import Model
 from allennlp.predictors.predictor import Predictor
 from overrides import overrides
 from typing import List, Dict 
+import numpy as np
 
 @Predictor.register('sentence-tagger')
 class SentenceTaggerPredictor(Predictor):

@@ -28,7 +28,6 @@ class SimpleGradient(SaliencyInterpreter):
       grads = self.predictor.get_gradients([instance])[0]
       handle.remove()
 
-
       # Gradients come back in the reverse order that they were sent into the network
       embeddings_list.reverse()
       for key, grad in grads.items():                
