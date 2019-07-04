@@ -296,8 +296,9 @@ class MultiQAReader(DatasetReader):
 
                 window_start_token_offset += self._STRIDE
 
+            #not self._is_training or
             # In training we need examples with answer only
-            if not self._is_training or len([inst for inst in chunks if inst['answers'] != []])>0:
+            if  len([inst for inst in chunks if inst['answers'] != []])>0:
                 per_question_chunks.append(chunks)
         return per_question_chunks
 
