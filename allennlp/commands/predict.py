@@ -9,7 +9,8 @@ or dataset to JSON predictions using a trained model and its
     usage: allennlp predict [-h] [--output-file OUTPUT_FILE]
                             [--weights-file WEIGHTS_FILE]
                             [--batch-size BATCH_SIZE] [--silent]
-                            [--cuda-device CUDA_DEVICE] [--use-dataset-reader]
+                            [--cuda-device CUDA_DEVICE]
+                            [--use-dataset-reader [{train,validation}]]
                             [-o OVERRIDES] [--predictor PREDICTOR]
                             [--include-package INCLUDE_PACKAGE]
                             archive_file input_file
@@ -30,8 +31,10 @@ or dataset to JSON predictions using a trained model and its
     --silent                do not print output to stdout
     --cuda-device CUDA_DEVICE
                             id of GPU to use (if any)
-    --use-dataset-reader    Whether to use the dataset reader of the original
-                            model to load Instances
+    --use-dataset-reader [{train,validation}]
+                            Indicates that a dataset reader of the original
+                            model should be used to load Instances. If no
+                            value is provided, "train" is used by default.
     -o OVERRIDES, --overrides OVERRIDES
                             a JSON structure used to override the experiment
                             configuration
@@ -75,8 +78,11 @@ class Predict(Subcommand):
         cuda_device.add_argument('--cuda-device', type=int, default=-1, help='id of GPU to use (if any)')
 
         subparser.add_argument('--use-dataset-reader',
-                               action='store_true',
-                               help='Whether to use the dataset reader of the original model to load Instances')
+                               nargs='?',
+                               const='train',
+                               choices=['train', 'validation'],
+                               help='Indicates that a dataset reader of the original model should be used '
+                                    'to load Instances. If no value is provided, "train" is used by default.')
 
         subparser.add_argument('-o', '--overrides',
                                type=str,
@@ -98,7 +104,7 @@ def _get_predictor(args: argparse.Namespace) -> Predictor:
                            cuda_device=args.cuda_device,
                            overrides=args.overrides)
 
-    return Predictor.from_archive(archive, args.predictor)
+    return Predictor.from_archive(archive, args.predictor, args.use_dataset_reader)
 
 
 class _PredictManager:
@@ -195,10 +201,11 @@ def _predict(args: argparse.Namespace) -> None:
         print("Exiting early because no output will be created.")
         sys.exit(0)
 
+    has_dataset_reader = args.use_dataset_reader is not None
     manager = _PredictManager(predictor,
                               args.input_file,
                               args.output_file,
                               args.batch_size,
                               not args.silent,
-                              args.use_dataset_reader)
+                              has_dataset_reader)
     manager.run()

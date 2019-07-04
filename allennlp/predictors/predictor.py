@@ -152,11 +152,12 @@ class Predictor(Registrable):
         return Predictor.from_archive(load_archive(archive_path, cuda_device=cuda_device), predictor_name)
 
     @classmethod
-    def from_archive(cls, archive: Archive, predictor_name: str = None) -> 'Predictor':
+    def from_archive(cls, archive: Archive, predictor_name: str = None, dataset_reader_to_load: str = None) -> 'Predictor':
         """
         Instantiate a :class:`Predictor` from an :class:`~allennlp.models.archival.Archive`;
         that is, from the result of training a model. Optionally specify which `Predictor`
-        subclass; otherwise, the default one for the model will be used.
+        subclass; otherwise, the default one for the model will be used. Optionally specify
+        which :class:`DatasetReader` should be loaded; otherwise, the training one will be used.
         """
         # Duplicate the config so that the config inside the archive doesn't get consumed
         config = archive.config.duplicate()
@@ -168,7 +169,14 @@ class Predictor(Registrable):
                                          f"Please specify a predictor explicitly.")
             predictor_name = DEFAULT_PREDICTORS[model_type]
 
-        dataset_reader_params = config["dataset_reader"]
+        if dataset_reader_to_load is None or dataset_reader_to_load == "train":
+            dataset_reader_params = config["dataset_reader"]
+        elif dataset_reader_to_load == "validation":
+            if "validation_dataset_reader" not in config:
+                raise ConfigurationError("No validation dataset reader exists in the archive.")
+            dataset_reader_params = config["validation_dataset_reader"]
+        else:
+            raise ConfigurationError(f"Unknown ``dataset_reader_to_load`` value: {dataset_reader_to_load}")
         dataset_reader = DatasetReader.from_params(dataset_reader_params)
 
         model = archive.model

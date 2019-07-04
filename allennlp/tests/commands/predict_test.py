@@ -16,7 +16,7 @@ from allennlp.common.util import JsonDict
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.commands import main
 from allennlp.commands.predict import Predict
-from allennlp.predictors import Predictor, BidafPredictor
+from allennlp.predictors import Predictor, AtisParserPredictor, BidafPredictor
 
 
 class TestPredict(AllenNlpTestCase):
@@ -25,6 +25,9 @@ class TestPredict(AllenNlpTestCase):
         self.bidaf_model_path = (self.FIXTURES_ROOT / "bidaf" /
                                  "serialization" / "model.tar.gz")
         self.bidaf_data_path = self.FIXTURES_ROOT / 'data' / 'squad.json'
+        self.atis_model_path = (self.FIXTURES_ROOT / "semantic_parsing" / "atis" /
+                                "serialization" / "model.tar.gz")
+        self.atis_data_path = self.FIXTURES_ROOT / 'data' / 'atis' / 'sample.json'
         self.tempdir = pathlib.Path(tempfile.mkdtemp())
         self.infile = self.tempdir / "inputs.txt"
         self.outfile = self.tempdir / "outputs.txt"
@@ -106,6 +109,62 @@ class TestPredict(AllenNlpTestCase):
                                           "best_span", "best_span_str", "loss"}
 
         shutil.rmtree(self.tempdir)
+
+    def test_uses_correct_dataset_reader(self):
+        # The ATIS archive has both a training and validation ``DatasetReader``
+        # with different values for ``keep_if_unparseable``. We create a new
+        # ``Predictor`` class that outputs this value so we can test which
+        # ``DatasetReader`` was used.
+        @Predictor.register('test-predictor')
+        class _TestPredictor(Predictor):
+            def dump_line(self, outputs: JsonDict) -> str:
+                data = {'keep_if_unparseable': self._dataset_reader._keep_if_unparseable}
+                return json.dumps(data) + '\n'
+
+        # No --use-dataset-reader argument provided
+        sys.argv = ["run.py",      # executable
+                    "predict",     # command
+                    str(self.atis_model_path),
+                    str(self.atis_data_path),     # input_file
+                    "--output-file", str(self.outfile),
+                    "--silent",
+                    "--predictor", "test-predictor",
+                    "--use-dataset-reader"]
+        main()
+        assert os.path.exists(self.outfile)
+        with open(self.outfile, 'r') as f:
+            results = [json.loads(line) for line in f]
+            assert results[0]['keep_if_unparseable'] == False
+
+        # --use-dataset-reader train
+        sys.argv = ["run.py",      # executable
+                    "predict",     # command
+                    str(self.atis_model_path),
+                    str(self.atis_data_path),     # input_file
+                    "--output-file", str(self.outfile),
+                    "--silent",
+                    "--predictor", "test-predictor",
+                    "--use-dataset-reader", "train"]
+        main()
+        assert os.path.exists(self.outfile)
+        with open(self.outfile, 'r') as f:
+            results = [json.loads(line) for line in f]
+            assert results[0]['keep_if_unparseable'] == False
+
+        # --use-dataset-reader validation
+        sys.argv = ["run.py",      # executable
+                    "predict",     # command
+                    str(self.atis_model_path),
+                    str(self.atis_data_path),     # input_file
+                    "--output-file", str(self.outfile),
+                    "--silent",
+                    "--predictor", "test-predictor",
+                    "--use-dataset-reader", "validation"]
+        main()
+        assert os.path.exists(self.outfile)
+        with open(self.outfile, 'r') as f:
+            results = [json.loads(line) for line in f]
+            assert results[0]['keep_if_unparseable'] == True
 
     def test_batch_prediction_works_with_known_model(self):
         with open(self.infile, 'w') as f:
