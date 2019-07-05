@@ -3,7 +3,6 @@ import numpy
 from overrides import overrides
 from allennlp.common.util import JsonDict, sanitize 
 from allennlp.data import Instance
-from allennlp.data.fields import LabelField
 from allennlp.predictors.predictor import Predictor
 from allennlp.data.fields import LabelField
 
