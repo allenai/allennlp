@@ -193,6 +193,7 @@ class MultiQAReader(DatasetReader):
         context['context_tokens'] = context_tokens
 
         # updating answer tokens offsets and text
+        no_answer_questions = []
         for qa in context['qas']:
             answer_text_list = []
             qa['detected_answers'] = []
@@ -212,6 +213,11 @@ class MultiQAReader(DatasetReader):
                                 answer_text_list.append(instance["text"])
 
             qa['answer_text_list'] = answer_text_list
+            if len(qa['detected_answers']) == 0:
+                no_answer_questions.append(qa)
+
+        for no_answer_q in no_answer_questions:
+            context['qas'].remove(no_answer_q)
 
         return context
 
