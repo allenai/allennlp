@@ -216,8 +216,9 @@ class MultiQAReader(DatasetReader):
             if len(qa['detected_answers']) == 0:
                 no_answer_questions.append(qa)
 
-        for no_answer_q in no_answer_questions:
-            context['qas'].remove(no_answer_q)
+        if self._is_training:
+            for no_answer_q in no_answer_questions:
+                context['qas'].remove(no_answer_q)
 
         return context
 
