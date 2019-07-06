@@ -3,7 +3,7 @@ Assorted utilities for working with neural networks in AllenNLP.
 """
 # pylint: disable=too-many-lines
 from collections import defaultdict
-from typing import Any, Dict, List, Optional, Sequence, Tuple, TypeVar
+from typing import Any, Dict, List, Optional, Sequence, Tuple, TypeVar, Union
 import logging
 import copy
 import math
@@ -628,7 +628,9 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
                                        targets: torch.LongTensor,
                                        weights: torch.FloatTensor,
                                        average: str = "batch",
-                                       label_smoothing: float = None) -> torch.FloatTensor:
+                                       label_smoothing: float = None,
+                                       gamma: float = None,
+                                       alpha: Union[float, List[float]] = None,) -> torch.FloatTensor:
     """
     Computes the cross entropy loss of a sequence, weighted with respect to
     some user provided weights. Note that the weighting here is not the same as
@@ -655,6 +657,20 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
         For example, with a label smoothing value of 0.2, a 4 class classification
         target would look like ``[0.05, 0.05, 0.85, 0.05]`` if the 3rd class was
         the correct label.
+    gamma : ``float``, optional (default = None)
+        Focal loss[*] focusing parameter $\gamma$ to reduces the relative loss for
+        well-classified examples and put more focus on hard. The greater value
+        $\gamma$ is, the more focus on hard examples.
+    alpha : ``float`` or ``List[float]``, optional (default = None)
+        Focal loss[*] weighting factor $\alpha$ to balance between classes. Can be
+        used independently with ``gamma``. This is just a class-base shortcut to
+        ``weights``. If a single ``float`` is provided, it is assumed binary case
+        using ``alpha`` and ``1 - alpha`` for positive and negative respectively.
+        If a list of ``float`` is provided, with the same length as the number of
+        classes, the weights will match the classes.
+        [*] T. Lin, P. Goyal, R. Girshick, K. He and P. Dollár, "Focal Loss for
+        Dense Object Detection," 2017 IEEE International Conference on Computer
+        Vision (ICCV), Venice, 2017, pp. 2999-3007.
 
     Returns
     -------
@@ -673,6 +689,30 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
     log_probs_flat = torch.nn.functional.log_softmax(logits_flat, dim=-1)
     # shape : (batch * max_len, 1)
     targets_flat = targets.view(-1, 1).long()
+    # focal loss coefficient
+    if gamma:
+        # shape : (batch * sequence_length, num_classes)
+        probs_flat = log_probs_flat.exp()
+        # shape : (batch * sequence_length,)
+        probs_flat = torch.gather(probs_flat, dim=1, index=targets_flat)
+        # shape : (batch * sequence_length,)
+        gamma = (1 - probs_flat) ** gamma
+        gamma = gamma.view(-1, 1)
+    else:
+        gamma = 1
+    if alpha is not None:
+        # shape : () / (num_classes,)
+        if isinstance(alpha, float) or len(alpha.size())==0:
+            # shape : (2,)
+            alpha = [1 - alpha, alpha]
+        alpha = torch.tensor(alpha, device=targets_flat.device)
+        # shape : (batch * max_len,)
+        alpha = torch.gather(alpha, dim=0, index=targets_flat.view(-1)).view(*targets.size())
+        weights = weights * alpha
+    else:
+        alpha = 1
+        
+    #import pdb;pdb.set_trace()
 
     if label_smoothing is not None and label_smoothing > 0.0:
         num_classes = logits.size(-1)
@@ -688,6 +728,8 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
         # to extract the indices of the num_classes dimension which contribute to the loss.
         # shape : (batch * sequence_length, 1)
         negative_log_likelihood_flat = - torch.gather(log_probs_flat, dim=1, index=targets_flat)
+    # shape : (batch * sequence_length, 1)
+    negative_log_likelihood = negative_log_likelihood_flat * gamma
     # shape : (batch, sequence_length)
     negative_log_likelihood = negative_log_likelihood_flat.view(*targets.size())
     # shape : (batch, sequence_length)
