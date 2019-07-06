@@ -84,7 +84,10 @@ class BooleanAccuracy(Metric):
         -------
         The accumulated accuracy.
         """
-        accuracy = float(self._correct_count) / float(self._total_count)
+        if self.total_count > 1e-12:
+            accuracy = float(self.correct_count) / float(self.total_count)
+        else:
+            accuracy = 0.0
         if reset:
             self.reset()
         return accuracy
