@@ -630,7 +630,7 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
                                        average: str = "batch",
                                        label_smoothing: float = None,
                                        gamma: float = None,
-                                       alpha: Union[float, List[float]] = None) -> torch.FloatTensor:
+                                       alpha: Union[float, List[float], torch.FloatTensor] = None) -> torch.FloatTensor:
     """
     Computes the cross entropy loss of a sequence, weighted with respect to
     some user provided weights. Note that the weighting here is not the same as
@@ -704,15 +704,28 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
         # shape : () / (num_classes,)
         if isinstance(alpha, float):
             # shape : (2,)
-            alpha = [1. - alpha, alpha]
-        alpha_factor = torch.tensor(alpha, device=targets_flat.device)
+            alpha_factor = torch.tensor([1. - alpha, alpha], device=targets_flat.device)
+        elif isinstance(alpha, list):
+            # shape : (c,)
+            alpha_factor = torch.tensor(alpha, device=targets_flat.device)
+        elif isinstance(alpha, torch.Tensor):
+            # shape : () / (num_classes,)
+            alpha = alpha.clone().detach().to(device=targets_flat.device)
+            if alpha.size():
+                # shape : (num_classes,)
+                alpha_factor = alpha
+            else:
+                # shape : (1,)
+                alpha = alpha.view(1)
+                # shape : (2,)
+                alpha_factor = torch.cat([1 - alpha, alpha])
+        else:
+            raise TypeError('alpha must be float, list of float, or torch.FloatTensor, {} provided.'.format(type(alpha)))
         # shape : (batch * max_len,)
         alpha_factor = torch.gather(alpha_factor, dim=0, index=targets_flat.view(-1)).view(*targets.size())
         weights = weights * alpha_factor
     else:
         alpha_factor = 1.
-
-    #import pdb;pdb.set_trace()
 
     if label_smoothing is not None and label_smoothing > 0.0:
         num_classes = logits.size(-1)
