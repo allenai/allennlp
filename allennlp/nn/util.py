@@ -631,7 +631,7 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
                                        label_smoothing: float = None,
                                        gamma: float = None,
                                        alpha: Union[float, List[float],
-                                                    torch.FloatTensor] = None) -> torch.FloatTensor:
+                                                    torch.FloatTensor]=None) -> torch.FloatTensor:
     """
     Computes the cross entropy loss of a sequence, weighted with respect to
     some user provided weights. Note that the weighting here is not the same as
