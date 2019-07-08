@@ -59,32 +59,32 @@ class SentenceTaggerPredictor(Predictor):
         Mary  went to Seattle to visit Microsoft Research
         O      O    O    O     O   O     B-Org     L-Org
         """
-        tags = outputs['tags']
-        tag_list = []
+        predicted_tags = outputs['tags']
+        predicted_spans = []
 
         i = 0
-        while i < len(tags):
-            tag = tags[i]
+        while i < len(predicted_tags):
+            tag = predicted_tags[i]
             # if its a U, add it to the list
             if tag[0] == 'U':
-                cur_tags = [t if idx == i else 'O' for idx, t in enumerate(tags)]
-                tag_list.append(cur_tags)
+                cur_tags = [t if idx == i else 'O' for idx, t in enumerate(predicted_tags)]
+                predicted_spans.append(cur_tags)
             # if its a B, keep going until you hit an L.
             elif tag[0] == 'B':
                 begin_idx = i
                 while tag[0] != 'L':
                     i += 1
-                    tag = tags[i]
+                    tag = predicted_tags[i]
                 end_idx = i
-                cur_tags = [t if idx >= begin_idx and idx <= end_idx else 'O' for idx, t in enumerate(tags)]
-                tag_list.append(cur_tags)
+                cur_tags = [t if idx >= begin_idx and idx <= end_idx else 'O' for idx, t in enumerate(predicted_tags)]
+                predicted_spans.append(cur_tags)
             i += 1
 
         # Creates a new instance for each contiguous tag
-        instance_list = []
-        for tags in tag_list:
+        instances = []
+        for span in predicted_spans:
             new_instance = deepcopy(instance)
-            new_instance.add_field('tags', ListField([LabelField(tag) for tag in tags]), self._model.vocab)
-            instance_list.append(new_instance)
+            new_instance.add_field('tags', ListField([LabelField(tag) for tag in predicted_tags]), self._model.vocab)
+            instances.append(new_instance)
 
-        return instance_list
+        return instances
