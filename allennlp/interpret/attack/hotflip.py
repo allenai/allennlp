@@ -2,7 +2,7 @@ from typing import Dict, List, Set
 import numpy
 import torch
 from allennlp.interpret.attack import Attacker
-from allennlp.common.util import JsonDict, sanitize 
+from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import Instance
 from allennlp.predictors.predictor import Predictor
 from allennlp.data.fields.field import DataArray, Field
@@ -78,22 +78,22 @@ class Hotflip(Attacker):
         # find the TextFieldEmbedder
         for module in self.predictor._model.modules():
             if isinstance(module, TextFieldEmbedder):
-                embedder = module  
+                embedder = module
         # pass all tokens through the fake matrix and create an embedding out of it.
-        embedding_matrix = embedder(all_inputs).squeeze()                        
+        embedding_matrix = embedder(all_inputs).squeeze()
         return Embedding(num_embeddings=self.vocab.get_vocab_size('tokens'), embedding_dim=embedding_matrix.shape[1], weight=embedding_matrix, trainable=False)
-    
-    def attack_from_json(self, 
+
+    def attack_from_json(self,
                          inputs: JsonDict,
                          name_of_input_field_to_attack: str,
                          name_of_grad_input_field: str):
-         
-        """ 
+
+        """
         Replaces one token at a time from the input until the model's prediction changes.
         `name_of_input_field_to_attack` is for example `tokens`, it says what the input
         field is called. name_of_grad_input_field is for example `grad_input_1`, which
         is a key into a grads dictionary.
-        """ 
+        """
         original_instances = self.predictor.inputs_to_labeled_instances(inputs)
         original_tokens = list(original_instances[0][name_of_input_field_to_attack].tokens)
         final_tokens = []
@@ -102,17 +102,17 @@ class Hotflip(Attacker):
             test_instances = self.predictor.inputs_to_labeled_instances(inputs)
 
             # get a list of fields that we want to check to see if they change
-            # (we want to change model predictions)            
-            fields_to_compare = {}        
+            # (we want to change model predictions)
+            fields_to_compare = {}
             for key in set(new_instances[0].fields.keys()):
                 if key not in inputs.keys() and key != name_of_input_field_to_attack:
                     fields_to_compare[key] = test_instances[0][key]
-                    
+
             current_tokens = new_instances[0][name_of_input_field_to_attack].tokens
-            grads, outputs = self.predictor.get_gradients(new_instances)                                
+            grads, outputs = self.predictor.get_gradients(new_instances)
             while True:
-                # Compute L2 norm of all grads. 
-                grad = grads[name_of_grad_input_field]                            
+                # Compute L2 norm of all grads.
+                grad = grads[name_of_grad_input_field]
                 grads_mag = [numpy.sqrt(g.dot(g)) for g in grad]
 
                 # we flip the token with highest gradient norm
@@ -125,42 +125,42 @@ class Hotflip(Attacker):
                     new_instances[0][name_of_input_field_to_attack]._indexed_tokens["tokens"][index_of_token_to_flip]
                 new_id_of_flipped_token = \
                     self.first_order_taylor(grad[index_of_token_to_flip],
-                                            self.token_embedding.weight, 
+                                            self.token_embedding.weight,
                                             original_id_of_token_to_flip)
                 # flip token
                 new_instances[0][name_of_input_field_to_attack].tokens[index_of_token_to_flip] = \
                     Token(self.vocab._index_to_token["tokens"][new_id_of_flipped_token])
-                new_instances[0].indexed = False                
+                new_instances[0].indexed = False
 
                 # Get model predictions on new_instances, and then label the instances
                 grads, outputs = self.predictor.get_gradients(new_instances) # predictions
                 for key in outputs:
-                    if isinstance(outputs[key], torch.Tensor):                        
+                    if isinstance(outputs[key], torch.Tensor):
                         outputs[key] = outputs[key].detach().cpu().numpy().squeeze().squeeze()
-                    elif isinstance(outputs[key],list):                    
-                        outputs[key] = outputs[key][0]                                    
-                # add labels to new_instances    
-                self.predictor.predictions_to_labeled_instances(new_instances[0], outputs)                
+                    elif isinstance(outputs[key],list):
+                        outputs[key] = outputs[key][0]
+                # add labels to new_instances
+                self.predictor.predictions_to_labeled_instances(new_instances[0], outputs)
 
                 # if the prediction has changed, then stop
-                label_change = False                  
-                for field in fields_to_compare.keys():                        
+                label_change = False
+                for field in fields_to_compare.keys():
                     if field in new_instances[0].fields:
                         equal = new_instances[0][field].__eq__(fields_to_compare[field])
                     else:
-                        equal = outputs[field] == fields_to_compare[field]                            
-                    if not equal: 
+                        equal = outputs[field] == fields_to_compare[field]
+                    if not equal:
                         label_change = True
-                        break       
+                        break
                 # if the prediction has changed, we want to return the new answer
                 # for visualization in the demo.
                 if label_change:
                     new_prediction = get_new_prediction(outputs)
                     break
-                    
-            final_tokens.append(current_tokens)        
+
+            final_tokens.append(current_tokens)
         return sanitize({"final": final_tokens,"original": original_tokens, "new_prediction": new_prediction})
-    
+
     # Get the model's new prediction given its outputs
     def get_new_prediction(outputs):
         new_prediction = None
@@ -178,7 +178,7 @@ class Hotflip(Attacker):
                 new_prediction = outputs["answer"]["value"]
         return new_prediction
 
-    def first_order_taylor(self, grad: numpy.ndarray, embedding_matrix: torch.nn.parameter.Parameter, token_idx: int):            
+    def first_order_taylor(self, grad: numpy.ndarray, embedding_matrix: torch.nn.parameter.Parameter, token_idx: int):
         """
         the below code is based on
         https://github.com/pmichel31415/translate/blob/paul/pytorch_translate/
@@ -187,7 +187,7 @@ class Hotflip(Attacker):
         Replaces the current token_idx with another token_idx to increase the loss. In particular,
         this function uses the grad, alongside the embedding_matrix to select
         the token that maximizes the first-order taylor approximation of the loss.
-        """        
+        """
         grad = torch.from_numpy(grad)
         embedding_matrix = embedding_matrix.cpu()
         word_embeds = torch.nn.functional.embedding(torch.LongTensor([token_idx]), embedding_matrix).detach().unsqueeze(0)

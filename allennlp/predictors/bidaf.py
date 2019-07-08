@@ -47,12 +47,12 @@ class BidafPredictor(Predictor):
                                          instance: Instance,
                                          outputs: Dict[str, np.ndarray]) -> List[Instance]:
         """
-        NAQANET has the following fields, answer_as_passage_spans,  answer_as_question_spans, answer_as_add_sub_expressions,
-        answer_as_counts. We need to provide labels for all of them.
+        NAQANET has the following fields, answer_as_passage_spans,  answer_as_question_spans,
+        answer_as_add_sub_expressions, answer_as_counts. We need to provide labels for all of them.
         """
 
         # For BiDAF
-        if 'best_span' in outputs:             
+        if 'best_span' in outputs:
             span_start_label = outputs['best_span'][0]
             span_end_label = outputs['best_span'][1]
             instance.add_field('span_start', IndexField(int(span_start_label), instance['passage']))
@@ -79,7 +79,7 @@ class BidafPredictor(Predictor):
                         word_span_start = idx
                     if offset[1] == span[1]:
                         word_span_end = idx
-                
+
                 field = ListField([SpanField(word_span_start, word_span_end, instance['passage'])])
                 instance.add_field('answer_as_passage_spans', field)
 
