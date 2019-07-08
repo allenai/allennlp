@@ -716,6 +716,7 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
             # pylint: disable=not-callable
             # shape : (c,)
             alpha_factor = torch.tensor(alpha, dtype=weights.dtype, device=weights.device)
+            # pylint: enable=not-callable
             if not alpha_factor.size():
                 # shape : (1,)
                 alpha_factor = alpha_factor.view(1)
