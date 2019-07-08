@@ -748,7 +748,7 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
         # shape : (batch * sequence_length, 1)
         negative_log_likelihood_flat = - torch.gather(log_probs_flat, dim=1, index=targets_flat)
     # shape : (batch * sequence_length, 1)
-    negative_log_likelihood = negative_log_likelihood_flat * focal_factor
+    negative_log_likelihood_flat = negative_log_likelihood_flat * focal_factor
     # shape : (batch, sequence_length)
     negative_log_likelihood = negative_log_likelihood_flat.view(*targets.size())
     # shape : (batch, sequence_length)
