@@ -6,7 +6,7 @@ import numpy
 from numpy.testing import assert_array_almost_equal, assert_almost_equal
 import torch
 import pytest
-import flaky
+from flaky import flaky
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
