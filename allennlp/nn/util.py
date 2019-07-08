@@ -690,7 +690,7 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
     # shape : (batch * sequence_length, num_classes)
     logits_flat = logits.view(-1, logits.size(-1))
     # shape : (batch * sequence_length, num_classes)
-    log_probs_flat = torch.nn.functional.log_softmaxloss(logits_flat, dim=-1)
+    log_probs_flat = torch.nn.functional.log_softmax(logits_flat, dim=-1)
     # shape : (batch * max_len, 1)
     targets_flat = targets.view(-1, 1).long()
     # focal loss coefficient
@@ -712,18 +712,11 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
             alpha_factor = torch.tensor([1. - float(alpha), float(alpha)],
                                         dtype=weights.dtype, device=weights.device)
             # pylint: enable=not-callable
-        elif isinstance(alpha, (list, numpy.ndarray)):
+        elif isinstance(alpha, (list, numpy.ndarray, torch.Tensor)):
             # pylint: disable=not-callable
             # shape : (c,)
             alpha_factor = torch.tensor(alpha, dtype=weights.dtype, device=weights.device)
-            # pylint: enable=not-callable
-        elif isinstance(alpha, torch.Tensor):
-            # shape : () / (num_classes,)
-            alpha = alpha.clone().detach().to(dtype=weights.dtype, device=weights.device)
-            if alpha.size():
-                # shape : (num_classes,)
-                alpha_factor = alpha
-            else:
+            if not alpha_factor.size():
                 # shape : (1,)
                 alpha = alpha.view(1)
                 # shape : (2,)
