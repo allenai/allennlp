@@ -631,8 +631,8 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
                                        average: str = "batch",
                                        label_smoothing: float = None,
                                        gamma: float = None,
-                                       alpha: Union[float, List[float],
-                                                    torch.FloatTensor]=None) -> torch.FloatTensor:
+                                       alpha: Union[float, List[float], torch.FloatTensor]=None
+                                      ) -> torch.FloatTensor:
     """
     Computes the cross entropy loss of a sequence, weighted with respect to
     some user provided weights. Note that the weighting here is not the same as
@@ -709,7 +709,8 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
         if isinstance(alpha, (float, int)):
             # pylint: disable=not-callable
             # shape : (2,)
-            alpha_factor = torch.tensor([1. - float(alpha), float(alpha)], dtype=weights.dtype, device=weights.device)
+            alpha_factor = torch.tensor([1. - float(alpha), float(alpha)],
+                                        dtype=weights.dtype, device=weights.device)
             # pylint: enable=not-callable
         elif isinstance(alpha, (list, numpy.ndarray)):
             # pylint: disable=not-callable
