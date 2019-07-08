@@ -15,81 +15,96 @@ from collections import defaultdict
 
 @Attacker.register('hotflip')
 class Hotflip(Attacker):
-    def __init__(self, predictor):
-        """
-        Runs the HotFlip style attack at the word-level https://arxiv.org/abs/1712.06751.
-        We use the first-order taylor approximation described in https://arxiv.org/abs/1903.06620,
-        in the function first_order_taylor().
-        """
-        super().__init__(predictor)                                          
+    """
+    Runs the HotFlip style attack at the word-level https://arxiv.org/abs/1712.06751.
+    We use the first-order taylor approximation described in https://arxiv.org/abs/1903.06620,
+    in the function first_order_taylor(). Constructing this object is expensive due to the
+    construction of the embedding matrix.
+    """
+    def __init__(self, predictor: Predictor):
+        super().__init__(predictor)
         self.vocab = self.predictor._model.vocab
+        self.token_embedding = self._construct_embedding_matrix()
+
+    def _construct_embedding_matrix(self):
         """ For HotFlip, we need a word embedding matrix to search over. The below is neccessary for
         models such as ELMo, character-level models, or for models that use a projection layer
-        after their word embeddings. 
-        We run all of the words from the dataset reader through the TextFieldEmbedder, and save the final
+        after their word embeddings.
+        We run all of the tokens from the vocabulary through the TextFieldEmbedder, and save the final
         output embedding. We then group all of those output embeddings into an "embedding matrix".
         """
         # Gets all tokens in the vocab and their corresponding IDs
-        all_tokens = list(self.vocab._token_to_index["tokens"].keys())            
-        all_inputs = {"tokens":torch.LongTensor([x for x in self.vocab._index_to_token["tokens"].keys()]).unsqueeze(0)}          
+        all_tokens = list(self.vocab._token_to_index["tokens"].keys())
+        all_inputs = {"tokens":torch.LongTensor([x for x in self.vocab._index_to_token["tokens"].keys()]).unsqueeze(0)}
+
         # handle when a model uses character-level inputs, e.g., ELMo or a CharCNN
-        if "token_characters" in self.predictor._dataset_reader._token_indexers:            
-            all_tokens_tokenized = self.predictor._dataset_reader._token_indexers["token_characters"]._character_tokenizer.batch_tokenize(all_tokens)                        
-            pad_length = max([len(x) for x in all_tokens_tokenized])    
-            character_tokens = []            
-            if getattr(all_tokens_tokenized[0][0], 'text_id', None) is not None:                
+        if "token_characters" in self.predictor._dataset_reader._token_indexers:
+        # indexer = self.predictor._dataset_reader._token_indexers["token_characters"]
+        # tokens = [Token(x) for x in all_tokens]
+        # max_token_length = max(len(x) for x in all_tokens)
+        # indexed_tokens = indexer.tokens_to_indices(tokens, self.vocab, "token_characters")
+        # padded_tokens = indexer.pad_token_sequence(indexed_tokens,
+        #                                            desired_num_tokens={"token_characters": len(tokens)},
+        #                                            padding_lengths={"num_token_characters": max_token_length})
+        # all_inputs.update(padded_tokens)
+
+            all_tokens_tokenized = self.predictor._dataset_reader._token_indexers["token_characters"]._character_tokenizer.batch_tokenize(all_tokens)
+            pad_length = max([len(x) for x in all_tokens_tokenized])
+            character_tokens = []
+            if getattr(all_tokens_tokenized[0][0], 'text_id', None) is not None:
                 for tok in all_tokens_tokenized:
-                    tmp = [x.text_id for x in tok]                    
+                    tmp = [x.text_id for x in tok]
                     tmp += [0] * (pad_length-len(tmp))
-                    character_tokens.append(tmp)                            
+                    character_tokens.append(tmp)
             else:
                 for tok in all_tokens_tokenized:
                     tmp = \
                         [self.vocab.get_token_index(x.text, \
-                        self.predictor._dataset_reader._token_indexers["token_characters"]._namespace) for x in tok]                    
+                        self.predictor._dataset_reader._token_indexers["token_characters"]._namespace) for x in tok]
+
                     tmp += [0] * (pad_length-len(tmp))
-                    character_tokens.append(tmp)                
+                    character_tokens.append(tmp)
             character_tokens = torch.LongTensor(character_tokens)
             all_inputs["token_characters"] = character_tokens.unsqueeze(0)
 
             if "elmo" in self.predictor._dataset_reader._token_indexers:
                 pad_length = pad_length + 2 # elmo has start/end word
-                elmo_tokens = []                
-                for tok in all_tokens:                    
-                    tmp = self.predictor._dataset_reader._token_indexers["elmo"].tokens_to_indices([Token(text=tok)], self.vocab,"sentence")["sentence"]                                    
-                    elmo_tokens.append(tmp[0])                
-                all_inputs["elmo"] = torch.LongTensor(elmo_tokens).unsqueeze(0)                 
+                elmo_tokens = []
+                for tok in all_tokens:
+                    tmp = self.predictor._dataset_reader._token_indexers["elmo"].tokens_to_indices([Token(text=tok)], self.vocab,"sentence")["sentence"]
+                    elmo_tokens.append(tmp[0])
+                all_inputs["elmo"] = torch.LongTensor(elmo_tokens).unsqueeze(0)
 
         # find the TextFieldEmbedder
         for module in self.predictor._model.modules():
             if isinstance(module, TextFieldEmbedder):
-                model = module  
+                embedder = module  
         # pass all tokens through the fake matrix and create an embedding out of it.
-        embedding_matrix = model(all_inputs).squeeze()                        
-        self.token_embedding = Embedding(num_embeddings=self.vocab.get_vocab_size('tokens'), embedding_dim=embedding_matrix.shape[1], weight=embedding_matrix, trainable=False)
+        embedding_matrix = embedder(all_inputs).squeeze()                        
+        return Embedding(num_embeddings=self.vocab.get_vocab_size('tokens'), embedding_dim=embedding_matrix.shape[1], weight=embedding_matrix, trainable=False)
 
-    def attack_from_json(self, inputs:JsonDict, target_field: str, gradient_index:str):        
+    def attack_from_json(self, inputs: JsonDict, target_field: str, gradient_index: str):
         """ 
         Replaces one token at a time from the input until the model's prediction changes.
         """ 
-        og_instances = self.predictor.inputs_to_labeled_instances(inputs)        
-        original = list(og_instances[0][target_field].tokens)        
-        final_tokens = []        
-        for i in range(len(og_instances)):            
-            new_instances = [og_instances[i]]                        
+        original_instances = self.predictor.inputs_to_labeled_instances(inputs)
+        original_tokens = list(original_instances[0][target_field].tokens)
+        final_tokens = []
+        for i in range(len(original_instances)):
+            new_instances = [original_instances[i]]
 
-            # handling fields that need to be checked            
-            check_list = {}            
+            # handling fields that need to be checked
+            check_list = {}
             test_instances = self.predictor.inputs_to_labeled_instances(inputs)
             for key in set(new_instances[0].fields.keys()):
-                if key not in inputs.keys() and key != target_field:                    
-                    check_list[key] = test_instances[0][key]            
+                if key not in inputs.keys() and key != target_field:
+                    check_list[key] = test_instances[0][key]
 
             # Build label for NER
-            if "tags" in new_instances[0]:                
+            if "tags" in new_instances[0]:
                 tag_dict = defaultdict(int)
-                tag_tok = ''                
-                for label in new_instances[0]["tags"].__dict__["field_list"]:                    
+                tag_tok = ''
+                for label in new_instances[0]["tags"].__dict__["field_list"]:
                     if label.label != "O":
                         tag_dict[label.label] += 1
                         tag_tok = tag_tok + label.label
@@ -165,20 +180,24 @@ class Hotflip(Attacker):
                         break
                         
             final_tokens.append(current_tokens)        
-        return sanitize({"final": final_tokens,"original": original, "new_prediction": new_prediction})
+        return sanitize({"final": final_tokens,"original": original_tokens, "new_prediction": new_prediction})
         
-    def first_order_taylor(self, grad, embedding_matrix, token_idx):            
+    def first_order_taylor(self, grad: numpy.ndarray, embedding_matrix: torch.nn.parameter.Parameter, token_idx: int):            
         """
         the below code is based on
         https://github.com/pmichel31415/translate/blob/paul/pytorch_translate/
         research/adversarial/adversaries/brute_force_adversary.py
-        """
-        grad = torch.from_numpy(grad)        
-        embedding_matrix = embedding_matrix.cpu()    
+
+        Replaces the current token_idx with another token_idx to increase the loss. In particular,
+        this function uses the grad, alongside the embedding_matrix to select
+        the token that maximizes the first-order taylor approximation of the loss.
+        """        
+        grad = torch.from_numpy(grad)
+        embedding_matrix = embedding_matrix.cpu()
         word_embeds = torch.nn.functional.embedding(torch.LongTensor([token_idx]), embedding_matrix).detach().unsqueeze(0)
-        grad = grad.unsqueeze(0).unsqueeze(0)          
-        new_embed_dot_grad = torch.einsum("bij,kj->bik", (grad, embedding_matrix))        
-        prev_embed_dot_grad = torch.einsum("bij,bij->bi", (grad, word_embeds)).unsqueeze(-1)         
-        neg_dir_dot_grad = -1 * (prev_embed_dot_grad - new_embed_dot_grad)            
-        score_at_each_step, best_at_each_step = neg_dir_dot_grad.max(2)                    
+        grad = grad.unsqueeze(0).unsqueeze(0)
+        new_embed_dot_grad = torch.einsum("bij,kj->bik", (grad, embedding_matrix))
+        prev_embed_dot_grad = torch.einsum("bij,bij->bi", (grad, word_embeds)).unsqueeze(-1)
+        neg_dir_dot_grad = -1 * (prev_embed_dot_grad - new_embed_dot_grad)
+        score_at_each_step, best_at_each_step = neg_dir_dot_grad.max(2)
         return best_at_each_step[0] # return the best candidate

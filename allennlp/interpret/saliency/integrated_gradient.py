@@ -3,6 +3,7 @@ from typing import List, Dict
 import numpy
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.interpret.saliency import SaliencyInterpreter
+from allennlp.predictors import Predictor
 from allennlp.modules.text_field_embedders import TextFieldEmbedder
 from allennlp.data import Instance
 
@@ -11,7 +12,7 @@ class IntegratedGradient(SaliencyInterpreter):
     """
     Interprets the prediction using Integrated Gradients (https://arxiv.org/abs/1703.01365)  
     """
-    def __init__(self, predictor):
+    def __init__(self, predictor: Predictor):
         super().__init__(predictor)
 
     def saliency_interpret_from_json(self, inputs: JsonDict) -> JsonDict:

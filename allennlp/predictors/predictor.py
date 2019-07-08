@@ -60,16 +60,7 @@ class Predictor(Registrable):
     def predict_json(self, inputs: JsonDict) -> JsonDict:
         instance = self._json_to_instance(inputs)
         return self.predict_instance(instance)
-
-    def saliency_interpret_from_json(self, inputs: JsonDict) -> JsonDict:
-        """
-        Implemented by a `SaliencyInterpreter`, which uses the gradients 
-        from :func:`get_gradients` to provide saliency interpretations
-        for specific models. 
-        """
-        raise RuntimeError("you need to implement this method \
-            if you want to give saliency model interpretations")
-
+    
     def inputs_to_labeled_instances(self, inputs: JsonDict) -> List[Instance]:
         """
         Converts incoming json to a :class:`~allennlp.data.instance.Instance`,
@@ -88,15 +79,18 @@ class Predictor(Registrable):
     def get_gradients(self, instances: List[Instance]) -> Dict[str, np.ndarray]:
         """
         Gets the gradients of the loss with respect to the model inputs.
+
         Parameters
         ----------
         instances: List[Instance]
+        
         Returns
         -------
         Dict[str, np.ndarray]
             Dictionary of gradient entries for each input fed into the model.
             The keys have the form ``{grad_input_1: ..., grad_input_2: ... }``
             up to the number of inputs given.
+
         Notes
         -----
         Takes a ``JsonDict`` representing the inputs of the model and converts

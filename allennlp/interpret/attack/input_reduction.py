@@ -10,16 +10,16 @@ from collections import defaultdict
 @Attacker.register('input-reduction')
 class InputReduction(Attacker):
     """
-    Runs the input reduction method from https://arxiv.org/abs/1804.07781.
+    Runs the input reduction method from `Pathologies of Neural Models Make Interpretations
+    Difficult` https://arxiv.org/abs/1804.07781, which removes as many words as possible
+    from the input _without_ changing the model's prediction.
     """
-    def __init__(self, predictor):
+    def __init__(self, predictor: Predictor):
         super().__init__(predictor)
 
-    def attack_from_json(self, inputs:JsonDict, target_field: str, gradient_index:str,ignore_tokens:List[str] = ["@@NULL@@"]):       
-        """ 
-        Removes as many words as possible from the input
-        without changing the model's prediction.
-        """ 
+    def attack_from_json(self, inputs:JsonDict,
+                         target_field: str, gradient_index: str,
+                         ignore_tokens: List[str] = ["@@NULL@@"]):               
         original_instances = self.predictor.inputs_to_labeled_instances(inputs)
         final_tokens = []        
         fields_to_check = {}        
@@ -88,12 +88,16 @@ class InputReduction(Attacker):
                         break
                         
                 current_tokens = list(current_instances[0][target_field].tokens)                                 
-                current_instances, smallest_idx = self.input_reduction(grads[gradient_index], current_instances, target_field, ignore_tokens)
+                current_instances, smallest_idx = \
+                    self.remove_one_token(grads[gradient_index], current_instances, target_field, ignore_tokens)
                     
             final_tokens.append(current_tokens)
         return sanitize({"final": final_tokens,"original":original_tokens})
     
-    def input_reduction(self, grads:np.ndarray, instances:List[Instance], target_field: str, ignore_tokens:List[str] = ["@@NULL@@"]) -> List[Instance]:     
+    def remove_one_token(self, grads:np.ndarray,
+                        instances:List[Instance],
+                        target_field: str,
+                        ignore_tokens:List[str] = ["@@NULL@@"]) -> List[Instance]:     
         """
         Finds the token with the smallest gradient and removes it.        
         """        
@@ -111,13 +115,16 @@ class InputReduction(Attacker):
                     grads_mag[idx] = float("inf")
 
         smallest = np.argmin(grads_mag)        
-        if smallest == float("inf"):
+        if smallest == float("inf"): # if all are ignored tokens, return.
             return instances
 
-        instances[0][target_field].tokens = instances[0][target_field].tokens[0:smallest] +  instances[0][target_field].tokens[smallest + 1:]
-        # # remove smallest
+        # remove smallest
+        instances[0][target_field].tokens = \
+        instances[0][target_field].tokens[0:smallest] +  instances[0][target_field].tokens[smallest + 1:]        
         if "tags" in instances[0]:
-            instances[0]["tags"].__dict__["field_list"] = instances[0]["tags"].__dict__["field_list"][0:smallest] + instances[0]["tags"].__dict__["field_list"][smallest + 1:]
+            instances[0]["tags"].__dict__["field_list"] = \
+                instances[0]["tags"].__dict__["field_list"][0:smallest] + \
+                instances[0]["tags"].__dict__["field_list"][smallest + 1:]
                                     
         instances[0].indexed = False
         return instances, smallest 

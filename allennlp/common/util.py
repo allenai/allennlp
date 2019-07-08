@@ -44,6 +44,7 @@ JsonDict = Dict[str, Any]  # pylint: disable=invalid-name
 START_SYMBOL = '@start@'
 END_SYMBOL = '@end@'
 
+
 def sanitize(x: Any) -> Any:  # pylint: disable=invalid-name,too-many-return-statements
     """
     Sanitize turns PyTorch and Numpy types into basic Python types so they

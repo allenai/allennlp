@@ -3,11 +3,12 @@ import math
 import numpy
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.modules.text_field_embedders import TextFieldEmbedder
+from allennlp.predictors import Predictor
 from allennlp.interpret.saliency import SaliencyInterpreter
 
 @SaliencyInterpreter.register('simple-gradients-interpreter')
 class SimpleGradient(SaliencyInterpreter):
-    def __init__(self, predictor):
+    def __init__(self, predictor: Predictor):
         super().__init__(predictor)
 
     def saliency_interpret_from_json(self, inputs: JsonDict) -> JsonDict:

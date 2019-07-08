@@ -5,6 +5,7 @@ import numpy
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.interpret.saliency import SaliencyInterpreter
 from allennlp.modules.text_field_embedders import TextFieldEmbedder
+from allennlp.predictors import Predictor
 from allennlp.data import Instance
 
 @SaliencyInterpreter.register('smooth-gradient-interpreter')
@@ -12,7 +13,7 @@ class SmoothGradient(SaliencyInterpreter):
     """
     Interprets the prediction using SmoothGrad (https://arxiv.org/abs/1706.03825)
     """
-    def __init__(self, predictor):
+    def __init__(self, predictor: Predictor):
         super().__init__(predictor)
 
     def saliency_interpret_from_json(self, inputs: JsonDict) -> JsonDict:
