@@ -719,7 +719,7 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
             # pylint: enable=not-callable
         elif isinstance(alpha, torch.Tensor):
             # shape : () / (num_classes,)
-            alpha = alpha.clone(dtype=weights.dtype).detach().to(device=weights.device)
+            alpha = alpha.clone().detach().to(dtype=weights.dtype, device=weights.device)
             if alpha.size():
                 # shape : (num_classes,)
                 alpha_factor = alpha
