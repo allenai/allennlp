@@ -1,5 +1,8 @@
 from typing import Dict, List, TypeVar, Generic
 
+
+import torch
+
 from allennlp.common import Registrable
 from allennlp.data.tokenizers.token import Token
 from allennlp.data.vocabulary import Vocabulary
@@ -95,6 +98,9 @@ class TokenIndexer(Generic[TokenType], Registrable):
         character-level padding.
         """
         raise NotImplementedError
+
+    def array_type(self):
+        return torch.LongTensor
 
     def get_keys(self, index_name: str) -> List[str]:
         """
