@@ -49,7 +49,7 @@ class SentenceTaggerPredictor(Predictor):
         Mary  went to Seattle to visit Microsoft Research
         U-Per  O    O   U-Loc  O   O     B-Org     L-Org
 
-        We create three instances. 
+        We create three instances.
         Mary  went to Seattle to visit Microsoft Research
         U-Per  O    O    O     O   O       O         O
 
@@ -76,7 +76,8 @@ class SentenceTaggerPredictor(Predictor):
                     i += 1
                     tag = predicted_tags[i]
                 end_idx = i
-                cur_tags = [t if idx >= begin_idx and idx <= end_idx else 'O' for idx, t in enumerate(predicted_tags)]
+                cur_tags = [t if idx >= begin_idx and idx <= end_idx else 'O' \
+                    for idx, t in enumerate(predicted_tags)]
                 predicted_spans.append(cur_tags)
             i += 1
 
@@ -84,7 +85,8 @@ class SentenceTaggerPredictor(Predictor):
         instances = []
         for span in predicted_spans:
             new_instance = deepcopy(instance)
-            new_instance.add_field('tags', ListField([LabelField(tag) for tag in predicted_tags]), self._model.vocab)
+            new_instance.add_field('tags', \
+                ListField([LabelField(tag) for tag in span]), self._model.vocab)
             instances.append(new_instance)
 
         return instances

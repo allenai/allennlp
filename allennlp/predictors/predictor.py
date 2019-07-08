@@ -60,7 +60,7 @@ class Predictor(Registrable):
     def predict_json(self, inputs: JsonDict) -> JsonDict:
         instance = self._json_to_instance(inputs)
         return self.predict_instance(instance)
-    
+
     def inputs_to_labeled_instances(self, inputs: JsonDict) -> List[Instance]:
         """
         Converts incoming json to a :class:`~allennlp.data.instance.Instance`,
@@ -83,7 +83,7 @@ class Predictor(Registrable):
         Parameters
         ----------
         instances: List[Instance]
-        
+
         Returns
         -------
         Dict[str, np.ndarray]
@@ -97,12 +97,12 @@ class Predictor(Registrable):
         them to :class:`~allennlp.data.instance.Instance`s, sends these through
         the model :func:`forward` function after registering hooks on the embedding
         layer of the model. Calls :func:`backward` on the loss and then removes the
-        hooks. 
+        hooks.
         """
         self._register_hooks()
 
         dataset = Batch(instances)
-        dataset.index_instances(self._model.vocab) 
+        dataset.index_instances(self._model.vocab)
         outputs = self._model.decode(self._model.forward(**dataset.as_tensor_dict()))
 
         loss = outputs['loss']
@@ -121,7 +121,7 @@ class Predictor(Registrable):
 
     def _register_hooks(self):
         """
-        Registers a backward hook on the 
+        Registers a backward hook on the
         :class:`~allennlp.modules.text_field_embedder.basic_text_field_embbedder.BasicTextFieldEmbedder`
         class. Used to save the gradients of the embeddings for use in get_gradients()
         """
@@ -179,11 +179,14 @@ class Predictor(Registrable):
         outputs = self._model.forward_on_instance(instance)
         return sanitize(outputs)
 
-    def predictions_to_labeled_instances(self, instance: Instance, outputs: Dict[str, np.ndarray]) -> List[Instance]:
+    def predictions_to_labeled_instances(self, 
+                                         instance: Instance,
+                                         outputs: Dict[str, np.ndarray]) -> List[Instance]:
         """
         Adds labels to the :class:`~allennlp.data.instance.Instance`s passed in.
         """
-        raise RuntimeError("you need to implement this method if you want to give model interpretations or attacks")
+        raise RuntimeError("you need to implement this method if you \
+            want to give model interpretations or attacks")
 
     def _json_to_instance(self, json_dict: JsonDict) -> Instance:
         """

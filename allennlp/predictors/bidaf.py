@@ -43,11 +43,12 @@ class BidafPredictor(Predictor):
         return self._dataset_reader.text_to_instance(question_text, passage_text)
 
     @overrides
-    def predictions_to_labeled_instances(self, 
+    def predictions_to_labeled_instances(self,
                                          instance: Instance,
                                          outputs: Dict[str, np.ndarray]) -> List[Instance]:
         """
-        NAQANET has the following fields, answer_as_passage_spans,  answer_as_question_spans, answer_as_add_sub_expressions, answer_as_counts. We need to provide labels for all of them.
+        NAQANET has the following fields, answer_as_passage_spans,  answer_as_question_spans, answer_as_add_sub_expressions,
+        answer_as_counts. We need to provide labels for all of them.
         """
 
         # For BiDAF
@@ -57,7 +58,7 @@ class BidafPredictor(Predictor):
             instance.add_field('span_start', IndexField(int(span_start_label), instance['passage']))
             instance.add_field('span_end', IndexField(int(span_end_label), instance['passage']))
 
-        # For NAQANet model 
+        # For NAQANet model
         elif 'answer' in outputs:
             answer_type = outputs['answer']['answer_type']
 
@@ -77,16 +78,16 @@ class BidafPredictor(Predictor):
                     if offset[0] == span[0]:
                         word_span_start = idx
                     if offset[1] == span[1]:
-                        word_span_end = idx 
+                        word_span_end = idx
                 
                 field = ListField([SpanField(word_span_start, word_span_end, instance['passage'])])
                 instance.add_field('answer_as_passage_spans', field)
 
             # When the answer is an arithmetic calculation
-            elif answer_type == 'arithmetic':                
-                # The different numbers in the passage that the model encounters 
+            elif answer_type == 'arithmetic':
+                # The different numbers in the passage that the model encounters
                 sequence_labels = outputs['answer']['numbers']
-                
+
                 # TODO (Eric-Wallace) outputs['answer']['numbers'] does not
                 # include padding (like metadata), is that ok?
                 numbers_as_tokens = \
@@ -100,7 +101,7 @@ class BidafPredictor(Predictor):
 
                 """Based on ``find_valid_add_sub_expressions``, it seems
                 like negative signs are 2 instead of -1.
-                The numbers in the passage are given signs, that's what 
+                The numbers in the passage are given signs, that's what
                 we are labeling here """
                 labels = []
                 for label in sequence_labels:
