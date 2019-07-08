@@ -161,7 +161,7 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
 
         # We'll check the indices here at runtime, because it's difficult to debug
         # if this goes wrong and it's tricky to get right.
-        if (exclusive_span_starts < 0).any() or (exclusive_span_ends > sequence_lengths.unsqueeze(-1)).any():
+        if (exclusive_span_starts < 0).any() or (exclusive_span_ends >= sequence_lengths.unsqueeze(-1)).any():
             raise ValueError(f"Adjusted span indices must lie inside the length of the sequence tensor, "
                              f"but found: exclusive_span_starts: {exclusive_span_starts}, "
                              f"exclusive_span_ends: {exclusive_span_ends} for a sequence tensor with lengths "
