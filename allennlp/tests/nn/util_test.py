@@ -681,6 +681,28 @@ class TestNnUtil(AllenNlpTestCase):
         average_token_loss = (total_token_loss / weights.float().sum()).detach()
         assert_almost_equal(loss.detach().item(), average_token_loss.item())
 
+    def test_sequence_cross_entropy_with_logits_gamma_correctly(self):
+        batch = 1
+        length = 3
+        classes = 4
+        gamma = 2
+
+        tensor = torch.rand([batch, length, classes])
+        targets = torch.LongTensor(numpy.random.randint(0, classes-1, [batch, length]))
+        weights = torch.ones([batch, length])
+
+        loss = util.sequence_cross_entropy_with_logits(tensor, targets, weights, gamma=gamma)
+
+        correct_loss = 0.0
+        for logit, label in zip(tensor.squeeze(0), targets.squeeze(0)):
+            p = torch.nn.functional.softmax(logit, dim=-1)
+            logp = torch.nn.functional.log_softmax(logit, dim=-1)
+            pt = p[label]
+            correct_loss += pt.log() * (1 - pt) ** gamma
+        # Average over sequence.
+        correct_loss = - correct_loss / length
+        numpy.testing.assert_array_almost_equal(loss.data.numpy(), correct_loss.data.numpy())
+
     def test_replace_masked_values_replaces_masked_values_with_finite_value(self):
         tensor = torch.FloatTensor([[[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]]])
         mask = torch.FloatTensor([[1, 1, 0]])
