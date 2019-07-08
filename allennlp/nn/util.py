@@ -718,9 +718,9 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
             alpha_factor = torch.tensor(alpha, dtype=weights.dtype, device=weights.device)
             if not alpha_factor.size():
                 # shape : (1,)
-                alpha = alpha.view(1)
+                alpha_factor = alpha_factor.view(1)
                 # shape : (2,)
-                alpha_factor = torch.cat([1 - alpha, alpha])
+                alpha_factor = torch.cat([1 - alpha_factor, alpha_factor])
         else:
             raise TypeError(('alpha must be float, list of float, or torch.FloatTensor, '
                              '{} provided.').format(type(alpha)))
