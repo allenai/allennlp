@@ -1,6 +1,7 @@
 from typing import List 
+import math
 import numpy
-from allennlp.common.util import JsonDict, sanitize, normalize_by_total_score
+from allennlp.common.util import JsonDict, sanitize
 from allennlp.modules.text_field_embedders import TextFieldEmbedder
 from allennlp.interpret.saliency import SaliencyInterpreter
 
@@ -34,7 +35,8 @@ class SimpleGradient(SaliencyInterpreter):
         # Get number at the end of every gradient key (they look like grad_input_[int], we're getting this [int] part and subtracting 1 for zero-based indexing). This is then used as an index into the reversed input array to match up the gradient and its respective embedding. 
         input_idx = int(key[-1]) - 1
         emb_grad = numpy.sum(grad * embeddings_list[input_idx], axis=1)
-        normalized_grad = normalize_by_total_score(emb_grad)
+        norm = numpy.linalg.norm(emb_grad, ord=1)
+        normalized_grad = [math.fabs(e) / norm for e in emb_grad]
           
         grads[key] = normalized_grad 
 

@@ -1,7 +1,8 @@
-import torch
+import math
 from typing import List, Dict 
+import torch
 import numpy
-from allennlp.common.util import JsonDict, sanitize, normalize_by_total_score
+from allennlp.common.util import JsonDict, sanitize
 from allennlp.interpret.saliency import SaliencyInterpreter
 from allennlp.modules.text_field_embedders import TextFieldEmbedder
 from allennlp.data import Instance
@@ -26,8 +27,9 @@ class SmoothGradient(SaliencyInterpreter):
       # Normalize results
       for key, grad in grads.items():      
         emb_grad = numpy.sum(grad, axis=1) # TODO (@Eric-Wallace), SmoothGrad is not using times input normalization. Fine for now, but should fix for consistency.
-        normalized_grad = normalize_by_total_score(emb_grad)      
-        grads[key] = normalized_grad 
+        norm = numpy.linalg.norm(emb_grad, ord=1)
+        normalized_grad = [math.fabs(e) / norm for e in emb_grad]
+        grads[key] = normalized_grad
 
       instances_with_grads['instance_' + str(idx + 1)] = grads
 
