@@ -644,7 +644,6 @@ class TestNnUtil(AllenNlpTestCase):
         correct_loss = - correct_loss / 3
         numpy.testing.assert_array_almost_equal(loss.data.numpy(), correct_loss.data.numpy())
 
-    @flaky # some time "not almost equal to 7 decimals"
     def test_sequence_cross_entropy_with_logits_averages_batch_correctly(self):
         # test batch average is the same as dividing the batch averaged
         # loss by the number of batches containing any non-padded tokens.
@@ -663,6 +662,7 @@ class TestNnUtil(AllenNlpTestCase):
         # Batch has one completely padded row, so divide by 4.
         assert loss.data.numpy() == vector_loss.sum().item() / 4
 
+    @flaky # some time "not almost equal to 7 decimals"
     def test_sequence_cross_entropy_with_logits_averages_token_correctly(self):
         # test token average is the same as multiplying the per-batch loss
         # with the per-batch weights and dividing by the total weight
