@@ -17,10 +17,18 @@ from collections import defaultdict
 class Hotflip(Attacker):
     def __init__(self, predictor):
         """
-        TODO
+        Runs the HotFlip style attack at the word-level https://arxiv.org/abs/1712.06751.
+        We use the first-order taylor approximation described in https://arxiv.org/abs/1903.06620,
+        in the function first_order_taylor().
         """
         super().__init__(predictor)                                          
         self.vocab = self.predictor._model.vocab
+        """ For HotFlip, we need a word embedding matrix to search over. The below is neccessary for
+        models such as ELMo, character-level models, or for models that use a projection layer
+        after their word embeddings. 
+        We run all of the words from the dataset reader through the TextFieldEmbedder, and save the final
+        output embedding. We then group all of those output embeddings into an "embedding matrix".
+        """
         # Gets all tokens in the vocab and their corresponding IDs
         all_tokens = list(self.vocab._token_to_index["tokens"].keys())            
         all_inputs = {"tokens":torch.LongTensor([x for x in self.vocab._index_to_token["tokens"].keys()]).unsqueeze(0)}          
@@ -36,7 +44,9 @@ class Hotflip(Attacker):
                     character_tokens.append(tmp)                            
             else:
                 for tok in all_tokens_tokenized:
-                    tmp = [self.vocab.get_token_index(x.text,self.predictor._dataset_reader._token_indexers["token_characters"]._namespace) for x in tok]                    
+                    tmp = \
+                        [self.vocab.get_token_index(x.text, \
+                        self.predictor._dataset_reader._token_indexers["token_characters"]._namespace) for x in tok]                    
                     tmp += [0] * (pad_length-len(tmp))
                     character_tokens.append(tmp)                
             character_tokens = torch.LongTensor(character_tokens)
@@ -50,16 +60,18 @@ class Hotflip(Attacker):
                     elmo_tokens.append(tmp[0])                
                 all_inputs["elmo"] = torch.LongTensor(elmo_tokens).unsqueeze(0)                 
 
+        # find the TextFieldEmbedder
         for module in self.predictor._model.modules():
             if isinstance(module, TextFieldEmbedder):
                 model = module  
+        # pass all tokens through the fake matrix and create an embedding out of it.
         embedding_matrix = model(all_inputs).squeeze()                        
         self.token_embedding = Embedding(num_embeddings=self.vocab.get_vocab_size('tokens'), embedding_dim=embedding_matrix.shape[1], weight=embedding_matrix, trainable=False)
 
     def attack_from_json(self, inputs:JsonDict, target_field: str, gradient_index:str):        
-        """       
-        TODO
-        """
+        """ 
+        Replaces one token at a time from the input until the model's prediction changes.
+        """ 
         og_instances = self.predictor.inputs_to_labeled_instances(inputs)        
         original = list(og_instances[0][target_field].tokens)        
         final_tokens = []        
@@ -157,7 +169,9 @@ class Hotflip(Attacker):
         
     def first_order_taylor(self, grad, embedding_matrix, token_idx):            
         """
-        The "Hotflip" attack described clearly in https://arxiv.org/abs/1903.06620, the below code is based on https://github.com/pmichel31415/translate/blob/paul/pytorch_translate/research/adversarial/adversaries/brute_force_adversary.py
+        the below code is based on
+        https://github.com/pmichel31415/translate/blob/paul/pytorch_translate/
+        research/adversarial/adversaries/brute_force_adversary.py
         """
         grad = torch.from_numpy(grad)        
         embedding_matrix = embedding_matrix.cpu()    

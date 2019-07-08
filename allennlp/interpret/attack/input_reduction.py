@@ -15,7 +15,11 @@ class InputReduction(Attacker):
     def __init__(self, predictor):
         super().__init__(predictor)
 
-    def attack_from_json(self, inputs:JsonDict, target_field: str, gradient_index:str,ignore_tokens:List[str] = ["@@NULL@@"]):        
+    def attack_from_json(self, inputs:JsonDict, target_field: str, gradient_index:str,ignore_tokens:List[str] = ["@@NULL@@"]):       
+        """ 
+        Removes as many words as possible from the input
+        without changing the model's prediction.
+        """ 
         original_instances = self.predictor.inputs_to_labeled_instances(inputs)
         final_tokens = []        
         fields_to_check = {}        

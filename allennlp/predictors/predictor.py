@@ -123,7 +123,7 @@ class Predictor(Registrable):
             key = 'grad_input_' + str(idx + 1)
             grad_dict[key] = grad.squeeze_(0).detach().cpu().numpy()
 
-        return grad_dict, outputs 
+        return grad_dict, outputs
 
     def _register_hooks(self):
         """
