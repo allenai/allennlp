@@ -631,7 +631,7 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
                                        average: str = "batch",
                                        label_smoothing: float = None,
                                        gamma: float = None,
-                                       alpha: Union[float, List[float], torch.FloatTensor]=None
+                                       alpha: Union[float, List[float], torch.FloatTensor] = None
                                       ) -> torch.FloatTensor:
     """
     Computes the cross entropy loss of a sequence, weighted with respect to
@@ -690,7 +690,7 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
     # shape : (batch * sequence_length, num_classes)
     logits_flat = logits.view(-1, logits.size(-1))
     # shape : (batch * sequence_length, num_classes)
-    log_probs_flat = torch.nn.functional.log_softmax(logits_flat, dim=-1)
+    log_probs_flat = torch.nn.functional.log_softmaxloss(logits_flat, dim=-1)
     # shape : (batch * max_len, 1)
     targets_flat = targets.view(-1, 1).long()
     # focal loss coefficient
