@@ -15,3 +15,4 @@ from allennlp.modules.token_embedders.bidirectional_language_model_token_embedde
 from allennlp.modules.token_embedders.language_model_token_embedder import \
         LanguageModelTokenEmbedder
 from allennlp.modules.token_embedders.bag_of_word_counts_token_embedder import BagOfWordCountsTokenEmbedder
+from allennlp.modules.token_embedders.pass_through_token_embedder import PassThroughTokenEmbedder
