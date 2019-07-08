@@ -1,7 +1,7 @@
 from typing import List, Iterator, Dict
 import json
-import numpy as np
 from contextlib import contextmanager
+import numpy as np
 
 from allennlp.common import Registrable
 from allennlp.common.checks import ConfigurationError
@@ -63,9 +63,12 @@ class Predictor(Registrable):
 
     def saliency_interpret_from_json(self, inputs: JsonDict) -> JsonDict:
         """
-        Implemented by a `SaliencyInterpreter`, which uses the gradients from :func:`get_gradients` to provide saliency interpretations for specific models. 
+        Implemented by a `SaliencyInterpreter`, which uses the gradients 
+        from :func:`get_gradients` to provide saliency interpretations
+        for specific models. 
         """
-        raise RuntimeError("you need to implement this method if you want to give saliency model interpretations")
+        raise RuntimeError("you need to implement this method \
+            if you want to give saliency model interpretations")
 
     def inputs_to_labeled_instances(self, inputs: JsonDict) -> List[Instance]:
         """

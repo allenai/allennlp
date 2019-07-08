@@ -1,9 +1,9 @@
+from typing import List, Dict
 from overrides import overrides
+import numpy as np
 from allennlp.common.util import JsonDict
 from allennlp.data import Instance
 from allennlp.predictors.predictor import Predictor
-from typing import List, Dict
-import numpy as np
 from allennlp.data.fields import LabelField
 from allennlp.data.dataset_readers import StanfordSentimentTreeBankDatasetReader
 from allennlp.data.tokenizers.word_tokenizer import WordTokenizer
@@ -24,14 +24,16 @@ class TextClassifierPredictor(Predictor):
         Expects JSON that looks like ``{"sentence": "..."}``.
         Runs the underlying model, and adds the ``"label"`` to the output.
         """
-        sentence = json_dict["sentence"]            
-        if isinstance(self._dataset_reader, StanfordSentimentTreeBankDatasetReader):        
-            tokenizer = WordTokenizer() 
-            sentence = [str(t) for t in tokenizer.tokenize(sentence)]                        
+        sentence = json_dict["sentence"]
+        if isinstance(self._dataset_reader, StanfordSentimentTreeBankDatasetReader):
+            tokenizer = WordTokenizer()
+            sentence = [str(t) for t in tokenizer.tokenize(sentence)]
         return self._dataset_reader.text_to_instance(sentence)
 
-    @overrides        
-    def predictions_to_labeled_instances(self, instance: Instance, outputs: Dict[str, np.ndarray]) -> List[Instance]:        
+    @overrides
+    def predictions_to_labeled_instances(self,
+                                         instance: Instance,
+                                         outputs: Dict[str, np.ndarray]) -> List[Instance]:
         label = np.argmax(outputs['probs'])
-        instance.add_field('label', LabelField(int(label), skip_indexing=True))                    
+        instance.add_field('label', LabelField(int(label), skip_indexing=True))
         return [instance]

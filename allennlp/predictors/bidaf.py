@@ -1,9 +1,8 @@
-from overrides import overrides
 from typing import Dict, List
+from overrides import overrides
 import numpy as np
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import Instance
-from allennlp.predictors.predictor import Predictor
 from allennlp.data.tokenizers import Token
 from allennlp.predictors.predictor import Predictor
 from allennlp.data.fields import IndexField, TextField, ListField, LabelField, SpanField, SequenceLabelField
@@ -44,7 +43,9 @@ class BidafPredictor(Predictor):
         return self._dataset_reader.text_to_instance(question_text, passage_text)
 
     @overrides
-    def predictions_to_labeled_instances(self, instance: Instance, outputs: Dict[str, np.ndarray]) -> List[Instance]:
+    def predictions_to_labeled_instances(self, 
+                                         instance: Instance,
+                                         outputs: Dict[str, np.ndarray]) -> List[Instance]:
         """
         NAQANET has the following fields, answer_as_passage_spans,  answer_as_question_spans, answer_as_add_sub_expressions, answer_as_counts. We need to provide labels for all of them.
         """
@@ -86,11 +87,16 @@ class BidafPredictor(Predictor):
                 # The different numbers in the passage that the model encounters 
                 sequence_labels = outputs['answer']['numbers']
                 
-                # TODO (Eric-Wallace) outputs['answer']['numbers'] does not include padding (like metadata), is that ok?
-                numbers_as_tokens = [Token(str(number['value'])) for number in outputs['answer']['numbers']]
-                # hack copied from https://github.com/allenai/allennlp/blob/master/allennlp/data/dataset_readers/reading_comprehension/drop.py#L232
+                # TODO (Eric-Wallace) outputs['answer']['numbers'] does not
+                # include padding (like metadata), is that ok?
+                numbers_as_tokens = \
+                [Token(str(number['value'])) for number in outputs['answer']['numbers']]
+                """ hack copied from https://github.com/
+                allenai/allennlp/blob/master/allennlp/
+                data/dataset_readers/reading_comprehension/drop.py#L232"""
                 numbers_as_tokens.append(Token('0'))
-                numbers_in_passage_field = TextField(numbers_as_tokens, self._dataset_reader._token_indexers)
+                numbers_in_passage_field = \
+                TextField(numbers_as_tokens, self._dataset_reader._token_indexers)
 
                 """Based on ``find_valid_add_sub_expressions``, it seems
                 like negative signs are 2 instead of -1.
@@ -118,9 +124,9 @@ class BidafPredictor(Predictor):
                     if offset[0] == span[0]:
                         word_span_start = idx
                     if offset[1] == span[1]:
-                        word_span_end = idx 
+                        word_span_end = idx
 
                 field = ListField([SpanField(word_span_start, word_span_end, instance['question'])])
                 instance.add_field('answer_as_question_spans', field)
-        
+
         return [instance]
