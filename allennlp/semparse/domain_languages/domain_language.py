@@ -301,8 +301,9 @@ class DomainLanguage:
         left_side = first_action.split(' -> ')[0]
         if left_side != '@start@':
             raise ExecutionError('invalid action sequence')
+        remaining_actions = action_sequence[1:]
         remaining_side_args = side_arguments[1:] if side_arguments else None
-        return self._execute_sequence(action_sequence[1:], remaining_side_args)[0]
+        return self._execute_sequence(remaining_actions, remaining_side_args)[0]
 
     def get_nonterminal_productions(self) -> Dict[str, List[str]]:
         """
@@ -374,8 +375,8 @@ class DomainLanguage:
             transitions, start_type = self._get_transitions(expression, expected_type=None)
             if self._start_types and start_type not in self._start_types:
                 raise ParsingError(f"Expression had unallowed start type of {start_type}: {expression}")
-        except ParsingError:
-            logger.error(f'Error parsing logical form: {logical_form}')
+        except ParsingError as error:
+            logger.error(f'Error parsing logical form: {logical_form}: {error}')
             raise
         transitions.insert(0, f'@start@ -> {start_type}')
         return transitions
@@ -519,6 +520,8 @@ class DomainLanguage:
         is a tuple of (execution, remaining_actions), where the second value is necessary to handle
         the recursion.
         """
+        if not action_sequence:
+            raise ExecutionError("invalid action sequence")
         first_action = action_sequence[0]
         remaining_actions = action_sequence[1:]
         remaining_side_args = side_arguments[1:] if side_arguments else None

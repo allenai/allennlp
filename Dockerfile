@@ -30,8 +30,7 @@ RUN apt-get update --fix-missing && apt-get install -y \
     libxrender1 \
     wget \
     libevent-dev \
-    build-essential \
-    openjdk-8-jdk && \
+    build-essential && \
     rm -rf /var/lib/apt/lists/*
 
 # Copy select files needed for installing requirements.

@@ -48,6 +48,18 @@ class TestCheckpointer(AllenNlpTestCase):
         models, training = self.retrieve_and_delete_saved()
         assert models == training == target
 
+    def test_keep_zero(self):
+        checkpointer = Checkpointer(serialization_dir=self.TEST_DIR,
+                                    num_serialized_models_to_keep=0)
+        for e in range(10):
+            checkpointer.save_checkpoint(epoch=e,
+                                         model_state={"epoch": e},
+                                         training_states={"epoch": e},
+                                         is_best_so_far=True)
+        files = os.listdir(self.TEST_DIR)
+        assert 'model_state_epoch_1.th' not in files
+        assert 'training_state_epoch_1.th' not in files
+
     def test_with_time(self):
         """
         Tests that keep_serialized_model_every_num_seconds parameter causes a checkpoint to be saved

@@ -6,11 +6,6 @@ allennlp.semparse.executors
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: allennlp.semparse.executors.wikitables_sempre_executor
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 .. automodule:: allennlp.semparse.executors.sql_executor
    :members:
    :undoc-members:

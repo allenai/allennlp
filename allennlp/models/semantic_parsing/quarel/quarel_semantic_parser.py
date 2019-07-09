@@ -110,7 +110,6 @@ class QuarelSemanticParser(Model):
         # Note: there's only one non-trivial entity type in QuaRel for now, so most of the
         # entity_type stuff is irrelevant
         self._num_entity_types = 4  # TODO(mattg): get this in a more principled way somehow?
-        self._num_start_types = 1 # Hardcoded until we feed lf syntax into the model
         self._entity_type_encoder_embedding = Embedding(self._num_entity_types, self._embedding_dim)
         self._entity_type_decoder_embedding = Embedding(self._num_entity_types, action_embedding_dim)
 
@@ -171,8 +170,6 @@ class QuarelSemanticParser(Model):
         self._decoder_step = LinkingTransitionFunction(encoder_output_dim=self._encoder_output_dim,
                                                        action_embedding_dim=action_embedding_dim,
                                                        input_attention=attention,
-                                                       num_start_types=self._num_start_types,
-                                                       predict_start_type_separately=False,
                                                        add_action_bias=self._add_action_bias,
                                                        mixture_feedforward=mixture_feedforward,
                                                        dropout=dropout)

@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple, TypeVar
 import logging
 import copy
 import math
+import json
 
 import torch
 
@@ -1378,3 +1379,37 @@ def uncombine_initial_dims(tensor: torch.Tensor, original_size: torch.Size) -> t
     else:
         view_args = list(original_size) + [tensor.size(-1)]
         return tensor.view(*view_args)
+
+
+def inspect_parameters(module: torch.nn.Module, quiet: bool = False) -> Dict[str, Any]:
+    """
+    Inspects the model/module parameters and their tunability. The output is structured
+    in a nested dict so that parameters in same sub-modules are grouped together.
+    This can be helpful to setup module path based regex, for example in initializer.
+    It prints it by default (optional) and returns the inspection dict. Eg. output::
+
+        {
+            "_text_field_embedder": {
+                "token_embedder_tokens": {
+                    "_projection": {
+                        "bias": "tunable",
+                        "weight": "tunable"
+                    },
+                    "weight": "frozen"
+                }
+            }
+        }
+
+    """
+    results: Dict[str, Any] = {}
+    for name, param in sorted(module.named_parameters()):
+        keys = name.split(".")
+        write_to = results
+        for key in keys[:-1]:
+            if key not in write_to:
+                write_to[key] = {}
+            write_to = write_to[key]
+        write_to[keys[-1]] = "tunable" if param.requires_grad else "frozen"
+    if not quiet:
+        print(json.dumps(results, indent=4))
+    return results
