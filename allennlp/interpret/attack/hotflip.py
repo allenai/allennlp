@@ -46,7 +46,7 @@ class Hotflip(Attacker):
             padded_tokens = indexer.pad_token_sequence(indexed_tokens,
                                                        desired_num_tokens={"token_characters": len(tokens)},
                                                        padding_lengths={"num_token_characters": max_token_length})
-            all_inputs['token_characters'] = torch.LongTensor(padded_tokens['token_characters'])
+            all_inputs['token_characters'] = torch.LongTensor(padded_tokens['token_characters']).unsqueeze(0)
   
             if "elmo" in self.predictor._dataset_reader._token_indexers:
                 pad_length = pad_length + 2 # elmo has start/end word
