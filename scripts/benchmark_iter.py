@@ -28,11 +28,14 @@ if __name__ == "__main__":
     start = time.perf_counter()
     last = start
     batch_count = 0
+    cumulative_batch_size = 0
     for batch in generator_tqdm:
-        if batch_count % BATCH_INTERVAL == 1:
-            end = time.perf_counter()
-            print(f"b/s total: {(end - start)/batch_count} b/s last: {(end - last)/BATCH_INTERVAL}")
-            last = end
         batch_count += 1
+        cumulative_batch_size += batch['source']['tokens'].size(0)
+
+        if batch_count % BATCH_INTERVAL == 0:
+            end = time.perf_counter()
+            print(f"b/s total: {(end - start)/batch_count} b/s last: {(end - last)/BATCH_INTERVAL} mean batch size: {cumulative_batch_size/batch_count}")
+            last = end
 
         pass
