@@ -34,8 +34,7 @@
     "optimizer": {"type": "sgd", "lr": 0.01, "momentum": 0.9},
     "num_epochs": 2,
     "callbacks": [
-        "generate_training_batches",
-        {"type": "train_supervised", "grad_norm": 1.0},
+        {"type": "gradient_norm_and_clip", "grad_norm": 1.0},
         "checkpoint",
         {"type": "track_metrics", "patience": 500},
         "validate",
