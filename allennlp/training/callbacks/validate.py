@@ -38,6 +38,7 @@ class Validate(Callback):
         self.instances = validation_data
         self.iterator = validation_iterator
 
+        # `MovingAverage`s used by the trainer.
         self.moving_averages: List[MovingAverage] = []
 
     @handle_event(Events.TRAINING_START)
@@ -53,7 +54,7 @@ class Validate(Callback):
 
     @handle_event(Events.VALIDATE)
     def validate(self, trainer: 'CallbackTrainer'):
-        # If the trainer has a moving average, replace with its values
+        # If the trainer has MovingAverage objects, use their weights for validation.
         for moving_average in self.moving_averages:
             moving_average.assign_average_value()
 

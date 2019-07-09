@@ -45,7 +45,7 @@ class Checkpoint(Callback):
         self.other_attrs = other_attrs or ['batch_num_total']
         self.last_save_time = time.time()
 
-        # MovingAverage objects to update
+        # `MovingAverage`s used by the trainer.
         self.moving_averages: List[MovingAverage] = []
 
     def _should_save_at_batch_end(self) -> bool:
@@ -70,7 +70,7 @@ class Checkpoint(Callback):
         self._save_checkpoint(f"{trainer.epoch_number}", trainer)
 
     def _save_checkpoint(self, epoch: str, trainer: 'CallbackTrainer'):
-        # If the trainer has a moving average, replace with its values
+        # If the trainer has MovingAverage objects, use their weights for checkpointing.
         for moving_average in self.moving_averages:
             moving_average.assign_average_value()
 
@@ -154,7 +154,7 @@ class Checkpoint(Callback):
             trainer.model.load_state_dict(best_model_state)
 
     @classmethod
-    def from_params(cls, params: Params, serialization_dir: str) -> 'CheckpointCallback':  # type: ignore
+    def from_params(cls, params: Params, serialization_dir: str) -> 'Checkpoint':  # type: ignore
         # pylint: disable=arguments-differ
         checkpointer_params = params.pop("checkpointer", None)
         if checkpointer_params:
