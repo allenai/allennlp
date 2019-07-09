@@ -9,6 +9,7 @@ import argparse
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir)))))
 
 from allennlp.data.dataset_readers import WikiTablesDatasetReader
+from allennlp.data.dataset_readers.semantic_parsing.wikitables import util
 from allennlp.models.archival import load_archive
 
 
@@ -18,27 +19,26 @@ def make_data(input_examples_file: str,
               output_dir: str,
               num_logical_forms: int) -> None:
     reader = WikiTablesDatasetReader(tables_directory=tables_directory,
-                                     keep_if_no_dpd=True,
+                                     keep_if_no_logical_forms=True,
                                      output_agendas=True)
     dataset = reader.read(input_examples_file)
     input_lines = []
     with open(input_examples_file) as input_file:
         input_lines = input_file.readlines()
-    # Note: Double { for escaping {.
-    new_tables_config = f"{{model: {{tables_directory: {tables_directory}}}}}"
-    archive = load_archive(archived_model_file,
-                           overrides=new_tables_config)
+    archive = load_archive(archived_model_file)
     model = archive.model
     model.training = False
     model._decoder_trainer._max_num_decoded_sequences = 100
     for instance, example_line in zip(dataset, input_lines):
         outputs = model.forward_on_instance(instance)
-        parsed_info = reader._parse_example_line(example_line)
+        world = instance.fields['world'].metadata
+        parsed_info = util.parse_example_line(example_line)
         example_id = parsed_info["id"]
+        target_list = parsed_info["target_values"]
         logical_forms = outputs["logical_form"]
         correct_logical_forms = []
         for logical_form in logical_forms:
-            if model._denotation_accuracy.evaluate_logical_form(logical_form, example_line):
+            if world.evaluate_logical_form(logical_form, target_list):
                 correct_logical_forms.append(logical_form)
                 if len(correct_logical_forms) >= num_logical_forms:
                     break

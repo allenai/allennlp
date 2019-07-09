@@ -138,8 +138,9 @@ class EndpointSpanExtractor(SpanExtractor):
                 span_widths = span_ends - span_starts
 
             span_width_embeddings = self._span_width_embedding(span_widths)
-            return torch.cat([combined_tensors, span_width_embeddings], -1)
+            combined_tensors = torch.cat([combined_tensors, span_width_embeddings], -1)
 
         if span_indices_mask is not None:
             return combined_tensors * span_indices_mask.unsqueeze(-1).float()
+
         return combined_tensors
