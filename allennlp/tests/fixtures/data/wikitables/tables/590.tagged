@@ -1,0 +1,78 @@
+row	col	id	content	tokens	lemmaTokens	posTags	nerTags	nerValues	number	date	num2	list	listId
+-1	0	fb:row.row.year	Year	year	year	NN	DURATION						
+-1	1	fb:row.row.division	Division	division	Division	NNP	O						
+-1	2	fb:row.row.league	League	league	League	NNP	O						
+-1	3	fb:row.row.regular_season	Regular Season	regular|season	regular|season	JJ|NN	O|O	|					
+-1	4	fb:row.row.playoffs	Playoffs	playoffs	playoff	NNS	O						
+-1	5	fb:row.row.open_cup	Open Cup	open|cup	Open|Cup	NNP|NNP	MISC|MISC	|					
+-1	6	fb:row.row.avg_attendance	Avg. Attendance	avg|.|attendance	avg|.|attendance	NN|.|NN	O|O|O	||					
+0	0	fb:cell.2001	2001	2001	2001	CD	DATE	2001	2001.0	2001-xx-xx			
+0	1	fb:cell.2	2	2	2	CD	NUMBER	2.0	2.0				
+0	2	fb:cell.usl_a_league	USL A-League	usl|a|league	USL|A|League	NNP|NNP|NNP	MISC|MISC|MISC	||					
+0	3	fb:cell.4th_western	4th, Western	4th|,|western	4th|,|western	JJ|,|JJ	ORDINAL|O|MISC	4.0||	4.0			4th|Western	fb:part.4th|fb:part.western
+0	4	fb:cell.quarterfinals	Quarterfinals	quarterfinals	quarterfinal	NNS	O						
+0	5	fb:cell.did_not_qualify	Did not qualify	did|not|qualify	do|not|qualify	VBD-AUX|RB|VB	O|O|O	||					
+0	6	fb:cell.7_169	7,169	7,169	7,169	CD	NUMBER	7169.0	7169.0				
+1	0	fb:cell.2002	2002	2002	2002	CD	DATE	2002	2002.0	2002-xx-xx			
+1	1	fb:cell.2	2	2	2	CD	NUMBER	2.0	2.0				
+1	2	fb:cell.usl_a_league	USL A-League	usl|a|league	USL|A|League	NNP|NNP|NNP	MISC|MISC|MISC	||					
+1	3	fb:cell.2nd_pacific	2nd, Pacific	2nd|,|pacific	2nd|,|Pacific	JJ|,|NNP	ORDINAL|O|LOCATION	2.0||	2.0			2nd|Pacific	fb:part.2nd|fb:part.pacific
+1	4	fb:cell.1st_round	1st Round	1st|round	1st|Round	CD|NNP	ORDINAL|O	1.0|	1.0				
+1	5	fb:cell.did_not_qualify	Did not qualify	did|not|qualify	do|not|qualify	VBD-AUX|RB|VB	O|O|O	||					
+1	6	fb:cell.6_260	6,260	6,260	6,260	CD	NUMBER	6260.0	6260.0				
+2	0	fb:cell.2003	2003	2003	2003	CD	DATE	2003	2003.0	2003-xx-xx			
+2	1	fb:cell.2	2	2	2	CD	NUMBER	2.0	2.0				
+2	2	fb:cell.usl_a_league	USL A-League	usl|a|league	USL|A|League	NNP|NNP|NNP	MISC|MISC|MISC	||					
+2	3	fb:cell.3rd_pacific	3rd, Pacific	3rd|,|pacific	3rd|,|Pacific	RB|,|NNP	ORDINAL|O|LOCATION	3.0||	3.0			3rd|Pacific	fb:part.3rd|fb:part.pacific
+2	4	fb:cell.did_not_qualify	Did not qualify	did|not|qualify	do|not|qualify	VBD-AUX|RB|VB	O|O|O	||					
+2	5	fb:cell.did_not_qualify	Did not qualify	did|not|qualify	do|not|qualify	VBD-AUX|RB|VB	O|O|O	||					
+2	6	fb:cell.5_871	5,871	5,871	5,871	CD	NUMBER	5871.0	5871.0				
+3	0	fb:cell.2004	2004	2004	2004	CD	DATE	2004	2004.0	2004-xx-xx			
+3	1	fb:cell.2	2	2	2	CD	NUMBER	2.0	2.0				
+3	2	fb:cell.usl_a_league	USL A-League	usl|a|league	USL|A|League	NNP|NNP|NNP	MISC|MISC|MISC	||					
+3	3	fb:cell.1st_western	1st, Western	1st|,|western	1st|,|western	JJ|,|JJ	ORDINAL|O|MISC	1.0||	1.0			1st|Western	fb:part.1st|fb:part.western
+3	4	fb:cell.quarterfinals	Quarterfinals	quarterfinals	quarterfinal	NNS	O						
+3	5	fb:cell.4th_round	4th Round	4th|round	4th|Round	JJ|NNP	ORDINAL|O	4.0|	4.0				
+3	6	fb:cell.5_628	5,628	5,628	5,628	CD	NUMBER	5628.0	5628.0				
+4	0	fb:cell.2005	2005	2005	2005	CD	DATE	2005	2005.0	2005-xx-xx			
+4	1	fb:cell.2	2	2	2	CD	NUMBER	2.0	2.0				
+4	2	fb:cell.usl_first_division	USL First Division	usl|first|division	USL|First|Division	NNP|NNP|NNP	MISC|ORDINAL|O	|1.0|					
+4	3	fb:cell.5th	5th	5th	5th	NN	ORDINAL	5.0	5.0			5th	fb:part.5th
+4	4	fb:cell.quarterfinals	Quarterfinals	quarterfinals	quarterfinal	NNS	O						
+4	5	fb:cell.4th_round	4th Round	4th|round	4th|Round	JJ|NNP	ORDINAL|O	4.0|	4.0				
+4	6	fb:cell.6_028	6,028	6,028	6,028	CD	NUMBER	6028.0	6028.0				
+5	0	fb:cell.2006	2006	2006	2006	CD	DATE	2006	2006.0	2006-xx-xx			
+5	1	fb:cell.2	2	2	2	CD	NUMBER	2.0	2.0				
+5	2	fb:cell.usl_first_division	USL First Division	usl|first|division	USL|First|Division	NNP|NNP|NNP	MISC|ORDINAL|O	|1.0|					
+5	3	fb:cell.11th	11th	11th	11th	JJ	ORDINAL	11.0	11.0			11th	fb:part.11th
+5	4	fb:cell.did_not_qualify	Did not qualify	did|not|qualify	do|not|qualify	VBD-AUX|RB|VB	O|O|O	||					
+5	5	fb:cell.3rd_round	3rd Round	3rd|round	3rd|Round	JJ|NNP	ORDINAL|O	3.0|	3.0				
+5	6	fb:cell.5_575	5,575	5,575	5,575	CD	NUMBER	5575.0	5575.0				
+6	0	fb:cell.2007	2007	2007	2007	CD	DATE	2007	2007.0	2007-xx-xx			
+6	1	fb:cell.2	2	2	2	CD	NUMBER	2.0	2.0				
+6	2	fb:cell.usl_first_division	USL First Division	usl|first|division	USL|First|Division	NNP|NNP|NNP	MISC|ORDINAL|O	|1.0|					
+6	3	fb:cell.2nd	2nd	2nd	2nd	JJ	ORDINAL	2.0	2.0			2nd	fb:part.2nd
+6	4	fb:cell.semifinals	Semifinals	semifinals	semifinal	NNS	O						
+6	5	fb:cell.2nd_round	2nd Round	2nd|round	2nd|Round	JJ|NNP	ORDINAL|O	2.0|	2.0				
+6	6	fb:cell.6_851	6,851	6,851	6,851	CD	NUMBER	6851.0	6851.0				
+7	0	fb:cell.2008	2008	2008	2008	CD	DATE	2008	2008.0	2008-xx-xx			
+7	1	fb:cell.2	2	2	2	CD	NUMBER	2.0	2.0				
+7	2	fb:cell.usl_first_division	USL First Division	usl|first|division	USL|First|Division	NNP|NNP|NNP	MISC|ORDINAL|O	|1.0|					
+7	3	fb:cell.11th	11th	11th	11th	JJ	ORDINAL	11.0	11.0			11th	fb:part.11th
+7	4	fb:cell.did_not_qualify	Did not qualify	did|not|qualify	do|not|qualify	VBD-AUX|RB|VB	O|O|O	||					
+7	5	fb:cell.1st_round	1st Round	1st|round	1st|Round	CD|NNP	ORDINAL|O	1.0|	1.0				
+7	6	fb:cell.8_567	8,567	8,567	8,567	CD	NUMBER	8567.0	8567.0				
+8	0	fb:cell.2009	2009	2009	2009	CD	DATE	2009	2009.0	2009-xx-xx			
+8	1	fb:cell.2	2	2	2	CD	NUMBER	2.0	2.0				
+8	2	fb:cell.usl_first_division	USL First Division	usl|first|division	USL|First|Division	NNP|NNP|NNP	MISC|ORDINAL|O	|1.0|					
+8	3	fb:cell.1st	1st	1st	1st	CD	ORDINAL	1.0	1.0			1st	fb:part.1st
+8	4	fb:cell.semifinals	Semifinals	semifinals	semifinal	NNS	O						
+8	5	fb:cell.3rd_round	3rd Round	3rd|round	3rd|Round	JJ|NNP	ORDINAL|O	3.0|	3.0				
+8	6	fb:cell.9_734	9,734	9,734	9,734	CD	NUMBER	9734.0	9734.0				
+9	0	fb:cell.2010	2010	2010	2010	CD	DATE	2010	2010.0	2010-xx-xx			
+9	1	fb:cell.2	2	2	2	CD	NUMBER	2.0	2.0				
+9	2	fb:cell.ussf_d_2_pro_league	USSF D-2 Pro League	ussf|d-2|pro|league	USSF|D-2|pro|League	NNP|NNP|FW|NNP	ORGANIZATION|O|O|O	|||	2.0				
+9	3	fb:cell.3rd_usl_3rd	3rd, USL (3rd)	3rd|,|usl|-lrb-|3rd|-rrb-	3rd|,|usl|-lrb-|3rd|-rrb-	RB|,|NN|-LRB-|CD|-RRB-	ORDINAL|O|MISC|O|ORDINAL|O	3.0||||3.0|	3.0		3.0	3rd|USL (3rd)	fb:part.3rd|fb:part.usl_3rd
+9	4	fb:cell.quarterfinals	Quarterfinals	quarterfinals	quarterfinal	NNS	O						
+9	5	fb:cell.3rd_round	3rd Round	3rd|round	3rd|Round	JJ|NNP	ORDINAL|O	3.0|	3.0				
+9	6	fb:cell.10_727	10,727	10,727	10,727	CD	NUMBER	10727.0	10727.0				

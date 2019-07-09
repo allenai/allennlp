@@ -1,27 +1,13 @@
 # pylint: disable=no-self-use,invalid-name,protected-access
-import os
 import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor
-from allennlp.predictors.wikitables_parser import (SEMPRE_ABBREVIATIONS_PATH, SEMPRE_GRAMMAR_PATH)
 
 
 @pytest.mark.java
 class TestWikiTablesParserPredictor(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
-        self.should_remove_sempre_abbreviations = not os.path.exists(SEMPRE_ABBREVIATIONS_PATH)
-        self.should_remove_sempre_grammar = not os.path.exists(SEMPRE_GRAMMAR_PATH)
-
-    def tearDown(self):
-        super().tearDown()
-        if self.should_remove_sempre_abbreviations and os.path.exists(SEMPRE_ABBREVIATIONS_PATH):
-            os.remove(SEMPRE_ABBREVIATIONS_PATH)
-        if self.should_remove_sempre_grammar and os.path.exists(SEMPRE_GRAMMAR_PATH):
-            os.remove(SEMPRE_GRAMMAR_PATH)
-
     def test_uses_named_inputs(self):
         inputs = {
                 "question": "names",
@@ -72,7 +58,8 @@ class TestWikiTablesParserPredictor(AllenNlpTestCase):
         predictor = Predictor.from_archive(archive, 'wikitables-parser')
 
         # This is not the start of the best sequence, but it will be once we force it.
-        initial_tokens = ['@start@ -> p', 'p -> [<#1,#1>, p]']
+        initial_tokens = ['@start@ -> Number',
+                          'Number -> [<List[Row],NumberColumn:Number>, List[Row], NumberColumn]']
 
         # First let's try an unforced one. Its initial tokens should not be ours.
         result = predictor.predict_json(inputs)

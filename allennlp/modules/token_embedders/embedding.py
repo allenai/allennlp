@@ -238,7 +238,8 @@ class Embedding(TokenEmbedder):
                                                             extended_vocab, vocab_namespace)
             extra_weight = whole_weight[self.num_embeddings:, :]
 
-        extended_weight = torch.cat([self.weight.data, extra_weight], dim=0)
+        device = self.weight.data.device
+        extended_weight = torch.cat([self.weight.data, extra_weight.to(device)], dim=0)
         self.weight = torch.nn.Parameter(extended_weight, requires_grad=self.weight.requires_grad)
 
     # Custom logic requires custom from_params.

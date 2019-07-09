@@ -214,7 +214,7 @@ it to the base class constructor.
 The feed forward layer is not passed in as a parameter, but is constructed by us.
 Notice that it looks at the encoder to find the correct input dimension
 and looks at the vocabulary (and, in particular, at the label -> index mapping)
-to find the corrct output dimension.
+to find the correct output dimension.
 
 The last thing to notice is that we also instantiate a `CategoricalAccuracy` metric,
 which we'll use to track accuracy during each training and validation epoch.

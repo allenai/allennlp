@@ -38,8 +38,6 @@ class TrainerBase(Registrable):
             raise ConfigurationError("Expected an int or list for cuda_device, got {}".format(cuda_device))
 
         if isinstance(cuda_device, list):
-            logger.warning(f"Multiple GPU support is experimental not recommended for use. "
-                           "In some cases it may lead to incorrect results or undefined behavior.")
             self._multiple_gpu = True
             self._cuda_devices = cuda_device
         else:
@@ -68,7 +66,8 @@ class TrainerBase(Registrable):
 
         if typ3 == "default":
             # Special logic to keep old from_params behavior.
-            from allennlp.training.trainer import Trainer, TrainerPieces
+            from allennlp.training.trainer import Trainer
+            from allennlp.training.trainer_pieces import TrainerPieces
 
             pieces = TrainerPieces.from_params(params, serialization_dir, recover)  # pylint: disable=no-member
             return Trainer.from_params(model=pieces.model,

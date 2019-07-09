@@ -1,6 +1,5 @@
 #! /usr/bin/env python
 import json
-import pickle
 import argparse
 from typing import Tuple, List
 import os
@@ -11,7 +10,8 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir)))))
 
 from allennlp.common.util import JsonDict
-from allennlp.semparse.worlds import NlvrWorld
+from allennlp.semparse.domain_languages import NlvrLanguage
+from allennlp.semparse.domain_languages.nlvr_language import Box
 from allennlp.semparse import ActionSpaceWalker
 
 
@@ -43,17 +43,14 @@ def process_data(input_file: str,
     """
     processed_data: JsonDict = []
     # We can instantiate the ``ActionSpaceWalker`` with any world because the action space is the
-    # same for all the ``NlvrWorlds``. It is just the execution that differs.
-    serialized_walker_path = f"serialized_action_space_walker_pl={max_path_length}.pkl"
-    if os.path.isfile(serialized_walker_path):
-        print("Reading walker from serialized file", file=sys.stderr)
-        walker = pickle.load(open(serialized_walker_path, "rb"))
-    else:
-        walker = ActionSpaceWalker(NlvrWorld({}), max_path_length=max_path_length)
-        pickle.dump(walker, open(serialized_walker_path, "wb"))
+    # same for all the ``NlvrLanguage`` objects. It is just the execution that differs.
+    walker = ActionSpaceWalker(NlvrLanguage({}), max_path_length=max_path_length)
     for line in open(input_file):
         instance_id, sentence, structured_reps, label_strings = read_json_line(line)
-        worlds = [NlvrWorld(structured_rep) for structured_rep in structured_reps]
+        worlds = []
+        for structured_representation in structured_reps:
+            boxes = set([Box(object_list, box_id) for box_id, object_list in enumerate(structured_representation)])
+            worlds.append(NlvrLanguage(boxes))
         labels = [label_string == "true" for label_string in label_strings]
         correct_logical_forms = []
         incorrect_logical_forms = []
@@ -62,7 +59,7 @@ def process_data(input_file: str,
             logical_forms = walker.get_all_logical_forms(max_num_logical_forms=1000)
         else:
             # TODO (pradeep): Assuming all worlds give the same agenda.
-            sentence_agenda = worlds[0].get_agenda_for_sentence(sentence, add_paths_to_agenda=False)
+            sentence_agenda = worlds[0].get_agenda_for_sentence(sentence)
             logical_forms = walker.get_logical_forms_with_agenda(sentence_agenda,
                                                                  max_num_logical_forms * 10)
         for logical_form in logical_forms:
@@ -76,14 +73,10 @@ def process_data(input_file: str,
                and len(incorrect_logical_forms) >= max_num_logical_forms:
                 break
         if write_sequences:
-            parsed_correct_forms = [worlds[0].parse_logical_form(logical_form) for logical_form in
-                                    correct_logical_forms]
-            correct_sequences = [worlds[0].get_action_sequence(parsed_form) for parsed_form in
-                                 parsed_correct_forms]
-            parsed_incorrect_forms = [worlds[0].parse_logical_form(logical_form) for logical_form in
-                                      incorrect_logical_forms]
-            incorrect_sequences = [worlds[0].get_action_sequence(parsed_form) for parsed_form in
-                                   parsed_incorrect_forms]
+            correct_sequences = [worlds[0].logical_form_to_action_sequence(logical_form) for logical_form in
+                                 correct_logical_forms]
+            incorrect_sequences = [worlds[0].logical_form_to_action_sequence(logical_form) for logical_form in
+                                   incorrect_logical_forms]
             processed_data.append({"id": instance_id,
                                    "sentence": sentence,
                                    "correct_sequences": correct_sequences,
