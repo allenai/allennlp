@@ -33,4 +33,6 @@ if __name__ == "__main__":
             end = time.perf_counter()
             print(f"b/s total: {(start - end)/batch_count} b/s last: {(last - end)/BATCH_INTERVAL}")
             last = end
+        batch_count += 1
+
         pass
