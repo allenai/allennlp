@@ -150,10 +150,6 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
             # We use the key of the indexer to recognise what the tensor corresponds to within the
             # field (i.e. the result of word indexing, or the result of character indexing, for
             # example).
-            # TODO(mattg): we might someday have a TokenIndexer that needs to use something other
-            # than a LongTensor here, and it's not clear how to signal that.  Maybe we'll need to
-            # add a class method to TokenIndexer to tell us the type?  But we can worry about that
-            # when there's a compelling use case for it.
             array_type = indexer.array_type()
             indexer_tensors = {key: array_type(array) for key, array in padded_array.items()}
             tensors.update(indexer_tensors)
