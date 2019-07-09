@@ -72,8 +72,14 @@ class Hotflip(Attacker):
         """
         Replaces one token at a time from the input until the model's prediction changes.
         `name_of_input_field_to_attack` is for example `tokens`, it says what the input
-        field is called. name_of_grad_input_field is for example `grad_input_1`, which
+        field is called. `name_of_grad_input_field` is for example `grad_input_1`, which
         is a key into a grads dictionary.
+
+        The method computes the gradient w.r.t. the tokens, finds
+        the token with the maximum gradient (by L2 norm), and replaces it will
+        another token based on the first-order Taylor approximation of the loss.
+        This process is iteratively repeated until the prediction changes.
+        Once a token is replaced, it is not flipped again.
         """
         original_instances = self.predictor.inputs_to_labeled_instances(inputs)
         original_tokens = list(original_instances[0][name_of_input_field_to_attack].tokens)
