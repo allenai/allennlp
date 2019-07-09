@@ -132,7 +132,7 @@ class Predictor(Registrable):
         self.extracted_grads = [] # pylint: disable=attribute-defined-outside-init
         self.hooks = [] # pylint: disable=attribute-defined-outside-init
 
-        def hook_layers(_, _, grad_out):
+        def hook_layers(inp, grad_in, grad_out): # pylint: disable=unused-argument
             self.extracted_grads.append(grad_out[0])
 
         # Register the hooks

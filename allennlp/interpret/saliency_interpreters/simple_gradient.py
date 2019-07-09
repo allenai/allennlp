@@ -51,7 +51,7 @@ class SimpleGradient(SaliencyInterpreter):
         multiplies the gradient by the embedding value.
         """
 
-        def forward_hook(_, _, output):
+        def forward_hook(inp, grad_in, grad_out): # pylint: disable=unused-argument
             embeddings_list.append(output.squeeze(0).clone().detach().numpy())
 
         handle = None
