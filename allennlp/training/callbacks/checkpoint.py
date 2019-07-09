@@ -62,7 +62,7 @@ class Checkpoint(Callback):
 
     def _save_checkpoint(self, epoch: str, trainer: 'CallbackTrainer'):
         # If the trainer has a moving average, replace with its values
-        for moving_average_callback in trainer.handler.get_callbacks(UpdateMovingAverage):
+        for moving_average_callback in trainer.handler.callbacks(UpdateMovingAverage):
             moving_average_callback.moving_average.assign_average_value()
 
         training_states = {}
@@ -89,7 +89,7 @@ class Checkpoint(Callback):
                 is_best_so_far=is_best_so_far)
 
         # If the trainer has a moving average, restore.
-        for moving_average_callback in trainer.handler.get_callbacks(UpdateMovingAverage):
+        for moving_average_callback in trainer.handler.callbacks(UpdateMovingAverage):
             moving_average_callback.moving_average.restore()
 
     @handle_event(Events.TRAINING_START)

@@ -1,4 +1,4 @@
-from typing import Iterable, Dict, NamedTuple, Callable, List, TypeVar, Type
+from typing import Iterable, Dict, NamedTuple, Callable, List, TypeVar, Type, overload
 from collections import defaultdict
 import inspect
 import logging
@@ -57,19 +57,30 @@ class CallbackHandler:
         for callback in callbacks:
             self.add_callback(callback)
 
+    @overload
     def callbacks(self) -> List[Callback]:
+        # pylint: disable=no-self-use
+        pass
+
+    @overload
+    def callbacks(self, typ: Type[CallbackType]) -> List[CallbackType]:
+        # pylint: disable=no-self-use,unused-argument,function-redefined
+        pass
+
+    def callbacks(self, typ=None):
+        # pylint: disable=function-redefined
         """
         Returns the callbacks associated with this handler.
         Each callback may be registered under multiple events,
-        but we make sure to only return it once.
+        but we make sure to only return it once. If `typ` is specified,
+        only returns callbacks of that type.
         """
-        return list({callback.callback
-                     for callback_list in self._callbacks.values()
-                     for callback in callback_list})
-
-    def get_callbacks(self, typ: Type[CallbackType]) -> List[CallbackType]:
-        # pylint: disable=protected-access
-        return self._callbacks_by_type.get(typ, [])  # type: ignore
+        if typ is None:
+            return list({callback.callback
+                         for callback_list in self._callbacks.values()
+                         for callback in callback_list})
+        else:
+            return self._callbacks_by_type.get(typ, [])
 
     def add_callback(self, callback: Callback) -> None:
         for name, method in inspect.getmembers(callback, _is_event_handler):
