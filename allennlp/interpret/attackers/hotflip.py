@@ -1,7 +1,7 @@
 from typing import Dict, List, Set
 import numpy
 import torch
-from allennlp.interpret.attack import Attacker
+from allennlp.interpret.attackers import Attacker
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import Instance
 from allennlp.predictors.predictor import Predictor

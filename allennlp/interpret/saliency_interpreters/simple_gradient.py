@@ -4,7 +4,7 @@ import numpy
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.modules.text_field_embedders import TextFieldEmbedder
 from allennlp.predictors import Predictor
-from allennlp.interpret.saliency import SaliencyInterpreter
+from allennlp.interpret.saliency_interpreters import SaliencyInterpreter
 
 @SaliencyInterpreter.register('simple-gradients-interpreter')
 class SimpleGradient(SaliencyInterpreter):

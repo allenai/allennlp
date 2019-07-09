@@ -3,7 +3,7 @@ from typing import List, Dict
 import torch
 import numpy
 from allennlp.common.util import JsonDict, sanitize
-from allennlp.interpret.saliency import SaliencyInterpreter
+from allennlp.interpret.saliency_interpreters import SaliencyInterpreter
 from allennlp.modules.text_field_embedders import TextFieldEmbedder
 from allennlp.predictors import Predictor
 from allennlp.data import Instance
