@@ -64,7 +64,7 @@ class TokenIndexer(Generic[TokenType], Registrable):
 
     def get_padding_token(self) -> TokenType: # pylint: disable=no-self-use
         """
-        Depreciated. Please just implement the padding token in `as_padded_tensor` instead.
+        Deprecated. Please just implement the padding token in `as_padded_tensor` instead.
         TODO(Mark): remove in 1.0 release. This is only a concrete implementation to preserve
         backward compatability, otherwise it would be abstract.
 
@@ -108,7 +108,7 @@ class TokenIndexer(Generic[TokenType], Registrable):
 
         Note that this method should be abstract, but it is implemented to allow backward compatability.
         """
-        if self.has_warned_for_as_padded_tensor:
+        if not self.has_warned_for_as_padded_tensor:
             warnings.warn("Using a Field with pad_token_sequence, which will be depreciated in 1.0.0."
                           "Please implement as_padded_tensor instead.", FutureWarning)
             self.has_warned_for_as_padded_tensor = True
@@ -121,7 +121,7 @@ class TokenIndexer(Generic[TokenType], Registrable):
                            desired_num_tokens: Dict[str, int],
                            padding_lengths: Dict[str, int]) -> Dict[str, TokenType]:
         """
-        Depreciated. Please use `as_padded_tensor` instead.
+        Deprecated. Please use `as_padded_tensor` instead.
         TODO(Mark): remove in 1.0 release.
         """
         raise NotImplementedError
