@@ -36,6 +36,6 @@ class TextClassifierPredictor(Predictor):
                                          instance: Instance,
                                          outputs: Dict[str, np.ndarray]) -> List[Instance]:
         label = np.argmax(outputs['probs'])
-        new_instance = deepcopy(instance)            
-        new_instance.add_field('label', LabelField(int(label), skip_indexing=True))        
+        new_instance = deepcopy(instance)
+        new_instance.add_field('label', LabelField(int(label), skip_indexing=True))
         return [new_instance]

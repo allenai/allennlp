@@ -1,7 +1,7 @@
 from typing import List, Dict
 import numpy
 from overrides import overrides
-from allennlp.common.util import JsonDict, sanitize
+from allennlp.common.util import JsonDict
 from allennlp.data import Instance
 from allennlp.predictors.predictor import Predictor
 from allennlp.data.fields import LabelField

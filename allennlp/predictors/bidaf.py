@@ -1,7 +1,7 @@
 from typing import Dict, List
 from overrides import overrides
 import numpy as np
-from allennlp.common.util import JsonDict, sanitize
+from allennlp.common.util import JsonDict
 from allennlp.data import Instance
 from allennlp.data.tokenizers import Token
 from allennlp.predictors.predictor import Predictor
@@ -92,17 +92,17 @@ class BidafPredictor(Predictor):
                 # include padding (like metadata), is that ok?
                 numbers_as_tokens = \
                 [Token(str(number['value'])) for number in outputs['answer']['numbers']]
-                """ hack copied from https://github.com/
-                allenai/allennlp/blob/master/allennlp/
-                data/dataset_readers/reading_comprehension/drop.py#L232"""
+                # hack copied from https://github.com/
+                # allenai/allennlp/blob/master/allennlp/
+                # data/dataset_readers/reading_comprehension/drop.py#L232
                 numbers_as_tokens.append(Token('0'))
                 numbers_in_passage_field = \
                 TextField(numbers_as_tokens, self._dataset_reader._token_indexers)
 
-                """Based on ``find_valid_add_sub_expressions``, it seems
-                like negative signs are 2 instead of -1.
-                The numbers in the passage are given signs, that's what
-                we are labeling here """
+                # Based on ``find_valid_add_sub_expressions``, it seems
+                # like negative signs are 2 instead of -1.
+                # The numbers in the passage are given signs, that's what
+                # we are labeling here
                 labels = []
                 for label in sequence_labels:
                     if label['sign'] == -1:

@@ -124,15 +124,15 @@ class Predictor(Registrable):
         Registers a backward hook on the
         :class:`~allennlp.modules.text_field_embedder.basic_text_field_embbedder.BasicTextFieldEmbedder`
         class. Used to save the gradients of the embeddings for use in get_gradients()
-        """
 
-        """ When there are multiple inputs (e.g., a passage and question), the hook
+        When there are multiple inputs (e.g., a passage and question), the hook
         will be called multiple times. We append all the embeddings gradients
-        to a list """
-        self.extracted_grads = []
-        self.hooks = []
+        to a list.
+        """
+        self.extracted_grads = [] # pylint: disable=attribute-defined-outside-init
+        self.hooks = [] # pylint: disable=attribute-defined-outside-init
 
-        def hook_layers(module, grad_in, grad_out):
+        def hook_layers(module, grad_in, grad_out): # pylint: disable=unused-argument
             self.extracted_grads.append(grad_out[0])
 
         # Register the hooks
@@ -179,7 +179,7 @@ class Predictor(Registrable):
         outputs = self._model.forward_on_instance(instance)
         return sanitize(outputs)
 
-    def predictions_to_labeled_instances(self, 
+    def predictions_to_labeled_instances(self,
                                          instance: Instance,
                                          outputs: Dict[str, np.ndarray]) -> List[Instance]:
         """
