@@ -8,7 +8,7 @@ from allennlp.training import util as training_util
 from allennlp.training.checkpointer import Checkpointer
 from allennlp.training.callbacks.callback import Callback, handle_event
 from allennlp.training.callbacks.events import Events
-from allennlp.training.callbacks.update_moving_average import UpdateMovingAverage
+from allennlp.training.moving_average import MovingAverage
 
 if TYPE_CHECKING:
     from allennlp.training.callback_trainer import CallbackTrainer  # pylint:disable=unused-import
@@ -45,9 +45,18 @@ class Checkpoint(Callback):
         self.other_attrs = other_attrs or ['batch_num_total']
         self.last_save_time = time.time()
 
+        # MovingAverage objects to update
+        self.moving_averages: List[MovingAverage] = []
+
     def _should_save_at_batch_end(self) -> bool:
         return (self.model_save_interval is not None and
                 time.time() - self.last_save_time > self.model_save_interval)
+
+    @handle_event(Events.TRAINING_START)
+    def collect_moving_averages(self, trainer: 'CallbackTrainer'):
+        self.moving_averages = [getattr(callback, 'moving_average')
+                                for callback in trainer.handler.callbacks()
+                                if hasattr(callback, 'moving_average')]
 
     @handle_event(Events.BATCH_END)
     def save_model_at_batch_end(self, trainer: 'CallbackTrainer'):
@@ -62,8 +71,8 @@ class Checkpoint(Callback):
 
     def _save_checkpoint(self, epoch: str, trainer: 'CallbackTrainer'):
         # If the trainer has a moving average, replace with its values
-        for moving_average_callback in trainer.handler.callbacks(UpdateMovingAverage):
-            moving_average_callback.moving_average.assign_average_value()
+        for moving_average in self.moving_averages:
+            moving_average.assign_average_value()
 
         training_states = {}
 
@@ -89,8 +98,8 @@ class Checkpoint(Callback):
                 is_best_so_far=is_best_so_far)
 
         # If the trainer has a moving average, restore.
-        for moving_average_callback in trainer.handler.callbacks(UpdateMovingAverage):
-            moving_average_callback.moving_average.restore()
+        for moving_average in self.moving_averages:
+            moving_average.restore()
 
     @handle_event(Events.TRAINING_START)
     def restore_checkpoint(self, trainer: 'CallbackTrainer'):

@@ -1,4 +1,4 @@
-from typing import Iterable, Dict, NamedTuple, Callable, List, TypeVar, Type, overload
+from typing import Iterable, Dict, NamedTuple, Callable, List
 from collections import defaultdict
 import inspect
 import logging
@@ -7,9 +7,6 @@ from allennlp.training.trainer_base import TrainerBase
 from allennlp.training.callbacks.callback import Callback
 
 logger = logging.getLogger(__name__)
-
-
-CallbackType = TypeVar('CallbackType', bound=Callback)  # pylint: disable=invalid-name
 
 
 class EventHandler(NamedTuple):
@@ -57,17 +54,7 @@ class CallbackHandler:
         for callback in callbacks:
             self.add_callback(callback)
 
-    @overload
     def callbacks(self) -> List[Callback]:
-        # pylint: disable=no-self-use
-        pass
-
-    @overload
-    def callbacks(self, typ: Type[CallbackType]) -> List[CallbackType]:
-        # pylint: disable=no-self-use,unused-argument,function-redefined
-        pass
-
-    def callbacks(self, typ=None):
         # pylint: disable=function-redefined
         """
         Returns the callbacks associated with this handler.
@@ -75,12 +62,9 @@ class CallbackHandler:
         but we make sure to only return it once. If `typ` is specified,
         only returns callbacks of that type.
         """
-        if typ is None:
-            return list({callback.callback
-                         for callback_list in self._callbacks.values()
-                         for callback in callback_list})
-        else:
-            return self._callbacks_by_type.get(typ, [])
+        return list({callback.callback
+                     for callback_list in self._callbacks.values()
+                     for callback in callback_list})
 
     def add_callback(self, callback: Callback) -> None:
         for name, method in inspect.getmembers(callback, _is_event_handler):

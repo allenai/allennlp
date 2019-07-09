@@ -1,4 +1,4 @@
-from typing import Iterable, TYPE_CHECKING
+from typing import Iterable, List, TYPE_CHECKING
 import logging
 import math
 
@@ -10,8 +10,8 @@ from allennlp.data.instance import Instance
 from allennlp.data.iterators import DataIterator
 from allennlp.training import util as training_util
 from allennlp.training.callbacks.callback import Callback, handle_event
-from allennlp.training.callbacks.update_moving_average import UpdateMovingAverage
 from allennlp.training.callbacks.events import Events
+from allennlp.training.moving_average import MovingAverage
 
 if TYPE_CHECKING:
     from allennlp.training.callback_trainer import CallbackTrainer  # pylint:disable=unused-import
@@ -38,16 +38,24 @@ class Validate(Callback):
         self.instances = validation_data
         self.iterator = validation_iterator
 
+        self.moving_averages: List[MovingAverage] = []
+
     @handle_event(Events.TRAINING_START)
     def set_validate(self, trainer: 'CallbackTrainer'):
         # pylint: disable=no-self-use
         trainer.validate = True
 
+    @handle_event(Events.TRAINING_START)
+    def collect_moving_averages(self, trainer: 'CallbackTrainer'):
+        self.moving_averages = [getattr(callback, 'moving_average')
+                                for callback in trainer.handler.callbacks()
+                                if hasattr(callback, 'moving_average')]
+
     @handle_event(Events.VALIDATE)
     def validate(self, trainer: 'CallbackTrainer'):
         # If the trainer has a moving average, replace with its values
-        for moving_average_callback in trainer.handler.callbacks(UpdateMovingAverage):
-            moving_average_callback.moving_average.assign_average_value()
+        for moving_average in self.moving_averages:
+            moving_average.assign_average_value()
 
         with torch.no_grad():
             # We have a validation set, so compute all the metrics on it.
@@ -91,5 +99,5 @@ class Validate(Callback):
                                                             reset=True)
 
         # If the trainer has a moving average, restore
-        for moving_average_callback in trainer.handler.callbacks(UpdateMovingAverage):
-            moving_average_callback.moving_average.restore()
+        for moving_average in self.moving_averages:
+            moving_average.restore()
