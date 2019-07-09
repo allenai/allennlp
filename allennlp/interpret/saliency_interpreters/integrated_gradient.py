@@ -40,7 +40,7 @@ class IntegratedGradient(SaliencyInterpreter):
         We store the embedding output into the embeddings_list when alpha is zero.
         This is used later to element-wise multiply the input by the averaged gradients.
         """
-        def forward_hook(inp, grad_in, grad_out): # pylint: disable=unused-argument
+        def forward_hook(module, input, output): # pylint: disable=unused-argument
             # Save the input for later use. Only do so on first call.
             if alpha == 0:
                 embeddings_list.append(output.squeeze(0).clone().detach().numpy())

@@ -43,7 +43,7 @@ class SmoothGradient(SaliencyInterpreter):
         Register a forward hook on the embedding layer which adds random noise to every embedding.
         Used for one term in the SmoothGrad sum.
         """
-        def forward_hook(inp, grad_in, grad_out): # pylint: disable=unused-argument
+        def forward_hook(module, input, output): # pylint: disable=unused-argument
             # Random noise = N(0, stdev * (max-min))
             noise = torch.randn(output.shape).to(output.device) \
                 * (stdev * (output.detach().max() - output.detach().min()))
