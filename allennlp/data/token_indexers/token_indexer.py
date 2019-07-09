@@ -64,13 +64,16 @@ class TokenIndexer(Generic[TokenType], Registrable):
 
     def get_padding_token(self) -> TokenType: # pylint: disable=no-self-use
         """
-        Depreceated. Please just implement the padding token in `as_padded_tensor` instead.
+        Depreciated. Please just implement the padding token in `as_padded_tensor` instead.
         TODO(Mark): remove in 1.0 release. This is only a concrete implementation to preserve
         backward compatability, otherwise it would be abstract.
 
         When we need to add padding tokens, what should they look like?  This method returns a
         "blank" token of whatever type is returned by :func:`tokens_to_indices`.
         """
+        warnings.warn("Using a Field with get_padding_token as an inherited method,"
+                      " which will be depreciated in 1.0.0."
+                      "Please implement as_padded_tensor instead.", FutureWarning)
         return 0
 
     def get_padding_lengths(self, token: TokenType) -> Dict[str, int]:
@@ -107,7 +110,7 @@ class TokenIndexer(Generic[TokenType], Registrable):
         """
         if self.has_warned_for_as_padded_tensor:
             warnings.warn("Using a Field with pad_token_sequence, which will be depreciated in 1.0.0."
-                            "Please implement as_padded_tensor instead.", FutureWarning)
+                          "Please implement as_padded_tensor instead.", FutureWarning)
             self.has_warned_for_as_padded_tensor = True
 
         padded = self.pad_token_sequence(tokens, desired_num_tokens, padding_lengths)
@@ -118,7 +121,7 @@ class TokenIndexer(Generic[TokenType], Registrable):
                            desired_num_tokens: Dict[str, int],
                            padding_lengths: Dict[str, int]) -> Dict[str, TokenType]:
         """
-        Depreceated. Please use `as_padded_tensor` instead.
+        Depreciated. Please use `as_padded_tensor` instead.
         TODO(Mark): remove in 1.0 release.
         """
         raise NotImplementedError
