@@ -8,7 +8,7 @@ from allennlp.interpret.saliency_interpreters import SimpleGradient
 class TestSimpleGradient(AllenNlpTestCase):
     def test_simple_gradient(self):
         inputs = {
-            "sentence": "It was the ending that I hated"
+                "sentence": "It was the ending that I hated"
         }
         archive = load_archive(self.FIXTURES_ROOT / 'basic_classifier' / 'serialization' / 'model.tar.gz')
         predictor = Predictor.from_archive(archive, 'text_classifier')
@@ -26,6 +26,3 @@ class TestSimpleGradient(AllenNlpTestCase):
         repeat_grad_input_1 = repeat_interpretation['instance_1']['grad_input_1']
         for grad, repeat_grad in zip(grad_input_1, repeat_grad_input_1):
             assert grad == approx(repeat_grad)
-
-x = TestSimpleGradient()
-x.test_simple_gradient()

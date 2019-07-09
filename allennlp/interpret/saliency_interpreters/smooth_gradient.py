@@ -1,3 +1,4 @@
+# pylint: disable=protected-access
 import math
 from typing import Dict
 import torch
@@ -5,7 +6,6 @@ import numpy
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.interpret.saliency_interpreters import SaliencyInterpreter
 from allennlp.modules.text_field_embedders import TextFieldEmbedder
-from allennlp.predictors import Predictor
 from allennlp.data import Instance
 
 @SaliencyInterpreter.register('smooth-gradient-interpreter')
@@ -13,9 +13,6 @@ class SmoothGradient(SaliencyInterpreter):
     """
     Interprets the prediction using SmoothGrad (https://arxiv.org/abs/1706.03825)
     """
-    def __init__(self, predictor: Predictor):
-        super().__init__(predictor)
-
     def saliency_interpret_from_json(self, inputs: JsonDict) -> JsonDict:
         # Convert inputs to labeled instances
         labeled_instances = self.predictor.inputs_to_labeled_instances(inputs)
@@ -43,7 +40,7 @@ class SmoothGradient(SaliencyInterpreter):
         Register a forward hook on the embedding layer which adds random noise to every embedding.
         Used for one term in the SmoothGrad sum.
         """
-        def forward_hook(module, input, output): # pylint: disable=unused-argument
+        def forward_hook(module, inp, output): # pylint: disable=unused-argument
             # Random noise = N(0, stdev * (max-min))
             noise = torch.randn(output.shape).to(output.device) \
                 * (stdev * (output.detach().max() - output.detach().min()))
@@ -64,14 +61,14 @@ class SmoothGradient(SaliencyInterpreter):
         stdev = 0.01
         num_samples = 25
 
-        total_gradients = None
-        for _ in range(num_samples):
+        total_gradients = {}
+        for i in range(num_samples):
             handle = self._register_forward_hook(stdev)
             grads = self.predictor.get_gradients([instance])[0]
             handle.remove()
 
             # Sum gradients
-            if total_gradients is None:
+            if total_gradients == {}:
                 total_gradients = grads
             else:
                 for key in grads.keys():

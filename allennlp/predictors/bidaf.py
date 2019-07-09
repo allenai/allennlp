@@ -1,3 +1,4 @@
+# pylint: disable=protected-access
 from typing import Dict, List
 from overrides import overrides
 import numpy as np

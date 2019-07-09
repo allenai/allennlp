@@ -8,7 +8,7 @@ from allennlp.interpret.saliency_interpreters import IntegratedGradient
 class TestIntegratedGradient(AllenNlpTestCase):
     def test_integrated_gradient(self):
         inputs = {
-            "sentence": "It was the ending that I hated"
+                "sentence": "It was the ending that I hated"
         }
         archive = load_archive(self.FIXTURES_ROOT / 'basic_classifier' / 'serialization' / 'model.tar.gz')
         predictor = Predictor.from_archive(archive, 'text_classifier')

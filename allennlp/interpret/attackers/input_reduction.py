@@ -4,7 +4,6 @@ import torch
 from allennlp.interpret.attackers import Attacker
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import Instance
-from allennlp.predictors.predictor import Predictor
 
 @Attacker.register('input-reduction')
 class InputReduction(Attacker):
@@ -13,7 +12,7 @@ class InputReduction(Attacker):
     Difficult` https://arxiv.org/abs/1804.07781, which removes as many words as possible
     from the input _without_ changing the model's prediction.
     """
-    def attack_from_json(self, inputs: JsonDict,
+    def attack_from_json(self, inputs: JsonDict = None,
                          target_field: str, gradient_index: str,
                          ignore_tokens: List[str] = ["@@NULL@@"]):
         original_instances = self.predictor.inputs_to_labeled_instances(inputs)
@@ -26,7 +25,7 @@ class InputReduction(Attacker):
             # Save fields that must be checked for equality
             test_instances = self.predictor.inputs_to_labeled_instances(inputs)
             for key in current_instances[0].fields.keys():
-                if key not in inputs.keys() and key != target_field:
+                if key not in inputs and key != target_field:
                     fields_to_check[key] = test_instances[0][key]
 
             # Set num_ignore_tokens, which tells input reduction when to stop
@@ -78,7 +77,7 @@ class InputReduction(Attacker):
         return sanitize({"final": final_tokens, "original": original_tokens})
 
 def remove_one_token(grads: np.ndarray,
-                     instances: List[Instance],
+                     instances: List[Instance] = None,
                      target_field: str,
                      ignore_tokens: List[str] = ["@@NULL@@"]) -> List[Instance]:
     """
@@ -112,7 +111,7 @@ def remove_one_token(grads: np.ndarray,
     instances[0].indexed = False
     return instances, smallest
 
-def get_ner_tags_and_mask(current_instances: List[Instance],
+def get_ner_tags_and_mask(current_instances: List[Instance] = None,
                           target_field: str,
                           ignore_tokens: List[str] = ["@@NULL@@"]):
     """
@@ -135,3 +134,4 @@ def get_ner_tags_and_mask(current_instances: List[Instance],
             num_ignore_tokens += 1
         else:
             tag_mask.append(0)
+    return num_ignore, tag_mask, original_tags

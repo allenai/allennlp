@@ -1,8 +1,8 @@
+# pylint: disable=protected-access
 import numpy
 import torch
 from allennlp.interpret.attackers import Attacker
 from allennlp.common.util import JsonDict, sanitize
-from allennlp.data import Instance
 from allennlp.predictors.predictor import Predictor
 from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
 from allennlp.modules.token_embedders import Embedding
@@ -30,7 +30,8 @@ class Hotflip(Attacker):
         """
         # Gets all tokens in the vocab and their corresponding IDs
         all_tokens = list(self.vocab._token_to_index["tokens"].keys())
-        all_inputs = {"tokens":torch.LongTensor([x for x in self.vocab._index_to_token["tokens"].keys()]).unsqueeze(0)}
+        all_inputs = \
+        {"tokens":torch.LongTensor([x for x in self.vocab._index_to_token["tokens"].keys()]).unsqueeze(0)}
 
         # handle when a model uses character-level inputs, e.g., ELMo or a CharCNN
         if "token_characters" in self.predictor._dataset_reader._token_indexers:
@@ -45,8 +46,9 @@ class Hotflip(Attacker):
 
             if "elmo" in self.predictor._dataset_reader._token_indexers:
                 elmo_tokens = []
+                indexer = self.predictor._dataset_reader._token_indexers["elmo"]
                 for tok in all_tokens:
-                    tmp = self.predictor._dataset_reader._token_indexers["elmo"].tokens_to_indices([Token(text=tok)], self.vocab, "sentence")["sentence"]
+                    tmp = indexer.tokens_to_indices([Token(text=tok)], self.vocab, "sentence")["sentence"]
                     elmo_tokens.append(tmp[0])
                 all_inputs["elmo"] = torch.LongTensor(elmo_tokens).unsqueeze(0)
 
@@ -56,7 +58,10 @@ class Hotflip(Attacker):
                 embedder = module
         # pass all tokens through the fake matrix and create an embedding out of it.
         embedding_matrix = embedder(all_inputs).squeeze()
-        return Embedding(num_embeddings=self.vocab.get_vocab_size('tokens'), embedding_dim=embedding_matrix.shape[1], weight=embedding_matrix, trainable=False)
+        return Embedding(num_embeddings=self.vocab.get_vocab_size('tokens'),
+                         embedding_dim=embedding_matrix.shape[1],
+                         weight=embedding_matrix,
+                         trainable=False)
 
     def attack_from_json(self,
                          inputs: JsonDict,
@@ -86,7 +91,7 @@ class Hotflip(Attacker):
             # get a list of fields that we want to check to see if they change
             # (we want to change model predictions)
             fields_to_compare = {}
-            for key in set(new_instances[0].fields.keys()):
+            for key in new_instances[0].fields:
                 if key not in inputs.keys() and key != name_of_input_field_to_attack:
                     fields_to_compare[key] = test_instances[0][key]
 
@@ -151,45 +156,44 @@ class Hotflip(Attacker):
         return \
             sanitize({"final": final_tokens, "original": original_tokens, "new_prediction": new_prediction})
 
-    # Get the model's new prediction given its outputs
-    def get_new_prediction(self, outputs):
-        new_prediction = None
-        if "probs" in outputs: # sentiment analysis
-            new_prediction = outputs["probs"]
-        elif "label_probs" in outputs: # textual entailment
-            new_prediction = outputs["label_probs"]
-        elif "best_span_str" in outputs: # bidaf
-            new_prediction = outputs["best_span_str"]
-        elif "answer" in outputs: # NAQANet
-            ans_type = outputs["answer"]["answer_type"]
-            if ans_type == "count":
-                new_prediction = outputs["answer"]["count"]
-            else:
-                new_prediction = outputs["answer"]["value"]
-        return new_prediction
+# Get the model's new prediction given its outputs
+def get_new_prediction(outputs):
+    new_prediction = None
+    if "probs" in outputs: # sentiment analysis
+        new_prediction = outputs["probs"]
+    elif "label_probs" in outputs: # textual entailment
+        new_prediction = outputs["label_probs"]
+    elif "best_span_str" in outputs: # bidaf
+        new_prediction = outputs["best_span_str"]
+    elif "answer" in outputs: # NAQANet
+        ans_type = outputs["answer"]["answer_type"]
+        if ans_type == "count":
+            new_prediction = outputs["answer"]["count"]
+        else:
+            new_prediction = outputs["answer"]["value"]
+    return new_prediction
 
-    def first_order_taylor(self,
-                           grad: numpy.ndarray,
-                           embedding_matrix: torch.nn.parameter.Parameter,
-                           token_idx: int):
-        """
-        the below code is based on
-        https://github.com/pmichel31415/translate/blob/paul/pytorch_translate/
-        research/adversarial/adversaries/brute_force_adversary.py
+def first_order_taylor(grad: numpy.ndarray,
+                       embedding_matrix: torch.nn.parameter.Parameter,
+                       token_idx: int):
+    """
+    the below code is based on
+    https://github.com/pmichel31415/translate/blob/paul/pytorch_translate/
+    research/adversarial/adversaries/brute_force_adversary.py
 
-        Replaces the current token_idx with another token_idx to increase the loss. In particular,
-        this function uses the grad, alongside the embedding_matrix to select
-        the token that maximizes the first-order taylor approximation of the loss.
-        """
-        grad = torch.from_numpy(grad)
-        embedding_matrix = embedding_matrix.cpu()
-        word_embeds = \
-            torch.nn.functional.embedding(torch.LongTensor([token_idx]), embedding_matrix)
-        word_embeds = word_embeds.detach().unsqueeze(0)
-        grad = grad.unsqueeze(0).unsqueeze(0)
-        # solves equation (3) here https://arxiv.org/abs/1903.06620
-        new_embed_dot_grad = torch.einsum("bij,kj->bik", (grad, embedding_matrix))
-        prev_embed_dot_grad = torch.einsum("bij,bij->bi", (grad, word_embeds)).unsqueeze(-1)
-        neg_dir_dot_grad = -1 * (prev_embed_dot_grad - new_embed_dot_grad)
-        _, best_at_each_step = neg_dir_dot_grad.max(2)
-        return best_at_each_step[0].data[0].detach().cpu().item() # return the best candidate
+    Replaces the current token_idx with another token_idx to increase the loss. In particular,
+    this function uses the grad, alongside the embedding_matrix to select
+    the token that maximizes the first-order taylor approximation of the loss.
+    """
+    grad = torch.from_numpy(grad)
+    embedding_matrix = embedding_matrix.cpu()
+    word_embeds = \
+        torch.nn.functional.embedding(torch.LongTensor([token_idx]), embedding_matrix)
+    word_embeds = word_embeds.detach().unsqueeze(0)
+    grad = grad.unsqueeze(0).unsqueeze(0)
+    # solves equation (3) here https://arxiv.org/abs/1903.06620
+    new_embed_dot_grad = torch.einsum("bij,kj->bik", (grad, embedding_matrix))
+    prev_embed_dot_grad = torch.einsum("bij,bij->bi", (grad, word_embeds)).unsqueeze(-1)
+    neg_dir_dot_grad = -1 * (prev_embed_dot_grad - new_embed_dot_grad)
+    _, best_at_each_step = neg_dir_dot_grad.max(2)
+    return best_at_each_step[0].data[0].detach().cpu().item() # return the best candidate

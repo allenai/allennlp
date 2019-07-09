@@ -7,13 +7,12 @@ from allennlp.interpret.attackers import Hotflip
 class TestHotflip(AllenNlpTestCase):
     def test_hotflip(self):
         inputs = {
-            "premise": "I always write unit tests for my code.",
-            "hypothesis": "One time I didn't write any unit tests for my code."
+                "premise": "I always write unit tests for my code.",
+                "hypothesis": "One time I didn't write any unit tests for my code."
         }
 
         archive = load_archive(self.FIXTURES_ROOT / 'decomposable_attention' / 'serialization' / 'model.tar.gz')
         predictor = Predictor.from_archive(archive, 'textual-entailment')
-        result = predictor.predict_json(inputs)
 
         hotflipper = Hotflip(predictor)
         attack = hotflipper.attack_from_json(inputs, 'hypothesis', 'grad_input_1')

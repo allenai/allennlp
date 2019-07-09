@@ -1,5 +1,4 @@
-# pylint: disable=no-self-use,invalid-name
-from pytest import approx
+# pylint: disable=no-self-use,invalid-name, pylint: protected-access
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor
@@ -8,7 +7,7 @@ from allennlp.interpret.saliency_interpreters import SmoothGradient
 class TestSmoothGradient(AllenNlpTestCase):
     def test_smooth_gradient(self):
         inputs = {
-            "sentence": "It was the ending that I hated"
+                "sentence": "It was the ending that I hated"
         }
         archive = load_archive(self.FIXTURES_ROOT / 'basic_classifier' / 'serialization' / 'model.tar.gz')
         predictor = Predictor.from_archive(archive, 'text_classifier')
