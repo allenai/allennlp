@@ -1,11 +1,14 @@
 #!/usr/bin/env python
 import argparse
 import logging
+import time
 
 from allennlp.common import Params, Tqdm
 from allennlp.training.trainer_pieces import TrainerPieces
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
+BATCH_INTERVAL = 100
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -21,5 +24,13 @@ if __name__ == "__main__":
                                       num_epochs=1,
                                       shuffle=True)
     generator_tqdm = Tqdm.tqdm(raw_generator)
+
+    start = time.perf_counter()
+    last = start
+    batch_count = 0
     for batch in generator_tqdm:
+        if batch_count % BATCH_INTERVAL == 0:
+            end = time.perf_counter()
+            print(f"b/s total: {(start - end)/batch_count} b/s last: {(last - end)/BATCH_INTERVAL}")
+            last = end
         pass
