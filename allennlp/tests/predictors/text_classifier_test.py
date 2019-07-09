@@ -93,18 +93,3 @@ class TestTextClassifierPredictor(AllenNlpTestCase):
         assert 'label' in new_instances[0].fields
         assert new_instances[0].fields['label'] is not None
         assert len(new_instances) == 1
-
-    def test_get_gradients(self):
-        inputs = {
-                "sentence": "It was the ending that I hated"
-        }
-
-        archive = load_archive(self.FIXTURES_ROOT / 'basic_classifier' / 'serialization' / 'model.tar.gz')
-        predictor = Predictor.from_archive(archive, 'text_classifier')
-
-        labeled_instances = predictor.inputs_to_labeled_instances(inputs)
-        for instance in labeled_instances:
-            grads = predictor.get_gradients([instance])[0]
-            assert 'grad_input_1' in grads
-            assert grads['grad_input_1'] is not None
-            assert len(grads['grad_input_1']) == 7  # 7 words in input

@@ -114,22 +114,3 @@ class TestBidafPredictor(AllenNlpTestCase):
         assert new_instances[0].fields['span_start'] is not None
         assert new_instances[0].fields['span_end'] is not None
         assert len(new_instances) == 1
-
-    def test_get_gradients(self):
-        inputs = {
-                "question": "What kind of test succeeded",
-                "passage": "One time I was writing a unit test"
-        }
-
-        archive = load_archive(self.FIXTURES_ROOT / 'bidaf' / 'serialization' / 'model.tar.gz')
-        predictor = Predictor.from_archive(archive, 'machine-comprehension')
-
-        labeled_instances = predictor.inputs_to_labeled_instances(inputs)
-        for instance in labeled_instances:
-            grads = predictor.get_gradients([instance])[0]
-            assert 'grad_input_1' in grads
-            assert 'grad_input_2' in grads
-            assert grads['grad_input_1'] is not None
-            assert grads['grad_input_2'] is not None
-            assert len(grads['grad_input_1']) == 8  # 5 words in question
-            assert len(grads['grad_input_2']) == 5  # 8 words in passage
