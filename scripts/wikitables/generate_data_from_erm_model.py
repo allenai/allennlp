@@ -31,14 +31,14 @@ def make_data(input_examples_file: str,
     model._decoder_trainer._max_num_decoded_sequences = 100
     for instance, example_line in zip(dataset, input_lines):
         outputs = model.forward_on_instance(instance)
-        instance_world = instance.fields['world'].metadata
+        world = instance.fields['world'].metadata
         parsed_info = util.parse_example_line(example_line)
         example_id = parsed_info["id"]
         target_list = parsed_info["target_values"]
         logical_forms = outputs["logical_form"]
         correct_logical_forms = []
         for logical_form in logical_forms:
-            if instance_world.evaluate_logical_form(logical_form, target_list):
+            if world.evaluate_logical_form(logical_form, target_list):
                 correct_logical_forms.append(logical_form)
                 if len(correct_logical_forms) >= num_logical_forms:
                     break
