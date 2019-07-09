@@ -96,3 +96,39 @@ class TestBidafPredictor(AllenNlpTestCase):
         # hooks should be gone
         for module in predictor._model.modules():
             assert not module._forward_hooks
+
+    def test_predictions_to_labeled_instances(self):
+        inputs = {
+                "question": "What kind of test succeeded on its first attempt?",
+                "passage": "One time I was writing a unit test, and it succeeded on the first attempt."
+        }
+
+        archive = load_archive(self.FIXTURES_ROOT / 'bidaf' / 'serialization' / 'model.tar.gz')
+        predictor = Predictor.from_archive(archive, 'machine-comprehension')
+
+        instance = predictor._json_to_instance(inputs)
+        outputs = predictor._model.forward_on_instance(instance)
+        new_instances = predictor.predictions_to_labeled_instances(instance, outputs)
+        assert 'span_start' in new_instances[0].fields
+        assert 'span_end' in new_instances[0].fields
+        assert new_instances[0].fields['span_start'] is not None
+        assert new_instances[0].fields['span_end'] is not None
+
+    def test_get_gradients(self):
+        inputs = {
+                "question": "What kind of test succeeded",
+                "passage": "One time I was writing a unit test"
+        }
+
+        archive = load_archive(self.FIXTURES_ROOT / 'bidaf' / 'serialization' / 'model.tar.gz')
+        predictor = Predictor.from_archive(archive, 'machine-comprehension')
+
+        labeled_instances = predictor.inputs_to_labeled_instances(inputs)
+        for idx, instance in enumerate(labeled_instances):
+            grads = predictor.get_gradients([instance])[0]
+            assert 'grad_input_1' in grads
+            assert 'grad_input_2' in grads
+            assert grads['grad_input_1'] is not None
+            assert grads['grad_input_2'] is not None
+            assert len(grads['grad_input_1']) == 8  # 5 words in question
+            assert len(grads['grad_input_2']) == 5  # 8 words in passage

@@ -79,3 +79,39 @@ class TestDecomposableAttentionPredictor(AllenNlpTestCase):
             sumexps = sum(exps)
             for e, p in zip(exps, label_probs):
                 assert e / sumexps == approx(p)
+
+    def test_predictions_to_labeled_instances(self):
+        inputs = {
+                "premise": "I always write unit tests for my code.",
+                "hypothesis": "One time I didn't write any unit tests for my code."
+        }
+
+        archive = load_archive(self.FIXTURES_ROOT / 'decomposable_attention' / 'serialization' / 'model.tar.gz')
+        predictor = Predictor.from_archive(archive, 'textual-entailment')
+
+        instance = predictor._json_to_instance(inputs)
+        outputs = predictor._model.forward_on_instance(instance)
+        new_instances = predictor.predictions_to_labeled_instances(instance, outputs)
+        assert 'hypothesis' in new_instances[0].fields
+        assert 'premise' in new_instances[0].fields
+        assert new_instances[0].fields['hypothesis'] is not None
+        assert new_instances[0].fields['premise'] is not None
+
+    def test_get_gradients(self):
+        inputs = {
+                "premise": "I always write unit tests",
+                "hypothesis": "One time I did not write any unit tests"
+        }
+
+        archive = load_archive(self.FIXTURES_ROOT / 'decomposable_attention' / 'serialization' / 'model.tar.gz')
+        predictor = Predictor.from_archive(archive, 'textual-entailment')
+
+        labeled_instances = predictor.inputs_to_labeled_instances(inputs)
+        for idx, instance in enumerate(labeled_instances):
+            grads = predictor.get_gradients([instance])[0]
+            assert 'grad_input_1' in grads
+            assert 'grad_input_2' in grads
+            assert grads['grad_input_1'] is not None
+            assert grads['grad_input_2'] is not None
+            assert len(grads['grad_input_1']) == 9  # 9 words in hypothesis
+            assert len(grads['grad_input_2']) == 5  # 5 words in premise

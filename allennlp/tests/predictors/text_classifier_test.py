@@ -78,3 +78,32 @@ class TestTextClassifierPredictor(AllenNlpTestCase):
             sum_exps = sum(exps)
             for e, p in zip(exps, probs):
                 assert e / sum_exps == approx(p)
+
+    def test_predictions_to_labeled_instances(self):
+        inputs = {
+                "sentence": "It was the ending that I hated. I was disappointed that it was so bad."
+        }
+
+        archive = load_archive(self.FIXTURES_ROOT / 'basic_classifier' / 'serialization' / 'model.tar.gz')
+        predictor = Predictor.from_archive(archive, 'text_classifier')
+
+        instance = predictor._json_to_instance(inputs)
+        outputs = predictor._model.forward_on_instance(instance)
+        new_instances = predictor.predictions_to_labeled_instances(instance, outputs)
+        assert 'label' in new_instances[0].fields
+        assert new_instances[0].fields['label'] is not None
+
+    def test_get_gradients(self):
+        inputs = {
+                "sentence": "It was the ending that I hated"
+        }
+
+        archive = load_archive(self.FIXTURES_ROOT / 'basic_classifier' / 'serialization' / 'model.tar.gz')
+        predictor = Predictor.from_archive(archive, 'text_classifier')
+
+        labeled_instances = predictor.inputs_to_labeled_instances(inputs)
+        for idx, instance in enumerate(labeled_instances):
+            grads = predictor.get_gradients([instance])[0]
+            assert 'grad_input_1' in grads
+            assert grads['grad_input_1'] is not None
+            assert len(grads['grad_input_1']) == 7  # 7 words in input
