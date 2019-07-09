@@ -29,7 +29,7 @@ if __name__ == "__main__":
     last = start
     batch_count = 0
     for batch in generator_tqdm:
-        if batch_count % BATCH_INTERVAL == 0:
+        if batch_count % BATCH_INTERVAL == 1:
             end = time.perf_counter()
             print(f"b/s total: {(start - end)/batch_count} b/s last: {(last - end)/BATCH_INTERVAL}")
             last = end
