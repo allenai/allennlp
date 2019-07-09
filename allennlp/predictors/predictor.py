@@ -183,7 +183,7 @@ class Predictor(Registrable):
                                          instance: Instance,
                                          outputs: Dict[str, np.ndarray]) -> List[Instance]:
         """
-        Adds labels to the :class:`~allennlp.data.instance.Instance`s passed in.
+        Adds labels to the :class:`~allennlp.data.instance.Instance`s passed in and returns it.
         """
         raise RuntimeError("you need to implement this method if you \
             want to give model interpretations or attacks")

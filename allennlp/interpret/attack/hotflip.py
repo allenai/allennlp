@@ -97,6 +97,7 @@ class Hotflip(Attacker):
         original_instances = self.predictor.inputs_to_labeled_instances(inputs)
         original_tokens = list(original_instances[0][name_of_input_field_to_attack].tokens)
         final_tokens = []
+        new_prediction = None
         for i in range(len(original_instances)):
             new_instances = [original_instances[i]]
             test_instances = self.predictor.inputs_to_labeled_instances(inputs)
@@ -110,15 +111,21 @@ class Hotflip(Attacker):
 
             current_tokens = new_instances[0][name_of_input_field_to_attack].tokens
             grads, outputs = self.predictor.get_gradients(new_instances)
+            flipped = []
             while True:
                 # Compute L2 norm of all grads.
                 grad = grads[name_of_grad_input_field]
                 grads_mag = [numpy.sqrt(g.dot(g)) for g in grad]
 
+                # only flip a token once
+                for index in flipped:
+                    grads_mag[index] = -1
+
                 # we flip the token with highest gradient norm
                 index_of_token_to_flip = numpy.argmax(grads_mag)
                 if grads_mag[index_of_token_to_flip] == -1:
                     break
+                flipped.append(index_of_token_to_flip)
 
                 # Get new token using taylor approximation
                 original_id_of_token_to_flip = \
@@ -146,6 +153,7 @@ class Hotflip(Attacker):
                 label_change = False
                 for field in fields_to_compare.keys():
                     if field in new_instances[0].fields:
+
                         equal = new_instances[0][field].__eq__(fields_to_compare[field])
                     else:
                         equal = outputs[field] == fields_to_compare[field]
@@ -155,14 +163,14 @@ class Hotflip(Attacker):
                 # if the prediction has changed, we want to return the new answer
                 # for visualization in the demo.
                 if label_change:
-                    new_prediction = get_new_prediction(outputs)
+                    new_prediction = self.get_new_prediction(outputs)
                     break
 
             final_tokens.append(current_tokens)
         return sanitize({"final": final_tokens,"original": original_tokens, "new_prediction": new_prediction})
 
     # Get the model's new prediction given its outputs
-    def get_new_prediction(outputs):
+    def get_new_prediction(self, outputs):
         new_prediction = None
         if "probs" in outputs: # sentiment analysis
             new_prediction = outputs["probs"]
