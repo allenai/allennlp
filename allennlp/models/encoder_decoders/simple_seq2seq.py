@@ -441,7 +441,7 @@ class SimpleSeq2Seq(Model):
         """Apply attention over encoder outputs and decoder state."""
         # Ensure mask is also a FloatTensor. Or else the multiplication within
         # attention will complain.
-        # shape: (batch_size, max_input_sequence_length, encoder_output_dim)
+        # shape: (batch_size, max_input_sequence_length)
         encoder_outputs_mask = encoder_outputs_mask.float()
 
         # shape: (batch_size, max_input_sequence_length)

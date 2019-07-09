@@ -111,7 +111,6 @@ class WikiTablesSemanticParser(Model):
                                "entity word average embedding dim", "question embedding dim")
 
         self._num_entity_types = 5  # TODO(mattg): get this in a more principled way somehow?
-        self._num_start_types = 3  # TODO(mattg): get this in a more principled way somehow?
         self._embedding_dim = question_embedder.get_output_dim()
         self._entity_type_encoder_embedding = Embedding(self._num_entity_types, self._embedding_dim)
         self._entity_type_decoder_embedding = Embedding(self._num_entity_types, action_embedding_dim)
@@ -685,7 +684,6 @@ class WikiTablesSemanticParser(Model):
 
         if metadata is not None:
             outputs["question_tokens"] = [x["question_tokens"] for x in metadata]
-            outputs["original_table"] = [x["original_table"] for x in metadata]
 
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
