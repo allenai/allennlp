@@ -3,7 +3,7 @@ import argparse
 import logging
 
 from allennlp.common import Params, Tqdm
-from allennlp.training.trainer import TrainerPieces
+from allennlp.training.trainer_pieces import TrainerPieces
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
