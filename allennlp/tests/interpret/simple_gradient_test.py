@@ -26,3 +26,6 @@ class TestSimpleGradient(AllenNlpTestCase):
         repeat_grad_input_1 = repeat_interpretation['instance_1']['grad_input_1']
         for grad, repeat_grad in zip(grad_input_1, repeat_grad_input_1):
             assert grad == approx(repeat_grad)
+
+x = TestSimpleGradient()
+x.test_simple_gradient()
