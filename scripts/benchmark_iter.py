@@ -13,7 +13,7 @@ BATCH_INTERVAL = 100
 MEAN_BATCH_SIZE = 66.0
 
 
-def time_iterable(iterable, get_size):
+def time_iterable(iterable, get_size, batch_interval):
     start = time.perf_counter()
     last = start
     batch_count = 0
@@ -22,9 +22,9 @@ def time_iterable(iterable, get_size):
         batch_count += 1
         cumulative_batch_size += get_size(batch)
 
-        if int(batch_count) % BATCH_INTERVAL == 0:
+        if batch_count % batch_interval == 0:
             end = time.perf_counter()
-            print(f"b/s total: {(end - start)/batch_count} b/s last: {(end - last)/BATCH_INTERVAL} mean batch size: {cumulative_batch_size/batch_count}")
+            print(f"b/s total: {(end - start)/batch_count} b/s last: {(end - last)/batch_interval} mean batch size: {cumulative_batch_size/batch_count}")
             last = end
 
         pass
@@ -39,9 +39,13 @@ if __name__ == "__main__":
     params = Params.from_file(args.config)
     pieces = TrainerPieces.from_params(params, args.serialization_dir)
 
+    # Time just the reader.
+    time_iterable(pieces.train_dataset, lambda batch: 1, BATCH_INTERVAL * MEAN_BATCH_SIZE)
+
     # Get tqdm for the training batches
-    raw_generator = pieces.iterator(pieces.train_dataset,
-                                      num_epochs=1,
-                                      shuffle=True)
-    generator_tqdm = Tqdm.tqdm(raw_generator)
-    time_iterable(generator_tqdm, lambda batch: batch['source']['tokens'].size(0))
+    #raw_generator = pieces.iterator(pieces.train_dataset,
+    #                                  num_epochs=1,
+    #                                  shuffle=True)
+    #generator_tqdm = Tqdm.tqdm(raw_generator)
+    #time_iterable(generator_tqdm, lambda batch: batch['source']['tokens'].size(0), BATCH_INTERVAL)
+
