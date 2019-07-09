@@ -10,3 +10,4 @@ from allennlp.training.callbacks.validate import Validate
 from allennlp.training.callbacks.track_metrics import TrackMetrics
 from allennlp.training.callbacks.gradient_norm_and_clip import GradientNormAndClip
 from allennlp.training.callbacks.post_to_url import PostToUrl
+from allennlp.training.callbacks.update_moving_average import UpdateMovingAverage

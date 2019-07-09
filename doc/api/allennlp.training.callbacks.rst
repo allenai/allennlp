@@ -56,3 +56,8 @@ allennlp.training.callbacks
    :members:
    :undoc-members:
    :show-inheritance:
+
+.. automodule:: allennlp.training.callbacks.update_moving_average
+   :members:
+   :undoc-members:
+   :show-inheritance:

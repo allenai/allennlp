@@ -28,7 +28,7 @@ from allennlp.training.callback_trainer import CallbackTrainer
 from allennlp.training.callbacks import (
         Events,
         LogToTensorboard, Checkpoint, Validate, PostToUrl, GradientNormAndClip,
-        UpdateLearningRate, UpdateMomentum, TrackMetrics
+        UpdateLearningRate, UpdateMomentum, TrackMetrics, UpdateMovingAverage
 )
 from allennlp.training.checkpointer import Checkpointer
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
@@ -225,13 +225,12 @@ class TestCallbackTrainer(ModelTestCase):
 
     def test_trainer_can_run_exponential_moving_average(self):
         moving_average = ExponentialMovingAverage(self.model.named_parameters(), decay=0.9999)
-        callbacks = self.default_callbacks()
+        callbacks = self.default_callbacks() + [UpdateMovingAverage(moving_average)]
         trainer = CallbackTrainer(model=self.model,
                                   training_data=self.instances,
                                   iterator=self.iterator,
                                   optimizer=self.optimizer,
                                   num_epochs=2,
-                                  moving_average=moving_average,
                                   callbacks=callbacks)
         trainer.train()
 
@@ -346,26 +345,24 @@ class TestCallbackTrainer(ModelTestCase):
 
     def test_trainer_can_resume_training_for_exponential_moving_average(self):
         moving_average = ExponentialMovingAverage(self.model.named_parameters())
-        callbacks = self.default_callbacks()
+        callbacks = self.default_callbacks() + [UpdateMovingAverage(moving_average)]
 
         trainer = CallbackTrainer(self.model,
                                   training_data=self.instances,
                                   iterator=self.iterator,
                                   optimizer=self.optimizer,
                                   num_epochs=1, serialization_dir=self.TEST_DIR,
-                                  moving_average=moving_average,
                                   callbacks=callbacks)
         trainer.train()
 
         new_moving_average = ExponentialMovingAverage(self.model.named_parameters())
-        new_callbacks = self.default_callbacks()
+        new_callbacks = self.default_callbacks() + [UpdateMovingAverage(new_moving_average)]
 
         new_trainer = CallbackTrainer(self.model,
                                       training_data=self.instances,
                                       iterator=self.iterator,
                                       optimizer=self.optimizer,
                                       num_epochs=3, serialization_dir=self.TEST_DIR,
-                                      moving_average=new_moving_average,
                                       callbacks=new_callbacks)
 
         new_trainer.handler.fire_event(Events.TRAINING_START)  # pylint: disable=protected-access

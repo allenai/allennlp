@@ -7,7 +7,6 @@ import time
 import datetime
 import math
 from typing import Dict, Optional, List, Union, Any, Iterable
-
 import torch
 
 from allennlp.common import Params
@@ -22,7 +21,6 @@ from allennlp.training import util as training_util
 from allennlp.training.callbacks.callback import Callback
 from allennlp.training.callbacks.callback_handler import CallbackHandler
 from allennlp.training.callbacks.events import Events
-from allennlp.training.moving_average import MovingAverage
 from allennlp.training.optimizers import Optimizer
 from allennlp.training.trainer_pieces import TrainerPieces
 from allennlp.training.trainer_base import TrainerBase
@@ -41,7 +39,6 @@ class CallbackTrainer(TrainerBase):
                  shuffle: bool = True,
                  serialization_dir: Optional[str] = None,
                  cuda_device: Union[int, List] = -1,
-                 moving_average: Optional[MovingAverage] = None,
                  callbacks: List[Callback] = None) -> None:
         """
         A trainer for doing supervised learning. It just takes a labeled dataset
@@ -80,10 +77,6 @@ class CallbackTrainer(TrainerBase):
             this parameter is not passed.
         cuda_device : ``Union[int, List[int]]``, optional (default=-1)
             An integer or list of integers specifying the CUDA device(s) to use. If -1, the CPU is used.
-        moving_average : ``MovingAverage``, optional (default = None)
-            If provided, will be used to maintain a moving average of all trainable model parameters,
-            which should be substituted in before checkpointing or validation or anything else that
-            requires it.
         callbacks : ``List[Callback]``, optional (default=None)
             A list of callbacks that will be called based on training events.
         """
@@ -107,7 +100,6 @@ class CallbackTrainer(TrainerBase):
 
         # For capturing overall metrics
         self.metrics: Dict[str, Any] = {}
-        self.moving_average = moving_average
 
         self.batch_num_total = 0
         self.batch_group: List[TensorDict] = []
@@ -171,10 +163,6 @@ class CallbackTrainer(TrainerBase):
 
         return loss
 
-    def _apply_moving_average(self) -> None:
-        if self.moving_average is not None:
-            self.moving_average.apply(self.batch_num_total)
-
     def train_one_batch_group(self, batch_group: List[TensorDict]) -> str:
         """
         Handles the training for a single batch group.
@@ -204,7 +192,6 @@ class CallbackTrainer(TrainerBase):
                                                        self.train_loss,
                                                        self.batches_this_epoch)
 
-        self._apply_moving_average()
         self.handler.fire_event(Events.BATCH_END)
 
         return training_util.description_from_metrics(self.train_metrics)
@@ -300,11 +287,6 @@ class CallbackTrainer(TrainerBase):
         parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
         optimizer = Optimizer.from_params(parameters, params.pop("optimizer"))
 
-        if "moving_average" in params:
-            moving_average = MovingAverage.from_params(params.pop("moving_average"), parameters=parameters)
-        else:
-            moving_average = None
-
         callbacks_params = params.pop("callbacks", [])
         callbacks: List[Callback] = [Callback.from_params(params=callback_params,
                                                           model=model,
@@ -326,5 +308,4 @@ class CallbackTrainer(TrainerBase):
                    shuffle=shuffle,
                    serialization_dir=serialization_dir,
                    cuda_device=cuda_device,
-                   moving_average=moving_average,
                    callbacks=callbacks)

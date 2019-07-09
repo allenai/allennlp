@@ -211,7 +211,6 @@ class GanCallbackTrainer(CallbackTrainer):
                  shuffle: bool = False,
                  serialization_dir: Optional[str] = None,
                  cuda_device: Union[int, List] = -1,
-                 moving_average=None,
                  callbacks: List[Callback] = None) -> None:
         super().__init__(model,
                          train_dataset,
@@ -221,7 +220,6 @@ class GanCallbackTrainer(CallbackTrainer):
                          shuffle,
                          serialization_dir,
                          cuda_device,
-                         None,  # MovingAverage
                          callbacks)
         # Need to track our own metrics as well
         self._reset_counters()

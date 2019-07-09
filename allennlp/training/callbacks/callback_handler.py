@@ -1,4 +1,4 @@
-from typing import Iterable, Dict, NamedTuple, Callable, List
+from typing import Iterable, Dict, NamedTuple, Callable, List, TypeVar, Type
 from collections import defaultdict
 import inspect
 import logging
@@ -7,6 +7,9 @@ from allennlp.training.trainer_base import TrainerBase
 from allennlp.training.callbacks.callback import Callback
 
 logger = logging.getLogger(__name__)
+
+
+CallbackType = TypeVar('CallbackType', bound=Callback)  # pylint: disable=invalid-name
 
 
 class EventHandler(NamedTuple):
@@ -45,6 +48,9 @@ class CallbackHandler:
                  verbose: bool = False) -> None:
         # Set up callbacks
         self._callbacks: Dict[str, List[EventHandler]] = defaultdict(list)
+
+        # This is just so we can find specific types of callbacks.
+        self._callbacks_by_type: Dict[type, List[Callback]] = defaultdict(list)
         self.state = state
         self.verbose = verbose
 
@@ -61,12 +67,18 @@ class CallbackHandler:
                      for callback_list in self._callbacks.values()
                      for callback in callback_list})
 
+    def get_callbacks(self, typ: Type[CallbackType]) -> List[CallbackType]:
+        # pylint: disable=protected-access
+        return self._callbacks_by_type.get(typ, [])  # type: ignore
+
     def add_callback(self, callback: Callback) -> None:
         for name, method in inspect.getmembers(callback, _is_event_handler):
             event = getattr(method, '_event')
             priority = getattr(method, '_priority')
             self._callbacks[event].append(EventHandler(name, callback, method, priority))
             self._callbacks[event].sort(key=lambda eh: eh.priority)
+
+            self._callbacks_by_type[type(callback)].append(callback)
 
     def fire_event(self, event: str) -> None:
         """
@@ -75,5 +87,5 @@ class CallbackHandler:
         """
         for event_handler in self._callbacks.get(event, []):
             if self.verbose:
-                print(f"event {event} -> {event_handler.name}")
+                logger.info(f"event {event} -> {event_handler.name}")
             event_handler.handler(self.state)

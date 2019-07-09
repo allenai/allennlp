@@ -10,6 +10,7 @@ from allennlp.data.instance import Instance
 from allennlp.data.iterators import DataIterator
 from allennlp.training import util as training_util
 from allennlp.training.callbacks.callback import Callback, handle_event
+from allennlp.training.callbacks.update_moving_average import UpdateMovingAverage
 from allennlp.training.callbacks.events import Events
 
 if TYPE_CHECKING:
@@ -45,8 +46,8 @@ class Validate(Callback):
     @handle_event(Events.VALIDATE)
     def validate(self, trainer: 'CallbackTrainer'):
         # If the trainer has a moving average, replace with its values
-        if trainer.moving_average:
-            trainer.moving_average.assign_average_value()
+        for moving_average_callback in trainer.handler.get_callbacks(UpdateMovingAverage):
+            moving_average_callback.moving_average.assign_average_value()
 
         with torch.no_grad():
             # We have a validation set, so compute all the metrics on it.
@@ -90,5 +91,5 @@ class Validate(Callback):
                                                             reset=True)
 
         # If the trainer has a moving average, restore
-        if trainer.moving_average:
-            trainer.moving_average.restore()
+        for moving_average_callback in trainer.handler.get_callbacks(UpdateMovingAverage):
+            moving_average_callback.moving_average.restore()

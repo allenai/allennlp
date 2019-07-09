@@ -8,6 +8,7 @@ from allennlp.training import util as training_util
 from allennlp.training.checkpointer import Checkpointer
 from allennlp.training.callbacks.callback import Callback, handle_event
 from allennlp.training.callbacks.events import Events
+from allennlp.training.callbacks.update_moving_average import UpdateMovingAverage
 
 if TYPE_CHECKING:
     from allennlp.training.callback_trainer import CallbackTrainer  # pylint:disable=unused-import
@@ -61,8 +62,8 @@ class Checkpoint(Callback):
 
     def _save_checkpoint(self, epoch: str, trainer: 'CallbackTrainer'):
         # If the trainer has a moving average, replace with its values
-        if trainer.moving_average:
-            trainer.moving_average.assign_average_value()
+        for moving_average_callback in trainer.handler.get_callbacks(UpdateMovingAverage):
+            moving_average_callback.moving_average.assign_average_value()
 
         training_states = {}
 
@@ -88,9 +89,8 @@ class Checkpoint(Callback):
                 is_best_so_far=is_best_so_far)
 
         # If the trainer has a moving average, restore.
-        if trainer.moving_average:
-            trainer.moving_average.restore()
-
+        for moving_average_callback in trainer.handler.get_callbacks(UpdateMovingAverage):
+            moving_average_callback.moving_average.restore()
 
     @handle_event(Events.TRAINING_START)
     def restore_checkpoint(self, trainer: 'CallbackTrainer'):
