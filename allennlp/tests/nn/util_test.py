@@ -624,7 +624,7 @@ class TestNnUtil(AllenNlpTestCase):
 
         loss = util.sequence_cross_entropy_with_logits(tensor, targets, weights)
         loss2 = util.sequence_cross_entropy_with_logits(tensor2, targets, weights)
-        numpy.testing.assert_almost_equal(loss.data.numpy(), loss2.data.numpy())
+        assert loss.data.numpy() == loss2.data.numpy()
 
     def test_sequence_cross_entropy_with_logits_smooths_labels_correctly(self):
         tensor = torch.rand([1, 3, 4])
@@ -679,7 +679,7 @@ class TestNnUtil(AllenNlpTestCase):
                                                               average=None)
         total_token_loss = (vector_loss * weights.float().sum(dim=-1)).sum()
         average_token_loss = (total_token_loss / weights.float().sum()).detach()
-        assert_almost_equal(loss.detach().item(), average_token_loss.item())
+        assert_almost_equal(loss.detach().item(), average_token_loss.item(), decimal=5)
 
     def test_replace_masked_values_replaces_masked_values_with_finite_value(self):
         tensor = torch.FloatTensor([[[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]]])
