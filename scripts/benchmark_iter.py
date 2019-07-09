@@ -24,7 +24,8 @@ def time_iterable(iterable, get_size, batch_interval):
 
         if batch_count % batch_interval == 0:
             end = time.perf_counter()
-            print(f"b/s total: {(end - start)/batch_count} b/s last: {(end - last)/batch_interval} mean interval size: {cumulative_batch_size/(batch_count/batch_interval)}")
+            approximate_intervals = batch_count / batch_interval
+            print(f"b/s total: {(end - start)/batch_count} b/s last: {(end - last)/batch_interval} mean interval size: {cumulative_batch_size/approximate_intervals}")
             last = end
 
         pass
