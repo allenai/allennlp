@@ -40,12 +40,12 @@ if __name__ == "__main__":
     pieces = TrainerPieces.from_params(params, args.serialization_dir)
 
     # Time just the reader.
-    time_iterable(pieces.train_dataset, lambda batch: 1, BATCH_INTERVAL * MEAN_BATCH_SIZE)
+    #time_iterable(pieces.train_dataset, lambda batch: 1, BATCH_INTERVAL * MEAN_BATCH_SIZE)
 
     # Get tqdm for the training batches
-    #raw_generator = pieces.iterator(pieces.train_dataset,
-    #                                  num_epochs=1,
-    #                                  shuffle=True)
-    #generator_tqdm = Tqdm.tqdm(raw_generator)
-    #time_iterable(generator_tqdm, lambda batch: batch['source']['tokens'].size(0), BATCH_INTERVAL)
+    raw_generator = pieces.iterator(pieces.train_dataset,
+                                      num_epochs=1,
+                                      shuffle=True)
+    generator_tqdm = Tqdm.tqdm(raw_generator)
+    time_iterable(generator_tqdm, lambda batch: batch['source']['tokens'].size(0), BATCH_INTERVAL)
 
