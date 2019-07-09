@@ -44,8 +44,9 @@ from allennlp.common import Params
 from allennlp.common.util import prepare_environment, prepare_global_logging, cleanup_global_logging, dump_metrics
 from allennlp.models.archival import archive_model, CONFIG_NAME
 from allennlp.models.model import Model, _DEFAULT_WEIGHTS
-from allennlp.training.trainer import Trainer, TrainerPieces
+from allennlp.training.trainer import Trainer
 from allennlp.training.trainer_base import TrainerBase
+from allennlp.training.trainer_pieces import TrainerPieces
 from allennlp.training.util import create_serialization_dir, evaluate
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -196,9 +197,9 @@ def train_model(params: Params,
     best_model: ``Model``
         The model with the best epoch weights.
     """
-    prepare_environment(params)
     create_serialization_dir(params, serialization_dir, recover, force)
     stdout_handler = prepare_global_logging(serialization_dir, file_friendly_logging)
+    prepare_environment(params)
 
     cuda_device = params.params.get('trainer').get('cuda_device', -1)
     check_for_gpu(cuda_device)
@@ -224,18 +225,19 @@ def train_model(params: Params,
                 validation_data=pieces.validation_dataset,
                 params=pieces.params,
                 validation_iterator=pieces.validation_iterator)
+
+        evaluation_iterator = pieces.validation_iterator or pieces.iterator
+        evaluation_dataset = pieces.test_dataset
+
     else:
-        # Workaround to obtain the evaluation parts.
-        pieces = TrainerPieces.from_params(params.duplicate(),  # pylint: disable=no-member
-                                           serialization_dir,
-                                           recover,
-                                           cache_directory,
-                                           cache_prefix)
+        if evaluate_on_test:
+            raise ValueError("--evaluate-on-test only works with the default Trainer. "
+                             "If you're using the CallbackTrainer you can use a callback "
+                             "to evaluate at Events.TRAINING_END; otherwise you'll have "
+                             "to run allennlp evaluate separately.")
 
         trainer = TrainerBase.from_params(params, serialization_dir, recover)
-
-    evaluation_iterator = pieces.validation_iterator or pieces.iterator
-    evaluation_dataset = pieces.test_dataset
+        evaluation_dataset = None
 
     params.assert_empty('base train command')
 

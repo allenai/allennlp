@@ -30,7 +30,7 @@ class TestWordTokenizer(AllenNlpTestCase):
     def test_stems_and_filters_stopwords_correctly(self):
         tokenizer = WordTokenizer.from_params(Params({'word_stemmer': {'type': 'porter'},
                                                       'word_filter': {'type': 'stopwords'}}))
-        sentence = "this (sentence) has 'crazy' \"punctuation\"."
-        expected_tokens = ["sentenc", "ha", "crazi", "punctuat"]
+        sentence = "this sentence has some stopwords, (but it doesn't have crazy \"punctuation\")."
+        expected_tokens = ["sentenc", "stopword", ",", "(", "crazi", '"', "punctuat", '"', ")", "."]
         tokens = [t.text for t in tokenizer.tokenize(sentence)]
         assert tokens == expected_tokens

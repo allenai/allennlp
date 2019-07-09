@@ -45,12 +45,16 @@ class BertClassificationTestReader(DatasetReader):
 class TestBertForClassification(ModelTestCase):
     def setUp(self):
         super().setUp()
-        monkeypatch = MonkeyPatch()
+        self.monkeypatch = MonkeyPatch()
 
         # monkeypatch the PretrainedBertModel to return the tiny test fixture model
         config_path = self.FIXTURES_ROOT / 'bert' / 'config.json'
         config = BertConfig(str(config_path))
-        monkeypatch.setattr(BertModel, 'from_pretrained', lambda _: BertModel(config))
+        self.monkeypatch.setattr(BertModel, 'from_pretrained', lambda _: BertModel(config))
+
+    def tearDown(self):
+        self.monkeypatch.undo()
+        super().tearDown()
 
     def test_model_can_train_save_and_load(self):
         param_file = self.FIXTURES_ROOT / 'bert' / 'bert_for_classification.jsonnet'

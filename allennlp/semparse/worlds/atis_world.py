@@ -56,7 +56,7 @@ class AtisWorld():
         We use this tokenizer to tokenize the utterances.
     """
 
-    database_file = "https://s3-us-west-2.amazonaws.com/allennlp/datasets/atis/atis.db"
+    database_file = "https://allennlp.s3.amazonaws.com/datasets/atis/atis.db"
     sql_table_context = None
 
     def __init__(self,
