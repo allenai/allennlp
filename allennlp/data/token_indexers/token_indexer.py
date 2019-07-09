@@ -1,5 +1,5 @@
 from typing import Dict, List, TypeVar, Generic
-
+import warnings
 
 import torch
 import numpy
@@ -32,6 +32,7 @@ class TokenIndexer(Generic[TokenType], Registrable):
         :class:`TokenIndexer` for the same field, otherwise you'll get mismatched tensor sizes.
     """
     default_implementation = 'single_id'
+    has_warned_for_as_padded_tensor = False
 
     def __init__(self,
                  token_min_padding_length: int = 0) -> None:
@@ -101,8 +102,16 @@ class TokenIndexer(Generic[TokenType], Registrable):
         ``padding_lengths`` is used to provide supplemental padding parameters which are needed
         in some cases.  For example, it contains the widths to pad characters to when doing
         character-level padding.
+
+        Note that this method should be abstract, but it is implemented to allow backward compatability.
         """
-        raise NotImplementedError
+        if self.has_warned_for_as_padded_tensor:
+            warnings.warn("Using a Field with pad_token_sequence, which will be depreciated in 1.0.0."
+                            "Please implement as_padded_tensor instead.", FutureWarning)
+            self.has_warned_for_as_padded_tensor = True
+
+        padded = self.pad_token_sequence(tokens, desired_num_tokens, padding_lengths)
+        return {key: torch.LongTensor(array) for key, array in padded.items()}
 
     def pad_token_sequence(self,
                            tokens: Dict[str, List[TokenType]],
@@ -112,8 +121,7 @@ class TokenIndexer(Generic[TokenType], Registrable):
         Depreceated. Please use `as_padded_tensor` instead.
         TODO(Mark): remove in 1.0 release.
         """
-        pass
-
+        raise NotImplementedError
 
     def get_keys(self, index_name: str) -> List[str]:
         """
