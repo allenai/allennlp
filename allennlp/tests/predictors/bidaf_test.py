@@ -113,6 +113,7 @@ class TestBidafPredictor(AllenNlpTestCase):
         assert 'span_end' in new_instances[0].fields
         assert new_instances[0].fields['span_start'] is not None
         assert new_instances[0].fields['span_end'] is not None
+        assert len(new_instances) == 1
 
     def test_get_gradients(self):
         inputs = {

@@ -1,12 +1,11 @@
 # pylint: disable=no-self-use,invalid-name
-from pytest import approx
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor
-from allennlp.interpret.attackers import InputReduction, Hotflip
+from allennlp.interpret.attackers import InputReduction
 
-class TestAttack(AllenNlpTestCase):
-    def test_attackers(self):
+class TestInputReduction(AllenNlpTestCase):
+    def test_input_reduction(self):
         inputs = {
             "premise": "I always write unit tests for my code.",
             "hypothesis": "One time I didn't write any unit tests for my code."

@@ -96,6 +96,7 @@ class TestDecomposableAttentionPredictor(AllenNlpTestCase):
         assert 'premise' in new_instances[0].fields
         assert new_instances[0].fields['hypothesis'] is not None
         assert new_instances[0].fields['premise'] is not None
+        assert len(new_instances) == 1
 
     def test_get_gradients(self):
         inputs = {
