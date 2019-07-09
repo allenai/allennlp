@@ -4,6 +4,7 @@ from typing import Dict, List
 
 import pytest
 import numpy
+import torch
 
 from allennlp.data import Token, Vocabulary
 from allennlp.data.fields import TextField
@@ -31,17 +32,15 @@ class DictReturningTokenIndexer(TokenIndexer):
                 "additional_key": [22, 29]
         }
 
-    def get_padding_token(self) -> int:
-        return 0
-
     def get_padding_lengths(self, token: int) -> Dict[str, int]:  # pylint: disable=unused-argument
         return {}
 
-    def pad_token_sequence(self,
-                           tokens: Dict[str, List[int]],
-                           desired_num_tokens: Dict[str, int],
-                           padding_lengths: Dict[str, int]) -> Dict[str, List[int]]:  # pylint: disable=unused-argument
-        return {key: pad_sequence_to_length(val, desired_num_tokens[key]) for key, val in tokens.items()}
+    def as_padded_tensor(self,
+                         tokens: Dict[str, List[int]],
+                         desired_num_tokens: Dict[str, int],
+                         padding_lengths: Dict[str, int]) -> Dict[str, torch.Tensor]:  # pylint: disable=unused-argument
+        return {key: torch.LongTensor(pad_sequence_to_length(val, desired_num_tokens[key]))
+                for key, val in tokens.items()}
 
     def get_keys(self, index_name: str) -> List[str]:
         # pylint: disable=unused-argument,no-self-use

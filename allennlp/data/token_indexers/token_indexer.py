@@ -1,4 +1,4 @@
-from typing import Dict, List, TypeVar, Generic, Type
+from typing import Dict, List, TypeVar, Generic
 
 
 import torch
@@ -61,12 +61,16 @@ class TokenIndexer(Generic[TokenType], Registrable):
         """
         raise NotImplementedError
 
-    def get_padding_token(self) -> TokenType:
+    def get_padding_token(self) -> TokenType: # pylint: disable=no-self-use
         """
+        Depreceated. Please just implement the padding token in `as_padded_tensor` instead.
+        TODO(Mark): remove in 1.0 release. This is only a concrete implementation to preserve
+        backward compatability, otherwise it would be abstract.
+
         When we need to add padding tokens, what should they look like?  This method returns a
         "blank" token of whatever type is returned by :func:`tokens_to_indices`.
         """
-        raise NotImplementedError
+        return 0
 
     def get_padding_lengths(self, token: TokenType) -> Dict[str, int]:
         """
@@ -85,14 +89,14 @@ class TokenIndexer(Generic[TokenType], Registrable):
         """
         return self._token_min_padding_length
 
-    def pad_token_sequence(self,
-                           tokens: Dict[str, List[TokenType]],
-                           desired_num_tokens: Dict[str, int],
-                           padding_lengths: Dict[str, int]) -> Dict[str, List[TokenType]]:
+    def as_padded_tensor(self,
+                         tokens: Dict[str, List[TokenType]],
+                         desired_num_tokens: Dict[str, int],
+                         padding_lengths: Dict[str, int]) -> Dict[str, torch.Tensor]:
         """
-        This method pads a list of tokens to ``desired_num_tokens`` and returns a padded copy of the
-        input tokens.  If the input token list is longer than ``desired_num_tokens`` then it will be
-        truncated.
+        This method pads a list of tokens to ``desired_num_tokens`` and returns that padded list
+        of input tokens as a torch Tensor. If the input token list is longer than ``desired_num_tokens``
+        then it will be truncated.
 
         ``padding_lengths`` is used to provide supplemental padding parameters which are needed
         in some cases.  For example, it contains the widths to pad characters to when doing
@@ -100,13 +104,16 @@ class TokenIndexer(Generic[TokenType], Registrable):
         """
         raise NotImplementedError
 
-    def array_type(self) -> Type[torch.Tensor]: # pylint: disable=no-self-use
+    def pad_token_sequence(self,
+                           tokens: Dict[str, List[TokenType]],
+                           desired_num_tokens: Dict[str, int],
+                           padding_lengths: Dict[str, int]) -> Dict[str, TokenType]:
         """
-        Token indexers typically require discrete indices, and such should be long tensors.
-        However, some indexers create vectors directly, in which case this method can be
-        overridden, so that the :class:`TextField` knows what type of tensor to create.
+        Depreceated. Please use `as_padded_tensor` instead.
+        TODO(Mark): remove in 1.0 release.
         """
-        return torch.LongTensor
+        pass
+
 
     def get_keys(self, index_name: str) -> List[str]:
         """

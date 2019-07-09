@@ -3,6 +3,7 @@ A ``TextField`` represents a string of text, the kind that you might want to rep
 standard word vectors, or pass through an LSTM.
 """
 from typing import Dict, List, Optional, Iterator
+import warnings
 import textwrap
 
 from overrides import overrides
@@ -34,6 +35,8 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
     ``SingleIdTokenIndexer`` produces an array of shape (num_tokens,), while a
     ``TokenCharactersIndexer`` produces an array of shape (num_tokens, num_characters).
     """
+
+    has_warned_for_as_padded_tensor = False
 
     def __init__(self, tokens: List[Token], token_indexers: Dict[str, TokenIndexer]) -> None:
         self.tokens = tokens
@@ -145,13 +148,26 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
                                   for indexed_tokens_key in self._indexer_name_to_indexed_token[indexer_name]}
             indices_to_pad = {indexed_tokens_key: self._indexed_tokens[indexed_tokens_key]
                               for indexed_tokens_key in self._indexer_name_to_indexed_token[indexer_name]}
-            padded_array = indexer.pad_token_sequence(indices_to_pad,
-                                                      desired_num_tokens, padding_lengths)
+
+            try:
+                indexer_tensors = indexer.as_padded_tensor(indices_to_pad,
+                                                           desired_num_tokens,
+                                                           padding_lengths)
+            except AttributeError:
+
+                if self.has_warned_for_as_padded_tensor:
+                    warnings.warn("Using a Field with pad_token_sequence, which will be depreciated in 1.0.0."
+                                  "Please implement as_padded_tensor instead.", FutureWarning)
+                    self.has_warned_for_as_padded_tensor = True
+
+                padded_array = indexer.pad_token_sequence(indices_to_pad,
+                                                          desired_num_tokens,
+                                                          padding_lengths)
+                indexer_tensors = {key: torch.LongTensor(array) for key, array in padded_array.items()}
+
             # We use the key of the indexer to recognise what the tensor corresponds to within the
             # field (i.e. the result of word indexing, or the result of character indexing, for
             # example).
-            array_type = indexer.array_type()
-            indexer_tensors = {key: array_type(array) for key, array in padded_array.items()}
             tensors.update(indexer_tensors)
         return tensors
 

@@ -49,35 +49,27 @@ class SpacyTokenIndexer(TokenIndexer[numpy.ndarray]):
 
         if not all([isinstance(x, SpacyToken) for x in tokens]):
             raise ValueError("The spacy indexer requires you to use a Tokenizer which produces SpacyTokens.")
-        indices: List[int] = []
+        indices: List[numpy.ndarray] = []
         for token in tokens:
             indices.append(token.vector)
 
         return {index_name: indices}
 
-    @overrides
-    def get_padding_token(self) -> int:
-        return 0
-
-    @overrides
-    def get_padding_lengths(self, token: int) -> Dict[str, int]:  # pylint: disable=unused-argument
-        return {}
-
-    @overrides
-    def array_type(self):
-        return torch.FloatTensor
-
-    def _zeros(self):
+    def get_padding_token(self) -> numpy.ndarray:
         return numpy.zeros(self._hidden_dim, dtype=numpy.float32)
 
     @overrides
-    def pad_token_sequence(self,
-                           tokens: Dict[str, List[numpy.ndarray]],
-                           desired_num_tokens: Dict[str, int],
-                           padding_lengths: Dict[str, int]) -> Dict[str, List[numpy.ndarray]]:  # pylint: disable=unused-argument
+    def get_padding_lengths(self,
+                            token: numpy.ndarray) -> Dict[str, numpy.ndarray]:  # pylint: disable=unused-argument
+        return {}
 
-        val = {key: pad_sequence_to_length(val,
-                                           desired_num_tokens[key],
-                                           default_value=self._zeros)
+    @overrides
+    def as_padded_tensor(self,
+                         tokens: Dict[str, List[numpy.ndarray]],
+                         desired_num_tokens: Dict[str, int],
+                         padding_lengths: Dict[str, int]) -> Dict[str, torch.Tensor]:  # pylint: disable=unused-argument
+
+        val = {key: torch.FloatTensor(pad_sequence_to_length(
+                val, desired_num_tokens[key], default_value=self.get_padding_token))
                for key, val in tokens.items()}
         return val
