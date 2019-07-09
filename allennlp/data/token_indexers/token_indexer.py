@@ -1,13 +1,14 @@
-from typing import Dict, List, TypeVar, Generic
+from typing import Dict, List, TypeVar, Generic, Type
 
 
 import torch
+import numpy
 
 from allennlp.common import Registrable
 from allennlp.data.tokenizers.token import Token
 from allennlp.data.vocabulary import Vocabulary
 
-TokenType = TypeVar("TokenType", int, List[int])  # pylint: disable=invalid-name
+TokenType = TypeVar("TokenType", int, List[int], numpy.ndarray)  # pylint: disable=invalid-name
 
 
 class TokenIndexer(Generic[TokenType], Registrable):
@@ -99,7 +100,12 @@ class TokenIndexer(Generic[TokenType], Registrable):
         """
         raise NotImplementedError
 
-    def array_type(self):
+    def array_type(self) -> Type[torch.Tensor]: # pylint: disable=no-self-use
+        """
+        Token indexers typically require discrete indices, and such should be long tensors.
+        However, some indexers create vectors directly, in which case this method can be
+        overridden, so that the :class:`TextField` knows what type of tensor to create.
+        """
         return torch.LongTensor
 
     def get_keys(self, index_name: str) -> List[str]:

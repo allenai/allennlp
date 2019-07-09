@@ -1,6 +1,5 @@
 import re
 from typing import List
-import sys
 
 from overrides import overrides
 import spacy

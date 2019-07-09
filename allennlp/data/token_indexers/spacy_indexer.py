@@ -1,5 +1,4 @@
 from typing import Dict, List
-import itertools
 
 from overrides import overrides
 from spacy.tokens import Token as SpacyToken
@@ -13,21 +12,18 @@ from allennlp.data.token_indexers.token_indexer import TokenIndexer
 
 
 @TokenIndexer.register("spacy")
-class SpacyTokenIndexer(TokenIndexer[int]):
+class SpacyTokenIndexer(TokenIndexer[numpy.ndarray]):
     """
-    This :class:`TokenIndexer` represents tokens as single integers.
+    This :class:`SpacyTokenIndexer` represents tokens as word vectors
+    from a spacy model. You might want to do this for two main reasons;
+    easier integration with a spacy pipeline and no out of vocabulary
+    tokens.
 
     Parameters
     ----------
-    namespace : ``str``, optional (default=``tokens``)
-        We will use this namespace in the :class:`Vocabulary` to map strings to indices.
-    lowercase_tokens : ``bool``, optional (default=``False``)
-        If ``True``, we will call ``token.lower()`` before getting an index for the token from the
-        vocabulary.
-    start_tokens : ``List[str]``, optional (default=``None``)
-        These are prepended to the tokens provided to ``tokens_to_indices``.
-    end_tokens : ``List[str]``, optional (default=``None``)
-        These are appended to the tokens provided to ``tokens_to_indices``.
+    hidden_dim : ``int``, optional (default=``96``)
+        The dimension of the vectors that spacy generates for
+        representing words.
     token_min_padding_length : ``int``, optional (default=``0``)
         See :class:`TokenIndexer`.
     """
@@ -39,14 +35,17 @@ class SpacyTokenIndexer(TokenIndexer[int]):
         super().__init__(token_min_padding_length)
 
     @overrides
-    def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):
+    def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]): # pylint: disable=unused-argument
+        # We are using spacy to generate embeddings directly for our model,
+        # so we don't need to capture the vocab - it is defined by the spacy
+        # model we are using instead.
         pass
 
     @overrides
     def tokens_to_indices(self,
-                          tokens: List[Token],
-                          vocabulary: Vocabulary,
-                          index_name: str) -> Dict[str, List[int]]:
+                          tokens: List[SpacyToken],
+                          vocabulary: Vocabulary, # pylint: disable=unused-argument
+                          index_name: str) -> Dict[str, List[numpy.ndarray]]:
 
         if not all([isinstance(x, SpacyToken) for x in tokens]):
             raise ValueError("The spacy indexer requires you to use a Tokenizer which produces SpacyTokens.")
@@ -68,13 +67,17 @@ class SpacyTokenIndexer(TokenIndexer[int]):
     def array_type(self):
         return torch.FloatTensor
 
+    def _zeros(self):
+        return numpy.zeros(self._hidden_dim, dtype=numpy.float32)
+
     @overrides
     def pad_token_sequence(self,
-                           tokens: Dict[str, List[int]],
+                           tokens: Dict[str, List[numpy.ndarray]],
                            desired_num_tokens: Dict[str, int],
-                           padding_lengths: Dict[str, int]) -> Dict[str, List[int]]:  # pylint: disable=unused-argument
+                           padding_lengths: Dict[str, int]) -> Dict[str, List[numpy.ndarray]]:  # pylint: disable=unused-argument
 
-        def zeros(): return numpy.zeros(self._hidden_dim, dtype=numpy.float32)
-        val = {key: pad_sequence_to_length(val, desired_num_tokens[key], default_value=zeros)
-                for key, val in tokens.items()}
+        val = {key: pad_sequence_to_length(val,
+                                           desired_num_tokens[key],
+                                           default_value=self._zeros)
+               for key, val in tokens.items()}
         return val

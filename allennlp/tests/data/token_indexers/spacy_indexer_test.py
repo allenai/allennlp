@@ -1,8 +1,5 @@
 # pylint: disable=no-self-use,invalid-name
-from collections import defaultdict
-
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data import Token
 from allennlp.data.token_indexers.spacy_indexer import SpacyTokenIndexer
 from allennlp.data.fields.text_field import TextField
 from allennlp.common.util import get_spacy_model
@@ -22,8 +19,6 @@ class TestSpacyTokenIndexer(AllenNlpTestCase):
         array_dict = indexer.tokens_to_indices(tokens, vocab, "spacy")
         assert len(array_dict["spacy"]) == 5
         assert len(array_dict["spacy"][0]) == 96
-
-        indexer.pad_token_sequence()
 
         # Check it also works with field
         lengths = field.get_padding_lengths()
