@@ -39,34 +39,15 @@ class Hotflip(Attacker):
 
         # handle when a model uses character-level inputs, e.g., ELMo or a CharCNN
         if "token_characters" in self.predictor._dataset_reader._token_indexers:
-            all_tokens_tokenized = self.predictor._dataset_reader._token_indexers["token_characters"]._character_tokenizer.batch_tokenize(all_tokens)
-            pad_length = max([len(x) for x in all_tokens_tokenized])
-            character_tokens = []
-            if getattr(all_tokens_tokenized[0][0], 'text_id', None) is not None:
-                for tok in all_tokens_tokenized:
-                    tmp = [x.text_id for x in tok]
-                    tmp += [0] * (pad_length-len(tmp))
-                    character_tokens.append(tmp)
-            else:
-                for tok in all_tokens_tokenized:
-                    tmp = [self.vocab.get_token_index(x.text, \
-                        self.predictor._dataset_reader._token_indexers["token_characters"]._namespace) for x in tok]
-
-                    tmp += [0] * (pad_length-len(tmp))
-                    character_tokens.append(tmp)
-            # character_tokens = torch.LongTensor(character_tokens)
-            # all_inputs["token_characters"] = character_tokens.unsqueeze(0)
-
-            # indexer = self.predictor._dataset_reader._token_indexers["token_characters"]
-            # tokens = [Token(x) for x in all_tokens]
-            # max_token_length = max(len(x) for x in all_tokens)
-            # indexed_tokens = indexer.tokens_to_indices(tokens, self.vocab, "token_characters")
-            # padded_tokens = indexer.pad_token_sequence(indexed_tokens,
-            #                                            desired_num_tokens={"token_characters": len(tokens)},
-            #                                            padding_lengths={"num_token_characters": max_token_length})
-            # all_inputs.update(padded_tokens)
-
-
+            indexer = self.predictor._dataset_reader._token_indexers["token_characters"]
+            tokens = [Token(x) for x in all_tokens]
+            max_token_length = max(len(x) for x in all_tokens)
+            indexed_tokens = indexer.tokens_to_indices(tokens, self.vocab, "token_characters")
+            padded_tokens = indexer.pad_token_sequence(indexed_tokens,
+                                                       desired_num_tokens={"token_characters": len(tokens)},
+                                                       padding_lengths={"num_token_characters": max_token_length})
+            all_inputs['token_characters'] = torch.LongTensor(padded_tokens['token_characters'])
+  
             if "elmo" in self.predictor._dataset_reader._token_indexers:
                 pad_length = pad_length + 2 # elmo has start/end word
                 elmo_tokens = []
@@ -80,7 +61,7 @@ class Hotflip(Attacker):
             if isinstance(module, TextFieldEmbedder):
                 embedder = module
         # pass all tokens through the fake matrix and create an embedding out of it.
-        embedding_matrix = embedder(all_inputs).squeeze()
+        embedding_matrix = embedder(all_inputs).squeeze()        
         return Embedding(num_embeddings=self.vocab.get_vocab_size('tokens'), embedding_dim=embedding_matrix.shape[1], weight=embedding_matrix, trainable=False)
 
     def attack_from_json(self,
