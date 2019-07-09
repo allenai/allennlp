@@ -64,9 +64,9 @@ class Hotflip(Attacker):
                          trainable=False)
 
     def attack_from_json(self,
-                         inputs: JsonDict,
-                         name_of_input_field_to_attack: str,
-                         name_of_grad_input_field: str):
+                         inputs: JsonDict = None,
+                         name_of_input_field_to_attack: str = 'tokens',
+                         name_of_grad_input_field: str = 'grad_input_1'):
 
         """
         Replaces one token at a time from the input until the model's prediction changes.
@@ -117,9 +117,9 @@ class Hotflip(Attacker):
                 input_tokens = new_instances[0][name_of_input_field_to_attack]._indexed_tokens["tokens"]
                 original_id_of_token_to_flip = input_tokens[index_of_token_to_flip]
                 new_id_of_flipped_token = \
-                    self.first_order_taylor(grad[index_of_token_to_flip],
-                                            self.token_embedding.weight,
-                                            original_id_of_token_to_flip)
+                    first_order_taylor(grad[index_of_token_to_flip],
+                                       self.token_embedding.weight,
+                                       original_id_of_token_to_flip)
                 # flip token
                 new_instances[0][name_of_input_field_to_attack].tokens[index_of_token_to_flip] = \
                     Token(self.vocab._index_to_token["tokens"][new_id_of_flipped_token])
@@ -149,7 +149,7 @@ class Hotflip(Attacker):
                 # if the prediction has changed, we want to return the new answer
                 # for visualization in the demo.
                 if label_change:
-                    new_prediction = self.get_new_prediction(outputs)
+                    new_prediction = get_new_prediction(outputs)
                     break
 
             final_tokens.append(current_tokens)

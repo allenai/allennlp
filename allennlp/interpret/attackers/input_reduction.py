@@ -13,19 +13,26 @@ class InputReduction(Attacker):
     from the input _without_ changing the model's prediction.
     """
     def attack_from_json(self, inputs: JsonDict = None,
-                         target_field: str, gradient_index: str,
+                         name_of_input_field_to_attack: str = 'tokens',
+                         name_of_grad_input_field: str = 'grad_input_1',
                          ignore_tokens: List[str] = ["@@NULL@@"]):
+        """
+        `name_of_input_field_to_attack` is for example `tokens`, it says what the input
+        field is called. `name_of_grad_input_field` is for example `grad_input_1`, which
+        is a key into a grads dictionary.          
+        """
         original_instances = self.predictor.inputs_to_labeled_instances(inputs)
         final_tokens = []
         fields_to_check = {}
         for current_instances in original_instances:
             current_instances = [current_instances]
-            original_tokens = [x for x in current_instances[0][target_field].tokens]
+            original_tokens = \
+                [x for x in current_instances[0][name_of_input_field_to_attack].tokens]
 
             # Save fields that must be checked for equality
             test_instances = self.predictor.inputs_to_labeled_instances(inputs)
             for key in current_instances[0].fields.keys():
-                if key not in inputs and key != target_field:
+                if key not in inputs and key != name_of_input_field_to_attack:
                     fields_to_check[key] = test_instances[0][key]
 
             # Set num_ignore_tokens, which tells input reduction when to stop
@@ -36,11 +43,11 @@ class InputReduction(Attacker):
             # Set num_ignore_tokens for NER and build token mask
             else:
                 num_ignore_tokens, tag_mask, original_tags = \
-                    get_ner_tags_and_mask(current_instances, target_field, ignore_tokens)
-            current_tokens = current_instances[0][target_field].tokens
+                    get_ner_tags_and_mask(current_instances, name_of_input_field_to_attack, ignore_tokens)
+            current_tokens = current_instances[0][name_of_input_field_to_attack].tokens
             smallest_idx = -1
             # keep removing tokens
-            while len(current_instances[0][target_field]) >= num_ignore_tokens:
+            while len(current_instances[0][name_of_input_field_to_attack]) >= num_ignore_tokens:
                 # get gradients and predictions
                 grads, outputs = self.predictor.get_gradients(current_instances)
                 for output in outputs:
@@ -69,16 +76,18 @@ class InputReduction(Attacker):
                         break
 
                 # remove a token from the input
-                current_tokens = list(current_instances[0][target_field].tokens)
+                current_tokens = list(current_instances[0][name_of_input_field_to_attack].tokens)
                 current_instances, smallest_idx = \
-                    remove_one_token(grads[gradient_index], current_instances, target_field, ignore_tokens)
+                    remove_one_token(grads[name_of_grad_input_field],
+                                     current_instances,
+                                     name_of_input_field_to_attack, ignore_tokens)
 
             final_tokens.append(current_tokens)
         return sanitize({"final": final_tokens, "original": original_tokens})
 
 def remove_one_token(grads: np.ndarray,
                      instances: List[Instance] = None,
-                     target_field: str,
+                     name_of_input_field_to_attack: str = 'tokens',
                      ignore_tokens: List[str] = ["@@NULL@@"]) -> List[Instance]:
     """
     Finds the token with the smallest gradient and removes it.
@@ -87,7 +96,7 @@ def remove_one_token(grads: np.ndarray,
     grads_mag = [np.sqrt(grad.dot(grad)) for grad in grads]
 
     # Skip all ignore_tokens by setting grad to infinity
-    for tok_idx, tok in enumerate(instances[0][target_field].tokens):
+    for tok_idx, tok in enumerate(instances[0][name_of_input_field_to_attack].tokens):
         if tok in ignore_tokens:
             grads_mag[tok_idx] = float("inf")
     # For NER, skip all tokens that are not in outside
@@ -101,8 +110,8 @@ def remove_one_token(grads: np.ndarray,
         return instances
 
     # remove smallest
-    instances[0][target_field].tokens = \
-    instances[0][target_field].tokens[0:smallest] +  instances[0][target_field].tokens[smallest + 1:]
+    instances[0][name_of_input_field_to_attack].tokens = \
+    instances[0][name_of_input_field_to_attack].tokens[0:smallest] +  instances[0][name_of_input_field_to_attack].tokens[smallest + 1:]
     if "tags" in instances[0]:
         instances[0]["tags"].__dict__["field_list"] = \
             instances[0]["tags"].__dict__["field_list"][0:smallest] + \
@@ -112,7 +121,7 @@ def remove_one_token(grads: np.ndarray,
     return instances, smallest
 
 def get_ner_tags_and_mask(current_instances: List[Instance] = None,
-                          target_field: str,
+                          name_of_input_field_to_attack: str = 'tokens',
                           ignore_tokens: List[str] = ["@@NULL@@"]):
     """
     Used for the NER task. Sets the num_ignore tokens, saves the original
@@ -120,7 +129,7 @@ def get_ner_tags_and_mask(current_instances: List[Instance] = None,
     """
     # Set num_ignore_tokens
     num_ignore_tokens = 0
-    for token in current_instances[0][target_field].tokens:
+    for token in current_instances[0][name_of_input_field_to_attack].tokens:
         if str(token) in ignore_tokens:
             num_ignore_tokens += 1
 
