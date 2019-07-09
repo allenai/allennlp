@@ -624,7 +624,7 @@ class TestNnUtil(AllenNlpTestCase):
 
         loss = util.sequence_cross_entropy_with_logits(tensor, targets, weights)
         loss2 = util.sequence_cross_entropy_with_logits(tensor2, targets, weights)
-        assert loss.data.numpy() == loss2.data.numpy()
+        numpy.testing.assert_almost_equal(loss.data.numpy(), loss2.data.numpy())
 
     def test_sequence_cross_entropy_with_logits_smooths_labels_correctly(self):
         tensor = torch.rand([1, 3, 4])
