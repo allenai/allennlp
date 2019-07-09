@@ -124,7 +124,7 @@ class TestBidafPredictor(AllenNlpTestCase):
         predictor = Predictor.from_archive(archive, 'machine-comprehension')
 
         labeled_instances = predictor.inputs_to_labeled_instances(inputs)
-        for idx, instance in enumerate(labeled_instances):
+        for instance in labeled_instances:
             grads = predictor.get_gradients([instance])[0]
             assert 'grad_input_1' in grads
             assert 'grad_input_2' in grads

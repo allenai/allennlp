@@ -132,7 +132,7 @@ class Predictor(Registrable):
         self.extracted_grads = [] # pylint: disable=attribute-defined-outside-init
         self.hooks = [] # pylint: disable=attribute-defined-outside-init
 
-        def hook_layers(module, grad_in, grad_out): # pylint: disable=unused-argument
+        def hook_layers(_, _, grad_out):
             self.extracted_grads.append(grad_out[0])
 
         # Register the hooks
@@ -181,7 +181,8 @@ class Predictor(Registrable):
 
     def predictions_to_labeled_instances(self,
                                          instance: Instance,
-                                         outputs: Dict[str, np.ndarray]) -> List[Instance]:
+                                         outputs: Dict[str, np.ndarray]) -> List[Instance]: \
+                                         # pylint: disable=unused-argument,no-self-use
         """
         Adds labels to the :class:`~allennlp.data.instance.Instance`s passed in and returns it.
         """

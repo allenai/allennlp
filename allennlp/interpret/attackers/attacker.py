@@ -4,12 +4,14 @@ from allennlp.common.util import JsonDict
 
 class Attacker(Registrable):
     """
-    an ``Attacker`` will modify an input (e.g., add or delete tokens) to try to change an AllenNLP Predictor's output in a desired manner (e.g., make it incorrect).
+    an ``Attacker`` will modify an input (e.g., add or delete tokens)
+    to try to change an AllenNLP Predictor's output in a desired
+    manner (e.g., make it incorrect).
     """
     def __init__(self, predictor: Predictor):
         self.predictor = predictor
 
-    def attack_from_json(self, inputs:JsonDict) -> JsonDict:
+    def attack_from_json(self, inputs: JsonDict) -> JsonDict:
         """
         This function modifies the input to change the model's prediction in some desired manner
         (e.g., an adversarial attack).

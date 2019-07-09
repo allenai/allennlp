@@ -1,5 +1,5 @@
 import math
-from typing import List, Dict 
+from typing import List, Dict
 import numpy
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.interpret.saliency_interpreters import SaliencyInterpreter
@@ -10,11 +10,8 @@ from allennlp.data import Instance
 @SaliencyInterpreter.register('integrated-gradients-interpreter')
 class IntegratedGradient(SaliencyInterpreter):
     """
-    Interprets the prediction using Integrated Gradients (https://arxiv.org/abs/1703.01365)  
+    Interprets the prediction using Integrated Gradients (https://arxiv.org/abs/1703.01365)
     """
-    def __init__(self, predictor: Predictor):
-        super().__init__(predictor)
-
     def saliency_interpret_from_json(self, inputs: JsonDict) -> JsonDict:
         # Convert inputs to labeled instances
         labeled_instances = self.predictor.inputs_to_labeled_instances(inputs)
@@ -43,7 +40,7 @@ class IntegratedGradient(SaliencyInterpreter):
         We store the embedding output into the embeddings_list when alpha is zero.
         This is used later to element-wise multiply the input by the averaged gradients.
         """
-        def forward_hook(module, input, output):
+        def forward_hook(_, _, output):
             # Save the input for later use. Only do so on first call.
             if alpha == 0:
                 embeddings_list.append(output.squeeze(0).clone().detach().numpy())
@@ -95,7 +92,7 @@ class IntegratedGradient(SaliencyInterpreter):
 
         # Element-wise multiply average gradient by the input
         for idx, iput in enumerate(embeddings_list):
-            key = "grad_input_" + str(idx + 1)      
+            key = "grad_input_" + str(idx + 1)
             ig_grads[key] *= iput
 
         return ig_grads

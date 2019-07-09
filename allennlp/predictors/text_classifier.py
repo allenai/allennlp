@@ -1,5 +1,4 @@
 from typing import List, Dict
-from copy import deepcopy
 from overrides import overrides
 import numpy as np
 from allennlp.common.util import JsonDict

@@ -1,5 +1,5 @@
 import math
-from typing import List, Dict 
+from typing import Dict
 import torch
 import numpy
 from allennlp.common.util import JsonDict, sanitize
@@ -27,7 +27,9 @@ class SmoothGradient(SaliencyInterpreter):
 
             # Normalize results
             for key, grad in grads.items():
-                emb_grad = numpy.sum(grad, axis=1) # TODO (@Eric-Wallace), SmoothGrad is not using times input normalization. Fine for now, but should fix for consistency.
+                # TODO (@Eric-Wallace), SmoothGrad is not using times input normalization.
+                # Fine for now, but should fix for consistency.
+                emb_grad = numpy.sum(grad, axis=1)
                 norm = numpy.linalg.norm(emb_grad, ord=1)
                 normalized_grad = [math.fabs(e) / norm for e in emb_grad]
                 grads[key] = normalized_grad
@@ -41,13 +43,14 @@ class SmoothGradient(SaliencyInterpreter):
         Register a forward hook on the embedding layer which adds random noise to every embedding.
         Used for one term in the SmoothGrad sum.
         """
-        def forward_hook(module, input, output):
+        def forward_hook(_, _, output):
             # Random noise = N(0, stdev * (max-min))
-            noise = torch.randn(output.shape).to(output.device) * (stdev * (output.detach().max() - output.detach().min()))
+            noise = torch.randn(output.shape).to(output.device) \
+                * (stdev * (output.detach().max() - output.detach().min()))
 
             # Add the random noise
             output.add_(noise)
-          
+
         # Register the hook
         handle = None
         for module in self.predictor._model.modules():
@@ -62,7 +65,7 @@ class SmoothGradient(SaliencyInterpreter):
         num_samples = 25
 
         total_gradients = None
-        for i in range(num_samples):
+        for _ in range(num_samples):
             handle = self._register_forward_hook(stdev)
             grads = self.predictor.get_gradients([instance])[0]
             handle.remove()

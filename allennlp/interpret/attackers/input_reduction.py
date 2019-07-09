@@ -1,11 +1,10 @@
-from typing import Dict, List, Set
+from typing import List
 import numpy as np
 import torch
 from allennlp.interpret.attackers import Attacker
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import Instance
 from allennlp.predictors.predictor import Predictor
-from collections import defaultdict
 
 @Attacker.register('input-reduction')
 class InputReduction(Attacker):
@@ -14,39 +13,14 @@ class InputReduction(Attacker):
     Difficult` https://arxiv.org/abs/1804.07781, which removes as many words as possible
     from the input _without_ changing the model's prediction.
     """
-    def __init__(self, predictor: Predictor):
-        super().__init__(predictor)
-
-    def get_ner_tags_and_mask(current_instances, target_field, ignore_tokens):
-        """
-        Used for the NER task. Sets the num_ignore tokens, saves the original
-         predicted tag and a 0/1 mask in the position of the tags
-        """
-        # Set num_ignore_tokens
-        num_ignore_tokens = 0
-        for token in current_instances[0][target_field].tokens:
-            if str(token) in ignore_tokens:
-                num_ignore_tokens += 1
-
-        # save the original tags and a 0/1 mask where the tags are
-        tag_mask = []
-        original_tags = []
-        for label in current_instances[0]["tags"].__dict__["field_list"]:
-            if label.label != "O":
-                tag_mask.append(1)
-                original_tags.append(label.label)
-                num_ignore_tokens +=1
-            else:
-                tag_mask.append(0)
-
-    def attack_from_json(self, inputs:JsonDict,
+    def attack_from_json(self, inputs: JsonDict,
                          target_field: str, gradient_index: str,
                          ignore_tokens: List[str] = ["@@NULL@@"]):
         original_instances = self.predictor.inputs_to_labeled_instances(inputs)
         final_tokens = []
         fields_to_check = {}
-        for i in range(len(original_instances)):
-            current_instances = [original_instances[i]]
+        for current_instances in original_instances:
+            current_instances = [current_instances]
             original_tokens = [x for x in current_instances[0][target_field].tokens]
 
             # Save fields that must be checked for equality
@@ -73,13 +47,13 @@ class InputReduction(Attacker):
                 for output in outputs:
                     if isinstance(outputs[output], torch.Tensor):
                         outputs[output] = outputs[output].detach().cpu().numpy().squeeze().squeeze()
-                    elif isinstance(outputs[output],list):
+                    elif isinstance(outputs[output], list):
                         outputs[output] = outputs[output][0]
 
                 # Check if any fields have changed, if so, break loop
                 if "tags" not in current_instances[0]:
                     equal = True
-                    for field in fields_to_check.keys():
+                    for field in fields_to_check:
                         if field in current_instances[0].fields:
                             equal = equal and current_instances[0][field].__eq__(fields_to_check[field])
                         else:
@@ -98,42 +72,66 @@ class InputReduction(Attacker):
                 # remove a token from the input
                 current_tokens = list(current_instances[0][target_field].tokens)
                 current_instances, smallest_idx = \
-                    self.remove_one_token(grads[gradient_index], current_instances, target_field, ignore_tokens)
+                    remove_one_token(grads[gradient_index], current_instances, target_field, ignore_tokens)
 
             final_tokens.append(current_tokens)
-        return sanitize({"final": final_tokens,"original":original_tokens})
+        return sanitize({"final": final_tokens, "original": original_tokens})
 
-    def remove_one_token(self, grads:np.ndarray,
-                        instances:List[Instance],
-                        target_field: str,
-                        ignore_tokens:List[str] = ["@@NULL@@"]) -> List[Instance]:
-        """
-        Finds the token with the smallest gradient and removes it.
-        """
-        # Compute L2 norm of all grads.
-        grads_mag = [np.sqrt(grad.dot(grad)) for grad in grads]
+def remove_one_token(grads: np.ndarray,
+                     instances: List[Instance],
+                     target_field: str,
+                     ignore_tokens: List[str] = ["@@NULL@@"]) -> List[Instance]:
+    """
+    Finds the token with the smallest gradient and removes it.
+    """
+    # Compute L2 norm of all grads.
+    grads_mag = [np.sqrt(grad.dot(grad)) for grad in grads]
 
-        # Skip all ignore_tokens by setting grad to infinity
-        for tok_idx, tok in enumerate(instances[0][target_field].tokens):
-            if tok in ignore_tokens:
-                grads_mag[tok_idx] = float("inf")
-        # For NER, skip all tokens that are not in outside
-        if "tags" in instances[0]:
-            for idx,label in enumerate(instances[0]["tags"].__dict__["field_list"]):
-                if label.label != "O":
-                    grads_mag[idx] = float("inf")
+    # Skip all ignore_tokens by setting grad to infinity
+    for tok_idx, tok in enumerate(instances[0][target_field].tokens):
+        if tok in ignore_tokens:
+            grads_mag[tok_idx] = float("inf")
+    # For NER, skip all tokens that are not in outside
+    if "tags" in instances[0]:
+        for idx, label in enumerate(instances[0]["tags"].__dict__["field_list"]):
+            if label.label != "O":
+                grads_mag[idx] = float("inf")
 
-        smallest = np.argmin(grads_mag)
-        if smallest == float("inf"): # if all are ignored tokens, return.
-            return instances
+    smallest = np.argmin(grads_mag)
+    if smallest == float("inf"): # if all are ignored tokens, return.
+        return instances
 
-        # remove smallest
-        instances[0][target_field].tokens = \
-        instances[0][target_field].tokens[0:smallest] +  instances[0][target_field].tokens[smallest + 1:]
-        if "tags" in instances[0]:
-            instances[0]["tags"].__dict__["field_list"] = \
-                instances[0]["tags"].__dict__["field_list"][0:smallest] + \
-                instances[0]["tags"].__dict__["field_list"][smallest + 1:]
+    # remove smallest
+    instances[0][target_field].tokens = \
+    instances[0][target_field].tokens[0:smallest] +  instances[0][target_field].tokens[smallest + 1:]
+    if "tags" in instances[0]:
+        instances[0]["tags"].__dict__["field_list"] = \
+            instances[0]["tags"].__dict__["field_list"][0:smallest] + \
+            instances[0]["tags"].__dict__["field_list"][smallest + 1:]
 
-        instances[0].indexed = False
-        return instances, smallest 
+    instances[0].indexed = False
+    return instances, smallest
+
+def get_ner_tags_and_mask(current_instances: List[Instance],
+                          target_field: str,
+                          ignore_tokens: List[str] = ["@@NULL@@"]):
+    """
+    Used for the NER task. Sets the num_ignore tokens, saves the original
+     predicted tag and a 0/1 mask in the position of the tags
+    """
+    # Set num_ignore_tokens
+    num_ignore_tokens = 0
+    for token in current_instances[0][target_field].tokens:
+        if str(token) in ignore_tokens:
+            num_ignore_tokens += 1
+
+    # save the original tags and a 0/1 mask where the tags are
+    tag_mask = []
+    original_tags = []
+    for label in current_instances[0]["tags"].__dict__["field_list"]:
+        if label.label != "O":
+            tag_mask.append(1)
+            original_tags.append(label.label)
+            num_ignore_tokens += 1
+        else:
+            tag_mask.append(0)

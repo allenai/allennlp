@@ -1,4 +1,4 @@
-from typing import List 
+from typing import List
 import math
 import numpy
 from allennlp.common.util import JsonDict, sanitize
@@ -8,12 +8,11 @@ from allennlp.interpret.saliency_interpreters import SaliencyInterpreter
 
 @SaliencyInterpreter.register('simple-gradients-interpreter')
 class SimpleGradient(SaliencyInterpreter):
-    def __init__(self, predictor: Predictor):
-        super().__init__(predictor)
-
     def saliency_interpret_from_json(self, inputs: JsonDict) -> JsonDict:
         """
-        Interprets the model's prediction for inputs. Gets the gradients of the loss with respect to the input and returns those gradients normalized and sanitized.
+        Interprets the model's prediction for inputs. 
+        Gets the gradients of the loss with respect to the input
+        and returns those gradients normalized and sanitized.
         """
         # Convert inputs to labeled instances
         labeled_instances = self.predictor.inputs_to_labeled_instances(inputs)
@@ -31,7 +30,11 @@ class SimpleGradient(SaliencyInterpreter):
             # Gradients come back in the reverse order that they were sent into the network
             embeddings_list.reverse()
             for key, grad in grads.items():
-                # Get number at the end of every gradient key (they look like grad_input_[int], we're getting this [int] part and subtracting 1 for zero-based indexing). This is then used as an index into the reversed input array to match up the gradient and its respective embedding. 
+                # Get number at the end of every gradient key 
+                # (they look like grad_input_[int], we're getting 
+                # this [int] part and subtracting 1 for zero-based indexing).
+                # This is then used as an index into the reversed input array
+                # to match up the gradient and its respective embedding.
                 input_idx = int(key[-1]) - 1
                 emb_grad = numpy.sum(grad * embeddings_list[input_idx], axis=1)
                 norm = numpy.linalg.norm(emb_grad, ord=1)
@@ -48,7 +51,7 @@ class SimpleGradient(SaliencyInterpreter):
         multiplies the gradient by the embedding value.
         """
 
-        def forward_hook(module, input, output):
+        def forward_hook(_, _, output):
             embeddings_list.append(output.squeeze(0).clone().detach().numpy())
 
         handle = None

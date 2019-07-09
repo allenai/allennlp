@@ -1,17 +1,12 @@
-from typing import Dict, List, Set
 import numpy
 import torch
 from allennlp.interpret.attackers import Attacker
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import Instance
 from allennlp.predictors.predictor import Predictor
-from allennlp.data.fields.field import DataArray, Field
-from allennlp.data.fields import IndexField
 from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
-from allennlp.modules.text_field_embedders import BasicTextFieldEmbedder
 from allennlp.modules.token_embedders import Embedding
 from allennlp.data.tokenizers import Token
-from collections import defaultdict
 
 @Attacker.register('hotflip')
 class Hotflip(Attacker):
@@ -47,12 +42,11 @@ class Hotflip(Attacker):
                                                        desired_num_tokens={"token_characters": len(tokens)},
                                                        padding_lengths={"num_token_characters": max_token_length})
             all_inputs['token_characters'] = torch.LongTensor(padded_tokens['token_characters']).unsqueeze(0)
-  
+
             if "elmo" in self.predictor._dataset_reader._token_indexers:
-                pad_length = pad_length + 2 # elmo has start/end word
                 elmo_tokens = []
                 for tok in all_tokens:
-                    tmp = self.predictor._dataset_reader._token_indexers["elmo"].tokens_to_indices([Token(text=tok)], self.vocab,"sentence")["sentence"]
+                    tmp = self.predictor._dataset_reader._token_indexers["elmo"].tokens_to_indices([Token(text=tok)], self.vocab, "sentence")["sentence"]
                     elmo_tokens.append(tmp[0])
                 all_inputs["elmo"] = torch.LongTensor(elmo_tokens).unsqueeze(0)
 
@@ -61,7 +55,7 @@ class Hotflip(Attacker):
             if isinstance(module, TextFieldEmbedder):
                 embedder = module
         # pass all tokens through the fake matrix and create an embedding out of it.
-        embedding_matrix = embedder(all_inputs).squeeze()        
+        embedding_matrix = embedder(all_inputs).squeeze()
         return Embedding(num_embeddings=self.vocab.get_vocab_size('tokens'), embedding_dim=embedding_matrix.shape[1], weight=embedding_matrix, trainable=False)
 
     def attack_from_json(self,
@@ -85,8 +79,8 @@ class Hotflip(Attacker):
         original_tokens = list(original_instances[0][name_of_input_field_to_attack].tokens)
         final_tokens = []
         new_prediction = None
-        for i in range(len(original_instances)):
-            new_instances = [original_instances[i]]
+        for new_instances in original_instances:
+            new_instances = [new_instances]
             test_instances = self.predictor.inputs_to_labeled_instances(inputs)
 
             # get a list of fields that we want to check to see if they change
@@ -115,8 +109,8 @@ class Hotflip(Attacker):
                 flipped.append(index_of_token_to_flip)
 
                 # Get new token using taylor approximation
-                original_id_of_token_to_flip = \
-                    new_instances[0][name_of_input_field_to_attack]._indexed_tokens["tokens"][index_of_token_to_flip]
+                input_tokens = new_instances[0][name_of_input_field_to_attack]._indexed_tokens["tokens"]
+                original_id_of_token_to_flip = input_tokens[index_of_token_to_flip]
                 new_id_of_flipped_token = \
                     self.first_order_taylor(grad[index_of_token_to_flip],
                                             self.token_embedding.weight,
@@ -131,7 +125,7 @@ class Hotflip(Attacker):
                 for key in outputs:
                     if isinstance(outputs[key], torch.Tensor):
                         outputs[key] = outputs[key].detach().cpu().numpy().squeeze().squeeze()
-                    elif isinstance(outputs[key],list):
+                    elif isinstance(outputs[key], list):
                         outputs[key] = outputs[key][0]
                 # add labels to new_instances
                 self.predictor.predictions_to_labeled_instances(new_instances[0], outputs)
@@ -154,7 +148,8 @@ class Hotflip(Attacker):
                     break
 
             final_tokens.append(current_tokens)
-        return sanitize({"final": final_tokens,"original": original_tokens, "new_prediction": new_prediction})
+        return \
+            sanitize({"final": final_tokens, "original": original_tokens, "new_prediction": new_prediction})
 
     # Get the model's new prediction given its outputs
     def get_new_prediction(self, outputs):
@@ -173,7 +168,10 @@ class Hotflip(Attacker):
                 new_prediction = outputs["answer"]["value"]
         return new_prediction
 
-    def first_order_taylor(self, grad: numpy.ndarray, embedding_matrix: torch.nn.parameter.Parameter, token_idx: int):
+    def first_order_taylor(self,
+                           grad: numpy.ndarray,
+                           embedding_matrix: torch.nn.parameter.Parameter,
+                           token_idx: int):
         """
         the below code is based on
         https://github.com/pmichel31415/translate/blob/paul/pytorch_translate/
@@ -185,11 +183,13 @@ class Hotflip(Attacker):
         """
         grad = torch.from_numpy(grad)
         embedding_matrix = embedding_matrix.cpu()
-        word_embeds = torch.nn.functional.embedding(torch.LongTensor([token_idx]), embedding_matrix).detach().unsqueeze(0)
+        word_embeds = \
+            torch.nn.functional.embedding(torch.LongTensor([token_idx]), embedding_matrix)
+        word_embeds = word_embeds.detach().unsqueeze(0)
         grad = grad.unsqueeze(0).unsqueeze(0)
         # solves equation (3) here https://arxiv.org/abs/1903.06620
         new_embed_dot_grad = torch.einsum("bij,kj->bik", (grad, embedding_matrix))
         prev_embed_dot_grad = torch.einsum("bij,bij->bi", (grad, word_embeds)).unsqueeze(-1)
         neg_dir_dot_grad = -1 * (prev_embed_dot_grad - new_embed_dot_grad)
-        score_at_each_step, best_at_each_step = neg_dir_dot_grad.max(2)
-        return best_at_each_step[0].data[0].detach().cpu().item() # return the best candidate        
+        _, best_at_each_step = neg_dir_dot_grad.max(2)
+        return best_at_each_step[0].data[0].detach().cpu().item() # return the best candidate

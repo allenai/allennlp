@@ -102,7 +102,7 @@ class TestTextClassifierPredictor(AllenNlpTestCase):
         predictor = Predictor.from_archive(archive, 'text_classifier')
 
         labeled_instances = predictor.inputs_to_labeled_instances(inputs)
-        for idx, instance in enumerate(labeled_instances):
+        for instance in labeled_instances:
             grads = predictor.get_gradients([instance])[0]
             assert 'grad_input_1' in grads
             assert grads['grad_input_1'] is not None
