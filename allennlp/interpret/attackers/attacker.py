@@ -1,3 +1,4 @@
+from typing import List
 from allennlp.common import Registrable
 from allennlp.predictors import Predictor
 from allennlp.common.util import JsonDict

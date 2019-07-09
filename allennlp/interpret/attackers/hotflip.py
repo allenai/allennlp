@@ -1,4 +1,5 @@
 # pylint: disable=protected-access
+from typing import List
 import numpy
 import torch
 from allennlp.interpret.attackers import Attacker
