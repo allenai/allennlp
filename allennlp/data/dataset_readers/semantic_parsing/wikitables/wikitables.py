@@ -3,7 +3,7 @@ Reader for WikitableQuestions (https://github.com/ppasupat/WikiTableQuestions/re
 """
 
 import logging
-from typing import Dict, List
+from typing import Dict, List, Any
 import os
 import gzip
 import tarfile
@@ -208,7 +208,7 @@ class WikiTablesDatasetReader(DatasetReader):
         # pylint: disable=arguments-differ
         tokenized_question = self._tokenizer.tokenize(question.lower())
         question_field = TextField(tokenized_question, self._question_token_indexers)
-        # TODO(pradeep): We'll need a better way to input CoreNLP processed lines.
+        metadata: Dict[str, Any] = {"question_tokens": [x.text for x in tokenized_question]}
         table_context = TableQuestionContext.read_from_lines(table_lines, tokenized_question)
         target_values_field = MetadataField(target_values)
         world = WikiTablesLanguage(table_context)
@@ -230,6 +230,7 @@ class WikiTablesDatasetReader(DatasetReader):
         action_field = ListField(production_rule_fields)
 
         fields = {'question': question_field,
+                  'metadata': MetadataField(metadata),
                   'table': table_field,
                   'world': world_field,
                   'actions': action_field,

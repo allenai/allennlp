@@ -98,7 +98,6 @@ class Text2SqlParser(Model):
         self._transition_function = BasicTransitionFunction(encoder_output_dim=self._encoder.get_output_dim(),
                                                             action_embedding_dim=action_embedding_dim,
                                                             input_attention=input_attention,
-                                                            predict_start_type_separately=False,
                                                             add_action_bias=self._add_action_bias,
                                                             dropout=dropout)
         initializer(self)

@@ -64,3 +64,7 @@ class BooleanAccuracyTest(AllenNlpTestCase):
         incorrect_shape_mask = torch.randint(0, 2, [5, 8])
         with pytest.raises(ValueError):
             accuracy(predictions, labels, incorrect_shape_mask)
+
+    def test_does_not_divide_by_zero_with_no_count(self):
+        accuracy = BooleanAccuracy()
+        self.assertAlmostEqual(accuracy.get_metric(), 0.0)
