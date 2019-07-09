@@ -12,10 +12,10 @@ class InputReduction(Attacker):
     Difficult` https://arxiv.org/abs/1804.07781, which removes as many words as possible
     from the input _without_ changing the model's prediction.
     """
-    def attack_from_json(self, inputs: JsonDict = None,
+    def attack_from_json(self, inputs: JsonDict,
                          name_of_input_field_to_attack: str = 'tokens',
                          name_of_grad_input_field: str = 'grad_input_1',
-                         ignore_tokens: List[str] = ["@@NULL@@"]):        
+                         ignore_tokens: List[str] = ["@@NULL@@"]): # pylint: disable=dangerous-default-value
         original_instances = self.predictor.inputs_to_labeled_instances(inputs)
         final_tokens = []
         fields_to_check = {}
@@ -29,10 +29,10 @@ class InputReduction(Attacker):
             for key in current_instances[0].fields.keys():
                 if key not in inputs and key != name_of_input_field_to_attack:
                     fields_to_check[key] = test_instances[0][key]
-            
+
             # Set num_ignore_tokens, which tells input reduction when to stop
-            num_ignore = 0
-            # Keep at least one token for classification/entailment/etc.            
+            num_ignore_tokens = 0
+            # Keep at least one token for classification/entailment/etc.
             if "tags" not in current_instances[0]:
                 num_ignore_tokens = 1
 
@@ -84,7 +84,7 @@ class InputReduction(Attacker):
 def remove_one_token(grads: np.ndarray,
                      instances: List[Instance] = None,
                      name_of_input_field_to_attack: str = 'tokens',
-                     ignore_tokens: List[str] = ["@@NULL@@"]) -> List[Instance]:
+                     ignore_tokens: List[str] = ["@@NULL@@"]) -> List[Instance]: # pylint: disable=dangerous-default-value
     """
     Finds the token with the smallest gradient and removes it.
     """
@@ -109,7 +109,7 @@ def remove_one_token(grads: np.ndarray,
     before_smallest = instances[0][name_of_input_field_to_attack].tokens[0:smallest]
     after_smallest = instances[0][name_of_input_field_to_attack].tokens[smallest + 1:]
     instances[0][name_of_input_field_to_attack].tokens = before_smallest + after_smallest
-        
+
     if "tags" in instances[0]:
         instances[0]["tags"].__dict__["field_list"] = \
             instances[0]["tags"].__dict__["field_list"][0:smallest] + \
@@ -120,7 +120,7 @@ def remove_one_token(grads: np.ndarray,
 
 def get_ner_tags_and_mask(current_instances: List[Instance] = None,
                           name_of_input_field_to_attack: str = 'tokens',
-                          ignore_tokens: List[str] = ["@@NULL@@"]):
+                          ignore_tokens: List[str] = ["@@NULL@@"]): # pylint: disable=dangerous-default-value
     """
     Used for the NER task. Sets the num_ignore tokens, saves the original
      predicted tag and a 0/1 mask in the position of the tags
@@ -141,4 +141,4 @@ def get_ner_tags_and_mask(current_instances: List[Instance] = None,
             num_ignore_tokens += 1
         else:
             tag_mask.append(0)
-    return num_ignore, tag_mask, original_tags
+    return num_ignore_tokens, tag_mask, original_tags

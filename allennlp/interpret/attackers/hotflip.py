@@ -68,7 +68,7 @@ class Hotflip(Attacker):
                          inputs: JsonDict = None,
                          name_of_input_field_to_attack: str = 'tokens',
                          name_of_grad_input_field: str = 'grad_input_1',
-                         ignore_tokens: List[str] = ["@@NULL@@"]): # pylint disable=unused-argument
+                         ignore_tokens: List[str] = ["@@NULL@@"]): # pylint disable=unused-argument,dangerous-default-value
 
         """
         Replaces one token at a time from the input until the model's prediction changes.

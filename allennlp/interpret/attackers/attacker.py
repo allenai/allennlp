@@ -16,7 +16,7 @@ class Attacker(Registrable):
                          inputs: JsonDict,
                          name_of_input_field_to_attack: str = 'tokens',
                          name_of_grad_input_field: str = 'grad_input_1',
-                         ignore_tokens: List[str] = ["@@NULL@@"]) -> JsonDict:
+                         ignore_tokens: List[str] = ["@@NULL@@"]) -> JsonDict: # pylint: disable=dangerous-default-value
         """
         This function modifies the input to change the model's prediction in some desired manner
         (e.g., an adversarial attack).
