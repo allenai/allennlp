@@ -1,3 +1,4 @@
+// The Wikitables data is available at https://ppasupat.github.io/WikiTableQuestions/
 {
   "dataset_reader": {
     "type": "wikitables",

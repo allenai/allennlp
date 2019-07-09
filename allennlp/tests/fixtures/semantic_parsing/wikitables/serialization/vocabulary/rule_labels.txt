@@ -1,104 +1,52 @@
-<#1,#1> -> !=
-<#1,<#1,#1>> -> and
-<#1,<#1,#1>> -> or
-<#1,n> -> count
-<<#1,#2>,<#2,#1>> -> reverse
-<c,d> -> ['lambda x', d]
-<c,d> -> [<<#1,#2>,<#2,#1>>, <d,c>]
-<c,n> -> ['lambda x', n]
-<c,n> -> [<<#1,#2>,<#2,#1>>, <n,c>]
-<c,p> -> [<<#1,#2>,<#2,#1>>, <p,c>]
-<c,r> -> fb:row.row.null
-<d,c> -> [<<#1,#2>,<#2,#1>>, <c,d>]
-<d,c> -> fb:cell.cell.date
-<d,d> -> ['lambda x', d]
-<d,d> -> [<<#1,#2>,<#2,#1>>, <d,d>]
-<d,n> -> ['lambda x', n]
-<d,n> -> [<<#1,#2>,<#2,#1>>, <n,d>]
-<d,r> -> [<<#1,#2>,<#2,#1>>, <r,d>]
-<n,<n,<#1,<<#2,#1>,#1>>>> -> argmax
-<n,<n,<#1,<<#2,#1>,#1>>>> -> argmin
-<n,<n,<n,d>>> -> date
-<n,<n,n>> -> -
-<n,c> -> [<<#1,#2>,<#2,#1>>, <c,n>]
-<n,c> -> fb:cell.cell.num2
-<n,c> -> fb:cell.cell.number
-<n,d> -> ['lambda x', d]
-<n,d> -> [<<#1,#2>,<#2,#1>>, <d,n>]
-<n,n> -> ['lambda x', n]
-<n,n> -> [<<#1,#2>,<#2,#1>>, <n,n>]
-<n,n> -> avg
-<n,n> -> number
-<n,n> -> sum
-<n,p> -> [<<#1,#2>,<#2,#1>>, <p,n>]
-<n,r> -> [<<#1,#2>,<#2,#1>>, <r,n>]
-<n,r> -> fb:row.row.index
-<nd,nd> -> <
-<nd,nd> -> <=
-<nd,nd> -> >
-<nd,nd> -> >=
-<nd,nd> -> max
-<nd,nd> -> min
-<p,c> -> fb:cell.cell.part
-<p,n> -> ['lambda x', n]
-<r,c> -> [<<#1,#2>,<#2,#1>>, <c,r>]
-<r,d> -> ['lambda x', d]
-<r,n> -> ['lambda x', n]
-<r,n> -> [<<#1,#2>,<#2,#1>>, <n,r>]
-<r,p> -> ['lambda x', p]
-<r,p> -> [<<#1,#2>,<#2,#1>>, <p,r>]
-<r,r> -> [<<#1,#2>,<#2,#1>>, <r,r>]
-<r,r> -> fb:row.row.next
-<r,r> -> fb:type.object.type
-@start@ -> c
-@start@ -> d
-@start@ -> n
-@start@ -> p
-@start@ -> r
-c -> [<#1,#1>, c]
-c -> [<#1,<#1,#1>>, c, c]
-c -> [<d,c>, d]
-c -> [<n,<n,<#1,<<#2,#1>,#1>>>>, n, n, c, <d,c>]
-c -> [<n,<n,<#1,<<#2,#1>,#1>>>>, n, n, c, <n,c>]
-c -> [<n,c>, n]
-c -> [<p,c>, p]
-c -> [<r,c>, r]
-c -> fb:cell.null
-c -> x
-d -> [<#1,#1>, d]
-d -> [<#1,<#1,#1>>, d, d]
-d -> [<c,d>, c]
-d -> [<n,<n,<#1,<<#2,#1>,#1>>>>, n, n, d, <d,d>]
-d -> [<n,<n,<#1,<<#2,#1>,#1>>>>, n, n, d, <n,d>]
-d -> [<n,<n,<n,d>>>, n, n, n]
-d -> [<nd,nd>, d]
-d -> x
-n -> [<#1,#1>, n]
-n -> [<#1,<#1,#1>>, n, n]
-n -> [<#1,n>, c]
-n -> [<#1,n>, d]
-n -> [<#1,n>, n]
-n -> [<#1,n>, p]
-n -> [<#1,n>, r]
-n -> [<c,n>, c]
-n -> [<n,<n,<#1,<<#2,#1>,#1>>>>, n, n, n, <d,n>]
-n -> [<n,<n,<#1,<<#2,#1>,#1>>>>, n, n, n, <n,n>]
-n -> [<n,<n,n>>, n, n]
-n -> [<n,n>, n]
-n -> [<nd,nd>, n]
-n -> [<r,n>, r]
-n -> x
-p -> [<#1,#1>, p]
-p -> [<#1,<#1,#1>>, p, p]
-p -> [<c,p>, c]
-p -> [<n,<n,<#1,<<#2,#1>,#1>>>>, n, n, p, <n,p>]
-p -> x
-r -> [<#1,#1>, r]
-r -> [<#1,<#1,#1>>, r, r]
-r -> [<c,r>, c]
-r -> [<n,<n,<#1,<<#2,#1>,#1>>>>, n, n, r, <d,r>]
-r -> [<n,<n,<#1,<<#2,#1>,#1>>>>, n, n, r, <n,r>]
-r -> [<n,r>, n]
-r -> [<r,r>, r]
-r -> fb:type.row
-r -> x
+<List[Row],Column:List[Row]> -> same_as
+<List[Row],ComparableColumn:List[Row]> -> argmax
+<List[Row],ComparableColumn:List[Row]> -> argmin
+<List[Row],DateColumn,Date:List[Row]> -> filter_date_equals
+<List[Row],DateColumn,Date:List[Row]> -> filter_date_greater
+<List[Row],DateColumn,Date:List[Row]> -> filter_date_greater_equals
+<List[Row],DateColumn,Date:List[Row]> -> filter_date_lesser
+<List[Row],DateColumn,Date:List[Row]> -> filter_date_lesser_equals
+<List[Row],DateColumn,Date:List[Row]> -> filter_date_not_equals
+<List[Row],DateColumn:Date> -> max_date
+<List[Row],DateColumn:Date> -> min_date
+<List[Row],DateColumn:Date> -> mode_date
+<List[Row],DateColumn:Date> -> select_date
+<List[Row],List[Row],NumberColumn:Number> -> diff
+<List[Row],NumberColumn,Number:List[Row]> -> filter_number_equals
+<List[Row],NumberColumn,Number:List[Row]> -> filter_number_greater
+<List[Row],NumberColumn,Number:List[Row]> -> filter_number_greater_equals
+<List[Row],NumberColumn,Number:List[Row]> -> filter_number_lesser
+<List[Row],NumberColumn,Number:List[Row]> -> filter_number_lesser_equals
+<List[Row],NumberColumn,Number:List[Row]> -> filter_number_not_equals
+<List[Row],NumberColumn:Number> -> average
+<List[Row],NumberColumn:Number> -> max_number
+<List[Row],NumberColumn:Number> -> min_number
+<List[Row],NumberColumn:Number> -> mode_number
+<List[Row],NumberColumn:Number> -> select_number
+<List[Row],NumberColumn:Number> -> sum
+<List[Row],StringColumn,List[str]:List[Row]> -> filter_in
+<List[Row],StringColumn,List[str]:List[Row]> -> filter_not_in
+<List[Row],StringColumn:List[str]> -> mode_string
+<List[Row],StringColumn:List[str]> -> select_string
+<List[Row]:List[Row]> -> first
+<List[Row]:List[Row]> -> last
+<List[Row]:List[Row]> -> next
+<List[Row]:List[Row]> -> previous
+<List[Row]:Number> -> count
+<Number,Number,Number:Date> -> date
+@start@ -> Date
+@start@ -> List[str]
+@start@ -> Number
+Date -> [<List[Row],DateColumn:Date>, List[Row], DateColumn]
+Date -> [<Number,Number,Number:Date>, Number, Number, Number]
+List[Row] -> [<List[Row],Column:List[Row]>, List[Row], Column]
+List[Row] -> [<List[Row],ComparableColumn:List[Row]>, List[Row], ComparableColumn]
+List[Row] -> [<List[Row],DateColumn,Date:List[Row]>, List[Row], DateColumn, Date]
+List[Row] -> [<List[Row],NumberColumn,Number:List[Row]>, List[Row], NumberColumn, Number]
+List[Row] -> [<List[Row],StringColumn,List[str]:List[Row]>, List[Row], StringColumn, List[str]]
+List[Row] -> [<List[Row]:List[Row]>, List[Row]]
+List[Row] -> all_rows
+List[str] -> [<List[Row],StringColumn:List[str]>, List[Row], StringColumn]
+Number -> [<List[Row],List[Row],NumberColumn:Number>, List[Row], List[Row], NumberColumn]
+Number -> [<List[Row],NumberColumn:Number>, List[Row], NumberColumn]
+Number -> [<List[Row]:Number>, List[Row]]

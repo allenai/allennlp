@@ -7,7 +7,7 @@ from allennlp.semparse.worlds import AtisWorld
 
 class TestAtisReader(AllenNlpTestCase):
     def test_atis_keep_unparseable(self):
-        database_file = cached_path("https://s3-us-west-2.amazonaws.com/allennlp/datasets/atis/atis.db")
+        database_file = cached_path("https://allennlp.s3.amazonaws.com/datasets/atis/atis.db")
         reader = AtisDatasetReader(database_file=database_file, keep_if_unparseable=True)
         instance = reader.text_to_instance(utterances=['show me the one way flights from detroit me to westchester county'],
                                            sql_query_labels=['this is not a query that can be parsed'])
@@ -19,7 +19,7 @@ class TestAtisReader(AllenNlpTestCase):
 
     def test_atis_read_from_file(self):
         data_path = AllenNlpTestCase.FIXTURES_ROOT / "data" / "atis" / "sample.json"
-        database_file = "https://s3-us-west-2.amazonaws.com/allennlp/datasets/atis/atis.db"
+        database_file = "https://allennlp.s3.amazonaws.com/datasets/atis/atis.db"
         reader = AtisDatasetReader(database_file=database_file)
 
         instances = list(reader.read(str(data_path)))

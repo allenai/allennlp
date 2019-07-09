@@ -13,6 +13,7 @@ allennlp.semparse
 
 .. toctree::
 
+   allennlp.semparse.common
    allennlp.semparse.contexts
    allennlp.semparse.executors
    allennlp.semparse.type_declarations

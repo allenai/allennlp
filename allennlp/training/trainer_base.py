@@ -66,7 +66,8 @@ class TrainerBase(Registrable):
 
         if typ3 == "default":
             # Special logic to keep old from_params behavior.
-            from allennlp.training.trainer import Trainer, TrainerPieces
+            from allennlp.training.trainer import Trainer
+            from allennlp.training.trainer_pieces import TrainerPieces
 
             pieces = TrainerPieces.from_params(params, serialization_dir, recover)  # pylint: disable=no-member
             return Trainer.from_params(model=pieces.model,

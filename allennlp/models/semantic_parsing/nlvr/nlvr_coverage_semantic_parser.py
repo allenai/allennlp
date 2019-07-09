@@ -107,9 +107,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         self._decoder_step = CoverageTransitionFunction(encoder_output_dim=self._encoder.get_output_dim(),
                                                         action_embedding_dim=action_embedding_dim,
                                                         input_attention=attention,
-                                                        num_start_types=1,
                                                         activation=Activation.by_name('tanh')(),
-                                                        predict_start_type_separately=False,
                                                         add_action_bias=False,
                                                         dropout=dropout)
         self._checklist_cost_weight = checklist_cost_weight

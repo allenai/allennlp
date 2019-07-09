@@ -1,0 +1,109 @@
+row	col	id	content	tokens	lemmaTokens	posTags	nerTags	nerValues	number	date	num2	list	listId
+-1	0	fb:row.row.year	Year	year	year	NN	DURATION						
+-1	1	fb:row.row.competition	Competition	competition	competition	NN	O						
+-1	2	fb:row.row.venue	Venue	venue	venue	NN	O						
+-1	3	fb:row.row.position	Position	position	position	NN	O						
+-1	4	fb:row.row.event	Event	event	event	NN	O						
+-1	5	fb:row.row.notes	Notes	notes	note	NNS	O						
+0	0	fb:cell.2001	2001	2001	2001	CD	DATE	2001	2001.0	2001-xx-xx			
+0	1	fb:cell.world_youth_championships	World Youth Championships	world|youth|championships	World|Youth|Championships	NNP|NNP|NNP	MISC|MISC|MISC	||					
+0	2	fb:cell.debrecen_hungary	Debrecen, Hungary	debrecen|,|hungary	Debrecen|,|Hungary	NNP|,|NNP	LOCATION|O|LOCATION	||				Debrecen|Hungary	fb:part.debrecen|fb:part.hungary
+0	3	fb:cell.2nd	2nd	2nd	2nd	JJ	ORDINAL	2.0	2.0				
+0	4	fb:cell.400_m	400 m	400|m	400|m	CD|NN	NUMBER|O	400.0|	400.0				
+0	5	fb:cell.47_12	47.12	47.12	47.12	CD	NUMBER	47.12	47.12				
+1	0	fb:cell.2001	2001	2001	2001	CD	DATE	2001	2001.0	2001-xx-xx			
+1	1	fb:cell.world_youth_championships	World Youth Championships	world|youth|championships	World|Youth|Championships	NNP|NNP|NNP	MISC|MISC|MISC	||					
+1	2	fb:cell.debrecen_hungary	Debrecen, Hungary	debrecen|,|hungary	Debrecen|,|Hungary	NNP|,|NNP	LOCATION|O|LOCATION	||				Debrecen|Hungary	fb:part.debrecen|fb:part.hungary
+1	3	fb:cell.1st	1st	1st	1st	CD	ORDINAL	1.0	1.0				
+1	4	fb:cell.medley_relay	Medley relay	medley|relay	Medley|relay	NNP|NN	O|O	|					
+1	5	fb:cell.1_50_46	1:50.46	1:50.46	1:50.46	CD	TIME	T01:50	1.0		50.46		
+2	0	fb:cell.2001	2001	2001	2001	CD	DATE	2001	2001.0	2001-xx-xx			
+2	1	fb:cell.european_junior_championships	European Junior Championships	european|junior|championships	european|Junior|Championships	JJ|NNP|NNP	O|O|O	||					
+2	2	fb:cell.grosseto_italy	Grosseto, Italy	grosseto|,|italy	Grosseto|,|Italy	NNP|,|NNP	LOCATION|O|LOCATION	||				Grosseto|Italy	fb:part.grosseto|fb:part.italy
+2	3	fb:cell.1st	1st	1st	1st	CD	ORDINAL	1.0	1.0				
+2	4	fb:cell.4x400_m_relay	4x400 m relay	4x400|m|relay	4x400|m|relay	NN|NN|NN	O|O|O	||	4.0		400.0		
+2	5	fb:cell.3_06_12	3:06.12	3:06.12	3:06.12	CD	TIME	T03:06	3.0		6.12		
+3	0	fb:cell.2003	2003	2003	2003	CD	DATE	2003	2003.0	2003-xx-xx			
+3	1	fb:cell.european_junior_championships	European Junior Championships	european|junior|championships	european|Junior|Championships	JJ|NNP|NNP	O|O|O	||					
+3	2	fb:cell.tampere_finland	Tampere, Finland	tampere|,|finland	Tampere|,|Finland	NNP|,|NNP	LOCATION|O|LOCATION	||				Tampere|Finland	fb:part.tampere|fb:part.finland
+3	3	fb:cell.3rd	3rd	3rd	3rd	IN	ORDINAL	3.0	3.0				
+3	4	fb:cell.400_m	400 m	400|m	400|m	CD|NN	NUMBER|O	400.0|	400.0				
+3	5	fb:cell.46_69	46.69	46.69	46.69	CD	NUMBER	46.69	46.69				
+4	0	fb:cell.2003	2003	2003	2003	CD	DATE	2003	2003.0	2003-xx-xx			
+4	1	fb:cell.european_junior_championships	European Junior Championships	european|junior|championships	european|Junior|Championships	JJ|NNP|NNP	O|O|O	||					
+4	2	fb:cell.tampere_finland	Tampere, Finland	tampere|,|finland	Tampere|,|Finland	NNP|,|NNP	LOCATION|O|LOCATION	||				Tampere|Finland	fb:part.tampere|fb:part.finland
+4	3	fb:cell.2nd	2nd	2nd	2nd	JJ	ORDINAL	2.0	2.0				
+4	4	fb:cell.4x400_m_relay	4x400 m relay	4x400|m|relay	4x400|m|relay	NN|NN|NN	O|O|O	||	4.0		400.0		
+4	5	fb:cell.3_08_62	3:08.62	3:08.62	3:08.62	CD	TIME	T03:08	3.0		8.62		
+5	0	fb:cell.2005	2005	2005	2005	CD	DATE	2005	2005.0	2005-xx-xx			
+5	1	fb:cell.european_u23_championships	European U23 Championships	european|u23|championships	european|u23|championship	JJ|NN|NNS	MISC|MISC|MISC	||	23.0				
+5	2	fb:cell.erfurt_germany	Erfurt, Germany	erfurt|,|germany	Erfurt|,|Germany	NNP|,|NNP	LOCATION|O|LOCATION	||				Erfurt|Germany	fb:part.erfurt|fb:part.germany
+5	3	fb:cell.11th_sf	11th (sf)	11th|-lrb-|sf|-rrb-	11th|-lrb-|sf|-rrb-	JJ|-LRB-|NN|-RRB-	ORDINAL|O|O|O	11.0|||	11.0				
+5	4	fb:cell.400_m	400 m	400|m	400|m	CD|NN	NUMBER|O	400.0|	400.0				
+5	5	fb:cell.46_62	46.62	46.62	46.62	NN	NUMBER	46.62	46.62				
+6	0	fb:cell.2005	2005	2005	2005	CD	DATE	2005	2005.0	2005-xx-xx			
+6	1	fb:cell.european_u23_championships	European U23 Championships	european|u23|championships	european|u23|championship	JJ|NN|NNS	MISC|MISC|MISC	||	23.0				
+6	2	fb:cell.erfurt_germany	Erfurt, Germany	erfurt|,|germany	Erfurt|,|Germany	NNP|,|NNP	LOCATION|O|LOCATION	||				Erfurt|Germany	fb:part.erfurt|fb:part.germany
+6	3	fb:cell.1st	1st	1st	1st	CD	ORDINAL	1.0	1.0				
+6	4	fb:cell.4x400_m_relay	4x400 m relay	4x400|m|relay	4x400|m|relay	NN|NN|NN	O|O|O	||	4.0		400.0		
+6	5	fb:cell.3_04_41	3:04.41	3:04.41	3:04.41	CD	TIME	T03:04	3.0		4.41		
+7	0	fb:cell.2005	2005	2005	2005	CD	DATE	2005	2005.0	2005-xx-xx			
+7	1	fb:cell.universiade	Universiade	universiade	Universiade	NNP	O						
+7	2	fb:cell.izmir_turkey	Izmir, Turkey	izmir|,|turkey	Izmir|,|Turkey	NNP|,|NNP	LOCATION|O|LOCATION	||				Izmir|Turkey	fb:part.izmir|fb:part.turkey
+7	3	fb:cell.7th	7th	7th	7th	IN	ORDINAL	7.0	7.0				
+7	4	fb:cell.400_m	400 m	400|m	400|m	CD|NN	NUMBER|O	400.0|	400.0				
+7	5	fb:cell.46_89	46.89	46.89	46.89	CD	NUMBER	46.89	46.89				
+8	0	fb:cell.2005	2005	2005	2005	CD	DATE	2005	2005.0	2005-xx-xx			
+8	1	fb:cell.universiade	Universiade	universiade	Universiade	NNP	O						
+8	2	fb:cell.izmir_turkey	Izmir, Turkey	izmir|,|turkey	Izmir|,|Turkey	NNP|,|NNP	LOCATION|O|LOCATION	||				Izmir|Turkey	fb:part.izmir|fb:part.turkey
+8	3	fb:cell.1st	1st	1st	1st	CD	ORDINAL	1.0	1.0				
+8	4	fb:cell.4x400_m_relay	4x400 m relay	4x400|m|relay	4x400|m|relay	NN|NN|NN	O|O|O	||	4.0		400.0		
+8	5	fb:cell.3_02_57	3:02.57	3:02.57	3:02.57	CD	TIME	T03:02	3.0		2.57		
+9	0	fb:cell.2006	2006	2006	2006	CD	DATE	2006	2006.0	2006-xx-xx			
+9	1	fb:cell.world_indoor_championships	World Indoor Championships	world|indoor|championships	World|Indoor|Championships	NNP|NNP|NNP	MISC|MISC|MISC	||					
+9	2	fb:cell.moscow_russia	Moscow, Russia	moscow|,|russia	Moscow|,|Russia	NNP|,|NNP	LOCATION|O|LOCATION	||				Moscow|Russia	fb:part.moscow|fb:part.russia
+9	3	fb:cell.2nd_h	2nd (h)	2nd|-lrb-|h|-rrb-	2nd|-lrb-|h|-rrb-	JJ|-LRB-|NN|-RRB-	ORDINAL|O|O|O	2.0|||	2.0				
+9	4	fb:cell.4x400_m_relay	4x400 m relay	4x400|m|relay	4x400|m|relay	NN|NN|NN	O|O|O	||	4.0		400.0		
+9	5	fb:cell.3_06_10	3:06.10	3:06.10	3:06.10	CD	TIME	T03:06	3.0		6.1		
+10	0	fb:cell.2006	2006	2006	2006	CD	DATE	2006	2006.0	2006-xx-xx			
+10	1	fb:cell.european_championships	European Championships	european|championships	european|championship	JJ|NNS	MISC|MISC	|					
+10	2	fb:cell.gothenburg_sweden	Gothenburg, Sweden	gothenburg|,|sweden	Gothenburg|,|Sweden	NNP|,|NNP	LOCATION|O|LOCATION	||				Gothenburg|Sweden	fb:part.gothenburg|fb:part.sweden
+10	3	fb:cell.3rd	3rd	3rd	3rd	IN	ORDINAL	3.0	3.0				
+10	4	fb:cell.4x400_m_relay	4x400 m relay	4x400|m|relay	4x400|m|relay	NN|NN|NN	O|O|O	||	4.0		400.0		
+10	5	fb:cell.3_01_73	3:01.73	3:01.73	3:01.73	CD	TIME	T03:01	3.0		1.73		
+11	0	fb:cell.2007	2007	2007	2007	CD	DATE	2007	2007.0	2007-xx-xx			
+11	1	fb:cell.european_indoor_championships	European Indoor Championships	european|indoor|championships	european|Indoor|championship	JJ|NNP|NNS	MISC|MISC|MISC	||					
+11	2	fb:cell.birmingham_united_kingdom	Birmingham, United Kingdom	birmingham|,|united|kingdom	Birmingham|,|United|Kingdom	NNP|,|NNP|NNP	LOCATION|O|LOCATION|LOCATION	|||				Birmingham|United Kingdom	fb:part.birmingham|fb:part.united_kingdom
+11	3	fb:cell.3rd	3rd	3rd	3rd	IN	ORDINAL	3.0	3.0				
+11	4	fb:cell.4x400_m_relay	4x400 m relay	4x400|m|relay	4x400|m|relay	NN|NN|NN	O|O|O	||	4.0		400.0		
+11	5	fb:cell.3_08_14	3:08.14	3:08.14	3:08.14	CD	TIME	T03:08	3.0		8.14		
+12	0	fb:cell.2007	2007	2007	2007	CD	DATE	2007	2007.0	2007-xx-xx			
+12	1	fb:cell.universiade	Universiade	universiade	Universiade	NNP	O						
+12	2	fb:cell.bangkok_thailand	Bangkok, Thailand	bangkok|,|thailand	Bangkok|,|Thailand	NNP|,|NNP	LOCATION|O|LOCATION	||				Bangkok|Thailand	fb:part.bangkok|fb:part.thailand
+12	3	fb:cell.7th	7th	7th	7th	IN	ORDINAL	7.0	7.0				
+12	4	fb:cell.400_m	400 m	400|m	400|m	CD|NN	NUMBER|O	400.0|	400.0				
+12	5	fb:cell.46_85	46.85	46.85	46.85	NN	NUMBER	46.85	46.85				
+13	0	fb:cell.2007	2007	2007	2007	CD	DATE	2007	2007.0	2007-xx-xx			
+13	1	fb:cell.universiade	Universiade	universiade	Universiade	NNP	O						
+13	2	fb:cell.bangkok_thailand	Bangkok, Thailand	bangkok|,|thailand	Bangkok|,|Thailand	NNP|,|NNP	LOCATION|O|LOCATION	||				Bangkok|Thailand	fb:part.bangkok|fb:part.thailand
+13	3	fb:cell.1st	1st	1st	1st	CD	ORDINAL	1.0	1.0				
+13	4	fb:cell.4x400_m_relay	4x400 m relay	4x400|m|relay	4x400|m|relay	NN|NN|NN	O|O|O	||	4.0		400.0		
+13	5	fb:cell.3_02_05	3:02.05	3:02.05	3:02.05	CD	TIME	T03:02	3.0		2.05		
+14	0	fb:cell.2008	2008	2008	2008	CD	DATE	2008	2008.0	2008-xx-xx			
+14	1	fb:cell.world_indoor_championships	World Indoor Championships	world|indoor|championships	World|Indoor|Championships	NNP|NNP|NNP	MISC|MISC|MISC	||					
+14	2	fb:cell.valencia_spain	Valencia, Spain	valencia|,|spain	Valencia|,|Spain	NNP|,|NNP	LOCATION|O|LOCATION	||				Valencia|Spain	fb:part.valencia|fb:part.spain
+14	3	fb:cell.4th	4th	4th	4th	JJ	ORDINAL	4.0	4.0				
+14	4	fb:cell.4x400_m_relay	4x400 m relay	4x400|m|relay	4x400|m|relay	NN|NN|NN	O|O|O	||	4.0		400.0		
+14	5	fb:cell.3_08_76	3:08.76	3:08.76	3:08.76	CD	TIME	T03:08	3.0		8.76		
+15	0	fb:cell.2008	2008	2008	2008	CD	DATE	2008	2008.0	2008-xx-xx			
+15	1	fb:cell.olympic_games	Olympic Games	olympic|games	Olympic|Games	NNP|NNPS	MISC|MISC	|					
+15	2	fb:cell.beijing_china	Beijing, China	beijing|,|china	Beijing|,|China	NNP|,|NNP	LOCATION|O|LOCATION	||				Beijing|China	fb:part.beijing|fb:part.china
+15	3	fb:cell.7th	7th	7th	7th	IN	ORDINAL	7.0	7.0				
+15	4	fb:cell.4x400_m_relay	4x400 m relay	4x400|m|relay	4x400|m|relay	NN|NN|NN	O|O|O	||	4.0		400.0		
+15	5	fb:cell.3_00_32	3:00.32	3:00.32	3:00.32	CD	TIME	T03:00	3.0		0.32		
+16	0	fb:cell.2009	2009	2009	2009	CD	DATE	2009	2009.0	2009-xx-xx			
+16	1	fb:cell.universiade	Universiade	universiade	Universiade	NNP	O						
+16	2	fb:cell.belgrade_serbia	Belgrade, Serbia	belgrade|,|serbia	Belgrade|,|Serbia	NNP|,|NNP	LOCATION|O|LOCATION	||				Belgrade|Serbia	fb:part.belgrade|fb:part.serbia
+16	3	fb:cell.2nd	2nd	2nd	2nd	JJ	ORDINAL	2.0	2.0				
+16	4	fb:cell.4x400_m_relay	4x400 m relay	4x400|m|relay	4x400|m|relay	NN|NN|NN	O|O|O	||	4.0		400.0		
+16	5	fb:cell.3_05_69	3:05.69	3:05.69	3:05.69	CD	TIME	T03:05	3.0		5.69		

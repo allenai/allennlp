@@ -67,9 +67,7 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
         self._decoder_step = BasicTransitionFunction(encoder_output_dim=self._encoder.get_output_dim(),
                                                      action_embedding_dim=action_embedding_dim,
                                                      input_attention=attention,
-                                                     num_start_types=1,
                                                      activation=Activation.by_name('tanh')(),
-                                                     predict_start_type_separately=False,
                                                      add_action_bias=False,
                                                      dropout=dropout)
         self._decoder_beam_search = decoder_beam_search
