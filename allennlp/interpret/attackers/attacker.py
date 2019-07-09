@@ -11,7 +11,11 @@ class Attacker(Registrable):
     def __init__(self, predictor: Predictor):
         self.predictor = predictor
 
-    def attack_from_json(self, inputs: JsonDict) -> JsonDict:
+    def attack_from_json(self,
+                         inputs: JsonDict,
+                         name_of_input_field_to_attack: str = 'tokens',
+                         name_of_grad_input_field: str = 'grad_input_1',
+                         ignore_tokens: List[str] = ["@@NULL@@"]) -> JsonDict:
         """
         This function modifies the input to change the model's prediction in some desired manner
         (e.g., an adversarial attack).
@@ -20,5 +24,8 @@ class Attacker(Registrable):
         containing the sanitized final tokens. For example, the final tokens might be a slight
         modification to the input tokens that cause the model to change its prediction.
 
+        `name_of_input_field_to_attack` is for example `tokens`, it says what the input
+        field is called. `name_of_grad_input_field` is for example `grad_input_1`, which
+        is a key into a grads dictionary.
         """
         raise NotImplementedError("you should implement this if you want to do model attacks")

@@ -12,8 +12,8 @@ class TestInputReduction(AllenNlpTestCase):
         }
 
         archive = load_archive(self.FIXTURES_ROOT / 'decomposable_attention' / 'serialization' / 'model.tar.gz')
-        predictor = Predictor.from_archive(archive, 'textual-entailment')        
-        
+        predictor = Predictor.from_archive(archive, 'textual-entailment')
+
         reducer = InputReduction(predictor)
         reduced = reducer.attack_from_json(inputs, 'hypothesis', 'grad_input_1')
         assert reduced is not None

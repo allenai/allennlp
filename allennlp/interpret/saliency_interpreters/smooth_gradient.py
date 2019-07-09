@@ -62,7 +62,7 @@ class SmoothGradient(SaliencyInterpreter):
         num_samples = 25
 
         total_gradients = {}
-        for i in range(num_samples):
+        for _ in range(num_samples):
             handle = self._register_forward_hook(stdev)
             grads = self.predictor.get_gradients([instance])[0]
             handle.remove()

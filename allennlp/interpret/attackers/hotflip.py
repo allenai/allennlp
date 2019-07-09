@@ -66,7 +66,8 @@ class Hotflip(Attacker):
     def attack_from_json(self,
                          inputs: JsonDict = None,
                          name_of_input_field_to_attack: str = 'tokens',
-                         name_of_grad_input_field: str = 'grad_input_1'):
+                         name_of_grad_input_field: str = 'grad_input_1',
+                         ignore_tokens: List[str] = ["@@NULL@@"]): # pylint disable=unused-argument
 
         """
         Replaces one token at a time from the input until the model's prediction changes.
@@ -79,6 +80,8 @@ class Hotflip(Attacker):
         another token based on the first-order Taylor approximation of the loss.
         This process is iteratively repeated until the prediction changes.
         Once a token is replaced, it is not flipped again.
+
+        TODO (@Eric-Wallace) add functionality for ignore_tokens in the future.
         """
         original_instances = self.predictor.inputs_to_labeled_instances(inputs)
         original_tokens = list(original_instances[0][name_of_input_field_to_attack].tokens)
@@ -137,7 +140,7 @@ class Hotflip(Attacker):
 
                 # if the prediction has changed, then stop
                 label_change = False
-                for field in fields_to_compare.keys():
+                for field in fields_to_compare:
                     if field in new_instances[0].fields:
 
                         equal = new_instances[0][field].__eq__(fields_to_compare[field])

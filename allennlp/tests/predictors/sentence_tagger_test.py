@@ -1,4 +1,4 @@
-# pylint: disable=no-self-use
+# pylint: disable=no-self-use, protected-access
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor
@@ -6,7 +6,7 @@ from allennlp.predictors import Predictor
 class TestSentenceTaggerPredictor(AllenNlpTestCase):
     def test_predictions_to_labeled_instances(self):
         inputs = {
-            "sentence": "Eric Wallace was an intern at AI2",
+                "sentence": "Eric Wallace was an intern at AI2",
         }
 
         archive = load_archive(self.FIXTURES_ROOT / 'simple_tagger' / 'serialization' / 'model.tar.gz')

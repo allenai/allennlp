@@ -15,12 +15,7 @@ class InputReduction(Attacker):
     def attack_from_json(self, inputs: JsonDict = None,
                          name_of_input_field_to_attack: str = 'tokens',
                          name_of_grad_input_field: str = 'grad_input_1',
-                         ignore_tokens: List[str] = ["@@NULL@@"]):
-        """
-        `name_of_input_field_to_attack` is for example `tokens`, it says what the input
-        field is called. `name_of_grad_input_field` is for example `grad_input_1`, which
-        is a key into a grads dictionary.          
-        """
+                         ignore_tokens: List[str] = ["@@NULL@@"]):        
         original_instances = self.predictor.inputs_to_labeled_instances(inputs)
         final_tokens = []
         fields_to_check = {}
@@ -34,9 +29,10 @@ class InputReduction(Attacker):
             for key in current_instances[0].fields.keys():
                 if key not in inputs and key != name_of_input_field_to_attack:
                     fields_to_check[key] = test_instances[0][key]
-
+            
             # Set num_ignore_tokens, which tells input reduction when to stop
-            # Keep at least one token for classification/entailment/etc.
+            num_ignore = 0
+            # Keep at least one token for classification/entailment/etc.            
             if "tags" not in current_instances[0]:
                 num_ignore_tokens = 1
 
@@ -110,8 +106,10 @@ def remove_one_token(grads: np.ndarray,
         return instances
 
     # remove smallest
-    instances[0][name_of_input_field_to_attack].tokens = \
-    instances[0][name_of_input_field_to_attack].tokens[0:smallest] +  instances[0][name_of_input_field_to_attack].tokens[smallest + 1:]
+    before_smallest = instances[0][name_of_input_field_to_attack].tokens[0:smallest]
+    after_smallest = instances[0][name_of_input_field_to_attack].tokens[smallest + 1:]
+    instances[0][name_of_input_field_to_attack].tokens = before_smallest + after_smallest
+        
     if "tags" in instances[0]:
         instances[0]["tags"].__dict__["field_list"] = \
             instances[0]["tags"].__dict__["field_list"][0:smallest] + \
