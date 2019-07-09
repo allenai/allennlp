@@ -74,7 +74,7 @@ class TokenIndexer(Generic[TokenType], Registrable):
         warnings.warn("Using a Field with get_padding_token as an inherited method,"
                       " which will be depreciated in 1.0.0."
                       "Please implement as_padded_tensor instead.", FutureWarning)
-        return 0
+        return 0 # type: ignore
 
     def get_padding_lengths(self, token: TokenType) -> Dict[str, int]:
         """
