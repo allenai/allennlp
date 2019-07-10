@@ -11,7 +11,7 @@ class InputReduction(Attacker):
     """
     Runs the input reduction method from `Pathologies of Neural Models Make Interpretations
     Difficult` https://arxiv.org/abs/1804.07781, which removes as many words as possible
-    from the input _without_ changing the model's prediction.
+    from the input without changing the model's prediction.
     """
     def attack_from_json(self, inputs: JsonDict,
                          input_field_to_attack: str = 'tokens',
@@ -72,7 +72,7 @@ class InputReduction(Attacker):
                         break
 
                 # remove a token from the input
-                current_tokens = getattr(current_instances[0][input_field_to_attack],'tokens')
+                current_tokens = getattr(current_instances[0][input_field_to_attack], 'tokens')
                 current_instances, smallest_idx = \
                     remove_one_token(grads[grad_input_field],
                                      current_instances,
@@ -100,7 +100,8 @@ def remove_one_token(grads: np.ndarray,
 
     # For NER, skip all tokens that are not in outside
     if "tags" in instances[0]:
-        for idx, label in enumerate(instances[0]["tags"].field_list):
+        field_list = getattr(instances[0]["tags"], 'field_list')
+        for idx, label in enumerate(field_list):
             if label.label != "O":
                 grads_mag[idx] = float("inf")
 
@@ -110,14 +111,15 @@ def remove_one_token(grads: np.ndarray,
 
     # remove smallest
     input_field = instances[0][input_field_to_attack]
-    before_smallest = getattr(input_field, 'tokens')[0:smallest]
-    after_smallest = getattr(input_field, 'tokens')[smallest + 1:]
-    setattr(input_field, 'tokens', before_smallest + after_smallest)
+    inputs_before_smallest = getattr(input_field, 'tokens')[0:smallest]
+    inputs_after_smallest = getattr(input_field, 'tokens')[smallest + 1:]
+    setattr(input_field, 'tokens', inputs_before_smallest + inputs_after_smallest)
 
     if "tags" in instances[0]:
-        instances[0]["tags"].field_list = \
-            instances[0]["tags"].field_list[0:smallest] + \
-            instances[0]["tags"].field_list[smallest + 1:]
+        field_list = getattr(instances[0]["tags"], 'field_list')
+        field_list_before_smallest = getattr(instances[0]["tags"], 'field_list')[0:smallest]
+        field_list_after_smallest = getattr(instances[0]["tags"], 'field_list')[smallest + 1:]
+        setattr(instances[0]["tags"], 'field_list', field_list_before_smallest + field_list_after_smallest)
 
     instances[0].indexed = False
     return instances, smallest

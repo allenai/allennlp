@@ -7,7 +7,7 @@ from allennlp.interpret.saliency_interpreters.saliency_interpreter import Salien
 from allennlp.modules.text_field_embedders import TextFieldEmbedder
 from allennlp.data import Instance
 
-@SaliencyInterpreter.register('integrated-gradients-interpreter')
+@SaliencyInterpreter.register('integrated-gradient')
 class IntegratedGradient(SaliencyInterpreter):
     """
     Interprets the prediction using Integrated Gradients (https://arxiv.org/abs/1703.01365)
@@ -91,8 +91,8 @@ class IntegratedGradient(SaliencyInterpreter):
         embeddings_list.reverse()
 
         # Element-wise multiply average gradient by the input
-        for idx, iput in enumerate(embeddings_list):
+        for idx, input_embedding in enumerate(embeddings_list):
             key = "grad_input_" + str(idx + 1)
-            ig_grads[key] *= iput
+            ig_grads[key] *= input_embedding
 
         return ig_grads

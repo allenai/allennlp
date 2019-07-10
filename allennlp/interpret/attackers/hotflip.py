@@ -31,8 +31,8 @@ class Hotflip(Attacker):
         """
         # Gets all tokens in the vocab and their corresponding IDs
         all_tokens = list(self.vocab._token_to_index["tokens"].keys())
-        all_inputs = \
-        {"tokens":torch.LongTensor([x for x in self.vocab._index_to_token["tokens"].keys()]).unsqueeze(0)}
+        all_indices = list(self.vocab._index_to_token["tokens"].keys())
+        all_inputs = {"tokens": torch.LongTensor(all_indices).unsqueeze(0)}
 
         # handle when a model uses character-level inputs, e.g., ELMo or a CharCNN
         if "token_characters" in self.predictor._dataset_reader._token_indexers:
@@ -45,13 +45,13 @@ class Hotflip(Attacker):
                                                        padding_lengths={"num_token_characters": max_token_length})
             all_inputs['token_characters'] = torch.LongTensor(padded_tokens['token_characters']).unsqueeze(0)
 
-            if "elmo" in self.predictor._dataset_reader._token_indexers:
-                elmo_tokens = []
-                indexer = self.predictor._dataset_reader._token_indexers["elmo"]
-                for tok in all_tokens:
-                    tmp = indexer.tokens_to_indices([Token(text=tok)], self.vocab, "sentence")["sentence"]
-                    elmo_tokens.append(tmp[0])
-                all_inputs["elmo"] = torch.LongTensor(elmo_tokens).unsqueeze(0)
+        if "elmo" in self.predictor._dataset_reader._token_indexers:
+            elmo_tokens = []
+            indexer = self.predictor._dataset_reader._token_indexers["elmo"]
+            for tok in all_tokens:
+                tmp = indexer.tokens_to_indices([Token(text=tok)], self.vocab, "sentence")["sentence"]
+                elmo_tokens.append(tmp[0])
+            all_inputs["elmo"] = torch.LongTensor(elmo_tokens).unsqueeze(0)
 
         # find the TextFieldEmbedder
         for module in self.predictor._model.modules():
@@ -80,9 +80,8 @@ class Hotflip(Attacker):
         another token based on the first-order Taylor approximation of the loss.
         This process is iteratively repeated until the prediction changes.
         Once a token is replaced, it is not flipped again.
-
-        TODO (@Eric-Wallace) add functionality for ignore_tokens in the future.
         """
+        # TODO (@Eric-Wallace) add functionality for ignore_tokens in the future.
         original_instances = self.predictor.inputs_to_labeled_instances(inputs)
         input_field = original_instances[0][input_field_to_attack]
 
@@ -107,36 +106,35 @@ class Hotflip(Attacker):
             while True:
                 # Compute L2 norm of all grads.
                 grad = grads[grad_input_field]
-                grads_mag = [numpy.sqrt(g.dot(g)) for g in grad]
+                grads_magnitude = [g.dot(g) for g in grad]
 
                 # only flip a token once
                 for index in flipped:
-                    grads_mag[index] = -1
+                    grads_magnitude[index] = -1
 
                 # we flip the token with highest gradient norm
-                index_of_token_to_flip = numpy.argmax(grads_mag)
-                if grads_mag[index_of_token_to_flip] == -1:
+                index_of_token_to_flip = numpy.argmax(grads_magnitude)
+                # when we have already flipped all the tokens once
+                if grads_magnitude[index_of_token_to_flip] == -1:
                     break
                 flipped.append(index_of_token_to_flip)
 
                 # Get new token using taylor approximation
                 input_tokens = new_instances[0][input_field_to_attack]._indexed_tokens["tokens"] # type: ignore
                 original_id_of_token_to_flip = input_tokens[index_of_token_to_flip]
-                new_id_of_flipped_token = \
-                    first_order_taylor(grad[index_of_token_to_flip],
-                                       self.token_embedding.weight,
-                                       original_id_of_token_to_flip)
+                new_id_of_flipped_token = first_order_taylor(grad[index_of_token_to_flip],
+                                                             self.token_embedding.weight,
+                                                             original_id_of_token_to_flip)
                 # flip token
                 new_token = Token(self.vocab._index_to_token["tokens"][new_id_of_flipped_token]) # type: ignore
-                new_instances[0][input_field_to_attack].tokens[index_of_token_to_flip] = new_token
-
+                new_instances[0][input_field_to_attack].tokens[index_of_token_to_flip] = new_token # type: ignore
                 new_instances[0].indexed = False
 
                 # Get model predictions on new_instances, and then label the instances
                 grads, outputs = self.predictor.get_gradients(new_instances) # predictions
                 for key in outputs:
                     if isinstance(outputs[key], torch.Tensor):
-                        outputs[key] = outputs[key].detach().cpu().numpy().squeeze().squeeze()
+                        outputs[key] = outputs[key].detach().cpu().numpy().squeeze()
                     elif isinstance(outputs[key], list):
                         outputs[key] = outputs[key][0]
                 # add labels to new_instances
@@ -194,8 +192,8 @@ def first_order_taylor(grad: numpy.ndarray,
     """
     grad = torch.from_numpy(grad)
     embedding_matrix = embedding_matrix.cpu()
-    word_embeds = \
-        torch.nn.functional.embedding(torch.LongTensor([token_idx]), embedding_matrix)
+    word_embeds = torch.nn.functional.embedding(torch.LongTensor([token_idx]),
+                                                embedding_matrix)
     word_embeds = word_embeds.detach().unsqueeze(0)
     grad = grad.unsqueeze(0).unsqueeze(0)
     # solves equation (3) here https://arxiv.org/abs/1903.06620

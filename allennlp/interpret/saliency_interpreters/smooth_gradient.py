@@ -8,7 +8,7 @@ from allennlp.interpret.saliency_interpreters.saliency_interpreter import Salien
 from allennlp.modules.text_field_embedders import TextFieldEmbedder
 from allennlp.data import Instance
 
-@SaliencyInterpreter.register('smooth-gradient-interpreter')
+@SaliencyInterpreter.register('smooth-gradient')
 class SmoothGradient(SaliencyInterpreter):
     """
     Interprets the prediction using SmoothGrad (https://arxiv.org/abs/1706.03825)

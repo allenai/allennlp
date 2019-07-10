@@ -12,9 +12,4 @@ class SaliencyInterpreter(Registrable):
         self.predictor = predictor
 
     def saliency_interpret_from_json(self, inputs: JsonDict) -> JsonDict:
-        """
-        Gets the saliency score for each token. Currently all
-        SaliencyInterpreters uses a  gradient-based method to get scores
-        for each word, and returns them normalized and sanitized.
-        """
         raise NotImplementedError("Implement this for saliency interpretations")

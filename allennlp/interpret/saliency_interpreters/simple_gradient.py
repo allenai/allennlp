@@ -6,7 +6,7 @@ from allennlp.common.util import JsonDict, sanitize
 from allennlp.modules.text_field_embedders import TextFieldEmbedder
 from allennlp.interpret.saliency_interpreters.saliency_interpreter import SaliencyInterpreter
 
-@SaliencyInterpreter.register('simple-gradients-interpreter')
+@SaliencyInterpreter.register('simple-gradient')
 class SimpleGradient(SaliencyInterpreter):
     def saliency_interpret_from_json(self, inputs: JsonDict) -> JsonDict:
         """
