@@ -85,7 +85,7 @@ class InputReduction(Attacker):
 def remove_one_token(grads: np.ndarray,
                      instances: List[Instance] = None,
                      input_field_to_attack: str = 'tokens',
-                     ignore_tokens: List[str] = ["@@NULL@@"]) -> (List[Instance], int):
+                     ignore_tokens: List[str] = ["@@NULL@@"]) -> Tuple[List[Instance], int]:
     """
     Finds the token with the smallest gradient and removes it.
     """

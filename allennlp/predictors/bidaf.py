@@ -1,12 +1,13 @@
 # pylint: disable=protected-access
-from typing import Dict, List, Any
+from typing import Dict, List
 from overrides import overrides
 import numpy as np
 from allennlp.common.util import JsonDict
 from allennlp.data import Instance
 from allennlp.data.tokenizers import Token
 from allennlp.predictors.predictor import Predictor
-from allennlp.data.fields import IndexField, TextField, ListField, LabelField, SpanField, SequenceLabelField, SequenceField, MetadataField
+from allennlp.data.fields import IndexField, TextField, ListField, \
+    LabelField, SpanField, SequenceLabelField, SequenceField, MetadataField
 
 @Predictor.register('machine-comprehension')
 class BidafPredictor(Predictor):
@@ -56,9 +57,8 @@ class BidafPredictor(Predictor):
         if 'best_span' in outputs:
             span_start_label = outputs['best_span'][0]
             span_end_label = outputs['best_span'][1]
-            passage = SequenceField(instance['passage'])
-            instance.add_field('span_start', IndexField(int(span_start_label), passage))
-            instance.add_field('span_end', IndexField(int(span_end_label), passage))
+            instance.add_field('span_start', IndexField(int(span_start_label), instance['passage'])) # type: ignore
+            instance.add_field('span_end', IndexField(int(span_end_label), instance['passage'])) # type: ignore
 
         # For NAQANet model
         elif 'answer' in outputs:
@@ -124,7 +124,7 @@ class BidafPredictor(Predictor):
 
                 # Convert character span indices into word span indices
                 word_span_start = None
-                word_span_end = None                
+                word_span_end = None
                 for idx, offset in enumerate(MetadataField(instance['metadata']). \
                     metadata['question_token_offsets']):
                     if offset[0] == span[0]:
@@ -132,8 +132,7 @@ class BidafPredictor(Predictor):
                     if offset[1] == span[1]:
                         word_span_end = idx
 
-                question = SequenceField(instance['question'])
-                field = ListField([SpanField(word_span_start, word_span_end, question)])
+                field = ListField([SpanField(word_span_start, word_span_end, instance['question'])]) # type: ignore
                 instance.add_field('answer_as_question_spans', field)
 
         return [instance]
