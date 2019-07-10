@@ -701,9 +701,9 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
         probs_flat = torch.gather(probs_flat, dim=1, index=targets_flat)
         # shape : (batch * sequence_length,)
         focal_factor = (1. - probs_flat) ** gamma
-        focal_factor = focal_factor.view(-1, 1)
-    else:
-        focal_factor = 1.
+        focal_factor = focal_factor.view(*targets.size())
+        weights = weights * focal_factor
+
     if alpha is not None:
         # shape : () / (num_classes,)
         if isinstance(alpha, (float, int)):
@@ -728,8 +728,6 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
         # shape : (batch, max_len)
         alpha_factor = torch.gather(alpha_factor, dim=0, index=targets_flat.view(-1)).view(*targets.size())
         weights = weights * alpha_factor
-    else:
-        alpha_factor = 1.
 
     if label_smoothing is not None and label_smoothing > 0.0:
         num_classes = logits.size(-1)
@@ -745,8 +743,7 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
         # to extract the indices of the num_classes dimension which contribute to the loss.
         # shape : (batch * sequence_length, 1)
         negative_log_likelihood_flat = - torch.gather(log_probs_flat, dim=1, index=targets_flat)
-    # shape : (batch * sequence_length, 1)
-    negative_log_likelihood_flat = negative_log_likelihood_flat * focal_factor
+
     # shape : (batch, sequence_length)
     negative_log_likelihood = negative_log_likelihood_flat.view(*targets.size())
     # shape : (batch, sequence_length)
