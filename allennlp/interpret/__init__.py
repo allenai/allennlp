@@ -1,2 +1,7 @@
 from allennlp.interpret.attackers.attacker import Attacker
 from allennlp.interpret.saliency_interpreters.saliency_interpreter import SaliencyInterpreter
+from allennlp.interpret.saliency_interpreters.simple_gradient import SimpleGradient
+from allennlp.interpret.saliency_interpreters.integrated_gradient import IntegratedGradient
+from allennlp.interpret.saliency_interpreters.smooth_gradient import SmoothGradient
+from allennlp.interpret.attackers.input_reduction import InputReduction
+from allennlp.interpret.attackers.hotflip import Hotflip

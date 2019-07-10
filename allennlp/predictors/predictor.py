@@ -43,9 +43,9 @@ class Predictor(Registrable):
         self._model = model
         self._dataset_reader = dataset_reader
         # if get_gradients() is called, this is populated with token gradients
-        self.embedding_gradients = []
+        self.embedding_gradients: list = []
         # backward hooks on the TextFieldEmbedder
-        self.embedding_gradient_hooks = []
+        self.embedding_gradient_hooks: list = []
 
     def load_line(self, line: str) -> JsonDict:  # pylint: disable=no-self-use
         """
@@ -90,10 +90,10 @@ class Predictor(Registrable):
 
         Returns
         -------
-        Dict[str, np.ndarray]
-            Dictionary of gradient entries for each input fed into the model.
-            The keys have the form ``{grad_input_1: ..., grad_input_2: ... }``
-            up to the number of inputs given.
+        Tuple[Dict[str, Any], Dict[str, Any]]
+            The first item is a Dict of gradient entries for each input.
+            The keys have the form  ``{grad_input_1: ..., grad_input_2: ... }``
+            up to the number of inputs given. The second item is the model's output.
 
         Notes
         -----
@@ -191,8 +191,7 @@ class Predictor(Registrable):
         Adds labels to the :class:`~allennlp.data.instance.Instance`s passed in and returns it.
         """
         # pylint: disable=unused-argument,no-self-use
-        raise RuntimeError("you need to implement this method if you"
-            "want to give model interpretations or attacks")
+        raise RuntimeError("implement this method for model interpretations or attacks")
 
     def _json_to_instance(self, json_dict: JsonDict) -> Instance:
         """

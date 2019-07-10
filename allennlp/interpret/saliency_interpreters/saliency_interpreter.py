@@ -8,7 +8,7 @@ class SaliencyInterpreter(Registrable):
     outputs by assigning a saliency score to each input token.
     This score is then visualized, e.g., the AllenNLP demos.
     """
-    def __init__(self, predictor: Predictor):
+    def __init__(self, predictor: Predictor) -> None:
         self.predictor = predictor
 
     def saliency_interpret_from_json(self, inputs: JsonDict) -> JsonDict:

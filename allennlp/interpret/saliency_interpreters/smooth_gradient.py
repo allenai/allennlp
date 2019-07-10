@@ -4,7 +4,7 @@ from typing import Dict
 import torch
 import numpy
 from allennlp.common.util import JsonDict, sanitize
-from allennlp.interpret.saliency_interpreters import SaliencyInterpreter
+from allennlp.interpret import SaliencyInterpreter
 from allennlp.modules.text_field_embedders import TextFieldEmbedder
 from allennlp.data import Instance
 
@@ -35,7 +35,7 @@ class SmoothGradient(SaliencyInterpreter):
 
         return sanitize(instances_with_grads)
 
-    def _register_forward_hook(self, stdev: int):
+    def _register_forward_hook(self, stdev: float):
         """
         Register a forward hook on the embedding layer which adds random noise to every embedding.
         Used for one term in the SmoothGrad sum.
@@ -61,7 +61,7 @@ class SmoothGradient(SaliencyInterpreter):
         stdev = 0.01
         num_samples = 25
 
-        total_gradients = {}
+        total_gradients = {} # type: Dict[str, Any]
         for _ in range(num_samples):
             handle = self._register_forward_hook(stdev)
             grads = self.predictor.get_gradients([instance])[0]

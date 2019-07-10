@@ -1,8 +1,8 @@
-# pylint: disable=protected-access
+# pylint: disable=protected-access,dangerous-default-value
 from typing import List
 import numpy
 import torch
-from allennlp.interpret.attackers import Attacker
+from allennlp.interpret import Attacker
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.predictors.predictor import Predictor
 from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
@@ -17,7 +17,7 @@ class Hotflip(Attacker):
     in the function first_order_taylor(). Constructing this object is expensive due to the
     construction of the embedding matrix.
     """
-    def __init__(self, predictor: Predictor):
+    def __init__(self, predictor: Predictor) -> None:
         super().__init__(predictor)
         self.vocab = self.predictor._model.vocab
         self.token_embedding = self._construct_embedding_matrix()
@@ -68,8 +68,7 @@ class Hotflip(Attacker):
                          inputs: JsonDict = None,
                          input_field_to_attack: str = 'tokens',
                          grad_input_field: str = 'grad_input_1',
-                         ignore_tokens: List[str] = ["@@NULL@@"]): # pylint disable=unused-argument,dangerous-default-value
-
+                         ignore_tokens: List[str] = ["@@NULL@@"]):
         """
         Replaces one token at a time from the input until the model's prediction changes.
         `input_field_to_attack` is for example `tokens`, it says what the input
@@ -101,7 +100,7 @@ class Hotflip(Attacker):
 
             current_tokens = new_instances[0][input_field_to_attack].tokens
             grads, outputs = self.predictor.get_gradients(new_instances)
-            flipped = []
+            flipped = []  # type: List[int]
             while True:
                 # Compute L2 norm of all grads.
                 grad = grads[grad_input_field]

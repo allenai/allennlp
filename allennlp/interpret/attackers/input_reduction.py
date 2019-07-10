@@ -1,9 +1,11 @@
+# pylint: disable=dangerous-default-value
 from typing import List
 import numpy as np
 import torch
-from allennlp.interpret.attackers import Attacker
+from allennlp.interpret import Attacker
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import Instance
+from allennlp.data.fields.text_field import TextField
 
 @Attacker.register('input-reduction')
 class InputReduction(Attacker):
@@ -15,7 +17,7 @@ class InputReduction(Attacker):
     def attack_from_json(self, inputs: JsonDict,
                          input_field_to_attack: str = 'tokens',
                          grad_input_field: str = 'grad_input_1',
-                         ignore_tokens: List[str] = ["@@NULL@@"]): # pylint: disable=dangerous-default-value
+                         ignore_tokens: List[str] = ["@@NULL@@"]):
         original_instances = self.predictor.inputs_to_labeled_instances(inputs)
         final_tokens = []
         fields_to_check = {}
@@ -84,7 +86,7 @@ class InputReduction(Attacker):
 def remove_one_token(grads: np.ndarray,
                      instances: List[Instance] = None,
                      input_field_to_attack: str = 'tokens',
-                     ignore_tokens: List[str] = ["@@NULL@@"]) -> List[Instance]: # pylint: disable=dangerous-default-value
+                     ignore_tokens: List[str] = ["@@NULL@@"]) -> List[Instance]:
     """
     Finds the token with the smallest gradient and removes it.
     """
@@ -103,12 +105,13 @@ def remove_one_token(grads: np.ndarray,
 
     smallest = np.argmin(grads_mag)
     if smallest == float("inf"): # if all are ignored tokens, return.
-        return instances
+        return instances, smallest
 
     # remove smallest
-    before_smallest = instances[0][input_field_to_attack].tokens[0:smallest]
-    after_smallest = instances[0][input_field_to_attack].tokens[smallest + 1:]
-    instances[0][input_field_to_attack].tokens = before_smallest + after_smallest
+    inputField = instances[0][input_field_to_attack] # type: TextField
+    before_smallest = inputField.tokens[0:smallest]
+    after_smallest = inputField.tokens[smallest + 1:]
+    inputField.tokens = before_smallest + after_smallest
 
     if "tags" in instances[0]:
         instances[0]["tags"].__dict__["field_list"] = \
@@ -120,14 +123,15 @@ def remove_one_token(grads: np.ndarray,
 
 def get_ner_tags_and_mask(current_instances: List[Instance] = None,
                           input_field_to_attack: str = 'tokens',
-                          ignore_tokens: List[str] = ["@@NULL@@"]): # pylint: disable=dangerous-default-value
+                          ignore_tokens: List[str] = ["@@NULL@@"]):
     """
     Used for the NER task. Sets the num_ignore tokens, saves the original
      predicted tag and a 0/1 mask in the position of the tags
     """
     # Set num_ignore_tokens
     num_ignore_tokens = 0
-    for token in current_instances[0][input_field_to_attack].tokens:
+    inputField = current_instances[0][input_field_to_attack] # type: TextField
+    for token in inputField.tokens:
         if str(token) in ignore_tokens:
             num_ignore_tokens += 1
 

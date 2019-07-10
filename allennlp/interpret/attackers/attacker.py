@@ -9,7 +9,7 @@ class Attacker(Registrable):
     to try to change an AllenNLP Predictor's output in a desired
     manner (e.g., make it incorrect).
     """
-    def __init__(self, predictor: Predictor):
+    def __init__(self, predictor: Predictor) -> None:
         self.predictor = predictor
 
     def attack_from_json(self,
@@ -28,7 +28,9 @@ class Attacker(Registrable):
         input_field_to_attack: str
             The key in the inputs JsonDict you want to attack, e.g., `tokens`.
         grad_input_field: str
-            The field in the gradients dictionary that contains the input gradients. For example, `grad_input_1` will be the field for single input tasks. See get_gradients() in `Predictor` for more information on field names.
+            The field in the gradients dictionary that contains the input gradients.
+            For example, `grad_input_1` will be the field for single input tasks. See
+            get_gradients() in `Predictor` for more information on field names.
         Returns
         -------
         JsonDict

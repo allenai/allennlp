@@ -4,7 +4,7 @@ import math
 import numpy
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.modules.text_field_embedders import TextFieldEmbedder
-from allennlp.interpret.saliency_interpreters import SaliencyInterpreter
+from allennlp.interpret import SaliencyInterpreter
 
 @SaliencyInterpreter.register('simple-gradients-interpreter')
 class SimpleGradient(SaliencyInterpreter):
@@ -18,7 +18,7 @@ class SimpleGradient(SaliencyInterpreter):
         labeled_instances = self.predictor.inputs_to_labeled_instances(inputs)
 
         # List of embedding inputs, used for multiplying gradient by the input for normalization
-        embeddings_list = []
+        embeddings_list = [] # type: List[np.ndarray]
 
         instances_with_grads = dict()
         for idx, instance in enumerate(labeled_instances):
