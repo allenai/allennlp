@@ -73,7 +73,7 @@ class Predictor(Registrable):
         Returns
         -------
         List[instance]
-            A list of :class:`~allennlp.data.instance.Instance`s
+        A list of :class:`~allennlp.data.instance.Instance`
         """
         instance = self._json_to_instance(inputs)
         outputs = self._model.forward_on_instance(instance)
@@ -92,9 +92,9 @@ class Predictor(Registrable):
         Returns
         -------
         Tuple[Dict[str, Any], Dict[str, Any]]
-            The first item is a Dict of gradient entries for each input.
-            The keys have the form  ``{grad_input_1: ..., grad_input_2: ... }``
-            up to the number of inputs given. The second item is the model's output.
+        The first item is a Dict of gradient entries for each input.
+        The keys have the form  ``{grad_input_1: ..., grad_input_2: ... }``
+        up to the number of inputs given. The second item is the model's output.
 
         Notes
         -----

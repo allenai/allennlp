@@ -20,14 +20,14 @@ class InputReduction(Attacker):
         original_instances = self.predictor.inputs_to_labeled_instances(inputs)
         final_tokens = []
         fields_to_check = {}
-        for current_instances in original_instances:
-            current_instances = [current_instances]
+        for current_instance in original_instances:
+            current_instances = [current_instance] # type: List[Instance]
             original_tokens = \
                 [x for x in current_instances[0][input_field_to_attack].tokens]
 
             # Save fields that must be checked for equality
             test_instances = self.predictor.inputs_to_labeled_instances(inputs)
-            for key in current_instances[0].fields.keys():
+            for key in current_instances[0].fields:
                 if key not in inputs and key != input_field_to_attack:
                     fields_to_check[key] = test_instances[0][key]
 

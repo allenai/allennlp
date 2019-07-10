@@ -76,13 +76,14 @@ class BidafPredictor(Predictor):
                 # Convert character span indices into word span indices
                 word_span_start = None
                 word_span_end = None
-                for idx, offset in enumerate(instance['metadata'].metadata['passage_token_offsets']): # type: ignore
+                for idx, offset in \
+                    enumerate(instance['metadata'].metadata['passage_token_offsets']): # type: ignore
                     if offset[0] == span[0]:
                         word_span_start = idx
                     if offset[1] == span[1]:
                         word_span_end = idx
 
-                field = ListField([SpanField(word_span_start, word_span_end, instance['passage'])])
+                field = ListField([SpanField(word_span_start, word_span_end, instance['passage'])]) # type: ignore
                 instance.add_field('answer_as_passage_spans', field)
 
             # When the answer is an arithmetic calculation
@@ -123,7 +124,8 @@ class BidafPredictor(Predictor):
                 # Convert character span indices into word span indices
                 word_span_start = None
                 word_span_end = None
-                for idx, offset in enumerate(instance['metadata'].metadata['question_token_offsets']): # type: ignore
+                for idx, offset in \
+                    enumerate(instance['metadata'].metadata['question_token_offsets']): # type: ignore
                     if offset[0] == span[0]:
                         word_span_start = idx
                     if offset[1] == span[1]:

@@ -84,11 +84,13 @@ class Hotflip(Attacker):
         TODO (@Eric-Wallace) add functionality for ignore_tokens in the future.
         """
         original_instances = self.predictor.inputs_to_labeled_instances(inputs)
-        original_tokens = list(original_instances[0][input_field_to_attack].tokens)
+        input_field = original_instances[0][input_field_to_attack]
+
+        original_tokens = list(getattr(input_field, 'tokens'))
         final_tokens = []
         new_prediction = None
-        for new_instances in original_instances:
-            new_instances = [new_instances]
+        for new_instance in original_instances:
+            new_instances = [new_instance]
             test_instances = self.predictor.inputs_to_labeled_instances(inputs)
 
             # get a list of fields that we want to check to see if they change
@@ -98,7 +100,8 @@ class Hotflip(Attacker):
                 if key not in inputs.keys() and key != input_field_to_attack:
                     fields_to_compare[key] = test_instances[0][key]
 
-            current_tokens = new_instances[0][input_field_to_attack].tokens
+            current_input_field = new_instances[0][input_field_to_attack]
+            current_tokens = getattr(current_input_field, 'tokens')
             grads, outputs = self.predictor.get_gradients(new_instances)
             flipped = []  # type: List[int]
             while True:
