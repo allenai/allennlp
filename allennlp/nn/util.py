@@ -665,11 +665,10 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
         ``gamma`` is, the more focus on hard examples.
     alpha : ``float`` or ``List[float]``, optional (default = None)
         Focal loss[*] weighting factor ``alpha`` to balance between classes. Can be
-        used independently with ``gamma``. This is just a class-base shortcut to
-        ``weights``. If a single ``float`` is provided, it is assumed binary case
-        using ``alpha`` and ``1 - alpha`` for positive and negative respectively.
-        If a list of ``float`` is provided, with the same length as the number of
-        classes, the weights will match the classes.
+        used independently with ``gamma``. If a single ``float`` is provided, it
+        is assumed binary case using ``alpha`` and ``1 - alpha`` for positive and
+        negative respectively. If a list of ``float`` is provided, with the same
+        length as the number of classes, the weights will match the classes.
         [*] T. Lin, P. Goyal, R. Girshick, K. He and P. Dollár, "Focal Loss for
         Dense Object Detection," 2017 IEEE International Conference on Computer
         Vision (ICCV), Venice, 2017, pp. 2999-3007.
@@ -687,6 +686,10 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
 
     # make sure weights are float
     weights = weights.float()
+    # sum all dim except batch
+    non_batch_dims = tuple(range(1, len(weights.shape)))
+    # shape : (batch_size,)
+    weights_batch_sum = weights.sum(dim=non_batch_dims)
     # shape : (batch * sequence_length, num_classes)
     logits_flat = logits.view(-1, logits.size(-1))
     # shape : (batch * sequence_length, num_classes)
@@ -701,6 +704,7 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
         probs_flat = torch.gather(probs_flat, dim=1, index=targets_flat)
         # shape : (batch * sequence_length,)
         focal_factor = (1. - probs_flat) ** gamma
+        # shape : (batch, sequence_length)
         focal_factor = focal_factor.view(*targets.size())
         weights = weights * focal_factor
 
@@ -743,7 +747,6 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
         # to extract the indices of the num_classes dimension which contribute to the loss.
         # shape : (batch * sequence_length, 1)
         negative_log_likelihood_flat = - torch.gather(log_probs_flat, dim=1, index=targets_flat)
-
     # shape : (batch, sequence_length)
     negative_log_likelihood = negative_log_likelihood_flat.view(*targets.size())
     # shape : (batch, sequence_length)
@@ -751,14 +754,14 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
 
     if average == "batch":
         # shape : (batch_size,)
-        per_batch_loss = negative_log_likelihood.sum(1) / (weights.sum(1) + 1e-13)
-        num_non_empty_sequences = ((weights.sum(1) > 0).float().sum() + 1e-13)
+        per_batch_loss = negative_log_likelihood.sum(non_batch_dims) / (weights_batch_sum + 1e-13)
+        num_non_empty_sequences = ((weights_batch_sum > 0).float().sum() + 1e-13)
         return per_batch_loss.sum() / num_non_empty_sequences
     elif average == "token":
-        return negative_log_likelihood.sum() / (weights.sum().float() + 1e-13)
+        return negative_log_likelihood.sum() / (weights_batch_sum.sum() + 1e-13)
     else:
         # shape : (batch_size,)
-        per_batch_loss = negative_log_likelihood.sum(1) / (weights.sum(1) + 1e-13)
+        per_batch_loss = negative_log_likelihood.sum(non_batch_dims) / (weights_batch_sum + 1e-13)
         return per_batch_loss
 
 
