@@ -91,8 +91,6 @@ class BidafPredictor(Predictor):
                 # The different numbers in the passage that the model encounters
                 sequence_labels = outputs['answer']['numbers']
 
-                # TODO (Eric-Wallace) outputs['answer']['numbers'] does not
-                # include padding (like metadata), is that ok?
                 numbers_as_tokens = \
                 [Token(str(number['value'])) for number in outputs['answer']['numbers']]
                 # hack copied from https://github.com/

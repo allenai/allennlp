@@ -144,39 +144,19 @@ class Hotflip(Attacker):
                 label_change = False
                 for field in fields_to_compare:
                     if field in new_instances[0].fields:
-
-                        equal = new_instances[0][field].__eq__(fields_to_compare[field])
+                        equal = new_instances[0][field] == fields_to_compare[field]
                     else:
                         equal = outputs[field] == fields_to_compare[field]
                     if not equal:
                         label_change = True
                         break
-                # if the prediction has changed, we want to return the new answer
-                # for visualization in the demo.
                 if label_change:
-                    new_prediction = get_new_prediction(outputs)
                     break
 
             final_tokens.append(current_tokens)
-        return \
-            sanitize({"final": final_tokens, "original": original_tokens, "new_prediction": new_prediction})
-
-# Get the model's new prediction given its outputs
-def get_new_prediction(outputs):
-    new_prediction = None
-    if "probs" in outputs: # sentiment analysis
-        new_prediction = outputs["probs"]
-    elif "label_probs" in outputs: # textual entailment
-        new_prediction = outputs["label_probs"]
-    elif "best_span_str" in outputs: # bidaf
-        new_prediction = outputs["best_span_str"]
-    elif "answer" in outputs: # NAQANet
-        ans_type = outputs["answer"]["answer_type"]
-        if ans_type == "count":
-            new_prediction = outputs["answer"]["count"]
-        else:
-            new_prediction = outputs["answer"]["value"]
-    return new_prediction
+        return sanitize({"final": final_tokens,
+                         "original": original_tokens,
+                         "outputs": outputs})
 
 def first_order_taylor(grad: numpy.ndarray,
                        embedding_matrix: torch.nn.parameter.Parameter,

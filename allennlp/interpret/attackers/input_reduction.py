@@ -142,7 +142,8 @@ def get_ner_tags_and_mask(current_instances: List[Instance] = None,
     # save the original tags and a 0/1 mask where the tags are
     tag_mask = []
     original_tags = []
-    for label in current_instances[0]["tags"].field_list:
+    tag_field = current_instances[0]["tags"]
+    for label in getattr(tag_field, 'field_list'):
         if label.label != "O":
             tag_mask.append(1)
             original_tags.append(label.label)
