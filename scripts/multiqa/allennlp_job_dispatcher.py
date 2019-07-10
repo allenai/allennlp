@@ -196,8 +196,8 @@ class AllenNLP_Job_Dispatcher():
                 exp_config["model"] = exp_config["model"].replace('[' + key + ']', str(params[key]))
             if "eval_set" in exp_config:
                 exp_config["eval_set"] = exp_config["eval_set"].replace('[' + key + ']', str(params[key]))
-
-            exp_config['output_file'] = exp_config['output_file'].replace('[' + key + ']', str(params[key]))
+            if 'output_file' in exp_config:
+                exp_config['output_file'] = exp_config['output_file'].replace('[' + key + ']', str(params[key]))
             if 'output_file_cloud' in exp_config:
                 exp_config['output_file_cloud'] = \
                     exp_config['output_file_cloud'].replace('[' + key + ']', str(params[key]))
@@ -240,6 +240,10 @@ class AllenNLP_Job_Dispatcher():
                     expanded_experiments.append(new_expriment)
             experiments = expanded_experiments
         return experiments
+
+    def build_run_script_bash_command(self, exp_config, run_name):
+        bash_command = exp_config['bash_command']
+        return bash_command
 
     def build_evaluate_bash_command(self, exp_config, run_name):
         bash_command = 'python -m allennlp.run evaluate ' + exp_config['model'] + ' '
@@ -371,7 +375,10 @@ class AllenNLP_Job_Dispatcher():
 
         config = self.read_config(full_file)
         job_type = config['operation']
-        config['override_config'] = config['allennlp_override']
+        if 'allennlp_override' in config:
+            config['override_config'] = config['allennlp_override']
+        else:
+            config['override_config'] = {}
 
         currently_running_experiments = self.get_running_experiments()
         elastic_exp_results = []
@@ -434,14 +441,21 @@ class AllenNLP_Job_Dispatcher():
                         / float(exp_config['override_config']['trainer']['gradient_accumulation_steps']))
 
             # Building command
-            runner_config = {'output_file': exp_config['output_file']}
+
+            runner_config = {}
+            if 'output_file' in exp_config:
+                runner_config['output_file'] = exp_config['output_file']
+            if 'env_setup' in exp_config:
+                runner_config['env_setup'] = exp_config['env_setup']
             runner_config['operation'] = "run job"
 
             if "post_proc_bash" in exp_config:
                 runner_config['post_proc_bash'] = exp_config['post_proc_bash']
             runner_config['resource_type'] = 'GPU'
             runner_config['override_config'] = exp_config['override_config']
-            if job_type == 'evaluate':
+            if job_type == 'run_script':
+                runner_config['bash_command'] = self.build_run_script_bash_command(exp_config, run_name)
+            elif job_type == 'evaluate':
                 runner_config['bash_command'] = self.build_evaluate_bash_command(exp_config, run_name)
             elif job_type == 'train':
                 runner_config['bash_command'] = self.build_train_bash_command(exp_config, run_name)
@@ -606,13 +620,16 @@ allennlp_dispatcher = AllenNLP_Job_Dispatcher(experiment_name)
 #experiment_name = '074_CSQA_BERTLarge_samechunk_train'
 #experiment_name = '075_CSQA_BERT_samechunk_train'
 #experiment_name = '076_beatbert_predict'
-experiment_name = '077_MultiQA_BERTBase_train'
+#experiment_name = '077_MultiQA_BERTBase_train'
+#experiment_name = '078_MultiQA_BERTBase_eval'
+#experiment_name = '079_MultiQA_BERTBase_mix_train'
+experiment_name = '080_MultiQA_BERTBase_predict_eval'
 
 #if experiment_name.find('BERTLarge') > -1 and experiment_name.find('evaluate') == -1:
 #    queue = '4GPUs'
 #queue = '4GPUs'
 #queue = 'rack-gamir-g05'
-#queue = 'rack-jonathan-g08'
+queue = 'rack-jonathan-g08'
 #queue = 'savant'
 
 FORCE_RUN = True

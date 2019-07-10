@@ -264,7 +264,10 @@ class JobRunner():
             bash_command = bash_command.replace("'[GPU_ID]'", str(assigned_GPU)).replace('[GPU_ID]', str(assigned_GPU))
             bash_command = bash_command.replace("'[GPU_ID4]'", str(assigned_GPU)).replace('[GPU_ID4]', str(assigned_GPU))
 
-        bash_command = 'nohup ' + bash_command + ' &'
+        if 'env_setup' in config:
+            bash_command = config['env_setup'] + '; nohup ' + bash_command + ' &'
+        else:
+            bash_command = 'nohup ' + bash_command + ' &'
 
         if 'output_file' in config and config['output_file'] is not None:
             config['output_file'] = config['output_file'].replace('[MODEL_DIR]', self._MODELS_DIR)
