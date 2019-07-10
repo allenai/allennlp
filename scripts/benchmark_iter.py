@@ -24,7 +24,7 @@ def time_iterable(iterable, get_items_per_batch, batches_per_interval):
         item_count += get_items_per_batch(batch)
         adjusted_batch_count = item_count / MEAN_BATCH_SIZE
 
-        if batch_count % batches_per_interval:
+        if batch_count % batches_per_interval == 0:
             end = time.perf_counter()
 
             msg = (f"s/b total: {(end - start) / adjusted_batch_count} " +
