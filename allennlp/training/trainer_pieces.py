@@ -37,8 +37,10 @@ class TrainerPieces(NamedTuple):
                     serialization_dir: str,
                     recover: bool = False,
                     cache_directory: str = None,
-                    cache_prefix: str = None) -> 'TrainerPieces':
-        all_datasets = training_util.datasets_from_params(params, cache_directory, cache_prefix)
+                    cache_prefix: str = None,
+                    cache_method: str = 'jsonpickle') -> 'TrainerPieces':
+        all_datasets = training_util.datasets_from_params(
+            params, cache_directory, cache_prefix, cache_method)
         datasets_for_vocab_creation = set(params.pop("datasets_for_vocab_creation", all_datasets))
 
         for dataset in datasets_for_vocab_creation:

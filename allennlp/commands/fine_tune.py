@@ -79,6 +79,14 @@ class FineTune(Subcommand):
                                default='',
                                help='Location to store cache of data preprocessing')
 
+        subparser.add_argument('--cache-method',
+                               type=str,
+                               default='jsonpickle',
+                               choices=['jsonpickle', 'pickle'],
+                               help='Data caching method. By default use `jsonpickle`, which is '
+                               'slow but portable. Alternatively, `pickle` can be much faster but '
+                               'may not be portable across different Python versions.')
+
         subparser.add_argument('--embedding-sources-mapping',
                                type=str,
                                default="",
@@ -103,7 +111,8 @@ def fine_tune_model_from_args(args: argparse.Namespace):
                                     file_friendly_logging=args.file_friendly_logging,
                                     batch_weight_key=args.batch_weight_key,
                                     embedding_sources_mapping=args.embedding_sources_mapping,
-                                    cache_directory=args.cache_directory)
+                                    cache_directory=args.cache_directory,
+                                    cache_method=args.cache_method)
 
 
 def fine_tune_model_from_file_paths(model_archive_path: str,
@@ -114,7 +123,8 @@ def fine_tune_model_from_file_paths(model_archive_path: str,
                                     file_friendly_logging: bool = False,
                                     batch_weight_key: str = "",
                                     embedding_sources_mapping: str = "",
-                                    cache_directory: str = None) -> Model:
+                                    cache_directory: str = None,
+                                    cache_method: str = "jsonpickle") -> Model:
     """
     A wrapper around :func:`fine_tune_model` which loads the model archive from a file.
 
@@ -141,6 +151,11 @@ def fine_tune_model_from_file_paths(model_archive_path: str,
     embedding_sources_mapping: ``str``, optional (default="")
         JSON string to define dict mapping from embedding paths used during training to
         the corresponding embedding filepaths available during fine-tuning.
+    cache_directory : ``str``, optional
+        For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
+    cache_method : ``str``, optional (default='jsonpickle')
+        Data caching method. By default use `jsonpickle`, which is slow but portable. Alternatively,
+        `pickle` can be much faster but may not be portable across different Python versions.
     """
     # We don't need to pass in `cuda_device` here, because the trainer will call `model.cuda()` if
     # necessary.
@@ -155,7 +170,8 @@ def fine_tune_model_from_file_paths(model_archive_path: str,
                            file_friendly_logging=file_friendly_logging,
                            batch_weight_key=batch_weight_key,
                            embedding_sources_mapping=embedding_sources,
-                           cache_directory=cache_directory)
+                           cache_directory=cache_directory,
+                           cache_method=cache_method)
 
 def fine_tune_model(model: Model,
                     params: Params,
@@ -164,7 +180,8 @@ def fine_tune_model(model: Model,
                     file_friendly_logging: bool = False,
                     batch_weight_key: str = "",
                     embedding_sources_mapping: Dict[str, str] = None,
-                    cache_directory: str = None) -> Model:
+                    cache_directory: str = None,
+                    cache_method: str = "jsonpickle") -> Model:
     """
     Fine tunes the given model, using a set of parameters that is largely identical to those used
     for :func:`~allennlp.commands.train.train_model`, except that the ``model`` section is ignored,
@@ -192,6 +209,11 @@ def fine_tune_model(model: Model,
     embedding_sources_mapping: ``Dict[str, str]``, optional (default=None)
         mapping from model paths to the pretrained embedding filepaths
         used during fine-tuning.
+    cache_directory : ``str``, optional
+        For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
+    cache_method : ``str``, optional (default='jsonpickle')
+        Data caching method. By default use `jsonpickle`, which is slow but portable. Alternatively,
+        `pickle` can be much faster but may not be portable across different Python versions.
     """
     prepare_environment(params)
     if os.path.exists(serialization_dir) and os.listdir(serialization_dir):
@@ -214,7 +236,7 @@ def fine_tune_model(model: Model,
         logger.warning("You passed `directory_path` in parameters for the vocabulary in "
                        "your configuration file, but it will be ignored. ")
 
-    all_datasets = datasets_from_params(params, cache_directory=cache_directory)
+    all_datasets = datasets_from_params(params, cache_directory=cache_directory, cache_method=cache_method)
     vocab = model.vocab
 
     if extend_vocab:

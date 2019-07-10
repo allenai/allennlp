@@ -69,24 +69,29 @@ class DatasetReader(Registrable):
     def __init__(self, lazy: bool = False) -> None:
         self.lazy = lazy
         self._cache_directory: pathlib.Path = None
+        self._cache_method: str = None
 
-    def cache_data(self, cache_directory: str) -> None:
+    def cache_data(self, cache_directory: str, cache_method: str = 'jsonpickle') -> None:
         """
         When you call this method, we will use this directory to store a cache of already-processed
-        ``Instances`` in every file passed to :func:`read`, serialized as one string-formatted
-        ``Instance`` per line.  If the cache file for a given ``file_path`` exists, we read the
-        ``Instances`` from the cache instead of re-processing the data (using
+        ``Instances`` in every file passed to :func:`read`. If the default `jsonpickle` caching
+        method is used, the data will be serialized serialized as one string-formatted ``Instance``
+        per line.  If instead `pickle` is given as the caching method, the data wil be serialized as
+        a pickle file, using the highest protocol available on the host machine. This method may be
+        much faster, but also may not be portable. If the cache file for a given ``file_path``
+        exists, we read the ``Instances`` from the cache instead of re-processing the data (using
         :func:`deserialize_instance`).  If the cache file does `not` exist, we will `create` it on
         our first pass through the data (using :func:`serialize_instance`).
 
         IMPORTANT CAVEAT: It is the `caller's` responsibility to make sure that this directory is
         unique for any combination of code and parameters that you use.  That is, if you call this
-        method, we will use any existing cache files in that directory `regardless of the
-        parameters you set for this DatasetReader!`  If you use our commands, the ``Train`` command
-        is responsible for calling this method and ensuring that unique parameters correspond to
-        unique cache directories.  If you don't use our commands, that is your responsibility.
+        method, we will use any existing cache files in that directory `regardless of the parameters
+        you set for this DatasetReader!`  If you use our commands, the ``Train`` command is
+        responsible for calling this method and ensuring that unique parameters correspond to unique
+        cache directories.  If you don't use our commands, that is your responsibility.
         """
         self._cache_directory = pathlib.Path(cache_directory)
+        self._cache_method = cache_method
         os.makedirs(self._cache_directory, exist_ok=True)
 
     def read(self, file_path: str) -> Iterable[Instance]:
@@ -140,14 +145,23 @@ class DatasetReader(Registrable):
             # And finally we write to the cache if we need to.
             if cache_file and not os.path.exists(cache_file):
                 logger.info(f"Caching instances to {cache_file}")
-                with open(cache_file, 'wb') as cache:
-                    # for instance in Tqdm.tqdm(instances):
-                    #     cache.write(self.serialize_instance(instance) + '\n')
-                    pkl.dump(instances, cache, protocol=pkl.HIGHEST_PROTOCOL)
+                self._instances_to_cache_file(cache_file, instances)
             return instances
 
     def _get_cache_location_for_file_path(self, file_path: str) -> str:
-        return str(self._cache_directory / util.flatten_filename(str(file_path)))
+        """
+        If we're using `jsonpickle` as the cache method, return a json file name. Otherwise return a
+        pickle file name.
+        """
+        file_pre, _ = os.path.splitext(file_path)
+        location_pre = str(self._cache_directory / util.flatten_filename(str(file_pre)))
+        if self._cache_method == 'jsonpickle':
+            extension = '.json'
+        elif self._cache_method == 'pickle':
+            extension = '.pkl'
+        else:
+            raise ConfigurationError('Available caching methods are `jsonpickle` and `pickle`.')
+        return location_pre + extension
 
     def _read(self, file_path: str) -> Iterable[Instance]:
         """
@@ -159,11 +173,26 @@ class DatasetReader(Registrable):
         raise NotImplementedError
 
     def _instances_from_cache_file(self, cache_filename: str) -> Iterable[Instance]:
-        # with open(cache_filename, 'r') as cache_file:
-        #     for line in cache_file:
-        #         yield self.deserialize_instance(line.strip())
-        with open(cache_filename, 'rb') as cache_file:
-            return pkl.load(cache_file)
+        if self._cache_method == 'jsonpickle':
+            with open(cache_filename, 'r') as cache_file:
+                for line in cache_file:
+                    yield self.deserialize_instance(line.strip())
+        elif self._cache_method == 'pickle':
+            with open(cache_filename, 'rb') as cache_file:
+                return pkl.load(cache_file)
+        else:
+            raise ConfigurationError('Available caching methods are `jsonpickle` and `pickle`.')
+
+    def _instances_to_cache_file(self, cache_file, instances):
+        if self._cache_method == 'jsonpickle':
+            with open(cache_file, 'w') as cache:
+                for instance in Tqdm.tqdm(instances):
+                    cache.write(self.serialize_instance(instance) + '\n')
+        elif self._cache_method == 'pickle':
+            with open(cache_file, 'wb') as cache:  # Use highest protocol for speed.
+                pkl.dump(instances, cache, protocol=pkl.HIGHEST_PROTOCOL)
+        else:
+            raise ConfigurationError('Available caching methods are `jsonpickle` and `pickle`.')
 
     def text_to_instance(self, *inputs) -> Instance:
         """

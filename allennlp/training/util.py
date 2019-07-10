@@ -127,7 +127,8 @@ def str_to_time(time_str: str) -> datetime.datetime:
 
 def datasets_from_params(params: Params,
                          cache_directory: str = None,
-                         cache_prefix: str = None) -> Dict[str, Iterable[Instance]]:
+                         cache_prefix: str = None,
+                         cache_method: str = 'jsonpickle') -> Dict[str, Iterable[Instance]]:
     """
     Load all the datasets specified by the config.
 
@@ -154,6 +155,9 @@ def datasets_from_params(params: Params,
         allow you to give recognizable names to these prefixes if you want them, you can manually
         specify the ``cache_prefix``.  Note that in some rare cases this can be dangerous, as we'll
         use the `same` prefix for both train and validation dataset readers.
+    cache_method : ``str``, optional (default='jsonpickle')
+        Data caching method. By default use `jsonpickle`, which is slow but portable. Alternatively,
+        `pickle` can be much faster but may not be portable across different Python versions.
     """
     dataset_reader_params = params.pop('dataset_reader')
     validation_dataset_reader_params = params.pop('validation_dataset_reader', None)
@@ -170,8 +174,8 @@ def datasets_from_params(params: Params,
         validation_and_test_dataset_reader = DatasetReader.from_params(validation_dataset_reader_params)
 
     if train_cache_dir:
-        dataset_reader.cache_data(train_cache_dir)
-        validation_and_test_dataset_reader.cache_data(validation_cache_dir)
+        dataset_reader.cache_data(train_cache_dir, cache_method)
+        validation_and_test_dataset_reader.cache_data(validation_cache_dir, cache_method)
 
     train_data_path = params.pop('train_data_path')
     logger.info("Reading training data from %s", train_data_path)

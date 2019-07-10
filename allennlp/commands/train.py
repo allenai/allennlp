@@ -98,6 +98,14 @@ class Train(Subcommand):
                                help='Prefix to use for data caching, giving current parameter '
                                'settings a name in the cache, instead of computing a hash')
 
+        subparser.add_argument('--cache-method',
+                               type=str,
+                               default='jsonpickle',
+                               choices=['jsonpickle', 'pickle'],
+                               help='Data caching method. By default use `jsonpickle`, which is '
+                               'slow but portable. Alternatively, `pickle` can be much faster but '
+                               'may not be portable across different Python versions.')
+
         subparser.set_defaults(func=train_model_from_args)
 
         return subparser
@@ -114,7 +122,8 @@ def train_model_from_args(args: argparse.Namespace):
                           args.recover,
                           args.force,
                           args.cache_directory,
-                          args.cache_prefix)
+                          args.cache_prefix,
+                          args.cache_method)
 
 
 def train_model_from_file(parameter_filename: str,
@@ -124,7 +133,8 @@ def train_model_from_file(parameter_filename: str,
                           recover: bool = False,
                           force: bool = False,
                           cache_directory: str = None,
-                          cache_prefix: str = None) -> Model:
+                          cache_prefix: str = None,
+                          cache_method: str = 'jsonpickle') -> Model:
     """
     A wrapper around :func:`train_model` which loads the params from a file.
 
@@ -150,6 +160,9 @@ def train_model_from_file(parameter_filename: str,
         For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
     cache_prefix : ``str``, optional
         For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
+    cache_method : ``str``, optional (default='jsonpickle')
+        Data caching method. By default use `jsonpickle`, which is slow but portable. Alternatively,
+        `pickle` can be much faster but may not be portable across different Python versions.
     """
     # Load the experiment config from a file and pass it to ``train_model``.
     params = Params.from_file(parameter_filename, overrides)
@@ -158,7 +171,7 @@ def train_model_from_file(parameter_filename: str,
                        file_friendly_logging,
                        recover,
                        force,
-                       cache_directory, cache_prefix)
+                       cache_directory, cache_prefix, cache_method)
 
 
 def train_model(params: Params,
@@ -167,7 +180,8 @@ def train_model(params: Params,
                 recover: bool = False,
                 force: bool = False,
                 cache_directory: str = None,
-                cache_prefix: str = None) -> Model:
+                cache_prefix: str = None,
+                cache_method: str = 'jsonpickle') -> Model:
     """
     Trains the model specified in the given :class:`Params` object, using the data and training
     parameters also specified in that object, and saves the results in ``serialization_dir``.
@@ -191,6 +205,9 @@ def train_model(params: Params,
         For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
     cache_prefix : ``str``, optional
         For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
+    cache_method : ``str``, optional (default='jsonpickle')
+        Data caching method. By default use `jsonpickle`, which is slow but portable. Alternatively,
+        `pickle` can be much faster but may not be portable across different Python versions.
 
     Returns
     -------
@@ -216,7 +233,8 @@ def train_model(params: Params,
                                            serialization_dir,
                                            recover,
                                            cache_directory,
-                                           cache_prefix)
+                                           cache_prefix,
+                                           cache_method)
         trainer = Trainer.from_params(
                 model=pieces.model,
                 serialization_dir=serialization_dir,
