@@ -66,14 +66,14 @@ class Hotflip(Attacker):
 
     def attack_from_json(self,
                          inputs: JsonDict = None,
-                         name_of_input_field_to_attack: str = 'tokens',
-                         name_of_grad_input_field: str = 'grad_input_1',
+                         input_field_to_attack: str = 'tokens',
+                         grad_input_field: str = 'grad_input_1',
                          ignore_tokens: List[str] = ["@@NULL@@"]): # pylint disable=unused-argument,dangerous-default-value
 
         """
         Replaces one token at a time from the input until the model's prediction changes.
-        `name_of_input_field_to_attack` is for example `tokens`, it says what the input
-        field is called. `name_of_grad_input_field` is for example `grad_input_1`, which
+        `input_field_to_attack` is for example `tokens`, it says what the input
+        field is called. `grad_input_field` is for example `grad_input_1`, which
         is a key into a grads dictionary.
 
         The method computes the gradient w.r.t. the tokens, finds
@@ -85,7 +85,7 @@ class Hotflip(Attacker):
         TODO (@Eric-Wallace) add functionality for ignore_tokens in the future.
         """
         original_instances = self.predictor.inputs_to_labeled_instances(inputs)
-        original_tokens = list(original_instances[0][name_of_input_field_to_attack].tokens)
+        original_tokens = list(original_instances[0][input_field_to_attack].tokens)
         final_tokens = []
         new_prediction = None
         for new_instances in original_instances:
@@ -96,15 +96,15 @@ class Hotflip(Attacker):
             # (we want to change model predictions)
             fields_to_compare = {}
             for key in new_instances[0].fields:
-                if key not in inputs.keys() and key != name_of_input_field_to_attack:
+                if key not in inputs.keys() and key != input_field_to_attack:
                     fields_to_compare[key] = test_instances[0][key]
 
-            current_tokens = new_instances[0][name_of_input_field_to_attack].tokens
+            current_tokens = new_instances[0][input_field_to_attack].tokens
             grads, outputs = self.predictor.get_gradients(new_instances)
             flipped = []
             while True:
                 # Compute L2 norm of all grads.
-                grad = grads[name_of_grad_input_field]
+                grad = grads[grad_input_field]
                 grads_mag = [numpy.sqrt(g.dot(g)) for g in grad]
 
                 # only flip a token once
@@ -118,14 +118,14 @@ class Hotflip(Attacker):
                 flipped.append(index_of_token_to_flip)
 
                 # Get new token using taylor approximation
-                input_tokens = new_instances[0][name_of_input_field_to_attack]._indexed_tokens["tokens"]
+                input_tokens = new_instances[0][input_field_to_attack]._indexed_tokens["tokens"]
                 original_id_of_token_to_flip = input_tokens[index_of_token_to_flip]
                 new_id_of_flipped_token = \
                     first_order_taylor(grad[index_of_token_to_flip],
                                        self.token_embedding.weight,
                                        original_id_of_token_to_flip)
                 # flip token
-                new_instances[0][name_of_input_field_to_attack].tokens[index_of_token_to_flip] = \
+                new_instances[0][input_field_to_attack].tokens[index_of_token_to_flip] = \
                     Token(self.vocab._index_to_token["tokens"][new_id_of_flipped_token])
                 new_instances[0].indexed = False
 

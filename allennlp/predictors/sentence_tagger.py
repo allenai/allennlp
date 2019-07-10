@@ -67,8 +67,8 @@ class SentenceTaggerPredictor(Predictor):
             tag = predicted_tags[i]
             # if its a U, add it to the list
             if tag[0] == 'U':
-                cur_tags = [t if idx == i else 'O' for idx, t in enumerate(predicted_tags)]
-                predicted_spans.append(cur_tags)
+                current_tags = [t if idx == i else 'O' for idx, t in enumerate(predicted_tags)]
+                predicted_spans.append(current_tags)
             # if its a B, keep going until you hit an L.
             elif tag[0] == 'B':
                 begin_idx = i
@@ -76,9 +76,9 @@ class SentenceTaggerPredictor(Predictor):
                     i += 1
                     tag = predicted_tags[i]
                 end_idx = i
-                cur_tags = [t if idx >= begin_idx and idx <= end_idx else 'O' \
+                current_tags = [t if idx >= begin_idx and idx <= end_idx else 'O' \
                     for idx, t in enumerate(predicted_tags)]
-                predicted_spans.append(cur_tags)
+                predicted_spans.append(current_tags)
             i += 1
 
         # Creates a new instance for each contiguous tag

@@ -42,6 +42,10 @@ class Predictor(Registrable):
     def __init__(self, model: Model, dataset_reader: DatasetReader) -> None:
         self._model = model
         self._dataset_reader = dataset_reader
+        # if get_gradients() is called, this is populated with token gradients
+        self.embedding_gradients = []
+        # backward hooks on the TextFieldEmbedder
+        self.embedding_gradient_hooks = []
 
     def load_line(self, line: str) -> JsonDict:  # pylint: disable=no-self-use
         """
@@ -99,7 +103,11 @@ class Predictor(Registrable):
         layer of the model. Calls :func:`backward` on the loss and then removes the
         hooks.
         """
-        self._register_hooks()
+        # clear embeddings and hooks
+        self.embedding_gradients = []
+        self.embedding_gradient_hooks = []
+
+        self._register_embedding_gradient_hooks()
 
         dataset = Batch(instances)
         dataset.index_instances(self._model.vocab)
@@ -109,17 +117,17 @@ class Predictor(Registrable):
         self._model.zero_grad()
         loss.backward()
 
-        for hook in self.hooks:
+        for hook in self.embedding_gradient_hooks:
             hook.remove()
 
         grad_dict = dict()
-        for idx, grad in enumerate(self.extracted_grads):
+        for idx, grad in enumerate(self.embedding_gradients):
             key = 'grad_input_' + str(idx + 1)
             grad_dict[key] = grad.squeeze_(0).detach().cpu().numpy()
 
         return grad_dict, outputs
 
-    def _register_hooks(self):
+    def _register_embedding_gradient_hooks(self):
         """
         Registers a backward hook on the
         :class:`~allennlp.modules.text_field_embedder.basic_text_field_embbedder.BasicTextFieldEmbedder`
@@ -129,17 +137,14 @@ class Predictor(Registrable):
         will be called multiple times. We append all the embeddings gradients
         to a list.
         """
-        self.extracted_grads = [] # pylint: disable=attribute-defined-outside-init
-        self.hooks = [] # pylint: disable=attribute-defined-outside-init
-
         def hook_layers(module, grad_in, grad_out): # pylint: disable=unused-argument
-            self.extracted_grads.append(grad_out[0])
+            self.embedding_gradients.append(grad_out[0])
 
         # Register the hooks
         for module in self._model.modules():
             if isinstance(module, TextFieldEmbedder):
                 backward_hook = module.register_backward_hook(hook_layers)
-                self.hooks.append(backward_hook)
+                self.embedding_gradient_hooks.append(backward_hook)
 
     @contextmanager
     def capture_model_internals(self) -> Iterator[dict]:
@@ -181,13 +186,13 @@ class Predictor(Registrable):
 
     def predictions_to_labeled_instances(self,
                                          instance: Instance,
-                                         outputs: Dict[str, np.ndarray]) -> List[Instance]: \
-                                         # pylint: disable=unused-argument,no-self-use
+                                         outputs: Dict[str, np.ndarray]) -> List[Instance]:
         """
         Adds labels to the :class:`~allennlp.data.instance.Instance`s passed in and returns it.
         """
-        raise RuntimeError("you need to implement this method if you \
-            want to give model interpretations or attacks")
+        # pylint: disable=unused-argument,no-self-use
+        raise RuntimeError("you need to implement this method if you"
+            "want to give model interpretations or attacks")
 
     def _json_to_instance(self, json_dict: JsonDict) -> Instance:
         """

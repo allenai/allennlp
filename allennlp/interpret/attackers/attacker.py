@@ -14,19 +14,24 @@ class Attacker(Registrable):
 
     def attack_from_json(self,
                          inputs: JsonDict,
-                         name_of_input_field_to_attack: str = 'tokens',
-                         name_of_grad_input_field: str = 'grad_input_1',
-                         ignore_tokens: List[str] = ["@@NULL@@"]) -> JsonDict: # pylint: disable=dangerous-default-value
+                         input_field_to_attack: str,
+                         grad_input_field: str,
+                         ignore_tokens: List[str]) -> JsonDict: # pylint: disable=dangerous-default-value
         """
         This function modifies the input to change the model's prediction in some desired manner
         (e.g., an adversarial attack).
 
-        The input is the same as what goes to a `Predictor`. The output is a JsonDict
-        containing the sanitized final tokens. For example, the final tokens might be a slight
-        modification to the input tokens that cause the model to change its prediction.
-
-        `name_of_input_field_to_attack` is for example `tokens`, it says what the input
-        field is called. `name_of_grad_input_field` is for example `grad_input_1`, which
-        is a key into a grads dictionary.
+        Parameters
+        ----------
+        inputs: JsonDict
+            The input you want to attack, similar to the argument to a Predictor, e.g., predict_json().
+        input_field_to_attack: str
+            The key in the inputs JsonDict you want to attack, e.g., `tokens`.
+        grad_input_field: str
+            The field in the gradients dictionary that contains the input gradients. For example, `grad_input_1` will be the field for single input tasks. See get_gradients() in `Predictor` for more information on field names.
+        Returns
+        -------
+        JsonDict
+            Contains the final, sanitized input after adversarial modification.
         """
-        raise NotImplementedError("you should implement this if you want to do model attacks")
+        raise NotImplementedError()

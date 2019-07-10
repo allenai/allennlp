@@ -5,7 +5,6 @@ from allennlp.common.util import JsonDict
 from allennlp.data import Instance
 from allennlp.predictors.predictor import Predictor
 from allennlp.data.fields import LabelField
-from allennlp.data.dataset_readers import StanfordSentimentTreeBankDatasetReader
 from allennlp.data.tokenizers.word_tokenizer import WordTokenizer
 
 @Predictor.register('text_classifier')
@@ -25,7 +24,7 @@ class TextClassifierPredictor(Predictor):
         Runs the underlying model, and adds the ``"label"`` to the output.
         """
         sentence = json_dict["sentence"]
-        if isinstance(self._dataset_reader, StanfordSentimentTreeBankDatasetReader):
+        if not hasattr(self._dataset_reader, 'tokenizer') and not hasattr(self._dataset_reader, '_tokenizer'):
             tokenizer = WordTokenizer()
             sentence = [str(t) for t in tokenizer.tokenize(sentence)]
         return self._dataset_reader.text_to_instance(sentence)
