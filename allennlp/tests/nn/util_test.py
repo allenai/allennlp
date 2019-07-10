@@ -699,9 +699,9 @@ class TestNnUtil(AllenNlpTestCase):
         for logit, label in zip(tensor.squeeze(0), targets.squeeze(0)):
             p = torch.nn.functional.softmax(logit, dim=-1)
             pt = p[label]
-            correct_loss += pt.log() * (1 - pt) ** gamma
+            correct_loss += - pt.log() * (1 - pt) ** gamma
         # Average over sequence.
-        correct_loss = - correct_loss / length
+        correct_loss = correct_loss / length
         numpy.testing.assert_array_almost_equal(loss.data.numpy(), correct_loss.data.numpy())
 
     def test_sequence_cross_entropy_with_logits_alpha_float_correctly(self):
@@ -726,9 +726,9 @@ class TestNnUtil(AllenNlpTestCase):
             else:
                 at = 1 - alpha
             sum_weight += at
-            correct_loss += logpt * at
+            correct_loss += - logpt * at
         # Average over sequence.
-        correct_loss = - correct_loss / sum_weight
+        correct_loss = correct_loss / sum_weight
         numpy.testing.assert_array_almost_equal(loss.data.numpy(), correct_loss.data.numpy())
 
     def test_sequence_cross_entropy_with_logits_alpha_single_float_correctly(self):
@@ -754,9 +754,9 @@ class TestNnUtil(AllenNlpTestCase):
             else:
                 at = 1 - alpha
             sum_weight += at
-            correct_loss += logpt * at
+            correct_loss += - logpt * at
         # Average over sequence.
-        correct_loss = - correct_loss / sum_weight
+        correct_loss = correct_loss / sum_weight
         numpy.testing.assert_array_almost_equal(loss.data.numpy(), correct_loss.data.numpy())
 
     def test_sequence_cross_entropy_with_logits_alpha_list_correctly(self):
@@ -778,9 +778,9 @@ class TestNnUtil(AllenNlpTestCase):
             logpt = logp[label]
             at = alpha[label]
             sum_weight += at
-            correct_loss += logpt * at
+            correct_loss += - logpt * at
         # Average over sequence.
-        correct_loss = - correct_loss / sum_weight
+        correct_loss = correct_loss / sum_weight
         numpy.testing.assert_array_almost_equal(loss.data.numpy(), correct_loss.data.numpy())
 
     def test_replace_masked_values_replaces_masked_values_with_finite_value(self):
