@@ -95,4 +95,4 @@ class IntegratedGradient(SaliencyInterpreter):
             key = "grad_input_" + str(idx + 1)
             ig_grads[key] *= iput
 
-        return ig_grad
+        return ig_grads
