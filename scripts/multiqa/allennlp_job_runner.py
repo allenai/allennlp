@@ -313,7 +313,7 @@ class JobRunner():
             # Allocating resources
             assigned_GPU = -1
             if config['resource_type'] == 'GPU':
-                if config['override_config']['trainer']["cuda_device"] == '[GPU_ID4]':
+                if config['bash_command'].find('[GPU_ID4]') > -1:
                     assigned_GPU = []
                     for i in range(4):
                         single_assigned_GPU = self.available_gpus[-1]
@@ -322,7 +322,7 @@ class JobRunner():
                         logger.info('assigned_GPU = %s', single_assigned_GPU)
                         assigned_GPU.append(single_assigned_GPU)
                 else:
-                    if config['override_config']['trainer']["cuda_device"] == '[GPU_ID]':
+                    if config['bash_command'].find('[GPU_ID]') > -1:
                         assigned_GPU = self.available_gpus[-1]
                     self.job_gpus.append(assigned_GPU)
                     self.update_available_gpus()
@@ -412,7 +412,7 @@ class JobRunner():
                     self.channel.basic_nack(method_frame.delivery_tag)
                     time.sleep(10)
                 elif self.resources_available and ((not hasattr(self, '_job_no_run_string')) or self._job_no_run_string == '' or name.find(self._job_no_run_string) == -1) and  \
-                        not (config['override_config']['trainer']["cuda_device"] == '[GPU_ID4]' and len(self.available_gpus)<4):
+                        not (config['bash_command'].find('[GPU_ID4]') > -1 and len(self.available_gpus)<4):
                     break
                 else:
                     # NO Resources

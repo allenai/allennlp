@@ -472,9 +472,12 @@ class AllenNLP_Job_Dispatcher():
             if not self.QUIET_MODE or DRY_RUN == False:
 
                 print('## bash_command= %s' % (runner_config['bash_command'].replace(',', ',\n').replace(' -', '\n-')))
+                if 'env_setup' in exp_config:
+                    print('## env_setup= %s' % (exp_config['env_setup']))
                 if 'output_file_cloud' in exp_config:
                     print('## output_file_cloud= %s' % (exp_config['output_file_cloud']))
-                print('## output_file= %s' % (runner_config['output_file']))
+                if 'output_file' in runner_config:
+                    print('## output_file= %s' % (runner_config['output_file']))
                 if "post_proc_bash" in exp_config:
                     print('## post_proc_bash= %s' % (runner_config['post_proc_bash']))
                 print('--------------------------------\n')
@@ -628,8 +631,8 @@ experiment_name = '080_MultiQA_BERTBase_predict_eval'
 #if experiment_name.find('BERTLarge') > -1 and experiment_name.find('evaluate') == -1:
 #    queue = '4GPUs'
 #queue = '4GPUs'
-#queue = 'rack-gamir-g05'
-queue = 'rack-jonathan-g08'
+queue = 'rack-gamir-g05'
+#queue = 'rack-jonathan-g08'
 #queue = 'savant'
 
 FORCE_RUN = True
