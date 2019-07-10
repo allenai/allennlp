@@ -14,7 +14,7 @@ from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import pad_sequence_to_length
 
-
+# pylint: disable=abstract-method
 class DictReturningTokenIndexer(TokenIndexer):
     """
     A stub TokenIndexer that returns multiple arrays of different lengths.
@@ -45,7 +45,7 @@ class DictReturningTokenIndexer(TokenIndexer):
     def get_keys(self, index_name: str) -> List[str]:
         # pylint: disable=unused-argument,no-self-use
         return ["token_ids", "additional_key"]
-
+# pylint: enable=abstract-method
 
 class TestTextField(AllenNlpTestCase):
     def setUp(self):
