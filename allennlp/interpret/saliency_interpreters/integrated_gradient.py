@@ -1,6 +1,6 @@
 # pylint: disable=protected-access
 import math
-from typing import List, Dict
+from typing import List, Dict, Any
 import numpy
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.interpret import SaliencyInterpreter
@@ -60,10 +60,10 @@ class IntegratedGradient(SaliencyInterpreter):
         """
         Returns integrated gradients for the given :class:`~allennlp.data.instance.Instance`
         """
-        ig_grads = {} # type: Dict[str, Any]
+        ig_grads: Dict[str, Any] = {}
 
         # List of Embedding inputs
-        embeddings_list = [] # type: List[np.ndarray]
+        embeddings_list: List[numpy.ndarray] = []
 
         # Use 10 terms in the summation approximation of the integral in integrated grad
         steps = 10

@@ -18,7 +18,7 @@ class SimpleGradient(SaliencyInterpreter):
         labeled_instances = self.predictor.inputs_to_labeled_instances(inputs)
 
         # List of embedding inputs, used for multiplying gradient by the input for normalization
-        embeddings_list = [] # type: List[np.ndarray]
+        embeddings_list = [] # type: List[numpy.ndarray]
 
         instances_with_grads = dict()
         for idx, instance in enumerate(labeled_instances):

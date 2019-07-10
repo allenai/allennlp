@@ -86,7 +86,7 @@ class InputReduction(Attacker):
 def remove_one_token(grads: np.ndarray,
                      instances: List[Instance] = None,
                      input_field_to_attack: str = 'tokens',
-                     ignore_tokens: List[str] = ["@@NULL@@"]) -> List[Instance]:
+                     ignore_tokens: List[str] = ["@@NULL@@"]) -> (List[Instance], int):
     """
     Finds the token with the smallest gradient and removes it.
     """
@@ -108,7 +108,7 @@ def remove_one_token(grads: np.ndarray,
         return instances, smallest
 
     # remove smallest
-    inputField = instances[0][input_field_to_attack] # type: TextField
+    inputField = TextField(instances[0][input_field_to_attack])
     before_smallest = inputField.tokens[0:smallest]
     after_smallest = inputField.tokens[smallest + 1:]
     inputField.tokens = before_smallest + after_smallest
@@ -130,7 +130,7 @@ def get_ner_tags_and_mask(current_instances: List[Instance] = None,
     """
     # Set num_ignore_tokens
     num_ignore_tokens = 0
-    inputField = current_instances[0][input_field_to_attack] # type: TextField
+    inputField =  TextField(current_instances[0][input_field_to_attack])
     for token in inputField.tokens:
         if str(token) in ignore_tokens:
             num_ignore_tokens += 1

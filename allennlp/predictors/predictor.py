@@ -80,7 +80,8 @@ class Predictor(Registrable):
         new_instances = self.predictions_to_labeled_instances(instance, outputs)
         return new_instances
 
-    def get_gradients(self, instances: List[Instance]) -> Dict[str, np.ndarray]:
+    def get_gradients(self,
+                      instances: List[Instance]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """
         Gets the gradients of the loss with respect to the model inputs.
 

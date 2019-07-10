@@ -1,5 +1,5 @@
 # pylint: disable=protected-access
-from typing import Dict, List
+from typing import Dict, List, Any
 from overrides import overrides
 import numpy as np
 from allennlp.common.util import JsonDict
@@ -56,7 +56,7 @@ class BidafPredictor(Predictor):
         if 'best_span' in outputs:
             span_start_label = outputs['best_span'][0]
             span_end_label = outputs['best_span'][1]
-            passage = instance['passage'] # type: SequenceField[Any]
+            passage = SequenceField(instance['passage'])
             instance.add_field('span_start', IndexField(int(span_start_label), passage))
             instance.add_field('span_end', IndexField(int(span_end_label), passage))
 
@@ -76,14 +76,14 @@ class BidafPredictor(Predictor):
                 # Convert character span indices into word span indices
                 word_span_start = None
                 word_span_end = None
-                metadata_field = instance['metadata'] # type: MetadataField[Any]
+                metadata_field = MetadataField(instance['metadata'])
                 for idx, offset in enumerate(metadata_field.metadata['passage_token_offsets']):
                     if offset[0] == span[0]:
                         word_span_start = idx
                     if offset[1] == span[1]:
                         word_span_end = idx
 
-                passage = instance['passage'] # type: SequenceField[Any]
+                passage = SequenceField(instance['passage'])
                 field = ListField([SpanField(word_span_start, word_span_end, passage)])
                 instance.add_field('answer_as_passage_spans', field)
 
@@ -101,7 +101,7 @@ class BidafPredictor(Predictor):
                 # data/dataset_readers/reading_comprehension/drop.py#L232
                 numbers_as_tokens.append(Token('0'))
                 numbers_in_passage_field = \
-                TextField(numbers_as_tokens, self._dataset_reader._token_indexers)
+                TextField(numbers_as_tokens, self._dataset_reader._token_indexers) # type: ignore
 
                 # Based on ``find_valid_add_sub_expressions``, it seems
                 # like negative signs are 2 instead of -1.
@@ -125,14 +125,15 @@ class BidafPredictor(Predictor):
                 # Convert character span indices into word span indices
                 word_span_start = None
                 word_span_end = None
-                metadata_field = instance['metadata'] # type: MetadataField[Any]
-                for idx, offset in enumerate(metadata_field.metadata['question_token_offsets']):
+                metadata_field =
+                for idx, offset in enumerate(MetadataField(instance['metadata']). \
+                    metadata['question_token_offsets']):
                     if offset[0] == span[0]:
                         word_span_start = idx
                     if offset[1] == span[1]:
                         word_span_end = idx
 
-                question = instance['question'] # type: SequenceField[Any]
+                question = SequenceField(instance['question'])
                 field = ListField([SpanField(word_span_start, word_span_end, question)])
                 instance.add_field('answer_as_question_spans', field)
 

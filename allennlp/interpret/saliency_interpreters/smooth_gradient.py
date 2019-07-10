@@ -1,6 +1,6 @@
 # pylint: disable=protected-access
 import math
-from typing import Dict
+from typing import Dict, Any
 import torch
 import numpy
 from allennlp.common.util import JsonDict, sanitize
@@ -61,7 +61,7 @@ class SmoothGradient(SaliencyInterpreter):
         stdev = 0.01
         num_samples = 25
 
-        total_gradients = {} # type: Dict[str, Any]
+        total_gradients: Dict[str, Any] = {}
         for _ in range(num_samples):
             handle = self._register_forward_hook(stdev)
             grads = self.predictor.get_gradients([instance])[0]
