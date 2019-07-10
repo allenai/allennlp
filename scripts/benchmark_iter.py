@@ -13,19 +13,25 @@ BATCH_INTERVAL = 100
 MEAN_BATCH_SIZE = 66.0
 
 
-def time_iterable(iterable, get_size, batch_interval):
+def time_iterable(iterable, get_items_per_batch, batches_per_interval):
     start = time.perf_counter()
     last = start
+
     batch_count = 0
-    cumulative_batch_size = 0
+    item_count = 0
     for batch in iterable:
         batch_count += 1
-        cumulative_batch_size += get_size(batch)
+        item_count += get_items_per_batch(batch)
 
-        if batch_count % batch_interval == 0:
+        if batch_count % batches_per_interval == 0:
             end = time.perf_counter()
-            approximate_intervals = batch_count / batch_interval
-            print(f"b/s total: {(end - start)/batch_count} b/s last: {(end - last)/batch_interval} mean interval size: {cumulative_batch_size/approximate_intervals}")
+            interval_count = batch_count / batches_per_interval
+            approximate_batch_count = item_count / MEAN_BATCH_SIZE
+
+            msg = (f"s/b total: {(end - start) / approximate_batch_count}" +
+                   f"s/b last: {(end - last) / batches_per_interval} +"
+                   f"mean interval size: {item_count / interval_count}")
+            print(msg)
             last = end
 
         pass
