@@ -28,8 +28,8 @@ def time_iterable(iterable, get_items_per_batch, batches_per_interval):
             interval_count = batch_count / batches_per_interval
             approximate_batch_count = item_count / MEAN_BATCH_SIZE
 
-            msg = (f"s/b total: {(end - start) / approximate_batch_count}" +
-                   f"s/b last: {(end - last) / batches_per_interval} +"
+            msg = (f"s/b total: {(end - start) / approximate_batch_count} " +
+                   f"s/b last: {(end - last) / batches_per_interval} "
                    f"mean interval size: {item_count / interval_count}")
             print(msg)
             last = end
