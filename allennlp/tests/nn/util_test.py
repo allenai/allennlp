@@ -679,7 +679,7 @@ class TestNnUtil(AllenNlpTestCase):
                                                               average=None)
         total_token_loss = (vector_loss * weights.float().sum(dim=-1)).sum()
         average_token_loss = (total_token_loss / weights.float().sum()).detach()
-        assert_almost_equal(loss.detach().item(), average_token_loss.item())
+        assert_almost_equal(loss.detach().item(), average_token_loss.item(), decimal=5)
 
     def test_replace_masked_values_replaces_masked_values_with_finite_value(self):
         tensor = torch.FloatTensor([[[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]]])
