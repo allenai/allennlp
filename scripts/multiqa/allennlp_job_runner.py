@@ -265,9 +265,11 @@ class JobRunner():
             bash_command = bash_command.replace("'[GPU_ID4]'", str(assigned_GPU)).replace('[GPU_ID4]', str(assigned_GPU))
 
         if 'env_setup' in config:
-            bash_command = config['env_setup'] + '; nohup ' + bash_command + ' &'
+            bash_command = config['env_setup'] + ' nohup ' + bash_command + ' &'
+            proc_offset = len([c for c in config['env_setup'] if c == ';'])
         else:
             bash_command = 'nohup ' + bash_command + ' &'
+            proc_offset = 0
 
         if 'output_file' in config and config['output_file'] is not None:
             config['output_file'] = config['output_file'].replace('[MODEL_DIR]', self._MODELS_DIR)
@@ -298,7 +300,7 @@ class JobRunner():
         new_job = {'GPU':assigned_GPU,'config': config,'command': bash_command, 'channel':channel, \
                     'log_file': log_file, 'log_snapshot': '', 'is_post_proc_run':False, \
                     'experiment_name': name, 'alive': True,'retries': 0, \
-                    'pid': wa_proc.pid + 1, 'start_time': time.time()}
+                    'pid': wa_proc.pid + 1 + proc_offset, 'start_time': time.time()}
         if 'output_file' in config:
             new_job['output_file'] =  config['output_file']
         self.running_jobs.append(new_job)
