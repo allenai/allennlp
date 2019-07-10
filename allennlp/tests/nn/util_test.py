@@ -604,6 +604,7 @@ class TestNnUtil(AllenNlpTestCase):
                                          observations)
         assert indices == [2, 3, 3, 0, 4, 3]
 
+    @flaky
     def test_sequence_cross_entropy_with_logits_masks_loss_correctly(self):
 
         # test weight masking by checking that a tensor with non-zero values in
@@ -627,6 +628,7 @@ class TestNnUtil(AllenNlpTestCase):
         loss2 = util.sequence_cross_entropy_with_logits(tensor2, targets, weights)
         assert loss.data.numpy() == loss2.data.numpy()
 
+    @flaky
     def test_sequence_cross_entropy_with_logits_smooths_labels_correctly(self):
         tensor = torch.rand([1, 3, 4])
         targets = torch.LongTensor(numpy.random.randint(0, 3, [1, 3]))
@@ -644,6 +646,7 @@ class TestNnUtil(AllenNlpTestCase):
         correct_loss = - correct_loss / 3
         numpy.testing.assert_array_almost_equal(loss.data.numpy(), correct_loss.data.numpy())
 
+    @flaky
     def test_sequence_cross_entropy_with_logits_averages_batch_correctly(self):
         # test batch average is the same as dividing the batch averaged
         # loss by the number of batches containing any non-padded tokens.
@@ -662,7 +665,7 @@ class TestNnUtil(AllenNlpTestCase):
         # Batch has one completely padded row, so divide by 4.
         assert loss.data.numpy() == vector_loss.sum().item() / 4
 
-    @flaky # some time "not almost equal to 7 decimals"
+    @flaky
     def test_sequence_cross_entropy_with_logits_averages_token_correctly(self):
         # test token average is the same as multiplying the per-batch loss
         # with the per-batch weights and dividing by the total weight
@@ -683,6 +686,7 @@ class TestNnUtil(AllenNlpTestCase):
         average_token_loss = (total_token_loss / weights.float().sum()).detach()
         assert_almost_equal(loss.detach().item(), average_token_loss.item())
 
+    @flaky
     def test_sequence_cross_entropy_with_logits_gamma_correctly(self):
         batch = 1
         length = 3
@@ -704,6 +708,7 @@ class TestNnUtil(AllenNlpTestCase):
         correct_loss = correct_loss / length
         numpy.testing.assert_array_almost_equal(loss.data.numpy(), correct_loss.data.numpy())
 
+    @flaky
     def test_sequence_cross_entropy_with_logits_alpha_float_correctly(self):
         batch = 1
         length = 3
@@ -731,6 +736,7 @@ class TestNnUtil(AllenNlpTestCase):
         correct_loss = correct_loss / sum_weight
         numpy.testing.assert_array_almost_equal(loss.data.numpy(), correct_loss.data.numpy())
 
+    @flaky
     def test_sequence_cross_entropy_with_logits_alpha_single_float_correctly(self):
         batch = 1
         length = 3
@@ -759,6 +765,7 @@ class TestNnUtil(AllenNlpTestCase):
         correct_loss = correct_loss / sum_weight
         numpy.testing.assert_array_almost_equal(loss.data.numpy(), correct_loss.data.numpy())
 
+    @flaky
     def test_sequence_cross_entropy_with_logits_alpha_list_correctly(self):
         batch = 1
         length = 3
