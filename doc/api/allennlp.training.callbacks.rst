@@ -22,7 +22,7 @@ allennlp.training.callbacks
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: allennlp.training.callbacks.generate_training_batches
+.. automodule:: allennlp.training.callbacks.gradient_norm_and_clip
    :members:
    :undoc-members:
    :show-inheritance:
@@ -42,11 +42,6 @@ allennlp.training.callbacks
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: allennlp.training.callbacks.compute_moving_average
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 .. automodule:: allennlp.training.callbacks.post_to_url
    :members:
    :undoc-members:
@@ -57,12 +52,12 @@ allennlp.training.callbacks
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: allennlp.training.callbacks.train_supervised
+.. automodule:: allennlp.training.callbacks.validate
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: allennlp.training.callbacks.validate
+.. automodule:: allennlp.training.callbacks.update_moving_average
    :members:
    :undoc-members:
    :show-inheritance:
