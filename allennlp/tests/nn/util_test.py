@@ -662,7 +662,7 @@ class TestNnUtil(AllenNlpTestCase):
         # Batch has one completely padded row, so divide by 4.
         assert loss.data.numpy() == vector_loss.sum().item() / 4
 
-    @flaky
+    @flaky(max_runs=3, min_passes=1)
     def test_sequence_cross_entropy_with_logits_averages_token_correctly(self):
         # test token average is the same as multiplying the per-batch loss
         # with the per-batch weights and dividing by the total weight
