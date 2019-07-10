@@ -1,8 +1,8 @@
 # pylint: disable=dangerous-default-value
-from typing import List
+from typing import List, Tuple
 import numpy as np
 import torch
-from allennlp.interpret import Attacker
+from allennlp.interpret.attackers.attacker import Attacker
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import Instance
 
@@ -93,9 +93,12 @@ def remove_one_token(grads: np.ndarray,
     grads_mag = [np.sqrt(grad.dot(grad)) for grad in grads]
 
     # Skip all ignore_tokens by setting grad to infinity
-    for tok_idx, tok in enumerate(instances[0][input_field_to_attack].tokens):
+    field = instances[0][input_field_to_attack]
+    tokens = getattr(field, 'tokens')
+    for tok_idx, tok in enumerate(tokens):
         if tok in ignore_tokens:
             grads_mag[tok_idx] = float("inf")
+
     # For NER, skip all tokens that are not in outside
     if "tags" in instances[0]:
         for idx, label in enumerate(instances[0]["tags"].__dict__["field_list"]):
@@ -108,9 +111,9 @@ def remove_one_token(grads: np.ndarray,
 
     # remove smallest
     input_field = instances[0][input_field_to_attack]
-    before_smallest = input_field.tokens[0:smallest]
-    after_smallest = input_field.tokens[smallest + 1:]
-    input_field.tokens = before_smallest + after_smallest
+    before_smallest = getattr(input_field, 'tokens')[0:smallest]
+    after_smallest = getattr(input_field, 'tokens')[smallest + 1:]
+    setattr(input_field, 'tokens', before_smallest + after_smallest)
 
     if "tags" in instances[0]:
         instances[0]["tags"].__dict__["field_list"] = \
@@ -130,7 +133,8 @@ def get_ner_tags_and_mask(current_instances: List[Instance] = None,
     # Set num_ignore_tokens
     num_ignore_tokens = 0
     input_field = current_instances[0][input_field_to_attack]
-    for token in input_field.tokens:
+    tokens = getattr(input_field, 'tokens')
+    for token in tokens:
         if str(token) in ignore_tokens:
             num_ignore_tokens += 1
 

@@ -2,7 +2,7 @@
 from typing import List
 import numpy
 import torch
-from allennlp.interpret import Attacker
+from allennlp.interpret.attackers.attacker import Attacker
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.predictors.predictor import Predictor
 from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder

@@ -3,7 +3,7 @@ import math
 from typing import List, Dict, Any
 import numpy
 from allennlp.common.util import JsonDict, sanitize
-from allennlp.interpret import SaliencyInterpreter
+from allennlp.interpret.saliency_interpreters.saliency_interpreter import SaliencyInterpreter
 from allennlp.modules.text_field_embedders import TextFieldEmbedder
 from allennlp.data import Instance
 
@@ -95,4 +95,4 @@ class IntegratedGradient(SaliencyInterpreter):
             key = "grad_input_" + str(idx + 1)
             ig_grads[key] *= iput
 
-        return ig_grads
+        return ig_grad
