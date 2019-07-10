@@ -2,7 +2,7 @@
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor
-from allennlp.interpret.attackers import Hotflip
+from allennlp.interpret import Hotflip
 
 class TestHotflip(AllenNlpTestCase):
     def test_hotflip(self):

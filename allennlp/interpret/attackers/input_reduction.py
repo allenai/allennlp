@@ -5,7 +5,6 @@ import torch
 from allennlp.interpret import Attacker
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import Instance
-from allennlp.data.fields.text_field import TextField
 
 @Attacker.register('input-reduction')
 class InputReduction(Attacker):
@@ -108,10 +107,10 @@ def remove_one_token(grads: np.ndarray,
         return instances, smallest
 
     # remove smallest
-    inputField = TextField(instances[0][input_field_to_attack])
-    before_smallest = inputField.tokens[0:smallest]
-    after_smallest = inputField.tokens[smallest + 1:]
-    inputField.tokens = before_smallest + after_smallest
+    input_field = instances[0][input_field_to_attack]
+    before_smallest = input_field.tokens[0:smallest]
+    after_smallest = input_field.tokens[smallest + 1:]
+    input_field.tokens = before_smallest + after_smallest
 
     if "tags" in instances[0]:
         instances[0]["tags"].__dict__["field_list"] = \
@@ -130,8 +129,8 @@ def get_ner_tags_and_mask(current_instances: List[Instance] = None,
     """
     # Set num_ignore_tokens
     num_ignore_tokens = 0
-    inputField =  TextField(current_instances[0][input_field_to_attack])
-    for token in inputField.tokens:
+    input_field = current_instances[0][input_field_to_attack]
+    for token in input_field.tokens:
         if str(token) in ignore_tokens:
             num_ignore_tokens += 1
 
