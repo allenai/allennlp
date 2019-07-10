@@ -6,16 +6,12 @@ import sys, os
 import numpy
 from typing import TypeVar,Iterable
 from allennlp.common.elastic_logger import ElasticLogger
-from subprocess import Popen,call
 
 T = TypeVar('T')
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(os.path.join(__file__, os.pardir), os.pardir))))
-from allennlp.common.file_utils import cached_path
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
-
-import numpy as np
 
 
 def parse_filename(filename):

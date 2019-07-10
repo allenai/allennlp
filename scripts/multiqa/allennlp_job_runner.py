@@ -267,7 +267,6 @@ class JobRunner():
         if 'env_setup' in config:
             bash_command = config['env_setup'] + ' nohup ' + bash_command + ' &'
             proc_offset = len([c for c in config['env_setup'] if c == ';'])
-            print(proc_offset)
         else:
             bash_command = 'nohup ' + bash_command + ' &'
             proc_offset = 0

@@ -24,7 +24,7 @@ from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
 from allennlp.data.tokenizers import Token, Tokenizer, WordTokenizer
 from allennlp.data.fields import Field, TextField, IndexField, \
-    MetadataField, ListField
+    MetadataField, ListField, MultiLabelField
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import pairwise_distances
 from nltk.corpus import stopwords
@@ -197,28 +197,35 @@ class MultiQAReader(DatasetReader):
         for qa in context['qas']:
             answer_text_list = []
             qa['detected_answers'] = []
-            if 'open-ended' in qa['answers'] and 'answer_candidates' in qa['answers']['open-ended']:
-                for ac in qa['answers']['open-ended']["answer_candidates"]:
-                    if 'extractive' in ac:
-                        if "single_answer" in ac['extractive']:
-                            for instance in ac['extractive']["single_answer"]["instances"]:
-                                detected_answer = {}
-                                # checking if the answer has been detected
-                                if "token_offset" in offsets[instance["doc_id"]][instance["part"]]:
-                                    answer_token_offset = offsets[instance["doc_id"]][instance["part"]]['token_offset']
-                                    detected_answer["token_spans"] = (instance['token_inds'][0] + answer_token_offset,
-                                                                      instance['token_inds'][1] + answer_token_offset)
-                                    detected_answer['text'] = instance["text"]
-                                    qa['detected_answers'].append(detected_answer)
-                                answer_text_list.append(instance["text"])
+            qa['categorical_labels'] = []
+            if 'open-ended' in qa['answers']:
+                if 'answer_candidates' in qa['answers']['open-ended']:
+                    for ac in qa['answers']['open-ended']["answer_candidates"]:
+                        if 'extractive' in ac:
+                            if "single_answer" in ac['extractive']:
+                                for instance in ac['extractive']["single_answer"]["instances"]:
+                                    detected_answer = {}
+                                    # checking if the answer has been detected
+                                    if "token_offset" in offsets[instance["doc_id"]][instance["part"]]:
+                                        answer_token_offset = offsets[instance["doc_id"]][instance["part"]]['token_offset']
+                                        detected_answer["token_spans"] = (instance['token_inds'][0] + answer_token_offset,
+                                                                          instance['token_inds'][1] + answer_token_offset)
+                                        detected_answer['text'] = instance["text"]
+                                        qa['detected_answers'].append(detected_answer)
+                                    answer_text_list.append(instance["text"])
+                        elif 'yesno' in ac:
+                            if "single_answer" in ac['yesno']:
+                                qa['categorical_labels'].append(ac['yesno']['single_answer'])
+                elif 'cannot_answer' in qa['answers']['open-ended']:
+                    qa['categorical_labels'].append('cannot_answer')
 
             qa['answer_text_list'] = answer_text_list
-            if len(qa['detected_answers']) == 0:
-                no_answer_questions.append(qa)
+            #if len(qa['detected_answers']) == 0:
+            #    no_answer_questions.append(qa)
 
-        if self._is_training:
-            for no_answer_q in no_answer_questions:
-                context['qas'].remove(no_answer_q)
+        #if self._is_training:
+        #    for no_answer_q in no_answer_questions:
+        #        context['qas'].remove(no_answer_q)
 
         return context
 
@@ -282,6 +289,7 @@ class MultiQAReader(DatasetReader):
 
 
                 inst = {}
+                inst['categorical_labels'] = copy.copy(qa['categorical_labels'])
                 inst['question_tokens'] = qa['question_tokens']
                 inst['tokens'] = curr_context_tokens
                 inst['text'] = qa['question'] + ' [SEP] ' + unproc_context['full_text'][context_char_offset: \
@@ -298,33 +306,46 @@ class MultiQAReader(DatasetReader):
                                                        answer['token_spans'][1] + answer_token_offset,
                                                        answer['text']))
 
+                if len(inst['categorical_labels']) == 0:
+                    if len(inst['answers']) == 0:
+                        inst['categorical_labels'].append('cannot_answer')
+                    else:
+                        inst['categorical_labels'].append('span')
+
+
                 inst['metadata'] = qa_metadata
                 chunks.append(inst)
 
                 window_start_token_offset += self._STRIDE
 
             # In training we need examples with answer only
-            if not self._is_training or len([inst for inst in chunks if inst['answers'] != []])>0:
-                per_question_chunks.append(chunks)
+            #if not self._is_training or len([inst for inst in chunks if inst['answers'] != []])>0:
+            per_question_chunks.append(chunks)
         return per_question_chunks
 
     @profile
     def gen_question_instances(self, question_chunks):
         instances_to_add = []
-        if self._is_training:
+        #if self._is_training:
             # When training randomly choose one chunk per example (training with shared norm (Clark and Gardner, 17)
             # is not well defined when using sliding window )
-            chunks_with_answers = [inst for inst in question_chunks if inst['answers'] != []]
-            instances_to_add = random.sample(chunks_with_answers, 1)
-        else:
-            instances_to_add = question_chunks
+        #    chunks_with_answers = [inst for inst in question_chunks if inst['answers'] != []]
+        #    instances_to_add = random.sample(chunks_with_answers, 1)
+        #else:
+
+        instances_to_add = question_chunks
 
         for inst_num, inst in enumerate(instances_to_add):
+            # TODO sampling cannot answer
+            if self._is_training and 'cannot_answer' in inst['categorical_labels']:
+                if random.randint(1,4) != 1:
+                    continue
             instance = make_multiqa_instance([Token(text=t[0], idx=t[1]) for t in inst['question_tokens']],
                                              [Token(text=t[0], idx=t[1]) for t in inst['tokens']],
                                              self._token_indexers,
                                              inst['text'],
                                              inst['answers'],
+                                             inst['categorical_labels'],
                                              inst['metadata'])
             yield instance
 
@@ -377,6 +398,7 @@ def make_multiqa_instance(question_tokens: List[Token],
                              token_indexers: Dict[str, TokenIndexer],
                              paragraph: List[str],
                              answers_list: List[Tuple[int, int]] = None,
+                             categorical_labels: List[str] = None,
                              additional_metadata: Dict[str, Any] = None) -> Instance:
 
     additional_metadata = additional_metadata or {}
@@ -387,6 +409,7 @@ def make_multiqa_instance(question_tokens: List[Token],
     passage_field = TextField(tokenized_paragraph, token_indexers)
     fields['passage'] = passage_field
     fields['question'] = TextField(question_tokens, token_indexers)
+    fields['multi_task'] = MultiLabelField(categorical_labels, num_labels=4)
     metadata = {'original_passage': paragraph,
                 'answers_list': answers_list,
                 'token_offsets': passage_offsets,
@@ -404,8 +427,8 @@ def make_multiqa_instance(question_tokens: List[Token],
         span_start_list.append(IndexField(span_start, passage_field))
         span_end_list.append(IndexField(span_end, passage_field))
 
-        fields['span_start'] = ListField(span_start_list)
-        fields['span_end'] = ListField(span_end_list)
+        fields['span_starts'] = ListField(span_start_list)
+        fields['span_ends'] = ListField(span_end_list)
 
     metadata.update(additional_metadata)
     fields['metadata'] = MetadataField(metadata)

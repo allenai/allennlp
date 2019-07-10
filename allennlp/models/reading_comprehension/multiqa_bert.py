@@ -5,6 +5,7 @@ from overrides import overrides
 import torch
 import torch.nn.functional as F
 from torch.nn.functional import nll_loss
+from torch.nn import CrossEntropyLoss
 import os
 import random
 import traceback
@@ -24,9 +25,7 @@ class MultiQA_BERT(Model):
     def __init__(self, vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
                  initializer: InitializerApplicator,
-                 dropout: float = 0.2,
                  max_span_length: int = 30,
-                 predictions_file = None,
                  use_multi_label_loss: bool = False,
                  stats_report_freq:float = None,
                  debug_experiment_name:str = None) -> None:
@@ -36,16 +35,13 @@ class MultiQA_BERT(Model):
         self._stats_report_freq = stats_report_freq
         self._debug_experiment_name = debug_experiment_name
         self._use_multi_label_loss = use_multi_label_loss
-        self._predictions_file = predictions_file
 
-        # TODO move to predict
-        if predictions_file is not None and os.path.isfile(predictions_file):
-            os.remove(predictions_file)
 
         # see usage below for explanation
         self._all_qa_count = 0
         self._qas_used_fraction = 1.0
         self.qa_outputs = torch.nn.Linear(self._text_field_embedder.get_output_dim(), 2)
+        self.qa_multitask = torch.nn.Linear(self._text_field_embedder.get_output_dim(), 4)
 
         initializer(self)
 
@@ -55,20 +51,32 @@ class MultiQA_BERT(Model):
     def forward(self,  # type: ignore
                 question: Dict[str, torch.LongTensor],
                 passage: Dict[str, torch.LongTensor],
-                span_start: torch.IntTensor = None,
-                span_end: torch.IntTensor = None,
+                span_starts: torch.IntTensor = None,
+                span_ends: torch.IntTensor = None,
+                multi_task : torch.IntTensor = None,
                 metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
 
         batch_size, num_of_passage_tokens = passage['bert'].size()
 
+
+        embedded_chunk = self._text_field_embedder(passage)
+        passage_length = embedded_chunk.size(1)
+
         # BERT for QA is a fully connected linear layer on top of BERT producing 2 vectors of
         # start and end spans.
-        embedded_passage = self._text_field_embedder(passage)
-        passage_length = embedded_passage.size(1)
-        logits = self.qa_outputs(embedded_passage)
+        logits = self.qa_outputs(embedded_chunk)
         start_logits, end_logits = logits.split(1, dim=-1)
         span_start_logits = start_logits.squeeze(-1)
         span_end_logits = end_logits.squeeze(-1)
+
+        multitask_logits = self.qa_multitask(torch.max(embedded_chunk, 1)[0])
+
+        #ignored_index = start_logits.size(1)
+        #span_starts.clamp_(0, ignored_index)
+        #span_ends.clamp_(0, ignored_index)
+        #answer_mask = answer_mask.type(torch.FloatTensor).cuda()
+        #loss_fct = CrossEntropyLoss(ignore_index=ignored_index, reduce=False)
+        #span_mask = answer_mask * (multi_task == 0).type(torch.FloatTensor).cuda()
 
         # Adding some masks with numerically stable values
         passage_mask = util.get_text_field_mask(passage).float()
@@ -78,8 +86,29 @@ class MultiQA_BERT(Model):
         span_start_logits = util.replace_masked_values(span_start_logits, repeated_passage_mask, -1e7)
         span_end_logits = util.replace_masked_values(span_end_logits, repeated_passage_mask, -1e7)
 
+        inds_with_gold_answer = np.argwhere(span_starts.view(-1).cpu().numpy() >= 0)
+        inds_with_gold_answer = inds_with_gold_answer.squeeze() if len(inds_with_gold_answer) > 1 else inds_with_gold_answer
+        loss = 0
+        if len(inds_with_gold_answer) > 0:
+            loss += nll_loss(util.masked_log_softmax(span_start_logits[inds_with_gold_answer], \
+                                                    repeated_passage_mask[inds_with_gold_answer]), \
+                            span_starts.view(-1)[inds_with_gold_answer], ignore_index=-1)
+            loss += nll_loss(util.masked_log_softmax(span_end_logits[inds_with_gold_answer], \
+                                                     repeated_passage_mask[inds_with_gold_answer]), \
+                             span_ends.view(-1)[inds_with_gold_answer], ignore_index=-1)
+
+        #switch_losses = [(loss_fct(multitask_logits, _switch) * _answer_mask) \
+        #                 for (_switch, _answer_mask) \
+        #                 in zip(torch.unbind(multi_task, dim=1), torch.unbind(answer_mask, dim=1))]
+        #assert len(start_losses) == len(end_losses) == len(switch_losses)
 
         output_dict: Dict[str, Any] = {}
+        if loss == 0:
+            # This is a hack for cases in which gold answer is not provided so we cannot compute loss...
+            output_dict["loss"] = torch.cuda.FloatTensor([0], device=span_end_logits.device) \
+                if torch.cuda.is_available() else torch.FloatTensor([0])
+        else:
+            output_dict["loss"] = loss
 
         # We may have multiple instances per questions, moving to per-question
         intances_question_id = [insta_meta['question_id'] for insta_meta in metadata]
@@ -87,25 +116,6 @@ class MultiQA_BERT(Model):
         per_question_inds = np.split(range(batch_size), question_instances_split_inds)
         metadata = np.split(metadata, question_instances_split_inds)
 
-        # Compute the loss.
-        if span_start is not None and len(np.argwhere(span_start.squeeze().cpu() >= 0)) > 0:
-            # in evaluation some instances may not contain the gold answer, so we need to compute
-            # loss only on those that do.
-            inds_with_gold_answer = np.argwhere(span_start.view(-1).cpu().numpy() >= 0)
-            inds_with_gold_answer = inds_with_gold_answer.squeeze() if len(inds_with_gold_answer) > 1 else inds_with_gold_answer
-            if len(inds_with_gold_answer)>0:
-                loss = nll_loss(util.masked_log_softmax(span_start_logits[inds_with_gold_answer], \
-                                                    repeated_passage_mask[inds_with_gold_answer]),\
-                                span_start.view(-1)[inds_with_gold_answer], ignore_index=-1)
-                loss += nll_loss(util.masked_log_softmax(span_end_logits[inds_with_gold_answer], \
-                                                    repeated_passage_mask[inds_with_gold_answer]),\
-                                span_end.view(-1)[inds_with_gold_answer], ignore_index=-1)
-                output_dict["loss"] = loss
-
-        # This is a hack for cases in which gold answer is not provided so we cannot compute loss...
-        if 'loss' not in output_dict:
-            output_dict["loss"] = torch.cuda.FloatTensor([0], device=span_end_logits.device) \
-                if torch.cuda.is_available() else torch.FloatTensor([0])
         # Compute F1 and preparing the output dictionary.
         output_dict['best_span_str'] = []
         output_dict['qid'] = []
@@ -145,17 +155,6 @@ class MultiQA_BERT(Model):
                 EM_score = squad_eval.metric_max_over_ground_truths(squad_eval.exact_match_score, best_span_string,gold_answer_texts)
             self._official_f1(100 * f1_score)
             self._official_EM(100 * EM_score)
-
-            # TODO move to predict
-            if self._predictions_file is not None:
-                with open(self._predictions_file,'a') as f:
-                    f.write(json.dumps({'question_id':question_instances_metadata[best_span_ind]['question_id'], \
-                                'best_span_logit':float(best_span_logit), \
-                                'f1':100 * f1_score,
-                                'EM':100 * EM_score,
-                                'best_span_string':best_span_string,\
-                                'gold_answer_texts':gold_answer_texts, \
-                                'qas_used_fraction':1.0}) + '\n')
 
         return output_dict
 
