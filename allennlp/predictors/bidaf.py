@@ -76,8 +76,8 @@ class BidafPredictor(Predictor):
                 # Convert character span indices into word span indices
                 word_span_start = None
                 word_span_end = None
-                for idx, offset in \
-                    enumerate(instance['metadata'].metadata['passage_token_offsets']): # type: ignore
+                offsets = instance['metadata'].metadata['passage_token_offsets'] # type: ignore
+                for idx, offset in enumerate(offsets):
                     if offset[0] == span[0]:
                         word_span_start = idx
                     if offset[1] == span[1]:

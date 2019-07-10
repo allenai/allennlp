@@ -120,15 +120,16 @@ class Hotflip(Attacker):
                 flipped.append(index_of_token_to_flip)
 
                 # Get new token using taylor approximation
-                input_tokens = new_instances[0][input_field_to_attack]._indexed_tokens["tokens"]
+                input_tokens = new_instances[0][input_field_to_attack]._indexed_tokens["tokens"] # type: ignore
                 original_id_of_token_to_flip = input_tokens[index_of_token_to_flip]
                 new_id_of_flipped_token = \
                     first_order_taylor(grad[index_of_token_to_flip],
                                        self.token_embedding.weight,
                                        original_id_of_token_to_flip)
                 # flip token
-                new_instances[0][input_field_to_attack].tokens[index_of_token_to_flip] = \
-                    Token(self.vocab._index_to_token["tokens"][new_id_of_flipped_token])
+                new_token = Token(self.vocab._index_to_token["tokens"][new_id_of_flipped_token]) # type: ignore
+                new_instances[0][input_field_to_attack].tokens[index_of_token_to_flip] = new_token
+
                 new_instances[0].indexed = False
 
                 # Get model predictions on new_instances, and then label the instances

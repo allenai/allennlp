@@ -22,8 +22,7 @@ class InputReduction(Attacker):
         fields_to_check = {}
         for current_instance in original_instances:
             current_instances = [current_instance] # type: List[Instance]
-            original_tokens = \
-                [x for x in current_instances[0][input_field_to_attack].tokens]
+            original_tokens = getattr(current_instances[0][input_field_to_attack], 'tokens')
 
             # Save fields that must be checked for equality
             test_instances = self.predictor.inputs_to_labeled_instances(inputs)
@@ -41,10 +40,10 @@ class InputReduction(Attacker):
             else:
                 num_ignore_tokens, tag_mask, original_tags = \
                     get_ner_tags_and_mask(current_instances, input_field_to_attack, ignore_tokens)
-            current_tokens = current_instances[0][input_field_to_attack].tokens
+            current_tokens = getattr(current_instances[0][input_field_to_attack], 'tokens')
             smallest_idx = -1
             # keep removing tokens
-            while len(current_instances[0][input_field_to_attack]) >= num_ignore_tokens:
+            while len(current_instances[0][input_field_to_attack]) >= num_ignore_tokens: # type: ignore
                 # get gradients and predictions
                 grads, outputs = self.predictor.get_gradients(current_instances)
                 for output in outputs:
@@ -73,7 +72,7 @@ class InputReduction(Attacker):
                         break
 
                 # remove a token from the input
-                current_tokens = list(current_instances[0][input_field_to_attack].tokens)
+                current_tokens = getattr(current_instances[0][input_field_to_attack],'tokens')
                 current_instances, smallest_idx = \
                     remove_one_token(grads[grad_input_field],
                                      current_instances,
@@ -101,7 +100,7 @@ def remove_one_token(grads: np.ndarray,
 
     # For NER, skip all tokens that are not in outside
     if "tags" in instances[0]:
-        for idx, label in enumerate(instances[0]["tags"].__dict__["field_list"]):
+        for idx, label in enumerate(instances[0]["tags"].field_list):
             if label.label != "O":
                 grads_mag[idx] = float("inf")
 
@@ -116,9 +115,9 @@ def remove_one_token(grads: np.ndarray,
     setattr(input_field, 'tokens', before_smallest + after_smallest)
 
     if "tags" in instances[0]:
-        instances[0]["tags"].__dict__["field_list"] = \
-            instances[0]["tags"].__dict__["field_list"][0:smallest] + \
-            instances[0]["tags"].__dict__["field_list"][smallest + 1:]
+        instances[0]["tags"].field_list = \
+            instances[0]["tags"].field_list[0:smallest] + \
+            instances[0]["tags"].field_list[smallest + 1:]
 
     instances[0].indexed = False
     return instances, smallest
@@ -141,7 +140,7 @@ def get_ner_tags_and_mask(current_instances: List[Instance] = None,
     # save the original tags and a 0/1 mask where the tags are
     tag_mask = []
     original_tags = []
-    for label in current_instances[0]["tags"].__dict__["field_list"]:
+    for label in current_instances[0]["tags"].field_list:
         if label.label != "O":
             tag_mask.append(1)
             original_tags.append(label.label)
