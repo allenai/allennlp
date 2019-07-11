@@ -19,5 +19,5 @@ class TestHotflip(AllenNlpTestCase):
         assert attack is not None
         assert 'final' in attack
         assert 'original' in attack
-        assert 'new_prediction' in attack
+        assert 'outputs' in attack
         assert len(attack['final'][0]) == len(attack['original']) # hotflip replaces words without removing
