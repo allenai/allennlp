@@ -1,14 +1,14 @@
 # pylint: disable=protected-access
-from typing import List, Dict, Any
+from typing import List
 import numpy
 import torch
 from allennlp.interpret.attackers.attacker import Attacker
-from allennlp.common.util import JsonDict, sanitize
+from allennlp.common.util import JsonDict, sanitize, get_fields_to_compare
 from allennlp.predictors.predictor import Predictor
 from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
 from allennlp.modules.token_embedders import Embedding
 from allennlp.data.tokenizers import Token
-from allennlp.data.token_indexers import ELMoTokenCharactersIndexer, TokenCharactersIndexer, TokenIndexer
+from allennlp.data.token_indexers import ELMoTokenCharactersIndexer, TokenCharactersIndexer
 
 @Attacker.register('hotflip')
 class Hotflip(Attacker):
@@ -88,7 +88,7 @@ class Hotflip(Attacker):
         final_tokens = []
         for current_instance in original_instances:
             # Gets a list of the fields that we want to check to see if they change.
-            fields_to_compare = self.get_fields_to_compare(inputs, current_instance, input_field_to_attack)
+            fields_to_compare = get_fields_to_compare(inputs, current_instance, input_field_to_attack)
 
             current_tokens = getattr(current_instance[input_field_to_attack], 'tokens')
             grads, outputs = self.predictor.get_gradients([current_instance])
