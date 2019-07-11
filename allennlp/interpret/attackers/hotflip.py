@@ -129,10 +129,10 @@ class Hotflip(Attacker):
                         outputs[key] = output[0]
 
                 # add labels to current_instances
-                self.predictor.predictions_to_labeled_instances(current_instance, outputs)
-
+                current_instance_labeled = self.predictor.predictions_to_labeled_instances(current_instance,
+                                                                                           outputs)[0]
                 # if the prediction has changed, then stop
-                if any(current_instance[field] != fields_to_compare[field] for field in fields_to_compare):
+                if any(current_instance_labeled[field] != fields_to_compare[field] for field in fields_to_compare):
                     break
 
             final_tokens.append(current_tokens)

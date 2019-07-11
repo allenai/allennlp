@@ -20,7 +20,9 @@ class TestPredictor(AllenNlpTestCase):
         archive = load_archive(self.FIXTURES_ROOT / 'decomposable_attention' / 'serialization' / 'model.tar.gz')
         predictor = Predictor.from_archive(archive, 'textual-entailment')
 
-        labeled_instances = predictor.inputs_to_labeled_instances(inputs)
+        instance = predictor._json_to_instance(inputs)
+        outputs = predictor._model.forward_on_instance(instance)
+        labeled_instances = predictor.predictions_to_labeled_instances(instance, outputs)
         for instance in labeled_instances:
             grads = predictor.get_gradients([instance])[0]
             assert 'grad_input_1' in grads
