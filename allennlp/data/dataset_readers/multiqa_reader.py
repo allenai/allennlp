@@ -24,7 +24,7 @@ from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
 from allennlp.data.tokenizers import Token, Tokenizer, WordTokenizer
 from allennlp.data.fields import Field, TextField, IndexField, \
-    MetadataField, ListField, MultiLabelField
+    MetadataField, ListField, LabelField
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import pairwise_distances
 from nltk.corpus import stopwords
@@ -409,7 +409,7 @@ def make_multiqa_instance(question_tokens: List[Token],
     passage_field = TextField(tokenized_paragraph, token_indexers)
     fields['passage'] = passage_field
     fields['question'] = TextField(question_tokens, token_indexers)
-    fields['multi_task'] = MultiLabelField(categorical_labels, num_labels=4)
+    fields['categorical_labels'] = LabelField(categorical_labels[0], label_namespace="categorical_labels")
     metadata = {'original_passage': paragraph,
                 'answers_list': answers_list,
                 'token_offsets': passage_offsets,

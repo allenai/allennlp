@@ -5,7 +5,7 @@ from overrides import overrides
 import torch
 import torch.nn.functional as F
 from torch.nn.functional import nll_loss
-from torch.nn import CrossEntropyLoss
+from torch.nn.functional import cross_entropy
 import os
 import random
 import traceback
@@ -41,7 +41,7 @@ class MultiQA_BERT(Model):
         self._all_qa_count = 0
         self._qas_used_fraction = 1.0
         self.qa_outputs = torch.nn.Linear(self._text_field_embedder.get_output_dim(), 2)
-        self.qa_multitask = torch.nn.Linear(self._text_field_embedder.get_output_dim(), 4)
+        self.qa_categorical = torch.nn.Linear(self._text_field_embedder.get_output_dim(), 4)
 
         initializer(self)
 
@@ -53,7 +53,7 @@ class MultiQA_BERT(Model):
                 passage: Dict[str, torch.LongTensor],
                 span_starts: torch.IntTensor = None,
                 span_ends: torch.IntTensor = None,
-                multi_task : torch.IntTensor = None,
+                categorical_labels : torch.IntTensor = None,
                 metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
 
         batch_size, num_of_passage_tokens = passage['bert'].size()
@@ -69,14 +69,7 @@ class MultiQA_BERT(Model):
         span_start_logits = start_logits.squeeze(-1)
         span_end_logits = end_logits.squeeze(-1)
 
-        multitask_logits = self.qa_multitask(torch.max(embedded_chunk, 1)[0])
-
-        #ignored_index = start_logits.size(1)
-        #span_starts.clamp_(0, ignored_index)
-        #span_ends.clamp_(0, ignored_index)
-        #answer_mask = answer_mask.type(torch.FloatTensor).cuda()
-        #loss_fct = CrossEntropyLoss(ignore_index=ignored_index, reduce=False)
-        #span_mask = answer_mask * (multi_task == 0).type(torch.FloatTensor).cuda()
+        categorical_logits = self.qa_categorical(torch.max(embedded_chunk, 1)[0])
 
         # Adding some masks with numerically stable values
         passage_mask = util.get_text_field_mask(passage).float()
@@ -92,19 +85,17 @@ class MultiQA_BERT(Model):
         if len(inds_with_gold_answer) > 0:
             loss += nll_loss(util.masked_log_softmax(span_start_logits[inds_with_gold_answer], \
                                                     repeated_passage_mask[inds_with_gold_answer]), \
-                            span_starts.view(-1)[inds_with_gold_answer], ignore_index=-1)
+                            span_starts.view(-1)[inds_with_gold_answer], ignore_index=-1, reduction='mean')
             loss += nll_loss(util.masked_log_softmax(span_end_logits[inds_with_gold_answer], \
                                                      repeated_passage_mask[inds_with_gold_answer]), \
-                             span_ends.view(-1)[inds_with_gold_answer], ignore_index=-1)
+                             span_ends.view(-1)[inds_with_gold_answer], ignore_index=-1, reduction='mean')
 
-        #switch_losses = [(loss_fct(multitask_logits, _switch) * _answer_mask) \
-        #                 for (_switch, _answer_mask) \
-        #                 in zip(torch.unbind(multi_task, dim=1), torch.unbind(answer_mask, dim=1))]
-        #assert len(start_losses) == len(end_losses) == len(switch_losses)
+        if categorical_labels is not None:
+            loss += cross_entropy(categorical_logits, categorical_labels,reduction='mean')
 
         output_dict: Dict[str, Any] = {}
         if loss == 0:
-            # This is a hack for cases in which gold answer is not provided so we cannot compute loss...
+            # For evaluation purposes only!
             output_dict["loss"] = torch.cuda.FloatTensor([0], device=span_end_logits.device) \
                 if torch.cuda.is_available() else torch.FloatTensor([0])
         else:
