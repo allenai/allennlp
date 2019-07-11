@@ -1,4 +1,4 @@
-from typing import Dict, List, Union, Any
+from typing import Dict, List, Union, Any, Optional
 import inspect
 
 import torch
@@ -41,22 +41,26 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
         meaning that the tensors produced by the indexers will be passed to the embedders in
         the order you specify in this list. You can also use `null` in the configuration to
         set some specified parameters to None.
-    allow_unmatched_keys : ``bool``, optional (default = False)
+    allow_unmatched_keys : ``bool``, optional
         If True, then don't enforce the keys of the ``text_field_input`` to
         match those in ``token_embedders`` (useful if the mapping is specified
-        via ``embedder_to_indexer_map``).
+        via ``embedder_to_indexer_map``). If you don't specify this it defaults to
+        True if you supplied an `embedder_to_indexer_map`, False otherwise.
     """
     def __init__(self,
                  token_embedders: Dict[str, TokenEmbedder],
                  embedder_to_indexer_map: Dict[str, Union[List[str], Dict[str, str]]] = None,
-                 allow_unmatched_keys: bool = False) -> None:
+                 allow_unmatched_keys: Optional[bool] = None) -> None:
         super(BasicTextFieldEmbedder, self).__init__()
         self._token_embedders = token_embedders
         self._embedder_to_indexer_map = embedder_to_indexer_map
         for key, embedder in token_embedders.items():
             name = 'token_embedder_%s' % key
             self.add_module(name, embedder)
-        self._allow_unmatched_keys = allow_unmatched_keys
+        if allow_unmatched_keys is None:
+            self._allow_unmatched_keys = self._embedder_to_indexer_map is not None
+        else:
+            self._allow_unmatched_keys = allow_unmatched_keys
 
     @overrides
     def get_output_dim(self) -> int:
@@ -149,7 +153,7 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
         embedder_to_indexer_map = params.pop("embedder_to_indexer_map", None)
         if embedder_to_indexer_map is not None:
             embedder_to_indexer_map = embedder_to_indexer_map.as_dict(quiet=True)
-        allow_unmatched_keys = params.pop_bool("allow_unmatched_keys", False)
+        allow_unmatched_keys = params.pop_bool("allow_unmatched_keys", None)
 
         token_embedder_params = params.pop('token_embedders', None)
 

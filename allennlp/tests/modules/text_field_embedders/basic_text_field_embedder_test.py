@@ -1,4 +1,6 @@
 # pylint: disable=no-self-use,invalid-name, protected-access
+import copy
+
 import pytest
 import torch
 
@@ -17,7 +19,7 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
         self.vocab.add_token_to_namespace("2")
         self.vocab.add_token_to_namespace("3")
         self.vocab.add_token_to_namespace("4")
-        params = Params({
+        self.params = Params({
                 "token_embedders": {
                         "words1": {
                                 "type": "embedding",
@@ -33,7 +35,8 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
                                 }
                         }
                 })
-        self.token_embedder = BasicTextFieldEmbedder.from_params(vocab=self.vocab, params=params)
+        self.token_embedder = BasicTextFieldEmbedder.from_params(vocab=self.vocab,
+                                                                 params=copy.deepcopy(self.params))
         self.inputs = {
                 "words1": torch.LongTensor([[0, 2, 3, 5]]),
                 "words2": torch.LongTensor([[1, 4, 3, 2]]),
@@ -236,3 +239,35 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
         assert old_embedder._token_embedders.keys() == new_embedder._token_embedders.keys()
 
         assert new_embedder(self.inputs).size() == (1, 4, 10)
+
+    def test_allow_unmatched_keys(self):
+        params = copy.deepcopy(self.params)
+        # Remove one embedder, so we have unmatched indexers and embedders.
+        params["token_embedders"].pop("words3")
+
+        # as-is, should raise an error
+        embedder = BasicTextFieldEmbedder.from_params(vocab=self.vocab, params=params)
+        with pytest.raises(ConfigurationError):
+            embedder(self.inputs)
+
+        # with allow unmatched keys should not raise an error
+        params = copy.deepcopy(self.params)
+        params["token_embedders"].pop("words3")
+        params["allow_unmatched_keys"] = True
+        embedder = BasicTextFieldEmbedder.from_params(vocab=self.vocab, params=params)
+        embedder(self.inputs)
+
+        # with embedder to indexer map should not raise an error
+        params = copy.deepcopy(self.params)
+        params["token_embedders"].pop("words3")
+        params["embedder_to_indexer_map"] = {"words1": ["words1"], "words2": ["words2"]}
+        embedder = BasicTextFieldEmbedder.from_params(vocab=self.vocab, params=params)
+        embedder(self.inputs)
+
+        # unless we explicitly specify not to allow unmatched keys
+        params = copy.deepcopy(self.params)
+        params["token_embedders"].pop("words3")
+        params["allow_unmatched_keys"] = False
+        embedder = BasicTextFieldEmbedder.from_params(vocab=self.vocab, params=params)
+        with pytest.raises(ConfigurationError):
+            embedder(self.inputs)
