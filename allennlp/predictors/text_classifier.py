@@ -1,6 +1,6 @@
+from copy import deepcopy
 from typing import List, Dict
 from overrides import overrides
-from copy import deepcopy
 import numpy as np
 from allennlp.common.util import JsonDict
 from allennlp.data import Instance

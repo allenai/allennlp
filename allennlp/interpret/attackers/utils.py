@@ -20,8 +20,8 @@ def get_fields_to_compare(inputs: JsonDict, instance: Instance, input_field_to_a
 
         """
         fields_to_compare = {
-                key: instance[key]
-                for key in instance.fields
-                if key not in inputs and key != input_field_to_attack
+            key: instance[key]
+            for key in instance.fields
+            if key not in inputs and key != input_field_to_attack
         }
         return fields_to_compare

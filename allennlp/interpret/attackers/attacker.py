@@ -2,7 +2,6 @@ from typing import List
 from allennlp.common import Registrable
 from allennlp.predictors import Predictor
 from allennlp.common.util import JsonDict
-from allennlp.data import Instance
 
 class Attacker(Registrable):
     """
@@ -14,7 +13,7 @@ class Attacker(Registrable):
         self.predictor = predictor
 
     def attack_from_json(self,
-                         inputs: JsonDict,
+                         inputs: JsonDict = None,
                          input_field_to_attack: str,
                          grad_input_field: str,
                          ignore_tokens: List[str]) -> JsonDict:

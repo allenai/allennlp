@@ -51,7 +51,9 @@ class Hotflip(Attacker):
                 elmo_tokens = []
                 indexer = self.predictor._dataset_reader._token_indexers["elmo"]
                 for token in all_tokens:
-                    elmo_indexed_token = indexer.tokens_to_indices([Token(text=token)], self.vocab, "sentence")["sentence"]
+                    elmo_indexed_token = indexer.tokens_to_indices([Token(text=token)],
+                                                                   self.vocab,
+                                                                   "sentence")["sentence"]
                     elmo_tokens.append(elmo_indexed_token[0])
                 all_inputs["elmo"] = torch.LongTensor(elmo_tokens).unsqueeze(0)
 

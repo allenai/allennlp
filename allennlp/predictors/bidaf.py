@@ -1,7 +1,7 @@
 # pylint: disable=protected-access
+from copy import deepcopy
 from typing import Dict, List
 from overrides import overrides
-from copy import deepcopy
 import numpy as np
 from allennlp.common.util import JsonDict
 from allennlp.data import Instance
@@ -58,8 +58,10 @@ class BidafPredictor(Predictor):
         if 'best_span' in outputs:
             span_start_label = outputs['best_span'][0]
             span_end_label = outputs['best_span'][1]
-            new_instance.add_field('span_start', IndexField(int(span_start_label), new_instance['passage'])) # type: ignore
-            new_instance.add_field('span_end', IndexField(int(span_end_label), new_instance['passage'])) # type: ignore
+            new_instance.add_field('span_start',
+                                   IndexField(int(span_start_label), new_instance['passage'])) # type: ignore
+            new_instance.add_field('span_end',
+                                   IndexField(int(span_end_label), new_instance['passage'])) # type: ignore
 
         # For NAQANet model
         elif 'answer' in outputs:
@@ -84,7 +86,9 @@ class BidafPredictor(Predictor):
                     if offset[1] == span[1]:
                         word_span_end = idx
 
-                field = ListField([SpanField(word_span_start, word_span_end, new_instance['passage'])]) # type: ignore
+                field = ListField([SpanField(word_span_start,
+                                             word_span_end,
+                                             new_instance['passage'])]) # type: ignore
                 new_instance.add_field('answer_as_passage_spans', field)
 
             # When the answer is an arithmetic calculation
@@ -130,7 +134,9 @@ class BidafPredictor(Predictor):
                     if offset[1] == span[1]:
                         word_span_end = idx
 
-                field = ListField([SpanField(word_span_start, word_span_end, new_instance['question'])]) # type: ignore
+                field = ListField([SpanField(word_span_start,
+                                             word_span_end,
+                                             new_instance['question'])]) # type: ignore
                 new_instance.add_field('answer_as_question_spans', field)
 
         return [new_instance]
