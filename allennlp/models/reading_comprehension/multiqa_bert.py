@@ -58,7 +58,6 @@ class MultiQA_BERT(Model):
 
         batch_size, num_of_passage_tokens = passage['bert'].size()
 
-
         embedded_chunk = self._text_field_embedder(passage)
         passage_length = embedded_chunk.size(1)
 
@@ -81,6 +80,7 @@ class MultiQA_BERT(Model):
 
         inds_with_gold_answer = np.argwhere(span_starts.view(-1).cpu().numpy() >= 0)
         inds_with_gold_answer = inds_with_gold_answer.squeeze() if len(inds_with_gold_answer) > 1 else inds_with_gold_answer
+
         loss = 0
         if len(inds_with_gold_answer) > 0:
             loss += nll_loss(util.masked_log_softmax(span_start_logits[inds_with_gold_answer], \
@@ -101,51 +101,52 @@ class MultiQA_BERT(Model):
         else:
             output_dict["loss"] = loss
 
-        # We may have multiple instances per questions, moving to per-question
-        intances_question_id = [insta_meta['question_id'] for insta_meta in metadata]
-        question_instances_split_inds = np.cumsum(np.unique(intances_question_id, return_counts=True)[1])[:-1]
-        per_question_inds = np.split(range(batch_size), question_instances_split_inds)
-        metadata = np.split(metadata, question_instances_split_inds)
-
         # Compute F1 and preparing the output dictionary.
         output_dict['best_span_str'] = []
+        output_dict['best_span_logit'] = []
+        output_dict['category'] = []
+        output_dict['category_logit'] = []
         output_dict['qid'] = []
 
         # getting best span prediction for
         best_span = self._get_example_predications(span_start_logits, span_end_logits, self._max_span_length)
         best_span_cpu = best_span.detach().cpu().numpy()
 
-        span_start_logits_numpy = span_start_logits.data.cpu().numpy()
-        span_end_logits_numpy = span_end_logits.data.cpu().numpy()
-        # Iterating over every question (which may contain multiple instances, one per chunk)
-        for question_inds, question_instances_metadata in zip(per_question_inds, metadata):
-            best_span_ind = np.argmax(span_start_logits_numpy[question_inds, best_span_cpu[question_inds][:, 0]] +
-                      span_end_logits_numpy[question_inds, best_span_cpu[question_inds][:, 1]])
-            best_span_logit = np.max(span_start_logits_numpy[question_inds, best_span_cpu[question_inds][:, 0]] +
-                                      span_end_logits_numpy[question_inds, best_span_cpu[question_inds][:, 1]])
+        # In prediction mode we have no gold answers
+        if categorical_labels is not None:
+            for instance_ind, instance_metadata in zip(range(batch_size), metadata):
+                best_span_logit = span_start_logits.data.cpu().numpy()[instance_ind, best_span_cpu[instance_ind][0]] + \
+                                  span_end_logits.data.cpu().numpy()[instance_ind, best_span_cpu[instance_ind][1]]
 
-            passage_str = question_instances_metadata[best_span_ind]['original_passage']
-            offsets = question_instances_metadata[best_span_ind]['token_offsets']
+                category = np.argmax(categorical_logits[instance_ind].data.cpu().numpy())
+                category_logit = categorical_logits[instance_ind,category].data.cpu().numpy()
+                cat_label_ind = categorical_labels.data.cpu().numpy()[instance_ind]
+                cat_label = self.vocab.get_token_from_index(cat_label_ind, namespace="categorical_labels")
+                cat_pred = self.vocab.get_token_from_index(category, namespace="categorical_labels")
 
-            predicted_span = best_span_cpu[question_inds[best_span_ind]]
-            start_offset = offsets[predicted_span[0]][0]
-            end_offset = offsets[predicted_span[1]][1]
-            best_span_string = passage_str[start_offset:end_offset]
+                passage_str = instance_metadata['original_passage']
+                offsets = instance_metadata['token_offsets']
 
-            # Note: this is a hack, because AllenNLP, when predicting, expects a value for each instance.
-            # But we may have more than 1 chunk per question, and thus less output strings than instances
-            for i in range(len(question_inds)):
+                predicted_span = best_span_cpu[instance_ind]
+                start_offset = offsets[predicted_span[0]][0]
+                end_offset = offsets[predicted_span[1]][1]
+                best_span_string = passage_str[start_offset:end_offset]
+
                 output_dict['best_span_str'].append(best_span_string)
-                output_dict['qid'].append(question_instances_metadata[best_span_ind]['question_id'])
+                output_dict['best_span_logit'].append(best_span_logit)
+                output_dict['category'].append(category)
+                output_dict['category_logit'].append(category_logit)
+                output_dict['qid'].append(instance_metadata['question_id'])
 
-            f1_score = 0.0
-            EM_score = 0.0
-            gold_answer_texts = question_instances_metadata[best_span_ind]['answer_texts_list']
-            if gold_answer_texts:
-                f1_score = squad_eval.metric_max_over_ground_truths(squad_eval.f1_score,best_span_string,gold_answer_texts)
-                EM_score = squad_eval.metric_max_over_ground_truths(squad_eval.exact_match_score, best_span_string,gold_answer_texts)
-            self._official_f1(100 * f1_score)
-            self._official_EM(100 * EM_score)
+                if cat_label == 'span':
+                    gold_answer_texts = instance_metadata['answer_texts_list']
+                    f1_score = squad_eval.metric_max_over_ground_truths(squad_eval.f1_score, best_span_string, gold_answer_texts)
+                    EM_score = squad_eval.metric_max_over_ground_truths(squad_eval.exact_match_score, best_span_string, gold_answer_texts)
+                    self._official_f1(100 * f1_score)
+                    self._official_EM(100 * EM_score)
+
+                self._official_EM(100 * (cat_label == cat_pred))
+                self._official_f1(100 * (cat_label == cat_pred))
 
         return output_dict
 
