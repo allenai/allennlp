@@ -5,6 +5,7 @@ import json
 import os
 import re
 import time
+from unittest.mock import MagicMock
 from typing import Dict, Iterable
 
 import torch
@@ -26,9 +27,10 @@ from allennlp.models.archival import load_archive
 from allennlp.models.model import Model
 from allennlp.training.callback_trainer import CallbackTrainer
 from allennlp.training.callbacks import (
-        Events,
+        Events, Callback, handle_event,
         LogToTensorboard, Checkpoint, Validate, PostToUrl, GradientNormAndClip,
-        UpdateLearningRate, UpdateMomentum, TrackMetrics, UpdateMovingAverage
+        UpdateLearningRate, UpdateMomentum, TrackMetrics, UpdateMovingAverage,
+        GradientAccumulation
 )
 from allennlp.training.checkpointer import Checkpointer
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
@@ -900,3 +902,54 @@ class TestCallbackTrainer(ModelTestCase):
         assert training_metrics["best_validation_loss"] == restored_metrics["best_validation_loss"]
         assert training_metrics["best_epoch"] == 0
         assert training_metrics["validation_loss"] > restored_metrics["validation_loss"]
+
+    def test_gradient_accumulation(self):
+
+        # We'll track how many times forward was called:
+        class CountForward(Callback):
+            def __init__(self) -> None:
+                self.count = 0
+
+            @handle_event(Events.FORWARD)
+            def increment(self, _):
+                self.count += 1
+
+        count_forward = CountForward()
+
+        callbacks = [*self.default_callbacks(batch_size=1),
+                     GradientAccumulation(gradient_accumulation_period=3),
+                     count_forward]
+
+        # Use a new iterator with batch size 1
+        iterator = BasicIterator(batch_size=1)
+        iterator.index_with(self.vocab)
+
+        # We'll record batch_num_total and forward count each time
+        # optimizer.step is called.
+        batch_nums_total = []
+        forwards_total = []
+
+        def side_effect():
+            batch_nums_total.append(trainer.batch_num_total)
+            forwards_total.append(count_forward.count)
+
+        self.optimizer.step = MagicMock(return_value=None, side_effect=side_effect)
+
+        trainer = CallbackTrainer(model=self.model,
+                                  training_data=self.instances,
+                                  iterator=iterator,
+                                  optimizer=self.optimizer,
+                                  callbacks=callbacks,
+                                  num_epochs=2)
+        trainer.handler.verbose = True
+        trainer.train()
+
+        # There are 8 batch_groups (2 epochs * 4 instances / batch_size 1)
+        # but optimizer.step should only get called twice
+        # (epoch 1, after 3 instances, epoch 2, after 3 instances)
+        assert len(self.optimizer.step.mock_calls) == 2
+
+        # And it should get called at the end of batch_group 3,
+        # then at the end of batch_group 7
+        assert batch_nums_total == [1, 3]
+        assert forwards_total == [3, 7]

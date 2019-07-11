@@ -117,6 +117,15 @@ class CallbackTrainer(TrainerBase):
         self.epoch_number = 0
         self.batch_grad_norm: Optional[float] = None
 
+        # If you're doing something like gradient accumulation, you might want
+        # to modify this during training to treat multiple forward / backward
+        # passes as a single "batch".
+        self.is_start_of_batch = True
+        self.is_end_of_batch = True
+
+        # Similarly, you may want to scale the loss, which you can do by changing this.
+        self.loss_scale = 1.0
+
         self.training_data = training_data
         self.iterator = iterator
         self.shuffle = shuffle
@@ -168,14 +177,14 @@ class CallbackTrainer(TrainerBase):
         Handles the training for a single batch group.
         Fires off the events BATCH_START, FORWARD, BACKWARD, and BATCH_END.
         """
-        self.handler.fire_event(Events.BATCH_START)
-        self.optimizer.zero_grad()
-
-        self.batches_this_epoch += 1
-        self.batch_num_total += 1
+        if self.is_start_of_batch:
+            self.handler.fire_event(Events.BATCH_START)
+            self.optimizer.zero_grad()
+            self.batches_this_epoch += 1
+            self.batch_num_total += 1
 
         self.handler.fire_event(Events.FORWARD)
-        loss = self.batch_loss(batch_group, for_training=True)
+        loss = self.batch_loss(batch_group, for_training=True) * self.loss_scale
 
         if torch.isnan(loss):
             raise ValueError("nan loss encountered")
@@ -185,16 +194,19 @@ class CallbackTrainer(TrainerBase):
 
         self.handler.fire_event(Events.BACKWARD)
 
-        self.optimizer.step()
+        if self.is_end_of_batch:
+            self.optimizer.step()
 
-        # Update the description with the latest metrics
-        self.train_metrics = training_util.get_metrics(self.model,
-                                                       self.train_loss,
-                                                       self.batches_this_epoch)
+            # Update the description with the latest metrics
+            self.train_metrics = training_util.get_metrics(self.model,
+                                                           self.train_loss,
+                                                           self.batches_this_epoch)
 
-        self.handler.fire_event(Events.BATCH_END)
+            self.handler.fire_event(Events.BATCH_END)
 
-        return training_util.description_from_metrics(self.train_metrics)
+            return training_util.description_from_metrics(self.train_metrics)
+        else:
+            return ""
 
 
     def train_one_epoch(self) -> None:
@@ -218,7 +230,9 @@ class CallbackTrainer(TrainerBase):
 
         for self.batch_group in batch_groups_tqdm:
             description = self.train_one_batch_group(self.batch_group)
-            batch_groups_tqdm.set_description(description, refresh=False)
+
+            if self.is_end_of_batch:
+                batch_groups_tqdm.set_description(description, refresh=False)
 
         self.handler.fire_event(Events.VALIDATE)
         self.handler.fire_event(Events.EPOCH_END)
