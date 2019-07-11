@@ -15,5 +15,3 @@ class Events:
     EPOCH_END = "EPOCH_END"
 
     TRAINING_END = "TRAINING_END"
-
-    ERROR = "ERROR"
