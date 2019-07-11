@@ -93,6 +93,7 @@ class WordpieceIndexer(TokenIndexer[int]):
         self.use_starting_offsets = use_starting_offsets
         self._do_lowercase = do_lowercase
         self._truncate_long_sequences = truncate_long_sequences
+        self._warned_about_truncation = False
 
         if never_lowercase is None:
             # Use the defaults
@@ -122,6 +123,14 @@ class WordpieceIndexer(TokenIndexer[int]):
         for word, idx in self.vocab.items():
             vocabulary._token_to_index[self._namespace][word] = idx
             vocabulary._index_to_token[self._namespace][idx] = word
+
+    def _warn_about_truncation(self, tokens: List[Token]) -> None:
+        if not self._warned_about_truncation:
+            logger.warning("Too many wordpieces, truncating sequence. "
+                           "If you would like a sliding window, set `truncate_long_sequences` to False."
+                           f"The offending input was: {str([token.text for token in tokens])}."
+                           "To avoid polluting your logs we will not warn about this again.")
+            self._warned_about_truncation = True
 
     @overrides
     def tokens_to_indices(self,
@@ -207,8 +216,7 @@ class WordpieceIndexer(TokenIndexer[int]):
             wordpiece_windows = [self._add_start_and_end(flat_wordpiece_ids)]
             token_type_ids = self._extend(flat_token_type_ids)
         elif self._truncate_long_sequences:
-            logger.warning("Too many wordpieces, truncating sequence. If you would like a sliding window, set"
-                           "`truncate_long_sequences` to False %s", str([token.text for token in tokens]))
+            self._warn_about_truncation(tokens)
             wordpiece_windows = [self._add_start_and_end(flat_wordpiece_ids[:pieces_accumulated])]
             token_type_ids = self._extend(flat_token_type_ids[:pieces_accumulated])
         else:
