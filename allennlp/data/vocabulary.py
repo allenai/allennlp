@@ -411,6 +411,7 @@ class Vocabulary(Registrable):
     # There's enough logic here to require a custom from_params.
     @classmethod
     @configuration([
+            # type: ignore
             # name, annotation, default_value, comment
             ("directory_path", str, None, "path to an existing vocabulary (if you want to use one)"),
             ("extend", bool, False, "whether to extend the existing vocabulary (if you specified one)"),
@@ -428,7 +429,7 @@ class Vocabulary(Registrable):
             ("tokens_to_add", Dict[str, List[str]], None,
              "any tokens here will certainly be included in the keyed namespace, regardless of your data")
     ])
-    def from_params(cls, params: Params, instances: Iterable['adi.Instance'] = None):  # type: ignore
+    def from_params(cls, params: Params, instances: Iterable['adi.Instance'] = None):
         """
         There are two possible ways to build a vocabulary; from a
         collection of instances, using :func:`Vocabulary.from_instances`, or

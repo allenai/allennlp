@@ -292,7 +292,9 @@ def _render(item: ConfigItem, indent: str = "") -> str:
     return rendered_item
 
 
-def configuration(config_items: List[ConfigItem]):
+ConfigTuple = Tuple[str, type, Any, str]  # pylint: disable=invalid-name
+
+def configuration(config_items: List[Union[ConfigItem, ConfigTuple]]):
     """
     Decorator to associate a ``Config`` with a from_params method
     when it can't be inferred from the constructor signature.
