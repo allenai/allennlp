@@ -2,7 +2,8 @@ from typing import List, Tuple
 import numpy as np
 import torch
 from allennlp.interpret.attackers.attacker import Attacker
-from allennlp.common.util import JsonDict, sanitize, get_fields_to_compare
+from allennlp.interpret.attackers import utils
+from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import Instance
 
 @Attacker.register('input-reduction')
@@ -12,7 +13,7 @@ class InputReduction(Attacker):
     Difficult` https://arxiv.org/abs/1804.07781, which removes as many words as possible
     from the input without changing the model's prediction.
     """
-    def attack_from_json(self,  JsonDict = None,
+    def attack_from_json(self, inputs: JsonDict = None,
                          input_field_to_attack: str = 'tokens',
                          grad_input_field: str = 'grad_input_1',
                          ignore_tokens: List[str] = ["@@NULL@@"]):
@@ -21,7 +22,7 @@ class InputReduction(Attacker):
         final_tokens = []
         for current_instance in original_instances:
             # Save fields that must be checked for equality
-            fields_to_compare = get_fields_to_compare(inputs, current_instance, input_field_to_attack)
+            fields_to_compare = utils.get_fields_to_compare(inputs, current_instance, input_field_to_attack)
 
             # Set num_ignore_tokens, which tells input reduction when to stop
             num_ignore_tokens = 0
