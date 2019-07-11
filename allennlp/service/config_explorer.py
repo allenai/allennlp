@@ -21,7 +21,7 @@ import logging
 
 from flask import Flask, request, Response, jsonify, send_file
 
-from allennlp.common.configuration import configure, choices
+from allennlp.common.autoconfigure import configure, choices
 from allennlp.common.util import import_submodules
 from allennlp.service.server_simple import ServerError
 

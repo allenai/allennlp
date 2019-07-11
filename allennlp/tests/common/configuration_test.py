@@ -3,7 +3,8 @@ from typing import Dict
 
 import pytest
 
-from allennlp.common.configuration import configure, Config, BASE_CONFIG, json_annotation, choices
+from allennlp.common.autoconfigure import configure, choices, BASE_CONFIG
+from allennlp.common.configuration import Config, json_annotation
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.nn.activations import Activation
 

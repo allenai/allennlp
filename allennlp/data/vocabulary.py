@@ -11,6 +11,7 @@ from collections import defaultdict
 from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Union
 from typing import TextIO  # pylint: disable=unused-import
 
+from allennlp.common.configuration import configuration
 from allennlp.common.util import namespace_match
 from allennlp.common import Params, Registrable
 from allennlp.common.checks import ConfigurationError
@@ -409,6 +410,24 @@ class Vocabulary(Registrable):
 
     # There's enough logic here to require a custom from_params.
     @classmethod
+    @configuration([
+            # name, annotation, default_value, comment
+            ("directory_path", str, None, "path to an existing vocabulary (if you want to use one)"),
+            ("extend", bool, False, "whether to extend the existing vocabulary (if you specified one)"),
+            ("min_count", Dict[str, int], None, "only include tokens that occur at least this many times"),
+            ("max_vocab_size", Union[int, Dict[str, int]], None,
+             "used to cap the number of tokens in your vocabulary"),
+            ("non_padded_namespaces", List[str], DEFAULT_NON_PADDED_NAMESPACES,
+             "namespaces that don't get padding or OOV tokens"),
+            ("pretrained_files", Dict[str, str], None, "pretrained embedding files for each namespace"),
+            ("min_pretrained_embeddings", Dict[str, int], None,
+             "specifies a number of lines to keep for each namespace, even for words not appearing in the data"),
+            ("only_include_pretrained_words", bool, False,
+             "if True, keeps only the words that appear in the pretrained set. "
+             "if False, also includes non-pretrained words that exceed min_count."),
+            ("tokens_to_add", Dict[str, List[str]], None,
+             "any tokens here will certainly be included in the keyed namespace, regardless of your data")
+    ])
     def from_params(cls, params: Params, instances: Iterable['adi.Instance'] = None):  # type: ignore
         """
         There are two possible ways to build a vocabulary; from a

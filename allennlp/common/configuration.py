@@ -3,10 +3,8 @@ Tools for programmatically generating config files for AllenNLP models.
 """
 # pylint: disable=protected-access,too-many-return-statements
 
-from typing import NamedTuple, Optional, Any, List, TypeVar, Generic, Type, Dict, Union, Sequence, Tuple
+from typing import NamedTuple, Optional, Any, List, TypeVar, Generic, Dict, Union, Sequence, Tuple
 import collections
-import inspect
-import importlib
 import json
 import re
 
@@ -14,18 +12,9 @@ import torch
 from numpydoc.docscrape import NumpyDocString
 
 from allennlp.common import Registrable, JsonDict
-from allennlp.data.dataset_readers import DatasetReader
-from allennlp.data.iterators import DataIterator
-from allennlp.data.vocabulary import Vocabulary, DEFAULT_NON_PADDED_NAMESPACES
-from allennlp.models.model import Model
-from allennlp.modules.seq2seq_encoders import _Seq2SeqWrapper
-from allennlp.modules.seq2vec_encoders import _Seq2VecWrapper
-from allennlp.modules.token_embedders import Embedding
 from allennlp.nn.activations import Activation
 from allennlp.nn.initializers import Initializer, PretrainedModelInitializer
 from allennlp.nn.regularizers import Regularizer
-from allennlp.training.optimizers import Optimizer as AllenNLPOptimizer
-from allennlp.training.trainer import Trainer
 
 def _remove_prefix(class_name: str) -> str:
     rgx = r"^(typing\.|builtins\.)"
@@ -118,7 +107,7 @@ class ConfigItem(NamedTuple):
         if is_registrable(self.annotation):
             json_dict["registrable"] = True
 
-        if self.default_value != _NO_DEFAULT:
+        if self.default_value != NO_DEFAULT:
             try:
                 # Ugly check that default value is actually serializable
                 json.dumps(self.default_value)
@@ -163,7 +152,7 @@ class Config(Generic[T]):
 # ``None`` is sometimes the default value for a function parameter,
 # so we use a special sentinel to indicate that a parameter has no
 # default value.
-_NO_DEFAULT = object()
+NO_DEFAULT = object()
 
 def _get_config_type(cla55: type) -> Optional[str]:
     """
@@ -219,80 +208,6 @@ def _docspec_comments(obj) -> Dict[str, str]:
         comments[name] = comment
 
     return comments
-
-def _auto_config(cla55: Type[T]) -> Config[T]:
-    """
-    Create the ``Config`` for a class by reflecting on its ``__init__``
-    method and applying a few hacks.
-    """
-    typ3 = _get_config_type(cla55)
-
-    # Don't include self, or vocab
-    names_to_ignore = {"self", "vocab"}
-
-    # Hack for RNNs
-    if cla55 in [torch.nn.RNN, torch.nn.LSTM, torch.nn.GRU]:
-        cla55 = torch.nn.RNNBase
-        names_to_ignore.add("mode")
-
-    if isinstance(cla55, type):
-        # It's a class, so inspect its constructor
-        function_to_inspect = cla55.__init__
-    else:
-        # It's a function, so inspect it, and ignore tensor
-        function_to_inspect = cla55
-        names_to_ignore.add("tensor")
-
-    argspec = inspect.getfullargspec(function_to_inspect)
-    comments = _docspec_comments(cla55)
-
-    items: List[ConfigItem] = []
-
-    num_args = len(argspec.args)
-    defaults = list(argspec.defaults or [])
-    num_default_args = len(defaults)
-    num_non_default_args = num_args - num_default_args
-
-    # Required args all come first, default args at the end.
-    defaults = [_NO_DEFAULT for _ in range(num_non_default_args)] + defaults
-
-    for name, default in zip(argspec.args, defaults):
-        if name in names_to_ignore:
-            continue
-        annotation = argspec.annotations.get(name)
-        comment = comments.get(name)
-
-        # Don't include Model, the only place you'd specify that is top-level.
-        if annotation == Model:
-            continue
-
-        # Don't include DataIterator, the only place you'd specify that is top-level.
-        if annotation == DataIterator:
-            continue
-
-        # Don't include params for an Optimizer
-        if torch.optim.Optimizer in getattr(cla55, '__bases__', ()) and name == "params":
-            continue
-
-        # Don't include datasets in the trainer
-        if cla55 == Trainer and name.endswith("_dataset"):
-            continue
-
-        # Hack in our Optimizer class to the trainer
-        if cla55 == Trainer and annotation == torch.optim.Optimizer:
-            annotation = AllenNLPOptimizer
-
-        # Hack in embedding num_embeddings as optional (it can be inferred from the pretrained file)
-        if cla55 == Embedding and name == "num_embeddings":
-            default = None
-
-        items.append(ConfigItem(name, annotation, default, comment))
-
-    # More hacks, Embedding
-    if cla55 == Embedding:
-        items.insert(1, ConfigItem("pretrained_file", str, None))
-
-    return Config(items, typ3=typ3)
 
 
 def render_config(config: Config, indent: str = "") -> str:
@@ -356,7 +271,7 @@ def _render(item: ConfigItem, indent: str = "") -> str:
     """
     Render a single config item, with the provided indent
     """
-    optional = item.default_value != _NO_DEFAULT
+    optional = item.default_value != NO_DEFAULT
 
     if is_configurable(item.annotation):
         rendered_annotation = f"{item.annotation} (configurable)"
@@ -376,136 +291,14 @@ def _render(item: ConfigItem, indent: str = "") -> str:
 
     return rendered_item
 
-BASE_CONFIG: Config = Config([
-        ConfigItem(name="dataset_reader",
-                   annotation=DatasetReader,
-                   default_value=_NO_DEFAULT,
-                   comment="specify your dataset reader here"),
-        ConfigItem(name="validation_dataset_reader",
-                   annotation=DatasetReader,
-                   default_value=None,
-                   comment="same as dataset_reader by default"),
-        ConfigItem(name="train_data_path",
-                   annotation=str,
-                   default_value=_NO_DEFAULT,
-                   comment="path to the training data"),
-        ConfigItem(name="validation_data_path",
-                   annotation=str,
-                   default_value=None,
-                   comment="path to the validation data"),
-        ConfigItem(name="test_data_path",
-                   annotation=str,
-                   default_value=None,
-                   comment="path to the test data (you probably don't want to use this!)"),
-        ConfigItem(name="evaluate_on_test",
-                   annotation=bool,
-                   default_value=False,
-                   comment="whether to evaluate on the test dataset at the end of training (don't do it!)"),
-        ConfigItem(name="model",
-                   annotation=Model,
-                   default_value=_NO_DEFAULT,
-                   comment="specify your model here"),
-        ConfigItem(name="iterator",
-                   annotation=DataIterator,
-                   default_value=_NO_DEFAULT,
-                   comment="specify your data iterator here"),
-        ConfigItem(name="trainer",
-                   annotation=Trainer,
-                   default_value=_NO_DEFAULT,
-                   comment="specify the trainer parameters here"),
-        ConfigItem(name="datasets_for_vocab_creation",
-                   annotation=List[str],
-                   default_value=None,
-                   comment="if not specified, use all datasets"),
-        ConfigItem(name="vocabulary",
-                   annotation=Vocabulary,
-                   default_value=None,
-                   comment="vocabulary options"),
 
-])
-
-def _valid_choices(cla55: type) -> Dict[str, str]:
+def configuration(config_items: List[ConfigItem]):
     """
-    Return a mapping {registered_name -> subclass_name}
-    for the registered subclasses of `cla55`.
+    Decorator to associate a ``Config`` with a from_params method
+    when it can't be inferred from the constructor signature.
     """
-    valid_choices: Dict[str, str] = {}
+    def assign_config(method):
+        setattr(method, '_config_items', config_items)
+        return method
 
-    if cla55 not in Registrable._registry:
-        raise ValueError(f"{cla55} is not a known Registrable class")
-
-    for name, subclass in Registrable._registry[cla55].items():
-        # These wrapper classes need special treatment
-        if isinstance(subclass, (_Seq2SeqWrapper, _Seq2VecWrapper)):
-            subclass = subclass._module_class
-
-        valid_choices[name] = full_name(subclass)
-
-    return valid_choices
-
-def choices(full_path: str = '') -> List[str]:
-    parts = full_path.split(".")
-    class_name = parts[-1]
-    module_name = ".".join(parts[:-1])
-    module = importlib.import_module(module_name)
-    cla55 = getattr(module, class_name)
-    return list(_valid_choices(cla55).values())
-
-
-def configure(full_path: str = '') -> Config:
-    if not full_path:
-        return BASE_CONFIG
-
-    parts = full_path.split(".")
-    class_name = parts[-1]
-    module_name = ".".join(parts[:-1])
-    module = importlib.import_module(module_name)
-    cla55 = getattr(module, class_name)
-    if cla55 == Vocabulary:
-        return VOCAB_CONFIG
-    else:
-        return _auto_config(cla55)
-
-
-# ONE OFF LOGIC FOR VOCABULARY
-VOCAB_CONFIG: Config = Config([
-        ConfigItem(name="directory_path",
-                   annotation=str,
-                   default_value=None,
-                   comment="path to an existing vocabulary (if you want to use one)"),
-        ConfigItem(name="extend",
-                   annotation=bool,
-                   default_value=False,
-                   comment="whether to extend the existing vocabulary (if you specified one)"),
-        ConfigItem(name="min_count",
-                   annotation=Dict[str, int],
-                   default_value=None,
-                   comment="only include tokens that occur at least this many times"),
-        ConfigItem(name="max_vocab_size",
-                   annotation=Union[int, Dict[str, int]],
-                   default_value=None,
-                   comment="used to cap the number of tokens in your vocabulary"),
-        ConfigItem(name="non_padded_namespaces",
-                   annotation=List[str],
-                   default_value=DEFAULT_NON_PADDED_NAMESPACES,
-                   comment="namespaces that don't get padding or OOV tokens"),
-        ConfigItem(name="pretrained_files",
-                   annotation=Dict[str, str],
-                   default_value=None,
-                   comment="pretrained embedding files for each namespace"),
-        ConfigItem(name="min_pretrained_embeddings",
-                   annotation=Dict[str, int],
-                   default_value=None,
-                   comment="specifies a number of lines to keep for each namespace, "
-                   "even for words not appearing in the data"),
-        ConfigItem(name="only_include_pretrained_words",
-                   annotation=bool,
-                   default_value=False,
-                   comment=("if True, keeps only the words that appear in the pretrained set. "
-                            "if False, also includes non-pretrained words that exceed min_count.")),
-        ConfigItem(name="tokens_to_add",
-                   annotation=Dict[str, List[str]],
-                   default_value=None,
-                   comment=("any tokens here will certainly be included in the keyed namespace, "
-                            "regardless of your data"))
-])
+    return assign_config
