@@ -14,7 +14,7 @@ class IntegratedGradient(SaliencyInterpreter):
     """
     def saliency_interpret_from_json(self, inputs: JsonDict) -> JsonDict:
         # Convert inputs to labeled instances
-        labeled_instances = self.predictor.inputs_to_labeled_instances(inputs)
+        labeled_instances = self.predictor.json_to_labeled_instances(inputs)
 
         instances_with_grads = dict()
         for idx, instance in enumerate(labeled_instances):

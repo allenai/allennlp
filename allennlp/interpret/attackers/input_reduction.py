@@ -17,7 +17,7 @@ class InputReduction(Attacker):
                          input_field_to_attack: str = 'tokens',
                          grad_input_field: str = 'grad_input_1',
                          ignore_tokens: List[str] = ["@@NULL@@"]):
-        original_instances = self.predictor.inputs_to_labeled_instances(inputs)
+        original_instances = self.predictor.json_to_labeled_instances(inputs)
         final_tokens = []
         fields_to_check = {}
         for current_instance in original_instances:
@@ -25,7 +25,7 @@ class InputReduction(Attacker):
             original_tokens = getattr(current_instances[0][input_field_to_attack], 'tokens')
 
             # Save fields that must be checked for equality
-            test_instances = self.predictor.inputs_to_labeled_instances(inputs)
+            test_instances = self.predictor.json_to_labeled_instances(inputs)
             for key in current_instances[0].fields:
                 if key not in inputs and key != input_field_to_attack:
                     fields_to_check[key] = test_instances[0][key]

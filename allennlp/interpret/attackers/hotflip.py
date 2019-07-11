@@ -1,5 +1,5 @@
 # pylint: disable=protected-access,dangerous-default-value
-from typing import List
+from typing import List, Dict, Any
 import numpy
 import torch
 from allennlp.interpret.attackers.attacker import Attacker
@@ -8,6 +8,8 @@ from allennlp.predictors.predictor import Predictor
 from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
 from allennlp.modules.token_embedders import Embedding
 from allennlp.data.tokenizers import Token
+from allennlp.data import Instance
+from allennlp.data.token_indexers import ELMoTokenCharactersIndexer, TokenCharactersIndexer, TokenIndexer
 
 @Attacker.register('hotflip')
 class Hotflip(Attacker):
@@ -23,35 +25,35 @@ class Hotflip(Attacker):
         self.token_embedding = self._construct_embedding_matrix()
 
     def _construct_embedding_matrix(self):
-        """ For HotFlip, we need a word embedding matrix to search over. The below is neccessary for
+        """ For HotFlip, we need a word embedding matrix to search over. The below is necessary for
         models such as ELMo, character-level models, or for models that use a projection layer
         after their word embeddings.
         We run all of the tokens from the vocabulary through the TextFieldEmbedder, and save the final
         output embedding. We then group all of those output embeddings into an "embedding matrix".
         """
         # Gets all tokens in the vocab and their corresponding IDs
-        all_tokens = list(self.vocab._token_to_index["tokens"].keys())
+        all_tokens = self.vocab._token_to_index["tokens"]
         all_indices = list(self.vocab._index_to_token["tokens"].keys())
         all_inputs = {"tokens": torch.LongTensor(all_indices).unsqueeze(0)}
-
-        # handle when a model uses character-level inputs, e.g., ELMo or a CharCNN
-        if "token_characters" in self.predictor._dataset_reader._token_indexers:
-            indexer = self.predictor._dataset_reader._token_indexers["token_characters"]
-            tokens = [Token(x) for x in all_tokens]
-            max_token_length = max(len(x) for x in all_tokens)
-            indexed_tokens = indexer.tokens_to_indices(tokens, self.vocab, "token_characters")
-            padded_tokens = indexer.pad_token_sequence(indexed_tokens,
-                                                       desired_num_tokens={"token_characters": len(tokens)},
-                                                       padding_lengths={"num_token_characters": max_token_length})
-            all_inputs['token_characters'] = torch.LongTensor(padded_tokens['token_characters']).unsqueeze(0)
-
-        if "elmo" in self.predictor._dataset_reader._token_indexers:
-            elmo_tokens = []
-            indexer = self.predictor._dataset_reader._token_indexers["elmo"]
-            for tok in all_tokens:
-                tmp = indexer.tokens_to_indices([Token(text=tok)], self.vocab, "sentence")["sentence"]
-                elmo_tokens.append(tmp[0])
-            all_inputs["elmo"] = torch.LongTensor(elmo_tokens).unsqueeze(0)
+        for token_indexer in self.predictor._dataset_reader._token_indexers.values():
+            # handle when a model uses character-level inputs, e.g., a CharCNN
+            if isinstance(token_indexer, TokenCharactersIndexer):
+                indexer = self.predictor._dataset_reader._token_indexers["token_characters"]
+                tokens = [Token(x) for x in all_tokens]
+                max_token_length = max(len(x) for x in all_tokens)
+                indexed_tokens = indexer.tokens_to_indices(tokens, self.vocab, "token_characters")
+                padded_tokens = indexer.pad_token_sequence(indexed_tokens,
+                                                           {"token_characters": len(tokens)},
+                                                           {"num_token_characters": max_token_length})
+                all_inputs['token_characters'] = torch.LongTensor(padded_tokens['token_characters']).unsqueeze(0)
+            # for ELMo models
+            if isinstance(token_indexer, ELMoTokenCharactersIndexer):
+                elmo_tokens = []
+                indexer = self.predictor._dataset_reader._token_indexers["elmo"]
+                for token in all_tokens:
+                    elmo_indexed_token = indexer.tokens_to_indices([Token(text=token)], self.vocab, "sentence")["sentence"]
+                    elmo_tokens.append(elmo_indexed_token[0])
+                all_inputs["elmo"] = torch.LongTensor(elmo_tokens).unsqueeze(0)
 
         # find the TextFieldEmbedder
         for module in self.predictor._model.modules():
@@ -68,7 +70,7 @@ class Hotflip(Attacker):
                          inputs: JsonDict = None,
                          input_field_to_attack: str = 'tokens',
                          grad_input_field: str = 'grad_input_1',
-                         ignore_tokens: List[str] = ["@@NULL@@"]):
+                         ignore_tokens: List[str] = ["@@NULL@@"]) -> JsonDict:
         """
         Replaces one token at a time from the input until the model's prediction changes.
         `input_field_to_attack` is for example `tokens`, it says what the input
@@ -82,26 +84,26 @@ class Hotflip(Attacker):
         Once a token is replaced, it is not flipped again.
         """
         # TODO (@Eric-Wallace) add functionality for ignore_tokens in the future.
-        original_instances = self.predictor.inputs_to_labeled_instances(inputs)
+        original_instances = self.predictor.json_to_labeled_instances(inputs)
         input_field = original_instances[0][input_field_to_attack]
 
         original_tokens = list(getattr(input_field, 'tokens'))
         final_tokens = []
         new_prediction = None
         for new_instance in original_instances:
-            new_instances = [new_instance]
-            test_instances = self.predictor.inputs_to_labeled_instances(inputs)
+            test_instances = self.predictor.json_to_labeled_instances(inputs)
 
             # get a list of fields that we want to check to see if they change
             # (we want to change model predictions)
-            fields_to_compare = {}
-            for key in new_instances[0].fields:
-                if key not in inputs.keys() and key != input_field_to_attack:
-                    fields_to_compare[key] = test_instances[0][key]
+            fields_to_compare = {
+                key: test_instances[0][key]
+                for key in new_instance.fields
+                if key not in inputs and key != input_field_to_attack
+            }
 
-            current_input_field = new_instances[0][input_field_to_attack]
+            current_input_field = new_instance[input_field_to_attack]
             current_tokens = getattr(current_input_field, 'tokens')
-            grads, outputs = self.predictor.get_gradients(new_instances)
+            grads, outputs = self.predictor.get_gradients([new_instance])
             flipped = []  # type: List[int]
             while True:
                 # Compute L2 norm of all grads.
@@ -120,47 +122,49 @@ class Hotflip(Attacker):
                 flipped.append(index_of_token_to_flip)
 
                 # Get new token using taylor approximation
-                input_tokens = new_instances[0][input_field_to_attack]._indexed_tokens["tokens"] # type: ignore
+                input_tokens = new_instance[input_field_to_attack]._indexed_tokens["tokens"] # type: ignore
                 original_id_of_token_to_flip = input_tokens[index_of_token_to_flip]
                 new_id_of_flipped_token = first_order_taylor(grad[index_of_token_to_flip],
                                                              self.token_embedding.weight,
                                                              original_id_of_token_to_flip)
                 # flip token
                 new_token = Token(self.vocab._index_to_token["tokens"][new_id_of_flipped_token]) # type: ignore
-                new_instances[0][input_field_to_attack].tokens[index_of_token_to_flip] = new_token # type: ignore
-                new_instances[0].indexed = False
+                new_instance[input_field_to_attack].tokens[index_of_token_to_flip] = new_token # type: ignore
+                new_instance.indexed = False
 
-                # Get model predictions on new_instances, and then label the instances
-                grads, outputs = self.predictor.get_gradients(new_instances) # predictions
-                for key in outputs:
-                    if isinstance(outputs[key], torch.Tensor):
-                        outputs[key] = outputs[key].detach().cpu().numpy().squeeze()
-                    elif isinstance(outputs[key], list):
-                        outputs[key] = outputs[key][0]
+                # Get model predictions on new_instance, and then label the instances
+                grads, outputs = self.predictor.get_gradients([new_instance]) # predictions
+                for key, output in outputs.items():
+                    if isinstance(output, torch.Tensor):
+                        outputs[key] = output.detach().cpu().numpy().squeeze()
+                    elif isinstance(output, list):
+                        outputs[key] = output[0]
                 # add labels to new_instances
-                self.predictor.predictions_to_labeled_instances(new_instances[0], outputs)
+                self.predictor.predictions_to_labeled_instances(new_instance, outputs)
+
 
                 # if the prediction has changed, then stop
-                label_change = False
-                for field in fields_to_compare:
-                    if field in new_instances[0].fields:
-                        equal = new_instances[0][field] == fields_to_compare[field]
-                    else:
-                        equal = outputs[field] == fields_to_compare[field]
-                    if not equal:
-                        label_change = True
-                        break
-                if label_change:
+                if any(is_not_equal(field, new_instance, outputs, fields_to_compare) for field in fields_to_compare):
                     break
+
 
             final_tokens.append(current_tokens)
         return sanitize({"final": final_tokens,
                          "original": original_tokens,
                          "outputs": outputs})
 
+def is_not_equal(field: str, new_instance: Instance, outputs: Dict[str, Any], fields_to_compare: JsonDict) -> bool:
+    """
+    Checks if the model's prediction has changed
+    """
+    if field in new_instance.fields:
+        return new_instance[field] != fields_to_compare[field]
+    else:
+        return outputs[field] != fields_to_compare[field]
+
 def first_order_taylor(grad: numpy.ndarray,
                        embedding_matrix: torch.nn.parameter.Parameter,
-                       token_idx: int):
+                       token_idx: int) -> int:
     """
     the below code is based on
     https://github.com/pmichel31415/translate/blob/paul/pytorch_translate/

@@ -15,7 +15,7 @@ class SimpleGradient(SaliencyInterpreter):
         and returns those gradients normalized and sanitized.
         """
         # Convert inputs to labeled instances
-        labeled_instances = self.predictor.inputs_to_labeled_instances(inputs)
+        labeled_instances = self.predictor.json_to_labeled_instances(inputs)
 
         # List of embedding inputs, used for multiplying gradient by the input for normalization
         embeddings_list = [] # type: List[numpy.ndarray]
