@@ -85,13 +85,13 @@ class MultiQA_BERT(Model):
         if len(inds_with_gold_answer) > 0:
             loss += nll_loss(util.masked_log_softmax(span_start_logits[inds_with_gold_answer], \
                                                     repeated_passage_mask[inds_with_gold_answer]), \
-                            span_starts.view(-1)[inds_with_gold_answer], ignore_index=-1, reduction='mean')
+                            span_starts.view(-1)[inds_with_gold_answer], ignore_index=-1)
             loss += nll_loss(util.masked_log_softmax(span_end_logits[inds_with_gold_answer], \
                                                      repeated_passage_mask[inds_with_gold_answer]), \
-                             span_ends.view(-1)[inds_with_gold_answer], ignore_index=-1, reduction='mean')
+                             span_ends.view(-1)[inds_with_gold_answer], ignore_index=-1)
 
         if categorical_labels is not None:
-            loss += cross_entropy(categorical_logits, categorical_labels,reduction='mean')
+            loss += cross_entropy(categorical_logits, categorical_labels)
 
         output_dict: Dict[str, Any] = {}
         if loss == 0:
