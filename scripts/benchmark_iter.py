@@ -26,10 +26,20 @@ def time_iterable(iterable, get_items_per_batch, batches_per_interval):
 
         if batch_count % batches_per_interval == 0:
             end = time.perf_counter()
+            # With this sleep I actually see items in the output queue.
+            #time.sleep(10)
+            # Conclusion: Tensorizing is slow?
 
-            msg = (f"s/b total: {(end - start) / adjusted_batch_count} " +
-                   f"s/b last: {(end - last) / BATCH_INTERVAL} "
-                   f"adjusted batch count: {adjusted_batch_count}")
+            #import inspect
+            #inspect.getmembers
+            #iterable.gi_frame.f_locals['self'].output_queue
+            #import pdb;pdb.set_trace()
+            msg = (f"s/b total: {(end - start) / adjusted_batch_count:.3f} " +
+                   f"s/b last: {(end - last) / BATCH_INTERVAL:.3f} " +
+                   f"read out q: {iterable.gi_frame.f_locals['instances'].output_queue.qsize()} " +
+                   f"it in q: {iterable.gi_frame.f_locals['input_queue'].qsize()} " +
+                   f"it out q: {iterable.gi_frame.f_locals['output_queue'].qsize()} " +
+                   f"~ batches: {adjusted_batch_count:.1f}")
             print(msg)
 
             last = end
@@ -51,6 +61,5 @@ if __name__ == "__main__":
     raw_generator = pieces.iterator(pieces.train_dataset,
                                       num_epochs=1,
                                       shuffle=True)
-    generator_tqdm = Tqdm.tqdm(raw_generator)
-    time_iterable(generator_tqdm, lambda batch: batch['source']['tokens'].size(0), BATCH_INTERVAL)
+    time_iterable(raw_generator, lambda batch: batch['source']['tokens'].size(0), BATCH_INTERVAL)
 

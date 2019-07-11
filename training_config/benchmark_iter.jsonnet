@@ -1,5 +1,5 @@
 local NUM_GPUS = 2;
-local NUM_THREADS = 1;
+local NUM_THREADS = 10;
 
 local BASE_READER = {
         "type": "simple_language_modeling",
@@ -41,7 +41,7 @@ local BASE_ITERATOR = {
   "dataset_reader": {
     "type": "multiprocess",
     "base_reader": BASE_READER,
-    "num_workers": NUM_THREADS,
+    "num_workers": 10,
     "output_queue_size": 1000
   },
   // Note: We don't set a validation_data_path because the softmax is only
@@ -113,7 +113,7 @@ local BASE_ITERATOR = {
   "iterator": {
     "type": "multiprocess",
     "base_iterator": BASE_ITERATOR,
-    "num_workers": NUM_THREADS,
+    "num_workers": 2,
     // The multiprocess dataset reader and iterator use many file descriptors,
     // so we need to increase the ulimit depending on the size of this queue.
     // See https://pytorch.org/docs/stable/multiprocessing.html#file-descriptor-file-descriptor
