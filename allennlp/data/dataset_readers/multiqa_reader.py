@@ -326,20 +326,19 @@ class MultiQAReader(DatasetReader):
     @profile
     def gen_question_instances(self, question_chunks):
         instances_to_add = []
-        #if self._is_training:
-            # When training randomly choose one chunk per example (training with shared norm (Clark and Gardner, 17)
-            # is not well defined when using sliding window )
-        #    chunks_with_answers = [inst for inst in question_chunks if inst['answers'] != []]
-        #    instances_to_add = random.sample(chunks_with_answers, 1)
-        #else:
-
-        instances_to_add = question_chunks
+        if self._is_training:
+            # Trying to balance the chunks with answer and the ones without by sampling one from each
+            # if each is available
+            chunks_with_answer = [inst for inst in question_chunks if 'cannot_answer' not in inst['categorical_labels']]
+            if len(chunks_with_answer) > 0:
+                instances_to_add += random.sample(chunks_with_answer, 1)
+            chunks_without_answer = [inst for inst in question_chunks if 'cannot_answer' in inst['categorical_labels']]
+            if len(chunks_without_answer) > 0:
+                instances_to_add += random.sample(chunks_without_answer, 1)
+        else:
+            instances_to_add = question_chunks
 
         for inst_num, inst in enumerate(instances_to_add):
-            # TODO sampling cannot answer
-            if self._is_training and 'cannot_answer' in inst['categorical_labels']:
-                if random.randint(1,4) != 1:
-                    continue
             instance = make_multiqa_instance([Token(text=t[0], idx=t[1]) for t in inst['question_tokens']],
                                              [Token(text=t[0], idx=t[1]) for t in inst['tokens']],
                                              self._token_indexers,

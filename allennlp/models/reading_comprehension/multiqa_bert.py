@@ -112,32 +112,32 @@ class MultiQA_BERT(Model):
         best_span = self._get_example_predications(span_start_logits, span_end_logits, self._max_span_length)
         best_span_cpu = best_span.detach().cpu().numpy()
 
-        # In prediction mode we have no gold answers
-        if categorical_labels is not None:
-            for instance_ind, instance_metadata in zip(range(batch_size), metadata):
-                best_span_logit = span_start_logits.data.cpu().numpy()[instance_ind, best_span_cpu[instance_ind][0]] + \
-                                  span_end_logits.data.cpu().numpy()[instance_ind, best_span_cpu[instance_ind][1]]
+        for instance_ind, instance_metadata in zip(range(batch_size), metadata):
+            best_span_logit = span_start_logits.data.cpu().numpy()[instance_ind, best_span_cpu[instance_ind][0]] + \
+                              span_end_logits.data.cpu().numpy()[instance_ind, best_span_cpu[instance_ind][1]]
 
-                category = np.argmax(categorical_logits[instance_ind].data.cpu().numpy())
-                category_logit = categorical_logits[instance_ind,category].data.cpu().numpy()
+            category = np.argmax(categorical_logits[instance_ind].data.cpu().numpy())
+            category_logit = categorical_logits[instance_ind,category].data.cpu().numpy()
+            cat_pred = self.vocab.get_token_from_index(category, namespace="categorical_labels")
+
+            passage_str = instance_metadata['original_passage']
+            offsets = instance_metadata['token_offsets']
+
+            predicted_span = best_span_cpu[instance_ind]
+            start_offset = offsets[predicted_span[0]][0]
+            end_offset = offsets[predicted_span[1]][1]
+            best_span_string = passage_str[start_offset:end_offset]
+
+            output_dict['best_span_str'].append(best_span_string)
+            output_dict['best_span_logit'].append(best_span_logit)
+            output_dict['category'].append(cat_pred)
+            output_dict['category_logit'].append(category_logit)
+            output_dict['qid'].append(instance_metadata['question_id'])
+
+            # In prediction mode we have no gold answers
+            if categorical_labels is not None:
                 cat_label_ind = categorical_labels.data.cpu().numpy()[instance_ind]
                 cat_label = self.vocab.get_token_from_index(cat_label_ind, namespace="categorical_labels")
-                cat_pred = self.vocab.get_token_from_index(category, namespace="categorical_labels")
-
-                passage_str = instance_metadata['original_passage']
-                offsets = instance_metadata['token_offsets']
-
-                predicted_span = best_span_cpu[instance_ind]
-                start_offset = offsets[predicted_span[0]][0]
-                end_offset = offsets[predicted_span[1]][1]
-                best_span_string = passage_str[start_offset:end_offset]
-
-                output_dict['best_span_str'].append(best_span_string)
-                output_dict['best_span_logit'].append(best_span_logit)
-                output_dict['category'].append(category)
-                output_dict['category_logit'].append(category_logit)
-                output_dict['qid'].append(instance_metadata['question_id'])
-
                 if cat_label == 'span':
                     gold_answer_texts = instance_metadata['answer_texts_list']
                     f1_score = squad_eval.metric_max_over_ground_truths(squad_eval.f1_score, best_span_string, gold_answer_texts)
