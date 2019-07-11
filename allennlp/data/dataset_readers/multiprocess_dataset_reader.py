@@ -1,6 +1,7 @@
 from typing import List, Iterable, Iterator
 import glob
 import logging
+from queue import Empty
 
 import numpy as np
 from torch.multiprocessing import Manager, Process, Queue, Value, log_to_stderr
@@ -128,7 +129,7 @@ class MultiprocessDatasetReader(DatasetReader):
                         try:
                             # Non-blocking to handle the empty-queue case.
                             yield self.output_queue.get(block=False, timeout=1.0)
-                        except Queue.Empty:
+                        except Empty:
                             # The queue could be empty because the workers are
                             # all finished or because they're busy processing.
                             # The outer loop distinguishes between these two
