@@ -1,4 +1,4 @@
-# pylint: disable=protected-access,dangerous-default-value
+# pylint: disable=protected-access
 from typing import List, Dict, Any
 import numpy
 import torch
@@ -8,7 +8,6 @@ from allennlp.predictors.predictor import Predictor
 from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
 from allennlp.modules.token_embedders import Embedding
 from allennlp.data.tokenizers import Token
-from allennlp.data import Instance
 from allennlp.data.token_indexers import ELMoTokenCharactersIndexer, TokenCharactersIndexer, TokenIndexer
 
 @Attacker.register('hotflip')
@@ -85,25 +84,14 @@ class Hotflip(Attacker):
         """
         # TODO (@Eric-Wallace) add functionality for ignore_tokens in the future.
         original_instances = self.predictor.json_to_labeled_instances(inputs)
-        input_field = original_instances[0][input_field_to_attack]
-
-        original_tokens = list(getattr(input_field, 'tokens'))
+        original_tokens = list(original_instances[0][input_field_to_attack])
         final_tokens = []
-        new_prediction = None
-        for new_instance in original_instances:
-            test_instances = self.predictor.json_to_labeled_instances(inputs)
+        for current_instance in original_instances:
+            # Gets a list of the fields that we want to check to see if they change.
+            fields_to_compare = self.get_fields_to_compare(inputs, current_instance, input_field_to_attack)
 
-            # get a list of fields that we want to check to see if they change
-            # (we want to change model predictions)
-            fields_to_compare = {
-                key: test_instances[0][key]
-                for key in new_instance.fields
-                if key not in inputs and key != input_field_to_attack
-            }
-
-            current_input_field = new_instance[input_field_to_attack]
-            current_tokens = getattr(current_input_field, 'tokens')
-            grads, outputs = self.predictor.get_gradients([new_instance])
+            current_tokens = getattr(current_instance[input_field_to_attack], 'tokens')
+            grads, outputs = self.predictor.get_gradients([current_instance])
             flipped = []  # type: List[int]
             while True:
                 # Compute L2 norm of all grads.
@@ -122,45 +110,35 @@ class Hotflip(Attacker):
                 flipped.append(index_of_token_to_flip)
 
                 # Get new token using taylor approximation
-                input_tokens = new_instance[input_field_to_attack]._indexed_tokens["tokens"] # type: ignore
+                input_tokens = current_instance[input_field_to_attack]._indexed_tokens["tokens"] # type: ignore
                 original_id_of_token_to_flip = input_tokens[index_of_token_to_flip]
                 new_id_of_flipped_token = first_order_taylor(grad[index_of_token_to_flip],
                                                              self.token_embedding.weight,
                                                              original_id_of_token_to_flip)
                 # flip token
                 new_token = Token(self.vocab._index_to_token["tokens"][new_id_of_flipped_token]) # type: ignore
-                new_instance[input_field_to_attack].tokens[index_of_token_to_flip] = new_token # type: ignore
-                new_instance.indexed = False
+                current_instance[input_field_to_attack].tokens[index_of_token_to_flip] = new_token # type: ignore
+                current_instance.indexed = False
 
-                # Get model predictions on new_instance, and then label the instances
-                grads, outputs = self.predictor.get_gradients([new_instance]) # predictions
+                # Get model predictions on current_instance, and then label the instances
+                grads, outputs = self.predictor.get_gradients([current_instance]) # predictions
                 for key, output in outputs.items():
                     if isinstance(output, torch.Tensor):
                         outputs[key] = output.detach().cpu().numpy().squeeze()
                     elif isinstance(output, list):
                         outputs[key] = output[0]
-                # add labels to new_instances
-                self.predictor.predictions_to_labeled_instances(new_instance, outputs)
 
+                # add labels to current_instances
+                self.predictor.predictions_to_labeled_instances(current_instance, outputs)
 
                 # if the prediction has changed, then stop
-                if any(is_not_equal(field, new_instance, outputs, fields_to_compare) for field in fields_to_compare):
+                if any(current_instance[field] != fields_to_compare[field] for field in fields_to_compare):
                     break
-
 
             final_tokens.append(current_tokens)
         return sanitize({"final": final_tokens,
                          "original": original_tokens,
                          "outputs": outputs})
-
-def is_not_equal(field: str, new_instance: Instance, outputs: Dict[str, Any], fields_to_compare: JsonDict) -> bool:
-    """
-    Checks if the model's prediction has changed
-    """
-    if field in new_instance.fields:
-        return new_instance[field] != fields_to_compare[field]
-    else:
-        return outputs[field] != fields_to_compare[field]
 
 def first_order_taylor(grad: numpy.ndarray,
                        embedding_matrix: torch.nn.parameter.Parameter,

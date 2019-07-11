@@ -2,6 +2,7 @@ from typing import List
 from allennlp.common import Registrable
 from allennlp.predictors import Predictor
 from allennlp.common.util import JsonDict
+from allennlp.data import Instance
 
 class Attacker(Registrable):
     """
@@ -16,7 +17,7 @@ class Attacker(Registrable):
                          inputs: JsonDict,
                          input_field_to_attack: str,
                          grad_input_field: str,
-                         ignore_tokens: List[str]) -> JsonDict: # pylint: disable=dangerous-default-value
+                         ignore_tokens: List[str]) -> JsonDict:
         """
         This function modifies the input to change the model's prediction in some desired manner
         (e.g., an adversarial attack).
@@ -34,6 +35,34 @@ class Attacker(Registrable):
         Returns
         -------
         JsonDict
-            Contains the final, sanitized input after adversarial modification.
+        Contains the final, sanitized input after adversarial modification.
         """
         raise NotImplementedError()
+
+    def get_fields_to_compare(self,
+                              inputs: JsonDict,
+                              instance: Instance,
+                              input_field_to_attack: str) -> JsonDict:
+        """
+        Gets a list of the fields that should be checked for equality after an attack is performed.
+
+        Parameters
+        ----------
+        inputs: JsonDict
+            The input you want to attack, similar to the argument to a Predictor, e.g., predict_json().
+        instance: Instance
+            A labeled instance that is output from json_to_labeled_instances().
+        input_field_to_attack: str
+            The key in the inputs JsonDict you want to attack, e.g., `tokens`.
+        Returns
+        -------
+        JsonDict
+        The fields that must be compared for equality.
+
+        """
+        fields_to_compare = {
+            key: instance[key]
+            for key in instance.fields
+            if key not in inputs and key != input_field_to_attack
+        }
+        return fields_to_compare
