@@ -15,17 +15,26 @@ class LearningRateSchedulersTest(AllenNlpTestCase):
         super().setUp()
         self.model = torch.nn.Sequential(torch.nn.Linear(10, 10))
 
-    def test_reduce_on_plateau_error_throw_when_no_metrics_exist(self):
+    def test_reduce_on_plateau_error_throw_when_mode_not_specified(self):
         with self.assertRaises(ConfigurationError) as context:
             LearningRateScheduler.from_params(Optimizer.from_params(self.model.named_parameters(),
                                                                     Params({"type": "adam"})),
                                               Params({"type": "reduce_on_plateau"})).step(None, None)
+            assert "ReduceLROnPlateau requires a mode to be specified" in str(context.exception)
+
+    def test_reduce_on_plateau_error_throw_when_no_metrics_exist(self):
+        with self.assertRaises(ConfigurationError) as context:
+            LearningRateScheduler.from_params(Optimizer.from_params(self.model.named_parameters(),
+                                                                    Params({"type": "adam"})),
+                                              Params({"type": "reduce_on_plateau",
+                                                      "mode": "min"})).step(None, None)
         assert "learning rate scheduler requires a validation metric" in str(context.exception)
 
     def test_reduce_on_plateau_works_when_metrics_exist(self):
         LearningRateScheduler.from_params(Optimizer.from_params(self.model.named_parameters(),
                                                                 Params({"type": "adam"})),
-                                          Params({"type": "reduce_on_plateau"})).step(10, None)
+                                          Params({"type": "reduce_on_plateau",
+                                                  "mode": "max"})).step(10, None)
 
     def test_no_metric_wrapper_can_support_none_for_metrics(self):
         lrs = LearningRateScheduler.from_params(Optimizer.from_params(self.model.named_parameters(),
