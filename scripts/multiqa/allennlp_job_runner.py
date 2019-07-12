@@ -291,7 +291,7 @@ class JobRunner():
 
                 # lets give this some time...
                 if not self._DEBUG:
-                    time.sleep(5)
+                    time.sleep(10)
 
 
         # open log file for reading
