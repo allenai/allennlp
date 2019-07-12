@@ -74,7 +74,7 @@ class Hotflip(Attacker):
                          inputs: JsonDict = None,
                          input_field_to_attack: str = 'tokens',
                          grad_input_field: str = 'grad_input_1',
-                         ignore_tokens: List[str] = ["@@NULL@@",'.',',',';','!','?']) -> JsonDict:
+                         ignore_tokens: List[str] = ["@@NULL@@", '.', ',', ';', '!', '?']) -> JsonDict:
         """
         Replaces one token at a time from the input until the model's prediction changes.
         `input_field_to_attack` is for example `tokens`, it says what the input
@@ -94,7 +94,7 @@ class Hotflip(Attacker):
         for current_instance in original_instances:
             # Gets a list of the fields that we want to check to see if they change.
             fields_to_compare = utils.get_fields_to_compare(inputs, current_instance, input_field_to_attack)
-            current_text_field : TextField = current_instance[input_field_to_attack]
+            current_text_field: TextField = current_instance[input_field_to_attack] # type: ignore
             current_tokens = current_text_field.tokens
             grads, outputs = self.predictor.get_gradients([current_instance])
 

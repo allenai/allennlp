@@ -6,7 +6,7 @@ from allennlp.interpret.attackers.attacker import Attacker
 from allennlp.interpret.attackers import utils
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import Instance
-from allennlp.data.fields import ListField
+from allennlp.data.fields import ListField, TextField, LabelField
 
 @Attacker.register('input-reduction')
 class InputReduction(Attacker):
@@ -85,17 +85,18 @@ def remove_one_token(grads: np.ndarray = None,
     grads_mag = [np.sqrt(grad.dot(grad)) for grad in grads]
 
     # Skip all ignore_tokens by setting grad to infinity
-    text_field: TextField = instance[input_field_to_attack]
+    text_field: TextField = instance[input_field_to_attack]  # type: ignore
     for tok_idx, tok in enumerate(text_field.tokens):
         if tok in ignore_tokens:
             grads_mag[tok_idx] = float("inf")
 
     # For NER, skip all tokens that are not in outside
     if "tags" in instance:
-        tag_field: ListField = instance['tags']
+        tag_field: ListField = instance['tags']  # type: ignore
         field_list = tag_field.field_list
         for idx, label in enumerate(field_list):
-            if label.label != "O":
+            label_field: LabelField = label  # type: ignore
+            if label_field.label != "O":
                 grads_mag[idx] = float("inf")
 
     smallest = np.argmin(grads_mag)
@@ -103,7 +104,7 @@ def remove_one_token(grads: np.ndarray = None,
         return instance, smallest
 
     # remove smallest
-    input_field: TextField = instance[input_field_to_attack]
+    input_field: TextField = instance[input_field_to_attack]  # type: ignore
     inputs_before_smallest = input_field.tokens[0:smallest]
     inputs_after_smallest = input_field.tokens[smallest + 1:]
     input_field.tokens = inputs_before_smallest + inputs_after_smallest
@@ -111,7 +112,7 @@ def remove_one_token(grads: np.ndarray = None,
     if "tags" in instance:
         field_list_before_smallest = field_list[0:smallest]
         field_list_after_smallest = field_list[smallest + 1:]
-        instance['tags'].field_list = field_list_before_smallest + field_list_after_smallest
+        tag_field.field_list = field_list_before_smallest + field_list_after_smallest
 
     instance.indexed = False
     return instance, smallest
@@ -126,7 +127,7 @@ def get_ner_tags_and_mask(current_instance: Instance = None,
     # Set num_ignore_tokens
     num_ignore_tokens = 0
     input_field = current_instance[input_field_to_attack]
-    for token in list(input_field):
+    for token in input_field.tokens:
         if str(token) in ignore_tokens:
             num_ignore_tokens += 1
 

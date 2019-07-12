@@ -8,7 +8,7 @@ from allennlp.data import Instance
 from allennlp.data.tokenizers import Token
 from allennlp.predictors.predictor import Predictor
 from allennlp.data.fields import IndexField, TextField, ListField, \
-    LabelField, SpanField, SequenceLabelField
+    LabelField, SpanField, SequenceLabelField, SequenceField
 
 @Predictor.register('machine-comprehension')
 class BidafPredictor(Predictor):
@@ -86,9 +86,10 @@ class BidafPredictor(Predictor):
                     if offset[1] == span[1]:
                         word_span_end = idx
 
+                passage_field: SequenceField = new_instance['passage']
                 field = ListField([SpanField(word_span_start,
                                              word_span_end,
-                                             new_instance['passage'])]) # type: ignore
+                                             passage_field)]) # type: ignore
                 new_instance.add_field('answer_as_passage_spans', field)
 
             # When the answer is an arithmetic calculation
@@ -102,8 +103,8 @@ class BidafPredictor(Predictor):
                 # allenai/allennlp/blob/master/allennlp/
                 # data/dataset_readers/reading_comprehension/drop.py#L232
                 numbers_as_tokens.append(Token('0'))
-                numbers_in_passage_field = \
-                TextField(numbers_as_tokens, self._dataset_reader._token_indexers) # type: ignore
+                numbers_in_passage_field = TextField(numbers_as_tokens,
+                                                     self._dataset_reader._token_indexers) # type: ignore
 
                 # Based on ``find_valid_add_sub_expressions``, it seems
                 # like negative signs are 2 instead of -1.
@@ -134,9 +135,10 @@ class BidafPredictor(Predictor):
                     if offset[1] == span[1]:
                         word_span_end = idx
 
+                question_field: SequenceField = new_instance['question']
                 field = ListField([SpanField(word_span_start,
                                              word_span_end,
-                                             new_instance['question'])]) # type: ignore
+                                             question_field)]) # type: ignore
                 new_instance.add_field('answer_as_question_spans', field)
 
         return [new_instance]
