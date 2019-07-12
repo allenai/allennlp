@@ -1,4 +1,5 @@
 # pylint: disable=no-self-use,invalid-name
+import spacy
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.tokenizers.token import Token
@@ -6,7 +7,7 @@ from allennlp.data.tokenizers.word_splitter import LettersDigitsWordSplitter
 from allennlp.data.tokenizers.word_splitter import SimpleWordSplitter
 from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
 from allennlp.data.tokenizers.word_splitter import OpenAISplitter
-
+from allennlp.data.tokenizers.word_splitter import BertBasicWordSplitter
 
 class TestSimpleWordSplitter(AllenNlpTestCase):
     def setUp(self):
@@ -151,6 +152,20 @@ class TestSpacyWordSplitter(AllenNlpTestCase):
             for batch_word, separate_word in zip(batch_sentence, separate_sentence):
                 assert batch_word.text == separate_word.text
 
+    def test_keep_spacy_tokens(self):
+        word_splitter = SpacyWordSplitter()
+        sentence = "This should be an allennlp Token"
+        tokens = word_splitter.split_words(sentence)
+        assert tokens
+        assert all(isinstance(token, Token) for token in tokens)
+
+        word_splitter = SpacyWordSplitter(keep_spacy_tokens=True)
+        sentence = "This should be a spacy Token"
+        tokens = word_splitter.split_words(sentence)
+        assert tokens
+        assert all(isinstance(token, spacy.tokens.Token) for token in tokens)
+
+
 class TestOpenAiWordSplitter(AllenNlpTestCase):
     def setUp(self):
         super(TestOpenAiWordSplitter, self).setUp()
@@ -160,4 +175,24 @@ class TestOpenAiWordSplitter(AllenNlpTestCase):
         sentence = "This sentence ?a!?!"
         expected_tokens = ['This', 'sentence', '?', 'a', '!', '?', '!']
         tokens = [t.text for t in self.word_splitter.split_words(sentence)]
+        assert tokens == expected_tokens
+
+
+class TestBertBasicWordSplitter(AllenNlpTestCase):
+    def setUp(self):
+        super(TestBertBasicWordSplitter, self).setUp()
+        self.word_splitter = BertBasicWordSplitter()
+
+    def test_never_split(self):
+        sentence = "[unused0] [UNK] [SEP] [PAD] [CLS] [MASK]"
+        expected_tokens = ["[", "unused0", "]", "[UNK]", "[SEP]", "[PAD]", "[CLS]", "[MASK]"]
+        tokens = [token.text for token in self.word_splitter.split_words(sentence)]
+        assert tokens == expected_tokens
+
+    def test_do_lower_case(self):
+        # BertBasicWordSplitter makes every token not in `never_split` to lowercase by default
+        word_splitter = BertBasicWordSplitter(never_split=["[UNUSED0]"])
+        sentence = "[UNUSED0] [UNK] [unused0]"
+        expected_tokens = ["[UNUSED0]", "[", "unk", "]", "[", "unused0", "]"]
+        tokens = [token.text for token in word_splitter.split_words(sentence)]
         assert tokens == expected_tokens

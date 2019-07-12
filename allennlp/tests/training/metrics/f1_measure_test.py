@@ -30,13 +30,18 @@ class F1MeasureTest(AllenNlpTestCase):
         f1_measure(predictions, targets)
         precision, recall, f1 = f1_measure.get_metric()
         assert f1_measure._true_positives == 1.0
-        assert f1_measure._true_negatives == 3.
+        assert f1_measure._true_negatives == 3.0
         assert f1_measure._false_positives == 0.0
         assert f1_measure._false_negatives == 2.0
         f1_measure.reset()
+        # check value
         numpy.testing.assert_almost_equal(precision, 1.0)
         numpy.testing.assert_almost_equal(recall, 0.333333333)
         numpy.testing.assert_almost_equal(f1, 0.499999999)
+        # check type
+        assert isinstance(precision, float)
+        assert isinstance(recall, float)
+        assert isinstance(f1, float)
 
         # Test the same thing with a mask:
         mask = torch.Tensor([1, 0, 1, 1, 1, 0])

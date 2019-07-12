@@ -26,13 +26,13 @@ class CharacterTokenIndexerTest(AllenNlpTestCase):
 
     def test_as_array_produces_token_sequence(self):
         indexer = TokenCharactersIndexer("characters", min_padding_length=1)
-        padded_tokens = indexer.pad_token_sequence({'k': [[1, 2, 3, 4, 5], [1, 2, 3], [1]]},
-                                                   desired_num_tokens={'k': 4},
-                                                   padding_lengths={"num_token_characters": 10})
-        assert padded_tokens == {'k': [[1, 2, 3, 4, 5, 0, 0, 0, 0, 0],
-                                       [1, 2, 3, 0, 0, 0, 0, 0, 0, 0],
-                                       [1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                                       [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]}
+        padded_tokens = indexer.as_padded_tensor({'k': [[1, 2, 3, 4, 5], [1, 2, 3], [1]]},
+                                                 desired_num_tokens={'k': 4},
+                                                 padding_lengths={"num_token_characters": 10})
+        assert padded_tokens["k"].tolist() == [[1, 2, 3, 4, 5, 0, 0, 0, 0, 0],
+                                               [1, 2, 3, 0, 0, 0, 0, 0, 0, 0],
+                                               [1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                                               [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
 
     def test_tokens_to_indices_produces_correct_characters(self):
         vocab = Vocabulary()
@@ -93,13 +93,13 @@ class CharacterTokenIndexerTest(AllenNlpTestCase):
             item = indexer.get_padding_lengths(token)
             value = item.values()
             value_padding_lengths = max(value_padding_lengths, max(value))
-        padded = indexer.pad_token_sequence(indices,
-                                            {"char": len(indices["char"])},
-                                            {key_padding_lengths: value_padding_lengths})
-        assert padded == {"char": [[2, 3, 3, 4, 5, 6, 7, 8, 0, 0],
-                                   [9, 10, 0, 0, 0, 0, 0, 0, 0, 0],
-                                   [11, 12, 4, 10, 13, 14, 4, 0, 0, 0],
-                                   [15, 0, 0, 0, 0, 0, 0, 0, 0, 0]]}
+        padded = indexer.as_padded_tensor(indices,
+                                          {"char": len(indices["char"])},
+                                          {key_padding_lengths: value_padding_lengths})
+        assert padded["char"].tolist() == [[2, 3, 3, 4, 5, 6, 7, 8, 0, 0],
+                                           [9, 10, 0, 0, 0, 0, 0, 0, 0, 0],
+                                           [11, 12, 4, 10, 13, 14, 4, 0, 0, 0],
+                                           [15, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
 
     def test_warn_min_padding_length(self):
         with pytest.warns(UserWarning, match=r"using the default value \(0\) of `min_padding_length`"):

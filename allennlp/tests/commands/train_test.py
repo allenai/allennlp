@@ -110,10 +110,7 @@ class TestTrain(AllenNlpTestCase):
                 }
         })
 
-        with pytest.raises(ConfigurationError,
-                           match="Experiment specified a GPU but none is available;"
-                                 " if you want to run on CPU use the override"
-                                 " 'trainer.cuda_device=-1' in the json config file."):
+        with pytest.raises(ConfigurationError, match="Experiment specified"):
             train_model(params, serialization_dir=os.path.join(self.TEST_DIR, 'test_train_model'))
 
     def test_train_with_test_set(self):
@@ -178,7 +175,7 @@ class LazyFakeReader(DatasetReader):
     # pylint: disable=abstract-method
     def __init__(self) -> None:
         super().__init__(lazy=True)
-        self.reader = DatasetReader.from_params(Params({'type': 'sequence_tagging'}))
+        self.reader = DatasetReader.from_params(Params({'type': 'sequence_tagging', 'lazy': True}))
 
     def _read(self, file_path: str) -> Iterable[Instance]:
         """
@@ -308,8 +305,8 @@ class TestTrainOnLazyDataset(AllenNlpTestCase):
         # trained on snli (snli2 has one extra token over snli).
         # Make sure (1) embedding extension happens implicitly.
         #           (2) model dumped in such a way is loadable.
-        # (1) corresponds to model.extend_embedder_vocab(vocab) in trainer.py
-        # (2) corresponds to model.extend_embedder_vocab(vocab) in model.py
+        # (1) corresponds to model.extend_embedder_vocab() in trainer.py
+        # (2) corresponds to model.extend_embedder_vocab() in model.py
         config_file = str(self.FIXTURES_ROOT / 'decomposable_attention' / 'experiment.json')
         model_archive = str(self.FIXTURES_ROOT / 'decomposable_attention' / 'serialization' / 'model.tar.gz')
         serialization_dir = str(self.TEST_DIR / 'train')

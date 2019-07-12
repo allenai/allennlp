@@ -6,6 +6,11 @@ allennlp.modules.seq2vec_encoders
    :undoc-members:
    :show-inheritance:
 
+.. automodule:: allennlp.modules.seq2vec_encoders.bert_pooler
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 .. automodule:: allennlp.modules.seq2vec_encoders.cnn_encoder
    :members:
    :undoc-members:

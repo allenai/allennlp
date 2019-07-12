@@ -233,11 +233,8 @@ class TestVocabulary(AllenNlpTestCase):
         vocab_dir = self.TEST_DIR / 'vocab_save'
 
         vocab = Vocabulary(non_padded_namespaces=["a", "c"])
-        vocab.add_token_to_namespace("a0", namespace="a")  # non-padded, should start at 0
-        vocab.add_token_to_namespace("a1", namespace="a")
-        vocab.add_token_to_namespace("a2", namespace="a")
-        vocab.add_token_to_namespace("b2", namespace="b")  # padded, should start at 2
-        vocab.add_token_to_namespace("b3", namespace="b")
+        vocab.add_tokens_to_namespace(["a0", "a1", "a2"], namespace="a")  # non-padded, should start at 0
+        vocab.add_tokens_to_namespace(["b2", "b3"], namespace="b")  # padded, should start at 2
 
         vocab.save_to_files(vocab_dir)
         vocab2 = Vocabulary.from_files(vocab_dir)
@@ -294,11 +291,8 @@ class TestVocabulary(AllenNlpTestCase):
         # Save a vocab to check we can load it from_params.
         vocab_dir = self.TEST_DIR / 'vocab_save'
         vocab = Vocabulary(non_padded_namespaces=["a", "c"])
-        vocab.add_token_to_namespace("a0", namespace="a")  # non-padded, should start at 0
-        vocab.add_token_to_namespace("a1", namespace="a")
-        vocab.add_token_to_namespace("a2", namespace="a")
-        vocab.add_token_to_namespace("b2", namespace="b")  # padded, should start at 2
-        vocab.add_token_to_namespace("b3", namespace="b")
+        vocab.add_tokens_to_namespace(["a0", "a1", "a2"], namespace="a")  # non-padded, should start at 0
+        vocab.add_tokens_to_namespace(["b2", "b3"], namespace="b")  # padded, should start at 2
         vocab.save_to_files(vocab_dir)
 
         params = Params({"directory_path": vocab_dir})
@@ -334,9 +328,7 @@ class TestVocabulary(AllenNlpTestCase):
         non_padded_namespaces_list = [[], ["tokens"]]
         for non_padded_namespaces in non_padded_namespaces_list:
             original_vocab = Vocabulary(non_padded_namespaces=non_padded_namespaces)
-            original_vocab.add_token_to_namespace("d", namespace="tokens")
-            original_vocab.add_token_to_namespace("a", namespace="tokens")
-            original_vocab.add_token_to_namespace("b", namespace="tokens")
+            original_vocab.add_tokens_to_namespace(["d", "a", "b"], namespace="tokens")
             text_field = TextField([Token(t) for t in ["a", "d", "c", "e"]],
                                    {"tokens": SingleIdTokenIndexer("tokens")})
             instances = Batch([Instance({"text": text_field})])
@@ -397,8 +389,7 @@ class TestVocabulary(AllenNlpTestCase):
     def test_invalid_vocab_extension(self):
         vocab_dir = self.TEST_DIR / 'vocab_save'
         original_vocab = Vocabulary(non_padded_namespaces=["tokens1"])
-        original_vocab.add_token_to_namespace("a", namespace="tokens1")
-        original_vocab.add_token_to_namespace("b", namespace="tokens1")
+        original_vocab.add_tokens_to_namespace(["a", "b"], namespace="tokens1")
         original_vocab.add_token_to_namespace("p", namespace="tokens2")
         original_vocab.save_to_files(vocab_dir)
         text_field1 = TextField([Token(t) for t in ["a" "c"]],
@@ -470,7 +461,7 @@ class TestVocabulary(AllenNlpTestCase):
             _ = Vocabulary.from_params(params, instances)
 
     def test_from_params_valid_vocab_extension_thoroughly(self):
-        '''
+        """
         Tests for Valid Vocab Extension thoroughly: Vocab extension is valid
         when overlapping namespaces have same padding behaviour (padded/non-padded)
         Summary of namespace paddings in this test:
@@ -497,7 +488,7 @@ class TestVocabulary(AllenNlpTestCase):
            an              #3->an
            atom            #4->atom
            banana          #5->banana
-        '''
+        """
 
         vocab_dir = self.TEST_DIR / 'vocab_save'
         original_vocab = Vocabulary(non_padded_namespaces=["tokens1", "tokens3"])
@@ -591,11 +582,8 @@ class TestVocabulary(AllenNlpTestCase):
 
     def test_vocab_can_print(self):
         vocab = Vocabulary(non_padded_namespaces=["a", "c"])
-        vocab.add_token_to_namespace("a0", namespace="a")
-        vocab.add_token_to_namespace("a1", namespace="a")
-        vocab.add_token_to_namespace("a2", namespace="a")
-        vocab.add_token_to_namespace("b2", namespace="b")
-        vocab.add_token_to_namespace("b3", namespace="b")
+        vocab.add_tokens_to_namespace(["a0", "a1", "a2"], namespace="a")
+        vocab.add_tokens_to_namespace(["b2", "b3"], namespace="b")
         print(vocab)
 
     def test_read_pretrained_words(self):

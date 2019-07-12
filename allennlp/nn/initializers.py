@@ -25,7 +25,7 @@ The available initialization functions are
 import logging
 import re
 import math
-from typing import Callable, List, Tuple, Type, Iterable, Dict
+from typing import Callable, List, Tuple, Type, Dict
 import itertools
 from overrides import overrides
 
@@ -298,7 +298,7 @@ class InitializerApplicator:
             for initializer_regex, initializer in self._initializers:
                 allow = self._prevent_regex is None or not bool(re.search(self._prevent_regex, name))
                 if allow and re.search(initializer_regex, name):
-                    logger.info("Initializing %s using %s intitializer", name, initializer_regex)
+                    logger.info("Initializing %s using %s initializer", name, initializer_regex)
                     initializer(parameter, parameter_name=name)
                     unused_regexes.discard(initializer_regex)
                     break
@@ -314,7 +314,7 @@ class InitializerApplicator:
             logger.info("   %s", name)
 
     @classmethod
-    def from_params(cls, params: Iterable[Tuple[str, Params]] = ()) -> "InitializerApplicator":  # type: ignore
+    def from_params(cls, params: List[Tuple[str, Params]] = None) -> "InitializerApplicator":
         """
         Converts a Params object into an InitializerApplicator. The json should
         be formatted as follows::
@@ -345,7 +345,7 @@ class InitializerApplicator:
         An InitializerApplicator containing the specified initializers.
         """
         # pylint: disable=arguments-differ
-
+        params = params or []
         is_prevent = lambda item: item == "prevent" or item == {"type": "prevent"}
         prevent_regexes = [param[0] for param in params if is_prevent(param[1])]
         params = [param for param in params if param[1] if not is_prevent(param[1])]

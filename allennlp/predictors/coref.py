@@ -72,6 +72,70 @@ class CorefPredictor(Predictor):
         instance = self._words_list_to_instance(tokenized_document)
         return self.predict_instance(instance)
 
+    @staticmethod
+    def replace_corefs(document: Doc, clusters: List[List[List[int]]]) -> str:
+        """
+        Uses a list of coreference clusters to convert a spacy document into a
+        string, where each coreference is replaced by its main mention.
+        """
+        # Original tokens with correct whitespace
+        resolved = list(tok.text_with_ws for tok in document)
+
+        for cluster in clusters:
+            # The main mention is the first item in the cluster
+            mention_start, mention_end = cluster[0][0], cluster[0][1] + 1
+            mention_span = document[mention_start: mention_end]
+
+            # The coreferences are all items following the first in the cluster
+            for coref in cluster[1:]:
+                final_token = document[coref[1]]
+                # In both of the following cases, the first token in the coreference
+                # is replaced with the main mention, while all subsequent tokens
+                # are masked out with "", so that they can be elimated from
+                # the returned document during "".join(resolved).
+
+                # The first case attempts to correctly handle possessive coreferences
+                # by inserting "'s" between the mention and the final whitespace
+                # These include my, his, her, their, our, etc.
+
+                # Disclaimer: Grammar errors can occur when the main mention is plural,
+                # e.g. "zebras" becomes "zebras's" because this case isn't
+                # being explictly checked and handled.
+
+                if final_token.tag_ in ["PRP$", "POS"]:
+                    resolved[coref[0]] = mention_span.text + "'s" + final_token.whitespace_
+                else:
+                # If not possessive, then replace first token with main mention directly
+                    resolved[coref[0]] = mention_span.text + final_token.whitespace_
+                # Mask out remaining tokens
+                for i in range(coref[0] + 1, coref[1] + 1):
+                    resolved[i] = ""
+
+        return "".join(resolved)
+
+    def coref_resolved(self, document: str) -> str:
+        """
+        Produce a document where each coreference is replaced by the its main mention
+
+        Parameters
+        ----------
+        document : ``str``
+            A string representation of a document.
+
+        Returns
+        -------
+        A string with each coference replaced by its main mention
+        """
+
+        spacy_document = self._spacy(document)
+        clusters = self.predict(document).get("clusters")
+
+        # Passing a document with no coreferences returns its original form
+        if not clusters:
+            return document
+
+        return self.replace_corefs(spacy_document, clusters)
+
     def _words_list_to_instance(self, words: List[str]) -> Instance:
         """
         Create an instance from words list represent an already tokenized document,

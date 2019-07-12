@@ -16,6 +16,7 @@ from allennlp.commands.subcommand import Subcommand
 from allennlp.commands.test_install import TestInstall
 from allennlp.commands.find_learning_rate import FindLearningRate
 from allennlp.commands.train import Train
+from allennlp.commands.print_results import PrintResults
 from allennlp.common.util import import_submodules
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -73,7 +74,7 @@ def main(prog: str = None,
             "dry-run": DryRun(),
             "test-install": TestInstall(),
             "find-lr": FindLearningRate(),
-
+            "print-results": PrintResults(),
             # Superseded by overrides
             **subcommand_overrides
     }

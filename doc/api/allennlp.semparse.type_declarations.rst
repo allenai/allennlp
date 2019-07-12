@@ -11,11 +11,6 @@ allennlp.semparse.type_declarations
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: allennlp.semparse.type_declarations.wikitables_lambda_dcs
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 .. automodule:: allennlp.semparse.type_declarations.quarel_type_declaration
    :members:
    :undoc-members:

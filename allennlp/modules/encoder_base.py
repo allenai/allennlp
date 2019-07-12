@@ -197,12 +197,12 @@ class _EncoderBase(torch.nn.Module):
             # tuple and returns the tensor directly.
             correctly_shaped_state = correctly_shaped_states[0]
             sorted_state = correctly_shaped_state.index_select(1, sorting_indices)
-            return sorted_state[:, :num_valid, :]
+            return sorted_state[:, :num_valid, :].contiguous()
         else:
             # LSTMs have a state tuple of (state, memory).
             sorted_states = [state.index_select(1, sorting_indices)
                              for state in correctly_shaped_states]
-            return tuple(state[:, :num_valid, :] for state in sorted_states)
+            return tuple(state[:, :num_valid, :].contiguous() for state in sorted_states)
 
     def _update_states(self,
                        final_states: RnnStateStorage,
@@ -281,5 +281,32 @@ class _EncoderBase(torch.nn.Module):
             # that there are some unused elements (zero-length) for the RNN computation.
             self._states = tuple(new_states)
 
-    def reset_states(self):
-        self._states = None
+    def reset_states(self,
+                     mask: torch.Tensor = None) -> None:
+        """
+        Resets the internal states of a stateful encoder.
+
+        Parameters
+        ----------
+        mask : ``torch.Tensor``, optional.
+            A tensor of shape ``(batch_size,)`` indicating which states should
+            be reset. If not provided, all states will be reset.
+        """
+        if mask is None:
+            self._states = None
+        else:
+            # state has shape (num_layers, batch_size, hidden_size). We reshape
+            # mask to have shape (1, batch_size, 1) so that operations
+            # broadcast properly.
+            mask_batch_size = mask.size(0)
+            mask = mask.float().view(1, mask_batch_size, 1)
+            new_states = []
+            for old_state in self._states:
+                old_state_batch_size = old_state.size(1)
+                if old_state_batch_size != mask_batch_size:
+                    raise ValueError(f'Trying to reset states using mask with incorrect batch size. '
+                                     f'Expected batch size: {old_state_batch_size}. '
+                                     f'Provided batch size: {mask_batch_size}.')
+                new_state = (1 - mask) * old_state
+                new_states.append(new_state.detach())
+            self._states = tuple(new_states)

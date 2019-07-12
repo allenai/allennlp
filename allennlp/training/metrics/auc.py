@@ -37,7 +37,7 @@ class Auc(Metric):
             A one-dimensional label tensor of shape (batch_size).
         """
 
-        predictions, gold_labels = self.unwrap_to_tensors(predictions, gold_labels)
+        predictions, gold_labels, mask = self.unwrap_to_tensors(predictions, gold_labels, mask)
 
         # Sanity checks.
         if gold_labels.dim() != 1:
@@ -52,7 +52,7 @@ class Auc(Metric):
             raise ConfigurationError("AUC can be used for binary tasks only. gold_labels has {} unique labels, "
                                      "expected at maximum 2.".format(unique_gold_labels.numel()))
 
-        gold_labels_is_binary = list(torch.sort(unique_gold_labels)[0].numpy()) == [0, 1]
+        gold_labels_is_binary = set(unique_gold_labels.tolist()) <= {0, 1}
         if not gold_labels_is_binary and self._positive_label not in unique_gold_labels:
             raise ConfigurationError("gold_labels should be binary with 0 and 1 or initialized positive_label "
                                      "{} should be present in gold_labels".format(self._positive_label))

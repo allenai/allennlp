@@ -1,4 +1,6 @@
 # pylint: disable=no-self-use,line-too-long
+import pytest
+import spacy
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp import pretrained
@@ -104,6 +106,7 @@ class SniffTest(AllenNlpTestCase):
         assert result["words"] == ["Michael", "Jordan", "is", "a", "professor", "at", "Berkeley", "."]
         assert result["tags"] == ["B-PER", "L-PER", "O", "O", "O", "O", "U-LOC", "O"]
 
+    @pytest.mark.skipif(spacy.__version__ < "2.1", reason="this model changed from 2.0 to 2.1")
     def test_constituency_parsing(self):
         predictor = pretrained.span_based_constituency_parsing_with_elmo_joshi_2018()
 
@@ -112,7 +115,7 @@ class SniffTest(AllenNlpTestCase):
         result = predictor.predict_json({"sentence": sentence})
 
         assert result["tokens"] == ["Pierre", "Vinken", "died", "aged", "81", ";", "immortalised", "aged", "61", "."]
-        assert result["trees"] == "(S (NP (NNP Pierre) (NNP Vinken)) (VP (VP (VBD died) (NP (JJ aged) (CD 81))) (, ;) (VP (VBD immortalised) (S (ADJP (VBN aged) (NP (CD 61)))))) (. .))"
+        assert result["trees"] == "(S (S (NP (NNP Pierre) (NNP Vinken)) (VP (VBD died) (NP (JJ aged) (CD 81)))) (: ;) (S (VP (VBN immortalised) (S (ADJP (VBN aged) (NP (CD 61)))))) (. .))"
 
     def test_dependency_parsing(self):
         predictor = pretrained.biaffine_parser_stanford_dependencies_todzat_2017()

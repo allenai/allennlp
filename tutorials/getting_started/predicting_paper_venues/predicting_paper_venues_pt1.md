@@ -460,8 +460,8 @@ aren't any, so we're just using the default tokenizer and word indexers (which, 
 were to split strings into words and represent words as single ids under the name "tokens").
 
 ```json
-  "train_data_path": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/academic-papers-example/train.jsonl",
-  "validation_data_path": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/academic-papers-example/dev.jsonl",
+  "train_data_path": "https://allennlp.s3.amazonaws.com/datasets/academic-papers-example/train.jsonl",
+  "validation_data_path": "https://allennlp.s3.amazonaws.com/datasets/academic-papers-example/dev.jsonl",
   "iterator": {
     "type": "bucket",
     "sorting_keys": [["abstract", "num_tokens"], ["title", "num_tokens"]],
@@ -496,7 +496,7 @@ The last piece of the configuration to look at is the model itself:
     "text_field_embedder": {
       "tokens": {
         "type": "embedding",
-        "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.100d.txt.gz",
+        "pretrained_file": "https://allennlp.s3.amazonaws.com/datasets/glove/glove.6B.100d.txt.gz",
         "embedding_dim": 100,
         "trainable": false
       }

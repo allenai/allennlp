@@ -110,7 +110,6 @@ class QuarelSemanticParser(Model):
         # Note: there's only one non-trivial entity type in QuaRel for now, so most of the
         # entity_type stuff is irrelevant
         self._num_entity_types = 4  # TODO(mattg): get this in a more principled way somehow?
-        self._num_start_types = 1 # Hardcoded until we feed lf syntax into the model
         self._entity_type_encoder_embedding = Embedding(self._num_entity_types, self._embedding_dim)
         self._entity_type_decoder_embedding = Embedding(self._num_entity_types, action_embedding_dim)
 
@@ -171,8 +170,6 @@ class QuarelSemanticParser(Model):
         self._decoder_step = LinkingTransitionFunction(encoder_output_dim=self._encoder_output_dim,
                                                        action_embedding_dim=action_embedding_dim,
                                                        input_attention=attention,
-                                                       num_start_types=self._num_start_types,
-                                                       predict_start_type_separately=False,
                                                        add_action_bias=self._add_action_bias,
                                                        mixture_feedforward=mixture_feedforward,
                                                        dropout=dropout)
@@ -213,10 +210,22 @@ class QuarelSemanticParser(Model):
             ``ProductionRule`` using a ``ProductionRuleField``.  We will embed all of these
             and use the embeddings to determine which action to take at each timestep in the
             decoder.
+        entity_bits : ``torch.Tensor``, optional (default=None)
+            Tensor encoding bits for the world entities.
+        denotation_target : ``torch.Tensor``, optional (default=None)
+            If model's field ``denotation_only`` is True, this is the tensor target denotation.
         target_action_sequences : torch.Tensor, optional (default=None)
            A list of possibly valid action sequences, where each action is an index into the list
            of possible actions.  This tensor has shape ``(batch_size, num_action_sequences,
            sequence_length)``.
+        metadata : List[Dict[str, Any]], optional (default=None).
+            A dictionary of metadata for each batch element which has keys:
+                question_tokens : ``List[str]``, optional.
+                    The original string tokens in the question.
+                world_extractions : ``nltk.Tree``, optional.
+                    Extracted worlds from the question.
+                answer_index : ``List[str]``, optional.
+                    Index of the correct answer.
         """
 
         table_text = table['text']

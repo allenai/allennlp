@@ -14,8 +14,11 @@ from hashlib import sha256
 from functools import wraps
 
 import boto3
+import botocore
 from botocore.exceptions import ClientError
 import requests
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry  # pylint: disable=import-error
 
 from allennlp.common.tqdm import Tqdm
 
@@ -76,7 +79,6 @@ def filename_to_url(filename: str, cache_dir: str = None) -> Tuple[str, str]:
     etag = metadata['etag']
 
     return url, etag
-
 
 def cached_path(url_or_filename: Union[str, Path], cache_dir: str = None) -> str:
     """
@@ -149,10 +151,20 @@ def s3_request(func: Callable):
     return wrapper
 
 
+def get_s3_resource():
+    session = boto3.session.Session()
+    if session.get_credentials() is None:
+        # Use unsigned requests.
+        s3_resource = session.resource("s3", config=botocore.client.Config(signature_version=botocore.UNSIGNED))
+    else:
+        s3_resource = session.resource("s3")
+    return s3_resource
+
+
 @s3_request
 def s3_etag(url: str) -> Optional[str]:
     """Check ETag on S3 object."""
-    s3_resource = boto3.resource("s3")
+    s3_resource = get_s3_resource()
     bucket_name, s3_path = split_s3_path(url)
     s3_object = s3_resource.Object(bucket_name, s3_path)
     return s3_object.e_tag
@@ -161,21 +173,36 @@ def s3_etag(url: str) -> Optional[str]:
 @s3_request
 def s3_get(url: str, temp_file: IO) -> None:
     """Pull a file directly from S3."""
-    s3_resource = boto3.resource("s3")
+    s3_resource = get_s3_resource()
     bucket_name, s3_path = split_s3_path(url)
     s3_resource.Bucket(bucket_name).download_fileobj(s3_path, temp_file)
 
+def session_with_backoff() -> requests.Session:
+    """
+    We ran into an issue where http requests to s3 were timing out,
+    possibly because we were making too many requests too quickly.
+    This helper function returns a requests session that has retry-with-backoff
+    built in.
+    see stackoverflow.com/questions/23267409/how-to-implement-retry-mechanism-into-python-requests-library
+    """
+    session = requests.Session()
+    retries = Retry(total=5, backoff_factor=1, status_forcelist=[502, 503, 504])
+    session.mount('http://', HTTPAdapter(max_retries=retries))
+    session.mount('https://', HTTPAdapter(max_retries=retries))
+
+    return session
 
 def http_get(url: str, temp_file: IO) -> None:
-    req = requests.get(url, stream=True)
-    content_length = req.headers.get('Content-Length')
-    total = int(content_length) if content_length is not None else None
-    progress = Tqdm.tqdm(unit="B", total=total)
-    for chunk in req.iter_content(chunk_size=1024):
-        if chunk: # filter out keep-alive new chunks
-            progress.update(len(chunk))
-            temp_file.write(chunk)
-    progress.close()
+    with session_with_backoff() as session:
+        req = session.get(url, stream=True)
+        content_length = req.headers.get('Content-Length')
+        total = int(content_length) if content_length is not None else None
+        progress = Tqdm.tqdm(unit="B", total=total)
+        for chunk in req.iter_content(chunk_size=1024):
+            if chunk: # filter out keep-alive new chunks
+                progress.update(len(chunk))
+                temp_file.write(chunk)
+        progress.close()
 
 
 # TODO(joelgrus): do we want to do checksums or anything like that?
@@ -193,7 +220,8 @@ def get_from_cache(url: str, cache_dir: str = None) -> str:
     if url.startswith("s3://"):
         etag = s3_etag(url)
     else:
-        response = requests.head(url, allow_redirects=True)
+        with session_with_backoff() as session:
+            response = session.head(url, allow_redirects=True)
         if response.status_code != 200:
             raise IOError("HEAD request failed for url {} with status code {}"
                           .format(url, response.status_code))
@@ -237,10 +265,10 @@ def get_from_cache(url: str, cache_dir: str = None) -> str:
 
 
 def read_set_from_file(filename: str) -> Set[str]:
-    '''
+    """
     Extract a de-duped collection (set) of text from a file.
     Expected file format is one item per line.
-    '''
+    """
     collection = set()
     with open(filename, 'r') as file_:
         for line in file_:
