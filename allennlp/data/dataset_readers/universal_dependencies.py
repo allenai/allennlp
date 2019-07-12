@@ -9,7 +9,7 @@ from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import Field, TextField, SequenceLabelField, MetadataField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
-from allennlp.data.tokenizers import Token
+from allennlp.data.tokenizers import Token, Tokenizer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -34,14 +34,19 @@ class UniversalDependenciesDatasetReader(DatasetReader):
     use_language_specific_pos : ``bool``, optional (default = False)
         Whether to use UD POS tags, or to use the language specific POS tags
         provided in the conllu format.
+    tokenizer : ``Tokenizer``, optional, default = None
+        A tokenizer to use to split the text. This is useful when the tokens that you pass
+        into the model need to have some particular attribute. Typically it is not necessary.
     """
     def __init__(self,
                  token_indexers: Dict[str, TokenIndexer] = None,
                  use_language_specific_pos: bool = False,
+                 tokenizer: Tokenizer = None,
                  lazy: bool = False) -> None:
         super().__init__(lazy)
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         self.use_language_specific_pos = use_language_specific_pos
+        self.tokenizer = tokenizer
 
     @overrides
     def _read(self, file_path: str):
@@ -93,17 +98,22 @@ class UniversalDependenciesDatasetReader(DatasetReader):
         """
         fields: Dict[str, Field] = {}
 
-        tokens = TextField([Token(w) for w in words], self._token_indexers)
-        fields["words"] = tokens
-        fields["pos_tags"] = SequenceLabelField(upos_tags, tokens, label_namespace="pos")
+        if self.tokenizer is not None:
+            tokens = self.tokenizer.tokenize(" ".join(words))
+        else:
+            tokens = [Token(t) for t in words]
+
+        text_field = TextField(tokens, self._token_indexers)
+        fields["words"] = text_field
+        fields["pos_tags"] = SequenceLabelField(upos_tags, text_field, label_namespace="pos")
         if dependencies is not None:
             # We don't want to expand the label namespace with an additional dummy token, so we'll
             # always give the 'ROOT_HEAD' token a label of 'root'.
             fields["head_tags"] = SequenceLabelField([x[0] for x in dependencies],
-                                                     tokens,
+                                                     text_field,
                                                      label_namespace="head_tags")
             fields["head_indices"] = SequenceLabelField([int(x[1]) for x in dependencies],
-                                                        tokens,
+                                                        text_field,
                                                         label_namespace="head_index_tags")
 
         fields["metadata"] = MetadataField({"words": words, "pos": upos_tags})

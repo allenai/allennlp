@@ -325,11 +325,11 @@ class TestElmoTokenRepresentation(ElmoTestCase):
         for k in range(10):
             char_indices = indices["elmo"][(k * 50):((k + 1) * 50)]
             sentences.append(
-                    indexer.pad_token_sequence(
+                    indexer.as_padded_tensor(
                             {'key': char_indices}, desired_num_tokens={'key': 50}, padding_lengths={}
                     )['key']
             )
-        batch = torch.from_numpy(numpy.array(sentences))
+        batch = torch.stack(sentences)
 
         elmo_token_embedder = _ElmoCharacterEncoder(self.options_file, self.weight_file)
         elmo_token_embedder_output = elmo_token_embedder(batch)

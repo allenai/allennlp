@@ -217,13 +217,13 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
             padded_entities = util.pad_sequence_to_length(self._indexed_entity_texts[indexer_name],
                                                           desired_num_entities,
                                                           default_value=lambda: [])
-            padded_arrays = []
+            padded_tensors = []
             for padded_entity in padded_entities:
-                padded_array = indexer.pad_token_sequence({'key': padded_entity},
-                                                          {'key': desired_num_entity_tokens},
-                                                          padding_lengths)['key']
-                padded_arrays.append(padded_array)
-            tensor = torch.LongTensor(padded_arrays)
+                padded_tensor = indexer.as_padded_tensor({'key': padded_entity},
+                                                         {'key': desired_num_entity_tokens},
+                                                         padding_lengths)['key']
+                padded_tensors.append(padded_tensor)
+            tensor = torch.stack(padded_tensors)
             tensors[indexer_name] = tensor
         padded_linking_features = util.pad_sequence_to_length(self.linking_features,
                                                               desired_num_entities,
