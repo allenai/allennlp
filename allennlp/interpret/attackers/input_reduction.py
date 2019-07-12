@@ -1,3 +1,4 @@
+from copy import deepcopy
 from typing import List, Tuple
 import numpy as np
 import torch
@@ -5,6 +6,7 @@ from allennlp.interpret.attackers.attacker import Attacker
 from allennlp.interpret.attackers import utils
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import Instance
+from allennlp.data.fields import ListField
 
 @Attacker.register('input-reduction')
 class InputReduction(Attacker):
@@ -18,7 +20,8 @@ class InputReduction(Attacker):
                          grad_input_field: str = 'grad_input_1',
                          ignore_tokens: List[str] = ["@@NULL@@"]):
         original_instances = self.predictor.json_to_labeled_instances(inputs)
-        original_tokens = list(original_instances[0][input_field_to_attack])
+        original_text_field: TextField = original_instances[0][input_field_to_attack]  # type: ignore
+        original_tokens = deepcopy(original_text_field.tokens)
         final_tokens = []
         for current_instance in original_instances:
             # Save fields that must be checked for equality
@@ -34,9 +37,10 @@ class InputReduction(Attacker):
             else:
                 num_ignore_tokens, tag_mask, original_tags = \
                     get_ner_tags_and_mask(current_instance, input_field_to_attack, ignore_tokens)
-            current_tokens = list(current_instance[input_field_to_attack])
-            smallest_idx = -1
 
+            current_text_field: TextField = current_instance[input_field_to_attack]  # type: ignore
+            current_tokens = deepcopy(current_text_field.tokens)
+            smallest_idx = -1
             # keep removing tokens until prediction is about to change
             while len(current_instance[input_field_to_attack]) >= num_ignore_tokens: # type: ignore
                 # get gradients and predictions
@@ -61,7 +65,7 @@ class InputReduction(Attacker):
                         break
 
                 # remove a token from the input
-                current_tokens = list(current_instance[input_field_to_attack])
+                current_tokens = deepcopy(current_text_field.tokens)
                 current_instance, smallest_idx = \
                     remove_one_token(grads[grad_input_field],
                                      current_instance,
@@ -81,14 +85,15 @@ def remove_one_token(grads: np.ndarray = None,
     grads_mag = [np.sqrt(grad.dot(grad)) for grad in grads]
 
     # Skip all ignore_tokens by setting grad to infinity
-    field = instance[input_field_to_attack]
-    for tok_idx, tok in enumerate(list(field)):
+    text_field: TextField = instance[input_field_to_attack]
+    for tok_idx, tok in enumerate(text_field.tokens):
         if tok in ignore_tokens:
             grads_mag[tok_idx] = float("inf")
 
     # For NER, skip all tokens that are not in outside
     if "tags" in instance:
-        field_list = getattr(instance["tags"], 'field_list')
+        tag_field: ListField = instance['tags']
+        field_list = tag_field.field_list
         for idx, label in enumerate(field_list):
             if label.label != "O":
                 grads_mag[idx] = float("inf")
@@ -98,16 +103,15 @@ def remove_one_token(grads: np.ndarray = None,
         return instance, smallest
 
     # remove smallest
-    input_field = instance[input_field_to_attack]
-    inputs_before_smallest = list(input_field)[0:smallest]
-    inputs_after_smallest = list(input_field)[smallest + 1:]
-    setattr(input_field, 'tokens', inputs_before_smallest + inputs_after_smallest)
+    input_field: TextField = instance[input_field_to_attack]
+    inputs_before_smallest = input_field.tokens[0:smallest]
+    inputs_after_smallest = input_field.tokens[smallest + 1:]
+    input_field.tokens = inputs_before_smallest + inputs_after_smallest
 
     if "tags" in instance:
-        field_list = getattr(instance["tags"], 'field_list')
-        field_list_before_smallest = getattr(instance["tags"], 'field_list')[0:smallest]
-        field_list_after_smallest = getattr(instance["tags"], 'field_list')[smallest + 1:]
-        setattr(instance["tags"], 'field_list', field_list_before_smallest + field_list_after_smallest)
+        field_list_before_smallest = field_list[0:smallest]
+        field_list_after_smallest = field_list[smallest + 1:]
+        instance['tags'].field_list = field_list_before_smallest + field_list_after_smallest
 
     instance.indexed = False
     return instance, smallest

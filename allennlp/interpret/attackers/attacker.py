@@ -13,7 +13,7 @@ class Attacker(Registrable):
         self.predictor = predictor
 
     def attack_from_json(self,
-                         inputs: JsonDict = None,
+                         inputs: JsonDict,
                          input_field_to_attack: str,
                          grad_input_field: str,
                          ignore_tokens: List[str]) -> JsonDict:

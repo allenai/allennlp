@@ -1,4 +1,5 @@
 # pylint: disable=protected-access
+from copy import deepcopy
 from typing import List
 import numpy
 import torch
@@ -10,6 +11,7 @@ from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldE
 from allennlp.modules.token_embedders import Embedding
 from allennlp.data.tokenizers import Token
 from allennlp.data.token_indexers import ELMoTokenCharactersIndexer, TokenCharactersIndexer
+from allennlp.data.fields import TextField
 
 @Attacker.register('hotflip')
 class Hotflip(Attacker):
@@ -72,7 +74,7 @@ class Hotflip(Attacker):
                          inputs: JsonDict = None,
                          input_field_to_attack: str = 'tokens',
                          grad_input_field: str = 'grad_input_1',
-                         ignore_tokens: List[str] = ["@@NULL@@"]) -> JsonDict:
+                         ignore_tokens: List[str] = ["@@NULL@@",'.',',',';','!','?']) -> JsonDict:
         """
         Replaces one token at a time from the input until the model's prediction changes.
         `input_field_to_attack` is for example `tokens`, it says what the input
@@ -85,17 +87,22 @@ class Hotflip(Attacker):
         This process is iteratively repeated until the prediction changes.
         Once a token is replaced, it is not flipped again.
         """
-        # TODO (@Eric-Wallace) add functionality for ignore_tokens in the future.
         original_instances = self.predictor.json_to_labeled_instances(inputs)
-        original_tokens = list(original_instances[0][input_field_to_attack])
+        original_text_field: TextField = original_instances[0][input_field_to_attack]  # type: ignore
+        original_tokens = deepcopy(original_text_field.tokens)
         final_tokens = []
         for current_instance in original_instances:
             # Gets a list of the fields that we want to check to see if they change.
             fields_to_compare = utils.get_fields_to_compare(inputs, current_instance, input_field_to_attack)
-
-            current_tokens = getattr(current_instance[input_field_to_attack], 'tokens')
+            current_text_field : TextField = current_instance[input_field_to_attack]
+            current_tokens = current_text_field.tokens
             grads, outputs = self.predictor.get_gradients([current_instance])
+
+            # ignore any token that is in the ignore_tokens list by setting the token to already flipped
             flipped = []  # type: List[int]
+            for index, token in enumerate(current_tokens):
+                if token.text in ignore_tokens:
+                    flipped.append(index)
             while True:
                 # Compute L2 norm of all grads.
                 grad = grads[grad_input_field]
