@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 BATCH_INTERVAL = 100
 # On subset of 1b word corpus
 MEAN_BATCH_SIZE = 66.0
-BATCH_COUNT = 40000
+BATCH_COUNT = 10000
 
 
 def log_iterable(iterable, get_items_per_batch, batches_per_interval):
@@ -61,6 +61,16 @@ def time_iterable(iterable):
     end = time.perf_counter()
     print(f"{(end - start)/BATCH_COUNT:.3f} s/b over {BATCH_COUNT} batches")
 
+def time_to_first(iterable):
+    print("Starting test")
+    start = time.perf_counter()
+
+    for _ in iterable:
+        break
+
+    end = time.perf_counter()
+    print(f"{(end - start):.3f} s/b for first batch")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -79,5 +89,6 @@ if __name__ == "__main__":
                                       num_epochs=1,
                                       shuffle=True)
     #log_iterable(raw_generator, lambda batch: batch['source']['tokens'].size(0), BATCH_INTERVAL)
-    time_iterable(raw_generator)
+    #time_iterable(raw_generator)
+    time_to_first(raw_generator)
 
