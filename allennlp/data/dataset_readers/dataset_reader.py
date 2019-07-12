@@ -178,8 +178,11 @@ class DatasetReader(Registrable):
                 for line in cache_file:
                     yield self.deserialize_instance(line.strip())
         elif self._cache_method == 'pickle':
+            # Need to yield the entries one at a time do provide a consistent interface.
             with open(cache_filename, 'rb') as cache_file:
-                return pkl.load(cache_file)
+                cached = pkl.load(cache_file)
+                for entry in cached:
+                    yield entry
         else:
             raise ConfigurationError('Available caching methods are `jsonpickle` and `pickle`.')
 
