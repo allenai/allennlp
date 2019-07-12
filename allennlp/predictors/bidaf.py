@@ -86,7 +86,7 @@ class BidafPredictor(Predictor):
                     if offset[1] == span[1]:
                         word_span_end = idx
 
-                passage_field: SequenceField = new_instance['passage']
+                passage_field: SequenceField = new_instance['passage']  # type: ignore
                 field = ListField([SpanField(word_span_start,
                                              word_span_end,
                                              passage_field)]) # type: ignore
@@ -135,7 +135,7 @@ class BidafPredictor(Predictor):
                     if offset[1] == span[1]:
                         word_span_end = idx
 
-                question_field: SequenceField = new_instance['question']
+                question_field: SequenceField = new_instance['question'] # type: ignore
                 field = ListField([SpanField(word_span_start,
                                              word_span_end,
                                              question_field)]) # type: ignore
