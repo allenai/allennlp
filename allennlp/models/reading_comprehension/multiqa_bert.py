@@ -124,9 +124,13 @@ class MultiQA_BERT(Model):
             offsets = instance_metadata['token_offsets']
 
             predicted_span = best_span_cpu[instance_ind]
-            start_offset = offsets[predicted_span[0]][0]
-            end_offset = offsets[predicted_span[1]][1]
-            best_span_string = passage_str[start_offset:end_offset]
+            if predicted_span[0] == 0 and predicted_span[1] == 0:
+                cat_pred = 'cannot_answer'
+            else:
+                cat_pred = ''
+                start_offset = offsets[predicted_span[0]][0]
+                end_offset = offsets[predicted_span[1]][1]
+                best_span_string = passage_str[start_offset:end_offset]
 
             output_dict['best_span_str'].append(best_span_string)
             output_dict['best_span_logit'].append(best_span_logit)
@@ -138,7 +142,8 @@ class MultiQA_BERT(Model):
             if categorical_labels is not None:
                 cat_label_ind = categorical_labels.data.cpu().numpy()[instance_ind]
                 cat_label = self.vocab.get_token_from_index(cat_label_ind, namespace="categorical_labels")
-                if cat_label == 'span' and cat_label == cat_pred:
+                #if cat_label == 'span' and cat_label == cat_pred:
+                if cat_pred != 'cannot_answer' and cat_label != 'cannot_answer':
                     gold_answer_texts = instance_metadata['answer_texts_list']
                     f1_score = squad_eval.metric_max_over_ground_truths(squad_eval.f1_score, best_span_string, gold_answer_texts)
                     EM_score = squad_eval.metric_max_over_ground_truths(squad_eval.exact_match_score, best_span_string, gold_answer_texts)

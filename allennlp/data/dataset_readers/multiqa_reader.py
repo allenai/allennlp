@@ -223,12 +223,6 @@ class MultiQAReader(DatasetReader):
                     qa['categorical_labels'].append('cannot_answer')
 
             qa['answer_text_list'] = answer_text_list
-            #if len(qa['detected_answers']) == 0:
-            #    no_answer_questions.append(qa)
-
-        #if self._is_training:
-        #    for no_answer_q in no_answer_questions:
-        #        context['qas'].remove(no_answer_q)
 
         return context
 
@@ -422,7 +416,7 @@ def make_multiqa_instance(question_tokens: List[Token],
         span_start_list: List[Field] = []
         span_end_list: List[Field] = []
         if answers_list == []:
-            span_start, span_end = -1, -1
+            span_start, span_end = 0, 0
         else:
             span_start, span_end, text = answers_list[0]
 
