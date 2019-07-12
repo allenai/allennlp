@@ -11,9 +11,10 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 BATCH_INTERVAL = 100
 # On subset of 1b word corpus
 MEAN_BATCH_SIZE = 66.0
+BATCH_COUNT = 40000
 
 
-def time_iterable(iterable, get_items_per_batch, batches_per_interval):
+def log_iterable(iterable, get_items_per_batch, batches_per_interval):
     start = time.perf_counter()
     last = start
 
@@ -34,6 +35,8 @@ def time_iterable(iterable, get_items_per_batch, batches_per_interval):
             #inspect.getmembers
             #iterable.gi_frame.f_locals['self'].output_queue
             #import pdb;pdb.set_trace()
+            # TODO(brendanr): Put the queue output on a timer.
+            # TODO(brendanr): Have a mode where we don't log anything for timing purposes. We just chug through 10k batches.
             msg = (f"s/b total: {(end - start) / adjusted_batch_count:.3f} " +
                    f"s/b last: {(end - last) / BATCH_INTERVAL:.3f} " +
                    f"read out q: {iterable.gi_frame.f_locals['instances'].output_queue.qsize()} " +
@@ -43,6 +46,20 @@ def time_iterable(iterable, get_items_per_batch, batches_per_interval):
             print(msg)
 
             last = end
+
+
+def time_iterable(iterable):
+    print("Starting test")
+    start = time.perf_counter()
+
+    batch_count = BATCH_COUNT
+    for _ in iterable:
+        batch_count -= 1
+        if batch_count == 0:
+            break
+
+    end = time.perf_counter()
+    print(f"{(end - start)/BATCH_COUNT:.3f} s/b over {BATCH_COUNT} batches")
 
 
 if __name__ == "__main__":
@@ -61,5 +78,6 @@ if __name__ == "__main__":
     raw_generator = pieces.iterator(pieces.train_dataset,
                                       num_epochs=1,
                                       shuffle=True)
-    time_iterable(raw_generator, lambda batch: batch['source']['tokens'].size(0), BATCH_INTERVAL)
+    #log_iterable(raw_generator, lambda batch: batch['source']['tokens'].size(0), BATCH_INTERVAL)
+    time_iterable(raw_generator)
 
