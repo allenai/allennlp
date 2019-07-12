@@ -55,6 +55,10 @@ class TestMultiLabelField(AllenNlpTestCase):
         f.index(vocab)
         tensor = f.as_tensor(f.get_padding_lengths()).detach().cpu().numpy()
         numpy.testing.assert_array_almost_equal(tensor, numpy.array([0, 0]))
+        g = f.empty_field()
+        g.index(vocab)
+        tensor = g.as_tensor(g.get_padding_lengths()).detach().cpu().numpy()
+        numpy.testing.assert_array_almost_equal(tensor, numpy.array([0, 0]))
 
     def test_class_variables_for_namespace_warnings_work_correctly(self):
         # pylint: disable=protected-access
