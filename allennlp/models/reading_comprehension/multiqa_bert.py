@@ -126,6 +126,7 @@ class MultiQA_BERT(Model):
             predicted_span = best_span_cpu[instance_ind]
             if predicted_span[0] == 0 and predicted_span[1] == 0:
                 cat_pred = 'cannot_answer'
+                best_span_string = ''
             else:
                 cat_pred = ''
                 start_offset = offsets[predicted_span[0]][0]
