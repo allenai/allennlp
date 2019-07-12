@@ -90,8 +90,8 @@ class MultiQA_BERT(Model):
                                                      repeated_passage_mask[inds_with_gold_answer]), \
                              span_ends.view(-1)[inds_with_gold_answer], ignore_index=-1)
 
-        if categorical_labels is not None:
-            loss += cross_entropy(categorical_logits, categorical_labels)
+        #if categorical_labels is not None:
+        #    loss += cross_entropy(categorical_logits, categorical_labels)
 
         output_dict: Dict[str, Any] = {}
         if loss == 0:
