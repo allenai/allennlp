@@ -124,11 +124,14 @@ class MultiQAReader(DatasetReader):
                  sample_size: int = -1,
                  STRIDE: int = 128,
                  MAX_WORDPIECES: int = 512,
+                 random_seed: int = 0
                  ) -> None:
         super().__init__(lazy)
 
-        # make sure results may be reproduced when sampling...
-        random.seed(0)
+        # the random seed could be change for models like BERT that are
+        # unstable when fine-tuned + the insure results reproducibility
+        random.seed(random_seed)
+
         self._preproc_outputfile = preproc_outputfile
         self._STRIDE = STRIDE
         # NOTE AllenNLP automatically adds [CLS] and [SEP] word peices in the begining and end of the context,

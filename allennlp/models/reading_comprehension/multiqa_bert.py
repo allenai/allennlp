@@ -138,15 +138,15 @@ class MultiQA_BERT(Model):
             if categorical_labels is not None:
                 cat_label_ind = categorical_labels.data.cpu().numpy()[instance_ind]
                 cat_label = self.vocab.get_token_from_index(cat_label_ind, namespace="categorical_labels")
-                if cat_label == 'span':
+                if cat_label == 'span' and cat_label == cat_pred:
                     gold_answer_texts = instance_metadata['answer_texts_list']
                     f1_score = squad_eval.metric_max_over_ground_truths(squad_eval.f1_score, best_span_string, gold_answer_texts)
                     EM_score = squad_eval.metric_max_over_ground_truths(squad_eval.exact_match_score, best_span_string, gold_answer_texts)
                     self._official_f1(100 * f1_score)
                     self._official_EM(100 * EM_score)
-
-                self._official_EM(100 * (cat_label == cat_pred))
-                self._official_f1(100 * (cat_label == cat_pred))
+                else:
+                    self._official_EM(100 * (cat_label == cat_pred))
+                    self._official_f1(100 * (cat_label == cat_pred))
 
         return output_dict
 
