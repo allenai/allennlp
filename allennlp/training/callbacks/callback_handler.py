@@ -45,6 +45,9 @@ class CallbackHandler:
                  verbose: bool = False) -> None:
         # Set up callbacks
         self._callbacks: Dict[str, List[EventHandler]] = defaultdict(list)
+
+        # This is just so we can find specific types of callbacks.
+        self._callbacks_by_type: Dict[type, List[Callback]] = defaultdict(list)
         self.state = state
         self.verbose = verbose
 
@@ -52,10 +55,12 @@ class CallbackHandler:
             self.add_callback(callback)
 
     def callbacks(self) -> List[Callback]:
+        # pylint: disable=function-redefined
         """
         Returns the callbacks associated with this handler.
         Each callback may be registered under multiple events,
-        but we make sure to only return it once.
+        but we make sure to only return it once. If `typ` is specified,
+        only returns callbacks of that type.
         """
         return list({callback.callback
                      for callback_list in self._callbacks.values()
@@ -68,6 +73,8 @@ class CallbackHandler:
             self._callbacks[event].append(EventHandler(name, callback, method, priority))
             self._callbacks[event].sort(key=lambda eh: eh.priority)
 
+            self._callbacks_by_type[type(callback)].append(callback)
+
     def fire_event(self, event: str) -> None:
         """
         Runs every callback registered for the provided event,
@@ -75,5 +82,5 @@ class CallbackHandler:
         """
         for event_handler in self._callbacks.get(event, []):
             if self.verbose:
-                logger.info(f"event {event} -> {event_handler}")
+                logger.info(f"event {event} -> {event_handler.name}")
             event_handler.handler(self.state)

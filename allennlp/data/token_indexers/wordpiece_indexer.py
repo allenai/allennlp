@@ -3,7 +3,7 @@ from typing import Dict, List, Callable
 import logging
 
 from overrides import overrides
-
+import torch
 from pytorch_pretrained_bert.tokenization import BertTokenizer
 
 from allennlp.common.util import pad_sequence_to_length
@@ -93,6 +93,7 @@ class WordpieceIndexer(TokenIndexer[int]):
         self.use_starting_offsets = use_starting_offsets
         self._do_lowercase = do_lowercase
         self._truncate_long_sequences = truncate_long_sequences
+        self._warned_about_truncation = False
 
         if never_lowercase is None:
             # Use the defaults
@@ -122,6 +123,14 @@ class WordpieceIndexer(TokenIndexer[int]):
         for word, idx in self.vocab.items():
             vocabulary._token_to_index[self._namespace][word] = idx
             vocabulary._index_to_token[self._namespace][idx] = word
+
+    def _warn_about_truncation(self, tokens: List[Token]) -> None:
+        if not self._warned_about_truncation:
+            logger.warning("Too many wordpieces, truncating sequence. "
+                           "If you would like a sliding window, set `truncate_long_sequences` to False."
+                           f"The offending input was: {str([token.text for token in tokens])}."
+                           "To avoid polluting your logs we will not warn about this again.")
+            self._warned_about_truncation = True
 
     @overrides
     def tokens_to_indices(self,
@@ -207,8 +216,7 @@ class WordpieceIndexer(TokenIndexer[int]):
             wordpiece_windows = [self._add_start_and_end(flat_wordpiece_ids)]
             token_type_ids = self._extend(flat_token_type_ids)
         elif self._truncate_long_sequences:
-            logger.warning("Too many wordpieces, truncating sequence. If you would like a sliding window, set"
-                           "`truncate_long_sequences` to False %s", str([token.text for token in tokens]))
+            self._warn_about_truncation(tokens)
             wordpiece_windows = [self._add_start_and_end(flat_wordpiece_ids[:pieces_accumulated])]
             token_type_ids = self._extend(flat_token_type_ids[:pieces_accumulated])
         else:
@@ -263,22 +271,18 @@ class WordpieceIndexer(TokenIndexer[int]):
                 token_type_ids +
                 [last for _ in self._end_piece_ids])
 
-
-    @overrides
-    def get_padding_token(self) -> int:
-        return 0
-
     @overrides
     def get_padding_lengths(self, token: int) -> Dict[str, int]:  # pylint: disable=unused-argument
         return {}
 
     @overrides
-    def pad_token_sequence(self,
-                           tokens: Dict[str, List[int]],
-                           desired_num_tokens: Dict[str, int],
-                           padding_lengths: Dict[str, int]) -> Dict[str, List[int]]:  # pylint: disable=unused-argument
-        return {key: pad_sequence_to_length(val, desired_num_tokens[key])
+    def as_padded_tensor(self,
+                         tokens: Dict[str, List[int]],
+                         desired_num_tokens: Dict[str, int],
+                         padding_lengths: Dict[str, int]) -> Dict[str, torch.Tensor]:  # pylint: disable=unused-argument
+        return {key: torch.LongTensor(pad_sequence_to_length(val, desired_num_tokens[key]))
                 for key, val in tokens.items()}
+
 
     @overrides
     def get_keys(self, index_name: str) -> List[str]:
