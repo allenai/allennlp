@@ -41,7 +41,7 @@ class MultiQA_BERT(Model):
         self._all_qa_count = 0
         self._qas_used_fraction = 1.0
         self.qa_outputs = torch.nn.Linear(self._text_field_embedder.get_output_dim(), 2)
-        self.qa_categorical = torch.nn.Linear(self._text_field_embedder.get_output_dim(), 4)
+        self.qa_yesno = torch.nn.Linear(self._text_field_embedder.get_output_dim(), 3)
 
         initializer(self)
 
@@ -53,7 +53,7 @@ class MultiQA_BERT(Model):
                 passage: Dict[str, torch.LongTensor],
                 span_starts: torch.IntTensor = None,
                 span_ends: torch.IntTensor = None,
-                categorical_labels : torch.IntTensor = None,
+                yesno : torch.IntTensor = None,
                 metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
 
         batch_size, num_of_passage_tokens = passage['bert'].size()
@@ -68,7 +68,11 @@ class MultiQA_BERT(Model):
         span_start_logits = start_logits.squeeze(-1)
         span_end_logits = end_logits.squeeze(-1)
 
-        categorical_logits = self.qa_categorical(torch.max(embedded_chunk, 1)[0])
+        # all input is preprocessed before farword is run, counting the yesno vocabulary
+        # will indicate if yesno support is at all needed.
+        # TODO add option to override this explicitly
+        if self.vocab.get_vocab_size("yesno_labels") > 1:
+            yesno_logits = self.qa_yesno(torch.max(embedded_chunk, 1)[0])
 
         # Adding some masks with numerically stable values
         passage_mask = util.get_text_field_mask(passage).float()
@@ -90,8 +94,8 @@ class MultiQA_BERT(Model):
                                                      repeated_passage_mask[inds_with_gold_answer]), \
                              span_ends.view(-1)[inds_with_gold_answer], ignore_index=-1)
 
-        #if categorical_labels is not None:
-        #    loss += cross_entropy(categorical_logits, categorical_labels)
+        if self.vocab.get_vocab_size("yesno_labels") > 1 and yesno is not None:
+            loss += cross_entropy(yesno_logits, yesno)
 
         output_dict: Dict[str, Any] = {}
         if loss == 0:
@@ -104,8 +108,8 @@ class MultiQA_BERT(Model):
         # Compute F1 and preparing the output dictionary.
         output_dict['best_span_str'] = []
         output_dict['best_span_logit'] = []
-        output_dict['category'] = []
-        output_dict['category_logit'] = []
+        output_dict['yesno'] = []
+        output_dict['yesno_logit'] = []
         output_dict['qid'] = []
 
         # getting best span prediction for
@@ -116,43 +120,52 @@ class MultiQA_BERT(Model):
             best_span_logit = span_start_logits.data.cpu().numpy()[instance_ind, best_span_cpu[instance_ind][0]] + \
                               span_end_logits.data.cpu().numpy()[instance_ind, best_span_cpu[instance_ind][1]]
 
-            category = np.argmax(categorical_logits[instance_ind].data.cpu().numpy())
-            category_logit = categorical_logits[instance_ind,category].data.cpu().numpy()
-            cat_pred = self.vocab.get_token_from_index(category, namespace="categorical_labels")
+            if self.vocab.get_vocab_size("yesno_labels") > 1:
+                yesno = np.argmax(yesno_logits[instance_ind].data.cpu().numpy())
+                yesno_logit = yesno_logits[instance_ind,yesno].data.cpu().numpy()
+                yesno_pred = self.vocab.get_token_from_index(yesno, namespace="yesno_labels")
+            else:
+                yesno_pred = 'no_yesno'
+                yesno_logit = -30.0
 
             passage_str = instance_metadata['original_passage']
             offsets = instance_metadata['token_offsets']
 
             predicted_span = best_span_cpu[instance_ind]
-            if predicted_span[0] == 0 and predicted_span[1] == 0:
-                cat_pred = 'cannot_answer'
-                best_span_string = ''
+            # In this version yesno if not "no_yesno" will be regarded as final answer before the spans are considered.
+            if yesno_pred != 'no_yesno':
+                best_span_string = yesno_pred
             else:
-                cat_pred = ''
-                start_offset = offsets[predicted_span[0]][0]
-                end_offset = offsets[predicted_span[1]][1]
-                best_span_string = passage_str[start_offset:end_offset]
+                if predicted_span[0] == 0 and predicted_span[1] == 0:
+                    best_span_string = 'cannot_answer'
+                else:
+                    start_offset = offsets[predicted_span[0]][0]
+                    end_offset = offsets[predicted_span[1]][1]
+                    best_span_string = passage_str[start_offset:end_offset]
 
             output_dict['best_span_str'].append(best_span_string)
             output_dict['best_span_logit'].append(best_span_logit)
-            output_dict['category'].append(cat_pred)
-            output_dict['category_logit'].append(category_logit)
+            output_dict['yesno'].append(yesno_pred)
+            output_dict['yesno_logit'].append(yesno_logit)
             output_dict['qid'].append(instance_metadata['question_id'])
 
             # In prediction mode we have no gold answers
-            if categorical_labels is not None:
-                cat_label_ind = categorical_labels.data.cpu().numpy()[instance_ind]
-                cat_label = self.vocab.get_token_from_index(cat_label_ind, namespace="categorical_labels")
-                #if cat_label == 'span' and cat_label == cat_pred:
-                if cat_pred != 'cannot_answer' and cat_label != 'cannot_answer':
-                    gold_answer_texts = instance_metadata['answer_texts_list']
-                    f1_score = squad_eval.metric_max_over_ground_truths(squad_eval.f1_score, best_span_string, gold_answer_texts)
-                    EM_score = squad_eval.metric_max_over_ground_truths(squad_eval.exact_match_score, best_span_string, gold_answer_texts)
-                    self._official_f1(100 * f1_score)
-                    self._official_EM(100 * EM_score)
+            if span_starts is not None:
+                yesno_label_ind = yesno.data.cpu().numpy()[instance_ind]
+                yesno_label = self.vocab.get_token_from_index(yesno_label_ind, namespace="yesno_labels")
+
+                if yesno_label != 'no_yesno':
+                    gold_answer_texts = yesno_label
+                elif instance_metadata['cannot_answer']:
+                    gold_answer_texts = ['cannot_answer']
                 else:
-                    self._official_EM(100 * (cat_label == cat_pred))
-                    self._official_f1(100 * (cat_label == cat_pred))
+                    gold_answer_texts = instance_metadata['answer_texts_list']
+
+                f1_score = squad_eval.metric_max_over_ground_truths(squad_eval.f1_score, best_span_string, gold_answer_texts)
+                EM_score = squad_eval.metric_max_over_ground_truths(squad_eval.exact_match_score, best_span_string, gold_answer_texts)
+                self._official_f1(100 * f1_score)
+                self._official_EM(100 * EM_score)
+
 
         return output_dict
 

@@ -161,7 +161,7 @@ class _PredictManager:
                     yield self._predictor.load_line(line)
         else:
             org_input_file = self._input_file
-            if self._input_file.startswith('s3'):
+            if self._input_file.startswith('s3') or self._input_file.startswith('http'):
                 self._input_file = cached_path(self._input_file)
 
             if org_input_file.endswith('gz'):
