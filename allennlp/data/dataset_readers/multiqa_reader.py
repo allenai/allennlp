@@ -290,6 +290,7 @@ class MultiQAReader(DatasetReader):
 
                 inst = {}
                 inst['yesno'] = qa['yesno']
+                inst['cannot_answer'] = qa['cannot_answer']
                 inst['question_tokens'] = qa['question_tokens']
                 inst['tokens'] = curr_context_tokens
                 inst['text'] = qa['question'] + ' [SEP] ' + unproc_context['full_text'][context_char_offset: \
@@ -319,16 +320,16 @@ class MultiQAReader(DatasetReader):
     def gen_question_instances(self, question_chunks):
         instances_to_add = []
         if self._is_training:
-            instances_to_add += random.sample(question_chunks, 1)
-
             # Trying to balance the chunks with answer and the ones without by sampling one from each
             # if each is available
-            #chunks_with_answer = [inst for inst in question_chunks if 'cannot_answer' not in inst['categorical_labels']]
-            #if len(chunks_with_answer) > 0:
-            #    instances_to_add += random.sample(chunks_with_answer, 1)
-            #chunks_without_answer = [inst for inst in question_chunks if 'cannot_answer' in inst['categorical_labels']]
-            #if len(chunks_without_answer) > 0:
-            #    instances_to_add += random.sample(chunks_without_answer, 1)
+            explicit_cannot_answer_chunks = [inst for inst in question_chunks if inst['cannot_answer']]
+            yesno_chunks = [inst for inst in question_chunks if inst['yesno'] != 'no_yesno']
+            span_chunks = [inst for inst in question_chunks if len(inst['answers']) > 0]
+
+            selected_chunks = explicit_cannot_answer_chunks + yesno_chunks + span_chunks
+            if len(selected_chunks) > 0:
+                instances_to_add += random.sample(selected_chunks, 1)
+
         else:
             instances_to_add = question_chunks
 
@@ -402,7 +403,7 @@ def make_multiqa_instance(question_tokens: List[Token],
     passage_field = TextField(tokenized_paragraph, token_indexers)
     fields['passage'] = passage_field
     fields['question'] = TextField(question_tokens, token_indexers)
-    fields['yesno'] = LabelField(yesno, label_namespace="yesno_labels")
+    fields['yesno_labels'] = LabelField(yesno, label_namespace="yesno_labels")
     metadata = {'original_passage': paragraph,
                 'answers_list': answers_list,
                 'cannot_answer': False,

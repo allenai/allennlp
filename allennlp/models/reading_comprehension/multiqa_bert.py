@@ -53,7 +53,7 @@ class MultiQA_BERT(Model):
                 passage: Dict[str, torch.LongTensor],
                 span_starts: torch.IntTensor = None,
                 span_ends: torch.IntTensor = None,
-                yesno : torch.IntTensor = None,
+                yesno_labels : torch.IntTensor = None,
                 metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
 
         batch_size, num_of_passage_tokens = passage['bert'].size()
@@ -94,8 +94,8 @@ class MultiQA_BERT(Model):
                                                      repeated_passage_mask[inds_with_gold_answer]), \
                              span_ends.view(-1)[inds_with_gold_answer], ignore_index=-1)
 
-        if self.vocab.get_vocab_size("yesno_labels") > 1 and yesno is not None:
-            loss += cross_entropy(yesno_logits, yesno)
+        if self.vocab.get_vocab_size("yesno_labels") > 1 and yesno_labels is not None:
+            loss += cross_entropy(yesno_logits, yesno_labels)
 
         output_dict: Dict[str, Any] = {}
         if loss == 0:
@@ -121,9 +121,9 @@ class MultiQA_BERT(Model):
                               span_end_logits.data.cpu().numpy()[instance_ind, best_span_cpu[instance_ind][1]]
 
             if self.vocab.get_vocab_size("yesno_labels") > 1:
-                yesno = np.argmax(yesno_logits[instance_ind].data.cpu().numpy())
-                yesno_logit = yesno_logits[instance_ind,yesno].data.cpu().numpy()
-                yesno_pred = self.vocab.get_token_from_index(yesno, namespace="yesno_labels")
+                yesno_maxind = np.argmax(yesno_logits[instance_ind].data.cpu().numpy())
+                yesno_logit = yesno_logits[instance_ind, yesno_maxind].data.cpu().numpy()
+                yesno_pred = self.vocab.get_token_from_index(yesno_maxind, namespace="yesno_labels")
             else:
                 yesno_pred = 'no_yesno'
                 yesno_logit = -30.0
@@ -151,7 +151,7 @@ class MultiQA_BERT(Model):
 
             # In prediction mode we have no gold answers
             if span_starts is not None:
-                yesno_label_ind = yesno.data.cpu().numpy()[instance_ind]
+                yesno_label_ind = yesno_labels.data.cpu().numpy()[instance_ind]
                 yesno_label = self.vocab.get_token_from_index(yesno_label_ind, namespace="yesno_labels")
 
                 if yesno_label != 'no_yesno':
