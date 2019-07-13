@@ -159,6 +159,42 @@ class MultiQAReader(DatasetReader):
         word_pieces = self._bert_wordpiece_tokenizer(text)
         return len(word_pieces), word_pieces
 
+    def _improve_answer_span(self, doc_tokens, input_start, input_end, tokenizer,
+                             orig_answer_text):
+        """Returns tokenized answer spans that better match the annotated answer."""
+
+        # The SQuAD annotations are character based. We first project them to
+        # whitespace-tokenized words. But then after WordPiece tokenization, we can
+        # often find a "better match". For example:
+        #
+        #   Question: What year was John Smith born?
+        #   Context: The leader was John Smith (1895-1943).
+        #   Answer: 1895
+        #
+        # The original whitespace-tokenized answer will be "(1895-1943).". However
+        # after tokenization, our tokens will be "( 1895 - 1943 ) .". So we can match
+        # the exact answer, 1895.
+        #
+        # However, this is not always possible. Consider the following:
+        #
+        #   Question: What country is the top exporter of electornics?
+        #   Context: The Japanese electronics industry is the lagest in the world.
+        #   Answer: Japan
+        #
+        # In this case, the annotator chose "Japan" as a character sub-span of
+        # the word "Japanese". Since our WordPiece tokenizer does not split
+        # "Japanese", we just use "Japanese" as the annotation. This is fairly rare
+        # in SQuAD, but does happen.
+        tok_answer_text = " ".join(tokenizer(orig_answer_text))
+
+        for new_start in range(input_start, input_end + 1):
+            for new_end in range(input_end, new_start - 1, -1):
+                text_span = " ".join(doc_tokens[new_start:(new_end + 1)])
+                if text_span == tok_answer_text:
+                    return (new_start, new_end)
+
+        return (input_start, input_end)
+
     @profile
     def combine_context(self, context):
         ## reording the documents using TF-IDF distance to the questions
@@ -303,9 +339,12 @@ class MultiQAReader(DatasetReader):
                         answer['token_spans'][1] < window_end_token_offset:
                         qa_metadata['has_answer'] = True
                         answer_token_offset = len(qa['question_tokens']) + 1 - window_start_token_offset
-                        inst['answers'].append((answer['token_spans'][0]+ answer_token_offset, \
-                                                       answer['token_spans'][1] + answer_token_offset,
-                                                       answer['text']))
+
+                        (tok_start_position, tok_end_position) = self._improve_answer_span([t[0] for t in inst['tokens']], \
+                                answer['token_spans'][0] + answer_token_offset, \
+                                answer['token_spans'][1] + answer_token_offset, self._bert_wordpiece_tokenizer, answer['text'])
+
+                        inst['answers'].append((tok_start_position, tok_end_position, answer['text']))
 
                 inst['metadata'] = qa_metadata
                 chunks.append(inst)

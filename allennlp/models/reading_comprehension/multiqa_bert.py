@@ -38,8 +38,6 @@ class MultiQA_BERT(Model):
 
 
         # see usage below for explanation
-        self._all_qa_count = 0
-        self._qas_used_fraction = 1.0
         self.qa_outputs = torch.nn.Linear(self._text_field_embedder.get_output_dim(), 2)
         self.qa_yesno = torch.nn.Linear(self._text_field_embedder.get_output_dim(), 3)
 
@@ -171,8 +169,7 @@ class MultiQA_BERT(Model):
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         return {'EM': self._official_EM.get_metric(reset),
-                'f1': self._official_f1.get_metric(reset),
-                'qas_used_fraction': 1.0}
+                'f1': self._official_f1.get_metric(reset)}
 
 
     @staticmethod
