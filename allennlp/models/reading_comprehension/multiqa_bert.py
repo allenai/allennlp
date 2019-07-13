@@ -69,8 +69,8 @@ class MultiQA_BERT(Model):
         # all input is preprocessed before farword is run, counting the yesno vocabulary
         # will indicate if yesno support is at all needed.
         # TODO add option to override this explicitly
-        if self.vocab.get_vocab_size("yesno_labels") > 1:
-            yesno_logits = self.qa_yesno(torch.max(embedded_chunk, 1)[0])
+        #if self.vocab.get_vocab_size("yesno_labels") > 1:
+        #    yesno_logits = self.qa_yesno(torch.max(embedded_chunk, 1)[0])
 
         # Adding some masks with numerically stable values
         passage_mask = util.get_text_field_mask(passage).float()

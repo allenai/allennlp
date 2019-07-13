@@ -362,7 +362,8 @@ class MultiQAReader(DatasetReader):
             # Trying to balance the chunks with answer and the ones without by sampling one from each
             # if each is available
             explicit_cannot_answer_chunks = [inst for inst in question_chunks if inst['cannot_answer']]
-            yesno_chunks = [inst for inst in question_chunks if inst['yesno'] != 'no_yesno']
+            #yesno_chunks = [inst for inst in question_chunks if inst['yesno'] != 'no_yesno']
+            yesno_chunks = []
             span_chunks = [inst for inst in question_chunks if len(inst['answers']) > 0]
 
             selected_chunks = explicit_cannot_answer_chunks + yesno_chunks + span_chunks
