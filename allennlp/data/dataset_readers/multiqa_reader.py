@@ -343,11 +343,13 @@ class MultiQAReader(DatasetReader):
                         qa_metadata['has_answer'] = True
                         answer_token_offset = len(qa['question_tokens']) + 1 - window_start_token_offset
 
-                        (tok_start_position, tok_end_position) = self._improve_answer_span([t[0] for t in inst['tokens']], \
-                                answer['token_spans'][0] + answer_token_offset, \
-                                answer['token_spans'][1] + answer_token_offset, self._bert_wordpiece_tokenizer, answer['text'])
+                        #(tok_start_position, tok_end_position) = self._improve_answer_span([t[0] for t in inst['tokens']], \
+                        #        answer['token_spans'][0] + answer_token_offset, \
+                        #        answer['token_spans'][1] + answer_token_offset, self._bert_wordpiece_tokenizer, answer['text'])
 
-                        inst['answers'].append((tok_start_position, tok_end_position, answer['text']))
+                        inst['answers'].append((answer['token_spans'][0] + answer_token_offset,\
+                                                answer['token_spans'][1] + answer_token_offset,\
+                                                answer['text']))
 
                 inst['metadata'] = qa_metadata
                 chunks.append(inst)

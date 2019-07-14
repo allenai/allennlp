@@ -6,6 +6,7 @@ import torch
 import torch.nn.functional as F
 from torch.nn.functional import nll_loss
 from torch.nn.functional import cross_entropy
+from torch.nn import CrossEntropyLoss
 import os
 import random
 import traceback
@@ -72,28 +73,37 @@ class MultiQA_BERT(Model):
         if self.vocab.get_vocab_size("yesno_labels") > 1:
             yesno_logits = self.qa_yesno(torch.max(embedded_chunk, 1)[0])
 
+        span_starts.clamp_(0, passage_length)
+        span_ends.clamp_(0, passage_length)
+
+        loss_fct = CrossEntropyLoss(ignore_index=passage_length)
+        start_loss = loss_fct(start_logits.squeeze(-1), span_starts.view(-1))
+        end_loss = loss_fct(end_logits.squeeze(-1), span_ends.view(-1))
+        loss = (start_loss + end_loss) / 2
+
         # Adding some masks with numerically stable values
-        passage_mask = util.get_text_field_mask(passage).float()
+        if False:
+            passage_mask = util.get_text_field_mask(passage).float()
 
-        repeated_passage_mask = passage_mask.unsqueeze(1).repeat(1, 1, 1)
-        repeated_passage_mask = repeated_passage_mask.view(batch_size, passage_length)
-        span_start_logits = util.replace_masked_values(span_start_logits, repeated_passage_mask, -1e7)
-        span_end_logits = util.replace_masked_values(span_end_logits, repeated_passage_mask, -1e7)
+            repeated_passage_mask = passage_mask.unsqueeze(1).repeat(1, 1, 1)
+            repeated_passage_mask = repeated_passage_mask.view(batch_size, passage_length)
+            span_start_logits = util.replace_masked_values(span_start_logits, repeated_passage_mask, -1e7)
+            span_end_logits = util.replace_masked_values(span_end_logits, repeated_passage_mask, -1e7)
 
-        inds_with_gold_answer = np.argwhere(span_starts.view(-1).cpu().numpy() >= 0)
-        inds_with_gold_answer = inds_with_gold_answer.squeeze() if len(inds_with_gold_answer) > 1 else inds_with_gold_answer
+            inds_with_gold_answer = np.argwhere(span_starts.view(-1).cpu().numpy() >= 0)
+            inds_with_gold_answer = inds_with_gold_answer.squeeze() if len(inds_with_gold_answer) > 1 else inds_with_gold_answer
 
-        loss = 0
-        if len(inds_with_gold_answer) > 0:
-            loss += nll_loss(util.masked_log_softmax(span_start_logits[inds_with_gold_answer], \
-                                                    repeated_passage_mask[inds_with_gold_answer]), \
-                            span_starts.view(-1)[inds_with_gold_answer], ignore_index=-1)
-            loss += nll_loss(util.masked_log_softmax(span_end_logits[inds_with_gold_answer], \
-                                                     repeated_passage_mask[inds_with_gold_answer]), \
-                             span_ends.view(-1)[inds_with_gold_answer], ignore_index=-1)
+            loss = 0
+            if len(inds_with_gold_answer) > 0:
+                loss += nll_loss(util.masked_log_softmax(span_start_logits[inds_with_gold_answer], \
+                                                        repeated_passage_mask[inds_with_gold_answer]), \
+                                span_starts.view(-1)[inds_with_gold_answer], ignore_index=-1)
+                loss += nll_loss(util.masked_log_softmax(span_end_logits[inds_with_gold_answer], \
+                                                         repeated_passage_mask[inds_with_gold_answer]), \
+                                 span_ends.view(-1)[inds_with_gold_answer], ignore_index=-1)
 
-        if self.vocab.get_vocab_size("yesno_labels") > 1 and yesno_labels is not None:
-            loss += cross_entropy(yesno_logits, yesno_labels)
+            if self.vocab.get_vocab_size("yesno_labels") > 1 and yesno_labels is not None:
+                loss += cross_entropy(yesno_logits, yesno_labels)
 
         output_dict: Dict[str, Any] = {}
         if loss == 0:
@@ -157,7 +167,7 @@ class MultiQA_BERT(Model):
                 yesno_label = self.vocab.get_token_from_index(yesno_label_ind, namespace="yesno_labels")
 
                 if yesno_label != 'no_yesno':
-                    gold_answer_texts = yesno_label
+                    gold_answer_texts = [yesno_label]
                 elif instance_metadata['cannot_answer']:
                     gold_answer_texts = ['cannot_answer']
                 else:
