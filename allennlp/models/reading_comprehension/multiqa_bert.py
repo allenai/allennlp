@@ -79,7 +79,6 @@ class MultiQA_BERT(Model):
         loss_fct = CrossEntropyLoss(ignore_index=passage_length)
         start_loss = loss_fct(start_logits.squeeze(-1), span_starts.view(-1))
         end_loss = loss_fct(end_logits.squeeze(-1), span_ends.view(-1))
-        loss = (start_loss + end_loss) / 2
 
         # Adding some masks with numerically stable values
         if False:
@@ -102,8 +101,11 @@ class MultiQA_BERT(Model):
                                                          repeated_passage_mask[inds_with_gold_answer]), \
                                  span_ends.view(-1)[inds_with_gold_answer], ignore_index=-1)
 
-            if self.vocab.get_vocab_size("yesno_labels") > 1 and yesno_labels is not None:
-                loss += cross_entropy(yesno_logits, yesno_labels)
+        if self.vocab.get_vocab_size("yesno_labels") > 1 and yesno_labels is not None:
+            yesno_loss = loss_fct(yesno_logits, yesno_labels)
+            loss = (start_loss + end_loss + yesno_loss) / 3
+        else:
+            loss = (start_loss + end_loss) / 2
 
         output_dict: Dict[str, Any] = {}
         if loss == 0:
