@@ -124,7 +124,8 @@ class MultiQAReader(DatasetReader):
                  sample_size: int = -1,
                  STRIDE: int = 128,
                  MAX_WORDPIECES: int = 512,
-                 random_seed: int = 0
+                 random_seed: int = 0,
+                 support_yesno: bool = True
                  ) -> None:
         super().__init__(lazy)
 
@@ -132,6 +133,7 @@ class MultiQAReader(DatasetReader):
         # unstable when fine-tuned + the insure results reproducibility
         random.seed(random_seed)
 
+        self._support_yesno = support_yesno
         self._preproc_outputfile = preproc_outputfile
         self._STRIDE = STRIDE
         # NOTE AllenNLP automatically adds [CLS] and [SEP] word peices in the begining and end of the context,
@@ -256,8 +258,9 @@ class MultiQAReader(DatasetReader):
                                     answer_text_list.append(instance["text"])
                         elif 'yesno' in ac:
                             # Supporting only one answer of type yesno
-                            if "single_answer" in ac['yesno']:
+                            if self._support_yesno and "single_answer" in ac['yesno']:
                                 qa['yesno'] = ac['yesno']['single_answer']
+
                 elif 'cannot_answer' in qa['answers']['open-ended']:
                     qa['cannot_answer'] = True
 
@@ -361,14 +364,12 @@ class MultiQAReader(DatasetReader):
         if self._is_training:
             # Trying to balance the chunks with answer and the ones without by sampling one from each
             # if each is available
-            explicit_cannot_answer_chunks = [inst for inst in question_chunks if inst['cannot_answer']]
-            #yesno_chunks = [inst for inst in question_chunks if inst['yesno'] != 'no_yesno']
-            yesno_chunks = []
-            span_chunks = [inst for inst in question_chunks if len(inst['answers']) > 0]
-
-            selected_chunks = explicit_cannot_answer_chunks + yesno_chunks + span_chunks
-            if len(selected_chunks) > 0:
-                instances_to_add += random.sample(selected_chunks, 1)
+            cannot_answer = [inst for inst in question_chunks if inst['cannot_answer']]
+            yesno = [inst for inst in question_chunks if inst['yesno'] != 'no_yesno']
+            spans = [inst for inst in question_chunks if len(inst['answers']) > 0]
+            chunks_to_select_from = cannot_answer + yesno + spans
+            if len(chunks_to_select_from) > 0:
+                instances_to_add += random.sample(chunks_to_select_from, 1)
 
         else:
             instances_to_add = question_chunks
