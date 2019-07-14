@@ -123,7 +123,7 @@ class MultiQAReader(DatasetReader):
                  is_training = False,
                  sample_size: int = -1,
                  STRIDE: int = 128,
-                 MAX_WORDPIECES: int = 512,
+                 MAX_WORDPIECES: int = 400,
                  random_seed: int = 0,
                  support_yesno: bool = True
                  ) -> None:
