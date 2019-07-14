@@ -278,7 +278,7 @@ class Trainer(TrainerBase):
                                    " 'loss' key in the output of model.forward(inputs).")
             loss = None
 
-        return loss
+        return loss, output_dict
 
 
     @profile
@@ -329,7 +329,7 @@ class Trainer(TrainerBase):
             if batches_this_epoch == 1:
                 self.optimizer.zero_grad()
 
-            loss = self.batch_loss(batch_group, for_training=True)
+            loss, output_dict = self.batch_loss(batch_group, for_training=True)
 
             if torch.isnan(loss):
                 raise ValueError("nan loss encountered")
@@ -453,9 +453,11 @@ class Trainer(TrainerBase):
                                        total=num_validation_batches)
         batches_this_epoch = 0
         val_loss = 0
+        # ALON ////
+        MultiQA_BERT_res = {}
         for batch_group in val_generator_tqdm:
 
-            loss = self.batch_loss(batch_group, for_training=False)
+            loss, _o = self.batch_loss(batch_group, for_training=False)
             if loss is not None:
                 # You shouldn't necessarily have to compute a loss for validation, so we allow for
                 # `loss` to be None.  We need to be careful, though - `batches_this_epoch` is
@@ -466,7 +468,23 @@ class Trainer(TrainerBase):
                 val_loss += loss.detach().cpu().numpy()
 
             # Update the description with the latest metrics
+
+
+            # ALON - due to the fact that with BERTLarge we are unable to add all question-chunks to the same
+            # batch we will need to compute the validation scores outside of the batch.
             val_metrics = training_util.get_metrics(self.model, val_loss, batches_this_epoch)
+            if str(type(self.model)).find('MultiQA_BERT') > -1:
+                for best_span_str,best_span_logit, yesno_logit, qid, EM, f1 in \
+                        zip(_o['best_span_str'],_o['best_span_logit'], _o['yesno_logit'],_o['qid'],_o['EM'],_o['f1']):
+                    if qid not in MultiQA_BERT_res or best_span_logit + yesno_logit > MultiQA_BERT_res[qid]['score']:
+                        MultiQA_BERT_res[qid] = {'score':best_span_logit + yesno_logit, \
+                            'best_span_str':best_span_str,'EM':EM, 'f1':f1}
+
+                val_metrics['EM'] = sum([MultiQA_BERT_res[q]['EM'] for q in MultiQA_BERT_res.keys()]) / \
+                                    len(MultiQA_BERT_res.keys())
+                val_metrics['f1'] = sum([MultiQA_BERT_res[q]['f1'] for q in MultiQA_BERT_res.keys()]) / \
+                                    len(MultiQA_BERT_res.keys())
+
             description = training_util.description_from_metrics(val_metrics)
             val_generator_tqdm.set_description(description, refresh=False)
 

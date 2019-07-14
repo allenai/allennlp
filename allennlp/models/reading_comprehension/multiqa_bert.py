@@ -109,6 +109,10 @@ class MultiQA_BERT(Model):
         output_dict['yesno'] = []
         output_dict['yesno_logit'] = []
         output_dict['qid'] = []
+        if span_starts is not None:
+            output_dict['EM'] = []
+            output_dict['f1'] = []
+
 
         # getting best span prediction for
         best_span = self._get_example_predications(span_start_logits, span_end_logits, self._max_span_length)
@@ -163,6 +167,8 @@ class MultiQA_BERT(Model):
                 EM_score = squad_eval.metric_max_over_ground_truths(squad_eval.exact_match_score, best_span_string, gold_answer_texts)
                 self._official_f1(100 * f1_score)
                 self._official_EM(100 * EM_score)
+                output_dict['EM'].append(100 * EM_score)
+                output_dict['f1'].append(100 * f1_score)
 
 
         return output_dict
