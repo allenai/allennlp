@@ -454,7 +454,7 @@ class Trainer(TrainerBase):
         batches_this_epoch = 0
         val_loss = 0
         # ALON ////
-        MultiQA_BERT_res = {}
+        multiqa_res = {}
         for batch_group in val_generator_tqdm:
 
             loss, _o = self.batch_loss(batch_group, for_training=False)
@@ -476,14 +476,14 @@ class Trainer(TrainerBase):
             if str(type(self.model)).find('MultiQA_BERT') > -1:
                 for best_span_str,best_span_logit, yesno_logit, qid, EM, f1 in \
                         zip(_o['best_span_str'],_o['best_span_logit'], _o['yesno_logit'],_o['qid'],_o['EM'],_o['f1']):
-                    if qid not in MultiQA_BERT_res or best_span_logit + yesno_logit > MultiQA_BERT_res[qid]['score']:
-                        MultiQA_BERT_res[qid] = {'score':best_span_logit + yesno_logit, \
+                    if qid not in multiqa_res or best_span_logit + yesno_logit > multiqa_res[qid]['score']:
+                        multiqa_res[qid] = {'score':best_span_logit + yesno_logit, \
                             'best_span_str':best_span_str,'EM':EM, 'f1':f1}
 
-                val_metrics['EM'] = sum([MultiQA_BERT_res[q]['EM'] for q in MultiQA_BERT_res.keys()]) / \
-                                    len(MultiQA_BERT_res.keys())
-                val_metrics['f1'] = sum([MultiQA_BERT_res[q]['f1'] for q in MultiQA_BERT_res.keys()]) / \
-                                    len(MultiQA_BERT_res.keys())
+                val_metrics['EM'] = sum([multiqa_res[q]['EM'] for q in multiqa_res.keys()]) / \
+                                    len(multiqa_res.keys())
+                val_metrics['f1'] = sum([multiqa_res[q]['f1'] for q in multiqa_res.keys()]) / \
+                                    len(multiqa_res.keys())
 
             description = training_util.description_from_metrics(val_metrics)
             val_generator_tqdm.set_description(description, refresh=False)
