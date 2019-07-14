@@ -492,7 +492,7 @@ class Trainer(TrainerBase):
         if self._moving_average is not None:
             self._moving_average.restore()
 
-        return val_loss, batches_this_epoch
+        return val_loss, batches_this_epoch, val_metrics
 
     def train(self) -> Dict[str, Any]:
         """
@@ -536,8 +536,9 @@ class Trainer(TrainerBase):
             if self._validation_data is not None:
                 with torch.no_grad():
                     # We have a validation set, so compute all the metrics on it.
-                    val_loss, num_batches = self._validation_loss()
-                    val_metrics = training_util.get_metrics(self.model, val_loss, num_batches, reset=True)
+                    val_loss, num_batches, val_metrics = self._validation_loss()
+                    # Alon get metrics from validation loss
+                    #val_metrics = training_util.get_metrics(self.model, val_loss, num_batches, reset=True)
 
                     # Check validation metric for early stopping
                     this_epoch_val_metric = val_metrics[self._validation_metric]
