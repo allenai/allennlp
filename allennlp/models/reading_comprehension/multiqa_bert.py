@@ -7,6 +7,7 @@ import torch.nn.functional as F
 from torch.nn.functional import nll_loss
 from torch.nn.functional import cross_entropy
 from torch.nn import CrossEntropyLoss
+from pytorch_pretrained_bert.modeling import BertModel
 import os
 import random
 import traceback
@@ -42,10 +43,21 @@ class MultiQA_BERT(Model):
         self.qa_outputs = torch.nn.Linear(self._text_field_embedder.get_output_dim(), 2)
         self.qa_yesno = torch.nn.Linear(self._text_field_embedder.get_output_dim(), 3)
 
+        self._bert_model = BertModel.from_pretrained("bert-base-uncased")
         initializer(self)
 
         self._official_f1 = Average()
         self._official_EM = Average()
+
+    def bert_offsets_to_wordpiece_offsets(self,bert_offsets):
+        # first offset is [CLS]
+        wordpiece_offsets = [0]
+        last_offset = 0
+        for idx, offset in enumerate(bert_offsets):
+            wordpiece_offsets += [idx for i in range(last_offset,offset)]
+            last_offset = offset
+        return wordpiece_offsets
+
 
     def forward(self,  # type: ignore
                 question: Dict[str, torch.LongTensor],
@@ -57,7 +69,16 @@ class MultiQA_BERT(Model):
 
         batch_size, num_of_passage_tokens = passage['bert'].size()
 
-        embedded_chunk = self._text_field_embedder(passage)
+        # TODO chaged to ids only
+        #embedded_chunk1 = self._text_field_embedder(passage)
+
+        input_ids = passage['bert']
+        token_type_ids = torch.zeros_like(input_ids)
+        mask = (input_ids != 0).long()
+        embedded_chunk, pooled_output = self._bert_model(input_ids=util.combine_initial_dims(input_ids),
+                                                         token_type_ids=util.combine_initial_dims(token_type_ids),
+                                                         attention_mask=util.combine_initial_dims(mask),
+                                                         output_all_encoded_layers=False)
         passage_length = embedded_chunk.size(1)
 
         # BERT for QA is a fully connected linear layer on top of BERT producing 2 vectors of
@@ -76,9 +97,14 @@ class MultiQA_BERT(Model):
         span_starts.clamp_(0, passage_length)
         span_ends.clamp_(0, passage_length)
 
+        # moving to word piece indexes from token indexes of start and end span
+        bert_offsets = passage['bert-offsets'].cpu().numpy()
+        span_starts = torch.LongTensor([bert_offsets[i, span_starts[i]] if span_starts[i] != 0 else 0 for i in range(batch_size)])
+        span_ends = torch.LongTensor([bert_offsets[i, span_ends[i]] if span_ends[i] != 0 else 0 for i in range(batch_size)])
+
         loss_fct = CrossEntropyLoss(ignore_index=passage_length)
-        start_loss = loss_fct(start_logits.squeeze(-1), span_starts.view(-1))
-        end_loss = loss_fct(end_logits.squeeze(-1), span_ends.view(-1))
+        start_loss = loss_fct(start_logits.squeeze(-1), span_starts)
+        end_loss = loss_fct(end_logits.squeeze(-1), span_ends)
 
         # Adding some masks with numerically stable values
         if False:
@@ -153,9 +179,9 @@ class MultiQA_BERT(Model):
                 if predicted_span[0] == 0 and predicted_span[1] == 0:
                     best_span_string = 'cannot_answer'
                 else:
-                    # TODO CLS test
-                    start_offset = offsets[predicted_span[0]-1][0]
-                    end_offset = offsets[predicted_span[1]-1][1]
+                    wordpiece_offsets = self.bert_offsets_to_wordpiece_offsets(bert_offsets[instance_ind][0:len(offsets)])
+                    start_offset = offsets[wordpiece_offsets[predicted_span[0]]][0]
+                    end_offset = offsets[wordpiece_offsets[predicted_span[1]]][1]
                     best_span_string = passage_str[start_offset:end_offset]
 
             output_dict['best_span_str'].append(best_span_string)

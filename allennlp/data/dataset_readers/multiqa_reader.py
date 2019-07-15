@@ -255,9 +255,8 @@ class MultiQAReader(DatasetReader):
                                     # checking if the answer has been detected
                                     if "token_offset" in offsets[instance["doc_id"]][instance["part"]]:
                                         answer_token_offset = offsets[instance["doc_id"]][instance["part"]]['token_offset']
-                                        # TODO testing if tokens need to be moved by 1 to account to the automatic addition of the [CLS]
-                                        detected_answer["token_spans"] = (instance['token_inds'][0] + answer_token_offset + 1,
-                                                                          instance['token_inds'][1] + answer_token_offset + 1)
+                                        detected_answer["token_spans"] = (instance['token_inds'][0] + answer_token_offset,
+                                                                          instance['token_inds'][1] + answer_token_offset)
                                         detected_answer['text'] = instance["text"]
                                         qa['detected_answers'].append(detected_answer)
                                     answer_text_list.append(instance["text"])
