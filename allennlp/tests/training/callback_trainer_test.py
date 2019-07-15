@@ -588,7 +588,7 @@ class TestCallbackTrainer(ModelTestCase):
         new_trainer.train()
 
     def test_trainer_can_run_with_lr_scheduler(self):
-        lr_params = Params({"type": "reduce_on_plateau", "mode": "min"})
+        lr_params = Params({"type": "reduce_on_plateau"})
         lr_scheduler = LearningRateScheduler.from_params(self.optimizer, lr_params)
         callbacks = self.default_callbacks() + [UpdateLearningRate(lr_scheduler)]
 

@@ -1,4 +1,4 @@
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 from overrides import overrides
 import torch
@@ -13,9 +13,8 @@ class LearningRateScheduler(Scheduler, Registrable):
 
     def __init__(self,
                  optimizer: torch.optim.Optimizer,
-                 last_epoch: int = -1,
-                 mode: Optional[str] = None) -> None:
-        super().__init__(optimizer, "lr", last_epoch, mode)
+                 last_epoch: int = -1) -> None:
+        super().__init__(optimizer, "lr", last_epoch)
 
     def get_values(self) -> None:
         raise NotImplementedError
@@ -25,13 +24,7 @@ class LearningRateScheduler(Scheduler, Registrable):
     def from_params(cls, optimizer: torch.optim.Optimizer, params: Params):  # type: ignore
         # pylint: disable=arguments-differ
         scheduler_type = params.pop_choice("type", LearningRateScheduler.list_available())
-        if scheduler_type == "reduce_on_plateau" and "mode" not in params:
-            raise ConfigurationError("ReduceLROnPlateau requires a mode to be specified."
-                                     " This ensures that there are no accidental side effects like"
-                                     " mode not being faithful to the metric being tracked")
-
-        scheduler = LearningRateScheduler.by_name(scheduler_type)(optimizer=optimizer,
-                                                                  **params.as_dict())  # type: ignore
+        scheduler = LearningRateScheduler.by_name(scheduler_type)(optimizer, **params.as_dict())  # type: ignore
         if isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
             return _PyTorchLearningRateSchedulerWithMetricsWrapper(scheduler)
         elif isinstance(scheduler, torch.optim.lr_scheduler._LRScheduler):  # pylint: disable=protected-access
