@@ -153,8 +153,9 @@ class MultiQA_BERT(Model):
                 if predicted_span[0] == 0 and predicted_span[1] == 0:
                     best_span_string = 'cannot_answer'
                 else:
-                    start_offset = offsets[predicted_span[0]][0]
-                    end_offset = offsets[predicted_span[1]][1]
+                    # TODO CLS test
+                    start_offset = offsets[predicted_span[0]-1][0]
+                    end_offset = offsets[predicted_span[1]-1][1]
                     best_span_string = passage_str[start_offset:end_offset]
 
             output_dict['best_span_str'].append(best_span_string)
