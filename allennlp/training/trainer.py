@@ -669,20 +669,8 @@ class Trainer(TrainerBase):
         cuda_device = parse_cuda_device(params.pop("cuda_device", -1))
         grad_norm = params.pop_float("grad_norm", None)
         grad_clipping = params.pop_float("grad_clipping", None)
-
-        if validation_metric[0] == "-":
-            should_decrease = True
-        elif validation_metric[0] == "+":
-            should_decrease = False
-        else:
-            raise ConfigurationError("metric_name must start with + or -")
-
-        lr_scheduler_params = training_util.update_scheduler_params(
-                params.pop("learning_rate_scheduler", None),
-                should_decrease)
-        momentum_scheduler_params = training_util.update_scheduler_params(
-                params.pop("momentum_scheduler", None),
-                should_decrease)
+        lr_scheduler_params = params.pop("learning_rate_scheduler", None)
+        momentum_scheduler_params = params.pop("momentum_scheduler", None)
 
         if isinstance(cuda_device, list):
             model_device = cuda_device[0]

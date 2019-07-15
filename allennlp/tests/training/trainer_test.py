@@ -383,7 +383,7 @@ class TestTrainer(AllenNlpTestCase):
         new_trainer.train()
 
     def test_trainer_can_run_with_lr_scheduler(self):
-        lr_params = Params({"type": "reduce_on_plateau", "mode": "min"})
+        lr_params = Params({"type": "reduce_on_plateau"})
         lr_scheduler = LearningRateScheduler.from_params(self.optimizer, lr_params)
         trainer = Trainer(model=self.model,
                           optimizer=self.optimizer,
@@ -394,66 +394,6 @@ class TestTrainer(AllenNlpTestCase):
                           validation_dataset=self.instances,
                           num_epochs=2)
         trainer.train()
-
-    def test_reduce_on_plateau_and_metric_agree(self):
-        # pylint: disable=protected-access
-        for metric in ["+acc", "-loss"]:
-            trainer_params = Params({
-                    "validation_metric": metric,
-                    "learning_rate_scheduler": {
-                            "type": "reduce_on_plateau"
-                    },
-                    "optimizer": {"type": "adam", "lr": 0.01}})
-            trainer = Trainer.from_params(model=self.model,
-                                          serialization_dir=self.TEST_DIR,
-                                          iterator=self.iterator,
-                                          train_data=self.instances,
-                                          validation_data=self.instances,
-                                          params=trainer_params)
-            if metric[0] == "+":
-                correct_mode = "max"
-                assert trainer._learning_rate_scheduler.lr_scheduler.mode == correct_mode
-            else:
-                correct_mode = "min"
-                assert trainer._learning_rate_scheduler.lr_scheduler.mode == correct_mode
-
-    def test_mode_specified_in_reduce_on_plateau(self):
-        # pylint: disable=protected-access
-        for mode, metric in [("min", "-custom"), ("max", "+custom")]:
-            trainer_params = Params({
-                    "validation_metric": metric,
-                    "learning_rate_scheduler": {
-                            "type": "reduce_on_plateau",
-                            "mode": mode
-                    },
-                    "optimizer": {"type": "adam", "lr": 0.01}})
-            trainer = Trainer.from_params(model=self.model,
-                                          serialization_dir=self.TEST_DIR,
-                                          iterator=self.iterator,
-                                          train_data=self.instances,
-                                          validation_data=self.instances,
-                                          params=trainer_params)
-            assert trainer._learning_rate_scheduler.lr_scheduler.mode == mode
-
-    def test_mode_doesnt_agree_with_metric(self):
-        # pylint: disable=protected-access
-        for mode, metric in [("max", "-custom"), ("min", "+custom")]:
-            trainer_params = Params({
-                    "validation_metric": metric,
-                    "learning_rate_scheduler": {
-                            "type": "reduce_on_plateau",
-                            "mode": mode
-                    },
-                    "optimizer": {"type": "adam", "lr": 0.01}})
-            with self.assertLogs(logger="allennlp.training.util", level="WARNING"):
-                # we warn when the metric and the mode don't agree
-                trainer = Trainer.from_params(model=self.model,
-                                              serialization_dir=self.TEST_DIR,
-                                              iterator=self.iterator,
-                                              train_data=self.instances,
-                                              validation_data=self.instances,
-                                              params=trainer_params)
-            assert trainer._learning_rate_scheduler.lr_scheduler.mode == mode
 
     def test_trainer_can_resume_with_lr_scheduler(self):
         lr_scheduler = LearningRateScheduler.from_params(

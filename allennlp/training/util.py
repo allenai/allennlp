@@ -428,7 +428,6 @@ def evaluate(model: Model,
 
         return final_metrics
 
-
 def description_from_metrics(metrics: Dict[str, float]) -> str:
     if (not HasBeenWarned.tqdm_ignores_underscores and
                 any(metric_name.startswith("_") for metric_name in metrics)):
@@ -438,22 +437,3 @@ def description_from_metrics(metrics: Dict[str, float]) -> str:
     return ', '.join(["%s: %.4f" % (name, value)
                       for name, value in
                       metrics.items() if not name.startswith("_")]) + " ||"
-
-
-def update_scheduler_params(params: Optional[Params], should_decrease: bool) -> Params:
-    """Updates the params to specify the mode, if not specified, based on the
-    if the validation metric is decreasing or not
-    """
-    def _is_faithful(mode: str, should_decrease: bool) -> bool:
-        if mode not in ["min", "max"]:
-            raise ConfigurationError("mode should be min or max")
-        return bool((mode == "min" and should_decrease) or (mode == "max" and not should_decrease))
-
-    if params is not None:
-        if "mode" in params:
-            if not _is_faithful(params.get("mode"), should_decrease):
-                logger.warning("The mode for the scheduler and the metrics are not "
-                               "faithful to each other.")
-        else:
-            params["mode"] = "min" if should_decrease else "max"
-    return params
