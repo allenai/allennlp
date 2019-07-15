@@ -184,8 +184,10 @@ class MultiQA_BERT(Model):
                     best_span_string = 'cannot_answer'
                 else:
                     wordpiece_offsets = self.bert_offsets_to_wordpiece_offsets(bert_offsets[instance_ind][0:len(offsets)])
-                    start_offset = offsets[wordpiece_offsets[predicted_span[0]]][0]
-                    end_offset = offsets[wordpiece_offsets[predicted_span[1]]][1]
+                    start_offset = offsets[wordpiece_offsets[predicted_span[0] if predicted_span[0] < len(wordpiece_offsets) \
+                        else len(wordpiece_offsets)-1]][0]
+                    end_offset = offsets[wordpiece_offsets[predicted_span[1] if predicted_span[1] < len(wordpiece_offsets) \
+                        else len(wordpiece_offsets)-1]][1]
                     best_span_string = passage_str[start_offset:end_offset]
 
             output_dict['best_span_str'].append(best_span_string)
