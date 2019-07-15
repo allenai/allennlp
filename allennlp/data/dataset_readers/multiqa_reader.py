@@ -248,6 +248,9 @@ class MultiQAReader(DatasetReader):
                         if 'extractive' in ac:
                             # Supporting only one answer of type extractive (future version will support list and set)
                             if "single_answer" in ac['extractive']:
+                                answer_text_list.append(ac['extractive']["single_answer"]["answer"])
+                                if 'aliases' in ac['extractive']["single_answer"]:
+                                    answer_text_list += ac['extractive']["single_answer"]["aliases"]
                                 for instance in ac['extractive']["single_answer"]["instances"]:
                                     detected_answer = {}
                                     # checking if the answer has been detected
@@ -266,7 +269,7 @@ class MultiQAReader(DatasetReader):
                 elif 'cannot_answer' in qa['answers']['open-ended']:
                     qa['cannot_answer'] = True
 
-            qa['answer_text_list'] = answer_text_list
+            qa['answer_text_list'] = list(set(answer_text_list))
 
         return context
 
