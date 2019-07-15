@@ -136,9 +136,11 @@ class MultiQAReader(DatasetReader):
         self._support_yesno = support_yesno
         self._preproc_outputfile = preproc_outputfile
         self._STRIDE = STRIDE
+        # TODO remove this
         # NOTE AllenNLP automatically adds [CLS] and [SEP] word peices in the begining and end of the context,
         # therefore we need to subtract 2
-        self._MAX_WORDPIECES = MAX_WORDPIECES - 2
+        #self._MAX_WORDPIECES = MAX_WORDPIECES - 2
+        self._MAX_WORDPIECES = MAX_WORDPIECES
         self._tokenizer = tokenizer or WordTokenizer()
         self._dataset_weight = dataset_weight
         self._sample_size = sample_size
@@ -282,6 +284,8 @@ class MultiQAReader(DatasetReader):
         # We could have contexts that are longer than the maximum sequence length.
         # To tackle this we'll implement a sliding window approach, where we take chunks
         # of up to our max length with a fixed stride.
+
+        # TODO remove this
         # splitting into chuncks that are not larger than 510 token pieces (NOTE AllenNLP
         # adds the [CLS] and [SEP] token pieces automatically)
         per_question_chunks = []
@@ -299,10 +303,11 @@ class MultiQAReader(DatasetReader):
                 if curr_token_ix >= len(unproc_context['context_tokens']):
                     continue
 
-                curr_context_tokens = qa['question_tokens'] + [['[SEP]',len(qa['question']) + 1]]
+                curr_context_tokens = [('[CLS]',0)]  + [(t[0], t[1] + 6) for t in qa['question_tokens']] + \
+                                      [('[SEP]',len(qa['question']) + 7)]
                 context_char_offset = unproc_context['context_tokens'][curr_token_ix][1]
-                # 5 chars for [SEP], 1 + 1 chars for spaces
-                question_char_offset = len(qa['question']) + 5 + 1 + 1
+                # 5 chars for [CLS], 1 chars for spaces, 5 chars for [SEP], 1 + 1 chars for spaces
+                question_char_offset = (5 + 1) + len(qa['question']) + (5 + 1 + 1)
                 num_of_wordpieces = 0
                 while num_of_wordpieces < self._MAX_WORDPIECES - num_of_question_wordpieces - 1 \
                         and curr_token_ix < len(unproc_context['context_tokens']):
@@ -326,14 +331,15 @@ class MultiQAReader(DatasetReader):
                         curr_context_tokens.append((curr_token_text,curr_token_offset))
                     curr_token_ix += 1
 
+                curr_context_tokens.append(('[SEP]',curr_token_offset + 1))
 
                 inst = {}
                 inst['yesno'] = qa['yesno']
                 inst['cannot_answer'] = qa['cannot_answer']
                 inst['question_tokens'] = qa['question_tokens']
                 inst['tokens'] = curr_context_tokens
-                inst['text'] = qa['question'] + ' [SEP] ' + unproc_context['full_text'][context_char_offset: \
-                            context_char_offset + curr_context_tokens[-1][1] + len(curr_context_tokens[-1][0]) + 1]
+                inst['text'] = '[CLS] ' + qa['question'] + ' [SEP] ' + unproc_context['full_text'][context_char_offset: \
+                            context_char_offset + curr_context_tokens[-1][1] - question_char_offset] + ' [SEP]'
                 inst['answers'] = []
                 qa_metadata = {'has_answer': False, 'dataset': header['dataset_name'], "question_id": qa['qid'], \
                                'answer_texts_list': list(set(qa['answer_text_list']))}
