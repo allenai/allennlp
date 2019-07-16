@@ -144,10 +144,6 @@ class SimpleTagger(Model):
 
         output_dict = {"logits": logits, "class_probabilities": class_probabilities}
 
-        # if tags is not None:
-        #     print(tags.shape)
-        #     print(logits.shape)
-        #     print(mask.shape)
         if tags is not None:
             loss = sequence_cross_entropy_with_logits(logits, tags, mask)
             for metric in self.metrics.values():

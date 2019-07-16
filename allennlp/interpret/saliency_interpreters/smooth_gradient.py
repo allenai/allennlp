@@ -9,14 +9,15 @@ from allennlp.common.util import JsonDict, sanitize
 from allennlp.interpret.saliency_interpreters.saliency_interpreter import SaliencyInterpreter
 from allennlp.modules.text_field_embedders import TextFieldEmbedder
 from allennlp.data import Instance
-
+from allennlp.predictors import Predictor
 
 @SaliencyInterpreter.register('smooth-gradient')
 class SmoothGradient(SaliencyInterpreter):
     """
     Interprets the prediction using SmoothGrad (https://arxiv.org/abs/1706.03825)
     """
-    def __init__(self) -> None:
+    def __init__(self, predictor: Predictor) -> None:
+        self.predictor = predictor
         # Hyperparameters
         self.stdev = 0.01
         self.num_samples = 25
@@ -50,7 +51,7 @@ class SmoothGradient(SaliencyInterpreter):
         """
         def forward_hook(module, inp, output): # pylint: disable=unused-argument
             # Random noise = N(0, stdev * (max-min))
-            scale = output.detach.max() - output.detach.min()
+            scale = output.detach().max() - output.detach().min()
             noise = torch.randn(output.shape).to(output.device) * stdev * scale
 
             # Add the random noise
