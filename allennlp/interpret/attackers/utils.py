@@ -13,6 +13,7 @@ def get_fields_to_compare(inputs: JsonDict, instance: Instance, input_field_to_a
         A labeled instance that is output from json_to_labeled_instances().
     input_field_to_attack: str
         The key in the inputs JsonDict you want to attack, e.g., `tokens`.
+
     Returns
     -------
     JsonDict

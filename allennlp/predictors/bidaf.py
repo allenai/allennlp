@@ -1,14 +1,17 @@
 # pylint: disable=protected-access
 from copy import deepcopy
 from typing import Dict, List
+
 from overrides import overrides
-import numpy as np
+import numpy
+
 from allennlp.common.util import JsonDict
 from allennlp.data import Instance
 from allennlp.data.tokenizers import Token
 from allennlp.predictors.predictor import Predictor
-from allennlp.data.fields import IndexField, TextField, ListField, \
-    LabelField, SpanField, SequenceLabelField, SequenceField
+from allennlp.data.fields import (IndexField, TextField, ListField,
+    LabelField, SpanField, SequenceLabelField, SequenceField)
+
 
 @Predictor.register('machine-comprehension')
 class BidafPredictor(Predictor):
@@ -48,22 +51,18 @@ class BidafPredictor(Predictor):
     @overrides
     def predictions_to_labeled_instances(self,
                                          instance: Instance,
-                                         outputs: Dict[str, np.ndarray]) -> List[Instance]:
-        """
-        NAQANET has the following fields, answer_as_passage_spans,  answer_as_question_spans,
-        answer_as_add_sub_expressions, answer_as_counts. We need to provide labels for all of them.
-        """
+                                         outputs: Dict[str, numpy.ndarray]) -> List[Instance]:
         new_instance = deepcopy(instance)
         # For BiDAF
         if 'best_span' in outputs:
             span_start_label = outputs['best_span'][0]
             span_end_label = outputs['best_span'][1]
-            new_instance.add_field('span_start',
-                                   IndexField(int(span_start_label), new_instance['passage'])) # type: ignore
-            new_instance.add_field('span_end',
-                                   IndexField(int(span_end_label), new_instance['passage'])) # type: ignore
+            passage_field: SequenceField = new_instance['passage'] # type: ignore
+            new_instance.add_field('span_start', IndexField(int(span_start_label), passage_field))
+            new_instance.add_field('span_end', IndexField(int(span_end_label), passage_field))
 
-        # For NAQANet model
+        # For NAQANet model. It has the fields: answer_as_passage_spans,
+        # answer_as_question_spans, answer_as_add_sub_expressions, answer_as_counts. We need labels for all.
         elif 'answer' in outputs:
             answer_type = outputs['answer']['answer_type']
 
@@ -80,16 +79,16 @@ class BidafPredictor(Predictor):
                 word_span_start = None
                 word_span_end = None
                 offsets = new_instance['metadata'].metadata['passage_token_offsets'] # type: ignore
-                for idx, offset in enumerate(offsets):
+                for index, offset in enumerate(offsets):
                     if offset[0] == span[0]:
-                        word_span_start = idx
+                        word_span_start = index
                     if offset[1] == span[1]:
-                        word_span_end = idx
+                        word_span_end = index
 
                 passage_field: SequenceField = new_instance['passage']  # type: ignore
                 field = ListField([SpanField(word_span_start,
                                              word_span_end,
-                                             passage_field)]) # type: ignore
+                                             passage_field)])
                 new_instance.add_field('answer_as_passage_spans', field)
 
             # When the answer is an arithmetic calculation
@@ -97,8 +96,8 @@ class BidafPredictor(Predictor):
                 # The different numbers in the passage that the model encounters
                 sequence_labels = outputs['answer']['numbers']
 
-                numbers_as_tokens = \
-                [Token(str(number['value'])) for number in outputs['answer']['numbers']]
+                numbers_as_tokens = [Token(str(number['value']))
+                                     for number in outputs['answer']['numbers']]
                 # hack copied from https://github.com/
                 # allenai/allennlp/blob/master/allennlp/
                 # data/dataset_readers/reading_comprehension/drop.py#L232
@@ -106,10 +105,8 @@ class BidafPredictor(Predictor):
                 numbers_in_passage_field = TextField(numbers_as_tokens,
                                                      self._dataset_reader._token_indexers) # type: ignore
 
-                # Based on ``find_valid_add_sub_expressions``, it seems
-                # like negative signs are 2 instead of -1.
-                # The numbers in the passage are given signs, that's what
-                # we are labeling here
+                # Based on ``find_valid_add_sub_expressions``, negative signs are 2 instead of -1.
+                # The numbers in the passage are given signs, that's what we are labeling here.
                 labels = []
                 for label in sequence_labels:
                     if label['sign'] == -1:
@@ -128,17 +125,17 @@ class BidafPredictor(Predictor):
                 # Convert character span indices into word span indices
                 word_span_start = None
                 word_span_end = None
-                for idx, offset in \
-                    enumerate(new_instance['metadata'].metadata['question_token_offsets']): # type: ignore
+                question_offsets = new_instance['metadata'].metadata['question_token_offsets']  # type: ignore
+                for index, offset in question_offsets:
                     if offset[0] == span[0]:
-                        word_span_start = idx
+                        word_span_start = index
                     if offset[1] == span[1]:
-                        word_span_end = idx
+                        word_span_end = index
 
                 question_field: SequenceField = new_instance['question'] # type: ignore
                 field = ListField([SpanField(word_span_start,
                                              word_span_end,
-                                             question_field)]) # type: ignore
+                                             question_field)])
                 new_instance.add_field('answer_as_question_spans', field)
 
         return [new_instance]

@@ -1,18 +1,26 @@
 # pylint: disable=protected-access
 import math
+
 from typing import Dict, Any
 import torch
 import numpy
+
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.interpret.saliency_interpreters.saliency_interpreter import SaliencyInterpreter
 from allennlp.modules.text_field_embedders import TextFieldEmbedder
 from allennlp.data import Instance
+
 
 @SaliencyInterpreter.register('smooth-gradient')
 class SmoothGradient(SaliencyInterpreter):
     """
     Interprets the prediction using SmoothGrad (https://arxiv.org/abs/1706.03825)
     """
+    def __init__(self) -> None:
+        # Hyperparameters
+        self.stdev = 0.01
+        self.num_samples = 25
+
     def saliency_interpret_from_json(self, inputs: JsonDict) -> JsonDict:
         # Convert inputs to labeled instances
         labeled_instances = self.predictor.json_to_labeled_instances(inputs)
@@ -26,9 +34,9 @@ class SmoothGradient(SaliencyInterpreter):
             for key, grad in grads.items():
                 # TODO (@Eric-Wallace), SmoothGrad is not using times input normalization.
                 # Fine for now, but should fix for consistency.
-                emb_grad = numpy.sum(grad, axis=1)
-                norm = numpy.linalg.norm(emb_grad, ord=1)
-                normalized_grad = [math.fabs(e) / norm for e in emb_grad]
+                embedding_grad = numpy.sum(grad, axis=1)
+                norm = numpy.linalg.norm(embedding_grad, ord=1)
+                normalized_grad = [math.fabs(e) / norm for e in embedding_grad]
                 grads[key] = normalized_grad
 
             instances_with_grads['instance_' + str(idx + 1)] = grads
@@ -42,8 +50,8 @@ class SmoothGradient(SaliencyInterpreter):
         """
         def forward_hook(module, inp, output): # pylint: disable=unused-argument
             # Random noise = N(0, stdev * (max-min))
-            noise = torch.randn(output.shape).to(output.device) \
-                * (stdev * (output.detach().max() - output.detach().min()))
+            scale = output.detach.max() - output.detach.min()
+            noise = torch.randn(output.shape).to(output.device) * stdev * scale
 
             # Add the random noise
             output.add_(noise)
@@ -57,13 +65,9 @@ class SmoothGradient(SaliencyInterpreter):
         return handle
 
     def smooth_grads(self, instance: Instance) -> Dict[str, numpy.ndarray]:
-        # Hyperparameters
-        stdev = 0.01
-        num_samples = 25
-
         total_gradients: Dict[str, Any] = {}
-        for _ in range(num_samples):
-            handle = self._register_forward_hook(stdev)
+        for _ in range(self.num_samples):
+            handle = self._register_forward_hook(self.stdev)
             grads = self.predictor.get_gradients([instance])[0]
             handle.remove()
 
@@ -76,6 +80,6 @@ class SmoothGradient(SaliencyInterpreter):
 
         # Average the gradients
         for key in total_gradients.keys():
-            total_gradients[key] /= num_samples
+            total_gradients[key] /= self.num_samples
 
         return total_gradients

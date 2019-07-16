@@ -1,11 +1,14 @@
 # pylint: disable=protected-access
 import math
 from typing import List, Dict, Any
+
 import numpy
+
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.interpret.saliency_interpreters.saliency_interpreter import SaliencyInterpreter
 from allennlp.modules.text_field_embedders import TextFieldEmbedder
 from allennlp.data import Instance
+
 
 @SaliencyInterpreter.register('integrated-gradient')
 class IntegratedGradient(SaliencyInterpreter):
@@ -23,9 +26,9 @@ class IntegratedGradient(SaliencyInterpreter):
 
             # Normalize results
             for key, grad in grads.items():
-                emb_grad = numpy.sum(grad, axis=1)
-                norm = numpy.linalg.norm(emb_grad, ord=1)
-                normalized_grad = [math.fabs(e) / norm for e in emb_grad]
+                embedding_grad = numpy.sum(grad, axis=1)
+                norm = numpy.linalg.norm(embedding_grad, ord=1)
+                normalized_grad = [math.fabs(e) / norm for e in embedding_grad]
                 grads[key] = normalized_grad
 
             instances_with_grads['instance_' + str(idx + 1)] = grads
@@ -85,7 +88,7 @@ class IntegratedGradient(SaliencyInterpreter):
 
         # Average of each gradient term
         for key in ig_grads.keys():
-            ig_grads[key] *= 1/steps
+            ig_grads[key] /= steps
 
         # Gradients come back in the reverse order that they were sent into the network
         embeddings_list.reverse()

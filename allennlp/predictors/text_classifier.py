@@ -1,12 +1,15 @@
 from copy import deepcopy
 from typing import List, Dict
+
 from overrides import overrides
-import numpy as np
+import numpy
+
 from allennlp.common.util import JsonDict
 from allennlp.data import Instance
 from allennlp.predictors.predictor import Predictor
 from allennlp.data.fields import LabelField
 from allennlp.data.tokenizers.word_tokenizer import WordTokenizer
+
 
 @Predictor.register('text_classifier')
 class TextClassifierPredictor(Predictor):
@@ -33,8 +36,8 @@ class TextClassifierPredictor(Predictor):
     @overrides
     def predictions_to_labeled_instances(self,
                                          instance: Instance,
-                                         outputs: Dict[str, np.ndarray]) -> List[Instance]:
+                                         outputs: Dict[str, numpy.ndarray]) -> List[Instance]:
         new_instance = deepcopy(instance)
-        label = np.argmax(outputs['probs'])
+        label = numpy.argmax(outputs['probs'])
         new_instance.add_field('label', LabelField(int(label), skip_indexing=True))
         return [new_instance]

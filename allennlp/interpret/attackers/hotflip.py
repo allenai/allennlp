@@ -1,8 +1,10 @@
 # pylint: disable=protected-access
 from copy import deepcopy
 from typing import List
+
 import numpy
 import torch
+
 from allennlp.interpret.attackers.attacker import Attacker
 from allennlp.interpret.attackers import utils
 from allennlp.common.util import JsonDict, sanitize
@@ -12,6 +14,7 @@ from allennlp.modules.token_embedders import Embedding
 from allennlp.data.tokenizers import Token
 from allennlp.data.token_indexers import ELMoTokenCharactersIndexer, TokenCharactersIndexer
 from allennlp.data.fields import TextField
+
 
 @Attacker.register('hotflip')
 class Hotflip(Attacker):
@@ -27,7 +30,8 @@ class Hotflip(Attacker):
         self.token_embedding = self._construct_embedding_matrix()
 
     def _construct_embedding_matrix(self):
-        """ For HotFlip, we need a word embedding matrix to search over. The below is necessary for
+        """
+        For HotFlip, we need a word embedding matrix to search over. The below is necessary for
         models such as ELMo, character-level models, or for models that use a projection layer
         after their word embeddings.
         We run all of the tokens from the vocabulary through the TextFieldEmbedder, and save the final
@@ -37,23 +41,21 @@ class Hotflip(Attacker):
         all_tokens = self.vocab._token_to_index["tokens"]
         all_indices = list(self.vocab._index_to_token["tokens"].keys())
         all_inputs = {"tokens": torch.LongTensor(all_indices).unsqueeze(0)}
-        for token_indexer in self.predictor._dataset_reader._token_indexers.values():
+        for  in self.predictor._dataset_reader._token_indexers.values():
             # handle when a model uses character-level inputs, e.g., a CharCNN
             if isinstance(token_indexer, TokenCharactersIndexer):
-                indexer = self.predictor._dataset_reader._token_indexers["token_characters"]
                 tokens = [Token(x) for x in all_tokens]
                 max_token_length = max(len(x) for x in all_tokens)
-                indexed_tokens = indexer.tokens_to_indices(tokens, self.vocab, "token_characters")
-                padded_tokens = indexer.pad_token_sequence(indexed_tokens,
+                indexed_tokens = token_indexer.tokens_to_indices(tokens, self.vocab, "token_characters")
+                padded_tokens = token_indexer.pad_token_sequence(indexed_tokens,
                                                            {"token_characters": len(tokens)},
                                                            {"num_token_characters": max_token_length})
                 all_inputs['token_characters'] = torch.LongTensor(padded_tokens['token_characters']).unsqueeze(0)
             # for ELMo models
             if isinstance(token_indexer, ELMoTokenCharactersIndexer):
                 elmo_tokens = []
-                indexer = self.predictor._dataset_reader._token_indexers["elmo"]
                 for token in all_tokens:
-                    elmo_indexed_token = indexer.tokens_to_indices([Token(text=token)],
+                    elmo_indexed_token = token_indexer.tokens_to_indices([Token(text=token)],
                                                                    self.vocab,
                                                                    "sentence")["sentence"]
                     elmo_tokens.append(elmo_indexed_token[0])
@@ -74,7 +76,7 @@ class Hotflip(Attacker):
                          inputs: JsonDict = None,
                          input_field_to_attack: str = 'tokens',
                          grad_input_field: str = 'grad_input_1',
-                         ignore_tokens: List[str] = ["@@NULL@@", '.', ',', ';', '!', '?']) -> JsonDict:
+                         ignore_tokens: List[str] = None) -> JsonDict:
         """
         Replaces one token at a time from the input until the model's prediction changes.
         `input_field_to_attack` is for example `tokens`, it says what the input
@@ -82,11 +84,12 @@ class Hotflip(Attacker):
         is a key into a grads dictionary.
 
         The method computes the gradient w.r.t. the tokens, finds
-        the token with the maximum gradient (by L2 norm), and replaces it will
+        the token with the maximum gradient (by L2 norm), and replaces it with
         another token based on the first-order Taylor approximation of the loss.
         This process is iteratively repeated until the prediction changes.
         Once a token is replaced, it is not flipped again.
         """
+        ignore_tokens = ["@@NULL@@", '.', ',', ';', '!', '?'] if ignore_tokens is None else ignore_tokens
         original_instances = self.predictor.json_to_labeled_instances(inputs)
         original_text_field: TextField = original_instances[0][input_field_to_attack]  # type: ignore
         original_tokens = deepcopy(original_text_field.tokens)
@@ -99,7 +102,7 @@ class Hotflip(Attacker):
             grads, outputs = self.predictor.get_gradients([current_instance])
 
             # ignore any token that is in the ignore_tokens list by setting the token to already flipped
-            flipped = []  # type: List[int]
+            flipped: List[int] = []
             for index, token in enumerate(current_tokens):
                 if token.text in ignore_tokens:
                     flipped.append(index)
@@ -120,14 +123,14 @@ class Hotflip(Attacker):
                 flipped.append(index_of_token_to_flip)
 
                 # Get new token using taylor approximation
-                input_tokens = current_instance[input_field_to_attack]._indexed_tokens["tokens"] # type: ignore
+                input_tokens = current_text_field._indexed_tokens["tokens"]
                 original_id_of_token_to_flip = input_tokens[index_of_token_to_flip]
                 new_id_of_flipped_token = first_order_taylor(grad[index_of_token_to_flip],
                                                              self.token_embedding.weight,
                                                              original_id_of_token_to_flip)
                 # flip token
                 new_token = Token(self.vocab._index_to_token["tokens"][new_id_of_flipped_token]) # type: ignore
-                current_instance[input_field_to_attack].tokens[index_of_token_to_flip] = new_token # type: ignore
+                current_text_field.tokens[index_of_token_to_flip] = new_token
                 current_instance.indexed = False
 
                 # Get model predictions on current_instance, and then label the instances

@@ -1,12 +1,15 @@
 from copy import deepcopy
 from typing import List, Tuple
+
 import numpy as np
 import torch
+
 from allennlp.interpret.attackers.attacker import Attacker
 from allennlp.interpret.attackers import utils
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import Instance
 from allennlp.data.fields import ListField, TextField, LabelField
+
 
 @Attacker.register('input-reduction')
 class InputReduction(Attacker):
@@ -14,11 +17,14 @@ class InputReduction(Attacker):
     Runs the input reduction method from `Pathologies of Neural Models Make Interpretations
     Difficult` https://arxiv.org/abs/1804.07781, which removes as many words as possible
     from the input without changing the model's prediction.
+
+    The functions on this class handle a special case for NER by looking for a field called "tags"
+    This check is brittle, i.e., the code could break if the name of this field has changed.
     """
     def attack_from_json(self, inputs: JsonDict = None,
                          input_field_to_attack: str = 'tokens',
                          grad_input_field: str = 'grad_input_1',
-                         ignore_tokens: List[str] = ["@@NULL@@"]):
+                         ignore_tokens: List[str] = None):
         original_instances = self.predictor.json_to_labeled_instances(inputs)
         original_text_field: TextField = original_instances[0][input_field_to_attack]  # type: ignore
         original_tokens = deepcopy(original_text_field.tokens)
@@ -28,21 +34,21 @@ class InputReduction(Attacker):
             fields_to_compare = utils.get_fields_to_compare(inputs, current_instance, input_field_to_attack)
 
             # Set num_ignore_tokens, which tells input reduction when to stop
-            num_ignore_tokens = 0
-            # Keep at least one token for classification/entailment/etc.
+            # We keep at least one token for input reduction on classification/entailment/etc.
             if "tags" not in current_instance:
                 num_ignore_tokens = 1
 
             # Set num_ignore_tokens for NER and build token mask
             else:
-                num_ignore_tokens, tag_mask, original_tags = \
-                    get_ner_tags_and_mask(current_instance, input_field_to_attack, ignore_tokens)
+                num_ignore_tokens, tag_mask, original_tags = get_ner_tags_and_mask(current_instance,
+                                                                                   input_field_to_attack,
+                                                                                   ignore_tokens)
 
             current_text_field: TextField = current_instance[input_field_to_attack]  # type: ignore
             current_tokens = deepcopy(current_text_field.tokens)
             smallest_idx = -1
             # keep removing tokens until prediction is about to change
-            while len(current_instance[input_field_to_attack]) >= num_ignore_tokens: # type: ignore
+            while len(current_text_field) >= num_ignore_tokens:
                 # get gradients and predictions
                 grads, outputs = self.predictor.get_gradients([current_instance])
                 for output in outputs:
@@ -67,17 +73,18 @@ class InputReduction(Attacker):
                 # remove a token from the input
                 current_tokens = deepcopy(current_text_field.tokens)
                 current_instance, smallest_idx = \
-                    remove_one_token(grads[grad_input_field],
-                                     current_instance,
-                                     input_field_to_attack, ignore_tokens)
+                    remove_one_token(current_instance,
+                                     input_field_to_attack,
+                                     grads[grad_input_field],
+                                     ignore_tokens)
 
             final_tokens.append(current_tokens)
         return sanitize({"final": final_tokens, "original": original_tokens})
 
-def remove_one_token(grads: np.ndarray = None,
-                     instance: Instance = None,
-                     input_field_to_attack: str = 'tokens',
-                     ignore_tokens: List[str] = ["@@NULL@@"]) -> Tuple[Instance, int]:
+def remove_one_token(_instance: Instance,
+                     _input_field_to_attack: str,
+                     _grads: np.ndarray,
+                     _ignore_tokens: List[str]) -> Tuple[Instance, int]:
     """
     Finds the token with the smallest gradient and removes it.
     """
@@ -117,12 +124,12 @@ def remove_one_token(grads: np.ndarray = None,
     instance.indexed = False
     return instance, smallest
 
-def get_ner_tags_and_mask(current_instance: Instance = None,
-                          input_field_to_attack: str = 'tokens',
-                          ignore_tokens: List[str] = ["@@NULL@@"]):
+def get_ner_tags_and_mask(_current_instance: Instance,
+                          _input_field_to_attack: str,
+                          _ignore_tokens: List[str]):
     """
     Used for the NER task. Sets the num_ignore tokens, saves the original
-     predicted tag and a 0/1 mask in the position of the tags
+    predicted tag and a 0/1 mask in the position of the tags
     """
     # Set num_ignore_tokens
     num_ignore_tokens = 0
@@ -134,11 +141,11 @@ def get_ner_tags_and_mask(current_instance: Instance = None,
     # save the original tags and a 0/1 mask where the tags are
     tag_mask = []
     original_tags = []
-    tag_field = current_instance["tags"]
-    for label in getattr(tag_field, 'field_list'):
-        if label.label != "O":
+    tag_field: SequenceLabelField = current_instance["tags"] # type: ignore
+    for label in tag_field:
+        if label != "O":
             tag_mask.append(1)
-            original_tags.append(label.label)
+            original_tags.append(label)
             num_ignore_tokens += 1
         else:
             tag_mask.append(0)

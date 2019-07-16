@@ -1,13 +1,16 @@
 from typing import List, Dict
 from copy import deepcopy
+
 from overrides import overrides
-import numpy as np
+import numpy
+
 from allennlp.common.util import JsonDict
 from allennlp.data import DatasetReader, Instance
-from allennlp.data.fields import ListField, LabelField
+from allennlp.data.fields import LabelField, SequenceLabelField
 from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
 from allennlp.models import Model
 from allennlp.predictors.predictor import Predictor
+
 
 @Predictor.register('sentence-tagger')
 class SentenceTaggerPredictor(Predictor):
@@ -38,8 +41,10 @@ class SentenceTaggerPredictor(Predictor):
     @overrides
     def predictions_to_labeled_instances(self,
                                          instance: Instance,
-                                         outputs: Dict[str, np.ndarray]) -> List[Instance]:
+                                         outputs: Dict[str, numpy.ndarray]) -> List[Instance]:
         """
+        This function currently only handles BIOUL tags.
+
         Imagine an NER model predicts three named entities (each one with potentially
         multiple tokens). For each individual entity, we create a new Instance that has
         the label set to only that entity and the rest of the tokens are labeled as outside.
@@ -85,8 +90,8 @@ class SentenceTaggerPredictor(Predictor):
         instances = []
         for span in predicted_spans:
             new_instance = deepcopy(instance)
-            new_instance.add_field('tags', \
-                ListField([LabelField(tag) for tag in span]), self._model.vocab)
+            new_instance.add_field('tags', ListField([LabelField(tag) for tag in span]), self._model.vocab)
+
             instances.append(new_instance)
 
         return instances

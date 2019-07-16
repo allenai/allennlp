@@ -1,7 +1,7 @@
 from typing import List, Iterator, Dict, Tuple, Any
 import json
 from contextlib import contextmanager
-import numpy as np
+import numpy
 
 from allennlp.common import Registrable
 from allennlp.common.checks import ConfigurationError
@@ -42,10 +42,6 @@ class Predictor(Registrable):
     def __init__(self, model: Model, dataset_reader: DatasetReader) -> None:
         self._model = model
         self._dataset_reader = dataset_reader
-        # if get_gradients() is called, this is populated with token gradients
-        self.embedding_gradients: list = []
-        # backward hooks on the TextFieldEmbedder
-        self.embedding_gradient_hooks: list = []
 
     def load_line(self, line: str) -> JsonDict:  # pylint: disable=no-self-use
         """
@@ -104,11 +100,8 @@ class Predictor(Registrable):
         layer of the model. Calls :func:`backward` on the loss and then removes the
         hooks.
         """
-        # clear embeddings and hooks
-        self.embedding_gradients = []
-        self.embedding_gradient_hooks = []
-
-        self._register_embedding_gradient_hooks()
+        embedding_gradients = []
+        hooks = self._register_embedding_gradient_hooks(embedding_gradients)
 
         dataset = Batch(instances)
         dataset.index_instances(self._model.vocab)
@@ -118,17 +111,17 @@ class Predictor(Registrable):
         self._model.zero_grad()
         loss.backward()
 
-        for hook in self.embedding_gradient_hooks:
+        for hook in hooks:
             hook.remove()
 
         grad_dict = dict()
-        for idx, grad in enumerate(self.embedding_gradients):
+        for idx, grad in enumerate(embedding_gradients):
             key = 'grad_input_' + str(idx + 1)
             grad_dict[key] = grad.squeeze_(0).detach().cpu().numpy()
 
         return grad_dict, outputs
 
-    def _register_embedding_gradient_hooks(self):
+    def _register_embedding_gradient_hooks(self, embedding_gradients):
         """
         Registers a backward hook on the
         :class:`~allennlp.modules.text_field_embedder.basic_text_field_embbedder.BasicTextFieldEmbedder`
@@ -139,13 +132,14 @@ class Predictor(Registrable):
         to a list.
         """
         def hook_layers(module, grad_in, grad_out): # pylint: disable=unused-argument
-            self.embedding_gradients.append(grad_out[0])
+            embedding_gradients.append(grad_out[0])
 
-        # Register the hooks
+        backward_hook = None
         for module in self._model.modules():
             if isinstance(module, TextFieldEmbedder):
                 backward_hook = module.register_backward_hook(hook_layers)
-                self.embedding_gradient_hooks.append(backward_hook)
+
+        return backward_hook
 
     @contextmanager
     def capture_model_internals(self) -> Iterator[dict]:
@@ -187,7 +181,7 @@ class Predictor(Registrable):
 
     def predictions_to_labeled_instances(self,
                                          instance: Instance,
-                                         outputs: Dict[str, np.ndarray]) -> List[Instance]:
+                                         outputs: Dict[str, numpy.ndarray]) -> List[Instance]:
         """
         This function takes a model's outputs for an Instance, and it labels that instance according
         to the output. For example, in classification this function labels the instance according

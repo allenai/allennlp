@@ -1,10 +1,13 @@
 # pylint: disable=protected-access
-from typing import List
 import math
+
+from typing import List
 import numpy
+
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.modules.text_field_embedders import TextFieldEmbedder
 from allennlp.interpret.saliency_interpreters.saliency_interpreter import SaliencyInterpreter
+
 
 @SaliencyInterpreter.register('simple-gradient')
 class SimpleGradient(SaliencyInterpreter):
@@ -14,11 +17,10 @@ class SimpleGradient(SaliencyInterpreter):
         Gets the gradients of the loss with respect to the input
         and returns those gradients normalized and sanitized.
         """
-        # Convert inputs to labeled instances
         labeled_instances = self.predictor.json_to_labeled_instances(inputs)
 
         # List of embedding inputs, used for multiplying gradient by the input for normalization
-        embeddings_list = [] # type: List[numpy.ndarray]
+        embeddings_list: List[numpy.ndarray] = []
 
         instances_with_grads = dict()
         for idx, instance in enumerate(labeled_instances):
