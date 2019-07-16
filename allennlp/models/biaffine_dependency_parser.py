@@ -209,6 +209,64 @@ class BiaffineDependencyParser(Model):
             raise ConfigurationError("Model uses a POS embedding, but no POS tags were passed.")
 
         mask = get_text_field_mask(words)
+
+        predicted_heads, predicted_head_tags, mask, arc_nll, tag_nll = self._parse(
+                embedded_text_input, mask, head_tags, head_indices)
+
+        loss = arc_nll + tag_nll
+
+        if head_indices is not None and head_tags is not None:
+            evaluation_mask = self._get_mask_for_eval(mask[:, 1:], pos_tags)
+            # We calculate attatchment scores for the whole sentence
+            # but excluding the symbolic ROOT token at the start,
+            # which is why we start from the second element in the sequence.
+            self._attachment_scores(predicted_heads[:, 1:],
+                                    predicted_head_tags[:, 1:],
+                                    head_indices,
+                                    head_tags,
+                                    evaluation_mask)
+
+        output_dict = {
+                "heads": predicted_heads,
+                "head_tags": predicted_head_tags,
+                "arc_loss": arc_nll,
+                "tag_loss": tag_nll,
+                "loss": loss,
+                "mask": mask,
+                "words": [meta["words"] for meta in metadata],
+                "pos": [meta["pos"] for meta in metadata]
+                }
+
+        return output_dict
+
+    @overrides
+    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+
+        head_tags = output_dict.pop("head_tags").cpu().detach().numpy()
+        heads = output_dict.pop("heads").cpu().detach().numpy()
+        mask = output_dict.pop("mask")
+        lengths = get_lengths_from_binary_sequence_mask(mask)
+        head_tag_labels = []
+        head_indices = []
+        for instance_heads, instance_tags, length in zip(heads, head_tags, lengths):
+            instance_heads = list(instance_heads[1:length])
+            instance_tags = instance_tags[1:length]
+            labels = [self.vocab.get_token_from_index(label, "head_tags")
+                      for label in instance_tags]
+            head_tag_labels.append(labels)
+            head_indices.append(instance_heads)
+
+        output_dict["predicted_dependencies"] = head_tag_labels
+        output_dict["predicted_heads"] = head_indices
+        return output_dict
+
+    def _parse(self,
+               embedded_text_input: torch.Tensor,
+               mask: torch.LongTensor,
+               head_tags: torch.LongTensor = None,
+               head_indices: torch.LongTensor = None
+              ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+
         embedded_text_input = self._input_dropout(embedded_text_input)
         encoded_text = self.encoder(embedded_text_input, mask)
 
@@ -258,17 +316,6 @@ class BiaffineDependencyParser(Model):
                                                     head_indices=head_indices,
                                                     head_tags=head_tags,
                                                     mask=mask)
-            loss = arc_nll + tag_nll
-
-            evaluation_mask = self._get_mask_for_eval(mask[:, 1:], pos_tags)
-            # We calculate attatchment scores for the whole sentence
-            # but excluding the symbolic ROOT token at the start,
-            # which is why we start from the second element in the sequence.
-            self._attachment_scores(predicted_heads[:, 1:],
-                                    predicted_head_tags[:, 1:],
-                                    head_indices[:, 1:],
-                                    head_tags[:, 1:],
-                                    evaluation_mask)
         else:
             arc_nll, tag_nll = self._construct_loss(head_tag_representation=head_tag_representation,
                                                     child_tag_representation=child_tag_representation,
@@ -276,41 +323,8 @@ class BiaffineDependencyParser(Model):
                                                     head_indices=predicted_heads.long(),
                                                     head_tags=predicted_head_tags.long(),
                                                     mask=mask)
-            loss = arc_nll + tag_nll
 
-        output_dict = {
-                "heads": predicted_heads,
-                "head_tags": predicted_head_tags,
-                "arc_loss": arc_nll,
-                "tag_loss": tag_nll,
-                "loss": loss,
-                "mask": mask,
-                "words": [meta["words"] for meta in metadata],
-                "pos": [meta["pos"] for meta in metadata]
-                }
-
-        return output_dict
-
-    @overrides
-    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
-
-        head_tags = output_dict.pop("head_tags").cpu().detach().numpy()
-        heads = output_dict.pop("heads").cpu().detach().numpy()
-        mask = output_dict.pop("mask")
-        lengths = get_lengths_from_binary_sequence_mask(mask)
-        head_tag_labels = []
-        head_indices = []
-        for instance_heads, instance_tags, length in zip(heads, head_tags, lengths):
-            instance_heads = list(instance_heads[1:length])
-            instance_tags = instance_tags[1:length]
-            labels = [self.vocab.get_token_from_index(label, "head_tags")
-                      for label in instance_tags]
-            head_tag_labels.append(labels)
-            head_indices.append(instance_heads)
-
-        output_dict["predicted_dependencies"] = head_tag_labels
-        output_dict["predicted_heads"] = head_indices
-        return output_dict
+        return predicted_heads, predicted_head_tags, mask, arc_nll, tag_nll
 
     def _construct_loss(self,
                         head_tag_representation: torch.Tensor,

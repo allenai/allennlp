@@ -3,16 +3,16 @@ from collections import defaultdict
 # Unfortunately, mypy doesn't like this very much, so we have to "type: ignore" a bunch of things.
 # But it makes for a nicer induced grammar, so it's worth it.
 from numbers import Number
-from typing import Dict, List, NamedTuple, Set, Tuple, Any
+from typing import Dict, List, NamedTuple, Set, Type, Tuple, Any
 import logging
 import re
 
 from allennlp.semparse.domain_languages.domain_language import (DomainLanguage, ExecutionError,
                                                                 PredicateType, predicate)
-from allennlp.semparse.contexts.table_question_knowledge_graph import MONTH_NUMBERS
+from allennlp.semparse.contexts.table_question_context import MONTH_NUMBERS
 from allennlp.semparse.contexts import TableQuestionContext
 from allennlp.semparse.contexts.table_question_context import CellValueType
-from allennlp.semparse.domain_languages.common import Date
+from allennlp.semparse.common import Date
 from allennlp.tools import wikitables_evaluator as evaluator
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -54,7 +54,7 @@ class WikiTablesLanguage(DomainLanguage):
     the language using ``add_predicate`` if, e.g., there is a column with dates in it.
     """
     def __init__(self, table_context: TableQuestionContext) -> None:
-        super().__init__(start_types={Number, Date, List[str]})
+        super().__init__(start_types=self._get_start_types_in_context(table_context))
         self.table_context = table_context
         self.table_data = [Row(row) for row in table_context.table_data]
 
@@ -115,10 +115,7 @@ class WikiTablesLanguage(DomainLanguage):
         # Keeps track of column name productions so that we can add them to the agenda.
         self._column_productions_for_agenda: Dict[str, str] = {}
 
-        # Adding column names as constants.  Each column gets added once for every
-        # type in the hierarchy going from its concrete class to the base Column.  String columns
-        # get added as StringColumn and Column, and date and number columns get added as DateColumn
-        # (or NumberColumn), ComparableColumn, and Column.
+        # Adding column names as constants.
         for column_name in table_context.column_names:
             column_type = column_name.split(":")[0].replace("_column", "")
             column: Column = None
@@ -141,6 +138,16 @@ class WikiTablesLanguage(DomainLanguage):
         self.terminal_productions: Dict[str, str] = {}
         for name, types in self._function_types.items():
             self.terminal_productions[name] = "%s -> %s" % (types[0], name)
+
+    def _get_start_types_in_context(self, table_context: TableQuestionContext) -> Set[Type]:
+        start_types: Set[Type] = set()
+        if "string" in table_context.column_types:
+            start_types.add(List[str])
+        if "number" in table_context.column_types or "num2" in table_context.column_types:
+            start_types.add(Number)
+        if "date" in table_context.column_types:
+            start_types.add(Date)
+        return start_types
 
     def get_agenda(self,
                    conservative: bool = False):
@@ -309,7 +316,7 @@ class WikiTablesLanguage(DomainLanguage):
         # Adding all productions that lead to entities and numbers extracted from the question.
         for entity in refined_entities:
             if entity.replace("string:", "") not in tokens_in_column_names:
-                agenda.append(f"str -> {entity}")
+                agenda.append(f"List[str] -> {entity}")
 
         for number in refined_numbers:
             # The reason we check for the presence of the number in the question again is because
@@ -320,20 +327,55 @@ class WikiTablesLanguage(DomainLanguage):
                 agenda.append(f"Number -> {number}")
         return agenda
 
+    @staticmethod
+    def is_instance_specific_entity(entity_name: str) -> bool:
+        """
+        Instance specific entities are column names, strings and numbers. Returns True if the entity
+        is one of those.
+        """
+        entity_is_number = False
+        try:
+            float(entity_name)
+            entity_is_number = True
+        except ValueError:
+            pass
+        # Column names start with "*_column:", strings start with "string:"
+        return "_column:" in entity_name or entity_name.startswith("string:") or entity_is_number
+
     def evaluate_logical_form(self, logical_form: str, target_list: List[str]) -> bool:
         """
         Takes a logical form, and the list of target values as strings from the original lisp
         string, and returns True iff the logical form executes to the target list, using the
         official WikiTableQuestions evaluation script.
         """
+        try:
+            denotation = self.execute(logical_form)
+        except ExecutionError as error:
+            logger.warning(f'Failed to execute: {logical_form}. Error: {error}')
+            return False
+        return self.evaluate_denotation(denotation, target_list)
+
+    def evaluate_action_sequence(self, action_sequence: List[str], target_list: List[str]) -> bool:
+        """
+        Similar to ``evaluate_logical_form`` except that it takes an action sequence instead. The reason this is
+        separate is because there is a separate method ``DomainLanguage.execute_action_sequence`` that executes the
+        action sequence directly.
+        """
+        try:
+            denotation = self.execute_action_sequence(action_sequence)
+        except ExecutionError:
+            logger.warning(f'Failed to execute action sequence: {action_sequence}')
+            return False
+        return self.evaluate_denotation(denotation, target_list)
+
+    def evaluate_denotation(self, denotation: Any, target_list: List[str]) -> bool:
+        """
+        Compares denotation with a target list and returns whether they are both the same according to the official
+        evaluator.
+        """
         normalized_target_list = [TableQuestionContext.normalize_string(value) for value in
                                   target_list]
         target_value_list = evaluator.to_value_list(normalized_target_list)
-        try:
-            denotation = self.execute(logical_form)
-        except ExecutionError:
-            logger.warning(f'Failed to execute: {logical_form}')
-            return False
         if isinstance(denotation, list):
             denotation_list = [str(denotation_item) for denotation_item in denotation]
         else:
@@ -391,10 +433,15 @@ class WikiTablesLanguage(DomainLanguage):
         Takes a row and a column and returns a list of rows from the full set of rows that contain
         the same value under the given column as the given row.
         """
+        return_list: List[Row] = []
+        if not rows:
+            return return_list
         cell_value = rows[0].values[column.name]
-        return_list = []
         for table_row in self.table_data:
-            if table_row.values[column.name] == cell_value:
+            new_cell_value = table_row.values[column.name]
+            if new_cell_value is None or not isinstance(new_cell_value, type(cell_value)):
+                continue
+            if new_cell_value == cell_value:
                 return_list.append(table_row)
         return return_list
 
@@ -484,7 +531,7 @@ class WikiTablesLanguage(DomainLanguage):
             return 0.0  # type: ignore
         most_frequent_value = most_frequent_list[0]
         if not isinstance(most_frequent_value, Number):
-            raise ExecutionError(f"Invalid valus for mode_number: {most_frequent_value}")
+            raise ExecutionError(f"Invalid values for mode_number: {most_frequent_value}")
         return most_frequent_value
 
     @predicate
@@ -498,7 +545,7 @@ class WikiTablesLanguage(DomainLanguage):
             return Date(-1, -1, -1)
         most_frequent_value = most_frequent_list[0]
         if not isinstance(most_frequent_value, Date):
-            raise ExecutionError(f"Invalid valus for mode_date: {most_frequent_value}")
+            raise ExecutionError(f"Invalid values for mode_date: {most_frequent_value}")
         return most_frequent_value
 
     # These get added to the language (using `add_predicate()`) if we see a date or number column
@@ -513,7 +560,7 @@ class WikiTablesLanguage(DomainLanguage):
         """
         if not rows:
             return []
-        value_row_pairs = [(row.values[column.name], row) for row in rows]
+        value_row_pairs = [(row.values[column.name], row) for row in rows if row.values[column.name] is not None]
         if not value_row_pairs:
             return []
         # Returns a list containing the row with the max cell value.
@@ -528,7 +575,7 @@ class WikiTablesLanguage(DomainLanguage):
         """
         if not rows:
             return []
-        value_row_pairs = [(row.values[column.name], row) for row in rows]
+        value_row_pairs = [(row.values[column.name], row) for row in rows if row.values[column.name] is not None]
         if not value_row_pairs:
             return []
         # Returns a list containing the row with the max cell value.
@@ -539,33 +586,33 @@ class WikiTablesLanguage(DomainLanguage):
     # added to the language if we see a number column in the table.
 
     def filter_number_greater(self, rows: List[Row], column: NumberColumn, filter_value: Number) -> List[Row]:
-        cell_row_pairs = [(row.values[column.name], row) for row in rows]
+        cell_row_pairs = [(row.values[column.name], row) for row in rows if row.values[column.name] is not None]
         return [row for cell_value, row in cell_row_pairs if cell_value > filter_value]  # type: ignore
 
     def filter_number_greater_equals(self,
                                      rows: List[Row],
                                      column: NumberColumn,
                                      filter_value: Number) -> List[Row]:
-        cell_row_pairs = [(row.values[column.name], row) for row in rows]
+        cell_row_pairs = [(row.values[column.name], row) for row in rows if row.values[column.name] is not None]
         return [row for cell_value, row in cell_row_pairs if cell_value >= filter_value]  # type: ignore
 
     def filter_number_lesser(self, rows: List[Row], column: NumberColumn, filter_value: Number) -> List[Row]:
-        cell_row_pairs = [(row.values[column.name], row) for row in rows]
+        cell_row_pairs = [(row.values[column.name], row) for row in rows if row.values[column.name] is not None]
         return [row for cell_value, row in cell_row_pairs if cell_value < filter_value]  # type: ignore
 
     def filter_number_lesser_equals(self,
                                     rows: List[Row],
                                     column: NumberColumn,
                                     filter_value: Number) -> List[Row]:
-        cell_row_pairs = [(row.values[column.name], row) for row in rows]
+        cell_row_pairs = [(row.values[column.name], row) for row in rows if row.values[column.name] is not None]
         return [row for cell_value, row in cell_row_pairs if cell_value <= filter_value]  # type: ignore
 
     def filter_number_equals(self, rows: List[Row], column: NumberColumn, filter_value: Number) -> List[Row]:
-        cell_row_pairs = [(row.values[column.name], row) for row in rows]
+        cell_row_pairs = [(row.values[column.name], row) for row in rows if row.values[column.name] is not None]
         return [row for cell_value, row in cell_row_pairs if cell_value == filter_value]  # type: ignore
 
     def filter_number_not_equals(self, rows: List[Row], column: NumberColumn, filter_value: Number) -> List[Row]:
-        cell_row_pairs = [(row.values[column.name], row) for row in rows]
+        cell_row_pairs = [(row.values[column.name], row) for row in rows if row.values[column.name] is not None]
         return [row for cell_value, row in cell_row_pairs if cell_value != filter_value]  # type: ignore
 
     # These six methods are the same as the six above, but for dates.  They only get added to the
@@ -678,7 +725,7 @@ class WikiTablesLanguage(DomainLanguage):
         Takes a list of rows and a column and returns the max of the values under that column in
         those rows.
         """
-        cell_values = [row.values[column.name] for row in rows]
+        cell_values = [row.values[column.name] for row in rows if row.values[column.name] is not None]
         if not cell_values:
             return Date(-1, -1, -1)
         if not all([isinstance(value, Date) for value in cell_values]):
@@ -690,7 +737,7 @@ class WikiTablesLanguage(DomainLanguage):
         Takes a list of rows and a column and returns the min of the values under that column in
         those rows.
         """
-        cell_values = [row.values[column.name] for row in rows]
+        cell_values = [row.values[column.name] for row in rows if row.values[column.name] is not None]
         if not cell_values:
             return Date(-1, -1, -1)
         if not all([isinstance(value, Date) for value in cell_values]):
@@ -705,7 +752,7 @@ class WikiTablesLanguage(DomainLanguage):
         Takes a list of rows and a column and returns the max of the values under that column in
         those rows.
         """
-        cell_values = [row.values[column.name] for row in rows]
+        cell_values = [row.values[column.name] for row in rows if row.values[column.name] is not None]
         if not cell_values:
             return 0.0  # type: ignore
         if not all([isinstance(value, Number) for value in cell_values]):
@@ -717,7 +764,7 @@ class WikiTablesLanguage(DomainLanguage):
         Takes a list of rows and a column and returns the min of the values under that column in
         those rows.
         """
-        cell_values = [row.values[column.name] for row in rows]
+        cell_values = [row.values[column.name] for row in rows if row.values[column.name] is not None]
         if not cell_values:
             return 0.0  # type: ignore
         if not all([isinstance(value, Number) for value in cell_values]):
@@ -729,7 +776,7 @@ class WikiTablesLanguage(DomainLanguage):
         Takes a list of rows and a column and returns the sum of the values under that column in
         those rows.
         """
-        cell_values = [row.values[column.name] for row in rows]
+        cell_values = [row.values[column.name] for row in rows if row.values[column.name] is not None]
         if not cell_values:
             return 0.0  # type: ignore
         return sum(cell_values)  # type: ignore
@@ -739,7 +786,7 @@ class WikiTablesLanguage(DomainLanguage):
         Takes a list of rows and a column and returns the mean of the values under that column in
         those rows.
         """
-        cell_values = [row.values[column.name] for row in rows]
+        cell_values = [row.values[column.name] for row in rows if row.values[column.name] is not None]
         if not cell_values:
             return 0.0  # type: ignore
         return sum(cell_values) / len(cell_values)  # type: ignore
@@ -755,6 +802,8 @@ class WikiTablesLanguage(DomainLanguage):
         second_value = second_row[0].values[column.name]
         if isinstance(first_value, float) and isinstance(second_value, float):
             return first_value - second_value  # type: ignore
+        elif first_value is None or second_value is None:
+            return 0.0  # type: ignore
         else:
             raise ExecutionError(f"Invalid column for diff: {column.name}")
 
@@ -801,11 +850,12 @@ class WikiTablesLanguage(DomainLanguage):
         most_frequent_list: List[CellValueType] = []
         for row in rows:
             cell_value = row.values[column.name]
-            value_frequencies[cell_value] += 1
-            frequency = value_frequencies[cell_value]
-            if frequency > max_frequency:
-                max_frequency = frequency
-                most_frequent_list = [cell_value]
-            elif frequency == max_frequency:
-                most_frequent_list.append(cell_value)
+            if cell_value is not None:
+                value_frequencies[cell_value] += 1
+                frequency = value_frequencies[cell_value]
+                if frequency > max_frequency:
+                    max_frequency = frequency
+                    most_frequent_list = [cell_value]
+                elif frequency == max_frequency:
+                    most_frequent_list.append(cell_value)
         return most_frequent_list

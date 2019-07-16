@@ -3,6 +3,7 @@ import itertools
 import warnings
 
 from overrides import overrides
+import torch
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import pad_sequence_to_length
@@ -100,10 +101,10 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
         return []
 
     @overrides
-    def pad_token_sequence(self,
-                           tokens: Dict[str, List[List[int]]],
-                           desired_num_tokens: Dict[str, int],
-                           padding_lengths: Dict[str, int]) -> Dict[str, List[List[int]]]:
+    def as_padded_tensor(self,
+                         tokens: Dict[str, List[List[int]]],
+                         desired_num_tokens: Dict[str, int],
+                         padding_lengths: Dict[str, int]) -> Dict[str, torch.Tensor]:
         # Pad the tokens.
         # tokens has only one key...
         key = list(tokens.keys())[0]
@@ -127,4 +128,5 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
             # Removes the "dummy token".
             padded_tokens.pop()
         # Truncates all the tokens to the desired length, and return the result.
-        return {key: [list(token[:desired_token_length]) for token in padded_tokens]}
+        return {key: torch.LongTensor([list(token[:desired_token_length])
+                                       for token in padded_tokens])}

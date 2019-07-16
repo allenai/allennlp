@@ -1,8 +1,9 @@
 import re
-from typing import List
+from typing import List, Optional
 
 from overrides import overrides
 import spacy
+from spacy.tokens import Doc
 import ftfy
 
 from pytorch_pretrained_bert.tokenization import BasicTokenizer as BertTokenizer
@@ -134,6 +135,26 @@ def _remove_spaces(tokens: List[spacy.tokens.Token]) -> List[spacy.tokens.Token]
     return [token for token in tokens if not token.is_space]
 
 
+class WhitespaceTokenizer:
+    """
+    Spacy doesn't assume that text is tokenised. Sometimes this
+    is annoying, like when you have gold data which is pre-tokenised,
+    but Spacy's tokenisation doesn't match the gold. This can be used
+    as follows:
+    nlp = spacy.load("en_core_web_md")
+    # hack to replace tokenizer with a whitespace tokenizer
+    nlp.tokenizer = WhitespaceTokenizer(nlp.vocab)
+    ... use nlp("here is some text") as normal.
+    """
+    def __init__(self, vocab):
+        self.vocab = vocab
+
+    def __call__(self, text):
+        words = text.split(' ')
+        spaces = [True] * len(words)
+        return Doc(self.vocab, words=words, spaces=spaces)
+
+
 @WordSplitter.register('spacy')
 class SpacyWordSplitter(WordSplitter):
     """
@@ -147,8 +168,12 @@ class SpacyWordSplitter(WordSplitter):
                  pos_tags: bool = False,
                  parse: bool = False,
                  ner: bool = False,
-                 keep_spacy_tokens: bool = False) -> None:
+                 keep_spacy_tokens: bool = False,
+                 split_on_spaces: bool = False) -> None:
         self.spacy = get_spacy_model(language, pos_tags, parse, ner)
+        if split_on_spaces:
+            self.spacy.tokenizer = WhitespaceTokenizer(self.spacy.vocab)
+
         self._keep_spacy_tokens = keep_spacy_tokens
 
     def _sanitize(self, tokens: List[spacy.tokens.Token]) -> List[Token]:
@@ -209,8 +234,14 @@ class BertBasicWordSplitter(WordSplitter):
     This is used to split a sentence into words.
     Then the ``BertTokenIndexer`` converts each word into wordpieces.
     """
-    def __init__(self, do_lower_case: bool = True) -> None:
-        self.basic_tokenizer = BertTokenizer(do_lower_case)
+    def __init__(self,
+                 do_lower_case: bool = True,
+                 never_split: Optional[List[str]] = None) -> None:
+        if never_split is None:
+            # Let BertTokenizer use its default
+            self.basic_tokenizer = BertTokenizer(do_lower_case)
+        else:
+            self.basic_tokenizer = BertTokenizer(do_lower_case, never_split)
 
     @overrides
     def split_words(self, sentence: str) -> List[Token]:

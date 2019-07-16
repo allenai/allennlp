@@ -1,14 +1,17 @@
 # pylint: disable=invalid-name,no-self-use,too-many-public-methods,not-callable,too-many-lines,protected-access
+import json
 from typing import NamedTuple
 
 import numpy
 from numpy.testing import assert_array_almost_equal, assert_almost_equal
 import torch
 import pytest
+from flaky import flaky
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.nn import util
+from allennlp.models import load_archive
 
 
 class TestNnUtil(AllenNlpTestCase):
@@ -517,6 +520,21 @@ class TestNnUtil(AllenNlpTestCase):
         _, argmax_indices = torch.max(sequence_logits, 1)
         assert indices == argmax_indices.data.squeeze().tolist()
 
+        # Test Viterbi decoding works with start and end transitions
+        sequence_logits = torch.nn.functional.softmax(torch.rand([5, 9]), dim=-1)
+        transition_matrix = torch.zeros([9, 9])
+        allowed_start_transitions = torch.zeros([9])
+        # Force start tag to be an 8
+        allowed_start_transitions[:8] = float("-inf")
+        allowed_end_transitions = torch.zeros([9])
+        # Force end tag to be a 0
+        allowed_end_transitions[1:] = float("-inf")
+        indices, _ = util.viterbi_decode(sequence_logits.data, transition_matrix,
+                                         allowed_end_transitions=allowed_end_transitions,
+                                         allowed_start_transitions=allowed_start_transitions)
+        assert indices[0] == 8
+        assert indices[-1] == 0
+
         # Test that pairwise potentials affect the sequence correctly and that
         # viterbi_decode can handle -inf values.
         sequence_logits = torch.FloatTensor([[0, 0, 0, 3, 5],
@@ -644,6 +662,7 @@ class TestNnUtil(AllenNlpTestCase):
         # Batch has one completely padded row, so divide by 4.
         assert loss.data.numpy() == vector_loss.sum().item() / 4
 
+    @flaky(max_runs=3, min_passes=1)
     def test_sequence_cross_entropy_with_logits_averages_token_correctly(self):
         # test token average is the same as multiplying the per-batch loss
         # with the per-batch weights and dividing by the total weight
@@ -662,7 +681,102 @@ class TestNnUtil(AllenNlpTestCase):
                                                               average=None)
         total_token_loss = (vector_loss * weights.float().sum(dim=-1)).sum()
         average_token_loss = (total_token_loss / weights.float().sum()).detach()
-        assert_almost_equal(loss.detach().item(), average_token_loss.item())
+        assert_almost_equal(loss.detach().item(), average_token_loss.item(), decimal=5)
+
+    def test_sequence_cross_entropy_with_logits_gamma_correctly(self):
+        batch = 1
+        length = 3
+        classes = 4
+        gamma = abs(numpy.random.randn()) # [0, +inf)
+
+        tensor = torch.rand([batch, length, classes])
+        targets = torch.LongTensor(numpy.random.randint(0, classes, [batch, length]))
+        weights = torch.ones([batch, length])
+
+        loss = util.sequence_cross_entropy_with_logits(tensor, targets, weights, gamma=gamma)
+
+        correct_loss = 0.
+        for logit, label in zip(tensor.squeeze(0), targets.squeeze(0)):
+            p = torch.nn.functional.softmax(logit, dim=-1)
+            pt = p[label]
+            ft = (1 - pt) ** gamma
+            correct_loss += - pt.log() * ft
+        # Average over sequence.
+        correct_loss = correct_loss / length
+        numpy.testing.assert_array_almost_equal(loss.data.numpy(), correct_loss.data.numpy())
+
+    def test_sequence_cross_entropy_with_logits_alpha_float_correctly(self):
+        batch = 1
+        length = 3
+        classes = 2 # alpha float for binary class only
+        alpha = numpy.random.rand() if numpy.random.rand() > 0.5 else (1. - numpy.random.rand()) # [0, 1]
+
+        tensor = torch.rand([batch, length, classes])
+        targets = torch.LongTensor(numpy.random.randint(0, classes, [batch, length]))
+        weights = torch.ones([batch, length])
+
+        loss = util.sequence_cross_entropy_with_logits(tensor, targets, weights, alpha=alpha)
+
+        correct_loss = 0.
+        for logit, label in zip(tensor.squeeze(0), targets.squeeze(0)):
+            logp = torch.nn.functional.log_softmax(logit, dim=-1)
+            logpt = logp[label]
+            if label:
+                at = alpha
+            else:
+                at = 1 - alpha
+            correct_loss += - logpt * at
+        # Average over sequence.
+        correct_loss = correct_loss / length
+        numpy.testing.assert_array_almost_equal(loss.data.numpy(), correct_loss.data.numpy())
+
+    def test_sequence_cross_entropy_with_logits_alpha_single_float_correctly(self):
+        batch = 1
+        length = 3
+        classes = 2 # alpha float for binary class only
+        alpha = numpy.random.rand() if numpy.random.rand() > 0.5 else (1. - numpy.random.rand()) # [0, 1]
+        alpha = torch.tensor(alpha)
+
+        tensor = torch.rand([batch, length, classes])
+        targets = torch.LongTensor(numpy.random.randint(0, classes, [batch, length]))
+        weights = torch.ones([batch, length])
+
+        loss = util.sequence_cross_entropy_with_logits(tensor, targets, weights, alpha=alpha)
+
+        correct_loss = 0.
+        for logit, label in zip(tensor.squeeze(0), targets.squeeze(0)):
+            logp = torch.nn.functional.log_softmax(logit, dim=-1)
+            logpt = logp[label]
+            if label:
+                at = alpha
+            else:
+                at = 1 - alpha
+            correct_loss += - logpt * at
+        # Average over sequence.
+        correct_loss = correct_loss / length
+        numpy.testing.assert_array_almost_equal(loss.data.numpy(), correct_loss.data.numpy())
+
+    def test_sequence_cross_entropy_with_logits_alpha_list_correctly(self):
+        batch = 1
+        length = 3
+        classes = 4 # alpha float for binary class only
+        alpha = abs(numpy.random.randn(classes)) # [0, +inf)
+
+        tensor = torch.rand([batch, length, classes])
+        targets = torch.LongTensor(numpy.random.randint(0, classes, [batch, length]))
+        weights = torch.ones([batch, length])
+
+        loss = util.sequence_cross_entropy_with_logits(tensor, targets, weights, alpha=alpha)
+
+        correct_loss = 0.
+        for logit, label in zip(tensor.squeeze(0), targets.squeeze(0)):
+            logp = torch.nn.functional.log_softmax(logit, dim=-1)
+            logpt = logp[label]
+            at = alpha[label]
+            correct_loss += - logpt * at
+        # Average over sequence.
+        correct_loss = correct_loss / length
+        numpy.testing.assert_array_almost_equal(loss.data.numpy(), correct_loss.data.numpy())
 
     def test_replace_masked_values_replaces_masked_values_with_finite_value(self):
         tensor = torch.FloatTensor([[[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]]])
@@ -1007,6 +1121,14 @@ class TestNnUtil(AllenNlpTestCase):
 
         embedding = util.uncombine_initial_dims(embedding2d, torch.Size((4, 10, 20, 17, 5)))
         assert list(embedding.size()) == [4, 10, 20, 17, 5, 12]
+
+    def test_inspect_model_parameters(self):
+        model_archive = str(self.FIXTURES_ROOT / 'decomposable_attention' / 'serialization' / 'model.tar.gz')
+        parameters_inspection = str(self.FIXTURES_ROOT / 'decomposable_attention' / 'parameters_inspection.json')
+        model = load_archive(model_archive).model
+        with open(parameters_inspection) as file:
+            parameters_inspection_dict = json.load(file)
+        assert parameters_inspection_dict == util.inspect_parameters(model)
 
     def test_move_to_device(self):
         # We're faking the tensor here so that we can test the calls to .cuda() without actually

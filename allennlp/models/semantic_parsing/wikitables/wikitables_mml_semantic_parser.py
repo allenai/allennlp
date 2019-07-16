@@ -4,16 +4,16 @@ from overrides import overrides
 import torch
 
 from allennlp.data import Vocabulary
-from allennlp.data.fields.production_rule_field import ProductionRule
+from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.models.model import Model
-from allennlp.models.semantic_parsing.wikitables.wikitables_semantic_parser import WikiTablesSemanticParser
 from allennlp.modules import Attention, FeedForward, Seq2SeqEncoder, Seq2VecEncoder, TextFieldEmbedder
-from allennlp.semparse.worlds import WikiTablesWorld
 from allennlp.state_machines import BeamSearch
 from allennlp.state_machines.states import GrammarBasedState
 from allennlp.state_machines.trainers import MaximumMarginalLikelihood
 from allennlp.state_machines.transition_functions import LinkingTransitionFunction
-
+from allennlp.semparse.domain_languages import WikiTablesLanguage
+from allennlp.models.semantic_parsing.wikitables.wikitables_semantic_parser \
+        import WikiTablesSemanticParser
 
 @Model.register("wikitables_mml_parser")
 class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
@@ -23,10 +23,9 @@ class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
     denotation. This is a re-implementation of the model used for the paper `Neural Semantic Parsing with Type
     Constraints for Semi-Structured Tables
     <https://www.semanticscholar.org/paper/Neural-Semantic-Parsing-with-Type-Constraints-for-Krishnamurthy-Dasigi/8c6f58ed0ebf379858c0bbe02c53ee51b3eb398a>`_,
-    by Jayant Krishnamurthy, Pradeep Dasigi, and Matt Gardner (EMNLP 2017).
-
-    WORK STILL IN PROGRESS.  We'll iteratively improve it until we've reproduced the performance of
-    the original parser.
+    by Jayant Krishnamurthy, Pradeep Dasigi, and Matt Gardner (EMNLP 2017). The language used by
+    this model is different from LambdaDCS, the one in the paper above though. This model uses the
+    variable free language from ``allennlp.semparse.domain_languages.wikitables_language``.
 
     Parameters
     ----------
@@ -77,10 +76,6 @@ class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
         The vocabulary namespace to use for production rules.  The default corresponds to the
         default used in the dataset reader, so you likely don't need to modify this. Passed to super
         class.
-    tables_directory : ``str``, optional (default=/wikitables/)
-        The directory to find tables when evaluating logical forms.  We rely on a call to SEMPRE to
-        evaluate logical forms, and SEMPRE needs to read the table from disk itself.  This tells
-        SEMPRE where to find the tables. Passed to super class.
     """
     def __init__(self,
                  vocab: Vocabulary,
@@ -97,8 +92,7 @@ class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
                  use_neighbor_similarity_for_linking: bool = False,
                  dropout: float = 0.0,
                  num_linking_features: int = 10,
-                 rule_namespace: str = 'rule_labels',
-                 tables_directory: str = '/wikitables/') -> None:
+                 rule_namespace: str = 'rule_labels') -> None:
         use_similarity = use_neighbor_similarity_for_linking
         super().__init__(vocab=vocab,
                          question_embedder=question_embedder,
@@ -110,15 +104,12 @@ class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
                          use_neighbor_similarity_for_linking=use_similarity,
                          dropout=dropout,
                          num_linking_features=num_linking_features,
-                         rule_namespace=rule_namespace,
-                         tables_directory=tables_directory)
+                         rule_namespace=rule_namespace)
         self._beam_search = decoder_beam_search
         self._decoder_trainer = MaximumMarginalLikelihood(training_beam_size)
         self._decoder_step = LinkingTransitionFunction(encoder_output_dim=self._encoder.get_output_dim(),
                                                        action_embedding_dim=action_embedding_dim,
                                                        input_attention=attention,
-                                                       num_start_types=self._num_start_types,
-                                                       predict_start_type_separately=True,
                                                        add_action_bias=self._add_action_bias,
                                                        mixture_feedforward=mixture_feedforward,
                                                        dropout=dropout)
@@ -127,9 +118,9 @@ class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
     def forward(self,  # type: ignore
                 question: Dict[str, torch.LongTensor],
                 table: Dict[str, torch.LongTensor],
-                world: List[WikiTablesWorld],
-                actions: List[List[ProductionRule]],
-                example_lisp_string: List[str] = None,
+                world: List[WikiTablesLanguage],
+                actions: List[List[ProductionRuleArray]],
+                target_values: List[List[str]] = None,
                 target_action_sequences: torch.LongTensor = None,
                 metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
@@ -149,24 +140,23 @@ class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
             ``KnowledgeGraphField``.  This output is similar to a ``TextField`` output, where each
             entity in the table is treated as a "token", and we will use a ``TextFieldEmbedder`` to
             get embeddings for each entity.
-        world : ``List[WikiTablesWorld]``
-            We use a ``MetadataField`` to get the ``World`` for each input instance.  Because of
-            how ``MetadataField`` works, this gets passed to us as a ``List[WikiTablesWorld]``,
-        actions : ``List[List[ProductionRule]]``
-            A list of all possible actions for each ``World`` in the batch, indexed into a
-            ``ProductionRule`` using a ``ProductionRuleField``.  We will embed all of these
+        world : ``List[WikiTablesLanguage]``
+            We use a ``MetadataField`` to get the ``WikiTablesLanguage`` object for each input instance.
+            Because of how ``MetadataField`` works, this gets passed to us as a ``List[WikiTablesLanguage]``,
+        actions : ``List[List[ProductionRuleArray]]``
+            A list of all possible actions for each ``world`` in the batch, indexed into a
+            ``ProductionRuleArray`` using a ``ProductionRuleField``.  We will embed all of these
             and use the embeddings to determine which action to take at each timestep in the
             decoder.
-        example_lisp_string : ``List[str]``, optional (default = None)
-            The example (lisp-formatted) string corresponding to the given input.  This comes
-            directly from the ``.examples`` file provided with the dataset.  We pass this to SEMPRE
-            when evaluating denotation accuracy; it is otherwise unused.
+        target_values : ``List[List[str]]``, optional (default = None)
+            For each instance, a list of target values taken from the example lisp string. We pass
+            this list to the evaluator along with logical forms to compute denotation accuracy.
         target_action_sequences : torch.Tensor, optional (default = None)
            A list of possibly valid action sequences, where each action is an index into the list
            of possible actions.  This tensor has shape ``(batch_size, num_action_sequences,
            sequence_length)``.
-        metadata : ``List[Dict[str, Any]]``, optional, (default = None)
-            Metadata containing the original tokenized question within a 'question_tokens' key.
+        metadata : ``List[Dict[str, Any]]``, optional (default = None)
+            Metadata containing the original tokenized question within a 'question_tokens' field.
         """
         outputs: Dict[str, Any] = {}
         rnn_state, grammar_state = self._get_initial_rnn_and_grammar_state(question,
@@ -183,7 +173,7 @@ class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
                                           rnn_state=rnn_state,
                                           grammar_state=grammar_state,
                                           possible_actions=actions,
-                                          extras=example_lisp_string,
+                                          extras=target_values,
                                           debug_info=None)
 
         if target_action_sequences is not None:
@@ -226,8 +216,7 @@ class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
             self._compute_validation_outputs(actions,
                                              best_final_states,
                                              world,
-                                             example_lisp_string,
+                                             target_values,
                                              metadata,
                                              outputs)
-
             return outputs

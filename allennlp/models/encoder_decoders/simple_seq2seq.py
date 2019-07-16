@@ -41,7 +41,7 @@ class SimpleSeq2Seq(Model):
         The encoder of the "encoder/decoder" model
     max_decoding_steps : ``int``
         Maximum length of decoded sequences.
-    target_namespace : ``str``, optional (default = 'target_tokens')
+    target_namespace : ``str``, optional (default = 'tokens')
         If the target side vocabulary is different from the source side's, you need to specify the
         target's namespace here. If not, we'll assume it is "tokens", which is also the default
         choice for the source side, and this might cause them to share vocabularies.
@@ -441,7 +441,7 @@ class SimpleSeq2Seq(Model):
         """Apply attention over encoder outputs and decoder state."""
         # Ensure mask is also a FloatTensor. Or else the multiplication within
         # attention will complain.
-        # shape: (batch_size, max_input_sequence_length, encoder_output_dim)
+        # shape: (batch_size, max_input_sequence_length)
         encoder_outputs_mask = encoder_outputs_mask.float()
 
         # shape: (batch_size, max_input_sequence_length)

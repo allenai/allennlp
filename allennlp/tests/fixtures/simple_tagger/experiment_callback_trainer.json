@@ -1,0 +1,45 @@
+{
+  "dataset_reader":{"type":"sequence_tagging"},
+  "train_data_path": "allennlp/tests/fixtures/data/sequence_tagging.tsv",
+  "validation_data_path": "allennlp/tests/fixtures/data/sequence_tagging.tsv",
+  "model": {
+    "type": "simple_tagger",
+    "text_field_embedder": {
+      "token_embedders": {
+        "tokens": {
+            "type": "embedding",
+            "projection_dim": 2,
+            "pretrained_file": "allennlp/tests/fixtures/embeddings/glove.6B.100d.sample.txt.gz",
+            "embedding_dim": 100,
+            "trainable": true
+        }
+      }
+    },
+    "encoder": {
+      "type": "lstm",
+      "input_size": 2,
+      "hidden_size": 4,
+      "num_layers": 1
+    }
+  },
+  "iterator": {
+    "type": "bucket",
+    "sorting_keys": [["tokens", "num_tokens"]],
+    "padding_noise": 0.0,
+    "batch_size" : 80
+  },
+  "trainer": {
+    "type": "callback",
+
+    "optimizer": {"type": "sgd", "lr": 0.01, "momentum": 0.9},
+    "num_epochs": 2,
+    "callbacks": [
+        {"type": "gradient_norm_and_clip", "grad_norm": 1.0},
+        "checkpoint",
+        {"type": "track_metrics", "patience": 500},
+        "validate",
+        {"type": "log_to_tensorboard", "log_batch_size_period": 10}
+    ],
+    "cuda_device": -1
+  }
+}

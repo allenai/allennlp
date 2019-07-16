@@ -3,7 +3,6 @@ import argparse
 import gzip
 import os
 
-import numpy
 import torch
 
 from allennlp.common.checks import ConfigurationError
@@ -47,9 +46,9 @@ def main(vocab_path: str,
     indices = indexer.tokens_to_indices([Token(token) for token in tokens], Vocabulary(), "indices")["indices"]
     sentences = []
     for k in range((len(indices) // 50) + 1):
-        sentences.append(indexer.pad_token_sequence(indices[(k * 50):((k + 1) * 50)],
-                                                    desired_num_tokens=50,
-                                                    padding_lengths={}))
+        sentences.append(indexer.as_padded_tensor(indices[(k * 50):((k + 1) * 50)],
+                                                  desired_num_tokens=50,
+                                                  padding_lengths={}))
 
     last_batch_remainder = 50 - (len(indices) % 50)
     if device != -1:
@@ -61,11 +60,9 @@ def main(vocab_path: str,
 
     all_embeddings = []
     for i in range((len(sentences) // batch_size) + 1):
-        array = numpy.array(sentences[i * batch_size: (i + 1) * batch_size])
+        batch = torch.stack(sentences[i * batch_size: (i + 1) * batch_size])
         if device != -1:
-            batch = torch.from_numpy(array).cuda(device)
-        else:
-            batch = torch.from_numpy(array)
+            batch = batch.cuda(device)
 
         token_embedding = elmo_token_embedder(batch)['token_embedding'].data
 

@@ -128,7 +128,13 @@ class Optimizer(Registrable):
         # key to your "trainer.optimizer" config.
         infer_type_and_cast = params.pop_bool("infer_type_and_cast", True)
         params_as_dict = params.as_dict(infer_type_and_cast=infer_type_and_cast)
-        return Optimizer.by_name(optimizer)(parameter_groups, **params_as_dict) # type: ignore
+        subclass = Optimizer.by_name(optimizer)
+
+        # If the optimizer subclass has a from_params, use it.
+        if hasattr(subclass, 'from_params'):
+            return subclass.from_params(parameter_groups, params=params)
+        else:
+            return subclass(parameter_groups, **params_as_dict) # type: ignore
 
 # We just use the Pytorch optimizers, so here we force them into
 # Registry._registry so we can build them from params.
