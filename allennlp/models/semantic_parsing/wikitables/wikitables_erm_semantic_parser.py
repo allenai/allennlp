@@ -131,7 +131,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         # We don't need a separate beam search since the trainer does that already. But we're defining one just to
         # be able to use interactive beam search (a functionality that's only implemented in the ``BeamSearch``
         # class) in the demo. We'll use this only at test time.
-        self._beam_search = BeamSearch(beam_size=decoder_beam_size)  # type: ignore
+        self._beam_search: BeamSearch = BeamSearch(beam_size=decoder_beam_size)
         # TODO (pradeep): Checking whether file exists here to avoid raising an error when we've
         # copied a trained ERM model from a different machine and the original MML model that was
         # used to initialize it does not exist on the current machine. This may not be the best
