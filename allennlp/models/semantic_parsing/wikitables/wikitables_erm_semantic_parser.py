@@ -128,9 +128,9 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                                                                dropout=dropout)
         self._checklist_cost_weight = checklist_cost_weight
         self._agenda_coverage = Average()
-        # We don't need a separate beam search since the trainer does that already. But we're defining once just to
+        # We don't need a separate beam search since the trainer does that already. But we're defining one just to
         # be able to use interactive beam search (a functionality that's only implemented in the ``BeamSearch``
-        # class) in the demo.
+        # class) in the demo. We'll use this only at test time.
         self._beam_search = BeamSearch(beam_size=decoder_beam_size)
         # TODO (pradeep): Checking whether file exists here to avoid raising an error when we've
         # copied a trained ERM model from a different machine and the original MML model that was
