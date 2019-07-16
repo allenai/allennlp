@@ -6,7 +6,7 @@ import numpy
 
 from allennlp.common.util import JsonDict
 from allennlp.data import DatasetReader, Instance
-from allennlp.data.fields import LabelField, SequenceLabelField
+from allennlp.data.fields import LabelField, SequenceLabelField, ListField
 from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
 from allennlp.models import Model
 from allennlp.predictors.predictor import Predictor
@@ -88,10 +88,11 @@ class SentenceTaggerPredictor(Predictor):
 
         # Creates a new instance for each contiguous tag
         instances = []
-        for span in predicted_spans:
+        for labels in predicted_spans:
             new_instance = deepcopy(instance)
-            new_instance.add_field('tags', ListField([LabelField(tag) for tag in span]), self._model.vocab)
-
+            text_field: TextField = instance['tokens']  # type: ignore
+            new_instance.add_field('tags', SequenceLabelField(labels, text_field), self._model.vocab)
+            #new_instance.add_field('tags', ListField([LabelField(tag) for tag in labels]), self._model.vocab)
             instances.append(new_instance)
 
         return instances

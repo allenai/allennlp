@@ -15,6 +15,7 @@ class TestHotflip(AllenNlpTestCase):
         predictor = Predictor.from_archive(archive, 'textual-entailment')
 
         hotflipper = Hotflip(predictor)
+        hotflipper.initialize()
         attack = hotflipper.attack_from_json(inputs, 'hypothesis', 'grad_input_1')
         assert attack is not None
         assert 'final' in attack

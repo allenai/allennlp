@@ -134,12 +134,12 @@ class Predictor(Registrable):
         def hook_layers(module, grad_in, grad_out): # pylint: disable=unused-argument
             embedding_gradients.append(grad_out[0])
 
-        backward_hook = None
+        backward_hooks = []
         for module in self._model.modules():
             if isinstance(module, TextFieldEmbedder):
-                backward_hook = module.register_backward_hook(hook_layers)
+                backward_hooks.append(module.register_backward_hook(hook_layers))
 
-        return backward_hook
+        return backward_hooks
 
     @contextmanager
     def capture_model_internals(self) -> Iterator[dict]:

@@ -27,6 +27,14 @@ class Hotflip(Attacker):
     def __init__(self, predictor: Predictor) -> None:
         super().__init__(predictor)
         self.vocab = self.predictor._model.vocab
+        self.token_embedding = None
+
+    def initialize(self):
+        """
+        Call this function before running attack_from_json(). We put the call to
+        _construct_embedding_matrix() in this function to prevent a large amount
+        of compute being done when __init__() is called.
+        """
         self.token_embedding = self._construct_embedding_matrix()
 
     def _construct_embedding_matrix(self):
@@ -41,7 +49,7 @@ class Hotflip(Attacker):
         all_tokens = self.vocab._token_to_index["tokens"]
         all_indices = list(self.vocab._index_to_token["tokens"].keys())
         all_inputs = {"tokens": torch.LongTensor(all_indices).unsqueeze(0)}
-        for  in self.predictor._dataset_reader._token_indexers.values():
+        for token_indexer in self.predictor._dataset_reader._token_indexers.values():
             # handle when a model uses character-level inputs, e.g., a CharCNN
             if isinstance(token_indexer, TokenCharactersIndexer):
                 tokens = [Token(x) for x in all_tokens]

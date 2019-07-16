@@ -11,7 +11,7 @@ class SaliencyInterpreter(Registrable):
         self.predictor = predictor
 
     def saliency_interpret_from_json(self, inputs: JsonDict) -> JsonDict:
-    	"""
+        """
         This function finds a modification to the input text
         that would change the model's prediction in some desired manner
         (e.g., an adversarial attack).

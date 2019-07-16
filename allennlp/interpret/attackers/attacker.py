@@ -14,6 +14,13 @@ class Attacker(Registrable):
     def __init__(self, predictor: Predictor) -> None:
         self.predictor = predictor
 
+    def initialize(self):
+        """
+        Initializes any components of the Attacker that are expensive to compute,
+        so that they are not created on __init__(). Used in hotflip.py
+        """
+        pass
+
     def attack_from_json(self,
                          inputs: JsonDict,
                          input_field_to_attack: str,
