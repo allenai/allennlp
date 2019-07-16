@@ -8,7 +8,7 @@ from allennlp.interpret.attackers.attacker import Attacker
 from allennlp.interpret.attackers import utils
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import Instance
-from allennlp.data.fields import ListField, TextField, LabelField, SequenceLabelField
+from allennlp.data.fields import ListField, TextField, LabelField, SequenceField
 
 
 @Attacker.register('input-reduction')
@@ -120,9 +120,9 @@ def remove_one_token(_instance: Instance,
     if "tags" in _instance:
         tag_field_before_smallest = tag_field.labels[0:smallest]
         tag_field_after_smallest = tag_field.labels[smallest + 1:]
-        tag_field.labels = tag_field_before_smallest + tag_field_after_smallest 
-        tag_field = SequenceLabelField(tag_field_before_smallest + tag_field_after_smallest, text_field)
-            
+        tag_field.labels = tag_field_before_smallest + tag_field_after_smallest
+        tag_field.sequence_field = TextField(text_field, text_field._token_indexers)
+
     _instance.indexed = False
     return _instance, smallest
 
