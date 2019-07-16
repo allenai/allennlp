@@ -95,7 +95,7 @@
             "layer_dropout_undecayed_prob": 0.0,
             "attention_dropout_prob": 0
         },
-        "dropout_prob": 0.1,
+        "dropout_prob": 0.0,
         "regularizer": [
             [
                 ".*",
