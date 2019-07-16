@@ -124,15 +124,9 @@ class MultiQAReader(DatasetReader):
                  sample_size: int = -1,
                  STRIDE: int = 128,
                  MAX_WORDPIECES: int = 512,
-                 random_seed: int = 0,
                  support_yesno: bool = True
                  ) -> None:
         super().__init__(lazy)
-
-        # the random seed could be change for models like BERT that are
-        # unstable when fine-tuned + the insure results reproducibility
-        random.seed(random_seed)
-
         self._support_yesno = support_yesno
         self._preproc_outputfile = preproc_outputfile
         self._STRIDE = STRIDE
@@ -247,11 +241,12 @@ class MultiQAReader(DatasetReader):
                         if 'extractive' in ac:
                             # Supporting only one answer of type extractive (future version will support list and set)
                             if "single_answer" in ac['extractive']:
+                                answer_text_list.append(ac['extractive']["single_answer"]["answer"])
+                                if 'aliases' in ac['extractive']["single_answer"]:
+                                    answer_text_list += ac['extractive']["single_answer"]["aliases"]
+
                                 for instance in ac['extractive']["single_answer"]["instances"]:
                                     detected_answer = {}
-                                    answer_text_list.append(ac['extractive']["single_answer"]["answer"])
-                                    if 'aliases' in ac['extractive']["single_answer"]:
-                                        answer_text_list += ac['extractive']["single_answer"]["aliases"]
                                     # checking if the answer has been detected
                                     if "token_offset" in offsets[instance["doc_id"]][instance["part"]]:
                                         answer_token_offset = offsets[instance["doc_id"]][instance["part"]]['token_offset']
@@ -259,7 +254,7 @@ class MultiQAReader(DatasetReader):
                                                                           instance['token_inds'][1] + answer_token_offset)
                                         detected_answer['text'] = instance["text"]
                                         qa['detected_answers'].append(detected_answer)
-                                    answer_text_list.append(instance["text"])
+
                         elif 'yesno' in ac:
                             # Supporting only one answer of type yesno
                             if self._support_yesno and "single_answer" in ac['yesno']:
