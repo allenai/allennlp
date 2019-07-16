@@ -3,7 +3,7 @@ from pytest import approx
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor
-from allennlp.interpret import SimpleGradient
+from allennlp.interpret.saliency_interpreters import SimpleGradient
 
 class TestSimpleGradient(AllenNlpTestCase):
     def test_simple_gradient(self):

@@ -2,7 +2,7 @@
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor
-from allennlp.interpret import InputReduction
+from allennlp.interpret.attackers import InputReduction
 
 class TestInputReduction(AllenNlpTestCase):
     def test_input_reduction(self):
