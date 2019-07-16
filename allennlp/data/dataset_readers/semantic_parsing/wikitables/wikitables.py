@@ -210,7 +210,6 @@ class WikiTablesDatasetReader(DatasetReader):
         question_field = TextField(tokenized_question, self._question_token_indexers)
         metadata: Dict[str, Any] = {"question_tokens": [x.text for x in tokenized_question]}
         table_context = TableQuestionContext.read_from_lines(table_lines, tokenized_question)
-        target_values_field = MetadataField(target_values)
         world = WikiTablesLanguage(table_context)
         world_field = MetadataField(world)
         # Note: Not passing any featre extractors when instantiating the field below. This will make
@@ -233,8 +232,11 @@ class WikiTablesDatasetReader(DatasetReader):
                   'metadata': MetadataField(metadata),
                   'table': table_field,
                   'world': world_field,
-                  'actions': action_field,
-                  'target_values': target_values_field}
+                  'actions': action_field}
+
+        if target_values is not None:
+            target_values_field = MetadataField(target_values)
+            fields['target_values'] = target_values_field
 
         # We'll make each target action sequence a List[IndexField], where the index is into
         # the action list we made above.  We need to ignore the type here because mypy doesn't

@@ -652,7 +652,7 @@ class WikiTablesSemanticParser(Model):
                         has_logical_form = True
                     except ParsingError:
                         logical_form = 'Error producing logical form'
-                    if target_list[0] is not None:
+                    if target_list is not None:
                         denotation_correct = world[i].evaluate_logical_form(logical_form, target_list[i])
                     else:
                         denotation_correct = False
