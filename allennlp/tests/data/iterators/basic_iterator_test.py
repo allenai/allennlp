@@ -11,12 +11,14 @@ from allennlp.data.fields import TextField
 from allennlp.data.iterators import BasicIterator
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 
+
 class LazyIterable:
     def __init__(self, instances):
         self._instances = instances
 
     def __iter__(self):
         return (instance for instance in self._instances)
+
 
 class IteratorTest(AllenNlpTestCase):
     def setUp(self):
@@ -165,7 +167,6 @@ class TestBasicIterator(IteratorTest):
                                          [self.instances[1], self.instances[2]],
                                          [self.instances[3]]]
 
-
     def test_epoch_tracking_when_one_epoch_at_a_time(self):
         iterator = BasicIterator(batch_size=2, track_epoch=True)
         iterator.index_with(self.vocab)
@@ -184,7 +185,6 @@ class TestBasicIterator(IteratorTest):
             epoch = i // 3
             assert all(epoch_num == epoch for epoch_num in batch['epoch_num'])
 
-
     def test_epoch_tracking_forever(self):
         iterator = BasicIterator(batch_size=2, track_epoch=True)
         iterator.index_with(self.vocab)
@@ -199,6 +199,19 @@ class TestBasicIterator(IteratorTest):
             epoch = i // 3
             assert all(epoch_num == epoch for epoch_num in batch['epoch_num'])
 
+    def test_epoch_tracking_forever_instances_per_epoch(self):
+        iterator = BasicIterator(batch_size=2, track_epoch=True, instances_per_epoch=4)
+        iterator.index_with(self.vocab)
+
+        it = iterator(self.instances, num_epochs=None)
+
+        all_batches = [next(it) for _ in range(30)]
+
+        assert len(all_batches) == 30
+        for i, batch in enumerate(all_batches):
+            # Should have 3 batches per epoch
+            epoch = i // 2
+            assert all(epoch_num == epoch for epoch_num in batch['epoch_num'])
 
     def test_shuffle(self):
         # pylint: disable=protected-access

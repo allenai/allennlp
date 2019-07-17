@@ -19,13 +19,12 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 TensorDict = Dict[str, Union[torch.Tensor, Dict[str, torch.Tensor]]]  # pylint: disable=invalid-name
 
 
-def add_epoch_number(batch: Batch, epoch: int) -> Batch:
+def add_epoch_number(batch: Iterable[Instance], epoch: int) -> Iterable[Instance]:
     """
     Add the epoch number to the batch instances as a MetadataField.
     """
-    for instance in batch.instances:
+    for instance in batch:
         instance.fields['epoch_num'] = MetadataField(epoch)
-    return batch
 
 
 class DataIterator(Registrable):
@@ -135,14 +134,16 @@ class DataIterator(Registrable):
                         epoch_tensor.fill_(epoch)
                     yield tensor_dict
             else:
+
+                if self._track_epoch:
+                    add_epoch_number(instances, epoch)
+
                 batches = self._create_batches(instances, shuffle)
 
                 # Should we add the instances to the cache this epoch?
                 add_to_cache = self._cache_instances and key not in self._cache
 
                 for batch in batches:
-                    if self._track_epoch:
-                        add_epoch_number(batch, epoch)
 
                     if self.vocab is not None:
                         batch.index_instances(self.vocab)
