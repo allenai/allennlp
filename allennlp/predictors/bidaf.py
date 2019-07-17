@@ -57,12 +57,12 @@ class BidafPredictor(Predictor):
         if 'best_span' in outputs:
             span_start_label = outputs['best_span'][0]
             span_end_label = outputs['best_span'][1]
-            passage_field: SequenceField = new_instance['passage'] # type: ignore
+            passage_field: SequenceField = new_instance['passage']  # type: ignore
             new_instance.add_field('span_start', IndexField(int(span_start_label), passage_field))
             new_instance.add_field('span_end', IndexField(int(span_end_label), passage_field))
 
-        # For NAQANet model. It has the fields: answer_as_passage_spans,
-        # answer_as_question_spans, answer_as_add_sub_expressions, answer_as_counts. We need labels for all.
+        # For NAQANet model. It has the fields: answer_as_passage_spans, answer_as_question_spans,
+        # answer_as_add_sub_expressions, answer_as_counts. We need labels for all.
         elif 'answer' in outputs:
             answer_type = outputs['answer']['answer_type']
 
@@ -73,12 +73,13 @@ class BidafPredictor(Predictor):
 
             # When the answer is in the passage
             elif answer_type == 'passage_span':
+                # TODO(mattg): Currently we only handle one predicted span.
                 span = outputs['answer']['spans'][0]
 
                 # Convert character span indices into word span indices
                 word_span_start = None
                 word_span_end = None
-                offsets = new_instance['metadata'].metadata['passage_token_offsets'] # type: ignore
+                offsets = new_instance['metadata'].metadata['passage_token_offsets']  # type: ignore
                 for index, offset in enumerate(offsets):
                     if offset[0] == span[0]:
                         word_span_start = index
@@ -96,26 +97,22 @@ class BidafPredictor(Predictor):
                 # The different numbers in the passage that the model encounters
                 sequence_labels = outputs['answer']['numbers']
 
-                numbers_as_tokens = [Token(str(number['value']))
-                                     for number in outputs['answer']['numbers']]
-                # hack copied from https://github.com/
-                # allenai/allennlp/blob/master/allennlp/
-                # data/dataset_readers/reading_comprehension/drop.py#L232
-                numbers_as_tokens.append(Token('0'))
-                numbers_in_passage_field = TextField(numbers_as_tokens,
-                                                     self._dataset_reader._token_indexers) # type: ignore
+                numbers_field: ListField = instance['number_indices']  # type: ignore
 
-                # Based on ``find_valid_add_sub_expressions``, negative signs are 2 instead of -1.
                 # The numbers in the passage are given signs, that's what we are labeling here.
+                # Negative signs are given the class label 2 (for 0 and 1, the sign matches the
+                # label).
                 labels = []
                 for label in sequence_labels:
                     if label['sign'] == -1:
                         labels.append(2)
                     else:
                         labels.append(label['sign'])
-                labels.append(0) # 0 stands for "not included"
+                # There's a dummy number added in the dataset reader to handle passages with no
+                # numbers; it has a label of 0 (not included).
+                labels.append(0)
 
-                field = ListField([SequenceLabelField(labels, numbers_in_passage_field)])
+                field = ListField([SequenceLabelField(labels, numbers_field)])
                 new_instance.add_field('answer_as_add_sub_expressions', field)
 
             # When the answer is in the question
@@ -126,7 +123,7 @@ class BidafPredictor(Predictor):
                 word_span_start = None
                 word_span_end = None
                 question_offsets = new_instance['metadata'].metadata['question_token_offsets']  # type: ignore
-                for index, offset in question_offsets:
+                for index, offset in enumerate(question_offsets):
                     if offset[0] == span[0]:
                         word_span_start = index
                     if offset[1] == span[1]:
