@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 TensorDict = Dict[str, Union[torch.Tensor, Dict[str, torch.Tensor]]]  # pylint: disable=invalid-name
 
 
-def add_epoch_number(batch: Iterable[Instance], epoch: int) -> Iterable[Instance]:
+def add_epoch_number(batch: Iterable[Instance], epoch: int) -> None:
     """
     Add the epoch number to the batch instances as a MetadataField.
     """
