@@ -703,7 +703,3 @@ class TestVocabulary(AllenNlpTestCase):
         vocab = Vocabulary.from_params(params=params, instances=self.dataset)
         assert vocab.get_vocab_size() >= 50
         assert vocab.get_token_index("his") > 1  # not @@UNKNOWN@@
-
-
-    def test_joel(self):
-        vocab = Vocabulary.from_params(params=Params({'min_count': {'a': 1}}), instances=self.dataset)
