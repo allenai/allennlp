@@ -7,10 +7,9 @@ import numpy
 
 from allennlp.common.util import JsonDict
 from allennlp.data import Instance
-from allennlp.data.tokenizers import Token
 from allennlp.predictors.predictor import Predictor
-from allennlp.data.fields import (IndexField, TextField, ListField,
-                                  LabelField, SpanField, SequenceLabelField, SequenceField)
+from allennlp.data.fields import (IndexField, ListField, LabelField, SpanField, SequenceLabelField,
+                                  SequenceField)
 
 
 @Predictor.register('machine-comprehension')
