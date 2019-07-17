@@ -108,7 +108,13 @@ class MultiQA_BERT_OLD(Model):
                 if torch.cuda.is_available() else torch.FloatTensor([0])
         # Compute F1 and preparing the output dictionary.
         output_dict['best_span_str'] = []
+        output_dict['best_span_logit'] = []
         output_dict['qid'] = []
+        output_dict['yesno'] = []
+        output_dict['yesno_logit'] = []
+        output_dict['qid'] = []
+        output_dict['EM'] = []
+        output_dict['f1'] = []
 
         # getting best span prediction for
         best_span = self._get_example_predications(span_start_logits, span_end_logits, self._max_span_length)
@@ -135,6 +141,9 @@ class MultiQA_BERT_OLD(Model):
             # But we may have more than 1 chunk per question, and thus less output strings than instances
             for i in range(len(question_inds)):
                 output_dict['best_span_str'].append(best_span_string)
+                output_dict['best_span_logit'].append(best_span_logit)
+                output_dict['yesno'].append("no_yesno")
+                output_dict['yesno_logit'].append(-30.0)
                 output_dict['qid'].append(question_instances_metadata[best_span_ind]['question_id'])
 
             f1_score = 0.0
@@ -145,6 +154,8 @@ class MultiQA_BERT_OLD(Model):
                 EM_score = squad_eval.metric_max_over_ground_truths(squad_eval.exact_match_score, best_span_string,gold_answer_texts)
             self._official_f1(100 * f1_score)
             self._official_EM(100 * EM_score)
+            output_dict['EM'].append(100 * EM_score)
+            output_dict['f1'].append(100 * f1_score)
 
             # TODO move to predict
             if self._predictions_file is not None:
