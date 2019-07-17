@@ -412,7 +412,7 @@ class WikiTablesLanguage(DomainLanguage):
             if isinstance(cell_value, float):
                 numbers.append(cell_value)
 
-        return numbers[0] if numbers else -1  # type: ignore
+        return numbers[0] if numbers else None  # type: ignore
 
     @predicate
     def select_date(self, rows: List[Row], column: DateColumn) -> Date:
@@ -425,7 +425,7 @@ class WikiTablesLanguage(DomainLanguage):
             if isinstance(cell_value, Date):
                 dates.append(cell_value)
 
-        return dates[0] if dates else Date(-1, -1, -1)  # type: ignore
+        return dates[0] if dates else None  # type: ignore
 
     @predicate
     def same_as(self, rows: List[Row], column: Column) -> List[Row]:
@@ -528,7 +528,7 @@ class WikiTablesLanguage(DomainLanguage):
         """
         most_frequent_list = self._get_most_frequent_values(rows, column)
         if not most_frequent_list:
-            return 0.0  # type: ignore
+            return None  # type: ignore
         most_frequent_value = most_frequent_list[0]
         if not isinstance(most_frequent_value, Number):
             raise ExecutionError(f"Invalid values for mode_number: {most_frequent_value}")
@@ -542,7 +542,7 @@ class WikiTablesLanguage(DomainLanguage):
         """
         most_frequent_list = self._get_most_frequent_values(rows, column)
         if not most_frequent_list:
-            return Date(-1, -1, -1)
+            return None
         most_frequent_value = most_frequent_list[0]
         if not isinstance(most_frequent_value, Date):
             raise ExecutionError(f"Invalid values for mode_date: {most_frequent_value}")
@@ -586,6 +586,8 @@ class WikiTablesLanguage(DomainLanguage):
     # added to the language if we see a number column in the table.
 
     def filter_number_greater(self, rows: List[Row], column: NumberColumn, filter_value: Number) -> List[Row]:
+        if filter_value is None:
+            return []
         cell_row_pairs = [(row.values[column.name], row) for row in rows if row.values[column.name] is not None]
         return [row for cell_value, row in cell_row_pairs if cell_value > filter_value]  # type: ignore
 
@@ -593,10 +595,14 @@ class WikiTablesLanguage(DomainLanguage):
                                      rows: List[Row],
                                      column: NumberColumn,
                                      filter_value: Number) -> List[Row]:
+        if filter_value is None:
+            return []
         cell_row_pairs = [(row.values[column.name], row) for row in rows if row.values[column.name] is not None]
         return [row for cell_value, row in cell_row_pairs if cell_value >= filter_value]  # type: ignore
 
     def filter_number_lesser(self, rows: List[Row], column: NumberColumn, filter_value: Number) -> List[Row]:
+        if filter_value is None:
+            return []
         cell_row_pairs = [(row.values[column.name], row) for row in rows if row.values[column.name] is not None]
         return [row for cell_value, row in cell_row_pairs if cell_value < filter_value]  # type: ignore
 
@@ -604,14 +610,20 @@ class WikiTablesLanguage(DomainLanguage):
                                     rows: List[Row],
                                     column: NumberColumn,
                                     filter_value: Number) -> List[Row]:
+        if filter_value is None:
+            return []
         cell_row_pairs = [(row.values[column.name], row) for row in rows if row.values[column.name] is not None]
         return [row for cell_value, row in cell_row_pairs if cell_value <= filter_value]  # type: ignore
 
     def filter_number_equals(self, rows: List[Row], column: NumberColumn, filter_value: Number) -> List[Row]:
+        if filter_value is None:
+            return []
         cell_row_pairs = [(row.values[column.name], row) for row in rows if row.values[column.name] is not None]
         return [row for cell_value, row in cell_row_pairs if cell_value == filter_value]  # type: ignore
 
     def filter_number_not_equals(self, rows: List[Row], column: NumberColumn, filter_value: Number) -> List[Row]:
+        if filter_value is None:
+            return []
         cell_row_pairs = [(row.values[column.name], row) for row in rows if row.values[column.name] is not None]
         return [row for cell_value, row in cell_row_pairs if cell_value != filter_value]  # type: ignore
 
@@ -619,6 +631,8 @@ class WikiTablesLanguage(DomainLanguage):
     # language if we see a date column in the table.
 
     def filter_date_greater(self, rows: List[Row], column: DateColumn, filter_value: Date) -> List[Row]:
+        if filter_value is None:
+            return []
         cell_row_pairs: List[Tuple[Date, Row]] = []
         for row in rows:
             cell_value = row.values[column.name]
@@ -628,6 +642,8 @@ class WikiTablesLanguage(DomainLanguage):
         return [row for cell_value, row in cell_row_pairs if cell_value > filter_value]
 
     def filter_date_greater_equals(self, rows: List[Row], column: DateColumn, filter_value: Date) -> List[Row]:
+        if filter_value is None:
+            return []
         cell_row_pairs: List[Tuple[Date, Row]] = []
         for row in rows:
             cell_value = row.values[column.name]
@@ -636,6 +652,8 @@ class WikiTablesLanguage(DomainLanguage):
         return [row for cell_value, row in cell_row_pairs if cell_value >= filter_value]
 
     def filter_date_lesser(self, rows: List[Row], column: DateColumn, filter_value: Date) -> List[Row]:
+        if filter_value is None:
+            return []
         cell_row_pairs: List[Tuple[Date, Row]] = []
         for row in rows:
             cell_value = row.values[column.name]
@@ -644,6 +662,8 @@ class WikiTablesLanguage(DomainLanguage):
         return [row for cell_value, row in cell_row_pairs if cell_value < filter_value]
 
     def filter_date_lesser_equals(self, rows: List[Row], column: DateColumn, filter_value: Date) -> List[Row]:
+        if filter_value is None:
+            return []
         cell_row_pairs: List[Tuple[Date, Row]] = []
         for row in rows:
             cell_value = row.values[column.name]
@@ -652,6 +672,8 @@ class WikiTablesLanguage(DomainLanguage):
         return [row for cell_value, row in cell_row_pairs if cell_value <= filter_value]
 
     def filter_date_equals(self, rows: List[Row], column: DateColumn, filter_value: Date) -> List[Row]:
+        if filter_value is None:
+            return []
         cell_row_pairs: List[Tuple[Date, Row]] = []
         for row in rows:
             cell_value = row.values[column.name]
@@ -660,6 +682,8 @@ class WikiTablesLanguage(DomainLanguage):
         return [row for cell_value, row in cell_row_pairs if cell_value == filter_value]
 
     def filter_date_not_equals(self, rows: List[Row], column: DateColumn, filter_value: Date) -> List[Row]:
+        if filter_value is None:
+            return []
         cell_row_pairs: List[Tuple[Date, Row]] = []
         for row in rows:
             cell_value = row.values[column.name]
@@ -727,7 +751,7 @@ class WikiTablesLanguage(DomainLanguage):
         """
         cell_values = [row.values[column.name] for row in rows if row.values[column.name] is not None]
         if not cell_values:
-            return Date(-1, -1, -1)
+            return None
         if not all([isinstance(value, Date) for value in cell_values]):
             raise ExecutionError(f"Invalid values for date selection function: {cell_values}")
         return max(cell_values)  # type: ignore
@@ -739,7 +763,7 @@ class WikiTablesLanguage(DomainLanguage):
         """
         cell_values = [row.values[column.name] for row in rows if row.values[column.name] is not None]
         if not cell_values:
-            return Date(-1, -1, -1)
+            return None
         if not all([isinstance(value, Date) for value in cell_values]):
             raise ExecutionError(f"Invalid values for date selection function: {cell_values}")
         return min(cell_values)  # type: ignore
@@ -754,7 +778,7 @@ class WikiTablesLanguage(DomainLanguage):
         """
         cell_values = [row.values[column.name] for row in rows if row.values[column.name] is not None]
         if not cell_values:
-            return 0.0  # type: ignore
+            return None  # type: ignore
         if not all([isinstance(value, Number) for value in cell_values]):
             raise ExecutionError(f"Invalid values for number selection function: {cell_values}")
         return max(cell_values)  # type: ignore
@@ -766,7 +790,7 @@ class WikiTablesLanguage(DomainLanguage):
         """
         cell_values = [row.values[column.name] for row in rows if row.values[column.name] is not None]
         if not cell_values:
-            return 0.0  # type: ignore
+            return None  # type: ignore
         if not all([isinstance(value, Number) for value in cell_values]):
             raise ExecutionError(f"Invalid values for number selection function: {cell_values}")
         return min(cell_values)  # type: ignore
@@ -778,7 +802,7 @@ class WikiTablesLanguage(DomainLanguage):
         """
         cell_values = [row.values[column.name] for row in rows if row.values[column.name] is not None]
         if not cell_values:
-            return 0.0  # type: ignore
+            return None  # type: ignore
         return sum(cell_values)  # type: ignore
 
     def average(self, rows: List[Row], column: NumberColumn) -> Number:
@@ -788,7 +812,7 @@ class WikiTablesLanguage(DomainLanguage):
         """
         cell_values = [row.values[column.name] for row in rows if row.values[column.name] is not None]
         if not cell_values:
-            return 0.0  # type: ignore
+            return None  # type: ignore
         return sum(cell_values) / len(cell_values)  # type: ignore
 
     def diff(self, first_row: List[Row], second_row: List[Row], column: NumberColumn) -> Number:
@@ -797,13 +821,13 @@ class WikiTablesLanguage(DomainLanguage):
         that column in those two rows.
         """
         if not first_row or not second_row:
-            return 0.0  # type: ignore
+            return None  # type: ignore
         first_value = first_row[0].values[column.name]
         second_value = second_row[0].values[column.name]
         if isinstance(first_value, float) and isinstance(second_value, float):
             return first_value - second_value  # type: ignore
         elif first_value is None or second_value is None:
-            return 0.0  # type: ignore
+            return None  # type: ignore
         else:
             raise ExecutionError(f"Invalid column for diff: {column.name}")
 

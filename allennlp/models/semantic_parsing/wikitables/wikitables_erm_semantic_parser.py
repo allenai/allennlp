@@ -265,26 +265,26 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                                       checklist_state=checklist_states,
                                       possible_actions=actions,
                                       extras=target_values,
-                                      debug_info=None)
+                                      debug_info=[[] for _ in range(batch_size)])
 
         if target_values is not None:
-            logger.warning(f"TARGET VALUES: {target_values}")
             trainer_outputs = self._decoder_trainer.decode(initial_state,  # type: ignore
                                                            self._decoder_step,
                                                            partial(self._get_state_cost, world))
             outputs.update(trainer_outputs)
+            best_final_states = outputs['best_final_states']
         else:
-            initial_state.debug_info = [[] for _ in range(batch_size)]
-            batch_size = len(actions)
+            #initial_state.debug_info = [[] for _ in range(batch_size)]
+            best_final_states = self._beam_search.search(self._max_decoding_steps,
+                                                         initial_state,
+                                                         self._decoder_step,
+                                                         keep_final_unfinished_states=False)
+        if not self.training:
             agenda_indices = [actions_[:, 0].cpu().data for actions_ in agenda]
             action_mapping = {}
             for batch_index, batch_actions in enumerate(actions):
                 for action_index, action in enumerate(batch_actions):
                     action_mapping[(batch_index, action_index)] = action[0]
-            best_final_states = self._beam_search.search(self._max_decoding_steps,
-                                                         initial_state,
-                                                         self._decoder_step,
-                                                         keep_final_unfinished_states=False)
             for i in range(batch_size):
                 in_agenda_ratio = 0.0
                 # Decoding may not have terminated with any completed logical forms, if `num_steps`
