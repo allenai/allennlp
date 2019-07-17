@@ -4,22 +4,23 @@ from typing import List, Tuple
 import numpy as np
 import torch
 
-from allennlp.interpret.attackers.attacker import Attacker
-from allennlp.interpret.attackers import utils
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import Instance
 from allennlp.data.fields import TextField, SequenceLabelField
+from allennlp.interpret.attackers import utils
+from allennlp.interpret.attackers.attacker import Attacker
 
 
 @Attacker.register('input-reduction')
 class InputReduction(Attacker):
     """
     Runs the input reduction method from `Pathologies of Neural Models Make Interpretations
-    Difficult` https://arxiv.org/abs/1804.07781, which removes as many words as possible
-    from the input without changing the model's prediction.
+    Difficult <https://arxiv.org/abs/1804.07781>`_, which removes as many words as possible from
+    the input without changing the model's prediction.
 
     The functions on this class handle a special case for NER by looking for a field called "tags"
-    This check is brittle, i.e., the code could break if the name of this field has changed.
+    This check is brittle, i.e., the code could break if the name of this field has changed, or if
+    a non-NER model has a field called "tags".
     """
     def attack_from_json(self, inputs: JsonDict = None,
                          input_field_to_attack: str = 'tokens',
@@ -94,9 +95,9 @@ def _remove_one_token(instance: Instance,
 
     # Skip all ignore_tokens by setting grad to infinity
     text_field: TextField = instance[input_field_to_attack]  # type: ignore
-    for tok_idx, tok in enumerate(text_field.tokens):
-        if tok in ignore_tokens:
-            grads_mag[tok_idx] = float("inf")
+    for token_idx, token in enumerate(text_field.tokens):
+        if token in ignore_tokens:
+            grads_mag[token_idx] = float("inf")
 
     # For NER, skip all tokens that are not in outside
     if "tags" in instance:
@@ -107,7 +108,7 @@ def _remove_one_token(instance: Instance,
                 grads_mag[idx] = float("inf")
 
     smallest = np.argmin(grads_mag)
-    if smallest == float("inf"): # if all are ignored tokens, return.
+    if smallest == float("inf"):  # if all are ignored tokens, return.
         return instance, smallest
 
     # remove smallest
@@ -129,8 +130,8 @@ def _get_ner_tags_and_mask(current_instance: Instance,
                            input_field_to_attack: str,
                            ignore_tokens: List[str]):
     """
-    Used for the NER task. Sets the num_ignore tokens, saves the original
-    predicted tag and a 0/1 mask in the position of the tags
+    Used for the NER task. Sets the num_ignore tokens, saves the original predicted tag and a 0/1
+    mask in the position of the tags
     """
     # Set num_ignore_tokens
     num_ignore_tokens = 0

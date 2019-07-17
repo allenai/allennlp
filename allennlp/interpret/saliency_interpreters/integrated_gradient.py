@@ -5,9 +5,9 @@ from typing import List, Dict, Any
 import numpy
 
 from allennlp.common.util import JsonDict, sanitize
+from allennlp.data import Instance
 from allennlp.interpret.saliency_interpreters.saliency_interpreter import SaliencyInterpreter
 from allennlp.modules.text_field_embedders import TextFieldEmbedder
-from allennlp.data import Instance
 
 
 @SaliencyInterpreter.register('integrated-gradient')
@@ -22,7 +22,7 @@ class IntegratedGradient(SaliencyInterpreter):
         instances_with_grads = dict()
         for idx, instance in enumerate(labeled_instances):
             # Run integrated gradients
-            grads = self.integrate_gradients(instance)
+            grads = self._integrate_gradients(instance)
 
             # Normalize results
             for key, grad in grads.items():
@@ -37,13 +37,13 @@ class IntegratedGradient(SaliencyInterpreter):
 
     def _register_forward_hook(self, alpha: int, embeddings_list: List):
         """
-        Register a forward hook on the embedding layer which scales
-        the embeddings by alpha. Used for one term in the Integrated Gradients sum.
+        Register a forward hook on the embedding layer which scales the embeddings by alpha. Used
+        for one term in the Integrated Gradients sum.
 
-        We store the embedding output into the embeddings_list when alpha is zero.
-        This is used later to element-wise multiply the input by the averaged gradients.
+        We store the embedding output into the embeddings_list when alpha is zero.  This is used
+        later to element-wise multiply the input by the averaged gradients.
         """
-        def forward_hook(module, inp, output): # pylint: disable=unused-argument
+        def forward_hook(module, inputs, output):  # pylint: disable=unused-argument
             # Save the input for later use. Only do so on first call.
             if alpha == 0:
                 embeddings_list.append(output.squeeze(0).clone().detach().numpy())
@@ -59,7 +59,7 @@ class IntegratedGradient(SaliencyInterpreter):
 
         return handle
 
-    def integrate_gradients(self, instance: Instance) -> Dict[str, numpy.ndarray]:
+    def _integrate_gradients(self, instance: Instance) -> Dict[str, numpy.ndarray]:
         """
         Returns integrated gradients for the given :class:`~allennlp.data.instance.Instance`
         """
