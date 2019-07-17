@@ -17,7 +17,7 @@ class SmoothGradient(SaliencyInterpreter):
     Interprets the prediction using SmoothGrad (https://arxiv.org/abs/1706.03825)
     """
     def __init__(self, predictor: Predictor) -> None:
-        super().__init__(predictor)        
+        super().__init__(predictor)
         # Hyperparameters
         self.stdev = 0.01
         self.num_samples = 25

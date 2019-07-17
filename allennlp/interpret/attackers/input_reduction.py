@@ -100,7 +100,7 @@ def _remove_one_token(instance: Instance,
     # For NER, skip all tokens that are not in outside
     if "tags" in instance:
         tag_field: SequenceLabelField = instance["tags"] # type: ignore
-        for idx, label in enumerate(tag_field):
+        for idx, label in enumerate(tag_field.labels):
             if label != "O":
                 grads_mag[idx] = float("inf")
 
@@ -116,7 +116,7 @@ def _remove_one_token(instance: Instance,
     if "tags" in instance:
         tag_field_before_smallest = tag_field.labels[0:smallest]
         tag_field_after_smallest = tag_field.labels[smallest + 1:]
-        tag_field.labels = tag_field_before_smallest + tag_field_after_smallest
+        tag_field.labels = tag_field_before_smallest + tag_field_after_smallest # type: ignore
         tag_field.sequence_field = text_field
 
     instance.indexed = False
@@ -131,7 +131,7 @@ def _get_ner_tags_and_mask(current_instance: Instance,
     """
     # Set num_ignore_tokens
     num_ignore_tokens = 0
-    input_field: TextField = current_instance[input_field_to_attack]
+    input_field: TextField = current_instance[input_field_to_attack] # type: ignore
     for token in input_field.tokens:
         if str(token) in ignore_tokens:
             num_ignore_tokens += 1
@@ -140,7 +140,7 @@ def _get_ner_tags_and_mask(current_instance: Instance,
     tag_mask = []
     original_tags = []
     tag_field: SequenceLabelField = current_instance["tags"] # type: ignore
-    for label in tag_field:
+    for label in tag_field.labels:
         if label != "O":
             tag_mask.append(1)
             original_tags.append(label)

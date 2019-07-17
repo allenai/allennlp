@@ -65,7 +65,7 @@ class Hotflip(Attacker):
                 for token in all_tokens:
                     elmo_indexed_token = token_indexer.tokens_to_indices([Token(text=token)],
                                                                          self.vocab,
-                                                                   "     sentence")["sentence"]
+                                                                         "sentence")["sentence"]
                     elmo_tokens.append(elmo_indexed_token[0])
                 all_inputs["elmo"] = torch.LongTensor(elmo_tokens).unsqueeze(0)
 
@@ -136,7 +136,7 @@ class Hotflip(Attacker):
                 input_tokens = current_text_field._indexed_tokens["tokens"]
                 original_id_of_token_to_flip = input_tokens[index_of_token_to_flip]
                 new_id_of_flipped_token = first_order_taylor(grad[index_of_token_to_flip],
-                                                             self.token_embedding.weight,
+                                                             self.token_embedding.weight, # type: ignore
                                                              original_id_of_token_to_flip)
                 # flip token
                 new_token = Token(self.vocab._index_to_token["tokens"][new_id_of_flipped_token]) # type: ignore

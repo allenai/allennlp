@@ -3,8 +3,7 @@ import json
 from contextlib import contextmanager
 import numpy
 from torch.utils.hooks import RemovableHandle
-
-
+from torch import Tensor
 
 from allennlp.common import Registrable
 from allennlp.common.checks import ConfigurationError
@@ -103,7 +102,7 @@ class Predictor(Registrable):
         layer of the model. Calls :func:`backward` on the loss and then removes the
         hooks.
         """
-        embedding_gradients = []
+        embedding_gradients: List[Tensor] = []
         hooks: List[RemovableHandle] = self._register_embedding_gradient_hooks(embedding_gradients)
 
         dataset = Batch(instances)
