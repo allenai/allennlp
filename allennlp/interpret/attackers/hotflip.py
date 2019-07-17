@@ -57,9 +57,9 @@ class Hotflip(Attacker):
                 tokens = [Token(x) for x in all_tokens]
                 max_token_length = max(len(x) for x in all_tokens)
                 indexed_tokens = token_indexer.tokens_to_indices(tokens, self.vocab, "token_characters")
-                padded_tokens = token_indexer.pad_token_sequence(indexed_tokens,
-                                                                 {"token_characters": len(tokens)},
-                                                                 {"num_token_characters": max_token_length})
+                padded_tokens = token_indexer.as_padded_tensor(indexed_tokens,
+                                                               {"token_characters": len(tokens)},
+                                                               {"num_token_characters": max_token_length})
                 all_inputs['token_characters'] = torch.LongTensor(padded_tokens['token_characters']).unsqueeze(0)
             # for ELMo models
             if isinstance(token_indexer, ELMoTokenCharactersIndexer):
