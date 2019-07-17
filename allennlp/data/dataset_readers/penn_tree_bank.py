@@ -132,7 +132,7 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
             gold_spans = None
         for start, end in enumerate_spans(tokens):
             spans.append(SpanField(start, end, text_field))
-            
+
             if gold_spans is not None:
                 gold_labels.append(gold_spans.get((start, end), "NO-LABEL"))
 
