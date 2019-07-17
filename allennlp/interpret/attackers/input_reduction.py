@@ -100,7 +100,9 @@ def _remove_one_token(instance: Instance,
     # For NER, skip all tokens that are not in outside
     if "tags" in instance:
         tag_field: SequenceLabelField = instance["tags"] # type: ignore
-        for idx, label in enumerate(tag_field.labels):
+        # mypy throws Cannot infer type argument 1 of "enumerate" without this
+        labels: List[str] = tag_field.labels
+        for idx, label in enumerate(labels):
             if label != "O":
                 grads_mag[idx] = float("inf")
 
