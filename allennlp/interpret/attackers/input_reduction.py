@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import List, Tuple
+from typing import List, Tuple, Union
 
 import numpy as np
 import torch
