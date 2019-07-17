@@ -165,8 +165,8 @@ class Hotflip(Attacker):
                          "outputs": outputs})
 
 def _first_order_taylor(grad: numpy.ndarray,
-                       embedding_matrix: torch.nn.parameter.Parameter,
-                       token_idx: int) -> int:
+                        embedding_matrix: torch.nn.parameter.Parameter,
+                        token_idx: int) -> int:
     """
     The below code is based on
     https://github.com/pmichel31415/translate/blob/paul/pytorch_translate/
