@@ -129,7 +129,7 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
         # Get all keys which have been used for padding for each indexer and take the max if there are duplicates.
         padding_keys = {key for d in lengths for key in d.keys()}
         for padding_key in padding_keys:
-            padding_lengths[padding_key] = max(x[padding_key] if padding_key in x else 0 for x in lengths)
+            padding_lengths[padding_key] = max(x.get(padding_key, 0) for x in lengths)
         return padding_lengths
 
     @overrides

@@ -198,13 +198,13 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
             # Iterate over the keys in the first element of the list.  This is fine as for a given
             # indexer, all entities will return the same keys, so we can just use the first one.
             for key in entity_lengths[0].keys():
-                indexer_lengths[key] = max(x[key] if key in x else 0 for x in entity_lengths)
+                indexer_lengths[key] = max(x.get(key, 0) for x in entity_lengths)
             lengths.append(indexer_lengths)
 
         # Get all the keys which have been used for padding.
         padding_keys = {key for d in lengths for key in d.keys()}
         for padding_key in padding_keys:
-            padding_lengths[padding_key] = max(x[padding_key] if padding_key in x else 0 for x in lengths)
+            padding_lengths[padding_key] = max(x.get(padding_key, 0) for x in lengths)
         return padding_lengths
 
     @overrides
