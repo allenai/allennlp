@@ -56,16 +56,16 @@ class Hotflip(Attacker):
                 max_token_length = max(len(x) for x in all_tokens)
                 indexed_tokens = token_indexer.tokens_to_indices(tokens, self.vocab, "token_characters")
                 padded_tokens = token_indexer.pad_token_sequence(indexed_tokens,
-                                                           {"token_characters": len(tokens)},
-                                                           {"num_token_characters": max_token_length})
+                                                                 {"token_characters": len(tokens)},
+                                                                 {"num_token_characters": max_token_length})
                 all_inputs['token_characters'] = torch.LongTensor(padded_tokens['token_characters']).unsqueeze(0)
             # for ELMo models
             if isinstance(token_indexer, ELMoTokenCharactersIndexer):
                 elmo_tokens = []
                 for token in all_tokens:
                     elmo_indexed_token = token_indexer.tokens_to_indices([Token(text=token)],
-                                                                   self.vocab,
-                                                                   "sentence")["sentence"]
+                                                                         self.vocab,
+                                                                   "     sentence")["sentence"]
                     elmo_tokens.append(elmo_indexed_token[0])
                 all_inputs["elmo"] = torch.LongTensor(elmo_tokens).unsqueeze(0)
 
@@ -97,6 +97,8 @@ class Hotflip(Attacker):
         This process is iteratively repeated until the prediction changes.
         Once a token is replaced, it is not flipped again.
         """
+        if self.token_embedding is None:
+            raise RuntimeError("You must call initialize() before calling attack_from_json()")
         ignore_tokens = ["@@NULL@@", '.', ',', ';', '!', '?'] if ignore_tokens is None else ignore_tokens
         original_instances = self.predictor.json_to_labeled_instances(inputs)
         original_text_field: TextField = original_instances[0][input_field_to_attack]  # type: ignore

@@ -20,8 +20,8 @@ class TestInputReduction(AllenNlpTestCase):
         assert reduced is not None
         assert 'final' in reduced
         assert 'original' in reduced
+        assert reduced['final'][0] # always at least one token
         assert len(reduced['final'][0]) <= len(reduced['original']) # input reduction removes tokens
-        assert len(reduced['final'][0]) > 0 # always at least one token
         for word in reduced['final'][0]: # no new words entered
             assert word in reduced['original']
 
@@ -39,7 +39,7 @@ class TestInputReduction(AllenNlpTestCase):
         assert 'final' in reduced
         assert 'original' in reduced
         for reduced_input in reduced['final']:
+            assert reduced_input # always at least one token
             assert len(reduced_input) <= len(reduced['original']) # input reduction removes tokens
-            assert len(reduced_input) > 0 # always at least one token
             for word in reduced_input: # no new words entered
                 assert word in reduced['original']

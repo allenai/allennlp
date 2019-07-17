@@ -10,7 +10,7 @@ from allennlp.data import Instance
 from allennlp.data.tokenizers import Token
 from allennlp.predictors.predictor import Predictor
 from allennlp.data.fields import (IndexField, TextField, ListField,
-    LabelField, SpanField, SequenceLabelField, SequenceField)
+                                  LabelField, SpanField, SequenceLabelField, SequenceField)
 
 
 @Predictor.register('machine-comprehension')

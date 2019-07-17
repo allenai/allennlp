@@ -8,7 +8,7 @@ from allennlp.interpret.attackers.attacker import Attacker
 from allennlp.interpret.attackers import utils
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import Instance
-from allennlp.data.fields import ListField, TextField, LabelField, SequenceField
+from allennlp.data.fields import TextField, SequenceLabelField
 
 
 @Attacker.register('input-reduction')
@@ -42,14 +42,14 @@ class InputReduction(Attacker):
             # Set num_ignore_tokens for NER and build token mask
             else:
                 num_ignore_tokens, tag_mask, original_tags = _get_ner_tags_and_mask(current_instance,
-                                                                                   input_field_to_attack,
-                                                                                   ignore_tokens)
+                                                                                    input_field_to_attack,
+                                                                                    ignore_tokens)
 
             current_text_field: TextField = current_instance[input_field_to_attack]  # type: ignore
             current_tokens = deepcopy(current_text_field.tokens)
             smallest_idx = -1
             # keep removing tokens until prediction is about to change
-            while len(current_text_field) >= num_ignore_tokens:
+            while len(current_text_field.tokens) >= num_ignore_tokens:
                 # get gradients and predictions
                 grads, outputs = self.predictor.get_gradients([current_instance])
                 for output in outputs:
@@ -74,17 +74,17 @@ class InputReduction(Attacker):
                 # remove a token from the input
                 current_tokens = deepcopy(current_text_field.tokens)
                 current_instance, smallest_idx = _remove_one_token(current_instance,
-                                                                  input_field_to_attack,
-                                                                  grads[grad_input_field],
-                                                                  ignore_tokens)
+                                                                   input_field_to_attack,
+                                                                   grads[grad_input_field],
+                                                                   ignore_tokens)
 
             final_tokens.append(current_tokens)
         return sanitize({"final": final_tokens, "original": original_tokens})
 
 def _remove_one_token(instance: Instance,
-                     input_field_to_attack: str,
-                     grads: np.ndarray,
-                     ignore_tokens: List[str]) -> Tuple[Instance, int]:
+                      input_field_to_attack: str,
+                      grads: np.ndarray,
+                      ignore_tokens: List[str]) -> Tuple[Instance, int]:
     """
     Finds the token with the smallest gradient and removes it.
     """
@@ -117,21 +117,21 @@ def _remove_one_token(instance: Instance,
         tag_field_before_smallest = tag_field.labels[0:smallest]
         tag_field_after_smallest = tag_field.labels[smallest + 1:]
         tag_field.labels = tag_field_before_smallest + tag_field_after_smallest
-        tag_field.sequence_field = TextField(text_field, text_field._token_indexers)
+        tag_field.sequence_field = text_field
 
     instance.indexed = False
     return instance, smallest
 
 def _get_ner_tags_and_mask(current_instance: Instance,
-                          input_field_to_attack: str,
-                          ignore_tokens: List[str]):
+                           input_field_to_attack: str,
+                           ignore_tokens: List[str]):
     """
     Used for the NER task. Sets the num_ignore tokens, saves the original
     predicted tag and a 0/1 mask in the position of the tags
     """
     # Set num_ignore_tokens
     num_ignore_tokens = 0
-    input_field = current_instance[input_field_to_attack]
+    input_field: TextField = current_instance[input_field_to_attack]
     for token in input_field.tokens:
         if str(token) in ignore_tokens:
             num_ignore_tokens += 1
