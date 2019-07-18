@@ -24,9 +24,9 @@ class InputReduction(Attacker):
     This check is brittle, i.e., the code could break if the name of this field has changed, or if
     a non-NER model has a field called "tags".
     """
-    def __init__(self, predictor: Predictor) -> None:
+    def __init__(self, predictor: Predictor, beam_size: int = 3) -> None:
         super().__init__(predictor)
-        self.beam_size = 3
+        self.beam_size = beam_size
 
     def attack_from_json(self, inputs: JsonDict = None,
                          input_field_to_attack: str = 'tokens',
@@ -38,6 +38,21 @@ class InputReduction(Attacker):
         original_tokens = deepcopy(original_text_field.tokens)
         final_tokens = []
         for current_instance in original_instances:
+            final_tokens.append(self._attack_instance(inputs,
+                                                      current_instance,
+                                                      input_field_to_attack,
+                                                      grad_input_field,
+                                                      ignore_tokens))
+
+        return sanitize({"final": final_tokens, "original": original_tokens})
+
+
+    def _attack_instance(self,
+                         inputs: JsonDict,
+                         current_instance: Instance,
+                         input_field_to_attack: str,
+                         grad_input_field: str,
+                         ignore_tokens: List[str]):
             # Save fields that must be checked for equality
             fields_to_compare = utils.get_fields_to_compare(inputs, current_instance, input_field_to_attack)
 
@@ -54,7 +69,6 @@ class InputReduction(Attacker):
 
             current_text_field: TextField = current_instance[input_field_to_attack]  # type: ignore
             current_tokens = deepcopy(current_text_field.tokens)
-            # new_
             current_candidates = [(current_instance, -1)]
             # keep removing tokens until prediction is about to change
             while len(current_tokens) > num_ignore_tokens and current_candidates:
@@ -82,7 +96,7 @@ class InputReduction(Attacker):
                     if "tags" not in current_instance:
                         # relabel beam_instance since last iteration removed an input token
                         beam_instance = self.predictor.predictions_to_labeled_instances(beam_instance, outputs)[0]
-                        if any(beam_instance[field] != fields_to_compare[field] for field in fields_to_compare):
+                        if utils.instance_has_changed(beam_instance, fields_to_compare):
                             continue
 
                     # special case for sentence tagging (we have tested NER)
@@ -105,16 +119,13 @@ class InputReduction(Attacker):
                                                                        ignore_tokens,
                                                                        self.beam_size)
                     current_candidates.extend(reduced_instances_and_smallest)
-
-            final_tokens.append(current_tokens)
-        return sanitize({"final": final_tokens, "original": original_tokens})
-
+            return current_tokens
 
 def _remove_one_token(instance: Instance,
                       input_field_to_attack: str,
                       grads: np.ndarray,
                       ignore_tokens: List[str],
-                      beam_size: int = 1) -> List[Tuple[Instance, int]]:
+                      beam_size: int) -> List[Tuple[Instance, int]]:
     """
     Finds the token with the smallest gradient and removes it.
     """
