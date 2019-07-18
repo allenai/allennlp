@@ -36,6 +36,7 @@ state of the art models with high quality engineering.
    api/allennlp.commands
    api/allennlp.common
    api/allennlp.data
+   api/allennlp.interpret
    api/allennlp.models
    api/allennlp.predictors
    api/allennlp.modules
