@@ -372,6 +372,8 @@ class MultiQAReader(DatasetReader):
             chunks_to_select_from = cannot_answer + yesno + spans
             if len(chunks_to_select_from) > 0:
                 instances_to_add += random.sample(chunks_to_select_from, 1)
+            else:
+                logger.info('found it!!!')
 
         else:
             instances_to_add = question_chunks
@@ -466,6 +468,7 @@ def make_multiqa_instance(question_tokens: List[Token],
             metadata['cannot_answer'] = True
         else:
             span_start, span_end, text = answers_list[0]
+            metadata['single_answer'] = text
 
         span_start_list.append(IndexField(span_start, passage_field))
         span_end_list.append(IndexField(span_end, passage_field))
