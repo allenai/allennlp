@@ -265,8 +265,10 @@ class CallbackTrainer(TrainerBase):
     def from_params(cls,  # type: ignore
                     params: Params,
                     serialization_dir: str,
-                    recover: bool = False) -> 'CallbackTrainer':
-        pieces = TrainerPieces.from_params(params, serialization_dir, recover)  # pylint: disable=no-member
+                    recover: bool = False,
+                    cache_directory: str = None,
+                    cache_prefix: str = None) -> 'CallbackTrainer':
+        pieces = TrainerPieces.from_params(params, serialization_dir, recover, cache_directory, cache_prefix)  # pylint: disable=no-member
         model = pieces.model
         params = pieces.params
         validation_iterator = pieces.validation_iterator or pieces.iterator

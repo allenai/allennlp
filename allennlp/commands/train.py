@@ -236,7 +236,7 @@ def train_model(params: Params,
                              "to evaluate at Events.TRAINING_END; otherwise you'll have "
                              "to run allennlp evaluate separately.")
 
-        trainer = TrainerBase.from_params(params, serialization_dir, recover)
+        trainer = TrainerBase.from_params(params, serialization_dir, recover, cache_directory, cache_prefix)
         evaluation_dataset = None
 
     params.assert_empty('base train command')
