@@ -8,10 +8,7 @@ from torch.nn.functional import nll_loss
 from torch.nn.functional import cross_entropy
 from torch.nn import CrossEntropyLoss
 from pytorch_pretrained_bert.modeling import BertModel
-import os
-import random
-import traceback
-import json
+from pytorch_pretrained_bert.tokenization import BertTokenizer
 
 from allennlp.data import Vocabulary
 from allennlp.models.model import Model
@@ -44,6 +41,8 @@ class MultiQA_BERT(Model):
         self.qa_yesno = torch.nn.Linear(self._text_field_embedder.get_output_dim(), 3)
 
         self._bert_model = BertModel.from_pretrained("bert-base-uncased")
+        bert_tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
+        self._bert_wordpiece_tokenizer = bert_tokenizer.tokenize
         initializer(self)
 
         self._official_f1 = Average()
@@ -57,6 +56,67 @@ class MultiQA_BERT(Model):
             wordpiece_offsets += [idx for i in range(last_offset,offset)]
             last_offset = offset
         return wordpiece_offsets
+
+    def _improve_answer_spans(self, span_starts, span_ends, metadata, bert_offsets, bert_wordpiece_ids, mask):
+
+        """Returns tokenized answer spans that better match the annotated answer."""
+
+        # The SQuAD annotations are character based. We first project them to
+        # whitespace-tokenized words. But then after WordPiece tokenization, we can
+        # often find a "better match". For example:
+        #
+        #   Question: What year was John Smith born?
+        #   Context: The leader was John Smith (1895-1943).
+        #   Answer: 1895
+        #
+        # The original whitespace-tokenized answer will be "(1895-1943).". However
+        # after tokenization, our tokens will be "( 1895 - 1943 ) .". So we can match
+        # the exact answer, 1895.
+        #
+        # However, this is not always possible. Consider the following:
+        #
+        #   Question: What country is the top exporter of electornics?
+        #   Context: The Japanese electronics industry is the lagest in the world.
+        #   Answer: Japan
+        #
+        # In this case, the annotator chose "Japan" as a character sub-span of
+        # the word "Japanese". Since our WordPiece tokenizer does not split
+        # "Japanese", we just use "Japanese" as the annotation. This is fairly rare
+        # in SQuAD, but does happen.
+
+        # moving to word piece indexes from token indexes of start and end span
+        new_span_starts_list = []
+        new_span_ends_list = []
+        for i, inst_metadata in zip(range(len(metadata)),metadata):
+            if span_starts[i] == 0 and span_ends[i] == 0:
+                new_span_starts_list.append(0)
+                new_span_ends_list.append(0)
+            else:
+
+                input_start = bert_offsets[i, span_starts[i]]
+                input_end = bert_offsets[i, span_ends[i] + 1] - 1 if bert_offsets[i, span_ends[i] + 1] > 0 else \
+                    bert_offsets[i, span_ends[i]]
+
+                # we need to word piece tokenize the passage for this
+                word_pieces = [self.vocab.get_token_from_index(int(bert_wordpiece_ids[i,j]), namespace="bert") \
+                    for j in range(mask.size(1)) if mask[i,j]]
+
+                tok_answer_text = " ".join(self._bert_wordpiece_tokenizer(inst_metadata['single_answer']))
+                found_improved_answer = False
+                for new_start in range(input_start, input_end + 1):
+                    for new_end in range(input_end, new_start - 1, -1):
+                        text_span = " ".join(word_pieces[new_start:(new_end + 1)])
+                        if text_span == tok_answer_text:
+                            new_span_starts_list.append(new_start)
+                            new_span_ends_list.append(new_end)
+                            found_improved_answer = True
+
+                if not found_improved_answer:
+                    new_span_starts_list.append(input_start)
+                    new_span_ends_list.append(input_end)
+
+
+        return new_span_starts_list, new_span_ends_list
 
 
     def forward(self,  # type: ignore
@@ -94,21 +154,20 @@ class MultiQA_BERT(Model):
         if self.vocab.get_vocab_size("yesno_labels") > 1:
             yesno_logits = self.qa_yesno(torch.max(embedded_chunk, 1)[0])
 
-        span_starts.clamp_(0, passage_length)
-        span_ends.clamp_(0, passage_length)
-
-        # moving to word piece indexes from token indexes of start and end span
         bert_offsets = passage['bert-offsets'].cpu().numpy()
-        span_starts_list = [bert_offsets[i, span_starts[i]] if span_starts[i] != 0 else 0 for i in range(batch_size)]
-        span_ends_list = [bert_offsets[i, span_ends[i]] if span_ends[i] != 0 else 0 for i in range(batch_size)]
-        span_starts = torch.cuda.LongTensor(span_starts_list, device=span_end_logits.device) \
-            if torch.cuda.is_available() else torch.LongTensor(span_starts_list)
-        span_ends = torch.cuda.LongTensor(span_ends_list, device=span_end_logits.device) \
-            if torch.cuda.is_available() else torch.LongTensor(span_ends_list)
+        (wordpiece_span_starts, wordpiece_span_ends) = self._improve_answer_spans(span_starts, span_ends, \
+                                                             metadata, bert_offsets, passage['bert'],mask)
+
+        wordpiece_span_starts = torch.cuda.LongTensor(wordpiece_span_starts, device=span_end_logits.device) \
+            if torch.cuda.is_available() else torch.LongTensor(wordpiece_span_ends)
+        wordpiece_span_ends = torch.cuda.LongTensor(wordpiece_span_starts, device=span_end_logits.device) \
+            if torch.cuda.is_available() else torch.LongTensor(wordpiece_span_ends)
+        wordpiece_span_starts.clamp_(0, passage_length)
+        wordpiece_span_ends.clamp_(0, passage_length)
 
         loss_fct = CrossEntropyLoss(ignore_index=passage_length)
-        start_loss = loss_fct(start_logits.squeeze(-1), span_starts)
-        end_loss = loss_fct(end_logits.squeeze(-1), span_ends)
+        start_loss = loss_fct(start_logits.squeeze(-1), wordpiece_span_starts)
+        end_loss = loss_fct(end_logits.squeeze(-1), wordpiece_span_ends)
 
         # Adding some masks with numerically stable values
         if False:
@@ -214,6 +273,7 @@ class MultiQA_BERT(Model):
                 self._official_EM(100 * EM_score)
                 output_dict['EM'].append(100 * EM_score)
                 output_dict['f1'].append(100 * f1_score)
+
 
 
         return output_dict
