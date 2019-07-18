@@ -134,10 +134,7 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
             spans.append(SpanField(start, end, text_field))
 
             if gold_spans is not None:
-                if (start, end) in gold_spans.keys():
-                    gold_labels.append(gold_spans[(start, end)])
-                else:
-                    gold_labels.append("NO-LABEL")
+                gold_labels.append(gold_spans.get((start, end), "NO-LABEL"))
 
         metadata = {"tokens": tokens}
         if gold_tree:

@@ -78,3 +78,18 @@ class TestTextClassifierPredictor(AllenNlpTestCase):
             sum_exps = sum(exps)
             for e, p in zip(exps, probs):
                 assert e / sum_exps == approx(p)
+
+    def test_predictions_to_labeled_instances(self):
+        inputs = {
+                "sentence": "It was the ending that I hated. I was disappointed that it was so bad."
+        }
+
+        archive = load_archive(self.FIXTURES_ROOT / 'basic_classifier' / 'serialization' / 'model.tar.gz')
+        predictor = Predictor.from_archive(archive, 'text_classifier')
+
+        instance = predictor._json_to_instance(inputs)
+        outputs = predictor._model.forward_on_instance(instance)
+        new_instances = predictor.predictions_to_labeled_instances(instance, outputs)
+        assert 'label' in new_instances[0].fields
+        assert new_instances[0].fields['label'] is not None
+        assert len(new_instances) == 1

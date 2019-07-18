@@ -13,6 +13,7 @@ def assert_dataset_correct(dataset):
 
     assert instance.fields.keys() == {
             'question',
+            'metadata',
             'table',
             'world',
             'actions',
@@ -24,6 +25,7 @@ def assert_dataset_correct(dataset):
                        "part", "of", "the", "usl", "a", "-", "league", "?"]
     assert [t.text for t in instance.fields["question"].tokens] == question_tokens
 
+    assert instance.fields['metadata'].as_tensor({})['question_tokens'] == question_tokens
 
     # The content of this will be tested indirectly by checking the actions; we'll just make
     # sure we get a WikiTablesWorld object in here.

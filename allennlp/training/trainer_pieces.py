@@ -55,8 +55,7 @@ class TrainerPieces(NamedTuple):
             vocab = Vocabulary.from_params(
                     params.pop("vocabulary", {}),
                     (instance for key, dataset in all_datasets.items()
-                     for instance in dataset
-                     if key in datasets_for_vocab_creation)
+                     if key in datasets_for_vocab_creation for instance in dataset)
             )
 
         model = Model.from_params(vocab=vocab, params=params.pop('model'))

@@ -12,6 +12,7 @@ from allennlp.models.archival import load_archive, Archive
 from allennlp.models.model import Model
 from allennlp.models.semantic_parsing.wikitables.wikitables_semantic_parser import WikiTablesSemanticParser
 from allennlp.modules import Attention, FeedForward, Seq2SeqEncoder, Seq2VecEncoder, TextFieldEmbedder
+from allennlp.state_machines import BeamSearch
 from allennlp.state_machines.states import CoverageState, ChecklistStatelet
 from allennlp.state_machines.trainers import ExpectedRiskMinimization
 from allennlp.state_machines.transition_functions import LinkingCoverageTransitionFunction
@@ -122,13 +123,15 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         self._decoder_step = LinkingCoverageTransitionFunction(encoder_output_dim=self._encoder.get_output_dim(),
                                                                action_embedding_dim=action_embedding_dim,
                                                                input_attention=attention,
-                                                               num_start_types=self._num_start_types,
-                                                               predict_start_type_separately=True,
                                                                add_action_bias=self._add_action_bias,
                                                                mixture_feedforward=mixture_feedforward,
                                                                dropout=dropout)
         self._checklist_cost_weight = checklist_cost_weight
         self._agenda_coverage = Average()
+        # We don't need a separate beam search since the trainer does that already. But we're defining one just to
+        # be able to use interactive beam search (a functionality that's only implemented in the ``BeamSearch``
+        # class) in the demo. We'll use this only at test time.
+        self._beam_search: BeamSearch = BeamSearch(beam_size=decoder_beam_size)
         # TODO (pradeep): Checking whether file exists here to avoid raising an error when we've
         # copied a trained ERM model from a different machine and the original MML model that was
         # used to initialize it does not exist on the current machine. This may not be the best
@@ -193,7 +196,8 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                 world: List[WikiTablesLanguage],
                 actions: List[List[ProductionRule]],
                 agenda: torch.LongTensor,
-                target_values: List[List[str]] = None) -> Dict[str, torch.Tensor]:
+                target_values: List[List[str]] = None,
+                metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
         Parameters
@@ -220,6 +224,8 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         target_values : ``List[List[str]]``, optional (default = None)
             For each instance, a list of target values taken from the example lisp string. We pass
             this list to the evaluator along with logical forms to compute denotation accuracy.
+        metadata : ``List[Dict[str, Any]]``, optional (default = None)
+            Metadata containing the original tokenized question within a 'question_tokens' field.
         """
         batch_size = list(question.values())[0].size(0)
         # Each instance's agenda is of size (agenda_size, 1)
@@ -261,21 +267,24 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                                       extras=target_values,
                                       debug_info=None)
 
-        if not self.training:
+        if target_values is not None:
+            logger.warning(f"TARGET VALUES: {target_values}")
+            trainer_outputs = self._decoder_trainer.decode(initial_state,  # type: ignore
+                                                           self._decoder_step,
+                                                           partial(self._get_state_cost, world))
+            outputs.update(trainer_outputs)
+        else:
             initial_state.debug_info = [[] for _ in range(batch_size)]
-
-        outputs = self._decoder_trainer.decode(initial_state,  # type: ignore
-                                               self._decoder_step,
-                                               partial(self._get_state_cost, world))
-        best_final_states = outputs['best_final_states']
-
-        if not self.training:
             batch_size = len(actions)
             agenda_indices = [actions_[:, 0].cpu().data for actions_ in agenda]
             action_mapping = {}
             for batch_index, batch_actions in enumerate(actions):
                 for action_index, action in enumerate(batch_actions):
                     action_mapping[(batch_index, action_index)] = action[0]
+            best_final_states = self._beam_search.search(self._max_decoding_steps,
+                                                         initial_state,
+                                                         self._decoder_step,
+                                                         keep_final_unfinished_states=False)
             for i in range(batch_size):
                 in_agenda_ratio = 0.0
                 # Decoding may not have terminated with any completed logical forms, if `num_steps`
@@ -299,7 +308,6 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                         in_agenda_ratio = sum(actions_in_agenda) / len(actions_in_agenda)
                 self._agenda_coverage(in_agenda_ratio)
 
-            metadata = None
             self._compute_validation_outputs(actions,
                                              best_final_states,
                                              world,

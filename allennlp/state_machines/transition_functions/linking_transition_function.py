@@ -34,14 +34,6 @@ class LinkingTransitionFunction(BasicTransitionFunction):
     input_attention : ``Attention``
     activation : ``Activation``, optional (default=relu)
         The activation that gets applied to the decoder LSTM input and to the action query.
-    predict_start_type_separately : ``bool``, optional (default=True)
-        If ``True``, we will predict the initial action (which is typically the base type of the
-        logical form) using a different mechanism than our typical action decoder.  We basically
-        just do a projection of the hidden state, and don't update the decoder RNN.
-    num_start_types : ``int``, optional (default=None)
-        If ``predict_start_type_separately`` is ``True``, this is the number of start types that
-        are in the grammar.  We need this so we can construct parameters with the right shape.
-        This is unused if ``predict_start_type_separately`` is ``False``.
     add_action_bias : ``bool``, optional (default=True)
         If ``True``, there has been a bias dimension added to the embedding of each action, which
         gets used when predicting the next action.  We add a dimension of ones to our predicted
@@ -59,8 +51,6 @@ class LinkingTransitionFunction(BasicTransitionFunction):
                  action_embedding_dim: int,
                  input_attention: Attention,
                  activation: Activation = Activation.by_name('relu')(),
-                 predict_start_type_separately: bool = True,
-                 num_start_types: int = None,
                  add_action_bias: bool = True,
                  mixture_feedforward: FeedForward = None,
                  dropout: float = 0.0,
@@ -68,9 +58,7 @@ class LinkingTransitionFunction(BasicTransitionFunction):
         super().__init__(encoder_output_dim=encoder_output_dim,
                          action_embedding_dim=action_embedding_dim,
                          input_attention=input_attention,
-                         num_start_types=num_start_types,
                          activation=activation,
-                         predict_start_type_separately=predict_start_type_separately,
                          add_action_bias=add_action_bias,
                          dropout=dropout,
                          num_layers=num_layers)
