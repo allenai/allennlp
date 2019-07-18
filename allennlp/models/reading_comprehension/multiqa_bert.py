@@ -104,7 +104,7 @@ class MultiQA_BERT(Model):
         for i in range(batch_size):
             if span_ends[i] == 0:
                 span_ends_list.append(0)
-            elif bert_offsets[i, span_ends[i] + 1] > 0:
+            elif span_ends[i] + 1 < bert_offsets.size(1) and bert_offsets[i, span_ends[i] + 1] > 0:
                 span_ends_list.append(bert_offsets[i, span_ends[i] + 1] - 1)
             else:
                 span_ends_list.append(bert_offsets[i, span_ends[i]])
