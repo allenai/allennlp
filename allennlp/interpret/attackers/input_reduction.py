@@ -58,7 +58,7 @@ class InputReduction(Attacker):
             # new_
             current_candidates = [(current_instance,-1)]
             # keep removing tokens until prediction is about to change
-            while len(current_tokens) >= num_ignore_tokens and current_candidates:
+            while len(current_tokens) > num_ignore_tokens and current_candidates:
                 # add length of tokens for each current candidates
                 current_candidates = [(beam_instance,
                                        smallest_idx,
@@ -78,11 +78,11 @@ class InputReduction(Attacker):
                         elif isinstance(outputs[output], list):
                             outputs[output] = outputs[output][0]
 
-                    # relabel beam_instance since last iteration removed an input token
-                    # the issue is using the 0 index here, we need to know which one to get out?
-                    beam_instance = self.predictor.predictions_to_labeled_instances(beam_instance, outputs)[0]
                     # Check if any fields have changed, if so, next beam
                     if "tags" not in current_instance:
+                        # relabel beam_instance since last iteration removed an input token
+                        # the issue is using the 0 index here, we need to know which one to get out?
+                        beam_instance = self.predictor.predictions_to_labeled_instances(beam_instance, outputs)[0]
                         if any(beam_instance[field] != fields_to_compare[field] for field in fields_to_compare):
                             continue
 
