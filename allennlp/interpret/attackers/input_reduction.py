@@ -64,7 +64,7 @@ class InputReduction(Attacker):
                     return len(input_text_field.tokens)
                 current_candidates = heapq.nsmallest(self.beam_size,
                                                      current_candidates,
-                                                     key=lambda x:get_length(x[0]))
+                                                     key=lambda x: get_length(x[0]))
 
                 beam_candidates = deepcopy(current_candidates)
                 current_candidates = []
