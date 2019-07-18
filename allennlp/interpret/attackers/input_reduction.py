@@ -27,7 +27,7 @@ class InputReduction(Attacker):
     """
     def __init__(self, predictor: Predictor) -> None:
         super().__init__(predictor)
-        self.beam_size = 5
+        self.beam_size = 3
 
     def attack_from_json(self, inputs: JsonDict = None,
                          input_field_to_attack: str = 'tokens',
@@ -60,8 +60,8 @@ class InputReduction(Attacker):
             # keep removing tokens until prediction is about to change
             while len(current_tokens) >= num_ignore_tokens and current_candidates:
                 # add length of tokens for each current candidates
-                current_candidates = [(beam_instance, 
-                                       smallest_idx, 
+                current_candidates = [(beam_instance,
+                                       smallest_idx,
                                        len(beam_instance[input_field_to_attack].tokens))
                                         for beam_instance, smallest_idx in current_candidates]
                 # trim down all the candidates to beam_size, based on their length
@@ -69,7 +69,7 @@ class InputReduction(Attacker):
                 beam_candidates = deepcopy(current_candidates)
                 current_candidates = []
                 for beam_instance, smallest_idx, _ in beam_candidates:
-                    # get gradients and predictions                
+                    # get gradients and predictions
                     grads, outputs = self.predictor.get_gradients([beam_instance])
 
                     for output in outputs:
@@ -79,12 +79,11 @@ class InputReduction(Attacker):
                             outputs[output] = outputs[output][0]
 
                     # relabel beam_instance since last iteration removed an input token
+                    # the issue is using the 0 index here, we need to know which one to get out?
                     beam_instance = self.predictor.predictions_to_labeled_instances(beam_instance, outputs)[0]
-
                     # Check if any fields have changed, if so, next beam
                     if "tags" not in current_instance:
-                        if any(not beam_instance[field].__eq__(fields_to_compare[field])
-                            for field in fields_to_compare):
+                        if any(beam_instance[field] != fields_to_compare[field] for field in fields_to_compare):
                             continue
 
                     # special case for sentence tagging (we have tested NER)
@@ -92,7 +91,7 @@ class InputReduction(Attacker):
                         # remove the mask where you deleted from.
                         # Don't delete on the very first iteration, or if another beam already deleted
                         # the mask for you
-                        if len(tag_mask) > len(outputs["tags"]): 
+                        if len(tag_mask) > len(outputs["tags"]):
                             del tag_mask[smallest_idx]
                         cur_tags = [outputs["tags"][x] for x in range(len(outputs["tags"])) if tag_mask[x]]
                         if cur_tags != original_tags:
@@ -136,7 +135,6 @@ def _remove_one_token(instance: Instance,
         for idx, label in enumerate(labels):
             if label != "O":
                 grads_mag[idx] = float("inf")
-
     reduced_instances_and_smallest: List[Tuple[Instance, int]] = []
     for _ in range(beam_size):
         # copy instance and edit later
