@@ -1,5 +1,7 @@
+from operator import itemgetter
 from copy import deepcopy
 from typing import List, Tuple
+import heapq
 
 import numpy as np
 import torch
@@ -9,6 +11,7 @@ from allennlp.data import Instance
 from allennlp.data.fields import TextField, SequenceLabelField
 from allennlp.interpret.attackers import utils
 from allennlp.interpret.attackers.attacker import Attacker
+from allennlp.predictors import Predictor
 
 
 @Attacker.register('input-reduction')
@@ -22,6 +25,10 @@ class InputReduction(Attacker):
     This check is brittle, i.e., the code could break if the name of this field has changed, or if
     a non-NER model has a field called "tags".
     """
+    def __init__(self, predictor: Predictor) -> None:
+        super().__init__(predictor)
+        self.beam_size = 5
+
     def attack_from_json(self, inputs: JsonDict = None,
                          input_field_to_attack: str = 'tokens',
                          grad_input_field: str = 'grad_input_1',
@@ -48,37 +55,58 @@ class InputReduction(Attacker):
 
             current_text_field: TextField = current_instance[input_field_to_attack]  # type: ignore
             current_tokens = deepcopy(current_text_field.tokens)
-            smallest_idx = -1
+            # new_
+            current_candidates = [(current_instance,-1)]
             # keep removing tokens until prediction is about to change
-            while len(current_text_field.tokens) >= num_ignore_tokens:
-                # get gradients and predictions
-                grads, outputs = self.predictor.get_gradients([current_instance])
-                for output in outputs:
-                    if isinstance(outputs[output], torch.Tensor):
-                        outputs[output] = outputs[output].detach().cpu().numpy().squeeze().squeeze()
-                    elif isinstance(outputs[output], list):
-                        outputs[output] = outputs[output][0]
+            while len(current_tokens) >= num_ignore_tokens and current_candidates:
+                # add length of tokens for each current candidates
+                current_candidates = [(beam_instance, 
+                                       smallest_idx, 
+                                       len(beam_instance[input_field_to_attack].tokens))
+                                        for beam_instance, smallest_idx in current_candidates]
+                # trim down all the candidates to beam_size, based on their length
+                current_candidates = heapq.nsmallest(self.beam_size, current_candidates, key=itemgetter(2))
+                beam_candidates = deepcopy(current_candidates)
+                current_candidates = []
+                for beam_instance, smallest_idx, _ in beam_candidates:
+                    # get gradients and predictions                
+                    grads, outputs = self.predictor.get_gradients([beam_instance])
 
-                # Check if any fields have changed, if so, break loop
-                if "tags" not in current_instance:
-                    if any(not current_instance[field].__eq__(fields_to_compare[field])
-                        for field in fields_to_compare):
-                        break
+                    for output in outputs:
+                        if isinstance(outputs[output], torch.Tensor):
+                            outputs[output] = outputs[output].detach().cpu().numpy().squeeze().squeeze()
+                        elif isinstance(outputs[output], list):
+                            outputs[output] = outputs[output][0]
 
-                # special case for sentence tagging (we have tested NER)
-                else:
-                    if smallest_idx != -1:
-                        del tag_mask[smallest_idx]
-                    cur_tags = [outputs["tags"][x] for x in range(len(outputs["tags"])) if tag_mask[x]]
-                    if cur_tags != original_tags:
-                        break
+                    # relabel beam_instance since last iteration removed an input token
+                    beam_instance = self.predictor.predictions_to_labeled_instances(beam_instance, outputs)[0]
 
-                # remove a token from the input
-                current_tokens = deepcopy(current_text_field.tokens)
-                current_instance, smallest_idx = _remove_one_token(current_instance,
-                                                                   input_field_to_attack,
-                                                                   grads[grad_input_field],
-                                                                   ignore_tokens)
+                    # Check if any fields have changed, if so, next beam
+                    if "tags" not in current_instance:
+                        if any(not beam_instance[field].__eq__(fields_to_compare[field])
+                            for field in fields_to_compare):
+                            continue
+
+                    # special case for sentence tagging (we have tested NER)
+                    else:
+                        # remove the mask where you deleted from.
+                        # Don't delete on the very first iteration, or if another beam already deleted
+                        # the mask for you
+                        if len(tag_mask) > len(outputs["tags"]): 
+                            del tag_mask[smallest_idx]
+                        cur_tags = [outputs["tags"][x] for x in range(len(outputs["tags"])) if tag_mask[x]]
+                        if cur_tags != original_tags:
+                            continue
+
+                    # remove a token from the input
+                    current_text_field: TextField = beam_instance[input_field_to_attack]  # type: ignore
+                    current_tokens = deepcopy(current_text_field.tokens)
+                    reduced_instances_and_smallest = _remove_one_token(beam_instance,
+                                                                       input_field_to_attack,
+                                                                       grads[grad_input_field],
+                                                                       ignore_tokens,
+                                                                       self.beam_size)
+                    current_candidates.extend(reduced_instances_and_smallest)
 
             final_tokens.append(current_tokens)
         return sanitize({"final": final_tokens, "original": original_tokens})
@@ -87,7 +115,8 @@ class InputReduction(Attacker):
 def _remove_one_token(instance: Instance,
                       input_field_to_attack: str,
                       grads: np.ndarray,
-                      ignore_tokens: List[str]) -> Tuple[Instance, int]:
+                      ignore_tokens: List[str],
+                      beam_size: int = 1) -> List[Tuple[Instance, int]]:
     """
     Finds the token with the smallest gradient and removes it.
     """
@@ -108,24 +137,34 @@ def _remove_one_token(instance: Instance,
             if label != "O":
                 grads_mag[idx] = float("inf")
 
-    smallest = np.argmin(grads_mag)
-    if smallest == float("inf"):  # if all are ignored tokens, return.
-        return instance, smallest
+    reduced_instances_and_smallest: List[Tuple[Instance, int]] = []
+    for _ in range(beam_size):
+        # copy instance and edit later
+        copied_instance = deepcopy(instance)
+        copied_text_field: TextField = copied_instance[input_field_to_attack] # type: ignore
 
-    # remove smallest
-    inputs_before_smallest = text_field.tokens[0:smallest]
-    inputs_after_smallest = text_field.tokens[smallest + 1:]
-    text_field.tokens = inputs_before_smallest + inputs_after_smallest
+        # find smallest
+        smallest = np.argmin(grads_mag)
+        if grads_mag[smallest] == float("inf"):  # if all are ignored tokens, return.
+            break
+        grads_mag[smallest] = float("inf") # so the other beams don't use this token
 
-    if "tags" in instance:
-        tag_field_before_smallest = tag_field.labels[0:smallest]
-        tag_field_after_smallest = tag_field.labels[smallest + 1:]
-        tag_field.labels = tag_field_before_smallest + tag_field_after_smallest  # type: ignore
-        tag_field.sequence_field = text_field
+        # remove smallest
+        inputs_before_smallest = copied_text_field.tokens[0:smallest]
+        inputs_after_smallest = copied_text_field.tokens[smallest + 1:]
+        copied_text_field.tokens = inputs_before_smallest + inputs_after_smallest
 
-    instance.indexed = False
-    return instance, smallest
+        if "tags" in instance:
+            tag_field: SequenceLabelField = copied_instance["tags"]  # type: ignore
+            tag_field_before_smallest = tag_field.labels[0:smallest]
+            tag_field_after_smallest = tag_field.labels[smallest + 1:]
+            tag_field.labels = tag_field_before_smallest + tag_field_after_smallest  # type: ignore
+            tag_field.sequence_field = copied_text_field
 
+        copied_instance.indexed = False
+        reduced_instances_and_smallest.append((copied_instance, smallest))
+
+    return reduced_instances_and_smallest
 
 def _get_ner_tags_and_mask(current_instance: Instance,
                            input_field_to_attack: str,
