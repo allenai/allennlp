@@ -56,19 +56,20 @@ class InputReduction(Attacker):
             current_text_field: TextField = current_instance[input_field_to_attack]  # type: ignore
             current_tokens = deepcopy(current_text_field.tokens)
             # new_
-            current_candidates = [(current_instance,-1)]
+            current_candidates = [(current_instance, -1)]
             # keep removing tokens until prediction is about to change
             while len(current_tokens) > num_ignore_tokens and current_candidates:
-                # add length of tokens for each current candidates
-                current_candidates = [(beam_instance,
-                                       smallest_idx,
-                                       len(beam_instance[input_field_to_attack].tokens))
-                                        for beam_instance, smallest_idx in current_candidates]
-                # trim down all the candidates to beam_size, based on their length
-                current_candidates = heapq.nsmallest(self.beam_size, current_candidates, key=itemgetter(2))
+                # sort current candidates by smallest length (we want to remove as many tokens as possible)
+                def get_length(input_instance: Instance):
+                    input_text_field: TextField = input_instance[input_field_to_attack]  # type: ignore
+                    return len(input_text_field.tokens)
+                current_candidates = heapq.nsmallest(self.beam_size,
+                                                     current_candidates,
+                                                     key=lambda x:get_length(x[0]))
+
                 beam_candidates = deepcopy(current_candidates)
                 current_candidates = []
-                for beam_instance, smallest_idx, _ in beam_candidates:
+                for beam_instance, smallest_idx in beam_candidates:
                     # get gradients and predictions
                     grads, outputs = self.predictor.get_gradients([beam_instance])
 
@@ -81,7 +82,6 @@ class InputReduction(Attacker):
                     # Check if any fields have changed, if so, next beam
                     if "tags" not in current_instance:
                         # relabel beam_instance since last iteration removed an input token
-                        # the issue is using the 0 index here, we need to know which one to get out?
                         beam_instance = self.predictor.predictions_to_labeled_instances(beam_instance, outputs)[0]
                         if any(beam_instance[field] != fields_to_compare[field] for field in fields_to_compare):
                             continue
