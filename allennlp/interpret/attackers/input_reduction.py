@@ -61,8 +61,7 @@ class InputReduction(Attacker):
 
                 # Check if any fields have changed, if so, break loop
                 if "tags" not in current_instance:
-                    if any(not current_instance[field].__eq__(fields_to_compare[field])
-                        for field in fields_to_compare):
+                    if any(current_instance[field] != fields_to_compare[field] for field in fields_to_compare):
                         break
 
                 # special case for sentence tagging (we have tested NER)
