@@ -41,7 +41,7 @@ class TestIndexField(AllenNlpTestCase):
         assert index_field1 == 4
         assert index_field1 == index_field1
         assert index_field1 == index_field2
-        
+
         assert index_field1 != index_field3
         assert index_field2 != index_field3
         assert index_field3 == index_field3
