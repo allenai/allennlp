@@ -80,6 +80,11 @@ class MultiQA_BERT(Model):
                                                          attention_mask=util.combine_initial_dims(mask),
                                                          output_all_encoded_layers=False)
         passage_length = embedded_chunk.size(1)
+        mask_min_values, wordpiece_passage_lens = torch.min(mask, dim=1)
+        wordpiece_passage_lens[mask_min_values == 1] = mask.shape[1]
+        offset_min_values, token_passage_lens = torch.min(passage['bert-offsets'], dim=1)
+        token_passage_lens[offset_min_values != 0] = passage['bert-offsets'].shape[1]
+        bert_offsets = passage['bert-offsets'].cpu().numpy()
 
         # BERT for QA is a fully connected linear layer on top of BERT producing 2 vectors of
         # start and end spans.
@@ -98,9 +103,17 @@ class MultiQA_BERT(Model):
         span_ends.clamp_(0, passage_length)
 
         # moving to word piece indexes from token indexes of start and end span
-        bert_offsets = passage['bert-offsets'].cpu().numpy()
+
         span_starts_list = [bert_offsets[i, span_starts[i]] if span_starts[i] != 0 else 0 for i in range(batch_size)]
-        span_ends_list = [bert_offsets[i, span_ends[i]] if span_ends[i] != 0 else 0 for i in range(batch_size)]
+        span_ends_list = []
+        for i in range(batch_size):
+            if span_ends[i] == 0:
+                span_ends_list.append(0)
+            elif span_ends[i] + 1 == token_passage_lens[i]:
+                span_ends_list.append(int(wordpiece_passage_lens[i] - 1))
+            else:
+                span_ends_list.append(bert_offsets[i, span_ends[i] + 1] - 1)
+
         span_starts = torch.cuda.LongTensor(span_starts_list, device=span_end_logits.device) \
             if torch.cuda.is_available() else torch.LongTensor(span_starts_list)
         span_ends = torch.cuda.LongTensor(span_ends_list, device=span_end_logits.device) \
