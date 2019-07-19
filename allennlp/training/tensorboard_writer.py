@@ -214,7 +214,7 @@ class TensorboardWriter(FromParams):
 
     def close(self) -> None:
         """
-        Calls the `close` method of the `SummaryWriter`s which makes sure that pending
+        Calls the ``close`` method of the ``SummaryWriter`` s which makes sure that pending
         scalars are flushed to disk and the tensorboard event files are closed properly.
         """
         if self._train_log is not None:
