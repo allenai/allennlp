@@ -109,6 +109,7 @@ class LogToTensorboard(Callback):
 
     @handle_event(Events.TRAINING_END)
     def training_end(self, trainer: 'CallbackTrainer'):
+        # pylint: disable=unused-argument
         self.tensorboard.close()
 
     @classmethod
