@@ -100,15 +100,7 @@ class MultiQA_BERT(Model):
         # moving to word piece indexes from token indexes of start and end span
         bert_offsets = passage['bert-offsets'].cpu().numpy()
         span_starts_list = [bert_offsets[i, span_starts[i]] if span_starts[i] != 0 else 0 for i in range(batch_size)]
-        span_ends_list = []
-        for i in range(batch_size):
-            if span_ends[i] == 0:
-                span_ends_list.append(0)
-            elif span_ends[i] + 1 < bert_offsets.shape[1] and bert_offsets[i, span_ends[i] + 1] > 0:
-                span_ends_list.append(bert_offsets[i, span_ends[i] + 1] - 1)
-            else:
-                span_ends_list.append(bert_offsets[i, span_ends[i]])
-
+        span_ends_list = [bert_offsets[i, span_ends[i]] if span_ends[i] != 0 else 0 for i in range(batch_size)]
         span_starts = torch.cuda.LongTensor(span_starts_list, device=span_end_logits.device) \
             if torch.cuda.is_available() else torch.LongTensor(span_starts_list)
         span_ends = torch.cuda.LongTensor(span_ends_list, device=span_end_logits.device) \
