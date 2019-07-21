@@ -104,6 +104,7 @@ class MultiQA_BERT(Model):
 
         # moving to word piece indexes from token indexes of start and end span
 
+
         span_starts_list = [bert_offsets[i, span_starts[i]] if span_starts[i] != 0 else 0 for i in range(batch_size)]
         span_ends_list = [bert_offsets[i, span_ends[i]] if span_ends[i] != 0 else 0 for i in range(batch_size)]
 
