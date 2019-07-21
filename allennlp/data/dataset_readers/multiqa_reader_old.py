@@ -201,6 +201,10 @@ class MultiQAReaderOLD(DatasetReader):
                 for ac in qa['answers']['open-ended']["answer_candidates"]:
                     if 'extractive' in ac:
                         if "single_answer" in ac['extractive']:
+                            answer_text_list.append(ac['extractive']["single_answer"]["answer"])
+                            if 'aliases' in ac['extractive']["single_answer"]:
+                                answer_text_list += ac['extractive']["single_answer"]["aliases"]
+
                             for instance in ac['extractive']["single_answer"]["instances"]:
                                 detected_answer = {}
                                 # checking if the answer has been detected
