@@ -410,11 +410,10 @@ def evaluate(model: Model,
 
                 # ALON - due to the fact that with BERTLarge we are unable to add all question-chunks to the same
                 # batch we will need to compute the validation scores outside of the batch.
-                if str(type(model)).find('MultiQA_BERT') > -1:
-                    metrics['EM'] = sum([multiqa_res[q]['EM'] for q in multiqa_res.keys()]) / \
-                                          len(multiqa_res.keys())
-                    metrics['f1'] = sum([multiqa_res[q]['f1'] for q in multiqa_res.keys()]) / \
-                                          len(multiqa_res.keys())
+                metrics['EM'] = sum([multiqa_res[q]['EM'] for q in multiqa_res.keys()]) / \
+                                      len(multiqa_res.keys())
+                metrics['f1'] = sum([multiqa_res[q]['f1'] for q in multiqa_res.keys()]) / \
+                                      len(multiqa_res.keys())
 
 
             if loss is not None:
