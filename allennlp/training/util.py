@@ -388,7 +388,8 @@ def evaluate(model: Model,
         total_loss = 0.0
         # Cumulative weight across all batches.
         total_weight = 0.0
-
+        # ALON ////
+        multiqa_res = {}
         for batch in generator_tqdm:
             batch_count += 1
             batch = nn_util.move_to_device(batch, cuda_device)
@@ -396,6 +397,25 @@ def evaluate(model: Model,
             loss = output_dict.get("loss")
 
             metrics = model.get_metrics()
+
+            # ALON - due to the fact that with BERTLarge we are unable to add all question-chunks to the same
+            # batch we will need to compute the validation scores outside of the batch.
+            if str(type(model)).find('MultiQA_BERT') > -1:
+                for best_span_str, best_span_logit, yesno_logit, qid, EM, f1 in \
+                        zip(output_dict['best_span_str'], output_dict['best_span_logit'], \
+                            output_dict['yesno_logit'], output_dict['qid'], output_dict['EM'], output_dict['f1']):
+                    if qid not in multiqa_res or best_span_logit + yesno_logit > multiqa_res[qid]['score']:
+                        multiqa_res[qid] = {'score': best_span_logit + yesno_logit, \
+                                            'best_span_str': best_span_str, 'EM': EM, 'f1': f1}
+
+                # ALON - due to the fact that with BERTLarge we are unable to add all question-chunks to the same
+                # batch we will need to compute the validation scores outside of the batch.
+                if str(type(model)).find('MultiQA_BERT') > -1:
+                    metrics['EM'] = sum([multiqa_res[q]['EM'] for q in multiqa_res.keys()]) / \
+                                          len(multiqa_res.keys())
+                    metrics['f1'] = sum([multiqa_res[q]['f1'] for q in multiqa_res.keys()]) / \
+                                          len(multiqa_res.keys())
+
 
             if loss is not None:
                 loss_count += 1
@@ -419,6 +439,15 @@ def evaluate(model: Model,
             generator_tqdm.set_description(description, refresh=False)
 
         final_metrics = model.get_metrics(reset=True)
+
+        # ALON - due to the fact that with BERTLarge we are unable to add all question-chunks to the same
+        # batch we will need to compute the validation scores outside of the batch.
+        if str(type(model)).find('MultiQA_BERT') > -1:
+            final_metrics['EM'] = sum([multiqa_res[q]['EM'] for q in multiqa_res.keys()]) / \
+                            len(multiqa_res.keys())
+            final_metrics['f1'] = sum([multiqa_res[q]['f1'] for q in multiqa_res.keys()]) / \
+                            len(multiqa_res.keys())
+
         if loss_count > 0:
             # Sanity check
             if loss_count != batch_count:
