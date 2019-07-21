@@ -105,14 +105,16 @@ class MultiQA_BERT(Model):
         # moving to word piece indexes from token indexes of start and end span
 
         span_starts_list = [bert_offsets[i, span_starts[i]] if span_starts[i] != 0 else 0 for i in range(batch_size)]
-        span_ends_list = []
-        for i in range(batch_size):
-            if span_ends[i] == 0:
-                span_ends_list.append(0)
-            elif span_ends[i] + 1 == token_passage_lens[i]:
-                span_ends_list.append(int(wordpiece_passage_lens[i] - 1))
-            else:
-                span_ends_list.append(bert_offsets[i, span_ends[i] + 1] - 1)
+        span_ends_list = [bert_offsets[i, span_ends[i]] if span_ends[i] != 0 else 0 for i in range(batch_size)]
+
+        #span_ends_list = []
+        #for i in range(batch_size):
+        #    if span_ends[i] == 0:
+        #        span_ends_list.append(0)
+        #    elif span_ends[i] + 1 == token_passage_lens[i]:
+        #        span_ends_list.append(int(wordpiece_passage_lens[i] - 1))
+        #    else:
+        #        span_ends_list.append(bert_offsets[i, span_ends[i] + 1] - 1)
 
         span_starts = torch.cuda.LongTensor(span_starts_list, device=span_end_logits.device) \
             if torch.cuda.is_available() else torch.LongTensor(span_starts_list)
