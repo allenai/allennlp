@@ -385,6 +385,7 @@ class MultiQAReader(DatasetReader):
                                              inst['text'],
                                              inst['answers'],
                                              inst['yesno'],
+                                             inst['cannot_answer'],
                                              inst['metadata'])
             yield instance
 
@@ -433,12 +434,13 @@ class MultiQAReader(DatasetReader):
 
 
 def make_multiqa_instance(question_tokens: List[Token],
-                             tokenized_paragraph: List[List[Token]],
-                             token_indexers: Dict[str, TokenIndexer],
-                             paragraph: List[str],
-                             answers_list: List[Tuple[int, int]] = None,
-                             yesno: List[str] = None,
-                             additional_metadata: Dict[str, Any] = None) -> Instance:
+                                tokenized_paragraph: List[List[Token]],
+                                token_indexers: Dict[str, TokenIndexer],
+                                paragraph: List[str],
+                                answers_list: List[Tuple[int, int]] = None,
+                                yesno: str = None,
+                                cannot_answer: str = None,
+                                additional_metadata: Dict[str, Any] = None) -> Instance:
 
     additional_metadata = additional_metadata or {}
     fields: Dict[str, Field] = {}
@@ -451,7 +453,7 @@ def make_multiqa_instance(question_tokens: List[Token],
     fields['yesno_labels'] = LabelField(yesno, label_namespace="yesno_labels")
     metadata = {'original_passage': paragraph,
                 'answers_list': answers_list,
-                'cannot_answer': False,
+                'cannot_answer': cannot_answer,
                 'token_offsets': passage_offsets,
                 'question_tokens': [token.text for token in question_tokens],
                 'passage_tokens': [token.text for token in tokenized_paragraph]}
@@ -465,7 +467,6 @@ def make_multiqa_instance(question_tokens: List[Token],
             # Note connot_answer (SQuAD 2.0) and negative examples (just example in which we could not find
             #the gold answer, if any are used), are both treated similarly here.
             span_start, span_end = 0, 0
-            metadata['cannot_answer'] = True
         else:
             span_start, span_end, text = answers_list[0]
             metadata['single_answer'] = text
