@@ -124,6 +124,7 @@ class MultiQAReader(DatasetReader):
                  sample_size: int = -1,
                  STRIDE: int = 128,
                  MAX_WORDPIECES: int = 512,
+                 random_seed: int = 0,
                  support_yesno: bool = True
                  ) -> None:
         super().__init__(lazy)
