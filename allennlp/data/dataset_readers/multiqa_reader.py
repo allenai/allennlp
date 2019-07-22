@@ -24,7 +24,7 @@ from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
 from allennlp.data.tokenizers import Token, Tokenizer, WordTokenizer
 from allennlp.data.fields import Field, TextField, IndexField, \
-    MetadataField, ListField, LabelField
+    MetadataField, ListField
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import pairwise_distances
 from nltk.corpus import stopwords
@@ -110,8 +110,8 @@ class Paragraph_TfIdf_Scoring():
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
-@DatasetReader.register("multiqa_reader")
-class MultiQAReader(DatasetReader):
+@DatasetReader.register("multiqa_reader_old")
+class MultiQAReaderOLD(DatasetReader):
 
     def __init__(self,
                  tokenizer: Tokenizer = None,
@@ -124,14 +124,13 @@ class MultiQAReader(DatasetReader):
                  sample_size: int = -1,
                  STRIDE: int = 128,
                  MAX_WORDPIECES: int = 512,
-                 random_seed: int = 0,
-                 support_yesno: bool = True
                  ) -> None:
         super().__init__(lazy)
-        self._support_yesno = support_yesno
+
+        # make sure results may be reproduced when sampling...
+        random.seed(0)
         self._preproc_outputfile = preproc_outputfile
         self._STRIDE = STRIDE
-        # TODO remove this
         # NOTE AllenNLP automatically adds [CLS] and [SEP] word peices in the begining and end of the context,
         # therefore we need to subtract 2
         self._MAX_WORDPIECES = MAX_WORDPIECES - 2
@@ -156,42 +155,6 @@ class MultiQAReader(DatasetReader):
                 else token[0])
         word_pieces = self._bert_wordpiece_tokenizer(text)
         return len(word_pieces), word_pieces
-
-    def _improve_answer_span(self, doc_tokens, input_start, input_end, tokenizer,
-                             orig_answer_text):
-        """Returns tokenized answer spans that better match the annotated answer."""
-
-        # The SQuAD annotations are character based. We first project them to
-        # whitespace-tokenized words. But then after WordPiece tokenization, we can
-        # often find a "better match". For example:
-        #
-        #   Question: What year was John Smith born?
-        #   Context: The leader was John Smith (1895-1943).
-        #   Answer: 1895
-        #
-        # The original whitespace-tokenized answer will be "(1895-1943).". However
-        # after tokenization, our tokens will be "( 1895 - 1943 ) .". So we can match
-        # the exact answer, 1895.
-        #
-        # However, this is not always possible. Consider the following:
-        #
-        #   Question: What country is the top exporter of electornics?
-        #   Context: The Japanese electronics industry is the lagest in the world.
-        #   Answer: Japan
-        #
-        # In this case, the annotator chose "Japan" as a character sub-span of
-        # the word "Japanese". Since our WordPiece tokenizer does not split
-        # "Japanese", we just use "Japanese" as the annotation. This is fairly rare
-        # in SQuAD, but does happen.
-        tok_answer_text = " ".join(tokenizer(orig_answer_text))
-
-        for new_start in range(input_start, input_end + 1):
-            for new_end in range(input_end, new_start - 1, -1):
-                text_span = " ".join(doc_tokens[new_start:(new_end + 1)])
-                if text_span == tok_answer_text:
-                    return (new_start, new_end)
-
-        return (input_start, input_end)
 
     @profile
     def combine_context(self, context):
@@ -234,38 +197,32 @@ class MultiQAReader(DatasetReader):
         for qa in context['qas']:
             answer_text_list = []
             qa['detected_answers'] = []
-            qa['yesno'] = 'no_yesno'
-            qa['cannot_answer'] = False
-            if 'open-ended' in qa['answers']:
-                if 'answer_candidates' in qa['answers']['open-ended']:
-                    for ac in qa['answers']['open-ended']["answer_candidates"]:
-                        if 'extractive' in ac:
-                            # Supporting only one answer of type extractive (future version will support list and set)
-                            if "single_answer" in ac['extractive']:
-                                answer_text_list.append(ac['extractive']["single_answer"]["answer"])
-                                if 'aliases' in ac['extractive']["single_answer"]:
-                                    answer_text_list += ac['extractive']["single_answer"]["aliases"]
+            if 'open-ended' in qa['answers'] and 'answer_candidates' in qa['answers']['open-ended']:
+                for ac in qa['answers']['open-ended']["answer_candidates"]:
+                    if 'extractive' in ac:
+                        if "single_answer" in ac['extractive']:
+                            answer_text_list.append(ac['extractive']["single_answer"]["answer"])
+                            if 'aliases' in ac['extractive']["single_answer"]:
+                                answer_text_list += ac['extractive']["single_answer"]["aliases"]
 
-                                for instance in ac['extractive']["single_answer"]["instances"]:
-                                    detected_answer = {}
-                                    # checking if the answer has been detected
-                                    if "token_offset" in offsets[instance["doc_id"]][instance["part"]]:
-                                        answer_token_offset = offsets[instance["doc_id"]][instance["part"]]['token_offset']
-                                        detected_answer["token_spans"] = (instance['token_inds'][0] + answer_token_offset,
-                                                                          instance['token_inds'][1] + answer_token_offset)
-                                        detected_answer['text'] = instance["text"]
-                                        qa['detected_answers'].append(detected_answer)
-
-                        elif 'yesno' in ac:
-                            # Supporting only one answer of type yesno
-                            if self._support_yesno and "single_answer" in ac['yesno']:
-                                qa['yesno'] = ac['yesno']['single_answer']
-
-                elif 'cannot_answer' in qa['answers']['open-ended']:
-                    qa['cannot_answer'] = True
+                            for instance in ac['extractive']["single_answer"]["instances"]:
+                                detected_answer = {}
+                                # checking if the answer has been detected
+                                if "token_offset" in offsets[instance["doc_id"]][instance["part"]]:
+                                    answer_token_offset = offsets[instance["doc_id"]][instance["part"]]['token_offset']
+                                    detected_answer["token_spans"] = (instance['token_inds'][0] + answer_token_offset,
+                                                                      instance['token_inds'][1] + answer_token_offset)
+                                    detected_answer['text'] = instance["text"]
+                                    qa['detected_answers'].append(detected_answer)
+                                answer_text_list.append(instance["text"])
 
             qa['answer_text_list'] = answer_text_list
+            if len(qa['detected_answers']) == 0:
+                no_answer_questions.append(qa)
 
+        if self._is_training:
+            for no_answer_q in no_answer_questions:
+                context['qas'].remove(no_answer_q)
 
         return context
 
@@ -329,12 +286,10 @@ class MultiQAReader(DatasetReader):
 
 
                 inst = {}
-                inst['yesno'] = qa['yesno']
-                inst['cannot_answer'] = qa['cannot_answer']
                 inst['question_tokens'] = qa['question_tokens']
                 inst['tokens'] = curr_context_tokens
                 inst['text'] = qa['question'] + ' [SEP] ' + unproc_context['full_text'][context_char_offset: \
-                            context_char_offset + curr_context_tokens[-1][1] + len(curr_context_tokens[-1][0]) + 1 - question_char_offset]
+                            context_char_offset + curr_context_tokens[-1][1] + len(curr_context_tokens[-1][0]) + 1]
                 inst['answers'] = []
                 qa_metadata = {'has_answer': False, 'dataset': header['dataset_name'], "question_id": qa['qid'], \
                                'answer_texts_list': list(set(qa['answer_text_list']))}
@@ -343,40 +298,28 @@ class MultiQAReader(DatasetReader):
                         answer['token_spans'][1] < window_end_token_offset:
                         qa_metadata['has_answer'] = True
                         answer_token_offset = len(qa['question_tokens']) + 1 - window_start_token_offset
-
-
-                        #(tok_start_position, tok_end_position) = self._improve_answer_span([t[0] for t in inst['tokens']], \
-                        #        answer['token_spans'][0] + answer_token_offset, \
-                        #        answer['token_spans'][1] + answer_token_offset, self._bert_wordpiece_tokenizer, answer['text'])
-
-                        inst['answers'].append((answer['token_spans'][0] + answer_token_offset,\
-                                                answer['token_spans'][1] + answer_token_offset,\
-                                                answer['text']))
+                        inst['answers'].append((answer['token_spans'][0]+ answer_token_offset, \
+                                                       answer['token_spans'][1] + answer_token_offset,
+                                                       answer['text']))
 
                 inst['metadata'] = qa_metadata
                 chunks.append(inst)
 
                 window_start_token_offset += self._STRIDE
 
-            per_question_chunks.append(chunks)
-
+            # In training we need examples with answer only
+            if not self._is_training or len([inst for inst in chunks if inst['answers'] != []])>0:
+                per_question_chunks.append(chunks)
         return per_question_chunks
 
     @profile
     def gen_question_instances(self, question_chunks):
         instances_to_add = []
         if self._is_training:
-            # Trying to balance the chunks with answer and the ones without by sampling one from each
-            # if each is available
-            cannot_answer = [inst for inst in question_chunks if inst['cannot_answer']]
-            yesno = [inst for inst in question_chunks if inst['yesno'] != 'no_yesno']
-            spans = [inst for inst in question_chunks if len(inst['answers']) > 0]
-            chunks_to_select_from = cannot_answer + yesno + spans
-            if len(chunks_to_select_from) > 0:
-                instances_to_add += random.sample(chunks_to_select_from, 1)
-            else:
-                logger.info('found it!!!')
-
+            # When training randomly choose one chunk per example (training with shared norm (Clark and Gardner, 17)
+            # is not well defined when using sliding window )
+            chunks_with_answers = [inst for inst in question_chunks if inst['answers'] != []]
+            instances_to_add = random.sample(chunks_with_answers, 1)
         else:
             instances_to_add = question_chunks
 
@@ -386,8 +329,6 @@ class MultiQAReader(DatasetReader):
                                              self._token_indexers,
                                              inst['text'],
                                              inst['answers'],
-                                             inst['yesno'],
-                                             inst['cannot_answer'],
                                              inst['metadata'])
             yield instance
 
@@ -436,13 +377,11 @@ class MultiQAReader(DatasetReader):
 
 
 def make_multiqa_instance(question_tokens: List[Token],
-                                tokenized_paragraph: List[List[Token]],
-                                token_indexers: Dict[str, TokenIndexer],
-                                paragraph: List[str],
-                                answers_list: List[Tuple[int, int]] = None,
-                                yesno: str = None,
-                                cannot_answer: str = None,
-                                additional_metadata: Dict[str, Any] = None) -> Instance:
+                             tokenized_paragraph: List[List[Token]],
+                             token_indexers: Dict[str, TokenIndexer],
+                             paragraph: List[str],
+                             answers_list: List[Tuple[int, int]] = None,
+                             additional_metadata: Dict[str, Any] = None) -> Instance:
 
     additional_metadata = additional_metadata or {}
     fields: Dict[str, Field] = {}
@@ -452,10 +391,8 @@ def make_multiqa_instance(question_tokens: List[Token],
     passage_field = TextField(tokenized_paragraph, token_indexers)
     fields['passage'] = passage_field
     fields['question'] = TextField(question_tokens, token_indexers)
-    fields['yesno_labels'] = LabelField(yesno, label_namespace="yesno_labels")
     metadata = {'original_passage': paragraph,
                 'answers_list': answers_list,
-                'cannot_answer': cannot_answer,
                 'token_offsets': passage_offsets,
                 'question_tokens': [token.text for token in question_tokens],
                 'passage_tokens': [token.text for token in tokenized_paragraph]}
@@ -464,23 +401,16 @@ def make_multiqa_instance(question_tokens: List[Token],
         span_start_list: List[Field] = []
         span_end_list: List[Field] = []
         if answers_list == []:
-            # No answer will point at the beginning of the chunk (see
-            # A BERT Baseline for the Natural Questions https://arxiv.org/abs/1901.08634 )
-            # Note connot_answer (SQuAD 2.0) and negative examples (just example in which we could not find
-            #the gold answer, if any are used), are both treated similarly here.
-            span_start, span_end = 0, 0
+            span_start, span_end = -1, -1
         else:
             span_start, span_end, text = answers_list[0]
-            metadata['single_answer'] = text
 
         span_start_list.append(IndexField(span_start, passage_field))
         span_end_list.append(IndexField(span_end, passage_field))
 
-        fields['span_starts'] = ListField(span_start_list)
-        fields['span_ends'] = ListField(span_end_list)
+        fields['span_start'] = ListField(span_start_list)
+        fields['span_end'] = ListField(span_end_list)
 
     metadata.update(additional_metadata)
     fields['metadata'] = MetadataField(metadata)
     return Instance(fields)
-
-
