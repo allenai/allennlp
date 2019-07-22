@@ -110,8 +110,8 @@ class Paragraph_TfIdf_Scoring():
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
-@DatasetReader.register("multiqa_reader_old")
-class MultiQAReaderOLD(DatasetReader):
+@DatasetReader.register("multiqa_reader")
+class MultiQAReader(DatasetReader):
 
     def __init__(self,
                  tokenizer: Tokenizer = None,

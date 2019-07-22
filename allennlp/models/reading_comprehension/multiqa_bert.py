@@ -19,8 +19,8 @@ from allennlp.training.metrics import Average, BooleanAccuracy, CategoricalAccur
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
-@Model.register("multiqa_bert_old")
-class MultiQA_BERT_OLD(Model):
+@Model.register("multiqa_bert")
+class MultiQA_BERT(Model):
     def __init__(self, vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
                  initializer: InitializerApplicator,
