@@ -31,10 +31,15 @@ or dataset to JSON predictions using a trained model and its
     --silent                do not print output to stdout
     --cuda-device CUDA_DEVICE
                             id of GPU to use (if any)
-    --use-dataset-reader [{train,validation}]
-                            Indicates that a dataset reader of the original
-                            model should be used to load Instances. If no
-                            value is provided, "train" is used by default.
+    --use-dataset-reader    Whether to use the dataset reader of the original
+                            model to load Instances. The validation dataset
+                            reader will be used if it exists, otherwise it will
+                            fall back to the train dataset reader. This
+                            behavior can be overridden with the
+                            --dataset-reader-choice flag.
+    --dataset-reader-choice {train,validation}
+                            Indicates which model dataset reader to use if the
+                            --use-dataset-reader flag is set.
     -o OVERRIDES, --overrides OVERRIDES
                             a JSON structure used to override the experiment
                             configuration
@@ -78,11 +83,18 @@ class Predict(Subcommand):
         cuda_device.add_argument('--cuda-device', type=int, default=-1, help='id of GPU to use (if any)')
 
         subparser.add_argument('--use-dataset-reader',
-                               nargs='?',
-                               const='train',
+                               action='store_true',
+                               help='Whether to use the dataset reader of the original model to load Instances. '
+                                    'The validation dataset reader will be used if it exists, otherwise it will '
+                                    'fall back to the train dataset reader. This behavior can be overridden'
+                                    'with the --dataset-reader-choice flag.')
+
+        subparser.add_argument('--dataset-reader-choice',
+                               type=str,
                                choices=['train', 'validation'],
-                               help='Indicates that a dataset reader of the original model should be used '
-                                    'to load Instances. If no value is provided, "train" is used by default.')
+                               default='validation',
+                               help='Indicates which model dataset reader to use if the --use-dataset-reader '
+                                    'flag is set.')
 
         subparser.add_argument('-o', '--overrides',
                                type=str,
@@ -104,7 +116,8 @@ def _get_predictor(args: argparse.Namespace) -> Predictor:
                            cuda_device=args.cuda_device,
                            overrides=args.overrides)
 
-    return Predictor.from_archive(archive, args.predictor, args.use_dataset_reader)
+    return Predictor.from_archive(archive, args.predictor,
+                                  dataset_reader_to_load=args.dataset_reader_choice)
 
 
 class _PredictManager:
@@ -201,11 +214,10 @@ def _predict(args: argparse.Namespace) -> None:
         print("Exiting early because no output will be created.")
         sys.exit(0)
 
-    has_dataset_reader = args.use_dataset_reader is not None
     manager = _PredictManager(predictor,
                               args.input_file,
                               args.output_file,
                               args.batch_size,
                               not args.silent,
-                              has_dataset_reader)
+                              args.use_dataset_reader)
     manager.run()

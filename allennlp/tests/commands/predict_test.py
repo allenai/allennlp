@@ -111,17 +111,19 @@ class TestPredict(AllenNlpTestCase):
         shutil.rmtree(self.tempdir)
 
     def test_uses_correct_dataset_reader(self):
+        # pylint: disable=protected-access
         # The ATIS archive has both a training and validation ``DatasetReader``
-        # with different values for ``keep_if_unparseable``. We create a new
-        # ``Predictor`` class that outputs this value so we can test which
-        # ``DatasetReader`` was used.
+        # with different values for ``keep_if_unparseable`` (``True`` for validation
+        # and ``False`` for training). We create a new ``Predictor`` class that
+        # outputs this value so we can test which ``DatasetReader`` was used.
         @Predictor.register('test-predictor')
         class _TestPredictor(Predictor):
+            # pylint: disable=abstract-method
             def dump_line(self, outputs: JsonDict) -> str:
-                data = {'keep_if_unparseable': self._dataset_reader._keep_if_unparseable}
+                data = {'keep_if_unparseable': self._dataset_reader._keep_if_unparseable}  # type: ignore
                 return json.dumps(data) + '\n'
 
-        # No --use-dataset-reader argument provided
+        # --use-dataset-reader argument only should use validation
         sys.argv = ["run.py",      # executable
                     "predict",     # command
                     str(self.atis_model_path),
@@ -134,9 +136,9 @@ class TestPredict(AllenNlpTestCase):
         assert os.path.exists(self.outfile)
         with open(self.outfile, 'r') as f:
             results = [json.loads(line) for line in f]
-            assert results[0]['keep_if_unparseable'] == False
+            assert results[0]['keep_if_unparseable'] is True
 
-        # --use-dataset-reader train
+        # --use-dataset-reader, override with train
         sys.argv = ["run.py",      # executable
                     "predict",     # command
                     str(self.atis_model_path),
@@ -144,14 +146,15 @@ class TestPredict(AllenNlpTestCase):
                     "--output-file", str(self.outfile),
                     "--silent",
                     "--predictor", "test-predictor",
-                    "--use-dataset-reader", "train"]
+                    "--use-dataset-reader",
+                    "--dataset-reader-choice", "train"]
         main()
         assert os.path.exists(self.outfile)
         with open(self.outfile, 'r') as f:
             results = [json.loads(line) for line in f]
-            assert results[0]['keep_if_unparseable'] == False
+            assert results[0]['keep_if_unparseable'] is False
 
-        # --use-dataset-reader validation
+        # --use-dataset-reader, override with train
         sys.argv = ["run.py",      # executable
                     "predict",     # command
                     str(self.atis_model_path),
@@ -159,12 +162,13 @@ class TestPredict(AllenNlpTestCase):
                     "--output-file", str(self.outfile),
                     "--silent",
                     "--predictor", "test-predictor",
-                    "--use-dataset-reader", "validation"]
+                    "--use-dataset-reader",
+                    "--dataset-reader-choice", "validation"]
         main()
         assert os.path.exists(self.outfile)
         with open(self.outfile, 'r') as f:
             results = [json.loads(line) for line in f]
-            assert results[0]['keep_if_unparseable'] == True
+            assert results[0]['keep_if_unparseable'] is True
 
         # No --use-dataset-reader flag, fails because the loading logic
         # is not implemented in the testing predictor
