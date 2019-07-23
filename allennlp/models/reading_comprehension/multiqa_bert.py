@@ -5,6 +5,9 @@ from overrides import overrides
 import torch
 import torch.nn.functional as F
 from torch.nn.functional import nll_loss
+from torch.nn.functional import cross_entropy
+from torch.nn import CrossEntropyLoss
+from pytorch_pretrained_bert.modeling import BertModel
 import os
 import random
 import traceback
@@ -24,9 +27,7 @@ class MultiQA_BERT(Model):
     def __init__(self, vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
                  initializer: InitializerApplicator,
-                 dropout: float = 0.2,
                  max_span_length: int = 30,
-                 predictions_file = None,
                  use_multi_label_loss: bool = False,
                  stats_report_freq:float = None,
                  debug_experiment_name:str = None) -> None:
@@ -36,144 +37,206 @@ class MultiQA_BERT(Model):
         self._stats_report_freq = stats_report_freq
         self._debug_experiment_name = debug_experiment_name
         self._use_multi_label_loss = use_multi_label_loss
-        self._predictions_file = predictions_file
 
-        # TODO move to predict
-        if predictions_file is not None and os.path.isfile(predictions_file):
-            os.remove(predictions_file)
 
         # see usage below for explanation
-        self._all_qa_count = 0
-        self._qas_used_fraction = 1.0
         self.qa_outputs = torch.nn.Linear(self._text_field_embedder.get_output_dim(), 2)
+        self.qa_yesno = torch.nn.Linear(self._text_field_embedder.get_output_dim(), 3)
 
+        self._bert_model = BertModel.from_pretrained("bert-base-uncased")
         initializer(self)
 
         self._official_f1 = Average()
         self._official_EM = Average()
 
+    def bert_offsets_to_wordpiece_offsets(self,bert_offsets):
+        # first offset is [CLS]
+        wordpiece_offsets = [0]
+        last_offset = 0
+        for idx, offset in enumerate(bert_offsets):
+            wordpiece_offsets += [idx for i in range(last_offset,offset)]
+            last_offset = offset
+        return wordpiece_offsets
+
+
     def forward(self,  # type: ignore
                 question: Dict[str, torch.LongTensor],
                 passage: Dict[str, torch.LongTensor],
-                span_start: torch.IntTensor = None,
-                span_end: torch.IntTensor = None,
+                span_starts: torch.IntTensor = None,
+                span_ends: torch.IntTensor = None,
+                yesno_labels : torch.IntTensor = None,
                 metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
 
         batch_size, num_of_passage_tokens = passage['bert'].size()
 
+        # TODO chaged to ids only
+        #embedded_chunk1 = self._text_field_embedder(passage)
+
+        input_ids = passage['bert']
+        token_type_ids = torch.zeros_like(input_ids)
+        mask = (input_ids != 0).long()
+        embedded_chunk, pooled_output = self._bert_model(input_ids=util.combine_initial_dims(input_ids),
+                                                         token_type_ids=util.combine_initial_dims(token_type_ids),
+                                                         attention_mask=util.combine_initial_dims(mask),
+                                                         output_all_encoded_layers=False)
+        passage_length = embedded_chunk.size(1)
+        mask_min_values, wordpiece_passage_lens = torch.min(mask, dim=1)
+        wordpiece_passage_lens[mask_min_values == 1] = mask.shape[1]
+        offset_min_values, token_passage_lens = torch.min(passage['bert-offsets'], dim=1)
+        token_passage_lens[offset_min_values != 0] = passage['bert-offsets'].shape[1]
+        bert_offsets = passage['bert-offsets'].cpu().numpy()
+
         # BERT for QA is a fully connected linear layer on top of BERT producing 2 vectors of
         # start and end spans.
-        embedded_passage = self._text_field_embedder(passage)
-        passage_length = embedded_passage.size(1)
-        logits = self.qa_outputs(embedded_passage)
+        logits = self.qa_outputs(embedded_chunk)
         start_logits, end_logits = logits.split(1, dim=-1)
         span_start_logits = start_logits.squeeze(-1)
         span_end_logits = end_logits.squeeze(-1)
 
+        # all input is preprocessed before farword is run, counting the yesno vocabulary
+        # will indicate if yesno support is at all needed.
+        # TODO add option to override this explicitly
+        if self.vocab.get_vocab_size("yesno_labels") > 1:
+            yesno_logits = self.qa_yesno(torch.max(embedded_chunk, 1)[0])
+
+        span_starts.clamp_(0, passage_length)
+        span_ends.clamp_(0, passage_length)
+
+        # moving to word piece indexes from token indexes of start and end span
+
+
+        span_starts_list = [bert_offsets[i, span_starts[i]] if span_starts[i] != 0 else 0 for i in range(batch_size)]
+        span_ends_list = [bert_offsets[i, span_ends[i]] if span_ends[i] != 0 else 0 for i in range(batch_size)]
+
+        #span_ends_list = []
+        #for i in range(batch_size):
+        #    if span_ends[i] == 0:
+        #        span_ends_list.append(0)
+        #    elif span_ends[i] + 1 == token_passage_lens[i]:
+        #        span_ends_list.append(int(wordpiece_passage_lens[i] - 1))
+        #    else:
+        #        span_ends_list.append(bert_offsets[i, span_ends[i] + 1] - 1)
+
+        span_starts = torch.cuda.LongTensor(span_starts_list, device=span_end_logits.device) \
+            if torch.cuda.is_available() else torch.LongTensor(span_starts_list)
+        span_ends = torch.cuda.LongTensor(span_ends_list, device=span_end_logits.device) \
+            if torch.cuda.is_available() else torch.LongTensor(span_ends_list)
+
+        loss_fct = CrossEntropyLoss(ignore_index=passage_length)
+        start_loss = loss_fct(start_logits.squeeze(-1), span_starts)
+        end_loss = loss_fct(end_logits.squeeze(-1), span_ends)
+
         # Adding some masks with numerically stable values
-        passage_mask = util.get_text_field_mask(passage).float()
+        if False:
+            passage_mask = util.get_text_field_mask(passage).float()
 
-        repeated_passage_mask = passage_mask.unsqueeze(1).repeat(1, 1, 1)
-        repeated_passage_mask = repeated_passage_mask.view(batch_size, passage_length)
-        span_start_logits = util.replace_masked_values(span_start_logits, repeated_passage_mask, -1e7)
-        span_end_logits = util.replace_masked_values(span_end_logits, repeated_passage_mask, -1e7)
+            repeated_passage_mask = passage_mask.unsqueeze(1).repeat(1, 1, 1)
+            repeated_passage_mask = repeated_passage_mask.view(batch_size, passage_length)
+            span_start_logits = util.replace_masked_values(span_start_logits, repeated_passage_mask, -1e7)
+            span_end_logits = util.replace_masked_values(span_end_logits, repeated_passage_mask, -1e7)
 
+            inds_with_gold_answer = np.argwhere(span_starts.view(-1).cpu().numpy() >= 0)
+            inds_with_gold_answer = inds_with_gold_answer.squeeze() if len(inds_with_gold_answer) > 1 else inds_with_gold_answer
+
+            loss = 0
+            if len(inds_with_gold_answer) > 0:
+                loss += nll_loss(util.masked_log_softmax(span_start_logits[inds_with_gold_answer], \
+                                                        repeated_passage_mask[inds_with_gold_answer]), \
+                                span_starts.view(-1)[inds_with_gold_answer], ignore_index=-1)
+                loss += nll_loss(util.masked_log_softmax(span_end_logits[inds_with_gold_answer], \
+                                                         repeated_passage_mask[inds_with_gold_answer]), \
+                                 span_ends.view(-1)[inds_with_gold_answer], ignore_index=-1)
+
+        if self.vocab.get_vocab_size("yesno_labels") > 1 and yesno_labels is not None:
+            yesno_loss = loss_fct(yesno_logits, yesno_labels)
+            loss = (start_loss + end_loss + yesno_loss) / 3
+        else:
+            loss = (start_loss + end_loss) / 2
 
         output_dict: Dict[str, Any] = {}
-
-        # We may have multiple instances per questions, moving to per-question
-        intances_question_id = [insta_meta['question_id'] for insta_meta in metadata]
-        question_instances_split_inds = np.cumsum(np.unique(intances_question_id, return_counts=True)[1])[:-1]
-        per_question_inds = np.split(range(batch_size), question_instances_split_inds)
-        metadata = np.split(metadata, question_instances_split_inds)
-
-        # Compute the loss.
-        if span_start is not None and len(np.argwhere(span_start.squeeze().cpu() >= 0)) > 0:
-            # in evaluation some instances may not contain the gold answer, so we need to compute
-            # loss only on those that do.
-            inds_with_gold_answer = np.argwhere(span_start.view(-1).cpu().numpy() >= 0)
-            inds_with_gold_answer = inds_with_gold_answer.squeeze() if len(inds_with_gold_answer) > 1 else inds_with_gold_answer
-            if len(inds_with_gold_answer)>0:
-                loss = nll_loss(util.masked_log_softmax(span_start_logits[inds_with_gold_answer], \
-                                                    repeated_passage_mask[inds_with_gold_answer]),\
-                                span_start.view(-1)[inds_with_gold_answer], ignore_index=-1)
-                loss += nll_loss(util.masked_log_softmax(span_end_logits[inds_with_gold_answer], \
-                                                    repeated_passage_mask[inds_with_gold_answer]),\
-                                span_end.view(-1)[inds_with_gold_answer], ignore_index=-1)
-                output_dict["loss"] = loss
-
-        # This is a hack for cases in which gold answer is not provided so we cannot compute loss...
-        if 'loss' not in output_dict:
+        if loss == 0:
+            # For evaluation purposes only!
             output_dict["loss"] = torch.cuda.FloatTensor([0], device=span_end_logits.device) \
                 if torch.cuda.is_available() else torch.FloatTensor([0])
+        else:
+            output_dict["loss"] = loss
+
         # Compute F1 and preparing the output dictionary.
         output_dict['best_span_str'] = []
         output_dict['best_span_logit'] = []
-        output_dict['qid'] = []
         output_dict['yesno'] = []
         output_dict['yesno_logit'] = []
         output_dict['qid'] = []
-        output_dict['EM'] = []
-        output_dict['f1'] = []
+        if span_starts is not None:
+            output_dict['EM'] = []
+            output_dict['f1'] = []
+
 
         # getting best span prediction for
         best_span = self._get_example_predications(span_start_logits, span_end_logits, self._max_span_length)
         best_span_cpu = best_span.detach().cpu().numpy()
 
-        span_start_logits_numpy = span_start_logits.data.cpu().numpy()
-        span_end_logits_numpy = span_end_logits.data.cpu().numpy()
-        # Iterating over every question (which may contain multiple instances, one per chunk)
-        for question_inds, question_instances_metadata in zip(per_question_inds, metadata):
-            best_span_ind = np.argmax(span_start_logits_numpy[question_inds, best_span_cpu[question_inds][:, 0]] +
-                      span_end_logits_numpy[question_inds, best_span_cpu[question_inds][:, 1]])
-            best_span_logit = np.max(span_start_logits_numpy[question_inds, best_span_cpu[question_inds][:, 0]] +
-                                      span_end_logits_numpy[question_inds, best_span_cpu[question_inds][:, 1]])
+        for instance_ind, instance_metadata in zip(range(batch_size), metadata):
+            best_span_logit = span_start_logits.data.cpu().numpy()[instance_ind, best_span_cpu[instance_ind][0]] + \
+                              span_end_logits.data.cpu().numpy()[instance_ind, best_span_cpu[instance_ind][1]]
 
-            passage_str = question_instances_metadata[best_span_ind]['original_passage']
-            offsets = question_instances_metadata[best_span_ind]['token_offsets']
+            if self.vocab.get_vocab_size("yesno_labels") > 1:
+                yesno_maxind = np.argmax(yesno_logits[instance_ind].data.cpu().numpy())
+                yesno_logit = yesno_logits[instance_ind, yesno_maxind].data.cpu().numpy()
+                yesno_pred = self.vocab.get_token_from_index(yesno_maxind, namespace="yesno_labels")
+            else:
+                yesno_pred = 'no_yesno'
+                yesno_logit = -30.0
 
-            predicted_span = best_span_cpu[question_inds[best_span_ind]]
-            start_offset = offsets[predicted_span[0]][0]
-            end_offset = offsets[predicted_span[1]][1]
-            best_span_string = passage_str[start_offset:end_offset]
+            passage_str = instance_metadata['original_passage']
+            offsets = instance_metadata['token_offsets']
 
-            # Note: this is a hack, because AllenNLP, when predicting, expects a value for each instance.
-            # But we may have more than 1 chunk per question, and thus less output strings than instances
-            for i in range(len(question_inds)):
-                output_dict['best_span_str'].append(best_span_string)
-                output_dict['best_span_logit'].append(best_span_logit)
-                output_dict['yesno'].append("no_yesno")
-                output_dict['yesno_logit'].append(-30.0)
-                output_dict['qid'].append(question_instances_metadata[best_span_ind]['question_id'])
+            predicted_span = best_span_cpu[instance_ind]
+            # In this version yesno if not "no_yesno" will be regarded as final answer before the spans are considered.
+            if yesno_pred != 'no_yesno':
+                best_span_string = yesno_pred
+            else:
+                if predicted_span[0] == 0 and predicted_span[1] == 0:
+                    best_span_string = 'cannot_answer'
+                else:
+                    wordpiece_offsets = self.bert_offsets_to_wordpiece_offsets(bert_offsets[instance_ind][0:len(offsets)])
+                    start_offset = offsets[wordpiece_offsets[predicted_span[0] if predicted_span[0] < len(wordpiece_offsets) \
+                        else len(wordpiece_offsets)-1]][0]
+                    end_offset = offsets[wordpiece_offsets[predicted_span[1] if predicted_span[1] < len(wordpiece_offsets) \
+                        else len(wordpiece_offsets)-1]][1]
+                    best_span_string = passage_str[start_offset:end_offset]
 
-            f1_score = 0.0
-            EM_score = 0.0
-            gold_answer_texts = question_instances_metadata[best_span_ind]['answer_texts_list']
-            if gold_answer_texts:
-                f1_score = squad_eval.metric_max_over_ground_truths(squad_eval.f1_score,best_span_string,gold_answer_texts)
-                EM_score = squad_eval.metric_max_over_ground_truths(squad_eval.exact_match_score, best_span_string,gold_answer_texts)
-            self._official_f1(100 * f1_score)
-            self._official_EM(100 * EM_score)
-            output_dict['EM'].append(100 * EM_score)
-            output_dict['f1'].append(100 * f1_score)
+            output_dict['best_span_str'].append(best_span_string)
+            output_dict['best_span_logit'].append(best_span_logit)
+            output_dict['yesno'].append(yesno_pred)
+            output_dict['yesno_logit'].append(yesno_logit)
+            output_dict['qid'].append(instance_metadata['question_id'])
 
-            # TODO move to predict
-            if self._predictions_file is not None:
-                with open(self._predictions_file,'a') as f:
-                    f.write(json.dumps({'question_id':question_instances_metadata[best_span_ind]['question_id'], \
-                                'best_span_logit':float(best_span_logit), \
-                                'f1':100 * f1_score,
-                                'EM':100 * EM_score,
-                                'best_span_string':best_span_string,\
-                                'gold_answer_texts':gold_answer_texts, \
-                                'qas_used_fraction':1.0}) + '\n')
+            # In prediction mode we have no gold answers
+            if span_starts is not None:
+                yesno_label_ind = yesno_labels.data.cpu().numpy()[instance_ind]
+                yesno_label = self.vocab.get_token_from_index(yesno_label_ind, namespace="yesno_labels")
+
+                if yesno_label != 'no_yesno':
+                    gold_answer_texts = [yesno_label]
+                elif instance_metadata['cannot_answer']:
+                    gold_answer_texts = ['cannot_answer']
+                else:
+                    gold_answer_texts = instance_metadata['answer_texts_list']
+
+                f1_score = squad_eval.metric_max_over_ground_truths(squad_eval.f1_score, best_span_string, gold_answer_texts)
+                EM_score = squad_eval.metric_max_over_ground_truths(squad_eval.exact_match_score, best_span_string, gold_answer_texts)
+                self._official_f1(100 * f1_score)
+                self._official_EM(100 * EM_score)
+                output_dict['EM'].append(100 * EM_score)
+                output_dict['f1'].append(100 * f1_score)
+
 
         return output_dict
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         return {'EM': self._official_EM.get_metric(reset),
-                'f1': self._official_f1.get_metric(reset),
-                'qas_used_fraction': 1.0}
+                'f1': self._official_f1.get_metric(reset)}
 
 
     @staticmethod
