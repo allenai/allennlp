@@ -10,7 +10,8 @@ or dataset to JSON predictions using a trained model and its
                             [--weights-file WEIGHTS_FILE]
                             [--batch-size BATCH_SIZE] [--silent]
                             [--cuda-device CUDA_DEVICE]
-                            [--use-dataset-reader [{train,validation}]]
+                            [--use-dataset-reader]
+                            [--dataset-reader-choice {train,validation}]
                             [-o OVERRIDES] [--predictor PREDICTOR]
                             [--include-package INCLUDE_PACKAGE]
                             archive_file input_file
