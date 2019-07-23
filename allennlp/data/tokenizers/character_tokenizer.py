@@ -73,3 +73,8 @@ class CharacterTokenizer(Tokenizer):
                 token = Token(text=end_token, idx=0)
             tokens.append(token)
         return tokens
+
+    def __eq__(self, other) -> bool:
+        if isinstance(self, other.__class__):
+            return self.__dict__ == other.__dict__
+        return NotImplemented

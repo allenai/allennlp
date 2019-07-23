@@ -34,7 +34,7 @@ local bert_model = "allennlp/tests/fixtures/bert/vocab.txt";
     "model": {
         "type": "bert_for_classification",
         "bert_model": bert_model,
-        "dropout": 0.2
+        "dropout": 0.0
     },
     "iterator": {
         "type": "bucket",

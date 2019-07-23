@@ -34,13 +34,12 @@ class TestNerTagIndexer(AllenNlpTestCase):
 
     def test_padding_functions(self):
         indexer = NerTagIndexer()
-        assert indexer.get_padding_token() == 0
         assert indexer.get_padding_lengths(0) == {}
 
     def test_as_array_produces_token_sequence(self):
         indexer = NerTagIndexer()
-        padded_tokens = indexer.pad_token_sequence({'key': [1, 2, 3, 4, 5]}, {'key': 10}, {})
-        assert padded_tokens == {'key': [1, 2, 3, 4, 5, 0, 0, 0, 0, 0]}
+        padded_tokens = indexer.as_padded_tensor({'key': [1, 2, 3, 4, 5]}, {'key': 10}, {})
+        assert padded_tokens["key"].tolist() == [1, 2, 3, 4, 5, 0, 0, 0, 0, 0]
 
     def test_blank_ner_tag(self):
         tokens = [Token(token)._replace(ent_type_="") for token in "allennlp is awesome .".split(" ")]
