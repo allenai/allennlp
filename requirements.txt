@@ -61,6 +61,7 @@ word2number>=1.1
 
 # To use the BERT model
 pytorch-pretrained-bert>=0.6.0
+pytorch-transformers
 
 # For caching processed data
 jsonpickle
