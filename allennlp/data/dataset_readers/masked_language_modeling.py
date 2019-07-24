@@ -29,6 +29,10 @@ class MaskedLanguageModelingReader(DatasetReader):
     namespace with the token vocabulary).  The mask position and target token lists are the same
     length.
 
+    NOTE: This is not fully functional!  It was written to put together a demo for interpreting and
+    attacking masked language modeling, not for actually training anything.  ``text_to_instance``
+    is functional, but ``_read`` is not.
+
     Parameters
     ----------
     tokenizer : ``Tokenizer``, optional (default=``WordTokenizer()``)
@@ -47,6 +51,16 @@ class MaskedLanguageModelingReader(DatasetReader):
 
     @overrides
     def _read(self, file_path: str):
+        # TODO(mattg): ACTUALLY IMPLEMENT THIS!!  I'm just replacing the first token of each
+        # sentence with [MASK], to make writing a model test easy.  I wrote this dataset reader for
+        # use with a predictor, not for actually training anything.
+        with open(file_path, "r") as text_file:
+            for sentence in text_file:
+                tokens = self._tokenizer.tokenize(sentence)
+                target = tokens[0].text
+                tokens[0] = Token('[MASK]')
+                yield self.text_to_instance(sentence, tokens, [target])
+
         raise NotImplementedError
 
     @overrides
@@ -79,6 +93,7 @@ class MaskedLanguageModelingReader(DatasetReader):
         if targets and len(targets) != len(mask_positions):
             raise ValueError(f"Found {len(mask_positions)} mask tokens and {len(targets)} targets")
         mask_position_field = ListField([IndexField(i, input_field) for i in mask_positions])
+        # TODO(mattg): there's a problem if the targets get split into multiple word pieces...
         target_field = TextField([Token(target) for target in targets], self._token_indexers)
         return Instance({'tokens': input_field,
                          'mask_positions': mask_position_field,
