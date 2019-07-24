@@ -61,8 +61,6 @@ class MaskedLanguageModelingReader(DatasetReader):
                 tokens[0] = Token('[MASK]')
                 yield self.text_to_instance(sentence, tokens, [target])
 
-        raise NotImplementedError
-
     @overrides
     def text_to_instance(self,
                          sentence: str = None,

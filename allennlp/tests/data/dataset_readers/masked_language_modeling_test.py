@@ -38,7 +38,8 @@ class TestMaskedLanguageModelingDatasetReader:
         assert [i.sequence_index for i in instance['mask_positions']] == [6]
         assert [t.text for t in instance['target_ids']] == ['This']
 
-        instance.index_fields(Vocabulary())
+        vocab = Vocabulary()
+        instance.index_fields(vocab)
         tensor_dict = instance.as_tensor_dict(instance.get_padding_lengths())
         assert tensor_dict.keys() == {'tokens', 'mask_positions', 'target_ids'}
         bert_token_ids = tensor_dict['tokens']['bert'].numpy().tolist()
