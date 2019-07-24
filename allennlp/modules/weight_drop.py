@@ -4,10 +4,10 @@ import torch.nn.functional as F
 class WeightDropout(nn.Module):
     "A module that warps another layer in which some weights will be replaced by 0 during training."
 
-    def __init__(self, module:nn.Module, weight_p:float, layer_names=['weight_hh_l0']):
+    def __init__(self, module: nn.Module, weight_p: float, layer_names=['weight_hh_l0']):
         super().__init__()
         self.wrapper = module
-        self.module,self.weight_p,self.layer_names = module._modules['_module'],weight_p,layer_names
+        self.module, self.weight_p, self.layer_names = module._modules['_module'], weight_p, layer_names
         for layer in self.layer_names:
             #Makes a copy of the weights of the selected layers.
             w = getattr(self.module, layer)
@@ -28,5 +28,5 @@ class WeightDropout(nn.Module):
         for layer in self.layer_names:
             raw_w = getattr(self, f'{layer}_raw')
             self.module._parameters[layer] = F.dropout(raw_w, p=self.weight_p, training=False)
-        if hasattr(self.module, 'reset'): 
+        if hasattr(self.module, 'reset'):
             self.module.reset()
