@@ -9,7 +9,9 @@ or dataset to JSON predictions using a trained model and its
     usage: allennlp predict [-h] [--output-file OUTPUT_FILE]
                             [--weights-file WEIGHTS_FILE]
                             [--batch-size BATCH_SIZE] [--silent]
-                            [--cuda-device CUDA_DEVICE] [--use-dataset-reader]
+                            [--cuda-device CUDA_DEVICE]
+                            [--use-dataset-reader]
+                            [--dataset-reader-choice {train,validation}]
                             [-o OVERRIDES] [--predictor PREDICTOR]
                             [--include-package INCLUDE_PACKAGE]
                             archive_file input_file
@@ -31,7 +33,14 @@ or dataset to JSON predictions using a trained model and its
     --cuda-device CUDA_DEVICE
                             id of GPU to use (if any)
     --use-dataset-reader    Whether to use the dataset reader of the original
-                            model to load Instances
+                            model to load Instances. The validation dataset
+                            reader will be used if it exists, otherwise it will
+                            fall back to the train dataset reader. This
+                            behavior can be overridden with the
+                            --dataset-reader-choice flag.
+    --dataset-reader-choice {train,validation}
+                            Indicates which model dataset reader to use if the
+                            --use-dataset-reader flag is set.
     -o OVERRIDES, --overrides OVERRIDES
                             a JSON structure used to override the experiment
                             configuration
@@ -76,7 +85,17 @@ class Predict(Subcommand):
 
         subparser.add_argument('--use-dataset-reader',
                                action='store_true',
-                               help='Whether to use the dataset reader of the original model to load Instances')
+                               help='Whether to use the dataset reader of the original model to load Instances. '
+                                    'The validation dataset reader will be used if it exists, otherwise it will '
+                                    'fall back to the train dataset reader. This behavior can be overridden'
+                                    'with the --dataset-reader-choice flag.')
+
+        subparser.add_argument('--dataset-reader-choice',
+                               type=str,
+                               choices=['train', 'validation'],
+                               default='validation',
+                               help='Indicates which model dataset reader to use if the --use-dataset-reader '
+                                    'flag is set.')
 
         subparser.add_argument('-o', '--overrides',
                                type=str,
@@ -98,7 +117,8 @@ def _get_predictor(args: argparse.Namespace) -> Predictor:
                            cuda_device=args.cuda_device,
                            overrides=args.overrides)
 
-    return Predictor.from_archive(archive, args.predictor)
+    return Predictor.from_archive(archive, args.predictor,
+                                  dataset_reader_to_load=args.dataset_reader_choice)
 
 
 class _PredictManager:

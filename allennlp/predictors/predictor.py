@@ -16,7 +16,7 @@ from allennlp.data.dataset import Batch
 
 # a mapping from model `type` to the default Predictor for that type
 DEFAULT_PREDICTORS = {
-        'atis_parser' : 'atis_parser',
+        'atis_parser' : 'atis-parser',
         'basic_classifier': 'text_classifier',
         'biaffine_parser': 'biaffine-dependency-parser',
         'bidaf': 'machine-comprehension',
@@ -228,7 +228,8 @@ class Predictor(Registrable):
         return instances
 
     @classmethod
-    def from_path(cls, archive_path: str, predictor_name: str = None, cuda_device: int = -1) -> 'Predictor':
+    def from_path(cls, archive_path: str, predictor_name: str = None, cuda_device: int = -1,
+                  dataset_reader_to_load: str = "validation") -> 'Predictor':
         """
         Instantiate a :class:`Predictor` from an archive path.
 
@@ -245,19 +246,26 @@ class Predictor(Registrable):
         cuda_device: ``int``, optional (default=-1)
             If `cuda_device` is >= 0, the model will be loaded onto the
             corresponding GPU. Otherwise it will be loaded onto the CPU.
+        dataset_reader_to_load: ``str``, optional (default="validation")
+            Which dataset reader to load from the archive, either "train" or
+            "validation".
 
         Returns
         -------
         A Predictor instance.
         """
-        return Predictor.from_archive(load_archive(archive_path, cuda_device=cuda_device), predictor_name)
+        return Predictor.from_archive(load_archive(archive_path, cuda_device=cuda_device), predictor_name,
+                                      dataset_reader_to_load=dataset_reader_to_load)
 
     @classmethod
-    def from_archive(cls, archive: Archive, predictor_name: str = None) -> 'Predictor':
+    def from_archive(cls, archive: Archive, predictor_name: str = None,
+                     dataset_reader_to_load: str = "validation") -> 'Predictor':
         """
         Instantiate a :class:`Predictor` from an :class:`~allennlp.models.archival.Archive`;
         that is, from the result of training a model. Optionally specify which `Predictor`
-        subclass; otherwise, the default one for the model will be used.
+        subclass; otherwise, the default one for the model will be used. Optionally specify
+        which :class:`DatasetReader` should be loaded; otherwise, the validation one will be used
+        if it exists followed by the training dataset reader.
         """
         # Duplicate the config so that the config inside the archive doesn't get consumed
         config = archive.config.duplicate()
@@ -269,7 +277,10 @@ class Predictor(Registrable):
                                          f"Please specify a predictor explicitly.")
             predictor_name = DEFAULT_PREDICTORS[model_type]
 
-        dataset_reader_params = config["dataset_reader"]
+        if dataset_reader_to_load == "validation" and "validation_dataset_reader" in config:
+            dataset_reader_params = config["validation_dataset_reader"]
+        else:
+            dataset_reader_params = config["dataset_reader"]
         dataset_reader = DatasetReader.from_params(dataset_reader_params)
 
         model = archive.model
