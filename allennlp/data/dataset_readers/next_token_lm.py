@@ -34,8 +34,8 @@ class NextTokenLMReader(DatasetReader):
         with open(file_path, "r") as text_file:
             for sentence in text_file:
                 tokens = self._tokenizer.tokenize(sentence)
-                target = 'the'                
-                yield self.text_to_instance(sentence, tokens, [target])
+                target = 'the'
+                yield self.text_to_instance(sentence, tokens, target)
 
     @overrides
     def text_to_instance(self,
@@ -44,8 +44,8 @@ class NextTokenLMReader(DatasetReader):
                          target: str = None) -> Instance:  # type: ignore
         # pylint: disable=arguments-differ
         if not tokens:
-            tokens = self._tokenizer.tokenize(sentence)                
-        input_field = TextField(tokens, self._token_indexers)                        
-        target_field = TextField([Token(target)], self._token_indexers)            
+            tokens = self._tokenizer.tokenize(sentence)
+        input_field = TextField(tokens, self._token_indexers)
+        target_field = TextField([Token(target)], self._token_indexers)
         return Instance({'tokens': input_field,
                          'target_ids': target_field})

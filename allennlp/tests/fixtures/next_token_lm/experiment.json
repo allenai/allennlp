@@ -1,6 +1,6 @@
 {
   "dataset_reader": {
-    "type": "next_token_lm",
+    "type": "next_token_lm"
   },
   "train_data_path": "allennlp/tests/fixtures/language_model/sentences.txt",
   "validation_data_path": "allennlp/tests/fixtures/language_model/sentences.txt",
@@ -14,6 +14,11 @@
           "embedding_dim": 4
         }
       }
+    },
+    "language_model_head": {
+      "type": "linear",
+      "input_dim": 4,
+      "vocab_namespace": "tokens"
     }
   },
   "iterator": {
