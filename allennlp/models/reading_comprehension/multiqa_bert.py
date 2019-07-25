@@ -44,7 +44,7 @@ class MultiQA_BERT(Model):
         self.qa_outputs = torch.nn.Linear(self._text_field_embedder.get_output_dim(), 2)
         self.qa_yesno = torch.nn.Linear(self._text_field_embedder.get_output_dim(), 3)
 
-        self._bert_model = BertModel.from_pretrained(pretrained_model)
+        #self._bert_model = BertModel.from_pretrained(pretrained_model)
         initializer(self)
 
         self._official_f1 = Average()
@@ -76,10 +76,12 @@ class MultiQA_BERT(Model):
         input_ids = passage['bert']
         token_type_ids = torch.zeros_like(input_ids)
         mask = (input_ids != 0).long()
-        embedded_chunk, pooled_output = self._bert_model(input_ids=util.combine_initial_dims(input_ids),
+        embedded_chunk, pooled_output = \
+            self._text_field_embedder.token_embedder_bert.bert_model(input_ids=util.combine_initial_dims(input_ids),
                                                          token_type_ids=util.combine_initial_dims(token_type_ids),
                                                          attention_mask=util.combine_initial_dims(mask),
                                                          output_all_encoded_layers=False)
+
         passage_length = embedded_chunk.size(1)
         mask_min_values, wordpiece_passage_lens = torch.min(mask, dim=1)
         wordpiece_passage_lens[mask_min_values == 1] = mask.shape[1]
