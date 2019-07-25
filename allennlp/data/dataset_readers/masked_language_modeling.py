@@ -92,7 +92,9 @@ class MaskedLanguageModelingReader(DatasetReader):
             raise ValueError(f"Found {len(mask_positions)} mask tokens and {len(targets)} targets")
         mask_position_field = ListField([IndexField(i, input_field) for i in mask_positions])
         # TODO(mattg): there's a problem if the targets get split into multiple word pieces...
-        target_field = TextField([Token(target) for target in targets], self._token_indexers)
-        return Instance({'tokens': input_field,
-                         'mask_positions': mask_position_field,
-                         'target_ids': target_field})
+        fields = {'tokens': input_field,
+                  'mask_positions': mask_position_field}
+        if targets is not None:
+            target_field = TextField([Token(target) for target in targets], self._token_indexers)
+            fields.update({'target_ids': target_field})
+        return Instance(fields)
