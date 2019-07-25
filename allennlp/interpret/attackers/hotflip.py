@@ -118,7 +118,6 @@ class Hotflip(Attacker):
                     elif isinstance(output, list):
                         outputs[key] = output[0]
                 original_outputs = deepcopy(outputs)
-            print('Original', outputs['clusters'])
 
             # ignore any token that is in the ignore_tokens list by setting the token to already flipped
             flipped: List[int] = []
@@ -159,7 +158,6 @@ class Hotflip(Attacker):
 
                 # Get model predictions on current_instance, and then label the instances
                 grads, outputs = self.predictor.get_gradients([current_instance])  # predictions
-                print('Modified', i, outputs['clusters'])
                 for key, output in outputs.items():
                     if isinstance(output, torch.Tensor):
                         outputs[key] = output.detach().cpu().numpy().squeeze()
@@ -172,13 +170,12 @@ class Hotflip(Attacker):
                     if set(tuple(l) for l in original_outputs['clusters']) != set(tuple(l) for l in outputs['clusters']):
                         break
                 # if the prediction has changed, then stop
-                elif any(current_instance_labeled[field] != fields_to_compare[field] for field in fields_to_compare):
+                elif if utils.instance_has_changed(current_instance_labeled, fields_to_compare):
                     break
 
             final_tokens.append(current_tokens)
             if 'clusters' in outputs:
                 break
-        print('Final', outputs['clusters'])
         return sanitize({"final": final_tokens,
                          "original": original_tokens,
                          "outputs": outputs})
