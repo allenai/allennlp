@@ -27,6 +27,11 @@ class Hotflip(Attacker):
     def __init__(self, predictor: Predictor) -> None:
         super().__init__(predictor)
         self.vocab = self.predictor._model.vocab
+        # Force new tokens to be alphanumeric
+        self.invalid_replacement_indices = []
+        for i in self.vocab._index_to_token["tokens"]:
+            if not self.vocab._index_to_token["tokens"][i].isalnum():
+                self.invalid_replacement_indices.append(i)
         self.token_embedding = None
 
     def initialize(self):
@@ -148,7 +153,7 @@ class Hotflip(Attacker):
                 # Get new token using taylor approximation
                 input_tokens = current_text_field._indexed_tokens["tokens"]
                 original_id_of_token_to_flip = input_tokens[index_of_token_to_flip]
-                new_id_of_flipped_token = _first_order_taylor(grad[index_of_token_to_flip],
+                new_id_of_flipped_token = self._first_order_taylor(grad[index_of_token_to_flip],
                                                               self.token_embedding.weight,  # type: ignore
                                                               original_id_of_token_to_flip)
                 # flip token
@@ -170,7 +175,7 @@ class Hotflip(Attacker):
                     if set(tuple(l) for l in original_outputs['clusters']) != set(tuple(l) for l in outputs['clusters']):
                         break
                 # if the prediction has changed, then stop
-                elif if utils.instance_has_changed(current_instance_labeled, fields_to_compare):
+                elif utils.instance_has_changed(current_instance_labeled, fields_to_compare):
                     break
 
             final_tokens.append(current_tokens)
@@ -180,27 +185,30 @@ class Hotflip(Attacker):
                          "original": original_tokens,
                          "outputs": outputs})
 
-def _first_order_taylor(grad: numpy.ndarray,
-                        embedding_matrix: torch.nn.parameter.Parameter,
-                        token_idx: int) -> int:
-    """
-    The below code is based on
-    https://github.com/pmichel31415/translate/blob/paul/pytorch_translate/
-    research/adversarial/adversaries/brute_force_adversary.py
+    def _first_order_taylor(self, grad: numpy.ndarray,
+                            embedding_matrix: torch.nn.parameter.Parameter,
+                            token_idx: int) -> int:
+        """
+        The below code is based on
+        https://github.com/pmichel31415/translate/blob/paul/pytorch_translate/
+        research/adversarial/adversaries/brute_force_adversary.py
 
-    Replaces the current token_idx with another token_idx to increase the loss. In particular, this
-    function uses the grad, alongside the embedding_matrix to select the token that maximizes the
-    first-order taylor approximation of the loss.
-    """
-    grad = torch.from_numpy(grad)
-    embedding_matrix = embedding_matrix.cpu()
-    word_embeds = torch.nn.functional.embedding(torch.LongTensor([token_idx]),
-                                                embedding_matrix)
-    word_embeds = word_embeds.detach().unsqueeze(0)
-    grad = grad.unsqueeze(0).unsqueeze(0)
-    # solves equation (3) here https://arxiv.org/abs/1903.06620
-    new_embed_dot_grad = torch.einsum("bij,kj->bik", (grad, embedding_matrix))
-    prev_embed_dot_grad = torch.einsum("bij,bij->bi", (grad, word_embeds)).unsqueeze(-1)
-    neg_dir_dot_grad = -1 * (prev_embed_dot_grad - new_embed_dot_grad)
-    _, best_at_each_step = neg_dir_dot_grad.max(2)
-    return best_at_each_step[0].data[0].detach().cpu().item()  # return the best candidate
+        Replaces the current token_idx with another token_idx to increase the loss. In particular, this
+        function uses the grad, alongside the embedding_matrix to select the token that maximizes the
+        first-order taylor approximation of the loss.
+        """
+        grad = torch.from_numpy(grad)
+        embedding_matrix = embedding_matrix.cpu()
+        word_embeds = torch.nn.functional.embedding(torch.LongTensor([token_idx]),
+                                                    embedding_matrix)
+        word_embeds = word_embeds.detach().unsqueeze(0)
+        grad = grad.unsqueeze(0).unsqueeze(0)
+        # solves equation (3) here https://arxiv.org/abs/1903.06620
+        new_embed_dot_grad = torch.einsum("bij,kj->bik", (grad, embedding_matrix))
+        prev_embed_dot_grad = torch.einsum("bij,bij->bi", (grad, word_embeds)).unsqueeze(-1)
+        neg_dir_dot_grad = -1 * (prev_embed_dot_grad - new_embed_dot_grad)
+        neg_dir_dot_grad = neg_dir_dot_grad.detach().cpu().numpy()
+        # Do not replace with non-alphanumeric tokens
+        neg_dir_dot_grad[:,:,self.invalid_replacement_indices] = -numpy.inf
+        best_at_each_step = neg_dir_dot_grad.argmax(2)
+        return best_at_each_step[0].data[0]
