@@ -28,6 +28,7 @@ class InputReduction(Attacker):
                          ignore_tokens: List[str] = None):
         ignore_tokens = ["@@NULL@@"] if ignore_tokens is None else ignore_tokens
         original_instances = self.predictor.json_to_labeled_instances(inputs)
+        print(original_instances[0])
         original_text_field: TextField = original_instances[0][input_field_to_attack]  # type: ignore
         original_tokens = deepcopy(original_text_field.tokens)
         final_tokens = []

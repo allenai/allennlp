@@ -1,11 +1,14 @@
-from typing import List
+from typing import List, Dict
 
 from overrides import overrides
+from copy import deepcopy
+import numpy
 from spacy.tokens import Doc
 
 from allennlp.common.util import JsonDict
 from allennlp.common.util import get_spacy_model
 from allennlp.data import DatasetReader, Instance
+from allennlp.data.fields import SequenceLabelField, SpanField
 from allennlp.models import Model
 from allennlp.predictors.predictor import Predictor
 
@@ -71,6 +74,43 @@ class CorefPredictor(Predictor):
         """
         instance = self._words_list_to_instance(tokenized_document)
         return self.predict_instance(instance)
+
+    @overrides
+    def predictions_to_labeled_instances(self,
+                                         instance: Instance,
+                                         outputs: Dict[str, numpy.ndarray]) -> List[Instance]:
+        predicted_clusters = []
+        """cluster_assignment = [-1]*len(outputs['top_spans'])
+        for i in range(len(outputs['top_spans'])):
+            antecedent = outputs['predicted_antecedents'][i]
+            if antecedent > -1 and cluster_assignment[antecedent] > -1:
+                cluster_assignment[i] = cluster_assignment[antecedent]
+                predicted_clusters[cluster_assignment[i]].append(tuple(outputs['top_spans'][i]))
+            elif antecedent > -1:
+                cluster_assignment[antecedent] = len(predicted_clusters)
+                cluster_assignment[i] = len(predicted_clusters)
+                predicted_clusters.append([tuple(outputs['top_spans'][antecedent]), tuple(outputs['top_spans'][i])])
+        print(outputs['top_spans'])
+        print(outputs['predicted_antecedents'])"""
+        predicted_clusters = outputs['clusters']
+        instances = []
+        print_flag = True
+        for clust in predicted_clusters:
+            new_instance = deepcopy(instance)
+            span_labels = [0 if (span.span_start, span.span_end) in clust else -1 for span in instance['spans']]
+            new_instance.add_field('span_labels',
+                                   SequenceLabelField(span_labels, instance['spans']), self._model.vocab)
+            new_instance['metadata'].metadata['clusters'] = [clust]
+            instances.append(new_instance)
+        if len(instances) == 0:
+            new_instance = deepcopy(instance)
+            span_labels = [-1]*len(instance['spans'])
+            new_instance.add_field('span_labels',
+                                   SequenceLabelField(span_labels, instance['spans']), self._model.vocab)
+            new_instance['metadata'].metadata['clusters'] = []
+            instances.append(new_instance)
+        return instances
+
 
     @staticmethod
     def replace_corefs(document: Doc, clusters: List[List[List[int]]]) -> str:

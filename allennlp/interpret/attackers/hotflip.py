@@ -105,12 +105,20 @@ class Hotflip(Attacker):
         original_text_field: TextField = original_instances[0][input_field_to_attack]  # type: ignore
         original_tokens = deepcopy(original_text_field.tokens)
         final_tokens = []
-        for current_instance in original_instances:
+        for i, current_instance in enumerate(original_instances):
             # Gets a list of the fields that we want to check to see if they change.
             fields_to_compare = utils.get_fields_to_compare(inputs, current_instance, input_field_to_attack)
             current_text_field: TextField = current_instance[input_field_to_attack]  # type: ignore
             current_tokens = current_text_field.tokens
             grads, outputs = self.predictor.get_gradients([current_instance])
+            if 'clusters' in outputs:
+                for key, output in outputs.items():
+                    if isinstance(output, torch.Tensor):
+                        outputs[key] = output.detach().cpu().numpy().squeeze()
+                    elif isinstance(output, list):
+                        outputs[key] = output[0]
+                original_outputs = deepcopy(outputs)
+            print('Original', outputs['clusters'])
 
             # ignore any token that is in the ignore_tokens list by setting the token to already flipped
             flipped: List[int] = []
@@ -146,6 +154,7 @@ class Hotflip(Attacker):
 
                 # Get model predictions on current_instance, and then label the instances
                 grads, outputs = self.predictor.get_gradients([current_instance])  # predictions
+                print('Modified', i, outputs['clusters'])
                 for key, output in outputs.items():
                     if isinstance(output, torch.Tensor):
                         outputs[key] = output.detach().cpu().numpy().squeeze()
@@ -153,13 +162,16 @@ class Hotflip(Attacker):
                         outputs[key] = output[0]
 
                 # add labels to current_instances
-                current_instance_labeled = self.predictor.predictions_to_labeled_instances(current_instance,
-                                                                                           outputs)[0]
+                current_instance_labeled = self.predictor.predictions_to_labeled_instances(current_instance, outputs)[0]
+                if 'clusters' in outputs:
+                    if tuple(original_outputs['clusters'][i]) not in [tuple(l) for l in outputs['clusters']]:
+                        break
                 # if the prediction has changed, then stop
-                if any(current_instance_labeled[field] != fields_to_compare[field] for field in fields_to_compare):
+                elif any(current_instance_labeled[field] != fields_to_compare[field] for field in fields_to_compare):
                     break
 
             final_tokens.append(current_tokens)
+        print('Final', outputs['clusters'])
         return sanitize({"final": final_tokens,
                          "original": original_tokens,
                          "outputs": outputs})

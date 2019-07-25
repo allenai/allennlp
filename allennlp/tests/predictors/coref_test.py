@@ -93,3 +93,26 @@ class TestCorefPredictor(AllenNlpTestCase):
             doc = nlp(text)
             output = CorefPredictor.replace_corefs(doc, clusters)
             assert output == expected_outputs[i]
+    def test_predictions_to_labeled_instances(self):
+        inputs = {"document": "This is a single string document about a test. Sometimes it "
+                              "contains coreferent parts."}
+        archive = load_archive(self.FIXTURES_ROOT / 'coref' / 'serialization' / 'model.tar.gz')
+        predictor = Predictor.from_archive(archive, 'coreference-resolution')
+
+        instance = predictor._json_to_instance(inputs)
+        outputs = predictor._model.forward_on_instance(instance)
+        new_instances = predictor.predictions_to_labeled_instances(instance, outputs)
+        assert new_instances is not None
+
+        for new_instance in new_instances:
+            assert 'span_labels' in new_instance
+            assert len(new_instance['span_labels']) == 60 # 7 words in input
+            true_top_spans = set(tuple(span) for span in outputs['top_spans'])
+            pred_clust_spans = set()
+            for i, span in enumerate(outputs['top_spans']):
+                if new_instance['span_labels'][i]:
+                    pred_clust_spans.add(tuple(span))
+            assert true_top_spans == pred_clust_spans
+
+x = TestCorefPredictor()
+x.test_predictions_to_labeled_instances()
