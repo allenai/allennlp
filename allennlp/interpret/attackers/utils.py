@@ -25,3 +25,8 @@ def get_fields_to_compare(inputs: JsonDict, instance: Instance, input_field_to_a
             if key not in inputs and key != input_field_to_attack and key != 'metadata'
     }
     return fields_to_compare
+
+def instance_has_changed(instance: Instance, fields_to_compare: JsonDict):
+    if any(instance[field] != fields_to_compare[field] for field in fields_to_compare):
+        return True
+    return False

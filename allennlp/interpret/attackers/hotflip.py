@@ -170,7 +170,7 @@ class Hotflip(Attacker):
                     if set(tuple(l) for l in original_outputs['clusters']) != set(tuple(l) for l in outputs['clusters']):
                         break
                 # if the prediction has changed, then stop
-                elif any(current_instance_labeled[field] != fields_to_compare[field] for field in fields_to_compare):
+                elif if utils.instance_has_changed(current_instance_labeled, fields_to_compare):
                     break
 
             final_tokens.append(current_tokens)
