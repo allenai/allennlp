@@ -1,14 +1,19 @@
+from typing import Dict
+
+from copy import deepcopy
 from overrides import overrides
+import numpy
 
 from allennlp.common.util import JsonDict
 from allennlp.data import Instance
+from allennlp.data.fields import LabelField
 from allennlp.predictors.predictor import Predictor
 
 
 @Predictor.register('next_token_lm')
 class NextTokenLMPredictor(Predictor):
-    def predict(self, sentence: str, target: str) -> JsonDict:
-        return self.predict_json({"sentence" : sentence, "target": target})
+    def predict(self, sentence: str) -> JsonDict:
+        return self.predict_json({"sentence" : sentence})
 
     def predictions_to_labeled_instances(self,
                                          instance: Instance,
@@ -23,5 +28,4 @@ class NextTokenLMPredictor(Predictor):
         Expects JSON that looks like ``{"sentence": "..."}``.
         """
         sentence = json_dict["sentence"]
-        target = json_dict["target"]
-        return self._dataset_reader.text_to_instance(sentence=sentence, target=target)
+        return self._dataset_reader.text_to_instance(sentence=sentence)
