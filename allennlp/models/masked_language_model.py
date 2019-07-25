@@ -107,7 +107,7 @@ class MaskedLanguageModel(Model):
         k = min(vocab_size, 20)  # min here largely because tests use small vocab
         top_probs, top_indices = probs.topk(k=k, dim=-1)
 
-        output_dict = {"top_probs": top_probs, "top_indices": top_indices}
+        output_dict = {"probabilities": top_probs, "top_indices": top_indices}
 
         if target_ids is not None:
             target_logits = target_logits.view(batch_size * num_masks, vocab_size)
@@ -134,6 +134,7 @@ class MaskedLanguageModel(Model):
                                                                namespace=self._target_namespace)
                                for index in mask_position]
                               for mask_position in instance_indices])
-        output_dict["top_words"] = top_words
+        output_dict["words"] = top_words
+        output_dict["output"] = ""
 
         return output_dict
