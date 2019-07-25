@@ -1,5 +1,6 @@
 from typing import Dict, List, Tuple, Union
 
+from overrides import overrides
 import torch
 
 from allennlp.common.checks import check_dimensions_match, ConfigurationError
@@ -44,6 +45,7 @@ class MaskedLanguageModel(Model):
         super().__init__(vocab)
         self._text_field_embedder = text_field_embedder
         self._contextualizer = contextualizer
+        self._target_namespace = target_namespace
         if contextualizer:
             softmax_dim = contextualizer.get_output_dim()
             check_dimensions_match(text_field_embedder.get_output_dim(), contextualizer.get_input_dim(),
@@ -78,9 +80,9 @@ class MaskedLanguageModel(Model):
             ``mask_positions`` - one target token per mask position.
         """
         # pylint: disable=arguments-differ
-        if len(target_ids) != 1:
+        if target_ids is not None and len(target_ids) != 1:
             raise ValueError(f"Found {len(target_ids)} indexers for target_ids, not sure what to do")
-        target_ids = list(target_ids.values())[0]
+            target_ids = list(target_ids.values())[0]
         mask_positions = mask_positions.squeeze(-1)
         batch_size, num_masks = mask_positions.size()
         if target_ids is not None and target_ids.size() != mask_positions.size():
@@ -120,3 +122,18 @@ class MaskedLanguageModel(Model):
 
     def get_metrics(self, reset: bool = False):
         return {"perplexity": self._perplexity.get_metric(reset=reset)}
+
+    @overrides
+    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+        """
+        Converts the tag ids to the actual target_ids.
+        ``output_dict["target_ids"]`` is a list of lists of tag_ids,
+        so we use an ugly nested list comprehension.
+        """
+        output_dict["top_indices"] = [
+                [self.vocab.get_token_from_index(top_index, namespace=self._target_namespace)
+                 for top_index in top_indices]
+                for top_indices in output_dict["top_indices"]
+        ]
+
+        return output_dict
