@@ -6,9 +6,7 @@ import torch
 from allennlp.common.checks import check_dimensions_match, ConfigurationError
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.model import Model
-from allennlp.modules.text_field_embedders import TextFieldEmbedder
-from allennlp.modules.sampled_softmax_loss import SampledSoftmaxLoss
-from allennlp.modules.seq2seq_encoders import Seq2SeqEncoder
+from allennlp.modules import LanguageModelHead, Seq2SeqEncoder, TextFieldEmbedder
 from allennlp.nn import util, InitializerApplicator
 from allennlp.training.metrics import Perplexity
 
@@ -25,19 +23,22 @@ class MaskedLanguageModel(Model):
     vocab : ``Vocabulary``
     text_field_embedder : ``TextFieldEmbedder``
         Used to embed the indexed tokens we get in ``forward``.
-    contextualizer : ``Seq2SeqEncoder``
-        Used to "contextualize" the embeddings. As described above,
-        this encoder must not cheat by peeking ahead.
+    language_model_head : ``LanguageModelHead``
+        The ``torch.nn.Module`` that goes from the hidden states output by the contextualizer to
+        logits over some output vocabulary.
+    contextualizer : ``Seq2SeqEncoder``, optional (default=None)
+        Used to "contextualize" the embeddings.  This is optional because the contextualization
+        might actually be done in the text field embedder.
     target_namespace : ``str``, optional (default='bert')
-        The vocabulary namespace to use to get the number of output tokens for the final softmax
-        layer.
-    dropout : ``float``, optional (default=None)
+        Namespace to use to convert predicted token ids to strings in ``Model.decode``.
+    dropout : ``float``, optional (default=0.0)
         If specified, dropout is applied to the contextualized embeddings before computation of
         the softmax. The contextualized embeddings themselves are returned without dropout.
     """
     def __init__(self,
                  vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
+                 language_model_head: LanguageModelHead,
                  contextualizer: Seq2SeqEncoder = None,
                  target_namespace: str = 'bert',
                  dropout: float = 0.0,
@@ -45,15 +46,11 @@ class MaskedLanguageModel(Model):
         super().__init__(vocab)
         self._text_field_embedder = text_field_embedder
         self._contextualizer = contextualizer
-        self._target_namespace = target_namespace
         if contextualizer:
-            softmax_dim = contextualizer.get_output_dim()
             check_dimensions_match(text_field_embedder.get_output_dim(), contextualizer.get_input_dim(),
                                    "text field embedder output", "contextualizer input")
-        else:
-            softmax_dim = text_field_embedder.get_output_dim()
-        self._language_model_head = torch.nn.Linear(softmax_dim,
-                                                    vocab.get_vocab_size(target_namespace))
+        self._language_model_head = language_model_head
+        self._target_namespace = target_namespace
         self._perplexity = Perplexity()
         self._dropout = torch.nn.Dropout(dropout)
 
@@ -80,8 +77,9 @@ class MaskedLanguageModel(Model):
             ``mask_positions`` - one target token per mask position.
         """
         # pylint: disable=arguments-differ
-        if target_ids is not None and len(target_ids) != 1:
-            raise ValueError(f"Found {len(target_ids)} indexers for target_ids, not sure what to do")
+        if target_ids is not None:
+            if len(target_ids) != 1:
+                raise ValueError(f"Found {len(target_ids)} indexers for target_ids, not sure what to do")
             target_ids = list(target_ids.values())[0]
         mask_positions = mask_positions.squeeze(-1)
         batch_size, num_masks = mask_positions.size()
@@ -109,8 +107,7 @@ class MaskedLanguageModel(Model):
         k = min(vocab_size, 20)  # min here largely because tests use small vocab
         top_probs, top_indices = probs.topk(k=k, dim=-1)
 
-        # TODO, im just squeezing and assuming batch size = 1
-        output_dict = {"top_probs": top_probs.squeeze(dim=0), "top_indices": top_indices.squeeze(dim=0)}
+        output_dict = {"top_probs": top_probs, "top_indices": top_indices}
 
         if target_ids is not None:
             target_logits = target_logits.view(batch_size * num_masks, vocab_size)
@@ -131,10 +128,12 @@ class MaskedLanguageModel(Model):
         ``output_dict["target_ids"]`` is a list of lists of tag_ids,
         so we use an ugly nested list comprehension.
         """
-        output_dict["top_indices"] = [
-                [self.vocab.get_token_from_index(top_index.item(), namespace=self._target_namespace)
-                 for top_index in top_indices]
-                for top_indices in output_dict["top_indices"]
-        ]
+        top_words = []
+        for instance_indices in output_dict['top_indices']:
+            top_words.append([[self.vocab.get_token_from_index(index.item(),
+                                                               namespace=self._target_namespace)
+                               for index in mask_position]
+                              for mask_position in instance_indices])
+        output_dict["top_words"] = top_words
 
         return output_dict

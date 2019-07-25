@@ -16,8 +16,7 @@ class WordpieceTokenizer(Tokenizer):
     """
     A ``WordpieceTokenizer`` splits a string of text (consistently of multiple words) into a list
     of wordpieces, where each word piece represents whether or not it is a continuation.  E.g.,
-    ``'AllenNLP is awesome'`` might get split into ``['Allen', '#N', '#L', '#P', 'is',
-    'awesome']``.
+    ``'AllenNLP is awesome'`` might get split into ``['Allen', '##NL', '##P', 'is', 'awesome']``.
 
     Because tokenizing into wordpieces requires first having obtained a wordpiece vocabulary, we
     leverage ``pytorch_transformers`` to provide a ``PreTrainedTokenizer``.  We take a model name

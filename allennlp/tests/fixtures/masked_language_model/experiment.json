@@ -1,12 +1,11 @@
 {
   "dataset_reader": {
-    "type": "masked_language_modeling",
+    "type": "masked_language_modeling"
   },
   "train_data_path": "allennlp/tests/fixtures/language_model/sentences.txt",
   "validation_data_path": "allennlp/tests/fixtures/language_model/sentences.txt",
   "model": {
     "type": "masked_language_model",
-    "target_namespace": "tokens",
     "text_field_embedder": {
       "token_embedders": {
         "tokens": {
@@ -14,6 +13,11 @@
           "embedding_dim": 4
         }
       }
+    },
+    "language_model_head": {
+      "type": "linear",
+      "input_dim": 4,
+      "vocab_namespace": "tokens"
     }
   },
   "iterator": {
