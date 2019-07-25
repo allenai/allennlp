@@ -109,6 +109,7 @@ class MaskedLanguageModel(Model):
         k = min(vocab_size, 20)  # min here largely because tests use small vocab
         top_probs, top_indices = probs.topk(k=k, dim=-1)
 
+        # TODO, im just squeezing and assuming batch size = 1
         output_dict = {"top_probs": top_probs.squeeze(dim=0), "top_indices": top_indices.squeeze(dim=0)}
 
         if target_ids is not None:
