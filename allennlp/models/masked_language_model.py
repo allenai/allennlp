@@ -109,7 +109,7 @@ class MaskedLanguageModel(Model):
         k = min(vocab_size, 20)  # min here largely because tests use small vocab
         top_probs, top_indices = probs.topk(k=k, dim=-1)
 
-        output_dict = {"top_probs": top_probs, "top_indices": top_indices}
+        output_dict = {"top_probs": top_probs.squeeze(dim=0), "top_indices": top_indices.squeeze(dim=0)}
 
         if target_ids is not None:
             target_logits = target_logits.view(batch_size * num_masks, vocab_size)
@@ -131,7 +131,7 @@ class MaskedLanguageModel(Model):
         so we use an ugly nested list comprehension.
         """
         output_dict["top_indices"] = [
-                [self.vocab.get_token_from_index(top_index, namespace=self._target_namespace)
+                [self.vocab.get_token_from_index(top_index.item(), namespace=self._target_namespace)
                  for top_index in top_indices]
                 for top_indices in output_dict["top_indices"]
         ]
