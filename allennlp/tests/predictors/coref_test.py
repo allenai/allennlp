@@ -113,6 +113,3 @@ class TestCorefPredictor(AllenNlpTestCase):
                 if new_instance['span_labels'][i]:
                     pred_clust_spans.add(tuple(span))
             assert true_top_spans == pred_clust_spans
-
-x = TestCorefPredictor()
-x.test_predictions_to_labeled_instances()
