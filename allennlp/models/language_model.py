@@ -52,13 +52,11 @@ class LanguageModel(Model):
     The ``LanguageModel`` applies a "contextualizing"
     ``Seq2SeqEncoder`` to uncontextualized embeddings, using a ``SoftmaxLoss``
     module (defined above) to compute the language modeling loss.
-
     If bidirectional is True,  the language model is trained to predict the next and
     previous tokens for each token in the input. In this case, the contextualizer must
     be bidirectional. If bidirectional is False, the language model is trained to only
     predict the next token for each token in the input; the contextualizer should also
     be unidirectional.
-
     If your language model is bidirectional, it is IMPORTANT that your bidirectional
     ``Seq2SeqEncoder`` contextualizer does not do any "peeking ahead". That is, for its
     forward direction it should only consider embeddings at previous timesteps, and for
@@ -66,7 +64,6 @@ class LanguageModel(Model):
     language model is unidirectional, the unidirectional contextualizer should only
     consider embeddings at previous timesteps. If this condition is not met, your
     language model is cheating.
-
     Parameters
     ----------
     vocab: ``Vocabulary``
@@ -224,117 +221,40 @@ class LanguageModel(Model):
             raise NotImplementedError(f"Contextualizer of type {type(self._contextualizer)} " +
                                       "does not report how many layers it has.")
 
-    # def forward(self,  # type: ignore
-    #             source: Dict[str, torch.LongTensor]) -> Dict[str, torch.Tensor]:
-    #     """
-    #     Computes the averaged forward (and backward, if language model is bidirectional)
-    #     LM loss from the batch.
-
-    #     Parameters
-    #     ----------
-    #     source: ``Dict[str, torch.LongTensor]``, required.
-    #         The output of ``Batch.as_tensor_dict()`` for a batch of sentences. By convention,
-    #         it's required to have at least a ``"tokens"`` entry that's the output of a
-    #         ``SingleIdTokenIndexer``, which is used to compute the language model targets.
-
-    #     Returns
-    #     -------
-    #     Dict with keys:
-
-    #     ``'loss'``: ``torch.Tensor``
-    #         forward negative log likelihood, or the average of forward/backward
-    #         if language model is bidirectional
-    #     ``'forward_loss'``: ``torch.Tensor``
-    #         forward direction negative log likelihood
-    #     ``'backward_loss'``: ``torch.Tensor`` or ``None``
-    #         backward direction negative log likelihood. If language model is not
-    #         bidirectional, this is ``None``.
-    #     ``'lm_embeddings'``: ``Union[torch.Tensor, List[torch.Tensor]]``
-    #         (batch_size, timesteps, embed_dim) tensor of top layer contextual representations or
-    #         list of all layers. No dropout applied.
-    #     ``'noncontextual_token_embeddings'``: ``torch.Tensor``
-    #         (batch_size, timesteps, token_embed_dim) tensor of bottom layer noncontextual
-    #         representations
-    #     ``'mask'``: ``torch.Tensor``
-    #         (batch_size, timesteps) mask for the embeddings
-    #     """
-    #     # pylint: disable=arguments-differ
-    #     mask = get_text_field_mask(source)
-
-    #     # shape (batch_size, timesteps, embedding_size)
-    #     embeddings = self._text_field_embedder(source)
-
-    #     # Either the top layer or all layers.
-    #     contextual_embeddings: Union[torch.Tensor, List[torch.Tensor]] = self._contextualizer(
-    #             embeddings, mask
-    #     )
-
-    #     return_dict = {}
-
-    #     # If we have target tokens, calculate the loss.
-    #     token_ids = source.get("tokens")
-    #     if token_ids is not None:
-    #         assert isinstance(contextual_embeddings, torch.Tensor)
-
-    #         # Use token_ids to compute targets
-    #         forward_targets = torch.zeros_like(token_ids)
-    #         forward_targets[:, 0:-1] = token_ids[:, 1:]
-
-    #         if self._bidirectional:
-    #             backward_targets = torch.zeros_like(token_ids)
-    #             backward_targets[:, 1:] = token_ids[:, 0:-1]
-    #         else:
-    #             backward_targets = None
-
-    #         # add dropout
-    #         contextual_embeddings_with_dropout = self._dropout(contextual_embeddings)
-
-    #         # compute softmax loss
-    #         forward_loss, backward_loss = self._compute_loss(contextual_embeddings_with_dropout,
-    #                                                          embeddings,
-    #                                                          forward_targets,
-    #                                                          backward_targets)
-
-    #         num_targets = torch.sum((forward_targets > 0).long())
-    #         if num_targets > 0:
-    #             if self._bidirectional:
-    #                 average_loss = 0.5 * (forward_loss + backward_loss) / num_targets.float()
-    #             else:
-    #                 average_loss = forward_loss / num_targets.float()
-    #         else:
-    #             average_loss = torch.tensor(0.0).to(forward_targets.device)  # pylint: disable=not-callable
-
-    #         self._perplexity(average_loss)
-
-    #         if num_targets > 0:
-    #             return_dict.update({
-    #                     'loss': average_loss,
-    #                     'forward_loss': forward_loss / num_targets.float(),
-    #                     'backward_loss': (backward_loss / num_targets.float()
-    #                                       if backward_loss is not None else None),
-    #                     'batch_weight': num_targets.float()
-    #             })
-    #         else:
-    #             # average_loss zero tensor, return it for all
-    #             return_dict.update({
-    #                     'loss': average_loss,
-    #                     'forward_loss': average_loss,
-    #                     'backward_loss': average_loss if backward_loss is not None else None
-    #             })
-
-    #     return_dict.update({
-    #             # Note: These embeddings do not have dropout applied.
-    #             'lm_embeddings': contextual_embeddings,
-    #             'noncontextual_token_embeddings': embeddings,
-    #             'mask': mask
-    #     })
-
-    #     return return_dict
-
     def forward(self,  # type: ignore
                 source: Dict[str, torch.LongTensor]) -> Dict[str, torch.Tensor]:
+        """
+        Computes the averaged forward (and backward, if language model is bidirectional)
+        LM loss from the batch.
+        Parameters
+        ----------
+        source: ``Dict[str, torch.LongTensor]``, required.
+            The output of ``Batch.as_tensor_dict()`` for a batch of sentences. By convention,
+            it's required to have at least a ``"tokens"`` entry that's the output of a
+            ``SingleIdTokenIndexer``, which is used to compute the language model targets.
+        Returns
+        -------
+        Dict with keys:
+        ``'loss'``: ``torch.Tensor``
+            forward negative log likelihood, or the average of forward/backward
+            if language model is bidirectional
+        ``'forward_loss'``: ``torch.Tensor``
+            forward direction negative log likelihood
+        ``'backward_loss'``: ``torch.Tensor`` or ``None``
+            backward direction negative log likelihood. If language model is not
+            bidirectional, this is ``None``.
+        ``'lm_embeddings'``: ``Union[torch.Tensor, List[torch.Tensor]]``
+            (batch_size, timesteps, embed_dim) tensor of top layer contextual representations or
+            list of all layers. No dropout applied.
+        ``'noncontextual_token_embeddings'``: ``torch.Tensor``
+            (batch_size, timesteps, token_embed_dim) tensor of bottom layer noncontextual
+            representations
+        ``'mask'``: ``torch.Tensor``
+            (batch_size, timesteps) mask for the embeddings
+        """
+        # pylint: disable=arguments-differ
         mask = get_text_field_mask(source)
-        
+
         # shape (batch_size, timesteps, embedding_size)
         embeddings = self._text_field_embedder(source)
 
@@ -345,18 +265,21 @@ class LanguageModel(Model):
 
         return_dict = {}
 
-        # If we have target tokens, calculate the loss.        
-        token_ids = source.get("tokens")        
+        # If we have target tokens, calculate the loss.
+        token_ids = source.get("tokens")
         if token_ids is not None:
             assert isinstance(contextual_embeddings, torch.Tensor)
 
             # Use token_ids to compute targets
             forward_targets = torch.zeros_like(token_ids)
-            #forward_targets[:, 0:-1] = token_ids[:, 1:]                        
-            forward_targets[-1] = source.get("target")            
-            print(forward_targets)
-            exit()            
-        
+            forward_targets[:, 0:-1] = token_ids[:, 1:]
+
+            if self._bidirectional:
+                backward_targets = torch.zeros_like(token_ids)
+                backward_targets[:, 1:] = token_ids[:, 0:-1]
+            else:
+                backward_targets = None
+
             # add dropout
             contextual_embeddings_with_dropout = self._dropout(contextual_embeddings)
 
@@ -364,16 +287,42 @@ class LanguageModel(Model):
             forward_loss, backward_loss = self._compute_loss(contextual_embeddings_with_dropout,
                                                              embeddings,
                                                              forward_targets,
-                                                             None)
+                                                             backward_targets)
 
             num_targets = torch.sum((forward_targets > 0).long())
-            assert num_targets > 0                                      
-            average_loss = forward_loss / num_targets.float()            
-                
-            return_dict.update({
-                    'loss': average_loss,
-            })
-        
+            if num_targets > 0:
+                if self._bidirectional:
+                    average_loss = 0.5 * (forward_loss + backward_loss) / num_targets.float()
+                else:
+                    average_loss = forward_loss / num_targets.float()
+            else:
+                average_loss = torch.tensor(0.0).to(forward_targets.device)  # pylint: disable=not-callable
+
+            self._perplexity(average_loss)
+
+            if num_targets > 0:
+                return_dict.update({
+                        'loss': average_loss,
+                        'forward_loss': forward_loss / num_targets.float(),
+                        'backward_loss': (backward_loss / num_targets.float()
+                                          if backward_loss is not None else None),
+                        'batch_weight': num_targets.float()
+                })
+            else:
+                # average_loss zero tensor, return it for all
+                return_dict.update({
+                        'loss': average_loss,
+                        'forward_loss': average_loss,
+                        'backward_loss': average_loss if backward_loss is not None else None
+                })
+
+        return_dict.update({
+                # Note: These embeddings do not have dropout applied.
+                'lm_embeddings': contextual_embeddings,
+                'noncontextual_token_embeddings': embeddings,
+                'mask': mask
+        })
+
         return return_dict
 
     def get_metrics(self, reset: bool = False):
