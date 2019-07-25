@@ -123,3 +123,9 @@ class SequenceLabelField(Field[torch.Tensor]):
                                     for labels in textwrap.wrap(repr(self.labels), 100)])
         return f"SequenceLabelField of length {length} with " \
                f"labels:\n {formatted_labels} \t\tin namespace: '{self._label_namespace}'."
+
+    @overrides
+    def __eq__(self, other):
+        if isinstance(other, SequenceLabelField):
+            return self.labels == other.labels
+        return super().__eq__(other)

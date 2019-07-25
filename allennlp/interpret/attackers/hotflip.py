@@ -133,6 +133,11 @@ class Hotflip(Attacker):
                 # only flip a token once
                 for index in flipped:
                     grads_magnitude[index] = -1
+                if 'clusters' in outputs:
+                    for clust in outputs['clusters']:
+                        for mention in clust:
+                            for index in range(mention[0], mention[1]+1):
+                                grads_magnitude[index] = -1
 
                 # we flip the token with highest gradient norm
                 index_of_token_to_flip = numpy.argmax(grads_magnitude)
@@ -164,13 +169,15 @@ class Hotflip(Attacker):
                 # add labels to current_instances
                 current_instance_labeled = self.predictor.predictions_to_labeled_instances(current_instance, outputs)[0]
                 if 'clusters' in outputs:
-                    if tuple(original_outputs['clusters'][i]) not in [tuple(l) for l in outputs['clusters']]:
+                    if set(tuple(l) for l in original_outputs['clusters']) != set(tuple(l) for l in outputs['clusters']):
                         break
                 # if the prediction has changed, then stop
                 elif any(current_instance_labeled[field] != fields_to_compare[field] for field in fields_to_compare):
                     break
 
             final_tokens.append(current_tokens)
+            if 'clusters' in outputs:
+                break
         print('Final', outputs['clusters'])
         return sanitize({"final": final_tokens,
                          "original": original_tokens,
