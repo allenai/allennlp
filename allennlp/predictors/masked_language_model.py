@@ -6,17 +6,15 @@ from allennlp.predictors.predictor import Predictor
 
 
 @Predictor.register('masked_lm_predictor')
-class MaskedLanguageModelPredictor(Predictor):    
-    def predict(self, tokens: str, mask_positions: List[int], target_ids: List[int]) -> JsonDict:
-        return self.predict_json({"tokens" : tokens, 
-                                  "mask_positions": mask_positions, 
-                                  "target_ids": target_ids})        
+class MaskedLanguageModelPredictor(Predictor):
+
+    def predict(self, sentence_with_masks: str) -> JsonDict:
+        return self.predict_json({"sentence" : sentence_with_masks})
+
     @overrides
     def _json_to_instance(self, json_dict: JsonDict) -> Instance:
         """
-        Expects JSON that looks like ``{"tokens": "..."}``.
+        Expects JSON that looks like ``{"sentence": "..."}``.
         """
-        tokens = json_dict["tokens"]
-        mask_positions = json_dict["mask_positions"]
-        target_ids = json_dict["targets_ids"]
-        return self._dataset_reader.text_to_instance(tokens=tokens, mask_positions=mask_positions, target_ids=target_ids)
+        tokens = json_dict["sentence"]
+        return self._dataset_reader.text_to_instance(sentence=sentence)
