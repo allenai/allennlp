@@ -29,6 +29,7 @@ class MultiQA_BERT(Model):
                  initializer: InitializerApplicator,
                  max_span_length: int = 30,
                  use_multi_label_loss: bool = False,
+                 pretrained_model: str = "bert-base-uncased",
                  stats_report_freq:float = None,
                  debug_experiment_name:str = None) -> None:
         super().__init__(vocab)
@@ -43,7 +44,7 @@ class MultiQA_BERT(Model):
         self.qa_outputs = torch.nn.Linear(self._text_field_embedder.get_output_dim(), 2)
         self.qa_yesno = torch.nn.Linear(self._text_field_embedder.get_output_dim(), 3)
 
-        self._bert_model = BertModel.from_pretrained("bert-base-uncased")
+        self._bert_model = BertModel.from_pretrained(pretrained_model)
         initializer(self)
 
         self._official_f1 = Average()
