@@ -375,8 +375,6 @@ class MultiQAReader(DatasetReader):
             chunks_to_select_from = cannot_answer + yesno + spans
             if len(chunks_to_select_from) > 0:
                 instances_to_add += random.sample(chunks_to_select_from, 1)
-            else:
-                logger.info('found it!!!')
 
         else:
             instances_to_add = question_chunks
