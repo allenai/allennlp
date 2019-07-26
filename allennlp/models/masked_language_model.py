@@ -104,10 +104,12 @@ class MaskedLanguageModel(Model):
 
         vocab_size = target_logits.size(-1)
         probs = torch.nn.functional.softmax(target_logits, dim=-1)
-        k = min(vocab_size, 20)  # min here largely because tests use small vocab
+        k = min(vocab_size, 5)  # min here largely because tests use small vocab
         top_probs, top_indices = probs.topk(k=k, dim=-1)
 
-        output_dict = {"top_probs": top_probs, "top_indices": top_indices}
+        output_dict = {"probabilities": top_probs, "top_indices": top_indices}
+        output_dict["outputs"] = ""
+        output_dict["tokens"] = [[self.vocab._index_to_token[self._target_namespace][t.item()] for t in batch] for batch in tokens[self._target_namespace]]
 
         if target_ids is not None:
             target_logits = target_logits.view(batch_size * num_masks, vocab_size)
@@ -134,6 +136,6 @@ class MaskedLanguageModel(Model):
                                                                namespace=self._target_namespace)
                                for index in mask_position]
                               for mask_position in instance_indices])
-        output_dict["top_words"] = top_words
+        output_dict["words"] = top_words
 
         return output_dict
