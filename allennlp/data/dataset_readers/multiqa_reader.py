@@ -124,14 +124,15 @@ class MultiQAReader(DatasetReader):
                  sample_size: int = -1,
                  STRIDE: int = 128,
                  MAX_WORDPIECES: int = 512,
-                 random_seed: int = 0,
-                 support_yesno: bool = True
+                 support_yesno: bool = False,
+                 support_cannotanswer: bool = False,
                  ) -> None:
         super().__init__(lazy)
         self._support_yesno = support_yesno
+        self._support_cannotanswer = support_cannotanswer
         self._preproc_outputfile = preproc_outputfile
         self._STRIDE = STRIDE
-        # TODO remove this
+
         # NOTE AllenNLP automatically adds [CLS] and [SEP] word peices in the begining and end of the context,
         # therefore we need to subtract 2
         self._MAX_WORDPIECES = MAX_WORDPIECES - 2
@@ -261,7 +262,7 @@ class MultiQAReader(DatasetReader):
                             if self._support_yesno and "single_answer" in ac['yesno']:
                                 qa['yesno'] = ac['yesno']['single_answer']
 
-                elif 'cannot_answer' in qa['answers']['open-ended']:
+                elif self._support_cannotanswer and 'cannot_answer' in qa['answers']['open-ended']:
                     qa['cannot_answer'] = True
 
             qa['answer_text_list'] = answer_text_list
