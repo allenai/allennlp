@@ -469,7 +469,8 @@ class Trainer(TrainerBase):
 
             # Update the description with the latest metrics
 
-
+            # TODO debugging
+            logger.info(_o)
             # ALON - due to the fact that with BERTLarge we are unable to add all question-chunks to the same
             # batch we will need to compute the validation scores outside of the batch.
             val_metrics = training_util.get_metrics(self.model, val_loss, batches_this_epoch)
