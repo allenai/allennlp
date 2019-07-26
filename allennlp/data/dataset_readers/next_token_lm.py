@@ -46,6 +46,7 @@ class NextTokenLMReader(DatasetReader):
         if not tokens:
             tokens = self._tokenizer.tokenize(sentence)
         input_field = TextField(tokens, self._token_indexers)
-        target_field = TextField([Token(target)], self._token_indexers)
-        return Instance({'tokens': input_field,
-                         'target_ids': target_field})
+        fields = {'tokens': input_field}
+        if target:
+            fields['target_ids'] = TextField([Token(target)], self._token_indexers)
+        return Instance(fields)
