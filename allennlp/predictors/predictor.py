@@ -2,6 +2,7 @@ from typing import List, Iterator, Dict, Tuple, Any
 import json
 from contextlib import contextmanager
 import numpy
+import torch
 from torch.utils.hooks import RemovableHandle
 from torch import Tensor
 
@@ -116,6 +117,8 @@ class Predictor(Registrable):
         for hook in hooks:
             hook.remove()
 
+        print(embedding_gradients)
+        print(loss)
         grad_dict = dict()
         for idx, grad in enumerate(embedding_gradients):
             key = 'grad_input_' + str(idx + 1)
@@ -179,6 +182,7 @@ class Predictor(Registrable):
 
     def predict_instance(self, instance: Instance) -> JsonDict:
         outputs = self._model.forward_on_instance(instance)
+        print(outputs)
         return sanitize(outputs)
 
     def predictions_to_labeled_instances(self,
