@@ -135,6 +135,6 @@ class MaskedLanguageModel(Model):
                                for index in mask_position]
                               for mask_position in instance_indices])
         output_dict["words"] = top_words
-        output_dict["output"] = ""
+        output_dict["outputs"] = ""
 
         return output_dict
