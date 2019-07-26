@@ -5,8 +5,8 @@ from copy import deepcopy
 from overrides import overrides
 
 from allennlp.common.util import JsonDict
-from allennlp.data import Instance
-from allennlp.data.fields import LabelField
+from allennlp.data import Instance, Token
+from allennlp.data.fields import TextField
 from allennlp.predictors.predictor import Predictor
 
 
@@ -21,8 +21,11 @@ class MaskedLanguageModelPredictor(Predictor):
                                          instance: Instance,
                                          outputs: Dict[str, numpy.ndarray]):
         new_instance = deepcopy(instance)
+        token_field: TextField = instance['tokens']  # type: ignore
+        mask_targets = [Token(target_top_k[0]) for target_top_k in outputs['words']]
         new_instance.add_field('target_ids',
-                               LabelField(int(outputs['top_indices'][0][0]), skip_indexing=True))
+                               TextField(mask_targets, token_field._token_indexers),
+                               vocab=self._model.vocab)
         return [new_instance]
 
     @overrides

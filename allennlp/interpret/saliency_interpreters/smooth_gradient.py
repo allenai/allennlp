@@ -58,10 +58,8 @@ class SmoothGradient(SaliencyInterpreter):
             output.add_(noise)
 
         # Register the hook
-        handle = None
-        for module in self.predictor._model.modules():
-            if isinstance(module, TextFieldEmbedder):
-                handle = module.register_forward_hook(forward_hook)
+        embedding_layer = util.find_embedding_layer(self.predictor._model)
+        handle = embedding_layer.register_forward_hook(forward_hook)
 
         return handle
 

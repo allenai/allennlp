@@ -118,8 +118,6 @@ class Predictor(Registrable):
         for hook in hooks:
             hook.remove()
 
-        print(embedding_gradients)
-        print(loss)
         grad_dict = dict()
         for idx, grad in enumerate(embedding_gradients):
             key = 'grad_input_' + str(idx + 1)
@@ -138,11 +136,10 @@ class Predictor(Registrable):
         to a list.
         """
         def hook_layers(module, grad_in, grad_out): # pylint: disable=unused-argument
-            print('in hook')
             embedding_gradients.append(grad_out[0])
 
         backward_hooks = []
-        embedding_layer = util.find_embedding_layer(self._model.modules())
+        embedding_layer = util.find_embedding_layer(self._model)
         backward_hooks.append(embedding_layer.register_backward_hook(hook_layers))
         return backward_hooks
 
@@ -182,7 +179,6 @@ class Predictor(Registrable):
 
     def predict_instance(self, instance: Instance) -> JsonDict:
         outputs = self._model.forward_on_instance(instance)
-        print(outputs)
         return sanitize(outputs)
 
     def predictions_to_labeled_instances(self,

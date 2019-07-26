@@ -18,7 +18,8 @@
       "type": "linear",
       "input_dim": 4,
       "vocab_namespace": "tokens"
-    }
+    },
+    "target_namespace": "tokens"
   },
   "iterator": {
     "type": "basic",

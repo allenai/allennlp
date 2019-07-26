@@ -1474,23 +1474,25 @@ def inspect_parameters(module: torch.nn.Module, quiet: bool = False) -> Dict[str
     return results
 
 
-def find_embedding_layer(modules: List[torch.nn.Module]) -> torch.nn.Module:
+def find_embedding_layer(model: torch.nn.Module) -> torch.nn.Module:
     """
-    Takes the output of ``model.modules()`` and makes a best guess about which module is the
-    embedding layer.  For typical AllenNLP models, this often is the ``TextFieldEmbedder``, but if
-    you're using a pre-trained contextualizer, we really want layer 0 of that contextualizer, not
-    the output.  So there are a bunch of hacks in here for specific pre-trained contextualizers.
+    Takes a model (typically an AllenNLP ``Model``, but this works for any ``torch.nn.Module``) and
+    makes a best guess about which module is the embedding layer.  For typical AllenNLP models,
+    this often is the ``TextFieldEmbedder``, but if you're using a pre-trained contextualizer, we
+    really want layer 0 of that contextualizer, not the output.  So there are a bunch of hacks in
+    here for specific pre-trained contextualizers.
     """
     # We'll look for a few special cases in a first pass, then fall back to just finding a
     # TextFieldEmbedder in a second pass if we didn't find a special case.
     from pytorch_pretrained_bert.modeling import BertEmbeddings
     from pytorch_transformers.modeling_gpt2 import GPT2Model
-    for module in modules:
+    from allennlp.modules import TextFieldEmbedder
+    for module in model.modules():
         if isinstance(module, BertEmbeddings):
             return module.word_embeddings
         if isinstance(module, GPT2Model):
             return module.wte
-    for module in modules:
+    for module in model.modules():
         if isinstance(module, TextFieldEmbedder):
             return module
     raise RuntimeError("No embedding module found!")
