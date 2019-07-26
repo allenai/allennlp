@@ -13,6 +13,7 @@ from allennlp.interpret.attackers import utils
 from allennlp.interpret.attackers.attacker import Attacker
 from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
 from allennlp.modules.token_embedders import Embedding
+from allennlp.nn import util
 from allennlp.predictors.predictor import Predictor
 
 
@@ -76,12 +77,10 @@ class Hotflip(Attacker):
                     elmo_tokens.append(elmo_indexed_token[0])
                 all_inputs["elmo"] = torch.LongTensor(elmo_tokens).unsqueeze(0)
 
-        # find the TextFieldEmbedder
-        for module in self.predictor._model.modules():
-            if isinstance(module, TextFieldEmbedder):
-                embedder = module
+        embedding_layer = util.find_embedding_layer(self.predictor._model.modules())
+
         # pass all tokens through the fake matrix and create an embedding out of it.
-        embedding_matrix = embedder(all_inputs).squeeze()
+        embedding_matrix = embedding_layer(all_inputs).squeeze()
         return Embedding(num_embeddings=self.vocab.get_vocab_size('tokens'),
                          embedding_dim=embedding_matrix.shape[1],
                          weight=embedding_matrix,

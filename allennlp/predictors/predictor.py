@@ -10,10 +10,11 @@ from allennlp.common import Registrable
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import DatasetReader, Instance
+from allennlp.data.dataset import Batch
 from allennlp.models import Model
 from allennlp.models.archival import Archive, load_archive
 from allennlp.modules.text_field_embedders import TextFieldEmbedder
-from allennlp.data.dataset import Batch
+from allennlp.nn import util
 
 # a mapping from model `type` to the default Predictor for that type
 DEFAULT_PREDICTORS = {
@@ -140,9 +141,8 @@ class Predictor(Registrable):
             embedding_gradients.append(grad_out[0])
 
         backward_hooks = []
-        for module in self._model.modules():
-            if isinstance(module, TextFieldEmbedder):
-                backward_hooks.append(module.register_backward_hook(hook_layers))
+        embedding_layer = util.find_embedding_layer(self._model.modules())
+        backward_hooks.append(embedding_layer.register_backward_hook(hook_layers))
 
         return backward_hooks
 

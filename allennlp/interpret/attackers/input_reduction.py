@@ -170,7 +170,7 @@ def _remove_one_token(instance: Instance,
             tag_field_after_smallest = tag_field.labels[smallest + 1:]
             tag_field.labels = tag_field_before_smallest + tag_field_after_smallest  # type: ignore
             tag_field.sequence_field = copied_text_field
-            
+
         copied_instance.indexed = False
         reduced_instances_and_smallest.append((copied_instance, smallest, tag_mask))
 
