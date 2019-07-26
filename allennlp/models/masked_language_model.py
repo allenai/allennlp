@@ -80,10 +80,7 @@ class MaskedLanguageModel(Model):
         if target_ids is not None:
             if len(target_ids) != 1:
                 raise ValueError(f"Found {len(target_ids)} indexers for target_ids, not sure what to do")
-            if type(target_ids) == Dict:
-                target_ids = list(target_ids.values())[0]
-            else:
-                target_ids = target_ids.unsqueeze(0)
+            target_ids = list(target_ids.values())[0]
         mask_positions = mask_positions.squeeze(-1)
         batch_size, num_masks = mask_positions.size()
         if target_ids is not None and target_ids.size() != mask_positions.size():
