@@ -20,8 +20,11 @@ class NextTokenLMPredictor(Predictor):
                                          instance: Instance,
                                          outputs: Dict[str, numpy.ndarray]):
         new_instance = deepcopy(instance)
+        token_field: TextField = instance['tokens']  # type: ignore
+        mask_targets = [Token(target_top_k[0]) for target_top_k in outputs['words']]
         new_instance.add_field('target_ids',
-                               LabelField(outputs['words'][0]))
+                               TextField(mask_targets, token_field._token_indexers),
+                               vocab=self._model.vocab)
         return [new_instance]
 
     @overrides
