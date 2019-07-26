@@ -81,7 +81,6 @@ class MaskedLanguageModelingReader(DatasetReader):
         """
         if not tokens:
             tokens = self._tokenizer.tokenize(sentence)
-        tokens = tokens[1:-1]
         input_field = TextField(tokens, self._token_indexers)
         mask_positions = []
         for i, token in enumerate(tokens):

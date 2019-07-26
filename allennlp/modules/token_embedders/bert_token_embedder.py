@@ -258,6 +258,6 @@ class PretrainedBertEmbedder(BertEmbedder):
         model = PretrainedBertModel.load(pretrained_model)
 
         for param in model.parameters():
-            param.requires_grad = requires_grad
+            param.requires_grad = True
 
         super().__init__(bert_model=model, top_layer_only=top_layer_only)

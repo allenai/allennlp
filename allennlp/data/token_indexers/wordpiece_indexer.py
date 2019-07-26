@@ -350,8 +350,8 @@ class PretrainedBertIndexer(WordpieceIndexer):
                          max_pieces=max_pieces,
                          do_lowercase=do_lowercase,
                          never_lowercase=never_lowercase,
-                         start_tokens=["[CLS]"],
-                         end_tokens=["[SEP]"],
+                         start_tokens=[],
+                         end_tokens=[],
                          separator_token="[SEP]",
                          truncate_long_sequences=truncate_long_sequences)
 
