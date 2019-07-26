@@ -65,3 +65,19 @@ class TestHotflip(AllenNlpTestCase):
             else:
                 if token in attack['final'][0]:
                     assert original_span_start != flipped_span_start or original_span_end != flipped_span_end
+
+    def test_targeted_attack_from_json(self):
+        inputs = {"sentence": "This is a single string [MASK] about a test . Sometimes it "
+                              "contains coreferent parts ."}
+
+        archive = load_archive(self.FIXTURES_ROOT / 'masked_language_model' / 'serialization' / 'model.tar.gz')
+        predictor = Predictor.from_archive(archive, 'masked_lm_predictor')
+
+        hotflipper = Hotflip(predictor)
+        hotflipper.initialize()
+        attack = hotflipper.targeted_attack_from_json(inputs, target=['target'])
+        assert attack is not None
+        assert 'final' in attack
+        assert 'original' in attack
+        assert 'outputs' in attack
+        assert len(attack['final'][0]) == len(attack['original']) # hotflip replaces words without removing

@@ -185,12 +185,12 @@ class Hotflip(Attacker):
                          "outputs": outputs})
 
     def targeted_attack_from_json(self,
-                     inputs: JsonDict = None,
-                     input_field_to_attack: str = 'tokens',
-                     grad_input_field: str = 'grad_input_1',
-                     ignore_tokens: List[str] = None,
-                     target: str = None,
-                     target_word: str = None) -> JsonDict:
+                                  inputs: JsonDict = None,
+                                  input_field_to_attack: str = 'tokens',
+                                  grad_input_field: str = 'grad_input_1',
+                                  ignore_tokens: List[str] = None,
+                                  target: str = None,
+                                  target_word: str = None) -> JsonDict:
         """
         Replaces one token at a time from the input until the model's prediction changes.
         ``input_field_to_attack`` is for example ``tokens``, it says what the input field is
@@ -205,7 +205,7 @@ class Hotflip(Attacker):
         if self.token_embedding is None:
             self.initialize()
         if target is None:
-            exit("set the target")
+            raise ValueError("set the target")
         ignore_tokens = ["@@NULL@@", '.', ',', ';', '!', '?'] if ignore_tokens is None else ignore_tokens
         sign = 1.0
         output_dict = {'words': [target]}
@@ -235,8 +235,9 @@ class Hotflip(Attacker):
                     if token.text != target_word:
                         flipped.append(index)
             else:
-                if token.text in ignore_tokens:
-                    flipped.append(index)
+                for index, token in enumerate(current_tokens):
+                    if token.text in ignore_tokens:
+                        flipped.append(index)
             while True:
                 # Compute L2 norm of all grads.
                 grad = grads[grad_input_field]
@@ -286,7 +287,7 @@ class Hotflip(Attacker):
                 # if the prediction has changed, then stop
                 if not utils.instance_has_changed(current_instance_labeled, fields_to_compare):
                         break
-                
+
             final_tokens.append(current_tokens)
             if 'clusters' in outputs:
                 break
