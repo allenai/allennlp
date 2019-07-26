@@ -469,12 +469,10 @@ class Trainer(TrainerBase):
 
             # Update the description with the latest metrics
 
-            # TODO debugging
-            logger.info(_o)
             # ALON - due to the fact that with BERTLarge we are unable to add all question-chunks to the same
             # batch we will need to compute the validation scores outside of the batch.
             val_metrics = training_util.get_metrics(self.model, val_loss, batches_this_epoch)
-            if str(type(self.model)).find('MultiQA_BERT') > -1:
+            if 'best_span_str' in _o and str(type(self.model)).find('MultiQA_BERT') > -1:
                 for best_span_str,best_span_logit, yesno_logit, qid, EM, f1 in \
                         zip(_o['best_span_str'],_o['best_span_logit'], _o['yesno_logit'],_o['qid'],_o['EM'],_o['f1']):
                     if qid not in multiqa_res or best_span_logit + yesno_logit > multiqa_res[qid]['score']:
