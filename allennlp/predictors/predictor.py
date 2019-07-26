@@ -107,6 +107,8 @@ class Predictor(Registrable):
         embedding_gradients: List[Tensor] = []
         hooks: List[RemovableHandle] = self._register_embedding_gradient_hooks(embedding_gradients)
 
+        for instance in instances:
+            print('in get gradients:', instance)
         dataset = Batch(instances)
         dataset.index_instances(self._model.vocab)
         outputs = self._model.decode(self._model.forward(**dataset.as_tensor_dict()))
@@ -114,6 +116,8 @@ class Predictor(Registrable):
         loss = outputs['loss']
         self._model.zero_grad()
         loss.backward()
+        print(loss)
+        print(embedding_gradients)
 
         for hook in hooks:
             hook.remove()

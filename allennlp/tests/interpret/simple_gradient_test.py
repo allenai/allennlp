@@ -51,7 +51,7 @@ class TestSimpleGradient(AllenNlpTestCase):
     def test_simple_gradient_masked_lm(self):
         inputs = {"sentence": "This is a single string [MASK] about a test . Sometimes it "
                               "contains coreferent parts ."}
-        archive = load_archive(self.FIXTURES_ROOT / 'masked_language_model' / 'serialization' / 'model.tar.gz')
+        archive = load_archive('/Users/sanjays/Downloads/bert-masked-lm-2019.07.25.tar.gz')
         predictor = Predictor.from_archive(archive, 'masked_lm_predictor')
         interpreter = SimpleGradient(predictor)
         interpretation = interpreter.saliency_interpret_from_json(inputs)
@@ -61,3 +61,5 @@ class TestSimpleGradient(AllenNlpTestCase):
         grad_input_1 = interpretation['instance_1']['grad_input_1']
         assert len(grad_input_1) == 16  # 16 words in input
         print(grad_input_1[0])
+x = TestSimpleGradient()
+x.test_simple_gradient_masked_lm()
