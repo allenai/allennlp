@@ -29,7 +29,6 @@ class MultiQA_BERT(Model):
                  initializer: InitializerApplicator,
                  max_span_length: int = 30,
                  use_multi_label_loss: bool = False,
-                 pretrained_model: str = "bert-base-uncased",
                  stats_report_freq:float = None,
                  debug_experiment_name:str = None) -> None:
         super().__init__(vocab)
@@ -39,12 +38,10 @@ class MultiQA_BERT(Model):
         self._debug_experiment_name = debug_experiment_name
         self._use_multi_label_loss = use_multi_label_loss
 
-
         # see usage below for explanation
         self.qa_outputs = torch.nn.Linear(self._text_field_embedder.get_output_dim(), 2)
         self.qa_yesno = torch.nn.Linear(self._text_field_embedder.get_output_dim(), 3)
 
-        #self._bert_model = BertModel.from_pretrained(pretrained_model)
         initializer(self)
 
         self._official_f1 = Average()
@@ -70,9 +67,7 @@ class MultiQA_BERT(Model):
 
         batch_size, num_of_passage_tokens = passage['bert'].size()
 
-        # TODO chaged to ids only
-        #embedded_chunk1 = self._text_field_embedder(passage)
-
+        # Executing the BERT model on the word piece ids (input_ids)
         input_ids = passage['bert']
         token_type_ids = torch.zeros_like(input_ids)
         mask = (input_ids != 0).long()
@@ -82,6 +77,7 @@ class MultiQA_BERT(Model):
                                                          attention_mask=util.combine_initial_dims(mask),
                                                          output_all_encoded_layers=False)
 
+        # Just measuring some lengths and offsets to handle the converstion between tokens and word-pieces
         passage_length = embedded_chunk.size(1)
         mask_min_values, wordpiece_passage_lens = torch.min(mask, dim=1)
         wordpiece_passage_lens[mask_min_values == 1] = mask.shape[1]
@@ -98,7 +94,6 @@ class MultiQA_BERT(Model):
 
         # all input is preprocessed before farword is run, counting the yesno vocabulary
         # will indicate if yesno support is at all needed.
-        # TODO add option to override this explicitly
         if self.vocab.get_vocab_size("yesno_labels") > 1:
             yesno_logits = self.qa_yesno(torch.max(embedded_chunk, 1)[0])
 
@@ -106,20 +101,8 @@ class MultiQA_BERT(Model):
         span_ends.clamp_(0, passage_length)
 
         # moving to word piece indexes from token indexes of start and end span
-
-
         span_starts_list = [bert_offsets[i, span_starts[i]] if span_starts[i] != 0 else 0 for i in range(batch_size)]
         span_ends_list = [bert_offsets[i, span_ends[i]] if span_ends[i] != 0 else 0 for i in range(batch_size)]
-
-        #span_ends_list = []
-        #for i in range(batch_size):
-        #    if span_ends[i] == 0:
-        #        span_ends_list.append(0)
-        #    elif span_ends[i] + 1 == token_passage_lens[i]:
-        #        span_ends_list.append(int(wordpiece_passage_lens[i] - 1))
-        #    else:
-        #        span_ends_list.append(bert_offsets[i, span_ends[i] + 1] - 1)
-
         span_starts = torch.cuda.LongTensor(span_starts_list, device=span_end_logits.device) \
             if torch.cuda.is_available() else torch.LongTensor(span_starts_list)
         span_ends = torch.cuda.LongTensor(span_ends_list, device=span_end_logits.device) \
@@ -128,27 +111,6 @@ class MultiQA_BERT(Model):
         loss_fct = CrossEntropyLoss(ignore_index=passage_length)
         start_loss = loss_fct(start_logits.squeeze(-1), span_starts)
         end_loss = loss_fct(end_logits.squeeze(-1), span_ends)
-
-        # Adding some masks with numerically stable values
-        if False:
-            passage_mask = util.get_text_field_mask(passage).float()
-
-            repeated_passage_mask = passage_mask.unsqueeze(1).repeat(1, 1, 1)
-            repeated_passage_mask = repeated_passage_mask.view(batch_size, passage_length)
-            span_start_logits = util.replace_masked_values(span_start_logits, repeated_passage_mask, -1e7)
-            span_end_logits = util.replace_masked_values(span_end_logits, repeated_passage_mask, -1e7)
-
-            inds_with_gold_answer = np.argwhere(span_starts.view(-1).cpu().numpy() >= 0)
-            inds_with_gold_answer = inds_with_gold_answer.squeeze() if len(inds_with_gold_answer) > 1 else inds_with_gold_answer
-
-            loss = 0
-            if len(inds_with_gold_answer) > 0:
-                loss += nll_loss(util.masked_log_softmax(span_start_logits[inds_with_gold_answer], \
-                                                        repeated_passage_mask[inds_with_gold_answer]), \
-                                span_starts.view(-1)[inds_with_gold_answer], ignore_index=-1)
-                loss += nll_loss(util.masked_log_softmax(span_end_logits[inds_with_gold_answer], \
-                                                         repeated_passage_mask[inds_with_gold_answer]), \
-                                 span_ends.view(-1)[inds_with_gold_answer], ignore_index=-1)
 
         if self.vocab.get_vocab_size("yesno_labels") > 1 and yesno_labels is not None:
             yesno_loss = loss_fct(yesno_logits, yesno_labels)
@@ -173,7 +135,6 @@ class MultiQA_BERT(Model):
         if span_starts is not None:
             output_dict['EM'] = []
             output_dict['f1'] = []
-
 
         # getting best span prediction for
         best_span = self._get_example_predications(span_start_logits, span_end_logits, self._max_span_length)
@@ -215,7 +176,7 @@ class MultiQA_BERT(Model):
             output_dict['yesno_logit'].append(yesno_logit)
             output_dict['qid'].append(instance_metadata['question_id'])
 
-            # In prediction mode we have no gold answers
+            # In AllenNLP prediction mode we have no gold answers, so let's check
             if span_starts is not None:
                 yesno_label_ind = yesno_labels.data.cpu().numpy()[instance_ind]
                 yesno_label = self.vocab.get_token_from_index(yesno_label_ind, namespace="yesno_labels")
