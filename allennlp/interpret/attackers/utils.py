@@ -12,7 +12,7 @@ def get_fields_to_compare(inputs: JsonDict, instance: Instance, input_field_to_a
     instance : ``Instance``
         A labeled instance that is output from json_to_labeled_instances().
     input_field_to_attack : ``str``
-        The key in the inputs JsonDict you want to attack, e.g., `tokens`.
+        The key in the inputs JsonDict you want to attack, e.g., tokens.
 
     Returns
     -------
@@ -22,7 +22,7 @@ def get_fields_to_compare(inputs: JsonDict, instance: Instance, input_field_to_a
     fields_to_compare = {
             key: instance[key]
             for key in instance.fields
-            if key not in inputs and key != input_field_to_attack and key != 'metadata'
+            if key not in inputs and key != input_field_to_attack and key != 'metadata' and key != 'output'
     }
     return fields_to_compare
 

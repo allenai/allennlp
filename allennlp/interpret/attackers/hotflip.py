@@ -154,7 +154,8 @@ class Hotflip(Attacker):
                 original_id_of_token_to_flip = input_tokens[index_of_token_to_flip]
                 new_id_of_flipped_token = self._first_order_taylor(grad[index_of_token_to_flip],
                                                               self.token_embedding.weight,  # type: ignore
-                                                              original_id_of_token_to_flip)
+                                                              original_id_of_token_to_flip,
+                                                              -1)
                 # flip token
                 new_token = Token(self.vocab._index_to_token["tokens"][new_id_of_flipped_token])  # type: ignore
                 current_text_field.tokens[index_of_token_to_flip] = new_token
@@ -184,9 +185,120 @@ class Hotflip(Attacker):
                          "original": original_tokens,
                          "outputs": outputs})
 
+    def targeted_attack_from_json(self,
+                     inputs: JsonDict = None,
+                     input_field_to_attack: str = 'tokens',
+                     grad_input_field: str = 'grad_input_1',
+                     ignore_tokens: List[str] = None,
+                     target: str = None,
+                     target_word: str = None) -> JsonDict:
+        """
+        Replaces one token at a time from the input until the model's prediction changes.
+        ``input_field_to_attack`` is for example ``tokens``, it says what the input field is
+        called.  ``grad_input_field`` is for example ``grad_input_1``, which is a key into a grads
+        dictionary.
+
+        The method computes the gradient w.r.t. the tokens, finds the token with the maximum
+        gradient (by L2 norm), and replaces it with another token based on the first-order Taylor
+        approximation of the loss.  This process is iteratively repeated until the prediction
+        changes.  Once a token is replaced, it is not flipped again.
+        """
+        if self.token_embedding is None:
+            self.initialize()
+        if target is None:
+            exit("set the target")
+        ignore_tokens = ["@@NULL@@", '.', ',', ';', '!', '?'] if ignore_tokens is None else ignore_tokens
+        sign = 1.0
+        output_dict = {'words': [target]}
+        instance = self.predictor._json_to_instance(inputs)
+        original_instances = self.predictor.predictions_to_labeled_instances(instance, output_dict)
+        original_text_field: TextField = original_instances[0][input_field_to_attack]  # type: ignore
+        original_tokens = deepcopy(original_text_field.tokens)
+        final_tokens = []
+        for i, current_instance in enumerate(original_instances):
+            # Gets a list of the fields that we want to check to see if they change.
+            fields_to_compare = utils.get_fields_to_compare(inputs, current_instance, input_field_to_attack)
+            current_text_field: TextField = current_instance[input_field_to_attack]  # type: ignore
+            current_tokens = current_text_field.tokens
+            grads, outputs = self.predictor.get_gradients([current_instance])
+            if 'clusters' in outputs:
+                for key, output in outputs.items():
+                    if isinstance(output, torch.Tensor):
+                        outputs[key] = output.detach().cpu().numpy().squeeze()
+                    elif isinstance(output, list):
+                        outputs[key] = output[0]
+                original_outputs = deepcopy(outputs)
+
+            # ignore any token that is in the ignore_tokens list by setting the token to already flipped
+            flipped: List[int] = []
+            if target_word is not None:
+                for index, token in enumerate(current_tokens):
+                    if token.text != target_word:
+                        flipped.append(index)
+            else:
+                if token.text in ignore_tokens:
+                    flipped.append(index)
+            while True:
+                # Compute L2 norm of all grads.
+                grad = grads[grad_input_field]
+                grads_magnitude = [g.dot(g) for g in grad]
+
+                # only flip a token once
+                for index in flipped:
+                    grads_magnitude[index] = -1
+                if 'clusters' in outputs:
+                    for clust in outputs['clusters']:
+                        for mention in clust:
+                            for index in range(mention[0], mention[1]+1):
+                                grads_magnitude[index] = -1
+
+                # we flip the token with highest gradient norm
+                index_of_token_to_flip = numpy.argmax(grads_magnitude)
+                # when we have already flipped all the tokens once
+                if grads_magnitude[index_of_token_to_flip] == -1:
+                    break
+                flipped.append(index_of_token_to_flip)
+
+                # Get new token using taylor approximation
+                input_tokens = current_text_field._indexed_tokens["tokens"]
+                original_id_of_token_to_flip = input_tokens[index_of_token_to_flip]
+                new_id_of_flipped_token = self._first_order_taylor(grad[index_of_token_to_flip],
+                                                              self.token_embedding.weight,  # type: ignore
+                                                              original_id_of_token_to_flip,
+                                                              sign)
+                # flip token
+                new_token = Token(self.vocab._index_to_token["tokens"][new_id_of_flipped_token])  # type: ignore
+                current_text_field.tokens[index_of_token_to_flip] = new_token
+                current_instance.indexed = False
+
+                # Get model predictions on current_instance, and then label the instances
+                grads, outputs = self.predictor.get_gradients([current_instance])  # predictions
+                for key, output in outputs.items():
+                    if isinstance(output, torch.Tensor):
+                        outputs[key] = output.detach().cpu().numpy().squeeze()
+                    elif isinstance(output, list):
+                        outputs[key] = output[0]
+
+                # add labels to current_instances
+                current_instance_labeled = self.predictor.predictions_to_labeled_instances(current_instance, outputs)[0]
+                if 'clusters' in outputs:
+                    if set(tuple(l) for l in original_outputs['clusters']) != set(tuple(l) for l in outputs['clusters']):
+                        break
+                # if the prediction has changed, then stop
+                if not utils.instance_has_changed(current_instance_labeled, fields_to_compare):
+                        break
+                
+            final_tokens.append(current_tokens)
+            if 'clusters' in outputs:
+                break
+        return sanitize({"final": final_tokens,
+                         "original": original_tokens,
+                         "outputs": outputs})
+
     def _first_order_taylor(self, grad: numpy.ndarray,
                             embedding_matrix: torch.nn.parameter.Parameter,
-                            token_idx: int) -> int:
+                            token_idx: int,
+                            sign: int) -> int:
         """
         The below code is based on
         https://github.com/pmichel31415/translate/blob/paul/pytorch_translate/
@@ -205,7 +317,7 @@ class Hotflip(Attacker):
         # solves equation (3) here https://arxiv.org/abs/1903.06620
         new_embed_dot_grad = torch.einsum("bij,kj->bik", (grad, embedding_matrix))
         prev_embed_dot_grad = torch.einsum("bij,bij->bi", (grad, word_embeds)).unsqueeze(-1)
-        neg_dir_dot_grad = -1 * (prev_embed_dot_grad - new_embed_dot_grad)
+        neg_dir_dot_grad = sign * (prev_embed_dot_grad - new_embed_dot_grad)        
         neg_dir_dot_grad = neg_dir_dot_grad.detach().cpu().numpy()
         # Do not replace with non-alphanumeric tokens
         neg_dir_dot_grad[:,:,self.invalid_replacement_indices] = -numpy.inf
