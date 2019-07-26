@@ -5,8 +5,8 @@ from overrides import overrides
 import numpy
 
 from allennlp.common.util import JsonDict
-from allennlp.data import Instance
-from allennlp.data.fields import LabelField
+from allennlp.data import Instance, Token
+from allennlp.data.fields import TextField
 from allennlp.predictors.predictor import Predictor
 
 

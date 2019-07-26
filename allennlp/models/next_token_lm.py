@@ -61,6 +61,7 @@ class NextTokenLM(Model):
         top_probs, top_indices = probs.topk(k=k, dim=-1)
 
         output_dict = {"probabilities": top_probs, "top_indices": top_indices}
+        output_dict["tokens"] = [[self.vocab._index_to_token[self._target_namespace][int(t.item())].replace('Ġ',' ') for t in batch] for batch in tokens['tokens']]
 
         if target_ids is not None:
             target_ids = list(target_ids.values())[0]
@@ -85,7 +86,7 @@ class NextTokenLM(Model):
         top_words = []
         for instance_indices in output_dict['top_indices']:
             top_words.append([[self.vocab.get_token_from_index(index.item(),
-                                                              namespace=self._target_namespace)[1:]
+                                                              namespace=self._target_namespace).replace('Ġ','')
                               for index in instance_indices]])
         output_dict["words"] = top_words
         print(top_words)
