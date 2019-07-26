@@ -153,7 +153,10 @@ class Hotflip(Attacker):
                 flipped.append(index_of_token_to_flip)
 
                 # Get new token using taylor approximation
-                input_tokens = current_text_field._indexed_tokens[self.namespace]
+                if self.namespace == 'gpt2':
+                    input_tokens = current_text_field._indexed_tokens['tokens']
+                else:
+                    input_tokens = current_text_field._indexed_tokens[self.namespace]
                 original_id_of_token_to_flip = input_tokens[index_of_token_to_flip]
                 new_id_of_flipped_token = self._first_order_taylor(grad[index_of_token_to_flip],
                                                               self.token_embedding.weight,  # type: ignore
@@ -264,7 +267,10 @@ class Hotflip(Attacker):
                 flipped.append(index_of_token_to_flip)
 
                 # Get new token using taylor approximation
-                input_tokens = current_text_field._indexed_tokens[self.namespace]
+                if self.namespace == 'gpt2':
+                    input_tokens = current_text_field._indexed_tokens['tokens']
+                else:
+                    input_tokens = current_text_field._indexed_tokens[self.namespace]
                 original_id_of_token_to_flip = input_tokens[index_of_token_to_flip]
                 new_id_of_flipped_token = self._first_order_taylor(grad[index_of_token_to_flip],
                                                               self.token_embedding.weight,  # type: ignore
