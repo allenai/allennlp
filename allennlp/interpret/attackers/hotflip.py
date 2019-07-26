@@ -77,10 +77,13 @@ class Hotflip(Attacker):
                 all_inputs["elmo"] = torch.LongTensor(elmo_tokens).unsqueeze(0)
 
         embedding_layer = util.find_embedding_layer(self.predictor._model)
+        if isinstance(embedding_layer, torch.nn.modules.sparse.Embedding):
+            embedding_matrix = embedding_layer.weight
+        else:
+            # pass all tokens through the fake matrix and create an embedding out of it.
+            embedding_matrix = embedding_layer(all_inputs).squeeze()
 
-        # pass all tokens through the fake matrix and create an embedding out of it.
-        embedding_matrix = embedding_layer(all_inputs).squeeze()
-        return Embedding(num_embeddings=self.vocab.get_vocab_size('tokens'),
+        return Embedding(num_embeddings=self.vocab.get_vocab_size(self.namespace),
                          embedding_dim=embedding_matrix.shape[1],
                          weight=embedding_matrix,
                          trainable=False)
