@@ -138,12 +138,12 @@ class Predictor(Registrable):
         to a list.
         """
         def hook_layers(module, grad_in, grad_out): # pylint: disable=unused-argument
+            print('in hook')
             embedding_gradients.append(grad_out[0])
 
         backward_hooks = []
         embedding_layer = util.find_embedding_layer(self._model.modules())
         backward_hooks.append(embedding_layer.register_backward_hook(hook_layers))
-
         return backward_hooks
 
     @contextmanager

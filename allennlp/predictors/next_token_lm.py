@@ -20,8 +20,7 @@ class NextTokenLMPredictor(Predictor):
                                          outputs: Dict[str, numpy.ndarray]):
         new_instance = deepcopy(instance)
         new_instance.add_field('target_ids',
-                               LabelField(int(outputs['top_indices'][0])),
-                               skip_indexing=True)
+                               LabelField(int(outputs['top_indices'][0]), skip_indexing=True))
         return [new_instance]
 
     @overrides

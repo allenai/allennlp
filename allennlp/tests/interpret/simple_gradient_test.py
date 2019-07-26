@@ -6,7 +6,7 @@ from allennlp.predictors import Predictor
 from allennlp.interpret.saliency_interpreters import SimpleGradient
 
 class TestSimpleGradient(AllenNlpTestCase):
-    def test_simple_gradient(self):
+    def test_simple_gradient_basic_text(self):
         inputs = {
                 "sentence": "It was the ending that I hated"
         }
@@ -15,6 +15,7 @@ class TestSimpleGradient(AllenNlpTestCase):
 
         interpreter = SimpleGradient(predictor)
         interpretation = interpreter.saliency_interpret_from_json(inputs)
+        print(interpretation)
         assert interpretation is not None
         assert 'instance_1' in interpretation
         assert 'grad_input_1' in interpretation['instance_1']
@@ -27,6 +28,7 @@ class TestSimpleGradient(AllenNlpTestCase):
         for grad, repeat_grad in zip(grad_input_1, repeat_grad_input_1):
             assert grad == approx(repeat_grad)
 
+    def test_simple_gradient_coref(self):
         inputs = {"document": "This is a single string document about a test. Sometimes it "
                               "contains coreferent parts."}
         archive = load_archive(self.FIXTURES_ROOT / 'coref' / 'serialization' / 'model.tar.gz')
@@ -46,3 +48,20 @@ class TestSimpleGradient(AllenNlpTestCase):
         for grad, repeat_grad in zip(grad_input_1, repeat_grad_input_1):
             assert grad == approx(repeat_grad)
 
+
+    def test_simple_gradient_masked_lm(self):
+        inputs = {"sentence": "This is a single string document about a test. Sometimes it "
+                              "contains coreferent parts."}
+        archive = load_archive(self.FIXTURES_ROOT / 'masked-language-model' / 'serialization' / 'model.tar.gz')
+        predictor = Predictor.from_archive(archive, 'masked-lm')
+        interpreter = SimpleGradient(predictor)
+        interpretation = interpreter.saliency_interpret_from_json(inputs)
+        assert interpretation is not None
+        assert 'instance_1' in interpretation
+        assert 'grad_input_1' in interpretation['instance_1']
+        grad_input_1 = interpretation['instance_1']['grad_input_1']
+        assert len(grad_input_1) == 16  # 16 words in input
+        print(grad_input_1[0])
+
+x = TestSimpleGradient()
+x.test_simple_gradient()
