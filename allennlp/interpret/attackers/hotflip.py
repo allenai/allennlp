@@ -24,13 +24,14 @@ class Hotflip(Attacker):
     _first_order_taylor(). Constructing this object is expensive due to the construction of the
     embedding matrix.
     """
-    def __init__(self, predictor: Predictor) -> None:
+    def __init__(self, predictor: Predictor, vocab_namespace: str = 'tokens') -> None:
         super().__init__(predictor)
         self.vocab = self.predictor._model.vocab
+        self.namespace = vocab_namespace
         # Force new tokens to be alphanumeric
         self.invalid_replacement_indices = []
-        for i in self.vocab._index_to_token["tokens"]:
-            if not self.vocab._index_to_token["tokens"][i].isalnum():
+        for i in self.vocab._index_to_token[self.namespace]:
+            if not self.vocab._index_to_token[self.namespace][i].isalnum():
                 self.invalid_replacement_indices.append(i)
         self.token_embedding = None
 
@@ -53,8 +54,8 @@ class Hotflip(Attacker):
         matrix".
         """
         # Gets all tokens in the vocab and their corresponding IDs
-        all_tokens = self.vocab._token_to_index["tokens"]
-        all_indices = list(self.vocab._index_to_token["tokens"].keys())
+        all_tokens = self.vocab._token_to_index[self.namespace]
+        all_indices = list(self.vocab._index_to_token[self.namespace].keys())
         all_inputs = {"tokens": torch.LongTensor(all_indices).unsqueeze(0)}
         for token_indexer in self.predictor._dataset_reader._token_indexers.values():
             # handle when a model uses character-level inputs, e.g., a CharCNN
@@ -152,14 +153,14 @@ class Hotflip(Attacker):
                 flipped.append(index_of_token_to_flip)
 
                 # Get new token using taylor approximation
-                input_tokens = current_text_field._indexed_tokens["tokens"]
+                input_tokens = current_text_field._indexed_tokens[self.namespace]
                 original_id_of_token_to_flip = input_tokens[index_of_token_to_flip]
                 new_id_of_flipped_token = self._first_order_taylor(grad[index_of_token_to_flip],
                                                               self.token_embedding.weight,  # type: ignore
                                                               original_id_of_token_to_flip,
                                                               -1)
                 # flip token
-                new_token = Token(self.vocab._index_to_token["tokens"][new_id_of_flipped_token])  # type: ignore
+                new_token = Token(self.vocab._index_to_token[self.namespace][new_id_of_flipped_token])  # type: ignore
                 current_text_field.tokens[index_of_token_to_flip] = new_token
                 current_instance.indexed = False
 
@@ -263,14 +264,14 @@ class Hotflip(Attacker):
                 flipped.append(index_of_token_to_flip)
 
                 # Get new token using taylor approximation
-                input_tokens = current_text_field._indexed_tokens["tokens"]
+                input_tokens = current_text_field._indexed_tokens[self.namespace]
                 original_id_of_token_to_flip = input_tokens[index_of_token_to_flip]
                 new_id_of_flipped_token = self._first_order_taylor(grad[index_of_token_to_flip],
                                                               self.token_embedding.weight,  # type: ignore
                                                               original_id_of_token_to_flip,
                                                               sign)
                 # flip token
-                new_token = Token(self.vocab._index_to_token["tokens"][new_id_of_flipped_token])  # type: ignore
+                new_token = Token(self.vocab._index_to_token[self.namespace][new_id_of_flipped_token])  # type: ignore
                 current_text_field.tokens[index_of_token_to_flip] = new_token
                 current_instance.indexed = False
 
