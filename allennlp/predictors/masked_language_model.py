@@ -16,7 +16,7 @@ class MaskedLanguageModelPredictor(Predictor):
     def predict(self, sentence_with_masks: str) -> JsonDict:
         return self.predict_json({"sentence" : sentence_with_masks})
 
-	@overrides
+    @overrides
     def predictions_to_labeled_instances(self,
                                          instance: Instance,
                                          outputs: Dict[str, numpy.ndarray]):
