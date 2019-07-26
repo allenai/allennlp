@@ -57,10 +57,10 @@ class NextTokenLM(Model):
 
         vocab_size = target_logits.size(-1)
         probs = torch.nn.functional.softmax(target_logits, dim=-1)
-        k = min(vocab_size, 20)  # min here largely because tests use small vocab
+        k = min(vocab_size, 5)  # min here largely because tests use small vocab
         top_probs, top_indices = probs.topk(k=k, dim=-1)
 
-        output_dict = {"top_probs": top_probs, "top_indices": top_indices}
+        output_dict = {"probabilities": top_probs, "top_indices": top_indices}
 
         if target_ids is not None:
             target_ids = list(target_ids.values())[0]
@@ -84,9 +84,10 @@ class NextTokenLM(Model):
         """
         top_words = []
         for instance_indices in output_dict['top_indices']:
-            top_words.append([self.vocab.get_token_from_index(index.item(),
-                                                              namespace=self._target_namespace)
-                              for index in instance_indices])
-        output_dict["top_words"] = top_words
+            top_words.append([[self.vocab.get_token_from_index(index.item(),
+                                                              namespace=self._target_namespace)[1:]
+                              for index in instance_indices]])
+        output_dict["words"] = top_words
+        print(top_words)
 
         return output_dict
