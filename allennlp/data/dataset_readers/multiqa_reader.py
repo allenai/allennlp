@@ -261,9 +261,17 @@ class MultiQAReader(DatasetReader):
                             # Supporting only one answer of type yesno
                             if self._support_yesno and "single_answer" in ac['yesno']:
                                 qa['yesno'] = ac['yesno']['single_answer']
+                            else:
+                                # in case we don't support this kind of answer, we will just add it as plane text so that
+                                # in validation we can just compare the prediction
+                                answer_text_list.append(ac['yesno']['single_answer'])
 
                 elif self._support_cannotanswer and 'cannot_answer' in qa['answers']['open-ended']:
                     qa['cannot_answer'] = True
+                else:
+                    # in case we don't support this kind of answer, we will just add it as plane text so that
+                    # in validation we can just compare the prediction
+                    answer_text_list.append('cannot_answer')
 
             qa['answer_text_list'] = answer_text_list
 
