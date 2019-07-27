@@ -27,7 +27,9 @@ class PearsonCorrelation(Metric):
     - ``covariance(labels, labels)``, i.e. variance of ``labels``
 
     If we have these values, the sample Pearson correlation coefficient is simply:
-
+    
+    denominator = (sqrt(predictions_variance) * sqrt(labels_variance)) 
+    denominator = 1 if denominator == 0 else denominator
     r = covariance / (sqrt(predictions_variance) * sqrt(labels_variance))
     """
     def __init__(self) -> None:
@@ -65,7 +67,9 @@ class PearsonCorrelation(Metric):
         labels_variance = self._labels_variance.get_metric(reset=reset)
         if reset:
             self.reset()
-        pearson_r = covariance / (math.sqrt(predictions_variance) * math.sqrt(labels_variance))
+        denominator = (math.sqrt(predictions_variance) * math.sqrt(labels_variance))
+        denominator = 1 if denominator == 0 else denominator
+        pearson_r = covariance / denominator
         return pearson_r
 
     @overrides
