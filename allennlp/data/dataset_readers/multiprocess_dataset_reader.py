@@ -52,6 +52,71 @@ def _worker(reader: DatasetReader,
             output_queue.put(instance)
 
 
+class QIterable(Iterable[Instance]):
+    """
+    You can't set attributes on Iterators, so this is just a dumb wrapper
+    that exposes the output_queue.
+    """
+    def __init__(self, output_queue_size, epochs_per_read, num_workers, reader, file_path) -> None:
+        self.manager = Manager()
+        self.output_queue = self.manager.Queue(output_queue_size)
+        self.epochs_per_read = epochs_per_read
+        self.num_workers = num_workers
+        self.reader = reader
+        self.file_path = file_path
+
+    def __iter__(self) -> Iterator[Instance]:
+        self.start()
+
+        # Keep going as long as not all the workers have finished.
+        while self.active_workers.value > 0:
+            # Inner loop to minimize locking on self.active_workers.
+            while True:
+                try:
+                    # Non-blocking to handle the empty-queue case.
+                    yield self.output_queue.get(block=False, timeout=1.0)
+                except Empty:
+                    # The queue could be empty because the workers are
+                    # all finished or because they're busy processing.
+                    # The outer loop distinguishes between these two
+                    # cases.
+                    break
+
+        self.join()
+
+    def start(self) -> None:
+        shards = glob.glob(self.file_path)
+        # Ensure a consistent order before shuffling for testing.
+        shards.sort()
+        num_shards = len(shards)
+
+        # If we want multiple epochs per read, put shards in the queue multiple times.
+        self.input_queue = self.manager.Queue(num_shards * self.epochs_per_read + self.num_workers)
+        for _ in range(self.epochs_per_read):
+            np.random.shuffle(shards)
+            for shard in shards:
+                self.input_queue.put(shard)
+
+        # Then put a None per worker to signify no more files.
+        for _ in range(self.num_workers):
+            self.input_queue.put(None)
+
+
+        self.processes: List[Process] = []
+        self.active_workers = Value('i', self.num_workers)
+        for worker_id in range(self.num_workers):
+            process = Process(target=_worker,
+                              args=(self.reader, self.input_queue, self.output_queue, self.active_workers))
+            logger.info(f"starting worker {worker_id}")
+            process.start()
+            self.processes.append(process)
+
+    def join(self) -> None:
+        for i, process in enumerate(self.processes):
+            process.join()
+            # Best effort logging. It's entirely possible it finished earlier.
+            logger.info(f"worker {i} finished")
+        self.processes.clear()
 
 @DatasetReader.register('multiprocess')
 class MultiprocessDatasetReader(DatasetReader):
@@ -105,71 +170,10 @@ class MultiprocessDatasetReader(DatasetReader):
         raise RuntimeError("Multiprocess reader implements read() directly.")
 
     def read(self, file_path: str) -> Iterable[Instance]:
-        outer_self = self
-
-        class QIterable(Iterable[Instance]):
-            """
-            You can't set attributes on Iterators, so this is just a dumb wrapper
-            that exposes the output_queue. Currently you probably shouldn't touch
-            the output queue, but this is done with an eye toward implementing
-            a data iterator that can read directly from the queue (instead of having
-            to use the _instances iterator we define here.)
-            """
-            def __init__(self) -> None:
-                self.manager = Manager()
-                self.output_queue = self.manager.Queue(outer_self.output_queue_size)
-
-            def __iter__(self) -> Iterator[Instance]:
-                self.start()
-
-                # Keep going as long as not all the workers have finished.
-                while self.active_workers.value > 0:
-                    # Inner loop to minimize locking on self.active_workers.
-                    while True:
-                        try:
-                            # Non-blocking to handle the empty-queue case.
-                            yield self.output_queue.get(block=False, timeout=1.0)
-                        except Empty:
-                            # The queue could be empty because the workers are
-                            # all finished or because they're busy processing.
-                            # The outer loop distinguishes between these two
-                            # cases.
-                            break
-
-                self.join()
-
-            def start(self) -> None:
-                shards = glob.glob(file_path)
-                # Ensure a consistent order before shuffling for testing.
-                shards.sort()
-                num_shards = len(shards)
-
-                # If we want multiple epochs per read, put shards in the queue multiple times.
-                self.input_queue = self.manager.Queue(num_shards * outer_self.epochs_per_read + outer_self.num_workers)
-                for _ in range(outer_self.epochs_per_read):
-                    np.random.shuffle(shards)
-                    for shard in shards:
-                        self.input_queue.put(shard)
-
-                # Then put a None per worker to signify no more files.
-                for _ in range(outer_self.num_workers):
-                    self.input_queue.put(None)
-
-
-                self.processes: List[Process] = []
-                self.active_workers = Value('i', outer_self.num_workers)
-                for worker_id in range(outer_self.num_workers):
-                    process = Process(target=_worker,
-                                      args=(outer_self.reader, self.input_queue, self.output_queue, self.active_workers))
-                    logger.info(f"starting worker {worker_id}")
-                    process.start()
-                    self.processes.append(process)
-
-            def join(self) -> None:
-                for i, process in enumerate(self.processes):
-                    process.join()
-                    # Best effort logging. It's entirely possible it finished earlier.
-                    logger.info(f"worker {i} finished")
-                self.processes.clear()
-
-        return QIterable()
+        return QIterable(
+                output_queue_size=self.output_queue_size,
+                epochs_per_read=self.epochs_per_read,
+                num_workers=self.num_workers,
+                reader=self.reader,
+                file_path=file_path
+        )
