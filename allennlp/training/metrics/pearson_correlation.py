@@ -30,7 +30,7 @@ class PearsonCorrelation(Metric):
     
     denominator = (sqrt(predictions_variance) * sqrt(labels_variance)) 
     denominator = 1 if denominator == 0 else denominator
-    r = covariance / (sqrt(predictions_variance) * sqrt(labels_variance))
+    r = covariance / denominator
     """
     def __init__(self) -> None:
         self._predictions_labels_covariance = Covariance()
