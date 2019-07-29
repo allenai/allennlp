@@ -398,6 +398,8 @@ class WikiTablesLanguage(DomainLanguage):
         Select function takes a list of rows and a column name and returns a list of strings as
         in cells.
         """
+        if rows is None:
+            return None
         return [str(row.values[column.name]) for row in rows if row.values[column.name] is not None]
 
     @predicate
@@ -406,6 +408,8 @@ class WikiTablesLanguage(DomainLanguage):
         Select function takes a row (as a list) and a column name and returns the number in that
         column. If multiple rows are given, will return the first number that is not None.
         """
+        if rows is None:
+            return None
         numbers: List[float] = []
         for row in rows:
             cell_value = row.values[column.name]
@@ -419,6 +423,8 @@ class WikiTablesLanguage(DomainLanguage):
         """
         Select function takes a row as a list and a column name and returns the date in that column.
         """
+        if rows is None:
+            return None
         dates: List[Date] = []
         for row in rows:
             cell_value = row.values[column.name]
@@ -435,7 +441,7 @@ class WikiTablesLanguage(DomainLanguage):
         """
         return_list: List[Row] = []
         if not rows:
-            return return_list
+            return None
         cell_value = rows[0].values[column.name]
         for table_row in self.table_data:
             new_cell_value = table_row.values[column.name]
@@ -461,7 +467,7 @@ class WikiTablesLanguage(DomainLanguage):
         """
         if not rows:
             logger.warning("Trying to get first row from an empty list")
-            return []
+            return None
         return [rows[0]]
 
     @predicate
@@ -472,7 +478,7 @@ class WikiTablesLanguage(DomainLanguage):
         """
         if not rows:
             logger.warning("Trying to get last row from an empty list")
-            return []
+            return None
         return [rows[-1]]
 
     @predicate
@@ -483,11 +489,11 @@ class WikiTablesLanguage(DomainLanguage):
         will return an empty list.
         """
         if not rows:
-            return []
+            return None
         input_row_index = self._get_row_index(rows[0])
         if input_row_index > 0:
             return [self.table_data[input_row_index - 1]]
-        return []
+        return None
 
     @predicate
     def next(self, rows: List[Row]) -> List[Row]:
@@ -497,15 +503,15 @@ class WikiTablesLanguage(DomainLanguage):
         will return an empty list.
         """
         if not rows:
-            return []
+            return None
         input_row_index = self._get_row_index(rows[0])
         if input_row_index < len(self.table_data) - 1 and input_row_index != -1:
             return [self.table_data[input_row_index + 1]]
-        return []
+        return None
 
     @predicate
     def count(self, rows: List[Row]) -> Number:
-        return len(rows)  # type: ignore
+        return len(rows) if rows is not None else None  # type: ignore
 
     @predicate
     def mode_string(self, rows: List[Row], column: StringColumn) -> List[str]:
@@ -515,7 +521,7 @@ class WikiTablesLanguage(DomainLanguage):
         """
         most_frequent_list = self._get_most_frequent_values(rows, column)
         if not most_frequent_list:
-            return []
+            return None
         if not all([isinstance(value, str) for value in most_frequent_list]):
             raise ExecutionError(f"Invalid values for mode_string: {most_frequent_list}")
         return most_frequent_list
@@ -559,10 +565,10 @@ class WikiTablesLanguage(DomainLanguage):
         ``all_rows``.
         """
         if not rows:
-            return []
+            return None
         value_row_pairs = [(row.values[column.name], row) for row in rows if row.values[column.name] is not None]
         if not value_row_pairs:
-            return []
+            return None
         # Returns a list containing the row with the max cell value.
         return [sorted(value_row_pairs, key=lambda x: x[0], reverse=True)[0][1]]
 
@@ -574,10 +580,10 @@ class WikiTablesLanguage(DomainLanguage):
         ``all_rows``.
         """
         if not rows:
-            return []
+            return None
         value_row_pairs = [(row.values[column.name], row) for row in rows if row.values[column.name] is not None]
         if not value_row_pairs:
-            return []
+            return None
         # Returns a list containing the row with the max cell value.
         return [sorted(value_row_pairs, key=lambda x: x[0])[0][1]]
 
@@ -586,8 +592,10 @@ class WikiTablesLanguage(DomainLanguage):
     # added to the language if we see a number column in the table.
 
     def filter_number_greater(self, rows: List[Row], column: NumberColumn, filter_value: Number) -> List[Row]:
+        if not rows:
+            return None
         if filter_value is None:
-            return []
+            return None
         cell_row_pairs = [(row.values[column.name], row) for row in rows if row.values[column.name] is not None]
         return [row for cell_value, row in cell_row_pairs if cell_value > filter_value]  # type: ignore
 
@@ -595,14 +603,18 @@ class WikiTablesLanguage(DomainLanguage):
                                      rows: List[Row],
                                      column: NumberColumn,
                                      filter_value: Number) -> List[Row]:
+        if not rows:
+            return None
         if filter_value is None:
-            return []
+            return None
         cell_row_pairs = [(row.values[column.name], row) for row in rows if row.values[column.name] is not None]
         return [row for cell_value, row in cell_row_pairs if cell_value >= filter_value]  # type: ignore
 
     def filter_number_lesser(self, rows: List[Row], column: NumberColumn, filter_value: Number) -> List[Row]:
+        if not rows:
+            return None
         if filter_value is None:
-            return []
+            return None
         cell_row_pairs = [(row.values[column.name], row) for row in rows if row.values[column.name] is not None]
         return [row for cell_value, row in cell_row_pairs if cell_value < filter_value]  # type: ignore
 
@@ -610,20 +622,26 @@ class WikiTablesLanguage(DomainLanguage):
                                     rows: List[Row],
                                     column: NumberColumn,
                                     filter_value: Number) -> List[Row]:
+        if not rows:
+            return None
         if filter_value is None:
-            return []
+            return None
         cell_row_pairs = [(row.values[column.name], row) for row in rows if row.values[column.name] is not None]
         return [row for cell_value, row in cell_row_pairs if cell_value <= filter_value]  # type: ignore
 
     def filter_number_equals(self, rows: List[Row], column: NumberColumn, filter_value: Number) -> List[Row]:
+        if not rows:
+            return None
         if filter_value is None:
-            return []
+            return None
         cell_row_pairs = [(row.values[column.name], row) for row in rows if row.values[column.name] is not None]
         return [row for cell_value, row in cell_row_pairs if cell_value == filter_value]  # type: ignore
 
     def filter_number_not_equals(self, rows: List[Row], column: NumberColumn, filter_value: Number) -> List[Row]:
+        if not rows:
+            return None
         if filter_value is None:
-            return []
+            return None
         cell_row_pairs = [(row.values[column.name], row) for row in rows if row.values[column.name] is not None]
         return [row for cell_value, row in cell_row_pairs if cell_value != filter_value]  # type: ignore
 
@@ -631,8 +649,10 @@ class WikiTablesLanguage(DomainLanguage):
     # language if we see a date column in the table.
 
     def filter_date_greater(self, rows: List[Row], column: DateColumn, filter_value: Date) -> List[Row]:
+        if not rows:
+            return None
         if filter_value is None:
-            return []
+            return None
         cell_row_pairs: List[Tuple[Date, Row]] = []
         for row in rows:
             cell_value = row.values[column.name]
@@ -642,8 +662,10 @@ class WikiTablesLanguage(DomainLanguage):
         return [row for cell_value, row in cell_row_pairs if cell_value > filter_value]
 
     def filter_date_greater_equals(self, rows: List[Row], column: DateColumn, filter_value: Date) -> List[Row]:
+        if not rows:
+            return None
         if filter_value is None:
-            return []
+            return None
         cell_row_pairs: List[Tuple[Date, Row]] = []
         for row in rows:
             cell_value = row.values[column.name]
@@ -652,8 +674,10 @@ class WikiTablesLanguage(DomainLanguage):
         return [row for cell_value, row in cell_row_pairs if cell_value >= filter_value]
 
     def filter_date_lesser(self, rows: List[Row], column: DateColumn, filter_value: Date) -> List[Row]:
+        if not rows:
+            return None
         if filter_value is None:
-            return []
+            return None
         cell_row_pairs: List[Tuple[Date, Row]] = []
         for row in rows:
             cell_value = row.values[column.name]
@@ -662,8 +686,10 @@ class WikiTablesLanguage(DomainLanguage):
         return [row for cell_value, row in cell_row_pairs if cell_value < filter_value]
 
     def filter_date_lesser_equals(self, rows: List[Row], column: DateColumn, filter_value: Date) -> List[Row]:
+        if not rows:
+            return None
         if filter_value is None:
-            return []
+            return None
         cell_row_pairs: List[Tuple[Date, Row]] = []
         for row in rows:
             cell_value = row.values[column.name]
@@ -672,8 +698,10 @@ class WikiTablesLanguage(DomainLanguage):
         return [row for cell_value, row in cell_row_pairs if cell_value <= filter_value]
 
     def filter_date_equals(self, rows: List[Row], column: DateColumn, filter_value: Date) -> List[Row]:
+        if not rows:
+            return None
         if filter_value is None:
-            return []
+            return None
         cell_row_pairs: List[Tuple[Date, Row]] = []
         for row in rows:
             cell_value = row.values[column.name]
@@ -682,8 +710,10 @@ class WikiTablesLanguage(DomainLanguage):
         return [row for cell_value, row in cell_row_pairs if cell_value == filter_value]
 
     def filter_date_not_equals(self, rows: List[Row], column: DateColumn, filter_value: Date) -> List[Row]:
+        if not rows:
+            return None
         if filter_value is None:
-            return []
+            return None
         cell_row_pairs: List[Tuple[Date, Row]] = []
         for row in rows:
             cell_value = row.values[column.name]
@@ -702,6 +732,8 @@ class WikiTablesLanguage(DomainLanguage):
         # Assuming filter value has underscores for spaces. The cell values also have underscores
         # for spaces, so we do not need to replace them here.
         # Note that if a list of filter values is passed, we only use the first one.
+        if not rows:
+            return None
         if not filter_values:
             raise ExecutionError(f"Unexpected filter value: {filter_values}")
         if isinstance(filter_values, str):
@@ -725,6 +757,8 @@ class WikiTablesLanguage(DomainLanguage):
         # Assuming filter value has underscores for spaces. The cell values also have underscores
         # for spaces, so we do not need to replace them here.
         # Note that if a list of filter values is passed, we only use the first one.
+        if not rows:
+            return None
         if not filter_values:
             raise ExecutionError(f"Unexpected filter value: {filter_values}")
         if isinstance(filter_values, str):
@@ -749,6 +783,8 @@ class WikiTablesLanguage(DomainLanguage):
         Takes a list of rows and a column and returns the max of the values under that column in
         those rows.
         """
+        if not rows:
+            return None
         cell_values = [row.values[column.name] for row in rows if row.values[column.name] is not None]
         if not cell_values:
             return None
@@ -761,6 +797,8 @@ class WikiTablesLanguage(DomainLanguage):
         Takes a list of rows and a column and returns the min of the values under that column in
         those rows.
         """
+        if not rows:
+            return None
         cell_values = [row.values[column.name] for row in rows if row.values[column.name] is not None]
         if not cell_values:
             return None
@@ -776,6 +814,8 @@ class WikiTablesLanguage(DomainLanguage):
         Takes a list of rows and a column and returns the max of the values under that column in
         those rows.
         """
+        if not rows:
+            return None
         cell_values = [row.values[column.name] for row in rows if row.values[column.name] is not None]
         if not cell_values:
             return None  # type: ignore
@@ -788,6 +828,8 @@ class WikiTablesLanguage(DomainLanguage):
         Takes a list of rows and a column and returns the min of the values under that column in
         those rows.
         """
+        if not rows:
+            return None
         cell_values = [row.values[column.name] for row in rows if row.values[column.name] is not None]
         if not cell_values:
             return None  # type: ignore
@@ -800,6 +842,8 @@ class WikiTablesLanguage(DomainLanguage):
         Takes a list of rows and a column and returns the sum of the values under that column in
         those rows.
         """
+        if not rows:
+            return None
         cell_values = [row.values[column.name] for row in rows if row.values[column.name] is not None]
         if not cell_values:
             return None  # type: ignore
@@ -810,6 +854,8 @@ class WikiTablesLanguage(DomainLanguage):
         Takes a list of rows and a column and returns the mean of the values under that column in
         those rows.
         """
+        if not rows:
+            return None
         cell_values = [row.values[column.name] for row in rows if row.values[column.name] is not None]
         if not cell_values:
             return None  # type: ignore
@@ -869,6 +915,8 @@ class WikiTablesLanguage(DomainLanguage):
         return row_index
 
     def _get_most_frequent_values(self, rows: List[Row], column: Column) -> List[Any]:
+        if rows is None:
+            return None
         value_frequencies: Dict[CellValueType, int] = defaultdict(int)
         max_frequency = 0
         most_frequent_list: List[CellValueType] = []
