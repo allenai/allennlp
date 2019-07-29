@@ -55,6 +55,7 @@ import json
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.checks import check_for_gpu, ConfigurationError
+from allennlp.common.file_utils import cached_path
 from allennlp.common.util import lazy_groups_of
 from allennlp.models.archival import load_archive
 from allennlp.predictors.predictor import Predictor, JsonDict
@@ -68,7 +69,7 @@ class Predict(Subcommand):
                 name, description=description, help='Use a trained model to make predictions.')
 
         subparser.add_argument('archive_file', type=str, help='the archived model to make predictions with')
-        subparser.add_argument('input_file', type=str, help='path to input file')
+        subparser.add_argument('input_file', type=str, help='path to or url of the input file')
 
         subparser.add_argument('--output-file', type=str, help='path to output file')
         subparser.add_argument('--weights-file',
@@ -177,7 +178,8 @@ class _PredictManager:
                 if not line.isspace():
                     yield self._predictor.load_line(line)
         else:
-            with open(self._input_file, "r") as file_input:
+            input_file = cached_path(self._input_file)
+            with open(input_file, "r") as file_input:
                 for line in file_input:
                     if not line.isspace():
                         yield self._predictor.load_line(line)
