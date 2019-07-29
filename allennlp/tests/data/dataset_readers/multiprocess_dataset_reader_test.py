@@ -1,11 +1,13 @@
 # pylint: disable=no-self-use,invalid-name
-from multiprocessing import Queue, Process
-from typing import Tuple
 from collections import Counter
+from multiprocessing import Queue, Process
+from queue import Empty
+from typing import Tuple
 
 import numpy as np
 
 from allennlp.data.dataset_readers import MultiprocessDatasetReader, SequenceTaggingDatasetReader
+from allennlp.data.dataset_readers.multiprocess_dataset_reader import QIterable
 from allennlp.data.instance import Instance
 from allennlp.data.iterators import BasicIterator
 from allennlp.data.vocabulary import Vocabulary
@@ -59,6 +61,36 @@ class TestMultiprocessDatasetReader(AllenNlpTestCase):
 
         for instance in reader.read(self.identical_files_glob):
             all_instances.append(instance)
+
+        # 100 files * 4 sentences / file
+        assert len(all_instances) == 100 * 4
+
+        counts = Counter(fingerprint(instance) for instance in all_instances)
+
+        # should have the exact same data 100 times
+        assert len(counts) == 4
+        assert counts[("cats", "are", "animals", ".", "N", "V", "N", "N")] == 100
+        assert counts[("dogs", "are", "animals", ".", "N", "V", "N", "N")] == 100
+        assert counts[("snakes", "are", "animals", ".", "N", "V", "N", "N")] == 100
+        assert counts[("birds", "are", "animals", ".", "N", "V", "N", "N")] == 100
+
+    def test_multiprocess_read_with_qiterable(self):
+        reader = MultiprocessDatasetReader(base_reader=self.base_reader, num_workers=4)
+
+        all_instances = []
+        qiterable = reader.read(self.identical_files_glob)
+        assert isinstance(qiterable, QIterable)
+
+        # Essentially QIterable.__iter__. Broken out here as we intend it to be
+        # a public interface.
+        qiterable.start()
+        while qiterable.active_workers.value > 0:
+            while True:
+                try:
+                    all_instances.append(qiterable.output_queue.get(block=False, timeout=1.0))
+                except Empty:
+                    break
+        qiterable.join()
 
         # 100 files * 4 sentences / file
         assert len(all_instances) == 100 * 4
