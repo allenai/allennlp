@@ -1,80 +1,86 @@
-from typing import Optional
-import math
-import numpy as np
-
-from overrides import overrides
+# pylint: disable=no-self-use,invalid-name,protected-access
 import torch
+import numpy as np
+from numpy.testing import assert_allclose
 
-from allennlp.training.metrics.covariance import Covariance
-from allennlp.training.metrics.metric import Metric
+from allennlp.common.testing import AllenNlpTestCase
+from allennlp.training.metrics import PearsonCorrelation
+
+def pearson_corrcoef(predictions, labels, fweights=None):
+    covariance_matrices = np.cov(predictions, labels, fweights=fweights)
+    denominator = np.sqrt(covariance_matrices[0, 0] * covariance_matrices[1, 1])
+    if np.around(denominator, decimals=5) == 0:
+        expected_pearson_correlation = 0
+    else:
+        expected_pearson_correlation = covariance_matrices[0, 1] / denominator
+    return expected_pearson_correlation
 
 
-@Metric.register("pearson_correlation")
-class PearsonCorrelation(Metric):
-    """
-    This ``Metric`` calculates the sample Pearson correlation coefficient (r)
-    between two tensors. Each element in the two tensors is assumed to be
-    a different observation of the variable (i.e., the input tensors are
-    implicitly flattened into vectors and the correlation is calculated
-    between the vectors).
+class PearsonCorrelationTest(AllenNlpTestCase):
+    def test_pearson_correlation_unmasked_computation(self):
+        pearson_correlation = PearsonCorrelation()
+        batch_size = 100
+        num_labels = 10
+        predictions_1 = np.random.randn(batch_size, num_labels).astype("float32")
+        labels_1 = 0.5 * predictions_1 + np.random.randn(batch_size, num_labels).astype("float32")
 
-    This implementation is mostly modeled after the streaming_pearson_correlation function in Tensorflow. See
-    https://github.com/tensorflow/tensorflow/blob/v1.10.1/tensorflow/contrib/metrics/python/ops/metric_ops.py#L3267
+        predictions_2 = np.random.randn(1).repeat(num_labels).astype("float32")
+        predictions_2 = predictions_2[np.newaxis, :].repeat(batch_size, axis=0)
+        labels_2 = np.random.randn(1).repeat(num_labels).astype("float32")
+        labels_2 = 0.5 * predictions_2 + labels_2[np.newaxis, :].repeat(batch_size, axis=0)
 
-    This metric delegates to the Covariance metric the tracking of three [co]variances:
+        predictions_labels = [(predictions_1, labels_1), (predictions_2, labels_2)]
 
-    - ``covariance(predictions, labels)``, i.e. covariance
-    - ``covariance(predictions, predictions)``, i.e. variance of ``predictions``
-    - ``covariance(labels, labels)``, i.e. variance of ``labels``
+        stride = 10
 
-    If we have these values, the sample Pearson correlation coefficient is simply:
+        for predictions, labels in predictions_labels:
+            pearson_correlation.reset()
+            for i in range(batch_size // stride):
+                timestep_predictions = torch.FloatTensor(predictions[stride * i:stride * (i+1), :])
+                timestep_labels = torch.FloatTensor(labels[stride * i:stride * (i+1), :])
+                expected_pearson_correlation = pearson_corrcoef(predictions[:stride * (i + 1), :].reshape(-1),
+                                                                labels[:stride * (i + 1), :].reshape(-1))
+                pearson_correlation(timestep_predictions, timestep_labels)
+                assert_allclose(expected_pearson_correlation, pearson_correlation.get_metric(), rtol=1e-5)
+            # Test reset
+            pearson_correlation.reset()
+            pearson_correlation(torch.FloatTensor(predictions), torch.FloatTensor(labels))
+            assert_allclose(pearson_corrcoef(predictions.reshape(-1), labels.reshape(-1)),
+                            pearson_correlation.get_metric(), rtol=1e-5)
 
-    r = covariance / (sqrt(predictions_variance) * sqrt(labels_variance))
-    """
-    def __init__(self) -> None:
-        self._predictions_labels_covariance = Covariance()
-        self._predictions_variance = Covariance()
-        self._labels_variance = Covariance()
+    def test_pearson_correlation_masked_computation(self):
+        pearson_correlation = PearsonCorrelation()
+        batch_size = 100
+        num_labels = 10
+        predictions_1 = np.random.randn(batch_size, num_labels).astype("float32")
+        labels_1 = 0.5 * predictions_1 + np.random.randn(batch_size, num_labels).astype("float32")
 
-    def __call__(self,
-                 predictions: torch.Tensor,
-                 gold_labels: torch.Tensor,
-                 mask: Optional[torch.Tensor] = None):
-        """
-        Parameters
-        ----------
-        predictions : ``torch.Tensor``, required.
-            A tensor of predictions of shape (batch_size, ...).
-        gold_labels : ``torch.Tensor``, required.
-            A tensor of the same shape as ``predictions``.
-        mask: ``torch.Tensor``, optional (default = None).
-            A tensor of the same shape as ``predictions``.
-        """
-        predictions, gold_labels, mask = self.unwrap_to_tensors(predictions, gold_labels, mask)
-        self._predictions_labels_covariance(predictions, gold_labels, mask)
-        self._predictions_variance(predictions, predictions, mask)
-        self._labels_variance(gold_labels, gold_labels, mask)
+        predictions_2 = np.random.randn(1).repeat(num_labels).astype("float32")
+        predictions_2 = predictions_2[np.newaxis, :].repeat(batch_size, axis=0)
+        labels_2 = np.random.randn(1).repeat(num_labels).astype("float32")
+        labels_2 = 0.5 * predictions_2 + labels_2[np.newaxis, :].repeat(batch_size, axis=0)
 
-    def get_metric(self, reset: bool = False):
-        """
-        Returns
-        -------
-        The accumulated sample Pearson correlation.
-        """
-        covariance = self._predictions_labels_covariance.get_metric(reset=reset)
-        predictions_variance = self._predictions_variance.get_metric(reset=reset)
-        labels_variance = self._labels_variance.get_metric(reset=reset)
-        if reset:
-            self.reset()
-        denominator = (math.sqrt(predictions_variance) * math.sqrt(labels_variance))
-        if np.around(denominator, decimals=5) == 0:
-            pearson_r = 0
-        else:
-            pearson_r = covariance / denominator
-        return pearson_r
+        predictions_labels = [(predictions_1, labels_1), (predictions_2, labels_2)]
 
-    @overrides
-    def reset(self):
-        self._predictions_labels_covariance.reset()
-        self._predictions_variance.reset()
-        self._labels_variance.reset()
+        # Random binary mask
+        mask = np.random.randint(0, 2, size=(batch_size, num_labels)).astype("float32")
+        stride = 10
+
+        for predictions, labels in predictions_labels:
+            pearson_correlation.reset()
+            for i in range(batch_size // stride):
+                timestep_predictions = torch.FloatTensor(predictions[stride * i:stride * (i+1), :])
+                timestep_labels = torch.FloatTensor(labels[stride * i:stride * (i+1), :])
+                timestep_mask = torch.FloatTensor(mask[stride * i:stride * (i+1), :])
+                expected_pearson_correlation = pearson_corrcoef(predictions[:stride * (i + 1), :].reshape(-1),
+                                                                labels[:stride * (i + 1), :].reshape(-1),
+                                                                fweights=mask[:stride * (i + 1), :].reshape(-1))
+
+                pearson_correlation(timestep_predictions, timestep_labels, timestep_mask)
+                assert_allclose(expected_pearson_correlation, pearson_correlation.get_metric(), rtol=1e-5)
+            # Test reset
+            pearson_correlation.reset()
+            pearson_correlation(torch.FloatTensor(predictions), torch.FloatTensor(labels), torch.FloatTensor(mask))
+            expected_pearson_correlation = pearson_corrcoef(predictions.reshape(-1),
+                                                            labels.reshape(-1), fweights=mask.reshape(-1))
+            assert_allclose(expected_pearson_correlation, pearson_correlation.get_metric(), rtol=1e-5)
