@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import argparse
+from enum import Enum
 import logging
 from multiprocessing import Process
 import time
@@ -7,12 +8,9 @@ import time
 from allennlp.common import Params, Tqdm
 from allennlp.training.trainer_pieces import TrainerPieces
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
-
 BATCH_INTERVAL = 100
 # On subset of 1b word corpus
 MEAN_BATCH_SIZE = 66.0
-BATCH_COUNT = 10000
 LOGGING_INTERVAL_SECONDS = 10
 
 def run_periodically(reader_output,
@@ -78,18 +76,20 @@ def log_iterable(iterable, get_items_per_batch, batches_per_interval):
     if periodic_logging_process:
         periodic_logging_process.terminate()
 
-def time_iterable(iterable):
+def time_iterable(iterable, batch_count):
+    assert batch_count > 0
+
     print("Starting test")
     start = time.perf_counter()
 
-    batch_count = BATCH_COUNT
+    i = batch_count
     for _ in iterable:
-        batch_count -= 1
-        if batch_count == 0:
+        i -= 1
+        if i == 0:
             break
 
     end = time.perf_counter()
-    print(f"{(end - start)/BATCH_COUNT:.3f} s/b over {BATCH_COUNT} batches")
+    print(f"{(end - start)/batch_count:.3f} s/b over {batch_count} batches")
 
 def time_to_first(iterable):
     print("Starting test")
@@ -101,24 +101,35 @@ def time_to_first(iterable):
     end = time.perf_counter()
     print(f"{(end - start):.3f} s/b for first batch")
 
+class Action(Enum):
+    log = "log"
+    time = "time"
+    first = "first"
+
+    def __str__(self):
+        return self.name
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument("--action", type=Action, choices=list(Action), required=True)
     parser.add_argument("--config", required=True)
     parser.add_argument("--serialization-dir", required=True)
+    parser.add_argument("--batch-count", type=int, default=0)
     args = parser.parse_args()
 
     params = Params.from_file(args.config)
     pieces = TrainerPieces.from_params(params, args.serialization_dir)
 
-    # Time just the reader.
-    # TODO(brendanr): Fix this
-    #time_iterable(pieces.train_dataset, lambda batch: 1, BATCH_INTERVAL * MEAN_BATCH_SIZE)
-
     raw_generator = pieces.iterator(pieces.train_dataset,
-                                      num_epochs=1,
-                                      shuffle=True)
-    log_iterable(raw_generator, lambda batch: batch['source']['tokens'].size(0), BATCH_INTERVAL)
-    #time_iterable(raw_generator)
-    #time_to_first(raw_generator)
+                                    num_epochs=1,
+                                    shuffle=True)
+
+    if args.action is Action.log:
+        log_iterable(raw_generator, lambda batch: batch['source']['tokens'].size(0), BATCH_INTERVAL)
+    elif args.action is Action.time:
+        time_iterable(raw_generator, args.batch_count)
+    elif args.action is Action.first:
+        time_to_first(raw_generator)
+    else:
+        raise Exception(f"Unaccounted for action {action}")
 
