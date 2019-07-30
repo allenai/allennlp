@@ -1,9 +1,11 @@
+from queue import Empty
 from typing import Iterable, Iterator, List, Optional
 import logging
 
 from torch.multiprocessing import Manager, Process, Queue, get_logger
 
 from allennlp.common.checks import ConfigurationError
+from allennlp.data.dataset_readers.multiprocess_dataset_reader import QIterable
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator, TensorDict
 from allennlp.data.dataset import Batch
@@ -12,21 +14,42 @@ from allennlp.data.vocabulary import Vocabulary
 logger = get_logger()  # pylint: disable=invalid-name
 logger.setLevel(logging.INFO)
 
-def _create_tensor_dicts(input_queue: Queue,
-                         output_queue: Queue,
-                         iterator: DataIterator,
-                         shuffle: bool,
-                         index: int) -> None:
+def _create_tensor_dicts_from_queue(input_queue: Queue,
+                                    output_queue: Queue,
+                                    iterator: DataIterator,
+                                    shuffle: bool,
+                                    index: int) -> None:
     """
-    Pulls at most ``max_instances_in_memory`` from the input_queue,
-    groups them into batches of size ``batch_size``, converts them
-    to ``TensorDict`` s, and puts them on the ``output_queue``.
+    Pulls instances from ``input_queue``, converts them into ``TensorDict``s
+    using ``iterator``, and puts them on the ``output_queue``.
     """
     def instances() -> Iterator[Instance]:
         instance = input_queue.get()
         while instance is not None:
             yield instance
             instance = input_queue.get()
+
+    for tensor_dict in iterator(instances(), num_epochs=1, shuffle=shuffle):
+        output_queue.put(tensor_dict)
+
+    output_queue.put(index)
+
+def _create_tensor_dicts_from_qiterable(qiterable: QIterable,
+                                        output_queue: Queue,
+                                        iterator: DataIterator,
+                                        shuffle: bool,
+                                        index: int) -> None:
+    """
+    Pulls instances from ``qiterable.output_queue``, converts them into
+    ``TensorDict``s using ``iterator``, and puts them on the ``output_queue``.
+    """
+    def instances() -> Iterator[Instance]:
+        while qiterable.active_workers.value > 0:
+            while True:
+                try:
+                    yield qiterable.output_queue.get(block=False, timeout=1.0)
+                except Empty:
+                    break
 
     for tensor_dict in iterator(instances(), num_epochs=1, shuffle=shuffle):
         output_queue.put(tensor_dict)
@@ -97,16 +120,10 @@ class MultiprocessIterator(DataIterator):
     def index_with(self, vocab: Vocabulary):
         self.iterator.index_with(vocab)
 
-    def __call__(self,
-                 instances: Iterable[Instance],
-                 num_epochs: int = None,
-                 shuffle: bool = True) -> Iterator[TensorDict]:
-
-        # If you run it forever, the multiprocesses won't shut down correctly.
-        # TODO(joelgrus) find a solution for this
-        if num_epochs is None:
-            raise ConfigurationError("Multiprocess Iterator must be run for a fixed number of epochs")
-
+    def _call_with_instances(self,
+                             instances: Iterable[Instance],
+                             num_epochs: int,
+                             shuffle: bool) -> Iterator[TensorDict]:
         manager = Manager()
         output_queue = manager.Queue(self.output_queue_size)
         input_queue = manager.Queue(self.output_queue_size * self.batch_size)
@@ -118,7 +135,7 @@ class MultiprocessIterator(DataIterator):
         # Start the tensor-dict workers.
         for i in range(self.num_workers):
             args = (input_queue, output_queue, self.iterator, shuffle, i)
-            process = Process(target=_create_tensor_dicts, args=args)
+            process = Process(target=_create_tensor_dicts_from_queue, args=args)
             process.start()
             self.processes.append(process)
 
@@ -138,3 +155,52 @@ class MultiprocessIterator(DataIterator):
         if self.queuer is not None:
             self.queuer.join()
             self.queuer = None
+
+    def _call_with_qiterable(self,
+                             qiterable: QIterable,
+                             num_epochs: int,
+                             shuffle: bool) -> Iterator[TensorDict]:
+        manager = Manager()
+        output_queue = manager.Queue(self.output_queue_size)
+
+        for _ in range(num_epochs):
+            qiterable.start()
+
+            # Start the tensor-dict workers.
+            for i in range(self.num_workers):
+                # TODO(brendanr): Does passing qiterable work or do we need to
+                # pass the underlying queue and active_workers variable?
+                args = (qiterable, output_queue, self.iterator, shuffle, i)
+                process = Process(target=_create_tensor_dicts_from_qiterable, args=args)
+                process.start()
+                self.processes.append(process)
+
+            num_finished = 0
+            while num_finished < self.num_workers:
+                item = output_queue.get()
+                if isinstance(item, int):
+                    num_finished += 1
+                    logger.info(f"worker {item} finished ({num_finished} / {self.num_workers})")
+                else:
+                    yield item
+
+            for process in self.processes:
+                process.join()
+            self.processes.clear()
+
+            qiterable.join()
+
+    def __call__(self,
+                 instances: Iterable[Instance],
+                 num_epochs: int = None,
+                 shuffle: bool = True) -> Iterator[TensorDict]:
+
+        # If you run it forever, the multiprocesses won't shut down correctly.
+        # TODO(joelgrus) find a solution for this
+        if num_epochs is None:
+            raise ConfigurationError("Multiprocess Iterator must be run for a fixed number of epochs")
+
+        if isinstance(instances, QIterable):
+            return self._call_with_qiterable(instances, num_epochs, shuffle)
+        else:
+            return self._call_with_instances(instances, num_epochs, shuffle)

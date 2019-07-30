@@ -15,10 +15,12 @@ MEAN_BATCH_SIZE = 66.0
 BATCH_COUNT = 10000
 LOGGING_INTERVAL_SECONDS = 10
 
-def run_periodically(reader_output, iterator_input, iterator_output):
+def run_periodically(reader_output,
+        #iterator_input,
+        iterator_output):
     while True:
         message = (f"read out q: {reader_output.qsize()} " +
-                  f"it in q: {iterator_input.qsize()} " +
+                  #f"it in q: {iterator_input.qsize()} " +
                   f"it out q: {iterator_output.qsize()}")
         print(message)
         time.sleep(10)
@@ -41,10 +43,14 @@ def log_iterable(iterable, get_items_per_batch, batches_per_interval):
                     # threads) has an entirely separate address space.
                     # Presumably this could be worked around with
                     # multiprocessing.managers or similar.
-                    args=(iterable.gi_frame.f_locals['instances'].output_queue,
-                          iterable.gi_frame.f_locals['input_queue'],
+                    #args=(iterable.gi_frame.f_locals['instances'].output_queue,
+                    #      iterable.gi_frame.f_locals['input_queue'],
+                    #      iterable.gi_frame.f_locals['output_queue']
+                    #)
+                    args=(iterable.gi_frame.f_locals['qiterable'].output_queue,
                           iterable.gi_frame.f_locals['output_queue']
-                    ))
+                    )
+                    )
             periodic_logging_process.start()
         batch_count += 1
         item_count += get_items_per_batch(batch)
