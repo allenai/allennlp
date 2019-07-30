@@ -28,7 +28,9 @@ class PearsonCorrelationTest(AllenNlpTestCase):
         predictions_2 = predictions_2[np.newaxis, :].repeat(batch_size, axis=0)
         labels_2 = np.random.randn(1).repeat(num_labels).astype("float32")
         labels_2 = 0.5 * predictions_2 + labels_2[np.newaxis, :].repeat(batch_size, axis=0)
-
+        
+        # in most cases, the data is constructed like predictions_1, the data of such a batch different.
+        # but in a few cases, for example, predictions_2, the data of such a batch is exactly the same.
         predictions_labels = [(predictions_1, labels_1), (predictions_2, labels_2)]
 
         stride = 10
@@ -84,4 +86,3 @@ class PearsonCorrelationTest(AllenNlpTestCase):
             expected_pearson_correlation = pearson_corrcoef(predictions.reshape(-1), labels.reshape(-1), fweights=mask.reshape(-1))
 
             assert_allclose(expected_pearson_correlation, pearson_correlation.get_metric(), rtol=1e-5)
-
