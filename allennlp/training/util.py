@@ -255,8 +255,9 @@ def create_serialization_dir(
     serialization_dir: ``str``
         The directory in which to save results and logs.
     recover: ``bool``
-        If ``True``, we will try to recover from an existing serialization directory, and crash if
-        the directory doesn't exist, or doesn't match the configuration we're given.
+        If ``True``, we will try to recover from an existing serialization directory.
+        If the configuration there doesn't match that given, we'll crash.  If the
+        directory doesn't exist, we'll instead train from scratch.
     force: ``bool``
         If ``True``, we will overwrite the serialization directory if it already exists.
     """
@@ -304,8 +305,8 @@ def create_serialization_dir(
                                          "recovering from.")
     else:
         if recover:
-            raise ConfigurationError(f"--recover specified but serialization_dir ({serialization_dir}) "
-                                     "does not exist.  There is nothing to recover from.")
+            logger.warning(f"--recover specified but serialization_dir ({serialization_dir}) "
+                           "does not exist.  There is nothing to recover from.  Training from scratch instead!")
         os.makedirs(serialization_dir, exist_ok=True)
 
 def data_parallel(batch_group: List[TensorDict],
