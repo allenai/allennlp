@@ -9,8 +9,6 @@ from allennlp.common import Params, Tqdm
 from allennlp.training.trainer_pieces import TrainerPieces
 
 BATCH_INTERVAL = 100
-# On subset of 1b word corpus
-MEAN_BATCH_SIZE = 66.0
 LOGGING_INTERVAL_SECONDS = 10
 
 def run_periodically(reader_output,
@@ -23,14 +21,13 @@ def run_periodically(reader_output,
         print(message)
         time.sleep(10)
 
-def log_iterable(iterable, get_items_per_batch, batches_per_interval):
+def log_iterable(iterable):
     start = time.perf_counter()
     last = start
     periodic_logging_process = None
     have_started_periodic_process = False
 
     batch_count = 0
-    item_count = 0
     for batch in iterable:
         if not have_started_periodic_process:
             have_started_periodic_process = True
@@ -51,24 +48,13 @@ def log_iterable(iterable, get_items_per_batch, batches_per_interval):
                     )
             periodic_logging_process.start()
         batch_count += 1
-        item_count += get_items_per_batch(batch)
-        adjusted_batch_count = item_count / MEAN_BATCH_SIZE
 
-        if batch_count % batches_per_interval == 0:
+        if batch_count % BATCH_INTERVAL == 0:
             end = time.perf_counter()
-            # With this sleep I actually see items in the output queue.
-            #time.sleep(10)
-            # Conclusion: Tensorizing is slow?
 
-            #import inspect
-            #inspect.getmembers
-            #iterable.gi_frame.f_locals['self'].output_queue
-            #import pdb;pdb.set_trace()
-            # TODO(brendanr): Put the queue output on a timer.
-            # TODO(brendanr): Have a mode where we don't log anything for timing purposes. We just chug through 10k batches.
-            msg = (f"s/b total: {(end - start) / adjusted_batch_count:.3f} " +
+            msg = (f"s/b total: {(end - start) / batch_count:.3f} " +
                    f"s/b last: {(end - last) / BATCH_INTERVAL:.3f} " +
-                   f"~ batches: {adjusted_batch_count:.1f}")
+                   f"~ batches: {batch_count}")
             print(msg)
 
             last = end
@@ -125,7 +111,7 @@ if __name__ == "__main__":
                                     shuffle=True)
 
     if args.action is Action.log:
-        log_iterable(raw_generator, lambda batch: batch['source']['tokens'].size(0), BATCH_INTERVAL)
+        log_iterable(raw_generator)
     elif args.action is Action.time:
         time_iterable(raw_generator, args.batch_count)
     elif args.action is Action.first:
