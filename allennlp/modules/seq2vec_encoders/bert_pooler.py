@@ -3,6 +3,7 @@ from typing import Union
 from overrides import overrides
 
 import torch
+import torch.nn
 from pytorch_pretrained_bert import BertModel
 
 from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
@@ -26,17 +27,24 @@ class BertPooler(Seq2VecEncoder):
         The pretrained BERT model to use. If this is a string,
         we will call ``BertModel.from_pretrained(pretrained_model)``
         and use that.
+    dropout : ``float``, optional, (default = 0.0)
+        Amount of dropout to apply after pooling
     requires_grad : ``bool``, optional, (default = True)
         If True, the weights of the pooler will be updated during training.
         Otherwise they will not.
     """
-    def __init__(self, pretrained_model: Union[str, BertModel], requires_grad: bool = True) -> None:
+    def __init__(self,
+                 pretrained_model: Union[str, BertModel],
+                 dropout: float = 0.0,
+                 requires_grad: bool = True) -> None:
         super().__init__()
 
         if isinstance(pretrained_model, str):
             model = PretrainedBertModel.load(pretrained_model)
         else:
             model = pretrained_model
+
+        self._dropout = torch.nn.Dropout(p=dropout)
 
         self.pooler = model.pooler
         for param in self.pooler.parameters():
@@ -52,4 +60,6 @@ class BertPooler(Seq2VecEncoder):
         return self._embedding_dim
 
     def forward(self, tokens: torch.Tensor, mask: torch.Tensor = None):  # pylint: disable=arguments-differ,unused-argument
-        return self.pooler(tokens)
+        pooled = self.pooler(tokens)
+        pooled = self._dropout(pooled)
+        return pooled
