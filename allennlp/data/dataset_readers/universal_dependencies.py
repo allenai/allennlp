@@ -112,7 +112,7 @@ class UniversalDependenciesDatasetReader(DatasetReader):
             fields["head_tags"] = SequenceLabelField([x[0] for x in dependencies],
                                                      text_field,
                                                      label_namespace="head_tags")
-            fields["head_indices"] = SequenceLabelField([int(x[1]) for x in dependencies],
+            fields["head_indices"] = SequenceLabelField([x[1] for x in dependencies],
                                                         text_field,
                                                         label_namespace="head_index_tags")
 
