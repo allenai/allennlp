@@ -7,29 +7,31 @@ import time
 
 from allennlp.common import Params, Tqdm
 from allennlp.training.trainer_pieces import TrainerPieces
+from allennlp.training.util import get_batch_size
 
 BATCH_INTERVAL = 100
-LOGGING_INTERVAL_SECONDS = 10
+LOGGING_INTERVAL_SECONDS = 5
 
-def run_periodically(reader_output,
-        #iterator_input,
-        iterator_output):
+def run_periodically(reader_output, iterator_output):
     while True:
         message = (f"read out q: {reader_output.qsize()} " +
-                  #f"it in q: {iterator_input.qsize()} " +
-                  f"it out q: {iterator_output.qsize()}")
+                   f"it out q: {iterator_output.qsize()}")
         print(message)
-        time.sleep(10)
+        time.sleep(LOGGING_INTERVAL_SECONDS)
 
-def log_iterable(iterable):
+def log_iterable(iterable, assume_multiprocess_types):
     start = time.perf_counter()
     last = start
     periodic_logging_process = None
     have_started_periodic_process = False
 
     batch_count = 0
+    cumulative_batch_size = 0
     for batch in iterable:
-        if not have_started_periodic_process:
+        batch_count += 1
+        cumulative_batch_size += get_batch_size(batch)
+
+        if assume_multiprocess_types and not have_started_periodic_process:
             have_started_periodic_process = True
             periodic_logging_process = Process(
                     target=run_periodically,
@@ -38,23 +40,19 @@ def log_iterable(iterable):
                     # threads) has an entirely separate address space.
                     # Presumably this could be worked around with
                     # multiprocessing.managers or similar.
-                    #args=(iterable.gi_frame.f_locals['instances'].output_queue,
-                    #      iterable.gi_frame.f_locals['input_queue'],
-                    #      iterable.gi_frame.f_locals['output_queue']
-                    #)
                     args=(iterable.gi_frame.f_locals['qiterable'].output_queue,
                           iterable.gi_frame.f_locals['output_queue']
                     )
                     )
             periodic_logging_process.start()
-        batch_count += 1
 
         if batch_count % BATCH_INTERVAL == 0:
             end = time.perf_counter()
 
             msg = (f"s/b total: {(end - start) / batch_count:.3f} " +
                    f"s/b last: {(end - last) / BATCH_INTERVAL:.3f} " +
-                   f"~ batches: {batch_count}")
+                   f"batch count: {batch_count} " +
+                   f"batch size: {cumulative_batch_size / batch_count:.1f}")
             print(msg)
 
             last = end
@@ -101,6 +99,7 @@ if __name__ == "__main__":
     parser.add_argument("--config", required=True)
     parser.add_argument("--serialization-dir", required=True)
     parser.add_argument("--batch-count", type=int, default=0)
+    parser.add_argument("--assume-multiprocess-types", action="store_true")
     args = parser.parse_args()
 
     params = Params.from_file(args.config)
@@ -111,7 +110,7 @@ if __name__ == "__main__":
                                     shuffle=True)
 
     if args.action is Action.log:
-        log_iterable(raw_generator)
+        log_iterable(raw_generator, args.assume_multiprocess_types)
     elif args.action is Action.time:
         time_iterable(raw_generator, args.batch_count)
     elif args.action is Action.first:

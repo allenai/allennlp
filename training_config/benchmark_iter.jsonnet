@@ -113,7 +113,7 @@ local BASE_ITERATOR = {
   "iterator": {
     "type": "multiprocess",
     "base_iterator": BASE_ITERATOR,
-    "num_workers": 4,
+    "num_workers": 1,
     // The multiprocess dataset reader and iterator use many file descriptors,
     // so we need to increase the ulimit depending on the size of this queue.
     // See https://pytorch.org/docs/stable/multiprocessing.html#file-descriptor-file-descriptor
