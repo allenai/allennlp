@@ -1,4 +1,21 @@
 #!/usr/bin/env python
+
+# Benchmarks the iterator (and indirectly the dataset reader) for a given config.
+#
+# Example 1: Log stats every 100 batches. Periodically output internals of
+# MultiprocessDatasetReader and MultiprocessIterator.
+#
+# $ scripts/benchmark_iter.py --config training_config/bidirectional_language_model.jsonnet --serialization-dir serialization-dir --action=log --assume-multiprocess-types
+#
+# Example 2: Output seconds/batch over 10k batches.
+#
+# $ scripts/benchmark_iter.py --config training_config/bidirectional_language_model.jsonnet --serialization-dir serialization-dir --action=time --batch-count=10000
+#
+# Example 3: Output seconds to produce the first batch in order to measure overhead.
+#
+# $ scripts/benchmark_iter.py --config training_config/bidirectional_language_model.jsonnet --serialization-dir serialization-dir --action=first
+
+
 import argparse
 from enum import Enum
 import logging
