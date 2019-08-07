@@ -137,6 +137,7 @@ class Embedding(TokenEmbedder):
         inputs = util.combine_initial_dims(inputs)
 
         embedded = embedding(inputs, self.weight,
+                             padding_idx=self.padding_index,
                              max_norm=self.max_norm,
                              norm_type=self.norm_type,
                              scale_grad_by_freq=self.scale_grad_by_freq,

@@ -64,7 +64,7 @@ class Batch(Iterable):
                 all_field_lengths[field_name].append(instance_field_lengths)
         for field_name, field_lengths in all_field_lengths.items():
             for padding_key in field_lengths[0].keys():
-                max_value = max(x[padding_key] if padding_key in x else 0 for x in field_lengths)
+                max_value = max(x.get(padding_key, 0) for x in field_lengths)
                 padding_lengths[field_name][padding_key] = max_value
         return {**padding_lengths}
 
@@ -124,7 +124,7 @@ class Batch(Iterable):
         lengths_to_use: Dict[str, Dict[str, int]] = defaultdict(dict)
         for field_name, instance_field_lengths in instance_padding_lengths.items():
             for padding_key in instance_field_lengths.keys():
-                if padding_lengths[field_name].get(padding_key) is not None:
+                if padding_key in padding_lengths[field_name]:
                     lengths_to_use[field_name][padding_key] = padding_lengths[field_name][padding_key]
                 else:
                     lengths_to_use[field_name][padding_key] = instance_field_lengths[padding_key]

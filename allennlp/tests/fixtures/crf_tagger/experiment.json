@@ -36,7 +36,7 @@
             "input_size": 25,
             "hidden_size": 80,
             "num_layers": 2,
-            "dropout": 0.25,
+            "dropout": 0.0,
             "bidirectional": true
           }
         }
@@ -47,7 +47,7 @@
       "input_size": 210,
       "hidden_size": 300,
       "num_layers": 2,
-      "dropout": 0.5,
+      "dropout": 0.0,
       "bidirectional": true
     },
     "regularizer": [

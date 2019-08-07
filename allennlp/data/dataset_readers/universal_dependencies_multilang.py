@@ -6,6 +6,7 @@ import os
 import numpy as np
 
 from overrides import overrides
+from conllu import parse_incr
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
@@ -13,7 +14,6 @@ from allennlp.data.fields import Field, TextField, SequenceLabelField, MetadataF
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
 from allennlp.data.tokenizers import Token
-from allennlp.data.dataset_readers.universal_dependencies import lazy_parse
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -103,7 +103,7 @@ class UniversalDependenciesMultiLangDatasetReader(DatasetReader):
         with open(file_path, 'r') as conllu_file:
             logger.info("Reading UD instances for %s language from conllu dataset at: %s", lang, file_path)
 
-            for annotation in lazy_parse(conllu_file.read()):
+            for annotation in parse_incr(conllu_file):
                 # CoNLLU annotations sometimes add back in words that have been elided
                 # in the original sentence; we remove these, as we're just predicting
                 # dependencies for the original sentence.

@@ -24,7 +24,7 @@
       "num_layers": 3,
       "hidden_dims": [5, 2, 1],
       "activations": ["relu", "sigmoid", "sigmoid"],
-      "dropout": [0.2, 0.0, 0.0]
+      "dropout": [0.0, 0.0, 0.0]
     },
     "encoder": {
       "type": "lstm",
