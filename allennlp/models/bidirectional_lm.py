@@ -1,9 +1,11 @@
+from typing import Optional
+
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.language_model import LanguageModel
 from allennlp.models.model import Model
 from allennlp.modules.text_field_embedders import TextFieldEmbedder
 from allennlp.modules.seq2seq_encoders import Seq2SeqEncoder
-from allennlp.nn import InitializerApplicator
+from allennlp.nn import InitializerApplicator, RegularizerApplicator
 
 
 @Model.register('bidirectional-language-model')
@@ -37,6 +39,8 @@ class BidirectionalLanguageModel(LanguageModel):
         the full ``_SoftmaxLoss`` defined above.
     sparse_embeddings: ``bool``, optional (default: False)
         Passed on to ``SampledSoftmaxLoss`` if True.
+    regularizer : ``RegularizerApplicator``, optional (default=``None``)
+        If provided, will be used to calculate the regularization penalty during training.
     """
     def __init__(self,
                  vocab: Vocabulary,
@@ -45,7 +49,8 @@ class BidirectionalLanguageModel(LanguageModel):
                  dropout: float = None,
                  num_samples: int = None,
                  sparse_embeddings: bool = False,
-                 initializer: InitializerApplicator = None) -> None:
+                 initializer: InitializerApplicator = None,
+                 regularizer: Optional[RegularizerApplicator] = None) -> None:
         super().__init__(vocab=vocab,
                          text_field_embedder=text_field_embedder,
                          contextualizer=contextualizer,
@@ -53,4 +58,5 @@ class BidirectionalLanguageModel(LanguageModel):
                          num_samples=num_samples,
                          sparse_embeddings=sparse_embeddings,
                          bidirectional=True,
-                         initializer=initializer)
+                         initializer=initializer,
+                         regularizer=regularizer)

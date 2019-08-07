@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Tuple, Union, Optional
 
 import torch
 import numpy as np
@@ -10,7 +10,7 @@ from allennlp.modules.text_field_embedders import TextFieldEmbedder
 from allennlp.modules.sampled_softmax_loss import SampledSoftmaxLoss
 from allennlp.modules.seq2seq_encoders import Seq2SeqEncoder
 from allennlp.nn.util import get_text_field_mask
-from allennlp.nn import InitializerApplicator
+from allennlp.nn import InitializerApplicator, RegularizerApplicator
 from allennlp.training.metrics import Perplexity
 
 
@@ -88,6 +88,8 @@ class LanguageModel(Model):
         Train a bidirectional language model, where the contextualizer
         is used to predict the next and previous token for each input token.
         This must match the bidirectionality of the contextualizer.
+    regularizer : ``RegularizerApplicator``, optional (default=``None``)
+        If provided, will be used to calculate the regularization penalty during training.
     """
     def __init__(self,
                  vocab: Vocabulary,
@@ -97,8 +99,9 @@ class LanguageModel(Model):
                  num_samples: int = None,
                  sparse_embeddings: bool = False,
                  bidirectional: bool = False,
-                 initializer: InitializerApplicator = None) -> None:
-        super().__init__(vocab)
+                 initializer: InitializerApplicator = None,
+                 regularizer: Optional[RegularizerApplicator] = None) -> None:
+        super().__init__(vocab, regularizer)
         self._text_field_embedder = text_field_embedder
 
         if contextualizer.is_bidirectional() is not bidirectional:
