@@ -31,6 +31,7 @@ class UpdateMovingAverage(Callback):
     def from_params(cls, params: Params, model: Model) -> 'UpdateMovingAverage':  # type: ignore
         # pylint: disable=arguments-differ
         moving_average_params = params.pop("moving_average")
-        moving_average = MovingAverage.from_params(params=moving_average_params, parameters=model.parameters())
+        model_parameters = [[name, param] for name, param in model.named_parameters() if param.requires_grad]
+        moving_average = MovingAverage.from_params(params=moving_average_params, parameters=model_parameters)
 
         return UpdateMovingAverage(moving_average)
