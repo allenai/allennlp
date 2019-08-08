@@ -3,7 +3,16 @@
 global defaults for certain tqdm parameters.
 """
 
-from tqdm import tqdm as _tqdm
+try:
+    shell = str(type(get_ipython()))
+except:
+    shell = ""
+    
+if "InteractiveShell" in shell:
+    from tqdm import tqdm_notebook as _tqdm
+else:
+    from tqdm import tqdm as _tqdm
+
 # This is neccesary to stop tqdm from hanging
 # when exceptions are raised inside iterators.
 # It should have been fixed in 4.2.1, but it still
