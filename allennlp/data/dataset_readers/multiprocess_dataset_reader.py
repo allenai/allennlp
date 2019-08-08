@@ -58,8 +58,9 @@ class QIterable(Iterable[Instance]):
     that exposes the output_queue.
     """
     def __init__(self, output_queue_size, epochs_per_read, num_workers, reader, file_path) -> None:
-        self.manager = Manager()
-        self.output_queue = self.manager.Queue(output_queue_size)
+        #self.manager = Manager()
+        #self.output_queue = self.manager.Queue(output_queue_size)
+        self.output_queue = Queue(output_queue_size)
         self.epochs_per_read = epochs_per_read
         self.num_workers = num_workers
         self.reader = reader
@@ -91,7 +92,8 @@ class QIterable(Iterable[Instance]):
         num_shards = len(shards)
 
         # If we want multiple epochs per read, put shards in the queue multiple times.
-        self.input_queue = self.manager.Queue(num_shards * self.epochs_per_read + self.num_workers)
+        #self.input_queue = self.manager.Queue(num_shards * self.epochs_per_read + self.num_workers)
+        self.input_queue = Queue(num_shards * self.epochs_per_read + self.num_workers)
         for _ in range(self.epochs_per_read):
             np.random.shuffle(shards)
             for shard in shards:
@@ -106,7 +108,8 @@ class QIterable(Iterable[Instance]):
         self.active_workers = Value('i', self.num_workers)
         for worker_id in range(self.num_workers):
             process = Process(target=_worker,
-                              args=(self.reader, self.input_queue, self.output_queue, self.active_workers))
+                              args=(self.reader, self.input_queue, self.output_queue, self.active_workers),
+                              daemon=True)
             logger.info(f"starting worker {worker_id}")
             process.start()
             self.processes.append(process)

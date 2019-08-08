@@ -1,5 +1,5 @@
 local NUM_GPUS = 2;
-local NUM_THREADS = 1;
+local NUM_THREADS = 8;
 
 local BASE_READER = {
         "type": "simple_language_modeling",
@@ -26,18 +26,24 @@ local BASE_READER = {
         "end_tokens": ["</S>"]
 };
 
+//local BASE_ITERATOR = {
+//  "type": "bucket",
+//  "max_instances_in_memory": 16384 * NUM_GPUS,
+//  // Larger than we really desire for a batch. Since we set
+//  // maximum_samples_per_batch below we will pack approximately that many
+//  // samples in every batch.
+//  "batch_size": 512 * NUM_GPUS,
+//  "sorting_keys": [["source", "num_tokens"]],
+//  "maximum_samples_per_batch": ["num_tokens", 2000]
+//};
+
 local BASE_ITERATOR = {
-  "type": "bucket",
-  "max_instances_in_memory": 16384 * NUM_GPUS,
-  // Larger than we really desire for a batch. Since we set
-  // maximum_samples_per_batch below we will pack approximately that many
-  // samples in every batch.
-  "batch_size": 512 * NUM_GPUS,
-  "sorting_keys": [["source", "num_tokens"]],
-  "maximum_samples_per_batch": ["num_tokens", 2000]
+  "type": "basic",
+  "batch_size": 66,
 };
 
 {
+  #"dataset_reader": BASE_READER,
   "dataset_reader": {
     "type": "multiprocess",
     "base_reader": BASE_READER,
@@ -110,6 +116,7 @@ local BASE_ITERATOR = {
         "input_dropout": 0.1
     }
   },
+  //"iterator": BASE_ITERATOR,
   "iterator": {
     "type": "multiprocess",
     "base_iterator": BASE_ITERATOR,
@@ -119,7 +126,7 @@ local BASE_ITERATOR = {
     // See https://pytorch.org/docs/stable/multiprocessing.html#file-descriptor-file-descriptor
     // for a description of the underlying issue. `ulimit -n 8192` has sufficed,
     // but that number could use tuning.
-    "output_queue_size": 500
+    "output_queue_size": 1000
   },
   "trainer": {
     "num_epochs": 10,
