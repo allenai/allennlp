@@ -234,6 +234,18 @@ class TestCallbackTrainer(ModelTestCase):
                                   callbacks=callbacks)
         trainer.train()
 
+    def test_trainer_can_run_ema_from_params(self):
+        uma_params = Params({"moving_average": {"decay": 0.9999}})
+        callbacks = self.default_callbacks() + [UpdateMovingAverage.from_params(uma_params, self.model)]
+        trainer = CallbackTrainer(model=self.model,
+                                  training_data=self.instances,
+                                  iterator=self.iterator,
+                                  optimizer=self.optimizer,
+                                  num_epochs=2,
+                                  callbacks=callbacks)
+        trainer.train()
+
+
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="No CUDA device registered.")
     def test_trainer_can_run_cuda(self):
         self.model.cuda()
