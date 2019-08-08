@@ -1,6 +1,5 @@
 # pylint: disable=no-self-use,invalid-name
 import pytest
-import spacy
 
 from allennlp.data.dataset_readers import TextClassificationJsonReader
 from allennlp.common.util import ensure_list
