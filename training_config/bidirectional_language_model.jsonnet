@@ -1,5 +1,5 @@
 local NUM_GPUS = 2;
-local NUM_THREADS = 10;
+local NUM_THREADS = 4;
 
 local BASE_READER = {
         "type": "simple_language_modeling",
@@ -49,7 +49,6 @@ local BASE_ITERATOR = {
     "base_reader": BASE_READER,
     "num_workers": NUM_THREADS,
     "output_queue_size": 1000,
-    "epochs_per_read": 100 # DELETEME
   },
   // Note: We don't set a validation_data_path because the softmax is only
   // sampled during training. Not sampling on GPUs results in a certain OOM
@@ -117,7 +116,7 @@ local BASE_ITERATOR = {
         "input_dropout": 0.1
     }
   },
-  //"iterator": BASE_ITERATOR,
+  #"iterator": BASE_ITERATOR,
   "iterator": {
     "type": "multiprocess",
     "base_iterator": BASE_ITERATOR,
