@@ -1,7 +1,9 @@
 from queue import Empty
 from typing import Iterable, Iterator, List, Optional
 import logging
+import os
 
+from torch import multiprocessing
 from torch.multiprocessing import Manager, Process, Queue, get_logger
 
 from allennlp.common.checks import ConfigurationError
@@ -23,6 +25,7 @@ def _create_tensor_dicts_from_queue(input_queue: Queue,
     Pulls instances from ``input_queue``, converts them into ``TensorDict``s
     using ``iterator``, and puts them on the ``output_queue``.
     """
+    logger.info(f"Iterator worker: {index} PID: {os.getpid()}")
     def instances() -> Iterator[Instance]:
         instance = input_queue.get()
         while instance is not None:
@@ -43,6 +46,7 @@ def _create_tensor_dicts_from_qiterable(qiterable: QIterable,
     Pulls instances from ``qiterable.output_queue``, converts them into
     ``TensorDict``s using ``iterator``, and puts them on the ``output_queue``.
     """
+    logger.info(f"Iterator worker: {index} PID: {os.getpid()}")
     def instances() -> Iterator[Instance]:
         while qiterable.active_workers.value > 0:
             while True:
@@ -63,6 +67,7 @@ def _queuer(instances: Iterable[Instance],
     """
     Reads Instances from the iterable and puts them in the input_queue.
     """
+    logger.info(f"Iterator queuer: {index} PID: {os.getpid()}")
     epoch = 0
 
     while num_epochs is None or epoch < num_epochs:
@@ -126,18 +131,19 @@ class MultiprocessIterator(DataIterator):
                              shuffle: bool) -> Iterator[TensorDict]:
         #manager = Manager()
         #output_queue = manager.Queue(self.output_queue_size)
-        output_queue = Queue(self.output_queue_size)
+        ctx = multiprocessing.get_context("spawn")
+        output_queue = ctx.Queue(self.output_queue_size)
         #input_queue = manager.Queue(self.output_queue_size * self.batch_size)
-        input_queue = Queue(self.output_queue_size * self.batch_size)
+        input_queue = ctx.Queue(self.output_queue_size * self.batch_size)
 
         # Start process that populates the queue.
-        self.queuer = Process(target=_queuer, args=(instances, input_queue, self.num_workers, num_epochs), daemon=True)
+        self.queuer = ctx.Process(target=_queuer, args=(instances, input_queue, self.num_workers, num_epochs), daemon=True)
         self.queuer.start()
 
         # Start the tensor-dict workers.
         for i in range(self.num_workers):
             args = (input_queue, output_queue, self.iterator, shuffle, i)
-            process = Process(target=_create_tensor_dicts_from_queue, args=args, daemon=True)
+            process = ctx.Process(target=_create_tensor_dicts_from_queue, args=args, daemon=True)
             process.start()
             self.processes.append(process)
 
@@ -164,7 +170,8 @@ class MultiprocessIterator(DataIterator):
                              shuffle: bool) -> Iterator[TensorDict]:
         #manager = Manager()
         #output_queue = manager.Queue(self.output_queue_size)
-        output_queue = Queue(self.output_queue_size)
+        ctx = multiprocessing.get_context("spawn")
+        output_queue = ctx.Queue(self.output_queue_size)
 
         for _ in range(num_epochs):
             qiterable.start()
@@ -174,7 +181,7 @@ class MultiprocessIterator(DataIterator):
                 # TODO(brendanr): Does passing qiterable work or do we need to
                 # pass the underlying queue and active_workers variable?
                 args = (qiterable, output_queue, self.iterator, shuffle, i)
-                process = Process(target=_create_tensor_dicts_from_qiterable, args=args, daemon=True)
+                process = ctx.Process(target=_create_tensor_dicts_from_qiterable, args=args, daemon=True)
                 process.start()
                 self.processes.append(process)
 

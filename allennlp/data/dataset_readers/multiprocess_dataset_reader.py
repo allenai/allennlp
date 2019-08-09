@@ -1,9 +1,11 @@
+from queue import Empty
 from typing import List, Iterable, Iterator
 import glob
 import logging
-from queue import Empty
+import os
 
 import numpy as np
+from torch import multiprocessing
 from torch.multiprocessing import Manager, Process, Queue, Value, log_to_stderr
 
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
@@ -31,20 +33,33 @@ class logger:
 def _worker(reader: DatasetReader,
             input_queue: Queue,
             output_queue: Queue,
-            active_workers: Value) -> None:
+            active_workers: Value,
+            worker_id: int) -> None:
     """
     A worker that pulls filenames off the input queue, uses the dataset reader
     to read them, and places the generated instances on the output queue.  When
     there are no filenames left on the input queue, it decrements
     active_workers to signal completion.
     """
+    logger.info(f"Reader worker: {worker_id} PID: {os.getpid()}")
     # Keep going until you get a file_path that's None.
     while True:
         file_path = input_queue.get()
         if file_path is None:
+            # It's important that we close and join the queue here before
+            # decrementing active_workers. Otherwise our parent may join us
+            # before the queue's feeder thread has passed all buffered items to
+            # the underlying pipe resulting in a deadlock.
+            #
+            # See:
+            # https://docs.python.org/3.6/library/multiprocessing.html?highlight=process#pipes-and-queues
+            # https://docs.python.org/3.6/library/multiprocessing.html?highlight=process#programming-guidelines
+            output_queue.close()
+            output_queue.join_thread()
             # Decrementing is not atomic. See https://docs.python.org/2/library/multiprocessing.html#multiprocessing.Value.
             with active_workers.get_lock():
                 active_workers.value -= 1
+            logger.info(f"Reader worker {worker_id} finished")
             break
 
         logger.info(f"reading instances from {file_path}")
@@ -60,7 +75,8 @@ class QIterable(Iterable[Instance]):
     def __init__(self, output_queue_size, epochs_per_read, num_workers, reader, file_path) -> None:
         #self.manager = Manager()
         #self.output_queue = self.manager.Queue(output_queue_size)
-        self.output_queue = Queue(output_queue_size)
+        ctx = multiprocessing.get_context("fork")
+        self.output_queue = ctx.Queue(output_queue_size)
         self.epochs_per_read = epochs_per_read
         self.num_workers = num_workers
         self.reader = reader
@@ -93,7 +109,8 @@ class QIterable(Iterable[Instance]):
 
         # If we want multiple epochs per read, put shards in the queue multiple times.
         #self.input_queue = self.manager.Queue(num_shards * self.epochs_per_read + self.num_workers)
-        self.input_queue = Queue(num_shards * self.epochs_per_read + self.num_workers)
+        ctx = multiprocessing.get_context("fork")
+        self.input_queue = ctx.Queue(num_shards * self.epochs_per_read + self.num_workers)
         for _ in range(self.epochs_per_read):
             np.random.shuffle(shards)
             for shard in shards:
@@ -105,11 +122,13 @@ class QIterable(Iterable[Instance]):
 
 
         self.processes: List[Process] = []
-        self.active_workers = Value('i', self.num_workers)
+        self.active_workers = ctx.Value('i', self.num_workers)
+        self.items_inflight = ctx.Value('i', 0)
+        ctx = multiprocessing.get_context("fork")
         for worker_id in range(self.num_workers):
-            process = Process(target=_worker,
-                              args=(self.reader, self.input_queue, self.output_queue, self.active_workers),
-                              daemon=True)
+            process = ctx.Process(target=_worker,
+                                  args=(self.reader, self.input_queue, self.output_queue, self.active_workers, worker_id),
+                                  daemon=True)
             logger.info(f"starting worker {worker_id}")
             process.start()
             self.processes.append(process)
@@ -118,7 +137,7 @@ class QIterable(Iterable[Instance]):
         for i, process in enumerate(self.processes):
             process.join()
             # Best effort logging. It's entirely possible it finished earlier.
-            logger.info(f"worker {i} finished")
+            logger.info(f"worker: {i} alive: {process.is_alive()}")
         self.processes.clear()
 
 @DatasetReader.register('multiprocess')
