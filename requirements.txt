@@ -9,7 +9,7 @@
 # please visit http://pytorch.org/ and install the relevant version.
 # For now AllenNLP works with both PyTorch 1.0 and 0.4.1. Expect that in
 # the future only >=1.0 will be supported.
-torch>=0.4.1
+torch>=0.4.1,<1.2
 
 # Parameter parsing (but not on Windows).
 jsonnet>=0.10.0 ; sys.platform != 'win32'
