@@ -74,6 +74,18 @@ class TestMultiprocessDatasetReader(AllenNlpTestCase):
         assert counts[("snakes", "are", "animals", ".", "N", "V", "N", "N")] == 100
         assert counts[("birds", "are", "animals", ".", "N", "V", "N", "N")] == 100
 
+    def test_multiprocess_read_partial_does_not_hang(self):
+        reader = MultiprocessDatasetReader(base_reader=self.base_reader, num_workers=4, output_queue_size=10)
+
+        all_instances = []
+
+        # Half of 100 files * 4 sentences / file
+        for _ in range(200):
+            instance = reader.read(self.identical_files_glob)
+            all_instances.append(instance)
+
+        assert len(all_instances) == 200
+
     def test_multiprocess_read_with_qiterable(self):
         reader = MultiprocessDatasetReader(base_reader=self.base_reader, num_workers=4)
 
