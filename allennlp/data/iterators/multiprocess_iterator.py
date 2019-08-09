@@ -38,6 +38,10 @@ def _create_tensor_dicts_from_queue(input_queue: Queue,
 
     output_queue.put(index)
 
+    # This helps prevent deadlocks. See the note in multiprocess_dataset_reader.py.
+    output_queue.close()
+    output_queue.join_thread()
+
 def _create_tensor_dicts_from_qiterable(qiterable: QIterable,
                                         output_queue: Queue,
                                         iterator: DataIterator,
@@ -62,6 +66,10 @@ def _create_tensor_dicts_from_qiterable(qiterable: QIterable,
         output_queue.put(tensor_dict)
 
     output_queue.put(index)
+
+    # This helps prevent deadlocks. See the note in multiprocess_dataset_reader.py.
+    output_queue.close()
+    output_queue.join_thread()
 
 def _queuer(instances: Iterable[Instance],
             input_queue: Queue,
