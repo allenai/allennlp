@@ -34,6 +34,7 @@ def _worker(reader: DatasetReader,
             input_queue: Queue,
             output_queue: Queue,
             active_workers: Value,
+            inflight_items: Value,
             worker_id: int) -> None:
     """
     A worker that pulls filenames off the input queue, uses the dataset reader
@@ -64,6 +65,8 @@ def _worker(reader: DatasetReader,
 
         logger.info(f"reading instances from {file_path}")
         for instance in reader.read(file_path):
+            with inflight_items.get_lock():
+                inflight_items += 1
             output_queue.put(instance)
 
 
@@ -85,13 +88,15 @@ class QIterable(Iterable[Instance]):
     def __iter__(self) -> Iterator[Instance]:
         self.start()
 
-        # Keep going as long as not all the workers have finished.
-        while self.active_workers.value > 0:
+        # Keep going as long as not all the workers have finished or there are items in flight.
+        while self.active_workers.value > 0 or self.inflight_items > 0:
             # Inner loop to minimize locking on self.active_workers.
             while True:
                 try:
                     # Non-blocking to handle the empty-queue case.
                     yield self.output_queue.get(block=False, timeout=1.0)
+                    with self.inflight_items.get_lock():
+                        self.inflight_items -= 1
                 except Empty:
                     # The queue could be empty because the workers are
                     # all finished or because they're busy processing.
@@ -122,12 +127,14 @@ class QIterable(Iterable[Instance]):
 
 
         self.processes: List[Process] = []
+        # active_workers and inflight_items in conjunction determine whether there could be any outstanding instances.
         self.active_workers = ctx.Value('i', self.num_workers)
-        self.items_inflight = ctx.Value('i', 0)
+        self.inflight_items = ctx.Value('i', 0)
         ctx = multiprocessing.get_context("fork")
         for worker_id in range(self.num_workers):
             process = ctx.Process(target=_worker,
-                                  args=(self.reader, self.input_queue, self.output_queue, self.active_workers, worker_id),
+                                  args=(self.reader, self.input_queue, self.output_queue,
+                                        self.active_workers, self.inflight_items, worker_id),
                                   daemon=True)
             logger.info(f"starting worker {worker_id}")
             process.start()

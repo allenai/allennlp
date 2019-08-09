@@ -88,10 +88,12 @@ class TestMultiprocessDatasetReader(AllenNlpTestCase):
     #    # Essentially QIterable.__iter__. Broken out here as we intend it to be
     #    # a public interface.
     #    qiterable.start()
-    #    while qiterable.active_workers.value > 0:
+    #    while qiterable.active_workers.value > 0 or qiterable.inflight_items > 0:
     #        while True:
     #            try:
     #                all_instances.append(qiterable.output_queue.get(block=False, timeout=1.0))
+    #                with qiterable.inflight_items.get_lock():
+    #                    qiterable.inflight_items -= 1
     #            except Empty:
     #                break
     #    qiterable.join()
