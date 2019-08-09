@@ -1,4 +1,4 @@
-from queue import Empty
+from queue import Empty, Full
 from typing import Iterable, Iterator, List, Optional
 import logging
 import os
@@ -42,7 +42,8 @@ def _create_tensor_dicts_from_qiterable(qiterable: QIterable,
                                         output_queue: Queue,
                                         iterator: DataIterator,
                                         shuffle: bool,
-                                        index: int) -> None:
+                                        index: int,
+                                        ret_queue: Queue) -> None:
     """
     Pulls instances from ``qiterable.output_queue``, converts them into
     ``TensorDict``s using ``iterator``, and puts them on the ``output_queue``.
@@ -59,9 +60,13 @@ def _create_tensor_dicts_from_qiterable(qiterable: QIterable,
                     break
 
     t = torch.tensor([[0, 1],[2,3]])
-    batch = {'source':{'tokens': t}}
+    static_batch = {'source':{'tokens': t}}
     for tensor_dict in iterator(instances(), num_epochs=1, shuffle=shuffle):
         #output_queue.put(tensor_dict)
+        try:
+            batch = ret_queue.get_nowait()
+        except Empty:
+            batch = static_batch
         output_queue.put(batch)
 
     output_queue.put(index)
@@ -177,6 +182,7 @@ class MultiprocessIterator(DataIterator):
         #manager = Manager()
         #output_queue = manager.Queue(self.output_queue_size)
         output_queue = Queue(self.output_queue_size)
+        ret_queue = Queue(self.output_queue_size)
 
         for _ in range(num_epochs):
             qiterable.start()
@@ -185,7 +191,7 @@ class MultiprocessIterator(DataIterator):
             for i in range(self.num_workers):
                 # TODO(brendanr): Does passing qiterable work or do we need to
                 # pass the underlying queue and active_workers variable?
-                args = (qiterable, output_queue, self.iterator, shuffle, i)
+                args = (qiterable, output_queue, self.iterator, shuffle, i, ret_queue)
                 process = Process(target=_create_tensor_dicts_from_qiterable, args=args, daemon=True)
                 process.start()
                 self.processes.append(process)
@@ -197,6 +203,10 @@ class MultiprocessIterator(DataIterator):
                     num_finished += 1
                     logger.info(f"worker {item} finished ({num_finished} / {self.num_workers})")
                 else:
+                    try:
+                        ret_queue.put_nowait(item)
+                    except Full:
+                        pass
                     yield item
 
             for process in self.processes:
