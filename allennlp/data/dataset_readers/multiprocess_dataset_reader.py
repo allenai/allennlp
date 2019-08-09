@@ -5,8 +5,7 @@ import logging
 import os
 
 import numpy as np
-from torch import multiprocessing
-from torch.multiprocessing import Manager, Process, Queue, Value, log_to_stderr
+from torch.multiprocessing import Process, Queue, Value, log_to_stderr
 
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.instance import Instance
@@ -76,10 +75,7 @@ class QIterable(Iterable[Instance]):
     that exposes the output_queue.
     """
     def __init__(self, output_queue_size, epochs_per_read, num_workers, reader, file_path) -> None:
-        #self.manager = Manager()
-        #self.output_queue = self.manager.Queue(output_queue_size)
-        ctx = multiprocessing.get_context("fork")
-        self.output_queue = ctx.Queue(output_queue_size)
+        self.output_queue = Queue(output_queue_size)
         self.epochs_per_read = epochs_per_read
         self.num_workers = num_workers
         self.reader = reader
@@ -113,9 +109,7 @@ class QIterable(Iterable[Instance]):
         num_shards = len(shards)
 
         # If we want multiple epochs per read, put shards in the queue multiple times.
-        #self.input_queue = self.manager.Queue(num_shards * self.epochs_per_read + self.num_workers)
-        ctx = multiprocessing.get_context("fork")
-        self.input_queue = ctx.Queue(num_shards * self.epochs_per_read + self.num_workers)
+        self.input_queue = Queue(num_shards * self.epochs_per_read + self.num_workers)
         for _ in range(self.epochs_per_read):
             np.random.shuffle(shards)
             for shard in shards:
@@ -128,14 +122,13 @@ class QIterable(Iterable[Instance]):
 
         self.processes: List[Process] = []
         # active_workers and inflight_items in conjunction determine whether there could be any outstanding instances.
-        self.active_workers = ctx.Value('i', self.num_workers)
-        self.inflight_items = ctx.Value('i', 0)
-        ctx = multiprocessing.get_context("fork")
+        self.active_workers = Value('i', self.num_workers)
+        self.inflight_items = Value('i', 0)
         for worker_id in range(self.num_workers):
-            process = ctx.Process(target=_worker,
-                                  args=(self.reader, self.input_queue, self.output_queue,
-                                        self.active_workers, self.inflight_items, worker_id),
-                                  daemon=True)
+            process = Process(target=_worker,
+                              args=(self.reader, self.input_queue, self.output_queue,
+                                    self.active_workers, self.inflight_items, worker_id),
+                              daemon=True)
             logger.info(f"starting worker {worker_id}")
             process.start()
             self.processes.append(process)
@@ -143,8 +136,6 @@ class QIterable(Iterable[Instance]):
     def join(self) -> None:
         for i, process in enumerate(self.processes):
             process.join()
-            # Best effort logging. It's entirely possible it finished earlier.
-            logger.info(f"worker: {i} alive: {process.is_alive()}")
         self.processes.clear()
 
 @DatasetReader.register('multiprocess')
