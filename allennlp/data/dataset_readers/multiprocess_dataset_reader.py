@@ -66,7 +66,7 @@ def _worker(reader: DatasetReader,
         logger.info(f"reading instances from {file_path}")
         for instance in reader.read(file_path):
             with inflight_items.get_lock():
-                inflight_items += 1
+                inflight_items.value += 1
             output_queue.put(instance)
 
 
@@ -89,14 +89,14 @@ class QIterable(Iterable[Instance]):
         self.start()
 
         # Keep going as long as not all the workers have finished or there are items in flight.
-        while self.active_workers.value > 0 or self.inflight_items > 0:
+        while self.active_workers.value > 0 or self.inflight_items.value > 0:
             # Inner loop to minimize locking on self.active_workers.
             while True:
                 try:
                     # Non-blocking to handle the empty-queue case.
                     yield self.output_queue.get(block=False, timeout=1.0)
                     with self.inflight_items.get_lock():
-                        self.inflight_items -= 1
+                        self.inflight_items.value -= 1
                 except Empty:
                     # The queue could be empty because the workers are
                     # all finished or because they're busy processing.
