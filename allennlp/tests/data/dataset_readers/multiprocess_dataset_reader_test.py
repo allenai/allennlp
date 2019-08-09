@@ -6,12 +6,13 @@ from typing import Tuple
 
 import numpy as np
 
+from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.dataset_readers import MultiprocessDatasetReader, SequenceTaggingDatasetReader
 from allennlp.data.dataset_readers.multiprocess_dataset_reader import QIterable
 from allennlp.data.instance import Instance
 from allennlp.data.iterators import BasicIterator
 from allennlp.data.vocabulary import Vocabulary
-from allennlp.common.testing import AllenNlpTestCase
+
 
 def fingerprint(instance: Instance) -> Tuple[str, ...]:
     """

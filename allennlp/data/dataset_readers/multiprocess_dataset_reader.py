@@ -1,14 +1,15 @@
-from queue import Empty
-from typing import List, Iterable, Iterator
 import glob
 import logging
 import os
+from queue import Empty
+from typing import List, Iterable, Iterator, Optional
 
 import numpy as np
 from torch.multiprocessing import Process, Queue, Value, log_to_stderr
 
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.instance import Instance
+
 
 class logger:
     """
@@ -56,7 +57,8 @@ def _worker(reader: DatasetReader,
             # https://docs.python.org/3.6/library/multiprocessing.html?highlight=process#programming-guidelines
             output_queue.close()
             output_queue.join_thread()
-            # Decrementing is not atomic. See https://docs.python.org/2/library/multiprocessing.html#multiprocessing.Value.
+            # Decrementing is not atomic.
+            # See https://docs.python.org/2/library/multiprocessing.html#multiprocessing.Value.
             with active_workers.get_lock():
                 active_workers.value -= 1
             logger.info(f"Reader worker {worker_id} finished")
@@ -80,6 +82,14 @@ class QIterable(Iterable[Instance]):
         self.num_workers = num_workers
         self.reader = reader
         self.file_path = file_path
+
+        # Initialized in start.
+        self.input_queue: Optional[Queue] = None
+        self.processes: Optional[List[Process]] = None
+        # The active_workers and inflight_items counts in conjunction determine
+        # whether there could be any outstanding instances.
+        self.active_workers: Optional[Value] = None
+        self.inflight_items: Optional[Value] = None
 
     def __iter__(self) -> Iterator[Instance]:
         self.start()
@@ -121,7 +131,6 @@ class QIterable(Iterable[Instance]):
 
 
         self.processes: List[Process] = []
-        # active_workers and inflight_items in conjunction determine whether there could be any outstanding instances.
         self.active_workers = Value('i', self.num_workers)
         self.inflight_items = Value('i', 0)
         for worker_id in range(self.num_workers):
@@ -134,7 +143,7 @@ class QIterable(Iterable[Instance]):
             self.processes.append(process)
 
     def join(self) -> None:
-        for i, process in enumerate(self.processes):
+        for process in self.processes:
             process.join()
         self.processes.clear()
 

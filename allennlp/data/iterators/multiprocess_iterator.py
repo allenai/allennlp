@@ -1,17 +1,15 @@
-from queue import Empty
-from typing import Iterable, Iterator, List, Optional
 import logging
 import os
+from queue import Empty
+from typing import Iterable, Iterator, List, Optional
 
-import torch
-from torch import multiprocessing
-from torch.multiprocessing import Manager, Process, Queue, get_logger
+from torch.multiprocessing import Process, Queue, get_logger
 
 from allennlp.common.checks import ConfigurationError
+from allennlp.data.dataset import Batch
 from allennlp.data.dataset_readers.multiprocess_dataset_reader import QIterable
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator, TensorDict
-from allennlp.data.dataset import Batch
 from allennlp.data.vocabulary import Vocabulary
 
 logger = get_logger()  # pylint: disable=invalid-name
@@ -144,7 +142,9 @@ class MultiprocessIterator(DataIterator):
         input_queue = Queue(self.output_queue_size * self.batch_size)
 
         # Start process that populates the queue.
-        self.queuer = Process(target=_queuer, args=(instances, input_queue, self.num_workers, num_epochs), daemon=True)
+        self.queuer = Process(target=_queuer,
+                              args=(instances, input_queue, self.num_workers, num_epochs),
+                              daemon=True)
         self.queuer.start()
 
         # Start the tensor-dict workers.
