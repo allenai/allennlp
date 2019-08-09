@@ -1,5 +1,5 @@
 local NUM_GPUS = 2;
-local NUM_THREADS = 8;
+local NUM_THREADS = 10;
 
 local BASE_READER = {
         "type": "simple_language_modeling",
@@ -26,21 +26,21 @@ local BASE_READER = {
         "end_tokens": ["</S>"]
 };
 
-//local BASE_ITERATOR = {
-//  "type": "bucket",
-//  "max_instances_in_memory": 16384 * NUM_GPUS,
-//  // Larger than we really desire for a batch. Since we set
-//  // maximum_samples_per_batch below we will pack approximately that many
-//  // samples in every batch.
-//  "batch_size": 512 * NUM_GPUS,
-//  "sorting_keys": [["source", "num_tokens"]],
-//  "maximum_samples_per_batch": ["num_tokens", 2000]
-//};
-
 local BASE_ITERATOR = {
-  "type": "basic",
-  "batch_size": 66,
+  "type": "bucket",
+  "max_instances_in_memory": 16384 * NUM_GPUS,
+  // Larger than we really desire for a batch. Since we set
+  // maximum_samples_per_batch below we will pack approximately that many
+  // samples in every batch.
+  "batch_size": 512 * NUM_GPUS,
+  "sorting_keys": [["source", "num_tokens"]],
+  "maximum_samples_per_batch": ["num_tokens", 2000]
 };
+
+//local BASE_ITERATOR = {
+//  "type": "basic",
+//  "batch_size": 66,
+//};
 
 {
   #"dataset_reader": BASE_READER,

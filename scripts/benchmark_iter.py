@@ -92,6 +92,7 @@ def time_iterable(iterable, batch_count):
         i -= 1
         if i == 0:
             break
+    assert i == 0, "Not enough batches!"
 
     end = time.perf_counter()
     print(f"{(end - start)/batch_count:.3f} s/b over {batch_count} batches")
