@@ -55,15 +55,12 @@ class TestMultiprocessDatasetReader(AllenNlpTestCase):
         self.vocab = Vocabulary.from_instances(self.base_reader.read(str(base_file_path)))
 
     def test_multiprocess_read(self):
-        print("FOO 1")
         reader = MultiprocessDatasetReader(base_reader=self.base_reader, num_workers=4)
-        print("FOO 2")
 
         all_instances = []
 
         for instance in reader.read(self.identical_files_glob):
             all_instances.append(instance)
-        print("FOO 3")
 
         # 100 files * 4 sentences / file
         assert len(all_instances) == 100 * 4
@@ -76,7 +73,6 @@ class TestMultiprocessDatasetReader(AllenNlpTestCase):
         assert counts[("dogs", "are", "animals", ".", "N", "V", "N", "N")] == 100
         assert counts[("snakes", "are", "animals", ".", "N", "V", "N", "N")] == 100
         assert counts[("birds", "are", "animals", ".", "N", "V", "N", "N")] == 100
-        print("FOO 4")
 
     def test_multiprocess_read_with_qiterable(self):
         reader = MultiprocessDatasetReader(base_reader=self.base_reader, num_workers=4)
