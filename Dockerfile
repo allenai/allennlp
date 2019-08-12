@@ -64,6 +64,9 @@ RUN ./scripts/cache_models.py
 ARG SOURCE_COMMIT
 ENV ALLENNLP_SOURCE_COMMIT $SOURCE_COMMIT
 
+# Copy wrapper script to allow beaker to run resumable training workloads.
+COPY resumable_train.sh /stage/allennlp
+
 LABEL maintainer="allennlp-contact@allenai.org"
 
 EXPOSE 8000
