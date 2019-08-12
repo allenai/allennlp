@@ -97,8 +97,7 @@ class MultiQA_BERT(Model):
         # all input is preprocessed before farword is run, counting the yesno vocabulary
         # will indicate if yesno support is at all needed.
         if self.vocab.get_vocab_size("yesno_labels") > 1:
-            self._text_field_embedder.get_output_dim()
-            pooled_output = self._dropout(pooled_output)
+            #pooled_output = self._dropout(pooled_output)
             yesno_logits = self.qa_yesno(pooled_output)
             #label_logits_flat = label_logits.squeeze(1)
             #label_logits = label_logits.view(-1, num_choices)
