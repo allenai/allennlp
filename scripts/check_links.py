@@ -23,6 +23,7 @@ OK_STATUS_CODES = (
         406,  # the resource exists, but our default 'Accept-' header may not match what the server can provide.
 )
 
+THREADS = 10
 
 http_session = requests.Session()  # pylint: disable=invalid-name
 for resource_prefix in ("http://", "https://"):
@@ -31,7 +32,7 @@ for resource_prefix in ("http://", "https://"):
             requests.adapters.HTTPAdapter(
                     max_retries=5,
                     pool_connections=20,
-                    #  pool_maxsize=50,  # doesn't matter since we're not using threads.
+                    pool_maxsize=THREADS,
             )
     )
 
@@ -87,7 +88,7 @@ def main():
     print(f"  {len(all_matches)} markdown files found")
     print("Checking to make sure we can retrieve each link...")
 
-    with Pool(processes=10) as pool:
+    with Pool(processes=THREADS) as pool:
         results = pool.map(link_ok, [match for match in list(all_matches)])
     unreachable_results = [(match_tuple, reason) for match_tuple, success, reason in results if not success]
 
