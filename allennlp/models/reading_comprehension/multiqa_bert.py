@@ -40,7 +40,8 @@ class MultiQA_BERT(Model):
 
         # see usage below for explanation
         self.qa_outputs = torch.nn.Linear(self._text_field_embedder.get_output_dim(), 2)
-        self.qa_yesno = torch.nn.Linear(self._text_field_embedder.get_output_dim(), 3)
+        self.qa_yesno = torch.nn.Linear(self._text_field_embedder.get_output_dim(), \
+                                        self.vocab.get_vocab_size("yesno_labels"))
 
         initializer(self)
 
