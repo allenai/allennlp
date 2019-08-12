@@ -42,6 +42,7 @@ class MultiQA_BERT(Model):
         self.qa_outputs = torch.nn.Linear(self._text_field_embedder.get_output_dim(), 2)
         self.qa_yesno = torch.nn.Linear(self._text_field_embedder.get_output_dim(), \
                                         self.vocab.get_vocab_size("yesno_labels"))
+        self._dropout = torch.nn.Dropout(self._text_field_embedder.token_embedder_bert.bert_model.config.hidden_dropout_prob)
 
         initializer(self)
 
@@ -96,7 +97,12 @@ class MultiQA_BERT(Model):
         # all input is preprocessed before farword is run, counting the yesno vocabulary
         # will indicate if yesno support is at all needed.
         if self.vocab.get_vocab_size("yesno_labels") > 1:
-            yesno_logits = self.qa_yesno(torch.max(embedded_chunk, 1)[0])
+            self._text_field_embedder.get_output_dim()
+            pooled_output = self._dropout(pooled_output)
+            yesno_logits = self.qa_yesno(pooled_output)
+            #label_logits_flat = label_logits.squeeze(1)
+            #label_logits = label_logits.view(-1, num_choices)
+            #yesno_logits = self.qa_yesno(torch.max(embedded_chunk, 1)[0])
 
         span_starts.clamp_(0, passage_length)
         span_ends.clamp_(0, passage_length)
