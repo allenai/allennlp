@@ -272,7 +272,7 @@ class Embedding(TokenEmbedder):
 
               where ``archive_uri`` can be a file system path or a URL. For example::
 
-                    "(http://nlp.stanford.edu/data/glove.twitter.27B.zip)#glove.twitter.27B.200d.txt"
+                    "(https://nlp.stanford.edu/data/glove.twitter.27B.zip)#glove.twitter.27B.200d.txt"
         """
         # pylint: disable=arguments-differ
         num_embeddings = params.pop_int('num_embeddings', None)

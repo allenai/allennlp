@@ -48,7 +48,7 @@ class TestUniversalDependenciesDatasetReader(AllenNlpTestCase):
         assert fields["head_indices"].labels == [4, 4, 4, 0, 6, 4, 6, 6, 4]
 
         # This instance tests specifically for filtering of elipsis:
-        # http://universaldependencies.org/u/overview/specific-syntax.html#ellipsis
+        # https://universaldependencies.org/u/overview/specific-syntax.html#ellipsis
         # The original sentence is:
         # "Over 300 Iraqis are reported dead and 500 [reported] wounded in Fallujah alone."
         # But the second "reported" is elided, and as such isn't included in the syntax tree.

@@ -28,7 +28,7 @@ class BeamSearch:
         If not given, this just defaults to ``beam_size``. Setting this parameter
         to a number smaller than ``beam_size`` may give better results, as it can introduce
         more diversity into the search. See `Beam Search Strategies for Neural Machine Translation.
-        Freitag and Al-Onaizan, 2017 <http://arxiv.org/abs/1702.01806>`_.
+        Freitag and Al-Onaizan, 2017 <https://arxiv.org/abs/1702.01806>`_.
     """
 
     def __init__(self,

@@ -21,7 +21,7 @@ class EvalbBracketingScorer(Metric):
     """
     This class uses the external EVALB software for computing a broad range of metrics
     on parse trees. Here, we use it to compute the Precision, Recall and F1 metrics.
-    You can download the source for EVALB from here: <http://nlp.cs.nyu.edu/evalb/>.
+    You can download the source for EVALB from here: <https://nlp.cs.nyu.edu/evalb/>.
 
     Note that this software is 20 years old. In order to compile it on modern hardware,
     you may need to remove an ``include <malloc.h>`` statement in ``evalb.c`` before it
