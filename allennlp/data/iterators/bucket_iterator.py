@@ -83,6 +83,10 @@ class BucketIterator(DataIterator):
         See :class:`BasicIterator`.
     maximum_samples_per_batch : ``Tuple[str, int]``, (default = None)
         See :class:`BasicIterator`.
+    skip_smaller_batches : bool, optional, (default = False)
+        When the number of data samples is not dividable by `batch_size`,
+        some batches might be smaller than `batch_size`.
+        If set to `True`, those smaller batches will be discarded.
     """
 
     def __init__(self,
