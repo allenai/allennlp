@@ -8,7 +8,7 @@ for developing state-of-the-art deep learning models on a wide variety of lingui
 
 ## Quick Links
 
-* [Website](http://www.allennlp.org/)
+* [Website](https://allennlp.org/)
 * [Tutorial](https://allennlp.org/tutorials)
 * [Documentation](https://allenai.github.io/allennlp-docs/)
 * [Contributing Guidelines](CONTRIBUTING.md)
@@ -96,7 +96,7 @@ AllenNLP installs a script when you install the python package, meaning you can 
 You can now test your installation with `allennlp test-install`.
 
 _`pip` currently installs Pytorch for CUDA 9 only (or no GPU). If you require an older version,
-please visit http://pytorch.org/ and install the relevant pytorch binary._
+please visit https://pytorch.org/ and install the relevant pytorch binary._
 
 ### Installing using Docker
 

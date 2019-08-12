@@ -50,8 +50,8 @@ decide if it was (or should be) published in a "natural language processing" ven
 learning" venue, or an "artificial intelligence" venue (all of those scare quotes are because this
 is a totally artificial task, and there aren't solid lines between these fields).
 
-We'll use the [open research corpus](http://labs.semanticscholar.org/corpus/) provided by the academic
-search engine [Semantic Scholar](http://semanticscholar.org), with a heuristically-edited "venue"
+We'll use the [open research corpus](https://labs.semanticscholar.org/corpus/) provided by the academic
+search engine [Semantic Scholar](https://www.semanticscholar.org/), with a heuristically-edited "venue"
 field.  You can follow the link to see the full specification of this data, but it's provided as a
 JSON-lines file, where each JSON blob has at least these fields:
 
