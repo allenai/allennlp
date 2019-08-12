@@ -58,9 +58,8 @@ class MetadataField(Field[DataArray], Mapping[str, Any]):
     def empty_field(self) -> 'MetadataField':
         return MetadataField(None)
 
-    @classmethod
     @overrides
-    def batch_tensors(cls, tensor_list: List[DataArray]) -> List[DataArray]:  # type: ignore
+    def batch_tensors(self, tensor_list: List[DataArray]) -> List[DataArray]:  # type: ignore
         return tensor_list
 
 

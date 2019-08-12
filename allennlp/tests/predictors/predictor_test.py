@@ -11,6 +11,22 @@ class TestPredictor(AllenNlpTestCase):
         # If it consumes the params, this will raise an exception
         Predictor.from_archive(archive, 'machine-comprehension')
 
+    def test_loads_correct_dataset_reader(self):
+        # pylint: disable=protected-access
+        # The ATIS archive has both training and validation ``DatasetReaders``. The
+        # ``keep_if_unparseable`` argument has a different value in each of them
+        # (``True`` for validation, ``False`` for training).
+        archive = load_archive(self.FIXTURES_ROOT / 'semantic_parsing' / 'atis' / 'serialization' / 'model.tar.gz')
+
+        predictor = Predictor.from_archive(archive, 'atis-parser')
+        assert predictor._dataset_reader._keep_if_unparseable is True
+
+        predictor = Predictor.from_archive(archive, 'atis-parser', dataset_reader_to_load='train')
+        assert predictor._dataset_reader._keep_if_unparseable is False
+
+        predictor = Predictor.from_archive(archive, 'atis-parser', dataset_reader_to_load='validation')
+        assert predictor._dataset_reader._keep_if_unparseable is True
+
     def test_get_gradients(self):
         inputs = {
                 "premise": "I always write unit tests",

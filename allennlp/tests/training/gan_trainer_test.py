@@ -274,7 +274,9 @@ class GanTestTrainer(TrainerBase):
     def from_params(cls,   # type: ignore
                     params: Params,
                     serialization_dir: str,
-                    recover: bool = False) -> 'GanTestTrainer':
+                    recover: bool = False,
+                    cache_directory: str = None,
+                    cache_prefix: str = None) -> 'GanTestTrainer':
         dataset_reader = DatasetReader.from_params(params.pop("data_reader"))
         data = dataset_reader.read("")
 
