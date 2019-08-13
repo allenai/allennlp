@@ -106,7 +106,7 @@ class BLEU(Metric):
         return math.exp(1.0 - self._reference_lengths / self._prediction_lengths)
 
     def _get_valid_tokens_mask(self, tensor: torch.LongTensor) -> torch.ByteTensor:
-        valid_tokens_mask = torch.ones(tensor.size(), dtype=torch.uint8)
+        valid_tokens_mask = torch.ones(tensor.size(), dtype=torch.bool)
         for index in self._exclude_indices:
             valid_tokens_mask = valid_tokens_mask & (tensor != index)
         return valid_tokens_mask

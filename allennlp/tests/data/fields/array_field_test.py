@@ -80,16 +80,16 @@ class TestArrayField(AllenNlpTestCase):
         returned_tensor1 = array_field1.as_tensor(array_field1.get_padding_lengths())
         assert returned_tensor1.dtype == torch.int64
 
-        # Setting dtype to numpy.uint8 should produce a torch.ByteTensor when field is converted to
+        # Setting dtype to numpy.bool should produce a torch.bool when field is converted to
         # a tensor
-        array_field2 = ArrayField(array, dtype=numpy.uint8)
+        array_field2 = ArrayField(array, dtype=numpy.bool)
         returned_tensor2 = array_field2.as_tensor(array_field2.get_padding_lengths())
-        assert returned_tensor2.dtype == torch.uint8
+        assert returned_tensor2.dtype == torch.bool
 
         # Padding should not affect dtype
         padding_lengths = {"dimension_" + str(i): 10 for i, _  in enumerate(shape)}
         padded_tensor = array_field2.as_tensor(padding_lengths)
-        assert padded_tensor.dtype == torch.uint8
+        assert padded_tensor.dtype == torch.bool
 
         # Empty fields should have the same dtype
         empty_field = array_field2.empty_field()
