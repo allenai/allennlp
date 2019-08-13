@@ -67,15 +67,17 @@ class TestHotflip(AllenNlpTestCase):
                     assert original_span_start != flipped_span_start or original_span_end != flipped_span_end
 
     def test_targeted_attack_from_json(self):
-        inputs = {"sentence": "This is a single string [MASK] about a test . Sometimes it "
-                              "contains coreferent parts ."}
+        inputs = {"sentence": "The doctor ran to the emergency room to see [MASK] patient."}
 
-        archive = load_archive(self.FIXTURES_ROOT / 'masked_language_model' / 'serialization' / 'model.tar.gz')
+        #archive = load_archive(self.FIXTURES_ROOT / 'masked_language_model' / 'serialization' / 'model.tar.gz')
+        archive = load_archive('tmp/bert-masked-lm-2019.07.25.tar.gz')
         predictor = Predictor.from_archive(archive, 'masked_lm_predictor')
 
-        hotflipper = Hotflip(predictor)
+        hotflipper = Hotflip(predictor, vocab_namespace='bert')
         hotflipper.initialize()
-        attack = hotflipper.targeted_attack_from_json(inputs, target=['target'])
+        attack = hotflipper.targeted_attack_from_json(inputs,
+                                                      ignore_tokens=["[MASK]", "[CLS]", "[SEP]"],
+                                                      target=['hi'])
         assert attack is not None
         assert 'final' in attack
         assert 'original' in attack

@@ -61,5 +61,3 @@ class TestSimpleGradient(AllenNlpTestCase):
         grad_input_1 = interpretation['instance_1']['grad_input_1']
         assert len(grad_input_1) == 16  # 16 words in input
         print(grad_input_1[0])
-x = TestSimpleGradient()
-x.test_simple_gradient_masked_lm()

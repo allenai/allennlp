@@ -213,7 +213,7 @@ class Hotflip(Attacker):
             self.initialize()
         if target is None:
             raise ValueError("set the target")
-        ignore_tokens = ["@@NULL@@", '.', ',', ';', '!', '?'] if ignore_tokens is None else ignore_tokens
+        ignore_tokens = ["@@NULL@@", '.', ',', ';', '!', '?', '[MASK]', '[SEP]', '[CLS]'] if ignore_tokens is None else ignore_tokens
         sign = 1.0
         output_dict = {'words': [target]}
         instance = self.predictor._json_to_instance(inputs)
@@ -297,6 +297,7 @@ class Hotflip(Attacker):
                 # if the prediction has changed, then stop
                 if not utils.instance_has_changed(current_instance_labeled, fields_to_compare):
                         break
+                current_instance_labeled = self.predictor.predictions_to_labeled_instances(current_instance, output_dict)[0]
 
             final_tokens.append(current_tokens)
             if 'clusters' in outputs:

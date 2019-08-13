@@ -355,6 +355,11 @@ class PretrainedBertIndexer(WordpieceIndexer):
                          separator_token="[SEP]",
                          truncate_long_sequences=truncate_long_sequences)
 
+    def __eq__(self, other):
+        if isinstance(other, PretrainedBertIndexer):
+            return True
+        return NotImplemented
+
 
 def _get_token_type_ids(wordpiece_ids: List[int],
                         separator_ids: List[int]) -> List[int]:
