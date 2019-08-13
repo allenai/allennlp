@@ -2,7 +2,6 @@ import logging
 from typing import List, Tuple
 
 from overrides import overrides
-import pytorch_transformers
 from pytorch_transformers.tokenization_auto import AutoTokenizer
 
 from allennlp.data.tokenizers.token import Token
