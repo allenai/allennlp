@@ -2,8 +2,7 @@ from typing import Dict, List
 import itertools
 
 from overrides import overrides
-import pytorch_transformers
-from pytorch_transformers.tokenization_utils import PreTrainedTokenizer
+from pytorch_transformers.tokenization_auto import AutoTokenizer
 import torch
 
 from allennlp.common.util import pad_sequence_to_length
