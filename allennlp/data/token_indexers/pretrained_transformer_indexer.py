@@ -1,5 +1,4 @@
 from typing import Dict, List
-import itertools
 
 from overrides import overrides
 from pytorch_transformers.tokenization_auto import AutoTokenizer
@@ -9,6 +8,9 @@ from allennlp.common.util import pad_sequence_to_length
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.tokenizers.token import Token
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
+
+
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 @TokenIndexer.register("pretrained_transformer")
