@@ -1,4 +1,5 @@
 from typing import Dict, List
+import logging
 
 from overrides import overrides
 from pytorch_transformers.tokenization_auto import AutoTokenizer
