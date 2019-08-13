@@ -63,10 +63,10 @@ class MaskedLanguageModelingReader(DatasetReader):
                 yield self.text_to_instance(sentence, tokens, [target])
 
     @overrides
-    def text_to_instance(self,
+    def text_to_instance(self,  # type: ignore
                          sentence: str = None,
                          tokens: List[Token] = None,
-                         targets: List[str] = None) -> Instance:  # type: ignore
+                         targets: List[str] = None) -> Instance:
         # pylint: disable=arguments-differ
         """
         Parameters

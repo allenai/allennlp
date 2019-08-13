@@ -9,7 +9,7 @@ from allennlp.data.tokenizers import Token, WordTokenizer
 from allennlp.data.tokenizers.word_splitter import JustSpacesWordSplitter
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
-from allennlp.data.fields import IndexField, LabelField, ListField, TextField
+from allennlp.data.fields import TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 
 
@@ -56,10 +56,10 @@ class NextTokenLmReader(DatasetReader):
                 yield self.text_to_instance(sentence, tokens, target)
 
     @overrides
-    def text_to_instance(self,
+    def text_to_instance(self,  # type: ignore
                          sentence: str = None,
                          tokens: List[Token] = None,
-                         target: str = None) -> Instance:  # type: ignore
+                         target: str = None) -> Instance:
         # pylint: disable=arguments-differ
         if not tokens:
             tokens = self._tokenizer.tokenize(sentence)

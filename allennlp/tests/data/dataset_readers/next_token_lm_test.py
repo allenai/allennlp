@@ -1,13 +1,11 @@
 # pylint: disable=no-self-use,invalid-name
-from pytest import approx
-
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.dataset_readers import NextTokenLmReader
 from allennlp.data import Vocabulary
 from allennlp.data.tokenizers import PretrainedTransformerTokenizer
 from allennlp.data.token_indexers import PretrainedTransformerIndexer
 
-class TestNextTokenLmReader:
+class TestNextTokenLmReader(AllenNlpTestCase):
     def test_text_to_instance_with_basic_tokenizer_and_indexer(self):
         reader = NextTokenLmReader()
 
