@@ -45,4 +45,4 @@ class TestMaskedLanguageModelingDatasetReader:
         target_ids = tensor_dict['target_ids']['bert'].numpy().tolist()
         # I don't know what wordpiece id BERT is going to assign to 'This', but it at least should
         # be the same between the input and the target.
-        assert target_ids[0] == bert_token_ids[0]
+        assert target_ids[0] == bert_token_ids[1]
