@@ -47,10 +47,6 @@ class CharacterTokenizer(Tokenizer):
         self._end_tokens = end_tokens or []
 
     @overrides
-    def batch_tokenize(self, texts: List[str]) -> List[List[Token]]:
-        return [self.tokenize(text) for text in texts]
-
-    @overrides
     def tokenize(self, text: str) -> List[Token]:
         if self._lowercase_characters:
             text = text.lower()
