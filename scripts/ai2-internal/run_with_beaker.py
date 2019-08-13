@@ -92,7 +92,7 @@ def main(param_file: str, args: argparse.Namespace):
     if args.gpu_count:
         requirements["gpuCount"] = int(args.gpu_count)
     if args.preemptible:
-        requirements["preemptible"] = true
+        requirements["preemptible"] = True
     config_spec = {
         "description": args.desc,
         "image": image,
