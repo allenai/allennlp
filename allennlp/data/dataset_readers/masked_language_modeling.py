@@ -3,15 +3,13 @@ import logging
 
 from overrides import overrides
 
-from allennlp.common.file_utils import cached_path
-from allennlp.common.tqdm import Tqdm
 from allennlp.data.instance import Instance
 from allennlp.data.tokenizers.tokenizer import Tokenizer
 from allennlp.data.tokenizers import Token, WordTokenizer
 from allennlp.data.tokenizers.word_splitter import JustSpacesWordSplitter
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
-from allennlp.data.fields import IndexField, LabelField, ListField, TextField
+from allennlp.data.fields import IndexField, ListField, TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 
 

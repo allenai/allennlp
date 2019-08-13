@@ -3,8 +3,6 @@ import logging
 
 from overrides import overrides
 
-from allennlp.common.file_utils import cached_path
-from allennlp.common.tqdm import Tqdm
 from allennlp.data.instance import Instance
 from allennlp.data.tokenizers.tokenizer import Tokenizer
 from allennlp.data.tokenizers import Token, WordTokenizer
@@ -19,7 +17,26 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 @DatasetReader.register("next_token_lm")
-class NextTokenLMReader(DatasetReader):
+class NextTokenLmReader(DatasetReader):
+    """
+    Creates ``Instances`` suitable for use in predicting a single next token using a language
+    model.  The :class:`Field` s that we create are the following: an input ``TextField`` and a
+    target token ``TextField`` (we only ver have a single token, but we use a ``TextField`` so we
+    can index it the same way as our input, typically with a single
+    ``PretrainedTransformerIndexer``).
+
+    NOTE: This is not fully functional!  It was written to put together a demo for interpreting and
+    attacking language models, not for actually training anything.  It would be a really bad idea
+    to use this setup for training language models.  The only purpose of this class is for a demo.
+
+    Parameters
+    ----------
+    tokenizer : ``Tokenizer``, optional (default=``WordTokenizer()``)
+        We use this ``Tokenizer`` for the text.  See :class:`Tokenizer`.
+    token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
+        We use this to define the input representation for the text, and to get ids for the mask
+        targets.  See :class:`TokenIndexer`.
+    """
     def __init__(self,
                  tokenizer: Tokenizer = None,
                  token_indexers: Dict[str, TokenIndexer] = None,
@@ -30,7 +47,8 @@ class NextTokenLMReader(DatasetReader):
 
     @overrides
     def _read(self, file_path: str):
-        # TODO(mattg): ACTUALLY IMPLEMENT THIS!! .
+        # NOTE: this is only useful for easy model tests.  Implementing this function for real
+        # doesn't make any sense, as you would never want to train a language model this way.
         with open(file_path, "r") as text_file:
             for sentence in text_file:
                 tokens = self._tokenizer.tokenize(sentence)
