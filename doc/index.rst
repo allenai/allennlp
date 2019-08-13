@@ -21,7 +21,7 @@ following principles:
 
 AllenNLP includes reference implementations of high quality models for Semantic
 Role Labelling, Question and Answering (BiDAF), Entailment (decomposable
-attention), and more (see http://www.allennlp.org/models).
+attention), and more (see https://allennlp.org/models).
 
 AllenNLP is built and maintained by the Allen Institute for Artificial
 Intelligence, in close collaboration with researchers at the University of

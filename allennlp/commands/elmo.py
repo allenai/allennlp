@@ -5,7 +5,7 @@ Given a pre-processed input text file, this command outputs the internal
 layers used to compute ELMo representations to a single (potentially large) file.
 
 The input file is previously tokenized, whitespace separated text, one sentence per line.
-The output is a hdf5 file (<http://docs.h5py.org/en/latest/>) where, with the --all flag, each
+The output is a hdf5 file (<https://h5py.readthedocs.io/en/latest/>) where, with the --all flag, each
 sentence is a size (3, num_tokens, 1024) array with the biLM representations.
 
 For information, see "Deep contextualized word representations", Peters et al 2018.

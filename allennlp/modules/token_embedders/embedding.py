@@ -137,6 +137,7 @@ class Embedding(TokenEmbedder):
         inputs = util.combine_initial_dims(inputs)
 
         embedded = embedding(inputs, self.weight,
+                             padding_idx=self.padding_index,
                              max_norm=self.max_norm,
                              norm_type=self.norm_type,
                              scale_grad_by_freq=self.scale_grad_by_freq,
@@ -271,7 +272,7 @@ class Embedding(TokenEmbedder):
 
               where ``archive_uri`` can be a file system path or a URL. For example::
 
-                    "(http://nlp.stanford.edu/data/glove.twitter.27B.zip)#glove.twitter.27B.200d.txt"
+                    "(https://nlp.stanford.edu/data/glove.twitter.27B.zip)#glove.twitter.27B.200d.txt"
         """
         # pylint: disable=arguments-differ
         num_embeddings = params.pop_int('num_embeddings', None)
