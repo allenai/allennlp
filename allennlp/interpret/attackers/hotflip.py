@@ -187,6 +187,10 @@ class Hotflip(Attacker):
             final_tokens.append(current_tokens)
             if 'clusters' in outputs:
                 break
+
+        original_tokens = [Token(token.text.replace('Ġ','')) for token in original_tokens]
+        final_tokens = [[Token(token.text.replace('Ġ','')) for token in batch] for batch in final_tokens]
+
         return sanitize({"final": final_tokens,
                          "original": original_tokens,
                          "outputs": outputs})
