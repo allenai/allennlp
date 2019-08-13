@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict
 import logging
 
 from overrides import overrides
@@ -7,7 +7,7 @@ from allennlp.common.file_utils import cached_path
 from allennlp.common.tqdm import Tqdm
 from allennlp.data.instance import Instance
 from allennlp.data.tokenizers.tokenizer import Tokenizer
-from allennlp.data.tokenizers import Token, WordTokenizer
+from allennlp.data.tokenizers import WordTokenizer
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
 from allennlp.data.fields import TextField
@@ -80,18 +80,18 @@ class LanguageModelingReader(DatasetReader):
             for index in Tqdm.tqdm(range(0, len(tokenized_text) - num_tokens, num_tokens - 1)):
                 tokenized_strings.append(tokenized_text[index:(index + num_tokens)])
         else:
-            tokenized_strings = self._tokenizer.batch_tokenize(instance_strings)
+            tokenized_strings = [self._tokenizer.tokenize(s) for s in instance_strings]
 
         for tokenized_string in tokenized_strings:
-            yield self.text_to_instance(tokens=tokenized_string)
+            input_field = TextField(tokenized_string[:-1], self._token_indexers)
+            output_field = TextField(tokenized_string[1:], self._output_indexer)
+            yield Instance({'input_tokens': input_field,
+                            'output_tokens': output_field})
 
     @overrides
-    def text_to_instance(self,
-                         sentence: str = None,
-                         tokens: List[Token] = None) -> Instance:  # type: ignore
+    def text_to_instance(self, sentence: str) -> Instance:  # type: ignore
         # pylint: disable=arguments-differ
-        if not tokens:
-            tokens = self._tokenizer.tokenize(sentence)
+        tokenized_string = self._tokenizer.tokenize(sentence)
         input_field = TextField(tokenized_string[:-1], self._token_indexers)
         output_field = TextField(tokenized_string[1:], self._output_indexer)
         return Instance({'input_tokens': input_field, 'output_tokens': output_field})
