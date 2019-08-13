@@ -25,13 +25,16 @@ class MaskedLanguageModelingReader(DatasetReader):
     model.
 
     The :class:`Field` s that we create are the following: an input ``TextField``, a mask position
-    ``ListField[IndexField]``, and a target token ``ListField[LabelField]`` (which shares a vocab
-    namespace with the token vocabulary).  The mask position and target token lists are the same
-    length.
+    ``ListField[IndexField]``, and a target token ``TextField`` (the target tokens aren't a single
+    string of text, but we use a ``TextField`` so we can index the target tokens the same way as
+    our input, typically with a single ``PretrainedTransformerIndexer``).  The mask position and
+    target token lists are the same length.
 
     NOTE: This is not fully functional!  It was written to put together a demo for interpreting and
     attacking masked language modeling, not for actually training anything.  ``text_to_instance``
-    is functional, but ``_read`` is not.
+    is functional, but ``_read`` is not.  To make this fully functional, you would want some
+    sampling strategies for picking the locations for [MASK] tokens, and probably a bunch of
+    efficiency / multi-processing stuff.
 
     Parameters
     ----------

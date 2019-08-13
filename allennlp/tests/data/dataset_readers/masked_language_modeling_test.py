@@ -4,8 +4,8 @@ from pytest import approx
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.dataset_readers import MaskedLanguageModelingReader
 from allennlp.data import Vocabulary
-from allennlp.data.tokenizers import WordpieceTokenizer
-from allennlp.data.token_indexers import PretrainedBertIndexer
+from allennlp.data.tokenizers import PretrainedTransformerTokenizer
+from allennlp.data.token_indexers import PretrainedTransformerIndexer
 
 class TestMaskedLanguageModelingDatasetReader:
     def test_text_to_instance_with_basic_tokenizer_and_indexer(self):
@@ -27,9 +27,8 @@ class TestMaskedLanguageModelingDatasetReader:
         assert tensor_dict['mask_positions'].numpy().tolist() == [[3]]
 
     def test_text_to_instance_with_bert_tokenizer_and_indexer(self):
-        tokenizer = WordpieceTokenizer('bert-base-cased',
-                                       do_lowercase=False)
-        token_indexer = PretrainedBertIndexer('bert-base-cased', do_lowercase=False)
+        tokenizer = PretrainedTransformerTokenizer('bert-base-cased', do_lowercase=False)
+        token_indexer = PretrainedTransformerIndexer('bert-base-cased', do_lowercase=False)
         reader = MaskedLanguageModelingReader(tokenizer, {'bert': token_indexer})
         instance = reader.text_to_instance(sentence='This is AllenNLP [MASK] token .',
                                            targets=['This'])
