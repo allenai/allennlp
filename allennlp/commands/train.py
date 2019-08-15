@@ -30,8 +30,14 @@ which to write the results.
      --file-friendly-logging
                            outputs tqdm status on separate lines and slows tqdm
                            refresh rate
+     --cache-directory CACHE_DIRECTORY
+                           Location to store cache of data preprocessing
+     --cache-prefix CACHE_PREFIX
+                           Prefix to use for data caching, giving current
+                           parameter settings a name in the cache, instead of
+                           computing a hash
      --include-package INCLUDE_PACKAGE
-                            additional packages to include
+                           additional packages to include
 """
 
 import argparse
