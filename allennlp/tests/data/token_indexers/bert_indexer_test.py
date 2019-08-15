@@ -31,6 +31,12 @@ class TestBertIndexer(ModelTestCase):
         assert indexed_tokens["bert"] == [16, 2, 3, 5, 6, 8, 9, 2, 15, 10, 11, 14, 1, 17]
         assert indexed_tokens["bert-offsets"] == [1, 2, 3, 4, 5, 6, 7, 8, 11, 12]
 
+    def test_eq(self):
+        vocab_path = self.FIXTURES_ROOT / 'bert' / 'vocab.txt'
+        indexer1 = PretrainedBertIndexer(str(vocab_path))
+        indexer2 = PretrainedBertIndexer(str(vocab_path))
+        assert indexer1 == indexer2
+
     def test_do_lowercase(self):
         # Our default tokenizer doesn't handle lowercasing.
         tokenizer = WordTokenizer()

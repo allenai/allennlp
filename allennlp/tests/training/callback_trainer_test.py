@@ -207,7 +207,7 @@ class TestCallbackTrainer(ModelTestCase):
 
     @responses.activate
     def test_trainer_posts_to_url(self):
-        url = 'http://slack.com?webhook=ewifjweoiwjef'
+        url = 'https://slack.com?webhook=ewifjweoiwjef'
         responses.add(responses.POST, url)
         post_to_url = PostToUrl(url, message="only a test")
         callbacks = self.default_callbacks() + [post_to_url]

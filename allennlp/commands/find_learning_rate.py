@@ -51,10 +51,6 @@ import math
 import logging
 import shutil
 
-# pylint: disable=multiple-statements,wrong-import-position
-import matplotlib; matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.checks import ConfigurationError, check_for_gpu
 from allennlp.common import Params, Tqdm
@@ -63,7 +59,6 @@ from allennlp.data import Vocabulary, DataIterator
 from allennlp.models import Model
 from allennlp.training import Trainer
 from allennlp.training.util import datasets_from_params
-# pylint: enable=multiple-statements,wrong-import-position
 
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -323,6 +318,9 @@ def _smooth(values: List[float], beta: float) -> List[float]:
 
 
 def _save_plot(learning_rates: List[float], losses: List[float], save_path: str):
+    # pylint: disable=multiple-statements,wrong-import-position
+    import matplotlib; matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
     plt.ylabel('loss')
     plt.xlabel('learning rate (log10 scale)')
     plt.xscale('log')
