@@ -68,7 +68,7 @@ Windows is currently not officially supported, although we try to fix issues whe
 version of Python required for AllenNLP.  If you already have a Python 3.6 or 3.7
 environment you want to use, you can skip to the 'installing via pip' section.
 
-1.  [Download and install Conda](https://conda.io/docs/download.html).
+1.  [Download and install Conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html).
 
 2.  Create a Conda environment with Python 3.6
 
