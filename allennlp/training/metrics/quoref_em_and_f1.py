@@ -25,8 +25,7 @@ class QuorefEmAndF1(DropEmAndF1):
             All the ground truth answers.
         """
         # Convert ground truths to DROP input format
-        ground_truths = [{"spans": ground_truths}]
-        super(QuorefEmAndF1, self).__call__(prediction, ground_truths)
+        super(QuorefEmAndF1, self).__call__(prediction, [{"spans": ground_truths}])
 
     def __str__(self):
         return f"QuorefEmAndF1(em={self._total_em}, f1={self._total_f1})"
