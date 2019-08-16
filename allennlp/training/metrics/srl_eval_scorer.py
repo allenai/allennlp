@@ -10,7 +10,7 @@ from overrides import overrides
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.training.metrics.metric import Metric
-from allennlp.models.semantic_role_labeler import write_conll_formatted_tags_to_file
+from allennlp.models.srl_util import write_conll_formatted_tags_to_file
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 

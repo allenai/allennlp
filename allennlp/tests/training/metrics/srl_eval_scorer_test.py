@@ -2,7 +2,7 @@
 from numpy.testing import assert_allclose
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.models.semantic_role_labeler import convert_bio_tags_to_conll_format
+from allennlp.models.srl_util import convert_bio_tags_to_conll_format
 from allennlp.training.metrics import SrlEvalScorer
 
 
