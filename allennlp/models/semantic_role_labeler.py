@@ -164,6 +164,7 @@ class SemanticRoleLabeler(Model):
             if not self.ignore_span_metric and self.span_metric is not None and not self.training:
                 batch_verb_indices = [example_metadata["verb_index"] for example_metadata in metadata]
                 batch_sentences = [example_metadata["words"] for example_metadata in metadata]
+                # Get the BIO tags from decode()
                 # TODO (nfliu): This is kind of a hack, consider splitting out part
                 # of decode() to a separate function.
                 batch_bio_predicted_tags = self.decode(output_dict).pop("tags")
@@ -172,7 +173,6 @@ class SemanticRoleLabeler(Model):
                 batch_bio_gold_tags = [example_metadata["gold_tags"] for example_metadata in metadata]
                 batch_conll_gold_tags = [convert_bio_tags_to_conll_format(tags) for
                                          tags in batch_bio_gold_tags]
-                # Get the BIO tags from decode()
                 self.span_metric(batch_verb_indices,
                                  batch_sentences,
                                  batch_conll_predicted_tags,
