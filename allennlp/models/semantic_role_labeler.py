@@ -159,7 +159,7 @@ class SemanticRoleLabeler(Model):
                                                       tags,
                                                       mask,
                                                       label_smoothing=self._label_smoothing)
-            if not self.ignore_span_metric:
+            if not self.ignore_span_metric and self.span_metric is not None and not self.training:
                 batch_verb_indices = [example_metadata["verb_index"] for example_metadata in metadata]
                 batch_sentences = [example_metadata["words"] for example_metadata in metadata]
                 # TODO (nfliu): This is kind of a hack, consider splitting out part
