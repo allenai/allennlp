@@ -51,12 +51,12 @@ def _create_tensor_dicts_from_qiterable(qiterable: QIterable,
     """
     logger.info(f"Iterator worker: {index} PID: {os.getpid()}")
     def instances() -> Iterator[Instance]:
-        while qiterable.active_workers.value > 0 or qiterable.inflight_items.value > 0:
+        while qiterable.num_active_workers.value > 0 or qiterable.num_inflight_items.value > 0:
             while True:
                 try:
                     yield qiterable.output_queue.get(block=False, timeout=1.0)
-                    with qiterable.inflight_items.get_lock():
-                        qiterable.inflight_items.value -= 1
+                    with qiterable.num_inflight_items.get_lock():
+                        qiterable.num_inflight_items.value -= 1
                 except Empty:
                     break
 

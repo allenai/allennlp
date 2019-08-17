@@ -81,8 +81,11 @@ class TestMultiprocessDatasetReader(AllenNlpTestCase):
         all_instances = []
 
         # Half of 100 files * 4 sentences / file
-        for _ in range(200):
-            instance = reader.read(self.identical_files_glob)
+        i = 0
+        for instance in reader.read(self.identical_files_glob):
+            if i == 200:
+                break
+            i += 1
             all_instances.append(instance)
 
         assert len(all_instances) == 200
@@ -97,12 +100,12 @@ class TestMultiprocessDatasetReader(AllenNlpTestCase):
         # Essentially QIterable.__iter__. Broken out here as we intend it to be
         # a public interface.
         qiterable.start()
-        while qiterable.active_workers.value > 0 or qiterable.inflight_items.value > 0:
+        while qiterable.num_active_workers.value > 0 or qiterable.num_inflight_items.value > 0:
             while True:
                 try:
                     all_instances.append(qiterable.output_queue.get(block=False, timeout=1.0))
-                    with qiterable.inflight_items.get_lock():
-                        qiterable.inflight_items.value -= 1
+                    with qiterable.num_inflight_items.get_lock():
+                        qiterable.num_inflight_items.value -= 1
                 except Empty:
                     break
         qiterable.join()

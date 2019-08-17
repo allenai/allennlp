@@ -37,13 +37,7 @@ local BASE_ITERATOR = {
   "maximum_samples_per_batch": ["num_tokens", 2000]
 };
 
-//local BASE_ITERATOR = {
-//  "type": "basic",
-//  "batch_size": 66,
-//};
-
 {
-  #"dataset_reader": BASE_READER,
   "dataset_reader": {
     "type": "multiprocess",
     "base_reader": BASE_READER,
@@ -116,7 +110,6 @@ local BASE_ITERATOR = {
         "input_dropout": 0.1
     }
   },
-  #"iterator": BASE_ITERATOR,
   "iterator": {
     "type": "multiprocess",
     "base_iterator": BASE_ITERATOR,
