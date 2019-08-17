@@ -72,6 +72,8 @@ class SemanticRoleLabeler(Model):
         self.num_classes = self.vocab.get_vocab_size("labels")
 
         if srl_eval_path is not None:
+            # For the span based evaluation, we don't want to consider labels
+            # for verb, because the verb index is provided to the model.
             self.span_metric = SrlEvalScorer(srl_eval_path, ignore_classes=["V"])
         else:
             self.span_metric = None
