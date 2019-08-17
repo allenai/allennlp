@@ -245,14 +245,18 @@ def bioul_tags_to_spans(tag_sequence: List[str],
             spans.append((label.partition('-')[2], (index, index)))
         elif label[0] == 'B':
             start = index
-            while label[0] != 'L':
+            tag_type = label.partition('-')[2]
+            index += 1
+            label = tag_sequence[index]
+            while label == 'I-' + tag_type:
                 index += 1
                 if index >= len(tag_sequence):
                     raise InvalidTagSequence(tag_sequence)
                 label = tag_sequence[index]
                 if not (label[0] == 'I' or label[0] == 'L'):
                     raise InvalidTagSequence(tag_sequence)
-            spans.append((label.partition('-')[2], (start, index)))
+            if label == 'L-' + tag_type:
+                spans.append((label.partition('-')[2], (start, index)))
         else:
             if label != 'O':
                 raise InvalidTagSequence(tag_sequence)
