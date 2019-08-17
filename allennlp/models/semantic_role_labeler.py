@@ -67,7 +67,7 @@ class SemanticRoleLabeler(Model):
         self.text_field_embedder = text_field_embedder
         self.num_classes = self.vocab.get_vocab_size("labels")
 
-        self.span_metric = SrlEvalScorer()
+        self.span_metric = SrlEvalScorer(ignore_classes=["V"])
 
         self.encoder = encoder
         # There are exactly 2 binary features for the verb predicate embedding.
