@@ -5,7 +5,7 @@ or dataset to JSON predictions using a trained model and its
 
 .. code-block:: bash
 
-    $ allennlp predict -h
+    $ allennlp predict --help
     usage: allennlp predict [-h] [--output-file OUTPUT_FILE]
                             [--weights-file WEIGHTS_FILE]
                             [--batch-size BATCH_SIZE] [--silent]
