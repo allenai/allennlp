@@ -15,7 +15,7 @@ from allennlp.models.model import Model
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
 from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits
 from allennlp.nn.util import get_lengths_from_binary_sequence_mask, viterbi_decode
-from allennlp.training.metrics.srl_eval_scorer import SrlEvalScorer
+from allennlp.training.metrics.srl_eval_scorer import SrlEvalScorer, DEFAULT_SRL_EVAL_PATH
 
 @Model.register("srl")
 class SemanticRoleLabeler(Model):
@@ -52,6 +52,9 @@ class SemanticRoleLabeler(Model):
         Whether or not to use label smoothing on the labels when computing cross entropy loss.
     ignore_span_metric: ``bool``, optional (default = False)
         Whether to calculate span loss, which is irrelevant when predicting BIO for Open Information Extraction.
+    srl_eval_path: ``str``, optional (default=``DEFAULT_SRL_EVAL_PATH``)
+        The path to the srl-eval.pl script. By default, will use the srl-eval.pl included with allennlp,
+        which is located at allennlp/tools/srl-eval.pl . If ``None``, srl-eval.pl is not used.
     """
     def __init__(self, vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
@@ -61,13 +64,17 @@ class SemanticRoleLabeler(Model):
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None,
                  label_smoothing: float = None,
-                 ignore_span_metric: bool = False) -> None:
+                 ignore_span_metric: bool = False,
+                 srl_eval_path: str = DEFAULT_SRL_EVAL_PATH) -> None:
         super(SemanticRoleLabeler, self).__init__(vocab, regularizer)
 
         self.text_field_embedder = text_field_embedder
         self.num_classes = self.vocab.get_vocab_size("labels")
 
-        self.span_metric = SrlEvalScorer(ignore_classes=["V"])
+        if srl_eval_path is not None:
+            self.span_metric = SrlEvalScorer(srl_eval_path, ignore_classes=["V"])
+        else:
+            self.span_metric = None
 
         self.encoder = encoder
         # There are exactly 2 binary features for the verb predicate embedding.
