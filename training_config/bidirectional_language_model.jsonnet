@@ -42,7 +42,7 @@ local BASE_ITERATOR = {
     "type": "multiprocess",
     "base_reader": BASE_READER,
     "num_workers": NUM_THREADS,
-    "output_queue_size": 1000,
+    "output_queue_size": 1000
   },
   // Note: We don't set a validation_data_path because the softmax is only
   // sampled during training. Not sampling on GPUs results in a certain OOM
