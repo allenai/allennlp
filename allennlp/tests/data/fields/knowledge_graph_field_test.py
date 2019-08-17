@@ -153,9 +153,8 @@ class KnowledgeGraphFieldTest(AllenNlpTestCase):
         assert_almost_equal(batched_tensor_dict['linking'].detach().cpu().numpy(),
                             expected_linking_tensor.detach().cpu().numpy())
 
-    def test_tokenizer_exists(self):
+    def test_field_initialized_with_empty_constructor(self):
         try:
-            field = KnowledgeGraphField(self.graph, self.utterance, self.token_indexers, None)
-            assert (field._tokenizer is not None)
-        except AttributeError as e:
-            pytest.fail(str(e))
+            self.field.empty_field()
+        except AssertionError as e:
+            pytest.fail(str(e), pytrace=True)
