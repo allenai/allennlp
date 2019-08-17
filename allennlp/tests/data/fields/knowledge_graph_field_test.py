@@ -152,3 +152,10 @@ class KnowledgeGraphFieldTest(AllenNlpTestCase):
         expected_linking_tensor = torch.stack([tensor_dict1['linking'], tensor_dict2['linking']])
         assert_almost_equal(batched_tensor_dict['linking'].detach().cpu().numpy(),
                             expected_linking_tensor.detach().cpu().numpy())
+
+    def test_tokenizer_exists(self):
+        try:
+            field = KnowledgeGraphField(self.graph, self.utterance, self.token_indexers, None)
+            assert (field._tokenizer is not None)
+        except AttributeError as e:
+            pytest.fail(str(e))
