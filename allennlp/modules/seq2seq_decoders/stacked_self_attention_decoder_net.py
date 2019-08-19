@@ -1,5 +1,6 @@
 from typing import Tuple, Dict, Optional
 import copy
+from copy import deepcopy
 import math
 from overrides import overrides
 
@@ -65,7 +66,6 @@ class StackedSelfAttentionDecoderNet(DecoderNet):
                          target_embedding_dim=target_embedding_dim,
                          decodes_parallel=True)
 
-        deep_copy = copy.deepcopy
         attn = MultiHeadedAttention(num_attention_heads, decoding_dim, attention_dropout_prob)
         feed_forward = PositionwiseFeedForward(decoding_dim, feedforward_hidden_dim, dropout_prob)
         self._embed_scale = math.sqrt(decoding_dim)
@@ -73,7 +73,7 @@ class StackedSelfAttentionDecoderNet(DecoderNet):
                                                        positional_encoding_max_steps) \
                                                        if use_positional_encoding else None
         self._dropout = nn.Dropout(dropout_prob)
-        self._self_attention = Decoder(DecoderLayer(decoding_dim, deep_copy(attn), deep_copy(attn),
+        self._self_attention = Decoder(DecoderLayer(decoding_dim, deepcopy(attn), deepcopy(attn),
                                                     feed_forward, residual_dropout_prob), num_layers)
 
     @overrides
@@ -107,17 +107,20 @@ class StackedSelfAttentionDecoderNet(DecoderNet):
         return {}, decoded
 
 
-def clones(module, N):
+def _clones(module: nn.Module, num_layers: int):
     "Produce N identical layers."
-    return nn.ModuleList([copy.deepcopy(module) for _ in range(N)])
+    return nn.ModuleList([copy.deepcopy(module) for _ in range(num_layers)])
 
 
 class Decoder(nn.Module):
-    "Generic N layer decoder with masking."
+    """
+    Transformer N layer decoder with masking.
+    Code taken from http://nlp.seas.harvard.edu/2018/04/03/attention.html
+    """
 
-    def __init__(self, layer, N) -> None:
+    def __init__(self, layer: nn.Module, num_layers: int) -> None:
         super().__init__()
-        self.layers = clones(layer, N)
+        self.layers = _clones(layer, num_layers)
         self.norm = LayerNorm(layer.size)
 
     @overrides
@@ -129,7 +132,10 @@ class Decoder(nn.Module):
         return self.norm(x)
 
 class DecoderLayer(nn.Module):
-    "Decoder is made of self-attn, src-attn, and feed forward (defined below)"
+    """
+    A single layer of transformer decoder.
+    Code taken from http://nlp.seas.harvard.edu/2018/04/03/attention.html
+    """
     def __init__(self,
                  size: int, self_attn: MultiHeadedAttention,
                  src_attn: MultiHeadedAttention, feed_forward: F, dropout: float) -> None:
@@ -138,13 +144,12 @@ class DecoderLayer(nn.Module):
         self.self_attn = self_attn
         self.src_attn = src_attn
         self.feed_forward = feed_forward
-        self.sublayer = clones(SublayerConnection(size, dropout), 3)
+        self.sublayer = _clones(SublayerConnection(size, dropout), 3)
 
     def forward(self, x: torch.Tensor, memory: torch.Tensor,
                 src_mask: torch.Tensor, tgt_mask: torch.Tensor) -> torch.Tensor:
         # pylint: disable=arguments-differ
         "Follow Figure 1 (right) for connections."
-        m = memory
         x = self.sublayer[0](x, lambda x: self.self_attn(x, x, x, tgt_mask))
-        x = self.sublayer[1](x, lambda x: self.src_attn(x, m, m, src_mask))
+        x = self.sublayer[1](x, lambda x: self.src_attn(x, memory, memory, src_mask))
         return self.sublayer[2](x, self.feed_forward)

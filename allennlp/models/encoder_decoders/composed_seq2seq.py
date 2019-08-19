@@ -20,8 +20,9 @@ class ComposedSeq2Seq(Model):
     a neural machine translation system, an abstractive summarization system, or any other common
     seq2seq problem.  The model here is simple, but should be a decent starting place for
     implementing recent models for these tasks.
-    The ``ComposedSeq2Seq`` is composed from separate Seq2SeqEncoder and DecoderCell classes.
-    This parts are customizable and independent from each other.
+
+    The ``ComposedSeq2Seq`` class composes separate ``Seq2SeqEncoder`` and ``SeqDecoder`` classes.
+    These parts are customizable and are independent from each other.
 
     Parameters
     ----------
@@ -63,7 +64,10 @@ class ComposedSeq2Seq(Model):
             raise ConfigurationError(f"Encoder output dimension {self._encoder.get_output_dim()} should be"
                                      f" equal to decoder dimension {self._decoder.get_output_dim()}.")
         if tied_source_embedder_key:
-            # Very ugly way to tie Embeddings
+            # A bit of a ugly hack to tie embeddings.
+            # Works only for `BasicTextFieldEmbedder`, and since
+            # it can have multiple embedders, and `SeqDecoder` contains only a single embedder, we need
+            # the key to select the source embedder to replace it with the target embedder from the decoder.
             if not isinstance(self._source_text_embedder, BasicTextFieldEmbedder):
                 raise ConfigurationError("Unable to tie embeddings,"
                                          "Source text embedder is not an instance of `BasicTextFieldEmbedder`.")
@@ -72,13 +76,10 @@ class ComposedSeq2Seq(Model):
             if not isinstance(source_embedder, Embedding):
                 raise ConfigurationError("Unable to tie embeddings,"
                                          "Selected source embedder is not an instance of `Embedding`.")
-            source_weight_shape = source_embedder.weight.shape
-            target_weight_shape = self._decoder.target_embedder.weight.shape
-            if  source_weight_shape != target_weight_shape:
-                raise ConfigurationError(f"Unable to tie embeddings due to mismatch in shared weights."
-                                         f"source  -  {source_weight_shape}"
-                                         f"target  -  {target_weight_shape}")
-            source_embedder.weight = self._decoder.target_embedder.weight
+            if source_embedder.get_output_dim() != self._decoder.target_embedder.get_output_dim():
+                raise ConfigurationError(f"Output Dimensions mismatch between"
+                                         f"source embedder and target embedder.")
+            self._source_text_embedder._token_embedders[tied_source_embedder_key] = self._decoder.target_embedder
         initializer(self)
 
     @overrides
@@ -87,7 +88,7 @@ class ComposedSeq2Seq(Model):
                 target_tokens: Dict[str, torch.LongTensor] = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
-        Make foward pass with decoder logic for producing the entire target sequence.
+        Make foward pass on the encoder and decoder for producing the entire target sequence.
 
         Parameters
         ----------
@@ -101,6 +102,7 @@ class ComposedSeq2Seq(Model):
         Returns
         -------
         Dict[str, torch.Tensor]
+            The output tensors from the decoder.
         """
         state = self._encode(source_tokens)
 
@@ -114,6 +116,23 @@ class ComposedSeq2Seq(Model):
         return self._decoder.post_process(output_dict)
 
     def _encode(self, source_tokens: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+        """
+        Make foward pass on the encoder.
+
+        Parameters
+        ----------
+        source_tokens : ``Dict[str, torch.LongTensor]``
+           The output of `TextField.as_array()` applied on the source `TextField`. This will be
+           passed through a `TextFieldEmbedder` and then through an encoder.
+
+        Returns
+        -------
+        Dict[str, torch.Tensor]
+            Map consisting of the key `source_mask` with the mask over the
+            `source_tokens` text field,
+            and the key `encoder_outputs` with the output tensor from
+            forward pass on the encoder.
+        """
         # shape: (batch_size, max_input_sequence_length, encoder_input_dim)
         embedded_input = self._source_text_embedder(source_tokens)
         # shape: (batch_size, max_input_sequence_length)

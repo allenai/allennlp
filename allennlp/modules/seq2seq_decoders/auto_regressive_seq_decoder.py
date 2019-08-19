@@ -150,13 +150,11 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
         target_mask = util.get_text_field_mask(target_tokens)
 
         if self._scheduled_sampling_ratio == 0 and self._decoder_net.decodes_parallel:
-            _, decoder_output = self._decoder_net(
-                previous_state=state,
-                previous_steps_predictions=target_embedding[:,:-1,:],
-                encoder_outputs=encoder_outputs,
-                source_mask=source_mask,
-                previous_steps_mask=target_mask[:,:-1]
-            )
+            _, decoder_output = self._decoder_net(previous_state=state,
+                                                  previous_steps_predictions=target_embedding[:, :-1, :],
+                                                  encoder_outputs=encoder_outputs,
+                                                  source_mask=source_mask,
+                                                  previous_steps_mask=target_mask[:, :-1])
 
             # shape: (group_size, max_target_sequence_length, num_classes)
             logits = self._output_projection_layer(decoder_output)
@@ -212,7 +210,7 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
                 last_predictions_embeddings = self.target_embedder(last_predictions).unsqueeze(1)
 
                 # This step is required, since we want to keep up two different prediction history: gold and real
-                if steps_embeddings.shape[-1] == 0:
+                if steps_embeddings.shape[-1] == 0: # pylint: disable=unsubscriptable-object
                     # There is no previous steps, except for start vectors in ``last_predictions``
                     # shape: (group_size, 1, target_embedding_dim)
                     steps_embeddings = last_predictions_embeddings
@@ -231,7 +229,7 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
         # we could consider taking the last_predictions here and building step_predictions
         # and use that instead of running beam search again, if performance in validation is taking a hit
         output_dict = {
-            'loss': loss
+                'loss': loss
         }
 
         return output_dict
@@ -268,20 +266,17 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
             # shape: (group_size, steps_count, target_embedding_dim)
             previous_steps_predictions = torch.cat([previous_steps_predictions, last_predictions_embeddings], 1)
 
-        decoder_state, decoder_output = self._decoder_net(
-            previous_steps_predictions=previous_steps_predictions,
-            encoder_outputs=encoder_outputs,
-            source_mask=source_mask,
-            previous_state=state
-        )
-
+        decoder_state, decoder_output = self._decoder_net(previous_state=state,
+                                                          encoder_outputs=encoder_outputs,
+                                                          source_mask=source_mask,
+                                                          previous_steps_predictions=previous_steps_predictions)
         state["previous_steps_predictions"] = previous_steps_predictions
 
         # Update state with new decoder state, override previous state
         state.update(decoder_state)
 
         if self._decoder_net.decodes_parallel:
-            decoder_output = decoder_output[:,-1,:]
+            decoder_output = decoder_output[:, -1, :]
 
         # shape: (group_size, num_classes)
         output_projections = self._output_projection_layer(decoder_output)
@@ -385,7 +380,8 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
     @overrides
     def forward(self,
                 encoder_out: Dict[str, torch.LongTensor],
-                target_tokens: Dict[str, torch.LongTensor] = None):
+                target_tokens: Dict[str, torch.LongTensor] = None) -> Dict[str, torch.Tensor]:
+        # pylint: disable=arguments-differ
 
         state = encoder_out
         decoder_init_state = self._decoder_net.init_decoder_state(state)

@@ -5,9 +5,16 @@ from allennlp.common import Registrable
 class DecoderNet(torch.nn.Module, Registrable):
     # pylint: disable=abstract-method
     """
-    A ``DecoderNet`` is a ``Module`` that takes as input a result of ``Seq2SeqEncoder`` and returns a
-    new sequence of vectors.
-    Decoder should implement function to perform a decoding step.
+    The ``DecoderNet`` abstract class to implement the neural architectures for decoding the encoded states and
+    embedded previous step prediction vectors into sequence of output vectors.
+
+    The implementations of ``DecoderNet`` is used by implementations of
+    ``allennlp.modules.seq2seq_decoders.seq_decoder.SeqDecoder`` such as
+    ``allennlp.modules.seq2seq_decoders.seq_decoder.auto_regressive_seq_decoder.AutoRegressiveSeqDecoder``.
+
+    The outputs of this module would be likely used by ``allennlp.modules.seq2seq_decoders.seq_decoder.SeqDecoder``
+    to apply the final output feedforward layer and softmax.
+
     Parameters
     ----------
     decoding_dim : ``int``, required
@@ -23,7 +30,7 @@ class DecoderNet(torch.nn.Module, Registrable):
                  decoding_dim: int,
                  target_embedding_dim: int,
                  decodes_parallel: bool) -> None:
-        super(DecoderNet, self).__init__()
+        super().__init__()
         self.target_embedding_dim = target_embedding_dim
         self.decoding_dim = decoding_dim
         self.decodes_parallel = decodes_parallel
