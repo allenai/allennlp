@@ -16,13 +16,13 @@
         }
       }
     },
-    "embedding_dropout": 0.2,
+    "embedding_dropout": 0.0,
     "pre_encode_feedforward": {
         "input_dim": 10,
         "num_layers": 1,
         "hidden_dims": [3],
         "activations": ["relu"],
-        "dropout": [0.2]
+        "dropout": [0.0]
     },
     "encoder": {
       "type": "lstm",
@@ -36,13 +36,13 @@
       "hidden_size": 3,
       "num_layers": 1
     },
-    "integrator_dropout": 0.2,
+    "integrator_dropout": 0.0,
     "output_layer": {
         "input_dim": 12,
         "num_layers": 2,
         "hidden_dims": [6, 5],
         "activations": ["relu", "linear"],
-        "dropout": [0.2, 0.0]
+        "dropout": [0.0, 0.0]
     }
   },
   "iterator": {

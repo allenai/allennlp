@@ -3,6 +3,7 @@ import itertools
 import warnings
 
 from overrides import overrides
+import torch
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import pad_sequence_to_length
@@ -34,6 +35,8 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
     min_padding_length: ``int``, optional (default=``0``)
         We use this value as the minimum length of padding. Usually used with :class:``CnnEncoder``, its
         value should be set to the maximum value of ``ngram_filter_sizes`` correspondingly.
+    token_min_padding_length : ``int``, optional (default=``0``)
+        See :class:`TokenIndexer`.
     """
     # pylint: disable=no-self-use
     def __init__(self,
@@ -41,7 +44,9 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
                  character_tokenizer: CharacterTokenizer = CharacterTokenizer(),
                  start_tokens: List[str] = None,
                  end_tokens: List[str] = None,
-                 min_padding_length: int = 0) -> None:
+                 min_padding_length: int = 0,
+                 token_min_padding_length: int = 0) -> None:
+        super().__init__(token_min_padding_length)
         if min_padding_length == 0:
             url = "https://github.com/allenai/allennlp/issues/1954"
             warnings.warn("You are using the default value (0) of `min_padding_length`, "
@@ -96,10 +101,10 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
         return []
 
     @overrides
-    def pad_token_sequence(self,
-                           tokens: Dict[str, List[List[int]]],
-                           desired_num_tokens: Dict[str, int],
-                           padding_lengths: Dict[str, int]) -> Dict[str, List[List[int]]]:
+    def as_padded_tensor(self,
+                         tokens: Dict[str, List[List[int]]],
+                         desired_num_tokens: Dict[str, int],
+                         padding_lengths: Dict[str, int]) -> Dict[str, torch.Tensor]:
         # Pad the tokens.
         # tokens has only one key...
         key = list(tokens.keys())[0]
@@ -123,4 +128,5 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
             # Removes the "dummy token".
             padded_tokens.pop()
         # Truncates all the tokens to the desired length, and return the result.
-        return {key: [list(token[:desired_token_length]) for token in padded_tokens]}
+        return {key: torch.LongTensor([list(token[:desired_token_length])
+                                       for token in padded_tokens])}

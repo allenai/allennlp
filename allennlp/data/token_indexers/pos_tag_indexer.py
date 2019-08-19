@@ -2,6 +2,7 @@ import logging
 from typing import Dict, List, Set
 
 from overrides import overrides
+import torch
 
 from allennlp.common.util import pad_sequence_to_length
 from allennlp.data.vocabulary import Vocabulary
@@ -24,9 +25,14 @@ class PosTagIndexer(TokenIndexer[int]):
         We will use this namespace in the :class:`Vocabulary` to map strings to indices.
     coarse_tags : ``bool``, optional (default=``False``)
         If ``True``, we will use coarse POS tags instead of the default fine-grained POS tags.
+    token_min_padding_length : ``int``, optional (default=``0``)
+        See :class:`TokenIndexer`.
     """
     # pylint: disable=no-self-use
-    def __init__(self, namespace: str = 'pos_tokens', coarse_tags: bool = False) -> None:
+    def __init__(self, namespace: str = 'pos_tokens',
+                 coarse_tags: bool = False,
+                 token_min_padding_length: int = 0) -> None:
+        super().__init__(token_min_padding_length)
         self._namespace = namespace
         self._coarse_tags = coarse_tags
         self._logged_errors: Set[str] = set()
@@ -64,17 +70,13 @@ class PosTagIndexer(TokenIndexer[int]):
         return {index_name: [vocabulary.get_token_index(tag, self._namespace) for tag in tags]}
 
     @overrides
-    def get_padding_token(self) -> int:
-        return 0
-
-    @overrides
     def get_padding_lengths(self, token: int) -> Dict[str, int]:  # pylint: disable=unused-argument
         return {}
 
     @overrides
-    def pad_token_sequence(self,
-                           tokens: Dict[str, List[int]],
-                           desired_num_tokens: Dict[str, int],
-                           padding_lengths: Dict[str, int]) -> Dict[str, List[int]]:  # pylint: disable=unused-argument
-        return {key: pad_sequence_to_length(val, desired_num_tokens[key])
+    def as_padded_tensor(self,
+                         tokens: Dict[str, List[int]],
+                         desired_num_tokens: Dict[str, int],
+                         padding_lengths: Dict[str, int]) -> Dict[str, torch.Tensor]:  # pylint: disable=unused-argument
+        return {key: torch.LongTensor(pad_sequence_to_length(val, desired_num_tokens[key]))
                 for key, val in tokens.items()}

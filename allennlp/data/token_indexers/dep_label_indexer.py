@@ -2,6 +2,7 @@ import logging
 from typing import Dict, List, Set
 
 from overrides import overrides
+import torch
 
 from allennlp.common.util import pad_sequence_to_length
 from allennlp.data.vocabulary import Vocabulary
@@ -21,9 +22,13 @@ class DepLabelIndexer(TokenIndexer[int]):
     ----------
     namespace : ``str``, optional (default=``dep_labels``)
         We will use this namespace in the :class:`Vocabulary` to map strings to indices.
+    token_min_padding_length : ``int``, optional (default=``0``)
+        See :class:`TokenIndexer`.
     """
     # pylint: disable=no-self-use
-    def __init__(self, namespace: str = 'dep_labels') -> None:
+    def __init__(self, namespace: str = 'dep_labels',
+                 token_min_padding_length: int = 0) -> None:
+        super().__init__(token_min_padding_length)
         self.namespace = namespace
         self._logged_errors: Set[str] = set()
 
@@ -47,17 +52,13 @@ class DepLabelIndexer(TokenIndexer[int]):
         return {index_name: [vocabulary.get_token_index(dep_label, self.namespace) for dep_label in dep_labels]}
 
     @overrides
-    def get_padding_token(self) -> int:
-        return 0
-
-    @overrides
     def get_padding_lengths(self, token: int) -> Dict[str, int]:  # pylint: disable=unused-argument
         return {}
 
     @overrides
-    def pad_token_sequence(self,
-                           tokens: Dict[str, List[int]],
-                           desired_num_tokens: Dict[str, int],
-                           padding_lengths: Dict[str, int]) -> Dict[str, List[int]]:  # pylint: disable=unused-argument
-        return {key: pad_sequence_to_length(val, desired_num_tokens[key])
+    def as_padded_tensor(self,
+                         tokens: Dict[str, List[int]],
+                         desired_num_tokens: Dict[str, int],
+                         padding_lengths: Dict[str, int]) -> Dict[str, torch.Tensor]:  # pylint: disable=unused-argument
+        return {key: torch.LongTensor(pad_sequence_to_length(val, desired_num_tokens[key]))
                 for key, val in tokens.items()}

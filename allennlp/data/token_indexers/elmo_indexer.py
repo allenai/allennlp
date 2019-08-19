@@ -1,6 +1,7 @@
 from typing import Dict, List
 
 from overrides import overrides
+import torch
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import pad_sequence_to_length
@@ -21,6 +22,7 @@ def _make_bos_eos(
     char_ids[1] = character
     char_ids[2] = end_of_word_character
     return char_ids
+
 
 class ELMoCharacterMapper:
     """
@@ -96,11 +98,15 @@ class ELMoTokenCharactersIndexer(TokenIndexer[List[int]]):
         If not None, then provides a mapping of special tokens to character
         ids. When using pre-trained models, then the character id must be
         less then 261, and we recommend using un-used ids (e.g. 1-32).
+    token_min_padding_length : ``int``, optional (default=``0``)
+        See :class:`TokenIndexer`.
     """
     # pylint: disable=no-self-use
     def __init__(self,
                  namespace: str = 'elmo_characters',
-                 tokens_to_add: Dict[str, int] = None) -> None:
+                 tokens_to_add: Dict[str, int] = None,
+                 token_min_padding_length: int = 0) -> None:
+        super().__init__(token_min_padding_length)
         self._namespace = namespace
         self._mapper = ELMoCharacterMapper(tokens_to_add)
 
@@ -130,20 +136,16 @@ class ELMoTokenCharactersIndexer(TokenIndexer[List[int]]):
         # pylint: disable=unused-argument
         return {}
 
-    @overrides
-    def get_padding_token(self) -> List[int]:
-        return []
-
     @staticmethod
     def _default_value_for_padding():
         return [0] * ELMoCharacterMapper.max_word_length
 
     @overrides
-    def pad_token_sequence(self,
-                           tokens: Dict[str, List[List[int]]],
-                           desired_num_tokens: Dict[str, int],
-                           padding_lengths: Dict[str, int]) -> Dict[str, List[List[int]]]:
+    def as_padded_tensor(self,
+                         tokens: Dict[str, List[List[int]]],
+                         desired_num_tokens: Dict[str, int],
+                         padding_lengths: Dict[str, int]) -> Dict[str, torch.Tensor]:
         # pylint: disable=unused-argument
-        return {key: pad_sequence_to_length(val, desired_num_tokens[key],
-                                            default_value=self._default_value_for_padding)
+        return {key: torch.LongTensor(pad_sequence_to_length(
+                val, desired_num_tokens[key], default_value=self._default_value_for_padding))
                 for key, val in tokens.items()}

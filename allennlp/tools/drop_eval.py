@@ -1,13 +1,14 @@
 #!/usr/bin/python
 
 from collections import defaultdict
-from typing import Any, Dict, List, Set, Tuple, Union
+from typing import Any, Dict, List, Set, Tuple, Union, Optional
 import json
 import argparse
 import string
 import re
 
 import numpy as np
+from scipy.optimize import linear_sum_assignment
 
 
 # From here through _normalize_answer was originally copied from:
@@ -56,47 +57,36 @@ def _normalize_number(text: str) -> str:
         return text
 
 
-def _answer_to_bags(answer: Union[str, List[str], Tuple[str, ...]]) -> Tuple[Set[str], List[Set[str]]]:
+def _answer_to_bags(answer: Union[str, List[str], Tuple[str, ...]]) -> Tuple[List[str], List[Set[str]]]:
     if isinstance(answer, (list, tuple)):
         raw_spans = answer
     else:
         raw_spans = [answer]
-    span_bag: Set[str] = set()
-    token_bag = []
+    normalized_spans: List[str] = []
+    token_bags = []
     for raw_span in raw_spans:
-        span = _normalize_answer(raw_span)
-        span_bag.add(span)
-        token_bag.append(set(span.split()))
-    return span_bag, token_bag
+        normalized_span = _normalize_answer(raw_span)
+        normalized_spans.append(normalized_span)
+        token_bags.append(set(normalized_span.split()))
+    return normalized_spans, token_bags
 
 
 def _align_bags(predicted: List[Set[str]], gold: List[Set[str]]) -> List[float]:
     """
-    Takes gold and predicted answer sets and first finds a greedy 1-1 alignment
-    between them and gets maximum metric values over all the answers
+    Takes gold and predicted answer sets and first finds the optimal 1-1 alignment
+    between them and gets maximum metric values over all the answers.
     """
-    f1_scores = []
+    scores = np.zeros([len(gold), len(predicted)])
     for gold_index, gold_item in enumerate(gold):
-        max_f1 = 0.0
-        max_index = None
-        best_alignment: Tuple[Set[str], Set[str]] = (set(), set())
-        if predicted:
-            for pred_index, pred_item in enumerate(predicted):
-                current_f1 = _compute_f1(pred_item, gold_item)
-                if current_f1 >= max_f1:
-                    best_alignment = (gold_item, pred_item)
-                    max_f1 = current_f1
-                    max_index = pred_index
-            match_flag = _match_numbers_if_present(*best_alignment)
-            gold[gold_index] = set()
-            predicted[max_index] = set()
-        else:
-            match_flag = False
-        if match_flag:
-            f1_scores.append(max_f1)
-        else:
-            f1_scores.append(0.0)
-    return f1_scores
+        for pred_index, pred_item in enumerate(predicted):
+            if _match_numbers_if_present(gold_item, pred_item):
+                scores[gold_index, pred_index] = _compute_f1(pred_item, gold_item)
+    row_ind, col_ind = linear_sum_assignment(-scores)
+
+    max_scores = np.zeros([max(len(gold), len(predicted))])
+    for row, column in zip(row_ind, col_ind):
+        max_scores[row] = max(max_scores[row], scores[row, column])
+    return max_scores
 
 
 def _compute_f1(predicted_bag: Set[str], gold_bag: Set[str]) -> float:
@@ -139,7 +129,10 @@ def get_metrics(predicted: Union[str, List[str], Tuple[str, ...]],
     predicted_bags = _answer_to_bags(predicted)
     gold_bags = _answer_to_bags(gold)
 
-    exact_match = 1.0 if predicted_bags[0] == gold_bags[0] else 0
+    if set(predicted_bags[0]) == set(gold_bags[0]) and len(predicted_bags[0]) == len(gold_bags[0]):
+        exact_match = 1.0
+    else:
+        exact_match = 0.0
 
     f1_per_bag = _align_bags(predicted_bags[1], gold_bags[1])
     f1 = np.mean(f1_per_bag)
@@ -226,18 +219,30 @@ def evaluate_json(annotations: Dict[str, Any], predicted_answers: Dict[str, Any]
     return global_em, global_f1
 
 
-def evaluate_prediction_file(prediction_path: str, gold_path: str) -> Tuple[float, float]:
+def evaluate_prediction_file(prediction_path: str, gold_path: str,
+                             output_path: Optional[str] = None) -> Tuple[float, float]:
     """
     Takes a prediction file and a gold file and evaluates the predictions for each question in the
     gold file.  Both files must be json formatted and must have query_id keys, which are used to
     match predictions to gold annotations.  The gold file is assumed to have the format of the dev
     set in the DROP data release.  The prediction file must be a JSON dictionary keyed by query id,
     where the value is either a JSON dictionary with an "answer" key, or just a string (or list of
-    strings) that is the answer.
+    strings) that is the answer. Writes a json with global_em and global_f1 metrics to file at
+    the specified output path, unless None is passed as output path.
     """
     predicted_answers = json.load(open(prediction_path, encoding='utf-8'))
     annotations = json.load(open(gold_path, encoding='utf-8'))
-    return evaluate_json(annotations, predicted_answers)
+    global_em, global_f1 = evaluate_json(annotations, predicted_answers)
+
+    # Output predictions to file if an output path is given
+    if output_path is not None:
+        output_dict = {"global_em": global_em,
+                       "global_f1": global_f1}
+
+        with open(output_path, "w", encoding="utf8") as outfile:
+            json.dump(output_dict, outfile)
+
+    return (global_em, global_f1)
 
 
 if __name__ == "__main__":
@@ -253,5 +258,11 @@ if __name__ == "__main__":
                         required=False,
                         default="sample_predictions.json",
                         help='location of the prediction file')
+    parser.add_argument("--output_path",
+                        type=str,
+                        required=False,
+                        default=None,
+                        help='location of the output metrics file')
+
     args = parser.parse_args()
-    evaluate_prediction_file(args.prediction_path, args.gold_path)
+    evaluate_prediction_file(args.prediction_path, args.gold_path, args.output_path)

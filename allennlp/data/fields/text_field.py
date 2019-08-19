@@ -39,6 +39,7 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
         self._token_indexers = token_indexers
         self._indexed_tokens: Optional[Dict[str, TokenList]] = None
         self._indexer_name_to_indexed_token: Optional[Dict[str, List[str]]] = None
+        self._token_index_to_indexer_name: Optional[Dict[str, str]] = None
 
         if not all([isinstance(x, (Token, SpacyToken)) for x in tokens]):
             raise ConfigurationError("TextFields must be passed Tokens. "
@@ -64,12 +65,16 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
     def index(self, vocab: Vocabulary):
         token_arrays: Dict[str, TokenList] = {}
         indexer_name_to_indexed_token: Dict[str, List[str]] = {}
+        token_index_to_indexer_name: Dict[str, str] = {}
         for indexer_name, indexer in self._token_indexers.items():
             token_indices = indexer.tokens_to_indices(self.tokens, vocab, indexer_name)
             token_arrays.update(token_indices)
             indexer_name_to_indexed_token[indexer_name] = list(token_indices.keys())
+            for token_index in token_indices:
+                token_index_to_indexer_name[token_index] = indexer_name
         self._indexed_tokens = token_arrays
         self._indexer_name_to_indexed_token = indexer_name_to_indexed_token
+        self._token_index_to_indexer_name = token_index_to_indexer_name
 
     @overrides
     def get_padding_lengths(self) -> Dict[str, int]:
@@ -95,22 +100,25 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
                 # This is a list of dicts, one for each token in the field.
                 token_lengths = [indexer.get_padding_lengths(token)
                                  for token in self._indexed_tokens[indexed_tokens_key]]
-            if not token_lengths:
-                # This is a padding edge case and occurs when we want to pad a ListField of
-                # TextFields. In order to pad the list field, we need to be able to have an
-                # _empty_ TextField, but if this is the case, token_lengths will be an empty
-                # list, so we add the default empty padding dictionary to the list instead.
-                token_lengths = [{}]
-            # Iterate over the keys and find the maximum token length.
-            # It's fine to iterate over the keys of the first token since all tokens have the same keys.
-            for key in token_lengths[0]:
-                indexer_lengths[key] = max(x[key] if key in x else 0 for x in token_lengths)
+                if not token_lengths:
+                    # This is a padding edge case and occurs when we want to pad a ListField of
+                    # TextFields. In order to pad the list field, we need to be able to have an
+                    # _empty_ TextField, but if this is the case, token_lengths will be an empty
+                    # list, so we add the padding for a token of length 0 to the list instead.
+                    token_lengths = [indexer.get_padding_lengths([])]
+                # Iterate over the keys and find the maximum token length.
+                # It's fine to iterate over the keys of the first token since all tokens have the same keys.
+                for key in token_lengths[0]:
+                    indexer_lengths[key] = max(x[key] if key in x else 0 for x in token_lengths)
             lengths.append(indexer_lengths)
 
         padding_lengths = {}
         num_tokens = set()
-        for indexer_name, token_list in self._indexed_tokens.items():
-            padding_lengths[f"{indexer_name}_length"] = len(token_list)
+        for token_index, token_list in self._indexed_tokens.items():
+            indexer_name = self._token_index_to_indexer_name[token_index]
+            indexer = self._token_indexers[indexer_name]
+            padding_lengths[f"{token_index}_length"] = max(len(token_list),
+                                                           indexer.get_token_min_padding_length())
             num_tokens.add(len(token_list))
 
         # We don't actually use this for padding anywhere, but we used to.  We add this key back in
@@ -121,7 +129,7 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
         # Get all keys which have been used for padding for each indexer and take the max if there are duplicates.
         padding_keys = {key for d in lengths for key in d.keys()}
         for padding_key in padding_keys:
-            padding_lengths[padding_key] = max(x[padding_key] if padding_key in x else 0 for x in lengths)
+            padding_lengths[padding_key] = max(x.get(padding_key, 0) for x in lengths)
         return padding_lengths
 
     @overrides
@@ -136,16 +144,13 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
                                   for indexed_tokens_key in self._indexer_name_to_indexed_token[indexer_name]}
             indices_to_pad = {indexed_tokens_key: self._indexed_tokens[indexed_tokens_key]
                               for indexed_tokens_key in self._indexer_name_to_indexed_token[indexer_name]}
-            padded_array = indexer.pad_token_sequence(indices_to_pad,
-                                                      desired_num_tokens, padding_lengths)
+
+            indexer_tensors = indexer.as_padded_tensor(indices_to_pad,
+                                                       desired_num_tokens,
+                                                       padding_lengths)
             # We use the key of the indexer to recognise what the tensor corresponds to within the
             # field (i.e. the result of word indexing, or the result of character indexing, for
             # example).
-            # TODO(mattg): we might someday have a TokenIndexer that needs to use something other
-            # than a LongTensor here, and it's not clear how to signal that.  Maybe we'll need to
-            # add a class method to TokenIndexer to tell us the type?  But we can worry about that
-            # when there's a compelling use case for it.
-            indexer_tensors = {key: torch.LongTensor(array) for key, array in padded_array.items()}
             tensors.update(indexer_tensors)
         return tensors
 

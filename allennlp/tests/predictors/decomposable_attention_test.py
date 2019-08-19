@@ -1,4 +1,4 @@
-# pylint: disable=no-self-use,invalid-name
+# pylint: disable=no-self-use,invalid-name, protected-access
 import math
 
 from pytest import approx
@@ -79,3 +79,21 @@ class TestDecomposableAttentionPredictor(AllenNlpTestCase):
             sumexps = sum(exps)
             for e, p in zip(exps, label_probs):
                 assert e / sumexps == approx(p)
+
+    def test_predictions_to_labeled_instances(self):
+        inputs = {
+                "premise": "I always write unit tests for my code.",
+                "hypothesis": "One time I didn't write any unit tests for my code."
+        }
+
+        archive = load_archive(self.FIXTURES_ROOT / 'decomposable_attention' / 'serialization' / 'model.tar.gz')
+        predictor = Predictor.from_archive(archive, 'textual-entailment')
+
+        instance = predictor._json_to_instance(inputs)
+        outputs = predictor._model.forward_on_instance(instance)
+        new_instances = predictor.predictions_to_labeled_instances(instance, outputs)
+        assert 'hypothesis' in new_instances[0].fields
+        assert 'premise' in new_instances[0].fields
+        assert new_instances[0].fields['hypothesis'] is not None
+        assert new_instances[0].fields['premise'] is not None
+        assert len(new_instances) == 1

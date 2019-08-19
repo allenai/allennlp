@@ -6,10 +6,10 @@
 #### ESSENTIAL LIBRARIES FOR MAIN FUNCTIONALITY ####
 
 # This installs Pytorch for CUDA 8 only. If you are using a newer version,
-# please visit http://pytorch.org/ and install the relevant version.
+# please visit https://pytorch.org/ and install the relevant version.
 # For now AllenNLP works with both PyTorch 1.0 and 0.4.1. Expect that in
 # the future only >=1.0 will be supported.
-torch>=0.4.1
+torch>=0.4.1,<1.2
 
 # Parameter parsing (but not on Windows).
 jsonnet>=0.10.0 ; sys.platform != 'win32'
@@ -22,7 +22,7 @@ overrides
 nltk
 
 # Mainly used for the faster tokenizer.
-spacy>=2.0.18,<2.2
+spacy>=2.1.0,<2.2
 
 # Used by span prediction models.
 numpy
@@ -37,9 +37,6 @@ scikit-learn
 # Write logs for training visualisation with the Tensorboard application
 # Install the Tensorboard application separately (part of tensorflow) to view them.
 tensorboardX>=1.2
-
-# aws commandline tools for running on Docker remotely.
-awscli>=1.11.91
 
 # Accessing files from S3 directly.
 boto3
@@ -64,6 +61,7 @@ word2number>=1.1
 
 # To use the BERT model
 pytorch-pretrained-bert>=0.6.0
+git+git://github.com/huggingface/pytorch-transformers.git@a7b4cfe9194bf93c7044a42c9f1281260ce6279e
 
 # For caching processed data
 jsonpickle
@@ -89,7 +87,7 @@ h5py
 pytz>=2017.3
 
 # Reads Universal Dependencies files.
-conllu==0.11
+conllu==1.3.1
 
 #### ESSENTIAL TESTING-RELATED PACKAGES ####
 
@@ -103,8 +101,6 @@ flaky
 # Required to mock out `requests` calls
 responses>=0.7
 
-# For mocking s3.
-moto>=1.3.4
 
 #### TESTING-RELATED PACKAGES ####
 
@@ -127,7 +123,7 @@ aiohttp
 #### DOC-RELATED PACKAGES ####
 
 # Builds our documentation.
-sphinx>=1.5.3
+sphinx>=2.1.1
 
 # Watches the documentation directory and rebuilds on changes.
 sphinx-autobuild

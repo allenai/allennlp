@@ -10,6 +10,7 @@ import copy
 import json
 import logging
 import os
+import zlib
 
 from overrides import overrides
 
@@ -168,6 +169,16 @@ def parse_overrides(serialized_overrides: str) -> Dict[str, Any]:
     else:
         return {}
 
+def _is_dict_free(obj: Any) -> bool:
+    """
+    Returns False if obj is a dict, or if it's a list with an element that _has_dict.
+    """
+    if isinstance(obj, dict):
+        return False
+    elif isinstance(obj, list):
+        return all(_is_dict_free(item) for item in obj)
+    else:
+        return True
 
 class Params(MutableMapping):
     """
@@ -192,7 +203,7 @@ class Params(MutableMapping):
     """
 
     # This allows us to check for the presence of "None" as a default argument,
-    # which we require because we make a distinction bewteen passing a value of "None"
+    # which we require because we make a distinction between passing a value of "None"
     # and passing no value to the default parameter of "pop".
     DEFAULT = object()
 
@@ -232,10 +243,12 @@ class Params(MutableMapping):
             self.files_to_archive[f"{self.history}{name}"] = cached_path(self.get(name))
 
     @overrides
-    def pop(self, key: str, default: Any = DEFAULT) -> Any:
+    def pop(self, key: str, default: Any = DEFAULT, keep_as_dict: bool = False) -> Any:
+        # pylint: disable=arguments-differ
         """
         Performs the functionality associated with dict.pop(key), along with checking for
-        returned dictionaries, replacing them with Param objects with an updated history.
+        returned dictionaries, replacing them with Param objects with an updated history
+        (unless keep_as_dict is True, in which case we leave them as dictionaries).
 
         If ``key`` is not present in the dictionary, and no default was specified, we raise a
         ``ConfigurationError``, instead of the typical ``KeyError``.
@@ -247,9 +260,12 @@ class Params(MutableMapping):
                 raise ConfigurationError("key \"{}\" is required at location \"{}\"".format(key, self.history))
         else:
             value = self.params.pop(key, default)
-        if not isinstance(value, dict):
+
+        if keep_as_dict or _is_dict_free(value):
             logger.info(self.history + key + " = " + str(value))  # type: ignore
-        return self._check_is_dict(key, value)
+            return value
+        else:
+            return self._check_is_dict(key, value)
 
     def pop_int(self, key: str, default: Any = DEFAULT) -> int:
         """
@@ -511,8 +527,13 @@ class Params(MutableMapping):
         Returns a hash code representing the current state of this ``Params`` object.  We don't
         want to implement ``__hash__`` because that has deeper python implications (and this is a
         mutable object), but this will give you a representation of the current state.
+        We use `zlib.adler32` instead of Python's builtin `hash` because the random seed for the
+        latter is reset on each new program invocation, as discussed here:
+        https://stackoverflow.com/questions/27954892/deterministic-hashing-in-python-3.
         """
-        return str(hash(json.dumps(self.params, sort_keys=True)))
+        dumped = json.dumps(self.params, sort_keys=True)
+        hashed = zlib.adler32(dumped.encode())
+        return str(hashed)
 
 
 def pop_choice(params: Dict[str, Any],

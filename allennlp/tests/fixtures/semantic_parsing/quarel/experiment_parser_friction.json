@@ -42,7 +42,7 @@
     },
     "max_decoding_steps": 30,
     "attention": {"type": "dot_product"},
-    "dropout": 0.2
+    "dropout": 0.0
   },
   "iterator": {
     "type": "basic",

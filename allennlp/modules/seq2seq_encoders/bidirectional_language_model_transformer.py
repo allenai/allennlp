@@ -1,6 +1,6 @@
 """
 The BidirectionalTransformerEncoder from Calypso.
-This is basically the transformer from http://nlp.seas.harvard.edu/2018/04/03/attention.html
+This is basically the transformer from https://nlp.seas.harvard.edu/2018/04/03/attention.html
 so credit to them.
 
 This code should be considered "private" in that we have several

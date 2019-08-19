@@ -20,7 +20,7 @@ def join_mwp(tags: List[str]) -> List[str]:
     for tag in tags:
         if "V" in tag:
             # Create a continuous 'V' BIO span
-            prefix, _ = tag.split("-")
+            prefix, _ = tag.split("-", 1)
             if verb_flag:
                 # Continue a verb label across the different predicate parts
                 prefix = 'I'
@@ -110,8 +110,8 @@ def merge_overlapping_predictions(tags1: List[str], tags2: List[str]) -> List[st
     # spans which predicates' overlap
 
     for tag1, tag2 in zip(tags1, tags2):
-        label1 = tag1.split("-")[-1]
-        label2 = tag2.split("-")[-1]
+        label1 = tag1.split("-", 1)[-1]
+        label2 = tag2.split("-", 1)[-1]
         if (label1 == "V") or (label2 == "V"):
             # Construct maximal predicate length -
             # add predicate tag if any of the sequence predict it
@@ -164,7 +164,7 @@ def sanitize_label(label: str) -> str:
     labels sometimes having some noise, as parentheses.
     """
     if "-" in label:
-        prefix, suffix = label.split("-")
+        prefix, suffix = label.split("-", 1)
         suffix = suffix.split("(")[-1]
         return f"{prefix}-{suffix}"
     else:

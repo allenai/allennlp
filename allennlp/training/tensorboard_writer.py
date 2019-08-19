@@ -5,12 +5,13 @@ import os
 from tensorboardX import SummaryWriter
 import torch
 
+from allennlp.common.from_params import FromParams
 from allennlp.models.model import Model
 
 logger = logging.getLogger(__name__)
 
 
-class TensorboardWriter:
+class TensorboardWriter(FromParams):
     """
     Class that handles Tensorboard (and other) logging.
 
@@ -92,7 +93,8 @@ class TensorboardWriter:
             # Log parameter values to Tensorboard
             for name, param in model.named_parameters():
                 self.add_train_scalar("parameter_mean/" + name, param.data.mean())
-                self.add_train_scalar("parameter_std/" + name, param.data.std())
+                if param.data.numel() > 1:
+                    self.add_train_scalar("parameter_std/" + name, param.data.std())
                 if param.grad is not None:
                     if param.grad.is_sparse:
                         # pylint: disable=protected-access
@@ -103,7 +105,8 @@ class TensorboardWriter:
                     # skip empty gradients
                     if torch.prod(torch.tensor(grad_data.shape)).item() > 0: # pylint: disable=not-callable
                         self.add_train_scalar("gradient_mean/" + name, grad_data.mean())
-                        self.add_train_scalar("gradient_std/" + name, grad_data.std())
+                        if grad_data.numel() > 1:
+                            self.add_train_scalar("gradient_std/" + name, grad_data.std())
                     else:
                         # no gradient for a parameter with sparse gradients
                         logger.info("No gradient for %s, skipping tensorboard logging.", name)
@@ -210,3 +213,13 @@ class TensorboardWriter:
         else:
             # skip it
             pass
+
+    def close(self) -> None:
+        """
+        Calls the ``close`` method of the ``SummaryWriter`` s which makes sure that pending
+        scalars are flushed to disk and the tensorboard event files are closed properly.
+        """
+        if self._train_log is not None:
+            self._train_log.close()
+        if self._validation_log is not None:
+            self._validation_log.close()

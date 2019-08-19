@@ -9,7 +9,9 @@ or dataset to JSON predictions using a trained model and its
     usage: allennlp predict [-h] [--output-file OUTPUT_FILE]
                             [--weights-file WEIGHTS_FILE]
                             [--batch-size BATCH_SIZE] [--silent]
-                            [--cuda-device CUDA_DEVICE] [--use-dataset-reader]
+                            [--cuda-device CUDA_DEVICE]
+                            [--use-dataset-reader]
+                            [--dataset-reader-choice {train,validation}]
                             [-o OVERRIDES] [--predictor PREDICTOR]
                             [--include-package INCLUDE_PACKAGE]
                             archive_file input_file
@@ -31,7 +33,14 @@ or dataset to JSON predictions using a trained model and its
     --cuda-device CUDA_DEVICE
                             id of GPU to use (if any)
     --use-dataset-reader    Whether to use the dataset reader of the original
-                            model to load Instances
+                            model to load Instances. The validation dataset
+                            reader will be used if it exists, otherwise it will
+                            fall back to the train dataset reader. This
+                            behavior can be overridden with the
+                            --dataset-reader-choice flag.
+    --dataset-reader-choice {train,validation}
+                            Indicates which model dataset reader to use if the
+                            --use-dataset-reader flag is set.
     -o OVERRIDES, --overrides OVERRIDES
                             a JSON structure used to override the experiment
                             configuration
@@ -46,6 +55,7 @@ import json
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.checks import check_for_gpu, ConfigurationError
+from allennlp.common.file_utils import cached_path
 from allennlp.common.util import lazy_groups_of
 from allennlp.models.archival import load_archive
 from allennlp.predictors.predictor import Predictor, JsonDict
@@ -59,7 +69,7 @@ class Predict(Subcommand):
                 name, description=description, help='Use a trained model to make predictions.')
 
         subparser.add_argument('archive_file', type=str, help='the archived model to make predictions with')
-        subparser.add_argument('input_file', type=str, help='path to input file')
+        subparser.add_argument('input_file', type=str, help='path to or url of the input file')
 
         subparser.add_argument('--output-file', type=str, help='path to output file')
         subparser.add_argument('--weights-file',
@@ -76,7 +86,17 @@ class Predict(Subcommand):
 
         subparser.add_argument('--use-dataset-reader',
                                action='store_true',
-                               help='Whether to use the dataset reader of the original model to load Instances')
+                               help='Whether to use the dataset reader of the original model to load Instances. '
+                                    'The validation dataset reader will be used if it exists, otherwise it will '
+                                    'fall back to the train dataset reader. This behavior can be overridden'
+                                    'with the --dataset-reader-choice flag.')
+
+        subparser.add_argument('--dataset-reader-choice',
+                               type=str,
+                               choices=['train', 'validation'],
+                               default='validation',
+                               help='Indicates which model dataset reader to use if the --use-dataset-reader '
+                                    'flag is set.')
 
         subparser.add_argument('-o', '--overrides',
                                type=str,
@@ -98,7 +118,8 @@ def _get_predictor(args: argparse.Namespace) -> Predictor:
                            cuda_device=args.cuda_device,
                            overrides=args.overrides)
 
-    return Predictor.from_archive(archive, args.predictor)
+    return Predictor.from_archive(archive, args.predictor,
+                                  dataset_reader_to_load=args.dataset_reader_choice)
 
 
 class _PredictManager:
@@ -141,11 +162,12 @@ class _PredictManager:
             yield self._predictor.dump_line(output)
 
     def _maybe_print_to_console_and_file(self,
+                                         index: int,
                                          prediction: str,
                                          model_input: str = None) -> None:
         if self._print_to_console:
             if model_input is not None:
-                print("input: ", model_input)
+                print(f"input {index}: ", model_input)
             print("prediction: ", prediction)
         if self._output_file is not None:
             self._output_file.write(prediction)
@@ -156,7 +178,8 @@ class _PredictManager:
                 if not line.isspace():
                     yield self._predictor.load_line(line)
         else:
-            with open(self._input_file, "r") as file_input:
+            input_file = cached_path(self._input_file)
+            with open(input_file, "r") as file_input:
                 for line in file_input:
                     if not line.isspace():
                         yield self._predictor.load_line(line)
@@ -171,14 +194,17 @@ class _PredictManager:
 
     def run(self) -> None:
         has_reader = self._dataset_reader is not None
+        index = 0
         if has_reader:
             for batch in lazy_groups_of(self._get_instance_data(), self._batch_size):
                 for model_input_instance, result in zip(batch, self._predict_instances(batch)):
-                    self._maybe_print_to_console_and_file(result, str(model_input_instance))
+                    self._maybe_print_to_console_and_file(index, result, str(model_input_instance))
+                    index = index + 1
         else:
             for batch_json in lazy_groups_of(self._get_json_data(), self._batch_size):
                 for model_input_json, result in zip(batch_json, self._predict_json(batch_json)):
-                    self._maybe_print_to_console_and_file(result, json.dumps(model_input_json))
+                    self._maybe_print_to_console_and_file(index, result, json.dumps(model_input_json))
+                    index = index + 1
 
         if self._output_file is not None:
             self._output_file.close()

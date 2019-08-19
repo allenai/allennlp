@@ -9,15 +9,15 @@
     "use_subtrees": false,
     "granularity": "5-class"
   },
-  "train_data_path": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/sst/train.txt",
-  "validation_data_path": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/sst/dev.txt",
-  "test_data_path": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/sst/test.txt",
+  "train_data_path": "https://allennlp.s3.amazonaws.com/datasets/sst/train.txt",
+  "validation_data_path": "https://allennlp.s3.amazonaws.com/datasets/sst/dev.txt",
+  "test_data_path": "https://allennlp.s3.amazonaws.com/datasets/sst/test.txt",
   "model": {
     "type": "bcn",
     "text_field_embedder": {
       "token_embedders": {
         "tokens": {
-            "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.840B.300d.txt.gz",
+            "pretrained_file": "https://allennlp.s3.amazonaws.com/datasets/glove/glove.840B.300d.txt.gz",
             "type": "embedding",
             "embedding_dim": 300,
             "trainable": false

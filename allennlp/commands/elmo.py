@@ -5,7 +5,7 @@ Given a pre-processed input text file, this command outputs the internal
 layers used to compute ELMo representations to a single (potentially large) file.
 
 The input file is previously tokenized, whitespace separated text, one sentence per line.
-The output is a hdf5 file (<http://docs.h5py.org/en/latest/>) where, with the --all flag, each
+The output is a hdf5 file (<https://h5py.readthedocs.io/en/latest/>) where, with the --all flag, each
 sentence is a size (3, num_tokens, 1024) array with the biLM representations.
 
 For information, see "Deep contextualized word representations", Peters et al 2018.
@@ -78,8 +78,8 @@ from allennlp.commands.subcommand import Subcommand
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
-DEFAULT_OPTIONS_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json" # pylint: disable=line-too-long
-DEFAULT_WEIGHT_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5" # pylint: disable=line-too-long
+DEFAULT_OPTIONS_FILE = "https://allennlp.s3.amazonaws.com/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json" # pylint: disable=line-too-long
+DEFAULT_WEIGHT_FILE = "https://allennlp.s3.amazonaws.com/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5" # pylint: disable=line-too-long
 DEFAULT_BATCH_SIZE = 64
 
 

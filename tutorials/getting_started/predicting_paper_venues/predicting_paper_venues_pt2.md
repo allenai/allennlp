@@ -10,7 +10,7 @@ Here we'll be working with the paper classification model
 we developed in [Part 1](./predicting_paper_venues_pt1.md) of this
 tutorial. All the code for that model is [on GitHub](https://github.com/allenai/allennlp-as-a-library-example/tree/master).
 You can either train it yourself or download a
-[trained model](https://s3-us-west-2.amazonaws.com/allennlp/models/tutorial-s2-classification-model-2018-02-01.tar.gz),
+[trained model](https://allennlp.s3.amazonaws.com/models/tutorial-s2-classification-model-2018-02-01.tar.gz),
 although in this tutorial we'll just use the tiny model that's included
 [as a test fixture](https://github.com/allenai/allennlp-as-a-library-example/tree/master/tests/fixtures).
 
@@ -256,7 +256,7 @@ and saved `index.html` there. The original page had a lot of embedded CSS, which
 For our customization, we'll replace the ugly JSON output
 with a beautiful pie chart of the predicted class probabilities,
 using a library called
-[chart.js](http://www.chartjs.org/docs/latest/getting-started/usage.html).
+[chart.js](https://www.chartjs.org/docs/latest/getting-started/usage.html).
 
 To start with, we need to [add a `script` tag to load chart.js](https://github.com/allenai/allennlp-as-a-library-example/blob/master/static_html/index.html#L47).
 

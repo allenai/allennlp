@@ -234,7 +234,9 @@ class MultiTaskTrainer(TrainerBase):
     def from_params(cls,   # type: ignore
                     params: Params,
                     serialization_dir: str,
-                    recover: bool = False) -> 'MultiTaskTrainer':
+                    recover: bool = False,
+                    cache_directory: str = None,
+                    cache_prefix: str = None) -> 'MultiTaskTrainer':
         readers = {name: DatasetReader.from_params(reader_params)
                    for name, reader_params in params.pop("train_dataset_readers").items()}
         train_file_paths = params.pop("train_file_paths").as_dict()

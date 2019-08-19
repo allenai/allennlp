@@ -2,7 +2,7 @@ from typing import Any, Dict, List, Tuple
 from collections import Counter
 
 from overrides import overrides
-from sklearn.utils.linear_assignment_ import linear_assignment
+from scipy.optimize import linear_sum_assignment
 import numpy as np
 import torch
 
@@ -189,7 +189,7 @@ class Scorer:
         """
         Counts the mentions in each predicted cluster which need to be re-allocated in
         order for each predicted cluster to be contained by the respective gold cluster.
-        <http://aclweb.org/anthology/M/M95/M95-1005.pdf>
+        <https://aclweb.org/anthology/M/M95/M95-1005.pdf>
         """
         true_p, all_p = 0, 0
         for cluster in clusters:
@@ -227,6 +227,6 @@ class Scorer:
         for i, gold_cluster in enumerate(gold_clusters):
             for j, cluster in enumerate(clusters):
                 scores[i, j] = Scorer.phi4(gold_cluster, cluster)
-        matching = linear_assignment(-scores)
-        similarity = sum(scores[matching[:, 0], matching[:, 1]])
+        row, col = linear_sum_assignment(-scores)
+        similarity = sum(scores[row, col])
         return similarity, len(clusters), similarity, len(gold_clusters)
