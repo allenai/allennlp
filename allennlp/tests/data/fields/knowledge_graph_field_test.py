@@ -152,3 +152,9 @@ class KnowledgeGraphFieldTest(AllenNlpTestCase):
         expected_linking_tensor = torch.stack([tensor_dict1['linking'], tensor_dict2['linking']])
         assert_almost_equal(batched_tensor_dict['linking'].detach().cpu().numpy(),
                             expected_linking_tensor.detach().cpu().numpy())
+
+    def test_field_initialized_with_empty_constructor(self):
+        try:
+            self.field.empty_field()
+        except AssertionError as e:
+            pytest.fail(str(e), pytrace=True)
