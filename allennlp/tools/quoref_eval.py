@@ -1,43 +1,58 @@
 import json
-from typing import Dict, Tuple, Any, Optional
+from typing import Dict, Tuple, List, Any, Optional
 import argparse
 import numpy as np
 from allennlp.tools import drop_eval
 
 
-def evaluate_json(annotations: Dict[str, Any], predicted_answers: Dict[str, Any]) -> Tuple[float, float]:
+def _get_answers_from_data(annotations: Dict[str, Any]) -> Dict[str, List[str]]:
     """
-    Takes gold annotations and predicted answers and  evaluates the predictions for each question
-    in the gold annotations.  Both JSON dictionaries must have query_id keys, which are used to
-    match predictions to gold annotations (note that these are somewhat deep in the JSON for the
-    gold annotations, but must be top-level keys in the predicted answers).
-
-    The ``annotations`` are assumed to have the format of the dev set in the Quoref data release.
-    The ``predicted_answers`` JSON must be a dictionary keyed by query id, where the value is a
-    list of strings (or just one string) that is the answer.
+    If the annotations file is in the same format as the original data files, this method can be used to extract a
+    dict of query ids and answers.
     """
-    instance_exact_match = []
-    instance_f1 = []
+    answers_dict: Dict[str, List[str]] = {}
     for article_info in annotations["data"]:
         for paragraph_info in article_info["paragraphs"]:
             for qa_pair in paragraph_info["qas"]:
                 query_id = qa_pair["id"]
-                max_em_score = 0.0
-                max_f1_score = 0.0
-                if query_id in predicted_answers:
-                    predicted = predicted_answers[query_id]
-                    candidate_answers = [answer["text"] for answer in qa_pair["answers"]]
-                    gold_answer = tuple(candidate_answers)
-                    em_score, f1_score = drop_eval.get_metrics(predicted, gold_answer)
-                    if gold_answer[0].strip() != "":
-                        max_em_score = max(max_em_score, em_score)
-                        max_f1_score = max(max_f1_score, f1_score)
-                else:
-                    print("Missing prediction for question: {}".format(query_id))
-                    max_em_score = 0.0
-                    max_f1_score = 0.0
-                instance_exact_match.append(max_em_score)
-                instance_f1.append(max_f1_score)
+                candidate_answers = [answer["text"] for answer in qa_pair["answers"]]
+                answers_dict[query_id] = candidate_answers
+    return answers_dict
+
+def evaluate_json(annotations: Dict[str, Any], predicted_answers: Dict[str, Any]) -> Tuple[float, float]:
+    """
+    Takes gold annotations and predicted answers and  evaluates the predictions for each question
+    in the gold annotations.  Both JSON dictionaries must have query_id keys, which are used to
+    match predictions to gold annotations.
+
+    The ``predicted_answers`` JSON must be a dictionary keyed by query id, where the value is a
+    list of strings (or just one string) that is the answer.
+    The ``annotations`` are assumed to have either the format of the dev set in the Quoref data release, or the
+    same format as the predicted answers file.
+    """
+    instance_exact_match = []
+    instance_f1 = []
+    if "data" in annotations:
+        # We're looking at annotations in the original data format. Let's extract the answers.
+        annotated_answers = _get_answers_from_data(annotations)
+    else:
+        annotated_answers = annotations
+    for query_id, candidate_answers in annotated_answers.items():
+        max_em_score = 0.0
+        max_f1_score = 0.0
+        if query_id in predicted_answers:
+            predicted = predicted_answers[query_id]
+            gold_answer = tuple(candidate_answers)
+            em_score, f1_score = drop_eval.get_metrics(predicted, gold_answer)
+            if gold_answer[0].strip() != "":
+                max_em_score = max(max_em_score, em_score)
+                max_f1_score = max(max_f1_score, f1_score)
+        else:
+            print("Missing prediction for question: {}".format(query_id))
+            max_em_score = 0.0
+            max_f1_score = 0.0
+        instance_exact_match.append(max_em_score)
+        instance_f1.append(max_f1_score)
 
     global_em = np.mean(instance_exact_match)
     global_f1 = np.mean(instance_f1)
@@ -52,9 +67,7 @@ def evaluate_prediction_file(prediction_path: str, gold_path: str,
     """
     Takes a prediction file and a gold file and evaluates the predictions for each question in the gold file.  Both
     files must be json formatted and must have query_id keys, which are used to match predictions to gold
-    annotations.  The gold file is assumed to have the format of the dev set in the Quoref data release.  The
-    prediction file must be a JSON dictionary keyed by query id, where the value is a list of strings (or just one
-    string) that is the answer. Writes a json with global_em and global_f1 metrics to file at the specified output
+    annotations. Writes a json with global_em and global_f1 metrics to file at the specified output
     path, unless None is passed as output path.
     """
     predicted_answers = json.load(open(prediction_path, encoding='utf-8'))
