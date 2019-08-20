@@ -21,6 +21,7 @@ from allennlp.training.metrics import Metric
 class AutoRegressiveSeqDecoder(SeqDecoder):
     """
     An autoregressive decoder that can be used for most seq2seq tasks.
+    
     Parameters
     ----------
     vocab : ``Vocabulary``, required

@@ -13,6 +13,7 @@ from allennlp.nn import util
 class LstmCellDecoderNet(DecoderNet):
     """
     This decoder net implements simple decoding network with LSTMCell and Attention.
+    
     Parameters
     ----------
     decoding_dim : ``int``, required

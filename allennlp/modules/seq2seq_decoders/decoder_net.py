@@ -70,7 +70,7 @@ class DecoderNet(torch.nn.Module, Registrable):
         # pylint: disable=arguments-differ
         """
         Performs a decoding step, and returns dictionary with decoder hidden state or cache and the decoder output.
-       The decoder output is a 3d tensor (group_size, steps_count, decoder_output_dim)
+        The decoder output is a 3d tensor (group_size, steps_count, decoder_output_dim)
         if `self.decodes_parallel` is True, else it is a 2d tensor with (group_size, decoder_output_dim).
 
         Parameters
