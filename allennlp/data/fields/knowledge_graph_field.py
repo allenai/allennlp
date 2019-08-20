@@ -12,8 +12,9 @@ from allennlp.common import util
 from allennlp.common.checks import ConfigurationError
 from allennlp.data.fields.field import Field
 from allennlp.data.token_indexers.token_indexer import TokenIndexer, TokenType
+from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
 from allennlp.data.tokenizers.token import Token
-from allennlp.data.tokenizers.tokenizer import Tokenizer
+from allennlp.data.tokenizers import Tokenizer, WordTokenizer
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.nn import util as nn_util
 from allennlp.semparse.contexts.knowledge_graph import KnowledgeGraph
@@ -52,7 +53,7 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
     utterance_tokens : ``List[Token]``
         The tokens in some utterance that is paired with the ``KnowledgeGraph``.  We compute a set
         of features for linking tokens in the utterance to entities in the graph.
-    tokenizer : ``Tokenizer``
+    tokenizer : ``Tokenizer``, optional (default=``WordTokenizer()``)
         We'll use this ``Tokenizer`` to tokenize the text representation of each entity.
     token_indexers : ``Dict[str, TokenIndexer]``
         Token indexers that convert entities into arrays, similar to how text tokens are treated in
@@ -93,7 +94,9 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
                  linking_features: List[List[List[float]]] = None,
                  include_in_vocab: bool = True,
                  max_table_tokens: int = None) -> None:
+
         self.knowledge_graph = knowledge_graph
+        self._tokenizer = tokenizer or WordTokenizer(word_splitter=SpacyWordSplitter(pos_tags=True))
         if not entity_tokens:
             entity_texts = [knowledge_graph.entity_text[entity].lower()
                             for entity in knowledge_graph.entities]
@@ -103,7 +106,7 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
             # so that we can add lemma features.  If we can remove the need for lemma / other
             # hand-written features, like with a CNN, we can cut down our data processing time by a
             # factor of 2.
-            self.entity_texts = tokenizer.batch_tokenize(entity_texts)
+            self.entity_texts = self._tokenizer.batch_tokenize(entity_texts)
         else:
             self.entity_texts = entity_tokens
         self.utterance_tokens = utterance_tokens

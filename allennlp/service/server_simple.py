@@ -1,5 +1,5 @@
 """
-A `Flask <http://flask.pocoo.org/>`_ server for serving predictions
+A `Flask <https://palletsprojects.com/p/flask/>`_ server for serving predictions
 from a single AllenNLP model. It also includes a very, very bare-bones
 web front-end for exploring predictions (or you can provide your own).
 

@@ -62,12 +62,14 @@ class TestBucketIterator(IteratorTest):
         assert iterator._padding_noise == 0.1
         assert not iterator._biggest_batch_first
         assert iterator._batch_size == 32
+        assert not iterator._skip_smaller_batches
 
         params = Params({
                 "sorting_keys": sorting_keys,
                 "padding_noise": 0.5,
                 "biggest_batch_first": True,
-                "batch_size": 100
+                "batch_size": 100,
+                "skip_smaller_batches": True
         })
 
         iterator = BucketIterator.from_params(params)
@@ -75,6 +77,7 @@ class TestBucketIterator(IteratorTest):
         assert iterator._padding_noise == 0.5
         assert iterator._biggest_batch_first
         assert iterator._batch_size == 100
+        assert iterator._skip_smaller_batches
 
     def test_bucket_iterator_maximum_samples_per_batch(self):
         iterator = BucketIterator(
@@ -118,3 +121,16 @@ class TestBucketIterator(IteratorTest):
 
         # ensure correct sample sizes (<= 11)
         assert stats['sample_sizes'] == [8, 10]
+
+    def test_skip_smaller_batches_works(self):
+        iterator = BucketIterator(batch_size=2, padding_noise=0, sorting_keys=[('text', 'num_tokens')],
+                                  skip_smaller_batches=True)
+        iterator.index_with(self.vocab)
+        batches = list(iterator._create_batches(self.instances, shuffle=False))
+        stats = self.get_batches_stats(batches)
+
+        # all batches have length batch_size
+        assert all(batch_len == 2 for batch_len in stats['batch_lengths'])
+
+        # we should have lost one instance by skipping the last batch
+        assert stats['total_instances'] == len(self.instances) - 1

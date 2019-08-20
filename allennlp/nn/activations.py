@@ -2,26 +2,26 @@
 An :class:`Activation` is just a function
 that takes some parameters and returns an element-wise activation function.
 For the most part we just use
-`PyTorch activations <http://pytorch.org/docs/master/nn.html#non-linear-activations>`_.
+`PyTorch activations <https://pytorch.org/docs/master/nn.html#non-linear-activations>`_.
 Here we provide a thin wrapper to allow registering them and instantiating them ``from_params``.
 
 The available activation functions are
 
 * "linear"
-* `"relu" <http://pytorch.org/docs/master/nn.html#torch.nn.ReLU>`_
-* `"relu6" <http://pytorch.org/docs/master/nn.html#torch.nn.ReLU6>`_
-* `"elu" <http://pytorch.org/docs/master/nn.html#torch.nn.ELU>`_
-* `"prelu" <http://pytorch.org/docs/master/nn.html#torch.nn.PReLU>`_
-* `"leaky_relu" <http://pytorch.org/docs/master/nn.html#torch.nn.LeakyReLU>`_
-* `"threshold" <http://pytorch.org/docs/master/nn.html#torch.nn.Threshold>`_
-* `"hardtanh" <http://pytorch.org/docs/master/nn.html#torch.nn.Hardtanh>`_
-* `"sigmoid" <http://pytorch.org/docs/master/nn.html#torch.nn.Sigmoid>`_
-* `"tanh" <http://pytorch.org/docs/master/nn.html#torch.nn.Tanh>`_
-* `"log_sigmoid" <http://pytorch.org/docs/master/nn.html#torch.nn.LogSigmoid>`_
-* `"softplus" <http://pytorch.org/docs/master/nn.html#torch.nn.Softplus>`_
-* `"softshrink" <http://pytorch.org/docs/master/nn.html#torch.nn.Softshrink>`_
-* `"softsign" <http://pytorch.org/docs/master/nn.html#torch.nn.Softsign>`_
-* `"tanhshrink" <http://pytorch.org/docs/master/nn.html#torch.nn.Tanhshrink>`_
+* `"relu" <https://pytorch.org/docs/master/nn.html#torch.nn.ReLU>`_
+* `"relu6" <https://pytorch.org/docs/master/nn.html#torch.nn.ReLU6>`_
+* `"elu" <https://pytorch.org/docs/master/nn.html#torch.nn.ELU>`_
+* `"prelu" <https://pytorch.org/docs/master/nn.html#torch.nn.PReLU>`_
+* `"leaky_relu" <https://pytorch.org/docs/master/nn.html#torch.nn.LeakyReLU>`_
+* `"threshold" <https://pytorch.org/docs/master/nn.html#torch.nn.Threshold>`_
+* `"hardtanh" <https://pytorch.org/docs/master/nn.html#torch.nn.Hardtanh>`_
+* `"sigmoid" <https://pytorch.org/docs/master/nn.html#torch.nn.Sigmoid>`_
+* `"tanh" <https://pytorch.org/docs/master/nn.html#torch.nn.Tanh>`_
+* `"log_sigmoid" <https://pytorch.org/docs/master/nn.html#torch.nn.LogSigmoid>`_
+* `"softplus" <https://pytorch.org/docs/master/nn.html#torch.nn.Softplus>`_
+* `"softshrink" <https://pytorch.org/docs/master/nn.html#torch.nn.Softshrink>`_
+* `"softsign" <https://pytorch.org/docs/master/nn.html#torch.nn.Softsign>`_
+* `"tanhshrink" <https://pytorch.org/docs/master/nn.html#torch.nn.Tanhshrink>`_
 """
 
 import torch
