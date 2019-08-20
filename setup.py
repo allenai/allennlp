@@ -131,7 +131,7 @@ setup(name='allennlp',
           'sqlparse>=0.2.4',
           'word2number>=1.1',
           'pytorch-pretrained-bert>=0.6.0',
-          'pytorch-transformers @ https://api.github.com/repos/huggingface/pytorch-transformers/tarball/a7b4cfe9194bf93c7044a42c9f1281260ce6279e',
+          'pytorch-transformers==1.1.0',
           'jsonpickle',
       ],
       entry_points={
