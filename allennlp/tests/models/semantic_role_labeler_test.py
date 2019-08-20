@@ -9,9 +9,9 @@ import numpy
 from allennlp.common.testing import ModelTestCase
 from allennlp.common.params import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.models.semantic_role_labeler import convert_bio_tags_to_conll_format
 from allennlp.models import Model
-from allennlp.models.semantic_role_labeler import write_bio_formatted_tags_to_file
+from allennlp.models.srl_util import (
+        convert_bio_tags_to_conll_format, write_bio_formatted_tags_to_file)
 from allennlp.nn.util import get_lengths_from_binary_sequence_mask
 
 from allennlp.data.dataset_readers.dataset_utils.span_utils import to_bioul
