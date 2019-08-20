@@ -33,8 +33,8 @@ class logger:
 def _worker(reader: DatasetReader,
             input_queue: Queue,
             output_queue: Queue,
-            active_workers: Value,
-            inflight_items: Value,
+            num_active_workers: Value,
+            num_inflight_items: Value,
             worker_id: int) -> None:
     """
     A worker that pulls filenames off the input queue, uses the dataset reader
@@ -59,15 +59,15 @@ def _worker(reader: DatasetReader,
             output_queue.join_thread()
             # Decrementing is not atomic.
             # See https://docs.python.org/2/library/multiprocessing.html#multiprocessing.Value.
-            with active_workers.get_lock():
-                active_workers.value -= 1
+            with num_active_workers.get_lock():
+                num_active_workers.value -= 1
             logger.info(f"Reader worker {worker_id} finished")
             break
 
         logger.info(f"reading instances from {file_path}")
         for instance in reader.read(file_path):
-            with inflight_items.get_lock():
-                inflight_items.value += 1
+            with num_inflight_items.get_lock():
+                num_inflight_items.value += 1
             output_queue.put(instance)
 
 
