@@ -89,12 +89,6 @@ allennlp.training.metrics
    :undoc-members:
    :show-inheritance:
 
-.. _quoref_em_and_f1:
-.. automodule:: allennlp.training.metrics.quoref_em_and_f1
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 .. _entropy:
 .. automodule:: allennlp.training.metrics.entropy
    :members:

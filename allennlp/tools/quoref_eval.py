@@ -1,3 +1,8 @@
+"""
+This evaluation script relies heavily on the one for DROP (``allennlp/tools/drop_eval.py``). We need a separate
+script for Quoref only because the data formats are slightly different.
+"""
+
 import json
 from typing import Dict, Tuple, List, Any, Optional
 import argparse

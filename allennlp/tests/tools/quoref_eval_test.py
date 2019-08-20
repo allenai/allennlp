@@ -6,6 +6,11 @@ from allennlp.tools import quoref_eval
 
 
 class TestQuorefEval(AllenNlpTestCase):
+    """
+    The actual evaluation logic in Quoref's evaluation script is from DROP's script, and the
+    only additional thing that Quoref's script does is handling the data properly. So this class only tests the
+    data handling aspects. The tests we have for DROP are fairly comprehensive.
+    """
     def test_quoref_eval_with_original_data_format(self):
         predictions_file = self.FIXTURES_ROOT / "data" / "quoref" / "quoref_sample_predictions.json"
         gold_file = self.FIXTURES_ROOT / "data" / "quoref" / "quoref_sample.json"
