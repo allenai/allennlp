@@ -33,20 +33,22 @@ class AllenNLP_Job_Dispatcher():
         s3 = boto3.client("s3")
 
         all_objects = s3.list_objects(Bucket='multiqa', Prefix='models/')
-        all_objects['Contents'] += s3.list_objects(Bucket='mrqa', Prefix='models/')['Contents']
+        #all_objects['Contents'] += s3.list_objects(Bucket='mrqa', Prefix='models/')['Contents']
         all_objects['Contents'] += s3.list_objects(Bucket='beatbert', Prefix='models/')['Contents']
-        all_objects['Contents'] += s3.list_objects(Bucket='multiqa', Prefix='models_new/')['Contents']
+        #all_objects['Contents'] += s3.list_objects(Bucket='multiqa', Prefix='models_new/')['Contents']
+        all_objects['Contents'] += s3.list_objects(Bucket='multiqa', Prefix='data/')['Contents']
         if 'Contents' in all_objects:
             self.s3_models = [obj['Key'] for obj in all_objects['Contents']]
         if len(self.s3_models) > 900:
             print('\n\n!!!!!!!!!!!!!!!!! approching S3 limit of 1000 results\n\n')
 
-        all_objects = s3.list_objects(Bucket='multiqa', Prefix='preproc/')
+        all_objects = s3.list_objects(Bucket='multiqa', Prefix='data/')
+        #all_objects = s3.list_objects(Bucket='multiqa', Prefix='preproc/')
         all_objects['Contents'] += s3.list_objects(Bucket='commensenseqa', Prefix='crowdsense/')['Contents']
-        all_objects['Contents'] += s3.list_objects(Bucket='multiqa', Prefix='data/')['Contents']
-        all_objects['Contents'] += s3.list_objects(Bucket='mrqa', Prefix='data/')['Contents']
+        #all_objects['Contents'] += s3.list_objects(Bucket='multiqa', Prefix='data/')['Contents']
+        #all_objects['Contents'] += s3.list_objects(Bucket='mrqa', Prefix='data/')['Contents']
         all_objects['Contents'] += s3.list_objects(Bucket='beatbert', Prefix='data/')['Contents']
-        all_objects['Contents'] += s3.list_objects(Bucket='multiqa', Prefix='allennlp_preproc/')['Contents']
+        #all_objects['Contents'] += s3.list_objects(Bucket='multiqa', Prefix='allennlp_preproc/')['Contents']
         if 'Contents' in all_objects:
             self.s3_preproc = [obj['Key'] for obj in all_objects['Contents']]
         if len(self.s3_preproc) > 900:
@@ -93,13 +95,13 @@ class AllenNLP_Job_Dispatcher():
     def get_s3_experiments(self, prefix):
         s3 = boto3.client("s3")
         all_objects = s3.list_objects(Bucket='multiqa',Prefix=prefix)
-        all_objects += s3.list_objects(Bucket='mrqa', Prefix=prefix)
+        #all_objects += s3.list_objects(Bucket='mrqa', Prefix=prefix)
         all_objects += s3.list_objects(Bucket='commensenseqa', Prefix=prefix)
         all_objects += s3.list_objects(Bucket='beatbert', Prefix=prefix)
         all_keys = []
         if 'Contents' in all_objects:
             for obj in all_objects['Contents']:
-                if obj['Key'].find('.tar.gz') > -1:
+                if obj['Key'].find('.tar.gz') > -1 or obj['Key'].find('.jsonl.gz') > -1:
                     all_keys.append(obj['Key'])
         return all_keys
 
@@ -107,20 +109,17 @@ class AllenNLP_Job_Dispatcher():
         return '    --include-package allennlp.data.dataset_readers.bert_mc_qa \
                     --include-package allennlp.models.bert_mc_qa \
                     --include-package allennlp.models.bert_binary_class \
-                   --include-package allennlp.data.iterators.multiqa_iterator \
                    --include-package allennlp.data.iterators.mrqa_iterator  \
                     --include-package allennlp.predictors.bert_binary_class \
-                   --include-package allennlp.data.dataset_readers.reading_comprehension.multiqa+ \
-                   --include-package allennlp.data.dataset_readers.reading_comprehension.multiqa+combine \
-                   --include-package allennlp.data.dataset_readers.reading_comprehension.multiqa_bert  \
                    --include-package allennlp.data.dataset_readers.reading_comprehension.multiqa_bert_mix  \
                    --include-package allennlp.models.reading_comprehension.BERT_QA   \
                    --include-package allennlp.data.dataset_readers.reading_comprehension.mrqa_reader \
+                    --include-package allennlp.models.reading_comprehension.multiqa_bert_old \
+                    --include-package allennlp.models.reading_comprehension.multiqa_bert_new \
                     --include-package allennlp.models.reading_comprehension.multiqa_bert \
-                    --include-package allennlp.data.dataset_readers.reading_comprehension.hotpotqa_dataset_reader \
-                    --include-package allennlp.data.dataset_readers.multiqa_reader \
-                    --include-package allennlp.data.dataset_readers.bert_same_chunk_mc_qa '
-
+                    --include-package allennlp.data.dataset_readers.multiqa_reader_old \
+                    --include-package allennlp.data.dataset_readers.multiqa_reader_new \
+                    --include-package allennlp.data.dataset_readers.multiqa_reader '
 
     def read_config(self, filename):
         if filename.find('jsonnet') > -1:
@@ -148,7 +147,7 @@ class AllenNLP_Job_Dispatcher():
         connection.close()
 
     def dataset_specific_override(self, dataset, exp_config):
-        if dataset in exp_config['dataset_specific_override']:
+        if 'dataset_specific_override' in exp_config and dataset in exp_config['dataset_specific_override']:
             for key1 in exp_config['dataset_specific_override'][dataset].keys():
                 for key2 in exp_config['dataset_specific_override'][dataset][key1].keys():
                     if type(exp_config['dataset_specific_override'][dataset][key1][key2]) == dict:
@@ -158,6 +157,24 @@ class AllenNLP_Job_Dispatcher():
                     else:
                         exp_config['override_config'][key1][key2] = \
                             exp_config['dataset_specific_override'][dataset][key1][key2]
+
+        return exp_config
+
+    def experiment_specific_override(self, dataset, exp_config):
+        if 'experiment_specific_override' in exp_config and dataset in exp_config['experiment_specific_override']:
+            for key1 in exp_config['experiment_specific_override'][dataset].keys():
+                if type(exp_config['experiment_specific_override'][dataset][key1]) == dict:
+                    for key2 in exp_config['experiment_specific_override'][dataset][key1].keys():
+                        if type(exp_config['experiment_specific_override'][dataset][key1][key2]) == dict:
+                            for key3 in exp_config['experiment_specific_override'][dataset][key1][key2].keys():
+                                exp_config['override_config'][key1][key2][key3] = \
+                                    exp_config['experiment_specific_override'][dataset][key1][key2][key3]
+                        else:
+                            exp_config['override_config'][key1][key2] = \
+                                exp_config['experiment_specific_override'][dataset][key1][key2]
+                else:
+                    exp_config['override_config'][key1] = \
+                        exp_config['experiment_specific_override'][dataset][key1]
 
         return exp_config
 
@@ -311,14 +328,15 @@ class AllenNLP_Job_Dispatcher():
 
             if 'TARGET' in params:
                 elastic_exp_results = [res for res in elastic_exp_results if res['target_dataset'] == params['TARGET']]
-            elif 'MODEL' in params:
+
+            if 'MODEL' in params:
                 elastic_exp_results = [res for res in elastic_exp_results if res['target_dataset'] == params['MODEL']]
 
             if 'SOURCE' in params:
                 elastic_exp_results = [res for res in elastic_exp_results if res['source_dataset'] == params['SOURCE']]
 
             if 'TARGET_SIZE' in params:
-                elastic_exp_results = [res for res in elastic_exp_results if int(res['target_size']) == int(params['TARGET_SIZE'])]
+                elastic_exp_results = [res for res in elastic_exp_results if res['target_size'] == params['TARGET_SIZE']]
             if len(elastic_exp_results) > 0:
                 if not self.QUIET_MODE:
                     print('!! %s already found in elastic, NOT RUNNING. \n' % (run_name))
@@ -395,6 +413,9 @@ class AllenNLP_Job_Dispatcher():
             elif 'DATASET' in params:
                 exp_config = self.dataset_specific_override(params['DATASET'], exp_config)
 
+            if 'EXP' in params:
+                exp_config = self.experiment_specific_override(params['EXP'], exp_config)
+
             for key in params.keys():
                 if key == 'TARGET':
                     params[key] += PREPROC_VERSION
@@ -439,6 +460,9 @@ class AllenNLP_Job_Dispatcher():
                     int(bert_t_tatal_calc_train_size / float(exp_config['override_config']['iterator']['batch_size']) \
                         * float(exp_config['override_config']['trainer']['num_epochs']) \
                         / float(exp_config['override_config']['trainer']['gradient_accumulation_steps']))
+
+                if exp_config['override_config']['trainer']['cuda_device'] == '[GPU_ID4]':
+                    exp_config['override_config']['trainer']['optimizer']['t_total'] /= 4
 
             # Building command
 
@@ -614,24 +638,27 @@ allennlp_dispatcher = AllenNLP_Job_Dispatcher(experiment_name)
 #experiment_name = '065_BERT_train_mix_MRQA'
 #experiment_name = '066_CSQA_BERT_train'
 #experiment_name = '067_CSQA_BERTbase_grid_train'
-#experiment_name = '068_beatbert_train'
+experiment_name = '068_beatbert_train'
 #experiment_name = '069_BERTLarge_train_mix_MRQA'
-#experiment_name = '070_CSQA_BERTLarge_train'
+experiment_name = '070_CSQA_BERTLarge_train'
 #experiment_name = '071_BERT_preproc_rlcwq'
 #experiment_name = '072_BERT_evaluate_crowdsense'
 #experiment_name = '073_beatbert_nettrain_large'
-#experiment_name = '074_CSQA_BERTLarge_samechunk_train'
+#experiment_na#me = '074_CSQA_BERTLarge_samechunk_train'
 #experiment_name = '075_CSQA_BERT_samechunk_train'
 #experiment_name = '076_beatbert_predict'
-#experiment_name = '077_MultiQA_BERTBase_train'
-#experiment_name = '078_MultiQA_BERTBase_eval'
-#experiment_name = '079_MultiQA_BERTBase_mix_train'
-experiment_name = '080_MultiQA_BERTBase_predict_eval'
 
+#experiment_name = '077_MultiQA_BERT_train'
+#experiment_name = '078_MultiQA_BERT_allennlp_eval'
+#experiment_name = '079_MultiQA_BERT_mix_train'
+#experiment_name = '080_MultiQA_BERT_predict_eval'
+#experiment_name = '081_MultiQA_build_datasets'
+#experiment_name = '082_git_pull'
 #if experiment_name.find('BERTLarge') > -1 and experiment_name.find('evaluate') == -1:
-#    queue = '4GPUs'
 #queue = '4GPUs'
-queue = 'rack-gamir-g05'
+#queue = 'V100'
+#queue = 'gamir'
+#queue = 'rack-gamir-g07'
 #queue = 'rack-jonathan-g08'
 #queue = 'savant'
 
