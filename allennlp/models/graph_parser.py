@@ -331,7 +331,7 @@ class GraphParser(Model):
         # shape (batch_size, sequence_length, sequence_length, num_tags)
         arc_tag_logits = arc_tag_logits + inf_diagonal_mask.unsqueeze(0).unsqueeze(-1)
         # Mask padded tokens, because we only want to consider actual word -> word edges.
-        minus_mask = (1 - mask).byte().unsqueeze(2)
+        minus_mask = (1 - mask).to(dtype=torch.bool).unsqueeze(2)
         arc_scores.masked_fill_(minus_mask, -numpy.inf)
         arc_tag_logits.masked_fill_(minus_mask.unsqueeze(-1), -numpy.inf)
         # shape (batch_size, sequence_length, sequence_length)
