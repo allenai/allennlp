@@ -68,9 +68,14 @@ class Seq2SeqDatasetReader(DatasetReader):
         self._delimiter = delimiter
         self._source_max_tokens = source_max_tokens
         self._target_max_tokens = target_max_tokens
+        self._source_max_exceeded = 0
+        self._target_max_exceeded = 0
 
     @overrides
     def _read(self, file_path):
+        # Reset exceeded counts
+        self._source_max_exceeded = 0
+        self._target_max_exceeded = 0
         with open(cached_path(file_path), "r") as data_file:
             logger.info("Reading instances from lines in file at: %s", file_path)
             for line_num, row in enumerate(csv.reader(data_file, delimiter=self._delimiter)):
@@ -78,12 +83,19 @@ class Seq2SeqDatasetReader(DatasetReader):
                     raise ConfigurationError("Invalid line format: %s (line number %d)" % (row, line_num + 1))
                 source_sequence, target_sequence = row
                 yield self.text_to_instance(source_sequence, target_sequence)
+        if self._source_max_tokens and self._source_max_exceeded:
+            logger.info("In %d instances the source string exceeded the max token limit (%d) got truncated.",
+                        self._source_max_tokens, self._source_max_exceeded)
+        if self._target_max_tokens and self._target_max_exceeded:
+            logger.info("In %d instances the target string exceeded the max token limit (%d) got truncated.",
+                        self._target_max_tokens, self._target_max_exceeded)
 
     @overrides
     def text_to_instance(self, source_string: str, target_string: str = None) -> Instance:  # type: ignore
         # pylint: disable=arguments-differ
         tokenized_source = self._source_tokenizer.tokenize(source_string)
-        if self._source_max_tokens:
+        if self._source_max_tokens and len(tokenized_source) > self._source_max_tokens:
+            self._source_max_exceeded += 1
             tokenized_source = tokenized_source[:self._source_max_tokens]
         if self._source_add_start_token:
             tokenized_source.insert(0, Token(START_SYMBOL))
@@ -91,7 +103,8 @@ class Seq2SeqDatasetReader(DatasetReader):
         source_field = TextField(tokenized_source, self._source_token_indexers)
         if target_string is not None:
             tokenized_target = self._target_tokenizer.tokenize(target_string)
-            if self._target_max_tokens:
+            if self._target_max_tokens and len(tokenized_target) > self._target_max_tokens:
+                self._target_max_exceeded += 1
                 tokenized_target = tokenized_target[:self._target_max_tokens]
             tokenized_target.insert(0, Token(START_SYMBOL))
             tokenized_target.append(Token(END_SYMBOL))
