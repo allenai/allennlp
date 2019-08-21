@@ -15,7 +15,6 @@ class BasicTransitionFunctionTest(AllenNlpTestCase):
         self.decoder_step = BasicTransitionFunction(encoder_output_dim=2,
                                                     action_embedding_dim=2,
                                                     input_attention=Attention.by_name('dot_product')(),
-                                                    num_start_types=3,
                                                     add_action_bias=False)
 
         batch_indices = [0, 1, 0]
