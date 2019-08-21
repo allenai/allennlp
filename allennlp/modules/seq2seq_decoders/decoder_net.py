@@ -5,8 +5,8 @@ from allennlp.common import Registrable
 class DecoderNet(torch.nn.Module, Registrable):
     # pylint: disable=abstract-method
     """
-    The ``DecoderNet`` abstract class to implement the neural architectures for decoding the encoded states and
-    embedded previous step prediction vectors into sequence of output vectors.
+    This class abstracts the neural architectures for decoding the encoded states and
+    embedded previous step prediction vectors into a new sequence of output vectors.
 
     The implementations of ``DecoderNet`` is used by implementations of
     ``allennlp.modules.seq2seq_decoders.seq_decoder.SeqDecoder`` such as

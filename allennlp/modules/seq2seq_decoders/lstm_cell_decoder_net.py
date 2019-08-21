@@ -13,7 +13,7 @@ from allennlp.nn import util
 class LstmCellDecoderNet(DecoderNet):
     """
     This decoder net implements simple decoding network with LSTMCell and Attention.
-    
+
     Parameters
     ----------
     decoding_dim : ``int``, required
@@ -38,7 +38,7 @@ class LstmCellDecoderNet(DecoderNet):
                          decodes_parallel=False)
 
         # In this particular type of decoder output of previous step passes directly to the input of current step
-        # We also assume that sequence decoder output dimensionality is equal to the encoder output dimensionality
+        # We also assume that decoder output dimensionality is equal to the encoder output dimensionality
         decoder_input_dim = self.target_embedding_dim
 
         # Attention mechanism applied to the encoder output for each step.

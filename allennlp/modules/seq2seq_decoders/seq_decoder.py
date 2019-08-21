@@ -16,7 +16,7 @@ class SeqDecoder(Module, Registrable):
     The implementation of this abstract class ideally uses a
     decoder neural net ``allennlp.modules.seq2seq_decoders.decoder_net.DecoderNet`` for decoding.
 
-    The ``default_implementation``
+    The `default_implementation`
     ``allennlp.modules.seq2seq_decoders.seq_decoder.auto_regressive_seq_decoder.AutoRegressiveSeqDecoder``
     covers most use cases. More likely that we will use the default implementation instead of creating a new
     implementation.
@@ -68,7 +68,7 @@ class SeqDecoder(Module, Registrable):
     def post_process(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
             Post processing for converting raw outputs to prediction during inference.
-            The composing models such `allennlp.models.encoder_decoders.composed_seq2seq.ComposedSeq2Seq`
+            The composing models such ``allennlp.models.encoder_decoders.composed_seq2seq.ComposedSeq2Seq``
             can call this method when `decode` is called.
         """
         raise NotImplementedError()
