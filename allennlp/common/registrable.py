@@ -39,11 +39,11 @@ class Registrable(FromParams):
     default_implementation: str = None
 
     @classmethod
-    def register(cls: Type[T], name: str):
+    def register(cls: Type[T], name: str, exist_ok=False):
         registry = Registrable._registry[cls]
         def add_subclass_to_registry(subclass: Type[T]):
             # Add to registry, raise an error if key has already been used.
-            if name in registry:
+            if name in registry and not exist_ok:
                 message = "Cannot register %s as %s; name already in use for %s" % (
                         name, cls.__name__, registry[name].__name__)
                 raise ConfigurationError(message)
