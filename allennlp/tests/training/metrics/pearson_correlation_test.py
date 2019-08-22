@@ -88,4 +88,4 @@ class PearsonCorrelationTest(AllenNlpTestCase):
             expected_pearson_correlation = pearson_corrcoef(predictions.reshape(-1), labels.reshape(-1),
                                                             fweights=mask.reshape(-1))
 
-assert_allclose(expected_pearson_correlation, pearson_correlation.get_metric(), rtol=1e-5)
+            assert_allclose(expected_pearson_correlation, pearson_correlation.get_metric(), rtol=1e-5)
