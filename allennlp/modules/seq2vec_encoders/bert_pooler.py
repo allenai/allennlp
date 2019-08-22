@@ -13,8 +13,10 @@ from allennlp.modules.token_embedders.bert_token_embedder import PretrainedBertM
 @Seq2VecEncoder.register("bert_pooler")
 class BertPooler(Seq2VecEncoder):
     """
-    The pooling layer at the end of the BERT model. If you want to use the pretrained
-    BERT model to build a classifier and you want to use the AllenNLP token-indexer ->
+    The pooling layer at the end of the BERT model. This returns an embedding for the
+    [CLS] token, after passing it through a non-linear tanh activation; the non-linear layer
+    is also part of the BERT model. If you want to use the pretrained BERT model
+    to build a classifier and you want to use the AllenNLP token-indexer ->
     token-embedder -> seq2vec encoder setup, this is the Seq2VecEncoder to use.
     (For example, if you want to experiment with other embedding / encoding combinations.)
 
