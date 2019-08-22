@@ -337,6 +337,17 @@ class TestFromParams(AllenNlpTestCase):
         assert d.items["first"].size == 1
         assert d.items["second"].size == 2
 
+    def test_dict_not_params(self):
+        class A(FromParams):
+            def __init__(self, counts: Dict[str, int]) -> None:
+                self.counts = counts
+
+        params = Params({"counts": {"a": 10, "b": 20}})
+        a = A.from_params(params)
+
+        assert isinstance(a.counts, dict)
+        assert not isinstance(a.counts, Params)
+
     def test_list(self):
         # pylint: disable=unused-variable
         from allennlp.common.registrable import Registrable

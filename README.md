@@ -68,7 +68,7 @@ Windows is currently not officially supported, although we try to fix issues whe
 version of Python required for AllenNLP.  If you already have a Python 3.6 or 3.7
 environment you want to use, you can skip to the 'installing via pip' section.
 
-1.  [Download and install Conda](https://conda.io/docs/download.html).
+1.  [Download and install Conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html).
 
 2.  Create a Conda environment with Python 3.6
 
@@ -110,10 +110,10 @@ just run the following command to get an environment that will run on either the
 
    ```bash
    mkdir -p $HOME/.allennlp/
-   docker run --rm -v $HOME/.allennlp:/root/.allennlp allennlp/allennlp:v0.8.4
+   docker run --rm -v $HOME/.allennlp:/root/.allennlp allennlp/allennlp:v0.8.5
    ```
 
-You can test the Docker environment with `docker run --rm -v $HOME/.allennlp:/root/.allennlp allennlp/allennlp:v0.8.4 test-install`.
+You can test the Docker environment with `docker run --rm -v $HOME/.allennlp:/root/.allennlp allennlp/allennlp:v0.8.5 test-install`.
 
 ### Installing from source
 

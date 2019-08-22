@@ -31,3 +31,4 @@ allennlp.models
   allennlp.models.language_model
   allennlp.models.simple_tagger
   allennlp.models.srl_bert
+  allennlp.models.srl_util

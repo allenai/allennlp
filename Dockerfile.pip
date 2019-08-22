@@ -32,6 +32,9 @@ RUN if [ ! -z "$VERSION" ]; \
     else echo "Installing the latest pip3 release of allennlp"; pip3 install allennlp; \
     fi
 
+# Copy wrapper script to allow beaker to run resumable training workloads.
+COPY scripts/ai2-internal/resumable_train.sh /stage/allennlp
+
 LABEL maintainer="allennlp-contact@allenai.org"
 
 ENV ALLENNLP_VERSION=$VERSION
