@@ -56,13 +56,12 @@ class Registrable(FromParams):
             # Add to registry, raise an error if key has already been used.
             if name in registry:
                 if exist_ok:
-                    message = ("%s has already been registered as %s, but "
-                               "exist_ok=True, so overwriting with %s" % (
-                                       name, registry[name].__name__, cls.__name__))
+                    message = (f"{name} has already been registered as {registry[name].__name__}, but "
+                               f"exist_ok=True, so overwriting with {cls.__name__}")
                     logger.debug(message)
                 else:
-                    message = "Cannot register %s as %s; name already in use for %s" % (
-                            name, cls.__name__, registry[name].__name__)
+                    message = (f"Cannot register {name} as {cls.__name__}; "
+                               f"name already in use for {registry[name].__name__}")
                     raise ConfigurationError(message)
             registry[name] = subclass
             return subclass
