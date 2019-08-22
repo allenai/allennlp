@@ -224,6 +224,19 @@ class PretrainedModelInitializer(Initializer):
            }
        ]
 
+    To initialize weights for all the parameters from a pretrained model (assuming their names
+    remain unchanged), use the following instead:
+
+        .. code-block:: js
+
+            [".*",
+                {
+                    "type": "pretrained",
+                    "weights_file_path": "best.th",
+                    "parameter_name_overrides": {}
+                }
+            ]
+
     Parameters
     ----------
     weights_file_path : ``str``, required
