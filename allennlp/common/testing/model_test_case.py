@@ -47,7 +47,7 @@ class ModelTestCase(AllenNlpTestCase):
                                              cuda_device: int = -1,
                                              gradients_to_ignore: Set[str] = None,
                                              overrides: str = "",
-                                             disable_dropout: bool = False):
+                                             disable_dropout: bool = True):
         """
         Parameters
         ----------
@@ -69,6 +69,9 @@ class ModelTestCase(AllenNlpTestCase):
             infrequently-used parameters that are hard to force the model to use in a small test).
         overrides : ``str``, optional (default = "")
             A JSON string that we will use to override values in the input parameter file.
+        disable_dropout : ``bool``, optional (default = True)
+            If True we will set all dropout to 0 before checking gradients. (Otherwise, with small
+            datasets, you may get zero gradients because of unlucky dropout.)
         """
         save_dir = self.TEST_DIR / "save_and_load_test"
         archive_file = save_dir / "model.tar.gz"
@@ -169,7 +172,7 @@ class ModelTestCase(AllenNlpTestCase):
     def check_model_computes_gradients_correctly(model: Model,
                                                  model_batch: Dict[str, Union[Any, Dict[str, Any]]],
                                                  params_to_ignore: Set[str] = None,
-                                                 disable_dropout: bool = False):
+                                                 disable_dropout: bool = True):
         print("Checking gradients")
         model.zero_grad()
 
