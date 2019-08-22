@@ -176,11 +176,13 @@ class ModelTestCase(AllenNlpTestCase):
         print("Checking gradients")
         model.zero_grad()
 
+        original_dropouts: Dict[str, float] = {}
+
         if disable_dropout:
             # clone model
-            model = copy.deepcopy(model)
-            for module in model.modules():
+            for name, module in model.named_modules():
                 if isinstance(module, torch.nn.Dropout):
+                    original_dropouts[name] = getattr(module, 'p')
                     setattr(module, 'p', 0)
 
         result = model(**model_batch)
@@ -209,6 +211,11 @@ class ModelTestCase(AllenNlpTestCase):
             for name, grad in has_zero_or_none_grads.items():
                 print(f"Parameter: {name} had incorrect gradient: {grad}")
             raise Exception("Incorrect gradients found. See stdout for more info.")
+
+        # Now restore dropouts
+        for name, module in model.named_modules():
+            if name in original_dropouts:
+                setattr(module, 'p', original_dropouts[name])
 
     def ensure_batch_predictions_are_consistent(
             self,
