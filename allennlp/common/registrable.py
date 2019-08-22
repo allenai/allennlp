@@ -39,21 +39,37 @@ class Registrable(FromParams):
     default_implementation: str = None
 
     @classmethod
-    def register(cls: Type[T], name: str):
+    def register(cls: Type[T], name: str, exist_ok=False):
+        """
+        Register a class under a particular name.
+
+        Parameters
+        ----------
+        name: ``str``
+            The name to register the class under.
+        exist_ok: ``bool`, optional (default=False)
+            If True, overwrites any existing models registered under ``name``. Else,
+            throws an error if a model is already registered under ``name``.
+        """
         registry = Registrable._registry[cls]
         def add_subclass_to_registry(subclass: Type[T]):
             # Add to registry, raise an error if key has already been used.
             if name in registry:
-                message = "Cannot register %s as %s; name already in use for %s" % (
-                        name, cls.__name__, registry[name].__name__)
-                raise ConfigurationError(message)
+                if exist_ok:
+                    message = (f"{name} has already been registered as {registry[name].__name__}, but "
+                               f"exist_ok=True, so overwriting with {cls.__name__}")
+                    logger.info(message)
+                else:
+                    message = (f"Cannot register {name} as {cls.__name__}; "
+                               f"name already in use for {registry[name].__name__}")
+                    raise ConfigurationError(message)
             registry[name] = subclass
             return subclass
         return add_subclass_to_registry
 
     @classmethod
     def by_name(cls: Type[T], name: str) -> Type[T]:
-        logger.debug(f"instantiating registered subclass {name} of {cls}")
+        logger.info(f"instantiating registered subclass {name} of {cls}")
         if name not in Registrable._registry[cls]:
             raise ConfigurationError("%s is not a registered name for %s" % (name, cls.__name__))
         return Registrable._registry[cls].get(name)
