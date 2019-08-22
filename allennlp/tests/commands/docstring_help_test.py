@@ -3,10 +3,13 @@ import pkgutil
 import re
 import subprocess
 
+import pytest
+
 import allennlp.commands
 from allennlp.common.testing import AllenNlpTestCase
 
 
+@pytest.mark.skip(reason="This test is slow and somewhat fragile and doesn't need to run every commit.")
 class TestDocstringHelp(AllenNlpTestCase):
     RE_DOCSTRING_CALL_SUBCOMMAND_HELP = re.compile(r'^\s*\$ (allennlp \S+ --help)$', re.MULTILINE)
     RE_STARTS_WITH_INDENTATION = re.compile(r'^ {4}', re.MULTILINE)
