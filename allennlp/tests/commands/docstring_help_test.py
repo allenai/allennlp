@@ -12,10 +12,10 @@ from allennlp.common.testing import AllenNlpTestCase
 # pylint: disable=protected-access
 def _subcommand_help_output(subcommand: str) -> str:
     parser = create_parser('allennlp')
-    for action in parser._actions:
+    for action in parser._actions:  # type: ignore
         if isinstance(action, argparse._SubParsersAction):
             file = io.StringIO()
-            action._name_parser_map[subcommand].print_help(file)
+            action._name_parser_map[subcommand].print_help(file)  # type: ignore
             file.seek(0)
             return file.read()
     raise LookupError("The main program parser does not contain a argparse._SubParsersAction object")
