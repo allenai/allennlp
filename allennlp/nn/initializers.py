@@ -230,7 +230,8 @@ class PretrainedModelInitializer(Initializer):
            {
                "type": "pretrained",
                "weights_file_path": "best.th",
-               "parameter_name_overrides": {}
+               "parameter_name_overrides": {
+               }
            }
        ]
 
