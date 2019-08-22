@@ -1,14 +1,28 @@
+import argparse
 import importlib
+import io
 import pkgutil
 import re
-import subprocess
 
-import allennlp.commands
+import allennlp
+from allennlp.commands import create_parser
 from allennlp.common.testing import AllenNlpTestCase
 
 
+# pylint: disable=protected-access
+def _subcommand_help_output(subcommand: str) -> str:
+    parser = create_parser('allennlp')
+    for action in parser._actions:
+        if isinstance(action, argparse._SubParsersAction):
+            file = io.StringIO()
+            action._name_parser_map[subcommand].print_help(file)
+            file.seek(0)
+            return file.read()
+    raise LookupError("The main program parser does not contain a argparse._SubParsersAction object")
+
+
 class TestDocstringHelp(AllenNlpTestCase):
-    RE_DOCSTRING_CALL_SUBCOMMAND_HELP = re.compile(r'^\s*\$ (allennlp \S+ --help)$', re.MULTILINE)
+    RE_DOCSTRING_CALL_SUBCOMMAND_HELP = re.compile(r'^\s*\$ (allennlp (\S+) --help)$', re.MULTILINE)
     RE_STARTS_WITH_INDENTATION = re.compile(r'^ {4}', re.MULTILINE)
 
     def test_docstring_help(self):
@@ -20,11 +34,8 @@ class TestDocstringHelp(AllenNlpTestCase):
                 expected_output = self.RE_STARTS_WITH_INDENTATION.sub('', module.__doc__[match.end(0) + 1:])
 
                 str_call_subcommand_help = match.group(1)
-                str_call_from_python_subcommand_help = str_call_subcommand_help.replace('allennlp',
-                                                                                        'python -m allennlp.run')
-
-                actual_output = subprocess.run(str_call_from_python_subcommand_help, check=True, shell=True,
-                                               stdout=subprocess.PIPE).stdout.decode()
+                subcommand = match.group(2)
+                actual_output = _subcommand_help_output(subcommand)
 
                 pytorch_pretrained_bert_warning = "Better speed can be achieved with apex installed from" \
                     " https://www.github.com/nvidia/apex.\n"
