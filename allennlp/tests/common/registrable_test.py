@@ -66,11 +66,11 @@ class TestRegistrable(AllenNlpTestCase):
 
         # Registering under a name that already exists should overwrite
         # if exist_ok=True.
-        @base_class.register('fake', exist_ok=True)
-        class FakeOtherAlternate(base_class):
+        @base_class.register('fake', exist_ok=True)  # pylint: disable=function-redefined
+        class FakeAlternate(base_class):
             # pylint: disable=abstract-method
             pass
-        assert base_class.by_name('fake') == FakeOtherAlternate
+        assert base_class.by_name('fake') == FakeAlternate
 
         del Registrable._registry[base_class]['fake']  # pylint: disable=protected-access
 

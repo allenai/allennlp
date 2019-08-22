@@ -43,10 +43,16 @@ class Registrable(FromParams):
         registry = Registrable._registry[cls]
         def add_subclass_to_registry(subclass: Type[T]):
             # Add to registry, raise an error if key has already been used.
-            if name in registry and not exist_ok:
-                message = "Cannot register %s as %s; name already in use for %s" % (
-                        name, cls.__name__, registry[name].__name__)
-                raise ConfigurationError(message)
+            if name in registry:
+                if exist_ok:
+                    message = ("%s has already been registered as %s, but "
+                               "exist_ok=True, so overwriting with %s" % (
+                                      name, registry[name].__name__, cls.__name__))
+                    logger.debug(message)
+                if not exist_ok:
+                    message = "Cannot register %s as %s; name already in use for %s" % (
+                            name, cls.__name__, registry[name].__name__)
+                    raise ConfigurationError(message)
             registry[name] = subclass
             return subclass
         return add_subclass_to_registry
