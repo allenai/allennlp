@@ -30,6 +30,8 @@ class PearsonCorrelation(Metric):
     If we have these values, the sample Pearson correlation coefficient is simply:
 
     r = covariance / (sqrt(predictions_variance) * sqrt(labels_variance))
+
+    if predictions_variance or labels_variance is 0, r is 0
     """
     def __init__(self) -> None:
         self._predictions_labels_covariance = Covariance()

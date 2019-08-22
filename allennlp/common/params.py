@@ -169,6 +169,16 @@ def parse_overrides(serialized_overrides: str) -> Dict[str, Any]:
     else:
         return {}
 
+def _is_dict_free(obj: Any) -> bool:
+    """
+    Returns False if obj is a dict, or if it's a list with an element that _has_dict.
+    """
+    if isinstance(obj, dict):
+        return False
+    elif isinstance(obj, list):
+        return all(_is_dict_free(item) for item in obj)
+    else:
+        return True
 
 class Params(MutableMapping):
     """
@@ -233,10 +243,12 @@ class Params(MutableMapping):
             self.files_to_archive[f"{self.history}{name}"] = cached_path(self.get(name))
 
     @overrides
-    def pop(self, key: str, default: Any = DEFAULT) -> Any:
+    def pop(self, key: str, default: Any = DEFAULT, keep_as_dict: bool = False) -> Any:
+        # pylint: disable=arguments-differ
         """
         Performs the functionality associated with dict.pop(key), along with checking for
-        returned dictionaries, replacing them with Param objects with an updated history.
+        returned dictionaries, replacing them with Param objects with an updated history
+        (unless keep_as_dict is True, in which case we leave them as dictionaries).
 
         If ``key`` is not present in the dictionary, and no default was specified, we raise a
         ``ConfigurationError``, instead of the typical ``KeyError``.
@@ -248,9 +260,12 @@ class Params(MutableMapping):
                 raise ConfigurationError("key \"{}\" is required at location \"{}\"".format(key, self.history))
         else:
             value = self.params.pop(key, default)
-        if not isinstance(value, dict):
+
+        if keep_as_dict or _is_dict_free(value):
             logger.info(self.history + key + " = " + str(value))  # type: ignore
-        return self._check_is_dict(key, value)
+            return value
+        else:
+            return self._check_is_dict(key, value)
 
     def pop_int(self, key: str, default: Any = DEFAULT) -> int:
         """

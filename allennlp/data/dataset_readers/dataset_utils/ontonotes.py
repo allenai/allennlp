@@ -85,7 +85,7 @@ class Ontonotes:
     This DatasetReader is designed to read in the English OntoNotes v5.0 data
     in the format used by the CoNLL 2011/2012 shared tasks. In order to use this
     Reader, you must follow the instructions provided `here (v12 release):
-    <http://cemantix.org/data/ontonotes.html>`_, which will allow you to download
+    <https://cemantix.org/data/ontonotes.html>`_, which will allow you to download
     the CoNLL style annotations for the  OntoNotes v5.0 release -- LDC2013T19.tgz
     obtained from LDC.
 

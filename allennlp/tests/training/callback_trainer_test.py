@@ -207,7 +207,7 @@ class TestCallbackTrainer(ModelTestCase):
 
     @responses.activate
     def test_trainer_posts_to_url(self):
-        url = 'http://slack.com?webhook=ewifjweoiwjef'
+        url = 'https://slack.com?webhook=ewifjweoiwjef'
         responses.add(responses.POST, url)
         post_to_url = PostToUrl(url, message="only a test")
         callbacks = self.default_callbacks() + [post_to_url]
@@ -233,6 +233,18 @@ class TestCallbackTrainer(ModelTestCase):
                                   num_epochs=2,
                                   callbacks=callbacks)
         trainer.train()
+
+    def test_trainer_can_run_ema_from_params(self):
+        uma_params = Params({"moving_average": {"decay": 0.9999}})
+        callbacks = self.default_callbacks() + [UpdateMovingAverage.from_params(uma_params, self.model)]
+        trainer = CallbackTrainer(model=self.model,
+                                  training_data=self.instances,
+                                  iterator=self.iterator,
+                                  optimizer=self.optimizer,
+                                  num_epochs=2,
+                                  callbacks=callbacks)
+        trainer.train()
+
 
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="No CUDA device registered.")
     def test_trainer_can_run_cuda(self):
