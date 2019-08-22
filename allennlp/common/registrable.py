@@ -40,6 +40,17 @@ class Registrable(FromParams):
 
     @classmethod
     def register(cls: Type[T], name: str, exist_ok=False):
+        """
+        Register a class under a particular name.
+
+        Parameters
+        ----------
+        name: ``str``
+            The name to register the class under.
+        exist_ok: ``bool`, optional (default=False)
+            If True, overwrites any existing models registered under ``name``. Else,
+            throws an error if a model is already registered under ``name``.
+        """
         registry = Registrable._registry[cls]
         def add_subclass_to_registry(subclass: Type[T]):
             # Add to registry, raise an error if key has already been used.
