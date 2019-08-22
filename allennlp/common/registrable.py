@@ -60,7 +60,7 @@ class Registrable(FromParams):
                                "exist_ok=True, so overwriting with %s" % (
                                        name, registry[name].__name__, cls.__name__))
                     logger.debug(message)
-                if not exist_ok:
+                else:
                     message = "Cannot register %s as %s; name already in use for %s" % (
                             name, cls.__name__, registry[name].__name__)
                     raise ConfigurationError(message)
