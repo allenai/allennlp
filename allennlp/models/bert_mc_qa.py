@@ -2,7 +2,8 @@ from typing import Dict, Optional, List, Any
 
 import logging
 from overrides import overrides
-from pytorch_pretrained_bert.modeling import BertModel, gelu
+#from pytorch_pretrained_bert.modeling import BertModel, gelu
+from pytorch_transformers.modeling_roberta import RobertaModel, gelu
 import re
 import torch
 from torch.nn.modules.linear import Linear
@@ -36,7 +37,7 @@ class BertMCQAModel(Model):
             bert_model_loaded = load_archive(bert_weights_model)
             self._bert_model = bert_model_loaded.model._bert_model
         else:
-            self._bert_model = BertModel.from_pretrained(pretrained_model)
+            self._bert_model = RobertaModel.from_pretrained(pretrained_model)
 
         for param in self._bert_model.parameters():
             param.requires_grad = requires_grad
@@ -56,7 +57,7 @@ class BertMCQAModel(Model):
         else:
             final_output_dim = 1
             self._classifier = Linear(self._output_dim, final_output_dim)
-            self._classifier.apply(self._bert_model.init_bert_weights)
+            self._classifier.apply(self._bert_model.init_weights)
         self._all_layers = not top_layer_only
         if self._all_layers:
             if bert_weights_model and hasattr(bert_model_loaded.model, "_scalar_mix") \
@@ -96,8 +97,7 @@ class BertMCQAModel(Model):
 
         encoded_layers, pooled_output = self._bert_model(input_ids=util.combine_initial_dims(input_ids),
                                             token_type_ids=util.combine_initial_dims(token_type_ids),
-                                            attention_mask=util.combine_initial_dims(question_mask),
-                                            output_all_encoded_layers=self._all_layers)
+                                            attention_mask=util.combine_initial_dims(question_mask))
 
         if self._all_layers:
             mixed_layer = self._scalar_mix(encoded_layers, question_mask)
