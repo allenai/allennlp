@@ -50,6 +50,8 @@ class PretrainedTransformerIndexer(TokenIndexer[int]):
                            "but your indexer is not lowercasing tokens.")
         if model_name == 'roberta-base':
             self.tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased', do_lower_case=do_lowercase)
+        elif model_name == 'roberta-large':
+            self.tokenizer = AutoTokenizer.from_pretrained('bert-large-uncased', do_lower_case=do_lowercase)
         else:
             self.tokenizer = AutoTokenizer.from_pretrained(model_name, do_lower_case=do_lowercase)
         self._namespace = namespace
