@@ -3,6 +3,7 @@ import logging
 
 from overrides import overrides
 from pytorch_transformers.tokenization_auto import AutoTokenizer
+from pytorch_transformers.tokenization_auto import RobertaTokenizer
 import torch
 
 from allennlp.common.util import pad_sequence_to_length
@@ -48,10 +49,8 @@ class PretrainedTransformerIndexer(TokenIndexer[int]):
         elif model_name.endswith("-uncased") and not do_lowercase:
             logger.warning("Your pretrained model appears to be uncased, "
                            "but your indexer is not lowercasing tokens.")
-        if model_name == 'roberta-base':
-            self.tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased', do_lower_case=do_lowercase)
-        elif model_name == 'roberta-large':
-            self.tokenizer = AutoTokenizer.from_pretrained('bert-large-uncased', do_lower_case=do_lowercase)
+        if model_name == 'roberta-base' or model_name == 'roberta-large':
+            self.tokenizer = RobertaTokenizer.from_pretrained('bert-base-uncased', do_lower_case=do_lowercase)
         else:
             self.tokenizer = AutoTokenizer.from_pretrained(model_name, do_lower_case=do_lowercase)
         self._namespace = namespace
