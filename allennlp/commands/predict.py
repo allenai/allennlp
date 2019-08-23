@@ -53,7 +53,6 @@ from typing import List, Iterator, Optional
 import argparse
 import sys
 import json
-from tqdm import tqdm
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.checks import check_for_gpu, ConfigurationError
@@ -221,12 +220,12 @@ class _PredictManager:
         has_reader = self._dataset_reader is not None
         index = 0
         if has_reader:
-            for batch in tqdm(lazy_groups_of(self._get_instance_data(), self._batch_size)):
+            for batch in lazy_groups_of(self._get_instance_data(), self._batch_size):
                 for model_input_instance, result in zip(batch, self._predict_instances(batch)):
                     self._maybe_print_to_console_and_file(index, result, str(model_input_instance))
                     index = index + 1
         else:
-            for batch_json in tqdm(lazy_groups_of(self._get_json_data(), self._batch_size)):
+            for batch_json in lazy_groups_of(self._get_json_data(), self._batch_size):
                 for model_input_json, result in zip(batch_json, self._predict_json(batch_json)):
                     self._maybe_print_to_console_and_file(
                         index, result, json.dumps(model_input_json)

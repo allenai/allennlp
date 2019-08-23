@@ -304,4 +304,11 @@ class Predictor(Registrable):
         model = archive.model
         model.eval()
 
-        return Predictor.by_name(predictor_name)(model, dataset_reader)
+        predictor_params = {"model": model, "dataset_reader": dataset_reader}
+        from json import JSONDecodeError
+        try:
+            predictor_params.update(json.loads(predictor_name))
+            predictor_name = predictor_params.pop("type")
+        except JSONDecodeError:
+            pass
+        return Predictor.by_name(predictor_name)(**predictor_params)
