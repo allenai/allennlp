@@ -19,7 +19,7 @@ def spearman_corrcoef(predictions, labels, mask=None):
     if len(np.unique(predictions)) == 1 or len(np.unique(labels)) == 1:
         return np.nan
 
-    n = len(predictions)
+    len_pre = len(predictions)
 
     predictions = [(k, v) for k, v in enumerate(predictions)]
     predictions.sort(key=lambda x: x[1], reverse=True)
@@ -32,15 +32,15 @@ def spearman_corrcoef(predictions, labels, mask=None):
     labels.sort(key=lambda x: x[1][0])
 
     total = 0
-    for i in range(n):
+    for i in range(len_pre):
         total += (predictions[i][0] - labels[i][0]) ** 2
-    expected_spearman_correlation = 1 - float(6 * total) / (n * (n ** 2 - 1))
+    expected_spearman_correlation = 1 - float(6 * total) / (len_pre * (len_pre ** 2 - 1))
 
     return expected_spearman_correlation
 
 
 class SpearmanCorrelationTest(AllenNlpTestCase):
-    def test_spearman_correlation_unmasked_computation(self):
+    def test_unmasked_computation(self):
         spearman_correlation = SpearmanCorrelation()
         batch_size = 100
         num_labels = 10
@@ -52,7 +52,8 @@ class SpearmanCorrelationTest(AllenNlpTestCase):
         labels2 = np.random.randn(1).repeat(num_labels).astype("float32")
         labels2 = 0.5 * predictions2 + labels2[np.newaxis, :].repeat(batch_size, axis=0)
 
-        # in top 100 batch, 10 number in each batch is different; The last 100 batch, 10 number in each batch is same.
+        # in most cases, the data is constructed like predictions_1, the data of such a batch different.
+        # but in a few cases, for example, predictions_2, the data of such a batch is exactly the same.
         predictions_labels_ = [(predictions1, labels1), (predictions2, labels2)]
 
         stride = 10
@@ -74,7 +75,7 @@ class SpearmanCorrelationTest(AllenNlpTestCase):
             assert_allclose(spearman_corrcoef(predictions.reshape(-1), labels.reshape(-1)),
                             spearman_correlation.get_metric(), rtol=1e-5)
 
-    def test_spearman_correlation_masked_computation(self):
+    def test_masked_computation(self):
         spearman_correlation = SpearmanCorrelation()
         batch_size = 100
         num_labels = 10
@@ -116,7 +117,10 @@ class SpearmanCorrelationTest(AllenNlpTestCase):
 
             # Test reset
             spearman_correlation.reset()
-            spearman_correlation(torch.FloatTensor(predictions), torch.FloatTensor(labels), torch.FloatTensor(mask))
+
+            spearman_correlation(torch.FloatTensor(predictions), 
+                                 torch.FloatTensor(labels), torch.FloatTensor(mask))
+
             expected_spearman_correlation = spearman_corrcoef(predictions.reshape(-1), labels.reshape(-1),
                                                               mask=mask.reshape(-1))
 
