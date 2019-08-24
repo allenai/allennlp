@@ -219,7 +219,7 @@ def bioul_tags_to_spans(tag_sequence: List[str],
     """
     Given a sequence corresponding to BIOUL tags, extracts spans.
     Spans are inclusive and can be of zero length, representing a single word span.
-    Ill-formed spans are not allowed and will raise ``InvalidTagSequence``.
+    Ill-formed spans will be ignored.
     This function works properly when the spans are unlabeled (i.e., your labels are
     simply "B", "I", "O", "U", and "L").
 
@@ -245,14 +245,18 @@ def bioul_tags_to_spans(tag_sequence: List[str],
             spans.append((label.partition('-')[2], (index, index)))
         elif label[0] == 'B':
             start = index
-            while label[0] != 'L':
+            tag_type = label.partition('-')[2]
+            index += 1
+            label = tag_sequence[index]
+            while label.partition('-')[0] == 'I' and label.partition('-')[2] == tag_type:
                 index += 1
                 if index >= len(tag_sequence):
                     raise InvalidTagSequence(tag_sequence)
                 label = tag_sequence[index]
                 if not (label[0] == 'I' or label[0] == 'L'):
                     raise InvalidTagSequence(tag_sequence)
-            spans.append((label.partition('-')[2], (start, index)))
+            if label.partition('-')[0] == 'L' and label.partition('-')[2] == tag_type:
+                spans.append((label.partition('-')[2], (start, index)))
         else:
             if label != 'O':
                 raise InvalidTagSequence(tag_sequence)
