@@ -242,9 +242,11 @@ def bioul_tags_to_spans(tag_sequence: List[str],
     while index < len(tag_sequence):
         label = tag_sequence[index]
         if label[0] == 'U':
-            spans.append((label.partition('-')[2], (index, index)))
+            start_index = index
+            end_index = index
+            spans.append((label.partition('-')[2], (start_index, end_index)))
         elif label[0] == 'B':
-            start = index
+            start_index = index
             tag_type = label.partition('-')[2]
             index += 1
             label = tag_sequence[index]
@@ -253,13 +255,13 @@ def bioul_tags_to_spans(tag_sequence: List[str],
                 if index >= len(tag_sequence):
                     raise InvalidTagSequence(tag_sequence)
                 label = tag_sequence[index]
-                if not (label[0] == 'I' or label[0] == 'L'):
+                if not (label[0] == 'I' or label[0] == 'L' or label[0] == 'O'):
                     raise InvalidTagSequence(tag_sequence)
             if label.partition('-')[0] == 'L' and label.partition('-')[2] == tag_type:
-                spans.append((label.partition('-')[2], (start, index)))
-        else:
-            if label != 'O':
-                raise InvalidTagSequence(tag_sequence)
+                end_index = index
+                spans.append((label.partition('-')[2], (start_index, end_index)))
+            else:
+                index -= 1 #avoid start with "U"
         index += 1
     return [span for span in spans if span[0] not in classes_to_ignore]
 
