@@ -1,7 +1,3 @@
-# coding=utf-8
-# @Author: wb-gmh583075
-# @Date: 2019-07-31
-
 import torch
 import numpy as np
 from numpy.testing import assert_allclose
@@ -117,11 +113,8 @@ class SpearmanCorrelationTest(AllenNlpTestCase):
 
             # Test reset
             spearman_correlation.reset()
-
-            spearman_correlation(torch.FloatTensor(predictions), 
+            spearman_correlation(torch.FloatTensor(predictions),
                                  torch.FloatTensor(labels), torch.FloatTensor(mask))
-
             expected_spearman_correlation = spearman_corrcoef(predictions.reshape(-1), labels.reshape(-1),
                                                               mask=mask.reshape(-1))
-
             assert (expected_spearman_correlation * spearman_correlation.get_metric()) > 0
