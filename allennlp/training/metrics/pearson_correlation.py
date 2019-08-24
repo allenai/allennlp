@@ -1,5 +1,6 @@
 from typing import Optional
 import math
+import numpy as np
 
 from overrides import overrides
 import torch
@@ -29,6 +30,8 @@ class PearsonCorrelation(Metric):
     If we have these values, the sample Pearson correlation coefficient is simply:
 
     r = covariance / (sqrt(predictions_variance) * sqrt(labels_variance))
+
+    if predictions_variance or labels_variance is 0, r is 0
     """
     def __init__(self) -> None:
         self._predictions_labels_covariance = Covariance()
@@ -65,7 +68,11 @@ class PearsonCorrelation(Metric):
         labels_variance = self._labels_variance.get_metric(reset=reset)
         if reset:
             self.reset()
-        pearson_r = covariance / (math.sqrt(predictions_variance) * math.sqrt(labels_variance))
+        denominator = (math.sqrt(predictions_variance) * math.sqrt(labels_variance))
+        if np.around(denominator, decimals=5) == 0:
+            pearson_r = 0
+        else:
+            pearson_r = covariance / denominator
         return pearson_r
 
     @overrides

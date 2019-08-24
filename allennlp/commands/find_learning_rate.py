@@ -6,41 +6,41 @@ which to write the results.
 .. code-block:: bash
 
    $ allennlp find-lr --help
-   usage: allennlp find-lr [-h] -s SERIALIZATION_DIR [-o OVERRIDES]
-                           [--start-lr START_LR] [--end-lr END_LR]
-                           [--num-batches NUM_BATCHES] [--linear]
-                           [--stopping-factor STOPPING_FACTOR] [--linear]
-                           [--include-package INCLUDE_PACKAGE]
-                           param_path
+    usage: allennlp find-lr [-h] -s SERIALIZATION_DIR [-o OVERRIDES]
+                            [--start-lr START_LR] [--end-lr END_LR]
+                            [--num-batches NUM_BATCHES]
+                            [--stopping-factor STOPPING_FACTOR] [--linear] [-f]
+                            [--include-package INCLUDE_PACKAGE]
+                            param_path
 
-   Find a learning rate range where the loss decreases quickly for the specified
-   model and dataset.
+    Find a learning rate range where loss decreases quickly for the specified
+    model and dataset.
 
-   positional arguments:
-   param_path            path to parameter file describing the model to be
-                           trained
+    positional arguments:
+      param_path            path to parameter file describing the model to be
+                            trained
 
-   optional arguments:
-   -h, --help              show this help message and exit
-   -s SERIALIZATION_DIR, --serialization-dir SERIALIZATION_DIR
-                           directory in which to save Learning rate vs loss
-   -f, --force             overwrite the output directory if it exists
-   -o OVERRIDES, --overrides OVERRIDES
-                           a JSON structure used to override the experiment
-                           configuration.
-   --start-lr START_LR
-                           learning rate to start the search.
-   --end-lr END_LR
-                           learning rate up to which search is done.
-   --num-batches NUM_BATCHES
-                           number of mini-batches to run Learning rate finder.
-   --stopping-factor STOPPING_FACTOR
-                           stop the search when the current loss exceeds the best
-                           loss recorded by multiple of stopping factor
-   --linear                increase learning rate linearly instead of exponential
-                           increase
-   --include-package INCLUDE_PACKAGE
-                           additional packages to include
+    optional arguments:
+      -h, --help            show this help message and exit
+      -s SERIALIZATION_DIR, --serialization-dir SERIALIZATION_DIR
+                            The directory in which to save results.
+      -o OVERRIDES, --overrides OVERRIDES
+                            a JSON structure used to override the experiment
+                            configuration
+      --start-lr START_LR   learning rate to start the search (default = 1e-05)
+      --end-lr END_LR       learning rate up to which search is done (default =
+                            10)
+      --num-batches NUM_BATCHES
+                            number of mini-batches to run learning rate finder
+                            (default = 100)
+      --stopping-factor STOPPING_FACTOR
+                            stop the search when the current loss exceeds the best
+                            loss recorded by multiple of stopping factor
+      --linear              increase learning rate linearly instead of exponential
+                            increase
+      -f, --force           overwrite the output directory if it exists
+      --include-package INCLUDE_PACKAGE
+                            additional packages to include
 """
 
 from typing import List, Tuple
