@@ -60,7 +60,7 @@ class Auc(Metric):
         if mask is None:
             batch_size = gold_labels.shape[0]
             mask = torch.ones(batch_size)
-        mask = mask.byte()
+        mask = mask.to(dtype=torch.bool)
 
         self._all_predictions = torch.cat([self._all_predictions,
                                            torch.masked_select(predictions, mask).float()], dim=0)
