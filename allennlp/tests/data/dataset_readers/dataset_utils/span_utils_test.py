@@ -109,19 +109,18 @@ class SpanUtilsTest(AllenNlpTestCase):
         tag_sequence = ['B-PER', 'I-PER', 'L-PER', 'U-PER', 'U-LOC', 'O']
         spans = span_utils.bioul_tags_to_spans(tag_sequence)
         assert spans == [('PER', (0, 2)), ('PER', (3, 3)), ('LOC', (4, 4))]
-
-        tag_sequence = ['B-PER', 'I-PER', 'O']
-        with self.assertRaises(span_utils.InvalidTagSequence):
-            spans = span_utils.bioul_tags_to_spans(tag_sequence)
+        
+        tag_sequence = ['B-PER', 'I-PER', 'O','L-PER', 'U-PER', 'B-LOC', 'L-LOC']
+        spans = span_utils.bioul_tags_to_spans(tag_sequence)
+        assert spans == [('PER', (4, 4)), ('LOC', (5, 6))
 
     def test_bioul_tags_to_spans_without_labels(self):
         tag_sequence = ['B', 'I', 'L', 'U', 'U', 'O']
         spans = span_utils.bioul_tags_to_spans(tag_sequence)
         assert spans == [('', (0, 2)), ('', (3, 3)), ('', (4, 4))]
 
-        tag_sequence = ['B', 'I', 'O']
-        with self.assertRaises(span_utils.InvalidTagSequence):
-            spans = span_utils.bioul_tags_to_spans(tag_sequence)
+        tag_sequence = ['B', 'U', 'O','B', 'I', 'L']
+        assert spans == [('', (1, 1)), ('', (3, 5))]
 
     def test_iob1_to_bioul(self):
         tag_sequence = ['I-ORG', 'O', 'I-MISC', 'O']
