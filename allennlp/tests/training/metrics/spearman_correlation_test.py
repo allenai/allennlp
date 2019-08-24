@@ -36,7 +36,7 @@ def spearman_corrcoef(predictions, labels, mask=None):
 
 
 class SpearmanCorrelationTest(AllenNlpTestCase):
-    def test_unmasked_computation(self):
+    def test_unmasked_computation():
         spearman_correlation = SpearmanCorrelation()
         batch_size = 100
         num_labels = 10
@@ -71,7 +71,7 @@ class SpearmanCorrelationTest(AllenNlpTestCase):
             assert_allclose(spearman_corrcoef(predictions.reshape(-1), labels.reshape(-1)),
                             spearman_correlation.get_metric(), rtol=1e-5)
 
-    def test_masked_computation(self):
+    def test_masked_computation():
         spearman_correlation = SpearmanCorrelation()
         batch_size = 100
         num_labels = 10
