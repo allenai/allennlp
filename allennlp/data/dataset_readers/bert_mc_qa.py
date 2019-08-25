@@ -244,8 +244,8 @@ class BertMCQAReader(DatasetReader):
         choice_tokens = self._word_splitter.split_words(answer)
         question_tokens, choice_tokens = self._truncate_tokens(question_tokens, choice_tokens, self._max_pieces - 3)
 
-        tokens = [cls_token] + question_tokens + [sep_token] + choice_tokens + [sep_token]
-        segment_ids = list(itertools.repeat(0, len(question_tokens) + 2)) + \
+        tokens = [cls_token] + question_tokens + [sep_token] + [sep_token] + choice_tokens + [sep_token]
+        segment_ids = list(itertools.repeat(0, len(question_tokens) + 3)) + \
                       list(itertools.repeat(1, len(choice_tokens) + 1))
 
         if choice1 is not None:
