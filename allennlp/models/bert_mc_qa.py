@@ -57,7 +57,7 @@ class BertMCQAModel(Model):
         else:
             final_output_dim = 1
             self._classifier = Linear(self._output_dim, final_output_dim)
-            #self._classifier.apply(self._bert_model.init_bert_weights)
+            self._classifier.apply(self._bert_model.init_weights)
         self._all_layers = not top_layer_only
         if self._all_layers:
             if bert_weights_model and hasattr(bert_model_loaded.model, "_scalar_mix") \
