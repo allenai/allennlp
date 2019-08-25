@@ -57,7 +57,7 @@ class BertMCQAModel(Model):
         else:
             final_output_dim = 1
             self._classifier = Linear(self._output_dim, final_output_dim)
-            self._classifier.apply(self._bert_model.init_bert_weights)
+            #self._classifier.apply(self._bert_model.init_bert_weights)
         self._all_layers = not top_layer_only
         if self._all_layers:
             if bert_weights_model and hasattr(bert_model_loaded.model, "_scalar_mix") \
@@ -97,8 +97,8 @@ class BertMCQAModel(Model):
 
         encoded_layers, pooled_output = self._bert_model(input_ids=util.combine_initial_dims(input_ids),
                                             token_type_ids=util.combine_initial_dims(token_type_ids),
-                                            attention_mask=util.combine_initial_dims(question_mask),
-                                            output_all_encoded_layers=self._all_layers)
+                                            attention_mask=util.combine_initial_dims(question_mask))
+                                            #output_all_encoded_layers=self._all_layers)
 
         if self._all_layers:
             mixed_layer = self._scalar_mix(encoded_layers, question_mask)
