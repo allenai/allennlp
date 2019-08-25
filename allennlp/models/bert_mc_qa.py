@@ -40,8 +40,8 @@ class BertMCQAModel(Model):
             self._bert_model = BertModel.from_pretrained(pretrained_model)
             self._bert_model.train()
 
-        for param in self._bert_model.parameters():
-            param.requires_grad = requires_grad
+        #for param in self._bert_model.parameters():
+        #    param.requires_grad = requires_grad
         #for name, param in self._bert_model.named_parameters():
         #    grad = requires_grad
         #    if layer_freeze_regexes and grad:
