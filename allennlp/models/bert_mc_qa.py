@@ -38,6 +38,7 @@ class BertMCQAModel(Model):
             self._bert_model = bert_model_loaded.model._bert_model
         else:
             self._bert_model = BertModel.from_pretrained(pretrained_model)
+            self._bert_model.train()
 
         for param in self._bert_model.parameters():
             param.requires_grad = requires_grad
