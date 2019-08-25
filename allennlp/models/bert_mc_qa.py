@@ -2,7 +2,8 @@ from typing import Dict, Optional, List, Any
 
 import logging
 from overrides import overrides
-from pytorch_pretrained_bert.modeling import BertModel, gelu
+from pytorch_transformers.modeling_bert import BertModel, gelu
+from pytorch_transformers.modeling_roberta import RobertaModel, gelu
 import re
 import torch
 from torch.nn.modules.linear import Linear
