@@ -233,8 +233,10 @@ class BertMCQAReader(DatasetReader):
         return tokens_a, tokens_b
 
     def bert_features_from_qa(self, question: str, answer: str, context: str = None, choice1: str = None , choice2: str = None):
-        cls_token = Token("[CLS]")
-        sep_token = Token("[SEP]")
+        # cls_token = Token("[CLS]")
+        # sep_token = Token("[SEP]")
+        cls_token = Token("<s>")
+        sep_token = Token("</s>")
         question_tokens = self._word_splitter.split_words(question)
         if context is not None:
             context_tokens = self._word_splitter.split_words(context)
