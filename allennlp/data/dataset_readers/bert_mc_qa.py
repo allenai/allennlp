@@ -55,6 +55,7 @@ class BertMCQAReader(DatasetReader):
                  sample: int = -1,
                  random_seed: int = 0) -> None:
         super().__init__()
+        self._pretrained_model = pretrained_model
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         lower_case = not '-cased' in pretrained_model
         self._word_splitter = BertBasicWordSplitter(do_lower_case=lower_case)
@@ -233,10 +234,13 @@ class BertMCQAReader(DatasetReader):
         return tokens_a, tokens_b
 
     def bert_features_from_qa(self, question: str, answer: str, context: str = None, choice1: str = None , choice2: str = None):
-        # cls_token = Token("[CLS]")
-        # sep_token = Token("[SEP]")
-        cls_token = Token("<s>")
-        sep_token = Token("</s>")
+        if self._pretrained_model.find('roberta') > -1:
+            cls_token = Token("<s>")
+            sep_token = Token("</s>")
+        else:
+            cls_token = Token("[CLS]")
+            sep_token = Token("[SEP]")
+
         question_tokens = self._word_splitter.split_words(question)
         if context is not None:
             context_tokens = self._word_splitter.split_words(context)
@@ -244,17 +248,12 @@ class BertMCQAReader(DatasetReader):
         choice_tokens = self._word_splitter.split_words(answer)
         question_tokens, choice_tokens = self._truncate_tokens(question_tokens, choice_tokens, self._max_pieces - 3)
 
-        tokens = [cls_token] + question_tokens + [sep_token] + [sep_token] + choice_tokens + [sep_token]
-        segment_ids = list(itertools.repeat(0, len(question_tokens) + 3)) + \
-                      list(itertools.repeat(1, len(choice_tokens) + 1))
-
-        if choice1 is not None:
-            choice1_tokens = self._word_splitter.split_words(choice1)
-            tokens += [Token("|")] + choice1_tokens + [sep_token]
-            segment_ids += list(itertools.repeat(1, len(choice1_tokens) + 2))
-        if choice2 is not None:
-            choice2_tokens = self._word_splitter.split_words(choice2)
-            tokens += [Token("|")] + choice2_tokens + [sep_token]
-            segment_ids += list(itertools.repeat(1, len(choice2_tokens) + 2))
-
+        if self._pretrained_model.find('roberta') > -1:
+            tokens = [cls_token] + question_tokens + [sep_token] + [sep_token] + choice_tokens + [sep_token]
+            segment_ids = list(itertools.repeat(0, len(question_tokens) + 3)) + \
+                          list(itertools.repeat(1, len(choice_tokens) + 1))
+        else:
+            tokens = [cls_token] + question_tokens + [sep_token] + choice_tokens + [sep_token]
+            segment_ids = list(itertools.repeat(0, len(question_tokens) + 2)) + \
+                          list(itertools.repeat(1, len(choice_tokens) + 1))
         return tokens, segment_ids
