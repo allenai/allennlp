@@ -18,6 +18,12 @@ class MaskedLanguageModel(Model):
     contextualizes them, then predicts targets for the masked tokens, computing a loss against
     known targets.
 
+    NOTE: This was developed for use in a demo, not for training.  It's possible that it will still
+    work for training a masked LM, but it is very likely that some other code would be much more
+    efficient for that.  This `does` compute correct gradients of the loss, because we use that in
+    our demo, so in principle it should be able to train a model, we just don't necessarily endorse
+    that use.
+
     Parameters
     ----------
     vocab : ``Vocabulary``
