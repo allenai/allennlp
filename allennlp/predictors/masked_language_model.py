@@ -10,7 +10,7 @@ from allennlp.data.fields import TextField
 from allennlp.predictors.predictor import Predictor
 
 
-@Predictor.register('masked_lm_predictor')
+@Predictor.register('masked_language_model')
 class MaskedLanguageModelPredictor(Predictor):
     def predict(self, sentence_with_masks: str) -> JsonDict:
         return self.predict_json({"sentence" : sentence_with_masks})
