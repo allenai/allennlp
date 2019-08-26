@@ -15,6 +15,8 @@ from allennlp.predictors.coref import CorefPredictor
 from allennlp.predictors.decomposable_attention import DecomposableAttentionPredictor
 from allennlp.predictors.dialog_qa import DialogQAPredictor
 from allennlp.predictors.event2mind import Event2MindPredictor
+from allennlp.predictors.masked_language_model import MaskedLanguageModelPredictor
+from allennlp.predictors.next_token_lm import NextTokenLMPredictor
 from allennlp.predictors.nlvr_parser import NlvrParserPredictor
 from allennlp.predictors.open_information_extraction import OpenIePredictor
 from allennlp.predictors.quarel_parser import QuarelParserPredictor

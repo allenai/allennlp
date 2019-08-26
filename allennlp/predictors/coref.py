@@ -1,11 +1,14 @@
-from typing import List
+from typing import List, Dict
 
 from overrides import overrides
+from copy import deepcopy
+import numpy
 from spacy.tokens import Doc
 
 from allennlp.common.util import JsonDict
 from allennlp.common.util import get_spacy_model
 from allennlp.data import DatasetReader, Instance
+from allennlp.data.fields import SequenceLabelField, SpanField
 from allennlp.models import Model
 from allennlp.predictors.predictor import Predictor
 
@@ -71,6 +74,32 @@ class CorefPredictor(Predictor):
         """
         instance = self._words_list_to_instance(tokenized_document)
         return self.predict_instance(instance)
+
+    @overrides
+    def predictions_to_labeled_instances(self,
+                                         instance: Instance,
+                                         outputs: Dict[str, numpy.ndarray]) -> List[Instance]:
+        predicted_clusters = outputs['clusters']
+        instances = []
+        for cluster in predicted_clusters:
+            new_instance = deepcopy(instance)
+            span_labels = [0 if (span.span_start, span.span_end) in cluster else -1
+                           for span in instance['spans']]
+            new_instance.add_field('span_labels',
+                                   SequenceLabelField(span_labels, instance['spans']),
+                                   self._model.vocab)
+            new_instance['metadata'].metadata['clusters'] = [cluster]
+            instances.append(new_instance)
+        if len(instances) == 0:
+            # No predicted clusters; we just give an empty coref prediction.
+            new_instance = deepcopy(instance)
+            span_labels = [-1] * len(instance['spans'])
+            new_instance.add_field('span_labels',
+                                   SequenceLabelField(span_labels, instance['spans']),
+                                   self._model.vocab)
+            new_instance['metadata'].metadata['clusters'] = []
+            instances.append(new_instance)
+        return instances
 
     @staticmethod
     def replace_corefs(document: Doc, clusters: List[List[List[int]]]) -> str:
