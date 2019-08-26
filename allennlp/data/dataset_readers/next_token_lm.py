@@ -9,7 +9,7 @@ from allennlp.data.tokenizers import Token, WordTokenizer
 from allennlp.data.tokenizers.word_splitter import JustSpacesWordSplitter
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
-from allennlp.data.fields import TextField
+from allennlp.data.fields import Field, TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 
 
@@ -64,7 +64,7 @@ class NextTokenLmReader(DatasetReader):
         if not tokens:
             tokens = self._tokenizer.tokenize(sentence)
         input_field = TextField(tokens, self._token_indexers)
-        fields = {'tokens': input_field}
+        fields: Dict[str, Field] = {'tokens': input_field}
         if target:
             fields['target_ids'] = TextField([Token(target)], self._token_indexers)
         return Instance(fields)
