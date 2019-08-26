@@ -1,9 +1,9 @@
-from typing import Dict, List, Tuple, Union
+from typing import Dict
 
 from overrides import overrides
 import torch
 
-from allennlp.common.checks import check_dimensions_match, ConfigurationError
+from allennlp.common.checks import check_dimensions_match
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import LanguageModelHead, Seq2SeqEncoder, TextFieldEmbedder
@@ -90,7 +90,9 @@ class NextTokenLM(Model):
         top_probs, top_indices = probs.topk(k=k, dim=-1)
 
         output_dict = {"probabilities": top_probs, "top_indices": top_indices}
-        output_dict["tokens"] = [[self.vocab._index_to_token[self._target_namespace][int(t.item())].replace('Ġ',' ') for t in batch] for batch in tokens['tokens']]
+
+        # Using the namespace here is a hack...
+        output_dict["token_ids"] = tokens[self._target_namespace]
 
         if target_ids is not None:
             target_ids = list(target_ids.values())[0]
@@ -115,9 +117,15 @@ class NextTokenLM(Model):
         top_words = []
         for instance_indices in output_dict['top_indices']:
             top_words.append([[self.vocab.get_token_from_index(index.item(),
-                                                              namespace=self._target_namespace).replace('Ġ','')
-                              for index in instance_indices]])
-        output_dict["words"] = top_words
-        print(top_words)
+                                                               namespace=self._target_namespace).replace('Ġ','')
+                               for index in instance_indices]])
+            output_dict["words"] = top_words
+        tokens = []
+        for instance_indices in output_dict['token_ids']:
+            tokens.append([[self.vocab.get_token_from_index(token_id.item(),
+                                                            namespace=self._target_namespace)
+                            for token_id in token_ids]
+                           for token_ids in instance_indices])
+        output_dict["tokens"] = tokens
 
         return output_dict
