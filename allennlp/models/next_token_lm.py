@@ -95,10 +95,10 @@ class NextTokenLM(Model):
         output_dict["token_ids"] = tokens[self._target_namespace]
 
         if target_ids is not None:
-            target_ids = list(target_ids.values())[0]
+            # Hack - we're assuming you only have one target indexer.
+            targets = list(target_ids.values())[0].view(batch_size)
             target_logits = target_logits.view(batch_size, vocab_size)
-            target_ids = target_ids.view(batch_size)
-            loss = torch.nn.functional.cross_entropy(target_logits, target_ids)
+            loss = torch.nn.functional.cross_entropy(target_logits, targets)
             self._perplexity(loss)
             output_dict['loss'] = loss
 
@@ -109,11 +109,6 @@ class NextTokenLM(Model):
 
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
-        """
-        Converts the tag ids to the actual target_ids.
-        ``output_dict["target_ids"]`` is a list of lists of tag_ids,
-        so we use an ugly nested list comprehension.
-        """
         top_words = []
         for instance_indices in output_dict['top_indices']:
             top_words.append([[self.vocab.get_token_from_index(index.item(),

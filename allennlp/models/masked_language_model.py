@@ -83,16 +83,17 @@ class MaskedLanguageModel(Model):
             ``mask_positions`` - one target token per mask position.
         """
         # pylint: disable=arguments-differ
+        targets = None
         if target_ids is not None:
+            # A bit of a hack to get the right targets out of the TextField output...
             if len(target_ids) != 1:
-                target_ids = target_ids['bert']
-                #raise ValueError(f"Found {len(target_ids)} indexers for target_ids, not sure what to do")
+                targets = target_ids['bert']
             else:
-                target_ids = list(target_ids.values())[0]
+                targets = list(target_ids.values())[0]
         mask_positions = mask_positions.squeeze(-1)
         batch_size, num_masks = mask_positions.size()
-        if target_ids is not None and target_ids.size() != mask_positions.size():
-            raise ValueError(f"Number of targets ({target_ids.size()}) and number of masks "
+        if targets is not None and targets.size() != mask_positions.size():
+            raise ValueError(f"Number of targets ({targets.size()}) and number of masks "
                              f"({mask_positions.size()}) are not equal")
 
         # Shape: (batch_size, num_tokens, embedding_dim)
@@ -120,10 +121,10 @@ class MaskedLanguageModel(Model):
         # Using the namespace here is a hack...
         output_dict["token_ids"] = tokens[self._target_namespace]
 
-        if target_ids is not None:
+        if targets is not None:
             target_logits = target_logits.view(batch_size * num_masks, vocab_size)
-            target_ids = target_ids.view(batch_size * num_masks)
-            loss = torch.nn.functional.cross_entropy(target_logits, target_ids)
+            targets = targets.view(batch_size * num_masks)
+            loss = torch.nn.functional.cross_entropy(target_logits, targets)
             self._perplexity(loss)
             output_dict['loss'] = loss
 
@@ -134,11 +135,6 @@ class MaskedLanguageModel(Model):
 
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
-        """
-        Converts the tag ids to the actual target_ids.
-        ``output_dict["target_ids"]`` is a list of lists of tag_ids,
-        so we use an ugly nested list comprehension.
-        """
         top_words = []
         for instance_indices in output_dict['top_indices']:
             top_words.append([[self.vocab.get_token_from_index(index.item(),
