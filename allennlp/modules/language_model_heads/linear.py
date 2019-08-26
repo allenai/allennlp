@@ -7,6 +7,10 @@ from allennlp.modules.language_model_heads.language_model_head import LanguageMo
 
 @LanguageModelHead.register('linear')
 class LinearLanguageModelHead(LanguageModelHead):
+    """
+    Uses ``torch.nn.Linear`` as a language model head.  Does nothing else fancy.  This was intended
+    largely for testing code with small models and simple components.
+    """
     def __init__(self,
                  vocab: Vocabulary,
                  input_dim: int,

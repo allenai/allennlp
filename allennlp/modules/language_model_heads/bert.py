@@ -7,6 +7,12 @@ from allennlp.modules.language_model_heads.language_model_head import LanguageMo
 
 @LanguageModelHead.register('bert')
 class BertLanguageModelHead(LanguageModelHead):
+    """
+    Loads just the LM head from ``pytorch_transformers.BertForMaskedLM``.  It was easiest to load
+    the entire model before only pulling out the head, so this is a bit slower than it could be,
+    but for practical use in a model, the few seconds of extra loading time is probably not a big
+    deal.
+    """
     def __init__(self, model_name: str) -> None:
         super().__init__()
         config = BertConfig.from_pretrained(model_name)
