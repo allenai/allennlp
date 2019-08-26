@@ -19,7 +19,7 @@ class BertLanguageModelHead(LanguageModelHead):
         self.input_dim = config.hidden_size
         self.output_dim = config.vocab_size
         bert_model = BertForMaskedLM.from_pretrained(model_name)
-        self.bert_lm_head = bert_model.cls
+        self.bert_lm_head = bert_model.cls  # pylint: disable=no-member
 
     @overrides
     def get_input_dim(self) -> int:

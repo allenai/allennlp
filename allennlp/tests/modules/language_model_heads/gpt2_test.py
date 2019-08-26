@@ -1,7 +1,5 @@
 # pylint: disable=invalid-name,no-self-use,protected-access
 import torch
-from numpy.testing import assert_almost_equal
-import numpy
 
 from allennlp.common import Params
 from allennlp.common.testing.test_case import AllenNlpTestCase

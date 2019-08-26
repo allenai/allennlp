@@ -19,7 +19,7 @@ class Gpt2LanguageModelHead(LanguageModelHead):
         self.input_dim = config.hidden_size
         self.output_dim = config.vocab_size
         gpt2_model = GPT2LMHeadModel.from_pretrained(model_name)
-        self.gpt2_lm_head = gpt2_model.lm_head
+        self.gpt2_lm_head = gpt2_model.lm_head  # pylint: disable=no-member
 
     @overrides
     def get_input_dim(self) -> int:
