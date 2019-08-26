@@ -4,6 +4,8 @@ import io
 import pkgutil
 import re
 
+import pytest
+
 import allennlp
 from allennlp.commands import create_parser
 from allennlp.common.testing import AllenNlpTestCase
@@ -21,6 +23,7 @@ def _subcommand_help_output(subcommand: str) -> str:
     raise LookupError("The main program parser does not contain a argparse._SubParsersAction object")
 
 
+@pytest.mark.skip(reason="This test is slow and somewhat fragile and doesn't need to run every commit.")
 class TestDocstringHelp(AllenNlpTestCase):
     RE_DOCSTRING_CALL_SUBCOMMAND_HELP = re.compile(r'^\s*\$ (allennlp (\S+) --help)$', re.MULTILINE)
     RE_STARTS_WITH_INDENTATION = re.compile(r'^ {4}', re.MULTILINE)
