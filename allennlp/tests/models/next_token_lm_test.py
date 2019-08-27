@@ -1,5 +1,6 @@
 # pylint: disable=invalid-name,arguments-differ,abstract-method
 from allennlp.common.testing import ModelTestCase
+from ..modules.language_model_heads.linear import LinearLanguageModelHead  # pylint: disable=unused-import
 
 
 class TestNextTokenLanguageModel(ModelTestCase):
