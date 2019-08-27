@@ -3,7 +3,7 @@ from typing import Dict, Optional, List, Any
 import logging
 from overrides import overrides
 from pytorch_transformers.modeling_bert import BertModel, gelu
-from pytorch_transformers.modeling_roberta import RobertaModel, gelu
+from pytorch_transformers.modeling_roberta import RobertaClassificationHead, RobertaConfig, RobertaModel
 import re
 import torch
 from torch.nn.modules.linear import Linear
@@ -37,11 +37,13 @@ class BertMCQAModel(Model):
             bert_model_loaded = load_archive(bert_weights_model)
             self._bert_model = bert_model_loaded.model._bert_model
         else:
-            self._bert_model = BertModel.from_pretrained(pretrained_model)
+            self._bert_model = RobertaModel.from_pretrained(pretrained_model)
             self._bert_model.train()
+            transformer_config = self._bert_model.config
+            transformer_config.num_labels = 1
 
-        #for param in self._bert_model.parameters():
-        #    param.requires_grad = requires_grad
+        for param in self._bert_model.parameters():
+            param.requires_grad = requires_grad
         #for name, param in self._bert_model.named_parameters():
         #    grad = requires_grad
         #    if layer_freeze_regexes and grad:
@@ -52,13 +54,9 @@ class BertMCQAModel(Model):
         self._output_dim = bert_config.hidden_size
         self._dropout = torch.nn.Dropout(bert_config.hidden_dropout_prob)
         self._per_choice_loss = per_choice_loss
-        # TODO: Check dimensions before replacing
-        if bert_weights_model and hasattr(bert_model_loaded.model, "_classifier"):
-            self._classifier = bert_model_loaded.model._classifier
-        else:
-            final_output_dim = 1
-            self._classifier = Linear(self._output_dim, final_output_dim)
-            self._classifier.apply(self._bert_model.init_weights)
+
+        self._classifier = RobertaClassificationHead(transformer_config)
+
         self._all_layers = not top_layer_only
         if self._all_layers:
             if bert_weights_model and hasattr(bert_model_loaded.model, "_scalar_mix") \
@@ -91,21 +89,27 @@ class BertMCQAModel(Model):
                     metadata: List[Dict[str, Any]] = None) -> torch.Tensor:
 
         self._debug -= 1
-        input_ids = question['bert']
-        batch_size, num_choices, _  = question['bert'].size()
+        input_ids = question['tokens']
+        batch_size, num_choices, _  = question['tokens'].size()
         question_mask = (input_ids != 0).long()
         token_type_ids = torch.zeros_like(input_ids)
 
-        encoded_layers, pooled_output = self._bert_model(input_ids=util.combine_initial_dims(input_ids),
-                                            token_type_ids=util.combine_initial_dims(token_type_ids),
-                                            attention_mask=util.combine_initial_dims(question_mask))
-                                            #output_all_encoded_layers=self._all_layers)
+        #encoded_layers, pooled_output = self._bert_model(input_ids=util.combine_initial_dims(input_ids),
+        #                                    token_type_ids=util.combine_initial_dims(token_type_ids),
+        #                                    attention_mask=util.combine_initial_dims(question_mask))
+        #                                    #output_all_encoded_layers=self._all_layers)
 
-        if self._all_layers:
-            mixed_layer = self._scalar_mix(encoded_layers, question_mask)
-            pooled_output = self._bert_model.pooler(mixed_layer)
+        transformer_outputs = self._bert_model(input_ids=util.combine_initial_dims(input_ids),
+                                                      # token_type_ids=util.combine_initial_dims(segment_ids),
+                                                      attention_mask=util.combine_initial_dims(question_mask))
 
-        pooled_output = self._dropout(pooled_output)
+        pooled_output = transformer_outputs[0]
+
+        #if self._all_layers:
+        #    mixed_layer = self._scalar_mix(encoded_layers, question_mask)
+        #    pooled_output = self._bert_model.pooler(mixed_layer)
+
+        #pooled_output = self._dropout(pooled_output)
         label_logits = self._classifier(pooled_output)
         label_logits_flat = label_logits.squeeze(1)
         label_logits = label_logits.view(-1, num_choices)
@@ -138,4 +142,5 @@ class BertMCQAModel(Model):
         return {
             'EM': self._accuracy.get_metric(reset),
         }
+
 
