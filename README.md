@@ -10,6 +10,7 @@ for developing state-of-the-art deep learning models on a wide variety of lingui
 
 * [Website](https://allennlp.org/)
 * [Tutorial](https://allennlp.org/tutorials)
+* [Forum](https://discourse.allennlp.org)
 * [Documentation](https://allenai.github.io/allennlp-docs/)
 * [Contributing Guidelines](CONTRIBUTING.md)
 * [Model List](MODELS.md)
