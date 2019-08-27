@@ -45,11 +45,6 @@ def _create_tensor_dicts_from_queue(input_queue: Queue,
     # on a Mac alone is not sufficient.
     output_queue.join()
 
-    # This helps prevent deadlocks. See the note in multiprocess_dataset_reader.py.
-    # TODO(brendanr): Needed given we're joining the queue above?
-    output_queue.close()
-    output_queue.join_thread()
-
 def _create_tensor_dicts_from_qiterable(qiterable: QIterable,
                                         output_queue: Queue,
                                         iterator: DataIterator,
@@ -77,11 +72,6 @@ def _create_tensor_dicts_from_qiterable(qiterable: QIterable,
 
     # See the note above in _create_tensor_dicts_from_queue.
     output_queue.join()
-
-    # This helps prevent deadlocks. See the note in multiprocess_dataset_reader.py.
-    # TODO(brendanr): Needed given we're joining the queue above?
-    output_queue.close()
-    output_queue.join_thread()
 
 def _queuer(instances: Iterable[Instance],
             input_queue: Queue,
