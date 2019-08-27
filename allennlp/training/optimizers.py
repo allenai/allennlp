@@ -2,9 +2,7 @@
 AllenNLP just uses
 `PyTorch optimizers <https://pytorch.org/docs/master/optim.html>`_ ,
 with a thin wrapper to allow registering them and instantiating them ``from_params``.
-
 The available optimizers are
-
 * `"adadelta" <https://pytorch.org/docs/master/optim.html#torch.optim.Adadelta>`_
 * `"adagrad" <https://pytorch.org/docs/master/optim.html#torch.optim.Adagrad>`_
 * `"adam" <https://pytorch.org/docs/master/optim.html#torch.optim.Adam>`_
@@ -22,6 +20,7 @@ from typing import List, Any, Dict
 
 import torch
 from pytorch_pretrained_bert.optimization import BertAdam
+from pytorch_transformers.optimization import AdamW
 
 from allennlp.common import Params, Registrable
 
@@ -148,6 +147,7 @@ Registrable._registry[Optimizer] = {   # pylint: disable=protected-access
         "adamax": torch.optim.Adamax,
         "averaged_sgd": torch.optim.ASGD,
         "bert_adam": BertAdam,
+        "adam_w": AdamW,
 }
 
 def _safe_sparse_mask(tensor: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
@@ -171,10 +171,8 @@ class DenseSparseAdam(torch.optim.Optimizer):
     """
     NOTE: This class has been copied verbatim from the separate Dense and
     Sparse versions of Adam in Pytorch.
-
     Implements Adam algorithm with dense & sparse gradients.
     It has been proposed in Adam: A Method for Stochastic Optimization.
-
     Parameters
     ----------
     params : ``iterable``
@@ -202,7 +200,6 @@ class DenseSparseAdam(torch.optim.Optimizer):
     def step(self, closure=None):
         """
         Performs a single optimization step.
-
         Parameters
         ----------
         closure : ``callable``, optional.
