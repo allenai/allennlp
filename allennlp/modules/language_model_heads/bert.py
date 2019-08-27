@@ -18,6 +18,10 @@ class BertLanguageModelHead(LanguageModelHead):
         config = BertConfig.from_pretrained(model_name)
         self.input_dim = config.hidden_size
         self.output_dim = config.vocab_size
+        # TODO(mattg): It's possible that we could use some kind of cache like we have in
+        # allennlp.modules.token_embedders.bert_token_embedder.PretrainedBertModel.  That way, we
+        # would only load the BERT weights once.  Though, it's not clear how to do that here, as we
+        # need to load `BertForMaskedLM`, not just `BertModel`...
         bert_model = BertForMaskedLM.from_pretrained(model_name)
         self.bert_lm_head = bert_model.cls  # pylint: disable=no-member
 

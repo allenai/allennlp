@@ -18,6 +18,10 @@ class Gpt2LanguageModelHead(LanguageModelHead):
         config = GPT2Config.from_pretrained(model_name)
         self.input_dim = config.hidden_size
         self.output_dim = config.vocab_size
+        # TODO(mattg): It's possible that we could use some kind of cache like we have in
+        # allennlp.modules.token_embedders.bert_token_embedder.PretrainedBertModel.  That way, we
+        # would only load the GPT2 weights once.  Though, it's not clear how to do that here, as we
+        # need to load `GPT2LMHeadModel`, not just `GPT2Model`...
         gpt2_model = GPT2LMHeadModel.from_pretrained(model_name)
         self.gpt2_lm_head = gpt2_model.lm_head  # pylint: disable=no-member
 
