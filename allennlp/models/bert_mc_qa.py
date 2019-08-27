@@ -38,7 +38,7 @@ class BertMCQAModel(Model):
             self._bert_model = bert_model_loaded.model._bert_model
         else:
             self._bert_model = RobertaModel.from_pretrained(pretrained_model)
-            self._bert_model.train()
+            #self._bert_model.train()
             transformer_config = self._bert_model.config
             transformer_config.num_labels = 1
 
@@ -89,8 +89,8 @@ class BertMCQAModel(Model):
                     metadata: List[Dict[str, Any]] = None) -> torch.Tensor:
 
         self._debug -= 1
-        input_ids = question['tokens']
-        batch_size, num_choices, _  = question['tokens'].size()
+        input_ids = question['roberta']
+        batch_size, num_choices, _  = question['roberta'].size()
         question_mask = (input_ids != 0).long()
         token_type_ids = torch.zeros_like(input_ids)
 
