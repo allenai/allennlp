@@ -5,6 +5,7 @@ from numpy.testing import assert_allclose
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.training.metrics import SpearmanCorrelation
 
+# pylint: disable=no-self-use
 
 def spearman_corrcoef(predictions, labels, mask=None):
     if mask is not None:
