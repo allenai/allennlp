@@ -112,7 +112,7 @@ class NextTokenLM(Model):
         top_words = []
         for instance_indices in output_dict['top_indices']:
             top_words.append([[self.vocab.get_token_from_index(index.item(),
-                                                               namespace=self._target_namespace).replace('Ġ','')
+                                                               namespace=self._target_namespace)
                                for index in instance_indices]])
             output_dict["words"] = top_words
         tokens = []
