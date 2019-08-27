@@ -27,7 +27,8 @@ class NextTokenLmReader(DatasetReader):
 
     NOTE: This is not fully functional!  It was written to put together a demo for interpreting and
     attacking language models, not for actually training anything.  It would be a really bad idea
-    to use this setup for training language models.  The only purpose of this class is for a demo.
+    to use this setup for training language models, as it would be incredibly inefficient.  The
+    only purpose of this class is for a demo.
 
     Parameters
     ----------
@@ -47,8 +48,9 @@ class NextTokenLmReader(DatasetReader):
 
     @overrides
     def _read(self, file_path: str):
-        # NOTE: this is only useful for easy model tests.  Implementing this function for real
-        # doesn't make any sense, as you would never want to train a language model this way.
+        if 'test' not in sys.argv[0]:
+            raise RuntimeError('_read is only implemented for unit tests. You should not actually '
+                               'try to train or evaluate a language model with this code.')
         with open(file_path, "r") as text_file:
             for sentence in text_file:
                 tokens = self._tokenizer.tokenize(sentence)
