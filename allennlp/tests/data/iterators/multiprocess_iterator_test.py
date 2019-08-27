@@ -45,7 +45,7 @@ class TestMultiprocessIterator(IteratorTest):
             generator = iterator(test_instances, num_epochs=1)
             # We only iterate through 3 of the 5 instances causing the
             # processes generating the tensors to remain active.
-            for i in range(3):
+            for _ in range(3):
                 next(generator)
             # The real test here is that we exit normally and don't hang due to
             # the still active processes.
