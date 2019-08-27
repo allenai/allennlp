@@ -20,8 +20,3 @@ allennlp.modules.language_model_heads
    :members:
    :undoc-members:
    :show-inheritance:
-
-.. automodule:: allennlp.modules.language_model_heads.linear
-   :members:
-   :undoc-members:
-   :show-inheritance:
