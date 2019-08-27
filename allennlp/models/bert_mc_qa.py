@@ -42,7 +42,7 @@ class BertMCQAModel(Model):
             transformer_config = self._bert_model.config
             transformer_config.num_labels = 1
 
-        for param in self._bert_model.parameters():
+        for param in self._bert_model.named_parameters():
             param.requires_grad = requires_grad
         #for name, param in self._bert_model.named_parameters():
         #    grad = requires_grad
@@ -80,6 +80,8 @@ class BertMCQAModel(Model):
             self._accuracy = CategoricalAccuracy()
             self._loss = torch.nn.CrossEntropyLoss()
         self._debug = -1
+        self._padding_value = 1 # The index of the RoBERTa padding token
+
 
 
     def forward(self,
@@ -91,7 +93,7 @@ class BertMCQAModel(Model):
         self._debug -= 1
         input_ids = question['roberta']
         batch_size, num_choices, _  = question['roberta'].size()
-        question_mask = (input_ids != 0).long()
+        question_mask = (input_ids != self._padding_value).long()
         token_type_ids = torch.zeros_like(input_ids)
 
         #encoded_layers, pooled_output = self._bert_model(input_ids=util.combine_initial_dims(input_ids),
