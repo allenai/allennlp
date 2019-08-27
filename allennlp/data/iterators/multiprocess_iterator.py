@@ -3,7 +3,7 @@ import os
 from queue import Empty
 from typing import Iterable, Iterator, List, Optional
 
-from torch.multiprocessing import Process, Queue, get_logger
+from torch.multiprocessing import JoinableQueue, Process, Queue, get_logger
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.data.dataset import Batch
@@ -36,7 +36,17 @@ def _create_tensor_dicts_from_queue(input_queue: Queue,
 
     output_queue.put(index)
 
+    # We need to ensure we've gotten all the tensors out of this queue before
+    # this process ends. Otherwise we'll crash. See
+    # https://github.com/pytorch/pytorch/issues/7181. This appears to be an
+    # issue specifically with tensors, perhaps due to the refcounting involved
+    # in managing them in shared memory. If you're working on this code, be
+    # aware that I've only been able to reproduce this issue on Linux.  Testing
+    # on a Mac alone is not sufficient.
+    output_queue.join()
+
     # This helps prevent deadlocks. See the note in multiprocess_dataset_reader.py.
+    # TODO(brendanr): Needed given we're joining the queue above?
     output_queue.close()
     output_queue.join_thread()
 
@@ -65,7 +75,11 @@ def _create_tensor_dicts_from_qiterable(qiterable: QIterable,
 
     output_queue.put(index)
 
+    # See the note above in _create_tensor_dicts_from_queue.
+    output_queue.join()
+
     # This helps prevent deadlocks. See the note in multiprocess_dataset_reader.py.
+    # TODO(brendanr): Needed given we're joining the queue above?
     output_queue.close()
     output_queue.join_thread()
 
@@ -138,7 +152,9 @@ class MultiprocessIterator(DataIterator):
                              instances: Iterable[Instance],
                              num_epochs: int,
                              shuffle: bool) -> Iterator[TensorDict]:
-        output_queue = Queue(self.output_queue_size)
+        # JoinableQueue needed here as sharing tensors across processes
+        # requires that the creating process not exit prematurely.
+        output_queue = JoinableQueue(self.output_queue_size)
         input_queue = Queue(self.output_queue_size * self.batch_size)
 
         # Start process that populates the queue.
@@ -157,6 +173,7 @@ class MultiprocessIterator(DataIterator):
         num_finished = 0
         while num_finished < self.num_workers:
             item = output_queue.get()
+            output_queue.task_done()
             if isinstance(item, int):
                 num_finished += 1
                 logger.info(f"worker {item} finished ({num_finished} / {self.num_workers})")
@@ -175,7 +192,9 @@ class MultiprocessIterator(DataIterator):
                              qiterable: QIterable,
                              num_epochs: int,
                              shuffle: bool) -> Iterator[TensorDict]:
-        output_queue = Queue(self.output_queue_size)
+        # JoinableQueue needed here as sharing tensors across processes
+        # requires that the creating tensor not exit prematurely.
+        output_queue = JoinableQueue(self.output_queue_size)
 
         for _ in range(num_epochs):
             qiterable.start()
@@ -190,6 +209,7 @@ class MultiprocessIterator(DataIterator):
             num_finished = 0
             while num_finished < self.num_workers:
                 item = output_queue.get()
+                output_queue.task_done()
                 if isinstance(item, int):
                     num_finished += 1
                     logger.info(f"worker {item} finished ({num_finished} / {self.num_workers})")
