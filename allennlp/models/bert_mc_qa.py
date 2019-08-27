@@ -42,7 +42,7 @@ class BertMCQAModel(Model):
             transformer_config = self._bert_model.config
             transformer_config.num_labels = 1
 
-        for param in self._bert_model.named_parameters():
+        for name, param in self._bert_model.named_parameters():
             param.requires_grad = requires_grad
         #for name, param in self._bert_model.named_parameters():
         #    grad = requires_grad
