@@ -10,6 +10,7 @@ from allennlp.data.tokenizers.tokenizer import Tokenizer
 logger = logging.getLogger(__name__)
 
 
+
 @Tokenizer.register("pretrained_transformer")
 class PretrainedTransformerTokenizer(Tokenizer):
     """
