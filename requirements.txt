@@ -7,9 +7,9 @@
 
 # This installs Pytorch for CUDA 8 only. If you are using a newer version,
 # please visit https://pytorch.org/ and install the relevant version.
-# For now AllenNLP works with both PyTorch 1.0 and 0.4.1. Expect that in
-# the future only >=1.0 will be supported.
-torch>=0.4.1,<1.2
+# allennlp>0.8.5 requires PyTorch 1.2 or greater. If you need to use
+# an older version of PyTorch you'll also need to use an older version of allennlp.
+torch>=1.2.0
 
 # Parameter parsing (but not on Windows).
 jsonnet>=0.10.0 ; sys.platform != 'win32'

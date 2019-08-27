@@ -7,7 +7,7 @@ At its core it uses Hugging Face's PyTorch implementation
 (https://github.com/huggingface/pytorch-pretrained-BERT),
 so thanks to them!
 """
-from typing import Dict
+from typing import Dict, List
 import logging
 
 import torch
@@ -66,13 +66,18 @@ class BertEmbedder(TokenEmbedder):
         The number of starting special tokens input to BERT (usually 1, i.e., [CLS])
     num_end_tokens : int, optional (default: 1)
         The number of ending tokens input to BERT (usually 1, i.e., [SEP])
+    scalar_mix_parameters: ``List[float]``, optional, (default = None)
+        If not ``None``, use these scalar mix parameters to weight the representations
+        produced by different layers. These mixing weights are not updated during
+        training.
     """
     def __init__(self,
                  bert_model: BertModel,
                  top_layer_only: bool = False,
                  max_pieces: int = 512,
                  num_start_tokens: int = 1,
-                 num_end_tokens: int = 1) -> None:
+                 num_end_tokens: int = 1,
+                 scalar_mix_parameters: List[float] = None) -> None:
         super().__init__()
         self.bert_model = bert_model
         self.output_dim = bert_model.config.hidden_size
@@ -82,7 +87,9 @@ class BertEmbedder(TokenEmbedder):
 
         if not top_layer_only:
             self._scalar_mix = ScalarMix(bert_model.config.num_hidden_layers,
-                                         do_layer_norm=False)
+                                         do_layer_norm=False,
+                                         initial_scalar_parameters=scalar_mix_parameters,
+                                         trainable=scalar_mix_parameters is None)
         else:
             self._scalar_mix = None
 
@@ -253,11 +260,16 @@ class PretrainedBertEmbedder(BertEmbedder):
         If True, compute gradient of BERT parameters for fine tuning.
     top_layer_only: ``bool``, optional (default = ``False``)
         If ``True``, then only return the top layer instead of apply the scalar mix.
+    scalar_mix_parameters: ``List[float]``, optional, (default = None)
+        If not ``None``, use these scalar mix parameters to weight the representations
+        produced by different layers. These mixing weights are not updated during
+        training.
     """
-    def __init__(self, pretrained_model: str, requires_grad: bool = False, top_layer_only: bool = False) -> None:
+    def __init__(self, pretrained_model: str, requires_grad: bool = False, top_layer_only: bool = False,
+                 scalar_mix_parameters: List[float] = None) -> None:
         model = PretrainedBertModel.load(pretrained_model)
 
         for param in model.parameters():
             param.requires_grad = requires_grad
 
-        super().__init__(bert_model=model, top_layer_only=top_layer_only)
+        super().__init__(bert_model=model, top_layer_only=top_layer_only, scalar_mix_parameters=scalar_mix_parameters)

@@ -270,7 +270,7 @@ def masked_softmax(vector: torch.Tensor,
             result = result * mask
             result = result / (result.sum(dim=dim, keepdim=True) + 1e-13)
         else:
-            masked_vector = vector.masked_fill((1 - mask).byte(), mask_fill_value)
+            masked_vector = vector.masked_fill((1 - mask).to(dtype=torch.bool), mask_fill_value)
             result = torch.nn.functional.softmax(masked_vector, dim=dim)
     return result
 
@@ -334,7 +334,7 @@ def masked_max(vector: torch.Tensor,
     -------
     A ``torch.Tensor`` of including the maximum values.
     """
-    one_minus_mask = (1.0 - mask).byte()
+    one_minus_mask = (1.0 - mask).to(dtype=torch.bool)
     replaced_vector = vector.masked_fill(one_minus_mask, min_val)
     max_value, _ = replaced_vector.max(dim=dim, keepdim=keepdim)
     return max_value
@@ -365,7 +365,7 @@ def masked_mean(vector: torch.Tensor,
     -------
     A ``torch.Tensor`` of including the mean values.
     """
-    one_minus_mask = (1.0 - mask).byte()
+    one_minus_mask = (1.0 - mask).to(dtype=torch.bool)
     replaced_vector = vector.masked_fill(one_minus_mask, 0.0)
 
     value_sum = torch.sum(replaced_vector, dim=dim, keepdim=keepdim)
@@ -773,11 +773,11 @@ def replace_masked_values(tensor: torch.Tensor, mask: torch.Tensor, replace_with
 
     This just does ``tensor.masked_fill()``, except the pytorch method fills in things with a mask
     value of 1, where we want the opposite.  You can do this in your own code with
-    ``tensor.masked_fill((1 - mask).byte(), replace_with)``.
+    ``tensor.masked_fill((1 - mask).to(dtype=torch.bool), replace_with)``.
     """
     if tensor.dim() != mask.dim():
         raise ConfigurationError("tensor.dim() (%d) != mask.dim() (%d)" % (tensor.dim(), mask.dim()))
-    return tensor.masked_fill((1 - mask).byte(), replace_with)
+    return tensor.masked_fill((1 - mask).to(dtype=torch.bool), replace_with)
 
 
 def tensors_equal(tensor1: torch.Tensor, tensor2: torch.Tensor, tolerance: float = 1e-12) -> bool:

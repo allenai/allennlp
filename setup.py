@@ -101,7 +101,7 @@ setup(name='allennlp',
       packages=find_packages(exclude=["*.tests", "*.tests.*",
                                       "tests.*", "tests"]),
       install_requires=[
-          'torch>=0.4.1,<1.2',
+          'torch>=1.2.0',
           "jsonnet>=0.10.0 ; sys.platform != 'win32'",
           'overrides',
           'nltk',
