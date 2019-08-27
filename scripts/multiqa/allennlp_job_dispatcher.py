@@ -45,7 +45,7 @@ class AllenNLP_Job_Dispatcher():
         all_objects = s3.list_objects(Bucket='multiqa', Prefix='data/')
         #all_objects = s3.list_objects(Bucket='multiqa', Prefix='preproc/')
         all_objects['Contents'] += s3.list_objects(Bucket='commensenseqa', Prefix='crowdsense/')['Contents']
-        #all_objects['Contents'] += s3.list_objects(Bucket='multiqa', Prefix='data/')['Contents']
+        #all_objects['Cotents'] += s3.list_objects(Bucket='multiqa', Prefix='data/')['Contents']
         #all_objects['Contents'] += s3.list_objects(Bucket='mrqa', Prefix='data/')['Contents']
         all_objects['Contents'] += s3.list_objects(Bucket='beatbert', Prefix='data/')['Contents']
         #all_objects['Contents'] += s3.list_objects(Bucket='multiqa', Prefix='allennlp_preproc/')['Contents']
@@ -638,9 +638,9 @@ allennlp_dispatcher = AllenNLP_Job_Dispatcher(experiment_name)
 #experiment_name = '065_BERT_train_mix_MRQA'
 #experiment_name = '066_CSQA_BERT_train'
 #experiment_name = '067_CSQA_BERTbase_grid_train'
-experiment_name = '068_beatbert_train'
+#experiment_name = '068_beatbert_train'
 #experiment_name = '069_BERTLarge_train_mix_MRQA'
-experiment_name = '070_CSQA_BERTLarge_train'
+#experiment_name = '070_CSQA_BERTLarge_train'
 #experiment_name = '071_BERT_preproc_rlcwq'
 #experiment_name = '072_BERT_evaluate_crowdsense'
 #experiment_name = '073_beatbert_nettrain_large'
@@ -654,10 +654,12 @@ experiment_name = '070_CSQA_BERTLarge_train'
 #experiment_name = '080_MultiQA_BERT_predict_eval'
 #experiment_name = '081_MultiQA_build_datasets'
 #experiment_name = '082_git_pull'
+experiment_name = '083_CSQA_RoBERTaLarge_samechunk_train'
+
 #if experiment_name.find('BERTLarge') > -1 and experiment_name.find('evaluate') == -1:
 #queue = '4GPUs'
 #queue = 'V100'
-#queue = 'gamir'
+queue = 'gamir'
 #queue = 'rack-gamir-g07'
 #queue = 'rack-jonathan-g08'
 #queue = 'savant'

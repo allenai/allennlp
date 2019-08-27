@@ -46,7 +46,8 @@ class ModelTestCase(AllenNlpTestCase):
                                              tolerance: float = 1e-4,
                                              cuda_device: int = -1,
                                              gradients_to_ignore: Set[str] = None,
-                                             overrides: str = ""):
+                                             overrides: str = "",
+                                             disable_dropout: bool = True):
         """
         Parameters
         ----------
@@ -68,6 +69,9 @@ class ModelTestCase(AllenNlpTestCase):
             infrequently-used parameters that are hard to force the model to use in a small test).
         overrides : ``str``, optional (default = "")
             A JSON string that we will use to override values in the input parameter file.
+        disable_dropout : ``bool``, optional (default = True)
+            If True we will set all dropout to 0 before checking gradients. (Otherwise, with small
+            datasets, you may get zero gradients because of unlucky dropout.)
         """
         save_dir = self.TEST_DIR / "save_and_load_test"
         archive_file = save_dir / "model.tar.gz"
@@ -103,7 +107,7 @@ class ModelTestCase(AllenNlpTestCase):
 
         # Check gradients are None for non-trainable parameters and check that
         # trainable parameters receive some gradient if they are trainable.
-        self.check_model_computes_gradients_correctly(model, model_batch, gradients_to_ignore)
+        self.check_model_computes_gradients_correctly(model, model_batch, gradients_to_ignore, disable_dropout)
 
         # The datasets themselves should be identical.
         assert model_batch.keys() == loaded_batch.keys()
@@ -167,9 +171,20 @@ class ModelTestCase(AllenNlpTestCase):
     @staticmethod
     def check_model_computes_gradients_correctly(model: Model,
                                                  model_batch: Dict[str, Union[Any, Dict[str, Any]]],
-                                                 params_to_ignore: Set[str] = None):
+                                                 params_to_ignore: Set[str] = None,
+                                                 disable_dropout: bool = True):
         print("Checking gradients")
         model.zero_grad()
+
+        original_dropouts: Dict[str, float] = {}
+
+        if disable_dropout:
+            # Remember original dropouts so we can restore them.
+            for name, module in model.named_modules():
+                if isinstance(module, torch.nn.Dropout):
+                    original_dropouts[name] = getattr(module, 'p')
+                    setattr(module, 'p', 0)
+
         result = model(**model_batch)
         result["loss"].backward()
         has_zero_or_none_grads = {}
@@ -196,6 +211,12 @@ class ModelTestCase(AllenNlpTestCase):
             for name, grad in has_zero_or_none_grads.items():
                 print(f"Parameter: {name} had incorrect gradient: {grad}")
             raise Exception("Incorrect gradients found. See stdout for more info.")
+
+        # Now restore dropouts if we disabled them.
+        if disable_dropout:
+            for name, module in model.named_modules():
+                if name in original_dropouts:
+                    setattr(module, 'p', original_dropouts[name])
 
     def ensure_batch_predictions_are_consistent(
             self,
