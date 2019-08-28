@@ -145,11 +145,10 @@ class MaskedLanguageModel(Model):
                               for mask_positions in instance_indices])
         output_dict["words"] = top_words
         tokens = []
-        for instance_indices in output_dict['token_ids']:
-            tokens.append([[self.vocab.get_token_from_index(token_id.item(),
-                                                            namespace=self._target_namespace)
-                            for token_id in token_ids]
-                           for token_ids in instance_indices])
+        for instance_tokens in output_dict['token_ids']:
+            tokens.append([self.vocab.get_token_from_index(token_id.item(),
+                                                           namespace=self._target_namespace)
+                           for token_id in instance_tokens])
         output_dict["tokens"] = tokens
 
         return output_dict
