@@ -34,10 +34,6 @@ numpydoc>=0.8.0
 scipy
 scikit-learn
 
-# Write logs for training visualisation with the Tensorboard application
-# Install the Tensorboard application separately (part of tensorflow) to view them.
-tensorboardX>=1.2
-
 # Accessing files from S3 directly.
 boto3
 

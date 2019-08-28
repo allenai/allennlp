@@ -2,7 +2,7 @@ from typing import Any, Set, Optional, Callable
 import logging
 import os
 
-from tensorboardX import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 import torch
 
 from allennlp.common.from_params import FromParams
