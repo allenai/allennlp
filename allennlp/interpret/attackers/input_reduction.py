@@ -7,7 +7,7 @@ import torch
 
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import Instance
-from allennlp.data.fields import TextField, SequenceLabelField, MetadataField
+from allennlp.data.fields import TextField, SequenceLabelField
 from allennlp.interpret.attackers import utils
 from allennlp.interpret.attackers.attacker import Attacker
 from allennlp.predictors import Predictor
@@ -31,7 +31,10 @@ class InputReduction(Attacker):
     def attack_from_json(self, inputs: JsonDict = None,
                          input_field_to_attack: str = 'tokens',
                          grad_input_field: str = 'grad_input_1',
-                         ignore_tokens: List[str] = None):
+                         ignore_tokens: List[str] = None,
+                         target: JsonDict = None):
+        if target is not None:
+            raise ValueError('Input reduction does not implement targeted attacks')
         ignore_tokens = ["@@NULL@@"] if ignore_tokens is None else ignore_tokens
         original_instances = self.predictor.json_to_labeled_instances(inputs)
         original_text_field: TextField = original_instances[0][input_field_to_attack]  # type: ignore

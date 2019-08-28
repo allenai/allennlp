@@ -7,7 +7,6 @@ import numpy
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import Instance
 from allennlp.interpret.saliency_interpreters.saliency_interpreter import SaliencyInterpreter
-from allennlp.modules.text_field_embedders import TextFieldEmbedder
 from allennlp.nn import util
 
 @SaliencyInterpreter.register('integrated-gradient')

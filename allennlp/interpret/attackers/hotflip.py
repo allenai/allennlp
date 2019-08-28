@@ -31,7 +31,7 @@ class Hotflip(Attacker):
         self.vocab = self.predictor._model.vocab
         self.namespace = vocab_namespace
         # Force new tokens to be alphanumeric
-        self.invalid_replacement_indices = []
+        self.invalid_replacement_indices: List[int] = []
         for i in self.vocab._index_to_token[self.namespace]:
             if not self.vocab._index_to_token[self.namespace][i].isalnum():
                 self.invalid_replacement_indices.append(i)
@@ -60,7 +60,10 @@ class Hotflip(Attacker):
         all_tokens = self.vocab._token_to_index[self.namespace]
         all_indices = list(self.vocab._index_to_token[self.namespace].keys())
         all_inputs = {"tokens": torch.LongTensor(all_indices).unsqueeze(0)}
-        for token_indexer in self.predictor._dataset_reader._token_indexers.values():
+
+        # A bit of a hack; this will only work with some dataset readers, but it'll do for now.
+        indexers = self.predictor._dataset_reader._token_indexers  # type: ignore
+        for token_indexer in indexers.values():
             # handle when a model uses character-level inputs, e.g., a CharCNN
             if isinstance(token_indexer, TokenCharactersIndexer):
                 tokens = [Token(x) for x in all_tokens]
@@ -138,7 +141,7 @@ class Hotflip(Attacker):
 
         # If `target` is `None`, we move away from the current prediction, otherwise we move
         # _towards_ the target.
-        sign = -1.0 if target is None else 1.0
+        sign = -1 if target is None else 1
         instance = self.predictor._json_to_instance(inputs)
         if target is None:
             output_dict = self.predictor._model.forward_on_instance(instance)
@@ -215,14 +218,14 @@ class Hotflip(Attacker):
                 original_id_of_token_to_flip = input_tokens[index_of_token_to_flip]
 
                 # Get new token using taylor approximation.
-                new_id_of_flipped_token = self._first_order_taylor(grad[index_of_token_to_flip],
-                                                                   self.token_embedding.weight,  # type: ignore
-                                                                   original_id_of_token_to_flip,
-                                                                   sign)
+                new_id = self._first_order_taylor(grad[index_of_token_to_flip],
+                                                  self.token_embedding.weight,  # type: ignore
+                                                  original_id_of_token_to_flip,
+                                                  sign)
 
                 # Flip token.  We need to tell the instance to re-index itself, so the text field
                 # will actually update.
-                new_token = Token(self.vocab._index_to_token[self.namespace][new_id_of_flipped_token])  # type: ignore
+                new_token = Token(self.vocab._index_to_token[self.namespace][new_id])  # type: ignore
                 text_field.tokens[index_of_token_to_flip] = new_token
                 instance.indexed = False
 
@@ -279,6 +282,6 @@ class Hotflip(Attacker):
         neg_dir_dot_grad = sign * (prev_embed_dot_grad - new_embed_dot_grad)
         neg_dir_dot_grad = neg_dir_dot_grad.detach().cpu().numpy()
         # Do not replace with non-alphanumeric tokens
-        neg_dir_dot_grad[:,:,self.invalid_replacement_indices] = -numpy.inf
+        neg_dir_dot_grad[:, :, self.invalid_replacement_indices] = -numpy.inf
         best_at_each_step = neg_dir_dot_grad.argmax(2)
         return best_at_each_step[0].data[0]

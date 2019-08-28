@@ -31,7 +31,7 @@ def instance_has_changed(instance: Instance, fields_to_compare: JsonDict):
         # Coref needs a special case here, apparently.  I (mattg) am not sure why the check below
         # doesn't catch this case; TODO: look into this.
         original_clusters = set(tuple(l) for l in fields_to_compare['clusters'])
-        new_clusters = set(tuple(l) for l in instance['clusters'])
+        new_clusters = set(tuple(l) for l in instance['clusters'])  # type: ignore
         return original_clusters != new_clusters
     if any(instance[field] != fields_to_compare[field] for field in fields_to_compare):
         return True
