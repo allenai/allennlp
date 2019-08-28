@@ -1,14 +1,14 @@
+from copy import deepcopy
 from typing import List, Dict
 
 from overrides import overrides
-from copy import deepcopy
-import numpy
 from spacy.tokens import Doc
+import numpy
 
 from allennlp.common.util import JsonDict
 from allennlp.common.util import get_spacy_model
 from allennlp.data import DatasetReader, Instance
-from allennlp.data.fields import SequenceLabelField, SpanField
+from allennlp.data.fields import ListField, SequenceLabelField
 from allennlp.models import Model
 from allennlp.predictors.predictor import Predictor
 
@@ -85,25 +85,28 @@ class CorefPredictor(Predictor):
         cluster`.  This lets us run interpretation methods using those gradients.  See superclass
         docstring for more info.
         """
+        # Digging into an Instance makes mypy go crazy, because we have all kinds of things where
+        # the type has been lost.  So there are lots of `type: ignore`s here...
         predicted_clusters = outputs['clusters']
+        span_field: ListField = instance['spans']  # type: ignore
         instances = []
         for cluster in predicted_clusters:
             new_instance = deepcopy(instance)
-            span_labels = [0 if (span.span_start, span.span_end) in cluster else -1
-                           for span in instance['spans']]
+            span_labels = [0 if (span.span_start, span.span_end) in cluster else -1  # type: ignore
+                           for span in span_field]  # type: ignore
             new_instance.add_field('span_labels',
-                                   SequenceLabelField(span_labels, instance['spans']),
+                                   SequenceLabelField(span_labels, span_field),
                                    self._model.vocab)
-            new_instance['metadata'].metadata['clusters'] = [cluster]
+            new_instance['metadata'].metadata['clusters'] = [cluster]  # type: ignore
             instances.append(new_instance)
-        if len(instances) == 0:
+        if not instances:
             # No predicted clusters; we just give an empty coref prediction.
             new_instance = deepcopy(instance)
-            span_labels = [-1] * len(instance['spans'])
+            span_labels = [-1] * len(span_field)  # type: ignore
             new_instance.add_field('span_labels',
-                                   SequenceLabelField(span_labels, instance['spans']),
+                                   SequenceLabelField(span_labels, span_field),
                                    self._model.vocab)
-            new_instance['metadata'].metadata['clusters'] = []
+            new_instance['metadata'].metadata['clusters'] = []  # type: ignore
             instances.append(new_instance)
         return instances
 

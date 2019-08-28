@@ -1,8 +1,8 @@
+from copy import deepcopy
 from typing import Dict
 
-import numpy
-from copy import deepcopy
 from overrides import overrides
+import numpy
 
 from allennlp.common.util import JsonDict
 from allennlp.data import Instance, Token
@@ -33,4 +33,4 @@ class MaskedLanguageModelPredictor(Predictor):
         Expects JSON that looks like ``{"sentence": "..."}``.
         """
         sentence = json_dict["sentence"]
-        return self._dataset_reader.text_to_instance(sentence=sentence)
+        return self._dataset_reader.text_to_instance(sentence=sentence)  # type: ignore
