@@ -21,7 +21,6 @@ from allennlp.common.params import Params
 from allennlp.models.simple_tagger import SimpleTagger
 from allennlp.data.iterators import BasicIterator
 from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
-from allennlp.models.archival import load_archive
 from allennlp.models.model import Model
 from allennlp.training.callback_trainer import CallbackTrainer
 from allennlp.training.callbacks import (

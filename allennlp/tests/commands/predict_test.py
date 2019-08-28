@@ -20,13 +20,12 @@ from allennlp.predictors import Predictor, BidafPredictor
 
 class TestPredict(AllenNlpTestCase):
     def setUp(self):
-        super().setUp()
-        self.bidaf_model_path = self.FIXTURES_ROOT / "bidaf" / "serialization" / "model.tar.gz"
-        self.bidaf_data_path = self.FIXTURES_ROOT / "data" / "squad.json"
-        self.atis_model_path = (
-            self.FIXTURES_ROOT / "semantic_parsing" / "atis" / "serialization" / "model.tar.gz"
-        )
-        self.atis_data_path = self.FIXTURES_ROOT / "data" / "atis" / "sample.json"
+        super(TestPredict, self).setUp()
+        self.bidaf_model_path = (self.FIXTURES_ROOT / "bidaf" /
+                                 "serialization" / "model.tar.gz")
+        self.bidaf_data_path = self.FIXTURES_ROOT / 'data' / 'squad.json'
+        self.naqanet_model_path = self.FIXTURES_ROOT / "naqanet" / "serialization" / "model.tar.gz"
+        self.naqanet_data_path = self.FIXTURES_ROOT / 'data' / 'drop.json'
         self.tempdir = pathlib.Path(tempfile.mkdtemp())
         self.infile = self.tempdir / "inputs.txt"
         self.outfile = self.tempdir / "outputs.txt"
@@ -156,18 +155,14 @@ class TestPredict(AllenNlpTestCase):
                 return json.dumps(data) + "\n"
 
         # --use-dataset-reader argument only should use validation
-        sys.argv = [
-            "run.py",  # executable
-            "predict",  # command
-            str(self.atis_model_path),
-            str(self.atis_data_path),  # input_file
-            "--output-file",
-            str(self.outfile),
-            "--silent",
-            "--predictor",
-            "test-predictor",
-            "--use-dataset-reader",
-        ]
+        sys.argv = ["run.py",      # executable
+                    "predict",     # command
+                    str(self.naqanet_model_path),
+                    str(self.naqanet_data_path),     # input_file
+                    "--output-file", str(self.outfile),
+                    "--silent",
+                    "--predictor", "test-predictor",
+                    "--use-dataset-reader"]
         main()
         assert os.path.exists(self.outfile)
         with open(self.outfile, "r") as f:
@@ -175,20 +170,15 @@ class TestPredict(AllenNlpTestCase):
             assert results[0]["keep_if_unparseable"] is True
 
         # --use-dataset-reader, override with train
-        sys.argv = [
-            "run.py",  # executable
-            "predict",  # command
-            str(self.atis_model_path),
-            str(self.atis_data_path),  # input_file
-            "--output-file",
-            str(self.outfile),
-            "--silent",
-            "--predictor",
-            "test-predictor",
-            "--use-dataset-reader",
-            "--dataset-reader-choice",
-            "train",
-        ]
+        sys.argv = ["run.py",      # executable
+                    "predict",     # command
+                    str(self.naqanet_model_path),
+                    str(self.naqanet_data_path),     # input_file
+                    "--output-file", str(self.outfile),
+                    "--silent",
+                    "--predictor", "test-predictor",
+                    "--use-dataset-reader",
+                    "--dataset-reader-choice", "train"]
         main()
         assert os.path.exists(self.outfile)
         with open(self.outfile, "r") as f:
@@ -196,20 +186,15 @@ class TestPredict(AllenNlpTestCase):
             assert results[0]["keep_if_unparseable"] is False
 
         # --use-dataset-reader, override with train
-        sys.argv = [
-            "run.py",  # executable
-            "predict",  # command
-            str(self.atis_model_path),
-            str(self.atis_data_path),  # input_file
-            "--output-file",
-            str(self.outfile),
-            "--silent",
-            "--predictor",
-            "test-predictor",
-            "--use-dataset-reader",
-            "--dataset-reader-choice",
-            "validation",
-        ]
+        sys.argv = ["run.py",      # executable
+                    "predict",     # command
+                    str(self.naqanet_model_path),
+                    str(self.naqanet_data_path),     # input_file
+                    "--output-file", str(self.outfile),
+                    "--silent",
+                    "--predictor", "test-predictor",
+                    "--use-dataset-reader",
+                    "--dataset-reader-choice", "validation"]
         main()
         assert os.path.exists(self.outfile)
         with open(self.outfile, "r") as f:
@@ -218,17 +203,13 @@ class TestPredict(AllenNlpTestCase):
 
         # No --use-dataset-reader flag, fails because the loading logic
         # is not implemented in the testing predictor
-        sys.argv = [
-            "run.py",  # executable
-            "predict",  # command
-            str(self.atis_model_path),
-            str(self.atis_data_path),  # input_file
-            "--output-file",
-            str(self.outfile),
-            "--silent",
-            "--predictor",
-            "test-predictor",
-        ]
+        sys.argv = ["run.py",      # executable
+                    "predict",     # command
+                    str(self.naqanet_model_path),
+                    str(self.naqanet_data_path),     # input_file
+                    "--output-file", str(self.outfile),
+                    "--silent",
+                    "--predictor", "test-predictor"]
         with self.assertRaises(NotImplementedError):
             main()
 
