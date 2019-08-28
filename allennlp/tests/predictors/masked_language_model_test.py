@@ -3,6 +3,9 @@ from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor
 
+from ..modules.language_model_heads.linear import LinearLanguageModelHead  # pylint: disable=unused-import
+
+
 class TestMaskedLanguageModelPredictor(AllenNlpTestCase):
     def test_predictions_to_labeled_instances(self):
         inputs = {
