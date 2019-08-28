@@ -75,25 +75,25 @@ class TestMultiprocessDatasetReader(AllenNlpTestCase):
 #        assert counts[("snakes", "are", "animals", ".", "N", "V", "N", "N")] == 100
 #        assert counts[("birds", "are", "animals", ".", "N", "V", "N", "N")] == 100
 #
-#    def test_multiprocess_read_partial_does_not_hang(self):
-#        # Use a small queue size such that the processes generating the data will block.
-#        reader = MultiprocessDatasetReader(base_reader=self.base_reader, num_workers=4, output_queue_size=10)
-#
-#        all_instances = []
-#
-#        # Half of 100 files * 4 sentences / file
-#        i = 0
-#        for instance in reader.read(self.identical_files_glob):
-#            # Stop early such that the processes generating the data remain
-#            # active (given the small queue size).
-#            if i == 200:
-#                break
-#            i += 1
-#            all_instances.append(instance)
-#
-#        # This should be trivially true. The real test here is that we exit
-#        # normally and don't hang due to the still active processes.
-#        assert len(all_instances) == 200
+    def test_multiprocess_read_partial_does_not_hang(self):
+        # Use a small queue size such that the processes generating the data will block.
+        reader = MultiprocessDatasetReader(base_reader=self.base_reader, num_workers=4, output_queue_size=10)
+
+        all_instances = []
+
+        # Half of 100 files * 4 sentences / file
+        i = 0
+        for instance in reader.read(self.identical_files_glob):
+            # Stop early such that the processes generating the data remain
+            # active (given the small queue size).
+            if i == 200:
+                break
+            i += 1
+            all_instances.append(instance)
+
+        # This should be trivially true. The real test here is that we exit
+        # normally and don't hang due to the still active processes.
+        assert len(all_instances) == 200
 
     def test_multiprocess_read_with_qiterable(self):
         reader = MultiprocessDatasetReader(base_reader=self.base_reader, num_workers=4)
