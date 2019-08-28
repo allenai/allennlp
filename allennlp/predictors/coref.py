@@ -79,6 +79,12 @@ class CorefPredictor(Predictor):
     def predictions_to_labeled_instances(self,
                                          instance: Instance,
                                          outputs: Dict[str, numpy.ndarray]) -> List[Instance]:
+        """
+        Takes each predicted cluster and makes it into a labeled ``Instance`` with only that
+        cluster labeled, so we can compute gradients of the loss `on the model's prediction of that
+        cluster`.  This lets us run interpretation methods using those gradients.  See superclass
+        docstring for more info.
+        """
         predicted_clusters = outputs['clusters']
         instances = []
         for cluster in predicted_clusters:

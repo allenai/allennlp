@@ -191,7 +191,6 @@ class Predictor(Registrable):
         multiple predictions in the output (e.g., in NER a model predicts multiple spans). In this
         case, each instance in the returned list of Instances contains an individual
         entity prediction as the label.
-
         """
         # pylint: disable=unused-argument,no-self-use
         raise RuntimeError("implement this method for model interpretations or attacks")
