@@ -162,7 +162,7 @@ class Hotflip(Attacker):
         # `original_instances` is a list because there might be several different predictions that
         # we're trying to attack (e.g., all of the NER tags for an input sentence).  We attack them
         # one at a time.
-        for i, instance in enumerate(original_instances):
+        for instance in original_instances:
             # Gets a list of the fields that we want to check to see if they change.
             fields_to_compare = utils.get_fields_to_compare(inputs, instance, input_field_to_attack)
 
