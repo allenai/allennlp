@@ -106,6 +106,8 @@ class MaskedLanguageModel(Model):
         else:
             contextual_embeddings = embeddings
 
+        # Does advanced indexing to get the embeddings of just the mask positions, which is what
+        # we're trying to predict.
         batch_index = torch.arange(0, batch_size).long().unsqueeze(1)
         mask_embeddings = contextual_embeddings[batch_index, mask_positions]
 
