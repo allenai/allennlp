@@ -34,6 +34,9 @@ numpydoc>=0.8.0
 scipy
 scikit-learn
 
+# Tensorboard application for visualizing training logs.
+tensorboard>=1.14.0
+
 # Accessing files from S3 directly.
 boto3
 
