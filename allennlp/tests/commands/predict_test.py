@@ -141,18 +141,19 @@ class TestPredict(AllenNlpTestCase):
         shutil.rmtree(self.tempdir)
 
     def test_uses_correct_dataset_reader(self):
-
-        # The ATIS archive has both a training and validation ``DatasetReader``
-        # with different values for ``keep_if_unparseable`` (``True`` for validation
-        # and ``False`` for training). We create a new ``Predictor`` class that
+        # pylint: disable=protected-access
+        # The NAQANET archive has both a training and validation ``DatasetReader``
+        # with different values for ``passage_length_limit`` (``1000`` for validation
+        # and ``400`` for training). We create a new ``Predictor`` class that
         # outputs this value so we can test which ``DatasetReader`` was used.
         @Predictor.register("test-predictor")
         class _TestPredictor(Predictor):
             def dump_line(self, outputs: JsonDict) -> str:
-                data = {
-                    "keep_if_unparseable": self._dataset_reader._keep_if_unparseable  # type: ignore
-                }
-                return json.dumps(data) + "\n"
+                data = {'passage_length_limit': self._dataset_reader.passage_length_limit}  # type: ignore
+                return json.dumps(data) + '\n'
+
+            def load_line(self, line: str) -> JsonDict:
+                raise NotImplementedError
 
         # --use-dataset-reader argument only should use validation
         sys.argv = ["run.py",      # executable
@@ -167,7 +168,7 @@ class TestPredict(AllenNlpTestCase):
         assert os.path.exists(self.outfile)
         with open(self.outfile, "r") as f:
             results = [json.loads(line) for line in f]
-            assert results[0]["keep_if_unparseable"] is True
+            assert results[0]['passage_length_limit'] == 1000
 
         # --use-dataset-reader, override with train
         sys.argv = ["run.py",      # executable
@@ -183,7 +184,7 @@ class TestPredict(AllenNlpTestCase):
         assert os.path.exists(self.outfile)
         with open(self.outfile, "r") as f:
             results = [json.loads(line) for line in f]
-            assert results[0]["keep_if_unparseable"] is False
+            assert results[0]['passage_length_limit'] == 400
 
         # --use-dataset-reader, override with train
         sys.argv = ["run.py",      # executable
@@ -199,7 +200,7 @@ class TestPredict(AllenNlpTestCase):
         assert os.path.exists(self.outfile)
         with open(self.outfile, "r") as f:
             results = [json.loads(line) for line in f]
-            assert results[0]["keep_if_unparseable"] is True
+            assert results[0]['passage_length_limit'] == 1000
 
         # No --use-dataset-reader flag, fails because the loading logic
         # is not implemented in the testing predictor
