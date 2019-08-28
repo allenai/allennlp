@@ -21,7 +21,6 @@ class SpearmanCorrelation(Metric):
     Ihe sample Spearman correlation coefficient is simply:
 
     r = 1 - \frac{6*\\sum d_{i}^{2}}{n*(n^{2}-1))}
-
     """
     def __init__(self) -> None:
         super().__init__()
