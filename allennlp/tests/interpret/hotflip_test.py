@@ -5,6 +5,9 @@ from allennlp.predictors import Predictor
 from allennlp.interpret.attackers import Hotflip
 from allennlp.interpret.attackers.hotflip import DEFAULT_IGNORE_TOKENS
 
+from ..modules.language_model_heads.linear import LinearLanguageModelHead  # pylint: disable=unused-import
+
+
 class TestHotflip(AllenNlpTestCase):
     def test_hotflip(self):
         inputs = {
@@ -72,7 +75,7 @@ class TestHotflip(AllenNlpTestCase):
         inputs = {"sentence": "The doctor ran to the emergency room to see [MASK] patient."}
 
         archive = load_archive(self.FIXTURES_ROOT / 'masked_language_model' / 'serialization' / 'model.tar.gz')
-        predictor = Predictor.from_archive(archive, 'masked_lm_predictor')
+        predictor = Predictor.from_archive(archive, 'masked_language_model')
 
         hotflipper = Hotflip(predictor, vocab_namespace='tokens')
         hotflipper.initialize()
