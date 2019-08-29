@@ -24,7 +24,8 @@ class Attacker(Registrable):
                          inputs: JsonDict,
                          input_field_to_attack: str,
                          grad_input_field: str,
-                         ignore_tokens: List[str]) -> JsonDict:
+                         ignore_tokens: List[str],
+                         target: JsonDict) -> JsonDict:
         """
         This function finds a modification to the input text that would change the model's
         prediction in some desired manner (e.g., an adversarial attack).
@@ -40,6 +41,12 @@ class Attacker(Registrable):
             The field in the gradients dictionary that contains the input gradients.  For example,
             `grad_input_1` will be the field for single input tasks. See get_gradients() in
             `Predictor` for more information on field names.
+        target : ``JsonDict``
+            If given, this is a `targeted` attack, trying to change the prediction to a particular
+            value, instead of just changing it from its original prediction.  Subclasses are not
+            required to accept this argument, as not all attacks make sense as targeted attacks.
+            Perhaps that means we should make the API more crisp, but adding another class is not
+            worth it.
 
         Returns
         -------

@@ -12,7 +12,7 @@ def get_fields_to_compare(inputs: JsonDict, instance: Instance, input_field_to_a
     instance : ``Instance``
         A labeled instance that is output from json_to_labeled_instances().
     input_field_to_attack : ``str``
-        The key in the inputs JsonDict you want to attack, e.g., `tokens`.
+        The key in the inputs JsonDict you want to attack, e.g., tokens.
 
     Returns
     -------
@@ -22,6 +22,17 @@ def get_fields_to_compare(inputs: JsonDict, instance: Instance, input_field_to_a
     fields_to_compare = {
             key: instance[key]
             for key in instance.fields
-            if key not in inputs and key != input_field_to_attack
+            if key not in inputs and key != input_field_to_attack and key != 'metadata' and key != 'output'
     }
     return fields_to_compare
+
+def instance_has_changed(instance: Instance, fields_to_compare: JsonDict):
+    if 'clusters' in fields_to_compare:
+        # Coref needs a special case here, apparently.  I (mattg) am not sure why the check below
+        # doesn't catch this case; TODO: look into this.
+        original_clusters = set(tuple(l) for l in fields_to_compare['clusters'])
+        new_clusters = set(tuple(l) for l in instance['clusters'])  # type: ignore
+        return original_clusters != new_clusters
+    if any(instance[field] != fields_to_compare[field] for field in fields_to_compare):
+        return True
+    return False
