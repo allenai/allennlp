@@ -51,8 +51,8 @@ class NextTokenLmReader(DatasetReader):
         import sys
         # You can call pytest with either `pytest` or `py.test`.
         if 'test' not in sys.argv[0]:
-            raise RuntimeError('_read is only implemented for unit tests. You should not actually '
-                               'try to train or evaluate a language model with this code.')
+            logger.error('_read is only implemented for unit tests. You should not actually '
+                         'try to train or evaluate a language model with this code.')
         with open(file_path, "r") as text_file:
             for sentence in text_file:
                 tokens = self._tokenizer.tokenize(sentence)
