@@ -85,7 +85,7 @@ class QIterable(Iterable[Instance]):
 
         # Initialized in start.
         self.input_queue: Optional[Queue] = None
-        self.processes: Optional[List[Process]] = None
+        self.processes: List[Process] = []
         # The num_active_workers and num_inflight_items counts in conjunction
         # determine whether there could be any outstanding instances.
         self.num_active_workers: Optional[Value] = None
@@ -130,14 +130,13 @@ class QIterable(Iterable[Instance]):
             self.input_queue.put(None)
 
 
-        self.processes: List[Process] = []
+        assert not self.processes, "Process list non-empty! You must call QIterable.join() before restarting."
         self.num_active_workers = Value('i', self.num_workers)
         self.num_inflight_items = Value('i', 0)
         for worker_id in range(self.num_workers):
             process = Process(target=_worker,
                               args=(self.reader, self.input_queue, self.output_queue,
-                                    self.num_active_workers, self.num_inflight_items, worker_id),
-                              daemon=True)
+                                    self.num_active_workers, self.num_inflight_items, worker_id))
             logger.info(f"starting worker {worker_id}")
             process.start()
             self.processes.append(process)
@@ -146,6 +145,21 @@ class QIterable(Iterable[Instance]):
         for process in self.processes:
             process.join()
         self.processes.clear()
+
+    def __del__(self) -> None:
+        """
+        Terminate processes if the user hasn't joined. This is necessary as
+        leaving stray processes running can corrupt shared state. In brief,
+        we've observed shared memory counters being reused (when the memory was
+        free from the perspective of the parent process) while the stray
+        workers still held a reference to them.
+
+        For a discussion of using destructors in Python in this manner, see
+        https://eli.thegreenplace.net/2009/06/12/safely-using-destructors-in-python/.
+        """
+        for process in self.processes:
+            process.terminate()
+
 
 @DatasetReader.register('multiprocess')
 class MultiprocessDatasetReader(DatasetReader):

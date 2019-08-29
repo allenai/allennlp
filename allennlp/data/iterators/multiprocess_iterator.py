@@ -149,14 +149,13 @@ class MultiprocessIterator(DataIterator):
 
         # Start process that populates the queue.
         self.queuer = Process(target=_queuer,
-                              args=(instances, input_queue, self.num_workers, num_epochs),
-                              daemon=True)
+                              args=(instances, input_queue, self.num_workers, num_epochs))
         self.queuer.start()
 
         # Start the tensor-dict workers.
         for i in range(self.num_workers):
             args = (input_queue, output_queue, self.iterator, shuffle, i)
-            process = Process(target=_create_tensor_dicts_from_queue, args=args, daemon=True)
+            process = Process(target=_create_tensor_dicts_from_queue, args=args)
             process.start()
             self.processes.append(process)
 
@@ -192,7 +191,7 @@ class MultiprocessIterator(DataIterator):
             # Start the tensor-dict workers.
             for i in range(self.num_workers):
                 args = (qiterable, output_queue, self.iterator, shuffle, i)
-                process = Process(target=_create_tensor_dicts_from_qiterable, args=args, daemon=True)
+                process = Process(target=_create_tensor_dicts_from_qiterable, args=args)
                 process.start()
                 self.processes.append(process)
 
@@ -226,3 +225,21 @@ class MultiprocessIterator(DataIterator):
             return self._call_with_qiterable(instances, num_epochs, shuffle)
         else:
             return self._call_with_instances(instances, num_epochs, shuffle)
+
+    def __del__(self) -> None:
+        """
+        Terminate processes if the user hasn't joined implicitly by consuming
+        all the tensors. This is necessary as leaving stray processes running
+        can corrupt shared state. In brief, we've observed shared memory
+        counters being reused (when the memory was free from the perspective of
+        the parent process) while the stray workers still held a reference to
+        them.
+
+        For a discussion of using destructors in Python in this manner, see
+        https://eli.thegreenplace.net/2009/06/12/safely-using-destructors-in-python/.
+        """
+        for process in self.processes:
+            process.terminate()
+
+        if self.queuer is not None:
+            self.queuer.terminate()
