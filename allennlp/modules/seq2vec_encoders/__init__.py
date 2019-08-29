@@ -71,7 +71,7 @@ class _Seq2VecWrapper:
             raise ConfigurationError("Our encoder semantics assumes batch is always first!")
         if self._module_class in self.PYTORCH_MODELS:
             params['batch_first'] = True
-        module = self._module_class(**params.as_dict())
+        module = self._module_class(**params.as_dict(infer_type_and_cast=True))
         return PytorchSeq2VecWrapper(module)
 
 # pylint: disable=protected-access
