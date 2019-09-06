@@ -17,6 +17,7 @@ allennlp.modules.token_embedders
 * :ref:`LanguageModelTokenEmbedder<language-model-token-embedder>`
 * :ref:`BagOfWordsCountsTokenEmbedder<bag-of-words-counts-token-embedder>`
 * :ref:`PassThroughTokenEmbedder<pass-through-token-embedder>`
+* :ref:`PretrainedTransformerEmbedder<pretrained-transformer-embedder>`
 
 .. _token-embedder:
 .. automodule:: allennlp.modules.token_embedders.token_embedder
@@ -74,6 +75,12 @@ allennlp.modules.token_embedders
 
 .. _pass-through-token-embedder:
 .. automodule:: allennlp.modules.token_embedders.pass_through_token_embedder
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. _pretrained-transformer-embedder:
+.. automodule:: allennlp.modules.token_embedders.pretrained_transformer_embedder
    :members:
    :undoc-members:
    :show-inheritance:
