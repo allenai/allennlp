@@ -1,5 +1,8 @@
 from typing import TYPE_CHECKING
 
+import torch
+
+from allennlp.common.params import Params
 from allennlp.training.callbacks.callback import Callback, handle_event
 from allennlp.training.callbacks.events import Events
 from allennlp.training.momentum_schedulers import MomentumScheduler
@@ -37,3 +40,9 @@ class UpdateMomentum(Callback):
 
         if state_dict:
             self.momentum_scheduler.load_state_dict(state_dict)
+
+    @classmethod
+    def from_params(cls, params: Params, optimizer: torch.optim.Optimizer) -> 'UpdateMomentum':  # type: ignore
+        # pylint: disable=arguments-differ
+        return cls(MomentumScheduler.from_params(params=params.pop("momentum_scheduler"),
+                                                 optimizer=optimizer))

@@ -16,7 +16,7 @@
         }
       }
     },
-    "embedding_dropout": 0.2,
+    "embedding_dropout": 0.0,
     "pre_encode_feedforward": {
         "input_dim": 10,
         "num_layers": 1,
@@ -36,13 +36,13 @@
       "hidden_size": 3,
       "num_layers": 1
     },
-    "integrator_dropout": 0.2,
+    "integrator_dropout": 0.0,
     "output_layer": {
         "input_dim": 12,
         "num_layers": 2,
         "output_dims": [6, 5],
         "pool_sizes": [4, 3],
-        "dropout": [0.2, 0.0]
+        "dropout": [0.0, 0.0]
     }
   },
   "iterator": {

@@ -87,9 +87,9 @@ class TrackMetrics(Callback):
             self.gpu_usage.append((gpu, memory))
             logger.info(f"GPU {gpu} memory usage MB: {memory}")
 
-
-    @handle_event(Events.VALIDATE, priority=100)
-    def collect_metrics(self, trainer: 'CallbackTrainer'):
+    # We want to collect training metrics before the actual validation happens
+    @handle_event(Events.VALIDATE, priority=-100)
+    def collect_train_metrics(self, trainer: 'CallbackTrainer'):
         trainer.train_metrics = training_util.get_metrics(trainer.model,
                                                           trainer.train_loss,
                                                           trainer.batches_this_epoch,
@@ -106,6 +106,9 @@ class TrackMetrics(Callback):
             if key.startswith('gpu_'):
                 trainer.metrics["peak_"+key] = max(trainer.metrics.get("peak_"+key, 0), value)
 
+    # We want to collect validation metrics after the validation happens
+    @handle_event(Events.VALIDATE, priority=100)
+    def collect_val_metrics(self, trainer: 'CallbackTrainer'):
         if trainer.validate:
             # Check validation metric for early stopping
             trainer.latest_val_metric = trainer.val_metrics[self.validation_metric]

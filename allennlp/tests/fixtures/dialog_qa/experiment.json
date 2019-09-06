@@ -34,7 +34,7 @@
             "num_filters": 10,
             "ngram_filter_sizes": [5]
           },
-          "dropout": 0.2
+          "dropout": 0.0
         }
       }
     },

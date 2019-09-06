@@ -35,7 +35,7 @@
           "options_file": "allennlp/tests/fixtures/elmo/options.json",
           "weight_file": "allennlp/tests/fixtures/elmo/lm_weights.hdf5",
           "do_layer_norm": false,
-          "dropout": 0.5
+          "dropout": 0.0
         }
       }
     },
@@ -52,7 +52,7 @@
     },
     "max_decoding_steps": 30,
     "attention": {"type": "dot_product"},
-    "dropout": 0.2
+    "dropout": 0.0
   },
   "iterator": {
     "type": "basic",

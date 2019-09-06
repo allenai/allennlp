@@ -15,6 +15,8 @@ allennlp.data.token_indexers
 * :ref:`ELMoTokenCharactersIndexer<elmo-indexer>`
 * :ref:`OpenaiTransformerBytePairIndexer<openai-transformer-byte-pair-indexer>`
 * :ref:`WordpieceIndexer<wordpiece-indexer>`
+* :ref:`PretrainedTransformerIndexer<pretrained-transformer-indexer>`
+* :ref:`SpacyTokenIndexer<spacy-token-indexer>`
 
 
 .. _token-indexer:
@@ -65,9 +67,21 @@ allennlp.data.token_indexers
    :undoc-members:
    :show-inheritance:
 
-
 .. _wordpiece-indexer:
 .. automodule:: allennlp.data.token_indexers.wordpiece_indexer
    :members:
    :undoc-members:
    :show-inheritance:
+
+.. _pretrained-transformer-indexer:
+.. automodule:: allennlp.data.token_indexers.pretrained_transformer_indexer
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. _spacy-token-indexer:
+.. automodule:: allennlp.data.token_indexers.spacy_indexer
+   :members:
+   :undoc-members:
+   :show-inheritance:
+

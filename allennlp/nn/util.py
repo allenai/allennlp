@@ -3,11 +3,12 @@ Assorted utilities for working with neural networks in AllenNLP.
 """
 # pylint: disable=too-many-lines
 from collections import defaultdict
-from typing import Any, Dict, List, Optional, Sequence, Tuple, TypeVar
+from typing import Any, Dict, List, Optional, Sequence, Tuple, TypeVar, Union
 import logging
 import copy
 import math
 import json
+import numpy
 
 import torch
 
@@ -269,7 +270,7 @@ def masked_softmax(vector: torch.Tensor,
             result = result * mask
             result = result / (result.sum(dim=dim, keepdim=True) + 1e-13)
         else:
-            masked_vector = vector.masked_fill((1 - mask).byte(), mask_fill_value)
+            masked_vector = vector.masked_fill((1 - mask).to(dtype=torch.bool), mask_fill_value)
             result = torch.nn.functional.softmax(masked_vector, dim=dim)
     return result
 
@@ -333,7 +334,7 @@ def masked_max(vector: torch.Tensor,
     -------
     A ``torch.Tensor`` of including the maximum values.
     """
-    one_minus_mask = (1.0 - mask).byte()
+    one_minus_mask = (1.0 - mask).to(dtype=torch.bool)
     replaced_vector = vector.masked_fill(one_minus_mask, min_val)
     max_value, _ = replaced_vector.max(dim=dim, keepdim=keepdim)
     return max_value
@@ -364,7 +365,7 @@ def masked_mean(vector: torch.Tensor,
     -------
     A ``torch.Tensor`` of including the mean values.
     """
-    one_minus_mask = (1.0 - mask).byte()
+    one_minus_mask = (1.0 - mask).to(dtype=torch.bool)
     replaced_vector = vector.masked_fill(one_minus_mask, 0.0)
 
     value_sum = torch.sum(replaced_vector, dim=dim, keepdim=keepdim)
@@ -628,7 +629,10 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
                                        targets: torch.LongTensor,
                                        weights: torch.FloatTensor,
                                        average: str = "batch",
-                                       label_smoothing: float = None) -> torch.FloatTensor:
+                                       label_smoothing: float = None,
+                                       gamma: float = None,
+                                       alpha: Union[float, List[float], torch.FloatTensor] = None
+                                      ) -> torch.FloatTensor:
     """
     Computes the cross entropy loss of a sequence, weighted with respect to
     some user provided weights. Note that the weighting here is not the same as
@@ -655,6 +659,19 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
         For example, with a label smoothing value of 0.2, a 4 class classification
         target would look like ``[0.05, 0.05, 0.85, 0.05]`` if the 3rd class was
         the correct label.
+    gamma : ``float``, optional (default = None)
+        Focal loss[*] focusing parameter ``gamma`` to reduces the relative loss for
+        well-classified examples and put more focus on hard. The greater value
+        ``gamma`` is, the more focus on hard examples.
+    alpha : ``float`` or ``List[float]``, optional (default = None)
+        Focal loss[*] weighting factor ``alpha`` to balance between classes. Can be
+        used independently with ``gamma``. If a single ``float`` is provided, it
+        is assumed binary case using ``alpha`` and ``1 - alpha`` for positive and
+        negative respectively. If a list of ``float`` is provided, with the same
+        length as the number of classes, the weights will match the classes.
+        [*] T. Lin, P. Goyal, R. Girshick, K. He and P. Dollár, "Focal Loss for
+        Dense Object Detection," 2017 IEEE International Conference on Computer
+        Vision (ICCV), Venice, 2017, pp. 2999-3007.
 
     Returns
     -------
@@ -667,12 +684,54 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
         raise ValueError("Got average f{average}, expected one of "
                          "None, 'token', or 'batch'")
 
+    # make sure weights are float
+    weights = weights.float()
+    # sum all dim except batch
+    non_batch_dims = tuple(range(1, len(weights.shape)))
+    # shape : (batch_size,)
+    weights_batch_sum = weights.sum(dim=non_batch_dims)
     # shape : (batch * sequence_length, num_classes)
     logits_flat = logits.view(-1, logits.size(-1))
     # shape : (batch * sequence_length, num_classes)
     log_probs_flat = torch.nn.functional.log_softmax(logits_flat, dim=-1)
     # shape : (batch * max_len, 1)
     targets_flat = targets.view(-1, 1).long()
+    # focal loss coefficient
+    if gamma:
+        # shape : (batch * sequence_length, num_classes)
+        probs_flat = log_probs_flat.exp()
+        # shape : (batch * sequence_length,)
+        probs_flat = torch.gather(probs_flat, dim=1, index=targets_flat)
+        # shape : (batch * sequence_length,)
+        focal_factor = (1. - probs_flat) ** gamma
+        # shape : (batch, sequence_length)
+        focal_factor = focal_factor.view(*targets.size())
+        weights = weights * focal_factor
+
+    if alpha is not None:
+        # shape : () / (num_classes,)
+        if isinstance(alpha, (float, int)):
+            # pylint: disable=not-callable
+            # shape : (2,)
+            alpha_factor = torch.tensor([1. - float(alpha), float(alpha)],
+                                        dtype=weights.dtype, device=weights.device)
+            # pylint: enable=not-callable
+        elif isinstance(alpha, (list, numpy.ndarray, torch.Tensor)):
+            # pylint: disable=not-callable
+            # shape : (c,)
+            alpha_factor = torch.tensor(alpha, dtype=weights.dtype, device=weights.device)
+            # pylint: enable=not-callable
+            if not alpha_factor.size():
+                # shape : (1,)
+                alpha_factor = alpha_factor.view(1)
+                # shape : (2,)
+                alpha_factor = torch.cat([1 - alpha_factor, alpha_factor])
+        else:
+            raise TypeError(('alpha must be float, list of float, or torch.FloatTensor, '
+                             '{} provided.').format(type(alpha)))
+        # shape : (batch, max_len)
+        alpha_factor = torch.gather(alpha_factor, dim=0, index=targets_flat.view(-1)).view(*targets.size())
+        weights = weights * alpha_factor
 
     if label_smoothing is not None and label_smoothing > 0.0:
         num_classes = logits.size(-1)
@@ -691,18 +750,18 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
     # shape : (batch, sequence_length)
     negative_log_likelihood = negative_log_likelihood_flat.view(*targets.size())
     # shape : (batch, sequence_length)
-    negative_log_likelihood = negative_log_likelihood * weights.float()
+    negative_log_likelihood = negative_log_likelihood * weights
 
     if average == "batch":
         # shape : (batch_size,)
-        per_batch_loss = negative_log_likelihood.sum(1) / (weights.sum(1).float() + 1e-13)
-        num_non_empty_sequences = ((weights.sum(1) > 0).float().sum() + 1e-13)
+        per_batch_loss = negative_log_likelihood.sum(non_batch_dims) / (weights_batch_sum + 1e-13)
+        num_non_empty_sequences = ((weights_batch_sum > 0).float().sum() + 1e-13)
         return per_batch_loss.sum() / num_non_empty_sequences
     elif average == "token":
-        return negative_log_likelihood.sum() / (weights.sum().float() + 1e-13)
+        return negative_log_likelihood.sum() / (weights_batch_sum.sum() + 1e-13)
     else:
         # shape : (batch_size,)
-        per_batch_loss = negative_log_likelihood.sum(1) / (weights.sum(1).float() + 1e-13)
+        per_batch_loss = negative_log_likelihood.sum(non_batch_dims) / (weights_batch_sum + 1e-13)
         return per_batch_loss
 
 
@@ -714,11 +773,11 @@ def replace_masked_values(tensor: torch.Tensor, mask: torch.Tensor, replace_with
 
     This just does ``tensor.masked_fill()``, except the pytorch method fills in things with a mask
     value of 1, where we want the opposite.  You can do this in your own code with
-    ``tensor.masked_fill((1 - mask).byte(), replace_with)``.
+    ``tensor.masked_fill((1 - mask).to(dtype=torch.bool), replace_with)``.
     """
     if tensor.dim() != mask.dim():
         raise ConfigurationError("tensor.dim() (%d) != mask.dim() (%d)" % (tensor.dim(), mask.dim()))
-    return tensor.masked_fill((1 - mask).byte(), replace_with)
+    return tensor.masked_fill((1 - mask).to(dtype=torch.bool), replace_with)
 
 
 def tensors_equal(tensor1: torch.Tensor, tensor2: torch.Tensor, tolerance: float = 1e-12) -> bool:
@@ -1413,3 +1472,27 @@ def inspect_parameters(module: torch.nn.Module, quiet: bool = False) -> Dict[str
     if not quiet:
         print(json.dumps(results, indent=4))
     return results
+
+
+def find_embedding_layer(model: torch.nn.Module) -> torch.nn.Module:
+    """
+    Takes a model (typically an AllenNLP ``Model``, but this works for any ``torch.nn.Module``) and
+    makes a best guess about which module is the embedding layer.  For typical AllenNLP models,
+    this often is the ``TextFieldEmbedder``, but if you're using a pre-trained contextualizer, we
+    really want layer 0 of that contextualizer, not the output.  So there are a bunch of hacks in
+    here for specific pre-trained contextualizers.
+    """
+    # We'll look for a few special cases in a first pass, then fall back to just finding a
+    # TextFieldEmbedder in a second pass if we didn't find a special case.
+    from pytorch_pretrained_bert.modeling import BertEmbeddings
+    from pytorch_transformers.modeling_gpt2 import GPT2Model
+    from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
+    for module in model.modules():
+        if isinstance(module, BertEmbeddings):
+            return module.word_embeddings
+        if isinstance(module, GPT2Model):
+            return module.wte
+    for module in model.modules():
+        if isinstance(module, TextFieldEmbedder):
+            return module
+    raise RuntimeError("No embedding module found!")

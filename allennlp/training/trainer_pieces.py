@@ -54,9 +54,11 @@ class TrainerPieces(NamedTuple):
         else:
             vocab = Vocabulary.from_params(
                     params.pop("vocabulary", {}),
+                    # Using a generator comprehension here is important
+                    # because, being lazy, it allows us to not iterate over the
+                    # dataset when directory_path is specified.
                     (instance for key, dataset in all_datasets.items()
-                     for instance in dataset
-                     if key in datasets_for_vocab_creation)
+                     if key in datasets_for_vocab_creation for instance in dataset)
             )
 
         model = Model.from_params(vocab=vocab, params=params.pop('model'))

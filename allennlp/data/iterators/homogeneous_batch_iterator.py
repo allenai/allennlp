@@ -7,6 +7,7 @@ from allennlp.data.dataset import Batch
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator
 
+
 @DataIterator.register("homogeneous_batch")
 class HomogeneousBatchIterator(DataIterator):
     """
@@ -34,17 +35,24 @@ class HomogeneousBatchIterator(DataIterator):
         If true, each instance will get a ``MetadataField`` containing the epoch number.
     partition_key : ``str``, optional, (default = "dataset")
         The key of the ``MetadataField`` indicating what "type" of instance this is.
+    skip_smaller_batches : bool, optional, (default = False)
+        When the number of data samples is not dividable by `batch_size`,
+        some batches might be smaller than `batch_size`.
+        If set to `True`, those smaller batches will be discarded.
     """
+
     def __init__(self,
                  batch_size: int = 32,
                  instances_per_epoch: int = None,
                  max_instances_in_memory: int = None,
                  cache_instances: bool = False,
                  track_epoch: bool = False,
-                 partition_key: str = "dataset") -> None:
+                 partition_key: str = "dataset",
+                 skip_smaller_batches: bool = False) -> None:
         super().__init__(batch_size, instances_per_epoch, max_instances_in_memory,
                          cache_instances, track_epoch)
         self._partition_key = partition_key
+        self._skip_smaller_batches = skip_smaller_batches
 
     def _create_batches(self, instances: Iterable[Instance], shuffle: bool) -> Iterable[Batch]:
         # First break the dataset into memory-sized lists:
@@ -69,6 +77,7 @@ class HomogeneousBatchIterator(DataIterator):
                     if key in remaining:
                         try:
                             batch = next(lazy_batches)
-                            yield Batch(batch)
+                            if not self._skip_smaller_batches or len(batch) == self._batch_size:
+                                yield Batch(batch)
                         except StopIteration:
                             remaining.remove(key)

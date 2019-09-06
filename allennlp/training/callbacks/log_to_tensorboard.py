@@ -86,7 +86,7 @@ class LogToTensorboard(Callback):
             self.cumulative_batch_size += cur_batch
             if (trainer.batches_this_epoch - 1) % self.log_batch_size_period == 0:
                 average = self.cumulative_batch_size / trainer.batches_this_epoch
-                logger.info(f"current batch size: {cur_batch} mean batch size: {average}")
+                logger.debug(f"current batch size: {cur_batch} mean batch size: {average}")
                 self.tensorboard.add_train_scalar("current_batch_size", cur_batch)
                 self.tensorboard.add_train_scalar("mean_batch_size", average)
 
@@ -106,6 +106,11 @@ class LogToTensorboard(Callback):
                                      val_metrics=trainer.val_metrics,
                                      log_to_console=True,
                                      epoch=trainer.epoch_number + 1)
+
+    @handle_event(Events.TRAINING_END)
+    def training_end(self, trainer: 'CallbackTrainer'):
+        # pylint: disable=unused-argument
+        self.tensorboard.close()
 
     @classmethod
     def from_params(cls, serialization_dir: str, params: Params) -> 'LogToTensorboard':  # type: ignore

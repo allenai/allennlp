@@ -186,6 +186,37 @@ class TestEncoderBase(AllenNlpTestCase):
         numpy.testing.assert_array_equal(self.encoder_base._states[1][:, 4, :].data.numpy(),
                                          index_selected_initial_states[1][:, 4, :].data.numpy())
 
+    def test_reset_states(self):
+        # Initialize the encoder states.
+        assert self.encoder_base._states is None
+        initial_states = torch.randn([1, 5, 7]), torch.randn([1, 5, 7])
+        index_selected_initial_states = (initial_states[0].index_select(1, self.restoration_indices),
+                                         initial_states[1].index_select(1, self.restoration_indices))
+        self.encoder_base._update_states(initial_states, self.restoration_indices)
+
+        # Check that only some of the states are reset when a mask is provided.
+        mask = torch.FloatTensor([1, 1, 0, 0, 0])
+        self.encoder_base.reset_states(mask)
+        # First two states should be zeros
+        numpy.testing.assert_array_equal(self.encoder_base._states[0][:, :2, :].data.numpy(),
+                                         torch.zeros_like(initial_states[0])[:, :2, :].data.numpy())
+        numpy.testing.assert_array_equal(self.encoder_base._states[1][:, :2, :].data.numpy(),
+                                         torch.zeros_like(initial_states[1])[:, :2, :].data.numpy())
+        # Remaining states should be the same
+        numpy.testing.assert_array_equal(self.encoder_base._states[0][:, 2:, :].data.numpy(),
+                                         index_selected_initial_states[0][:, 2:, :].data.numpy())
+        numpy.testing.assert_array_equal(self.encoder_base._states[1][:, 2:, :].data.numpy(),
+                                         index_selected_initial_states[1][:, 2:, :].data.numpy())
+
+        # Check that error is raised if mask has wrong batch size.
+        bad_mask = torch.FloatTensor([1, 1, 0])
+        with self.assertRaises(ValueError):
+            self.encoder_base.reset_states(bad_mask)
+
+        # Check that states are reset to None if no mask is provided.
+        self.encoder_base.reset_states()
+        assert self.encoder_base._states is None
+
     def test_non_contiguous_initial_states_handled(self):
         # Check that the encoder is robust to non-contiguous initial states.
 

@@ -10,6 +10,7 @@ from typing import Dict, Iterable, Optional
 import torch
 import responses
 import pytest
+import numpy as np
 
 from allennlp.common.checks import ConfigurationError
 
@@ -26,8 +27,8 @@ from allennlp.models.model import Model
 from allennlp.training.callback_trainer import CallbackTrainer
 from allennlp.training.callbacks import (
         Events, Callback, handle_event,
-        LogToTensorboard, Checkpoint, ComputeMovingAverage, Validate, PostToUrl,
-        UpdateLearningRate, UpdateMomentum, TrackMetrics, TrainSupervised, GenerateTrainingBatches
+        LogToTensorboard, Checkpoint, Validate, PostToUrl, GradientNormAndClip,
+        UpdateLearningRate, UpdateMomentum, TrackMetrics, UpdateMovingAverage
 )
 from allennlp.training.checkpointer import Checkpointer
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
@@ -72,6 +73,9 @@ class TestCallbackTrainer(ModelTestCase):
                 })
         self.model = SimpleTagger.from_params(vocab=self.vocab, params=self.model_params)
         self.optimizer = torch.optim.SGD(self.model.parameters(), 0.01, momentum=0.9)
+        self.iterator = BasicIterator(batch_size=2)
+        self.iterator.index_with(vocab)
+
 
     def tearDown(self):
         super().tearDown()
@@ -82,8 +86,8 @@ class TestCallbackTrainer(ModelTestCase):
                           patience: int = None,
                           max_checkpoints: int = 20,
                           checkpoint_every: int = None,
+                          model_save_interval: float = None,
                           serialization_dir: str = "__DEFAULT__",
-                          iterator: DataIterator = None,
                           validation_data: Iterable[Instance] = None,
                           validation_iterator: DataIterator = None,
                           batch_size: int = 2):
@@ -94,18 +98,17 @@ class TestCallbackTrainer(ModelTestCase):
                                     max_checkpoints)
         tensorboard = TensorboardWriter(get_batch_num_total=lambda: None)
 
-        if iterator is None:
-            iterator = BasicIterator(batch_size=batch_size)
-            iterator.index_with(self.vocab)
+        if validation_iterator is None:
+            validation_iterator = BasicIterator(batch_size=batch_size)
+            validation_iterator.index_with(self.vocab)
 
         return [
                 LogToTensorboard(log_batch_size_period=10, tensorboard=tensorboard),
-                Checkpoint(checkpointer),
+                Checkpoint(checkpointer, model_save_interval),
                 Validate(validation_data=self.instances if validation_data is None else validation_data,
-                         validation_iterator=iterator if validation_iterator is None else validation_iterator),
+                         validation_iterator=validation_iterator),
                 TrackMetrics(patience, validation_metric),
-                TrainSupervised(),
-                GenerateTrainingBatches(self.instances, iterator, True)
+                GradientNormAndClip(),
         ]
 
     def test_end_to_end(self):
@@ -122,8 +125,6 @@ class TestCallbackTrainer(ModelTestCase):
                     "optimizer": {"type": "sgd", "lr": 0.01, "momentum": 0.9},
                     "num_epochs": 2,
                     "callbacks": [
-                        "generate_training_batches",
-                        "train_supervised",
                         "checkpoint",
                         "track_metrics",
                         "validate",
@@ -167,6 +168,8 @@ class TestCallbackTrainer(ModelTestCase):
 
     def test_trainer_can_run(self):
         trainer = CallbackTrainer(model=self.model,
+                                  training_data=self.instances,
+                                  iterator=self.iterator,
                                   optimizer=self.optimizer,
                                   callbacks=self.default_callbacks(serialization_dir=None),
                                   num_epochs=2)
@@ -183,6 +186,8 @@ class TestCallbackTrainer(ModelTestCase):
 
         # Making sure that both increasing and decreasing validation metrics work.
         trainer = CallbackTrainer(model=self.model,
+                                  training_data=self.instances,
+                                  iterator=self.iterator,
                                   optimizer=self.optimizer,
                                   callbacks=self.default_callbacks(validation_metric="+loss",
                                                                    serialization_dir=None),
@@ -202,11 +207,13 @@ class TestCallbackTrainer(ModelTestCase):
 
     @responses.activate
     def test_trainer_posts_to_url(self):
-        url = 'http://slack.com?webhook=ewifjweoiwjef'
+        url = 'https://slack.com?webhook=ewifjweoiwjef'
         responses.add(responses.POST, url)
         post_to_url = PostToUrl(url, message="only a test")
         callbacks = self.default_callbacks() + [post_to_url]
         trainer = CallbackTrainer(model=self.model,
+                                  training_data=self.instances,
+                                  iterator=self.iterator,
                                   optimizer=self.optimizer,
                                   num_epochs=2,
                                   callbacks=callbacks)
@@ -218,17 +225,34 @@ class TestCallbackTrainer(ModelTestCase):
 
     def test_trainer_can_run_exponential_moving_average(self):
         moving_average = ExponentialMovingAverage(self.model.named_parameters(), decay=0.9999)
-        callbacks = self.default_callbacks() + [ComputeMovingAverage(moving_average)]
+        callbacks = self.default_callbacks() + [UpdateMovingAverage(moving_average)]
         trainer = CallbackTrainer(model=self.model,
+                                  training_data=self.instances,
+                                  iterator=self.iterator,
                                   optimizer=self.optimizer,
                                   num_epochs=2,
                                   callbacks=callbacks)
         trainer.train()
 
+    def test_trainer_can_run_ema_from_params(self):
+        uma_params = Params({"moving_average": {"decay": 0.9999}})
+        callbacks = self.default_callbacks() + [UpdateMovingAverage.from_params(uma_params, self.model)]
+        trainer = CallbackTrainer(model=self.model,
+                                  training_data=self.instances,
+                                  iterator=self.iterator,
+                                  optimizer=self.optimizer,
+                                  num_epochs=2,
+                                  callbacks=callbacks)
+        trainer.train()
+
+
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="No CUDA device registered.")
     def test_trainer_can_run_cuda(self):
         self.model.cuda()
-        trainer = CallbackTrainer(self.model, self.optimizer,
+        trainer = CallbackTrainer(self.model,
+                                  training_data=self.instances,
+                                  iterator=self.iterator,
+                                  optimizer=self.optimizer,
                                   num_epochs=2,
                                   callbacks=self.default_callbacks(),
                                   cuda_device=0)
@@ -258,9 +282,12 @@ class TestCallbackTrainer(ModelTestCase):
 
         multigpu_iterator = BasicIterator(batch_size=4)
         multigpu_iterator.index_with(self.vocab)
-        trainer = CallbackTrainer(MetaDataCheckWrapper(self.model), self.optimizer,
+        trainer = CallbackTrainer(MetaDataCheckWrapper(self.model),
+                                  training_data=self.instances,
+                                  iterator=multigpu_iterator,
+                                  optimizer=self.optimizer,
                                   num_epochs=2,
-                                  callbacks=self.default_callbacks(iterator=multigpu_iterator),
+                                  callbacks=self.default_callbacks(),
                                   cuda_device=[0, 1])
         metrics = trainer.train()
         assert 'peak_cpu_memory_MB' in metrics
@@ -289,27 +316,34 @@ class TestCallbackTrainer(ModelTestCase):
 
         trainer = CallbackTrainer(
                 model,
+                instances,
+                multigpu_iterator,
                 self.optimizer,
                 num_epochs=2,
                 cuda_device=[0, 1],
                 callbacks=[
-                        GenerateTrainingBatches(instances, multigpu_iterator),
-                        TrainSupervised()
+                        GradientNormAndClip()
                 ])
         trainer.train()
 
     def test_trainer_can_resume_training(self):
-        trainer = CallbackTrainer(self.model, self.optimizer,
+        trainer = CallbackTrainer(self.model,
+                                  training_data=self.instances,
+                                  iterator=self.iterator,
+                                  optimizer=self.optimizer,
                                   callbacks=self.default_callbacks(),
                                   num_epochs=1, serialization_dir=self.TEST_DIR)
         trainer.train()
 
 
-        new_trainer = CallbackTrainer(self.model, self.optimizer,
+        new_trainer = CallbackTrainer(self.model,
+                                      training_data=self.instances,
+                                      iterator=self.iterator,
+                                      optimizer=self.optimizer,
                                       callbacks=self.default_callbacks(),
                                       num_epochs=3, serialization_dir=self.TEST_DIR)
 
-        new_trainer.handler.fire_event(Events.RESTORE_CHECKPOINT)
+        new_trainer.handler.fire_event(Events.TRAINING_START)
 
         assert new_trainer.epoch_number == 1
 
@@ -323,21 +357,27 @@ class TestCallbackTrainer(ModelTestCase):
 
     def test_trainer_can_resume_training_for_exponential_moving_average(self):
         moving_average = ExponentialMovingAverage(self.model.named_parameters())
-        callbacks = self.default_callbacks() + [ComputeMovingAverage(moving_average)]
+        callbacks = self.default_callbacks() + [UpdateMovingAverage(moving_average)]
 
-        trainer = CallbackTrainer(self.model, self.optimizer,
+        trainer = CallbackTrainer(self.model,
+                                  training_data=self.instances,
+                                  iterator=self.iterator,
+                                  optimizer=self.optimizer,
                                   num_epochs=1, serialization_dir=self.TEST_DIR,
                                   callbacks=callbacks)
         trainer.train()
 
         new_moving_average = ExponentialMovingAverage(self.model.named_parameters())
-        new_callbacks = self.default_callbacks() + [ComputeMovingAverage(new_moving_average)]
+        new_callbacks = self.default_callbacks() + [UpdateMovingAverage(new_moving_average)]
 
-        new_trainer = CallbackTrainer(self.model, self.optimizer,
+        new_trainer = CallbackTrainer(self.model,
+                                      training_data=self.instances,
+                                      iterator=self.iterator,
+                                      optimizer=self.optimizer,
                                       num_epochs=3, serialization_dir=self.TEST_DIR,
                                       callbacks=new_callbacks)
 
-        new_trainer.handler.fire_event(Events.RESTORE_CHECKPOINT)  # pylint: disable=protected-access
+        new_trainer.handler.fire_event(Events.TRAINING_START)  # pylint: disable=protected-access
         assert new_trainer.epoch_number == 1
 
         tracker = trainer.metric_tracker  # pylint: disable=protected-access
@@ -346,9 +386,66 @@ class TestCallbackTrainer(ModelTestCase):
 
         new_trainer.train()
 
+    def test_training_metrics_consistent_with_and_without_validation(self):
+        default_callbacks = self.default_callbacks(serialization_dir=None)
+        default_callbacks_without_validation = [callback for callback in default_callbacks
+                                                if not isinstance(callback, Validate)]
+        trainer1 = CallbackTrainer(copy.deepcopy(self.model),
+                                   training_data=self.instances,
+                                   iterator=self.iterator,
+                                   optimizer=copy.deepcopy(self.optimizer),
+                                   callbacks=default_callbacks_without_validation,
+                                   num_epochs=1, serialization_dir=None)
+
+        trainer1.train()
+
+        trainer2 = CallbackTrainer(copy.deepcopy(self.model),
+                                   training_data=self.instances,
+                                   iterator=self.iterator,
+                                   optimizer=copy.deepcopy(self.optimizer),
+                                   callbacks=default_callbacks,
+                                   num_epochs=1, serialization_dir=None)
+
+        trainer2.train()
+        metrics1 = trainer1.train_metrics
+        metrics2 = trainer2.train_metrics
+        assert metrics1.keys() == metrics2.keys()
+        for key in ['accuracy', 'accuracy3', 'loss']:
+            np.testing.assert_almost_equal(metrics1[key], metrics2[key])
+
+    def test_validation_metrics_consistent_with_and_without_tracking(self):
+        default_callbacks = self.default_callbacks(serialization_dir=None)
+        default_callbacks_without_tracking = [callback for callback in default_callbacks
+                                              if not isinstance(callback, TrackMetrics)]
+        trainer1 = CallbackTrainer(copy.deepcopy(self.model),
+                                   training_data=self.instances,
+                                   iterator=self.iterator,
+                                   optimizer=copy.deepcopy(self.optimizer),
+                                   callbacks=default_callbacks_without_tracking,
+                                   num_epochs=1, serialization_dir=None)
+
+        trainer1.train()
+
+        trainer2 = CallbackTrainer(copy.deepcopy(self.model),
+                                   training_data=self.instances,
+                                   iterator=self.iterator,
+                                   optimizer=copy.deepcopy(self.optimizer),
+                                   callbacks=default_callbacks,
+                                   num_epochs=1, serialization_dir=None)
+
+        trainer2.train()
+        metrics1 = trainer1.val_metrics
+        metrics2 = trainer2.val_metrics
+        assert metrics1.keys() == metrics2.keys()
+        for key in ['accuracy', 'accuracy3', 'loss']:
+            np.testing.assert_almost_equal(metrics1[key], metrics2[key])
+
     def test_metric_only_considered_best_so_far_when_strictly_better_than_those_before_it_increasing_metric(
             self):
-        new_trainer = CallbackTrainer(self.model, self.optimizer,
+        new_trainer = CallbackTrainer(self.model,
+                                      training_data=self.instances,
+                                      iterator=self.iterator,
+                                      optimizer=self.optimizer,
                                       num_epochs=3, serialization_dir=self.TEST_DIR,
                                       callbacks=self.default_callbacks("+test", patience=5))
         tracker = new_trainer.metric_tracker
@@ -374,7 +471,10 @@ class TestCallbackTrainer(ModelTestCase):
         assert not new_tracker.is_best_so_far()
 
     def test_metric_only_considered_best_so_far_when_strictly_better_than_those_before_it_decreasing_metric(self):
-        new_trainer = CallbackTrainer(self.model, self.optimizer,
+        new_trainer = CallbackTrainer(self.model,
+                                      training_data=self.instances,
+                                      iterator=self.iterator,
+                                      optimizer=self.optimizer,
                                       num_epochs=3, serialization_dir=self.TEST_DIR,
                                       callbacks=self.default_callbacks(patience=5))
         tracker = new_trainer.metric_tracker
@@ -399,7 +499,10 @@ class TestCallbackTrainer(ModelTestCase):
         new_tracker.add_metrics([.3, .3, .3, .2, .5, .1, 13])
 
     def test_should_stop_early_with_increasing_metric(self):
-        new_trainer = CallbackTrainer(self.model, self.optimizer,
+        new_trainer = CallbackTrainer(self.model,
+                                      training_data=self.instances,
+                                      iterator=self.iterator,
+                                      optimizer=self.optimizer,
                                       num_epochs=3, serialization_dir=self.TEST_DIR,
                                       callbacks=self.default_callbacks(patience=5, validation_metric="+test"))
 
@@ -415,7 +518,10 @@ class TestCallbackTrainer(ModelTestCase):
 
 
     def test_should_stop_early_with_decreasing_metric(self):
-        new_trainer = CallbackTrainer(self.model, self.optimizer,
+        new_trainer = CallbackTrainer(self.model,
+                                      training_data=self.instances,
+                                      iterator=self.iterator,
+                                      optimizer=self.optimizer,
                                       num_epochs=3, serialization_dir=self.TEST_DIR,
                                       callbacks=self.default_callbacks(patience=5))
         tracker = new_trainer.metric_tracker
@@ -434,7 +540,10 @@ class TestCallbackTrainer(ModelTestCase):
 
     def test_should_stop_early_with_early_stopping_disabled(self):
         # Increasing metric
-        trainer = CallbackTrainer(self.model, self.optimizer,
+        trainer = CallbackTrainer(self.model,
+                                  training_data=self.instances,
+                                  iterator=self.iterator,
+                                  optimizer=self.optimizer,
                                   num_epochs=100,
                                   callbacks=self.default_callbacks(validation_metric="+test"))
         tracker = trainer.metric_tracker
@@ -442,7 +551,10 @@ class TestCallbackTrainer(ModelTestCase):
         assert not tracker.should_stop_early()
 
         # Decreasing metric
-        trainer = CallbackTrainer(self.model, self.optimizer,
+        trainer = CallbackTrainer(self.model,
+                                  training_data=self.instances,
+                                  iterator=self.iterator,
+                                  optimizer=self.optimizer,
                                   num_epochs=100,
                                   callbacks=self.default_callbacks(validation_metric="-test"))
         tracker = trainer.metric_tracker
@@ -452,7 +564,10 @@ class TestCallbackTrainer(ModelTestCase):
     def test_should_stop_early_with_invalid_patience(self):
         for patience in [0, -1, -2, 1.5, 'None']:
             with pytest.raises(ConfigurationError):
-                CallbackTrainer(self.model, self.optimizer,
+                CallbackTrainer(self.model,
+                                training_data=self.instances,
+                                iterator=self.iterator,
+                                optimizer=self.optimizer,
                                 num_epochs=100,
                                 callbacks=self.default_callbacks(patience=patience, validation_metric="+test"))
 
@@ -461,6 +576,8 @@ class TestCallbackTrainer(ModelTestCase):
                 self.optimizer, Params({"type": "inverted_triangular", "cool_down": 2, "warm_up": 2}))
         callbacks = self.default_callbacks() + [UpdateMomentum(scheduler)]
         trainer = CallbackTrainer(model=self.model,
+                                  training_data=self.instances,
+                                  iterator=self.iterator,
                                   optimizer=self.optimizer,
                                   num_epochs=4,
                                   callbacks=callbacks,
@@ -471,11 +588,13 @@ class TestCallbackTrainer(ModelTestCase):
                 self.optimizer, Params({"type": "inverted_triangular", "cool_down": 2, "warm_up": 2}))
         new_callbacks = self.default_callbacks() + [UpdateMomentum(new_scheduler)]
         new_trainer = CallbackTrainer(model=self.model,
+                                      training_data=self.instances,
+                                      iterator=self.iterator,
                                       optimizer=self.optimizer,
                                       num_epochs=6,
                                       callbacks=new_callbacks,
                                       serialization_dir=self.TEST_DIR)
-        new_trainer.handler.fire_event(Events.RESTORE_CHECKPOINT)
+        new_trainer.handler.fire_event(Events.TRAINING_START)
         assert new_trainer.epoch_number == 4
         assert new_scheduler.last_epoch == 3
         new_trainer.train()
@@ -486,6 +605,8 @@ class TestCallbackTrainer(ModelTestCase):
         callbacks = self.default_callbacks() + [UpdateLearningRate(lr_scheduler)]
 
         trainer = CallbackTrainer(model=self.model,
+                                  training_data=self.instances,
+                                  iterator=self.iterator,
                                   optimizer=self.optimizer,
                                   callbacks=callbacks,
                                   num_epochs=2)
@@ -497,6 +618,8 @@ class TestCallbackTrainer(ModelTestCase):
         callbacks = self.default_callbacks() + [UpdateLearningRate(lr_scheduler)]
 
         trainer = CallbackTrainer(model=self.model,
+                                  training_data=self.instances,
+                                  iterator=self.iterator,
                                   optimizer=self.optimizer,
                                   callbacks=callbacks,
                                   num_epochs=2, serialization_dir=self.TEST_DIR)
@@ -507,10 +630,12 @@ class TestCallbackTrainer(ModelTestCase):
         callbacks = self.default_callbacks() + [UpdateLearningRate(new_lr_scheduler)]
 
         new_trainer = CallbackTrainer(model=self.model,
+                                      training_data=self.instances,
+                                      iterator=self.iterator,
                                       optimizer=self.optimizer,
                                       callbacks=callbacks,
                                       num_epochs=4, serialization_dir=self.TEST_DIR)
-        new_trainer.handler.fire_event(Events.RESTORE_CHECKPOINT)
+        new_trainer.handler.fire_event(Events.TRAINING_START)
         assert new_trainer.epoch_number == 2
         assert new_lr_scheduler.lr_scheduler.last_epoch == 1
         new_trainer.train()
@@ -520,7 +645,10 @@ class TestCallbackTrainer(ModelTestCase):
             def forward(self, **kwargs):  # pylint: disable=arguments-differ,unused-argument
                 return {}
         with pytest.raises(RuntimeError):
-            trainer = CallbackTrainer(FakeModel(None), self.optimizer,
+            trainer = CallbackTrainer(FakeModel(None),
+                                      training_data=self.instances,
+                                      iterator=self.iterator,
+                                      optimizer=self.optimizer,
                                       callbacks=self.default_callbacks(),
                                       num_epochs=2, serialization_dir=self.TEST_DIR)
             trainer.train()
@@ -535,14 +663,20 @@ class TestCallbackTrainer(ModelTestCase):
         tensorboard = TensorboardWriter(lambda: None, histogram_interval=2)
         callbacks.append(LogToTensorboard(tensorboard))
 
-        trainer = CallbackTrainer(self.model, self.optimizer,
+        trainer = CallbackTrainer(self.model,
+                                  training_data=self.instances,
+                                  iterator=self.iterator,
+                                  optimizer=self.optimizer,
                                   num_epochs=3,
                                   serialization_dir=self.TEST_DIR,
                                   callbacks=callbacks)
         trainer.train()
 
     def test_trainer_respects_num_serialized_models_to_keep(self):
-        trainer = CallbackTrainer(self.model, self.optimizer,
+        trainer = CallbackTrainer(self.model,
+                                  training_data=self.instances,
+                                  iterator=self.iterator,
+                                  optimizer=self.optimizer,
                                   num_epochs=5,
                                   serialization_dir=self.TEST_DIR,
                                   callbacks=self.default_callbacks(max_checkpoints=3))
@@ -557,6 +691,8 @@ class TestCallbackTrainer(ModelTestCase):
 
     def test_trainer_saves_metrics_every_epoch(self):
         trainer = CallbackTrainer(model=self.model,
+                                  training_data=self.instances,
+                                  iterator=self.iterator,
                                   optimizer=self.optimizer,
                                   num_epochs=5,
                                   serialization_dir=self.TEST_DIR,
@@ -584,19 +720,21 @@ class TestCallbackTrainer(ModelTestCase):
                 time.sleep(2.5)
                 return super(WaitingIterator, self)._create_batches(*args, **kwargs)
 
-        iterator = WaitingIterator(batch_size=2)
-        iterator.index_with(self.vocab)
+        waiting_iterator = WaitingIterator(batch_size=2)
+        waiting_iterator.index_with(self.vocab)
 
         # Don't want validation iterator to wait.
         viterator = BasicIterator(batch_size=2)
         viterator.index_with(self.vocab)
 
-        trainer = CallbackTrainer(self.model, self.optimizer,
+        trainer = CallbackTrainer(self.model,
+                                  training_data=self.instances,
+                                  iterator=waiting_iterator,
+                                  optimizer=self.optimizer,
                                   num_epochs=6,
                                   serialization_dir=self.TEST_DIR,
                                   callbacks=self.default_callbacks(max_checkpoints=2,
                                                                    checkpoint_every=5,
-                                                                   iterator=iterator,
                                                                    validation_iterator=viterator))
         trainer.train()
 
@@ -614,7 +752,10 @@ class TestCallbackTrainer(ModelTestCase):
         tensorboard = TensorboardWriter(lambda: None, should_log_learning_rate=True, summary_interval=2)
         callbacks.append(LogToTensorboard(tensorboard))
 
-        trainer = CallbackTrainer(self.model, self.optimizer,
+        trainer = CallbackTrainer(self.model,
+                                  training_data=self.instances,
+                                  iterator=self.iterator,
+                                  optimizer=self.optimizer,
                                   num_epochs=2,
                                   serialization_dir=self.TEST_DIR,
                                   callbacks=callbacks)
@@ -622,11 +763,16 @@ class TestCallbackTrainer(ModelTestCase):
         trainer.train()
 
     def test_trainer_saves_models_at_specified_interval(self):
-        trainer = CallbackTrainer(self.model, self.optimizer,
+        iterator = BasicIterator(batch_size=4)
+        iterator.index_with(self.vocab)
+
+        trainer = CallbackTrainer(self.model,
+                                  training_data=self.instances,
+                                  iterator=iterator,
+                                  optimizer=self.optimizer,
                                   num_epochs=2,
                                   serialization_dir=self.TEST_DIR,
-                                  callbacks=self.default_callbacks(batch_size=4),
-                                  model_save_interval=0.0001)
+                                  callbacks=self.default_callbacks(model_save_interval=0.0001))
 
         trainer.train()
 
@@ -650,12 +796,14 @@ class TestCallbackTrainer(ModelTestCase):
         os.remove(os.path.join(self.TEST_DIR, 'best.th'))
 
         restore_trainer = CallbackTrainer(
-                self.model, self.optimizer,
+                self.model,
+                training_data=self.instances,
+                iterator=iterator,
+                optimizer=self.optimizer,
                 num_epochs=2,
                 serialization_dir=self.TEST_DIR,
-                callbacks=self.default_callbacks(),
-                model_save_interval=0.0001)
-        restore_trainer.handler.fire_event(Events.RESTORE_CHECKPOINT)
+                callbacks=self.default_callbacks(model_save_interval=0.0001))
+        restore_trainer.handler.fire_event(Events.TRAINING_START)
         assert restore_trainer.epoch_number == 2
         # One batch per epoch.
         assert restore_trainer.batch_num_total == 2
@@ -664,11 +812,14 @@ class TestCallbackTrainer(ModelTestCase):
         # Use -loss and run 1 epoch of original-training, and one of restored-training
         # Run 1 epoch of original training.
         trainer = CallbackTrainer(
-                self.model, self.optimizer,
+                self.model,
+                training_data=self.instances,
+                iterator=self.iterator,
+                optimizer=self.optimizer,
                 callbacks=self.default_callbacks(),
                 num_epochs=1, serialization_dir=self.TEST_DIR)
         trainer.train()
-        _ = trainer.handler.fire_event(Events.RESTORE_CHECKPOINT)
+        _ = trainer.handler.fire_event(Events.TRAINING_START)
         best_epoch_1 = trainer.metric_tracker.best_epoch
         best_validation_metrics_epoch_1 = trainer.metric_tracker.best_epoch_metrics
         # best_validation_metrics_epoch_1: {'accuracy': 0.75, 'accuracy3': 1.0, 'loss': 0.6243013441562653}
@@ -677,11 +828,14 @@ class TestCallbackTrainer(ModelTestCase):
 
         # Run 1 epoch of restored training.
         restore_trainer = CallbackTrainer(
-                self.model, self.optimizer,
+                self.model,
+                training_data=self.instances,
+                iterator=self.iterator,
+                optimizer=self.optimizer,
                 callbacks=self.default_callbacks(),
                 num_epochs=2, serialization_dir=self.TEST_DIR)
         restore_trainer.train()
-        _ = restore_trainer.handler.fire_event(Events.RESTORE_CHECKPOINT)
+        _ = restore_trainer.handler.fire_event(Events.TRAINING_START)
         best_epoch_2 = restore_trainer.metric_tracker.best_epoch
         best_validation_metrics_epoch_2 = restore_trainer.metric_tracker.best_epoch_metrics
 
@@ -693,12 +847,16 @@ class TestCallbackTrainer(ModelTestCase):
         # Use -loss and run 1 epoch of original-training, and one of restored-training
         # Run 1 epoch of original training.
         trainer = CallbackTrainer(
-                self.model, self.optimizer,
+                self.model,
+                training_data=self.instances,
+                iterator=self.iterator,
+                optimizer=self.optimizer,
                 callbacks=self.default_callbacks(validation_metric="+loss"),
                 num_epochs=1, serialization_dir=self.TEST_DIR)
+        trainer.handler.verbose = True
         trainer.train()
 
-        _ = trainer.handler.fire_event(Events.RESTORE_CHECKPOINT)
+        _ = trainer.handler.fire_event(Events.TRAINING_START)
         best_epoch_1 = trainer.metric_tracker.best_epoch
         best_validation_metrics_epoch_1 = trainer.metric_tracker.best_epoch_metrics
         # best_validation_metrics_epoch_1: {'accuracy': 0.75, 'accuracy3': 1.0, 'loss': 0.6243013441562653}
@@ -707,11 +865,16 @@ class TestCallbackTrainer(ModelTestCase):
 
         # Run 1 more epoch of restored training.
         restore_trainer = CallbackTrainer(
-                self.model, self.optimizer,
+                self.model,
+                training_data=self.instances,
+                iterator=self.iterator,
+                optimizer=self.optimizer,
                 callbacks=self.default_callbacks(validation_metric="+loss"),
                 num_epochs=2, serialization_dir=self.TEST_DIR)
+        print("restore trainer")
+        restore_trainer.handler.verbose = True
         restore_trainer.train()
-        _ = restore_trainer.handler.fire_event(Events.RESTORE_CHECKPOINT)
+        _ = restore_trainer.handler.fire_event(Events.TRAINING_START)
         best_epoch_2 = restore_trainer.metric_tracker.best_epoch
         best_validation_metrics_epoch_2 = restore_trainer.metric_tracker.best_epoch_metrics
 
@@ -722,14 +885,20 @@ class TestCallbackTrainer(ModelTestCase):
     def test_restored_training_returns_best_epoch_metrics_even_if_no_better_epoch_is_found_after_restoring(self):
         # Instead of -loss, use +loss to assure 2nd epoch is considered worse.
         # Run 1 epoch of original training.
-        original_trainer = CallbackTrainer(self.model, self.optimizer,
+        original_trainer = CallbackTrainer(self.model,
+                                           training_data=self.instances,
+                                           iterator=self.iterator,
+                                           optimizer=self.optimizer,
                                            callbacks=self.default_callbacks(validation_metric="+loss"),
                                            num_epochs=1, serialization_dir=self.TEST_DIR)
         training_metrics = original_trainer.train()
 
         # Run 1 epoch of restored training.
         restored_trainer = CallbackTrainer(
-                self.model, self.optimizer,
+                self.model,
+                training_data=self.instances,
+                iterator=self.iterator,
+                optimizer=self.optimizer,
                 callbacks=self.default_callbacks(validation_metric="+loss"),
                 num_epochs=2, serialization_dir=self.TEST_DIR)
         restored_metrics = restored_trainer.train()
@@ -772,7 +941,10 @@ class TestCallbackTrainer(ModelTestCase):
         error_test = ErrorTest()
         callbacks = self.default_callbacks() + [error_test]
 
-        original_trainer = CallbackTrainer(self.model, self.optimizer,
+        original_trainer = CallbackTrainer(self.model,
+                                           self.instances,
+                                           self.iterator,
+                                           self.optimizer,
                                            callbacks=callbacks,
                                            num_epochs=1, serialization_dir=self.TEST_DIR)
 
