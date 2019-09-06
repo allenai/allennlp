@@ -5,7 +5,7 @@ import json
 import os
 import re
 import time
-from typing import Dict, Iterable
+from typing import Dict, Iterable, Optional
 
 import torch
 import responses
@@ -26,7 +26,7 @@ from allennlp.models.archival import load_archive
 from allennlp.models.model import Model
 from allennlp.training.callback_trainer import CallbackTrainer
 from allennlp.training.callbacks import (
-        Events,
+        Events, Callback, handle_event,
         LogToTensorboard, Checkpoint, Validate, PostToUrl, GradientNormAndClip,
         UpdateLearningRate, UpdateMomentum, TrackMetrics, UpdateMovingAverage
 )
@@ -912,3 +912,49 @@ class TestCallbackTrainer(ModelTestCase):
         assert training_metrics["best_validation_loss"] == restored_metrics["best_validation_loss"]
         assert training_metrics["best_epoch"] == 0
         assert training_metrics["validation_loss"] > restored_metrics["validation_loss"]
+
+    def test_handle_errors(self):
+        # pylint: disable=unused-argument,no-self-use
+        class ErrorTest(Callback):
+            """
+            A callback with three triggers
+            * at BATCH_START, it raises a RuntimeError
+            * at TRAINING_END, it sets a finished flag to True
+            * at ERROR, it captures `trainer.exception`
+            """
+            def __init__(self) -> None:
+                self.exc: Optional[Exception] = None
+                self.finished_training = None
+
+            @handle_event(Events.BATCH_START)
+            def raise_exception(self, trainer):
+                raise RuntimeError("problem starting batch")
+
+            @handle_event(Events.TRAINING_END)
+            def finish_training(self, trainer):
+                self.finished_training = True
+
+            @handle_event(Events.ERROR)
+            def capture_error(self, trainer):
+                self.exc = trainer.exception
+
+        error_test = ErrorTest()
+        callbacks = self.default_callbacks() + [error_test]
+
+        original_trainer = CallbackTrainer(self.model,
+                                           self.instances,
+                                           self.iterator,
+                                           self.optimizer,
+                                           callbacks=callbacks,
+                                           num_epochs=1, serialization_dir=self.TEST_DIR)
+
+        with pytest.raises(RuntimeError):
+            # pylint: disable=not-callable
+            original_trainer.train()
+
+        # The callback should have captured the exception.
+        assert error_test.exc is not None
+        assert error_test.exc.args == ("problem starting batch",)
+
+        # The "finished" flag should never have been set to True.
+        assert not error_test.finished_training
