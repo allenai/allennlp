@@ -59,10 +59,10 @@ class SpearmanCorrelation(Metric):
         -------
         The accumulated sample Spearman correlation.
         """
+        spearman_correlation = stats.spearmanr(self.total_predictions.numpy(), self.total_gold_labels.numpy())
+
         if reset:
             self.reset()
-
-        spearman_correlation = stats.spearmanr(self.total_predictions.numpy(), self.total_gold_labels.numpy())
 
         return spearman_correlation[0]
 
