@@ -675,7 +675,7 @@ class TestNnUtil(AllenNlpTestCase):
         # Test Viterbi decoding is equal to greedy decoding with no pairwise potentials.
         sequence_logits = torch.autograd.Variable(torch.rand([5, 9]))
         transition_matrix = torch.zeros([9, 9])
-        indices, _ = util.viterbi_decode(sequence_logits.data, transition_matrix)
+        indices, _ = util.viterbi_decode(sequence_logits.data, transition_matrix, top_k=5)
         _, argmax_indices = torch.max(sequence_logits, 1)
         assert indices[0] == argmax_indices.data.squeeze().tolist()
 
@@ -687,7 +687,7 @@ class TestNnUtil(AllenNlpTestCase):
         transition_matrix = torch.zeros([5, 5])
         for i in range(5):
             transition_matrix[i, i] = float("-inf")
-        indices, _ = util.viterbi_decode(sequence_logits, transition_matrix)
+        indices, _ = util.viterbi_decode(sequence_logits, transition_matrix, top_k=5)
         assert indices[0] == [3, 4, 3, 4, 3, 4]
 
         # Test that unbalanced pairwise potentials break ties
@@ -700,7 +700,7 @@ class TestNnUtil(AllenNlpTestCase):
         transition_matrix = torch.zeros([5, 5])
         transition_matrix[4, 4] = -10
         transition_matrix[4, 3] = -10
-        indices, _ = util.viterbi_decode(sequence_logits, transition_matrix)
+        indices, _ = util.viterbi_decode(sequence_logits, transition_matrix, top_k=5)
         assert indices[0] == [3, 3, 3, 3, 3, 3]
 
         sequence_logits = torch.FloatTensor([[1, 0, 0, 4], [1, 0, 6, 2], [0, 3, 0, 4]])
@@ -709,7 +709,7 @@ class TestNnUtil(AllenNlpTestCase):
         transition_matrix = torch.zeros([4, 4])
         transition_matrix[0, 0] = 1
         transition_matrix[2, 1] = 5
-        indices, value = util.viterbi_decode(sequence_logits, transition_matrix)
+        indices, value = util.viterbi_decode(sequence_logits, transition_matrix, top_k=5)
         assert indices[0] == [3, 2, 1]
         assert value[0] == 18
 
