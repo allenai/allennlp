@@ -1,6 +1,6 @@
 import json
 import random
-from typing import NamedTuple
+from typing import NamedTuple, Any
 
 import numpy
 from numpy.testing import assert_array_almost_equal, assert_almost_equal
@@ -678,6 +678,7 @@ class TestNnUtil(AllenNlpTestCase):
         transition_matrix = torch.zeros([9, 9])
         # pylint: disable=no-member
         indices, _ = util.viterbi_decode(sequence_logits.data, transition_matrix, top_k=5)
+        # pylint: enable=no-member
         _, argmax_indices = torch.max(sequence_logits, 1)
         assert indices[0] == argmax_indices.data.squeeze().tolist()
 
@@ -715,18 +716,20 @@ class TestNnUtil(AllenNlpTestCase):
         assert indices[0] == [3, 2, 1]
         assert value[0] == 18
 
-        def brute_decode(tag_sequence: torch.Tensor, transition_matrix: torch.Tensor, top_k: int = 5):
+        def brute_decode(tag_sequence: torch.Tensor, transition_matrix: torch.Tensor, top_k: int = 5) -> Any:
             """
             Top-k decoder that uses brute search instead of the Viterbi Decode dynamic programing algorithm
             """
             # Create all possible sequences
             sequences = [[]]
+            # pylint: disable=consider-using-enumerate
             for i in range(len(tag_sequence)):
                 new_sequences = []
                 for j in range(len(tag_sequence[i])):
                     for sequence in sequences:
                         new_sequences.append(sequence[:] + [j])
                 sequences = new_sequences
+            # pylint: enable=consider-using-enumerate
 
             # Score
             scored_sequences = []
@@ -741,7 +744,7 @@ class TestNnUtil(AllenNlpTestCase):
             top_k_sequences = sorted(scored_sequences, key=lambda r: r[0], reverse=True)[:top_k]
             scores, paths = zip(*top_k_sequences)
 
-            return paths, scores
+            return paths, scores  # type: ignore
 
         # Run 100 randomly generated parameters and compare the outputs.
         for i in range(100):
