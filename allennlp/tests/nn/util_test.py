@@ -1,11 +1,11 @@
 import json
+import random
 from typing import NamedTuple
 
 import numpy
 from numpy.testing import assert_array_almost_equal, assert_almost_equal
 import torch
 import pytest
-import random
 from flaky import flaky
 
 from allennlp.common.checks import ConfigurationError
@@ -676,6 +676,7 @@ class TestNnUtil(AllenNlpTestCase):
         # Test Viterbi decoding is equal to greedy decoding with no pairwise potentials.
         sequence_logits = torch.autograd.Variable(torch.rand([5, 9]))
         transition_matrix = torch.zeros([9, 9])
+        # pylint: disable=no-member
         indices, _ = util.viterbi_decode(sequence_logits.data, transition_matrix, top_k=5)
         _, argmax_indices = torch.max(sequence_logits, 1)
         assert indices[0] == argmax_indices.data.squeeze().tolist()

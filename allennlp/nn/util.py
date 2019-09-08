@@ -557,9 +557,9 @@ def viterbi_decode(
         path_indices.append(paths.squeeze())
 
     # Construct the most likely sequence backwards.
-    path_scores = path_scores[-1].view(-1)
-    max_k = min(path_scores.size()[0], top_k)
-    viterbi_scores, best_paths = torch.topk(path_scores, k=max_k, dim=0)
+    path_scores_v = path_scores[-1].view(-1)
+    max_k = min(path_scores_v.size()[0], top_k)
+    viterbi_scores, best_paths = torch.topk(path_scores_v, k=max_k, dim=0)
     viterbi_paths = []
     for i in range(max_k):
         viterbi_path = [best_paths[i]]
