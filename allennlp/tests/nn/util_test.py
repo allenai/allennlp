@@ -1,6 +1,6 @@
 import json
 import random
-from typing import NamedTuple, Any
+from typing import NamedTuple, List, Any
 
 import numpy
 from numpy.testing import assert_array_almost_equal, assert_almost_equal
@@ -716,15 +716,15 @@ class TestNnUtil(AllenNlpTestCase):
         assert indices[0] == [3, 2, 1]
         assert value[0] == 18
 
-        def brute_decode(tag_sequence: torch.Tensor, transition_matrix: torch.Tensor, top_k: int = 5) -> Any:
+        def _brute_decode(tag_sequence: torch.Tensor, transition_matrix: torch.Tensor, top_k: int = 5) -> Any:
             """
             Top-k decoder that uses brute search instead of the Viterbi Decode dynamic programing algorithm
             """
             # Create all possible sequences
-            sequences = [[]]
+            sequences = [[]]  # type: ignore
             # pylint: disable=consider-using-enumerate
             for i in range(len(tag_sequence)):
-                new_sequences = []
+                new_sequences = []  # type: ignore
                 for j in range(len(tag_sequence[i])):
                     for sequence in sequences:
                         new_sequences.append(sequence[:] + [j])
@@ -732,7 +732,7 @@ class TestNnUtil(AllenNlpTestCase):
             # pylint: enable=consider-using-enumerate
 
             # Score
-            scored_sequences = []
+            scored_sequences = []  # type: ignore
             for sequence in sequences:
                 emission_score = sum([tag_sequence[i, j] for i, j in enumerate(sequence)])
                 transition_score = sum([transition_matrix[sequence[i - 1], sequence[i]]
@@ -754,7 +754,7 @@ class TestNnUtil(AllenNlpTestCase):
             sequence_logits = torch.rand([seq_len, num_tags])
             transition_matrix = torch.rand([num_tags, num_tags])
             viterbi_paths_v1, viterbi_scores_v1 = util.viterbi_decode(sequence_logits, transition_matrix, top_k=k)
-            viterbi_path_brute, viterbi_score_brute = brute_decode(sequence_logits, transition_matrix, top_k=k)
+            viterbi_path_brute, viterbi_score_brute = _brute_decode(sequence_logits, transition_matrix, top_k=k)
             numpy.testing.assert_almost_equal(list(viterbi_score_brute), viterbi_scores_v1.tolist(), decimal=3)
             numpy.testing.assert_equal(sanitize(viterbi_paths_v1), viterbi_path_brute)
 
