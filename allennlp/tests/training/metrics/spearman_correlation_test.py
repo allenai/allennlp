@@ -1,6 +1,6 @@
+import math
 import torch
 import numpy as np
-import math
 from numpy.testing import assert_allclose
 
 from allennlp.common.testing import AllenNlpTestCase
@@ -63,7 +63,7 @@ class SpearmanCorrelationTest(AllenNlpTestCase):
             spearman_correlation(torch.FloatTensor(predictions), torch.FloatTensor(labels))
             assert_allclose(spearman_formula(predictions.reshape(-1), labels.reshape(-1)),
                             spearman_correlation.get_metric(), rtol=1e-5)
-            
+
     def test_masked_computation(self):
         spearman_correlation = SpearmanCorrelation()
         batch_size = 10
@@ -85,7 +85,8 @@ class SpearmanCorrelationTest(AllenNlpTestCase):
 
         for predictions, labels in predictions_labels_:
             spearman_correlation.reset()
-            spearman_correlation(torch.FloatTensor(predictions), torch.FloatTensor(labels), torch.FloatTensor(mask))
+            spearman_correlation(torch.FloatTensor(predictions),
+                                 torch.FloatTensor(labels), torch.FloatTensor(mask))
             expected_spearman_correlation = spearman_formula(predictions.reshape(-1), labels.reshape(-1),
                                                              mask=mask.reshape(-1))
 
@@ -95,7 +96,7 @@ class SpearmanCorrelationTest(AllenNlpTestCase):
             # but the positive and negative results are the same,
             # so here we only test the positive and negative results of the results.
             assert (expected_spearman_correlation * spearman_correlation.get_metric()) > 0
-    
+
     def test_reset(self):
         spearman_correlation = SpearmanCorrelation()
         batch_size = 10
