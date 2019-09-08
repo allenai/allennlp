@@ -1,6 +1,6 @@
 import json
 import random
-from typing import NamedTuple, List, Any
+from typing import NamedTuple, Any
 
 import numpy
 from numpy.testing import assert_array_almost_equal, assert_almost_equal
