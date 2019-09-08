@@ -64,7 +64,7 @@ class CrfTagger(Model):
     top_k : ``int``, optional (default=``None``)
         If provided, the number of parses to return from the crf in output_dict['top_k_tags'].
         Top k parses are returned as a list of dicts, where each dictionary is of the form:
-            {"tags": List, "score": float}.
+        {"tags": List, "score": float}.
         The "tags" value for the first dict in the list for each data_item will be the top
         choice, and will equal the corresponding item in output_dict['tags']
     """
