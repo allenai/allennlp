@@ -43,7 +43,7 @@ def spearman_formula(predictions, labels, mask=None):
 
 class SpearmanCorrelationTest(AllenNlpTestCase):
     def test_unmasked_computation(self):
-                spearman_correlation = SpearmanCorrelation()
+        spearman_correlation = SpearmanCorrelation()
         batch_size = 10
         num_labels = 10
         predictions1 = np.random.randn(batch_size, num_labels).astype("float32")
