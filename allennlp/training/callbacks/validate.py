@@ -78,8 +78,7 @@ class Validate(Callback):
             batches_this_epoch = 0
             val_loss = 0
             for batch_group in val_generator_tqdm:
-
-                loss = trainer.batch_loss(batch_group, for_training=False)
+                loss = trainer.batch_group_forward(batch_group).get("loss", None)
                 if loss is not None:
                     # You shouldn't necessarily have to compute a loss for validation, so we allow for
                     # `loss` to be None.  We need to be careful, though - `batches_this_epoch` is

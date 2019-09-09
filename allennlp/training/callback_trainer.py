@@ -17,7 +17,6 @@ from allennlp.common.util import lazy_groups_of
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator, TensorDict
 from allennlp.models.model import Model
-from allennlp.nn import util as nn_util
 from allennlp.training import util as training_util
 from allennlp.training.callbacks.callback import Callback
 from allennlp.training.callbacks.callback_handler import CallbackHandler
@@ -117,6 +116,8 @@ class CallbackTrainer(TrainerBase):
         self.batch_num_total = 0
         self.batch_group: List[TensorDict] = []
         self.batches_this_epoch = 0
+        self.batch_output = None
+        self.batch_loss = None
 
         self.training_batches: Iterable[List[TensorDict]] = ()
         self.num_training_batches = 0
@@ -151,33 +152,11 @@ class CallbackTrainer(TrainerBase):
         self.training_batches = lazy_groups_of(raw_train_generator, num_gpus)
         self.num_training_batches = math.ceil(self.iterator.get_num_batches(self.training_data) / num_gpus)
 
-    def batch_loss(self, batch_group: List[TensorDict], for_training: bool) -> torch.Tensor:
+    def batch_group_forward(self, batch_group: List[TensorDict]) -> Dict[str, torch.Tensor]:
         """
-        Does a forward pass on the given batches and returns the ``loss`` value in the result.
-        If ``for_training`` is `True` also applies regularization penalty.
-
-        This is a method on the trainer so that it can be used both in training and validation
-        (which are handled separately).
+        Forward pass on model without altering any trainer state variables
         """
-        if self._multiple_gpu:
-            output_dict = training_util.data_parallel(batch_group, self.model, self._cuda_devices)
-        else:
-            assert len(batch_group) == 1
-            batch = batch_group[0]
-            batch = nn_util.move_to_device(batch, self._cuda_devices[0])
-            output_dict = self.model(**batch)
-
-        try:
-            loss = output_dict["loss"]
-            if for_training:
-                loss += self.model.get_regularization_penalty()
-        except KeyError:
-            if for_training:
-                raise RuntimeError("The model you are trying to optimize does not contain a"
-                                   " 'loss' key in the output of model.forward(inputs).")
-            loss = None
-
-        return loss
+        return training_util.batch_group_forward(batch_group, self.model, self._cuda_devices)
 
     def train_one_batch_group(self, batch_group: List[TensorDict]) -> str:
         """
@@ -191,13 +170,22 @@ class CallbackTrainer(TrainerBase):
         self.batch_num_total += 1
 
         self.handler.fire_event(Events.FORWARD)
-        loss = self.batch_loss(batch_group, for_training=True)
 
-        if torch.isnan(loss):
+        self.batch_output = self.batch_group_forward(batch_group)
+        if "loss" not in self.batch_output:
+            raise RuntimeError("The model you are trying to optimize does not contain a"
+                               " 'loss' key in the output of model.forward(inputs).")
+
+        self.handler.fire_event(Events.FORWARD_COMPLETE)
+
+        self.batch_loss = self.batch_output["loss"] + self.model.get_regularization_penalty()
+        if torch.isnan(self.batch_loss):
             raise ValueError("nan loss encountered")
 
-        loss.backward()
-        self.train_loss += loss.item()
+        self.handler.fire_event(Events.LOSS)
+
+        self.batch_loss.backward()
+        self.train_loss += self.batch_loss.item()
 
         self.handler.fire_event(Events.BACKWARD)
 

@@ -336,6 +336,21 @@ def data_parallel(batch_group: List[TensorDict],
     losses = gather([output['loss'].unsqueeze(0) for output in outputs], used_device_ids[0], 0)
     return {'loss': losses.mean()}
 
+def batch_group_forward(batch_group: List[TensorDict],
+                        model: Model,
+                        cuda_devices: List) -> Dict[str, torch.Tensor]:
+    """
+    Does a forward pass on the given batches, using data_parallel iff more than one cuda device is passed
+    """
+    if len(cuda_devices) > 1:
+        return data_parallel(batch_group, model, cuda_devices)
+    else:
+        assert len(batch_group) == 1
+        batch = batch_group[0]
+        batch = nn_util.move_to_device(batch, cuda_devices[0])
+        return model(**batch)
+
+
 def enable_gradient_clipping(model: Model, grad_clipping: Optional[float]) -> None:
     if grad_clipping is not None:
         for parameter in model.parameters():

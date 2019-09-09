@@ -7,6 +7,10 @@ class Events:
 
     FORWARD = "FORWARD"
 
+    FORWARD_COMPLETE = "FORWARD_COMPLETE"
+
+    LOSS = "LOSS"
+
     BACKWARD = "BACKWARD"
 
     BATCH_END = "BATCH_END"
