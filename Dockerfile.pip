@@ -20,7 +20,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
          python3-pip && \
      rm -rf /var/lib/apt/lists/*
 
-RUN echo "alias python=python3\nalias pip=pip3" > ~/.bash_aliases
+RUN ln -s /usr/bin/python3 /usr/bin/python
+RUN ln -s /usr/bin/pip3 /usr/bin/pip
 
 RUN pip3 install wheel
 
