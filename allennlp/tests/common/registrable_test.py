@@ -27,7 +27,7 @@ class TestRegistrable(AllenNlpTestCase):
         # This function tests the basic `Registrable` functionality:
         #
         #   1. The decorator should add things to the list.
-        #   2. The decorator should crash when adding a duplicate.
+        #   2. The decorator should crash when adding a duplicate (unless exist_ok=True).
         #   3. If a default is given, it should show up first in the list.
         #
         # What we don't test here is that built-in items are registered correctly.  Those are
@@ -55,6 +55,22 @@ class TestRegistrable(AllenNlpTestCase):
                 base_class.default_implementation = "not present"
                 base_class.list_available()
             base_class.default_implementation = default
+
+        # Verify that registering under a name that already exists
+        # causes a ConfigurationError.
+        with pytest.raises(ConfigurationError):
+            @base_class.register('fake')
+            class FakeAlternate(base_class):
+                # pylint: disable=abstract-method
+                pass
+
+        # Registering under a name that already exists should overwrite
+        # if exist_ok=True.
+        @base_class.register('fake', exist_ok=True)  # pylint: disable=function-redefined
+        class FakeAlternate(base_class):
+            # pylint: disable=abstract-method
+            pass
+        assert base_class.by_name('fake') == FakeAlternate
 
         del Registrable._registry[base_class]['fake']  # pylint: disable=protected-access
 

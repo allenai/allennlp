@@ -169,7 +169,7 @@ class GatedCnnEncoder(Seq2SeqEncoder):
 
         # We need to broadcast the mask to feature dimension,
         # and to use masked_fill_ we need the inverse of the mask.
-        mask_for_fill = (1 - mask).unsqueeze(1).byte()
+        mask_for_fill = (1 - mask).unsqueeze(1).to(dtype=torch.bool)
 
         if self._return_all_layers:
             # outputs will be [[all forward layers], [all backward layers]]

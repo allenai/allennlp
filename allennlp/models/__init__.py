@@ -32,5 +32,7 @@ from allennlp.models.bimpm import BiMpm
 from allennlp.models.graph_parser import GraphParser
 from allennlp.models.bidirectional_lm import BidirectionalLanguageModel
 from allennlp.models.language_model import LanguageModel
+from allennlp.models.masked_language_model import MaskedLanguageModel
+from allennlp.models.next_token_lm import NextTokenLM
 from allennlp.models.basic_classifier import BasicClassifier
 from allennlp.models.srl_bert import SrlBert
