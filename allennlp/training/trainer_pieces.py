@@ -32,8 +32,9 @@ class TrainerPieces(NamedTuple):
     validation_iterator: DataIterator
     params: Params
 
-    @staticmethod
-    def from_params(params: Params,
+    @classmethod
+    def from_params(cls,
+                    params: Params,
                     serialization_dir: str,
                     recover: bool = False,
                     cache_directory: str = None,
@@ -98,6 +99,6 @@ class TrainerPieces(NamedTuple):
         for name in tunable_parameter_names:
             logger.info(name)
 
-        return TrainerPieces(model, iterator,
-                             train_data, validation_data, test_data,
-                             validation_iterator, trainer_params)
+        return cls(model, iterator,
+                   train_data, validation_data, test_data,
+                   validation_iterator, trainer_params)
