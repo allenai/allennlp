@@ -5,7 +5,8 @@ logging and validation.
 """
 
 from typing import Any, Dict, List
-from collections import MutableMapping, OrderedDict
+from collections.abc import MutableMapping
+from collections import OrderedDict
 import copy
 import json
 import logging

@@ -19,14 +19,12 @@ class TestAdditiveAttention(AllenNlpTestCase):
         additive._W_matrix = Parameter(torch.Tensor([[-0.2, 0.3], [-0.5, 0.5]]))
         additive._U_matrix = Parameter(torch.Tensor([[0., 1.], [1., 1.], [1., -1.]]))
         additive._V_vector = Parameter(torch.Tensor([[1.], [-1.]]))
-        # batch, hidden
         vectors = torch.FloatTensor([[0.7, -0.8], [0.4, 0.9]])
-        # batch, seq_len, hidden
         matrices = torch.FloatTensor([
             [[1., -1., 3.], [0.5, -0.3, 0.], [0.2, -1., 1.], [0.7, 0.8, -1.]],
             [[-2., 3., -3.], [0.6, 0.2, 2.], [0.5, -0.4, -1.], [0.2, 0.2, 0.]]])
-        result = additive(vectors, matrices)
+        result = additive(vectors, matrices).detach().numpy()
         assert result.shape == (2, 4)
         assert_almost_equal(result, [
-            [[1.9751], [-0.0500], [1.2176], [-0.9206]],
-            [[-1.4852], [1.4897], [-1.8903],[-1.0672]]])
+            [1.975072, -0.04997836, 1.2176098, -0.9205586],
+            [-1.4851665, 1.489604, -1.890285, -1.0672251]])
