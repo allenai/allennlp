@@ -93,9 +93,8 @@ class SequenceLabelField(Field[torch.Tensor]):
 
     @overrides
     def index(self, vocab: Vocabulary):
-        if self._indexed_labels is None:
-            self._indexed_labels = [vocab.get_token_index(label, self._label_namespace)  # type: ignore
-                                    for label in self.labels]
+        self._indexed_labels = [vocab.get_token_index(label, self._label_namespace)  # type: ignore
+                                for label in self.labels]
 
     @overrides
     def get_padding_lengths(self) -> Dict[str, int]:

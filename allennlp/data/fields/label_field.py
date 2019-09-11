@@ -79,8 +79,7 @@ class LabelField(Field[torch.Tensor]):
 
     @overrides
     def index(self, vocab: Vocabulary):
-        if self._label_id is None:
-            self._label_id = vocab.get_token_index(self.label, self._label_namespace)  # type: ignore
+        self._label_id = vocab.get_token_index(self.label, self._label_namespace)  # type: ignore
 
     @overrides
     def get_padding_lengths(self) -> Dict[str, int]:  # pylint: disable=no-self-use
