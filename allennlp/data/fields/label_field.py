@@ -50,6 +50,7 @@ class LabelField(Field[torch.Tensor]):
         self._label_namespace = label_namespace
         self._label_id = None
         self._maybe_warn_for_namespace(label_namespace)
+        self._skip_indexing = skip_indexing
 
         if skip_indexing:
             if not isinstance(label, int):
@@ -79,7 +80,7 @@ class LabelField(Field[torch.Tensor]):
 
     @overrides
     def index(self, vocab: Vocabulary):
-        if self._label_id is None:
+        if not self._skip_indexing:
             self._label_id = vocab.get_token_index(self.label, self._label_namespace)  # type: ignore
 
     @overrides
