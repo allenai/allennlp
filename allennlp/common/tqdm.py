@@ -8,7 +8,7 @@ try:
 except:
     shell = ""
     
-if "InteractiveShell" in shell:
+if "zmqshell.ZMQInteractiveShell" in shell:
     from tqdm import tqdm_notebook as _tqdm
 else:
     from tqdm import tqdm as _tqdm
