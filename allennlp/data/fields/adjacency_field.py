@@ -90,8 +90,9 @@ class AdjacencyField(Field[torch.Tensor]):
 
     @overrides
     def index(self, vocab: Vocabulary):
-        self._indexed_labels = [vocab.get_token_index(label, self._label_namespace)
-                                for label in self.labels]
+        if self.labels is not None:
+            self._indexed_labels = [vocab.get_token_index(label, self._label_namespace)
+                                    for label in self.labels]
 
     @overrides
     def get_padding_lengths(self) -> Dict[str, int]:
