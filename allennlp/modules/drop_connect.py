@@ -1,5 +1,4 @@
-from typing import Iterator, List
-from collections import namedtuple
+from typing import Iterator
 import re
 
 import torch
@@ -27,11 +26,11 @@ class _Match:
         return '_'.join((prefix, self.parameter_name)) + '_raw'
 
 
-class WeightDropout(torch.nn.Module):
+class DropConnect(torch.nn.Module):
     """
-    Weight dropout (a.k.a DropConnect) module described in: `"Regularization of Neural Networks using DropConnect"
+    DropConnect module described in: `"Regularization of Neural Networks using DropConnect"
     <https://www.semanticscholar.org/paper/Regularization-of-Neural-Networks-using-DropConnect-Wan-Zeiler/38f35dd624cd1cf827416e31ac5e0e0454028eca>`_
-    by Wan et al., 2013.
+    by Wan et al., 2013. Applies dropout to module parameters instead of module outputs.
 
     Parameters
     ==========
