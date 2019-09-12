@@ -57,8 +57,10 @@ class SequenceLabelField(Field[torch.Tensor]):
             raise ConfigurationError("Label length and sequence length "
                                      "don't match: %d and %d" % (len(labels), sequence_field.sequence_length()))
 
+        self._skip_indexing = False
         if all([isinstance(x, int) for x in labels]):
             self._indexed_labels = labels
+            self._skip_indexing = True
 
         elif not all([isinstance(x, str) for x in labels]):
             raise ConfigurationError("SequenceLabelFields must be passed either all "
@@ -93,7 +95,7 @@ class SequenceLabelField(Field[torch.Tensor]):
 
     @overrides
     def index(self, vocab: Vocabulary):
-        if self._indexed_labels is None:
+        if not self._skip_indexing:
             self._indexed_labels = [vocab.get_token_index(label, self._label_namespace)  # type: ignore
                                     for label in self.labels]
 
