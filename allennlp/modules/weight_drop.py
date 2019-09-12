@@ -27,17 +27,6 @@ class _Match:
         return '_'.join((prefix, self.parameter_name)) + '_raw'
 
 
-def _module_search(regex: str, module: torch.nn.Module) -> Iterator[_Match]:
-    """
-    Generates _Match objects for all parameters in a given module whose names match the provided
-    regular expression.
-    """
-    for submodule_name, submodule in module.named_modules():
-        for parameter_name, parameter in submodule.named_parameters():
-            if re.search(regex, parameter_name):
-                yield _Match(submodule_name, module, parameter_name, parameter)
-
-
 class WeightDropout(torch.nn.Module):
     """
     Weight dropout (a.k.a DropConnect) module described in: `"Regularization of Neural Networks using DropConnect"
@@ -65,7 +54,7 @@ class WeightDropout(torch.nn.Module):
         # submodule they belong to, as well as their names. We need to know the specific submodule
         # so that we can place the dropped out tensors into the correct Module._parameters
         # dictionaries.
-        self._matches = list(_module_search(self._parameter_regex, self._module))
+        self._matches = list(self._search_parameters(self._parameter_regex))
         # Register the raw parameters (e.g., the parameters before dropout is applied) to this
         # module and remove them from their parent module. This avoids double counting when using
         # the Module.parameters() method. If we didn't do this the matched parameters would be
@@ -73,6 +62,16 @@ class WeightDropout(torch.nn.Module):
         for match in self._matches:
             self.register_parameter(match.raw_parameter_name, match.parameter)
             delattr(match.module, match.parameter_name)
+
+    def _search_parameters(self, regex: str) -> Iterator[_Match]:
+        """
+        Generates _Match objects for all parameters whose names match the provided regular
+        expression.
+        """
+        for submodule_name, submodule in self.named_modules():
+            for parameter_name, parameter in submodule.named_parameters(recurse=False):
+                if re.search(regex, parameter_name):
+                    yield _Match(submodule_name, submodule, parameter_name, parameter)
 
     def forward(self, *args):
         # pylint: disable=protected-access
@@ -95,5 +94,10 @@ class WeightDropout(torch.nn.Module):
         return output
 
     def reset(self):
-        if hasattr(self.module, 'reset'):
-            self.module.reset()
+        if hasattr(self._module, 'reset'):
+            self._module.reset()
+
+        self._matches = list(self._search_parameters(self._parameter_regex))
+        for match in self._matches:
+            self.register_parameter(match.raw_parameter_name, match.parameter)
+            delattr(match.module, match.parameter_name)
