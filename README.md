@@ -8,8 +8,9 @@ for developing state-of-the-art deep learning models on a wide variety of lingui
 
 ## Quick Links
 
-* [Website](http://www.allennlp.org/)
+* [Website](https://allennlp.org/)
 * [Tutorial](https://allennlp.org/tutorials)
+* [Forum](https://discourse.allennlp.org)
 * [Documentation](https://allenai.github.io/allennlp-docs/)
 * [Contributing Guidelines](CONTRIBUTING.md)
 * [Model List](MODELS.md)
@@ -68,7 +69,7 @@ Windows is currently not officially supported, although we try to fix issues whe
 version of Python required for AllenNLP.  If you already have a Python 3.6 or 3.7
 environment you want to use, you can skip to the 'installing via pip' section.
 
-1.  [Download and install Conda](https://conda.io/docs/download.html).
+1.  [Download and install Conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html).
 
 2.  Create a Conda environment with Python 3.6
 
@@ -96,7 +97,7 @@ AllenNLP installs a script when you install the python package, meaning you can 
 You can now test your installation with `allennlp test-install`.
 
 _`pip` currently installs Pytorch for CUDA 9 only (or no GPU). If you require an older version,
-please visit http://pytorch.org/ and install the relevant pytorch binary._
+please visit https://pytorch.org/ and install the relevant pytorch binary._
 
 ### Installing using Docker
 
@@ -110,10 +111,10 @@ just run the following command to get an environment that will run on either the
 
    ```bash
    mkdir -p $HOME/.allennlp/
-   docker run --rm -v $HOME/.allennlp:/root/.allennlp allennlp/allennlp:v0.8.4
+   docker run --rm -v $HOME/.allennlp:/root/.allennlp allennlp/allennlp:v0.8.5
    ```
 
-You can test the Docker environment with `docker run --rm -v $HOME/.allennlp:/root/.allennlp allennlp/allennlp:v0.8.4 test-install`.
+You can test the Docker environment with `docker run --rm -v $HOME/.allennlp:/root/.allennlp allennlp/allennlp:v0.8.5 test-install`.
 
 ### Installing from source
 
@@ -224,6 +225,6 @@ If you use AllenNLP in your research, please cite [AllenNLP: A Deep Semantic Nat
 
 ## Team
 
-AllenNLP is an open-source project backed by [the Allen Institute for Artificial Intelligence (AI2)](http://www.allenai.org).
+AllenNLP is an open-source project backed by [the Allen Institute for Artificial Intelligence (AI2)](https://allenai.org/).
 AI2 is a non-profit institute with the mission to contribute to humanity through high-impact AI research and engineering.
 To learn more about who specifically contributed to this codebase, see [our contributors](https://github.com/allenai/allennlp/graphs/contributors) page.

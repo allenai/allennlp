@@ -25,7 +25,6 @@ class TestMultiprocessIterator(IteratorTest):
         # For some of the tests we need a vocab, we'll just use the base_reader for that.
         self.vocab = Vocabulary.from_instances(self.base_reader.read(str(base_file_path)))
 
-
     def test_yield_one_epoch_iterates_over_the_data_once(self):
         for test_instances in (self.instances, self.lazy_instances):
             base_iterator = BasicIterator(batch_size=2, max_instances_in_memory=1024)
@@ -37,6 +36,19 @@ class TestMultiprocessIterator(IteratorTest):
                          for batch in batches
                          for instance in batch['text']["tokens"]]
             assert len(instances) == 5
+
+    def test_multiprocess_iterate_partial_does_not_hang(self):
+        for test_instances in (self.instances, self.lazy_instances):
+            base_iterator = BasicIterator(batch_size=2, max_instances_in_memory=1024)
+            iterator = MultiprocessIterator(base_iterator, num_workers=4)
+            iterator.index_with(self.vocab)
+            generator = iterator(test_instances, num_epochs=1)
+            # We only iterate through 3 of the 5 instances causing the
+            # processes generating the tensors to remain active.
+            for _ in range(3):
+                next(generator)
+            # The real test here is that we exit normally and don't hang due to
+            # the still active processes.
 
     def test_multiprocess_reader_with_multiprocess_iterator(self):
         # use SequenceTaggingDatasetReader as the base reader

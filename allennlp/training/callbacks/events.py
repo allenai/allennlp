@@ -6,6 +6,7 @@ class Events:
     BATCH_START = "BATCH_START"
 
     FORWARD = "FORWARD"
+
     BACKWARD = "BACKWARD"
 
     BATCH_END = "BATCH_END"
@@ -15,3 +16,5 @@ class Events:
     EPOCH_END = "EPOCH_END"
 
     TRAINING_END = "TRAINING_END"
+
+    ERROR = "ERROR"

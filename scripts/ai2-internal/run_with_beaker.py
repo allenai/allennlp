@@ -69,6 +69,9 @@ def main(param_file: str, args: argparse.Namespace):
             "--file-friendly-logging"
         ]
 
+    if args.preemptible:
+        allennlp_command = [ "/stage/allennlp/resumable_train.sh", "/output", "/config.json", "--file-friendly-logging"  ]
+
     dataset_mounts = []
     for source in args.source + [f"{config_dataset_id}:/config.json"]:
         datasetId, containerPath = source.split(":")
@@ -88,6 +91,8 @@ def main(param_file: str, args: argparse.Namespace):
         requirements["memory"] = args.memory
     if args.gpu_count:
         requirements["gpuCount"] = int(args.gpu_count)
+    if args.preemptible:
+        requirements["preemptible"] = True
     config_spec = {
         "description": args.desc,
         "image": image,
@@ -136,6 +141,7 @@ if __name__ == "__main__":
     parser.add_argument('--cpu', help='CPUs to reserve for this experiment (e.g., 0.5)')
     parser.add_argument('--gpu-count', default=1, help='GPUs to use for this experiment (e.g., 1 (default))')
     parser.add_argument('--memory', help='Memory to reserve for this experiment (e.g., 1GB)')
+    parser.add_argument('--preemptible', action='store_true', help='Allow task to run on preemptible hardware')
 
     args = parser.parse_args()
 

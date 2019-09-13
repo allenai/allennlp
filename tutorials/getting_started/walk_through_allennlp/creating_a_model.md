@@ -10,7 +10,7 @@ subclass corresponding to the model you want to implement.
 (If there's already a `DatasetReader` for the dataset you want to use,
  of course you can reuse that one.)
 In this tutorial we'll also implement a custom PyTorch
-[`Module`](http://pytorch.org/docs/master/nn.html#torch.nn.Module),
+[`Module`](https://pytorch.org/docs/master/nn.html#torch.nn.Module),
 but you won't need to do that in general.
 
 Our [simple tagger](training_and_evaluating.md) model
@@ -31,7 +31,7 @@ on the validation dataset. We'd like to do better.
 One way to approach this is to add a [Conditional Random Field](https://en.wikipedia.org/wiki/Conditional_random_field)
 layer at the end of our tagging model.
 (If you're not familiar with conditional random fields, [this overview paper](https://arxiv.org/abs/1011.4088)
- is helpful, as is [this PyTorch tutorial](http://pytorch.org/tutorials/beginner/nlp/advanced_tutorial.html).)
+ is helpful, as is [this PyTorch tutorial](https://pytorch.org/tutorials/beginner/nlp/advanced_tutorial.html).)
 
 The "linear-chain" conditional random field we'll implement has a `num_tags` x `num_tags` matrix of transition costs,
 where `transitions[i, j]` represents the likelihood of transitioning
@@ -51,7 +51,7 @@ As the CRF is just a component of our model, we'll implement it as a [Module](ht
 
 ## Implementing the CRF Module
 
-To implement a PyTorch module, we just need to inherit from [`torch.nn.Module`](http://pytorch.org/docs/master/nn.html#torch.nn.Module)
+To implement a PyTorch module, we just need to inherit from [`torch.nn.Module`](https://pytorch.org/docs/master/nn.html#torch.nn.Module)
 and override
 
 ```python

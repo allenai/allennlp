@@ -283,7 +283,7 @@ decoding_](https://github.com/allenai/acl2018-semantic-parsing-tutorial/blob/mas
 That is, instead of outputting tokens in the target language directly, we build an abstract syntax
 tree of the target program, linearize that tree, and produce it sequentially.  You can see an
 example of this in our [WikiTableQuestions parser
-demo](http://demo.allennlp.org/wikitables-parser), if you look at the predicted actions.  Each
+demo](https://demo.allennlp.org/wikitables-parser), if you look at the predicted actions.  Each
 action expands a non-terminal in the tree.  Constructing this grammar over abstract syntax trees is
 a bit messy.
 
@@ -439,7 +439,7 @@ general SQL grammar that we wrote with `parsimonious`.
   questions that require qualitative reasoning (paper and website coming soon).
 
 There are models implemented for most of these datasets, many of which you can see in our
-[demo](http://demo.allennlp.org).
+[demo](https://demo.allennlp.org).
 
 Is there a dataset or model that you really want to work on that's not here?  We'd love to hear
 about it, or to have contributions to add more capability to this framework.  Just open an issue or

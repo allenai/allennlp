@@ -6,9 +6,9 @@ others are AllenNLP modules.
 
 The available Seq2Seq encoders are
 
-* `"gru" <http://pytorch.org/docs/master/nn.html#torch.nn.GRU>`_
-* `"lstm" <http://pytorch.org/docs/master/nn.html#torch.nn.LSTM>`_
-* `"rnn" <http://pytorch.org/docs/master/nn.html#torch.nn.RNN>`_
+* `"gru" <https://pytorch.org/docs/master/nn.html#torch.nn.GRU>`_
+* `"lstm" <https://pytorch.org/docs/master/nn.html#torch.nn.LSTM>`_
+* `"rnn" <https://pytorch.org/docs/master/nn.html#torch.nn.RNN>`_
 * :class:`"augmented_lstm" <allennlp.modules.augmented_lstm.AugmentedLstm>`
 * :class:`"alternating_lstm" <allennlp.modules.stacked_alternating_lstm.StackedAlternatingLstm>`
 * :class:`"alternating_highway_lstm" <allennlp.modules.stacked_alternating_lstm.StackedAlternatingLstm> (GPU only)`
@@ -85,7 +85,7 @@ class _Seq2SeqWrapper:
         if self._module_class in self.PYTORCH_MODELS:
             params['batch_first'] = True
         stateful = params.pop_bool('stateful', False)
-        module = self._module_class(**params.as_dict())
+        module = self._module_class(**params.as_dict(infer_type_and_cast=True))
         return PytorchSeq2SeqWrapper(module, stateful=stateful)
 
 # pylint: disable=protected-access

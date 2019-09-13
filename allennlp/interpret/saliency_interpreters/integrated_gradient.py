@@ -7,8 +7,7 @@ import numpy
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import Instance
 from allennlp.interpret.saliency_interpreters.saliency_interpreter import SaliencyInterpreter
-from allennlp.modules.text_field_embedders import TextFieldEmbedder
-
+from allennlp.nn import util
 
 @SaliencyInterpreter.register('integrated-gradient')
 class IntegratedGradient(SaliencyInterpreter):
@@ -52,11 +51,8 @@ class IntegratedGradient(SaliencyInterpreter):
             output.mul_(alpha)
 
         # Register the hook
-        handle = None
-        for module in self.predictor._model.modules():
-            if isinstance(module, TextFieldEmbedder):
-                handle = module.register_forward_hook(forward_hook)
-
+        embedding_layer = util.find_embedding_layer(self.predictor._model)
+        handle = embedding_layer.register_forward_hook(forward_hook)
         return handle
 
     def _integrate_gradients(self, instance: Instance) -> Dict[str, numpy.ndarray]:

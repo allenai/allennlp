@@ -2,7 +2,7 @@ from typing import Dict, Tuple, List
 import logging
 
 from overrides import overrides
-from conllu.parser import parse_line, DEFAULT_FIELDS
+from conllu import parse_incr
 
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
@@ -12,14 +12,6 @@ from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
 from allennlp.data.tokenizers import Token, Tokenizer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
-
-
-def lazy_parse(text: str, fields: Tuple[str, ...]=DEFAULT_FIELDS):
-    for sentence in text.split("\n\n"):
-        if sentence:
-            yield [parse_line(line, fields)
-                   for line in sentence.split("\n")
-                   if line and not line.strip().startswith("#")]
 
 
 @DatasetReader.register("universal_dependencies")
@@ -56,13 +48,13 @@ class UniversalDependenciesDatasetReader(DatasetReader):
         with open(file_path, 'r') as conllu_file:
             logger.info("Reading UD instances from conllu dataset at: %s", file_path)
 
-            for annotation in  lazy_parse(conllu_file.read()):
+            for annotation in parse_incr(conllu_file):
                 # CoNLLU annotations sometimes add back in words that have been elided
                 # in the original sentence; we remove these, as we're just predicting
                 # dependencies for the original sentence.
                 # We filter by None here as elided words have a non-integer word id,
                 # and are replaced with None by the conllu python library.
-                annotation = [x for x in annotation if x["id"] is not None]
+                annotation = [x for x in annotation if isinstance(x["id"], int)]
 
                 heads = [x["head"] for x in annotation]
                 tags = [x["deprel"] for x in annotation]
@@ -112,7 +104,7 @@ class UniversalDependenciesDatasetReader(DatasetReader):
             fields["head_tags"] = SequenceLabelField([x[0] for x in dependencies],
                                                      text_field,
                                                      label_namespace="head_tags")
-            fields["head_indices"] = SequenceLabelField([int(x[1]) for x in dependencies],
+            fields["head_indices"] = SequenceLabelField([x[1] for x in dependencies],
                                                         text_field,
                                                         label_namespace="head_index_tags")
 

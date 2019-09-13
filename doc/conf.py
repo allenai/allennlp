@@ -123,7 +123,7 @@ html_logo = 'static/allennlp-logo-dark.png'
 # to template names.
 #
 # This is required for the alabaster theme
-# refs: http://alabaster.readthedocs.io/en/latest/installation.html#sidebars
+# refs: https://alabaster.readthedocs.io/en/latest/installation.html#sidebars
 html_sidebars = {
     '**': [
         'about.html',
@@ -238,4 +238,4 @@ def linkcode_resolve(domain, info):
         linespec = ""
 
     filename = info['module'].replace('.', '/')
-    return "http://github.com/allenai/allennlp/blob/master/%s.py%s" % (filename, linespec)
+    return "https://github.com/allenai/allennlp/blob/master/%s.py%s" % (filename, linespec)

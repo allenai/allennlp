@@ -189,7 +189,7 @@ class Scorer:
         """
         Counts the mentions in each predicted cluster which need to be re-allocated in
         order for each predicted cluster to be contained by the respective gold cluster.
-        <http://aclweb.org/anthology/M/M95/M95-1005.pdf>
+        <https://aclweb.org/anthology/M/M95/M95-1005.pdf>
         """
         true_p, all_p = 0, 0
         for cluster in clusters:

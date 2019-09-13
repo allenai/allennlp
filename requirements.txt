@@ -6,10 +6,10 @@
 #### ESSENTIAL LIBRARIES FOR MAIN FUNCTIONALITY ####
 
 # This installs Pytorch for CUDA 8 only. If you are using a newer version,
-# please visit http://pytorch.org/ and install the relevant version.
-# For now AllenNLP works with both PyTorch 1.0 and 0.4.1. Expect that in
-# the future only >=1.0 will be supported.
-torch>=0.4.1
+# please visit https://pytorch.org/ and install the relevant version.
+# allennlp>0.8.5 requires PyTorch 1.2 or greater. If you need to use
+# an older version of PyTorch you'll also need to use an older version of allennlp.
+torch>=1.2.0
 
 # Parameter parsing (but not on Windows).
 jsonnet>=0.10.0 ; sys.platform != 'win32'
@@ -22,7 +22,7 @@ overrides
 nltk
 
 # Mainly used for the faster tokenizer.
-spacy>=2.0.18,<2.2
+spacy>=2.1.0,<2.2
 
 # Used by span prediction models.
 numpy
@@ -61,6 +61,7 @@ word2number>=1.1
 
 # To use the BERT model
 pytorch-pretrained-bert>=0.6.0
+pytorch-transformers==1.1.0
 
 # For caching processed data
 jsonpickle
@@ -86,7 +87,7 @@ h5py
 pytz>=2017.3
 
 # Reads Universal Dependencies files.
-conllu==0.11
+conllu==1.3.1
 
 #### ESSENTIAL TESTING-RELATED PACKAGES ####
 

@@ -14,6 +14,7 @@ from allennlp.data.vocabulary import Vocabulary
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
+
 def sort_by_padding(instances: List[Instance],
                     sorting_keys: List[Tuple[str, str]],  # pylint: disable=invalid-sequence-index
                     vocab: Vocabulary,
@@ -82,6 +83,10 @@ class BucketIterator(DataIterator):
         See :class:`BasicIterator`.
     maximum_samples_per_batch : ``Tuple[str, int]``, (default = None)
         See :class:`BasicIterator`.
+    skip_smaller_batches : bool, optional, (default = False)
+        When the number of data samples is not dividable by `batch_size`,
+        some batches might be smaller than `batch_size`.
+        If set to `True`, those smaller batches will be discarded.
     """
 
     def __init__(self,
@@ -93,7 +98,8 @@ class BucketIterator(DataIterator):
                  max_instances_in_memory: int = None,
                  cache_instances: bool = False,
                  track_epoch: bool = False,
-                 maximum_samples_per_batch: Tuple[str, int] = None) -> None:
+                 maximum_samples_per_batch: Tuple[str, int] = None,
+                 skip_smaller_batches: bool = False) -> None:
         if not sorting_keys:
             raise ConfigurationError("BucketIterator requires sorting_keys to be specified")
 
@@ -106,6 +112,7 @@ class BucketIterator(DataIterator):
         self._sorting_keys = sorting_keys
         self._padding_noise = padding_noise
         self._biggest_batch_first = biggest_batch_first
+        self._skip_smaller_batches = skip_smaller_batches
 
     @overrides
     def _create_batches(self, instances: Iterable[Instance], shuffle: bool) -> Iterable[Batch]:
@@ -120,8 +127,10 @@ class BucketIterator(DataIterator):
             excess: Deque[Instance] = deque()
             for batch_instances in lazy_groups_of(iter(instance_list), self._batch_size):
                 for possibly_smaller_batches in self._ensure_batch_is_sufficiently_small(batch_instances, excess):
+                    if self._skip_smaller_batches and len(possibly_smaller_batches) < self._batch_size:
+                        continue
                     batches.append(Batch(possibly_smaller_batches))
-            if excess:
+            if excess and (not self._skip_smaller_batches or len(excess) == self._batch_size):
                 batches.append(Batch(excess))
 
             # TODO(brendanr): Add multi-GPU friendly grouping, i.e. group
