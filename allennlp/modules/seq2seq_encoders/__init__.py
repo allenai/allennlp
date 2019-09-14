@@ -85,7 +85,7 @@ class _Seq2SeqWrapper:
         if self._module_class in self.PYTORCH_MODELS:
             params['batch_first'] = True
         stateful = params.pop_bool('stateful', False)
-        module = self._module_class(**params.as_dict())
+        module = self._module_class(**params.as_dict(infer_type_and_cast=True))
         return PytorchSeq2SeqWrapper(module, stateful=stateful)
 
 # pylint: disable=protected-access

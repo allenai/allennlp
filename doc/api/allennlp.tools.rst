@@ -14,6 +14,11 @@ tasks for which we build models.
    :undoc-members:
    :show-inheritance:
 
+.. automodule:: allennlp.tools.quoref_eval
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 .. automodule:: allennlp.tools.squad_eval
    :members:
    :undoc-members:

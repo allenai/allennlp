@@ -74,7 +74,9 @@ class Elmo(torch.nn.Module):
     scalar_mix_parameters : ``List[float]``, optional, (default = None)
         If not ``None``, use these scalar mix parameters to weight the representations
         produced by different layers. These mixing weights are not updated during
-        training.
+        training. The mixing weights here should be the unnormalized (i.e., pre-softmax)
+        weights. So, if you wanted to use only the 1st layer of a 2-layer ELMo,
+        you can set this to [-9e10, 1, -9e10 ].
     module : ``torch.nn.Module``, optional, (default = None).
         If provided, then use this module instead of the pre-trained ELMo biLM.
         If using this option, then pass ``None`` for both ``options_file``

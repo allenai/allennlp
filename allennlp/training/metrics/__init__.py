@@ -11,6 +11,7 @@ from allennlp.training.metrics.bleu import BLEU
 from allennlp.training.metrics.categorical_accuracy import CategoricalAccuracy
 from allennlp.training.metrics.conll_coref_scores import ConllCorefScores
 from allennlp.training.metrics.covariance import Covariance
+from allennlp.training.metrics.drop_em_and_f1 import DropEmAndF1
 from allennlp.training.metrics.entropy import Entropy
 from allennlp.training.metrics.evalb_bracketing_scorer import EvalbBracketingScorer, DEFAULT_EVALB_DIR
 from allennlp.training.metrics.fbeta_measure import FBetaMeasure
@@ -23,6 +24,6 @@ from allennlp.training.metrics.perplexity import Perplexity
 from allennlp.training.metrics.sequence_accuracy import SequenceAccuracy
 from allennlp.training.metrics.span_based_f1_measure import SpanBasedF1Measure
 from allennlp.training.metrics.squad_em_and_f1 import SquadEmAndF1
-from allennlp.training.metrics.srl_eval_scorer import SrlEvalScorer
+from allennlp.training.metrics.srl_eval_scorer import SrlEvalScorer, DEFAULT_SRL_EVAL_PATH
 from allennlp.training.metrics.unigram_recall import UnigramRecall
 from allennlp.training.metrics.auc import Auc

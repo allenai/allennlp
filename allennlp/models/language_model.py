@@ -149,7 +149,7 @@ class LanguageModel(Model):
                                      mask: torch.Tensor,
                                      direction: int) -> torch.Tensor:
         # Need to shift the mask in the correct direction
-        zero_col = token_embeddings.new_zeros(mask.size(0), 1).byte()
+        zero_col = token_embeddings.new_zeros(mask.size(0), 1).to(dtype=torch.bool)
         if direction == 0:
             # forward direction, get token to right
             shifted_mask = torch.cat([zero_col, mask[:, 0:-1]], dim=1)

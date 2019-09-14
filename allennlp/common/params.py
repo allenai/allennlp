@@ -5,7 +5,8 @@ logging and validation.
 """
 
 from typing import Any, Dict, List
-from collections import MutableMapping, OrderedDict
+from collections.abc import MutableMapping
+from collections import OrderedDict
 import copy
 import json
 import logging
@@ -448,8 +449,8 @@ class Params(MutableMapping):
             value = [self._check_is_dict(f"{new_history}.{i}", v) for i, v in enumerate(value)]
         return value
 
-    @staticmethod
-    def from_file(params_file: str, params_overrides: str = "", ext_vars: dict = None) -> 'Params':
+    @classmethod
+    def from_file(cls, params_file: str, params_overrides: str = "", ext_vars: dict = None) -> 'Params':
         """
         Load a `Params` object from a configuration file.
 
@@ -479,7 +480,7 @@ class Params(MutableMapping):
         overrides_dict = parse_overrides(params_overrides)
         param_dict = with_fallback(preferred=overrides_dict, fallback=file_dict)
 
-        return Params(param_dict)
+        return cls(param_dict)
 
     def to_file(self, params_file: str, preference_orders: List[List[str]] = None) -> None:
         with open(params_file, "w") as handle:

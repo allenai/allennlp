@@ -6,23 +6,24 @@ each training run.
 .. code-block:: bash
 
    $ allennlp make-vocab --help
-
-    usage: allennlp make-vocab [-h] [-o OVERRIDES] [--include-package INCLUDE_PACKAGE] param_path
+    usage: allennlp make-vocab [-h] -s SERIALIZATION_DIR [-o OVERRIDES]
+                               [--include-package INCLUDE_PACKAGE]
+                               param_path
 
     Create a vocabulary from the specified dataset.
 
     positional arguments:
-    param_path            path to parameter file describing the model and its
-                          inputs
+      param_path            path to parameter file describing the model and its
+                            inputs
 
     optional arguments:
-    -h, --help            show this help message and exit
-   -s SERIALIZATION_DIR, --serialization-dir SERIALIZATION_DIR
-                           directory in which to save the vocabulary directory
-    -o OVERRIDES, --overrides OVERRIDES
-                          a JSON structure used to override the experiment
-                          configuration
-    --include-package INCLUDE_PACKAGE
+      -h, --help            show this help message and exit
+      -s SERIALIZATION_DIR, --serialization-dir SERIALIZATION_DIR
+                            directory in which to save the vocabulary directory
+      -o OVERRIDES, --overrides OVERRIDES
+                            a JSON structure used to override the experiment
+                            configuration
+      --include-package INCLUDE_PACKAGE
                             additional packages to include
 """
 import argparse

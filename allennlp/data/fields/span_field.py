@@ -38,7 +38,7 @@ class SpanField(Field[torch.Tensor]):
                              f"but found ({span_start}, {span_end}).")
 
         if span_end > self.sequence_field.sequence_length() - 1:
-            raise ValueError(f"span_end must be < len(sequence_length) - 1, but found "
+            raise ValueError(f"span_end must be <= len(sequence_length) - 1, but found "
                              f"{span_end} and {self.sequence_field.sequence_length() - 1} respectively.")
 
     @overrides
@@ -62,5 +62,4 @@ class SpanField(Field[torch.Tensor]):
     def __eq__(self, other) -> bool:
         if isinstance(other, tuple) and len(other) == 2:
             return other == (self.span_start, self.span_end)
-        else:
-            return id(self) == id(other)
+        return super().__eq__(other)

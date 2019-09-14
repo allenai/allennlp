@@ -10,7 +10,7 @@ from overrides import overrides
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.training.metrics.metric import Metric
-from allennlp.models.semantic_role_labeler import write_conll_formatted_tags_to_file
+from allennlp.models.srl_util import write_conll_formatted_tags_to_file
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -33,10 +33,14 @@ class SrlEvalScorer(Metric):
     ----------
     srl_eval_path : ``str``, optional.
         The path to the srl-eval.pl script.
+    ignore_classes : ``List[str]``, optional (default=``None``).
+        A list of classes to ignore.
     """
     def __init__(self,
-                 srl_eval_path: str = DEFAULT_SRL_EVAL_PATH) -> None:
+                 srl_eval_path: str = DEFAULT_SRL_EVAL_PATH,
+                 ignore_classes: List[str] = None) -> None:
         self._srl_eval_path = srl_eval_path
+        self._ignore_classes = set(ignore_classes)
         # These will hold per label span counts.
         self._true_positives: Dict[str, int] = defaultdict(int)
         self._false_positives: Dict[str, int] = defaultdict(int)
@@ -95,7 +99,7 @@ class SrlEvalScorer(Metric):
             if len(stripped) == 7:
                 tag = stripped[0]
                 # Overall metrics are calculated in get_metric, skip them here.
-                if tag == "Overall":
+                if tag == "Overall" or tag in self._ignore_classes:
                     continue
                 # This line contains results for a span
                 num_correct = int(stripped[1])

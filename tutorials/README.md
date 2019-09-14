@@ -39,3 +39,4 @@ The tutorials available here on the repo relate to the version of AllenNLP at th
 * The [blog posts by Masato Hagiwara](http://www.realworldnlpbook.com/blog/) as he writes his NLP book
 * [An in-depth tutorial by Keita Kurita](https://mlexplained.com/2019/01/30/an-in-depth-tutorial-to-allennlp-from-basics-to-elmo-and-bert/)
 * [Ethan Chau's extended Getting Started guide](https://gitlab.cs.washington.edu/echau18/tech-writing-mirror/blob/master/the-annotated-config/the-annotated-config.md)
+* The [blog posts by Joe Barrow](https://jbarrow.ai/)
