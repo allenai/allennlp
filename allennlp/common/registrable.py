@@ -71,12 +71,12 @@ class Registrable(FromParams):
     @classmethod
     def by_name(cls: Type[T], name: str) -> Type[T]:
         logger.info(f"instantiating registered subclass {name} of {cls}")
-        parts = name.split(".")
         if name in Registrable._registry[cls]:
             return Registrable._registry[cls].get(name)
-        elif len(parts) > 1:
+        elif "." in name:
             # This might be a fully qualified class name, so we'll try importing its "module"
             # and finding it there.
+            parts = name.split(".")
             submodule = ".".join(parts[:-1])
             class_name = parts[-1]
 
