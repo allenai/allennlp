@@ -6,6 +6,7 @@ from allennlp.modules.drop_connect import DropConnect
 
 
 class DropConnectTest(AllenNlpTestCase):
+    #pylint: disable=no-self-use
 
     @flaky(max_runs=10, min_passes=1)
     def test_linear_outputs(self):  #pylint: disable=no-self-use
@@ -60,8 +61,8 @@ class DropConnectTest(AllenNlpTestCase):
                 super().__init__()
                 self.linear = torch.nn.Linear(1, 1)
                 # Use identical names to linear params to test that we don't run into name conflicts.
-                self.weight = torch.nn.Parameter(torch.tensor([1., 2]))
-                self.bias = torch.nn.Parameter(torch.tensor([1., 2]))
+                self.weight = torch.nn.Parameter(torch.FloatTensor([1, 2]))
+                self.bias = torch.nn.Parameter(torch.FloatTensor([1., 2]))
 
         module = Mock()
         dropped_module = DropConnect(module=module, parameter_regex='weight', dropout=0.9)
