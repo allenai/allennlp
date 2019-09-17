@@ -94,7 +94,11 @@ class Registrable(FromParams):
 
         else:
             # is not a qualified class name
-            raise ConfigurationError("%s is not a registered name for %s" % (name, cls.__name__))
+            raise ConfigurationError(f"{name} is not a registered name for {cls.__name__}. "
+                                     "You probably need to use the --include-package flag "
+                                     "to load your custom code. Alternatively, you can specify your choices "
+                                     """using fully-qualified paths, e.g. {"model": "my_module.models.MyModel"} """
+                                     "in which case they will be automatically imported correctly.")
 
 
     @classmethod
