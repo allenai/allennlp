@@ -357,7 +357,10 @@ class Params(MutableMapping):
         ok_because_class_name = allow_class_names and '.' in value
         if value not in choices and not ok_because_class_name:
             key_str = self.history + key
-            message = '%s not in acceptable choices for %s: %s' % (value, key_str, str(choices))
+            message = (f"{value} not in acceptable choices for {key_str}: {choices}. "
+                       "You should either use the --include-package flag to make sure the correct module "
+                       "is loaded, or use a fully qualified class name in your config file like "
+                       """{"model": "my_module.models.MyModel"} to have it imported automatically."""
             raise ConfigurationError(message)
         return value
 
