@@ -243,7 +243,7 @@ class ConditionalRandomField(torch.nn.Module):
             # Alpha is for the current_tag, so we broadcast along the next_tag axis.
             broadcast_alpha = alpha.view(batch_size, num_tags, 1)
 
-            # Add all the scores together and logexp over the current_tag axis
+            # Add all the scores together and logexp over the current_tag axis.
             inner = broadcast_alpha + emit_scores + transition_scores
 
             # In valid positions (mask == 1) we want to take the logsumexp over the current_tag dimension
