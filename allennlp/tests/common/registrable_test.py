@@ -1,4 +1,8 @@
 # pylint: disable=no-self-use,invalid-name,too-many-public-methods
+import inspect
+import os
+import sys
+
 import pytest
 import torch
 import torch.nn.init
@@ -151,3 +155,41 @@ class TestRegistrable(AllenNlpTestCase):
         assert SimilarityFunction.by_name("bilinear").__name__ == 'BilinearSimilarity'
         assert SimilarityFunction.by_name("linear").__name__ == 'LinearSimilarity'
         assert SimilarityFunction.by_name("cosine").__name__ == 'CosineSimilarity'
+
+    def test_implicit_include_package(self):
+        # Create a new package in a temporary dir
+        packagedir = self.TEST_DIR / 'testpackage'
+        packagedir.mkdir()  # pylint: disable=no-member
+        (packagedir / '__init__.py').touch()  # pylint: disable=no-member
+
+        # And add that directory to the path
+        sys.path.insert(0, str(self.TEST_DIR))
+
+        # Write out a duplicate dataset reader there, but registered under a different name.
+        snli_reader = DatasetReader.by_name('snli')
+
+        with open(inspect.getabsfile(snli_reader)) as f:
+            code = f.read().replace("""@DatasetReader.register("snli")""",
+                                    """@DatasetReader.register("snli-fake")""")
+
+        with open(os.path.join(packagedir, 'reader.py'), 'w') as f:
+            f.write(code)
+
+        # Fails to import by registered name
+        with pytest.raises(ConfigurationError) as exc:
+            DatasetReader.by_name('snli-fake')
+            assert "is not a registered name" in str(exc.value)
+
+        # Fails to import with wrong module name
+        with pytest.raises(ConfigurationError) as exc:
+            DatasetReader.by_name('testpackage.snli_reader.SnliFakeReader')
+            assert "unable to import module" in str(exc.value)
+
+        # Fails to import with wrong class name
+        with pytest.raises(ConfigurationError):
+            DatasetReader.by_name('testpackage.reader.SnliFakeReader')
+            assert "unable to find class" in str(exc.value)
+
+        # Imports successfully with right fully qualified name
+        duplicate_reader = DatasetReader.by_name('testpackage.reader.SnliReader')
+        assert duplicate_reader.__name__ == 'SnliReader'
