@@ -1484,11 +1484,14 @@ def find_embedding_layer(model: torch.nn.Module) -> torch.nn.Module:
     """
     # We'll look for a few special cases in a first pass, then fall back to just finding a
     # TextFieldEmbedder in a second pass if we didn't find a special case.
-    from pytorch_pretrained_bert.modeling import BertEmbeddings
+    from pytorch_pretrained_bert.modeling import BertEmbeddings as BertEmbeddingsOld
     from pytorch_transformers.modeling_gpt2 import GPT2Model
+    from pytorch_transformers.modeling_bert import BertEmbeddings as BertEmbeddingsNew
     from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
     for module in model.modules():
-        if isinstance(module, BertEmbeddings):
+        if isinstance(module, BertEmbeddingsOld):
+            return module.word_embeddings
+        if isinstance(module, BertEmbeddingsNew):
             return module.word_embeddings
         if isinstance(module, GPT2Model):
             return module.wte
