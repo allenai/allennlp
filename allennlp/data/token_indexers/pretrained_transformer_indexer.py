@@ -48,6 +48,7 @@ class PretrainedTransformerIndexer(TokenIndexer[int]):
         elif model_name.endswith("-uncased") and not do_lowercase:
             logger.warning("Your pretrained model appears to be uncased, "
                            "but your indexer is not lowercasing tokens.")
+        self._model_name = model_name
         self.tokenizer = AutoTokenizer.from_pretrained(model_name, do_lower_case=do_lowercase)
         self._namespace = namespace
         self._added_to_vocabulary = False
@@ -91,3 +92,15 @@ class PretrainedTransformerIndexer(TokenIndexer[int]):
                                                              desired_num_tokens[key],
                                                              default_value=lambda: self._padding_value))
                 for key, val in tokens.items()}
+
+    def __eq__(self, other):
+        if isinstance(other, PretrainedTransformerIndexer):
+            for key in self.__dict__:
+                if key == 'tokenizer':
+                    # This is a reference to a function in the huggingface code, which we can't
+                    # really modify to make this clean.  So we special-case it.
+                    continue
+                if self.__dict__[key] != other.__dict__[key]:
+                    return False
+            return True
+        return NotImplemented
