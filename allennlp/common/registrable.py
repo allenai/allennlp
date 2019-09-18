@@ -5,6 +5,7 @@ for registering them.
 """
 from collections import defaultdict
 from typing import TypeVar, Type, Dict, List
+import importlib
 import logging
 
 from allennlp.common.checks import ConfigurationError
@@ -70,9 +71,35 @@ class Registrable(FromParams):
     @classmethod
     def by_name(cls: Type[T], name: str) -> Type[T]:
         logger.info(f"instantiating registered subclass {name} of {cls}")
-        if name not in Registrable._registry[cls]:
-            raise ConfigurationError("%s is not a registered name for %s" % (name, cls.__name__))
-        return Registrable._registry[cls].get(name)
+        if name in Registrable._registry[cls]:
+            return Registrable._registry[cls].get(name)
+        elif "." in name:
+            # This might be a fully qualified class name, so we'll try importing its "module"
+            # and finding it there.
+            parts = name.split(".")
+            submodule = ".".join(parts[:-1])
+            class_name = parts[-1]
+
+            try:
+                module = importlib.import_module(submodule)
+            except ModuleNotFoundError:
+                raise ConfigurationError(f"tried to interpret {name} as a path to a class "
+                                         f"but unable to import module {submodule}")
+
+            try:
+                return getattr(module, class_name)
+            except AttributeError:
+                raise ConfigurationError(f"tried to interpret {name} as a path to a class "
+                                         f"but unable to find class {class_name} in {submodule}")
+
+        else:
+            # is not a qualified class name
+            raise ConfigurationError(f"{name} is not a registered name for {cls.__name__}. "
+                                     "You probably need to use the --include-package flag "
+                                     "to load your custom code. Alternatively, you can specify your choices "
+                                     """using fully-qualified paths, e.g. {"model": "my_module.models.MyModel"} """
+                                     "in which case they will be automatically imported correctly.")
+
 
     @classmethod
     def list_available(cls) -> List[str]:
