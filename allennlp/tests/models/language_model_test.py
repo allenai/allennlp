@@ -6,7 +6,6 @@ from allennlp.common.testing import ModelTestCase
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.models import Model
-from allennlp.predictors import Predictor
 
 
 class TestUnidirectionalLanguageModel(ModelTestCase):
@@ -56,10 +55,9 @@ class TestUnidirectionalLanguageModel(ModelTestCase):
         with pytest.raises(ConfigurationError):
             Model.from_params(vocab=self.vocab, params=params.get("model"))
 
-    def test_language_model_predictions_are_valid(self):
-        predictor = Predictor(self.model)
-        instance = next(iter(self.dataset))
-        predictions = predictor.predict_instances(instance)
+    def test_language_model_forward_on_instances(self):
+        instances = self.dataset.instances
+        predictions = self.model.forward_on_instances(instances)
         assert predictions is not None
 
 class TestUnidirectionalLanguageModelUnsampled(TestUnidirectionalLanguageModel):
