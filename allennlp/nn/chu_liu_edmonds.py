@@ -28,7 +28,7 @@ def decode_mst(energy: numpy.ndarray,
     """
     if has_labels and energy.ndim != 3:
         raise ConfigurationError("The dimension of the energy array is not equal to 3.")
-    elif not has_labels and energy.ndim != 2:
+    if not has_labels and energy.ndim != 2:
         raise ConfigurationError("The dimension of the energy array is not equal to 2.")
     input_shape = energy.shape
     max_length = input_shape[-1]

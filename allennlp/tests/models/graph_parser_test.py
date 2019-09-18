@@ -22,6 +22,6 @@ class GraphParserTest(ModelTestCase):
         output_dict = self.model(**training_tensors)
         decode_output_dict = self.model.decode(output_dict)
 
-        assert set(decode_output_dict.keys()) == set(['arc_loss', 'tag_loss', 'loss',
-                                                      'arcs', 'arc_tags', 'arc_tag_probs',
-                                                      'arc_probs', 'tokens', 'mask'])
+        assert set(decode_output_dict.keys()) == {'arc_loss', 'tag_loss', 'loss',
+                                                  'arcs', 'arc_tags', 'arc_tag_probs',
+                                                  'arc_probs', 'tokens', 'mask'}

@@ -25,7 +25,7 @@ class ListField(SequenceField[DataArray]):
         contained ``Field`` objects must be of the same type.
     """
     def __init__(self, field_list: List[Field]) -> None:
-        field_class_set = set([field.__class__ for field in field_list])
+        field_class_set = {field.__class__ for field in field_list}
         assert len(field_class_set) == 1, "ListFields must contain a single field type, found " +\
                                           str(field_class_set)
         # Not sure why mypy has a hard time with this type...

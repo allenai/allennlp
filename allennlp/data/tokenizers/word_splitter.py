@@ -49,11 +49,11 @@ class SimpleWordSplitter(WordSplitter):
     """
     def __init__(self):
         # These are certainly incomplete.  But at least it's a start.
-        self.special_cases = set(['mr.', 'mrs.', 'etc.', 'e.g.', 'cf.', 'c.f.', 'eg.', 'al.'])
-        self.contractions = set(["n't", "'s", "'ve", "'re", "'ll", "'d", "'m"])
-        self.contractions |= set([x.replace("'", "’") for x in self.contractions])
-        self.ending_punctuation = set(['"', "'", '.', ',', ';', ')', ']', '}', ':', '!', '?', '%', '”', "’"])
-        self.beginning_punctuation = set(['"', "'", '(', '[', '{', '#', '$', '“', "‘"])
+        self.special_cases = {'mr.', 'mrs.', 'etc.', 'e.g.', 'cf.', 'c.f.', 'eg.', 'al.'}
+        self.contractions = {"n't", "'s", "'ve", "'re", "'ll", "'d", "'m"}
+        self.contractions |= {x.replace("'", "’") for x in self.contractions}
+        self.ending_punctuation = {'"', "'", '.', ',', ';', ')', ']', '}', ':', '!', '?', '%', '”', "’"}
+        self.beginning_punctuation = {'"', "'", '(', '[', '{', '#', '$', '“', "‘"}
 
     @overrides
     def split_words(self, sentence: str) -> List[Token]:

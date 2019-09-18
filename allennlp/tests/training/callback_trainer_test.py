@@ -819,7 +819,7 @@ class TestCallbackTrainer(ModelTestCase):
                 callbacks=self.default_callbacks(),
                 num_epochs=1, serialization_dir=self.TEST_DIR)
         trainer.train()
-        _ = trainer.handler.fire_event(Events.TRAINING_START)
+        trainer.handler.fire_event(Events.TRAINING_START)
         best_epoch_1 = trainer.metric_tracker.best_epoch
         best_validation_metrics_epoch_1 = trainer.metric_tracker.best_epoch_metrics
         # best_validation_metrics_epoch_1: {'accuracy': 0.75, 'accuracy3': 1.0, 'loss': 0.6243013441562653}
@@ -835,7 +835,7 @@ class TestCallbackTrainer(ModelTestCase):
                 callbacks=self.default_callbacks(),
                 num_epochs=2, serialization_dir=self.TEST_DIR)
         restore_trainer.train()
-        _ = restore_trainer.handler.fire_event(Events.TRAINING_START)
+        restore_trainer.handler.fire_event(Events.TRAINING_START)
         best_epoch_2 = restore_trainer.metric_tracker.best_epoch
         best_validation_metrics_epoch_2 = restore_trainer.metric_tracker.best_epoch_metrics
 
@@ -856,7 +856,7 @@ class TestCallbackTrainer(ModelTestCase):
         trainer.handler.verbose = True
         trainer.train()
 
-        _ = trainer.handler.fire_event(Events.TRAINING_START)
+        trainer.handler.fire_event(Events.TRAINING_START)
         best_epoch_1 = trainer.metric_tracker.best_epoch
         best_validation_metrics_epoch_1 = trainer.metric_tracker.best_epoch_metrics
         # best_validation_metrics_epoch_1: {'accuracy': 0.75, 'accuracy3': 1.0, 'loss': 0.6243013441562653}
@@ -874,7 +874,7 @@ class TestCallbackTrainer(ModelTestCase):
         print("restore trainer")
         restore_trainer.handler.verbose = True
         restore_trainer.train()
-        _ = restore_trainer.handler.fire_event(Events.TRAINING_START)
+        restore_trainer.handler.fire_event(Events.TRAINING_START)
         best_epoch_2 = restore_trainer.metric_tracker.best_epoch
         best_validation_metrics_epoch_2 = restore_trainer.metric_tracker.best_epoch_metrics
 

@@ -16,7 +16,7 @@ from allennlp.data.dataset_readers.dataset_utils import Ontonotes, OntonotesSent
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 def _normalize_word(word: str):
-    if word == "/." or word == "/?":
+    if word in ("/.", "/?"):
         return word[1:]
     else:
         return word

@@ -86,7 +86,7 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
                            f"between your token indexers and token embedders.")
                 raise ConfigurationError(message)
 
-            elif self._token_embedders.keys() != text_field_input.keys():
+            if self._token_embedders.keys() != text_field_input.keys():
                 # some other mismatch
                 message = "Mismatched token keys: %s and %s" % (str(self._token_embedders.keys()),
                                                                 str(text_field_input.keys()))
