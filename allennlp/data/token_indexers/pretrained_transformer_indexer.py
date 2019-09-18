@@ -103,3 +103,4 @@ class PretrainedTransformerIndexer(TokenIndexer[int]):
                 if self.__dict__[key] != other.__dict__[key]:
                     return False
             return True
+        return NotImplemented
