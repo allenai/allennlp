@@ -6,6 +6,7 @@ from allennlp.common.testing import ModelTestCase
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.models import Model
+from allennlp.predictors import Predictor
 
 
 class TestUnidirectionalLanguageModel(ModelTestCase):
@@ -55,6 +56,12 @@ class TestUnidirectionalLanguageModel(ModelTestCase):
         with pytest.raises(ConfigurationError):
             Model.from_params(vocab=self.vocab, params=params.get("model"))
 
+    def test_language_model_predictions_are_valid(self):
+        predictor = Predictor(self.model)
+        instance = next(iter(self.dataset))
+        predictions = predictor.predict_instances(instance)
+        assert predictions is not None
+
 class TestUnidirectionalLanguageModelUnsampled(TestUnidirectionalLanguageModel):
     def setUp(self):
         super().setUp()
@@ -87,8 +94,7 @@ class TestBidirectionalLanguageModel(TestUnidirectionalLanguageModel):
 
         self.expected_embedding_shape = (2, 8, 14)
         self.bidirectional = True
-        self.result_keys = {"loss", "forward_loss", "backward_loss", "lm_embeddings",
-                            "noncontextual_token_embeddings", "mask", "batch_weight"}
+        self.result_keys.add("backward_loss")
 
         self.set_up_model(self.FIXTURES_ROOT / 'language_model' / 'experiment.jsonnet',
                           self.FIXTURES_ROOT / 'language_model' / 'sentences.txt')
