@@ -147,10 +147,17 @@ class TestDropEvalFunctional:
         annotation = {"pid1": {"qa_pairs":[{"answer": {"number": "5"}, "validated_answers": \
                                                         [{"spans": ["7-meters"]}], "query_id":"qid1"}]}}
         prediction = {"qid1": "5-yard"}
-
         with io.StringIO() as buf, redirect_stdout(buf):
             evaluate_json(annotation, prediction)
             output = buf.getvalue()
+        lines = output.strip().split("\n")
+        assert lines[4] == 'number: 1 (100.00%)'
 
+        annotation = {"pid1": {"qa_pairs":[{"answer": {"spans": ["7-meters"]}, "validated_answers": \
+                                                        [{"number": "5"}], "query_id":"qid1"}]}}
+        prediction = {"qid1": "5-yard"}
+        with io.StringIO() as buf, redirect_stdout(buf):
+            evaluate_json(annotation, prediction)
+            output = buf.getvalue()
         lines = output.strip().split("\n")
         assert lines[4] == 'number: 1 (100.00%)'
