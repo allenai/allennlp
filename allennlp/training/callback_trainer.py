@@ -116,8 +116,8 @@ class CallbackTrainer(TrainerBase):
         self.batch_num_total = 0
         self.batch_group: List[TensorDict] = []
         self.batches_this_epoch = 0
-        self.batch_output = None
-        self.batch_loss = None
+        self.batch_output: Dict[str, torch.Tensor] = None
+        self.batch_loss: torch.Tensor = None
 
         self.training_batches: Iterable[List[TensorDict]] = ()
         self.num_training_batches = 0
