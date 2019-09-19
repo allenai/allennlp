@@ -313,17 +313,18 @@ class LanguageModel(Model):
                 return_dict.update({
                         'loss': average_loss,
                         'forward_loss': forward_loss / num_targets.float(),
-                        'backward_loss': (backward_loss / num_targets.float()
-                                          if backward_loss is not None else None),
                         'batch_weight': num_targets.float()
                 })
+                if backward_loss is not None:
+                    return_dict['backward_loss'] = backward_loss / num_targets.float()
             else:
                 # average_loss zero tensor, return it for all
                 return_dict.update({
                         'loss': average_loss,
                         'forward_loss': average_loss,
-                        'backward_loss': average_loss if backward_loss is not None else None
                 })
+                if backward_loss is not None:
+                    return_dict['backward_loss'] = average_loss
 
         return_dict.update({
                 # Note: These embeddings do not have dropout applied.
