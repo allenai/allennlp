@@ -24,7 +24,7 @@ class TestNlvrDatasetReader(AllenNlpTestCase):
         agenda_strings = [actions[rule_id] for rule_id in agenda]
         assert set(agenda_strings) == {'<Set[Object]:Set[Object]> -> circle',
                                        '<Set[Object]:bool> -> object_exists',
-                                       '<Set[Object]:Set[Object]> -> touch_corner']}
+                                       '<Set[Object]:Set[Object]> -> touch_corner'}
         worlds = [world_field.as_tensor({}) for world_field in instance.fields["worlds"].field_list]
         assert isinstance(worlds[0], NlvrLanguage)
         label = instance.fields["labels"].field_list[0].label
