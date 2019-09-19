@@ -7,7 +7,9 @@ assignees: ''
 
 ---
 
-Please first search our GitHub repository for similar questions.  If you don't find a similar example you can use the following template:
+Please first search our GitHub repository and [Discourse forum](https://discourse.allennlp.org/) for similar questions.  While we are encouraging users to ask questions in our new [Discourse forum](https://discourse.allennlp.org/), we are still accepting questions as GitHub issues as well.
+
+If you don't find a similar example and you would like to ask a question on GitHub you can use the following template:
 
 **System (please complete the following information):**
  - OS: [e.g. OSX, Linux]
