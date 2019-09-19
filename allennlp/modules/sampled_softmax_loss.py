@@ -87,8 +87,8 @@ class SampledSoftmaxLoss(torch.nn.Module):
 
         if use_fast_sampler:
             raise ConfigurationError("fast sampler is not implemented")
-
-        self.choice_func = _choice
+        else:
+            self.choice_func = _choice
 
         # Glorit init (std=(1.0 / sqrt(fan_in))
         if sparse:

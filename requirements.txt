@@ -105,7 +105,7 @@ responses>=0.7
 #### TESTING-RELATED PACKAGES ####
 
 # Checks style, syntax, and other useful errors.
-pylint==2.3.1
+pylint>=2.3.1
 
 # Static type checking
 mypy==0.521

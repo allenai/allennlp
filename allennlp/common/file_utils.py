@@ -145,7 +145,8 @@ def s3_request(func: Callable):
         except ClientError as exc:
             if int(exc.response["Error"]["Code"]) == 404:
                 raise FileNotFoundError("file {} not found".format(url))
-            raise
+            else:
+                raise
 
     return wrapper
 

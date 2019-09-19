@@ -188,10 +188,10 @@ class _PredictManager:
     def _get_instance_data(self) -> Iterator[Instance]:
         if self._input_file == "-":
             raise ConfigurationError("stdin is not an option when using a DatasetReader.")
-        if self._dataset_reader is None:
+        elif self._dataset_reader is None:
             raise ConfigurationError("To generate instances directly, pass a DatasetReader.")
-
-        yield from self._dataset_reader.read(self._input_file)
+        else:
+            yield from self._dataset_reader.read(self._input_file)
 
     def run(self) -> None:
         has_reader = self._dataset_reader is not None
