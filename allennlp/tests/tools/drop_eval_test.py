@@ -1,5 +1,8 @@
 # pylint: disable=no-self-use,invalid-name
 
+import io
+from contextlib import redirect_stdout
+
 from allennlp.tools.drop_eval import _normalize_answer, get_metrics, evaluate_json
 
 class TestDropEvalNormalize:
@@ -139,3 +142,22 @@ class TestDropEvalFunctional:
                                         {"answer": {"spans": ["answer2"]}, "query_id":"qid2"}]}}
         prediction = {"qid1": "answer", "qid2": "answer2"}
         assert evaluate_json(annotation, prediction) == (0.5, 0.5)
+
+    def test_type_partition_output(self):
+        annotation = {"pid1": {"qa_pairs":[{"answer": {"number": "5"}, "validated_answers": \
+                                                        [{"spans": ["7-meters"]}], "query_id":"qid1"}]}}
+        prediction = {"qid1": "5-yard"}
+        with io.StringIO() as buf, redirect_stdout(buf):
+            evaluate_json(annotation, prediction)
+            output = buf.getvalue()
+        lines = output.strip().split("\n")
+        assert lines[4] == 'number: 1 (100.00%)'
+
+        annotation = {"pid1": {"qa_pairs":[{"answer": {"spans": ["7-meters"]}, "validated_answers": \
+                                                        [{"number": "5"}], "query_id":"qid1"}]}}
+        prediction = {"qid1": "5-yard"}
+        with io.StringIO() as buf, redirect_stdout(buf):
+            evaluate_json(annotation, prediction)
+            output = buf.getvalue()
+        lines = output.strip().split("\n")
+        assert lines[4] == 'number: 1 (100.00%)'
