@@ -1488,6 +1488,8 @@ def find_embedding_layer(model: torch.nn.Module) -> torch.nn.Module:
     from pytorch_transformers.modeling_gpt2 import GPT2Model
     from pytorch_transformers.modeling_bert import BertEmbeddings as BertEmbeddingsNew
     from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
+    from allennlp.modules.text_field_embedders import BasicTextFieldEmbedder
+    from allennlp.modules.token_embedders import Embedding
     for module in model.modules():
         if isinstance(module, BertEmbeddingsOld):
             return module.word_embeddings
@@ -1497,5 +1499,13 @@ def find_embedding_layer(model: torch.nn.Module) -> torch.nn.Module:
             return module.wte
     for module in model.modules():
         if isinstance(module, TextFieldEmbedder):
+            if isinstance(module, BasicTextFieldEmbedder):
+                # We'll have a check for single Embedding cases, because we can be more efficient
+                # in cases like this.  If this check fails, then for something like hotflip we need
+                # to actually run the text field embedder and construct a vector for each token.
+                if len(module._token_embedders) == 1:
+                    embedder = list(module._token_embedders.values())[0]
+                    if isinstance(embedder, Embedding):
+                        return embedder
             return module
     raise RuntimeError("No embedding module found!")

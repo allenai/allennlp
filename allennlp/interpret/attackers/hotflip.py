@@ -7,7 +7,9 @@ import torch
 
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data.fields import TextField
-from allennlp.data.token_indexers import ELMoTokenCharactersIndexer, TokenCharactersIndexer
+from allennlp.data.token_indexers import (ELMoTokenCharactersIndexer,
+                                          TokenCharactersIndexer,
+                                          SingleIdTokenIndexer)
 from allennlp.data.tokenizers import Token
 from allennlp.interpret.attackers import utils
 from allennlp.interpret.attackers.attacker import Attacker
@@ -26,16 +28,21 @@ class Hotflip(Attacker):
     _first_order_taylor(). Constructing this object is expensive due to the construction of the
     embedding matrix.
     """
-    def __init__(self, predictor: Predictor, vocab_namespace: str = 'tokens') -> None:
+    def __init__(self,
+                 predictor: Predictor,
+                 vocab_namespace: str = 'tokens',
+                 max_tokens: int = 5) -> None:
         super().__init__(predictor)
         self.vocab = self.predictor._model.vocab
         self.namespace = vocab_namespace
         # Force new tokens to be alphanumeric
+        self.max_tokens = max_tokens
         self.invalid_replacement_indices: List[int] = []
         for i in self.vocab._index_to_token[self.namespace]:
             if not self.vocab._index_to_token[self.namespace][i].isalnum():
                 self.invalid_replacement_indices.append(i)
-        self.token_embedding: Embedding = None
+        self.embedding_matrix: torch.Tensor = None
+        self.initialize()
 
     def initialize(self):
         """
@@ -43,8 +50,8 @@ class Hotflip(Attacker):
         ``_construct_embedding_matrix()`` in this function to prevent a large amount of compute
         being done when __init__() is called.
         """
-        if self.token_embedding is None:
-            self.token_embedding = self._construct_embedding_matrix()
+        if self.embedding_matrix is None:
+            self.embedding_matrix = self._construct_embedding_matrix()
 
     def _construct_embedding_matrix(self) -> Embedding:
         """
@@ -56,44 +63,48 @@ class Hotflip(Attacker):
         final output embedding. We then group all of those output embeddings into an "embedding
         matrix".
         """
-        # Gets all tokens in the vocab and their corresponding IDs
-        all_tokens = self.vocab._token_to_index[self.namespace]
-        all_indices = list(self.vocab._index_to_token[self.namespace].keys())
-        all_inputs = {"tokens": torch.LongTensor(all_indices).unsqueeze(0)}
+        embedding_layer = util.find_embedding_layer(self.predictor._model)
+        if isinstance(embedding_layer, (Embedding, torch.nn.modules.sparse.Embedding)):
+            # If we're using something that already just has an embedding matrix, we can just use
+            # that and bypass this method.
+            return embedding_layer.weight
 
+        # We take the top `self.max_tokens` as candidates for hotflip.  Because we have to
+        # construct a new vector for each of these, we can't always afford to use the whole vocab.
+        all_tokens = list(self.vocab._token_to_index[self.namespace])[:self.max_tokens]
+        max_index = self.vocab.get_token_index(all_tokens[-1], self.namespace)
+        self.invalid_replacement_indices = [i for i in self.invalid_replacement_indices if i < max_index]
+
+        all_inputs = {}
         # A bit of a hack; this will only work with some dataset readers, but it'll do for now.
         indexers = self.predictor._dataset_reader._token_indexers  # type: ignore
-        for token_indexer in indexers.values():
-            # handle when a model uses character-level inputs, e.g., a CharCNN
-            if isinstance(token_indexer, TokenCharactersIndexer):
+        for indexer_name, token_indexer in indexers.items():
+            if isinstance(token_indexer, SingleIdTokenIndexer):
+                all_indices = [self.vocab._token_to_index[self.namespace][token] for token in all_tokens]
+                all_inputs[indexer_name] = torch.LongTensor(all_indices).unsqueeze(0)
+            elif isinstance(token_indexer, TokenCharactersIndexer):
                 tokens = [Token(x) for x in all_tokens]
                 max_token_length = max(len(x) for x in all_tokens)
                 indexed_tokens = token_indexer.tokens_to_indices(tokens, self.vocab, "token_characters")
                 padded_tokens = token_indexer.as_padded_tensor(indexed_tokens,
                                                                {"token_characters": len(tokens)},
                                                                {"num_token_characters": max_token_length})
-                all_inputs['token_characters'] = torch.LongTensor(padded_tokens['token_characters']).unsqueeze(0)
-            # for ELMo models
-            if isinstance(token_indexer, ELMoTokenCharactersIndexer):
+                all_inputs[indexer_name] = torch.LongTensor(padded_tokens['token_characters']).unsqueeze(0)
+            elif isinstance(token_indexer, ELMoTokenCharactersIndexer):
                 elmo_tokens = []
                 for token in all_tokens:
                     elmo_indexed_token = token_indexer.tokens_to_indices([Token(text=token)],
                                                                          self.vocab,
                                                                          "sentence")["sentence"]
                     elmo_tokens.append(elmo_indexed_token[0])
-                all_inputs["elmo"] = torch.LongTensor(elmo_tokens).unsqueeze(0)
+                all_inputs[indexer_name] = torch.LongTensor(elmo_tokens).unsqueeze(0)
+            else:
+                raise RuntimeError('Unsupported token indexer:', token_indexer)
 
-        embedding_layer = util.find_embedding_layer(self.predictor._model)
-        if isinstance(embedding_layer, torch.nn.modules.sparse.Embedding):
-            embedding_matrix = embedding_layer.weight
-        else:
-            # pass all tokens through the fake matrix and create an embedding out of it.
-            embedding_matrix = embedding_layer(all_inputs).squeeze()
+        # pass all tokens through the fake matrix and create an embedding out of it.
+        embedding_matrix = embedding_layer(all_inputs).squeeze()
 
-        return Embedding(num_embeddings=self.vocab.get_vocab_size(self.namespace),
-                         embedding_dim=embedding_matrix.shape[1],
-                         weight=embedding_matrix,
-                         trainable=False)
+        return embedding_matrix
 
     def attack_from_json(self,
                          inputs: JsonDict,
@@ -135,7 +146,7 @@ class Hotflip(Attacker):
             token (hence the list of length one), and we want to change the prediction from
             whatever it was to ``"she"``.
         """
-        if self.token_embedding is None:
+        if self.embedding_matrix is None:
             self.initialize()
         ignore_tokens = DEFAULT_IGNORE_TOKENS if ignore_tokens is None else ignore_tokens
 
@@ -219,7 +230,7 @@ class Hotflip(Attacker):
 
                 # Get new token using taylor approximation.
                 new_id = self._first_order_taylor(grad[index_of_token_to_flip],
-                                                  self.token_embedding.weight,  # type: ignore
+                                                  self.embedding_matrix,
                                                   original_id_of_token_to_flip,
                                                   sign)
 
@@ -258,7 +269,7 @@ class Hotflip(Attacker):
                          "outputs": outputs})
 
     def _first_order_taylor(self, grad: numpy.ndarray,
-                            embedding_matrix: torch.nn.parameter.Parameter,
+                            embedding_matrix: torch.Tensor,
                             token_idx: int,
                             sign: int) -> int:
         """

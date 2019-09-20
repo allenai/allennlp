@@ -80,12 +80,28 @@ class InputReduction(Attacker):
                 return len(input_text_field.tokens)
             candidates = heapq.nsmallest(self.beam_size, candidates, key=lambda x: get_length(x[0]))
 
+            # predictor.get_gradients is where the most expensive computation happens, so we're
+            # going to do it in a batch, up front, before iterating over the results.
             beam_candidates = deepcopy(candidates)
+            all_grads, all_outputs = self.predictor.get_gradients([x[0] for x in beam_candidates])
+            split_grads = []
+            for i in range(len(beam_candidates)):
+                split_grads.append({key: value[i] for key, value in all_grads.items()})
+            split_outputs = []
+            for i in range(len(beam_candidates)):
+                instance_outputs = {}
+                for key, value in all_outputs.items():
+                    if key == 'loss':
+                        continue
+                    instance_outputs[key] = value[i]
+                split_outputs.append(instance_outputs)
+            beam_candidates = [(x[0], x[1], x[2], split_grads[i], split_outputs[i])
+                               for i, x in enumerate(beam_candidates)]
+
             candidates = []
-            for beam_instance, smallest_idx, tag_mask in beam_candidates:
+            for beam_instance, smallest_idx, tag_mask, grads, outputs in beam_candidates:
                 # get gradients and predictions
                 beam_tag_mask = deepcopy(tag_mask)
-                grads, outputs = self.predictor.get_gradients([beam_instance])
 
                 for output in outputs:
                     if isinstance(outputs[output], torch.Tensor):
