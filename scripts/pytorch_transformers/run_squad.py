@@ -449,9 +449,10 @@ def main():
                         help="Overwrite the cached training and evaluation sets")
     parser.add_argument('--seed', type=int, default=42,
                         help="random seed for initialization")
-
-    parser.add_argument("--local_rank", type=int, default=-1,
-                        help="local_rank for distributed training on gpus")
+    parser.add_argument("--no_distributed_training", action='store_true',
+                        help="do distributed_training")
+    parser.add_argument('--fp16', action='store_true',
+                        help="Whether to use 16-bit (mixed) precision (through NVIDIA apex) instead of 32-bit")
     parser.add_argument('--fp16', action='store_true',
                         help="Whether to use 16-bit (mixed) precision (through NVIDIA apex) instead of 32-bit")
     parser.add_argument('--fp16_opt_level', type=str, default='O1',
@@ -483,7 +484,8 @@ def main():
     else:  # Initializes the distributed backend which will take care of sychronizing nodes/GPUs
         torch.cuda.set_device(args.local_rank)
         device = torch.device("cuda", args.local_rank)
-        torch.distributed.init_process_group(backend='nccl')
+        if not args.no_distributed_training:
+            torch.distributed.init_process_group(backend='nccl')
         args.n_gpu = 1
     args.device = device
 
@@ -498,7 +500,7 @@ def main():
     set_seed(args)
 
     # Load pretrained model and tokenizer
-    if args.local_rank not in [-1, 0]:
+    if args.local_rank not in [-1, 0] and not args.no_distributed_training:
         torch.distributed.barrier()  # Make sure only the first process in distributed training will download model & vocab
 
     args.model_type = args.model_type.lower()
@@ -507,7 +509,7 @@ def main():
     tokenizer = tokenizer_class.from_pretrained(args.tokenizer_name if args.tokenizer_name else args.model_name_or_path, do_lower_case=args.do_lower_case)
     model = model_class.from_pretrained(args.model_name_or_path, from_tf=bool('.ckpt' in args.model_name_or_path), config=config)
 
-    if args.local_rank == 0:
+    if args.local_rank == 0 and not args.no_distributed_training:
         torch.distributed.barrier()  # Make sure only the first process in distributed training will download model & vocab
 
     model.to(args.device)
@@ -522,7 +524,7 @@ def main():
 
 
     # Save the trained model and the tokenizer
-    if args.do_train and (args.local_rank == -1 or torch.distributed.get_rank() == 0):
+    if args.do_train and (args.local_rank == -1 or torch.distributed.get_rank() == 0 or args.no_distributed_training):
         # Create output directory if needed
         if not os.path.exists(args.output_dir) and args.local_rank in [-1, 0]:
             os.makedirs(args.output_dir)
