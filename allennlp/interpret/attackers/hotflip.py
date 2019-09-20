@@ -221,9 +221,9 @@ class Hotflip(Attacker):
                     break
                 flipped.append(index_of_token_to_flip)
 
-                # TODO(mattg): This is quite a bit of a hack, both for gpt2 and for getting the
-                # vocab id in general...  I don't have better ideas at the moment, though.
-                indexer_name = 'tokens' if self.namespace == 'gpt2' else self.namespace
+                # TODO(mattg): This is quite a bit of a hack for getting the vocab id...  I don't
+                # have better ideas at the moment, though.
+                indexer_name = self.namespace
                 input_tokens = text_field._indexed_tokens[indexer_name]
                 original_id_of_token_to_flip = input_tokens[index_of_token_to_flip]
 
