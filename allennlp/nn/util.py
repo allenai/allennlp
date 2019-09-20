@@ -1506,6 +1506,10 @@ def find_embedding_layer(model: torch.nn.Module) -> torch.nn.Module:
                 if len(module._token_embedders) == 1:
                     embedder = list(module._token_embedders.values())[0]
                     if isinstance(embedder, Embedding):
-                        return embedder
+                        if embedder._projection is None:  # pylint: disable=protected-access
+                            # If there's a projection inside the Embedding, then we need to return
+                            # the whole TextFieldEmbedder, because there's more computation that
+                            # needs to be done than just multiply by an embedding matrix.
+                            return embedder
             return module
     raise RuntimeError("No embedding module found!")

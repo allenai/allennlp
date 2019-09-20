@@ -31,7 +31,7 @@ class Hotflip(Attacker):
     def __init__(self,
                  predictor: Predictor,
                  vocab_namespace: str = 'tokens',
-                 max_tokens: int = 5) -> None:
+                 max_tokens: int = 5000) -> None:
         super().__init__(predictor)
         self.vocab = self.predictor._model.vocab
         self.namespace = vocab_namespace
@@ -208,7 +208,7 @@ class Hotflip(Attacker):
 
             while True:
                 # Compute L2 norm of all grads.
-                grad = grads[grad_input_field]
+                grad = grads[grad_input_field][0]
                 grads_magnitude = [g.dot(g) for g in grad]
 
                 # only flip a token once

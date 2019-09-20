@@ -100,6 +100,7 @@ class InputReduction(Attacker):
 
             candidates = []
             for beam_instance, smallest_idx, tag_mask, grads, outputs in beam_candidates:
+                beam_tag_mask = deepcopy(tag_mask)
 
                 for output in outputs:
                     if isinstance(outputs[output], torch.Tensor):
@@ -116,7 +117,6 @@ class InputReduction(Attacker):
 
                 # special case for sentence tagging (we have tested NER)
                 else:
-                    beam_tag_mask = deepcopy(tag_mask)
                     # remove the mask where you remove the input token from.
                     if smallest_idx != -1: # Don't delete on the very first iteration
                         del beam_tag_mask[smallest_idx]

@@ -35,7 +35,9 @@ class SmoothGradient(SaliencyInterpreter):
             for key, grad in grads.items():
                 # TODO (@Eric-Wallace), SmoothGrad is not using times input normalization.
                 # Fine for now, but should fix for consistency.
-                embedding_grad = numpy.sum(grad, axis=1)
+
+                # The [0] here is undo-ing the batching that happens in get_gradients.
+                embedding_grad = numpy.sum(grad[0], axis=1)
                 norm = numpy.linalg.norm(embedding_grad, ord=1)
                 normalized_grad = [math.fabs(e) / norm for e in embedding_grad]
                 grads[key] = normalized_grad
