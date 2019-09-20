@@ -52,6 +52,8 @@ from scripts.pytorch_transformers.utils_squad import (read_squad_examples, conve
 # We've added it here for automated tests (see examples/test_examples.py file)
 from scripts.pytorch_transformers.utils_squad_evaluate import EVAL_OPTS, main as evaluate_on_squad
 
+logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
+                    level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 ALL_MODELS = sum((tuple(conf.pretrained_config_archive_map.keys()) \
