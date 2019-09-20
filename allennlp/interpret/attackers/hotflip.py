@@ -42,7 +42,6 @@ class Hotflip(Attacker):
             if not self.vocab._index_to_token[self.namespace][i].isalnum():
                 self.invalid_replacement_indices.append(i)
         self.embedding_matrix: torch.Tensor = None
-        self.initialize()
 
     def initialize(self):
         """
