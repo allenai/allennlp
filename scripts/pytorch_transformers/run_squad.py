@@ -77,7 +77,7 @@ def to_list(tensor):
 
 def train(args, train_dataset, model, tokenizer):
     """ Train the model """
-    if args.local_rank in [-1, 0]:
+    if args.local_rank in [-1, 0] or args.no_distributed_training:
         tb_writer = SummaryWriter()
 
     args.train_batch_size = args.per_gpu_train_batch_size * max(1, args.n_gpu)
@@ -128,7 +128,7 @@ def train(args, train_dataset, model, tokenizer):
     global_step = 0
     tr_loss, logging_loss = 0.0, 0.0
     model.zero_grad()
-    train_iterator = trange(int(args.num_train_epochs), desc="Epoch", disable=args.local_rank not in [-1, 0])
+    train_iterator = trange(int(args.num_train_epochs), desc="Epoch", disable=args.local_rank not in [-1, 0] and not args.no_distributed_training)
     set_seed(args)  # Added here for reproductibility (even between python 2 and 3)
     for epoch_number in train_iterator:
         epoch_iterator = tqdm(train_dataloader, desc="Iteration", disable=args.local_rank not in [-1, 0])
