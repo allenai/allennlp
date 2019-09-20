@@ -526,7 +526,7 @@ def main():
     # Save the trained model and the tokenizer
     if args.do_train and (args.local_rank == -1 or args.no_distributed_training or torch.distributed.get_rank() == 0):
         # Create output directory if needed
-        if not os.path.exists(args.output_dir) and args.local_rank in [-1, 0]:
+        if not os.path.exists(args.output_dir) and (args.local_rank in [-1, 0] or args.no_distributed_training):
             os.makedirs(args.output_dir)
 
         logger.info("Saving model checkpoint to %s", args.output_dir)
