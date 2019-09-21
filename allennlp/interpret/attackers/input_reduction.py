@@ -84,6 +84,10 @@ class InputReduction(Attacker):
             # going to do it in a batch, up front, before iterating over the results.
             copied_candidates = deepcopy(candidates)
             all_grads, all_outputs = self.predictor.get_gradients([x[0] for x in copied_candidates])
+
+            # The output in `all_grads` and `all_outputs` is batched in a dictionary (e.g.,
+            # {'grad_output_1': batched_tensor}).  We need to split this into a list of non-batched
+            # dictionaries that we can iterate over.
             split_grads = []
             for i in range(len(copied_candidates)):
                 split_grads.append({key: value[i] for key, value in all_grads.items()})

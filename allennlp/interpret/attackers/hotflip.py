@@ -25,8 +25,32 @@ class Hotflip(Attacker):
     """
     Runs the HotFlip style attack at the word-level https://arxiv.org/abs/1712.06751.  We use the
     first-order taylor approximation described in https://arxiv.org/abs/1903.06620, in the function
-    _first_order_taylor(). Constructing this object is expensive due to the construction of the
-    embedding matrix.
+    ``_first_order_taylor()``.
+
+    We try to re-use the embedding matrix from the model when deciding what other words to flip a
+    token to.  For a large class of models, this is straightforward.  When there is a
+    character-level encoder, however (e.g., with ELMo, any char-CNN, etc.), or a combination of
+    encoders (e.g., ELMo + glove), we need to construct a fake embedding matrix that we can use in
+    ``_first_order_taylor()``.  We do this by getting a list of words from the model's vocabulary
+    and embedding them using the encoder.  This can be expensive, both in terms of time and memory
+    usage, so we take a ``max_tokens`` parameter to limit the size of this fake embedding matrix.
+    This also requires a model to `have` a token vocabulary in the first place, which can be
+    problematic for models that only have character vocabularies.
+
+    Parameters
+    ----------
+    predictor : ``Predictor``
+        The model (inside a Predictor) that we're attacking.  We use this to get gradients and
+        predictions.
+    vocab_namespace : ``str``, optional (default='tokens')
+        We use this to know three things: (1) which tokens we should ignore when producing flips
+        (we don't consider non-alphanumeric tokens); (2) what the string value is of the token that
+        we produced, so we can show something human-readable to the user; and (3) if we need to
+        construct a fake embedding matrix, we use the tokens in the vocabulary as flip candidates.
+    max_tokens : ``int``, optional (default=5000)
+        This is only used when we need to construct a fake embedding matrix.  That matrix can take
+        a lot of memory when the vocab size is large.  This parameter puts a cap on the number of
+        tokens to use, so the fake embedding matrix doesn't take as much memory.
     """
     def __init__(self,
                  predictor: Predictor,
@@ -64,12 +88,13 @@ class Hotflip(Attacker):
         """
         embedding_layer = util.find_embedding_layer(self.predictor._model)
         if isinstance(embedding_layer, (Embedding, torch.nn.modules.sparse.Embedding)):
-            # If we're using something that already just has an embedding matrix, we can just use
+            # If we're using something that already has an only embedding matrix, we can just use
             # that and bypass this method.
             return embedding_layer.weight
 
         # We take the top `self.max_tokens` as candidates for hotflip.  Because we have to
-        # construct a new vector for each of these, we can't always afford to use the whole vocab.
+        # construct a new vector for each of these, we can't always afford to use the whole vocab,
+        # for both runtime and memory considerations.
         all_tokens = list(self.vocab._token_to_index[self.namespace])[:self.max_tokens]
         max_index = self.vocab.get_token_index(all_tokens[-1], self.namespace)
         self.invalid_replacement_indices = [i for i in self.invalid_replacement_indices if i < max_index]
