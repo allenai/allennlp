@@ -82,13 +82,13 @@ class InputReduction(Attacker):
 
             # predictor.get_gradients is where the most expensive computation happens, so we're
             # going to do it in a batch, up front, before iterating over the results.
-            beam_candidates = deepcopy(candidates)
-            all_grads, all_outputs = self.predictor.get_gradients([x[0] for x in beam_candidates])
+            copied_candidates = deepcopy(candidates)
+            all_grads, all_outputs = self.predictor.get_gradients([x[0] for x in copied_candidates])
             split_grads = []
-            for i in range(len(beam_candidates)):
+            for i in range(len(copied_candidates)):
                 split_grads.append({key: value[i] for key, value in all_grads.items()})
             split_outputs = []
-            for i in range(len(beam_candidates)):
+            for i in range(len(copied_candidates)):
                 instance_outputs = {}
                 for key, value in all_outputs.items():
                     if key == 'loss':
@@ -96,7 +96,7 @@ class InputReduction(Attacker):
                     instance_outputs[key] = value[i]
                 split_outputs.append(instance_outputs)
             beam_candidates = [(x[0], x[1], x[2], split_grads[i], split_outputs[i])
-                               for i, x in enumerate(beam_candidates)]
+                               for i, x in enumerate(copied_candidates)]
 
             candidates = []
             for beam_instance, smallest_idx, tag_mask, grads, outputs in beam_candidates:
