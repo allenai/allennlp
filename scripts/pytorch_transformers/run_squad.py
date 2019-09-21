@@ -166,23 +166,27 @@ def train(args, train_dataset, model, tokenizer):
                 model.zero_grad()
                 global_step += 1
 
-                if (args.local_rank in [-1, 0] or args.no_distributed_training) and args.logging_steps > 0 and global_step % args.logging_steps == 0:
-                    # Log metrics
-                    if (args.local_rank == -1 or args.no_distributed_training) and args.evaluate_during_training:  # Only evaluate when single GPU otherwise metrics may not average well
-                        results = evaluate(args, model, tokenizer)
+                # Log metrics
+                if (args.local_rank == -1 or args.no_distributed_training) and args.evaluate_during_training and \
+                        args.training_eval_steps > 0 and global_step % args.training_eval_steps == 0:
+                    # Only evaluate when single GPU otherwise metrics may not average well
+                    results = evaluate(args, model, tokenizer)
 
-                        # ALON - elastic eval results
-                        # Alon addition - elastic logs - this is a huge Patch ... sorry didn't have time to change this before ACL ..
-                        # Training logs are saved in training and validation under the training final results
-                        elastic_val_metrics = results.copy()
-                        elastic_val_metrics['EM'] = elastic_val_metrics.pop('exact')
-                        elastic_val_metrics = {'validation/' + k: v for k, v in elastic_val_metrics.items()}
-                        elastic_val_metrics.update({'epoch': epoch_number})
-                        elastic_val_metrics.update({'experiment_name': args.exp_name})
-                        ElasticLogger().write_log('INFO', 'val_metric', context_dict=elastic_val_metrics)
+                    # ALON - elastic eval results
+                    # Alon addition - elastic logs - this is a huge Patch ... sorry didn't have time to change this before ACL ..
+                    # Training logs are saved in training and validation under the training final results
+                    elastic_val_metrics = results.copy()
+                    elastic_val_metrics['EM'] = elastic_val_metrics.pop('exact')
+                    elastic_val_metrics = {'validation/' + k: v for k, v in elastic_val_metrics.items()}
+                    elastic_val_metrics.update({'epoch': epoch_number})
+                    elastic_val_metrics.update({'experiment_name': args.exp_name})
+                    ElasticLogger().write_log('INFO', 'val_metric', context_dict=elastic_val_metrics)
 
-                        for key, value in results.items():
-                            tb_writer.add_scalar('eval_{}'.format(key), value, global_step)
+                    for key, value in results.items():
+                        tb_writer.add_scalar('eval_{}'.format(key), value, global_step)
+
+                if (args.local_rank in [-1, 0] or args.no_distributed_training) and \
+                        args.logging_steps > 0 and global_step % args.logging_steps == 1:
 
                     tb_writer.add_scalar('lr', scheduler.get_lr()[0], global_step)
                     tb_writer.add_scalar('loss', (tr_loss - logging_loss)/args.logging_steps, global_step)
@@ -330,13 +334,14 @@ def load_and_cache_examples(args, tokenizer, evaluate=False, output_examples=Fal
 
         features = convert_examples_to_features(examples=examples,
                                                 tokenizer=tokenizer,
-                                                max_seq_length=args.max_seq_length,
+                                                mavx_seq_length=args.max_seq_length,
                                                 doc_stride=args.doc_stride,
                                                 max_query_length=args.max_query_length,
                                                 is_training=not evaluate)
-        if args.local_rank in [-1, 0]:
-            logger.info("Saving features into cached file %s", cached_features_file)
-            torch.save(features, cached_features_file)
+        # TODO features should be recalc when data changed
+        #if args.local_rank in [-1, 0] or args.no_distributed_training:
+        #    logger.info("Saving features into cached file %s", cached_features_file)
+        #    torch.save(features, cached_features_file)
 
     if args.local_rank == 0 and not evaluate and not args.no_distributed_training:
         torch.distributed.barrier()  # Make sure only the first process in distributed training process the dataset, and the others will use the cache
@@ -438,6 +443,8 @@ def main():
                              "A number of warnings are expected for a normal SQuAD evaluation.")
 
     parser.add_argument('--logging_steps', type=int, default=50,
+                        help="Log every X updates steps.")
+    parser.add_argument('--training_eval_steps', type=int, default=2000,
                         help="Log every X updates steps.")
     parser.add_argument('--save_steps', type=int, default=50,
                         help="Save checkpoint every X updates steps.")
