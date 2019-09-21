@@ -120,7 +120,7 @@ class Predictor(Registrable):
         grad_dict = dict()
         for idx, grad in enumerate(embedding_gradients):
             key = 'grad_input_' + str(idx + 1)
-            grad_dict[key] = grad.squeeze_(0).detach().cpu().numpy()
+            grad_dict[key] = grad.detach().cpu().numpy()
 
         return grad_dict, outputs
 
