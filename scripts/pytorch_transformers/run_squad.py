@@ -334,7 +334,7 @@ def load_and_cache_examples(args, tokenizer, evaluate=False, output_examples=Fal
 
         features = convert_examples_to_features(examples=examples,
                                                 tokenizer=tokenizer,
-                                                mavx_seq_length=args.max_seq_length,
+                                                max_seq_length=args.max_seq_length,
                                                 doc_stride=args.doc_stride,
                                                 max_query_length=args.max_query_length,
                                                 is_training=not evaluate)
