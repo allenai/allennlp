@@ -20,7 +20,7 @@ class SmoothGradient(SaliencyInterpreter):
         super().__init__(predictor)
         # Hyperparameters
         self.stdev = 0.01
-        self.num_samples = 25
+        self.num_samples = 10
 
     def saliency_interpret_from_json(self, inputs: JsonDict) -> JsonDict:
         # Convert inputs to labeled instances
