@@ -1,4 +1,4 @@
-from typing import Tuple, Union, Optional, Callable
+from typing import Tuple, Union, Optional, Callable, Any
 import torch
 from torch.nn.utils.rnn import pack_padded_sequence, PackedSequence
 
@@ -102,7 +102,7 @@ class _EncoderBase(torch.nn.Module):
         # Prepare the initial states.
         if not self.stateful:
             if hidden_state is None:
-                initial_states = hidden_state
+                initial_states: Any = hidden_state
             elif isinstance(hidden_state, tuple):
                 initial_states = [state.index_select(1, sorting_indices)[:, :num_valid, :].contiguous()
                                   for state in hidden_state]

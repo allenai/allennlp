@@ -51,7 +51,7 @@ class TestFromParams(AllenNlpTestCase):
 
     def test_remove_optional(self):
         optional_type = Optional[Dict[str, str]]
-        bare_type = remove_optional(optional_type)
+        bare_type = remove_optional(optional_type)  # type: ignore
         bare_bare_type = remove_optional(bare_type)
 
         assert bare_type == Dict[str, str]
