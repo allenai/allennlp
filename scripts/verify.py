@@ -24,7 +24,7 @@ def main(checks):
 
         if "mypy" in checks:
             print("Typechecker (mypy):", flush=True)
-            run("mypy allennlp --ignore-missing-imports", shell=True, check=True)
+            run("mypy allennlp --ignore-missing-imports --no-site-packages --no-strict-optional", shell=True, check=True)
             print("mypy checks passed")
 
         if "build-docs" in checks:
