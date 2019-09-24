@@ -163,8 +163,8 @@ def find_learning_rate_model(params: Params, serialization_dir: str,
     if os.path.exists(serialization_dir) and os.listdir(serialization_dir):
         raise ConfigurationError(f'Serialization directory {serialization_dir} already exists and is '
                                  f'not empty.')
-    else:
-        os.makedirs(serialization_dir, exist_ok=True)
+
+    os.makedirs(serialization_dir, exist_ok=True)
 
     prepare_environment(params)
 

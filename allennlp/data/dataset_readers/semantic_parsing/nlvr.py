@@ -158,8 +158,8 @@ class NlvrDatasetReader(DatasetReader):
         # pylint: disable=arguments-differ
         worlds = []
         for structured_representation in structured_representations:
-            boxes = set([Box(object_list, box_id) for box_id, object_list in
-                         enumerate(structured_representation)])
+            boxes = {Box(object_list, box_id)
+                     for box_id, object_list in enumerate(structured_representation)}
             worlds.append(NlvrLanguage(boxes))
         tokenized_sentence = self._tokenizer.tokenize(sentence)
         sentence_field = TextField(tokenized_sentence, self._sentence_token_indexers)

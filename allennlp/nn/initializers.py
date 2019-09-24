@@ -305,7 +305,7 @@ class InitializerApplicator:
             The Pytorch module to apply the initializers to.
         """
         logger.info("Initializing parameters")
-        unused_regexes = set([initializer[0] for initializer in self._initializers])
+        unused_regexes = {initializer[0] for initializer in self._initializers}
         uninitialized_parameters = set()
         # Store which initialisers were applied to which parameters.
         for name, parameter in module.named_parameters():
@@ -360,7 +360,7 @@ class InitializerApplicator:
         """
         # pylint: disable=arguments-differ
         params = params or []
-        is_prevent = lambda item: item == "prevent" or item == {"type": "prevent"}
+        is_prevent = lambda item: item == "prevent" or item == {"type": "prevent"}  # pylint: disable=consider-using-in
         prevent_regexes = [param[0] for param in params if is_prevent(param[1])]
         params = [param for param in params if param[1] if not is_prevent(param[1])]
         initializers = [(name, Initializer.from_params(init_params)) for name, init_params in params]

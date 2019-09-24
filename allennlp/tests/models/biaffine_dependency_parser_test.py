@@ -30,9 +30,9 @@ class BiaffineDependencyParserTest(ModelTestCase):
         output_dict = self.model(**training_tensors)
         decode_output_dict = self.model.decode(output_dict)
 
-        assert set(decode_output_dict.keys()) == set(['arc_loss', 'tag_loss', 'loss',
-                                                      'predicted_dependencies', 'predicted_heads',
-                                                      'words', 'pos'])
+        assert set(decode_output_dict.keys()) == {'arc_loss', 'tag_loss', 'loss',
+                                                  'predicted_dependencies', 'predicted_heads',
+                                                  'words', 'pos'}
 
     def test_mst_respects_no_outgoing_root_edges_constraint(self):
         # This energy tensor expresses the following relation:

@@ -115,8 +115,7 @@ def unflatten(flat_dict: Dict[str, Any]) -> Dict[str, Any]:
                 raise ConfigurationError("flattened dictionary is invalid")
         if not isinstance(curr_dict, dict) or parts[-1] in curr_dict:
             raise ConfigurationError("flattened dictionary is invalid")
-        else:
-            curr_dict[parts[-1]] = value
+        curr_dict[parts[-1]] = value
 
     return unflat
 
@@ -263,7 +262,7 @@ class Params(MutableMapping):
             value = self.params.pop(key, default)
 
         if keep_as_dict or _is_dict_free(value):
-            logger.info(self.history + key + " = " + str(value))  # type: ignore
+            logger.info(f"{self.history}{key} = {value}")
             return value
         else:
             return self._check_is_dict(key, value)
@@ -390,7 +389,7 @@ class Params(MutableMapping):
                     new_local_history = history + key  + "."
                     log_recursively(value, new_local_history)
                 else:
-                    logger.info(history + key + " = " + str(value))
+                    logger.info(f"{history}{key} = {value}")
 
         logger.info("Converting Params object to dict; logging of default "
                     "values will not occur when dictionary parameters are "

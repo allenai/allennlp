@@ -74,6 +74,7 @@ class Predictor(Registrable):
         List[instance]
         A list of :class:`~allennlp.data.instance.Instance`
         """
+        # pylint: disable=assignment-from-no-return
         instance = self._json_to_instance(inputs)
         outputs = self._model.forward_on_instance(instance)
         new_instances = self.predictions_to_labeled_instances(instance, outputs)
