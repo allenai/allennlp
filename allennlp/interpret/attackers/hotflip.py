@@ -55,7 +55,7 @@ class Hotflip(Attacker):
     def __init__(self,
                  predictor: Predictor,
                  vocab_namespace: str = 'tokens',
-                 max_tokens: int = 500) -> None:
+                 max_tokens: int = 5000) -> None:
         super().__init__(predictor)
         self.vocab = self.predictor._model.vocab
         self.namespace = vocab_namespace
@@ -309,6 +309,9 @@ class Hotflip(Attacker):
         """
         grad = torch.from_numpy(grad)
         if token_idx >= self.embedding_matrix.size(0):
+            # This happens when we've truncated our fake embedding matrix.  We need to do a dot
+            # product with the word vector of the current token; if that token is out of
+            # vocabulary for our truncated matrix, we need to run it through the embedding layer.
             inputs = self._make_embedder_input([self.vocab.get_token_from_index(token_idx)])
             word_embedding = self.embedding_layer(inputs)[0]
         else:
