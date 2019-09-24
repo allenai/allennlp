@@ -23,6 +23,7 @@ import argparse
 import logging
 import os
 import pathlib
+import sys
 
 import pytest
 
@@ -77,4 +78,4 @@ def _run_test(args: argparse.Namespace):
 
     # Change back to original working directory after running tests
     os.chdir(initial_working_dir)
-    exit(exit_code)
+    sys.exit(exit_code)

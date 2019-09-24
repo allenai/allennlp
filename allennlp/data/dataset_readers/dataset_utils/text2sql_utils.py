@@ -142,7 +142,8 @@ def clean_unneeded_aliases(sql_tokens: List[str]) -> List[str]:
         if new_token is not None and dealiased_tokens[-1] == "AS":
             dealiased_tokens.pop()
             continue
-        elif new_token is None:
+
+        if new_token is None:
             new_token = token
 
         dealiased_tokens.append(new_token)
@@ -231,8 +232,8 @@ def process_sql_data(data: List[JsonDict],
                     key = " ".join(query_tokens)
                     if key in seen_sentences:
                         continue
-                    else:
-                        seen_sentences.add(key)
+
+                    seen_sentences.add(key)
 
                 sql_tokens = clean_and_split_sql(sql)
                 if remove_unneeded_aliases:
