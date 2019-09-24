@@ -84,11 +84,11 @@ class Seq2SeqDatasetReader(DatasetReader):
                 source_sequence, target_sequence = row
                 yield self.text_to_instance(source_sequence, target_sequence)
         if self._source_max_tokens and self._source_max_exceeded:
-            logger.info("In %d instances the source string exceeded the max token limit (%d) got truncated.",
-                        self._source_max_tokens, self._source_max_exceeded)
+            logger.info("In %d instances, the source token length exceeded the max limit (%d) and were truncated.",
+                        self._source_max_exceeded, self._source_max_tokens)
         if self._target_max_tokens and self._target_max_exceeded:
-            logger.info("In %d instances the target string exceeded the max token limit (%d) got truncated.",
-                        self._target_max_tokens, self._target_max_exceeded)
+            logger.info("In %d instances, the target token length exceeded the max limit (%d) and were truncated.",
+                        self._target_max_exceeded, self._target_max_tokens)
 
     @overrides
     def text_to_instance(self, source_string: str, target_string: str = None) -> Instance:  # type: ignore
