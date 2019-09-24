@@ -48,7 +48,10 @@ class PretrainedTransformerTokenizer(Tokenizer):
             logger.warning("Your pretrained model appears to be uncased, "
                            "but your tokenizer is not lowercasing tokens.")
 
-        self._tokenizer = AutoTokenizer.from_pretrained(model_name, do_lower_case=do_lowercase)
+        if 'roberta' in model_name:
+            self._tokenizer = RobertaTokenizer.from_pretrained(model_name, do_lower_case=do_lowercase)
+        else:
+            self._tokenizer = AutoTokenizer.from_pretrained(model_name, do_lower_case=do_lowercase)
         default_start_tokens, default_end_tokens = _guess_start_and_end_token_defaults(model_name)
         self._start_tokens = start_tokens if start_tokens is not None else default_start_tokens
         self._end_tokens = end_tokens if end_tokens is not None else default_end_tokens
