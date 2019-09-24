@@ -10,6 +10,7 @@ local dataset_dir = "https://s3.amazonaws.com/commensenseqa/";
 local cuda_device = 0;
 
 {
+  "random_seed":3,
   "dataset_reader": {
     "type": "transformer_mc_qa",
     "sample": -1,
