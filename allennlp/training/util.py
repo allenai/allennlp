@@ -277,31 +277,30 @@ def create_serialization_dir(
         if not os.path.exists(recovered_config_file):
             raise ConfigurationError("The serialization directory already exists but doesn't "
                                      "contain a config.json. You probably gave the wrong directory.")
-        else:
-            loaded_params = Params.from_file(recovered_config_file)
+        loaded_params = Params.from_file(recovered_config_file)
 
-            # Check whether any of the training configuration differs from the configuration we are
-            # resuming.  If so, warn the user that training may fail.
-            fail = False
-            flat_params = params.as_flat_dict()
-            flat_loaded = loaded_params.as_flat_dict()
-            for key in flat_params.keys() - flat_loaded.keys():
-                logger.error(f"Key '{key}' found in training configuration but not in the serialization "
-                             f"directory we're recovering from.")
+        # Check whether any of the training configuration differs from the configuration we are
+        # resuming.  If so, warn the user that training may fail.
+        fail = False
+        flat_params = params.as_flat_dict()
+        flat_loaded = loaded_params.as_flat_dict()
+        for key in flat_params.keys() - flat_loaded.keys():
+            logger.error(f"Key '{key}' found in training configuration but not in the serialization "
+                         f"directory we're recovering from.")
+            fail = True
+        for key in flat_loaded.keys() - flat_params.keys():
+            logger.error(f"Key '{key}' found in the serialization directory we're recovering from "
+                         f"but not in the training config.")
+            fail = True
+        for key in flat_params.keys():
+            if flat_params.get(key, None) != flat_loaded.get(key, None):
+                logger.error(f"Value for '{key}' in training configuration does not match that the value in "
+                             f"the serialization directory we're recovering from: "
+                             f"{flat_params[key]} != {flat_loaded[key]}")
                 fail = True
-            for key in flat_loaded.keys() - flat_params.keys():
-                logger.error(f"Key '{key}' found in the serialization directory we're recovering from "
-                             f"but not in the training config.")
-                fail = True
-            for key in flat_params.keys():
-                if flat_params.get(key, None) != flat_loaded.get(key, None):
-                    logger.error(f"Value for '{key}' in training configuration does not match that the value in "
-                                 f"the serialization directory we're recovering from: "
-                                 f"{flat_params[key]} != {flat_loaded[key]}")
-                    fail = True
-            if fail:
-                raise ConfigurationError("Training configuration does not match the configuration we're "
-                                         "recovering from.")
+        if fail:
+            raise ConfigurationError("Training configuration does not match the configuration we're "
+                                     "recovering from.")
     else:
         if recover:
             raise ConfigurationError(f"--recover specified but serialization_dir ({serialization_dir}) "

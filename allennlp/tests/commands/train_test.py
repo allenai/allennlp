@@ -156,7 +156,7 @@ class TestTrain(AllenNlpTestCase):
 
             args = parser.parse_args(raw_args)
 
-            assert args.func == train_model_from_args
+            assert args.func == train_model_from_args  # pylint: disable=comparison-with-callable
             assert args.param_path == "path/to/params"
             assert args.serialization_dir == "serialization_dir"
 

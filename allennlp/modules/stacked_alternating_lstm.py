@@ -59,7 +59,7 @@ class StackedAlternatingLstm(torch.nn.Module):
         layers = []
         lstm_input_size = input_size
         for layer_index in range(num_layers):
-            go_forward = True if layer_index % 2 == 0 else False
+            go_forward = layer_index % 2 == 0
             layer = AugmentedLstm(lstm_input_size, hidden_size, go_forward,
                                   recurrent_dropout_probability=recurrent_dropout_probability,
                                   use_highway=use_highway,

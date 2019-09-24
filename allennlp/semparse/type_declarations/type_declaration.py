@@ -456,8 +456,8 @@ class DynamicTypeLogicParser(LogicParser):
                  type_signatures: Dict[str, Type] = None) -> None:
         super(DynamicTypeLogicParser, self).__init__(type_check)
         self._constant_type_prefixes = constant_type_prefixes or {}
-        self._variables_with_placeholders = set([name for name, type_ in type_signatures.items()
-                                                 if isinstance(type_, PlaceholderType)])
+        self._variables_with_placeholders = {name for name, type_ in type_signatures.items()
+                                             if isinstance(type_, PlaceholderType)}
 
     @overrides
     def make_ApplicationExpression(self, function, argument):
@@ -698,7 +698,7 @@ START_TYPE = NamedBasicType(START_SYMBOL)
 # this; it's just something that works for now, that we can fix later if / when it's needed.
 # If you allow for more than three nested lambdas, or if you want to use different lambda
 # variable names, you'll have to change this somehow.
-LAMBDA_VARIABLES = set(['x', 'y', 'z'])
+LAMBDA_VARIABLES = {'x', 'y', 'z'}
 
 def is_nonterminal(production: str) -> bool:
     # TODO(pradeep): This is pretty specific to the assumptions made in converting types to

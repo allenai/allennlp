@@ -56,12 +56,10 @@ class LabelField(Field[torch.Tensor]):
             if not isinstance(label, int):
                 raise ConfigurationError("In order to skip indexing, your labels must be integers. "
                                          "Found label = {}".format(label))
-            else:
-                self._label_id = label
-        else:
-            if not isinstance(label, str):
-                raise ConfigurationError("LabelFields must be passed a string label if skip_indexing=False. "
-                                         "Found label: {} with type: {}.".format(label, type(label)))
+            self._label_id = label
+        elif not isinstance(label, str):
+            raise ConfigurationError("LabelFields must be passed a string label if skip_indexing=False. "
+                                     "Found label: {} with type: {}.".format(label, type(label)))
 
     def _maybe_warn_for_namespace(self, label_namespace: str) -> None:
         if not (self._label_namespace.endswith("labels") or self._label_namespace.endswith("tags")):
