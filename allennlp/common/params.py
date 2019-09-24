@@ -319,7 +319,11 @@ class Params(MutableMapping):
             value = self.params.get(key, default)
         return self._check_is_dict(key, value)
 
-    def pop_choice(self, key: str, choices: List[Any], default_to_first_choice: bool = False) -> Any:
+    def pop_choice(self,
+                   key: str,
+                   choices: List[Any],
+                   default_to_first_choice: bool = False,
+                   allow_class_names: bool = True) -> Any:
         """
         Gets the value of ``key`` in the ``params`` dictionary, ensuring that the value is one of
         the given choices. Note that this `pops` the key from params, modifying the dictionary,
@@ -342,12 +346,21 @@ class Params(MutableMapping):
             ``ConfigurationError``, because specifying the ``key`` is required (e.g., you `have` to
             specify your model class when running an experiment, but you can feel free to use
             default settings for encoders if you want).
+        allow_class_names : bool, optional (default = True)
+            If this is `True`, then we allow unknown choices that look like fully-qualified class names.
+            This is to allow e.g. specifying a model type as my_library.my_model.MyModel
+            and importing it on the fly. Our check for "looks like" is extremely lenient
+            and consists of checking that the value contains a '.'.
         """
         default = choices[0] if default_to_first_choice else self.DEFAULT
         value = self.pop(key, default)
-        if value not in choices:
+        ok_because_class_name = allow_class_names and '.' in value
+        if value not in choices and not ok_because_class_name:
             key_str = self.history + key
-            message = '%s not in acceptable choices for %s: %s' % (value, key_str, str(choices))
+            message = (f"{value} not in acceptable choices for {key_str}: {choices}. "
+                       "You should either use the --include-package flag to make sure the correct module "
+                       "is loaded, or use a fully qualified class name in your config file like "
+                       """{"model": "my_module.models.MyModel"} to have it imported automatically.""")
             raise ConfigurationError(message)
         return value
 
@@ -541,7 +554,8 @@ def pop_choice(params: Dict[str, Any],
                key: str,
                choices: List[Any],
                default_to_first_choice: bool = False,
-               history: str = "?.") -> Any:
+               history: str = "?.",
+               allow_class_names: bool = True) -> Any:
     """
     Performs the same function as :func:`Params.pop_choice`, but is required in order to deal with
     places that the Params object is not welcome, such as inside Keras layers.  See the docstring
@@ -552,7 +566,10 @@ def pop_choice(params: Dict[str, Any],
     history, so you'll have to fix that in the log if you want to actually recover the logged
     parameters.
     """
-    value = Params(params, history).pop_choice(key, choices, default_to_first_choice)
+    value = Params(params, history).pop_choice(key,
+                                               choices,
+                                               default_to_first_choice,
+                                               allow_class_names=allow_class_names)
     return value
 
 

@@ -36,7 +36,8 @@ class SimpleGradient(SaliencyInterpreter):
                 # This is then used as an index into the reversed input array to match up the
                 # gradient and its respective embedding.
                 input_idx = int(key[-1]) - 1
-                emb_grad = numpy.sum(grad * embeddings_list[input_idx], axis=1)
+                # The [0] here is undo-ing the batching that happens in get_gradients.
+                emb_grad = numpy.sum(grad[0] * embeddings_list[input_idx], axis=1)
                 norm = numpy.linalg.norm(emb_grad, ord=1)
                 normalized_grad = [math.fabs(e) / norm for e in emb_grad]
                 grads[key] = normalized_grad
