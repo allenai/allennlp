@@ -56,6 +56,35 @@ class F1MeasureTest(AllenNlpTestCase):
         numpy.testing.assert_almost_equal(recall, 0.5)
         numpy.testing.assert_almost_equal(f1, 0.6666666666)
 
+
+    def test_f1_measure_other_positive_label(self):
+        f1_measure = F1Measure(positive_label=1)
+        predictions = torch.Tensor([[0.35, 0.25, 0.1, 0.1, 0.2],
+                                    [0.1, 0.6, 0.1, 0.2, 0.0],
+                                    [0.1, 0.6, 0.1, 0.2, 0.0],
+                                    [0.1, 0.5, 0.1, 0.2, 0.0],
+                                    [0.1, 0.2, 0.1, 0.7, 0.0],
+                                    [0.1, 0.6, 0.1, 0.2, 0.0]])
+        # [True Negative, False Positive, True Positive,
+        #  False Positive, True Negative, False Positive]
+        targets = torch.Tensor([0, 4, 1, 0, 3, 0])
+        f1_measure(predictions, targets)
+        precision, recall, f1 = f1_measure.get_metric()
+        assert f1_measure._true_positives == 1.0
+        assert f1_measure._true_negatives == 2.0
+        assert f1_measure._false_positives == 3.0
+        assert f1_measure._false_negatives == 0.0
+        f1_measure.reset()
+        # check value
+        numpy.testing.assert_almost_equal(precision, 0.25)
+        numpy.testing.assert_almost_equal(recall, 1.0)
+        numpy.testing.assert_almost_equal(f1, 0.4)
+        # check type
+        assert isinstance(precision, float)
+        assert isinstance(recall, float)
+        assert isinstance(f1, float)
+
+
     def test_f1_measure_accumulates_and_resets_correctly(self):
         f1_measure = F1Measure(positive_label=0)
         predictions = torch.Tensor([[0.35, 0.25, 0.1, 0.1, 0.2],
