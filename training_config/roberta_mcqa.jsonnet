@@ -1,7 +1,7 @@
 local train_size = 9741;
 local batch_size = 1;
 local gradient_accumulation_batch_size = 16;
-local num_epochs = 2;
+local num_epochs = 4;
 local learning_rate = 1e-5;
 local weight_decay = 0.1;
 local warmup_ratio = 0.06;
@@ -10,7 +10,6 @@ local dataset_dir = "https://s3.amazonaws.com/commensenseqa/";
 local cuda_device = 0;
 
 {
-  "random_seed":3,
   "dataset_reader": {
     "type": "transformer_mc_qa",
     "sample": -1,

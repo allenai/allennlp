@@ -134,7 +134,7 @@ class RobertaMCQAModel(Model):
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         return {
-            'accuracy': self._accuracy.get_metric(reset),
+            'EM': self._accuracy.get_metric(reset),
         }
 
     @classmethod
@@ -444,7 +444,7 @@ class RobertaSpanPredictionModel(Model):
             'start_acc': self._span_start_accuracy.get_metric(reset),
             'end_acc': self._span_end_accuracy.get_metric(reset),
             'span_acc': self._span_accuracy.get_metric(reset),
-            'em': exact_match,
+            'EM': exact_match,
             'f1': f1_score,
         }
 
