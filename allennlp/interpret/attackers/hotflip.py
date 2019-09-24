@@ -1,6 +1,6 @@
 # pylint: disable=protected-access
 from copy import deepcopy
-from typing import List
+from typing import Dict, List
 
 import numpy
 import torch
@@ -66,6 +66,7 @@ class Hotflip(Attacker):
             if not self.vocab._index_to_token[self.namespace][i].isalnum():
                 self.invalid_replacement_indices.append(i)
         self.embedding_matrix: torch.Tensor = None
+        self.embedding_layer: torch.nn.Module = None
 
     def initialize(self):
         """
@@ -74,7 +75,7 @@ class Hotflip(Attacker):
         being done when __init__() is called.
         """
         if self.embedding_matrix is None:
-            self.embedding_matrix = self._construct_embedding_matrix()
+            self.embedding_matrix = self._construct_embedding_matrix().cpu()
 
     def _construct_embedding_matrix(self) -> Embedding:
         """
@@ -87,6 +88,7 @@ class Hotflip(Attacker):
         matrix".
         """
         embedding_layer = util.find_embedding_layer(self.predictor._model)
+        self.embedding_layer = embedding_layer
         if isinstance(embedding_layer, (Embedding, torch.nn.modules.sparse.Embedding)):
             # If we're using something that already has an only embedding matrix, we can just use
             # that and bypass this method.
@@ -99,13 +101,21 @@ class Hotflip(Attacker):
         max_index = self.vocab.get_token_index(all_tokens[-1], self.namespace)
         self.invalid_replacement_indices = [i for i in self.invalid_replacement_indices if i < max_index]
 
-        all_inputs = {}
+        inputs = self._make_embedder_input(all_tokens)
+
+        # pass all tokens through the fake matrix and create an embedding out of it.
+        embedding_matrix = embedding_layer(inputs).squeeze()
+
+        return embedding_matrix
+
+    def _make_embedder_input(self, all_tokens: List[str]) -> Dict[str, torch.Tensor]:
+        inputs = {}
         # A bit of a hack; this will only work with some dataset readers, but it'll do for now.
         indexers = self.predictor._dataset_reader._token_indexers  # type: ignore
         for indexer_name, token_indexer in indexers.items():
             if isinstance(token_indexer, SingleIdTokenIndexer):
                 all_indices = [self.vocab._token_to_index[self.namespace][token] for token in all_tokens]
-                all_inputs[indexer_name] = torch.LongTensor(all_indices).unsqueeze(0)
+                inputs[indexer_name] = torch.LongTensor(all_indices).unsqueeze(0)
             elif isinstance(token_indexer, TokenCharactersIndexer):
                 tokens = [Token(x) for x in all_tokens]
                 max_token_length = max(len(x) for x in all_tokens)
@@ -113,7 +123,7 @@ class Hotflip(Attacker):
                 padded_tokens = token_indexer.as_padded_tensor(indexed_tokens,
                                                                {"token_characters": len(tokens)},
                                                                {"num_token_characters": max_token_length})
-                all_inputs[indexer_name] = torch.LongTensor(padded_tokens['token_characters']).unsqueeze(0)
+                inputs[indexer_name] = torch.LongTensor(padded_tokens['token_characters']).unsqueeze(0)
             elif isinstance(token_indexer, ELMoTokenCharactersIndexer):
                 elmo_tokens = []
                 for token in all_tokens:
@@ -121,14 +131,10 @@ class Hotflip(Attacker):
                                                                          self.vocab,
                                                                          "sentence")["sentence"]
                     elmo_tokens.append(elmo_indexed_token[0])
-                all_inputs[indexer_name] = torch.LongTensor(elmo_tokens).unsqueeze(0)
+                inputs[indexer_name] = torch.LongTensor(elmo_tokens).unsqueeze(0)
             else:
                 raise RuntimeError('Unsupported token indexer:', token_indexer)
-
-        # pass all tokens through the fake matrix and create an embedding out of it.
-        embedding_matrix = embedding_layer(all_inputs).squeeze()
-
-        return embedding_matrix
+        return inputs
 
     def attack_from_json(self,
                          inputs: JsonDict,
@@ -254,7 +260,6 @@ class Hotflip(Attacker):
 
                 # Get new token using taylor approximation.
                 new_id = self._first_order_taylor(grad[index_of_token_to_flip],
-                                                  self.embedding_matrix,
                                                   original_id_of_token_to_flip,
                                                   sign)
 
@@ -292,10 +297,7 @@ class Hotflip(Attacker):
                          "original": original_tokens,
                          "outputs": outputs})
 
-    def _first_order_taylor(self, grad: numpy.ndarray,
-                            embedding_matrix: torch.Tensor,
-                            token_idx: int,
-                            sign: int) -> int:
+    def _first_order_taylor(self, grad: numpy.ndarray, token_idx: int, sign: int) -> int:
         """
         The below code is based on
         https://github.com/pmichel31415/translate/blob/paul/pytorch_translate/
@@ -306,14 +308,20 @@ class Hotflip(Attacker):
         first-order taylor approximation of the loss.
         """
         grad = torch.from_numpy(grad)
-        embedding_matrix = embedding_matrix.cpu()
-        word_embeds = torch.nn.functional.embedding(torch.LongTensor([token_idx]),
-                                                    embedding_matrix)
-        word_embeds = word_embeds.detach().unsqueeze(0)
+        if token_idx >= self.embedding_matrix.size(0):
+            # This happens when we've truncated our fake embedding matrix.  We need to do a dot
+            # product with the word vector of the current token; if that token is out of
+            # vocabulary for our truncated matrix, we need to run it through the embedding layer.
+            inputs = self._make_embedder_input([self.vocab.get_token_from_index(token_idx)])
+            word_embedding = self.embedding_layer(inputs)[0]
+        else:
+            word_embedding = torch.nn.functional.embedding(torch.LongTensor([token_idx]),
+                                                           self.embedding_matrix)
+        word_embedding = word_embedding.detach().unsqueeze(0)
         grad = grad.unsqueeze(0).unsqueeze(0)
         # solves equation (3) here https://arxiv.org/abs/1903.06620
-        new_embed_dot_grad = torch.einsum("bij,kj->bik", (grad, embedding_matrix))
-        prev_embed_dot_grad = torch.einsum("bij,bij->bi", (grad, word_embeds)).unsqueeze(-1)
+        new_embed_dot_grad = torch.einsum("bij,kj->bik", (grad, self.embedding_matrix))
+        prev_embed_dot_grad = torch.einsum("bij,bij->bi", (grad, word_embedding)).unsqueeze(-1)
         neg_dir_dot_grad = sign * (prev_embed_dot_grad - new_embed_dot_grad)
         neg_dir_dot_grad = neg_dir_dot_grad.detach().cpu().numpy()
         # Do not replace with non-alphanumeric tokens
