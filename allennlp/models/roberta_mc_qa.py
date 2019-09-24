@@ -256,6 +256,7 @@ class RobertaClassifierModel(Model):
 
         output_dict['label_probs'] = torch.nn.functional.softmax(label_logits, dim=1)
         output_dict['label_predicted'] = label_logits.argmax(1)
+        output_dict['answer_index'] = label_logits.argmax(1)
 
         if label is not None:
             loss = self._loss(label_logits, label)
