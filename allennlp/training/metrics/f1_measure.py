@@ -42,8 +42,6 @@ class F1Measure(FBetaMeasure):
         if self._true_positive_sum is None:
             return 0.0
         else:
-            # Because we just care about the class `positive_label`,
-            # there is just one item in `self._true_positive_sum`.
             return self._true_positive_sum[self._positive_label]
 
     @property
@@ -53,8 +51,6 @@ class F1Measure(FBetaMeasure):
         if self._true_negative_sum is None:
             return 0.0
         else:
-            # Because we just care about the class `positive_label`,
-            # there is just one item in `self._true_negative_sum`.
             return self._true_negative_sum[self._positive_label]
 
     @property
