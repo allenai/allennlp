@@ -93,5 +93,6 @@ class SentenceTaggerPredictor(Predictor):
             text_field: TextField = instance['tokens']  # type: ignore
             new_instance.add_field('tags', SequenceLabelField(labels, text_field), self._model.vocab)
             instances.append(new_instance)
+        instances.reverse() # NER tags are in the opposite order as desired for the interpret UI
 
         return instances

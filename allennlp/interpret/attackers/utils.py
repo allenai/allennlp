@@ -19,6 +19,10 @@ def get_fields_to_compare(inputs: JsonDict, instance: Instance, input_field_to_a
     fields : ``JsonDict``
         The fields that must be compared for equality.
     """
+    # TODO(mattg): this really should live on the Predictor.  We have some messy stuff for, e.g.,
+    # reading comprehension models, and the interpret code can't really know about the internals of
+    # that (or at least it shouldn't now, and once we split out the reading comprehension repo, it
+    # really *can't*).
     fields_to_compare = {
             key: instance[key]
             for key in instance.fields
