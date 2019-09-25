@@ -14,7 +14,7 @@ If you don't find a similar example and you would like to ask a question on GitH
 **System (please complete the following information):**
  - OS: [e.g. OSX, Linux]
  - Python version: [e.g. 3.6.1]
- - AllenNLP version: [e.g. v0.8.5, or "I installed from master"]
+ - AllenNLP version: [e.g. v0.9.0, or "I installed from master"]
  - PyTorch version: (if you installed it yourself)
 
 **Question**
