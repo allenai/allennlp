@@ -20,12 +20,12 @@ from allennlp.common.checks import ConfigurationError
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 PTB_PARENTHESES = {
-    "-LRB-": "(",
-    "-RRB-": ")",
-    "-LCB-": "{",
-    "-RCB-": "}",
-    "-LSB-": "[",
-    "-RSB-": "]"
+        "-LRB-": "(",
+        "-RRB-": ")",
+        "-LCB-": "{",
+        "-RCB-": "}",
+        "-LSB-": "[",
+        "-RSB-": "]"
 }
 
 
