@@ -14,6 +14,8 @@ class TestUnidirectionalLanguageModel(ModelTestCase):
 
         self.expected_embedding_shape = (2, 8, 7)
         self.bidirectional = False
+        self.result_keys = {"loss", "forward_loss", "lm_embeddings",
+                            "noncontextual_token_embeddings", "mask", "batch_weight"}
 
         self.set_up_model(self.FIXTURES_ROOT / 'language_model' / 'experiment_unidirectional.jsonnet',
                           self.FIXTURES_ROOT / 'language_model' / 'sentences.txt')
@@ -29,8 +31,8 @@ class TestUnidirectionalLanguageModel(ModelTestCase):
         training_tensors = self.dataset.as_tensor_dict()
         result = self.model(**training_tensors)
 
-        assert set(result) == {"loss", "forward_loss", "backward_loss", "lm_embeddings",
-                               "noncontextual_token_embeddings", "mask", "batch_weight"}
+        # Unidirectional models should not have backward_loss; bidirectional models should have it.
+        assert set(result) == self.result_keys
 
         # The model should preserve the BOS / EOS tokens.
         embeddings = result["lm_embeddings"]
@@ -44,7 +46,6 @@ class TestUnidirectionalLanguageModel(ModelTestCase):
                                            decimal=3)
         else:
             np.testing.assert_almost_equal(loss, forward_loss, decimal=3)
-            assert result["backward_loss"] is None
 
     def test_mismatching_contextualizer_unidirectionality_throws_configuration_error(self):
         params = Params.from_file(self.param_file)
@@ -53,6 +54,11 @@ class TestUnidirectionalLanguageModel(ModelTestCase):
         params["model"]["contextualizer"]["bidirectional"] = (not self.bidirectional)
         with pytest.raises(ConfigurationError):
             Model.from_params(vocab=self.vocab, params=params.get("model"))
+
+    def test_language_model_forward_on_instances(self):
+        instances = self.dataset.instances
+        predictions = self.model.forward_on_instances(instances)
+        assert predictions is not None
 
 class TestUnidirectionalLanguageModelUnsampled(TestUnidirectionalLanguageModel):
     def setUp(self):
@@ -86,6 +92,7 @@ class TestBidirectionalLanguageModel(TestUnidirectionalLanguageModel):
 
         self.expected_embedding_shape = (2, 8, 14)
         self.bidirectional = True
+        self.result_keys.add("backward_loss")
 
         self.set_up_model(self.FIXTURES_ROOT / 'language_model' / 'experiment.jsonnet',
                           self.FIXTURES_ROOT / 'language_model' / 'sentences.txt')

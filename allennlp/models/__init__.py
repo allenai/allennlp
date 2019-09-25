@@ -14,6 +14,7 @@ from allennlp.models.coreference_resolution.coref import CoreferenceResolver
 from allennlp.models.crf_tagger import CrfTagger
 from allennlp.models.decomposable_attention import DecomposableAttention
 from allennlp.models.event2mind import Event2Mind
+from allennlp.models.encoder_decoders.composed_seq2seq import ComposedSeq2Seq
 from allennlp.models.encoder_decoders.simple_seq2seq import SimpleSeq2Seq
 from allennlp.models.reading_comprehension.bidaf import BidirectionalAttentionFlow
 from allennlp.models.reading_comprehension.naqanet import NumericallyAugmentedQaNet
@@ -32,5 +33,7 @@ from allennlp.models.bimpm import BiMpm
 from allennlp.models.graph_parser import GraphParser
 from allennlp.models.bidirectional_lm import BidirectionalLanguageModel
 from allennlp.models.language_model import LanguageModel
+from allennlp.models.masked_language_model import MaskedLanguageModel
+from allennlp.models.next_token_lm import NextTokenLM
 from allennlp.models.basic_classifier import BasicClassifier
 from allennlp.models.srl_bert import SrlBert

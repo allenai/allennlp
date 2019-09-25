@@ -32,8 +32,9 @@ class TrainerPieces(NamedTuple):
     validation_iterator: DataIterator
     params: Params
 
-    @staticmethod
-    def from_params(params: Params,
+    @classmethod
+    def from_params(cls,
+                    params: Params,
                     serialization_dir: str,
                     recover: bool = False,
                     cache_directory: str = None,
@@ -54,6 +55,9 @@ class TrainerPieces(NamedTuple):
         else:
             vocab = Vocabulary.from_params(
                     params.pop("vocabulary", {}),
+                    # Using a generator comprehension here is important
+                    # because, being lazy, it allows us to not iterate over the
+                    # dataset when directory_path is specified.
                     (instance for key, dataset in all_datasets.items()
                      if key in datasets_for_vocab_creation for instance in dataset)
             )
@@ -95,6 +99,6 @@ class TrainerPieces(NamedTuple):
         for name in tunable_parameter_names:
             logger.info(name)
 
-        return TrainerPieces(model, iterator,
-                             train_data, validation_data, test_data,
-                             validation_iterator, trainer_params)
+        return cls(model, iterator,
+                   train_data, validation_data, test_data,
+                   validation_iterator, trainer_params)

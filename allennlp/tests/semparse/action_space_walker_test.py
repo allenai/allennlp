@@ -52,13 +52,13 @@ class ActionSpaceWalkerTest(AllenNlpTestCase):
         black_triangle_touch_forms = self.walker.get_logical_forms_with_agenda(agenda)
         # Permutations of the three functions. There will not be repetitions of any functions
         # because we limit the length of paths to 10 above.
-        assert set(black_triangle_touch_forms) == set([
+        assert set(black_triangle_touch_forms) == {
                 '(object_exists (black (triangle (touch_wall all_objects))))',
                 '(object_exists (black (touch_wall (triangle all_objects))))',
                 '(object_exists (triangle (black (touch_wall all_objects))))',
                 '(object_exists (triangle (touch_wall (black all_objects))))',
                 '(object_exists (touch_wall (black (triangle all_objects))))',
-                '(object_exists (touch_wall (triangle (black all_objects))))'])
+                '(object_exists (touch_wall (triangle (black all_objects))))'}
 
     def test_get_logical_forms_with_agenda_and_partial_match(self):
         black_logical_forms = self.walker.get_logical_forms_with_agenda(['<Set[Object]:Set[Object]> -> black'])
@@ -74,29 +74,29 @@ class ActionSpaceWalkerTest(AllenNlpTestCase):
         black_triangle_touch_forms = self.walker.get_logical_forms_with_agenda(agenda,
                                                                                allow_partial_match=True)
         # The first six logical forms will contain permutations of all three functions.
-        assert set(black_triangle_touch_forms[:6]) == set([
+        assert set(black_triangle_touch_forms[:6]) == {
                 '(object_exists (black (triangle (touch_wall all_objects))))',
                 '(object_exists (black (touch_wall (triangle all_objects))))',
                 '(object_exists (triangle (black (touch_wall all_objects))))',
                 '(object_exists (triangle (touch_wall (black all_objects))))',
                 '(object_exists (touch_wall (black (triangle all_objects))))',
-                '(object_exists (touch_wall (triangle (black all_objects))))'])
+                '(object_exists (touch_wall (triangle (black all_objects))))'}
 
         # The next six will be the shortest six with two agenda items.
-        assert set(black_triangle_touch_forms[6:12]) == set([
+        assert set(black_triangle_touch_forms[6:12]) == {
                 '(object_exists (black (triangle all_objects)))',
                 '(object_exists (black (touch_wall all_objects)))',
                 '(object_exists (triangle (black all_objects)))',
                 '(object_exists (triangle (touch_wall all_objects)))',
                 '(object_exists (touch_wall (black all_objects)))',
-                '(object_exists (touch_wall (triangle all_objects)))'])
+                '(object_exists (touch_wall (triangle all_objects)))'}
 
         # After a bunch of longer logical forms with two agenda items, we have the shortest three
         # with one agenda item.
-        assert set(black_triangle_touch_forms[30:33]) == set([
+        assert set(black_triangle_touch_forms[30:33]) == {
                 '(object_exists (black all_objects))',
                 '(object_exists (triangle all_objects))',
-                '(object_exists (touch_wall all_objects))'])
+                '(object_exists (touch_wall all_objects))'}
 
     def test_get_logical_forms_with_empty_agenda_returns_all_logical_forms(self):
         with self.assertLogs("allennlp.semparse.action_space_walker") as log:
@@ -137,13 +137,13 @@ class ActionSpaceWalkerTest(AllenNlpTestCase):
             yellow_black_triangle_touch_forms = self.walker.get_logical_forms_with_agenda(agenda)
             # Permutations of the three functions, after ignoring yellow. There will not be repetitions
             # of any functions because we limit the length of paths to 10 above.
-            assert set(yellow_black_triangle_touch_forms) == set([
+            assert set(yellow_black_triangle_touch_forms) == {
                     '(object_exists (black (triangle (touch_wall all_objects))))',
                     '(object_exists (black (touch_wall (triangle all_objects))))',
                     '(object_exists (triangle (black (touch_wall all_objects))))',
                     '(object_exists (triangle (touch_wall (black all_objects))))',
                     '(object_exists (touch_wall (black (triangle all_objects))))',
-                    '(object_exists (touch_wall (triangle (black all_objects))))'])
+                    '(object_exists (touch_wall (triangle (black all_objects))))'}
         self.assertEqual(log.output,
                          ["WARNING:allennlp.semparse.action_space_walker:"
                           "<Set[Object]:Set[Object]> -> yellow is not in any of the paths found! Ignoring it."])

@@ -294,7 +294,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         """
         terminal_indices = []
         target_checklist_list = []
-        agenda_indices_set = set([int(x) for x in agenda.squeeze(0).detach().cpu().numpy()])
+        agenda_indices_set = {int(x) for x in agenda.squeeze(0).detach().cpu().numpy()}
         for index, action in enumerate(all_actions):
             # Each action is a ProductionRule, a tuple where the first item is the production
             # rule string.

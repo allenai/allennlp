@@ -105,7 +105,11 @@ responses>=0.7
 #### TESTING-RELATED PACKAGES ####
 
 # Checks style, syntax, and other useful errors.
-pylint==1.9.4
+pylint>=2.3.1
+
+# The pinned mypy wants an older version than this, but the newer pylint needs this version.
+# mypy still seems to run, though. Hopefully we can update mypy soon and get rid of this.
+typed-ast>=1.3.0
 
 # Static type checking
 mypy==0.521

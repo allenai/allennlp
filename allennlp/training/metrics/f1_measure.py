@@ -15,6 +15,7 @@ class F1Measure(FBetaMeasure):
     def __init__(self, positive_label: int) -> None:
         super().__init__(beta=1,
                          labels=[positive_label])
+        self._positive_label = positive_label
 
     def get_metric(self,
                    reset: bool = False) -> Tuple[float, float, float]:
@@ -41,9 +42,7 @@ class F1Measure(FBetaMeasure):
         if self._true_positive_sum is None:
             return 0.0
         else:
-            # Because we just care about the class `positive_label`,
-            # there is just one item in `self._true_positive_sum`.
-            return self._true_positive_sum[0]
+            return self._true_positive_sum[self._positive_label]
 
     @property
     def _true_negatives(self):
@@ -52,9 +51,7 @@ class F1Measure(FBetaMeasure):
         if self._true_negative_sum is None:
             return 0.0
         else:
-            # Because we just care about the class `positive_label`,
-            # there is just one item in `self._true_negative_sum`.
-            return self._true_negative_sum[0]
+            return self._true_negative_sum[self._positive_label]
 
     @property
     def _false_positives(self):
@@ -65,7 +62,7 @@ class F1Measure(FBetaMeasure):
         else:
             # `self._pred_sum` is the total number of instances under each _predicted_ class,
             # including true positives and false positives.
-            return self._pred_sum[0] - self._true_positives
+            return self._pred_sum[self._positive_label] - self._true_positives
 
     @property
     def _false_negatives(self):
@@ -76,4 +73,4 @@ class F1Measure(FBetaMeasure):
         else:
             # `self._true_sum` is the total number of instances under each _true_ class,
             # including true positives and false negatives.
-            return self._true_sum[0] - self._true_positives
+            return self._true_sum[self._positive_label] - self._true_positives

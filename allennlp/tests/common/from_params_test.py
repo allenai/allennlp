@@ -188,7 +188,7 @@ class TestFromParams(AllenNlpTestCase):
                 n = extras2["n"]
                 return cls(m=m, n=n)
 
-        class C(object):
+        class C:
             pass
 
         @BaseClass.register("D")
