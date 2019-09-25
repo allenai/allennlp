@@ -70,7 +70,7 @@ class Registrable(FromParams):
 
     @classmethod
     def by_name(cls: Type[T], name: str) -> Type[T]:
-        logger.info(f"instantiating registered subclass {name} of {cls}")
+        logger.debug(f"instantiating registered subclass {name} of {cls}")
         if name in Registrable._registry[cls]:
             return Registrable._registry[cls].get(name)
         elif "." in name:

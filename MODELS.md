@@ -1,7 +1,7 @@
 # Models
 
 A repository for the available models for AllenNLP.  While we highlight a particular model for
-each task on https://allennlp.org/models we often have other trained models that might
+each task on https://demo.allennlp.org we often have other trained models that might
 work better for a particular application.
 
 
