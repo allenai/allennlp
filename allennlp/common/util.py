@@ -371,7 +371,7 @@ def gpu_memory_mb() -> Dict[int, int]:
         Values are memory usage as integers in MB.
         Returns an empty ``dict`` if GPUs are not available.
     """
-    # pylint: disable=bare-except
+    # pylint: disable=bare-except,unexpected-keyword-arg
     try:
         result = subprocess.check_output(['nvidia-smi', '--query-gpu=memory.used',
                                           '--format=csv,nounits,noheader'],

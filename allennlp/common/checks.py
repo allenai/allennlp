@@ -36,6 +36,7 @@ class ExperimentalFeatureWarning(RuntimeWarning):
 
 
 def log_pytorch_version_info():
+    # pylint: disable=import-outside-toplevel
     import torch
     logger.info("Pytorch version: %s", torch.__version__)
 

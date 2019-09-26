@@ -1,4 +1,4 @@
-# pylint: disable=no-self-use,invalid-name
+# pylint: disable=no-self-use,invalid-name,import-outside-toplevel
 import pytest
 import spacy
 import torch

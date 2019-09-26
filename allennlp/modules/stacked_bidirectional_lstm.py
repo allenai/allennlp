@@ -1,10 +1,12 @@
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List
 import torch
 from torch.nn.utils.rnn import PackedSequence, pack_padded_sequence, pad_packed_sequence
 from allennlp.modules.augmented_lstm import AugmentedLstm
 from allennlp.modules.input_variational_dropout import InputVariationalDropout
 from allennlp.common.checks import ConfigurationError
 
+
+TensorPair = Tuple[torch.Tensor, torch.Tensor]  # pylint: disable=invalid-name
 
 class StackedBidirectionalLstm(torch.nn.Module):
     """
@@ -77,8 +79,7 @@ class StackedBidirectionalLstm(torch.nn.Module):
 
     def forward(self,  # pylint: disable=arguments-differ
                 inputs: PackedSequence,
-                initial_state: Optional[Tuple[torch.Tensor, torch.Tensor]] = None
-               ) -> Tuple[PackedSequence, Tuple[torch.Tensor, torch.Tensor]]:
+                initial_state: Optional[TensorPair] = None) -> Tuple[PackedSequence, TensorPair]:
         """
         Parameters
         ----------
@@ -96,8 +97,8 @@ class StackedBidirectionalLstm(torch.nn.Module):
             The per-layer final (state, memory) states of the LSTM, each with shape
             (num_layers * 2, batch_size, hidden_size * 2).
         """
-        if not initial_state:
-            hidden_states = [None] * len(self.lstm_layers)
+        if initial_state is None:
+            hidden_states: List[Optional[TensorPair]] = [None] * len(self.lstm_layers)
         elif initial_state[0].size()[0] != len(self.lstm_layers):
             raise ConfigurationError("Initial states were passed to forward() but the number of "
                                      "initial states does not match the number of layers.")
