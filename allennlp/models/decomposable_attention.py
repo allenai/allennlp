@@ -70,7 +70,7 @@ class DecomposableAttention(Model):
                  hypothesis_encoder: Optional[Seq2SeqEncoder] = None,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
-        super(DecomposableAttention, self).__init__(vocab, regularizer)
+        super().__init__(vocab, regularizer)
 
         self._text_field_embedder = text_field_embedder
         self._attend_feedforward = TimeDistributed(attend_feedforward)

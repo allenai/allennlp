@@ -68,7 +68,7 @@ class _NamespaceDependentDefaultDict(defaultdict):
         self._non_padded_namespaces = set(non_padded_namespaces)
         self._padded_function = padded_function
         self._non_padded_function = non_padded_function
-        super(_NamespaceDependentDefaultDict, self).__init__()
+        super().__init__()
 
     def __missing__(self, key: str):
         if any(namespace_match(pattern, key) for pattern in self._non_padded_namespaces):
@@ -84,16 +84,12 @@ class _NamespaceDependentDefaultDict(defaultdict):
 
 class _TokenToIndexDefaultDict(_NamespaceDependentDefaultDict):
     def __init__(self, non_padded_namespaces: Set[str], padding_token: str, oov_token: str) -> None:
-        super(_TokenToIndexDefaultDict, self).__init__(non_padded_namespaces,
-                                                       lambda: {padding_token: 0, oov_token: 1},
-                                                       lambda: {})
+        super().__init__(non_padded_namespaces, lambda: {padding_token: 0, oov_token: 1}, lambda: {})
 
 
 class _IndexToTokenDefaultDict(_NamespaceDependentDefaultDict):
     def __init__(self, non_padded_namespaces: Set[str], padding_token: str, oov_token: str) -> None:
-        super(_IndexToTokenDefaultDict, self).__init__(non_padded_namespaces,
-                                                       lambda: {0: padding_token, 1: oov_token},
-                                                       lambda: {})
+        super().__init__(non_padded_namespaces, lambda: {0: padding_token, 1: oov_token}, lambda: {})
 
 
 def _read_pretrained_tokens(embeddings_file_uri: str) -> List[str]:

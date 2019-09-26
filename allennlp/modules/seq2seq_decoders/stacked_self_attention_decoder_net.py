@@ -139,7 +139,7 @@ class DecoderLayer(nn.Module):
     def __init__(self,
                  size: int, self_attn: MultiHeadedAttention,
                  src_attn: MultiHeadedAttention, feed_forward: F, dropout: float) -> None:
-        super(DecoderLayer, self).__init__()
+        super().__init__()
         self.size = size
         self.self_attn = self_attn
         self.src_attn = src_attn

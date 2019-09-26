@@ -12,7 +12,7 @@ from allennlp.nn.util import sort_batch_by_length, get_lengths_from_binary_seque
 class TestEncoderBase(AllenNlpTestCase):
 
     def setUp(self):
-        super(TestEncoderBase, self).setUp()
+        super().setUp()
         self.lstm = LSTM(bidirectional=True, num_layers=3, input_size=3, hidden_size=7, batch_first=True)
         self.rnn = RNN(bidirectional=True, num_layers=3, input_size=3, hidden_size=7, batch_first=True)
         self.encoder_base = _EncoderBase(stateful=True)

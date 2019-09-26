@@ -55,7 +55,7 @@ class ElmoTokenEmbedder(TokenEmbedder):
                  projection_dim: int = None,
                  vocab_to_cache: List[str] = None,
                  scalar_mix_parameters: List[float] = None) -> None:
-        super(ElmoTokenEmbedder, self).__init__()
+        super().__init__()
 
         self._elmo = Elmo(options_file,
                           weight_file,

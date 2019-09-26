@@ -94,7 +94,7 @@ class Embedding(TokenEmbedder):
                  sparse: bool = False,
                  vocab_namespace: str = None,
                  pretrained_file: str = None) -> None:
-        super(Embedding, self).__init__()
+        super().__init__()
         self.num_embeddings = num_embeddings
         self.padding_index = padding_index
         self.max_norm = max_norm

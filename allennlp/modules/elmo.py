@@ -97,7 +97,7 @@ class Elmo(torch.nn.Module):
                  keep_sentence_boundaries: bool = False,
                  scalar_mix_parameters: List[float] = None,
                  module: torch.nn.Module = None) -> None:
-        super(Elmo, self).__init__()
+        super().__init__()
 
         logger.info("Initializing ELMo")
         if module is not None:
@@ -300,7 +300,7 @@ class _ElmoCharacterEncoder(torch.nn.Module):
                  options_file: str,
                  weight_file: str,
                  requires_grad: bool = False) -> None:
-        super(_ElmoCharacterEncoder, self).__init__()
+        super().__init__()
 
         with open(cached_path(options_file), 'r') as fin:
             self._options = json.load(fin)
@@ -521,7 +521,7 @@ class _ElmoBiLm(torch.nn.Module):
                  weight_file: str,
                  requires_grad: bool = False,
                  vocab_to_cache: List[str] = None) -> None:
-        super(_ElmoBiLm, self).__init__()
+        super().__init__()
 
         self._token_embedder = _ElmoCharacterEncoder(options_file, weight_file, requires_grad=requires_grad)
 

@@ -25,7 +25,7 @@ class _EncoderBase(torch.nn.Module):
     subclasses by allowing the caching and retrieving of the hidden states of RNNs.
     """
     def __init__(self, stateful: bool = False) -> None:
-        super(_EncoderBase, self).__init__()
+        super().__init__()
         self.stateful = stateful
         self._states: Optional[RnnStateStorage] = None
 

@@ -20,7 +20,7 @@ class ConfigurationError(Exception):
     """
 
     def __init__(self, message):
-        super(ConfigurationError, self).__init__()
+        super().__init__()
         self.message = message
 
     def __str__(self):

@@ -44,7 +44,7 @@ def is_hat_shaped(learning_rates: List[float]):
 class SlantedTriangularTest(AllenNlpTestCase):
 
     def setUp(self):
-        super(SlantedTriangularTest, self).setUp()
+        super().setUp()
         self.model = torch.nn.Sequential(OrderedDict([
                 ('lin1', torch.nn.Linear(10, 10)),
                 ('lin2', torch.nn.Linear(10, 10))

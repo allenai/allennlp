@@ -47,7 +47,7 @@ class StackedBidirectionalLstm(torch.nn.Module):
                  recurrent_dropout_probability: float = 0.0,
                  layer_dropout_probability: float = 0.0,
                  use_highway: bool = True) -> None:
-        super(StackedBidirectionalLstm, self).__init__()
+        super().__init__()
 
         # Required to be wrapped with a :class:`PytorchSeq2SeqWrapper`.
         self.input_size = input_size

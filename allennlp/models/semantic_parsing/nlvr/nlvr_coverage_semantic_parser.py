@@ -90,11 +90,11 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                  dynamic_cost_weight: Dict[str, Union[int, float]] = None,
                  penalize_non_agenda_actions: bool = False,
                  initial_mml_model_file: str = None) -> None:
-        super(NlvrCoverageSemanticParser, self).__init__(vocab=vocab,
-                                                         sentence_embedder=sentence_embedder,
-                                                         action_embedding_dim=action_embedding_dim,
-                                                         encoder=encoder,
-                                                         dropout=dropout)
+        super().__init__(vocab=vocab,
+                         sentence_embedder=sentence_embedder,
+                         action_embedding_dim=action_embedding_dim,
+                         encoder=encoder,
+                         dropout=dropout)
         self._agenda_coverage = Average()
         self._decoder_trainer: DecoderTrainer[Callable[[CoverageState], torch.Tensor]] = \
                 ExpectedRiskMinimization(beam_size=beam_size,

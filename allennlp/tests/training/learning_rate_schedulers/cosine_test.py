@@ -13,7 +13,7 @@ from allennlp.common.params import Params
 class CosineWithRestartsTest(AllenNlpTestCase):
 
     def setUp(self):
-        super(CosineWithRestartsTest, self).setUp()
+        super().setUp()
         self.model = torch.nn.Sequential(torch.nn.Linear(10, 10))
 
         # We use these cases to verify that the scheduler works as expected.

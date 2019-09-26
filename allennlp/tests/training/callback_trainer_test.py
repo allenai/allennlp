@@ -718,7 +718,7 @@ class TestCallbackTrainer(ModelTestCase):
             # pylint: disable=arguments-differ
             def _create_batches(self, *args, **kwargs):
                 time.sleep(2.5)
-                return super(WaitingIterator, self)._create_batches(*args, **kwargs)
+                return super()._create_batches(*args, **kwargs)
 
         waiting_iterator = WaitingIterator(batch_size=2)
         waiting_iterator.index_with(self.vocab)
