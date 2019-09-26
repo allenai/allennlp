@@ -533,7 +533,6 @@ class EmbeddingsTextFile(Iterator[str]):
 
             # Some systems don't have support for all of these libraries, so we import them only
             # when necessary.
-
             package = None
             if extension in ['.txt', '.vec']:
                 package = io

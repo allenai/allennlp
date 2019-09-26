@@ -205,7 +205,6 @@ class MultiprocessDatasetReader(DatasetReader):
         """
         Just delegate to the base reader text_to_instance.
         """
-
         return self.reader.text_to_instance(*args, **kwargs)  # type: ignore
 
     def _read(self, file_path: str) -> Iterable[Instance]:

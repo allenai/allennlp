@@ -91,7 +91,6 @@ def bio_tags_to_spans(tag_sequence: List[str],
         The typed, extracted spans from the sequence, in the format (label, (span_start, span_end)).
         Note that the label `does not` contain any BIO tag prefixes.
     """
-
     classes_to_ignore = classes_to_ignore or []
     spans: Set[Tuple[str, Tuple[int, int]]] = set()
     span_start = 0

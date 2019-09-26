@@ -36,7 +36,6 @@ class ExperimentalFeatureWarning(RuntimeWarning):
 
 
 def log_pytorch_version_info():
-
     import torch
     logger.info("Pytorch version: %s", torch.__version__)
 
