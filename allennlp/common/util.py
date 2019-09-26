@@ -26,7 +26,6 @@ from spacy.language import Language as SpacyModelType
 
 # This base import is so we can refer to allennlp.data.Token in `sanitize()` without creating
 # circular dependencies.
-import allennlp
 from allennlp.common.checks import log_pytorch_version_info
 from allennlp.common.params import Params
 from allennlp.common.tqdm import Tqdm
@@ -50,6 +49,9 @@ def sanitize(x: Any) -> Any:
     Sanitize turns PyTorch and Numpy types into basic Python types so they
     can be serialized into JSON.
     """
+    # Import here to avoid circular references
+    from allennlp.data.tokenizers.token import Token
+
     if isinstance(x, (str, float, int, bool)):
         # x is already serializable
         return x
@@ -65,7 +67,7 @@ def sanitize(x: Any) -> Any:
     elif isinstance(x, dict):
         # Dicts need their values sanitized
         return {key: sanitize(value) for key, value in x.items()}
-    elif isinstance(x, (spacy.tokens.Token, allennlp.data.Token)):
+    elif isinstance(x, (spacy.tokens.Token, Token)):
         # Tokens get sanitized to just their text.
         return x.text
     elif isinstance(x, (list, tuple)):
