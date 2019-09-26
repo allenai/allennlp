@@ -22,7 +22,7 @@ def main(checks):
 
         if "flake8" in checks:
             print("Linter (flake8)", flush=True)
-            run("flake8", shell=True, check=True)
+            run("flake8 -v", shell=True, check=True)
             print("flake8 checks passed")
 
         if "mypy" in checks:
