@@ -47,7 +47,7 @@ class LinearSimilarity(SimilarityFunction):
                  tensor_2_dim: int,
                  combination: str = 'x,y',
                  activation: Activation = None) -> None:
-        super(LinearSimilarity, self).__init__()
+        super().__init__()
         self._combination = combination
         combined_dim = util.get_combined_dim(combination, [tensor_1_dim, tensor_2_dim])
         self._weight_vector = Parameter(torch.Tensor(combined_dim))

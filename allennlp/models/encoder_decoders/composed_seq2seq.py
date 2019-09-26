@@ -54,7 +54,7 @@ class ComposedSeq2Seq(Model):
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None)-> None:
 
-        super(ComposedSeq2Seq, self).__init__(vocab, regularizer)
+        super().__init__(vocab, regularizer)
 
         self._source_text_embedder = source_text_embedder
         self._encoder = encoder

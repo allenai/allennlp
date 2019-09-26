@@ -11,7 +11,7 @@ from allennlp.data.iterators import DataIterator
 
 class WikiTablesMmlSemanticParserTest(ModelTestCase):
     def setUp(self):
-        super(WikiTablesMmlSemanticParserTest, self).setUp()
+        super().setUp()
         config_path = self.FIXTURES_ROOT /  "semantic_parsing" / "wikitables" / "experiment.json"
         data_path = self.FIXTURES_ROOT / "data" / "wikitables" / "sample_data.examples"
         self.set_up_model(config_path, data_path)

@@ -28,7 +28,7 @@ class TestVocabulary(AllenNlpTestCase):
                                {"tokens": token_indexer})
         self.instance = Instance({"text": text_field})
         self.dataset = Batch([self.instance])
-        super(TestVocabulary, self).setUp()
+        super().setUp()
 
     def test_pickling(self):
         vocab = Vocabulary.from_instances(self.dataset)

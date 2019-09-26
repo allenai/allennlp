@@ -366,15 +366,15 @@ class TypedConstantExpression(ConstantExpression):
     where we can pass a default type to the constructor and use that in the ``_set_type`` method.
     """
     def __init__(self, variable, default_type: Type) -> None:
-        super(TypedConstantExpression, self).__init__(variable)
+        super().__init__(variable)
         self._default_type = default_type
 
     @overrides
     def _set_type(self, other_type=ANY_TYPE, signature=None) -> None:
         if other_type == ANY_TYPE:
-            super(TypedConstantExpression, self)._set_type(self._default_type, signature)
+            super()._set_type(self._default_type, signature)
         else:
-            super(TypedConstantExpression, self)._set_type(other_type, signature)
+            super()._set_type(other_type, signature)
 
 
 class DynamicTypeApplicationExpression(ApplicationExpression):
@@ -394,7 +394,7 @@ class DynamicTypeApplicationExpression(ApplicationExpression):
     appears in. This variable binding operation is implemented by overriding ``_set_type`` below.
     """
     def __init__(self, function: Expression, argument: Expression, variables_with_placeholders: Set[str]) -> None:
-        super(DynamicTypeApplicationExpression, self).__init__(function, argument)
+        super().__init__(function, argument)
         self._variables_with_placeholders = variables_with_placeholders
 
     @property
@@ -403,7 +403,7 @@ class DynamicTypeApplicationExpression(ApplicationExpression):
         # have access to the type signatures yet. Thus, we need to look at the name of the function
         # to return the type.
         if not str(self.function) in self._variables_with_placeholders:
-            return super(DynamicTypeApplicationExpression, self).type
+            return super().type
         if self.function.type == ANY_TYPE:
             return ANY_TYPE
         argument_type = self.argument.type
@@ -427,7 +427,7 @@ class DynamicTypeApplicationExpression(ApplicationExpression):
         the information about F. Hence this method. Note that the language may or may not contain
         the var function. We deal with both cases below.
         """
-        super(DynamicTypeApplicationExpression, self)._set_type(other_type, signature)
+        super()._set_type(other_type, signature)
         # TODO(pradeep): Assuming the mapping of "var" function is "V". Do something better.
         if isinstance(self.argument, ApplicationExpression) and str(self.argument.function) == "V":
             # pylint: disable=protected-access
@@ -454,7 +454,7 @@ class DynamicTypeLogicParser(LogicParser):
                  type_check: bool = True,
                  constant_type_prefixes: Dict[str, BasicType] = None,
                  type_signatures: Dict[str, Type] = None) -> None:
-        super(DynamicTypeLogicParser, self).__init__(type_check)
+        super().__init__(type_check)
         self._constant_type_prefixes = constant_type_prefixes or {}
         self._variables_with_placeholders = {name for name, type_ in type_signatures.items()
                                              if isinstance(type_, PlaceholderType)}
@@ -471,7 +471,7 @@ class DynamicTypeLogicParser(LogicParser):
                 return TypedConstantExpression(Variable(name), self._constant_type_prefixes[prefix])
             else:
                 raise RuntimeError(f"Unknown prefix: {prefix}. Did you forget to pass it to the constructor?")
-        return super(DynamicTypeLogicParser, self).make_VariableExpression(name)
+        return super().make_VariableExpression(name)
 
     def __eq__(self, other):
         if isinstance(self, other.__class__):

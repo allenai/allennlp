@@ -8,7 +8,7 @@ from allennlp.nn.chu_liu_edmonds import decode_mst
 class BiaffineDependencyParserTest(ModelTestCase):
 
     def setUp(self):
-        super(BiaffineDependencyParserTest, self).setUp()
+        super().setUp()
         self.set_up_model(self.FIXTURES_ROOT / "biaffine_dependency_parser" / "experiment.json",
                           self.FIXTURES_ROOT / "data" / "dependencies.conllu")
 

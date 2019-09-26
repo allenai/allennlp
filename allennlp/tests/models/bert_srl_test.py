@@ -19,7 +19,7 @@ class BertSrlTest(ModelTestCase):
         self.monkeypatch.setattr(BertModel, 'from_pretrained', lambda _: BertModel(config))
         self.monkeypatch.setattr(BertTokenizer, 'from_pretrained', lambda _: BertTokenizer(vocab_path))
 
-        super(BertSrlTest, self).setUp()
+        super().setUp()
         self.set_up_model(self.FIXTURES_ROOT / 'bert_srl' / 'experiment.jsonnet',
                           self.FIXTURES_ROOT / 'conll_2012')
 
