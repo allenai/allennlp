@@ -16,7 +16,7 @@ from allennlp.nn import InitializerApplicator, util
 from allennlp.tools import squad_eval
 from allennlp.training.metrics import Average, BooleanAccuracy, CategoricalAccuracy
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @Model.register("dialog_qa")
@@ -127,7 +127,7 @@ class DialogQA(Model):
                 yesno_list: torch.IntTensor = None,
                 followup_list: torch.IntTensor = None,
                 metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
+
         """
         Parameters
         ----------
@@ -279,8 +279,8 @@ class DialogQA(Model):
                                                                           repeated_passage_mask))
         self_attention_matrix = self._self_attention(residual_layer, residual_layer)
 
-        mask = repeated_passage_mask.reshape(total_qa_count, passage_length, 1) \
-               * repeated_passage_mask.reshape(total_qa_count, 1, passage_length)
+        mask = (repeated_passage_mask.reshape(total_qa_count, passage_length, 1) *
+                repeated_passage_mask.reshape(total_qa_count, 1, passage_length))
         self_mask = torch.eye(passage_length, passage_length, device=self_attention_matrix.device)
         self_mask = self_mask.reshape(1, passage_length, passage_length)
         mask = mask * (1 - self_mask)
@@ -409,9 +409,9 @@ class DialogQA(Model):
 
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, Any]:
-        yesno_tags = [[self.vocab.get_token_from_index(x, namespace="yesno_labels") for x in yn_list] \
+        yesno_tags = [[self.vocab.get_token_from_index(x, namespace="yesno_labels") for x in yn_list]
                       for yn_list in output_dict.pop("yesno")]
-        followup_tags = [[self.vocab.get_token_from_index(x, namespace="followup_labels") for x in followup_list] \
+        followup_tags = [[self.vocab.get_token_from_index(x, namespace="followup_labels") for x in followup_list]
                          for followup_list in output_dict.pop("followup")]
         output_dict['yesno'] = yesno_tags
         output_dict['followup'] = followup_tags
@@ -445,7 +445,7 @@ class DialogQA(Model):
         span_end_logits = span_end_logits.data.cpu().numpy()
         span_yesno_logits = span_yesno_logits.data.cpu().numpy()
         span_followup_logits = span_followup_logits.data.cpu().numpy()
-        for b_i in range(batch_size):  # pylint: disable=invalid-name
+        for b_i in range(batch_size):
             for j in range(passage_length):
                 val1 = span_start_logits[b_i, span_start_argmax[b_i]]
                 if val1 < span_start_logits[b_i, j]:

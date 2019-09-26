@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 import spacy
 
 from allennlp.common.testing import AllenNlpTestCase
@@ -8,6 +7,7 @@ from allennlp.data.tokenizers.word_splitter import SimpleWordSplitter
 from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
 from allennlp.data.tokenizers.word_splitter import OpenAISplitter
 from allennlp.data.tokenizers.word_splitter import BertBasicWordSplitter
+
 
 class TestSimpleWordSplitter(AllenNlpTestCase):
     def setUp(self):

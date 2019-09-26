@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 from collections import Counter
 from multiprocessing import Queue, Process
 from queue import Empty
@@ -31,7 +30,6 @@ class TestMultiprocessDatasetReader(AllenNlpTestCase):
         # use SequenceTaggingDatasetReader as the base reader
         self.base_reader = SequenceTaggingDatasetReader(lazy=True)
         base_file_path = AllenNlpTestCase.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv'
-
 
         # Make 100 copies of the data
         raw_data = open(base_file_path).read()
@@ -130,6 +128,7 @@ class TestMultiprocessDatasetReader(AllenNlpTestCase):
     def test_multiprocess_read_in_subprocess_is_deterministic(self):
         reader = MultiprocessDatasetReader(base_reader=self.base_reader, num_workers=1)
         q = Queue()
+
         def read():
             for instance in reader.read(self.distinct_files_glob):
                 q.put(fingerprint(instance))

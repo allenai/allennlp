@@ -1,5 +1,6 @@
 from typing import List, TextIO, Optional
 
+
 def write_bio_formatted_tags_to_file(prediction_file: TextIO,
                                      gold_file: TextIO,
                                      verb_index: Optional[int],

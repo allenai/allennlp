@@ -18,7 +18,7 @@ from allennlp.data.dataset_readers.dataset_utils import text2sql_utils
 from allennlp.semparse.worlds.text2sql_world import Text2SqlWorld
 from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import read_dataset_schema
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @DatasetReader.register("grammar_based_text2sql")
@@ -129,7 +129,7 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
                          query: List[str],
                          prelinked_entities: Dict[str, Dict[str, str]] = None,
                          sql: List[str] = None) -> Instance:
-        # pylint: disable=arguments-differ
+
         fields: Dict[str, Field] = {}
         tokens = TextField([Token(t) for t in query], self._token_indexers)
         fields["tokens"] = tokens
@@ -157,7 +157,7 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
         valid_actions_field = ListField(production_rule_fields)
         fields["valid_actions"] = valid_actions_field
 
-        action_map = {action.rule: i # type: ignore
+        action_map = {action.rule: i  # type: ignore
                       for i, action in enumerate(valid_actions_field.field_list)}
 
         for production_rule in action_sequence:

@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use, invalid-name
 import json
 import logging
 import math
@@ -13,6 +12,7 @@ from allennlp.nn.initializers import block_orthogonal, uniform_unit_scaling
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.params import Params
+
 
 class TestInitializers(AllenNlpTestCase):
     def setUp(self):
@@ -37,7 +37,7 @@ class TestInitializers(AllenNlpTestCase):
                 self.linear_2 = torch.nn.Linear(10, 5)
                 self.conv = torch.nn.Conv1d(5, 5, 5)
 
-            def forward(self, inputs):  # pylint: disable=arguments-differ
+            def forward(self, inputs):
                 pass
 
         # Make sure we handle regexes properly
@@ -99,7 +99,8 @@ class TestInitializers(AllenNlpTestCase):
                 self.linear_3_transfer = torch.nn.Linear(5, 10)
                 self.linear_4_transfer = torch.nn.Linear(10, 5)
                 self.pretrained_conv = torch.nn.Conv1d(5, 5, 5)
-            def forward(self, inputs):  # pylint: disable=arguments-differ
+
+            def forward(self, inputs):
                 pass
 
         json_params = """{"initializer": [

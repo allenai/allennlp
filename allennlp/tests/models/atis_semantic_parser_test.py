@@ -1,8 +1,8 @@
-# pylint: disable=invalid-name,no-self-use,protected-access
 from flaky import flaky
 
 from allennlp.common.testing import ModelTestCase
 from allennlp.semparse.contexts.sql_context_utils import action_sequence_to_sql
+
 
 class AtisSemanticParserTest(ModelTestCase):
     def setUp(self):

@@ -1,5 +1,3 @@
-# pylint: disable=no-self-use,invalid-name,line-too-long
-
 from allennlp.data.dataset_readers import TemplateText2SqlDatasetReader
 from allennlp.common.util import ensure_list
 from allennlp.common.testing import AllenNlpTestCase

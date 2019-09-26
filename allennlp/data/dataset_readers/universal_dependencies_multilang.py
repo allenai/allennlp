@@ -15,7 +15,7 @@ from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
 from allennlp.data.tokenizers import Token
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 def get_file_paths(pathname: str, languages: List[str]):
@@ -142,7 +142,7 @@ class UniversalDependenciesMultiLangDatasetReader(DatasetReader):
                     try:
                         yield lang_iter.__next__()
                     except StopIteration:
-                        lang, file_path = file_paths[ind]  # pylint: disable=invalid-sequence-index
+                        lang, file_path = file_paths[ind]
                         lang_iter = iter(self._read_one_file(lang, file_path))
                         self._iterators[ind] = (lang, lang_iter)
                         yield lang_iter.__next__()
@@ -153,7 +153,7 @@ class UniversalDependenciesMultiLangDatasetReader(DatasetReader):
                          words: List[str],
                          upos_tags: List[str],
                          dependencies: List[Tuple[str, int]] = None) -> Instance:
-        # pylint: disable=arguments-differ
+
         """
         Parameters
         ----------

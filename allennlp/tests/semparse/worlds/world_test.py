@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name,protected-access
 from overrides import overrides
 
 from allennlp.common.testing import AllenNlpTestCase
@@ -6,7 +5,6 @@ from allennlp.semparse import World
 
 
 class FakeWorldWithoutRecursion(World):
-    # pylint: disable=abstract-method
     @overrides
     def all_possible_actions(self):
         # The logical forms this grammar allows are
@@ -22,7 +20,6 @@ class FakeWorldWithoutRecursion(World):
 
 
 class FakeWorldWithRecursion(FakeWorldWithoutRecursion):
-    # pylint: disable=abstract-method
     @overrides
     def all_possible_actions(self):
         # In addition to the forms allowed by ``FakeWorldWithoutRecursion``, this world allows
@@ -49,7 +46,7 @@ class TestWorld(AllenNlpTestCase):
         assert unary_function_paths == [['<e,t> -> unary_function', 't -> [<e,t>, e]',
                                          '@start@ -> t']]
         binary_function_paths = \
-                self.world_without_recursion.get_paths_to_root('<e,<e,t>> -> binary_function')
+            self.world_without_recursion.get_paths_to_root('<e,<e,t>> -> binary_function')
         assert binary_function_paths == [['<e,<e,t>> -> binary_function',
                                           '<e,t> -> [<e,<e,t>>, e]', 't -> [<e,t>, e]',
                                           '@start@ -> t']]

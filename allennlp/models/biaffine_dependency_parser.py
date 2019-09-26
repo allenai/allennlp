@@ -20,9 +20,10 @@ from allennlp.nn.util import get_device_of, masked_log_softmax, get_lengths_from
 from allennlp.nn.chu_liu_edmonds import decode_mst
 from allennlp.training.metrics import AttachmentScores
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 POS_TO_IGNORE = {'``', "''", ':', ',', '.', 'PU', 'PUNCT', 'SYM'}
+
 
 @Model.register("biaffine_parser")
 class BiaffineDependencyParser(Model):
@@ -94,10 +95,10 @@ class BiaffineDependencyParser(Model):
 
         encoder_dim = encoder.get_output_dim()
 
-        self.head_arc_feedforward = arc_feedforward or \
-                                        FeedForward(encoder_dim, 1,
-                                                    arc_representation_dim,
-                                                    Activation.by_name("elu")())
+        self.head_arc_feedforward = (arc_feedforward or
+                                     FeedForward(encoder_dim, 1,
+                                                 arc_representation_dim,
+                                                 Activation.by_name("elu")()))
         self.child_arc_feedforward = copy.deepcopy(self.head_arc_feedforward)
 
         self.arc_attention = BilinearMatrixAttention(arc_representation_dim,
@@ -106,10 +107,10 @@ class BiaffineDependencyParser(Model):
 
         num_labels = self.vocab.get_vocab_size("head_tags")
 
-        self.head_tag_feedforward = tag_feedforward or \
-                                        FeedForward(encoder_dim, 1,
-                                                    tag_representation_dim,
-                                                    Activation.by_name("elu")())
+        self.head_tag_feedforward = (tag_feedforward or
+                                     FeedForward(encoder_dim, 1,
+                                                 tag_representation_dim,
+                                                 Activation.by_name("elu")()))
         self.child_tag_feedforward = copy.deepcopy(self.head_tag_feedforward)
 
         self.tag_bilinear = torch.nn.modules.Bilinear(tag_representation_dim,
@@ -151,7 +152,7 @@ class BiaffineDependencyParser(Model):
                 metadata: List[Dict[str, Any]],
                 head_tags: torch.LongTensor = None,
                 head_indices: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
+
         """
         Parameters
         ----------
@@ -265,7 +266,7 @@ class BiaffineDependencyParser(Model):
                mask: torch.LongTensor,
                head_tags: torch.LongTensor = None,
                head_indices: torch.LongTensor = None
-              ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+               ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
 
         embedded_text_input = self._input_dropout(embedded_text_input)
         encoded_text = self.encoder(embedded_text_input, mask)

@@ -1,4 +1,3 @@
-# pylint: disable=unused-import
 import warnings
 
 from allennlp.predictors.sentence_tagger import SentenceTaggerPredictor

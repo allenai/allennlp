@@ -19,6 +19,7 @@ from allennlp.semparse.contexts.text2sql_table_context import update_grammar_wit
 from allennlp.semparse.contexts.text2sql_table_context import update_grammar_values_with_variables
 from allennlp.semparse.contexts.text2sql_table_context import update_grammar_numbers_and_strings_with_variables
 
+
 class Text2SqlWorld:
     """
     World representation for any of the Text2Sql datasets.
@@ -63,7 +64,8 @@ class Text2SqlWorld:
 
     def get_action_sequence_and_all_actions(self,
                                             query: List[str] = None,
-                                            prelinked_entities: Dict[str, Dict[str, str]] = None) -> Tuple[List[str], List[str]]: # pylint: disable=line-too-long
+                                            prelinked_entities: Dict[str, Dict[str, str]] = None
+                                            ) -> Tuple[List[str], List[str]]:
         grammar_with_context = deepcopy(self.base_grammar_dictionary)
 
         if not self.use_prelinked_entities and prelinked_entities is not None:

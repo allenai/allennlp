@@ -1,4 +1,3 @@
-# pylint: disable=invalid-name,too-many-public-methods,protected-access
 import json
 import os
 import shutil

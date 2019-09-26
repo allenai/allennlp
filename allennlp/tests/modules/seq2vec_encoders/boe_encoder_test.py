@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 import numpy
 from numpy.testing import assert_almost_equal
 import torch
@@ -6,6 +5,7 @@ import torch
 from allennlp.common import Params
 from allennlp.modules.seq2vec_encoders import BagOfEmbeddingsEncoder
 from allennlp.common.testing import AllenNlpTestCase
+
 
 class TestBagOfEmbeddingsEncoder(AllenNlpTestCase):
     def test_get_dimension_is_correct(self):

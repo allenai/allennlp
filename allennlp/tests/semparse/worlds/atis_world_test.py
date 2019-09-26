@@ -1,13 +1,13 @@
-# pylint: disable=too-many-lines
 from datetime import datetime
 import json
 
 from parsimonious.expressions import Literal, Sequence
 
 from allennlp.common.file_utils import cached_path
-from allennlp.semparse.contexts.atis_tables import * # pylint: disable=wildcard-import,unused-wildcard-import
+from allennlp.semparse.contexts import atis_tables as at
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.semparse.worlds.atis_world import AtisWorld
+
 
 class TestAtisWorld(AllenNlpTestCase):
     def setUp(self):
@@ -16,7 +16,7 @@ class TestAtisWorld(AllenNlpTestCase):
         self.data = open(test_filename).readlines()
         self.database_file = cached_path("https://allennlp.s3.amazonaws.com/datasets/atis/atis.db")
 
-    def test_atis_global_actions(self): # pylint: disable=no-self-use
+    def test_atis_global_actions(self):
         world = AtisWorld(utterances=[])
         valid_actions = world.valid_actions
         assert set(valid_actions.keys()) == \
@@ -351,7 +351,7 @@ class TestAtisWorld(AllenNlpTestCase):
                  'table_name -> ["restriction"]',
                  'table_name -> ["state"]'}
 
-    def test_atis_local_actions(self): # pylint: disable=no-self-use
+    def test_atis_local_actions(self):
         # Check if the triggers activate correcty
         world = AtisWorld(["show me the flights from denver at 12 o'clock"])
 
@@ -400,7 +400,7 @@ class TestAtisWorld(AllenNlpTestCase):
         assert set(world.valid_actions['year_number']) == \
                 {'year_number -> ["1991"]'}
 
-    def test_atis_simple_action_sequence(self): # pylint: disable=no-self-use
+    def test_atis_simple_action_sequence(self):
         world = AtisWorld([("give me all flights from boston to "
                             "philadelphia next week arriving after lunch")])
         action_sequence = world.get_action_sequence(("(SELECT DISTINCT city . city_code , city . city_name "
@@ -555,7 +555,7 @@ class TestAtisWorld(AllenNlpTestCase):
              'binaryop -> ["="]',
              'city_city_name_string -> ["\'BOSTON\'"]']
 
-    def test_atis_long_action_sequence(self): # pylint: disable=no-self-use
+    def test_atis_long_action_sequence(self):
         world = AtisWorld([("what is the earliest flight in morning "
                             "1993 june fourth from boston to pittsburgh")])
         action_sequence = world.get_action_sequence("( SELECT DISTINCT flight.flight_id "
@@ -769,23 +769,23 @@ class TestAtisWorld(AllenNlpTestCase):
             action_sequence = world.get_action_sequence(line['interaction'][utterance_idx]['sql'])
             assert action_sequence is not None
 
-    def test_time_extraction(self): # pylint: disable=no-self-use
-        approximate_times = get_approximate_times([1900])
+    def test_time_extraction(self):
+        approximate_times = at.get_approximate_times([1900])
         assert approximate_times == [1830, 1930]
 
-        approximate_times = get_approximate_times([515])
+        approximate_times = at.get_approximate_times([515])
         assert approximate_times == [445, 545]
 
-        pm_times = [pm_map_match_to_query_value(string)
+        pm_times = [at.pm_map_match_to_query_value(string)
                     for string in ['12pm', '1pm', '830pm', '1230pm', '115pm']]
         assert pm_times == [[1200], [1300], [2030], [1230], [1315]]
 
-    def test_atis_helper_methods(self): # pylint: disable=no-self-use
+    def test_atis_helper_methods(self):
         world = AtisWorld([("what is the earliest flight in morning "
                             "1993 june fourth from boston to pittsburgh")])
         assert world.dates == [datetime(1993, 6, 4, 0, 0)]
-        assert world._get_numeric_database_values('time_range_end') == ['800', '1200'] # pylint: disable=protected-access
-        assert world._get_sequence_with_spacing(world.grammar, # pylint: disable=protected-access
+        assert world._get_numeric_database_values('time_range_end') == ['800', '1200']
+        assert world._get_sequence_with_spacing(world.grammar,
                                                 [world.grammar['col_ref'],
                                                  Literal('BETWEEN'),
                                                  world.grammar['time_range_start'],

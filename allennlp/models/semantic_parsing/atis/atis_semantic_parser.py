@@ -23,7 +23,7 @@ from allennlp.state_machines.trainers import MaximumMarginalLikelihood
 from allennlp.state_machines.states import GrammarStatelet, RnnStatelet
 from allennlp.training.metrics import Average
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @Model.register("atis_parser")
@@ -99,7 +99,6 @@ class AtisSemanticParser(Model):
         self._action_embedder = Embedding(num_embeddings=num_actions, embedding_dim=input_action_dim)
         self._output_action_embedder = Embedding(num_embeddings=num_actions, embedding_dim=action_embedding_dim)
 
-
         # This is what we pass as input in the first step of decoding, when we don't have a
         # previous action, or a previous utterance attention.
         self._first_action_embedding = torch.nn.Parameter(torch.FloatTensor(action_embedding_dim))
@@ -128,7 +127,7 @@ class AtisSemanticParser(Model):
                 linking_scores: torch.Tensor,
                 target_action_sequence: torch.LongTensor = None,
                 sql_queries: List[List[str]] = None) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
+
         """
         We set up the initial state for the decoder, and pass that state off to either a DecoderTrainer,
         if we're training, or a BeamSearch for inference, if we're not.
@@ -294,7 +293,6 @@ class AtisSemanticParser(Model):
                                                      self._first_attended_utterance,
                                                      encoder_output_list,
                                                      utterance_mask_list))
-
 
         initial_grammar_state = [self._create_grammar_state(worlds[i],
                                                             actions[i],

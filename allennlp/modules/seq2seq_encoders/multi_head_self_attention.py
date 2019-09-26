@@ -8,7 +8,7 @@ from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
 
 @Seq2SeqEncoder.register("multi_head_self_attention")
 class MultiHeadSelfAttention(Seq2SeqEncoder):
-    # pylint: disable=line-too-long
+
     """
     This class implements the key-value scaled dot product attention mechanism
     detailed in the paper `Attention is all you Need
@@ -36,7 +36,7 @@ class MultiHeadSelfAttention(Seq2SeqEncoder):
     attention_dropout_prob : ``float``, optional (default = 0.1).
         The dropout probability applied to the normalised attention
         distributions.
-    """
+    """  # noqa
     def __init__(self,
                  num_heads: int,
                  input_dim: int,
@@ -77,7 +77,7 @@ class MultiHeadSelfAttention(Seq2SeqEncoder):
         return False
 
     @overrides
-    def forward(self,  # pylint: disable=arguments-differ
+    def forward(self,
                 inputs: torch.Tensor,
                 mask: torch.LongTensor = None) -> torch.FloatTensor:
         """
@@ -116,7 +116,9 @@ class MultiHeadSelfAttention(Seq2SeqEncoder):
         # Shape (num_heads * batch_size, timesteps, attention_dim / num_heads)
         queries_per_head = queries.view(batch_size, timesteps, num_heads, int(self._attention_dim/num_heads))
         queries_per_head = queries_per_head.transpose(1, 2).contiguous()
-        queries_per_head = queries_per_head.view(batch_size * num_heads, timesteps, int(self._attention_dim/num_heads))
+        queries_per_head = queries_per_head.view(batch_size * num_heads,
+                                                 timesteps,
+                                                 int(self._attention_dim / num_heads))
 
         # Shape (num_heads * batch_size, timesteps, attention_dim / num_heads)
         keys_per_head = keys.view(batch_size, timesteps, num_heads, int(self._attention_dim/num_heads))

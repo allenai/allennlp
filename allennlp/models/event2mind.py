@@ -145,7 +145,7 @@ class Event2Mind(Model):
     def forward(self,  # type: ignore
                 source: Dict[str, torch.LongTensor],
                 **target_tokens: Dict[str, Dict[str, torch.LongTensor]]) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
+
         """
         Decoder logic for producing the target sequences.
 
@@ -361,7 +361,7 @@ class Event2Mind(Model):
 
 
 class StateDecoder(Module):
-    # pylint: disable=abstract-method
+
     """
     Simple struct-like class for internal use.
     """

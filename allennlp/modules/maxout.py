@@ -73,7 +73,7 @@ class Maxout(torch.nn.Module, FromParams):
         return self._input_dim
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
-        # pylint: disable=arguments-differ
+
         output = inputs
         for layer, layer_output_dim, dropout, pool_size in zip(self._linear_layers, self._output_dims,
                                                                self._dropout, self._pool_sizes):

@@ -6,7 +6,8 @@ from allennlp.modules.input_variational_dropout import InputVariationalDropout
 from allennlp.common.checks import ConfigurationError
 
 
-TensorPair = Tuple[torch.Tensor, torch.Tensor]  # pylint: disable=invalid-name
+TensorPair = Tuple[torch.Tensor, torch.Tensor]
+
 
 class StackedBidirectionalLstm(torch.nn.Module):
     """
@@ -77,7 +78,7 @@ class StackedBidirectionalLstm(torch.nn.Module):
         self.lstm_layers = layers
         self.layer_dropout = InputVariationalDropout(layer_dropout_probability)
 
-    def forward(self,  # pylint: disable=arguments-differ
+    def forward(self,
                 inputs: PackedSequence,
                 initial_state: Optional[TensorPair] = None) -> Tuple[PackedSequence, TensorPair]:
         """

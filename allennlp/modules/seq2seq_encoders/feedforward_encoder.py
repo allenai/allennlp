@@ -27,7 +27,7 @@ class FeedForwardEncoder(Seq2SeqEncoder):
         return False
 
     @overrides
-    def forward(self,  # pylint: disable=arguments-differ
+    def forward(self,
                 inputs: torch.Tensor,
                 mask: torch.LongTensor = None) -> torch.Tensor:
         """

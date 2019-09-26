@@ -20,7 +20,6 @@ from allennlp.modules.token_embedders.embedding import format_embeddings_file_ur
 
 
 class TestVocabulary(AllenNlpTestCase):
-    # pylint: disable=no-self-use, invalid-name, too-many-public-methods, protected-access
 
     def setUp(self):
         token_indexer = SingleIdTokenIndexer("tokens")
@@ -161,7 +160,7 @@ class TestVocabulary(AllenNlpTestCase):
         assert default_dict["foobaz"] == 3
 
     def test_unknown_token(self):
-        # pylint: disable=protected-access
+
         # We're putting this behavior in a test so that the behavior is documented.  There is
         # solver code that depends in a small way on how we treat the unknown token, so any
         # breaking change to this behavior should break a test, so you know you've done something
@@ -173,7 +172,7 @@ class TestVocabulary(AllenNlpTestCase):
         assert vocab.get_token_index("unseen word") == oov_index
 
     def test_set_from_file_reads_padded_files(self):
-        # pylint: disable=protected-access
+
         vocab_filename = self.TEST_DIR / 'vocab_file'
         with codecs.open(vocab_filename, 'w', 'utf-8') as vocab_file:
             vocab_file.write('<S>\n')
@@ -206,7 +205,7 @@ class TestVocabulary(AllenNlpTestCase):
         assert vocab.get_token_from_index(7) == "another"
 
     def test_set_from_file_reads_non_padded_files(self):
-        # pylint: disable=protected-access
+
         vocab_filename = self.TEST_DIR / 'vocab_file'
         with codecs.open(vocab_filename, 'w', 'utf-8') as vocab_file:
             vocab_file.write('B-PERS\n')
@@ -229,7 +228,7 @@ class TestVocabulary(AllenNlpTestCase):
         assert vocab.get_token_from_index(4, namespace='tags') == "I-ORG"
 
     def test_saving_and_loading(self):
-        # pylint: disable=protected-access
+
         vocab_dir = self.TEST_DIR / 'vocab_save'
 
         vocab = Vocabulary(non_padded_namespaces=["a", "c"])
@@ -277,14 +276,14 @@ class TestVocabulary(AllenNlpTestCase):
         dataset = Batch([Instance({"sentence": text_field})])
         vocab = Vocabulary.from_instances(dataset)
         text_field.index(vocab)
-        indexed_tokens = deepcopy(text_field._indexed_tokens)  # pylint: disable=protected-access
+        indexed_tokens = deepcopy(text_field._indexed_tokens)
 
         vocab_dir = self.TEST_DIR / 'vocab_save'
         vocab.save_to_files(vocab_dir)
         vocab2 = Vocabulary.from_files(vocab_dir)
         text_field2 = TextField(tokens, {"characters": token_indexer})
         text_field2.index(vocab2)
-        indexed_tokens2 = deepcopy(text_field2._indexed_tokens)  # pylint: disable=protected-access
+        indexed_tokens2 = deepcopy(text_field2._indexed_tokens)
         assert indexed_tokens == indexed_tokens2
 
     def test_from_params(self):
@@ -650,9 +649,8 @@ class TestVocabulary(AllenNlpTestCase):
         class MyVocabulary:
             @classmethod
             def from_params(cls, params, instances=None):
-                # pylint: disable=unused-argument
-                return MyVocabulary()
 
+                return MyVocabulary()
 
         params = Params({'type': 'my-vocabulary'})
 
@@ -664,9 +662,9 @@ class TestVocabulary(AllenNlpTestCase):
 
     def test_max_vocab_size_dict(self):
         params = Params({
-                "max_vocab_size": {
-                        "tokens": 1,
-                        "characters": 20
+            "max_vocab_size": {
+                "tokens": 1,
+                "characters": 20
                 }
         })
 
@@ -683,8 +681,8 @@ class TestVocabulary(AllenNlpTestCase):
         })
         dataset = Batch([instance])
         params = Params({
-                "max_vocab_size": {
-                        "tokens": 1
+            "max_vocab_size": {
+                "tokens": 1
                 }
         })
 
@@ -694,10 +692,10 @@ class TestVocabulary(AllenNlpTestCase):
 
     def test_min_pretrained_embeddings(self):
         params = Params({
-                "pretrained_files": {
-                        "tokens": str(self.FIXTURES_ROOT / "embeddings/glove.6B.100d.sample.txt.gz")
+            "pretrained_files": {
+                "tokens": str(self.FIXTURES_ROOT / "embeddings/glove.6B.100d.sample.txt.gz")
                 },
-                "min_pretrained_embeddings": {"tokens": 50},
+            "min_pretrained_embeddings": {"tokens": 50},
         })
 
         vocab = Vocabulary.from_params(params=params, instances=self.dataset)

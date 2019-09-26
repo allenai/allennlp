@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 from pytorch_transformers.tokenization_auto import AutoTokenizer
 
 from allennlp.common.testing import AllenNlpTestCase

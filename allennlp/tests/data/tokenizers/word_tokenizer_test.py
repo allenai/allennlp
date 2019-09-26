@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.tokenizers import WordTokenizer

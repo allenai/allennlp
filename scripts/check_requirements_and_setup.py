@@ -15,7 +15,7 @@ import sys
 from typing import Set, Dict, Tuple, Optional
 
 
-PackagesType = Dict[str, Optional[str]]  # pylint: disable=invalid-name
+PackagesType = Dict[str, Optional[str]]
 
 
 def parse_section_name(line: str) -> str:

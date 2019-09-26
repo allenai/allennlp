@@ -74,7 +74,7 @@ class FeedForward(torch.nn.Module, FromParams):
         return self.input_dim
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
-        # pylint: disable=arguments-differ
+
         output = inputs
         for layer, activation, dropout in zip(self._linear_layers, self._activations, self._dropout):
             output = dropout(activation(layer(output)))

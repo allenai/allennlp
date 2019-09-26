@@ -1,8 +1,8 @@
-# pylint: disable=protected-access
 import torch
 
 from allennlp.common.testing.test_case import AllenNlpTestCase
 from allennlp.models import load_archive
+
 
 class TestModel(AllenNlpTestCase):
     def test_extend_embedder_vocab(self):

@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name,arguments-differ
 from typing import Dict
 
 import numpy
@@ -30,10 +29,11 @@ class DummyModel(Model):
                 trainable=False)
         self.embedder = BasicTextFieldEmbedder({"words": token_embedding})
 
-    def forward(self, # type: ignore
+    def forward(self,  # type: ignore
                 list_tensor: Dict[str, torch.LongTensor]) -> Dict[str, torch.Tensor]:
         self.embedder(list_tensor)
         return {"loss": 1.0}
+
 
 class TestListField(AllenNlpTestCase):
     def setUp(self):
@@ -154,7 +154,7 @@ class TestListField(AllenNlpTestCase):
                                                 numpy.array([0, 0, 0, 0, 0, 0, 0]))
 
     def test_as_tensor_can_handle_multiple_token_indexers(self):
-        # pylint: disable=protected-access
+
         self.field1._token_indexers = self.words_and_characters_indexers
         self.field2._token_indexers = self.words_and_characters_indexers
         self.field3._token_indexers = self.words_and_characters_indexers
@@ -188,7 +188,7 @@ class TestListField(AllenNlpTestCase):
                                                                             [0, 0, 0, 0, 0, 0, 0, 0, 0]]))
 
     def test_as_tensor_can_handle_multiple_token_indexers_and_empty_fields(self):
-        # pylint: disable=protected-access
+
         self.field1._token_indexers = self.words_and_characters_indexers
         self.field2._token_indexers = self.words_and_characters_indexers
         self.field3._token_indexers = self.words_and_characters_indexers

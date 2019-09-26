@@ -1,5 +1,3 @@
-# pylint: disable=too-many-lines,invalid-name
-
 import sqlite3
 
 from parsimonious import Grammar, ParseError

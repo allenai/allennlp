@@ -1,4 +1,3 @@
-# pylint: disable=invalid-name
 import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
@@ -75,7 +74,6 @@ class TestOptimizer(AllenNlpTestCase):
         assert len(param_groups[1]['params']) == 2
         # the embedding + recurrent connections left in the default group
         assert len(param_groups[2]['params']) == 3
-
 
     def test_parameter_type_inference(self):
         # Should work ok even with lr as a string

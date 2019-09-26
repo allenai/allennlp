@@ -14,7 +14,7 @@ from allennlp.training.callbacks.events import Events
 from allennlp.training.moving_average import MovingAverage
 
 if TYPE_CHECKING:
-    from allennlp.training.callback_trainer import CallbackTrainer  # pylint:disable=unused-import
+    from allennlp.training.callback_trainer import CallbackTrainer
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +43,7 @@ class Validate(Callback):
 
     @handle_event(Events.TRAINING_START)
     def set_validate(self, trainer: 'CallbackTrainer'):
-        # pylint: disable=no-self-use
+
         trainer.validate = True
 
     @handle_event(Events.TRAINING_START)
@@ -64,7 +64,7 @@ class Validate(Callback):
 
             trainer.model.eval()
 
-            num_gpus = len(trainer._cuda_devices)  # pylint: disable=protected-access
+            num_gpus = len(trainer._cuda_devices)
 
             raw_val_generator = self.iterator(self.instances,
                                               num_epochs=1,

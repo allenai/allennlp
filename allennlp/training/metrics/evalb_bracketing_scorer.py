@@ -11,10 +11,11 @@ from nltk import Tree
 from allennlp.common.checks import ConfigurationError
 from allennlp.training.metrics.metric import Metric
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 DEFAULT_EVALB_DIR = os.path.abspath(os.path.join(
         os.path.dirname(os.path.realpath(__file__)), os.pardir, os.pardir, "tools", "EVALB"))
+
 
 @Metric.register("evalb")
 class EvalbBracketingScorer(Metric):
@@ -51,7 +52,6 @@ class EvalbBracketingScorer(Metric):
         self._evalb_program_path = os.path.join(evalb_directory_path, "evalb")
         self._evalb_param_path = os.path.join(evalb_directory_path, evalb_param_filename)
 
-
         self._header_line = ['ID', 'Len.', 'Stat.', 'Recal', 'Prec.', 'Bracket',
                              'gold', 'test', 'Bracket', 'Words', 'Tags', 'Accracy']
 
@@ -60,7 +60,7 @@ class EvalbBracketingScorer(Metric):
         self._predicted_brackets = 0.0
 
     @overrides
-    def __call__(self, predicted_trees: List[Tree], gold_trees: List[Tree]) -> None: # type: ignore
+    def __call__(self, predicted_trees: List[Tree], gold_trees: List[Tree]) -> None:  # type: ignore
         """
         Parameters
         ----------

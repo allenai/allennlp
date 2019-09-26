@@ -1,7 +1,5 @@
-# pylint: disable=no-self-use,invalid-name,no-value-for-parameter
-
-
 from allennlp.common.testing.model_test_case import ModelTestCase
+
 
 class GraphParserTest(ModelTestCase):
 

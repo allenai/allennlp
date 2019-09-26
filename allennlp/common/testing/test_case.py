@@ -1,4 +1,4 @@
-# pylint: disable=invalid-name,protected-access
+
 import logging
 import os
 import pathlib
@@ -10,13 +10,14 @@ from allennlp.common.checks import log_pytorch_version_info
 
 TEST_DIR = tempfile.mkdtemp(prefix="allennlp_tests")
 
-class AllenNlpTestCase(TestCase):  # pylint: disable=too-many-public-methods
+
+class AllenNlpTestCase(TestCase):
     """
     A custom subclass of :class:`~unittest.TestCase` that disables some of the
     more verbose AllenNLP logging and that creates and destroys a temp directory
     as a test fixture.
     """
-    PROJECT_ROOT = (pathlib.Path(__file__).parent / ".." / ".." / "..").resolve()  # pylint: disable=no-member
+    PROJECT_ROOT = (pathlib.Path(__file__).parent / ".." / ".." / "..").resolve()
     MODULE_ROOT = PROJECT_ROOT / "allennlp"
     TOOLS_ROOT = MODULE_ROOT / "tools"
     TESTS_ROOT = MODULE_ROOT / "tests"

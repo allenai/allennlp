@@ -15,7 +15,7 @@ class Seq2SeqPredictor(Predictor):
     """
 
     def predict(self, source: str) -> JsonDict:
-        return self.predict_json({"source" : source})
+        return self.predict_json({"source": source})
 
     @overrides
     def _json_to_instance(self, json_dict: JsonDict) -> Instance:

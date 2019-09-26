@@ -5,6 +5,7 @@ import torch
 from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
 from allennlp.nn.util import get_lengths_from_binary_sequence_mask
 
+
 @Seq2VecEncoder.register("boe")
 @Seq2VecEncoder.register("bag_of_embeddings")
 class BagOfEmbeddingsEncoder(Seq2VecEncoder):
@@ -36,7 +37,7 @@ class BagOfEmbeddingsEncoder(Seq2VecEncoder):
     def get_output_dim(self) -> int:
         return self._embedding_dim
 
-    def forward(self, tokens: torch.Tensor, mask: torch.Tensor = None):  #pylint: disable=arguments-differ
+    def forward(self, tokens: torch.Tensor, mask: torch.Tensor = None):
         if mask is not None:
             tokens = tokens * mask.unsqueeze(-1).float()
 

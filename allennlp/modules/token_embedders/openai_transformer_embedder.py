@@ -55,7 +55,7 @@ class OpenaiTransformerEmbedder(TokenEmbedder):
             An embedding representation of the input sequence
             having shape ``(batch_size, sequence_length, embedding_dim)``
         """
-        # pylint: disable=arguments-differ
+
         batch_size, num_timesteps = inputs.size()
 
         # the transformer embedding consists of the byte pair embeddings,

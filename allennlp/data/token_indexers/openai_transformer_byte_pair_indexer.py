@@ -46,7 +46,7 @@ class OpenaiTransformerBytePairIndexer(TokenIndexer[int]):
     ``n_special=len(tokens_to_add)`` in ``OpenaiTransformer``, otherwise
     behavior is undefined.
     """
-    # pylint: disable=no-self-use
+
     def __init__(self,
                  encoder: Dict[str, int] = None,
                  byte_pairs: List[Tuple[str, str]] = None,
@@ -187,7 +187,7 @@ class OpenaiTransformerBytePairIndexer(TokenIndexer[int]):
         return word
 
     def _add_encoding_to_vocabulary(self, vocabulary: Vocabulary) -> None:
-        # pylint: disable=protected-access
+
         for word, idx in self.encoder.items():
             vocabulary._token_to_index[self._namespace][word] = idx
             vocabulary._index_to_token[self._namespace][idx] = word
@@ -232,13 +232,13 @@ class OpenaiTransformerBytePairIndexer(TokenIndexer[int]):
         }
 
     @overrides
-    def get_padding_lengths(self, token: int) -> Dict[str, int]:  # pylint: disable=unused-argument
+    def get_padding_lengths(self, token: int) -> Dict[str, int]:
         return {}
 
     @overrides
     def as_padded_tensor(self,
                          tokens: Dict[str, List[int]],
                          desired_num_tokens: Dict[str, int],
-                         padding_lengths: Dict[str, int]) -> Dict[str, torch.Tensor]:  # pylint: disable=unused-argument
+                         padding_lengths: Dict[str, int]) -> Dict[str, torch.Tensor]:
         return {key: torch.LongTensor(pad_sequence_to_length(val, desired_num_tokens[key]))
                 for key, val in tokens.items()}

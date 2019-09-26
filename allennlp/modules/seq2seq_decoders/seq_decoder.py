@@ -62,7 +62,7 @@ class SeqDecoder(Module, Registrable):
             The output of `TextField.as_array()` applied on the target `TextField`.
 
        """
-        # pylint: disable=arguments-differ
+
         raise NotImplementedError()
 
     def post_process(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:

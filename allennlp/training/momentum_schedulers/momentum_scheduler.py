@@ -18,7 +18,7 @@ class MomentumScheduler(Scheduler, Registrable):
     # Requires custom from_params so we can pass the optimizer.
     @classmethod
     def from_params(cls, optimizer: torch.optim.Optimizer, params: Params):  # type: ignore
-        # pylint: disable=arguments-differ
+
         scheduler_type = params.pop_choice("type", MomentumScheduler.list_available())
         scheduler = MomentumScheduler.by_name(scheduler_type)(optimizer, **params.as_dict())
         return scheduler

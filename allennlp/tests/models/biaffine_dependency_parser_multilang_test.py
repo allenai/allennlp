@@ -1,5 +1,6 @@
 from allennlp.common.testing.model_test_case import ModelTestCase
 
+
 class BiaffineDependencyParserMultilangTest(ModelTestCase):
 
     def setUp(self):

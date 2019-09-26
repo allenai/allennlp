@@ -1,5 +1,3 @@
-# pylint: disable=no-self-use,invalid-name,protected-access
-
 from typing import Dict, Any
 
 import torch

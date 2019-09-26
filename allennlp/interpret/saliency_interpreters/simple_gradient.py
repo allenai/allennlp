@@ -1,4 +1,3 @@
-# pylint: disable=protected-access
 import math
 
 from typing import List
@@ -52,7 +51,7 @@ class SimpleGradient(SaliencyInterpreter):
         our normalization scheme multiplies the gradient by the embedding value.
         """
 
-        def forward_hook(module, inputs, output):  # pylint: disable=unused-argument
+        def forward_hook(module, inputs, output):
             embeddings_list.append(output.squeeze(0).clone().detach().numpy())
 
         embedding_layer = util.find_embedding_layer(self.predictor._model)

@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name,abstract-method
 from typing import Iterable, List
 
 from allennlp.data.fields import TextField

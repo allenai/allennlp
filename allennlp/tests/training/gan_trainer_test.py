@@ -8,8 +8,6 @@ and a second to sample uniform noise. We'll then adversarially train a generator
 to transform the noise into something that (hopefully) looks like the true distribution
 and a discriminator `Model` to (hopefully) distinguish between the "true" and generated data.
 """
-# pylint: disable=bad-continuation
-
 from typing import Dict, Iterable, Any
 
 import tqdm
@@ -75,7 +73,7 @@ class SamplingReader(DatasetReader):
             yield self.text_to_instance(example)
 
     def text_to_instance(self, example: np.ndarray) -> Instance:  # type: ignore
-        # pylint: disable=arguments-differ
+
         field = ArrayField(example)
         return Instance({"array": field})
 
@@ -104,7 +102,7 @@ class Generator(Model):
 
     def forward(self,  # type: ignore
                 inputs: torch.Tensor, discriminator: Model = None) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
+
         hidden1 = self.activation(self.linear1(inputs))
         hidden2 = self.activation(self.linear2(hidden1))
         output = self.linear3(hidden2)
@@ -117,6 +115,7 @@ class Generator(Model):
             output_dict["loss"] = self.loss(predicted, desired)
 
         return output_dict
+
 
 def get_moments(dist: torch.Tensor) -> torch.Tensor:
     """
@@ -160,9 +159,9 @@ class Discriminator(Model):
         self.activation = activation
         self.loss = torch.nn.BCELoss()
 
-    def forward(self, # type: ignore
+    def forward(self,  # type: ignore
                 inputs: torch.Tensor, label: torch.Tensor = None) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
+
         inputs = inputs.squeeze(-1)
         hidden1 = self.activation(self.linear1(self.preprocess(inputs)))
         hidden2 = self.activation(self.linear2(hidden1))
@@ -172,6 +171,7 @@ class Discriminator(Model):
             output_dict["loss"] = self.loss(output, label)
 
         return output_dict
+
 
 @TrainerBase.register("gan-test")
 class GanTestTrainer(TrainerBase):
@@ -361,7 +361,7 @@ if __name__ == "__main__":
     #
     # python -m allennlp.tests.training.gan_trainer_test
     #
-    # pylint: disable=invalid-name
+
     sample_size = 500
 
     params_ = Params({

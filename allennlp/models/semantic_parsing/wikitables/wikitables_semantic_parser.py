@@ -63,7 +63,7 @@ class WikiTablesSemanticParser(Model):
         The vocabulary namespace to use for production rules.  The default corresponds to the
         default used in the dataset reader, so you likely don't need to modify this.
     """
-    # pylint: disable=abstract-method
+
     def __init__(self,
                  vocab: Vocabulary,
                  question_embedder: TextFieldEmbedder,
@@ -98,7 +98,6 @@ class WikiTablesSemanticParser(Model):
             self._action_biases = Embedding(num_embeddings=num_actions, embedding_dim=1)
         self._action_embedder = Embedding(num_embeddings=num_actions, embedding_dim=action_embedding_dim)
         self._output_action_embedder = Embedding(num_embeddings=num_actions, embedding_dim=action_embedding_dim)
-
 
         # This is what we pass as input in the first step of decoding, when we don't have a
         # previous action, or a previous question attention.
@@ -190,7 +189,6 @@ class WikiTablesSemanticParser(Model):
         else:
             # (batch_size, num_entities, embedding_dim)
             entity_embeddings = torch.tanh(entity_type_embeddings)
-
 
         # Compute entity and question word similarity.  We tried using cosine distance here, but
         # because this similarity is the main mechanism that the model can use to push apart logit

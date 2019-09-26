@@ -25,7 +25,7 @@ from allennlp.semparse.contexts import TableQuestionContext
 from allennlp.semparse.domain_languages import WikiTablesLanguage
 
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @DatasetReader.register("wikitables")
@@ -205,7 +205,7 @@ class WikiTablesDatasetReader(DatasetReader):
         offline_search_output : ``List[str]``, optional
             List of logical forms, produced by offline search. Not required during test.
         """
-        # pylint: disable=arguments-differ
+
         tokenized_question = self._tokenizer.tokenize(question.lower())
         question_field = TextField(tokenized_question, self._question_token_indexers)
         metadata: Dict[str, Any] = {"question_tokens": [x.text for x in tokenized_question]}
@@ -264,7 +264,7 @@ class WikiTablesDatasetReader(DatasetReader):
                     logger.debug(f'Table info was: {table_lines}')
                     logger.debug(f'Logical form was: {logical_form}')
                     continue
-                except:
+                except:  # noqa
                     logger.error(logical_form)
                     raise
                 if len(action_sequence_fields) >= self._max_offline_logical_forms:

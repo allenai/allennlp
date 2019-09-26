@@ -1,5 +1,3 @@
-# pylint: disable=protected-access
-
 import numpy as np
 
 from allennlp.common import Params

@@ -1,4 +1,3 @@
-# pytest: disable=no-self-use,invalid-name
 import shutil
 import sys
 
@@ -9,6 +8,7 @@ from allennlp.commands.subcommand import Subcommand
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 
+
 class TestMain(AllenNlpTestCase):
     def test_fails_on_unknown_command(self):
         sys.argv = ["bogus",         # command
@@ -17,7 +17,7 @@ class TestMain(AllenNlpTestCase):
                     "--output-file", "bogus out file",
                     "--silent"]
 
-        with self.assertRaises(SystemExit) as cm:  # pylint: disable=invalid-name
+        with self.assertRaises(SystemExit) as cm:
             main()
 
         assert cm.exception.code == 2  # argparse code for incorrect usage
@@ -49,8 +49,8 @@ class TestMain(AllenNlpTestCase):
     def test_other_modules(self):
         # Create a new package in a temporary dir
         packagedir = self.TEST_DIR / 'testpackage'
-        packagedir.mkdir()  # pylint: disable=no-member
-        (packagedir / '__init__.py').touch()  # pylint: disable=no-member
+        packagedir.mkdir()
+        (packagedir / '__init__.py').touch()
 
         # And add that directory to the path
         sys.path.insert(0, str(self.TEST_DIR))

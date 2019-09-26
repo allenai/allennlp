@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 import numpy
 from _pytest.monkeypatch import MonkeyPatch
 from pytorch_pretrained_bert.modeling import BertConfig, BertModel
@@ -7,6 +6,7 @@ from pytorch_pretrained_bert.tokenization import BertTokenizer
 from allennlp.common.testing import ModelTestCase
 from allennlp.nn.util import get_lengths_from_binary_sequence_mask
 from allennlp.data.dataset_readers.dataset_utils.span_utils import to_bioul
+
 
 class BertSrlTest(ModelTestCase):
     def setUp(self):

@@ -12,11 +12,11 @@ from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.data.vocabulary import Vocabulary
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 def sort_by_padding(instances: List[Instance],
-                    sorting_keys: List[Tuple[str, str]],  # pylint: disable=invalid-sequence-index
+                    sorting_keys: List[Tuple[str, str]],
                     vocab: Vocabulary,
                     padding_noise: float = 0.0) -> List[Instance]:
     """

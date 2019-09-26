@@ -1,5 +1,5 @@
 #! /usr/bin/env python
-# pylint: disable=invalid-name,redefined-outer-name
+
 from glob import glob
 import os
 import re
@@ -55,6 +55,7 @@ def existing_modules(module_glob: str = MODULE_GLOB) -> Set[str]:
         modules.add(path)
 
     return modules
+
 
 if __name__ == "__main__":
     success = True

@@ -6,7 +6,7 @@ from allennlp.training.callbacks.callback import Callback, handle_event
 from allennlp.training.callbacks.events import Events
 
 if TYPE_CHECKING:
-    from allennlp.training.callback_trainer import CallbackTrainer  # pylint:disable=unused-import
+    from allennlp.training.callback_trainer import CallbackTrainer
 
 logger = logging.getLogger(__name__)
 

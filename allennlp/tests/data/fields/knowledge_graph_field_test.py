@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 from collections import defaultdict
 
 import pytest
@@ -48,7 +47,7 @@ class KnowledgeGraphFieldTest(AllenNlpTestCase):
                 }
 
     def test_index_converts_field_correctly(self):
-        # pylint: disable=protected-access
+
         self.field.index(self.vocab)
         assert self.field._indexed_entity_texts.keys() == {'tokens'}
         # Note that these are sorted by their _identifiers_, not their cell text, so the
@@ -63,7 +62,7 @@ class KnowledgeGraphFieldTest(AllenNlpTestCase):
             self.field.get_padding_lengths()
 
     def test_padding_lengths_are_computed_correctly(self):
-        # pylint: disable=protected-access
+
         self.field.index(self.vocab)
         assert self.field.get_padding_lengths() == {'num_entities': 3, 'num_entity_tokens': 3,
                                                     'num_utterance_tokens': 4}
@@ -115,7 +114,7 @@ class KnowledgeGraphFieldTest(AllenNlpTestCase):
                                     err_msg=f"{entity_index} {question_index}")
 
     def test_lemma_feature_extractor(self):
-        # pylint: disable=protected-access
+
         utterance = self.tokenizer.tokenize("Names in English")
         field = KnowledgeGraphField(self.graph, self.utterance, self.token_indexers, self.tokenizer)
         entity = 'string_column:name_in_english'
@@ -127,7 +126,7 @@ class KnowledgeGraphFieldTest(AllenNlpTestCase):
         assert lemma_feature == 1
 
     def test_span_overlap_fraction(self):
-        # pylint: disable=protected-access
+
         utterance = self.tokenizer.tokenize("what is the name in english of mersin?")
         field = KnowledgeGraphField(self.graph, self.utterance, self.token_indexers, self.tokenizer)
         entity = 'string_column:name_in_english'

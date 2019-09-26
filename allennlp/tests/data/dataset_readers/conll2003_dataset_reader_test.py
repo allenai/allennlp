@@ -1,9 +1,9 @@
-# pylint: disable=no-self-use,invalid-name
 import pytest
 
 from allennlp.data.dataset_readers.conll2003 import Conll2003DatasetReader
 from allennlp.common.util import ensure_list
 from allennlp.common.testing import AllenNlpTestCase
+
 
 class TestConll2003Reader():
     @pytest.mark.parametrize("lazy", (True, False))

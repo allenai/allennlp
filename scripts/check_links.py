@@ -25,7 +25,7 @@ OK_STATUS_CODES = (
 
 THREADS = 10
 
-http_session = requests.Session()  # pylint: disable=invalid-name
+http_session = requests.Session()
 for resource_prefix in ("http://", "https://"):
     http_session.mount(
             resource_prefix,
@@ -72,7 +72,7 @@ def link_ok(match_tuple: MatchTuple) -> Tuple[MatchTuple, bool, Optional[str]]:
 def main():
     print("Finding all markdown files in the current directory...")
 
-    project_root = (pathlib.Path(__file__).parent / "..").resolve() # pylint: disable=no-member
+    project_root = (pathlib.Path(__file__).parent / "..").resolve()
     markdown_files = project_root.glob('**/*.md')
 
     all_matches = set()

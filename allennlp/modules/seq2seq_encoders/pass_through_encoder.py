@@ -3,6 +3,7 @@ import torch
 
 from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
 
+
 @Seq2SeqEncoder.register("pass_through")
 class PassThroughEncoder(Seq2SeqEncoder):
     """
@@ -27,7 +28,7 @@ class PassThroughEncoder(Seq2SeqEncoder):
         return False
 
     @overrides
-    def forward(self,  # pylint: disable=arguments-differ
+    def forward(self,
                 inputs: torch.Tensor,
                 mask: torch.LongTensor = None) -> torch.Tensor:
         """

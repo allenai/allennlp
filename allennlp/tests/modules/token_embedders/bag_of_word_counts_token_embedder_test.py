@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 import numpy as np
 from numpy.testing import assert_almost_equal
 import torch
@@ -7,6 +6,7 @@ from allennlp.data import Vocabulary
 from allennlp.modules.token_embedders import BagOfWordCountsTokenEmbedder
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.checks import ConfigurationError
+
 
 class TestBagOfWordCountsTokenEmbedder(AllenNlpTestCase):
     def setUp(self):

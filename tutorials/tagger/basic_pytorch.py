@@ -9,7 +9,7 @@ with the following changes:
  4. early stopping based on validation loss
  5. track accuracy during training / validation
 """
-# pylint: disable=invalid-name,redefined-outer-name
+
 from typing import Iterable, Mapping, Dict, Tuple, List
 
 import torch

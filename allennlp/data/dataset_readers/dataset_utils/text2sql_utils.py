@@ -1,4 +1,3 @@
-
 """
 Utility functions for reading the standardised text2sql datasets presented in
 `"Improving Text to SQL Evaluation Methodology" <https://arxiv.org/abs/1806.09029>`_
@@ -38,10 +37,12 @@ class SqlData(NamedTuple):
     text_variables: Dict[str, str]
     sql_variables: Dict[str, Dict[str, str]]
 
+
 class TableColumn(NamedTuple):
     name: str
     column_type: str
     is_primary_key: bool
+
 
 def column_has_string_type(column: TableColumn) -> bool:
     if "varchar" in column.column_type:
@@ -53,6 +54,7 @@ def column_has_string_type(column: TableColumn) -> bool:
 
     return False
 
+
 def column_has_numeric_type(column: TableColumn) -> bool:
     if "int" in column.column_type:
         return True
@@ -61,6 +63,7 @@ def column_has_numeric_type(column: TableColumn) -> bool:
     elif "double" in column.column_type:
         return True
     return False
+
 
 def replace_variables(sentence: List[str],
                       sentence_variables: Dict[str, str]) -> Tuple[List[str], List[str]]:
@@ -79,12 +82,14 @@ def replace_variables(sentence: List[str],
                 tags.append(token)
     return tokens, tags
 
+
 def split_table_and_column_names(table: str) -> Iterable[str]:
     partitioned = [x for x in table.partition(".") if x != '']
     # Avoid splitting decimal strings.
     if partitioned[0].isnumeric() and partitioned[-1].isnumeric():
         return [table]
     return partitioned
+
 
 def clean_and_split_sql(sql: str) -> List[str]:
     """
@@ -100,6 +105,7 @@ def clean_and_split_sql(sql: str) -> List[str]:
         else:
             sql_tokens.extend(split_table_and_column_names(token))
     return sql_tokens
+
 
 def resolve_primary_keys_in_schema(sql_tokens: List[str],
                                    schema: Dict[str, List[TableColumn]]) -> List[str]:
@@ -119,6 +125,7 @@ def resolve_primary_keys_in_schema(sql_tokens: List[str],
                 token = primary_keys_for_tables[table_name]
         resolved_tokens.append(token)
     return resolved_tokens
+
 
 def clean_unneeded_aliases(sql_tokens: List[str]) -> List[str]:
 
@@ -149,6 +156,7 @@ def clean_unneeded_aliases(sql_tokens: List[str]) -> List[str]:
         dealiased_tokens.append(new_token)
 
     return dealiased_tokens
+
 
 def read_dataset_schema(schema_path: str) -> Dict[str, List[TableColumn]]:
     """

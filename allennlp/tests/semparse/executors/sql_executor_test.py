@@ -1,6 +1,7 @@
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.semparse.executors import SqlExecutor
 
+
 class SqlExecutorTest(AllenNlpTestCase):
     def setUp(self):
         super().setUp()

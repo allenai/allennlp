@@ -13,7 +13,7 @@ from allennlp.data.fields import Field, TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @DatasetReader.register("next_token_lm")
@@ -48,7 +48,7 @@ class NextTokenLmReader(DatasetReader):
 
     @overrides
     def _read(self, file_path: str):
-        import sys  # pylint: disable=import-outside-toplevel
+        import sys
         # You can call pytest with either `pytest` or `py.test`.
         if 'test' not in sys.argv[0]:
             logger.error('_read is only implemented for unit tests. You should not actually '
@@ -64,7 +64,7 @@ class NextTokenLmReader(DatasetReader):
                          sentence: str = None,
                          tokens: List[Token] = None,
                          target: str = None) -> Instance:
-        # pylint: disable=arguments-differ
+
         if not tokens:
             tokens = self._tokenizer.tokenize(sentence)
         input_field = TextField(tokens, self._token_indexers)

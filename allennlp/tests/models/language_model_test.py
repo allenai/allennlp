@@ -1,4 +1,3 @@
-# pylint: disable=invalid-name,arguments-differ,abstract-method
 import numpy as np
 import pytest
 
@@ -20,7 +19,6 @@ class TestUnidirectionalLanguageModel(ModelTestCase):
         self.set_up_model(self.FIXTURES_ROOT / 'language_model' / 'experiment_unidirectional.jsonnet',
                           self.FIXTURES_ROOT / 'language_model' / 'sentences.txt')
 
-    # pylint: disable=no-member
     def test_unidirectional_language_model_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
 
@@ -60,12 +58,14 @@ class TestUnidirectionalLanguageModel(ModelTestCase):
         predictions = self.model.forward_on_instances(instances)
         assert predictions is not None
 
+
 class TestUnidirectionalLanguageModelUnsampled(TestUnidirectionalLanguageModel):
     def setUp(self):
         super().setUp()
         self.set_up_model(self.FIXTURES_ROOT / 'language_model' /
                           'experiment_unidirectional_unsampled.jsonnet',
                           self.FIXTURES_ROOT / 'language_model' / 'sentences.txt')
+
 
 class TestUnidirectionalLanguageModelTransformer(TestUnidirectionalLanguageModel):
     def setUp(self):
@@ -77,7 +77,6 @@ class TestUnidirectionalLanguageModelTransformer(TestUnidirectionalLanguageModel
                           'experiment_unidirectional_transformer.jsonnet',
                           self.FIXTURES_ROOT / 'language_model' / 'sentences.txt')
 
-    # pylint: disable=no-member
     def test_unidirectional_language_model_can_train_save_and_load(self):
         # Ignore layer 0 feedforward layer norm parameters, since
         # they are not used.
@@ -85,6 +84,7 @@ class TestUnidirectionalLanguageModelTransformer(TestUnidirectionalLanguageModel
                 self.param_file, gradients_to_ignore={
                         "_contextualizer.feedforward_layer_norm_0.gamma",
                         "_contextualizer.feedforward_layer_norm_0.beta"})
+
 
 class TestBidirectionalLanguageModel(TestUnidirectionalLanguageModel):
     def setUp(self):
@@ -97,11 +97,13 @@ class TestBidirectionalLanguageModel(TestUnidirectionalLanguageModel):
         self.set_up_model(self.FIXTURES_ROOT / 'language_model' / 'experiment.jsonnet',
                           self.FIXTURES_ROOT / 'language_model' / 'sentences.txt')
 
+
 class TestBidirectionalLanguageModelUnsampled(TestBidirectionalLanguageModel):
     def setUp(self):
         super().setUp()
         self.set_up_model(self.FIXTURES_ROOT / 'language_model' / 'experiment_unsampled.jsonnet',
                           self.FIXTURES_ROOT / 'language_model' / 'sentences.txt')
+
 
 class TestBidirectionalLanguageModelTransformer(TestBidirectionalLanguageModel):
     def setUp(self):

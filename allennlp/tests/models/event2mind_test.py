@@ -1,4 +1,3 @@
-# pylint: disable=invalid-name,protected-access
 import torch
 
 from allennlp.commands.train import train_model_from_file

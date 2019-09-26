@@ -14,6 +14,7 @@ import torch
 
 from allennlp.state_machines import State, TransitionFunction
 
+
 class SimpleState(State['SimpleState']):
     def __init__(self,
                  batch_indices: List[int],

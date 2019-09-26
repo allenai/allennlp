@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 from collections import defaultdict
 
 from allennlp.common.testing import AllenNlpTestCase
@@ -21,7 +20,7 @@ class TestPosTagIndexer(AllenNlpTestCase):
             indexer.count_vocab_items(token, counter)
         assert counter["pos_tokens"] == {'DT': 2, 'VBZ': 1, '.': 1, 'NN': 1, 'NONE': 2}
 
-        indexer._coarse_tags = True  # pylint: disable=protected-access
+        indexer._coarse_tags = True
         counter = defaultdict(lambda: defaultdict(int))
         for token in tokens:
             indexer.count_vocab_items(token, counter)
@@ -47,7 +46,7 @@ class TestPosTagIndexer(AllenNlpTestCase):
         assert indices["tokens"][1] == verb_index
         assert indices["tokens"][-1] == none_index
 
-        indexer._coarse_tags = False  # pylint: disable=protected-access
+        indexer._coarse_tags = False
         assert indexer.tokens_to_indices([tokens[1]], vocab, "coarse") == {"coarse": [cop_index]}
 
     def test_padding_functions(self):

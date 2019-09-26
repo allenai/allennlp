@@ -16,7 +16,7 @@ from allennlp.nn import InitializerApplicator, RegularizerApplicator
 from allennlp.nn.util import get_text_field_mask
 from allennlp.training.metrics import AttachmentScores
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @Model.register("biaffine_parser_multilang")
@@ -108,7 +108,7 @@ class BiaffineDependencyParserMultiLang(BiaffineDependencyParser):
                 metadata: List[Dict[str, Any]],
                 head_tags: torch.LongTensor = None,
                 head_indices: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
+
         """
         Embedding each language by the corresponding parameters for
         ``TextFieldEmbedder``. Batches should contain only samples from a

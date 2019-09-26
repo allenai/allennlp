@@ -1,4 +1,3 @@
-# pylint: disable=protected-access
 import math
 from typing import Dict, Any
 
@@ -10,6 +9,7 @@ from allennlp.data import Instance
 from allennlp.interpret.saliency_interpreters.saliency_interpreter import SaliencyInterpreter
 from allennlp.predictors import Predictor
 from allennlp.nn import util
+
 
 @SaliencyInterpreter.register('smooth-gradient')
 class SmoothGradient(SaliencyInterpreter):
@@ -51,7 +51,7 @@ class SmoothGradient(SaliencyInterpreter):
         Register a forward hook on the embedding layer which adds random noise to every embedding.
         Used for one term in the SmoothGrad sum.
         """
-        def forward_hook(module, inputs, output):  # pylint: disable=unused-argument
+        def forward_hook(module, inputs, output):
             # Random noise = N(0, stdev * (max-min))
             scale = output.detach().max() - output.detach().min()
             noise = torch.randn(output.shape).to(output.device) * stdev * scale

@@ -101,7 +101,7 @@ class ElmoLstm(_EncoderBase):
         self.forward_layers = forward_layers
         self.backward_layers = backward_layers
 
-    def forward(self,  # pylint: disable=arguments-differ
+    def forward(self,
                 inputs: torch.Tensor,
                 mask: torch.LongTensor) -> torch.Tensor:
         """
@@ -254,8 +254,7 @@ class ElmoLstm(_EncoderBase):
                     # lstm is an instance of LSTMCellWithProjection
                     cell_size = lstm.cell_size
 
-                    dataset = fin['RNN_%s' % j_direction]['RNN']['MultiRNNCell']['Cell%s' % i_layer
-                                                                                ]['LSTMCell']
+                    dataset = fin['RNN_%s' % j_direction]['RNN']['MultiRNNCell']['Cell%s' % i_layer]['LSTMCell']
 
                     # tensorflow packs together both W and U matrices into one matrix,
                     # but pytorch maintains individual matrices.  In addition, tensorflow
@@ -288,10 +287,8 @@ class ElmoLstm(_EncoderBase):
                     # parameters...
                     tf_bias[(2 * cell_size):(3 * cell_size)] += 1
                     torch_bias = tf_bias.copy()
-                    torch_bias[(1 * cell_size):(2 * cell_size)
-                              ] = tf_bias[(2 * cell_size):(3 * cell_size)]
-                    torch_bias[(2 * cell_size):(3 * cell_size)
-                              ] = tf_bias[(1 * cell_size):(2 * cell_size)]
+                    torch_bias[(1 * cell_size):(2 * cell_size)] = tf_bias[(2 * cell_size):(3 * cell_size)]
+                    torch_bias[(2 * cell_size):(3 * cell_size)] = tf_bias[(1 * cell_size):(2 * cell_size)]
                     lstm.state_linearity.bias.data.copy_(torch.FloatTensor(torch_bias))
                     lstm.state_linearity.bias.requires_grad = requires_grad
 

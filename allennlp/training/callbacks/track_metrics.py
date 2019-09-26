@@ -1,4 +1,3 @@
-# pylint: disable=unused-variable,arguments-differ
 from typing import List, Tuple, TYPE_CHECKING
 import copy
 import datetime
@@ -14,7 +13,7 @@ from allennlp.training.callbacks.events import Events
 from allennlp.training.metric_tracker import MetricTracker
 
 if TYPE_CHECKING:
-    from allennlp.training.callback_trainer import CallbackTrainer  # pylint:disable=unused-import
+    from allennlp.training.callback_trainer import CallbackTrainer
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +47,6 @@ class TrackMetrics(Callback):
         self.peak_cpu_usage = 0.0
         # Track pairs (gpu_id, memory usage)
         self.gpu_usage: List[Tuple[int, int]] = []
-
 
     def get_training_state(self) -> dict:
         return {
@@ -140,7 +138,6 @@ class TrackMetrics(Callback):
 
             self.metric_tracker.best_epoch_metrics = copy.deepcopy(trainer.val_metrics)
 
-        # pylint: disable=protected-access
         if trainer._serialization_dir:
             dump_metrics(os.path.join(trainer._serialization_dir,
                                       f'metrics_epoch_{trainer.epoch_number}.json'),

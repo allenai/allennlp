@@ -67,7 +67,7 @@ class LanguageModelTokenEmbedder(TokenEmbedder):
         from allennlp.models.archival import load_archive
         # Load LM and the associated config.
         archive = load_archive(archive_file, overrides=json.dumps(overrides))
-        self._lm: LanguageModel = archive.model  # pylint: disable=used-before-assignment
+        self._lm: LanguageModel = archive.model
         self._lm.delete_softmax()
         config = archive.config
         dict_config = config.as_dict(quiet=True)
@@ -122,7 +122,6 @@ class LanguageModelTokenEmbedder(TokenEmbedder):
         # See https://github.com/allenai/allennlp/blob/master/allennlp/modules/elmo.py#L76
         self._scalar_mix = ScalarMix(mixture_size=num_layers, do_layer_norm=False, trainable=True)
 
-        # pylint: disable=protected-access
         character_dim = self._lm._text_field_embedder.get_output_dim()
         contextual_dim = self._lm._contextualizer.get_output_dim()
 
@@ -141,7 +140,7 @@ class LanguageModelTokenEmbedder(TokenEmbedder):
             param.requires_grad = requires_grad
 
     def get_output_dim(self) -> int:
-        return self._lm._contextualizer.get_output_dim() # pylint: disable=protected-access
+        return self._lm._contextualizer.get_output_dim()
 
     def forward(self,  # type: ignore
                 inputs: torch.Tensor) -> Dict[str, torch.Tensor]:
@@ -157,7 +156,7 @@ class LanguageModelTokenEmbedder(TokenEmbedder):
         The bidirectional language model representations for the input sequence, shape
         ``(batch_size, timesteps, embedding_dim)``
         """
-        # pylint: disable=arguments-differ
+
         if self._bos_indices is not None:
             mask = get_text_field_mask({"": inputs})
             inputs, mask = add_sentence_boundary_token_ids(

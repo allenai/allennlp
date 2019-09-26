@@ -1,5 +1,3 @@
-# pylint: disable=invalid-name
-
 from typing import Dict, Tuple
 
 import numpy as np
@@ -11,7 +9,7 @@ from allennlp.common.testing import AllenNlpTestCase
 from allennlp.nn.beam_search import BeamSearch
 
 
-transition_probabilities = torch.tensor(  # pylint: disable=not-callable
+transition_probabilities = torch.tensor(
         [[0.0, 0.4, 0.3, 0.2, 0.1, 0.0],  # start token -> jth token
          [0.0, 0.0, 1.0, 0.0, 0.0, 0.0],  # 1st token -> jth token
          [0.0, 0.0, 0.0, 1.0, 0.0, 0.0],  # 2nd token -> jth token
@@ -57,7 +55,7 @@ class BeamSearchTest(AllenNlpTestCase):
         )
 
         # This is what the log probs should look like for each item in the batch.
-        self.expected_log_probs = np.log(np.array([0.4, 0.3, 0.2]))  # pylint: disable=assignment-from-no-return
+        self.expected_log_probs = np.log(np.array([0.4, 0.3, 0.2]))
 
     def _check_results(self,
                        batch_size: int = 5,
@@ -72,7 +70,7 @@ class BeamSearchTest(AllenNlpTestCase):
         beam_search = beam_search or self.beam_search
         beam_size = beam_search.beam_size
 
-        initial_predictions = torch.tensor([0] * batch_size)  # pylint: disable=not-callable
+        initial_predictions = torch.tensor([0] * batch_size)
         top_k, log_probs = beam_search.search(initial_predictions, state, take_step)  # type: ignore
 
         # top_k should be shape `(batch_size, beam_size, max_predicted_length)`.
@@ -88,7 +86,7 @@ class BeamSearchTest(AllenNlpTestCase):
 
     def test_finished_state(self):
         state = {}
-        state["foo"] = torch.tensor(  # pylint: disable=not-callable
+        state["foo"] = torch.tensor(
                 [[1, 0, 1],
                  [2, 0, 1],
                  [0, 0, 1],
@@ -129,7 +127,7 @@ class BeamSearchTest(AllenNlpTestCase):
     def test_greedy_search(self):
         beam_search = BeamSearch(self.end_index, beam_size=1)
         expected_top_k = np.array([[1, 2, 3, 4, 5]])
-        expected_log_probs = np.log(np.array([0.4]))  # pylint: disable=assignment-from-no-return
+        expected_log_probs = np.log(np.array([0.4]))
         self._check_results(expected_top_k=expected_top_k,
                             expected_log_probs=expected_log_probs,
                             beam_search=beam_search)
@@ -144,7 +142,7 @@ class BeamSearchTest(AllenNlpTestCase):
                  [2, 3, 4],
                  [3, 4, 5]]
         )
-        expected_log_probs = np.log(np.array([0.4, 0.3, 0.2]))  # pylint: disable=assignment-from-no-return
+        expected_log_probs = np.log(np.array([0.4, 0.3, 0.2]))
         self._check_results(expected_top_k=expected_top_k,
                             expected_log_probs=expected_log_probs,
                             beam_search=beam_search)

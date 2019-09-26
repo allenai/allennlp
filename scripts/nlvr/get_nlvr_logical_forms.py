@@ -5,8 +5,6 @@ from typing import Tuple, List
 import os
 import sys
 
-# pylint: disable=wrong-import-position,invalid-name
-
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir)))))
 
 from allennlp.common.util import JsonDict

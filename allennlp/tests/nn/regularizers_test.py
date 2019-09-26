@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 import re
 import torch
 
@@ -47,7 +46,7 @@ class TestRegularizers(AllenNlpTestCase):
     def test_from_params(self):
         params = Params({"regularizers": [("conv", "l1"), ("linear", {"type": "l2", "alpha": 10})]})
         regularizer_applicator = RegularizerApplicator.from_params(params.pop("regularizers"))
-        regularizers = regularizer_applicator._regularizers  # pylint: disable=protected-access
+        regularizers = regularizer_applicator._regularizers
 
         conv = linear = None
         for regex, regularizer in regularizers:

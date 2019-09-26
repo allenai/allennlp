@@ -1,8 +1,6 @@
 """
 Tools for programmatically generating config files for AllenNLP models.
 """
-# pylint: disable=protected-access,too-many-return-statements
-
 from typing import NamedTuple, Optional, Any, List, TypeVar, Generic, Type, Dict, Union, Sequence, Tuple
 import collections
 import inspect
@@ -27,9 +25,11 @@ from allennlp.nn.regularizers import Regularizer
 from allennlp.training.optimizers import Optimizer as AllenNLPOptimizer
 from allennlp.training.trainer import Trainer
 
+
 def _remove_prefix(class_name: str) -> str:
     rgx = r"^(typing\.|builtins\.)"
     return re.sub(rgx, "", class_name)
+
 
 def full_name(cla55: Optional[type]) -> str:
     """
@@ -54,7 +54,7 @@ def full_name(cla55: Optional[type]) -> str:
         return f"""{_remove_prefix(str(origin))}[{", ".join(full_name(arg) for arg in args)}]"""
     elif origin == Union:
         # Special special case to handle optional types:
-        if len(args) == 2 and args[-1] == type(None):
+        if len(args) == 2 and args[-1] == type(None):  # noqa
             return f"""Optional[{full_name(args[0])}]"""
         else:
             return f"""Union[{", ".join(full_name(arg) for arg in args)}]"""
@@ -87,7 +87,7 @@ def json_annotation(cla55: Optional[type]):
         return {'origin': _remove_prefix(str(origin)), 'args': [json_annotation(arg) for arg in args]}
     elif origin == Union:
         # Special special case to handle optional types:
-        if len(args) == 2 and args[-1] == type(None):
+        if len(args) == 2 and args[-1] == type(None):  # noqa
             return json_annotation(args[0])
         else:
             return {'origin': "Union", 'args': [json_annotation(arg) for arg in args]}
@@ -127,7 +127,6 @@ class ConfigItem(NamedTuple):
                 print(f"unable to json serialize {self.default_value}, using None instead")
                 json_dict["defaultValue"] = None
 
-
         if self.comment:
             json_dict["comment"] = self.comment
 
@@ -165,6 +164,7 @@ class Config(Generic[T]):
 # default value.
 _NO_DEFAULT = object()
 
+
 def _get_config_type(cla55: type) -> Optional[str]:
     """
     Find the name (if any) that a subclass was registered under.
@@ -191,6 +191,7 @@ def _get_config_type(cla55: type) -> Optional[str]:
                     return sif.__name__.rstrip("_")
 
     return None
+
 
 def _docspec_comments(obj) -> Dict[str, str]:
     """
@@ -219,6 +220,7 @@ def _docspec_comments(obj) -> Dict[str, str]:
         comments[name] = comment
 
     return comments
+
 
 def _auto_config(cla55: Type[T]) -> Config[T]:
     """
@@ -319,10 +321,11 @@ def _remove_optional(typ3: type) -> type:
     origin = getattr(typ3, '__origin__', None)
     args = getattr(typ3, '__args__', None)
 
-    if origin == Union and len(args) == 2 and args[-1] == type(None):
+    if origin == Union and len(args) == 2 and args[-1] == type(None):  # noqa
         return _remove_optional(args[0])
     else:
         return typ3
+
 
 def is_registrable(typ3: type) -> bool:
     # Throw out optional:
@@ -352,6 +355,7 @@ def is_configurable(typ3: type) -> bool:
             typ3 == Regularizer,
     ])
 
+
 def _render(item: ConfigItem, indent: str = "") -> str:
     """
     Render a single config item, with the provided indent
@@ -375,6 +379,7 @@ def _render(item: ConfigItem, indent: str = "") -> str:
     ])
 
     return rendered_item
+
 
 BASE_CONFIG: Config = Config([
         ConfigItem(name="dataset_reader",
@@ -424,6 +429,7 @@ BASE_CONFIG: Config = Config([
 
 ])
 
+
 def _valid_choices(cla55: type) -> Dict[str, str]:
     """
     Return a mapping {registered_name -> subclass_name}
@@ -442,6 +448,7 @@ def _valid_choices(cla55: type) -> Dict[str, str]:
         valid_choices[name] = full_name(subclass)
 
     return valid_choices
+
 
 def choices(full_path: str = '') -> List[str]:
     parts = full_path.split(".")

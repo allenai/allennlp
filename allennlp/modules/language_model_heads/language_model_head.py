@@ -15,5 +15,5 @@ class LanguageModelHead(torch.nn.Module, Registrable):
         raise NotImplementedError
 
     def forward(self, hidden_states: torch.Tensor) -> torch.Tensor:  # type: ignore
-        # pylint: disable=arguments-differ
+
         raise NotImplementedError

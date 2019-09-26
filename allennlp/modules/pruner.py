@@ -5,6 +5,7 @@ import torch
 
 from allennlp.nn import util
 
+
 class Pruner(torch.nn.Module):
     """
     This module scores and prunes items in a list using a parameterised scoring function and a
@@ -22,7 +23,7 @@ class Pruner(torch.nn.Module):
         self._scorer = scorer
 
     @overrides
-    def forward(self, # pylint: disable=arguments-differ
+    def forward(self,
                 embeddings: torch.FloatTensor,
                 mask: torch.LongTensor,
                 num_items_to_keep: Union[int, torch.LongTensor]) -> Tuple[torch.FloatTensor, torch.LongTensor,

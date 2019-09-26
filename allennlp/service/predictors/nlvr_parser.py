@@ -1,4 +1,3 @@
-# pylint: disable=unused-import
 import warnings
 
 from allennlp.predictors.nlvr_parser import NlvrParserPredictor

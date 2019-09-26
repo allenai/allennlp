@@ -1,4 +1,3 @@
-# pylint: disable=invalid-name,no-self-use
 import pytest
 import numpy
 import torch

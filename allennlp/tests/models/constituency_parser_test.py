@@ -1,10 +1,10 @@
-# pylint: disable=no-self-use,invalid-name,no-value-for-parameter
 from nltk import Tree
 import torch
 
 from allennlp.common.testing.model_test_case import ModelTestCase
 from allennlp.models.constituency_parser import SpanInformation
 from allennlp.training.metrics import EvalbBracketingScorer
+
 
 class SpanConstituencyParserTest(ModelTestCase):
 
@@ -62,7 +62,7 @@ class SpanConstituencyParserTest(ModelTestCase):
                       ((2, 3), 'V'), ((3, 4), 'D'), ((4, 5), 'N'),
                       ((3, 5), 'NP'), ((2, 5), 'VP'), ((0, 5), 'S')]
         sentence = ["the", "dog", "chased", "the", "cat"]
-        tree = self.model.construct_tree_from_spans({x:y for x, y in tree_spans}, sentence)
+        tree = self.model.construct_tree_from_spans({x: y for x, y in tree_spans}, sentence)
         correct_tree = Tree.fromstring("(S (NP (D the) (N dog)) (VP (V chased) (NP (D the) (N cat))))")
         assert tree == correct_tree
 
@@ -70,7 +70,7 @@ class SpanConstituencyParserTest(ModelTestCase):
         # The tree construction should split the "S-NP" into (S (NP ...)).
         tree_spans = [((0, 1), 'D'), ((1, 2), 'N'), ((0, 2), 'S-NP')]
         sentence = ["the", "dog"]
-        tree = self.model.construct_tree_from_spans({x:y for x, y in tree_spans}, sentence)
+        tree = self.model.construct_tree_from_spans({x: y for x, y in tree_spans}, sentence)
         correct_tree = Tree.fromstring("(S (NP (D the) (N dog)))")
         assert tree == correct_tree
 
@@ -80,6 +80,6 @@ class SpanConstituencyParserTest(ModelTestCase):
         # XX POS tag labels, as the right hand side splits will not occur in tree_spans.
         tree_spans = [((0, 1), 'D'), ((1, 2), 'N'), ((0, 2), 'NP'), ((0, 5), 'S')]
         sentence = ["the", "dog", "chased", "the", "cat"]
-        tree = self.model.construct_tree_from_spans({x:y for x, y in tree_spans}, sentence)
+        tree = self.model.construct_tree_from_spans({x: y for x, y in tree_spans}, sentence)
         correct_tree = Tree.fromstring("(S (NP (D the) (N dog)) (XX chased) (XX the) (XX cat))")
         assert tree == correct_tree

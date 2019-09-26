@@ -13,6 +13,7 @@ from allennlp.nn import util as nn_util
 
 logger = logging.getLogger(__name__)
 
+
 class Checkpointer(Registrable):
     """
     This class implements the functionality for checkpointing your model and trainer state

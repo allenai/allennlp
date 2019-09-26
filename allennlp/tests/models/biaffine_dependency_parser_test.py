@@ -1,9 +1,8 @@
-# pylint: disable=no-self-use,invalid-name,no-value-for-parameter
-
 import torch
 
 from allennlp.common.testing.model_test_case import ModelTestCase
 from allennlp.nn.chu_liu_edmonds import decode_mst
+
 
 class BiaffineDependencyParserTest(ModelTestCase):
 
@@ -15,11 +14,9 @@ class BiaffineDependencyParserTest(ModelTestCase):
     def test_dependency_parser_can_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
 
-
     def test_mst_decoding_can_run_forward(self):
         self.model.use_mst_decoding_for_validation = True
         self.ensure_model_can_train_save_and_load(self.param_file)
-
 
     def test_batch_predictions_are_consistent(self):
         self.ensure_batch_predictions_are_consistent()
@@ -53,7 +50,7 @@ class BiaffineDependencyParserTest(ModelTestCase):
         assert list(heads) == [-1, 0, 0]
         # If we run the decoding with the model, it should enforce
         # the constraint.
-        heads_model, _ = self.model._run_mst_decoding(energy.view(1, 1, 3, 3), length) # pylint: disable=protected-access
+        heads_model, _ = self.model._run_mst_decoding(energy.view(1, 1, 3, 3), length)
         assert heads_model.tolist()[0] == [0, 0, 1]
 
     def test_mst_decodes_arc_labels_with_respect_to_unconstrained_scores(self):
@@ -68,7 +65,7 @@ class BiaffineDependencyParserTest(ModelTestCase):
         # the masked score.
         energy[:, 1, 0, :] = 3
         length = torch.LongTensor([3])
-        heads, tags = self.model._run_mst_decoding(energy, length) # pylint: disable=protected-access
+        heads, tags = self.model._run_mst_decoding(energy, length)
         assert heads.tolist()[0] == [0, 0, 1]
 
         # This test produces different results under PyTorch 0.4.1 and 1.0.

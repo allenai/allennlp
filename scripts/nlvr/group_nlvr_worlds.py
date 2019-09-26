@@ -5,7 +5,7 @@ appearing with four worlds), identified by the prefixes in identifiers. This scr
 worlds and corresponding labels together to enable training a parser with this information.
 """
 
-# pylint: disable=invalid-name
+
 import json
 import argparse
 from collections import defaultdict

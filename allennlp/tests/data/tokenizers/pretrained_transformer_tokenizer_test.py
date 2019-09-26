@@ -1,7 +1,6 @@
-# pylint: disable=no-self-use,invalid-name
-
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.tokenizers import PretrainedTransformerTokenizer
+
 
 class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
     def test_splits_into_wordpieces(self):

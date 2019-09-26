@@ -10,7 +10,7 @@ from allennlp.data.fields import Field, TextField, ListField, IndexField
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.tokenizers import Token
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @DatasetReader.register("babi")
@@ -70,13 +70,12 @@ class BabiReader(DatasetReader):
                     context.append(new_entry)
 
     @overrides
-    def text_to_instance(self, # type: ignore
+    def text_to_instance(self,  # type: ignore
                          context: List[List[str]],
                          question: List[str],
                          answer: str,
                          supports: List[int]) -> Instance:
 
-        # pylint: disable=arguments-differ
         fields: Dict[str, Field] = {}
 
         if self._keep_sentences:

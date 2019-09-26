@@ -1,5 +1,3 @@
-# pylint: disable=no-self-use,invalid-name,line-too-long,no-member
-
 import json
 import os
 import sys
@@ -38,7 +36,6 @@ class TestConfigExplorer(AllenNlpTestCase):
                 "annotation": {'origin': "allennlp.data.dataset_readers.dataset_reader.DatasetReader"}
         }
 
-
     def test_choices(self):
         response = self.client.get('/api/config/?class=allennlp.data.dataset_readers.dataset_reader.DatasetReader&get_choices=true')
         data = json.loads(response.get_data())
@@ -74,7 +71,6 @@ class TestConfigExplorer(AllenNlpTestCase):
         data = json.loads(response.get_data())
         assert 'config' in data
         assert 'choices' not in data
-
 
     def test_torch_class(self):
         response = self.client.get('/api/config/?class=torch.optim.rmsprop.RMSprop')
@@ -131,8 +127,8 @@ class TestConfigExplorer(AllenNlpTestCase):
     def test_other_modules(self):
         # Create a new package in a temporary dir
         packagedir = self.TEST_DIR / 'configexplorer'
-        packagedir.mkdir()  # pylint: disable=no-member
-        (packagedir / '__init__.py').touch()  # pylint: disable=no-member
+        packagedir.mkdir()
+        (packagedir / '__init__.py').touch()
 
         # And add that directory to the path
         sys.path.insert(0, str(self.TEST_DIR))

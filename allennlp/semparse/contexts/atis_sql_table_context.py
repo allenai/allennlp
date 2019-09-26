@@ -78,6 +78,7 @@ NUMERIC_NONTERMINALS = ['number', 'time_range_start', 'time_range_end',
                         'fare_round_trip_cost', 'fare_one_direction_cost',
                         'flight_number', 'day_number', 'month_number', 'year_number']
 
+
 class AtisSqlTableContext:
     """
     An ``AtisSqlTableContext`` represents the SQL context with a grammar of SQL and the valid actions
@@ -153,7 +154,7 @@ class AtisSqlTableContext:
                         results.append(('EA',))
                     strings_list.extend([(format_action(f"{table}_{column}_string",
                                                         str(row[0]),
-                                                        is_string=not 'number' in column,
+                                                        is_string='number' not in column,
                                                         is_number='number' in column),
                                           str(row[0]))
                                          for row in results])
@@ -166,7 +167,7 @@ class AtisSqlTableContext:
                                 sorted([f'"\'{str(row[0])}\'"' for row in results], reverse=True)
 
         grammar_dictionary['biexpr'] = sorted(biexprs, reverse=True) + \
-                ['( col_ref ws binaryop ws value)', '(value ws binaryop ws value)']
+            ['( col_ref ws binaryop ws value)', '(value ws binaryop ws value)']
         return grammar_dictionary, strings_list
 
     def get_grammar_string(self):

@@ -10,7 +10,7 @@ but the serialized weights depend on the exact parameter setup
 here, so it's easiest to just reimplement them.
 """
 
-# pylint: disable=invalid-name,arguments-differ
+
 from typing import NamedTuple, List
 import copy
 import io
@@ -31,11 +31,14 @@ from allennlp.common.from_params import FromParams
 
 logger = logging.getLogger(__name__)
 
+
 def gelu(x: torch.Tensor) -> torch.Tensor:
     return 0.5 * x * (1 + torch.tanh(math.sqrt(2 / math.pi) * (x + 0.044715 * torch.pow(x, 3))))
 
+
 def swish(x: torch.Tensor) -> torch.Tensor:
     return x * torch.sigmoid(x)
+
 
 _ACTIVATION_FUNCTIONS = {
         'relu': torch.nn.ReLU,
@@ -43,7 +46,7 @@ _ACTIVATION_FUNCTIONS = {
         'gelu': gelu
 }
 
-# pylint: disable=line-too-long
+
 _PARAMETER_NAMES = ["model/we:0",
                     "model/h0/attn/c_attn/w:0", "model/h0/attn/c_attn/b:0", "model/h0/attn/c_proj/w:0",
                     "model/h0/attn/c_proj/b:0", "model/h0/ln_1/g:0", "model/h0/ln_1/b:0", "model/h0/mlp/c_fc/w:0",
@@ -82,7 +85,6 @@ _PARAMETER_NAMES = ["model/we:0",
                     "model/h11/attn/c_proj/b:0", "model/h11/ln_1/g:0", "model/h11/ln_1/b:0", "model/h11/mlp/c_fc/w:0",
                     "model/h11/mlp/c_fc/b:0", "model/h11/mlp/c_proj/w:0", "model/h11/mlp/c_proj/b:0", "model/h11/ln_2/g:0",
                     "model/h11/ln_2/b:0", "model/clf/w:0", "model/clf/b:0"]
-# pylint: enable=line-too-long
 
 
 class TransformerConfig(NamedTuple):
@@ -136,6 +138,7 @@ class Conv1D(torch.nn.Module):
             raise NotImplementedError
         return x
 
+
 class Attention(torch.nn.Module):
     def __init__(self,
                  nx: int,
@@ -165,7 +168,7 @@ class Attention(torch.nn.Module):
         return torch.matmul(w, v)
 
     def merge_heads(self, x: torch.Tensor):
-        # pylint: disable=no-self-use
+
         x = x.permute(0, 2, 1, 3).contiguous()
         new_x_shape = x.size()[:-2] + (x.size(-2) * x.size(-1),)
         return x.view(*new_x_shape)  # in Tensorflow implem: fct merge_states
@@ -223,6 +226,7 @@ class Block(torch.nn.Module):
         m = self.mlp(n)
         h = self.ln_2(n + m)
         return h
+
 
 class OpenaiTransformer(torch.nn.Module, FromParams):
     """
@@ -309,7 +313,7 @@ class OpenaiTransformer(torch.nn.Module, FromParams):
             self.load_weights(model_path, n_special=n_special, n_ctx=n_ctx)
 
     def forward(self, x: torch.Tensor) -> List[torch.Tensor]:
-        #x = x.view(-1, x.size(2), x.size(3))
+        # x = x.view(-1, x.size(2), x.size(3))
 
         # x is (batch_size, sequence_length) tensor of byte-pair ids
 
@@ -334,7 +338,6 @@ class OpenaiTransformer(torch.nn.Module, FromParams):
                      n_transfer: int = 12,
                      n_embd: int = 768,
                      names: List[str] = _PARAMETER_NAMES) -> None:
-        # pylint: disable=dangerous-default-value
 
         logger.info(f"loading weights from {transformer_model_path}")
         # if `file_path` is a URL, redirect to the cache
@@ -416,7 +419,7 @@ class OpenaiTransformer(torch.nn.Module, FromParams):
 
         # for each (name, array) pair to transfer over
         for name, ip in zip(names[1:n_transfer], init_params[1:n_transfer]):
-                                            # "model/h0/attn/c_attn/w:0"
+            # name is initially e.g.          "model/h0/attn/c_attn/w:0"
             name = name[6:]                 # "h0/attn/c_attn/w:0"
             assert name[-2:] == ":0"
             name = name[:-2]                # "h0/attn/c_attn/w"
@@ -425,12 +428,12 @@ class OpenaiTransformer(torch.nn.Module, FromParams):
             pointer = self
             for m_name in name_parts:
                 if re.fullmatch(r'[A-Za-z]+\d+', m_name):
-                    l = re.split(r'(\d+)', m_name)   # ['h', '0', '']
+                    pieces = re.split(r'(\d+)', m_name)   # ['h', '0', '']
                 else:
-                    l = [m_name]                     # ['attn']
-                pointer = getattr(pointer, l[0])
-                if len(l) >= 2:
-                    num = int(l[1])
+                    pieces = [m_name]                     # ['attn']
+                pointer = getattr(pointer, pieces[0])
+                if len(pieces) >= 2:
+                    num = int(pieces[1])
                     pointer = pointer[num]
             try:
                 assert pointer.shape == ip.shape
@@ -438,13 +441,13 @@ class OpenaiTransformer(torch.nn.Module, FromParams):
                 e.args += (pointer.shape, ip.shape)
                 raise
 
-            pointer.data = torch.from_numpy(ip)  # pylint: disable=attribute-defined-outside-init
+            pointer.data = torch.from_numpy(ip)
 
     def dump_weights(self,
                      output_dir: str,
                      num_pieces: int = 10) -> None:
         output_path = pathlib.Path(output_dir) / 'model'
-        output_path.mkdir(exist_ok=True, parents=True)  # pylint: disable=no-member
+        output_path.mkdir(exist_ok=True, parents=True)
 
         named_parameters = list(self.named_parameters())
 
@@ -459,9 +462,9 @@ class OpenaiTransformer(torch.nn.Module, FromParams):
         names = ["model/we:0"]
 
         for param_name, tensor in named_parameters[1:]:
-            param_name = f'h{param_name}'            # 'h0.attn.c_attn.w'
-            parts = param_name.split(".")            # ['h0', 'attn', 'c_attn', 'w']
-            name = "model/" + '/'.join(parts) + ':0' # 'model/h0/attn/c_attn/w:0'
+            param_name = f'h{param_name}'             # 'h0.attn.c_attn.w'
+            parts = param_name.split(".")             # ['h0', 'attn', 'c_attn', 'w']
+            name = "model/" + '/'.join(parts) + ':0'  # 'model/h0/attn/c_attn/w:0'
             array = tensor.numpy().ravel()
 
             arrays.append(array)

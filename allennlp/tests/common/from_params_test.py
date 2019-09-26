@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name,too-many-public-methods,protected-access
 from typing import Dict, Optional, List, Set, Tuple, Union
 
 import pytest
@@ -11,6 +10,7 @@ from allennlp.data.tokenizers.word_splitter import WordSplitter
 from allennlp.models import Model
 from allennlp.models.archival import load_archive
 from allennlp.common.checks import ConfigurationError
+
 
 class MyClass(FromParams):
     def __init__(self, my_int: int, my_bool: bool = False) -> None:
@@ -80,7 +80,6 @@ class TestFromParams(AllenNlpTestCase):
         }
 
     def test_extras(self):
-        # pylint: disable=unused-variable,arguments-differ
         from allennlp.common.registrable import Registrable
 
         class A(Registrable):
@@ -103,7 +102,6 @@ class TestFromParams(AllenNlpTestCase):
             def from_params(cls, params: Params, size: int) -> 'C':  # type: ignore
                 name = params.pop('name')
                 return cls(size=size, name=name)
-
 
         # Check that extras get passed, even though A doesn't need them.
         params = Params({"type": "b", "size": 10})
@@ -133,7 +131,7 @@ class TestFromParams(AllenNlpTestCase):
         assert c.size == 20
 
     def test_extras_for_custom_classes(self):
-        # pylint: disable=unused-variable,arguments-differ
+
         from allennlp.common.registrable import Registrable
 
         class BaseClass(Registrable):
@@ -307,7 +305,7 @@ class TestFromParams(AllenNlpTestCase):
         assert c.c['b'].a == [4, 5]
 
     def test_dict(self):
-        # pylint: disable=unused-variable
+
         from allennlp.common.registrable import Registrable
 
         class A(Registrable):
@@ -349,7 +347,7 @@ class TestFromParams(AllenNlpTestCase):
         assert not isinstance(a.counts, Params)
 
     def test_list(self):
-        # pylint: disable=unused-variable
+
         from allennlp.common.registrable import Registrable
 
         class A(Registrable):
@@ -378,7 +376,7 @@ class TestFromParams(AllenNlpTestCase):
         assert d.items[1].size == 2
 
     def test_tuple(self):
-        # pylint: disable=unused-variable
+
         from allennlp.common.registrable import Registrable
 
         class A(Registrable):
@@ -416,7 +414,7 @@ class TestFromParams(AllenNlpTestCase):
         assert f.items[1].name == "item2"
 
     def test_set(self):
-        # pylint: disable=unused-variable
+
         from allennlp.common.registrable import Registrable
 
         class A(Registrable):

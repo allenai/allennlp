@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 from typing import List, Tuple
 
 import pytest
@@ -6,6 +5,7 @@ import pytest
 from allennlp.data.dataset_readers import ConllCorefReader
 from allennlp.common.util import ensure_list
 from allennlp.common.testing import AllenNlpTestCase
+
 
 class TestCorefReader:
     span_width = 5
@@ -80,5 +80,5 @@ class TestCorefReader:
 
         # Check we aren't considering zero length spans and all
         # candidate spans are less than what we specified
-        assert all([self.span_width >= len(x) > 0 for x in candidate_mentions])  # pylint: disable=len-as-condition
+        assert all([self.span_width >= len(x) > 0 for x in candidate_mentions])
         return candidate_mentions

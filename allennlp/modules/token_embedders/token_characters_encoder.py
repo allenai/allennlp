@@ -7,6 +7,7 @@ from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
 from allennlp.modules.time_distributed import TimeDistributed
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 
+
 @TokenEmbedder.register("character_encoding")
 class TokenCharactersEncoder(TokenEmbedder):
     """
@@ -28,16 +29,16 @@ class TokenCharactersEncoder(TokenEmbedder):
             self._dropout = lambda x: x
 
     def get_output_dim(self) -> int:
-        return self._encoder._module.get_output_dim()  # pylint: disable=protected-access
+        return self._encoder._module.get_output_dim()
 
-    def forward(self, token_characters: torch.Tensor) -> torch.Tensor:  # pylint: disable=arguments-differ
+    def forward(self, token_characters: torch.Tensor) -> torch.Tensor:
         mask = (token_characters != 0).long()
         return self._dropout(self._encoder(self._embedding(token_characters), mask))
 
     # The setdefault requires a custom from_params
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'TokenCharactersEncoder':  # type: ignore
-        # pylint: disable=arguments-differ
+
         embedding_params: Params = params.pop("embedding")
         # Embedding.from_params() uses "tokens" as the default namespace, but we need to change
         # that to be "token_characters" by default. If num_embeddings is present, set default namespace

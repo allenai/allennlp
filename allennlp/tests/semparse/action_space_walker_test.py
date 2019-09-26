@@ -1,4 +1,3 @@
-# pylint: disable=invalid-name
 from typing import Set
 
 from allennlp.common.testing import AllenNlpTestCase
@@ -10,7 +9,7 @@ class Object:
 
 
 class FakeLanguageWithAssertions(DomainLanguage):
-    # pylint: disable=unused-argument,no-self-use
+
     @predicate
     def object_exists(self, items: Set[Object]) -> bool:
         return True

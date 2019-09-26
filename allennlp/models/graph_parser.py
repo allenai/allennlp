@@ -18,7 +18,7 @@ from allennlp.nn.util import get_text_field_mask
 from allennlp.nn.util import get_lengths_from_binary_sequence_mask
 from allennlp.training.metrics import F1Measure
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @Model.register("graph_parser")
@@ -84,10 +84,10 @@ class GraphParser(Model):
 
         encoder_dim = encoder.get_output_dim()
 
-        self.head_arc_feedforward = arc_feedforward or \
-                                        FeedForward(encoder_dim, 1,
-                                                    arc_representation_dim,
-                                                    Activation.by_name("elu")())
+        self.head_arc_feedforward = (arc_feedforward or
+                                     FeedForward(encoder_dim, 1,
+                                                 arc_representation_dim,
+                                                 Activation.by_name("elu")()))
         self.child_arc_feedforward = copy.deepcopy(self.head_arc_feedforward)
 
         self.arc_attention = BilinearMatrixAttention(arc_representation_dim,
@@ -95,10 +95,10 @@ class GraphParser(Model):
                                                      use_input_biases=True)
 
         num_labels = self.vocab.get_vocab_size("labels")
-        self.head_tag_feedforward = tag_feedforward or \
-                                        FeedForward(encoder_dim, 1,
-                                                    tag_representation_dim,
-                                                    Activation.by_name("elu")())
+        self.head_tag_feedforward = (tag_feedforward or
+                                     FeedForward(encoder_dim, 1,
+                                                 tag_representation_dim,
+                                                 Activation.by_name("elu")()))
         self.child_tag_feedforward = copy.deepcopy(self.head_tag_feedforward)
 
         self.tag_bilinear = BilinearMatrixAttention(tag_representation_dim,
@@ -131,7 +131,7 @@ class GraphParser(Model):
                 pos_tags: torch.LongTensor = None,
                 metadata: List[Dict[str, Any]] = None,
                 arc_tags: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
+
         """
         Parameters
         ----------

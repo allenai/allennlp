@@ -10,7 +10,8 @@ from allennlp.common import Tqdm, util
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.registrable import Registrable
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
+
 
 class _LazyInstances(Iterable):
     """
@@ -191,7 +192,7 @@ class DatasetReader(Registrable):
         The default implementation is to use ``jsonpickle``.  If you would like some other format
         for your pre-processed data, override this method.
         """
-        # pylint: disable=no-self-use
+
         return jsonpickle.dumps(instance)
 
     def deserialize_instance(self, string: str) -> Instance:
@@ -202,5 +203,5 @@ class DatasetReader(Registrable):
         The default implementation is to use ``jsonpickle``.  If you would like some other format
         for your pre-processed data, override this method.
         """
-        # pylint: disable=no-self-use
+
         return jsonpickle.loads(string)  # type: ignore

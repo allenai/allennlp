@@ -19,7 +19,7 @@ from allennlp.data.vocabulary import Vocabulary
 from allennlp.nn import util as nn_util
 from allennlp.semparse.contexts.knowledge_graph import KnowledgeGraph
 
-TokenList = List[TokenType]  # pylint: disable=invalid-name
+TokenList = List[TokenType]
 
 
 class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
@@ -232,7 +232,10 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
                                                               desired_num_entities,
                                                               default_value=lambda: [])
         padded_linking_arrays = []
-        default_feature_value = lambda: [0.0] * len(self._feature_extractors)
+
+        def default_feature_value():
+            return [0.0] * len(self._feature_extractors)
+
         for linking_features in padded_linking_features:
             padded_features = util.pad_sequence_to_length(linking_features,
                                                           desired_num_utterance_tokens,
@@ -263,14 +266,13 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
 
     @overrides
     def batch_tensors(self, tensor_list: List[Dict[str, torch.Tensor]]) -> Dict[str, torch.Tensor]:
-        # pylint: disable=no-self-use
+
         batched_text = nn_util.batch_tensor_dicts(tensor['text'] for tensor in tensor_list)  # type: ignore
         batched_linking = torch.stack([tensor['linking'] for tensor in tensor_list])
         return {'text': batched_text, 'linking': batched_linking}
 
     # Below here we have feature extractor functions.  To keep a consistent API for easy logic
     # above, some of these functions have unused arguments.
-    # pylint: disable=unused-argument,no-self-use
 
     # These feature extractors are generally pretty specific to the logical form language and
     # problem setting in WikiTableQuestions.  This whole notion of feature extraction should
@@ -434,5 +436,3 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
             seen_entity_lemmas.add(tokens[token_index_left].lemma_)
             token_index_left -= 1
         return len(seen_entity_lemmas) / len(entity_lemmas)
-
-    # pylint: enable=unused-argument,no-self-use

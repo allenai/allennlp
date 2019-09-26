@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.semparse.type_declarations import type_declaration as types
 from allennlp.semparse.type_declarations.type_declaration import (
@@ -12,6 +11,7 @@ from allennlp.semparse.type_declarations.type_declaration import (
 
 ROW_TYPE = NamedBasicType('row')
 CELL_TYPE = NamedBasicType('cell')
+
 
 class TestTypeDeclaration(AllenNlpTestCase):
     def test_basic_types_conflict_on_names(self):

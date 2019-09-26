@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 from collections import defaultdict
 
 import pytest
@@ -44,9 +43,7 @@ class TestSequenceLabelField(AllenNlpTestCase):
         sequence_label_field = SequenceLabelField(tags, self.text, label_namespace="*labels")
         sequence_label_field.index(vocab)
 
-        # pylint: disable=protected-access
         assert sequence_label_field._indexed_labels == [b_index, i_index, o_index, o_index, o_index]
-        # pylint: enable=protected-access
 
     def test_as_tensor_produces_integer_targets(self):
         vocab = Vocabulary()
@@ -67,7 +64,7 @@ class TestSequenceLabelField(AllenNlpTestCase):
             _ = SequenceLabelField([[], [], [], [], []], self.text)
 
     def test_class_variables_for_namespace_warnings_work_correctly(self):
-        # pylint: disable=protected-access
+
         tags = ["B", "I", "O", "O", "O"]
         assert "text" not in SequenceLabelField._already_warned_namespaces
         with self.assertLogs(logger="allennlp.data.fields.sequence_label_field", level="WARNING"):

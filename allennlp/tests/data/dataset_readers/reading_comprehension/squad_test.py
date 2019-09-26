@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 import pytest
 
 from allennlp.common import Params
@@ -41,7 +40,7 @@ class TestSquadReader:
 
     def test_can_build_from_params(self):
         reader = SquadReader.from_params(Params({}))
-        # pylint: disable=protected-access
+
         assert reader._tokenizer.__class__.__name__ == 'WordTokenizer'
         assert reader._token_indexers["tokens"].__class__.__name__ == 'SingleIdTokenIndexer'
 
@@ -75,4 +74,4 @@ class TestSquadReader:
         for instance_x, instance_y in zip(instances, instances_unlimited):
             print(instance_x.fields["metadata"]["answer_texts"])
             assert set(instance_x.fields["metadata"]["answer_texts"]) \
-                   == set(instance_y.fields["metadata"]["answer_texts"])
+                == set(instance_y.fields["metadata"]["answer_texts"])

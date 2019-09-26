@@ -1,5 +1,3 @@
-# pylint: disable=no-self-use,invalid-name,protected-access
-
 from nltk.tree import Tree
 
 from allennlp.data.dataset_readers import PennTreeBankConstituencySpanDatasetReader
@@ -56,7 +54,6 @@ class TestPennTreeBankConstituencySpanReader(AllenNlpTestCase):
             if label != "NO-LABEL":
                 assert correct_spans_and_labels[span] == label
 
-
         fields = instances[1].fields
         tokens = [x.text for x in fields["tokens"].tokens]
         pos_tags = fields["pos_tags"].labels
@@ -100,7 +97,7 @@ class TestPennTreeBankConstituencySpanReader(AllenNlpTestCase):
 
         span_dict = {}
         ptb_reader._get_gold_spans(tree, 0, span_dict)
-        spans = list(span_dict.items()) # pylint: disable=protected-access
+        spans = list(span_dict.items())
         assert spans == [((0, 1), 'NP'), ((3, 4), 'NP'), ((2, 4), 'VP'), ((0, 4), 'S')]
 
     def test_get_gold_spans_correctly_extracts_spans_with_nested_labels(self):
@@ -147,8 +144,8 @@ class TestPennTreeBankConstituencySpanReader(AllenNlpTestCase):
         (. .))
         """)
         span_dict = {}
-        ptb_reader._strip_functional_tags(tree) # pylint: disable=protected-access
-        ptb_reader._get_gold_spans(tree, 0, span_dict) # pylint: disable=protected-access
+        ptb_reader._strip_functional_tags(tree)
+        ptb_reader._get_gold_spans(tree, 0, span_dict)
         assert span_dict == {(1, 1): 'NP', (5, 5): 'PRT', (6, 7): 'NP', (4, 7): 'VP', (10, 10): 'PRT',
                              (11, 11): 'WHNP-WHNP', (13, 13): 'ADJP', (14, 14): 'WHNP', (17, 18): 'NP',
                              (16, 18): 'VP', (15, 18): 'S-VP', (14, 18): 'SBAR', (12, 18): 'S-VP',

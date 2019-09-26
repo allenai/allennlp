@@ -1,4 +1,3 @@
-# pylint: disable=unused-import
 import warnings
 
 from allennlp.predictors.simple_seq2seq import SimpleSeq2SeqPredictor

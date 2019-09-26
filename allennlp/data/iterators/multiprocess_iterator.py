@@ -12,8 +12,9 @@ from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator, TensorDict
 from allennlp.data.vocabulary import Vocabulary
 
-logger = get_logger()  # pylint: disable=invalid-name
+logger = get_logger()
 logger.setLevel(logging.INFO)
+
 
 def _create_tensor_dicts_from_queue(input_queue: Queue,
                                     output_queue: Queue,
@@ -25,6 +26,7 @@ def _create_tensor_dicts_from_queue(input_queue: Queue,
     using ``iterator``, and puts them on the ``output_queue``.
     """
     logger.info(f"Iterator worker: {index} PID: {os.getpid()}")
+
     def instances() -> Iterator[Instance]:
         instance = input_queue.get()
         while instance is not None:
@@ -45,6 +47,7 @@ def _create_tensor_dicts_from_queue(input_queue: Queue,
     # on a Mac alone is not sufficient.
     output_queue.join()
 
+
 def _create_tensor_dicts_from_qiterable(qiterable: QIterable,
                                         output_queue: Queue,
                                         iterator: DataIterator,
@@ -55,6 +58,7 @@ def _create_tensor_dicts_from_qiterable(qiterable: QIterable,
     ``TensorDict``s using ``iterator``, and puts them on the ``output_queue``.
     """
     logger.info(f"Iterator worker: {index} PID: {os.getpid()}")
+
     def instances() -> Iterator[Instance]:
         while qiterable.num_active_workers.value > 0 or qiterable.num_inflight_items.value > 0:
             while True:
@@ -72,6 +76,7 @@ def _create_tensor_dicts_from_qiterable(qiterable: QIterable,
 
     # See the note above in _create_tensor_dicts_from_queue.
     output_queue.join()
+
 
 def _queuer(instances: Iterable[Instance],
             input_queue: Queue,
@@ -92,6 +97,7 @@ def _queuer(instances: Iterable[Instance],
     # to know that it's done.
     for _ in range(num_workers):
         input_queue.put(None)
+
 
 @DataIterator.register("multiprocess")
 class MultiprocessIterator(DataIterator):
@@ -114,7 +120,7 @@ class MultiprocessIterator(DataIterator):
                  base_iterator: DataIterator,
                  num_workers: int = 1,
                  output_queue_size: int = 1000) -> None:
-        # pylint: disable=protected-access
+
         super().__init__()
         self.num_workers = num_workers
         self.batch_size = base_iterator._batch_size

@@ -25,7 +25,7 @@ from pytorch_pretrained_bert.optimization import BertAdam
 
 from allennlp.common import Params, Registrable
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 class Optimizer(Registrable):
@@ -37,7 +37,7 @@ class Optimizer(Registrable):
     # Requires custom from_params.
     @classmethod
     def from_params(cls, model_parameters: List, params: Params):  # type: ignore
-        # pylint: disable=arguments-differ
+
         if isinstance(params, str):
             optimizer = params
             params = Params({})
@@ -55,11 +55,11 @@ class Optimizer(Registrable):
             # see: https://pytorch.org/docs/0.3.0/optim.html?#per-parameter-options
             #
             # groups contains something like:
-            #"parameter_groups": [
+            #  "parameter_groups": [
             #       [["regex1", "regex2"], {"lr": 1e-3}],
             #       [["regex3"], {"lr": 1e-4}]
-            #]
-            #(note that the allennlp config files require double quotes ", and will
+            #  ]
+            # (note that the allennlp config files require double quotes ", and will
             # fail (sometimes silently) with single quotes ').
 
             # This is typed as as Any since the dict values other then
@@ -70,7 +70,7 @@ class Optimizer(Registrable):
             # Those will be included in the last entry of parameter_groups.
             parameter_groups: Any = [{'params': []} for _ in range(len(groups) + 1)]
             # add the group specific kwargs
-            for k in range(len(groups)): # pylint: disable=consider-using-enumerate
+            for k in range(len(groups)):
                 parameter_groups[k].update(groups[k][1].as_dict())
 
             regex_use_counts: Dict[str, int] = {}
@@ -134,11 +134,12 @@ class Optimizer(Registrable):
         if hasattr(subclass, 'from_params'):
             return subclass.from_params(parameter_groups, params=params)
         else:
-            return subclass(parameter_groups, **params_as_dict) # type: ignore
+            return subclass(parameter_groups, **params_as_dict)  # type: ignore
+
 
 # We just use the Pytorch optimizers, so here we force them into
 # Registry._registry so we can build them from params.
-Registrable._registry[Optimizer] = {   # pylint: disable=protected-access
+Registrable._registry[Optimizer] = {
         "adam": torch.optim.Adam,
         "sparse_adam": torch.optim.SparseAdam,
         "adagrad": torch.optim.Adagrad,
@@ -150,12 +151,13 @@ Registrable._registry[Optimizer] = {   # pylint: disable=protected-access
         "bert_adam": BertAdam,
 }
 
+
 def _safe_sparse_mask(tensor: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
     """
     In PyTorch 1.0, Tensor._sparse_mask was changed to Tensor.sparse_mask.
     This wrapper allows AllenNLP to (temporarily) work with both 1.0 and 0.4.1.
     """
-    # pylint: disable=protected-access
+
     try:
         return tensor.sparse_mask(mask)
     except AttributeError:
@@ -165,9 +167,6 @@ def _safe_sparse_mask(tensor: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
 
 @Optimizer.register('dense_sparse_adam')
 class DenseSparseAdam(torch.optim.Optimizer):
-    # pylint: disable=protected-access,cell-var-from-loop
-    # pylint: disable=unneeded-not,misplaced-comparison-constant
-    # pylint: disable=len-as-condition,invalid-name,anomalous-backslash-in-string
     """
     NOTE: This class has been copied verbatim from the separate Dense and
     Sparse versions of Adam in Pytorch.

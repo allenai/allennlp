@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name,protected-access
 from collections import defaultdict
 
 from numpy.testing import assert_almost_equal
