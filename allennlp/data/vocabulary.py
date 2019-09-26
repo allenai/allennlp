@@ -84,16 +84,12 @@ class _NamespaceDependentDefaultDict(defaultdict):
 
 class _TokenToIndexDefaultDict(_NamespaceDependentDefaultDict):
     def __init__(self, non_padded_namespaces: Set[str], padding_token: str, oov_token: str) -> None:
-        super().__init__(non_padded_namespaces,
-                                                       lambda: {padding_token: 0, oov_token: 1},
-                                                       lambda: {})
+        super().__init__(non_padded_namespaces, lambda: {padding_token: 0, oov_token: 1}, lambda: {})
 
 
 class _IndexToTokenDefaultDict(_NamespaceDependentDefaultDict):
     def __init__(self, non_padded_namespaces: Set[str], padding_token: str, oov_token: str) -> None:
-        super().__init__(non_padded_namespaces,
-                                                       lambda: {0: padding_token, 1: oov_token},
-                                                       lambda: {})
+        super().__init__(non_padded_namespaces, lambda: {0: padding_token, 1: oov_token}, lambda: {})
 
 
 def _read_pretrained_tokens(embeddings_file_uri: str) -> List[str]:
