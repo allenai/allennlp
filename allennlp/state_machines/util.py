@@ -2,6 +2,7 @@ from collections import defaultdict
 from typing import Dict, List, Optional, Set, Tuple, Union
 
 import torch
+import numpy as np
 
 
 def construct_prefix_tree(targets: Union[torch.Tensor, List[List[List[int]]]],
@@ -28,13 +29,15 @@ def construct_prefix_tree(targets: Union[torch.Tensor, List[List[List[int]]]],
 
     if not isinstance(targets, list):
         assert targets.dim() == 3, "targets tensor needs to be batched!"
-        targets = targets.detach().cpu().numpy().tolist()
-    if target_mask is not None:
-        target_mask = target_mask.detach().cpu().numpy().tolist()
+        targets_list = targets.detach().cpu().numpy().tolist()
     else:
-        target_mask = [None for _ in targets]
+        targets_list = targets
+    if target_mask is not None:
+        target_masks: List[Optional[np.ndarray]] = target_mask.detach().cpu().numpy().tolist()
+    else:
+        target_masks = [None for _ in targets_list]
 
-    for instance_targets, instance_mask in zip(targets, target_mask):
+    for instance_targets, instance_mask in zip(targets_list, target_masks):
         allowed_transitions: Dict[Tuple[int, ...], Set[int]] = defaultdict(set)
         for i, target_sequence in enumerate(instance_targets):
             history: Tuple[int, ...] = ()

@@ -313,9 +313,9 @@ def construct_arg(cls: Type[T], # pylint: disable=inconsistent-return-statements
     else:
         # Pass it on as is and hope for the best.   ¯\_(ツ)_/¯
         if optional:
-            return params.pop(name, default)
+            return params.pop(name, default, keep_as_dict=True)
         else:
-            return params.pop(name)
+            return params.pop(name, keep_as_dict=True)
 
 
 class FromParams:

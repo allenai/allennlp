@@ -1,6 +1,7 @@
 from typing import List, Iterator, Dict, Tuple, Any
 import json
 from contextlib import contextmanager
+
 import numpy
 from torch.utils.hooks import RemovableHandle
 from torch import Tensor
@@ -9,10 +10,10 @@ from allennlp.common import Registrable
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import DatasetReader, Instance
+from allennlp.data.dataset import Batch
 from allennlp.models import Model
 from allennlp.models.archival import Archive, load_archive
-from allennlp.modules.text_field_embedders import TextFieldEmbedder
-from allennlp.data.dataset import Batch
+from allennlp.nn import util
 
 # a mapping from model `type` to the default Predictor for that type
 DEFAULT_PREDICTORS = {
@@ -73,6 +74,7 @@ class Predictor(Registrable):
         List[instance]
         A list of :class:`~allennlp.data.instance.Instance`
         """
+        # pylint: disable=assignment-from-no-return
         instance = self._json_to_instance(inputs)
         outputs = self._model.forward_on_instance(instance)
         new_instances = self.predictions_to_labeled_instances(instance, outputs)
@@ -107,7 +109,7 @@ class Predictor(Registrable):
 
         dataset = Batch(instances)
         dataset.index_instances(self._model.vocab)
-        outputs = self._model.decode(self._model.forward(**dataset.as_tensor_dict()))
+        outputs = self._model.decode(self._model.forward(**dataset.as_tensor_dict()))  # type: ignore
 
         loss = outputs['loss']
         self._model.zero_grad()
@@ -119,7 +121,7 @@ class Predictor(Registrable):
         grad_dict = dict()
         for idx, grad in enumerate(embedding_gradients):
             key = 'grad_input_' + str(idx + 1)
-            grad_dict[key] = grad.squeeze_(0).detach().cpu().numpy()
+            grad_dict[key] = grad.detach().cpu().numpy()
 
         return grad_dict, outputs
 
@@ -137,10 +139,8 @@ class Predictor(Registrable):
             embedding_gradients.append(grad_out[0])
 
         backward_hooks = []
-        for module in self._model.modules():
-            if isinstance(module, TextFieldEmbedder):
-                backward_hooks.append(module.register_backward_hook(hook_layers))
-
+        embedding_layer = util.find_embedding_layer(self._model)
+        backward_hooks.append(embedding_layer.register_backward_hook(hook_layers))
         return backward_hooks
 
     @contextmanager
@@ -192,7 +192,6 @@ class Predictor(Registrable):
         multiple predictions in the output (e.g., in NER a model predicts multiple spans). In this
         case, each instance in the returned list of Instances contains an individual
         entity prediction as the label.
-
         """
         # pylint: disable=unused-argument,no-self-use
         raise RuntimeError("implement this method for model interpretations or attacks")

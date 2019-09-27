@@ -6,31 +6,38 @@ which to write the results.
 .. code-block:: bash
 
    $ allennlp train --help
+    usage: allennlp train [-h] -s SERIALIZATION_DIR [-r] [-f] [-o OVERRIDES]
+                          [--file-friendly-logging]
+                          [--cache-directory CACHE_DIRECTORY]
+                          [--cache-prefix CACHE_PREFIX]
+                          [--include-package INCLUDE_PACKAGE]
+                          param_path
 
-   usage: allennlp train [-h] -s SERIALIZATION_DIR [-r] [-f] [-o OVERRIDES]
-                         [--file-friendly-logging]
-                         [--include-package INCLUDE_PACKAGE]
-                         param_path
+    Train the specified model on the specified dataset.
 
-   Train the specified model on the specified dataset.
+    positional arguments:
+      param_path            path to parameter file describing the model to be
+                            trained
 
-   positional arguments:
-     param_path            path to parameter file describing the model to be
-                           trained
-
-   optional arguments:
-     -h, --help            show this help message and exit
-     -s SERIALIZATION_DIR, --serialization-dir SERIALIZATION_DIR
-                           directory in which to save the model and its logs
-     -r, --recover         recover training from the state in serialization_dir
-     -f, --force           overwrite the output directory if it exists
-     -o OVERRIDES, --overrides OVERRIDES
-                           a JSON structure used to override the experiment
-                           configuration
-     --file-friendly-logging
-                           outputs tqdm status on separate lines and slows tqdm
-                           refresh rate
-     --include-package INCLUDE_PACKAGE
+    optional arguments:
+      -h, --help            show this help message and exit
+      -s SERIALIZATION_DIR, --serialization-dir SERIALIZATION_DIR
+                            directory in which to save the model and its logs
+      -r, --recover         recover training from the state in serialization_dir
+      -f, --force           overwrite the output directory if it exists
+      -o OVERRIDES, --overrides OVERRIDES
+                            a JSON structure used to override the experiment
+                            configuration
+      --file-friendly-logging
+                            outputs tqdm status on separate lines and slows tqdm
+                            refresh rate
+      --cache-directory CACHE_DIRECTORY
+                            Location to store cache of data preprocessing
+      --cache-prefix CACHE_PREFIX
+                            Prefix to use for data caching, giving current
+                            parameter settings a name in the cache, instead of
+                            computing a hash
+      --include-package INCLUDE_PACKAGE
                             additional packages to include
 """
 

@@ -1,18 +1,18 @@
 """
 AllenNLP just uses
-`PyTorch optimizers <http://pytorch.org/docs/master/optim.html>`_ ,
+`PyTorch optimizers <https://pytorch.org/docs/master/optim.html>`_ ,
 with a thin wrapper to allow registering them and instantiating them ``from_params``.
 
 The available optimizers are
 
-* `"adadelta" <http://pytorch.org/docs/master/optim.html#torch.optim.Adadelta>`_
-* `"adagrad" <http://pytorch.org/docs/master/optim.html#torch.optim.Adagrad>`_
-* `"adam" <http://pytorch.org/docs/master/optim.html#torch.optim.Adam>`_
-* `"sparse_adam" <http://pytorch.org/docs/master/optim.html#torch.optim.SparseAdam>`_
-* `"sgd" <http://pytorch.org/docs/master/optim.html#torch.optim.SGD>`_
-* `"rmsprop <http://pytorch.org/docs/master/optim.html#torch.optim.RMSprop>`_
-* `"adamax <http://pytorch.org/docs/master/optim.html#torch.optim.Adamax>`_
-* `"averaged_sgd <http://pytorch.org/docs/master/optim.html#torch.optim.ASGD>`_
+* `"adadelta" <https://pytorch.org/docs/master/optim.html#torch.optim.Adadelta>`_
+* `"adagrad" <https://pytorch.org/docs/master/optim.html#torch.optim.Adagrad>`_
+* `"adam" <https://pytorch.org/docs/master/optim.html#torch.optim.Adam>`_
+* `"sparse_adam" <https://pytorch.org/docs/master/optim.html#torch.optim.SparseAdam>`_
+* `"sgd" <https://pytorch.org/docs/master/optim.html#torch.optim.SGD>`_
+* `"rmsprop <https://pytorch.org/docs/master/optim.html#torch.optim.RMSprop>`_
+* `"adamax <https://pytorch.org/docs/master/optim.html#torch.optim.Adamax>`_
+* `"averaged_sgd <https://pytorch.org/docs/master/optim.html#torch.optim.ASGD>`_
 """
 
 import logging
@@ -52,7 +52,7 @@ class Optimizer(Registrable):
             # e.g., {'params': [list of parameters], 'lr': 1e-3, ...}
             # Any config option not specified in the additional options (e.g.
             # for the default group) is inherited from the top level config.
-            # see: http://pytorch.org/docs/0.3.0/optim.html?#per-parameter-options
+            # see: https://pytorch.org/docs/0.3.0/optim.html?#per-parameter-options
             #
             # groups contains something like:
             #"parameter_groups": [
@@ -197,7 +197,7 @@ class DenseSparseAdam(torch.optim.Optimizer):
         if not 0.0 <= betas[1] < 1.0:
             raise ValueError("Invalid beta parameter at index 1: {}".format(betas[1]))
         defaults = dict(lr=lr, betas=betas, eps=eps)
-        super(DenseSparseAdam, self).__init__(params, defaults)
+        super().__init__(params, defaults)
 
     def step(self, closure=None):
         """

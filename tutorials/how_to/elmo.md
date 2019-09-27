@@ -8,7 +8,7 @@ semantic role labeling, classification, and syntactic parsing.
 This document describes how to add ELMo representations to your model using pytorch and `allennlp`.
 We also have a [tensorflow implementation](https://github.com/allenai/bilm-tf).
 
-For more detail about ELMo, please see the publication ["Deep contextualized word representations", NAACL 2018](http://www.aclweb.org/anthology/N18-1202) or the [ELMo section of the AllenNLP website](https://allennlp.org/elmo).
+For more detail about ELMo, please see the publication ["Deep contextualized word representations", NAACL 2018](https://www.aclweb.org/anthology/N18-1202) or the [ELMo section of the AllenNLP website](https://allennlp.org/elmo).
 
 Citations:
 
@@ -214,7 +214,7 @@ There are a few practical implications of this:
 # Reproducing the results from <i>Deep contextualized word representations</i>
 
 This section provides details on reproducing the results in Table 1
-of the [ELMo paper](http://www.aclweb.org/anthology/N18-1202).
+of the [ELMo paper](https://www.aclweb.org/anthology/N18-1202).
 
 For context, all of the experiments for the ELMo paper were done before AllenNLP existed, and almost all of the models in AllenNLP are re-implementations of things that were typically originally written in tensorflow code (the SRL model is the only exception).
 In some cases, we haven't had the resources to tune the AllenNLP implementations to match the existing performance numbers yet; if you are able to do this for some of the models and submit back a tuned model, we (and many others) would greatly appreciate it.

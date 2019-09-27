@@ -42,6 +42,19 @@ class TestSeq2SeqDatasetReader:
         assert [t.text for t in fields["target_tokens"].tokens] == ["@start@", "this", "is",
                                                                     "a", "sentence", "@end@"]
 
+    def test_max_length_truncation(self):
+        reader = Seq2SeqDatasetReader(source_max_tokens=3, target_max_tokens=5)
+        instances = reader.read(str(AllenNlpTestCase.FIXTURES_ROOT / 'data' / 'seq2seq_copy.tsv'))
+        instances = ensure_list(instances)
+        assert reader._source_max_exceeded == 2 # pylint: disable=protected-access
+        assert reader._target_max_exceeded == 1 # pylint: disable=protected-access
+        assert len(instances) == 3
+        fields = instances[0].fields
+        assert [t.text for t in fields["source_tokens"].tokens] == ["@start@", "this", "is",
+                                                                    "a", "@end@"]
+        assert [t.text for t in fields["target_tokens"].tokens] == ["@start@", "this", "is",
+                                                                    "a", "sentence", "@end@"]
+
     def test_delimiter_parameter(self):
         reader = Seq2SeqDatasetReader(delimiter=",")
         instances = reader.read(str(AllenNlpTestCase.FIXTURES_ROOT / 'data' / 'seq2seq_copy.csv'))

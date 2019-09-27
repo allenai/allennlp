@@ -124,7 +124,7 @@ class WikiTablesLanguage(DomainLanguage):
             elif column_type == 'date':
                 column = DateColumn(column_name)
                 self.add_constant(column_name, column, type_=ComparableColumn)
-            elif column_type == 'number' or column_type == "num2":
+            elif column_type in ('number', 'num2'):
                 column = NumberColumn(column_name)
                 self.add_constant(column_name, column, type_=ComparableColumn)
             self.add_constant(column_name, column, type_=Column)
@@ -817,6 +817,7 @@ class WikiTablesLanguage(DomainLanguage):
 
     @staticmethod
     def _make_date(cell_string: str) -> Date:
+        # pylint: disable=consider-using-get
         string_parts = cell_string.split("_")
         year = -1
         month = -1

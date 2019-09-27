@@ -475,7 +475,7 @@ class AtisSemanticParser(Model):
                                                            list(global_action_ids))
             if linked_actions:
                 linked_rules, linked_action_ids = zip(*linked_actions)
-                entities = linked_rules
+                entities = list(linked_rules)
                 entity_ids = [entity_map[entity] for entity in entities]
                 entity_linking_scores = linking_scores[entity_ids]
                 entity_type_tensor = entity_types[entity_ids]

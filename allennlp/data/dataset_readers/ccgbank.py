@@ -96,8 +96,8 @@ class CcgBankDatasetReader(DatasetReader):
 
                     yield self.text_to_instance(tokens,
                                                 ccg_categories,
-                                                modified_pos_tags,
                                                 original_pos_tags,
+                                                modified_pos_tags,
                                                 predicate_arg_categories)
 
     @overrides

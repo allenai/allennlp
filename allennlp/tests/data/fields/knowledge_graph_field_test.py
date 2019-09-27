@@ -33,7 +33,7 @@ class KnowledgeGraphFieldTest(AllenNlpTestCase):
         self.edirne_index = self.oov_index
         self.field = KnowledgeGraphField(self.graph, self.utterance, self.token_indexers, self.tokenizer)
 
-        super(KnowledgeGraphFieldTest, self).setUp()
+        super().setUp()
 
     def test_count_vocab_items(self):
         namespace_token_counts = defaultdict(lambda: defaultdict(int))
@@ -152,3 +152,9 @@ class KnowledgeGraphFieldTest(AllenNlpTestCase):
         expected_linking_tensor = torch.stack([tensor_dict1['linking'], tensor_dict2['linking']])
         assert_almost_equal(batched_tensor_dict['linking'].detach().cpu().numpy(),
                             expected_linking_tensor.detach().cpu().numpy())
+
+    def test_field_initialized_with_empty_constructor(self):
+        try:
+            self.field.empty_field()
+        except AssertionError as e:
+            pytest.fail(str(e), pytrace=True)

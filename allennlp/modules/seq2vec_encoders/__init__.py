@@ -6,9 +6,9 @@ others are AllenNLP modules.
 
 The available Seq2Vec encoders are
 
-* `"gru" <http://pytorch.org/docs/master/nn.html#torch.nn.GRU>`_
-* `"lstm" <http://pytorch.org/docs/master/nn.html#torch.nn.LSTM>`_
-* `"rnn" <http://pytorch.org/docs/master/nn.html#torch.nn.RNN>`_
+* `"gru" <https://pytorch.org/docs/master/nn.html#torch.nn.GRU>`_
+* `"lstm" <https://pytorch.org/docs/master/nn.html#torch.nn.LSTM>`_
+* `"rnn" <https://pytorch.org/docs/master/nn.html#torch.nn.RNN>`_
 * :class:`"cnn" <allennlp.modules.seq2vec_encoders.cnn_encoder.CnnEncoder>`
 * :class:`"augmented_lstm" <allennlp.modules.augmented_lstm.AugmentedLstm>`
 * :class:`"alternating_lstm" <allennlp.modules.stacked_alternating_lstm.StackedAlternatingLstm>`
@@ -71,7 +71,7 @@ class _Seq2VecWrapper:
             raise ConfigurationError("Our encoder semantics assumes batch is always first!")
         if self._module_class in self.PYTORCH_MODELS:
             params['batch_first'] = True
-        module = self._module_class(**params.as_dict())
+        module = self._module_class(**params.as_dict(infer_type_and_cast=True))
         return PytorchSeq2VecWrapper(module)
 
 # pylint: disable=protected-access

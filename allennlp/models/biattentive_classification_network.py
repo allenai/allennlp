@@ -84,7 +84,7 @@ class BiattentiveClassificationNetwork(Model):
                  use_integrator_output_elmo: bool = False,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
-        super(BiattentiveClassificationNetwork, self).__init__(vocab, regularizer)
+        super().__init__(vocab, regularizer)
 
         self._text_field_embedder = text_field_embedder
         if "elmo" in self._text_field_embedder._token_embedders.keys():  # pylint: disable=protected-access

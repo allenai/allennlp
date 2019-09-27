@@ -68,7 +68,7 @@ class _NamespaceDependentDefaultDict(defaultdict):
         self._non_padded_namespaces = set(non_padded_namespaces)
         self._padded_function = padded_function
         self._non_padded_function = non_padded_function
-        super(_NamespaceDependentDefaultDict, self).__init__()
+        super().__init__()
 
     def __missing__(self, key: str):
         if any(namespace_match(pattern, key) for pattern in self._non_padded_namespaces):
@@ -84,16 +84,12 @@ class _NamespaceDependentDefaultDict(defaultdict):
 
 class _TokenToIndexDefaultDict(_NamespaceDependentDefaultDict):
     def __init__(self, non_padded_namespaces: Set[str], padding_token: str, oov_token: str) -> None:
-        super(_TokenToIndexDefaultDict, self).__init__(non_padded_namespaces,
-                                                       lambda: {padding_token: 0, oov_token: 1},
-                                                       lambda: {})
+        super().__init__(non_padded_namespaces, lambda: {padding_token: 0, oov_token: 1}, lambda: {})
 
 
 class _IndexToTokenDefaultDict(_NamespaceDependentDefaultDict):
     def __init__(self, non_padded_namespaces: Set[str], padding_token: str, oov_token: str) -> None:
-        super(_IndexToTokenDefaultDict, self).__init__(non_padded_namespaces,
-                                                       lambda: {0: padding_token, 1: oov_token},
-                                                       lambda: {})
+        super().__init__(non_padded_namespaces, lambda: {0: padding_token, 1: oov_token}, lambda: {})
 
 
 def _read_pretrained_tokens(embeddings_file_uri: str) -> List[str]:
@@ -122,11 +118,11 @@ def pop_max_vocab_size(params: Params) -> Union[int, Dict[str, int]]:
     But it could also be a string representing an int (in the case of environment variable
     substitution). So we need some complex logic to handle it.
     """
-    size = params.pop("max_vocab_size", None)
+    size = params.pop("max_vocab_size", None, keep_as_dict=True)
 
-    if isinstance(size, Params):
+    if isinstance(size, dict):
         # This is the Dict[str, int] case.
-        return size.as_dict()
+        return size
     elif size is not None:
         # This is the int / str case.
         return int(size)
@@ -469,10 +465,10 @@ class Vocabulary(Registrable):
         if extend:
             vocab.extend_from_instances(params, instances=instances)
             return vocab
-        min_count = params.pop("min_count", None)
+        min_count = params.pop("min_count", None, keep_as_dict=True)
         max_vocab_size = pop_max_vocab_size(params)
         non_padded_namespaces = params.pop("non_padded_namespaces", DEFAULT_NON_PADDED_NAMESPACES)
-        pretrained_files = params.pop("pretrained_files", {})
+        pretrained_files = params.pop("pretrained_files", {}, keep_as_dict=True)
         min_pretrained_embeddings = params.pop("min_pretrained_embeddings", None)
         only_include_pretrained_words = params.pop_bool("only_include_pretrained_words", False)
         tokens_to_add = params.pop("tokens_to_add", None)

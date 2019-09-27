@@ -60,11 +60,11 @@ class AttachmentScores(Metric):
         gold_indices = gold_indices.long()
         gold_labels = gold_labels.long()
 
-        # Multiply by a mask donoting locations of
+        # Multiply by a mask denoting locations of
         # gold labels which we should ignore.
         for label in self._ignore_classes:
             label_mask = gold_labels.eq(label)
-            mask = mask * (1 - label_mask).long()
+            mask = mask * (~label_mask).long()
 
         correct_indices = predicted_indices.eq(gold_indices).long() * mask
         unlabeled_exact_match = (correct_indices + (1 - mask)).prod(dim=-1)

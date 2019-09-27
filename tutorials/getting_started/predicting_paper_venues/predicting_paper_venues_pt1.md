@@ -50,8 +50,8 @@ decide if it was (or should be) published in a "natural language processing" ven
 learning" venue, or an "artificial intelligence" venue (all of those scare quotes are because this
 is a totally artificial task, and there aren't solid lines between these fields).
 
-We'll use the [open research corpus](http://labs.semanticscholar.org/corpus/) provided by the academic
-search engine [Semantic Scholar](http://semanticscholar.org), with a heuristically-edited "venue"
+We'll use the [open research corpus](https://labs.semanticscholar.org/corpus/) provided by the academic
+search engine [Semantic Scholar](https://www.semanticscholar.org/), with a heuristically-edited "venue"
 field.  You can follow the link to see the full specification of this data, but it's provided as a
 JSON-lines file, where each JSON blob has at least these fields:
 
@@ -246,7 +246,7 @@ from allennlp.common.testing import ModelTestCase
 
 class AcademicPaperClassifierTest(ModelTestCase):
     def setUp(self):
-        super(AcademicPaperClassifierTest, self).setUp()
+        super().setUp()
         self.set_up_model('tests/fixtures/academic_paper_classifier.json',
                           'tests/fixtures/s2_papers.jsonl')
 
@@ -292,7 +292,7 @@ class AcademicPaperClassifier(Model):
                  classifier_feedforward: FeedForward,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
-        super(AcademicPaperClassifier, self).__init__(vocab, regularizer)
+        super().__init__(vocab, regularizer)
 
         self.text_field_embedder = text_field_embedder
         self.num_classes = self.vocab.get_vocab_size("labels")

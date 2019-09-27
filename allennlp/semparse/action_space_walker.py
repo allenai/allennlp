@@ -65,8 +65,8 @@ class ActionSpaceWalker:
                     # an columns of type "date", then this condition would be triggered. We should
                     # just discard those paths.
                     continue
-                else:
-                    next_actions.extend(actions[nonterminal])
+
+                next_actions.extend(actions[nonterminal])
                 # Iterating over all possible next actions.
                 for action in next_actions:
                     new_history = history + [action]

@@ -13,7 +13,7 @@ from allennlp.data.token_indexers import SingleIdTokenIndexer
 
 class TestSequenceLabelField(AllenNlpTestCase):
     def setUp(self):
-        super(TestSequenceLabelField, self).setUp()
+        super().setUp()
         self.text = TextField([Token(t) for t in ["here", "are", "some", "words", "."]],
                               {"words": SingleIdTokenIndexer("words")})
 

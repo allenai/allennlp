@@ -119,7 +119,7 @@ class FBetaMeasure(Metric):
 
         if mask is None:
             mask = torch.ones_like(gold_labels)
-        mask = mask.to(torch.uint8)
+        mask = mask.to(dtype=torch.bool)
         gold_labels = gold_labels.float()
 
         argmax_predictions = predictions.max(dim=-1)[1].float()

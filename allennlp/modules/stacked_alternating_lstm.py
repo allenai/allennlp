@@ -3,11 +3,13 @@ A stacked LSTM with LSTM layers which alternate between going forwards over
 the sequence and going backwards.
 """
 
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple, Union, List
 import torch
 from torch.nn.utils.rnn import PackedSequence
 from allennlp.modules.augmented_lstm import AugmentedLstm
 from allennlp.common.checks import ConfigurationError
+
+TensorPair = Tuple[torch.Tensor, torch.Tensor]  # pylint: disable=invalid-name
 
 
 class StackedAlternatingLstm(torch.nn.Module):
@@ -49,7 +51,7 @@ class StackedAlternatingLstm(torch.nn.Module):
                  recurrent_dropout_probability: float = 0.0,
                  use_highway: bool = True,
                  use_input_projection_bias: bool = True) -> None:
-        super(StackedAlternatingLstm, self).__init__()
+        super().__init__()
 
         # Required to be wrapped with a :class:`PytorchSeq2SeqWrapper`.
         self.input_size = input_size
@@ -59,7 +61,7 @@ class StackedAlternatingLstm(torch.nn.Module):
         layers = []
         lstm_input_size = input_size
         for layer_index in range(num_layers):
-            go_forward = True if layer_index % 2 == 0 else False
+            go_forward = layer_index % 2 == 0
             layer = AugmentedLstm(lstm_input_size, hidden_size, go_forward,
                                   recurrent_dropout_probability=recurrent_dropout_probability,
                                   use_highway=use_highway,
@@ -71,8 +73,8 @@ class StackedAlternatingLstm(torch.nn.Module):
 
     def forward(self,  # pylint: disable=arguments-differ
                 inputs: PackedSequence,
-                initial_state: Optional[Tuple[torch.Tensor, torch.Tensor]] = None) -> \
-            Tuple[Union[torch.Tensor, PackedSequence], Tuple[torch.Tensor, torch.Tensor]]:
+                initial_state: Optional[TensorPair] = None) -> \
+            Tuple[Union[torch.Tensor, PackedSequence], TensorPair]:
         """
         Parameters
         ----------
@@ -91,7 +93,7 @@ class StackedAlternatingLstm(torch.nn.Module):
             (num_layers, batch_size, hidden_size).
         """
         if not initial_state:
-            hidden_states = [None] * len(self.lstm_layers)
+            hidden_states: List[Optional[TensorPair]] = [None] * len(self.lstm_layers)
         elif initial_state[0].size()[0] != len(self.lstm_layers):
             raise ConfigurationError("Initial states were passed to forward() but the number of "
                                      "initial states does not match the number of layers.")

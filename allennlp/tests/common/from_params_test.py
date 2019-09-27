@@ -51,7 +51,7 @@ class TestFromParams(AllenNlpTestCase):
 
     def test_remove_optional(self):
         optional_type = Optional[Dict[str, str]]
-        bare_type = remove_optional(optional_type)
+        bare_type = remove_optional(optional_type)  # type: ignore
         bare_bare_type = remove_optional(bare_type)
 
         assert bare_type == Dict[str, str]
@@ -188,7 +188,7 @@ class TestFromParams(AllenNlpTestCase):
                 n = extras2["n"]
                 return cls(m=m, n=n)
 
-        class C(object):
+        class C:
             pass
 
         @BaseClass.register("D")
@@ -336,6 +336,17 @@ class TestFromParams(AllenNlpTestCase):
         assert all(isinstance(value, B) for value in d.items.values())
         assert d.items["first"].size == 1
         assert d.items["second"].size == 2
+
+    def test_dict_not_params(self):
+        class A(FromParams):
+            def __init__(self, counts: Dict[str, int]) -> None:
+                self.counts = counts
+
+        params = Params({"counts": {"a": 10, "b": 20}})
+        a = A.from_params(params)
+
+        assert isinstance(a.counts, dict)
+        assert not isinstance(a.counts, Params)
 
     def test_list(self):
         # pylint: disable=unused-variable

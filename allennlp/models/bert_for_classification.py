@@ -1,4 +1,4 @@
-from typing import Dict, Union
+from typing import Dict, Union, Optional
 
 from overrides import overrides
 import torch
@@ -8,6 +8,7 @@ from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules.token_embedders.bert_token_embedder import PretrainedBertModel
 from allennlp.nn.initializers import InitializerApplicator
+from allennlp.nn import RegularizerApplicator
 from allennlp.training.metrics import CategoricalAccuracy
 
 
@@ -42,6 +43,8 @@ class BertForClassification(Model):
         Otherwise, they will be frozen and only the final linear layer will be trained.
     initializer : ``InitializerApplicator``, optional
         If provided, will be used to initialize the final linear layer *only*.
+    regularizer : ``RegularizerApplicator``, optional (default=``None``)
+        If provided, will be used to calculate the regularization penalty during training.
     """
     def __init__(self,
                  vocab: Vocabulary,
@@ -51,8 +54,9 @@ class BertForClassification(Model):
                  index: str = "bert",
                  label_namespace: str = "labels",
                  trainable: bool = True,
-                 initializer: InitializerApplicator = InitializerApplicator()) -> None:
-        super().__init__(vocab)
+                 initializer: InitializerApplicator = InitializerApplicator(),
+                 regularizer: Optional[RegularizerApplicator] = None,) -> None:
+        super().__init__(vocab, regularizer)
 
         if isinstance(bert_model, str):
             self.bert_model = PretrainedBertModel.load(bert_model)

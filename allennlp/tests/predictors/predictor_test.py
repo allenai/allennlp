@@ -45,5 +45,5 @@ class TestPredictor(AllenNlpTestCase):
             assert 'grad_input_2' in grads
             assert grads['grad_input_1'] is not None
             assert grads['grad_input_2'] is not None
-            assert len(grads['grad_input_1']) == 9  # 9 words in hypothesis
-            assert len(grads['grad_input_2']) == 5  # 5 words in premise
+            assert len(grads['grad_input_1'][0]) == 9  # 9 words in hypothesis
+            assert len(grads['grad_input_2'][0]) == 5  # 5 words in premise

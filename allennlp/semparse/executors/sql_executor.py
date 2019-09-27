@@ -1,5 +1,6 @@
 import logging
 from typing import List
+import sys
 
 import sqlite3
 import multiprocessing
@@ -63,7 +64,7 @@ class SqlExecutor:
             predicted_rows = self._cursor.fetchall()
         except sqlite3.Error as error:
             logger.warning(f'Error executing predicted: {error}')
-            exit(0)
+            sys.exit(0)
 
         # If predicted table matches any of the reference tables then it is counted as correct.
         target_rows = None
@@ -75,8 +76,8 @@ class SqlExecutor:
             except sqlite3.Error as error:
                 logger.warning(f'Error executing predicted: {error}')
             if predicted_rows == target_rows:
-                exit(1)
-        exit(0)
+                sys.exit(1)
+        sys.exit(0)
 
     @staticmethod
     def postprocess_query_sqlite(query: str):

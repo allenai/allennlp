@@ -10,7 +10,7 @@ from allennlp.common.checks import ConfigurationError
 
 class TestBagOfWordCountsTokenEmbedder(AllenNlpTestCase):
     def setUp(self):
-        super(TestBagOfWordCountsTokenEmbedder, self).setUp()
+        super().setUp()
         self.vocab = Vocabulary()
         self.vocab.add_token_to_namespace("1")
         self.vocab.add_token_to_namespace("2")

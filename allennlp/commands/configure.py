@@ -5,16 +5,15 @@ generate an AllenNLP configuration file.
 .. code-block:: bash
 
     $ allennlp configure --help
-
     usage: allennlp configure [-h] [--port PORT]
-                            [--include-package INCLUDE_PACKAGE]
+                              [--include-package INCLUDE_PACKAGE]
 
     Run the configuration wizard
 
     optional arguments:
-    -h, --help            show this help message and exit
-    --port PORT           port to serve the wizard on
-    --include-package INCLUDE_PACKAGE
+      -h, --help            show this help message and exit
+      --port PORT           port to serve the wizard on (default = 8123)
+      --include-package INCLUDE_PACKAGE
                             additional packages to include
 """
 
