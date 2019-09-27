@@ -13,7 +13,7 @@ class TestMultiLabelField(AllenNlpTestCase):
         f = MultiLabelField([2, 3], skip_indexing=True, label_namespace="test1", num_labels=5)
         tensor = f.as_tensor(f.get_padding_lengths()).detach().cpu().tolist()
         assert tensor == [0, 0, 1, 1, 0]
-        assert set([type(item) for item in tensor]) == set([int])
+        assert {type(item) for item in tensor} == {int}
 
     def test_multilabel_field_can_index_with_vocab(self):
         vocab = Vocabulary()

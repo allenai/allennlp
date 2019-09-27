@@ -90,7 +90,7 @@ class BiaffineDependencyParserMultiLang(BiaffineDependencyParser):
                  input_dropout: float = 0.0,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
-        super(BiaffineDependencyParserMultiLang, self).__init__(
+        super().__init__(
                 vocab, text_field_embedder, encoder, tag_representation_dim,
                 arc_representation_dim, tag_feedforward, arc_feedforward,
                 pos_tag_embedding, use_mst_decoding_for_validation, dropout,

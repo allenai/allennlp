@@ -24,7 +24,7 @@ from allennlp.nn.util import remove_sentence_boundaries
 
 class ElmoTestCase(AllenNlpTestCase):
     def setUp(self):
-        super(ElmoTestCase, self).setUp()
+        super().setUp()
         self.elmo_fixtures_path = self.FIXTURES_ROOT / 'elmo'
         self.options_file = str(self.elmo_fixtures_path / 'options.json')
         self.weight_file = str(self.elmo_fixtures_path / 'lm_weights.hdf5')
@@ -168,7 +168,7 @@ class TestElmoBiLm(ElmoTestCase):
 
 class TestElmo(ElmoTestCase):
     def setUp(self):
-        super(TestElmo, self).setUp()
+        super().setUp()
 
         self.elmo = Elmo(self.options_file, self.weight_file, 2, dropout=0.0)
 

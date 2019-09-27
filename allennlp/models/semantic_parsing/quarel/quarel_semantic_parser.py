@@ -90,7 +90,7 @@ class QuarelSemanticParser(Model):
                  entity_encoder: Seq2VecEncoder = None,  # pylint: disable=unused-argument
                  entity_similarity_mode: str = "dot_product",
                  rule_namespace: str = 'rule_labels') -> None:
-        super(QuarelSemanticParser, self).__init__(vocab)
+        super().__init__(vocab)
         self._question_embedder = question_embedder
         self._encoder = encoder
         self._beam_search = decoder_beam_search

@@ -20,7 +20,7 @@ class TestDataset(AllenNlpTestCase):
         self.vocab.add_token_to_namespace(".")
         self.token_indexer = {"tokens": SingleIdTokenIndexer()}
         self.instances = self.get_instances()
-        super(TestDataset, self).setUp()
+        super().setUp()
 
     def test_instances_must_have_homogeneous_fields(self):
         instance1 = Instance({"tag": (LabelField(1, skip_indexing=True))})

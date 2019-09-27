@@ -14,6 +14,7 @@ from allennlp.models.coreference_resolution.coref import CoreferenceResolver
 from allennlp.models.crf_tagger import CrfTagger
 from allennlp.models.decomposable_attention import DecomposableAttention
 from allennlp.models.event2mind import Event2Mind
+from allennlp.models.encoder_decoders.composed_seq2seq import ComposedSeq2Seq
 from allennlp.models.encoder_decoders.simple_seq2seq import SimpleSeq2Seq
 from allennlp.models.reading_comprehension.bidaf import BidirectionalAttentionFlow
 from allennlp.models.reading_comprehension.naqanet import NumericallyAugmentedQaNet

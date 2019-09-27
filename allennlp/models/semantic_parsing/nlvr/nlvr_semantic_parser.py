@@ -50,7 +50,7 @@ class NlvrSemanticParser(Model):
                  encoder: Seq2SeqEncoder,
                  dropout: float = 0.0,
                  rule_namespace: str = 'rule_labels') -> None:
-        super(NlvrSemanticParser, self).__init__(vocab=vocab)
+        super().__init__(vocab=vocab)
 
         self._sentence_embedder = sentence_embedder
         self._denotation_accuracy = Average()

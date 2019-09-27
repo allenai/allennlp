@@ -190,7 +190,7 @@ def evaluate_json(annotations: Dict[str, Any], predicted_answers: Dict[str, Any]
                     if gold_answer[0].strip() != "":
                         max_em_score = max(max_em_score, em_score)
                         max_f1_score = max(max_f1_score, f1_score)
-                        if max_em_score == em_score or max_f1_score == f1_score:
+                        if max_em_score == em_score and max_f1_score == f1_score:
                             max_type = gold_type
             else:
                 print("Missing prediction for question: {}".format(query_id))

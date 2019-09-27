@@ -19,7 +19,7 @@ class DotProductSimilarity(SimilarityFunction):
         variance in the result.
     """
     def __init__(self, scale_output: bool = False) -> None:
-        super(DotProductSimilarity, self).__init__()
+        super().__init__()
         self._scale_output = scale_output
 
     @overrides

@@ -177,7 +177,7 @@ class ConllCorefReader(DatasetReader):
 
     @staticmethod
     def _normalize_word(word):
-        if word == "/." or word == "/?":
+        if word in ("/.", "/?"):
             return word[1:]
         else:
             return word

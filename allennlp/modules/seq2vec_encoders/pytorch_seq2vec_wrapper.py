@@ -37,7 +37,7 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
     """
     def __init__(self, module: torch.nn.modules.RNNBase) -> None:
         # Seq2VecEncoders cannot be stateful.
-        super(PytorchSeq2VecWrapper, self).__init__(stateful=False)
+        super().__init__(stateful=False)
         self._module = module
         try:
             if not self._module.batch_first:

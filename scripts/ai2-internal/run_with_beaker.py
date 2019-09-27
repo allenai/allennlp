@@ -22,7 +22,7 @@ from allennlp.common.params import Params
 def main(param_file: str, args: argparse.Namespace):
     commit = subprocess.check_output(["git", "rev-parse", "HEAD"], universal_newlines=True).strip()
     docker_image = f"allennlp/allennlp:{commit}"
-    overrides = ""
+    overrides = args.overrides
 
     # Reads params and sets environment.
     ext_vars = {}
@@ -32,6 +32,12 @@ def main(param_file: str, args: argparse.Namespace):
         ext_vars[key] = value
 
     params = Params.from_file(param_file, overrides, ext_vars)
+
+    # Write params as json. Otherwise Jsonnet's import feature breaks.
+    compiled_params_path = tempfile.mkstemp(".json", "config")[1]
+    params.to_file(compiled_params_path)
+    print(f"Compiled jsonnet config written to {compiled_params_path}.")
+
     flat_params = params.as_flat_dict()
     env = {}
     for k, v in flat_params.items():
@@ -56,21 +62,31 @@ def main(param_file: str, args: argparse.Namespace):
                                         universal_newlines=True).strip()
         print(f"  Image created: {docker_image}")
 
-    config_dataset_id = subprocess.check_output(f'beaker dataset create --quiet {param_file}', shell=True, universal_newlines=True).strip()
+    config_dataset_id = subprocess.check_output(f'beaker dataset create --quiet {compiled_params_path}', shell=True, universal_newlines=True).strip()
 
-    allennlp_command = [
-            "python",
-            "-m",
-            "allennlp.run",
-            "train",
-            "/config.json",
-            "-s",
-            "/output",
-            "--file-friendly-logging"
+    # Arguments that differ between preemptible and regular machine execution.
+    if args.preemptible:
+        allennlp_prefix = ["/stage/allennlp/resumable_train.sh", "/output", "/config.json"]
+    else:
+        allennlp_prefix = [
+                "python",
+                "-m",
+                "allennlp.run",
+                "train",
+                "/config.json",
+                "-s",
+                "/output"
         ]
 
-    if args.preemptible:
-        allennlp_command = [ "/stage/allennlp/resumable_train.sh", "/output", "/config.json", "--file-friendly-logging"  ]
+    # All other arguments
+    allennlp_suffix = [
+            "--file-friendly-logging"
+    ]
+    for package_name in args.include_package:
+        allennlp_suffix.append("--include-package")
+        allennlp_suffix.append(package_name)
+
+    allennlp_command  = allennlp_prefix + allennlp_suffix
 
     dataset_mounts = []
     for source in args.source + [f"{config_dataset_id}:/config.json"]:
@@ -142,6 +158,8 @@ if __name__ == "__main__":
     parser.add_argument('--gpu-count', default=1, help='GPUs to use for this experiment (e.g., 1 (default))')
     parser.add_argument('--memory', help='Memory to reserve for this experiment (e.g., 1GB)')
     parser.add_argument('--preemptible', action='store_true', help='Allow task to run on preemptible hardware')
+    parser.add_argument('--include-package', type=str, action='append', default=[], help='Additional packages to include')
+    parser.add_argument('-o', '--overrides', type=str, default="", help='a JSON structure used to override the experiment configuration')
 
     args = parser.parse_args()
 

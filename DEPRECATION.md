@@ -83,7 +83,7 @@ Say you've found some old code that needs some care. You have a fix in mind, may
   * Provide the version and date when we will remove the feature if applicable.
     * We should support whichever is longest.
     * The code should live for at least one full minor version and 3 months before removal.
-      * e.g., if you're committing the deprecation to master while version 0.8.5 is out, then it should live throughout version 0.9 and can first be removed in version 0.10.0.
+      * e.g., if you're committing the deprecation to master while version 0.9.0 is out, then it should live throughout version 0.9 and can first be removed in version 0.10.0.
       * In particular, this should be at least a minor release, i.e. m.n.0.
       * If this isn't possible, consult with other developers. You should have a compelling rationale.
 

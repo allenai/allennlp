@@ -12,7 +12,7 @@ from allennlp.models.archival import load_archive
 
 class NlvrCoverageSemanticParserTest(ModelTestCase):
     def setUp(self):
-        super(NlvrCoverageSemanticParserTest, self).setUp()
+        super().setUp()
         self.set_up_model(self.FIXTURES_ROOT / "semantic_parsing" /
                           "nlvr_coverage_semantic_parser" / "experiment.json",
                           self.FIXTURES_ROOT / "data" / "nlvr" / "sample_grouped_data.jsonl")

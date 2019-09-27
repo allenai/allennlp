@@ -265,8 +265,8 @@ class WordpieceIndexer(TokenIndexer[int]):
         Extend the token type ids by len(start_piece_ids) on the left
         and len(end_piece_ids) on the right.
         """
-        first = token_type_ids[0]
-        last = token_type_ids[-1]
+        first = token_type_ids[0] if token_type_ids else 0
+        last = token_type_ids[-1] if token_type_ids else 0
         return ([first for _ in self._start_piece_ids] +
                 token_type_ids +
                 [last for _ in self._end_piece_ids])

@@ -114,7 +114,7 @@ class InputReduction(Attacker):
                 current_tokens = deepcopy(text_field.tokens)
                 reduced_instances_and_smallest = _remove_one_token(beam_instance,
                                                                    input_field_to_attack,
-                                                                   grads[grad_input_field],
+                                                                   grads[grad_input_field][0],
                                                                    ignore_tokens,
                                                                    self.beam_size,
                                                                    beam_tag_mask)

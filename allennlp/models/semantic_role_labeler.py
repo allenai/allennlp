@@ -66,7 +66,7 @@ class SemanticRoleLabeler(Model):
                  label_smoothing: float = None,
                  ignore_span_metric: bool = False,
                  srl_eval_path: str = DEFAULT_SRL_EVAL_PATH) -> None:
-        super(SemanticRoleLabeler, self).__init__(vocab, regularizer)
+        super().__init__(vocab, regularizer)
 
         self.text_field_embedder = text_field_embedder
         self.num_classes = self.vocab.get_vocab_size("labels")

@@ -7,7 +7,7 @@ from allennlp.common.testing import ModelTestCase
 
 class TestESIM(ModelTestCase):
     def setUp(self):
-        super(TestESIM, self).setUp()
+        super().setUp()
         self.set_up_model(self.FIXTURES_ROOT / 'esim' / 'experiment.json',
                           self.FIXTURES_ROOT / 'data' / 'snli.jsonl')
 

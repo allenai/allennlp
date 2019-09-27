@@ -68,10 +68,10 @@ class NextTokenLM(Model):
                 tokens: Dict[str, torch.LongTensor],
                 target_ids: Dict[str, torch.LongTensor] = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
-        batch_size = tokens['tokens'].size()[0]
 
          # Shape: (batch_size, num_tokens, embedding_dim)
         embeddings = self._text_field_embedder(tokens)
+        batch_size = embeddings.size(0)
 
          # Shape: (batch_size, num_tokens, encoding_dim)
         if self._contextualizer:

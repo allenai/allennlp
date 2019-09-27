@@ -55,7 +55,7 @@ class UnigramRecall(Metric):
                 masked_gold = cur_gold * mask[i]
             else:
                 masked_gold = cur_gold
-            cleaned_gold = [x for x in masked_gold if x != 0 and x != end_index]
+            cleaned_gold = [x for x in masked_gold if x not in (0, end_index)]
 
             retval = 0.
             for word in cleaned_gold:

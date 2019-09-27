@@ -130,7 +130,7 @@ class Scorer:
         self.metric = metric
 
     def update(self, predicted, gold, mention_to_predicted, mention_to_gold):
-        if self.metric == self.ceafe:
+        if self.metric == self.ceafe:  # pylint: disable=comparison-with-callable
             p_num, p_den, r_num, r_den = self.metric(predicted, gold)
         else:
             p_num, p_den = self.metric(predicted, mention_to_gold)

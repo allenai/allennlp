@@ -22,6 +22,22 @@ class TestSeq2SeqPredictor(AllenNlpTestCase):
         assert isinstance(predicted_tokens, list)
         assert all(isinstance(x, str) for x in predicted_tokens)
 
+    def test_uses_named_inputs_with_composed_seq2seq(self):
+        inputs = {
+                "source": "What kind of test succeeded on its first attempt?",
+        }
+
+        archive = load_archive(self.FIXTURES_ROOT / 'encoder_decoder' / 'composed_seq2seq' /
+                               'serialization' / 'model.tar.gz')
+        predictor = Predictor.from_archive(archive, 'seq2seq')
+
+        result = predictor.predict_json(inputs)
+
+        predicted_tokens = result.get("predicted_tokens")
+        assert predicted_tokens is not None
+        assert isinstance(predicted_tokens, list)
+        assert all(isinstance(x, str) for x in predicted_tokens)
+
     def test_copynet_predictions(self):
         archive = load_archive(self.FIXTURES_ROOT / 'encoder_decoder' / 'copynet_seq2seq' /
                                'serialization' / 'model.tar.gz')

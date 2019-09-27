@@ -37,7 +37,7 @@ class Maxout(torch.nn.Module, FromParams):
                  output_dims: Union[int, Sequence[int]],
                  pool_sizes: Union[int, Sequence[int]],
                  dropout: Union[float, Sequence[float]] = 0.0) -> None:
-        super(Maxout, self).__init__()
+        super().__init__()
         if not isinstance(output_dims, list):
             output_dims = [output_dims] * num_layers  # type: ignore
         if not isinstance(pool_sizes, list):

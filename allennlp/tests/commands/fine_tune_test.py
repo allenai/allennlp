@@ -126,7 +126,7 @@ class TestFineTune(AllenNlpTestCase):
 
         args = self.parser.parse_args(raw_args)
 
-        assert args.func == fine_tune_model_from_args
+        assert args.func == fine_tune_model_from_args  # pylint: disable=comparison-with-callable
         assert args.model_archive == self.model_archive
         assert args.config_file == self.config_file
         assert args.serialization_dir == self.serialization_dir
