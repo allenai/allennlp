@@ -23,14 +23,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN ln -s /usr/bin/python3 /usr/bin/python
 RUN ln -s /usr/bin/pip3 /usr/bin/pip
 
-RUN pip3 install wheel
+RUN pip install wheel
 
 # Install the specified version of AllenNLP.
 RUN if [ ! -z "$VERSION" ]; \
-    then echo "Installing allennlp==$VERSION."; pip3 install allennlp==$VERSION; \
+    then echo "Installing allennlp==$VERSION."; pip install allennlp==$VERSION; \
     elif [ ! -z "$SOURCE_COMMIT" ]; \
-    then echo "Installing allennlp@$SOURCE_COMMIT"; pip3 install "git+git://github.com/allenai/allennlp.git@$SOURCE_COMMIT"; \
-    else echo "Installing the latest pip3 release of allennlp"; pip3 install allennlp; \
+    then echo "Installing allennlp@$SOURCE_COMMIT"; pip install "git+git://github.com/allenai/allennlp.git@$SOURCE_COMMIT"; \
+    else echo "Installing the latest pip release of allennlp"; pip install allennlp; \
     fi
 
 # Copy wrapper script to allow beaker to run resumable training workloads.
