@@ -4,11 +4,11 @@ global defaults for certain tqdm parameters.
 """
 
 try:
-    shell = str(type(get_ipython()))
-except:
-    shell = ""
-    
-if "zmqshell.ZMQInteractiveShell" in shell:
+    SHELL = str(type(get_ipython()))
+except: # pylint: disable=bare-except
+    SHELL = ""
+
+if "zmqshell.ZMQInteractiveShell" in SHELL:
     from tqdm import tqdm_notebook as _tqdm
 else:
     from tqdm import tqdm as _tqdm
