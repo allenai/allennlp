@@ -24,7 +24,20 @@ def main(checks):
 
         if "mypy" in checks:
             print("Typechecker (mypy):", flush=True)
-            run("mypy allennlp --ignore-missing-imports", shell=True, check=True)
+            run("mypy allennlp"
+                # This is necessary because not all the imported libraries have type stubs.
+                " --ignore-missing-imports"
+
+                # This is necessary because PyTorch has some type stubs but they're incomplete,
+                # and mypy will follow them and generate a lot of spurious errors.
+                " --no-site-packages "
+
+                # We are extremely lax about specifying Optional[] types, so we need this flag.
+                # TODO: tighten up our type annotations and remove this
+                " --no-strict-optional",
+
+                shell=True,
+                check=True)
             print("mypy checks passed")
 
         if "build-docs" in checks:

@@ -263,7 +263,7 @@ class DomainLanguage:
                  start_types: Set[Type] = None) -> None:
         self._functions: Dict[str, Callable] = {}
         self._function_types: Dict[str, List[PredicateType]] = defaultdict(list)
-        self._start_types: Set[PredicateType] = set([PredicateType.get_type(type_) for type_ in start_types])
+        self._start_types: Set[PredicateType] = {PredicateType.get_type(type_) for type_ in start_types}
         for name in dir(self):
             if isinstance(getattr(self, name), types.MethodType):
                 function = getattr(self, name)
@@ -482,8 +482,7 @@ class DomainLanguage:
             else:
                 if isinstance(expression[0], str):
                     raise ExecutionError(f"Unrecognized function: {expression[0]}")
-                else:
-                    raise ExecutionError(f"Unsupported expression type: {expression}")
+                raise ExecutionError(f"Unsupported expression type: {expression}")
             arguments = [self._execute_expression(arg) for arg in expression[1:]]
             try:
                 return function(*arguments)
@@ -648,8 +647,7 @@ class DomainLanguage:
         else:
             if isinstance(expression, str):
                 raise ParsingError(f"Unrecognized function: {expression[0]}")
-            else:
-                raise ParsingError(f"Unsupported expression type: {expression}")
+            raise ParsingError(f"Unsupported expression type: {expression}")
         if not isinstance(function_type, FunctionType):
             raise ParsingError(f'Zero-arg function or constant called with arguments: {name}')
 

@@ -45,7 +45,7 @@ def take_step(last_predictions: torch.Tensor,
 class BeamSearchTest(AllenNlpTestCase):
 
     def setUp(self):
-        super(BeamSearchTest, self).setUp()
+        super().setUp()
         self.end_index = transition_probabilities.size()[0] - 1
         self.beam_search = BeamSearch(self.end_index, max_steps=10, beam_size=3)
 

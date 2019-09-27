@@ -85,7 +85,7 @@ class SpanConstituencyParser(Model):
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None,
                  evalb_directory_path: str = DEFAULT_EVALB_DIR) -> None:
-        super(SpanConstituencyParser, self).__init__(vocab, regularizer)
+        super().__init__(vocab, regularizer)
 
         self.text_field_embedder = text_field_embedder
         self.span_extractor = span_extractor
@@ -207,7 +207,7 @@ class SpanConstituencyParser(Model):
         span_representations = self.span_extractor(encoded_text, spans, mask, span_mask)
 
         if self.feedforward_layer is not None:
-            span_representations = self.feedforward_layer(span_representations)
+            span_representations = self.feedforward_layer(span_representations)  # pylint: disable=not-callable
 
         logits = self.tag_projection_layer(span_representations)
         class_probabilities = masked_softmax(logits, span_mask.unsqueeze(-1))

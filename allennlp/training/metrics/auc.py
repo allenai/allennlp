@@ -15,7 +15,7 @@ class Auc(Metric):
     (ROC) curve for binary classification problems.
     """
     def __init__(self, positive_label=1):
-        super(Auc, self).__init__()
+        super().__init__()
         self._positive_label = positive_label
         self._all_predictions = torch.FloatTensor()
         self._all_gold_labels = torch.LongTensor()

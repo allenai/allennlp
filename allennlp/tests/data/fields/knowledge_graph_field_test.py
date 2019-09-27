@@ -33,7 +33,7 @@ class KnowledgeGraphFieldTest(AllenNlpTestCase):
         self.edirne_index = self.oov_index
         self.field = KnowledgeGraphField(self.graph, self.utterance, self.token_indexers, self.tokenizer)
 
-        super(KnowledgeGraphFieldTest, self).setUp()
+        super().setUp()
 
     def test_count_vocab_items(self):
         namespace_token_counts = defaultdict(lambda: defaultdict(int))

@@ -58,7 +58,7 @@ class TestTextField(AllenNlpTestCase):
         self.vocab.add_token_to_namespace("n", namespace='characters')
         self.vocab.add_token_to_namespace("t", namespace='characters')
         self.vocab.add_token_to_namespace("c", namespace='characters')
-        super(TestTextField, self).setUp()
+        super().setUp()
 
     def test_field_counts_vocab_items_correctly(self):
         field = TextField([Token(t) for t in ["This", "is", "a", "sentence", "."]],

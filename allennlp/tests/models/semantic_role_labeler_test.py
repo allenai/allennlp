@@ -18,7 +18,7 @@ from allennlp.data.dataset_readers.dataset_utils.span_utils import to_bioul
 
 class SemanticRoleLabelerTest(ModelTestCase):
     def setUp(self):
-        super(SemanticRoleLabelerTest, self).setUp()
+        super().setUp()
         self.set_up_model(self.FIXTURES_ROOT / 'srl' / 'experiment.json',
                           self.FIXTURES_ROOT / 'conll_2012')
 

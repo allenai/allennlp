@@ -289,3 +289,16 @@ class TestBertIndexer(ModelTestCase):
         # 1 full window + 1 half window with start/end tokens
         assert indexed_tokens["bert"] == [16, 2, 3, 4, 3, 5, 6, 8, 9, 2, 3, 4, 17]
         assert indexed_tokens["bert-offsets"] == [1, 3, 4, 5, 6, 7, 8, 9, 11]
+
+    def test_indexes_empty_sequence(self):
+        vocab = Vocabulary()
+        vocab_path = self.FIXTURES_ROOT / 'bert' / 'vocab.txt'
+        token_indexer = PretrainedBertIndexer(str(vocab_path))
+
+        indexed_tokens = token_indexer.tokens_to_indices([], vocab, "bert")
+        assert indexed_tokens == {
+                'bert': [16, 17],           # [CLS], [SEP]
+                'bert-offsets': [],         # no tokens => no offsets
+                'bert-type-ids': [0, 0],    # just 0s for start and end
+                'mask': []                  # no tokens => no mask
+        }

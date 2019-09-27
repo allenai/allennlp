@@ -47,7 +47,7 @@ class ChecklistStatelet:
         if terminal_indices_dict is not None:
             self.terminal_indices_dict = terminal_indices_dict
         else:
-            self.terminal_indices_dict: Dict[int, int] = {}
+            self.terminal_indices_dict = {}
             for checklist_index, batch_action_index in enumerate(terminal_actions.detach().cpu()):
                 action_index = int(batch_action_index[0])
                 if action_index == -1:

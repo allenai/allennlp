@@ -11,7 +11,7 @@ from allennlp.common.testing import AllenNlpTestCase
 
 class TestBasicTextFieldEmbedder(AllenNlpTestCase):
     def setUp(self):
-        super(TestBasicTextFieldEmbedder, self).setUp()
+        super().setUp()
         self.vocab = Vocabulary()
         self.vocab.add_token_to_namespace("1")
         self.vocab.add_token_to_namespace("2")

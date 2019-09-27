@@ -90,11 +90,11 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                  dynamic_cost_weight: Dict[str, Union[int, float]] = None,
                  penalize_non_agenda_actions: bool = False,
                  initial_mml_model_file: str = None) -> None:
-        super(NlvrCoverageSemanticParser, self).__init__(vocab=vocab,
-                                                         sentence_embedder=sentence_embedder,
-                                                         action_embedding_dim=action_embedding_dim,
-                                                         encoder=encoder,
-                                                         dropout=dropout)
+        super().__init__(vocab=vocab,
+                         sentence_embedder=sentence_embedder,
+                         action_embedding_dim=action_embedding_dim,
+                         encoder=encoder,
+                         dropout=dropout)
         self._agenda_coverage = Average()
         self._decoder_trainer: DecoderTrainer[Callable[[CoverageState], torch.Tensor]] = \
                 ExpectedRiskMinimization(beam_size=beam_size,
@@ -294,7 +294,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         """
         terminal_indices = []
         target_checklist_list = []
-        agenda_indices_set = set([int(x) for x in agenda.squeeze(0).detach().cpu().numpy()])
+        agenda_indices_set = {int(x) for x in agenda.squeeze(0).detach().cpu().numpy()}
         for index, action in enumerate(all_actions):
             # Each action is a ProductionRule, a tuple where the first item is the production
             # rule string.

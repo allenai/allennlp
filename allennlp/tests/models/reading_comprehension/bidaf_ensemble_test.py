@@ -8,7 +8,7 @@ from allennlp.models.reading_comprehension.bidaf_ensemble import BidafEnsemble, 
 
 class BidafEnsembleTest(ModelTestCase):
     def setUp(self):
-        super(BidafEnsembleTest, self).setUp()
+        super().setUp()
         self.set_up_model(self.FIXTURES_ROOT / 'bidaf' / 'experiment.json',
                           self.FIXTURES_ROOT / 'data' /  'squad.json')
         self.model.eval()

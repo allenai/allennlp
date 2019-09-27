@@ -94,7 +94,7 @@ class Embedding(TokenEmbedder):
                  sparse: bool = False,
                  vocab_namespace: str = None,
                  pretrained_file: str = None) -> None:
-        super(Embedding, self).__init__()
+        super().__init__()
         self.num_embeddings = num_embeddings
         self.padding_index = padding_index
         self.max_norm = max_norm
@@ -533,6 +533,7 @@ class EmbeddingsTextFile(Iterator[str]):
 
             # Some systems don't have support for all of these libraries, so we import them only
             # when necessary.
+            # pylint: disable=import-outside-toplevel
             package = None
             if extension in ['.txt', '.vec']:
                 package = io

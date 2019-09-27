@@ -45,7 +45,7 @@ class SrlBert(Model):
                  label_smoothing: float = None,
                  ignore_span_metric: bool = False,
                  srl_eval_path: str = DEFAULT_SRL_EVAL_PATH) -> None:
-        super(SrlBert, self).__init__(vocab, regularizer)
+        super().__init__(vocab, regularizer)
 
         if isinstance(bert_model, str):
             self.bert_model = BertModel.from_pretrained(bert_model)

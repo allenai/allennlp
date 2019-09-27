@@ -87,7 +87,7 @@ class BasicTransitionFunctionTest(AllenNlpTestCase):
         # We're not going to try to guess which action was taken (or set model weights so that we
         # know which action will be taken); we'll just check that we got one of the actions we were
         # expecting.
-        expected_possibilities = set([((4,), ('j',)), ((1, 2), ('h',)), ((1, 3), ('i',))])
+        expected_possibilities = {((4,), ('j',)), ((1, 2), ('h',)), ((1, 3), ('i',))}
         actual = (tuple(new_state.action_history[0]), tuple(new_state.grammar_state[0]._nonterminal_stack))
         assert actual in expected_possibilities
 

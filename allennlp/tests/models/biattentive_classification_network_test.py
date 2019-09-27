@@ -11,7 +11,7 @@ from allennlp.models import Model
 
 class BiattentiveClassificationNetworkTest(ModelTestCase):
     def setUp(self):
-        super(BiattentiveClassificationNetworkTest, self).setUp()
+        super().setUp()
         self.set_up_model(self.FIXTURES_ROOT / 'biattentive_classification_network' / 'experiment.json',
                           self.FIXTURES_ROOT / 'data' / 'sst.txt')
 

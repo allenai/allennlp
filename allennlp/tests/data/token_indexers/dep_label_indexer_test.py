@@ -9,7 +9,7 @@ from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
 
 class TestDepLabelIndexer(AllenNlpTestCase):
     def setUp(self):
-        super(TestDepLabelIndexer, self).setUp()
+        super().setUp()
         self.tokenizer = SpacyWordSplitter(parse=True)
 
     def test_count_vocab_items_uses_pos_tags(self):

@@ -6,7 +6,7 @@ from allennlp.data.tokenizers.token import Token
 
 class TestWordFilter(AllenNlpTestCase):
     def setUp(self):
-        super(TestWordFilter, self).setUp()
+        super().setUp()
         self.sentence = ["this", "45", "(", "sentence", ")", "has", "9943434", '"', "punctuations", '"', "."]
         self.sentence = list(map(Token, self.sentence))
 

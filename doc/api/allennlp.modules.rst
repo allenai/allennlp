@@ -21,6 +21,7 @@ allennlp.modules
    allennlp.modules.matrix_attention
    allennlp.modules.openai_transformer
    allennlp.modules.seq2seq_encoders
+   allennlp.modules.seq2seq_decoders
    allennlp.modules.seq2vec_encoders
    allennlp.modules.span_extractors
    allennlp.modules.similarity_functions

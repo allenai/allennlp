@@ -5,7 +5,7 @@ from allennlp.common.testing import ModelTestCase
 
 class TestBiMPM(ModelTestCase):
     def setUp(self):
-        super(TestBiMPM, self).setUp()
+        super().setUp()
         self.set_up_model(self.FIXTURES_ROOT / 'bimpm' / 'experiment.json',
                           self.FIXTURES_ROOT / 'data' / 'quora_paraphrase.tsv')
 

@@ -74,6 +74,7 @@ class Predictor(Registrable):
         List[instance]
         A list of :class:`~allennlp.data.instance.Instance`
         """
+        # pylint: disable=assignment-from-no-return
         instance = self._json_to_instance(inputs)
         outputs = self._model.forward_on_instance(instance)
         new_instances = self.predictions_to_labeled_instances(instance, outputs)
@@ -108,7 +109,7 @@ class Predictor(Registrable):
 
         dataset = Batch(instances)
         dataset.index_instances(self._model.vocab)
-        outputs = self._model.decode(self._model.forward(**dataset.as_tensor_dict()))
+        outputs = self._model.decode(self._model.forward(**dataset.as_tensor_dict()))  # type: ignore
 
         loss = outputs['loss']
         self._model.zero_grad()
@@ -120,7 +121,7 @@ class Predictor(Registrable):
         grad_dict = dict()
         for idx, grad in enumerate(embedding_gradients):
             key = 'grad_input_' + str(idx + 1)
-            grad_dict[key] = grad.squeeze_(0).detach().cpu().numpy()
+            grad_dict[key] = grad.detach().cpu().numpy()
 
         return grad_dict, outputs
 

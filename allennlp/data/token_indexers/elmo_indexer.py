@@ -85,6 +85,11 @@ class ELMoCharacterMapper:
         # +1 one for masking
         return [c + 1 for c in char_ids]
 
+    def __eq__(self, other) -> bool:
+        if isinstance(self, other.__class__):
+            return self.__dict__ == other.__dict__
+        return NotImplemented
+
 
 @TokenIndexer.register("elmo_characters")
 class ELMoTokenCharactersIndexer(TokenIndexer[List[int]]):
