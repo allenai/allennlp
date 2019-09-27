@@ -130,7 +130,7 @@ class Scorer:
         self.metric = metric
 
     def update(self, predicted, gold, mention_to_predicted, mention_to_gold):
-        if self.metric == self.ceafe:
+        if self.metric == self.ceafe:  # pylint: disable=comparison-with-callable
             p_num, p_den, r_num, r_den = self.metric(predicted, gold)
         else:
             p_num, p_den = self.metric(predicted, mention_to_gold)
@@ -189,7 +189,7 @@ class Scorer:
         """
         Counts the mentions in each predicted cluster which need to be re-allocated in
         order for each predicted cluster to be contained by the respective gold cluster.
-        <http://aclweb.org/anthology/M/M95/M95-1005.pdf>
+        <https://aclweb.org/anthology/M/M95/M95-1005.pdf>
         """
         true_p, all_p = 0, 0
         for cluster in clusters:

@@ -5,7 +5,7 @@ an installation by running the unit tests.
 .. code-block:: bash
 
     $ allennlp test-install --help
-    usage: allennlp test-install [-h] [--run-all]
+    usage: allennlp test-install [-h] [--run-all] [-k K]
                                  [--include-package INCLUDE_PACKAGE]
 
     Test that installation works by running the unit tests.
@@ -14,6 +14,7 @@ an installation by running the unit tests.
       -h, --help            show this help message and exit
       --run-all             By default, we skip tests that are slow or download
                             large files. This flag will run all tests.
+      -k K                  Limit tests by setting pytest -k argument
       --include-package INCLUDE_PACKAGE
                             additional packages to include
 """
@@ -22,6 +23,7 @@ import argparse
 import logging
 import os
 import pathlib
+import sys
 
 import pytest
 
@@ -76,4 +78,4 @@ def _run_test(args: argparse.Namespace):
 
     # Change back to original working directory after running tests
     os.chdir(initial_working_dir)
-    exit(exit_code)
+    sys.exit(exit_code)

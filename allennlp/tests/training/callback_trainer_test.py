@@ -5,7 +5,7 @@ import json
 import os
 import re
 import time
-from typing import Dict, Iterable
+from typing import Dict, Iterable, Optional
 
 import torch
 import responses
@@ -26,7 +26,7 @@ from allennlp.models.archival import load_archive
 from allennlp.models.model import Model
 from allennlp.training.callback_trainer import CallbackTrainer
 from allennlp.training.callbacks import (
-        Events,
+        Events, Callback, handle_event,
         LogToTensorboard, Checkpoint, Validate, PostToUrl, GradientNormAndClip,
         UpdateLearningRate, UpdateMomentum, TrackMetrics, UpdateMovingAverage
 )
@@ -207,7 +207,7 @@ class TestCallbackTrainer(ModelTestCase):
 
     @responses.activate
     def test_trainer_posts_to_url(self):
-        url = 'http://slack.com?webhook=ewifjweoiwjef'
+        url = 'https://slack.com?webhook=ewifjweoiwjef'
         responses.add(responses.POST, url)
         post_to_url = PostToUrl(url, message="only a test")
         callbacks = self.default_callbacks() + [post_to_url]
@@ -233,6 +233,18 @@ class TestCallbackTrainer(ModelTestCase):
                                   num_epochs=2,
                                   callbacks=callbacks)
         trainer.train()
+
+    def test_trainer_can_run_ema_from_params(self):
+        uma_params = Params({"moving_average": {"decay": 0.9999}})
+        callbacks = self.default_callbacks() + [UpdateMovingAverage.from_params(uma_params, self.model)]
+        trainer = CallbackTrainer(model=self.model,
+                                  training_data=self.instances,
+                                  iterator=self.iterator,
+                                  optimizer=self.optimizer,
+                                  num_epochs=2,
+                                  callbacks=callbacks)
+        trainer.train()
+
 
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="No CUDA device registered.")
     def test_trainer_can_run_cuda(self):
@@ -706,7 +718,7 @@ class TestCallbackTrainer(ModelTestCase):
             # pylint: disable=arguments-differ
             def _create_batches(self, *args, **kwargs):
                 time.sleep(2.5)
-                return super(WaitingIterator, self)._create_batches(*args, **kwargs)
+                return super()._create_batches(*args, **kwargs)
 
         waiting_iterator = WaitingIterator(batch_size=2)
         waiting_iterator.index_with(self.vocab)
@@ -807,7 +819,7 @@ class TestCallbackTrainer(ModelTestCase):
                 callbacks=self.default_callbacks(),
                 num_epochs=1, serialization_dir=self.TEST_DIR)
         trainer.train()
-        _ = trainer.handler.fire_event(Events.TRAINING_START)
+        trainer.handler.fire_event(Events.TRAINING_START)
         best_epoch_1 = trainer.metric_tracker.best_epoch
         best_validation_metrics_epoch_1 = trainer.metric_tracker.best_epoch_metrics
         # best_validation_metrics_epoch_1: {'accuracy': 0.75, 'accuracy3': 1.0, 'loss': 0.6243013441562653}
@@ -823,7 +835,7 @@ class TestCallbackTrainer(ModelTestCase):
                 callbacks=self.default_callbacks(),
                 num_epochs=2, serialization_dir=self.TEST_DIR)
         restore_trainer.train()
-        _ = restore_trainer.handler.fire_event(Events.TRAINING_START)
+        restore_trainer.handler.fire_event(Events.TRAINING_START)
         best_epoch_2 = restore_trainer.metric_tracker.best_epoch
         best_validation_metrics_epoch_2 = restore_trainer.metric_tracker.best_epoch_metrics
 
@@ -844,7 +856,7 @@ class TestCallbackTrainer(ModelTestCase):
         trainer.handler.verbose = True
         trainer.train()
 
-        _ = trainer.handler.fire_event(Events.TRAINING_START)
+        trainer.handler.fire_event(Events.TRAINING_START)
         best_epoch_1 = trainer.metric_tracker.best_epoch
         best_validation_metrics_epoch_1 = trainer.metric_tracker.best_epoch_metrics
         # best_validation_metrics_epoch_1: {'accuracy': 0.75, 'accuracy3': 1.0, 'loss': 0.6243013441562653}
@@ -862,7 +874,7 @@ class TestCallbackTrainer(ModelTestCase):
         print("restore trainer")
         restore_trainer.handler.verbose = True
         restore_trainer.train()
-        _ = restore_trainer.handler.fire_event(Events.TRAINING_START)
+        restore_trainer.handler.fire_event(Events.TRAINING_START)
         best_epoch_2 = restore_trainer.metric_tracker.best_epoch
         best_validation_metrics_epoch_2 = restore_trainer.metric_tracker.best_epoch_metrics
 
@@ -900,3 +912,49 @@ class TestCallbackTrainer(ModelTestCase):
         assert training_metrics["best_validation_loss"] == restored_metrics["best_validation_loss"]
         assert training_metrics["best_epoch"] == 0
         assert training_metrics["validation_loss"] > restored_metrics["validation_loss"]
+
+    def test_handle_errors(self):
+        # pylint: disable=unused-argument,no-self-use
+        class ErrorTest(Callback):
+            """
+            A callback with three triggers
+            * at BATCH_START, it raises a RuntimeError
+            * at TRAINING_END, it sets a finished flag to True
+            * at ERROR, it captures `trainer.exception`
+            """
+            def __init__(self) -> None:
+                self.exc: Optional[Exception] = None
+                self.finished_training = None
+
+            @handle_event(Events.BATCH_START)
+            def raise_exception(self, trainer):
+                raise RuntimeError("problem starting batch")
+
+            @handle_event(Events.TRAINING_END)
+            def finish_training(self, trainer):
+                self.finished_training = True
+
+            @handle_event(Events.ERROR)
+            def capture_error(self, trainer):
+                self.exc = trainer.exception
+
+        error_test = ErrorTest()
+        callbacks = self.default_callbacks() + [error_test]
+
+        original_trainer = CallbackTrainer(self.model,
+                                           self.instances,
+                                           self.iterator,
+                                           self.optimizer,
+                                           callbacks=callbacks,
+                                           num_epochs=1, serialization_dir=self.TEST_DIR)
+
+        with pytest.raises(RuntimeError):
+            # pylint: disable=not-callable
+            original_trainer.train()
+
+        # The callback should have captured the exception.
+        assert error_test.exc is not None
+        assert error_test.exc.args == ("problem starting batch",)
+
+        # The "finished" flag should never have been set to True.
+        assert not error_test.finished_training

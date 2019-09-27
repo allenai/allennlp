@@ -158,7 +158,7 @@ class AtisDatasetReader(DatasetReader):
                   'world' : world_field,
                   'linking_scores' : ArrayField(world.linking_scores)}
 
-        if sql_query_labels != None:
+        if sql_query_labels is not None:
             fields['sql_queries'] = MetadataField(sql_query_labels)
             if self._keep_if_unparseable or action_sequence:
                 for production_rule in action_sequence:

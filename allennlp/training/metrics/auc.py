@@ -15,7 +15,7 @@ class Auc(Metric):
     (ROC) curve for binary classification problems.
     """
     def __init__(self, positive_label=1):
-        super(Auc, self).__init__()
+        super().__init__()
         self._positive_label = positive_label
         self._all_predictions = torch.FloatTensor()
         self._all_gold_labels = torch.LongTensor()
@@ -60,7 +60,7 @@ class Auc(Metric):
         if mask is None:
             batch_size = gold_labels.shape[0]
             mask = torch.ones(batch_size)
-        mask = mask.byte()
+        mask = mask.to(dtype=torch.bool)
 
         self._all_predictions = torch.cat([self._all_predictions,
                                            torch.masked_select(predictions, mask).float()], dim=0)

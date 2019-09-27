@@ -65,6 +65,9 @@ def sanitize(x: Any) -> Any:  # pylint: disable=invalid-name,too-many-return-sta
     elif isinstance(x, dict):
         # Dicts need their values sanitized
         return {key: sanitize(value) for key, value in x.items()}
+    elif isinstance(x, numpy.bool_):
+        # Numpy bool_ need to be converted to python bool.
+        return bool(x)
     elif isinstance(x, (spacy.tokens.Token, allennlp.data.Token)):
         # Tokens get sanitized to just their text.
         return x.text
@@ -371,7 +374,7 @@ def gpu_memory_mb() -> Dict[int, int]:
         Values are memory usage as integers in MB.
         Returns an empty ``dict`` if GPUs are not available.
     """
-    # pylint: disable=bare-except
+    # pylint: disable=bare-except,unexpected-keyword-arg
     try:
         result = subprocess.check_output(['nvidia-smi', '--query-gpu=memory.used',
                                           '--format=csv,nounits,noheader'],

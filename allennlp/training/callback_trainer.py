@@ -5,6 +5,7 @@ Its API may change at any time, and it may disappear altogether.
 import logging
 import time
 import datetime
+import functools
 import math
 from typing import Dict, Optional, List, Union, Any, Iterable
 import torch
@@ -26,6 +27,18 @@ from allennlp.training.trainer_pieces import TrainerPieces
 from allennlp.training.trainer_base import TrainerBase
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
+def handle_errors(method):
+    @functools.wraps(method)
+    def train_and_handle_errors(self: 'CallbackTrainer') -> Dict[str, Any]:
+        try:
+            return method(self)
+        except Exception as exc:
+            self.exception = exc
+            self.handler.fire_event(Events.ERROR)
+            raise
+
+    return train_and_handle_errors
 
 
 @TrainerBase.register("callback")
@@ -122,6 +135,9 @@ class CallbackTrainer(TrainerBase):
         self.shuffle = shuffle
         self.handler = CallbackHandler(callbacks, self)
 
+        # For capturing errors that occur during the train loop.
+        self.exception: Optional[Exception] = None
+
     def generate_training_batches(self):
         """
         Generates one epoch worth of training data. Stores it in trainer instance variables
@@ -196,7 +212,6 @@ class CallbackTrainer(TrainerBase):
 
         return training_util.description_from_metrics(self.train_metrics)
 
-
     def train_one_epoch(self) -> None:
         """
         Trains the model for a single epoch.
@@ -223,7 +238,7 @@ class CallbackTrainer(TrainerBase):
         self.handler.fire_event(Events.VALIDATE)
         self.handler.fire_event(Events.EPOCH_END)
 
-
+    @handle_errors
     def train(self) -> Dict[str, Any]:
         """
         Trains the supplied model with the supplied parameters.

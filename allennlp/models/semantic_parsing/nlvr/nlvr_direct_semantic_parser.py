@@ -58,11 +58,11 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
                  decoder_beam_search: BeamSearch,
                  max_decoding_steps: int,
                  dropout: float = 0.0) -> None:
-        super(NlvrDirectSemanticParser, self).__init__(vocab=vocab,
-                                                       sentence_embedder=sentence_embedder,
-                                                       action_embedding_dim=action_embedding_dim,
-                                                       encoder=encoder,
-                                                       dropout=dropout)
+        super().__init__(vocab=vocab,
+                         sentence_embedder=sentence_embedder,
+                         action_embedding_dim=action_embedding_dim,
+                         encoder=encoder,
+                         dropout=dropout)
         self._decoder_trainer = MaximumMarginalLikelihood()
         self._decoder_step = BasicTransitionFunction(encoder_output_dim=self._encoder.get_output_dim(),
                                                      action_embedding_dim=action_embedding_dim,

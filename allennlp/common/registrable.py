@@ -5,6 +5,7 @@ for registering them.
 """
 from collections import defaultdict
 from typing import TypeVar, Type, Dict, List
+import importlib
 import logging
 
 from allennlp.common.checks import ConfigurationError
@@ -39,14 +40,30 @@ class Registrable(FromParams):
     default_implementation: str = None
 
     @classmethod
-    def register(cls: Type[T], name: str):
+    def register(cls: Type[T], name: str, exist_ok=False):
+        """
+        Register a class under a particular name.
+
+        Parameters
+        ----------
+        name: ``str``
+            The name to register the class under.
+        exist_ok: ``bool`, optional (default=False)
+            If True, overwrites any existing models registered under ``name``. Else,
+            throws an error if a model is already registered under ``name``.
+        """
         registry = Registrable._registry[cls]
         def add_subclass_to_registry(subclass: Type[T]):
             # Add to registry, raise an error if key has already been used.
             if name in registry:
-                message = "Cannot register %s as %s; name already in use for %s" % (
-                        name, cls.__name__, registry[name].__name__)
-                raise ConfigurationError(message)
+                if exist_ok:
+                    message = (f"{name} has already been registered as {registry[name].__name__}, but "
+                               f"exist_ok=True, so overwriting with {cls.__name__}")
+                    logger.info(message)
+                else:
+                    message = (f"Cannot register {name} as {cls.__name__}; "
+                               f"name already in use for {registry[name].__name__}")
+                    raise ConfigurationError(message)
             registry[name] = subclass
             return subclass
         return add_subclass_to_registry
@@ -54,9 +71,35 @@ class Registrable(FromParams):
     @classmethod
     def by_name(cls: Type[T], name: str) -> Type[T]:
         logger.debug(f"instantiating registered subclass {name} of {cls}")
-        if name not in Registrable._registry[cls]:
-            raise ConfigurationError("%s is not a registered name for %s" % (name, cls.__name__))
-        return Registrable._registry[cls].get(name)
+        if name in Registrable._registry[cls]:
+            return Registrable._registry[cls].get(name)
+        elif "." in name:
+            # This might be a fully qualified class name, so we'll try importing its "module"
+            # and finding it there.
+            parts = name.split(".")
+            submodule = ".".join(parts[:-1])
+            class_name = parts[-1]
+
+            try:
+                module = importlib.import_module(submodule)
+            except ModuleNotFoundError:
+                raise ConfigurationError(f"tried to interpret {name} as a path to a class "
+                                         f"but unable to import module {submodule}")
+
+            try:
+                return getattr(module, class_name)
+            except AttributeError:
+                raise ConfigurationError(f"tried to interpret {name} as a path to a class "
+                                         f"but unable to find class {class_name} in {submodule}")
+
+        else:
+            # is not a qualified class name
+            raise ConfigurationError(f"{name} is not a registered name for {cls.__name__}. "
+                                     "You probably need to use the --include-package flag "
+                                     "to load your custom code. Alternatively, you can specify your choices "
+                                     """using fully-qualified paths, e.g. {"model": "my_module.models.MyModel"} """
+                                     "in which case they will be automatically imported correctly.")
+
 
     @classmethod
     def list_available(cls) -> List[str]:

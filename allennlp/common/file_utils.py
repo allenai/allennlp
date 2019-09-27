@@ -24,7 +24,7 @@ from allennlp.common.tqdm import Tqdm
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
-CACHE_ROOT = Path(os.getenv('ALLENNLP_CACHE_ROOT', Path.home() / '.allennlp'))
+CACHE_ROOT = Path(os.getenv('ALLENNLP_CACHE_ROOT', Path.home() / '.allennlp'))  # pylint: disable=invalid-envvar-default
 CACHE_DIRECTORY = str(CACHE_ROOT / "cache")
 DEPRECATED_CACHE_DIRECTORY = str(CACHE_ROOT / "datasets")
 

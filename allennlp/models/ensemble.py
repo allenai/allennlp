@@ -24,7 +24,7 @@ class Ensemble(Model):
             if submodel.vocab != vocab:
                 raise ConfigurationError("Vocabularies in ensemble differ")
 
-        super(Ensemble, self).__init__(vocab, None)
+        super().__init__(vocab, None)
 
         # Using ModuleList propagates calls to .eval() so dropout is disabled on the submodels in evaluation
         # and prediction.

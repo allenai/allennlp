@@ -7,7 +7,7 @@ from allennlp.common.testing import ModelTestCase
 
 class CorefTest(ModelTestCase):
     def setUp(self):
-        super(CorefTest, self).setUp()
+        super().setUp()
         self.set_up_model(self.FIXTURES_ROOT / 'coref' / 'experiment.json',
                           self.FIXTURES_ROOT / 'coref' / 'coref.gold_conll')
 

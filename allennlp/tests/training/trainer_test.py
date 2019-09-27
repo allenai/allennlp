@@ -486,7 +486,7 @@ class TestTrainer(AllenNlpTestCase):
             # pylint: disable=arguments-differ
             def _create_batches(self, *args, **kwargs):
                 time.sleep(2.5)
-                return super(WaitingIterator, self)._create_batches(*args, **kwargs)
+                return super()._create_batches(*args, **kwargs)
 
         iterator = WaitingIterator(batch_size=2)
         iterator.index_with(self.vocab)

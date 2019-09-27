@@ -11,7 +11,7 @@ class PassThroughEncoder(Seq2SeqEncoder):
     measuring the impact of different elements of your model.
     """
     def __init__(self, input_dim: int) -> None:
-        super(PassThroughEncoder, self).__init__()
+        super().__init__()
         self._input_dim = input_dim
 
     @overrides

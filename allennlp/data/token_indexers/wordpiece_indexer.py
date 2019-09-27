@@ -265,8 +265,8 @@ class WordpieceIndexer(TokenIndexer[int]):
         Extend the token type ids by len(start_piece_ids) on the left
         and len(end_piece_ids) on the right.
         """
-        first = token_type_ids[0]
-        last = token_type_ids[-1]
+        first = token_type_ids[0] if token_type_ids else 0
+        last = token_type_ids[-1] if token_type_ids else 0
         return ([first for _ in self._start_piece_ids] +
                 token_type_ids +
                 [last for _ in self._end_piece_ids])
@@ -282,7 +282,6 @@ class WordpieceIndexer(TokenIndexer[int]):
                          padding_lengths: Dict[str, int]) -> Dict[str, torch.Tensor]:  # pylint: disable=unused-argument
         return {key: torch.LongTensor(pad_sequence_to_length(val, desired_num_tokens[key]))
                 for key, val in tokens.items()}
-
 
     @overrides
     def get_keys(self, index_name: str) -> List[str]:
@@ -354,6 +353,18 @@ class PretrainedBertIndexer(WordpieceIndexer):
                          end_tokens=["[SEP]"],
                          separator_token="[SEP]",
                          truncate_long_sequences=truncate_long_sequences)
+
+    def __eq__(self, other):
+        if isinstance(other, PretrainedBertIndexer):
+            for key in self.__dict__:
+                if key == 'wordpiece_tokenizer':
+                    # This is a reference to a function in the huggingface code, which we can't
+                    # really modify to make this clean.  So we special-case it.
+                    continue
+                if self.__dict__[key] != other.__dict__[key]:
+                    return False
+            return True
+        return NotImplemented
 
 
 def _get_token_type_ids(wordpiece_ids: List[int],

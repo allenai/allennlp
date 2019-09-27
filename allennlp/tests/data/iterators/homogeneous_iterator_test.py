@@ -43,3 +43,29 @@ class TestHomogeneousBatchIterator(AllenNlpTestCase):
             observed_instance_type_counts.update(batch["dataset"])
 
         assert observed_instance_type_counts == actual_instance_type_counts
+
+    def test_skip_smaller_batches(self):
+        readers = {
+                "a": PlainTextReader(),
+                "b": PlainTextReader(),
+                "c": PlainTextReader()
+        }
+
+        reader = InterleavingDatasetReader(readers)
+        data_dir = self.FIXTURES_ROOT / "data"
+
+        file_path = f"""{{
+            "a": "{data_dir / 'babi.txt'}",
+            "b": "{data_dir / 'conll2000.txt'}",
+            "c": "{data_dir / 'conll2003.txt'}"
+        }}"""
+
+        instances = list(reader.read(file_path))
+        vocab = Vocabulary.from_instances(instances)
+
+        iterator = HomogeneousBatchIterator(batch_size=3, skip_smaller_batches=True)
+        iterator.index_with(vocab)
+
+        for batch in iterator(instances, num_epochs=1, shuffle=True):
+            # every batch should have length 3 (batch size)
+            assert len(batch["dataset"]) == 3

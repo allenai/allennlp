@@ -87,7 +87,7 @@ class BiaffineDependencyParser(Model):
                  input_dropout: float = 0.0,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
-        super(BiaffineDependencyParser, self).__init__(vocab, regularizer)
+        super().__init__(vocab, regularizer)
 
         self.text_field_embedder = text_field_embedder
         self.encoder = encoder
@@ -436,7 +436,7 @@ class BiaffineDependencyParser(Model):
         attended_arcs = attended_arcs + torch.diag(attended_arcs.new(mask.size(1)).fill_(-numpy.inf))
         # Mask padded tokens, because we only want to consider actual words as heads.
         if mask is not None:
-            minus_mask = (1 - mask).byte().unsqueeze(2)
+            minus_mask = (1 - mask).to(dtype=torch.bool).unsqueeze(2)
             attended_arcs.masked_fill_(minus_mask, -numpy.inf)
 
         # Compute the heads greedily.

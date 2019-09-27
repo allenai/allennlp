@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Optional
 
 from overrides import overrides
 import torch
@@ -6,7 +6,7 @@ import torch
 from allennlp.data import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import Seq2SeqEncoder, Seq2VecEncoder, TextFieldEmbedder
-from allennlp.nn import InitializerApplicator
+from allennlp.nn import InitializerApplicator, RegularizerApplicator
 from allennlp.nn.util import get_text_field_mask
 from allennlp.training.metrics import CategoricalAccuracy
 
@@ -41,6 +41,8 @@ class BasicClassifier(Model):
         Vocabulary namespace corresponding to labels. By default, we use the "labels" namespace.
     initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
         If provided, will be used to initialize the model parameters.
+    regularizer : ``RegularizerApplicator``, optional (default=``None``)
+        If provided, will be used to calculate the regularization penalty during training.
     """
     def __init__(self,
                  vocab: Vocabulary,
@@ -50,9 +52,10 @@ class BasicClassifier(Model):
                  dropout: float = None,
                  num_labels: int = None,
                  label_namespace: str = "labels",
-                 initializer: InitializerApplicator = InitializerApplicator()) -> None:
+                 initializer: InitializerApplicator = InitializerApplicator(),
+                 regularizer: Optional[RegularizerApplicator] = None) -> None:
 
-        super().__init__(vocab)
+        super().__init__(vocab, regularizer)
         self._text_field_embedder = text_field_embedder
 
         if seq2seq_encoder:

@@ -14,12 +14,14 @@ allennlp.modules
    allennlp.modules.lstm_cell_with_projection
    allennlp.modules.elmo
    allennlp.modules.elmo_lstm
+   allennlp.modules.language_model_heads
    allennlp.modules.conditional_random_field
    allennlp.modules.feedforward
    allennlp.modules.highway
    allennlp.modules.matrix_attention
    allennlp.modules.openai_transformer
    allennlp.modules.seq2seq_encoders
+   allennlp.modules.seq2seq_decoders
    allennlp.modules.seq2vec_encoders
    allennlp.modules.span_extractors
    allennlp.modules.similarity_functions

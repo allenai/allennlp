@@ -176,9 +176,9 @@ class OpenaiTransformerBytePairIndexer(TokenIndexer[int]):
             word = new_word
             if len(word) == 1:
                 break  # out of while True
-            else:
-                pairs = {(prev_symbol, next_symbol)
-                         for prev_symbol, next_symbol in zip(word, word[1:])}
+
+            pairs = {(prev_symbol, next_symbol)
+                     for prev_symbol, next_symbol in zip(word, word[1:])}
 
         if ' '.join(word) == '\n  </w>':
             word = ['\n</w>']

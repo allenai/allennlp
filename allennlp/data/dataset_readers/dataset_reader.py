@@ -139,9 +139,8 @@ class DatasetReader(Registrable):
             # And finally we write to the cache if we need to.
             if cache_file and not os.path.exists(cache_file):
                 logger.info(f"Caching instances to {cache_file}")
-                with open(cache_file, 'w') as cache:
-                    for instance in Tqdm.tqdm(instances):
-                        cache.write(self.serialize_instance(instance) + '\n')
+                self._instances_to_cache_file(cache_file, instances)
+
             return instances
 
     def _get_cache_location_for_file_path(self, file_path: str) -> str:
@@ -160,6 +159,11 @@ class DatasetReader(Registrable):
         with open(cache_filename, 'r') as cache_file:
             for line in cache_file:
                 yield self.deserialize_instance(line.strip())
+
+    def _instances_to_cache_file(self, cache_filename, instances) -> None:
+        with open(cache_filename, 'w') as cache:
+            for instance in Tqdm.tqdm(instances):
+                cache.write(self.serialize_instance(instance) + '\n')
 
     def text_to_instance(self, *inputs) -> Instance:
         """

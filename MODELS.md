@@ -1,7 +1,7 @@
 # Models
 
 A repository for the available models for AllenNLP.  While we highlight a particular model for
-each task on https://allennlp.org/models we often have other trained models that might
+each task on https://demo.allennlp.org we often have other trained models that might
 work better for a particular application.
 
 
@@ -92,7 +92,7 @@ Based on [Dozat and Manning, 2017](https://arxiv.org/pdf/1611.01734.pdf)
 
 * [biaffine-dependency-parser-ptb-2018.08.23.tar.gz](https://allennlp.s3.amazonaws.com/models/biaffine-dependency-parser-ptb-2018.08.23.tar.gz) (69 MB) uses [Penn Treebank](https://catalog.ldc.upenn.edu/ldc99t42) style dependencies.
 
-* [biaffine-dependency-parser-ud-2018.08.23.tar.gz](https://allennlp.s3.amazonaws.com/models/biaffine-dependency-parser-ud-2018.08.23.tar.gz) (61 MB) uses [Universal Dependency](http://universaldependencies.org/) style depedencies.
+* [biaffine-dependency-parser-ud-2018.08.23.tar.gz](https://allennlp.s3.amazonaws.com/models/biaffine-dependency-parser-ud-2018.08.23.tar.gz) (61 MB) uses [Universal Dependency](https://universaldependencies.org/) style depedencies.
 
 ```
 f1: 0.941

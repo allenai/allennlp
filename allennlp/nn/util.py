@@ -270,7 +270,7 @@ def masked_softmax(vector: torch.Tensor,
             result = result * mask
             result = result / (result.sum(dim=dim, keepdim=True) + 1e-13)
         else:
-            masked_vector = vector.masked_fill((1 - mask).byte(), mask_fill_value)
+            masked_vector = vector.masked_fill((1 - mask).to(dtype=torch.bool), mask_fill_value)
             result = torch.nn.functional.softmax(masked_vector, dim=dim)
     return result
 
@@ -334,7 +334,7 @@ def masked_max(vector: torch.Tensor,
     -------
     A ``torch.Tensor`` of including the maximum values.
     """
-    one_minus_mask = (1.0 - mask).byte()
+    one_minus_mask = (1.0 - mask).to(dtype=torch.bool)
     replaced_vector = vector.masked_fill(one_minus_mask, min_val)
     max_value, _ = replaced_vector.max(dim=dim, keepdim=keepdim)
     return max_value
@@ -365,7 +365,7 @@ def masked_mean(vector: torch.Tensor,
     -------
     A ``torch.Tensor`` of including the mean values.
     """
-    one_minus_mask = (1.0 - mask).byte()
+    one_minus_mask = (1.0 - mask).to(dtype=torch.bool)
     replaced_vector = vector.masked_fill(one_minus_mask, 0.0)
 
     value_sum = torch.sum(replaced_vector, dim=dim, keepdim=keepdim)
@@ -773,11 +773,11 @@ def replace_masked_values(tensor: torch.Tensor, mask: torch.Tensor, replace_with
 
     This just does ``tensor.masked_fill()``, except the pytorch method fills in things with a mask
     value of 1, where we want the opposite.  You can do this in your own code with
-    ``tensor.masked_fill((1 - mask).byte(), replace_with)``.
+    ``tensor.masked_fill((1 - mask).to(dtype=torch.bool), replace_with)``.
     """
     if tensor.dim() != mask.dim():
         raise ConfigurationError("tensor.dim() (%d) != mask.dim() (%d)" % (tensor.dim(), mask.dim()))
-    return tensor.masked_fill((1 - mask).byte(), replace_with)
+    return tensor.masked_fill((1 - mask).to(dtype=torch.bool), replace_with)
 
 
 def tensors_equal(tensor1: torch.Tensor, tensor2: torch.Tensor, tolerance: float = 1e-12) -> bool:
@@ -1472,3 +1472,45 @@ def inspect_parameters(module: torch.nn.Module, quiet: bool = False) -> Dict[str
     if not quiet:
         print(json.dumps(results, indent=4))
     return results
+
+
+def find_embedding_layer(model: torch.nn.Module) -> torch.nn.Module:
+    """
+    Takes a model (typically an AllenNLP ``Model``, but this works for any ``torch.nn.Module``) and
+    makes a best guess about which module is the embedding layer.  For typical AllenNLP models,
+    this often is the ``TextFieldEmbedder``, but if you're using a pre-trained contextualizer, we
+    really want layer 0 of that contextualizer, not the output.  So there are a bunch of hacks in
+    here for specific pre-trained contextualizers.
+    """
+    # We'll look for a few special cases in a first pass, then fall back to just finding a
+    # TextFieldEmbedder in a second pass if we didn't find a special case.
+    from pytorch_pretrained_bert.modeling import BertEmbeddings as BertEmbeddingsOld
+    from pytorch_transformers.modeling_gpt2 import GPT2Model
+    from pytorch_transformers.modeling_bert import BertEmbeddings as BertEmbeddingsNew
+    from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
+    from allennlp.modules.text_field_embedders.basic_text_field_embedder import BasicTextFieldEmbedder
+    from allennlp.modules.token_embedders.embedding import Embedding
+    for module in model.modules():
+        if isinstance(module, BertEmbeddingsOld):
+            return module.word_embeddings
+        if isinstance(module, BertEmbeddingsNew):
+            return module.word_embeddings
+        if isinstance(module, GPT2Model):
+            return module.wte
+    for module in model.modules():
+        if isinstance(module, TextFieldEmbedder):
+            # pylint: disable=protected-access
+            if isinstance(module, BasicTextFieldEmbedder):
+                # We'll have a check for single Embedding cases, because we can be more efficient
+                # in cases like this.  If this check fails, then for something like hotflip we need
+                # to actually run the text field embedder and construct a vector for each token.
+                if len(module._token_embedders) == 1:
+                    embedder = list(module._token_embedders.values())[0]
+                    if isinstance(embedder, Embedding):
+                        if embedder._projection is None:  # pylint: disable=protected-access
+                            # If there's a projection inside the Embedding, then we need to return
+                            # the whole TextFieldEmbedder, because there's more computation that
+                            # needs to be done than just multiply by an embedding matrix.
+                            return embedder
+            return module
+    raise RuntimeError("No embedding module found!")

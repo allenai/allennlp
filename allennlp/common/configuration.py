@@ -40,7 +40,7 @@ def full_name(cla55: Optional[type]) -> str:
         return "?"
 
     if issubclass(cla55, Initializer) and cla55 not in [Initializer, PretrainedModelInitializer]:
-        init_fn = cla55()._init_function
+        init_fn = getattr(cla55(), '_init_function')
         return f"{init_fn.__module__}.{init_fn.__name__}"
 
     origin = getattr(cla55, '__origin__', None)
@@ -73,7 +73,7 @@ def json_annotation(cla55: Optional[type]):
 
     # Hack because e.g. typing.Union isn't a type.
     if isinstance(cla55, type) and issubclass(cla55, Initializer) and cla55 != Initializer:
-        init_fn = cla55()._init_function
+        init_fn = getattr(cla55(), '_init_function')
         return {'origin': f"{init_fn.__module__}.{init_fn.__name__}"}
 
     origin = getattr(cla55, '__origin__', None)

@@ -7,6 +7,7 @@ from collections import OrderedDict
 
 import pytest
 
+from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params, unflatten, with_fallback, parse_overrides, infer_and_cast
 from allennlp.common.testing import AllenNlpTestCase
 
@@ -435,3 +436,19 @@ class TestParams(AllenNlpTestCase):
 
         assert new_params.loading_from_archive
         assert new_params.files_to_archive == {"hey": "this is a path"}
+
+    def test_pop_choice(self):
+        choices = ['my_model', 'other_model']
+        params = Params({'model': 'my_model'})
+        assert params.pop_choice('model', choices) == 'my_model'
+
+        params = Params({'model': 'non_existent_model'})
+        with pytest.raises(ConfigurationError):
+            params.pop_choice('model', choices)
+
+        params = Params({'model': 'module.submodule.ModelName'})
+        assert params.pop_choice('model', 'choices') == 'module.submodule.ModelName'
+
+        params = Params({'model': 'module.submodule.ModelName'})
+        with pytest.raises(ConfigurationError):
+            params.pop_choice('model', choices, allow_class_names=False)

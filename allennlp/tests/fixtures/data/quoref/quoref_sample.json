@@ -1,0 +1,68 @@
+{
+  "data": [
+    {
+      "title": "2007\u20132008 Nazko earthquakes 1",
+      "url": "https://en.wikipedia.org/wiki/2007%E2%80%932008_Nazko_earthquakes",
+      "paragraphs": [
+        {
+          "context": "The earthquake swarm was noted on October 12, 2007 in the Prince George Citizen by citizen staff, three days after the earthquakes began. Scientists mentioned in the report were seismologist John Cassidy of Natural Resources Canada and volcanologist Catherine Hickson, who was part of the Geological Survey of Canada at the time. At the time of the report, scientists did not know the origin of the swarm. Seismologist John Cassidy stated, \"the depth is enough to rule out hydrothermal but it's up in the air as to whether the cause is tectonic shifts or volcanic activity. If it is volcanic there are certain characteristics that we would expect, there's a tremor-like character to it. And so we'll be looking for the types of events that we see beneath volcanoes and we'll be looking to see if they're getting closer to the surface or if they're migrating at all.\"Even if the Nazko swarm were a warning of a volcanic eruption, Hickson doubted it would turn out to be a highly explosive eruption like those that can occur in subduction-zone volcanoes. \"We're not talking about an injection of tonnes of ash many kilometers into the air like the 1980 Mount St. Helens eruption or the 1991 Mount Pinatubo eruption. We're talking about something very small, relatively localized that should have a fairly limited impact... but it'll be extremely exciting\", Hickson said. If an eruption were to occur, Hickson suggested that it would be characterized by a lava fountain that sends globs of lava 100 m (330 ft) into the air. This is similar to those that occur in Hawaii. Hickson said that a Nazko eruption could be a tourist attraction, but warned that noxious gases such as carbon dioxide and sulfur dioxide would be released during the event.",
+          "context_id": "9821bc1796c741d48f9a50ad2e70a2f136f00338",
+          "qas": [
+            {
+              "question": "What is the first name of the person who doubted it would turn out to be a highly explosive eruption like those that can occur in subduction-zone volcanoes?",
+              "id": "ba3f052c7a557909526b59713430403dd134e01d",
+              "answers": [
+                {
+                  "text": "Catherine",
+                  "answer_start": 250
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Peter Warlock",
+      "url": "https://en.wikipedia.org/wiki/Peter_Warlock",
+      "paragraphs": [
+        {
+          "context": "Philip Arnold Heseltine (30 October 1894 \u2013 17 December 1930), known by the pseudonym Peter Warlock, was a British composer and music critic. The Warlock name, which reflects Heseltine's interest in occult practices, was used for all his published musical works. He is best known as a composer of songs and other vocal music; he also achieved notoriety in his lifetime through his unconventional and often scandalous lifestyle.\nAs a schoolboy at Eton College, Heseltine met the British composer Frederick Delius, with whom he formed a close friendship. After a failed student career in Oxford and London, Heseltine turned to musical journalism, while developing interests in folk-song and Elizabethan music. His first serious compositions date from around 1915. Following a period of inactivity, a positive and lasting influence on his work arose from his meeting in 1916 with the Dutch composer Bernard van Dieren; he also gained creative impetus from a year spent in Ireland, studying Celtic culture and language. On his return to England in 1918, Heseltine began composing songs in a distinctive, original style, while building a reputation as a combative and controversial music critic.  During 1920\u201321 he edited the music magazine The Sackbut. His most prolific period as a composer came in the 1920s, when he was based first in Wales and later at Eynsford in Kent.\nThrough his critical writings, published under his own name, Heseltine made a pioneering contribution to the scholarship of early music. In addition, he produced a full-length biography of Frederick Delius and wrote, edited, or otherwise assisted the production of several other books and pamphlets. Towards the end of his life, Heseltine became depressed by a loss of his creative inspiration. He died in his London flat of coal gas poisoning in 1930, probably by his own hand.",
+          "context_id": "d7a264271662fb370d46eeb48d997bd976d7660e",
+          "qas": [
+            {
+              "question": "What is the last name of the person who is best known as a composer of songs and other vocal music?",
+              "id": "7db0ed1ab90b90ee27a71b63798e4528a8523df1",
+              "answers": [
+                {
+                  "text": "Heseltine",
+                  "answer_start": 459
+                }
+              ]
+            },
+            {
+              "question": "What is the last name of the person who also achieved notoriety in his lifetime through his unconventional and often scandalous lifestyle?",
+              "id": "335654892c66647dd8531140c9bcd28e3f7500ec",
+              "answers": [
+                {
+                  "text": "Heseltine",
+                  "answer_start": 459
+                }
+              ]
+            },
+            {
+              "question": "What is the last name of the person whose first serious compositions date from around 1915?",
+              "id": "2142d85e9eacd549bc6164583d14407383d15692",
+              "answers": [
+                {
+                  "text": "Heseltine",
+                  "answer_start": 459
+                }
+              ]
+            }
+	  ]
+	}
+      ]
+    }
+  ]
+}

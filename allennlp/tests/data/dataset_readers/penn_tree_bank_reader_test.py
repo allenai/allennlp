@@ -10,7 +10,7 @@ from allennlp.data.dataset_readers.dataset_utils.span_utils import enumerate_spa
 class TestPennTreeBankConstituencySpanReader(AllenNlpTestCase):
 
     def setUp(self):
-        super(TestPennTreeBankConstituencySpanReader, self).setUp()
+        super().setUp()
         self.span_width = 5
 
     def test_read_from_file(self):

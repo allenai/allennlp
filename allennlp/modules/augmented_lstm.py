@@ -63,7 +63,7 @@ class AugmentedLstm(torch.nn.Module):
                  recurrent_dropout_probability: float = 0.0,
                  use_highway: bool = True,
                  use_input_projection_bias: bool = True) -> None:
-        super(AugmentedLstm, self).__init__()
+        super().__init__()
         # Required to be wrapped with a :class:`PytorchSeq2SeqWrapper`.
         self.input_size = input_size
         self.hidden_size = hidden_size

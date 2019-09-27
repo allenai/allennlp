@@ -20,7 +20,7 @@ class ConfigurationError(Exception):
     """
 
     def __init__(self, message):
-        super(ConfigurationError, self).__init__()
+        super().__init__()
         self.message = message
 
     def __str__(self):
@@ -36,6 +36,7 @@ class ExperimentalFeatureWarning(RuntimeWarning):
 
 
 def log_pytorch_version_info():
+    # pylint: disable=import-outside-toplevel
     import torch
     logger.info("Pytorch version: %s", torch.__version__)
 

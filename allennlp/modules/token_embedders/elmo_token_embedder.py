@@ -42,7 +42,9 @@ class ElmoTokenEmbedder(TokenEmbedder):
     scalar_mix_parameters : ``List[int]``, optional, (default=None)
         If not ``None``, use these scalar mix parameters to weight the representations
         produced by different layers. These mixing weights are not updated during
-        training.
+        training. The mixing weights here should be the unnormalized (i.e., pre-softmax)
+        weights. So, if you wanted to use only the 1st layer of a 2-layer ELMo,
+        you can set this to [-9e10, 1, -9e10 ].
     """
     def __init__(self,
                  options_file: str,
@@ -53,7 +55,7 @@ class ElmoTokenEmbedder(TokenEmbedder):
                  projection_dim: int = None,
                  vocab_to_cache: List[str] = None,
                  scalar_mix_parameters: List[float] = None) -> None:
-        super(ElmoTokenEmbedder, self).__init__()
+        super().__init__()
 
         self._elmo = Elmo(options_file,
                           weight_file,

@@ -24,7 +24,7 @@ class BagOfEmbeddingsEncoder(Seq2VecEncoder):
     def __init__(self,
                  embedding_dim: int,
                  averaged: bool = False) -> None:
-        super(BagOfEmbeddingsEncoder, self).__init__()
+        super().__init__()
         self._embedding_dim = embedding_dim
         self._averaged = averaged
 

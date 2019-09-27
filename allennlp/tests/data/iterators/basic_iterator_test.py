@@ -20,7 +20,7 @@ class LazyIterable:
 
 class IteratorTest(AllenNlpTestCase):
     def setUp(self):
-        super(IteratorTest, self).setUp()
+        super().setUp()
         self.token_indexers = {"tokens": SingleIdTokenIndexer()}
         self.vocab = Vocabulary()
         self.this_index = self.vocab.add_token_to_namespace('this')

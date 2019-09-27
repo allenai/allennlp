@@ -16,7 +16,7 @@ from allennlp.data.dataset_readers.dataset_utils.span_utils import (
 )
 
 
-TAGS_TO_SPANS_FUNCTION_TYPE = Callable[[List[str], Optional[List[str]]], List[TypedStringSpan]]
+TAGS_TO_SPANS_FUNCTION_TYPE = Callable[[List[str], Optional[List[str]]], List[TypedStringSpan]]  # pylint: disable=invalid-name
 
 
 @Metric.register("span_f1")

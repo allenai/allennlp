@@ -152,6 +152,6 @@ class TestDryRun(AllenNlpTestCase):
         for serialization_arg in ["-s", "--serialization-dir"]:
             raw_args = ["dry-run", "path/to/params", serialization_arg, "serialization_dir"]
             args = parser.parse_args(raw_args)
-            assert args.func == dry_run_from_args
+            assert args.func == dry_run_from_args  # pylint: disable=comparison-with-callable
             assert args.param_path == "path/to/params"
             assert args.serialization_dir == "serialization_dir"

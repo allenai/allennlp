@@ -28,7 +28,7 @@ class FakeWorldWithRecursion(FakeWorldWithoutRecursion):
         # In addition to the forms allowed by ``FakeWorldWithoutRecursion``, this world allows
         # (unary_function (identity .... (argument)))
         # (binary_function (identity .... (argument)) (identity .... (argument)))
-        actions = super(FakeWorldWithRecursion, self).all_possible_actions()
+        actions = super().all_possible_actions()
         actions.extend(['e -> [<e,e>, e]',
                         '<e,e> -> identity'])
         return actions
