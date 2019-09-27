@@ -318,7 +318,7 @@ def _smooth(values: List[float], beta: float) -> List[float]:
 
 
 def _save_plot(learning_rates: List[float], losses: List[float], save_path: str):
-    # pylint: disable=multiple-statements,wrong-import-position
+    # pylint: disable=multiple-statements,wrong-import-position,import-outside-toplevel
     import matplotlib; matplotlib.use('Agg')
     import matplotlib.pyplot as plt
     plt.ylabel('loss')

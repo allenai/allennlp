@@ -10,7 +10,7 @@ from allennlp.data.fields import ListField, ProductionRuleField
 
 class TestProductionRuleField(AllenNlpTestCase):
     def setUp(self):
-        super(TestProductionRuleField, self).setUp()
+        super().setUp()
         self.vocab = Vocabulary()
         self.s_rule_index = self.vocab.add_token_to_namespace("S -> [NP, VP]", namespace='rule_labels')
         self.np_index = self.vocab.add_token_to_namespace("NP -> test", namespace='rule_labels')

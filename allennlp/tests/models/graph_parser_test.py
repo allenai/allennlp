@@ -6,7 +6,7 @@ from allennlp.common.testing.model_test_case import ModelTestCase
 class GraphParserTest(ModelTestCase):
 
     def setUp(self):
-        super(GraphParserTest, self).setUp()
+        super().setUp()
         self.set_up_model(self.FIXTURES_ROOT / "graph_parser" / "experiment.json",
                           self.FIXTURES_ROOT / "data" / "dm.sdp")
 

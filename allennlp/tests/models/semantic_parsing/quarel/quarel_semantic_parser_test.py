@@ -7,7 +7,7 @@ class QuarelSemanticParserTest(ModelTestCase):
 
     def setUp(self):
 
-        super(QuarelSemanticParserTest, self).setUp()
+        super().setUp()
         self.set_up_model(str(self.FIXTURES_ROOT / "semantic_parsing" / "quarel" / "experiment.json"),
                           str(self.FIXTURES_ROOT / "data" / "quarel.jsonl"))
         # No gradient for these if only one entity type

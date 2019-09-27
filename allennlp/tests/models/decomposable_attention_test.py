@@ -12,7 +12,7 @@ from allennlp.models import DecomposableAttention, Model
 
 class TestDecomposableAttention(ModelTestCase):
     def setUp(self):
-        super(TestDecomposableAttention, self).setUp()
+        super().setUp()
         self.set_up_model(self.FIXTURES_ROOT / 'decomposable_attention' / 'experiment.json',
                           self.FIXTURES_ROOT / 'data' / 'snli.jsonl')
 

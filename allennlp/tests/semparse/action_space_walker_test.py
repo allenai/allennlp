@@ -34,7 +34,7 @@ class FakeLanguageWithAssertions(DomainLanguage):
 
 class ActionSpaceWalkerTest(AllenNlpTestCase):
     def setUp(self):
-        super(ActionSpaceWalkerTest, self).setUp()
+        super().setUp()
         self.world = FakeLanguageWithAssertions(start_types={bool})
         self.walker = ActionSpaceWalker(self.world, max_path_length=10)
 

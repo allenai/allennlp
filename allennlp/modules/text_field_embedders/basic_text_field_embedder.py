@@ -50,7 +50,7 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
                  token_embedders: Dict[str, TokenEmbedder],
                  embedder_to_indexer_map: Dict[str, Union[List[str], Dict[str, str]]] = None,
                  allow_unmatched_keys: bool = False) -> None:
-        super(BasicTextFieldEmbedder, self).__init__()
+        super().__init__()
         self._token_embedders = token_embedders
         self._embedder_to_indexer_map = embedder_to_indexer_map
         for key, embedder in token_embedders.items():

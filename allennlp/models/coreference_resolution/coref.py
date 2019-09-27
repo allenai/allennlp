@@ -73,7 +73,7 @@ class CoreferenceResolver(Model):
                  lexical_dropout: float = 0.2,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
-        super(CoreferenceResolver, self).__init__(vocab, regularizer)
+        super().__init__(vocab, regularizer)
 
         self._text_field_embedder = text_field_embedder
         self._context_layer = context_layer

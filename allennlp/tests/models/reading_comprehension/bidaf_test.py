@@ -15,7 +15,7 @@ from allennlp.models import BidirectionalAttentionFlow, Model
 
 class BidirectionalAttentionFlowTest(ModelTestCase):
     def setUp(self):
-        super(BidirectionalAttentionFlowTest, self).setUp()
+        super().setUp()
         self.set_up_model(self.FIXTURES_ROOT / 'bidaf' / 'experiment.json',
                           self.FIXTURES_ROOT / 'data' / 'squad.json')
 

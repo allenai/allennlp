@@ -16,11 +16,11 @@ from allennlp.common.params import Params
 
 class TestInitializers(AllenNlpTestCase):
     def setUp(self):
-        super(TestInitializers, self).setUp()
+        super().setUp()
         logging.getLogger('allennlp.nn.initializers').disabled = False
 
     def tearDown(self):
-        super(TestInitializers, self).tearDown()
+        super().tearDown()
         logging.getLogger('allennlp.nn.initializers').disabled = True
 
     def test_from_params_string(self):
@@ -32,7 +32,7 @@ class TestInitializers(AllenNlpTestCase):
     def test_regex_matches_are_initialized_correctly(self):
         class Net(torch.nn.Module):
             def __init__(self):
-                super(Net, self).__init__()
+                super().__init__()
                 self.linear_1_with_funky_name = torch.nn.Linear(5, 10)
                 self.linear_2 = torch.nn.Linear(10, 5)
                 self.conv = torch.nn.Conv1d(5, 5, 5)
@@ -92,7 +92,7 @@ class TestInitializers(AllenNlpTestCase):
 
         class Net(torch.nn.Module):
             def __init__(self):
-                super(Net, self).__init__()
+                super().__init__()
                 self.linear_1 = torch.nn.Linear(5, 10)
                 self.linear_2 = torch.nn.Linear(10, 5)
                 # typical actual usage: modules loaded from allenlp.model.load(..)

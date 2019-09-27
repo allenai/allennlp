@@ -19,7 +19,7 @@ class TokenCharactersEncoder(TokenEmbedder):
     We take the embedding and encoding modules as input, so this class is itself quite simple.
     """
     def __init__(self, embedding: Embedding, encoder: Seq2VecEncoder, dropout: float = 0.0) -> None:
-        super(TokenCharactersEncoder, self).__init__()
+        super().__init__()
         self._embedding = TimeDistributed(embedding)
         self._encoder = TimeDistributed(encoder)
         if dropout > 0:

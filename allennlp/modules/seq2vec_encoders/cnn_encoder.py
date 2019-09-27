@@ -53,7 +53,7 @@ class CnnEncoder(Seq2VecEncoder):
                  ngram_filter_sizes: Tuple[int, ...] = (2, 3, 4, 5),  # pylint: disable=bad-whitespace
                  conv_layer_activation: Activation = None,
                  output_dim: Optional[int] = None) -> None:
-        super(CnnEncoder, self).__init__()
+        super().__init__()
         self._embedding_dim = embedding_dim
         self._num_filters = num_filters
         self._ngram_filter_sizes = ngram_filter_sizes
