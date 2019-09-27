@@ -21,7 +21,7 @@ from allennlp.predictors import Predictor, BidafPredictor
 
 class TestPredict(AllenNlpTestCase):
     def setUp(self):
-        super(TestPredict, self).setUp()
+        super().setUp()
         self.bidaf_model_path = (self.FIXTURES_ROOT / "bidaf" /
                                  "serialization" / "model.tar.gz")
         self.bidaf_data_path = self.FIXTURES_ROOT / 'data' / 'squad.json'

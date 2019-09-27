@@ -240,7 +240,7 @@ def convert_sent_to_conll(sent_ls: List[Extraction]):
     convert it to conll representation.
     """
     # Sanity check - make sure all extractions are on the same sentence
-    assert(len(set([ex.sent for ex in sent_ls])) == 1)
+    assert(len({ex.sent for ex in sent_ls}) == 1)
     toks = sent_ls[0].sent.split(' ')
 
     return safe_zip(*[range(len(toks)),
@@ -279,4 +279,3 @@ if __name__ == "__main__":
     parser.add_argument("--out", type=str, help="path to the output file, where CoNLL format should be written.", required = True)
     args = parser.parse_args()
     main(args.inp, args.domain, args.out)
-

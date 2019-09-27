@@ -19,6 +19,15 @@ from allennlp.common.checks import ConfigurationError
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
+PTB_PARENTHESES = {
+        "-LRB-": "(",
+        "-RRB-": ")",
+        "-LCB-": "{",
+        "-RCB-": "}",
+        "-LSB-": "[",
+        "-RSB-": "]"
+}
+
 
 @DatasetReader.register("ptb_trees")
 class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
@@ -37,6 +46,9 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
     use_pos_tags : ``bool``, optional, (default = ``True``)
         Whether or not the instance should contain gold POS tags
         as a field.
+    convert_parentheses : ``bool``, optional, (default = ``False``)
+        Whether or not to convert special PTB parentheses tokens (e.g., "-LRB-")
+        to the corresponding parentheses tokens (i.e., "(").
     lazy : ``bool``, optional, (default = ``False``)
         Whether or not instances can be consumed lazily.
     label_namespace_prefix : ``str``, optional, (default = ``""``)
@@ -49,12 +61,14 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
     def __init__(self,
                  token_indexers: Dict[str, TokenIndexer] = None,
                  use_pos_tags: bool = True,
+                 convert_parentheses: bool = False,
                  lazy: bool = False,
                  label_namespace_prefix: str = "",
                  pos_label_namespace: str = "pos") -> None:
         super().__init__(lazy=lazy)
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         self._use_pos_tags = use_pos_tags
+        self._convert_parentheses = convert_parentheses
         self._label_namespace_prefix = label_namespace_prefix
         self._pos_label_namespace = pos_label_namespace
 
@@ -110,6 +124,8 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
                 The gold NLTK parse tree for use in evaluation.
         """
         # pylint: disable=arguments-differ
+        if self._convert_parentheses:
+            tokens = [PTB_PARENTHESES.get(token, token) for token in tokens]
         text_field = TextField([Token(x) for x in tokens], token_indexers=self._token_indexers)
         fields: Dict[str, Field] = {"tokens": text_field}
 

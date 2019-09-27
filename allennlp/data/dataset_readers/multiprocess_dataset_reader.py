@@ -207,7 +207,7 @@ class MultiprocessDatasetReader(DatasetReader):
         Just delegate to the base reader text_to_instance.
         """
         # pylint: disable=arguments-differ
-        return self.reader.text_to_instance(*args, **kwargs)
+        return self.reader.text_to_instance(*args, **kwargs)  # type: ignore
 
     def _read(self, file_path: str) -> Iterable[Instance]:
         raise RuntimeError("Multiprocess reader implements read() directly.")

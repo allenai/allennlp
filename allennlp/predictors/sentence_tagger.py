@@ -81,7 +81,7 @@ class SentenceTaggerPredictor(Predictor):
                     i += 1
                     tag = predicted_tags[i]
                 end_idx = i
-                current_tags = [t if idx >= begin_idx and idx <= end_idx else 'O' \
+                current_tags = [t if begin_idx <= idx <= end_idx else 'O' \
                     for idx, t in enumerate(predicted_tags)]
                 predicted_spans.append(current_tags)
             i += 1
@@ -93,5 +93,6 @@ class SentenceTaggerPredictor(Predictor):
             text_field: TextField = instance['tokens']  # type: ignore
             new_instance.add_field('tags', SequenceLabelField(labels, text_field), self._model.vocab)
             instances.append(new_instance)
+        instances.reverse() # NER tags are in the opposite order as desired for the interpret UI
 
         return instances

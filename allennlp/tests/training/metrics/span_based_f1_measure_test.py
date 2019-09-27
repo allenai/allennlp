@@ -16,7 +16,7 @@ from allennlp.common.checks import ConfigurationError
 class SpanBasedF1Test(AllenNlpTestCase):
 
     def setUp(self):
-        super(SpanBasedF1Test, self).setUp()
+        super().setUp()
         vocab = Vocabulary()
         vocab.add_token_to_namespace("O", "tags")
         vocab.add_token_to_namespace("B-ARG1", "tags")

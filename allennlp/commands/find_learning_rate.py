@@ -163,8 +163,8 @@ def find_learning_rate_model(params: Params, serialization_dir: str,
     if os.path.exists(serialization_dir) and os.listdir(serialization_dir):
         raise ConfigurationError(f'Serialization directory {serialization_dir} already exists and is '
                                  f'not empty.')
-    else:
-        os.makedirs(serialization_dir, exist_ok=True)
+
+    os.makedirs(serialization_dir, exist_ok=True)
 
     prepare_environment(params)
 
@@ -318,7 +318,7 @@ def _smooth(values: List[float], beta: float) -> List[float]:
 
 
 def _save_plot(learning_rates: List[float], losses: List[float], save_path: str):
-    # pylint: disable=multiple-statements,wrong-import-position
+    # pylint: disable=multiple-statements,wrong-import-position,import-outside-toplevel
     import matplotlib; matplotlib.use('Agg')
     import matplotlib.pyplot as plt
     plt.ylabel('loss')

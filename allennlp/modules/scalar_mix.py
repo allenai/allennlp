@@ -18,7 +18,7 @@ class ScalarMix(torch.nn.Module):
                  do_layer_norm: bool = False,
                  initial_scalar_parameters: List[float] = None,
                  trainable: bool = True) -> None:
-        super(ScalarMix, self).__init__()
+        super().__init__()
         self.mixture_size = mixture_size
         self.do_layer_norm = do_layer_norm
 

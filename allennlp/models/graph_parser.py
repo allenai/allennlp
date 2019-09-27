@@ -73,7 +73,7 @@ class GraphParser(Model):
                  edge_prediction_threshold: float = 0.5,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
-        super(GraphParser, self).__init__(vocab, regularizer)
+        super().__init__(vocab, regularizer)
 
         self.text_field_embedder = text_field_embedder
         self.encoder = encoder

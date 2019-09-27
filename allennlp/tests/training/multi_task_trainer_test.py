@@ -219,7 +219,7 @@ class MultiTaskTrainer(TrainerBase):
             batches = tqdm.tqdm(self.iterator(self.mingler.mingle(self.datasets), num_epochs=1))
             for i, batch in enumerate(batches):
                 self.optimizer.zero_grad()
-                loss = self.model.forward(**batch)['loss']
+                loss = self.model.forward(**batch)['loss']  # type: ignore
                 loss.backward()
                 total_loss += loss.item()
                 self.optimizer.step()

@@ -64,7 +64,7 @@ def main():
     atexit.register(lambda: shutil.rmtree(tempdir))
 
     config_path = os.path.join(tempdir, CONFIG_NAME)
-    subprocess.run([args.editor, config_path])
+    subprocess.run([args.editor, config_path], check=False)
 
     with tarfile.open(output_file, "w:gz") as tar:
         tar.add(tempdir, arcname=os.path.sep)

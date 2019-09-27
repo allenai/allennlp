@@ -28,7 +28,7 @@ class TestVocabulary(AllenNlpTestCase):
                                {"tokens": token_indexer})
         self.instance = Instance({"text": text_field})
         self.dataset = Batch([self.instance])
-        super(TestVocabulary, self).setUp()
+        super().setUp()
 
     def test_pickling(self):
         vocab = Vocabulary.from_instances(self.dataset)
@@ -392,7 +392,7 @@ class TestVocabulary(AllenNlpTestCase):
         original_vocab.add_tokens_to_namespace(["a", "b"], namespace="tokens1")
         original_vocab.add_token_to_namespace("p", namespace="tokens2")
         original_vocab.save_to_files(vocab_dir)
-        text_field1 = TextField([Token(t) for t in ["a" "c"]],
+        text_field1 = TextField([Token(t) for t in ["a", "c"]],
                                 {"tokens1": SingleIdTokenIndexer("tokens1")})
         text_field2 = TextField([Token(t) for t in ["p", "q", "r"]],
                                 {"tokens2": SingleIdTokenIndexer("tokens2")})
