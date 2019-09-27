@@ -136,7 +136,7 @@ class BiMpmMatching(nn.Module, FromParams):
                  with_maxpool_match: bool = True,
                  with_attentive_match: bool = True,
                  with_max_attentive_match: bool = True) -> None:
-        super(BiMpmMatching, self).__init__()
+        super().__init__()
 
         self.hidden_dim = hidden_dim
         self.num_perspectives = num_perspectives

@@ -69,7 +69,7 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
                  dropout_prob: float = 0.1,
                  residual_dropout_prob: float = 0.2,
                  attention_dropout_prob: float = 0.1) -> None:
-        super(StackedSelfAttentionEncoder, self).__init__()
+        super().__init__()
 
         self._use_positional_encoding = use_positional_encoding
         self._attention_layers: List[MultiHeadSelfAttention] = []

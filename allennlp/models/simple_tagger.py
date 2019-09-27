@@ -61,7 +61,7 @@ class SimpleTagger(Model):
                  verbose_metrics: bool = False,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
-        super(SimpleTagger, self).__init__(vocab, regularizer)
+        super().__init__(vocab, regularizer)
 
         self.label_namespace = label_namespace
         self.text_field_embedder = text_field_embedder

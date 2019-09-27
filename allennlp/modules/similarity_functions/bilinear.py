@@ -31,7 +31,7 @@ class BilinearSimilarity(SimilarityFunction):
                  tensor_1_dim: int,
                  tensor_2_dim: int,
                  activation: Activation = None) -> None:
-        super(BilinearSimilarity, self).__init__()
+        super().__init__()
         self._weight_matrix = Parameter(torch.Tensor(tensor_1_dim, tensor_2_dim))
         self._bias = Parameter(torch.Tensor(1))
         self._activation = activation or Activation.by_name('linear')()

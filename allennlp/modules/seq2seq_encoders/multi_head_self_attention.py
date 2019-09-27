@@ -44,7 +44,7 @@ class MultiHeadSelfAttention(Seq2SeqEncoder):
                  values_dim: int,
                  output_projection_dim: int = None,
                  attention_dropout_prob: float = 0.1) -> None:
-        super(MultiHeadSelfAttention, self).__init__()
+        super().__init__()
 
         self._num_heads = num_heads
         self._input_dim = input_dim

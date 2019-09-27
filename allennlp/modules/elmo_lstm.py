@@ -63,7 +63,7 @@ class ElmoLstm(_EncoderBase):
                  recurrent_dropout_probability: float = 0.0,
                  memory_cell_clip_value: Optional[float] = None,
                  state_projection_clip_value: Optional[float] = None) -> None:
-        super(ElmoLstm, self).__init__(stateful=True)
+        super().__init__(stateful=True)
 
         # Required to be wrapped with a :class:`PytorchSeq2SeqWrapper`.
         self.input_size = input_size

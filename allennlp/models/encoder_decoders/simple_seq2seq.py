@@ -81,7 +81,7 @@ class SimpleSeq2Seq(Model):
                  target_embedding_dim: int = None,
                  scheduled_sampling_ratio: float = 0.,
                  use_bleu: bool = True) -> None:
-        super(SimpleSeq2Seq, self).__init__(vocab)
+        super().__init__(vocab)
         self._target_namespace = target_namespace
         self._scheduled_sampling_ratio = scheduled_sampling_ratio
 

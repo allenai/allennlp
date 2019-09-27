@@ -14,7 +14,7 @@ from allennlp.training import Trainer
 
 class SimpleTaggerTest(ModelTestCase):
     def setUp(self):
-        super(SimpleTaggerTest, self).setUp()
+        super().setUp()
         self.set_up_model(self.FIXTURES_ROOT / 'simple_tagger' / 'experiment.json',
                           self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv')
 
@@ -73,7 +73,7 @@ class SimpleTaggerTest(ModelTestCase):
 
 class SimpleTaggerSpanF1Test(ModelTestCase):
     def setUp(self):
-        super(SimpleTaggerSpanF1Test, self).setUp()
+        super().setUp()
         self.set_up_model(self.FIXTURES_ROOT / 'simple_tagger' / 'experiment_with_span_f1.json',
                           self.FIXTURES_ROOT / 'data' / 'conll2003.txt')
 

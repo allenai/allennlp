@@ -5,7 +5,7 @@ from allennlp.common.testing import ModelTestCase
 
 class TestBasicClassifier(ModelTestCase):
     def setUp(self):
-        super(TestBasicClassifier, self).setUp()
+        super().setUp()
         self.set_up_model(self.FIXTURES_ROOT / 'basic_classifier' / 'experiment_seq2vec.jsonnet',
                           self.FIXTURES_ROOT / 'data' / 'text_classification_json' / 'imdb_corpus.jsonl')
 

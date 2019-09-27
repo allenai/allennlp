@@ -78,7 +78,7 @@ class TestListField(AllenNlpTestCase):
         non_empty_fields = {'list_tensor': non_empty_list_field}
         self.non_empty_instance = Instance(non_empty_fields)
 
-        super(TestListField, self).setUp()
+        super().setUp()
 
     def test_get_padding_lengths(self):
         list_field = ListField([self.field1, self.field2, self.field3])

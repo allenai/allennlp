@@ -6,7 +6,7 @@ from allennlp.semparse.contexts.sql_context_utils import action_sequence_to_sql
 
 class AtisSemanticParserTest(ModelTestCase):
     def setUp(self):
-        super(AtisSemanticParserTest, self).setUp()
+        super().setUp()
         self.set_up_model(str(self.FIXTURES_ROOT / "semantic_parsing" / "atis" / "experiment.json"),
                           str(self.FIXTURES_ROOT / "data" / "atis" / "sample.json"))
 

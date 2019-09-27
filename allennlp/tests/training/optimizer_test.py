@@ -12,7 +12,7 @@ from allennlp.data.iterators import BasicIterator
 
 class TestOptimizer(AllenNlpTestCase):
     def setUp(self):
-        super(TestOptimizer, self).setUp()
+        super().setUp()
         self.instances = SequenceTaggingDatasetReader().read(self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv')
         vocab = Vocabulary.from_instances(self.instances)
         self.model_params = Params({
@@ -103,7 +103,7 @@ class TestOptimizer(AllenNlpTestCase):
 class TestDenseSparseAdam(AllenNlpTestCase):
 
     def setUp(self):
-        super(TestDenseSparseAdam, self).setUp()
+        super().setUp()
         self.instances = SequenceTaggingDatasetReader().read(self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv')
         self.vocab = Vocabulary.from_instances(self.instances)
         self.model_params = Params({

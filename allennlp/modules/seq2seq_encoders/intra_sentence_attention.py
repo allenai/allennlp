@@ -53,7 +53,7 @@ class IntraSentenceAttentionEncoder(Seq2SeqEncoder):
                  num_attention_heads: int = 1,
                  combination: str = '1,2',
                  output_dim: int = None) -> None:
-        super(IntraSentenceAttentionEncoder, self).__init__()
+        super().__init__()
         self._input_dim = input_dim
         if projection_dim:
             self._projection = torch.nn.Linear(input_dim, projection_dim)
