@@ -44,12 +44,9 @@ def log_iterable(iterable, assume_multiprocess_types):
 
     batch_count = 0
     cumulative_batch_size = 0
-    cumulative_token_count = 0
     for batch in iterable:
         batch_count += 1
         cumulative_batch_size += get_batch_size(batch)
-        tokens_size = batch['source']['tokens'].size()
-        cumulative_token_count += tokens_size[0] * tokens_size[1]
 
         if assume_multiprocess_types and not have_started_periodic_process:
             have_started_periodic_process = True
@@ -72,8 +69,7 @@ def log_iterable(iterable, assume_multiprocess_types):
             msg = (f"s/b total: {(end - start) / batch_count:.3f} " +
                    f"s/b last: {(end - last) / BATCH_INTERVAL:.3f} " +
                    f"batch count: {batch_count} " +
-                   f"batch size: {cumulative_batch_size / batch_count:.1f} " +
-                   f"total tokens {cumulative_token_count}")
+                   f"batch size: {cumulative_batch_size / batch_count:.1f} ")
             print(msg)
 
             last = end
