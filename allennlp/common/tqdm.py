@@ -4,7 +4,7 @@ global defaults for certain tqdm parameters.
 """
 
 try:
-    SHELL = str(type(get_ipython()))
+    SHELL = str(type(get_ipython())) # pylint: disable=undefined-variable
 except: # pylint: disable=bare-except
     SHELL = ""
 
