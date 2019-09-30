@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 from allennlp.common.testing import ModelTestCase
 from allennlp.data.dataset import Batch
 
@@ -25,6 +24,7 @@ class TestLanguageModelTokenEmbedder(ModelTestCase):
             for tag_id in example_tags:
                 tag = self.model.vocab.get_token_from_index(tag_id, namespace="labels")
                 assert tag in {'O', 'I-ORG', 'I-PER', 'I-LOC'}
+
 
 class TestLanguageModelTokenEmbedderWithoutBosEos(TestLanguageModelTokenEmbedder):
     def setUp(self):

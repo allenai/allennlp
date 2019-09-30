@@ -1,10 +1,10 @@
-# pylint: disable=no-self-use,invalid-name
 import pytest
 import torch
 from numpy.testing import assert_almost_equal
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.state_machines.states import LambdaGrammarStatelet
+
 
 def is_nonterminal(symbol: str) -> bool:
     if symbol == 'identity':

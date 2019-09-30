@@ -15,7 +15,7 @@ python -m allennlp.service.config_explorer \
     --include-package my_library
 ```
 """
-# pylint: disable=too-many-return-statements
+
 from typing import Sequence
 import logging
 
@@ -25,7 +25,7 @@ from allennlp.common.configuration import configure, choices
 from allennlp.common.util import import_submodules
 from allennlp.service.server_simple import ServerError
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 def make_app(include_packages: Sequence[str] = ()) -> Flask:
@@ -36,20 +36,20 @@ def make_app(include_packages: Sequence[str] = ()) -> Flask:
     for package_name in include_packages:
         import_submodules(package_name)
 
-    app = Flask(__name__)  # pylint: disable=invalid-name
+    app = Flask(__name__)
 
     @app.errorhandler(ServerError)
-    def handle_invalid_usage(error: ServerError) -> Response:  # pylint: disable=unused-variable
+    def handle_invalid_usage(error: ServerError) -> Response:
         response = jsonify(error.to_dict())
         response.status_code = error.status_code
         return response
 
     @app.route('/')
-    def index() -> Response:  # pylint: disable=unused-variable
+    def index() -> Response:
         return send_file('config_explorer.html')
 
     @app.route('/api/config/')
-    def api_config() -> Response:  # pylint: disable=unused-variable
+    def api_config() -> Response:
         """
         There are basically two things that can happen here.
         If this method is called with a ``Registrable`` class (e.g. ``Model``),

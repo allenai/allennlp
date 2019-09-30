@@ -4,7 +4,7 @@ import torch
 
 from allennlp.state_machines.states import State
 
-StateType = TypeVar('StateType', bound=State)  # pylint: disable=invalid-name
+StateType = TypeVar('StateType', bound=State)
 
 
 class TransitionFunction(torch.nn.Module, Generic[StateType]):

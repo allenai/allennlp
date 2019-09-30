@@ -1,4 +1,3 @@
-# pylint: disable=invalid-name,no-self-use,protected-access
 import os
 import json
 import sys
@@ -6,7 +5,6 @@ import pathlib
 import tempfile
 import io
 from contextlib import redirect_stdout
-
 
 from allennlp.commands import main
 from allennlp.common.testing import AllenNlpTestCase
@@ -29,7 +27,6 @@ class TestPrintResults(AllenNlpTestCase):
         json.dump({"train": 1, "test": 2, "dev": 3}, open(os.path.join(self.directory1 / "metrics.json"), "w+"))
         json.dump({"train": 4, "dev": 5}, open(os.path.join(self.directory2 / "metrics.json"), "w+"))
         json.dump({"train": 6, "dev": 7}, open(os.path.join(self.directory3 / "cool_metrics.json"), "w+"))
-
 
     def test_print_results(self):
         kebab_args = ["run.py", "print-results", str(self.TEST_DIR), "--keys", "train", "dev", "test"]

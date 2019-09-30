@@ -31,12 +31,12 @@ import logging
 import os
 import json
 from allennlp.commands.subcommand import Subcommand
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 class PrintResults(Subcommand):
     def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
-        # pylint: disable=protected-access
+
         description = '''Print results from allennlp training runs in a helpful CSV format.'''
         subparser = parser.add_parser(
                 name, description=description,
@@ -77,7 +77,6 @@ def print_results_from_args(args: argparse.Namespace):
             full_name = os.path.join(root, metrics_name)
             metrics = json.load(open(full_name))
             results_dict[full_name] = metrics
-
 
     sorted_keys = sorted(list(results_dict.keys()))
     print(f"model_run, {', '.join(keys)}")

@@ -18,7 +18,8 @@ from allennlp.common.file_utils import cached_path
 from allennlp.common.params import Params, unflatten, with_fallback, parse_overrides
 from allennlp.models.model import Model, _DEFAULT_WEIGHTS
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
+
 
 class Archive(NamedTuple):
     """ An archive comprises a Model and its experimental config"""
@@ -71,9 +72,10 @@ class Archive(NamedTuple):
             raise ConfigurationError(f"The transferred object from model {type(self.model)} at path "
                                      f"{path} is not a PyTorch Module.")
 
-        for parameter in module.parameters(): # type: ignore
+        for parameter in module.parameters():  # type: ignore
             parameter.requires_grad_(not freeze)
         return module
+
 
 # We archive a model by creating a tar.gz file with its weights, config, and vocabulary.
 #
@@ -85,6 +87,7 @@ class Archive(NamedTuple):
 CONFIG_NAME = "config.json"
 _WEIGHTS_NAME = "weights.th"
 _FTA_NAME = "files_to_archive.json"
+
 
 def archive_model(serialization_dir: str,
                   weights: str = _DEFAULT_WEIGHTS,
@@ -146,6 +149,7 @@ def archive_model(serialization_dir: str,
             # And add each requested file to the archive.
             for key, filename in files_to_archive.items():
                 archive.add(filename, arcname=f"fta/{key}")
+
 
 def load_archive(archive_file: str,
                  cuda_device: int = -1,
@@ -221,7 +225,6 @@ def load_archive(archive_file: str,
         # Fallback for serialization directories.
         if not os.path.exists(weights_path):
             weights_path = os.path.join(serialization_dir, _DEFAULT_WEIGHTS)
-
 
     # Instantiate model. Use a duplicate of the config, as it will get consumed.
     model = Model.load(config.duplicate(),

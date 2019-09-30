@@ -61,7 +61,7 @@ class LstmCellWithProjection(torch.nn.Module):
                  recurrent_dropout_probability: float = 0.0,
                  memory_cell_clip_value: Optional[float] = None,
                  state_projection_clip_value: Optional[float] = None) -> None:
-        super(LstmCellWithProjection, self).__init__()
+        super().__init__()
         # Required to be wrapped with a :class:`PytorchSeq2SeqWrapper`.
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -90,7 +90,7 @@ class LstmCellWithProjection(torch.nn.Module):
         # Exploration of Recurrent Network Architectures, (Jozefowicz, 2015).
         self.state_linearity.bias.data[self.cell_size:2 * self.cell_size].fill_(1.0)
 
-    def forward(self,  # pylint: disable=arguments-differ
+    def forward(self,
                 inputs: torch.FloatTensor,
                 batch_lengths: List[int],
                 initial_state: Optional[Tuple[torch.Tensor, torch.Tensor]] = None):
@@ -194,7 +194,7 @@ class LstmCellWithProjection(torch.nn.Module):
             # and again clip it.
 
             if self.memory_cell_clip_value:
-                # pylint: disable=invalid-unary-operand-type
+
                 memory = torch.clamp(memory, -self.memory_cell_clip_value, self.memory_cell_clip_value)
 
             # shape (current_length_index, cell_size)
@@ -203,7 +203,7 @@ class LstmCellWithProjection(torch.nn.Module):
             # shape (current_length_index, hidden_size)
             timestep_output = self.state_projection(pre_projection_timestep_output)
             if self.state_projection_clip_value:
-                # pylint: disable=invalid-unary-operand-type
+
                 timestep_output = torch.clamp(timestep_output,
                                               -self.state_projection_clip_value,
                                               self.state_projection_clip_value)

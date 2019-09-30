@@ -33,7 +33,7 @@ class Highway(torch.nn.Module):
                  input_dim: int,
                  num_layers: int = 1,
                  activation: Callable[[torch.Tensor], torch.Tensor] = torch.nn.functional.relu) -> None:
-        super(Highway, self).__init__()
+        super().__init__()
         self._input_dim = input_dim
         self._layers = torch.nn.ModuleList([torch.nn.Linear(input_dim, input_dim * 2)
                                             for _ in range(num_layers)])
@@ -46,7 +46,7 @@ class Highway(torch.nn.Module):
             layer.bias[input_dim:].data.fill_(1)
 
     @overrides
-    def forward(self, inputs: torch.Tensor) -> torch.Tensor:  # pylint: disable=arguments-differ
+    def forward(self, inputs: torch.Tensor) -> torch.Tensor:
         current_input = inputs
         for layer in self._layers:
             projected_input = layer(current_input)

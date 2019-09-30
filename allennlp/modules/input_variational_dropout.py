@@ -1,5 +1,6 @@
 import torch
 
+
 class InputVariationalDropout(torch.nn.Dropout):
     """
     Apply the dropout technique in Gal and Ghahramani, "Dropout as a Bayesian Approximation:
@@ -11,7 +12,7 @@ class InputVariationalDropout(torch.nn.Dropout):
     it to every time step.
     """
     def forward(self, input_tensor):
-        # pylint: disable=arguments-differ
+
         """
         Apply dropout to input tensor.
 

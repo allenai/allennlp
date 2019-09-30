@@ -1,9 +1,9 @@
-# pylint: disable=no-self-use,invalid-name
 import pytest
 
 from allennlp.data.dataset_readers.semantic_role_labeling import SrlReader, _convert_tags_to_wordpiece_tags
 from allennlp.common.util import ensure_list
 from allennlp.common.testing import AllenNlpTestCase
+
 
 class TestSrlReader:
     @pytest.mark.parametrize("lazy", (True, False))
@@ -75,7 +75,6 @@ class TestSrlReader:
         assert len(instances) == 2
 
 
-
 class TestBertSrlReader(AllenNlpTestCase):
 
     def setUp(self):
@@ -83,7 +82,7 @@ class TestBertSrlReader(AllenNlpTestCase):
         self.reader = SrlReader(bert_model_name="bert-base-uncased")
 
     def test_convert_tags_to_wordpiece_tags(self):
-        # pylint: disable=protected-access
+
         offsets = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
         offsets = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
         original = ['B-ARG0', 'I-ARG0', 'I-ARG0', 'B-V', 'B-ARG1', 'I-ARG1',
@@ -108,18 +107,15 @@ class TestBertSrlReader(AllenNlpTestCase):
         original = ["B-ARG", "I-ARG", "O"]
         converted = _convert_tags_to_wordpiece_tags(original, offsets)
         assert converted == ['O', 'B-ARG', 'I-ARG', 'I-ARG', 'O', 'O', 'O']
-        # pylint: enable=protected-access
-
 
     def test_wordpiece_tokenize_input(self):
-        wordpieces, offsets, start_offsets = self.reader._wordpiece_tokenize_input( # pylint: disable=protected-access
+        wordpieces, offsets, start_offsets = self.reader._wordpiece_tokenize_input(
                 "This is a sentenceandsomepieces with a reallylongword".split(" "))
 
         assert wordpieces == ['[CLS]', 'this', 'is', 'a', 'sentence', '##ands', '##ome',
                               '##piece', '##s', 'with', 'a', 'really', '##long', '##word', '[SEP]']
         assert [wordpieces[i] for i in offsets] == ['this', 'is', 'a', '##s', 'with', 'a', '##word']
         assert [wordpieces[i] for i in start_offsets] == ['this', 'is', 'a', 'sentence', 'with', 'a', 'really']
-
 
     def test_read_from_file(self):
         conll_reader = self.reader
@@ -150,7 +146,6 @@ class TestBertSrlReader(AllenNlpTestCase):
         assert fields["tags"].labels == ['O', 'B-ARG0', 'I-ARG0', 'B-V', 'B-ARG1', 'I-ARG1', 'B-ARGM-TMP',
                                          'I-ARGM-TMP', 'B-ARGM-TMP', 'I-ARGM-TMP', 'I-ARGM-TMP',
                                          'I-ARGM-TMP', 'I-ARGM-TMP', 'O', 'O']
-
 
         fields = instances[3].fields
         tokens = fields["metadata"]["words"]

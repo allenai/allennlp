@@ -2,6 +2,7 @@ from typing import Optional, Iterable, Dict, Any
 
 from allennlp.common.checks import ConfigurationError
 
+
 class MetricTracker:
     """
     This class tracks a metric during training for the dual purposes of early stopping

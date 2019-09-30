@@ -20,6 +20,6 @@ class PassThroughTokenEmbedder(TokenEmbedder):
     def get_output_dim(self):
         return self.hidden_dim
 
-    def forward(self,  # pylint: disable=arguments-differ
+    def forward(self,
                 inputs: torch.Tensor) -> torch.Tensor:
         return inputs

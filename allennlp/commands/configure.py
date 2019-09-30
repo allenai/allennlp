@@ -28,7 +28,7 @@ from allennlp.service.config_explorer import make_app
 
 class Configure(Subcommand):
     def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
-        # pylint: disable=protected-access
+
         description = '''Run the configuration wizard'''
         subparser = parser.add_parser(
                 name, description=description, help='Run the configuration wizard.')
@@ -42,6 +42,7 @@ class Configure(Subcommand):
         subparser.set_defaults(func=_run_wizard)
 
         return subparser
+
 
 def _run_wizard(args: argparse.Namespace) -> None:
     app = make_app(args.include_package)

@@ -14,7 +14,7 @@ from allennlp.data.tokenizers import Token, Tokenizer, WordTokenizer
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @DatasetReader.register("copynet_seq2seq")
@@ -153,7 +153,7 @@ class CopyNetDatasetReader(DatasetReader):
         Instance
             See the above for a description of the fields that the instance will contain.
         """
-        # pylint: disable=arguments-differ
+
         tokenized_source = self._source_tokenizer.tokenize(source_string)
         tokenized_source.insert(0, Token(START_SYMBOL))
         tokenized_source.append(Token(END_SYMBOL))

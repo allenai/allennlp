@@ -1,5 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
-
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor
@@ -33,20 +31,22 @@ class TestBiaffineDependencyParser(AllenNlpTestCase):
         hierplane_tree = result.get("hierplane_tree")
         hierplane_tree.pop("nodeTypeToStyle")
         hierplane_tree.pop("linkToPosition")
-        # pylint: disable=line-too-long,bad-continuation
-        assert result.get("hierplane_tree") == {'text': 'Please could you parse this sentence ?',
-                                                'root': {'word': 'Please', 'nodeType': 'det', 'attributes': ['INTJ'], 'link': 'det', 'spans': [{'start': 0, 'end': 7}],
-                                                    'children': [
-                                                            {'word': 'could', 'nodeType': 'nummod', 'attributes': ['VERB'], 'link': 'nummod', 'spans': [{'start': 7, 'end': 13}]},
-                                                            {'word': 'you', 'nodeType': 'nummod', 'attributes': ['PRON'], 'link': 'nummod', 'spans': [{'start': 13, 'end': 17}]},
-                                                            {'word': 'parse', 'nodeType': 'nummod', 'attributes': ['VERB'], 'link': 'nummod', 'spans': [{'start': 17, 'end': 23}]},
-                                                            {'word': 'this', 'nodeType': 'nummod', 'attributes': ['DET'], 'link': 'nummod', 'spans': [{'start': 23, 'end': 28}]},
-                                                            {'word': 'sentence', 'nodeType': 'nummod', 'attributes':['NOUN'], 'link': 'nummod', 'spans': [{'start': 28, 'end': 37}]},
-                                                            {'word': '?', 'nodeType': 'nummod', 'attributes': ['PUNCT'], 'link': 'nummod', 'spans': [{'start': 37, 'end': 39}]}
-                                                            ]
-                                                        }
-                                               }
-        # pylint: enable=line-too-long,bad-continuation
+
+        assert result.get("hierplane_tree") == {
+            'text': 'Please could you parse this sentence ?',
+            'root': {
+                'word': 'Please', 'nodeType': 'det', 'attributes': ['INTJ'], 'link': 'det', 'spans': [{'start': 0, 'end': 7}],
+                'children': [
+                    {'word': 'could', 'nodeType': 'nummod', 'attributes': ['VERB'], 'link': 'nummod', 'spans': [{'start': 7, 'end': 13}]},
+                    {'word': 'you', 'nodeType': 'nummod', 'attributes': ['PRON'], 'link': 'nummod', 'spans': [{'start': 13, 'end': 17}]},
+                    {'word': 'parse', 'nodeType': 'nummod', 'attributes': ['VERB'], 'link': 'nummod', 'spans': [{'start': 17, 'end': 23}]},
+                    {'word': 'this', 'nodeType': 'nummod', 'attributes': ['DET'], 'link': 'nummod', 'spans': [{'start': 23, 'end': 28}]},
+                    {'word': 'sentence', 'nodeType': 'nummod', 'attributes': ['NOUN'], 'link': 'nummod', 'spans': [{'start': 28, 'end': 37}]},
+                    {'word': '?', 'nodeType': 'nummod', 'attributes': ['PUNCT'], 'link': 'nummod', 'spans': [{'start': 37, 'end': 39}]}
+                    ]
+                }
+            }
+
     def test_batch_prediction(self):
         inputs = [
                 {
@@ -75,7 +75,7 @@ class TestBiaffineDependencyParser(AllenNlpTestCase):
             assert all(isinstance(x, str) for x in predicted_dependencies)
 
     def test_predictor_uses_dataset_reader_to_determine_pos_set(self):
-        # pylint: disable=protected-access
+
         archive = load_archive(self.FIXTURES_ROOT / 'biaffine_dependency_parser'
                                / 'serialization' / 'model.tar.gz')
         predictor = Predictor.from_archive(archive, 'biaffine-dependency-parser')

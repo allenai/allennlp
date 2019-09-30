@@ -145,9 +145,9 @@ class CrfTagger(Model):
                 tokens: Dict[str, torch.LongTensor],
                 tags: torch.LongTensor = None,
                 metadata: List[Dict[str, Any]] = None,
-                # pylint: disable=unused-argument
+
                 **kwargs) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
+
         """
         Parameters
         ----------
@@ -205,9 +205,7 @@ class CrfTagger(Model):
             # Add negative log-likelihood as loss
             log_likelihood = self.crf(logits, tags, mask)
 
-            # It's not clear why, but pylint seems to think `log_likelihood` is tuple
-            # (in fact, it's a torch.Tensor), so we need a disable.
-            output["loss"] = -log_likelihood  # pylint: disable=invalid-unary-operand-type
+            output["loss"] = -log_likelihood
 
             # Represent viterbi tags as "class probabilities" that we can
             # feed into the metrics

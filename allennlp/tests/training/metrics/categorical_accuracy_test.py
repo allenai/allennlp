@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name,protected-access
 import torch
 import pytest
 import numpy
@@ -6,6 +5,7 @@ import numpy
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.checks import ConfigurationError
 from allennlp.training.metrics import CategoricalAccuracy
+
 
 class CategoricalAccuracyTest(AllenNlpTestCase):
     def test_categorical_accuracy(self):

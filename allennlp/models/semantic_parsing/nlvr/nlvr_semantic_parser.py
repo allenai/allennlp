@@ -14,7 +14,7 @@ from allennlp.semparse.domain_languages import NlvrLanguage, START_SYMBOL
 from allennlp.state_machines.states import GrammarBasedState, GrammarStatelet, RnnStatelet
 from allennlp.training.metrics import Average
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 class NlvrSemanticParser(Model):
@@ -50,7 +50,7 @@ class NlvrSemanticParser(Model):
                  encoder: Seq2SeqEncoder,
                  dropout: float = 0.0,
                  rule_namespace: str = 'rule_labels') -> None:
-        super(NlvrSemanticParser, self).__init__(vocab=vocab)
+        super().__init__(vocab=vocab)
 
         self._sentence_embedder = sentence_embedder
         self._denotation_accuracy = Average()
@@ -72,7 +72,7 @@ class NlvrSemanticParser(Model):
 
     @overrides
     def forward(self):  # type: ignore
-        # pylint: disable=arguments-differ
+
         # Sub-classes should define their own logic here.
         raise NotImplementedError
 

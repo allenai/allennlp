@@ -1,9 +1,10 @@
 from allennlp.common.testing.model_test_case import ModelTestCase
 
+
 class BiaffineDependencyParserMultilangTest(ModelTestCase):
 
     def setUp(self):
-        super(BiaffineDependencyParserMultilangTest, self).setUp()
+        super().setUp()
         self.set_up_model(self.FIXTURES_ROOT / "biaffine_dependency_parser_multilang" / "experiment.json",
                           self.FIXTURES_ROOT / "data" / "dependencies_multilang" / "*")
 

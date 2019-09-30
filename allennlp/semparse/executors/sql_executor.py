@@ -1,13 +1,15 @@
 import logging
 from typing import List
+import sys
 
 import sqlite3
 import multiprocessing
 from multiprocessing import Process
 from allennlp.common.file_utils import cached_path
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 MULTIPROCESSING_LOGGER = multiprocessing.get_logger()
+
 
 class SqlExecutor:
     """
@@ -37,7 +39,7 @@ class SqlExecutor:
 
         # If the query has not finished in 3 seconds then we will proceed.
         process.join(3)
-        denotation_correct = process.exitcode # type: ignore
+        denotation_correct = process.exitcode  # type: ignore
 
         if process.is_alive():
             logger.warning("Evaluating query took over 3 seconds, skipping query")
@@ -63,7 +65,7 @@ class SqlExecutor:
             predicted_rows = self._cursor.fetchall()
         except sqlite3.Error as error:
             logger.warning(f'Error executing predicted: {error}')
-            exit(0)
+            sys.exit(0)
 
         # If predicted table matches any of the reference tables then it is counted as correct.
         target_rows = None
@@ -75,8 +77,8 @@ class SqlExecutor:
             except sqlite3.Error as error:
                 logger.warning(f'Error executing predicted: {error}')
             if predicted_rows == target_rows:
-                exit(1)
-        exit(0)
+                sys.exit(1)
+        sys.exit(0)
 
     @staticmethod
     def postprocess_query_sqlite(query: str):

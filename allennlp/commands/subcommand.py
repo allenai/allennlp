@@ -3,6 +3,7 @@ Base class for subcommands under ``allennlp.run``.
 """
 import argparse
 
+
 class Subcommand:
     """
     An abstract class representing subcommands for allennlp.run.
@@ -14,5 +15,5 @@ class Subcommand:
     :func:`~allennlp.commands.main` .
     """
     def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
-        # pylint: disable=protected-access
+
         raise NotImplementedError

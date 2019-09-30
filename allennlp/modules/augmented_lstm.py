@@ -13,6 +13,7 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.nn.util import get_dropout_mask
 from allennlp.nn.initializers import block_orthogonal
 
+
 class AugmentedLstm(torch.nn.Module):
     """
     An LSTM with Recurrent Dropout and the option to use highway
@@ -63,7 +64,7 @@ class AugmentedLstm(torch.nn.Module):
                  recurrent_dropout_probability: float = 0.0,
                  use_highway: bool = True,
                  use_input_projection_bias: bool = True) -> None:
-        super(AugmentedLstm, self).__init__()
+        super().__init__()
         # Required to be wrapped with a :class:`PytorchSeq2SeqWrapper`.
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -93,7 +94,7 @@ class AugmentedLstm(torch.nn.Module):
         # Exploration of Recurrent Network Architectures, (Jozefowicz, 2015).
         self.state_linearity.bias.data[self.hidden_size:2 * self.hidden_size].fill_(1.0)
 
-    def forward(self,  # pylint: disable=arguments-differ
+    def forward(self,
                 inputs: PackedSequence,
                 initial_state: Optional[Tuple[torch.Tensor, torch.Tensor]] = None):
         """

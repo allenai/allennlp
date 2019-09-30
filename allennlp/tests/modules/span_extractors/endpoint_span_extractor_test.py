@@ -1,10 +1,10 @@
-# pylint: disable=no-self-use,invalid-name,protected-access
 import numpy
 import torch
 
 from allennlp.modules.span_extractors import SpanExtractor, EndpointSpanExtractor
 from allennlp.common.params import Params
 from allennlp.nn.util import batched_index_select
+
 
 class TestEndpointSpanExtractor:
     def test_endpoint_span_extractor_can_build_from_params(self):
@@ -73,7 +73,6 @@ class TestEndpointSpanExtractor:
         numpy.testing.assert_array_equal(end_embeddings.data.numpy(),
                                          correct_end_embeddings.numpy())
 
-
     def test_masked_indices_are_handled_correctly_with_exclusive_indices(self):
         sequence_tensor = torch.randn([2, 5, 8])
         # concatentate start and end points together to form our representation
@@ -91,7 +90,6 @@ class TestEndpointSpanExtractor:
         # We just concatenated the start and end embeddings together, so
         # we can check they match the original indices if we split them apart.
         start_embeddings, end_embeddings = span_representations.split(8, -1)
-
 
         correct_start_indices = torch.LongTensor([[0, 1], [-1, -1]])
         # These indices should be -1, so they'll be replaced with a sentinel. Here,

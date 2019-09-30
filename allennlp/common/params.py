@@ -5,7 +5,8 @@ logging and validation.
 """
 
 from typing import Any, Dict, List
-from collections import MutableMapping, OrderedDict
+from collections.abc import MutableMapping
+from collections import OrderedDict
 import copy
 import json
 import logging
@@ -30,9 +31,9 @@ except ImportError:
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
-# pylint: disable=inconsistent-return-statements
+
 def infer_and_cast(value: Any):
     """
     In some cases we'll be feeding params dicts to functions we don't own;
@@ -41,7 +42,7 @@ def infer_and_cast(value: Any):
     using environment variables). This function takes something that looks JSON-like
     and recursively casts things that look like (bool, int, float) to (bool, int, float).
     """
-    # pylint: disable=too-many-return-statements
+
     if isinstance(value, (int, float, bool)):
         # Already one of our desired types, so leave as is.
         return value
@@ -71,7 +72,7 @@ def infer_and_cast(value: Any):
                 return value
     else:
         raise ValueError(f"cannot infer type of {value}")
-# pylint: enable=inconsistent-return-statements
+
 
 def _is_encodable(value: str) -> bool:
     """
@@ -83,6 +84,7 @@ def _is_encodable(value: str) -> bool:
     # but mypy doesn't like that.
     return (value == "") or (value.encode('utf-8', 'ignore') != b"")
 
+
 def _environment_variables() -> Dict[str, str]:
     """
     Wraps `os.environ` to filter out non-encodable values.
@@ -90,6 +92,7 @@ def _environment_variables() -> Dict[str, str]:
     return {key: value
             for key, value in os.environ.items()
             if _is_encodable(value)}
+
 
 def unflatten(flat_dict: Dict[str, Any]) -> Dict[str, Any]:
     """
@@ -114,10 +117,10 @@ def unflatten(flat_dict: Dict[str, Any]) -> Dict[str, Any]:
                 raise ConfigurationError("flattened dictionary is invalid")
         if not isinstance(curr_dict, dict) or parts[-1] in curr_dict:
             raise ConfigurationError("flattened dictionary is invalid")
-        else:
-            curr_dict[parts[-1]] = value
+        curr_dict[parts[-1]] = value
 
     return unflat
+
 
 def with_fallback(preferred: Dict[str, Any], fallback: Dict[str, Any]) -> Dict[str, Any]:
     """
@@ -161,6 +164,7 @@ def with_fallback(preferred: Dict[str, Any], fallback: Dict[str, Any]) -> Dict[s
         merged[key] = merge(preferred_value, fallback_value)
     return merged
 
+
 def parse_overrides(serialized_overrides: str) -> Dict[str, Any]:
     if serialized_overrides:
         ext_vars = _environment_variables()
@@ -168,6 +172,7 @@ def parse_overrides(serialized_overrides: str) -> Dict[str, Any]:
         return unflatten(json.loads(evaluate_snippet("", serialized_overrides, ext_vars=ext_vars)))
     else:
         return {}
+
 
 def _is_dict_free(obj: Any) -> bool:
     """
@@ -179,6 +184,7 @@ def _is_dict_free(obj: Any) -> bool:
         return all(_is_dict_free(item) for item in obj)
     else:
         return True
+
 
 class Params(MutableMapping):
     """
@@ -244,7 +250,7 @@ class Params(MutableMapping):
 
     @overrides
     def pop(self, key: str, default: Any = DEFAULT, keep_as_dict: bool = False) -> Any:
-        # pylint: disable=arguments-differ
+
         """
         Performs the functionality associated with dict.pop(key), along with checking for
         returned dictionaries, replacing them with Param objects with an updated history
@@ -262,7 +268,7 @@ class Params(MutableMapping):
             value = self.params.pop(key, default)
 
         if keep_as_dict or _is_dict_free(value):
-            logger.info(self.history + key + " = " + str(value))  # type: ignore
+            logger.info(f"{self.history}{key} = {value}")
             return value
         else:
             return self._check_is_dict(key, value)
@@ -318,7 +324,11 @@ class Params(MutableMapping):
             value = self.params.get(key, default)
         return self._check_is_dict(key, value)
 
-    def pop_choice(self, key: str, choices: List[Any], default_to_first_choice: bool = False) -> Any:
+    def pop_choice(self,
+                   key: str,
+                   choices: List[Any],
+                   default_to_first_choice: bool = False,
+                   allow_class_names: bool = True) -> Any:
         """
         Gets the value of ``key`` in the ``params`` dictionary, ensuring that the value is one of
         the given choices. Note that this `pops` the key from params, modifying the dictionary,
@@ -341,12 +351,21 @@ class Params(MutableMapping):
             ``ConfigurationError``, because specifying the ``key`` is required (e.g., you `have` to
             specify your model class when running an experiment, but you can feel free to use
             default settings for encoders if you want).
+        allow_class_names : bool, optional (default = True)
+            If this is `True`, then we allow unknown choices that look like fully-qualified class names.
+            This is to allow e.g. specifying a model type as my_library.my_model.MyModel
+            and importing it on the fly. Our check for "looks like" is extremely lenient
+            and consists of checking that the value contains a '.'.
         """
         default = choices[0] if default_to_first_choice else self.DEFAULT
         value = self.pop(key, default)
-        if value not in choices:
+        ok_because_class_name = allow_class_names and '.' in value
+        if value not in choices and not ok_because_class_name:
             key_str = self.history + key
-            message = '%s not in acceptable choices for %s: %s' % (value, key_str, str(choices))
+            message = (f"{value} not in acceptable choices for {key_str}: {choices}. "
+                       "You should either use the --include-package flag to make sure the correct module "
+                       "is loaded, or use a fully qualified class name in your config file like "
+                       """{"model": "my_module.models.MyModel"} to have it imported automatically.""")
             raise ConfigurationError(message)
         return value
 
@@ -373,10 +392,10 @@ class Params(MutableMapping):
         def log_recursively(parameters, history):
             for key, value in parameters.items():
                 if isinstance(value, dict):
-                    new_local_history = history + key  + "."
+                    new_local_history = history + key + "."
                     log_recursively(value, new_local_history)
                 else:
-                    logger.info(history + key + " = " + str(value))
+                    logger.info(f"{history}{key} = {value}")
 
         logger.info("Converting Params object to dict; logging of default "
                     "values will not occur when dictionary parameters are "
@@ -391,6 +410,7 @@ class Params(MutableMapping):
         Nested structure is collapsed with periods.
         """
         flat_params = {}
+
         def recurse(parameters, path):
             for key, value in parameters.items():
                 newpath = path + [key]
@@ -448,8 +468,8 @@ class Params(MutableMapping):
             value = [self._check_is_dict(f"{new_history}.{i}", v) for i, v in enumerate(value)]
         return value
 
-    @staticmethod
-    def from_file(params_file: str, params_overrides: str = "", ext_vars: dict = None) -> 'Params':
+    @classmethod
+    def from_file(cls, params_file: str, params_overrides: str = "", ext_vars: dict = None) -> 'Params':
         """
         Load a `Params` object from a configuration file.
 
@@ -479,7 +499,7 @@ class Params(MutableMapping):
         overrides_dict = parse_overrides(params_overrides)
         param_dict = with_fallback(preferred=overrides_dict, fallback=file_dict)
 
-        return Params(param_dict)
+        return cls(param_dict)
 
     def to_file(self, params_file: str, preference_orders: List[List[str]] = None) -> None:
         with open(params_file, "w") as handle:
@@ -540,7 +560,8 @@ def pop_choice(params: Dict[str, Any],
                key: str,
                choices: List[Any],
                default_to_first_choice: bool = False,
-               history: str = "?.") -> Any:
+               history: str = "?.",
+               allow_class_names: bool = True) -> Any:
     """
     Performs the same function as :func:`Params.pop_choice`, but is required in order to deal with
     places that the Params object is not welcome, such as inside Keras layers.  See the docstring
@@ -551,7 +572,10 @@ def pop_choice(params: Dict[str, Any],
     history, so you'll have to fix that in the log if you want to actually recover the logged
     parameters.
     """
-    value = Params(params, history).pop_choice(key, choices, default_to_first_choice)
+    value = Params(params, history).pop_choice(key,
+                                               choices,
+                                               default_to_first_choice,
+                                               allow_class_names=allow_class_names)
     return value
 
 

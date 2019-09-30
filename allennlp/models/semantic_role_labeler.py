@@ -17,12 +17,13 @@ from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_lo
 from allennlp.nn.util import get_lengths_from_binary_sequence_mask, viterbi_decode
 from allennlp.training.metrics.srl_eval_scorer import SrlEvalScorer, DEFAULT_SRL_EVAL_PATH
 
+
 @Model.register("srl")
 class SemanticRoleLabeler(Model):
     """
     This model performs semantic role labeling using BIO tags using Propbank semantic roles.
     Specifically, it is an implementation of `Deep Semantic Role Labeling - What works
-    and what's next <https://homes.cs.washington.edu/~luheng/files/acl2017_hllz.pdf>`_ .
+    and what's next <https://www.aclweb.org/anthology/P17-1044>`_ .
 
     This implementation is effectively a series of stacked interleaved LSTMs with highway
     connections, applied to embedded sequences of words concatenated with a binary indicator
@@ -66,7 +67,7 @@ class SemanticRoleLabeler(Model):
                  label_smoothing: float = None,
                  ignore_span_metric: bool = False,
                  srl_eval_path: str = DEFAULT_SRL_EVAL_PATH) -> None:
-        super(SemanticRoleLabeler, self).__init__(vocab, regularizer)
+        super().__init__(vocab, regularizer)
 
         self.text_field_embedder = text_field_embedder
         self.num_classes = self.vocab.get_vocab_size("labels")
@@ -98,7 +99,7 @@ class SemanticRoleLabeler(Model):
                 verb_indicator: torch.LongTensor,
                 tags: torch.LongTensor = None,
                 metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
+
         """
         Parameters
         ----------
@@ -270,6 +271,7 @@ class SemanticRoleLabeler(Model):
                 start_transitions[i] = float("-inf")
 
         return start_transitions
+
 
 def write_to_conll_eval_file(prediction_file: TextIO,
                              gold_file: TextIO,

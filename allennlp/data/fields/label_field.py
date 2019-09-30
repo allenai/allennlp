@@ -8,7 +8,7 @@ from allennlp.data.fields.field import Field
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.common.checks import ConfigurationError
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 class LabelField(Field[torch.Tensor]):
@@ -50,17 +50,16 @@ class LabelField(Field[torch.Tensor]):
         self._label_namespace = label_namespace
         self._label_id = None
         self._maybe_warn_for_namespace(label_namespace)
+        self._skip_indexing = skip_indexing
 
         if skip_indexing:
             if not isinstance(label, int):
                 raise ConfigurationError("In order to skip indexing, your labels must be integers. "
                                          "Found label = {}".format(label))
-            else:
-                self._label_id = label
-        else:
-            if not isinstance(label, str):
-                raise ConfigurationError("LabelFields must be passed a string label if skip_indexing=False. "
-                                         "Found label: {} with type: {}.".format(label, type(label)))
+            self._label_id = label
+        elif not isinstance(label, str):
+            raise ConfigurationError("LabelFields must be passed a string label if skip_indexing=False. "
+                                     "Found label: {} with type: {}.".format(label, type(label)))
 
     def _maybe_warn_for_namespace(self, label_namespace: str) -> None:
         if not (self._label_namespace.endswith("labels") or self._label_namespace.endswith("tags")):
@@ -79,16 +78,16 @@ class LabelField(Field[torch.Tensor]):
 
     @overrides
     def index(self, vocab: Vocabulary):
-        if self._label_id is None:
+        if not self._skip_indexing:
             self._label_id = vocab.get_token_index(self.label, self._label_namespace)  # type: ignore
 
     @overrides
-    def get_padding_lengths(self) -> Dict[str, int]:  # pylint: disable=no-self-use
+    def get_padding_lengths(self) -> Dict[str, int]:
         return {}
 
     @overrides
     def as_tensor(self, padding_lengths: Dict[str, int]) -> torch.Tensor:
-        # pylint: disable=unused-argument,not-callable
+
         tensor = torch.tensor(self._label_id, dtype=torch.long)
         return tensor
 

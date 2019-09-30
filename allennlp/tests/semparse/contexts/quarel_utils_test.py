@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.semparse.contexts.knowledge_graph import KnowledgeGraph
 from allennlp.semparse.contexts.quarel_utils import get_explanation

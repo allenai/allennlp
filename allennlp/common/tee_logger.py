@@ -5,6 +5,7 @@ A logger that maintains logs of both stdout and stderr when models are run.
 from typing import TextIO
 import os
 
+
 def replace_cr_with_newline(message: str):
     """
     TQDM and requests use carriage returns to get the training line to update for each batch
@@ -18,6 +19,7 @@ def replace_cr_with_newline(message: str):
         if not message or message[-1] != '\n':
             message += '\n'
     return message
+
 
 class TeeLogger:
     """

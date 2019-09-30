@@ -1,4 +1,3 @@
-# pylint: disable=invalid-name,no-self-use,protected-access
 import argparse
 import re
 import shutil
@@ -15,6 +14,7 @@ from allennlp.modules.token_embedders.embedding import _read_pretrained_embeddin
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.common.checks import ConfigurationError
 
+
 class TestFineTune(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
@@ -25,7 +25,6 @@ class TestFineTune(AllenNlpTestCase):
         self.parser = argparse.ArgumentParser(description="Testing")
         subparsers = self.parser.add_subparsers(title='Commands', metavar='')
         FineTune().add_subparser('fine-tune', subparsers)
-
 
     def test_fine_tune_model_runs_from_file_paths(self):
         fine_tune_model_from_file_paths(model_archive_path=self.model_archive,
@@ -168,8 +167,7 @@ class TestFineTune(AllenNlpTestCase):
                 if any(re.search(regex, name) for regex in regex_list):
                     assert not parameter.requires_grad
                 else:
-                    assert parameter.requires_grad \
-                    == name_parameters_original[name].requires_grad
+                    assert parameter.requires_grad == name_parameters_original[name].requires_grad
         # If all parameters have requires_grad=False, then error.
         with pytest.raises(Exception) as _:
             params = Params.from_file(self.config_file)

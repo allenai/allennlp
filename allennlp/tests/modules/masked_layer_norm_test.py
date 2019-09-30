@@ -1,9 +1,9 @@
-# pylint: disable=invalid-name,no-self-use
 import numpy as np
 import torch
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.modules.masked_layer_norm import MaskedLayerNorm
+
 
 class TestMaskedLayerNorm(AllenNlpTestCase):
     def test_masked_layer_norm(self):

@@ -11,7 +11,7 @@ from allennlp.training.callbacks.events import Events
 from allennlp.training.moving_average import MovingAverage
 
 if TYPE_CHECKING:
-    from allennlp.training.callback_trainer import CallbackTrainer  # pylint:disable=unused-import
+    from allennlp.training.callback_trainer import CallbackTrainer
 
 
 @Callback.register("checkpoint")
@@ -155,7 +155,7 @@ class Checkpoint(Callback):
 
     @classmethod
     def from_params(cls, params: Params, serialization_dir: str) -> 'Checkpoint':  # type: ignore
-        # pylint: disable=arguments-differ
+
         checkpointer_params = params.pop("checkpointer", None)
         if checkpointer_params:
             checkpointer = Checkpointer.from_params(checkpointer_params, serialization_dir=serialization_dir)

@@ -17,7 +17,7 @@ from allennlp.training.metrics import Metric, BLEU
 from allennlp.nn.beam_search import BeamSearch
 
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @Model.register("copynet_seq2seq")
@@ -94,8 +94,8 @@ class CopyNetSeq2Seq(Model):
         self._src_end_index = self.vocab.get_token_index(END_SYMBOL, self._source_namespace)
         self._start_index = self.vocab.get_token_index(START_SYMBOL, self._target_namespace)
         self._end_index = self.vocab.get_token_index(END_SYMBOL, self._target_namespace)
-        self._oov_index = self.vocab.get_token_index(self.vocab._oov_token, self._target_namespace)  # pylint: disable=protected-access
-        self._pad_index = self.vocab.get_token_index(self.vocab._padding_token, self._target_namespace)  # pylint: disable=protected-access
+        self._oov_index = self.vocab.get_token_index(self.vocab._oov_token, self._target_namespace)
+        self._pad_index = self.vocab.get_token_index(self.vocab._padding_token, self._target_namespace)
         self._copy_index = self.vocab.add_token_to_namespace(copy_token, self._target_namespace)
 
         self._tensor_based_metric = tensor_based_metric or \
@@ -156,7 +156,7 @@ class CopyNetSeq2Seq(Model):
                 metadata: List[Dict[str, Any]],
                 target_tokens: Dict[str, torch.LongTensor] = None,
                 target_token_ids: torch.Tensor = None) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
+
         """
         Make foward pass with decoder logic for producing the entire target sequence.
 
@@ -510,7 +510,7 @@ class CopyNetSeq2Seq(Model):
         trimmed_source_length = source_length - 2
         # Initialize the copy scores to zero.
         state["copy_log_probs"] = \
-                (state["decoder_hidden"].new_zeros((batch_size, trimmed_source_length)) + 1e-45).log()
+            (state["decoder_hidden"].new_zeros((batch_size, trimmed_source_length)) + 1e-45).log()
         # shape: (batch_size,)
         start_predictions = state["source_mask"].new_full((batch_size,), fill_value=self._start_index)
         # shape (all_top_k_predictions): (batch_size, beam_size, num_decoding_steps)
@@ -658,7 +658,7 @@ class CopyNetSeq2Seq(Model):
             if i < (trimmed_source_length - 1):
                 # Sum copy scores from future occurences of source token.
                 # shape: (group_size, trimmed_source_length - i)
-                source_future_occurences = (source_token_ids[:, (i+1):] == source_token_ids[:, i].unsqueeze(-1)).float()  # pylint: disable=line-too-long
+                source_future_occurences = (source_token_ids[:, (i+1):] == source_token_ids[:, i].unsqueeze(-1)).float()  # noqa
                 # shape: (group_size, trimmed_source_length - i)
                 future_copy_log_probs = copy_log_probs[:, (i+1):] + (source_future_occurences + 1e-45).log()
                 # shape: (group_size, 1 + trimmed_source_length - i)

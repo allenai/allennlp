@@ -1,4 +1,4 @@
-# pylint: disable=no-self-use,invalid-name
+
 import pytest
 
 from allennlp.data.dataset_readers import TextClassificationJsonReader

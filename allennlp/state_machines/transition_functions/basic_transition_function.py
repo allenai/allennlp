@@ -60,10 +60,10 @@ class BasicTransitionFunction(TransitionFunction[GrammarBasedState]):
         # hidden state of the decoder with the final hidden state of the encoder.
         output_dim = encoder_output_dim
         input_dim = output_dim
-        # Our decoder input will be the concatenation of the decoder hidden state and the previous
-        # action embedding, and we'll project that down to the decoder's `input_dim`, which we
-        # arbitrarily set to be the same as `output_dim`.
-        self._input_projection_layer = Linear(output_dim + action_embedding_dim, input_dim)
+        # Our decoder input will be the concatenation of the attended encoder hidden state (i.e., the
+        # attended question encoding) and the previous action embedding, and we'll project that down
+        # to the decoder's `input_dim`, which we arbitrarily set to be the same as `output_dim`.
+        self._input_projection_layer = Linear(encoder_output_dim + action_embedding_dim, input_dim)
         # Before making a prediction, we'll compute an attention over the input given our updated
         # hidden state. Then we concatenate those with the decoder state and project to
         # `action_embedding_dim` to make a prediction.
@@ -170,9 +170,8 @@ class BasicTransitionFunction(TransitionFunction[GrammarBasedState]):
                                       hidden_state: torch.Tensor,
                                       attention_weights: torch.Tensor,
                                       predicted_action_embeddings: torch.Tensor
-                                     ) -> Dict[int, List[Tuple[int, Any, Any, Any, List[int]]]]:
-        # We take a couple of extra arguments here because subclasses might use them.
-        # pylint: disable=unused-argument,no-self-use
+                                      ) -> Dict[int, List[Tuple[int, Any, Any, Any, List[int]]]]:
+        # We take a couple of extra arguments here because subclasses might use them
 
         # In this section we take our predicted action embedding and compare it to the available
         # actions in our current state (which might be different for each group element).  For
@@ -211,7 +210,6 @@ class BasicTransitionFunction(TransitionFunction[GrammarBasedState]):
                                batch_action_probs: Dict[int, List[Tuple[int, Any, Any, Any, List[int]]]],
                                max_actions: int,
                                allowed_actions: List[Set[int]]):
-        # pylint: disable=no-self-use
 
         # We'll yield a bunch of states here that all have a `group_size` of 1, so that the
         # learning algorithm can decide how many of these it wants to keep, and it can just regroup

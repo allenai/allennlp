@@ -1,4 +1,3 @@
-
 import torch
 from torch.nn.parameter import Parameter
 from overrides import overrides
@@ -188,10 +187,10 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
             # or the end sentinel.
             float_end_sentinel_mask = end_sentinel_mask.float()
             float_start_sentinel_mask = start_sentinel_mask.float()
-            forward_start_embeddings = forward_start_embeddings * (1 - float_start_sentinel_mask) \
-                                        + float_start_sentinel_mask * self._start_sentinel
-            backward_start_embeddings = backward_start_embeddings * (1 - float_end_sentinel_mask) \
-                                        + float_end_sentinel_mask * self._end_sentinel
+            forward_start_embeddings = (forward_start_embeddings * (1 - float_start_sentinel_mask)
+                                        + float_start_sentinel_mask * self._start_sentinel)
+            backward_start_embeddings = (backward_start_embeddings * (1 - float_end_sentinel_mask)
+                                         + float_end_sentinel_mask * self._end_sentinel)
 
         # Now we combine the forward and backward spans in the manner specified by the
         # respective combinations and concatenate these representations.

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=no-self-use,invalid-name
+
 import json
 import os
 import pathlib
@@ -21,7 +21,7 @@ from allennlp.tests.modules.elmo_test import ElmoTestCase
 
 class TestElmoCommand(ElmoTestCase):
     def setUp(self):
-        super(TestElmoCommand, self).setUp()
+        super().setUp()
         self.tempdir = pathlib.Path(tempfile.mkdtemp())
         self.sentences_path = str(self.tempdir / "sentences.txt")
         self.output_path = str(self.tempdir / "output.txt")

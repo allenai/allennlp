@@ -1,5 +1,6 @@
 import torch
 
+
 class MaskedLayerNorm(torch.nn.Module):
     """
     See LayerNorm for details.
@@ -14,7 +15,7 @@ class MaskedLayerNorm(torch.nn.Module):
         self.eps = eps
 
     def forward(self, tensor: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
-        # pylint: disable=arguments-differ
+
         broadcast_mask = mask.unsqueeze(-1).float()
         num_elements = broadcast_mask.sum() * self.size
         mean = (tensor * broadcast_mask).sum() / num_elements

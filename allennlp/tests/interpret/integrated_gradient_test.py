@@ -1,9 +1,9 @@
-# pylint: disable=no-self-use,invalid-name
 from pytest import approx
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor
 from allennlp.interpret.saliency_interpreters import IntegratedGradient
+
 
 class TestIntegratedGradient(AllenNlpTestCase):
     def test_integrated_gradient(self):

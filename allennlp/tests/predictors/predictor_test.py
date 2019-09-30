@@ -1,7 +1,7 @@
-# pylint: disable=no-self-use,invalid-name,protected-access
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor
+
 
 class TestPredictor(AllenNlpTestCase):
     def test_from_archive_does_not_consume_params(self):
@@ -12,7 +12,7 @@ class TestPredictor(AllenNlpTestCase):
         Predictor.from_archive(archive, 'machine-comprehension')
 
     def test_loads_correct_dataset_reader(self):
-        # pylint: disable=protected-access
+
         # The ATIS archive has both training and validation ``DatasetReaders``. The
         # ``keep_if_unparseable`` argument has a different value in each of them
         # (``True`` for validation, ``False`` for training).
@@ -45,5 +45,5 @@ class TestPredictor(AllenNlpTestCase):
             assert 'grad_input_2' in grads
             assert grads['grad_input_1'] is not None
             assert grads['grad_input_2'] is not None
-            assert len(grads['grad_input_1']) == 9  # 9 words in hypothesis
-            assert len(grads['grad_input_2']) == 5  # 5 words in premise
+            assert len(grads['grad_input_1'][0]) == 9  # 9 words in hypothesis
+            assert len(grads['grad_input_2'][0]) == 5  # 5 words in premise

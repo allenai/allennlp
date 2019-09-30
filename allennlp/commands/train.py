@@ -56,12 +56,12 @@ from allennlp.training.trainer_base import TrainerBase
 from allennlp.training.trainer_pieces import TrainerPieces
 from allennlp.training.util import create_serialization_dir, evaluate
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 class Train(Subcommand):
     def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
-        # pylint: disable=protected-access
+
         description = '''Train the specified model on the specified dataset.'''
         subparser = parser.add_parser(name, description=description, help='Train a model.')
 
@@ -219,7 +219,7 @@ def train_model(params: Params,
 
     if trainer_type == "default":
         # Special logic to instantiate backward-compatible trainer.
-        pieces = TrainerPieces.from_params(params,  # pylint: disable=no-member
+        pieces = TrainerPieces.from_params(params,
                                            serialization_dir,
                                            recover,
                                            cache_directory,
@@ -262,7 +262,7 @@ def train_model(params: Params,
     if evaluation_dataset and evaluate_on_test:
         logger.info("The model will be evaluated using the best epoch weights.")
         test_metrics = evaluate(trainer.model, evaluation_dataset, evaluation_iterator,
-                                cuda_device=trainer._cuda_devices[0],  # pylint: disable=protected-access,
+                                cuda_device=trainer._cuda_devices[0],
                                 # TODO(brendanr): Pass in an arg following Joel's trainer refactor.
                                 batch_weight_key="")
 

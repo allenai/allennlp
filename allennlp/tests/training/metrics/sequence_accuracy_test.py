@@ -1,9 +1,9 @@
-# pylint: disable=no-self-use,invalid-name,protected-access
 import torch
 import numpy
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.training.metrics import SequenceAccuracy
+
 
 class SequenceAccuracyTest(AllenNlpTestCase):
     def test_sequence_accuracy(self):

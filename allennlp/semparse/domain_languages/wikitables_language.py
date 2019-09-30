@@ -15,7 +15,7 @@ from allennlp.semparse.contexts.table_question_context import CellValueType
 from allennlp.semparse.common import Date
 from allennlp.tools import wikitables_evaluator as evaluator
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 class Row(NamedTuple):
@@ -44,7 +44,7 @@ class NumberColumn(ComparableColumn):
 
 
 class WikiTablesLanguage(DomainLanguage):
-    # pylint: disable=too-many-public-methods,no-self-use
+
     """
     Implements the functions in the variable free language we use, that's inspired by the one in
     "Memory Augmented Policy Optimization for Program Synthesis with Generalization" by Liang et al.
@@ -124,7 +124,7 @@ class WikiTablesLanguage(DomainLanguage):
             elif column_type == 'date':
                 column = DateColumn(column_name)
                 self.add_constant(column_name, column, type_=ComparableColumn)
-            elif column_type == 'number' or column_type == "num2":
+            elif column_type in ('number', 'num2'):
                 column = NumberColumn(column_name)
                 self.add_constant(column_name, column, type_=ComparableColumn)
             self.add_constant(column_name, column, type_=Column)
@@ -241,7 +241,6 @@ class WikiTablesLanguage(DomainLanguage):
                     agenda_items.append("min_date")
                 else:
                     agenda_items.append("select_date")
-
 
         if "how many" in question:
             if "sum" not in agenda_items and "average" not in agenda_items:
@@ -817,6 +816,7 @@ class WikiTablesLanguage(DomainLanguage):
 
     @staticmethod
     def _make_date(cell_string: str) -> Date:
+
         string_parts = cell_string.split("_")
         year = -1
         month = -1

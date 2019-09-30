@@ -19,7 +19,7 @@ from allennlp.commands.train import Train
 from allennlp.commands.print_results import PrintResults
 from allennlp.common.util import import_submodules
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 class ArgumentParserWithDefaults(argparse.ArgumentParser):
@@ -40,7 +40,7 @@ class ArgumentParserWithDefaults(argparse.ArgumentParser):
 
     @overrides
     def add_argument(self, *args, **kwargs):
-        # pylint: disable=arguments-differ
+
         # Add default value to the help message when the default is meaningful.
         default = kwargs.get("default")
         if kwargs.get("action") not in self._action_defaults_to_ignore and not self._is_empty_default(default):
@@ -56,7 +56,6 @@ def create_parser(prog: str = None, subcommand_overrides: Dict[str, Subcommand] 
     if subcommand_overrides is None:
         subcommand_overrides = {}
 
-    # pylint: disable=dangerous-default-value
     parser = ArgumentParserWithDefaults(description="Run AllenNLP", usage='%(prog)s', prog=prog)
     parser.add_argument('--version', action='version', version='%(prog)s ' + __version__)
 

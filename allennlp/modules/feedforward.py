@@ -40,7 +40,7 @@ class FeedForward(torch.nn.Module, FromParams):
                  activations: Union[Activation, List[Activation]],
                  dropout: Union[float, List[float]] = 0.0) -> None:
 
-        super(FeedForward, self).__init__()
+        super().__init__()
         if not isinstance(hidden_dims, list):
             hidden_dims = [hidden_dims] * num_layers  # type: ignore
         if not isinstance(activations, list):
@@ -74,7 +74,7 @@ class FeedForward(torch.nn.Module, FromParams):
         return self.input_dim
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
-        # pylint: disable=arguments-differ
+
         output = inputs
         for layer, activation, dropout in zip(self._linear_layers, self._activations, self._dropout):
             output = dropout(activation(layer(output)))

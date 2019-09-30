@@ -136,7 +136,7 @@ class BiMpmMatching(nn.Module, FromParams):
                  with_maxpool_match: bool = True,
                  with_attentive_match: bool = True,
                  with_max_attentive_match: bool = True) -> None:
-        super(BiMpmMatching, self).__init__()
+        super().__init__()
 
         self.hidden_dim = hidden_dim
         self.num_perspectives = num_perspectives
@@ -190,7 +190,7 @@ class BiMpmMatching(nn.Module, FromParams):
                 mask_1: torch.Tensor,
                 context_2: torch.Tensor,
                 mask_2: torch.Tensor) -> Tuple[List[torch.Tensor], List[torch.Tensor]]:
-        # pylint: disable=arguments-differ
+
         """
         Given the forward (or backward) representations of sentence1 and sentence2, apply four bilateral
         matching functions between them in one direction.
@@ -307,7 +307,6 @@ class BiMpmMatching(nn.Module, FromParams):
 
             matching_vector_1.extend([matching_vector_1_max, matching_vector_1_mean])
             matching_vector_2.extend([matching_vector_2_max, matching_vector_2_mean])
-
 
         # Step 3. Attentive-Matching
         # Each forward (or backward) similarity is taken as the weight

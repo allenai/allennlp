@@ -1,9 +1,9 @@
-# pylint: disable=invalid-name,no-self-use
 import torch
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.modules.seq2seq_encoders.bidirectional_language_model_transformer import \
         BidirectionalLanguageModelTransformer
+
 
 class TestBidirectionalLanguageModelTransformer(AllenNlpTestCase):
     def test_bidirectional_transformer_encoder(self):

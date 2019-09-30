@@ -13,7 +13,7 @@ from allennlp.data.tokenizers import Token
 from allennlp.data.dataset_readers.dataset_utils import Ontonotes, OntonotesSentence
 
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 def _convert_tags_to_wordpiece_tags(tags: List[str], offsets: List[int]) -> List[str]:
@@ -61,7 +61,7 @@ def _convert_tags_to_wordpiece_tags(tags: List[str], offsets: List[int]) -> List
     return ["O"] + new_tags + ["O"]
 
 
-def _convert_verb_indices_to_wordpiece_indices(verb_indices: List[int], offsets: List[int]): # pylint: disable=invalid-name
+def _convert_verb_indices_to_wordpiece_indices(verb_indices: List[int], offsets: List[int]):
     """
     Converts binary verb indicators to account for a wordpiece tokenizer,
     extending/modifying BIO tags where appropriate to deal with words which
@@ -234,7 +234,7 @@ class SrlReader(DatasetReader):
         one-hot binary vector, the same length as the tokens, indicating the position of the verb
         to find arguments for.
         """
-        # pylint: disable=arguments-differ
+
         metadata_dict: Dict[str, Any] = {}
         if self.bert_tokenizer is not None:
             wordpieces, offsets, start_offsets = self._wordpiece_tokenize_input([t.text for t in tokens])

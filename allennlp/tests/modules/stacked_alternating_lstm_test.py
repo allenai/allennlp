@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 import numpy
 import torch
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence

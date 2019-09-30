@@ -15,7 +15,7 @@ from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
 from allennlp.data.tokenizers import Token
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 def get_file_paths(pathname: str, languages: List[str]):
@@ -153,7 +153,7 @@ class UniversalDependenciesMultiLangDatasetReader(DatasetReader):
                          words: List[str],
                          upos_tags: List[str],
                          dependencies: List[Tuple[str, int]] = None) -> Instance:
-        # pylint: disable=arguments-differ
+
         """
         Parameters
         ----------

@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 import pytest
 
 from allennlp.common import Params
@@ -22,6 +21,6 @@ class TestBAbIReader:
 
     def test_can_build_from_params(self):
         reader = BabiReader.from_params(Params({'keep_sentences': True}))
-        # pylint: disable=protected-access
+
         assert reader._keep_sentences
         assert reader._token_indexers['tokens'].__class__.__name__ == 'SingleIdTokenIndexer'

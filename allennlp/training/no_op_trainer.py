@@ -26,8 +26,8 @@ class NoOpTrainer(TrainerBase):
                     recover: bool = False,
                     cache_directory: str = None,
                     cache_prefix: str = None):
-        # pylint: disable=arguments-differ
-        pieces = TrainerPieces.from_params(params, serialization_dir, recover, cache_directory, cache_prefix)  # pylint: disable=no-member
+
+        pieces = TrainerPieces.from_params(params, serialization_dir, recover, cache_directory, cache_prefix)
         return NoOpTrainer(serialization_dir, pieces.model)
 
     def train(self) -> Dict[str, Any]:

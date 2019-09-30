@@ -1,4 +1,3 @@
-# pylint: disable=protected-access
 import math
 from typing import List, Dict, Any
 
@@ -7,7 +6,7 @@ import numpy
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import Instance
 from allennlp.interpret.saliency_interpreters.saliency_interpreter import SaliencyInterpreter
-from allennlp.modules.text_field_embedders import TextFieldEmbedder
+from allennlp.nn import util
 
 
 @SaliencyInterpreter.register('integrated-gradient')
@@ -26,7 +25,8 @@ class IntegratedGradient(SaliencyInterpreter):
 
             # Normalize results
             for key, grad in grads.items():
-                embedding_grad = numpy.sum(grad, axis=1)
+                # The [0] here is undo-ing the batching that happens in get_gradients.
+                embedding_grad = numpy.sum(grad[0], axis=1)
                 norm = numpy.linalg.norm(embedding_grad, ord=1)
                 normalized_grad = [math.fabs(e) / norm for e in embedding_grad]
                 grads[key] = normalized_grad
@@ -43,7 +43,7 @@ class IntegratedGradient(SaliencyInterpreter):
         We store the embedding output into the embeddings_list when alpha is zero.  This is used
         later to element-wise multiply the input by the averaged gradients.
         """
-        def forward_hook(module, inputs, output):  # pylint: disable=unused-argument
+        def forward_hook(module, inputs, output):
             # Save the input for later use. Only do so on first call.
             if alpha == 0:
                 embeddings_list.append(output.squeeze(0).clone().detach().numpy())
@@ -52,11 +52,8 @@ class IntegratedGradient(SaliencyInterpreter):
             output.mul_(alpha)
 
         # Register the hook
-        handle = None
-        for module in self.predictor._model.modules():
-            if isinstance(module, TextFieldEmbedder):
-                handle = module.register_forward_hook(forward_hook)
-
+        embedding_layer = util.find_embedding_layer(self.predictor._model)
+        handle = embedding_layer.register_forward_hook(forward_hook)
         return handle
 
     def _integrate_gradients(self, instance: Instance) -> Dict[str, numpy.ndarray]:

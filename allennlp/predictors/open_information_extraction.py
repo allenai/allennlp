@@ -10,6 +10,7 @@ from allennlp.predictors.predictor import Predictor
 from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
 from allennlp.data.tokenizers import Token
 
+
 def join_mwp(tags: List[str]) -> List[str]:
     """
     Join multi-word predicates to a single
@@ -31,6 +32,7 @@ def join_mwp(tags: List[str]) -> List[str]:
             verb_flag = False
 
     return ret
+
 
 def make_oie_string(tokens: List[Token], tags: List[str]) -> str:
     """
@@ -60,11 +62,13 @@ def make_oie_string(tokens: List[Token], tags: List[str]) -> str:
 
     return " ".join(frame)
 
+
 def get_predicate_indices(tags: List[str]) -> List[int]:
     """
     Return the word indices of a predicate in BIO tags.
     """
     return [ind for ind, tag in enumerate(tags) if 'V' in tag]
+
 
 def get_predicate_text(sent_tokens: List[Token], tags: List[str]) -> str:
     """
@@ -72,6 +76,7 @@ def get_predicate_text(sent_tokens: List[Token], tags: List[str]) -> str:
     """
     return " ".join([sent_tokens[pred_id].text
                      for pred_id in get_predicate_indices(tags)])
+
 
 def predicates_overlap(tags1: List[str], tags2: List[str]) -> bool:
     """
@@ -85,6 +90,7 @@ def predicates_overlap(tags1: List[str], tags2: List[str]) -> bool:
     # Return if pred_ind1 pred_ind2 overlap
     return any(set.intersection(set(pred_ind1), set(pred_ind2)))
 
+
 def get_coherent_next_tag(prev_label: str, cur_label: str) -> str:
     """
     Generate a coherent tag, given previous tag and current label.
@@ -97,6 +103,7 @@ def get_coherent_next_tag(prev_label: str, cur_label: str) -> str:
         return f"I-{cur_label}"
     else:
         return f"B-{cur_label}"
+
 
 def merge_overlapping_predictions(tags1: List[str], tags2: List[str]) -> List[str]:
     """
@@ -128,6 +135,7 @@ def merge_overlapping_predictions(tags1: List[str], tags2: List[str]) -> List[st
         prev_label = cur_label
         ret_sequence.append(cur_tag)
     return ret_sequence
+
 
 def consolidate_predictions(outputs: List[List[str]], sent_tokens: List[Token]) -> Dict[str, List[str]]:
     """
@@ -170,6 +178,7 @@ def sanitize_label(label: str) -> str:
     else:
         return label
 
+
 @Predictor.register('open-information-extraction')
 class OpenIePredictor(Predictor):
     """
@@ -181,7 +190,6 @@ class OpenIePredictor(Predictor):
                  dataset_reader: DatasetReader) -> None:
         super().__init__(model, dataset_reader)
         self._tokenizer = WordTokenizer(word_splitter=SpacyWordSplitter(pos_tags=True))
-
 
     def _json_to_instance(self, json_dict: JsonDict) -> Instance:
         """

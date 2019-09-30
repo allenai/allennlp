@@ -52,7 +52,7 @@ class MultiHeadedSimilarity(SimilarityFunction):
                  tensor_2_dim: int = None,
                  tensor_2_projected_dim: int = None,
                  internal_similarity: SimilarityFunction = DotProductSimilarity()) -> None:
-        super(MultiHeadedSimilarity, self).__init__()
+        super().__init__()
         self.num_heads = num_heads
         self._internal_similarity = internal_similarity
         tensor_1_projected_dim = tensor_1_projected_dim or tensor_1_dim

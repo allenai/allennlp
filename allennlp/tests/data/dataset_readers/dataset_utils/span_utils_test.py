@@ -1,10 +1,10 @@
-# pylint: disable=no-self-use,invalid-name,protected-access
 from typing import List
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.dataset_readers.dataset_utils import span_utils
 from allennlp.data.tokenizers.word_tokenizer import SpacyWordSplitter
 from allennlp.data.tokenizers.token import Token
+
 
 class SpanUtilsTest(AllenNlpTestCase):
 

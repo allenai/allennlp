@@ -1,4 +1,3 @@
-#pylint: disable=unused-import
 from flaky import flaky
 
 from allennlp.common.testing import ModelTestCase

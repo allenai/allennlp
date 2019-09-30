@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 import numpy
 import pytest
 
@@ -11,7 +10,7 @@ from allennlp.data.token_indexers import SingleIdTokenIndexer
 
 class TestIndexField(AllenNlpTestCase):
     def setUp(self):
-        super(TestIndexField, self).setUp()
+        super().setUp()
         self.text = TextField([Token(t) for t in ["here", "is", "a", "sentence", "."]],
                               {"words": SingleIdTokenIndexer("words")})
 

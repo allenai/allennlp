@@ -50,7 +50,7 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
                  token_embedders: Dict[str, TokenEmbedder],
                  embedder_to_indexer_map: Dict[str, Union[List[str], Dict[str, str]]] = None,
                  allow_unmatched_keys: bool = False) -> None:
-        super(BasicTextFieldEmbedder, self).__init__()
+        super().__init__()
         self._token_embedders = token_embedders
         self._embedder_to_indexer_map = embedder_to_indexer_map
         for key, embedder in token_embedders.items():
@@ -135,8 +135,6 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
     # This is some unusual logic, it needs a custom from_params.
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'BasicTextFieldEmbedder':  # type: ignore
-        # pylint: disable=arguments-differ,bad-super-call
-
         # The original `from_params` for this class was designed in a way that didn't agree
         # with the constructor. The constructor wants a 'token_embedders' parameter that is a
         # `Dict[str, TokenEmbedder]`, but the original `from_params` implementation expected those

@@ -1,5 +1,3 @@
-# pylint: disable=protected-access,not-callable
-
 from collections import Counter
 import math
 

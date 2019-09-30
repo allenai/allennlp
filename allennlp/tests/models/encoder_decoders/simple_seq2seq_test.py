@@ -1,5 +1,3 @@
-# pylint: disable=invalid-name
-
 import json
 
 import numpy
@@ -48,7 +46,7 @@ class SimpleSeq2SeqTest(ModelTestCase):
                                                   overrides=param_overrides)
 
     def test_loss_is_computed_correctly(self):
-        # pylint: disable=protected-access
+
         batch_size = 5
         num_decoding_steps = 5
         num_classes = 10
@@ -80,7 +78,7 @@ class SimpleSeq2SeqTest(ModelTestCase):
         assert "predicted_tokens" in decode_output_dict
 
     def test_greedy_decode_matches_beam_search(self):
-        # pylint: disable=protected-access
+
         beam_search = BeamSearch(self.model._end_index, max_steps=self.model._max_decoding_steps, beam_size=1)
         training_tensors = self.dataset.as_tensor_dict()
 

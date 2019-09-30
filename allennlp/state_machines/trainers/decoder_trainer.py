@@ -5,7 +5,8 @@ import torch
 from allennlp.state_machines.states import State
 from allennlp.state_machines.transition_functions import TransitionFunction
 
-SupervisionType = TypeVar('SupervisionType')  # pylint: disable=invalid-name
+SupervisionType = TypeVar('SupervisionType')
+
 
 class DecoderTrainer(Generic[SupervisionType]):
     """

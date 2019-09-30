@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name,protected-access
 import numpy
 import pytest
 import torch
@@ -7,6 +6,7 @@ from allennlp.modules.span_extractors import SpanExtractor, BidirectionalEndpoin
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.nn.util import batched_index_select
+
 
 class TestBidirectonalEndpointSpanExtractor:
     def test_bidirectional_endpoint_span_extractor_can_build_from_params(self):
@@ -95,7 +95,6 @@ class TestBidirectonalEndpointSpanExtractor:
         numpy.testing.assert_array_equal(backward_start_embeddings.data.numpy(),
                                          correct_backward_start_embeddings.data.numpy())
 
-
     def test_correct_sequence_elements_are_embedded_with_a_masked_sequence(self):
         sequence_tensor = torch.randn([2, 5, 8])
         # concatentate start and end points together to form our representation
@@ -171,7 +170,6 @@ class TestBidirectonalEndpointSpanExtractor:
 
         numpy.testing.assert_array_equal(backward_start_embeddings.data.numpy(),
                                          correct_backward_start_embeddings.data.numpy())
-
 
     def test_forward_doesnt_raise_with_empty_sequence(self):
         # size: (batch_size=1, sequence_length=2, emb_dim=2)

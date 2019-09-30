@@ -17,7 +17,7 @@ from allennlp.state_machines.states import GrammarBasedState
 from allennlp.state_machines.trainers import MaximumMarginalLikelihood
 from allennlp.state_machines.transition_functions import BasicTransitionFunction
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @Model.register("nlvr_direct_parser")
@@ -58,11 +58,11 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
                  decoder_beam_search: BeamSearch,
                  max_decoding_steps: int,
                  dropout: float = 0.0) -> None:
-        super(NlvrDirectSemanticParser, self).__init__(vocab=vocab,
-                                                       sentence_embedder=sentence_embedder,
-                                                       action_embedding_dim=action_embedding_dim,
-                                                       encoder=encoder,
-                                                       dropout=dropout)
+        super().__init__(vocab=vocab,
+                         sentence_embedder=sentence_embedder,
+                         action_embedding_dim=action_embedding_dim,
+                         encoder=encoder,
+                         dropout=dropout)
         self._decoder_trainer = MaximumMarginalLikelihood()
         self._decoder_step = BasicTransitionFunction(encoder_output_dim=self._encoder.get_output_dim(),
                                                      action_embedding_dim=action_embedding_dim,
@@ -83,7 +83,7 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
                 target_action_sequences: torch.LongTensor = None,
                 labels: torch.LongTensor = None,
                 metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
+
         """
         Decoder logic for producing type constrained target sequences, trained to maximize marginal
         likelihod over a set of approximate logical forms.

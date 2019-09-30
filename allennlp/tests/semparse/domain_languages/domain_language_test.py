@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name,protected-access
 from typing import Callable, List
 
 import pytest
@@ -6,6 +5,7 @@ import pytest
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.semparse import ExecutionError, ParsingError
 from allennlp.semparse import DomainLanguage, predicate, predicate_with_side_args
+
 
 class Arithmetic(DomainLanguage):
     def __init__(self):
@@ -285,6 +285,7 @@ class DomainLanguageTest(AllenNlpTestCase):
         class SideArgumentLanguage(DomainLanguage):
             def __init__(self) -> None:
                 super().__init__(start_types={int}, allowed_constants={'1': 1, '2': 2, '3': 3})
+
             @predicate_with_side_args(['num2'])
             def add(self, num1: int, num2: int) -> int:
                 return num1 + num2

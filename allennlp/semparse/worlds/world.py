@@ -11,7 +11,7 @@ from allennlp.semparse.domain_languages.domain_language import nltk_tree_to_logi
 from allennlp.semparse import util as semparse_util
 from allennlp.semparse.common.errors import ParsingError
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 class World:
@@ -358,7 +358,7 @@ class World:
             <e,<e,t>> -> 2
             <b,<<b,#1>,<#1,b>>> -> 3
         """
-        if not "<" in type_signature:
+        if "<" not in type_signature:
             return 0
         # We need to find the return type from the signature. We do that by removing the outer most
         # angular brackets and traversing the remaining substring till the angular brackets (if any)

@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name,protected-access
 from nltk import Tree
 
 from allennlp.common.testing import AllenNlpTestCase
@@ -62,7 +61,6 @@ class TestConstituencyParserPredictor(AllenNlpTestCase):
 
         hierplane_tree = predictor._build_hierplane_tree(tree, 0, is_root=True)
 
-        # pylint: disable=bad-continuation
         correct_tree = {
                 'text': 'the dog chased the cat',
                 "linkNameToLabel": LINK_TO_LABEL,
@@ -125,5 +123,5 @@ class TestConstituencyParserPredictor(AllenNlpTestCase):
                         ]
                     }
                 }
-        # pylint: enable=bad-continuation
+
         assert correct_tree == hierplane_tree

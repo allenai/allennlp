@@ -3,6 +3,7 @@ from allennlp.state_machines.states import GrammarStatelet
 from allennlp.models.semantic_parsing.text2sql_parser import Text2SqlParser
 from allennlp.semparse.worlds.text2sql_world import Text2SqlWorld
 
+
 class Text2SqlParserTest(ModelTestCase):
 
     def setUp(self):
@@ -28,4 +29,4 @@ class Text2SqlParserTest(ModelTestCase):
                                         reverse_productions=True)
         for action in action_sequence:
             grammar_state = grammar_state.take_action(action)
-        assert grammar_state._nonterminal_stack == [] # pylint: disable=protected-access
+        assert grammar_state._nonterminal_stack == []

@@ -2,6 +2,7 @@ import torch
 
 from allennlp.common import Registrable
 
+
 class Regularizer(Registrable):
     """
     An abstract class representing a regularizer. It must implement

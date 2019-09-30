@@ -1,8 +1,8 @@
-# pylint: disable=no-self-use,invalid-name
 import numpy
 import torch
 from allennlp.modules.token_embedders import PassThroughTokenEmbedder
 from allennlp.common.testing import AllenNlpTestCase
+
 
 class TestBagOfWordCountsTokenEmbedder(AllenNlpTestCase):
     def test_pass_through_embedder(self):

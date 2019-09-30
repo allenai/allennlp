@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 import spacy
 
 from allennlp.common.testing import AllenNlpTestCase
@@ -9,9 +8,10 @@ from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
 from allennlp.data.tokenizers.word_splitter import OpenAISplitter
 from allennlp.data.tokenizers.word_splitter import BertBasicWordSplitter
 
+
 class TestSimpleWordSplitter(AllenNlpTestCase):
     def setUp(self):
-        super(TestSimpleWordSplitter, self).setUp()
+        super().setUp()
         self.word_splitter = SimpleWordSplitter()
 
     def test_tokenize_handles_complex_punctuation(self):
@@ -63,7 +63,7 @@ class TestSimpleWordSplitter(AllenNlpTestCase):
 
 class TestLettersDigitsWordSplitter(AllenNlpTestCase):
     def setUp(self):
-        super(TestLettersDigitsWordSplitter, self).setUp()
+        super().setUp()
         self.word_splitter = LettersDigitsWordSplitter()
 
     def test_tokenize_handles_complex_punctuation(self):
@@ -90,7 +90,7 @@ class TestLettersDigitsWordSplitter(AllenNlpTestCase):
 
 class TestSpacyWordSplitter(AllenNlpTestCase):
     def setUp(self):
-        super(TestSpacyWordSplitter, self).setUp()
+        super().setUp()
         self.word_splitter = SpacyWordSplitter()
 
     def test_tokenize_handles_complex_punctuation(self):
@@ -168,7 +168,7 @@ class TestSpacyWordSplitter(AllenNlpTestCase):
 
 class TestOpenAiWordSplitter(AllenNlpTestCase):
     def setUp(self):
-        super(TestOpenAiWordSplitter, self).setUp()
+        super().setUp()
         self.word_splitter = OpenAISplitter()
 
     def test_tokenize_handles_complex_punctuation(self):
@@ -180,7 +180,7 @@ class TestOpenAiWordSplitter(AllenNlpTestCase):
 
 class TestBertBasicWordSplitter(AllenNlpTestCase):
     def setUp(self):
-        super(TestBertBasicWordSplitter, self).setUp()
+        super().setUp()
         self.word_splitter = BertBasicWordSplitter()
 
     def test_never_split(self):

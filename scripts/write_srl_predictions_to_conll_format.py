@@ -11,7 +11,6 @@ from allennlp.common import Params
 from allennlp.models.archival import load_archive
 from allennlp.data.iterators import BasicIterator
 from allennlp.data import DatasetReader
-from allennlp.models import Model
 from allennlp.models.semantic_role_labeler import write_to_conll_eval_file
 from allennlp.nn.util import move_to_device
 
@@ -83,6 +82,7 @@ def main(serialization_directory: int,
                                      verb_index, sentence, prediction, gold_tags)
         prediction_file.close()
         gold_file.close()
+
 
 if __name__ == "__main__":
 

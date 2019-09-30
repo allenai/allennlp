@@ -1,15 +1,17 @@
-# pylint: disable=no-self-use,invalid-name
-from multiprocessing import Queue, Process
-from typing import Tuple
 from collections import Counter
+from multiprocessing import Queue, Process
+from queue import Empty
+from typing import Tuple
 
 import numpy as np
 
+from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.dataset_readers import MultiprocessDatasetReader, SequenceTaggingDatasetReader
+from allennlp.data.dataset_readers.multiprocess_dataset_reader import QIterable
 from allennlp.data.instance import Instance
 from allennlp.data.iterators import BasicIterator
 from allennlp.data.vocabulary import Vocabulary
-from allennlp.common.testing import AllenNlpTestCase
+
 
 def fingerprint(instance: Instance) -> Tuple[str, ...]:
     """
@@ -28,7 +30,6 @@ class TestMultiprocessDatasetReader(AllenNlpTestCase):
         # use SequenceTaggingDatasetReader as the base reader
         self.base_reader = SequenceTaggingDatasetReader(lazy=True)
         base_file_path = AllenNlpTestCase.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv'
-
 
         # Make 100 copies of the data
         raw_data = open(base_file_path).read()
@@ -72,9 +73,62 @@ class TestMultiprocessDatasetReader(AllenNlpTestCase):
         assert counts[("snakes", "are", "animals", ".", "N", "V", "N", "N")] == 100
         assert counts[("birds", "are", "animals", ".", "N", "V", "N", "N")] == 100
 
+    def test_multiprocess_read_partial_does_not_hang(self):
+        # Use a small queue size such that the processes generating the data will block.
+        reader = MultiprocessDatasetReader(base_reader=self.base_reader, num_workers=4, output_queue_size=10)
+
+        all_instances = []
+
+        # Half of 100 files * 4 sentences / file
+        i = 0
+        for instance in reader.read(self.identical_files_glob):
+            # Stop early such that the processes generating the data remain
+            # active (given the small queue size).
+            if i == 200:
+                break
+            i += 1
+            all_instances.append(instance)
+
+        # This should be trivially true. The real test here is that we exit
+        # normally and don't hang due to the still active processes.
+        assert len(all_instances) == 200
+
+    def test_multiprocess_read_with_qiterable(self):
+        reader = MultiprocessDatasetReader(base_reader=self.base_reader, num_workers=4)
+
+        all_instances = []
+        qiterable = reader.read(self.identical_files_glob)
+        assert isinstance(qiterable, QIterable)
+
+        # Essentially QIterable.__iter__. Broken out here as we intend it to be
+        # a public interface.
+        qiterable.start()
+        while qiterable.num_active_workers.value > 0 or qiterable.num_inflight_items.value > 0:
+            while True:
+                try:
+                    all_instances.append(qiterable.output_queue.get(block=False, timeout=1.0))
+                    with qiterable.num_inflight_items.get_lock():
+                        qiterable.num_inflight_items.value -= 1
+                except Empty:
+                    break
+        qiterable.join()
+
+        # 100 files * 4 sentences / file
+        assert len(all_instances) == 100 * 4
+
+        counts = Counter(fingerprint(instance) for instance in all_instances)
+
+        # should have the exact same data 100 times
+        assert len(counts) == 4
+        assert counts[("cats", "are", "animals", ".", "N", "V", "N", "N")] == 100
+        assert counts[("dogs", "are", "animals", ".", "N", "V", "N", "N")] == 100
+        assert counts[("snakes", "are", "animals", ".", "N", "V", "N", "N")] == 100
+        assert counts[("birds", "are", "animals", ".", "N", "V", "N", "N")] == 100
+
     def test_multiprocess_read_in_subprocess_is_deterministic(self):
         reader = MultiprocessDatasetReader(base_reader=self.base_reader, num_workers=1)
         q = Queue()
+
         def read():
             for instance in reader.read(self.distinct_files_glob):
                 q.put(fingerprint(instance))

@@ -1,4 +1,3 @@
-# pylint: disable=invalid-name,no-self-use,bad-continuation
 import argparse
 import os
 import pytest
@@ -111,15 +110,14 @@ class TestFindLearningRate(AllenNlpTestCase):
             assert args.serialization_dir == "serialization_dir"
 
         # config is required
-        with self.assertRaises(SystemExit) as cm:  # pylint: disable=invalid-name
+        with self.assertRaises(SystemExit) as cm:
             args = parser.parse_args(["find_lr", "-s", "serialization_dir"])
             assert cm.exception.code == 2  # argparse code for incorrect usage
 
         # serialization dir is required
-        with self.assertRaises(SystemExit) as cm:  # pylint: disable=invalid-name
+        with self.assertRaises(SystemExit) as cm:
             args = parser.parse_args(["find_lr", "path/to/params"])
             assert cm.exception.code == 2  # argparse code for incorrect usage
-
 
     @pytest.mark.skipif(torch.cuda.device_count() < 2,
                         reason="Need multiple GPUs.")

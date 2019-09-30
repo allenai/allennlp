@@ -15,6 +15,7 @@ from allennlp.semparse.domain_languages import WikiTablesLanguage
 from allennlp.models.semantic_parsing.wikitables.wikitables_semantic_parser \
         import WikiTablesSemanticParser
 
+
 @Model.register("wikitables_mml_parser")
 class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
     """
@@ -123,7 +124,7 @@ class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
                 target_values: List[List[str]] = None,
                 target_action_sequences: torch.LongTensor = None,
                 metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
+
         """
         In this method we encode the table entities, link them to words in the question, then
         encode the question. Then we set up the initial state for the decoder, and pass that

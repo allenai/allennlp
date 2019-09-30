@@ -1,4 +1,3 @@
-# pylint: disable=invalid-name
 import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
@@ -13,7 +12,7 @@ from allennlp.data.iterators import BasicIterator
 
 class TestOptimizer(AllenNlpTestCase):
     def setUp(self):
-        super(TestOptimizer, self).setUp()
+        super().setUp()
         self.instances = SequenceTaggingDatasetReader().read(self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv')
         vocab = Vocabulary.from_instances(self.instances)
         self.model_params = Params({
@@ -76,7 +75,6 @@ class TestOptimizer(AllenNlpTestCase):
         # the embedding + recurrent connections left in the default group
         assert len(param_groups[2]['params']) == 3
 
-
     def test_parameter_type_inference(self):
         # Should work ok even with lr as a string
         optimizer_params = Params({
@@ -105,7 +103,7 @@ class TestOptimizer(AllenNlpTestCase):
 class TestDenseSparseAdam(AllenNlpTestCase):
 
     def setUp(self):
-        super(TestDenseSparseAdam, self).setUp()
+        super().setUp()
         self.instances = SequenceTaggingDatasetReader().read(self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv')
         self.vocab = Vocabulary.from_instances(self.instances)
         self.model_params = Params({

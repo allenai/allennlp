@@ -13,7 +13,7 @@ from allennlp.data.dataset_readers.reading_comprehension import util
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
 from allennlp.data.tokenizers import Token, Tokenizer, WordTokenizer
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @DatasetReader.register("triviaqa")
@@ -123,7 +123,7 @@ class TriviaQaReader(DatasetReader):
         paragraph on the dev or test sets, that's likely cheating, depending on how you've defined
         the task.
         """
-        # pylint: disable=no-self-use,unused-argument
+
         paragraphs = []
         for evidence_file in evidence_files:
             whole_document = ' '.join(evidence_file)
@@ -140,7 +140,7 @@ class TriviaQaReader(DatasetReader):
                          answer_texts: List[str] = None,
                          question_tokens: List[Token] = None,
                          passage_tokens: List[Token] = None) -> Instance:
-        # pylint: disable=arguments-differ
+
         if not question_tokens:
             question_tokens = self._tokenizer.tokenize(question_text)
         if not passage_tokens:

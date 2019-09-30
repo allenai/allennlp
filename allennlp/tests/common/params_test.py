@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name,bad-continuation
 import json
 import os
 import re
@@ -7,6 +6,7 @@ from collections import OrderedDict
 
 import pytest
 
+from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params, unflatten, with_fallback, parse_overrides, infer_and_cast
 from allennlp.common.testing import AllenNlpTestCase
 
@@ -123,9 +123,9 @@ class TestParams(AllenNlpTestCase):
         params = Params({
                 'a': 10,
                 'b': {
-                        'c': 20,
-                        'd': 'stuff'
-                }
+                    'c': 20,
+                    'd': 'stuff'
+                    }
         }).as_flat_dict()
 
         assert params == {'a': 10, 'b.c': 20, 'b.d': 'stuff'}
@@ -290,14 +290,14 @@ class TestParams(AllenNlpTestCase):
                 return cls(B.from_params(b_params))
 
         params = Params({
-                "a": {
-                        "b": {
-                                "filename": my_file,
-                                "c": {
-                                        "c_file": my_other_file
-                                }
+            "a": {
+                "b": {
+                    "filename": my_file,
+                    "c": {
+                        "c_file": my_other_file
                         }
-                }
+                    }
+            }
         })
 
         # Construct ``A`` from params but then just throw it away.
@@ -356,16 +356,16 @@ class TestParams(AllenNlpTestCase):
                 return cls(bs=[B.from_params(b_params) for b_params in bs])
 
         params = Params({
-                "a": {
-                        "bs": [
-                                {
-                                    "filename": my_file,
-                                    "c": {
-                                            "c_file": my_other_file
-                                    },
-                                },
-                            ],
-                }
+            "a": {
+                "bs": [
+                    {
+                        "filename": my_file,
+                        "c": {
+                            "c_file": my_other_file
+                            },
+                        },
+                ],
+            }
         })
 
         # Construct ``A`` from params but then just throw it away.
@@ -435,3 +435,19 @@ class TestParams(AllenNlpTestCase):
 
         assert new_params.loading_from_archive
         assert new_params.files_to_archive == {"hey": "this is a path"}
+
+    def test_pop_choice(self):
+        choices = ['my_model', 'other_model']
+        params = Params({'model': 'my_model'})
+        assert params.pop_choice('model', choices) == 'my_model'
+
+        params = Params({'model': 'non_existent_model'})
+        with pytest.raises(ConfigurationError):
+            params.pop_choice('model', choices)
+
+        params = Params({'model': 'module.submodule.ModelName'})
+        assert params.pop_choice('model', 'choices') == 'module.submodule.ModelName'
+
+        params = Params({'model': 'module.submodule.ModelName'})
+        with pytest.raises(ConfigurationError):
+            params.pop_choice('model', choices, allow_class_names=False)

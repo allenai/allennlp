@@ -1,4 +1,3 @@
-# pylint: disable=protected-access
 import math
 
 from typing import List
@@ -6,7 +5,7 @@ import numpy
 
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.interpret.saliency_interpreters.saliency_interpreter import SaliencyInterpreter
-from allennlp.modules.text_field_embedders import TextFieldEmbedder
+from allennlp.nn import util
 
 
 @SaliencyInterpreter.register('simple-gradient')
@@ -36,7 +35,8 @@ class SimpleGradient(SaliencyInterpreter):
                 # This is then used as an index into the reversed input array to match up the
                 # gradient and its respective embedding.
                 input_idx = int(key[-1]) - 1
-                emb_grad = numpy.sum(grad * embeddings_list[input_idx], axis=1)
+                # The [0] here is undo-ing the batching that happens in get_gradients.
+                emb_grad = numpy.sum(grad[0] * embeddings_list[input_idx], axis=1)
                 norm = numpy.linalg.norm(emb_grad, ord=1)
                 normalized_grad = [math.fabs(e) / norm for e in emb_grad]
                 grads[key] = normalized_grad
@@ -51,12 +51,10 @@ class SimpleGradient(SaliencyInterpreter):
         our normalization scheme multiplies the gradient by the embedding value.
         """
 
-        def forward_hook(module, inputs, output):  # pylint: disable=unused-argument
+        def forward_hook(module, inputs, output):
             embeddings_list.append(output.squeeze(0).clone().detach().numpy())
 
-        handle = None
-        for module in self.predictor._model.modules():
-            if isinstance(module, TextFieldEmbedder):
-                handle = module.register_forward_hook(forward_hook)
+        embedding_layer = util.find_embedding_layer(self.predictor._model)
+        handle = embedding_layer.register_forward_hook(forward_hook)
 
         return handle

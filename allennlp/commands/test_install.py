@@ -23,17 +23,19 @@ import argparse
 import logging
 import os
 import pathlib
+import sys
 
 import pytest
 
 import allennlp
 from allennlp.commands.subcommand import Subcommand
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
+
 
 class TestInstall(Subcommand):
     def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
-        # pylint: disable=protected-access
+
         description = '''Test that installation works by running the unit tests.'''
         subparser = parser.add_parser(
                 name, description=description, help='Run the unit tests.')
@@ -77,4 +79,4 @@ def _run_test(args: argparse.Namespace):
 
     # Change back to original working directory after running tests
     os.chdir(initial_working_dir)
-    exit(exit_code)
+    sys.exit(exit_code)

@@ -1,7 +1,7 @@
-# pylint: disable=no-self-use,invalid-name
 from allennlp.data.dataset_readers import UniversalDependenciesMultiLangDatasetReader
 from allennlp.data.iterators.same_language_iterator import SameLanguageIterator
 from allennlp.common.testing import AllenNlpTestCase
+
 
 class SameLanguageIteratorTest(AllenNlpTestCase):
     data_path = AllenNlpTestCase.FIXTURES_ROOT / "data" / "dependencies_multilang" / "*"
@@ -11,7 +11,7 @@ class SameLanguageIteratorTest(AllenNlpTestCase):
         iterator = SameLanguageIterator(batch_size=2, sorting_keys=[["words", "num_tokens"]])
         instances = list(reader.read(str(self.data_path)))
 
-        batches = list(iterator._create_batches(instances, shuffle=False)) # pylint: disable=W0212
+        batches = list(iterator._create_batches(instances, shuffle=False))
         assert len(batches) == 3
 
         for batch in batches:

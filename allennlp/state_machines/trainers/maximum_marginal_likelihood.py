@@ -9,7 +9,7 @@ from allennlp.state_machines.states import State
 from allennlp.state_machines.trainers.decoder_trainer import DecoderTrainer
 from allennlp.state_machines.transition_functions import TransitionFunction
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 class MaximumMarginalLikelihood(DecoderTrainer[Tuple[torch.Tensor, torch.Tensor]]):

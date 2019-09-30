@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name,protected-access
 import os
 import subprocess
 
@@ -16,7 +15,7 @@ from allennlp.common.checks import ConfigurationError
 class SpanBasedF1Test(AllenNlpTestCase):
 
     def setUp(self):
-        super(SpanBasedF1Test, self).setUp()
+        super().setUp()
         vocab = Vocabulary()
         vocab.add_token_to_namespace("O", "tags")
         vocab.add_token_to_namespace("B-ARG1", "tags")
@@ -271,7 +270,7 @@ class SpanBasedF1Test(AllenNlpTestCase):
         assert num_correct_arg1_instances_from_perl_evaluation == metric._true_positives["ARG1"]
 
     def test_span_f1_accepts_tags_to_spans_function_argument(self):
-        def mock_tags_to_spans_function(tag_sequence, classes_to_ignore=None):  # pylint: disable=W0613
+        def mock_tags_to_spans_function(tag_sequence, classes_to_ignore=None):
             return [('mock', (42, 42))]
 
         # Should be ignore.

@@ -29,7 +29,7 @@ class QuarelParserPredictor(Predictor):
         dynamic_entities = None
         if 'entitycues' in json_dict:
             entity_cues = from_entity_cues_string(json_dict['entitycues'])
-            dynamic_entities = dataset_reader._dynamic_entities.copy()  # pylint: disable=protected-access
+            dynamic_entities = dataset_reader._dynamic_entities.copy()
             for entity, cues in entity_cues.items():
                 key = "a:" + entity
                 entity_strings = [words_from_entity_string(entity).lower()]
@@ -40,7 +40,7 @@ class QuarelParserPredictor(Predictor):
             qr_spec_override = from_qr_spec_string(json_dict['qrspec'])
             old_entities = dynamic_entities
             if old_entities is None:
-                old_entities = dataset_reader._dynamic_entities.copy()  # pylint: disable=protected-access
+                old_entities = dataset_reader._dynamic_entities.copy()
             dynamic_entities = {}
             for qset in qr_spec_override:
                 for entity in qset:
@@ -49,7 +49,7 @@ class QuarelParserPredictor(Predictor):
                     dynamic_entities[key] = value
 
         question = question_data['question']
-        tokenized_question = dataset_reader._tokenizer.tokenize(question.lower())  # pylint: disable=protected-access
+        tokenized_question = dataset_reader._tokenizer.tokenize(question.lower())
         world_extractions = question_data.get('world_extractions')
 
         instance = dataset_reader.text_to_instance(question,

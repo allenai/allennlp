@@ -15,6 +15,7 @@ class EventHandler(NamedTuple):
     handler: Callable[[TrainerBase], None]
     priority: int
 
+
 def _is_event_handler(member) -> bool:
     return inspect.ismethod(member) and hasattr(member, '_event') and hasattr(member, '_priority')
 
@@ -55,7 +56,7 @@ class CallbackHandler:
             self.add_callback(callback)
 
     def callbacks(self) -> List[Callback]:
-        # pylint: disable=function-redefined
+
         """
         Returns the callbacks associated with this handler.
         Each callback may be registered under multiple events,

@@ -1,4 +1,4 @@
-from typing import Tuple, Union, Optional, Callable
+from typing import Tuple, Union, Optional, Callable, Any
 import torch
 from torch.nn.utils.rnn import pack_padded_sequence, PackedSequence
 
@@ -8,12 +8,12 @@ from allennlp.nn.util import get_lengths_from_binary_sequence_mask, sort_batch_b
 # which is Iterable (like a tuple, below), is helpful for internal manipulation
 # - however, the states are consumed as either Tensors or a Tuple of Tensors, so
 # returning them in this format is unhelpful.
-RnnState = Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]  # pylint: disable=invalid-name
-RnnStateStorage = Tuple[torch.Tensor, ...]  # pylint: disable=invalid-name
+RnnState = Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]
+RnnStateStorage = Tuple[torch.Tensor, ...]
 
 
 class _EncoderBase(torch.nn.Module):
-    # pylint: disable=abstract-method
+
     """
     This abstract class serves as a base for the 3 ``Encoder`` abstractions in AllenNLP.
     - :class:`~allennlp.modules.seq2seq_encoders.Seq2SeqEncoders`
@@ -25,7 +25,7 @@ class _EncoderBase(torch.nn.Module):
     subclasses by allowing the caching and retrieving of the hidden states of RNNs.
     """
     def __init__(self, stateful: bool = False) -> None:
-        super(_EncoderBase, self).__init__()
+        super().__init__()
         self.stateful = stateful
         self._states: Optional[RnnStateStorage] = None
 
@@ -102,7 +102,7 @@ class _EncoderBase(torch.nn.Module):
         # Prepare the initial states.
         if not self.stateful:
             if hidden_state is None:
-                initial_states = hidden_state
+                initial_states: Any = hidden_state
             elif isinstance(hidden_state, tuple):
                 initial_states = [state.index_select(1, sorting_indices)[:, :num_valid, :].contiguous()
                                   for state in hidden_state]

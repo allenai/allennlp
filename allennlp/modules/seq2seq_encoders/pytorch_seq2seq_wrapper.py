@@ -34,7 +34,7 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
     state for the subsequent batch by passing ``stateful=True`` to the constructor.
     """
     def __init__(self, module: torch.nn.Module, stateful: bool = False) -> None:
-        super(PytorchSeq2SeqWrapper, self).__init__(stateful)
+        super().__init__(stateful)
         self._module = module
         try:
             if not self._module.batch_first:
@@ -64,7 +64,7 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
         return self._is_bidirectional
 
     @overrides
-    def forward(self,  # pylint: disable=arguments-differ
+    def forward(self,
                 inputs: torch.Tensor,
                 mask: torch.Tensor,
                 hidden_state: torch.Tensor = None) -> torch.Tensor:

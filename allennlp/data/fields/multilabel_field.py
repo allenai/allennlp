@@ -8,7 +8,7 @@ from allennlp.data.fields.field import Field
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.common.checks import ConfigurationError
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 class MultiLabelField(Field[torch.Tensor]):
@@ -102,13 +102,11 @@ class MultiLabelField(Field[torch.Tensor]):
             self._num_labels = vocab.get_vocab_size(self._label_namespace)
 
     @overrides
-    def get_padding_lengths(self) -> Dict[str, int]:  # pylint: disable=no-self-use
+    def get_padding_lengths(self) -> Dict[str, int]:
         return {}
 
     @overrides
     def as_tensor(self, padding_lengths: Dict[str, int]) -> torch.Tensor:
-        # pylint: disable=unused-argument
-
         tensor = torch.zeros(self._num_labels, dtype=torch.long)  # vector of zeros
         if self._label_ids:
             tensor.scatter_(0, torch.LongTensor(self._label_ids), 1)

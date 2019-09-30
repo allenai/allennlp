@@ -15,7 +15,7 @@ from allennlp.semparse.domain_languages import NlvrLanguage
 from allennlp.semparse.domain_languages.nlvr_language import Box
 
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @DatasetReader.register("nlvr")
@@ -155,11 +155,11 @@ class NlvrDatasetReader(DatasetReader):
         identifier : ``str`` (optional)
             The identifier from the dataset if available.
         """
-        # pylint: disable=arguments-differ
+
         worlds = []
         for structured_representation in structured_representations:
-            boxes = set([Box(object_list, box_id) for box_id, object_list in
-                         enumerate(structured_representation)])
+            boxes = {Box(object_list, box_id)
+                     for box_id, object_list in enumerate(structured_representation)}
             worlds.append(NlvrLanguage(boxes))
         tokenized_sentence = self._tokenizer.tokenize(sentence)
         sentence_field = TextField(tokenized_sentence, self._sentence_token_indexers)

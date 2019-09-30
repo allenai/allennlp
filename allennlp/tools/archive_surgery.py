@@ -9,7 +9,7 @@ to modify the config.json, and then re-tar everything to a new archive.
 If your $EDITOR environment variable is not set, you'll have to explicitly
 specify which editor to use.
 """
-# pylint: disable=invalid-name,redefined-outer-name
+
 import argparse
 import atexit
 import logging
@@ -64,7 +64,7 @@ def main():
     atexit.register(lambda: shutil.rmtree(tempdir))
 
     config_path = os.path.join(tempdir, CONFIG_NAME)
-    subprocess.run([args.editor, config_path])
+    subprocess.run([args.editor, config_path], check=False)
 
     with tarfile.open(output_file, "w:gz") as tar:
         tar.add(tempdir, arcname=os.path.sep)

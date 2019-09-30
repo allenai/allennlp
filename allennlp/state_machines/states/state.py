@@ -8,6 +8,7 @@ import torch
 # type checking in a few important methods.
 T = TypeVar('T', bound='State')
 
+
 class State(Generic[T]):
     """
     Represents the (batched) state of a transition-based decoder.

@@ -37,7 +37,7 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
     """
     def __init__(self, module: torch.nn.modules.RNNBase) -> None:
         # Seq2VecEncoders cannot be stateful.
-        super(PytorchSeq2VecWrapper, self).__init__(stateful=False)
+        super().__init__(stateful=False)
         self._module = module
         try:
             if not self._module.batch_first:
@@ -55,7 +55,7 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
             is_bidirectional = False
         return self._module.hidden_size * (2 if is_bidirectional else 1)
 
-    def forward(self,  # pylint: disable=arguments-differ
+    def forward(self,
                 inputs: torch.Tensor,
                 mask: torch.Tensor,
                 hidden_state: torch.Tensor = None) -> torch.Tensor:

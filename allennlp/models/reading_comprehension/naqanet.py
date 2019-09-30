@@ -43,7 +43,6 @@ class NumericallyAugmentedQaNet(Model):
                  answering_abilities: List[str] = None) -> None:
         super().__init__(vocab, regularizer)
 
-
         if answering_abilities is None:
             self.answering_abilities = ["passage_span_extraction", "question_span_extraction",
                                         "addition_subtraction", "counting"]
@@ -137,7 +136,6 @@ class NumericallyAugmentedQaNet(Model):
                 answer_as_add_sub_expressions: torch.LongTensor = None,
                 answer_as_counts: torch.LongTensor = None,
                 metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
 
         question_mask = util.get_text_field_mask(question).float()
         passage_mask = util.get_text_field_mask(passage).float()
@@ -371,7 +369,7 @@ class NumericallyAugmentedQaNet(Model):
                                                    gold_question_span_mask,
                                                    -1e7)
                     # Shape: (batch_size, )
-                    # pylint: disable=invalid-name
+
                     log_marginal_likelihood_for_question_span = \
                         util.logsumexp(log_likelihood_for_question_spans)
                     log_marginal_likelihood_list.append(log_marginal_likelihood_for_question_span)

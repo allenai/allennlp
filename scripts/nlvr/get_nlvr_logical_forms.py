@@ -5,8 +5,6 @@ from typing import Tuple, List
 import os
 import sys
 
-# pylint: disable=wrong-import-position,invalid-name
-
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir)))))
 
 from allennlp.common.util import JsonDict
@@ -49,7 +47,7 @@ def process_data(input_file: str,
         instance_id, sentence, structured_reps, label_strings = read_json_line(line)
         worlds = []
         for structured_representation in structured_reps:
-            boxes = set([Box(object_list, box_id) for box_id, object_list in enumerate(structured_representation)])
+            boxes = {Box(object_list, box_id) for box_id, object_list in enumerate(structured_representation)}
             worlds.append(NlvrLanguage(boxes))
         labels = [label_string == "true" for label_string in label_strings]
         correct_logical_forms = []

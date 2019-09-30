@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name,protected-access
 import os
 import json
 import warnings
@@ -24,7 +23,7 @@ from allennlp.nn.util import remove_sentence_boundaries
 
 class ElmoTestCase(AllenNlpTestCase):
     def setUp(self):
-        super(ElmoTestCase, self).setUp()
+        super().setUp()
         self.elmo_fixtures_path = self.FIXTURES_ROOT / 'elmo'
         self.options_file = str(self.elmo_fixtures_path / 'options.json')
         self.weight_file = str(self.elmo_fixtures_path / 'lm_weights.hdf5')
@@ -166,9 +165,10 @@ class TestElmoBiLm(ElmoTestCase):
             numpy.testing.assert_array_almost_equal(activation_cached.data.cpu().numpy(),
                                                     activation.data.cpu().numpy(), decimal=6)
 
+
 class TestElmo(ElmoTestCase):
     def setUp(self):
-        super(TestElmo, self).setUp()
+        super().setUp()
 
         self.elmo = Elmo(self.options_file, self.weight_file, 2, dropout=0.0)
 
@@ -219,7 +219,6 @@ class TestElmo(ElmoTestCase):
         assert list(elmo_representations[0].size()) == [2, 7+2, 32]
         assert list(elmo_representations[1].size()) == [2, 7+2, 32]
         assert list(mask.size()) == [2, 7+2]
-
 
     def test_elmo_4D_input(self):
         sentences = [[['The', 'sentence', '.'],

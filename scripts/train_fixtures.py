@@ -15,7 +15,7 @@ from allennlp.common import Params
 from allennlp.training.metrics import EvalbBracketingScorer
 
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 def train_fixture(config_prefix: str) -> None:
@@ -66,6 +66,7 @@ if __name__ == "__main__":
                 'constituency_parser',
                 'coref',
                 'decomposable_attention',
+                'encoder_decoder/composed_seq2seq',
                 'encoder_decoder/simple_seq2seq',
                 'encoder_decoder/copynet_seq2seq',
                 'semantic_parsing/nlvr_coverage_semantic_parser',

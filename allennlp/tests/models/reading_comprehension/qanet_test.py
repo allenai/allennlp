@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 import torch
 import pytest
 from flaky import flaky
@@ -72,7 +71,7 @@ class QaNetTest(ModelTestCase):
         # changing the amount of padding in the batch will result in small differences in the
         # output of the encoder. So, we'll remove the CNN encoder entirely from the model for this test.
         # Save some state.
-        # pylint: disable=protected-access,attribute-defined-outside-init
+
         saved_model = self.model
         saved_instances = self.instances
 

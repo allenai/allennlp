@@ -1,6 +1,7 @@
 from typing import List, Iterator, Dict, Tuple, Any
 import json
 from contextlib import contextmanager
+
 import numpy
 from torch.utils.hooks import RemovableHandle
 from torch import Tensor
@@ -9,14 +10,14 @@ from allennlp.common import Registrable
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import DatasetReader, Instance
+from allennlp.data.dataset import Batch
 from allennlp.models import Model
 from allennlp.models.archival import Archive, load_archive
-from allennlp.modules.text_field_embedders import TextFieldEmbedder
-from allennlp.data.dataset import Batch
+from allennlp.nn import util
 
 # a mapping from model `type` to the default Predictor for that type
 DEFAULT_PREDICTORS = {
-        'atis_parser' : 'atis-parser',
+        'atis_parser': 'atis-parser',
         'basic_classifier': 'text_classifier',
         'biaffine_parser': 'biaffine-dependency-parser',
         'bidaf': 'machine-comprehension',
@@ -36,6 +37,7 @@ DEFAULT_PREDICTORS = {
         'wikitables_mml_parser': 'wikitables-parser'
 }
 
+
 class Predictor(Registrable):
     """
     a ``Predictor`` is a thin wrapper around an AllenNLP model that handles JSON -> JSON predictions
@@ -45,14 +47,14 @@ class Predictor(Registrable):
         self._model = model
         self._dataset_reader = dataset_reader
 
-    def load_line(self, line: str) -> JsonDict:  # pylint: disable=no-self-use
+    def load_line(self, line: str) -> JsonDict:
         """
         If your inputs are not in JSON-lines format (e.g. you have a CSV)
         you can override this function to parse them correctly.
         """
         return json.loads(line)
 
-    def dump_line(self, outputs: JsonDict) -> str:  # pylint: disable=no-self-use
+    def dump_line(self, outputs: JsonDict) -> str:
         """
         If you don't want your outputs in JSON-lines format
         you can override this function to output them differently.
@@ -73,6 +75,7 @@ class Predictor(Registrable):
         List[instance]
         A list of :class:`~allennlp.data.instance.Instance`
         """
+
         instance = self._json_to_instance(inputs)
         outputs = self._model.forward_on_instance(instance)
         new_instances = self.predictions_to_labeled_instances(instance, outputs)
@@ -107,7 +110,7 @@ class Predictor(Registrable):
 
         dataset = Batch(instances)
         dataset.index_instances(self._model.vocab)
-        outputs = self._model.decode(self._model.forward(**dataset.as_tensor_dict()))
+        outputs = self._model.decode(self._model.forward(**dataset.as_tensor_dict()))  # type: ignore
 
         loss = outputs['loss']
         self._model.zero_grad()
@@ -119,7 +122,7 @@ class Predictor(Registrable):
         grad_dict = dict()
         for idx, grad in enumerate(embedding_gradients):
             key = 'grad_input_' + str(idx + 1)
-            grad_dict[key] = grad.squeeze_(0).detach().cpu().numpy()
+            grad_dict[key] = grad.detach().cpu().numpy()
 
         return grad_dict, outputs
 
@@ -133,14 +136,12 @@ class Predictor(Registrable):
         will be called multiple times. We append all the embeddings gradients
         to a list.
         """
-        def hook_layers(module, grad_in, grad_out): # pylint: disable=unused-argument
+        def hook_layers(module, grad_in, grad_out):
             embedding_gradients.append(grad_out[0])
 
         backward_hooks = []
-        for module in self._model.modules():
-            if isinstance(module, TextFieldEmbedder):
-                backward_hooks.append(module.register_backward_hook(hook_layers))
-
+        embedding_layer = util.find_embedding_layer(self._model)
+        backward_hooks.append(embedding_layer.register_backward_hook(hook_layers))
         return backward_hooks
 
     @contextmanager
@@ -192,9 +193,8 @@ class Predictor(Registrable):
         multiple predictions in the output (e.g., in NER a model predicts multiple spans). In this
         case, each instance in the returned list of Instances contains an individual
         entity prediction as the label.
-
         """
-        # pylint: disable=unused-argument,no-self-use
+
         raise RuntimeError("implement this method for model interpretations or attacks")
 
     def _json_to_instance(self, json_dict: JsonDict) -> Instance:
@@ -272,8 +272,8 @@ class Predictor(Registrable):
 
         if not predictor_name:
             model_type = config.get("model").get("type")
-            if not model_type in DEFAULT_PREDICTORS:
-                raise ConfigurationError(f"No default predictor for model type {model_type}.\n"\
+            if model_type not in DEFAULT_PREDICTORS:
+                raise ConfigurationError(f"No default predictor for model type {model_type}.\n"
                                          f"Please specify a predictor explicitly.")
             predictor_name = DEFAULT_PREDICTORS[model_type]
 

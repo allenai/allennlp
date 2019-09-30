@@ -1,9 +1,9 @@
-# pylint: disable=no-self-use,invalid-name
 from flaky import flaky
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor
+
 
 class TestAtisParserPredictor(AllenNlpTestCase):
     @flaky
