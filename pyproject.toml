@@ -1,0 +1,19 @@
+[tool.black]
+line-length = 115
+
+include = '\.pyi?$'
+
+exclude = '''
+(
+      __pycache__
+    | tutorials
+    | ^build/
+    | \.git
+    | \.mypy_cache
+    | \.pytest_cache
+    | \.vscode
+    | \.venv
+    | ^dist
+    | ^doc
+)
+'''
