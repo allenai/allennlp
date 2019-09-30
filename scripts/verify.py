@@ -26,6 +26,11 @@ def main(checks):
             run("flake8 -v", shell=True, check=True)
             print("flake8 checks passed")
 
+        if "black" in checks:
+            print("Formatter (black)", flush=True)
+            run("black -v --check .", shell=True, check=True)
+            print("black checks passed")
+
         if "mypy" in checks:
             print("Typechecker (mypy):", flush=True)
             run(
@@ -77,6 +82,7 @@ if __name__ == "__main__":
         "pytest",
         "flake8",
         "mypy",
+        "black",
         "build-docs",
         "check-docs",
         "check-links",
