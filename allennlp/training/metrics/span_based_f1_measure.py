@@ -78,7 +78,9 @@ class SpanBasedF1Measure(Metric):
             )
         if label_encoding:
             if label_encoding not in ["BIO", "IOB1", "BIOUL", "BMES"]:
-                raise ConfigurationError("Unknown label encoding - expected 'BIO', 'IOB1', 'BIOUL', 'BMES'.")
+                raise ConfigurationError(
+                    "Unknown label encoding - expected 'BIO', 'IOB1', 'BIOUL', 'BMES'."
+                )
         elif tags_to_spans_function is None:
             raise ConfigurationError(
                 "At least one of the (label_encoding, tags_to_spans_function) should be provided."
@@ -156,10 +158,12 @@ class SpanBasedF1Measure(Metric):
                 continue
 
             predicted_string_labels = [
-                self._label_vocabulary[label_id] for label_id in sequence_prediction[:length].tolist()
+                self._label_vocabulary[label_id]
+                for label_id in sequence_prediction[:length].tolist()
             ]
             gold_string_labels = [
-                self._label_vocabulary[label_id] for label_id in sequence_gold_label[:length].tolist()
+                self._label_vocabulary[label_id]
+                for label_id in sequence_gold_label[:length].tolist()
             ]
 
             tags_to_spans_function = None
@@ -215,7 +219,9 @@ class SpanBasedF1Measure(Metric):
         A ``List[TypedStringSpan]`` with continued arguments replaced with a single span.
         """
         span_set: Set[TypedStringSpan] = set(spans)
-        continued_labels: List[str] = [label[2:] for (label, span) in span_set if label.startswith("C-")]
+        continued_labels: List[str] = [
+            label[2:] for (label, span) in span_set if label.startswith("C-")
+        ]
         for label in continued_labels:
             continued_spans = {span for span in span_set if label in span[0]}
 

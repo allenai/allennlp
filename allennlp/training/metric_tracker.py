@@ -44,9 +44,13 @@ class MetricTracker:
         # If the metric name starts with "-", we want it to decrease.
         # We also allow you to not specify a metric name and just set `should_decrease` directly.
         if should_decrease is None and metric_name is None:
-            raise ConfigurationError("must specify either `should_decrease` or `metric_name` (but not both)")
+            raise ConfigurationError(
+                "must specify either `should_decrease` or `metric_name` (but not both)"
+            )
         elif should_decrease is not None and metric_name is not None:
-            raise ConfigurationError("must specify either `should_decrease` or `metric_name` (but not both)")
+            raise ConfigurationError(
+                "must specify either `should_decrease` or `metric_name` (but not both)"
+            )
         elif metric_name is not None:
             if metric_name[0] == "-":
                 self._should_decrease = True

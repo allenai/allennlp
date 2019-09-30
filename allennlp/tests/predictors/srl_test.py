@@ -5,7 +5,9 @@ from allennlp.predictors import Predictor
 
 class TestSrlPredictor(AllenNlpTestCase):
     def test_uses_named_inputs(self):
-        inputs = {"sentence": "The squirrel wrote a unit test to make sure its nuts worked as designed."}
+        inputs = {
+            "sentence": "The squirrel wrote a unit test to make sure its nuts worked as designed."
+        }
 
         archive = load_archive(self.FIXTURES_ROOT / "srl" / "serialization" / "model.tar.gz")
         predictor = Predictor.from_archive(archive, "semantic-role-labeling")
@@ -70,7 +72,9 @@ class TestSrlPredictor(AllenNlpTestCase):
             assert len(tags) == num_words
 
     def test_batch_prediction(self):
-        inputs = {"sentence": "The squirrel wrote a unit test to make sure its nuts worked as designed."}
+        inputs = {
+            "sentence": "The squirrel wrote a unit test to make sure its nuts worked as designed."
+        }
         archive = load_archive(self.FIXTURES_ROOT / "srl" / "serialization" / "model.tar.gz")
         predictor = Predictor.from_archive(archive, "semantic-role-labeling")
         result = predictor.predict_batch_json([inputs, inputs])

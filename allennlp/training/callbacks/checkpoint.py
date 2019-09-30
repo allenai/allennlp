@@ -53,7 +53,8 @@ class Checkpoint(Callback):
 
     def _should_save_at_batch_end(self) -> bool:
         return (
-            self.model_save_interval is not None and time.time() - self.last_save_time > self.model_save_interval
+            self.model_save_interval is not None
+            and time.time() - self.last_save_time > self.model_save_interval
         )
 
     @handle_event(Events.TRAINING_START)
@@ -167,7 +168,9 @@ class Checkpoint(Callback):
 
         checkpointer_params = params.pop("checkpointer", None)
         if checkpointer_params:
-            checkpointer = Checkpointer.from_params(checkpointer_params, serialization_dir=serialization_dir)
+            checkpointer = Checkpointer.from_params(
+                checkpointer_params, serialization_dir=serialization_dir
+            )
         else:
             checkpointer = Checkpointer(serialization_dir=serialization_dir)
 

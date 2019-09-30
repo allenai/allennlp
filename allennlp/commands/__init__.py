@@ -43,7 +43,9 @@ class ArgumentParserWithDefaults(argparse.ArgumentParser):
 
         # Add default value to the help message when the default is meaningful.
         default = kwargs.get("default")
-        if kwargs.get("action") not in self._action_defaults_to_ignore and not self._is_empty_default(default):
+        if kwargs.get(
+            "action"
+        ) not in self._action_defaults_to_ignore and not self._is_empty_default(default):
             description = kwargs.get("help") or ""
             kwargs["help"] = f"{description} (default = {default})"
         super().add_argument(*args, **kwargs)
@@ -84,7 +86,11 @@ def main(prog: str = None, subcommand_overrides: Dict[str, Subcommand] = {}) -> 
         # whatever classes it needs.
         if name != "configure":
             subparser.add_argument(
-                "--include-package", type=str, action="append", default=[], help="additional packages to include"
+                "--include-package",
+                type=str,
+                action="append",
+                default=[],
+                help="additional packages to include",
             )
 
     args = parser.parse_args()

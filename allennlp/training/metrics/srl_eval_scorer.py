@@ -15,7 +15,9 @@ from allennlp.models.srl_util import write_conll_formatted_tags_to_file
 logger = logging.getLogger(__name__)
 
 DEFAULT_SRL_EVAL_PATH = os.path.abspath(
-    os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir, os.pardir, "tools", "srl-eval.pl")
+    os.path.join(
+        os.path.dirname(os.path.realpath(__file__)), os.pardir, os.pardir, "tools", "srl-eval.pl"
+    )
 )
 
 
@@ -39,7 +41,9 @@ class SrlEvalScorer(Metric):
         A list of classes to ignore.
     """
 
-    def __init__(self, srl_eval_path: str = DEFAULT_SRL_EVAL_PATH, ignore_classes: List[str] = None) -> None:
+    def __init__(
+        self, srl_eval_path: str = DEFAULT_SRL_EVAL_PATH, ignore_classes: List[str] = None
+    ) -> None:
         self._srl_eval_path = srl_eval_path
         self._ignore_classes = set(ignore_classes)
         # These will hold per label span counts.
@@ -90,7 +94,12 @@ class SrlEvalScorer(Metric):
                 batch_conll_formatted_gold_tags,
             ):
                 write_conll_formatted_tags_to_file(
-                    predicted_file, gold_file, verb_index, sentence, predicted_tag_sequence, gold_tag_sequence
+                    predicted_file,
+                    gold_file,
+                    verb_index,
+                    sentence,
+                    predicted_tag_sequence,
+                    gold_tag_sequence,
                 )
         perl_script_command = ["perl", self._srl_eval_path, gold_path, predicted_path]
         completed_process = subprocess.run(
@@ -132,7 +141,8 @@ class SrlEvalScorer(Metric):
         for tag in all_tags:
             if tag == "overall":
                 raise ValueError(
-                    "'overall' is disallowed as a tag type, " "rename the tag type to something else if necessary."
+                    "'overall' is disallowed as a tag type, "
+                    "rename the tag type to something else if necessary."
                 )
             precision, recall, f1_measure = self._compute_metrics(
                 self._true_positives[tag], self._false_positives[tag], self._false_negatives[tag]

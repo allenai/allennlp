@@ -37,14 +37,22 @@ class PretrainedTransformerIndexer(TokenIndexer[int]):
     """
 
     def __init__(
-        self, model_name: str, do_lowercase: bool, namespace: str = "tags", token_min_padding_length: int = 0
+        self,
+        model_name: str,
+        do_lowercase: bool,
+        namespace: str = "tags",
+        token_min_padding_length: int = 0,
     ) -> None:
         super().__init__(token_min_padding_length)
         if model_name.endswith("-cased") and do_lowercase:
-            logger.warning("Your pretrained model appears to be cased, " "but your indexer is lowercasing tokens.")
+            logger.warning(
+                "Your pretrained model appears to be cased, "
+                "but your indexer is lowercasing tokens."
+            )
         elif model_name.endswith("-uncased") and not do_lowercase:
             logger.warning(
-                "Your pretrained model appears to be uncased, " "but your indexer is not lowercasing tokens."
+                "Your pretrained model appears to be uncased, "
+                "but your indexer is not lowercasing tokens."
             )
         self._model_name = model_name
         self.tokenizer = AutoTokenizer.from_pretrained(model_name, do_lower_case=do_lowercase)
@@ -82,11 +90,16 @@ class PretrainedTransformerIndexer(TokenIndexer[int]):
 
     @overrides
     def as_padded_tensor(
-        self, tokens: Dict[str, List[int]], desired_num_tokens: Dict[str, int], padding_lengths: Dict[str, int]
+        self,
+        tokens: Dict[str, List[int]],
+        desired_num_tokens: Dict[str, int],
+        padding_lengths: Dict[str, int],
     ) -> Dict[str, torch.Tensor]:
         return {
             key: torch.LongTensor(
-                pad_sequence_to_length(val, desired_num_tokens[key], default_value=lambda: self._padding_value)
+                pad_sequence_to_length(
+                    val, desired_num_tokens[key], default_value=lambda: self._padding_value
+                )
             )
             for key, val in tokens.items()
         }

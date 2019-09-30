@@ -93,7 +93,9 @@ class TestCorefReader:
         spans = fields["spans"].field_list
         span_starts, span_ends = zip(*[(field.span_start, field.span_end) for field in spans])
 
-        candidate_mentions = self.check_candidate_mentions_are_well_defined(span_starts, span_ends, text)
+        candidate_mentions = self.check_candidate_mentions_are_well_defined(
+            span_starts, span_ends, text
+        )
 
         gold_span_labels = fields["span_labels"]
         gold_indices_with_ids = [(i, x) for i, x in enumerate(gold_span_labels.labels) if x != -1]
@@ -163,7 +165,9 @@ class TestCorefReader:
         spans = fields["spans"].field_list
         span_starts, span_ends = zip(*[(field.span_start, field.span_end) for field in spans])
 
-        candidate_mentions = self.check_candidate_mentions_are_well_defined(span_starts, span_ends, text)
+        candidate_mentions = self.check_candidate_mentions_are_well_defined(
+            span_starts, span_ends, text
+        )
 
         gold_span_labels = fields["span_labels"]
         gold_indices_with_ids = [(i, x) for i, x in enumerate(gold_span_labels.labels) if x != -1]

@@ -29,7 +29,16 @@ class Text2SqlUtilsTest(AllenNlpTestCase):
             "francisco",
             "?",
         ]
-        assert sql_data.text_with_variables == ["how", "many", "name0", "are", "there", "in", "city_name0", "?"]
+        assert sql_data.text_with_variables == [
+            "how",
+            "many",
+            "name0",
+            "are",
+            "there",
+            "in",
+            "city_name0",
+            "?",
+        ]
         assert sql_data.sql == [
             "SELECT",
             "COUNT",
@@ -67,7 +76,10 @@ class Text2SqlUtilsTest(AllenNlpTestCase):
             ";",
         ]
 
-        assert sql_data.text_variables == {"city_name0": "san francisco", "name0": "buttercup kitchen"}
+        assert sql_data.text_variables == {
+            "city_name0": "san francisco",
+            "name0": "buttercup kitchen",
+        }
         assert sql_data.sql_variables == {
             "city_name0": {"text": "san francisco", "type": "city_name"},
             "name0": {"text": "buttercup kitchen", "type": "name"},
@@ -76,8 +88,31 @@ class Text2SqlUtilsTest(AllenNlpTestCase):
         dataset = text2sql_utils.process_sql_data([data[1]])
         correct_text = [
             [
-                ["how", "many", "chinese", "restaurants", "are", "there", "in", "the", "bay", "area", "?"],
-                ["how", "many", "food_type0", "restaurants", "are", "there", "in", "the", "region0", "?"],
+                [
+                    "how",
+                    "many",
+                    "chinese",
+                    "restaurants",
+                    "are",
+                    "there",
+                    "in",
+                    "the",
+                    "bay",
+                    "area",
+                    "?",
+                ],
+                [
+                    "how",
+                    "many",
+                    "food_type0",
+                    "restaurants",
+                    "are",
+                    "there",
+                    "in",
+                    "the",
+                    "region0",
+                    "?",
+                ],
             ],
             [
                 [
@@ -111,12 +146,60 @@ class Text2SqlUtilsTest(AllenNlpTestCase):
                 ],
             ],
             [
-                ["how", "many", "chinese", "places", "are", "there", "in", "the", "bay", "area", "?"],
-                ["how", "many", "food_type0", "places", "are", "there", "in", "the", "region0", "?"],
+                [
+                    "how",
+                    "many",
+                    "chinese",
+                    "places",
+                    "are",
+                    "there",
+                    "in",
+                    "the",
+                    "bay",
+                    "area",
+                    "?",
+                ],
+                [
+                    "how",
+                    "many",
+                    "food_type0",
+                    "places",
+                    "are",
+                    "there",
+                    "in",
+                    "the",
+                    "region0",
+                    "?",
+                ],
             ],
             [
-                ["how", "many", "places", "for", "chinese", "are", "there", "in", "the", "bay", "area", "?"],
-                ["how", "many", "places", "for", "food_type0", "are", "there", "in", "the", "region0", "?"],
+                [
+                    "how",
+                    "many",
+                    "places",
+                    "for",
+                    "chinese",
+                    "are",
+                    "there",
+                    "in",
+                    "the",
+                    "bay",
+                    "area",
+                    "?",
+                ],
+                [
+                    "how",
+                    "many",
+                    "places",
+                    "for",
+                    "food_type0",
+                    "are",
+                    "there",
+                    "in",
+                    "the",
+                    "region0",
+                    "?",
+                ],
             ],
         ]
 
@@ -175,7 +258,18 @@ class Text2SqlUtilsTest(AllenNlpTestCase):
         sentence = ["how", "many", "name0", "are", "there", "in", "city_name0", "?"]
         sentence_variables = {"city_name0": "san francisco", "name0": "buttercup kitchen"}
         tokens, tags = text2sql_utils.replace_variables(sentence, sentence_variables)
-        assert tokens == ["how", "many", "buttercup", "kitchen", "are", "there", "in", "san", "francisco", "?"]
+        assert tokens == [
+            "how",
+            "many",
+            "buttercup",
+            "kitchen",
+            "are",
+            "there",
+            "in",
+            "san",
+            "francisco",
+            "?",
+        ]
         assert tags == ["O", "O", "name0", "name0", "O", "O", "O", "city_name0", "city_name0", "O"]
 
     def test_clean_and_split_sql(self):
@@ -322,7 +416,9 @@ class Text2SqlUtilsTest(AllenNlpTestCase):
             self.FIXTURES_ROOT / "data" / "text2sql" / "restaurants-schema.csv"
         )
         # Make it easier to compare:
-        schema = {k: [(x.name, x.column_type, x.is_primary_key) for x in v] for k, v in schema.items()}
+        schema = {
+            k: [(x.name, x.column_type, x.is_primary_key) for x in v] for k, v in schema.items()
+        }
         assert schema == {
             "RESTAURANT": [
                 ("RESTAURANT_ID", "int(11)", True),

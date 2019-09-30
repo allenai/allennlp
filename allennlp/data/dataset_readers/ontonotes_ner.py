@@ -68,7 +68,8 @@ class OntonotesNamedEntityRecognition(DatasetReader):
         self._domain_identifier = domain_identifier
         if domain_identifier == "pt":
             raise ConfigurationError(
-                "The Ontonotes 5.0 dataset does not contain annotations for" " the old and new testament sections."
+                "The Ontonotes 5.0 dataset does not contain annotations for"
+                " the old and new testament sections."
             )
         self._coding_scheme = coding_scheme
 
@@ -79,9 +80,14 @@ class OntonotesNamedEntityRecognition(DatasetReader):
         ontonotes_reader = Ontonotes()
         logger.info("Reading Fine-Grained NER instances from dataset files at: %s", file_path)
         if self._domain_identifier is not None:
-            logger.info("Filtering to only include file paths containing the %s domain", self._domain_identifier)
+            logger.info(
+                "Filtering to only include file paths containing the %s domain",
+                self._domain_identifier,
+            )
 
-        for sentence in self._ontonotes_subset(ontonotes_reader, file_path, self._domain_identifier):
+        for sentence in self._ontonotes_subset(
+            ontonotes_reader, file_path, self._domain_identifier
+        ):
             tokens = [Token(_normalize_word(t)) for t in sentence.words]
             yield self.text_to_instance(tokens, sentence.named_entities)
 
@@ -95,7 +101,9 @@ class OntonotesNamedEntityRecognition(DatasetReader):
         identifier in the file path are yielded.
         """
         for conll_file in ontonotes_reader.dataset_path_iterator(file_path):
-            if (domain_identifier is None or f"/{domain_identifier}/" in conll_file) and "/pt/" not in conll_file:
+            if (
+                domain_identifier is None or f"/{domain_identifier}/" in conll_file
+            ) and "/pt/" not in conll_file:
                 yield from ontonotes_reader.sentence_iterator(conll_file)
 
     @overrides

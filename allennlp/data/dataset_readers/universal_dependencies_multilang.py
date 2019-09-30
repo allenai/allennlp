@@ -104,7 +104,9 @@ class UniversalDependenciesMultiLangDatasetReader(DatasetReader):
 
     def _read_one_file(self, lang: str, file_path: str):
         with open(file_path, "r") as conllu_file:
-            logger.info("Reading UD instances for %s language from conllu dataset at: %s", lang, file_path)
+            logger.info(
+                "Reading UD instances for %s language from conllu dataset at: %s", lang, file_path
+            )
 
             for annotation in parse_incr(conllu_file):
                 # CoNLLU annotations sometimes add back in words that have been elided
@@ -127,7 +129,9 @@ class UniversalDependenciesMultiLangDatasetReader(DatasetReader):
     def _read(self, file_path: str):
         file_paths = get_file_paths(file_path, self._languages)
         if (self._is_first_pass and self._is_first_pass_for_vocab) or (not self._alternate):
-            iterators = [iter(self._read_one_file(lang, file_path)) for (lang, file_path) in file_paths]
+            iterators = [
+                iter(self._read_one_file(lang, file_path)) for (lang, file_path) in file_paths
+            ]
             self._is_first_pass = False
             for inst in itertools.chain(*iterators):
                 yield inst
@@ -135,7 +139,8 @@ class UniversalDependenciesMultiLangDatasetReader(DatasetReader):
         else:
             if self._iterators is None:
                 self._iterators = [
-                    (lang, iter(self._read_one_file(lang, file_path))) for (lang, file_path) in file_paths
+                    (lang, iter(self._read_one_file(lang, file_path)))
+                    for (lang, file_path) in file_paths
                 ]
             num_files = len(file_paths)
             while True:

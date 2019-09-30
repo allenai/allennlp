@@ -10,7 +10,9 @@ class TestNlvrLanguage(AllenNlpTestCase):
         super().setUp()
         test_filename = self.FIXTURES_ROOT / "data" / "nlvr" / "sample_ungrouped_data.jsonl"
         data = [json.loads(line)["structured_rep"] for line in open(test_filename).readlines()]
-        box_lists = [[Box(object_reps, i) for i, object_reps in enumerate(box_rep)] for box_rep in data]
+        box_lists = [
+            [Box(object_reps, i) for i, object_reps in enumerate(box_rep)] for box_rep in data
+        ]
         self.languages = [NlvrLanguage(boxes) for boxes in box_lists]
         # y_loc increases as we go down from top to bottom, and x_loc from left to right. That is,
         # the origin is at the top-left corner.
@@ -25,7 +27,9 @@ class TestNlvrLanguage(AllenNlpTestCase):
             ],
             [{"y_loc": 60, "size": 10, "type": "triangle", "x_loc": 12, "color": "#0099ff"}],
         ]
-        self.custom_language = NlvrLanguage([Box(object_rep, i) for i, object_rep in enumerate(custom_rep)])
+        self.custom_language = NlvrLanguage(
+            [Box(object_rep, i) for i, object_rep in enumerate(custom_rep)]
+        )
 
     def test_logical_form_with_assert_executes_correctly(self):
         executor = self.languages[0]
@@ -71,7 +75,8 @@ class TestNlvrLanguage(AllenNlpTestCase):
         executor = self.languages[2]
         # Utterance is "There are at most two medium triangles not touching a wall." and label is "True".
         logical_form = (
-            "(object_count_lesser_equals ((negate_filter touch_wall) " "(medium (triangle (all_objects)))) 2)"
+            "(object_count_lesser_equals ((negate_filter touch_wall) "
+            "(medium (triangle (all_objects)))) 2)"
         )
         assert executor.execute(logical_form) is True
 
@@ -154,7 +159,8 @@ class TestNlvrLanguage(AllenNlpTestCase):
         # There is a circle in the box with objects of different shapes.
         assert (
             self.custom_language.execute(
-                "(object_shape_any_equals (object_in_box " "(member_shape_different all_boxes)) shape_circle)"
+                "(object_shape_any_equals (object_in_box "
+                "(member_shape_different all_boxes)) shape_circle)"
             )
             is True
         )
@@ -288,21 +294,27 @@ class TestNlvrLanguage(AllenNlpTestCase):
             "<Set[Object]:Set[Object]> -> touch_wall",
             "int -> 1",
         }
-        agenda = language.get_agenda_for_sentence("There is exactly one square not touching any edge")
+        agenda = language.get_agenda_for_sentence(
+            "There is exactly one square not touching any edge"
+        )
         assert set(agenda) == {
             "<Set[Object]:Set[Object]> -> square",
             "<Set[Object]:Set[Object]> -> touch_wall",
             "int -> 1",
             "<<Set[Object]:Set[Object]>:<Set[Object]:Set[Object]>> -> negate_filter",
         }
-        agenda = language.get_agenda_for_sentence("There is only 1 tower with 1 blue block at the base")
+        agenda = language.get_agenda_for_sentence(
+            "There is only 1 tower with 1 blue block at the base"
+        )
         assert set(agenda) == {
             "<Set[Object]:Set[Object]> -> blue",
             "int -> 1",
             "<Set[Object]:Set[Object]> -> bottom",
             "int -> 1",
         }
-        agenda = language.get_agenda_for_sentence("There is only 1 tower that has 1 blue block at the top")
+        agenda = language.get_agenda_for_sentence(
+            "There is only 1 tower that has 1 blue block at the top"
+        )
         assert set(agenda) == {
             "<Set[Object]:Set[Object]> -> blue",
             "int -> 1",
@@ -310,7 +322,9 @@ class TestNlvrLanguage(AllenNlpTestCase):
             "int -> 1",
             "Set[Box] -> all_boxes",
         }
-        agenda = language.get_agenda_for_sentence("There is exactly one square touching the blue " "triangle")
+        agenda = language.get_agenda_for_sentence(
+            "There is exactly one square touching the blue " "triangle"
+        )
         assert set(agenda) == {
             "<Set[Object]:Set[Object]> -> square",
             "<Set[Object]:Set[Object]> -> blue",

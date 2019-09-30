@@ -128,7 +128,9 @@ class TestNlvrDatasetReader(AllenNlpTestCase):
         }
         all_action_sequence_indices = instance.fields["target_action_sequences"].field_list
         assert len(all_action_sequence_indices) == 20
-        action_sequence_indices = [item.sequence_index for item in all_action_sequence_indices[0].field_list]
+        action_sequence_indices = [
+            item.sequence_index for item in all_action_sequence_indices[0].field_list
+        ]
         actions = [action.rule for action in instance.fields["actions"].field_list]
         action_sequence = [actions[rule_id] for rule_id in action_sequence_indices]
         assert action_sequence == [

@@ -24,5 +24,9 @@ class TestAdditiveAttention(AllenNlpTestCase):
         result = additive(vectors, matrices).detach().numpy()
         assert result.shape == (2, 4)
         assert_almost_equal(
-            result, [[1.975072, -0.04997836, 1.2176098, -0.9205586], [-1.4851665, 1.489604, -1.890285, -1.0672251]]
+            result,
+            [
+                [1.975072, -0.04997836, 1.2176098, -0.9205586],
+                [-1.4851665, 1.489604, -1.890285, -1.0672251],
+            ],
         )

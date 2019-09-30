@@ -220,7 +220,9 @@ class SpanConstituencyParser(Model):
         span_representations = self.span_extractor(encoded_text, spans, mask, span_mask)
 
         if self.feedforward_layer is not None:
-            span_representations = self.feedforward_layer(span_representations)  # pylint: disable=not-callable
+            span_representations = self.feedforward_layer(
+                span_representations
+            )  # pylint: disable=not-callable
 
         logits = self.tag_projection_layer(span_representations)
         class_probabilities = masked_softmax(logits, span_mask.unsqueeze(-1))
@@ -241,7 +243,9 @@ class SpanConstituencyParser(Model):
         # it for the validation and test sets.
         batch_gold_trees = [meta.get("gold_tree") for meta in metadata]
         if all(batch_gold_trees) and self._evalb_score is not None and not self.training:
-            gold_pos_tags: List[List[str]] = [list(zip(*tree.pos()))[1] for tree in batch_gold_trees]
+            gold_pos_tags: List[List[str]] = [
+                list(zip(*tree.pos()))[1] for tree in batch_gold_trees
+            ]
             predicted_trees = self.construct_trees(
                 class_probabilities.cpu().data,
                 spans.cpu().data,
@@ -270,11 +274,15 @@ class SpanConstituencyParser(Model):
         all_sentences = output_dict["tokens"]
         all_pos_tags = output_dict["pos_tags"] if all(output_dict["pos_tags"]) else None
         num_spans = output_dict["num_spans"].data
-        trees = self.construct_trees(all_predictions, all_spans, num_spans, all_sentences, all_pos_tags)
+        trees = self.construct_trees(
+            all_predictions, all_spans, num_spans, all_sentences, all_pos_tags
+        )
 
         batch_size = all_predictions.size(0)
         output_dict["spans"] = [all_spans[i, : num_spans[i]] for i in range(batch_size)]
-        output_dict["class_probabilities"] = [all_predictions[i, : num_spans[i], :] for i in range(batch_size)]
+        output_dict["class_probabilities"] = [
+            all_predictions[i, : num_spans[i], :] for i in range(batch_size)
+        ]
 
         output_dict["trees"] = trees
         return output_dict
@@ -323,7 +331,9 @@ class SpanConstituencyParser(Model):
             zip(predictions, exclusive_end_spans, sentences)
         ):
             selected_spans = []
-            for prediction, span in zip(scored_spans[: num_spans[batch_index]], spans[: num_spans[batch_index]]):
+            for prediction, span in zip(
+                scored_spans[: num_spans[batch_index]], spans[: num_spans[batch_index]]
+            ):
                 start, end = span
                 no_label_prob = prediction[no_label_id]
                 label_prob, label_index = torch.max(prediction, -1)
@@ -404,7 +414,10 @@ class SpanConstituencyParser(Model):
                         # was unlabled? In the first case, we delete span2 from the
                         # set of spans to form the tree - in the second case, we delete
                         # span1.
-                        if span1.no_label_prob + span2.label_prob < span2.no_label_prob + span1.label_prob:
+                        if (
+                            span1.no_label_prob + span2.label_prob
+                            < span2.no_label_prob + span1.label_prob
+                        ):
                             spans.pop(span2_index)
                         else:
                             spans.pop(span1_index)

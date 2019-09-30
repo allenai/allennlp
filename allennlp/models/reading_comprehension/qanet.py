@@ -162,8 +162,12 @@ class QaNet(Model):
         projected_embedded_question = self._encoding_proj_layer(embedded_question)
         projected_embedded_passage = self._encoding_proj_layer(embedded_passage)
 
-        encoded_question = self._dropout(self._phrase_layer(projected_embedded_question, question_mask))
-        encoded_passage = self._dropout(self._phrase_layer(projected_embedded_passage, passage_mask))
+        encoded_question = self._dropout(
+            self._phrase_layer(projected_embedded_question, question_mask)
+        )
+        encoded_passage = self._dropout(
+            self._phrase_layer(projected_embedded_passage, passage_mask)
+        )
 
         # Shape: (batch_size, passage_length, question_length)
         passage_question_similarity = self._matrix_attention(encoded_passage, encoded_question)
@@ -199,7 +203,9 @@ class QaNet(Model):
         modeled_passage_list = [self._modeling_proj_layer(merged_passage_attention_vectors)]
 
         for _ in range(3):
-            modeled_passage = self._dropout(self._modeling_layer(modeled_passage_list[-1], passage_mask))
+            modeled_passage = self._dropout(
+                self._modeling_layer(modeled_passage_list[-1], passage_mask)
+            )
             modeled_passage_list.append(modeled_passage)
 
         # Shape: (batch_size, passage_length, modeling_dim * 2))
@@ -230,9 +236,13 @@ class QaNet(Model):
 
         # Compute the loss for training.
         if span_start is not None:
-            loss = nll_loss(util.masked_log_softmax(span_start_logits, passage_mask), span_start.squeeze(-1))
+            loss = nll_loss(
+                util.masked_log_softmax(span_start_logits, passage_mask), span_start.squeeze(-1)
+            )
             self._span_start_accuracy(span_start_logits, span_start.squeeze(-1))
-            loss += nll_loss(util.masked_log_softmax(span_end_logits, passage_mask), span_end.squeeze(-1))
+            loss += nll_loss(
+                util.masked_log_softmax(span_end_logits, passage_mask), span_end.squeeze(-1)
+            )
             self._span_end_accuracy(span_end_logits, span_end.squeeze(-1))
             self._span_accuracy(best_span, torch.cat([span_start, span_end], -1))
             output_dict["loss"] = loss

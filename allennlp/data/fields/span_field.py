@@ -36,7 +36,9 @@ class SpanField(Field[torch.Tensor]):
                 f"({type(span_start)} {type(span_end)})"
             )
         if span_start > span_end:
-            raise ValueError(f"span_start must be less than span_end, " f"but found ({span_start}, {span_end}).")
+            raise ValueError(
+                f"span_start must be less than span_end, " f"but found ({span_start}, {span_end})."
+            )
 
         if span_end > self.sequence_field.sequence_length() - 1:
             raise ValueError(

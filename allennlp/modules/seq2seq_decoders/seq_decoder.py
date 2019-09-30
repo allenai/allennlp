@@ -47,7 +47,9 @@ class SeqDecoder(Module, Registrable):
         raise NotImplementedError()
 
     def forward(
-        self, encoder_out: Dict[str, torch.LongTensor], target_tokens: Optional[Dict[str, torch.LongTensor]] = None
+        self,
+        encoder_out: Dict[str, torch.LongTensor],
+        target_tokens: Optional[Dict[str, torch.LongTensor]] = None,
     ) -> Dict[str, torch.Tensor]:
         """
         Decoding from encoded states to sequence of outputs

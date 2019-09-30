@@ -8,7 +8,9 @@ from allennlp.modules.seq2seq_encoders.bidirectional_language_model_transformer 
 
 class TestBidirectionalLanguageModelTransformer(AllenNlpTestCase):
     def test_bidirectional_transformer_encoder(self):
-        transformer_encoder = BidirectionalLanguageModelTransformer(input_dim=32, hidden_dim=64, num_layers=2)
+        transformer_encoder = BidirectionalLanguageModelTransformer(
+            input_dim=32, hidden_dim=64, num_layers=2
+        )
         token_embeddings = torch.rand(5, 10, 32)
         mask = torch.ones(5, 10)
         mask[0, 7:] = 0
@@ -35,7 +37,9 @@ class TestBidirectionalLanguageModelTransformer(AllenNlpTestCase):
         assert list(concat_layers.size()) == [5, 2, 10, 64]
 
     def test_attention_masks(self):
-        transformer_encoder = BidirectionalLanguageModelTransformer(input_dim=32, hidden_dim=64, num_layers=2)
+        transformer_encoder = BidirectionalLanguageModelTransformer(
+            input_dim=32, hidden_dim=64, num_layers=2
+        )
 
         mask = torch.ones(3, 6).int()
         mask[0, 3:] = 0

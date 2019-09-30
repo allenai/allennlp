@@ -61,7 +61,8 @@ class TestMain(AllenNlpTestCase):
 
         with open(simple_tagger.__file__) as model_file:
             code = model_file.read().replace(
-                """@Model.register("simple_tagger")""", """@Model.register("duplicate-test-tagger")"""
+                """@Model.register("simple_tagger")""",
+                """@Model.register("duplicate-test-tagger")""",
             )
 
         with open(packagedir / "model.py", "w") as new_model_file:

@@ -61,4 +61,6 @@ class SpacySentenceSplitter(SentenceSplitter):
         """
         This method lets you take advantage of spacy's batch processing.
         """
-        return [[sentence.string.strip() for sentence in doc.sents] for doc in self.spacy.pipe(texts)]
+        return [
+            [sentence.string.strip() for sentence in doc.sents] for doc in self.spacy.pipe(texts)
+        ]

@@ -6,7 +6,9 @@ import os
 import json
 import argparse
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir)))))
+sys.path.insert(
+    0, os.path.dirname(os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
+)
 
 from allennlp.data.dataset_readers import NlvrDatasetReader
 from allennlp.models import NlvrCoverageSemanticParser
@@ -14,12 +16,16 @@ from allennlp.models.archival import load_archive
 from allennlp.semparse.worlds import NlvrWorld
 
 
-def make_data(input_file: str, output_file: str, archived_model_file: str, max_num_decoded_sequences: int) -> None:
+def make_data(
+    input_file: str, output_file: str, archived_model_file: str, max_num_decoded_sequences: int
+) -> None:
     reader = NlvrDatasetReader(output_agendas=True)
     model = load_archive(archived_model_file).model
     if not isinstance(model, NlvrCoverageSemanticParser):
         model_type = type(model)
-        raise RuntimeError(f"Expected an archived NlvrCoverageSemanticParser, but found {model_type} instead")
+        raise RuntimeError(
+            f"Expected an archived NlvrCoverageSemanticParser, but found {model_type} instead"
+        )
     # Tweaking the decoder trainer to coerce the it to generate a k-best list. Setting k to 100
     # here, so that we can filter out the inconsistent ones later.
     model._decoder_trainer._max_num_decoded_sequences = 100
@@ -42,7 +48,8 @@ def make_data(input_file: str, output_file: str, archived_model_file: str, max_n
             for sequence, logical_form in zip(action_strings, logical_forms):
                 denotations = [world.execute(logical_form) for world in worlds]
                 denotations_are_correct = [
-                    label.lower() == str(denotation).lower() for label, denotation in zip(labels, denotations)
+                    label.lower() == str(denotation).lower()
+                    for label, denotation in zip(labels, denotations)
                 ]
                 if all(denotations_are_correct):
                     correct_sequences.append(sequence)
@@ -67,7 +74,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("input", type=str, help="Input data file")
     parser.add_argument("output", type=str, help="Output data file")
-    parser.add_argument("archived_model", type=str, help="Path to archived model.tar.gz to use for decoding")
+    parser.add_argument(
+        "archived_model", type=str, help="Path to archived model.tar.gz to use for decoding"
+    )
     parser.add_argument(
         "--max-num-sequences",
         type=int,

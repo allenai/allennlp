@@ -17,7 +17,9 @@ from allennlp.semparse.worlds import AtisWorld
 from allennlp.semparse.contexts.atis_sql_table_context import NUMERIC_NONTERMINALS
 from allennlp.semparse.contexts.sql_context_utils import action_sequence_to_sql
 from allennlp.state_machines.states import GrammarBasedState
-from allennlp.state_machines.transition_functions.linking_transition_function import LinkingTransitionFunction
+from allennlp.state_machines.transition_functions.linking_transition_function import (
+    LinkingTransitionFunction,
+)
 from allennlp.state_machines import BeamSearch
 from allennlp.state_machines.trainers import MaximumMarginalLikelihood
 from allennlp.state_machines.states import GrammarStatelet, RnnStatelet
@@ -99,18 +101,26 @@ class AtisSemanticParser(Model):
             input_action_dim = action_embedding_dim + 1
         else:
             input_action_dim = action_embedding_dim
-        self._action_embedder = Embedding(num_embeddings=num_actions, embedding_dim=input_action_dim)
-        self._output_action_embedder = Embedding(num_embeddings=num_actions, embedding_dim=action_embedding_dim)
+        self._action_embedder = Embedding(
+            num_embeddings=num_actions, embedding_dim=input_action_dim
+        )
+        self._output_action_embedder = Embedding(
+            num_embeddings=num_actions, embedding_dim=action_embedding_dim
+        )
 
         # This is what we pass as input in the first step of decoding, when we don't have a
         # previous action, or a previous utterance attention.
         self._first_action_embedding = torch.nn.Parameter(torch.FloatTensor(action_embedding_dim))
-        self._first_attended_utterance = torch.nn.Parameter(torch.FloatTensor(encoder.get_output_dim()))
+        self._first_attended_utterance = torch.nn.Parameter(
+            torch.FloatTensor(encoder.get_output_dim())
+        )
         torch.nn.init.normal_(self._first_action_embedding)
         torch.nn.init.normal_(self._first_attended_utterance)
 
         self._num_entity_types = 2  # TODO(kevin): get this in a more principled way somehow?
-        self._entity_type_decoder_embedding = Embedding(self._num_entity_types, action_embedding_dim)
+        self._entity_type_decoder_embedding = Embedding(
+            self._num_entity_types, action_embedding_dim
+        )
         self._decoder_num_layers = decoder_num_layers
 
         self._beam_search = decoder_beam_search
@@ -199,7 +209,10 @@ class AtisSemanticParser(Model):
             # our output dictionary.
             initial_state.debug_info = [[] for _ in range(batch_size)]
             best_final_states = self._beam_search.search(
-                num_steps, initial_state, self._transition_function, keep_final_unfinished_states=False
+                num_steps,
+                initial_state,
+                self._transition_function,
+                keep_final_unfinished_states=False,
             )
             outputs["best_action_sequence"] = []
             outputs["debug_info"] = []
@@ -223,7 +236,9 @@ class AtisSemanticParser(Model):
 
                 best_action_indices = best_final_states[i][0].action_history[0]
 
-                action_strings = [action_mapping[(i, action_index)] for action_index in best_action_indices]
+                action_strings = [
+                    action_mapping[(i, action_index)] for action_index in best_action_indices
+                ]
                 predicted_sql_query = action_sequence_to_sql(action_strings)
 
                 if target_action_sequence is not None:
@@ -237,15 +252,21 @@ class AtisSemanticParser(Model):
                     self._action_similarity(similarity.ratio())
 
                 if sql_queries and sql_queries[i]:
-                    denotation_correct = self._executor.evaluate_sql_query(predicted_sql_query, sql_queries[i])
+                    denotation_correct = self._executor.evaluate_sql_query(
+                        predicted_sql_query, sql_queries[i]
+                    )
                     self._denotation_accuracy(denotation_correct)
                     outputs["sql_queries"].append(sql_queries[i])
 
                 outputs["utterance"].append(world[i].utterances[-1])
-                outputs["tokenized_utterance"].append([token.text for token in world[i].tokenized_utterances[-1]])
+                outputs["tokenized_utterance"].append(
+                    [token.text for token in world[i].tokenized_utterances[-1]]
+                )
                 outputs["entities"].append(world[i].entities)
                 outputs["best_action_sequence"].append(action_strings)
-                outputs["predicted_sql_query"].append(sqlparse.format(predicted_sql_query, reindent=True))
+                outputs["predicted_sql_query"].append(
+                    sqlparse.format(predicted_sql_query, reindent=True)
+                )
                 outputs["debug_info"].append(best_final_states[i][0].debug_info[0])  # type: ignore
             return outputs
 
@@ -355,7 +376,12 @@ class AtisSemanticParser(Model):
             types = []
             entities = [
                 ("number", entity)
-                if any([entity.startswith(numeric_nonterminal) for numeric_nonterminal in NUMERIC_NONTERMINALS])
+                if any(
+                    [
+                        entity.startswith(numeric_nonterminal)
+                        for numeric_nonterminal in NUMERIC_NONTERMINALS
+                    ]
+                )
                 else ("string", entity)
                 for entity in world.entities
             ]
@@ -467,7 +493,9 @@ class AtisSemanticParser(Model):
         for entity_index, entity in enumerate(entities):
             entity_map[entity] = entity_index
 
-        translated_valid_actions: Dict[str, Dict[str, Tuple[torch.Tensor, torch.Tensor, List[int]]]] = {}
+        translated_valid_actions: Dict[
+            str, Dict[str, Tuple[torch.Tensor, torch.Tensor, List[int]]]
+        ] = {}
         for key, action_strings in valid_actions.items():
             translated_valid_actions[key] = {}
             # `key` here is a non-terminal from the grammar, and `action_strings` are all the valid
@@ -486,7 +514,9 @@ class AtisSemanticParser(Model):
 
             if global_actions:
                 global_action_tensors, global_action_ids = zip(*global_actions)
-                global_action_tensor = torch.cat(global_action_tensors, dim=0).to(entity_types.device).long()
+                global_action_tensor = (
+                    torch.cat(global_action_tensors, dim=0).to(entity_types.device).long()
+                )
                 global_input_embeddings = self._action_embedder(global_action_tensor)
                 global_output_embeddings = self._output_action_embedder(global_action_tensor)
                 translated_valid_actions[key]["global"] = (
@@ -501,7 +531,9 @@ class AtisSemanticParser(Model):
                 entity_linking_scores = linking_scores[entity_ids]
                 entity_type_tensor = entity_types[entity_ids]
                 entity_type_embeddings = (
-                    self._entity_type_decoder_embedding(entity_type_tensor).to(entity_types.device).float()
+                    self._entity_type_decoder_embedding(entity_type_tensor)
+                    .to(entity_types.device)
+                    .float()
                 )
                 translated_valid_actions[key]["linked"] = (
                     entity_linking_scores,
@@ -525,7 +557,9 @@ class AtisSemanticParser(Model):
         best_actions = output_dict["best_action_sequence"]
         debug_infos = output_dict["debug_info"]
         batch_action_info = []
-        for batch_index, (predicted_actions, debug_info) in enumerate(zip(best_actions, debug_infos)):
+        for batch_index, (predicted_actions, debug_info) in enumerate(
+            zip(best_actions, debug_infos)
+        ):
             instance_action_info = []
             for predicted_action, action_debug_info in zip(predicted_actions, debug_info):
                 action_info = {}

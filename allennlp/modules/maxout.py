@@ -48,16 +48,24 @@ class Maxout(torch.nn.Module, FromParams):
         if not isinstance(dropout, list):
             dropout = [dropout] * num_layers  # type: ignore
         if len(output_dims) != num_layers:
-            raise ConfigurationError("len(output_dims) (%d) != num_layers (%d)" % (len(output_dims), num_layers))
+            raise ConfigurationError(
+                "len(output_dims) (%d) != num_layers (%d)" % (len(output_dims), num_layers)
+            )
         if len(pool_sizes) != num_layers:
-            raise ConfigurationError("len(pool_sizes) (%d) != num_layers (%d)" % (len(pool_sizes), num_layers))
+            raise ConfigurationError(
+                "len(pool_sizes) (%d) != num_layers (%d)" % (len(pool_sizes), num_layers)
+            )
         if len(dropout) != num_layers:
-            raise ConfigurationError("len(dropout) (%d) != num_layers (%d)" % (len(dropout), num_layers))
+            raise ConfigurationError(
+                "len(dropout) (%d) != num_layers (%d)" % (len(dropout), num_layers)
+            )
 
         self._pool_sizes = pool_sizes
         input_dims = [input_dim] + output_dims[:-1]
         linear_layers = []
-        for layer_input_dim, layer_output_dim, pool_size in zip(input_dims, output_dims, pool_sizes):
+        for layer_input_dim, layer_output_dim, pool_size in zip(
+            input_dims, output_dims, pool_sizes
+        ):
             linear_layers.append(torch.nn.Linear(layer_input_dim, layer_output_dim * pool_size))
         self._linear_layers = torch.nn.ModuleList(linear_layers)
         dropout_layers = [torch.nn.Dropout(p=value) for value in dropout]

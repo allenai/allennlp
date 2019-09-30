@@ -158,7 +158,8 @@ class TestSearchLearningRate(AllenNlpTestCase):
         )
         all_datasets = datasets_from_params(params)
         vocab = Vocabulary.from_params(
-            params.pop("vocabulary", {}), (instance for dataset in all_datasets.values() for instance in dataset)
+            params.pop("vocabulary", {}),
+            (instance for dataset in all_datasets.values() for instance in dataset),
         )
         model = Model.from_params(vocab=vocab, params=params.pop("model"))
         iterator = DataIterator.from_params(params.pop("iterator"))
@@ -186,6 +187,8 @@ class TestSearchLearningRate(AllenNlpTestCase):
         assert len(learning_rates_losses) > 1
 
     def test_search_learning_rate_without_stopping_factor(self):
-        learning_rates, losses = search_learning_rate(self.trainer, num_batches=100, stopping_factor=None)
+        learning_rates, losses = search_learning_rate(
+            self.trainer, num_batches=100, stopping_factor=None
+        )
         assert len(learning_rates) == 101
         assert len(losses) == 101

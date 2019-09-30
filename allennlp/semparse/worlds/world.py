@@ -53,12 +53,15 @@ class World:
         self.global_name_mapping = global_name_mapping or {}
         self.global_type_signatures = global_type_signatures or {}
         # We keep a reverse map as well to put the terminals back in action sequences.
-        self.reverse_name_mapping = {mapped_name: name for name, mapped_name in self.global_name_mapping.items()}
+        self.reverse_name_mapping = {
+            mapped_name: name for name, mapped_name in self.global_name_mapping.items()
+        }
         type_prefixes = constant_type_prefixes or {}
         self._num_nested_lambdas = num_nested_lambdas
         if num_nested_lambdas > 3:
             raise NotImplementedError(
-                "For ease of implementation, we currently only handle at " "most three nested lambda expressions"
+                "For ease of implementation, we currently only handle at "
+                "most three nested lambda expressions"
             )
         self._lambda_variables = set(["x", "y", "z"][:num_nested_lambdas])
         self._logic_parser = types.DynamicTypeLogicParser(
@@ -85,7 +88,11 @@ class World:
         if the given symbol is a terminal symbol.
         """
         # We special-case 'lambda' here because it behaves weirdly in action sequences.
-        return symbol in self.global_name_mapping or symbol in self.local_name_mapping or "lambda" in symbol
+        return (
+            symbol in self.global_name_mapping
+            or symbol in self.local_name_mapping
+            or "lambda" in symbol
+        )
 
     def get_valid_actions(self) -> Dict[str, List[str]]:
         if not self._valid_actions:
@@ -163,11 +170,15 @@ class World:
             for possible_action in all_actions:
                 left_side, right_side = possible_action.split(" -> ")
                 if "[" not in right_side:
-                    self._right_side_indexed_actions[right_side].append((left_side, possible_action))
+                    self._right_side_indexed_actions[right_side].append(
+                        (left_side, possible_action)
+                    )
                 else:
                     right_side_parts = right_side[1:-1].split(", ")
                     for right_side_part in right_side_parts:
-                        self._right_side_indexed_actions[right_side_part].append((left_side, possible_action))
+                        self._right_side_indexed_actions[right_side_part].append(
+                            (left_side, possible_action)
+                        )
         return self._right_side_indexed_actions
 
     def get_basic_types(self) -> Set[Type]:
@@ -268,7 +279,9 @@ class World:
         tree = Tree(remaining_actions[0][1], [])
 
         try:
-            remaining_actions = self._construct_node_from_actions(tree, remaining_actions[1:], add_var_function)
+            remaining_actions = self._construct_node_from_actions(
+                tree, remaining_actions[1:], add_var_function
+            )
         except ParsingError:
             logger.error("Error parsing action sequence: %s", action_sequence)
             raise
@@ -307,7 +320,10 @@ class World:
                 for key, values in self.get_multi_match_mapping().items()
             }
             current_label = current_node.label()
-            if current_label in multi_match_mapping and left_side in multi_match_mapping[current_label]:
+            if (
+                current_label in multi_match_mapping
+                and left_side in multi_match_mapping[current_label]
+            ):
                 mismatch = False
             if mismatch:
                 logger.error("Current node: %s", current_node)
@@ -335,7 +351,9 @@ class World:
                 right_side = f"(var {right_side})"
             if add_var_function and right_side == "var":
                 raise ParsingError("add_var_function was true, but action sequence already had var")
-            current_node.append(Tree(right_side, []))  # you add a child to an nltk.Tree with `append`
+            current_node.append(
+                Tree(right_side, [])
+            )  # you add a child to an nltk.Tree with `append`
         else:
             # The only way this can happen is if you have a unary non-terminal production rule.
             # That is almost certainly not what you want with this kind of grammar, so we'll crash.
@@ -481,7 +499,9 @@ class World:
                         # This is the initial application of a curried function.  We'll use this
                         # node in the expression to generate the action for this function, using
                         # all of its arguments.
-                        transformed_types = [function.type] + [argument.type for argument in arguments]
+                        transformed_types = [function.type] + [
+                            argument.type for argument in arguments
+                        ]
                     else:
                         # We're at an intermediate node.  We'll set `transformed_types` to `None`
                         # to indicate that we need to squelch this action.

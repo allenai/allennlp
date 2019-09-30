@@ -14,7 +14,9 @@ class TestDecomposableAttentionPredictor(AllenNlpTestCase):
             "hypothesis": "One time I didn't write any unit tests for my code.",
         }
 
-        archive = load_archive(self.FIXTURES_ROOT / "decomposable_attention" / "serialization" / "model.tar.gz")
+        archive = load_archive(
+            self.FIXTURES_ROOT / "decomposable_attention" / "serialization" / "model.tar.gz"
+        )
         predictor = Predictor.from_archive(archive, "textual-entailment")
         result = predictor.predict_json(inputs)
 
@@ -51,7 +53,9 @@ class TestDecomposableAttentionPredictor(AllenNlpTestCase):
             },
         ]
 
-        archive = load_archive(self.FIXTURES_ROOT / "decomposable_attention" / "serialization" / "model.tar.gz")
+        archive = load_archive(
+            self.FIXTURES_ROOT / "decomposable_attention" / "serialization" / "model.tar.gz"
+        )
         predictor = Predictor.from_archive(archive, "textual-entailment")
         results = predictor.predict_batch_json(batch_inputs)
         print(results)
@@ -85,7 +89,9 @@ class TestDecomposableAttentionPredictor(AllenNlpTestCase):
             "hypothesis": "One time I didn't write any unit tests for my code.",
         }
 
-        archive = load_archive(self.FIXTURES_ROOT / "decomposable_attention" / "serialization" / "model.tar.gz")
+        archive = load_archive(
+            self.FIXTURES_ROOT / "decomposable_attention" / "serialization" / "model.tar.gz"
+        )
         predictor = Predictor.from_archive(archive, "textual-entailment")
 
         instance = predictor._json_to_instance(inputs)

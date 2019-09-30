@@ -33,7 +33,9 @@ class Validate(Callback):
         The iterator to use in the evaluation.
     """
 
-    def __init__(self, validation_data: Iterable[Instance], validation_iterator: DataIterator) -> None:
+    def __init__(
+        self, validation_data: Iterable[Instance], validation_iterator: DataIterator
+    ) -> None:
         self.instances = validation_data
         self.iterator = validation_iterator
 
@@ -69,7 +71,9 @@ class Validate(Callback):
 
             raw_val_generator = self.iterator(self.instances, num_epochs=1, shuffle=False)
             val_generator = lazy_groups_of(raw_val_generator, num_gpus)
-            num_validation_batches = math.ceil(self.iterator.get_num_batches(self.instances) / num_gpus)
+            num_validation_batches = math.ceil(
+                self.iterator.get_num_batches(self.instances) / num_gpus
+            )
             val_generator_tqdm = Tqdm.tqdm(val_generator, total=num_validation_batches)
 
             batches_this_epoch = 0

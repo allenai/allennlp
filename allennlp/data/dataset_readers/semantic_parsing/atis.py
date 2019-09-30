@@ -107,7 +107,9 @@ class AtisDatasetReader(DatasetReader):
                     if not current_interaction["utterance"] or not current_interaction["sql"]:
                         continue
                     utterances.append(current_interaction["utterance"])
-                    sql_query_labels = [query for query in current_interaction["sql"].split("\n") if query]
+                    sql_query_labels = [
+                        query for query in current_interaction["sql"].split("\n") if query
+                    ]
                     instance = self.text_to_instance(deepcopy(utterances), sql_query_labels)
                     if not instance:
                         continue
@@ -129,7 +131,9 @@ class AtisDatasetReader(DatasetReader):
             The SQL queries that are given as labels during training or validation.
         """
         if self._num_turns_to_concatenate:
-            utterances[-1] = f" {END_OF_UTTERANCE_TOKEN} ".join(utterances[-self._num_turns_to_concatenate :])
+            utterances[-1] = f" {END_OF_UTTERANCE_TOKEN} ".join(
+                utterances[-self._num_turns_to_concatenate :]
+            )
 
         utterance = utterances[-1]
         action_sequence: List[str] = []
@@ -157,7 +161,9 @@ class AtisDatasetReader(DatasetReader):
         for production_rule in world.all_possible_actions():
             nonterminal, _ = production_rule.split(" ->")
             # The whitespaces are not semantically meaningful, so we filter them out.
-            production_rule = " ".join([token for token in production_rule.split(" ") if token != "ws"])
+            production_rule = " ".join(
+                [token for token in production_rule.split(" ") if token != "ws"]
+            )
             field = ProductionRuleField(production_rule, self._is_global_rule(nonterminal))
             production_rule_fields.append(field)
 

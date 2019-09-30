@@ -66,7 +66,8 @@ class MultiLabelField(Field[torch.Tensor]):
         if skip_indexing and self.labels:
             if not all(isinstance(label, int) for label in labels):
                 raise ConfigurationError(
-                    "In order to skip indexing, your labels must be integers. " "Found labels = {}".format(labels)
+                    "In order to skip indexing, your labels must be integers. "
+                    "Found labels = {}".format(labels)
                 )
             if not num_labels:
                 raise ConfigurationError("In order to skip indexing, num_labels can't be None.")
@@ -130,4 +131,6 @@ class MultiLabelField(Field[torch.Tensor]):
         return MultiLabelField([], self._label_namespace, skip_indexing=True)
 
     def __str__(self) -> str:
-        return f"MultiLabelField with labels: {self.labels} in namespace: '{self._label_namespace}'.'"
+        return (
+            f"MultiLabelField with labels: {self.labels} in namespace: '{self._label_namespace}'.'"
+        )

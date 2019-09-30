@@ -16,15 +16,35 @@ class TestQuACReader:
 
         assert instances[0].fields["question"].sequence_length() == 6
         assert instances[0].fields["yesno_list"].sequence_length() == 6
-        assert [t.text for t in instances[0].fields["question"].field_list[0].tokens[:3]] == ["What", "was", "the"]
+        assert [t.text for t in instances[0].fields["question"].field_list[0].tokens[:3]] == [
+            "What",
+            "was",
+            "the",
+        ]
 
         assert len(instances) == 2
         passage_length = len(instances[0].fields["passage"].tokens)
 
         assert [t.text for t in instances[0].fields["passage"].tokens[:3]] == ["DJ", "Kool", "Herc"]
-        assert [x.label for x in instances[0].fields["yesno_list"].field_list] == ["x", "x", "y", "x", "x", "x"]
-        assert [x.label for x in instances[0].fields["followup_list"].field_list] == ["y", "m", "m", "n", "m", "y"]
-        assert instances[0].fields["p1_answer_marker"].field_list[0].labels == ["O"] * passage_length
+        assert [x.label for x in instances[0].fields["yesno_list"].field_list] == [
+            "x",
+            "x",
+            "y",
+            "x",
+            "x",
+            "x",
+        ]
+        assert [x.label for x in instances[0].fields["followup_list"].field_list] == [
+            "y",
+            "m",
+            "m",
+            "n",
+            "m",
+            "y",
+        ]
+        assert (
+            instances[0].fields["p1_answer_marker"].field_list[0].labels == ["O"] * passage_length
+        )
 
         # Check the previous answer marking here
         prev_1_list = ["O"] * passage_length

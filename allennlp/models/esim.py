@@ -9,7 +9,12 @@ from allennlp.modules import FeedForward, InputVariationalDropout
 from allennlp.modules.matrix_attention.legacy_matrix_attention import LegacyMatrixAttention
 from allennlp.modules import Seq2SeqEncoder, SimilarityFunction, TextFieldEmbedder
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
-from allennlp.nn.util import get_text_field_mask, masked_softmax, weighted_sum, replace_masked_values
+from allennlp.nn.util import (
+    get_text_field_mask,
+    masked_softmax,
+    weighted_sum,
+    replace_masked_values,
+)
 from allennlp.training.metrics import CategoricalAccuracy
 
 
@@ -205,7 +210,9 @@ class ESIM(Model):
         v_a_max, _ = replace_masked_values(v_ai, premise_mask.unsqueeze(-1), -1e7).max(dim=1)
         v_b_max, _ = replace_masked_values(v_bi, hypothesis_mask.unsqueeze(-1), -1e7).max(dim=1)
 
-        v_a_avg = torch.sum(v_ai * premise_mask.unsqueeze(-1), dim=1) / torch.sum(premise_mask, 1, keepdim=True)
+        v_a_avg = torch.sum(v_ai * premise_mask.unsqueeze(-1), dim=1) / torch.sum(
+            premise_mask, 1, keepdim=True
+        )
         v_b_avg = torch.sum(v_bi * hypothesis_mask.unsqueeze(-1), dim=1) / torch.sum(
             hypothesis_mask, 1, keepdim=True
         )

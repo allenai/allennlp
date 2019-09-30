@@ -1,7 +1,19 @@
 """
 Tools for programmatically generating config files for AllenNLP models.
 """
-from typing import NamedTuple, Optional, Any, List, TypeVar, Generic, Type, Dict, Union, Sequence, Tuple
+from typing import (
+    NamedTuple,
+    Optional,
+    Any,
+    List,
+    TypeVar,
+    Generic,
+    Type,
+    Dict,
+    Union,
+    Sequence,
+    Tuple,
+)
 import collections
 import inspect
 import importlib
@@ -84,7 +96,10 @@ def json_annotation(cla55: Optional[type]):
         key_type, value_type = args
         return {"origin": "Dict", "args": [json_annotation(key_type), json_annotation(value_type)]}
     elif origin in (Tuple, tuple, List, list, Sequence, collections.abc.Sequence):
-        return {"origin": _remove_prefix(str(origin)), "args": [json_annotation(arg) for arg in args]}
+        return {
+            "origin": _remove_prefix(str(origin)),
+            "args": [json_annotation(arg) for arg in args],
+        }
     elif origin == Union:
         # Special special case to handle optional types:
         if len(args) == 2 and args[-1] == type(None):  # noqa
@@ -396,10 +411,16 @@ BASE_CONFIG: Config = Config(
             comment="same as dataset_reader by default",
         ),
         ConfigItem(
-            name="train_data_path", annotation=str, default_value=_NO_DEFAULT, comment="path to the training data"
+            name="train_data_path",
+            annotation=str,
+            default_value=_NO_DEFAULT,
+            comment="path to the training data",
         ),
         ConfigItem(
-            name="validation_data_path", annotation=str, default_value=None, comment="path to the validation data"
+            name="validation_data_path",
+            annotation=str,
+            default_value=None,
+            comment="path to the validation data",
         ),
         ConfigItem(
             name="test_data_path",
@@ -413,7 +434,12 @@ BASE_CONFIG: Config = Config(
             default_value=False,
             comment="whether to evaluate on the test dataset at the end of training (don't do it!)",
         ),
-        ConfigItem(name="model", annotation=Model, default_value=_NO_DEFAULT, comment="specify your model here"),
+        ConfigItem(
+            name="model",
+            annotation=Model,
+            default_value=_NO_DEFAULT,
+            comment="specify your model here",
+        ),
         ConfigItem(
             name="iterator",
             annotation=DataIterator,
@@ -432,7 +458,12 @@ BASE_CONFIG: Config = Config(
             default_value=None,
             comment="if not specified, use all datasets",
         ),
-        ConfigItem(name="vocabulary", annotation=Vocabulary, default_value=None, comment="vocabulary options"),
+        ConfigItem(
+            name="vocabulary",
+            annotation=Vocabulary,
+            default_value=None,
+            comment="vocabulary options",
+        ),
     ]
 )
 
@@ -541,7 +572,8 @@ VOCAB_CONFIG: Config = Config(
             annotation=Dict[str, List[str]],
             default_value=None,
             comment=(
-                "any tokens here will certainly be included in the keyed namespace, " "regardless of your data"
+                "any tokens here will certainly be included in the keyed namespace, "
+                "regardless of your data"
             ),
         ),
     ]

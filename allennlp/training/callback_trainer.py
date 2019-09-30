@@ -152,7 +152,9 @@ class CallbackTrainer(TrainerBase):
 
         raw_train_generator = self.iterator(self.training_data, num_epochs=1, shuffle=self.shuffle)
         self.training_batches = lazy_groups_of(raw_train_generator, num_gpus)
-        self.num_training_batches = math.ceil(self.iterator.get_num_batches(self.training_data) / num_gpus)
+        self.num_training_batches = math.ceil(
+            self.iterator.get_num_batches(self.training_data) / num_gpus
+        )
 
     def batch_loss(self, batch_group: List[TensorDict], for_training: bool) -> torch.Tensor:
         """
@@ -209,7 +211,9 @@ class CallbackTrainer(TrainerBase):
         self.optimizer.step()
 
         # Update the description with the latest metrics
-        self.train_metrics = training_util.get_metrics(self.model, self.train_loss, self.batches_this_epoch)
+        self.train_metrics = training_util.get_metrics(
+            self.model, self.train_loss, self.batches_this_epoch
+        )
 
         self.handler.fire_event(Events.BATCH_END)
 
@@ -266,7 +270,9 @@ class CallbackTrainer(TrainerBase):
             if self.epoch_number < self.num_epochs - 1:
                 training_elapsed_time = time.time() - self.training_start_time
                 estimated_time_remaining = training_elapsed_time * (
-                    (self.num_epochs - starting_epoch) / float(self.epoch_number - starting_epoch + 1) - 1
+                    (self.num_epochs - starting_epoch)
+                    / float(self.epoch_number - starting_epoch + 1)
+                    - 1
                 )
                 formatted_time = str(datetime.timedelta(seconds=int(estimated_time_remaining)))
                 logger.info("Estimated training time remaining: %s", formatted_time)
@@ -289,7 +295,9 @@ class CallbackTrainer(TrainerBase):
         cache_directory: str = None,
         cache_prefix: str = None,
     ) -> "CallbackTrainer":
-        pieces = TrainerPieces.from_params(params, serialization_dir, recover, cache_directory, cache_prefix)
+        pieces = TrainerPieces.from_params(
+            params, serialization_dir, recover, cache_directory, cache_prefix
+        )
         model = pieces.model
         params = pieces.params
         validation_iterator = pieces.validation_iterator or pieces.iterator

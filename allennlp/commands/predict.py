@@ -64,26 +64,38 @@ from allennlp.data import Instance
 
 
 class Predict(Subcommand):
-    def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
+    def add_subparser(
+        self, name: str, parser: argparse._SubParsersAction
+    ) -> argparse.ArgumentParser:
 
         description = """Run the specified model against a JSON-lines input file."""
         subparser = parser.add_parser(
             name, description=description, help="Use a trained model to make predictions."
         )
 
-        subparser.add_argument("archive_file", type=str, help="the archived model to make predictions with")
+        subparser.add_argument(
+            "archive_file", type=str, help="the archived model to make predictions with"
+        )
         subparser.add_argument("input_file", type=str, help="path to or url of the input file")
 
         subparser.add_argument("--output-file", type=str, help="path to output file")
-        subparser.add_argument("--weights-file", type=str, help="a path that overrides which weights file to use")
+        subparser.add_argument(
+            "--weights-file", type=str, help="a path that overrides which weights file to use"
+        )
 
         batch_size = subparser.add_mutually_exclusive_group(required=False)
-        batch_size.add_argument("--batch-size", type=int, default=1, help="The batch size to use for processing")
+        batch_size.add_argument(
+            "--batch-size", type=int, default=1, help="The batch size to use for processing"
+        )
 
-        subparser.add_argument("--silent", action="store_true", help="do not print output to stdout")
+        subparser.add_argument(
+            "--silent", action="store_true", help="do not print output to stdout"
+        )
 
         cuda_device = subparser.add_mutually_exclusive_group(required=False)
-        cuda_device.add_argument("--cuda-device", type=int, default=-1, help="id of GPU to use (if any)")
+        cuda_device.add_argument(
+            "--cuda-device", type=int, default=-1, help="id of GPU to use (if any)"
+        )
 
         subparser.add_argument(
             "--use-dataset-reader",
@@ -99,7 +111,8 @@ class Predict(Subcommand):
             type=str,
             choices=["train", "validation"],
             default="validation",
-            help="Indicates which model dataset reader to use if the --use-dataset-reader " "flag is set.",
+            help="Indicates which model dataset reader to use if the --use-dataset-reader "
+            "flag is set.",
         )
 
         subparser.add_argument(
@@ -110,7 +123,9 @@ class Predict(Subcommand):
             help="a JSON structure used to override the experiment configuration",
         )
 
-        subparser.add_argument("--predictor", type=str, help="optionally specify a specific predictor to use")
+        subparser.add_argument(
+            "--predictor", type=str, help="optionally specify a specific predictor to use"
+        )
 
         subparser.set_defaults(func=_predict)
 
@@ -120,10 +135,15 @@ class Predict(Subcommand):
 def _get_predictor(args: argparse.Namespace) -> Predictor:
     check_for_gpu(args.cuda_device)
     archive = load_archive(
-        args.archive_file, weights_file=args.weights_file, cuda_device=args.cuda_device, overrides=args.overrides
+        args.archive_file,
+        weights_file=args.weights_file,
+        cuda_device=args.cuda_device,
+        overrides=args.overrides,
     )
 
-    return Predictor.from_archive(archive, args.predictor, dataset_reader_to_load=args.dataset_reader_choice)
+    return Predictor.from_archive(
+        archive, args.predictor, dataset_reader_to_load=args.dataset_reader_choice
+    )
 
 
 class _PredictManager:
@@ -166,7 +186,9 @@ class _PredictManager:
         for output in results:
             yield self._predictor.dump_line(output)
 
-    def _maybe_print_to_console_and_file(self, index: int, prediction: str, model_input: str = None) -> None:
+    def _maybe_print_to_console_and_file(
+        self, index: int, prediction: str, model_input: str = None
+    ) -> None:
         if self._print_to_console:
             if model_input is not None:
                 print(f"input {index}: ", model_input)
@@ -205,7 +227,9 @@ class _PredictManager:
         else:
             for batch_json in lazy_groups_of(self._get_json_data(), self._batch_size):
                 for model_input_json, result in zip(batch_json, self._predict_json(batch_json)):
-                    self._maybe_print_to_console_and_file(index, result, json.dumps(model_input_json))
+                    self._maybe_print_to_console_and_file(
+                        index, result, json.dumps(model_input_json)
+                    )
                     index = index + 1
 
         if self._output_file is not None:
@@ -221,6 +245,11 @@ def _predict(args: argparse.Namespace) -> None:
         sys.exit(0)
 
     manager = _PredictManager(
-        predictor, args.input_file, args.output_file, args.batch_size, not args.silent, args.use_dataset_reader
+        predictor,
+        args.input_file,
+        args.output_file,
+        args.batch_size,
+        not args.silent,
+        args.use_dataset_reader,
     )
     manager.run()

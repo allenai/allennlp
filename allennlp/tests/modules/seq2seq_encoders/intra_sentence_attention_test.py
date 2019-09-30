@@ -39,7 +39,9 @@ class TestIntraSentenceAttentionEncoder(AllenNlpTestCase):
             IntraSentenceAttentionEncoder(input_dim=5, similarity_function=similarity)
         assert "Similarity function has multiple heads" in exception_info.value.message
         with pytest.raises(ConfigurationError) as exception_info:
-            IntraSentenceAttentionEncoder(input_dim=5, num_attention_heads=2, similarity_function=similarity)
+            IntraSentenceAttentionEncoder(
+                input_dim=5, num_attention_heads=2, similarity_function=similarity
+            )
         assert "Number of heads don't match" in exception_info.value.message
 
     def test_forward_works_with_simple_attention(self):

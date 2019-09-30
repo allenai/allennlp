@@ -13,11 +13,15 @@ from allennlp.data.iterators import BasicIterator
 class TestOptimizer(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
-        self.instances = SequenceTaggingDatasetReader().read(self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv")
+        self.instances = SequenceTaggingDatasetReader().read(
+            self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv"
+        )
         vocab = Vocabulary.from_instances(self.instances)
         self.model_params = Params(
             {
-                "text_field_embedder": {"token_embedders": {"tokens": {"type": "embedding", "embedding_dim": 5}}},
+                "text_field_embedder": {
+                    "token_embedders": {"tokens": {"type": "embedding", "embedding_dim": 5}}
+                },
                 "encoder": {"type": "lstm", "input_size": 5, "hidden_size": 7, "num_layers": 2},
             }
         )
@@ -85,12 +89,16 @@ class TestOptimizer(AllenNlpTestCase):
 class TestDenseSparseAdam(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
-        self.instances = SequenceTaggingDatasetReader().read(self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv")
+        self.instances = SequenceTaggingDatasetReader().read(
+            self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv"
+        )
         self.vocab = Vocabulary.from_instances(self.instances)
         self.model_params = Params(
             {
                 "text_field_embedder": {
-                    "token_embedders": {"tokens": {"type": "embedding", "embedding_dim": 5, "sparse": True}}
+                    "token_embedders": {
+                        "tokens": {"type": "embedding", "embedding_dim": 5, "sparse": True}
+                    }
                 },
                 "encoder": {"type": "lstm", "input_size": 5, "hidden_size": 7, "num_layers": 2},
             }

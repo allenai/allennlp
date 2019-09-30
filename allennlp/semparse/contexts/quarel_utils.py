@@ -45,7 +45,17 @@ LEXICAL_CUES["synonyms"] = {
 LEXICAL_CUES["values"] = {
     "friction": [],
     "speed": ["fast", "slow", "faster", "slower", "slowly", "quickly", "rapidly"],
-    "distance": ["far", "near", "further", "longer", "shorter", "long", "short", "farther", "furthest"],
+    "distance": [
+        "far",
+        "near",
+        "further",
+        "longer",
+        "shorter",
+        "long",
+        "short",
+        "farther",
+        "furthest",
+    ],
     "heat": ["hot", "hotter", "cold", "colder"],
     "smoothness": ["rough", "smooth", "rougher", "smoother", "bumpy", "slicker"],
     "acceleration": [],
@@ -113,7 +123,9 @@ def strip_entity_type(entity: str) -> str:
     return re.sub(r"^[a-z]:", "", entity)
 
 
-def str_join(string_or_list: Union[str, List[str]], joiner: str, prefixes: str = "", postfixes: str = "") -> str:
+def str_join(
+    string_or_list: Union[str, List[str]], joiner: str, prefixes: str = "", postfixes: str = ""
+) -> str:
     res = string_or_list
     if not isinstance(res, list):
         res = [res]
@@ -135,7 +147,10 @@ def get_explanation(
         output.append(
             {
                 "header": "Identified two worlds",
-                "content": [f"""world1 = {nl_world['world1']}""", f"""world2 = {nl_world['world2']}"""],
+                "content": [
+                    f"""world1 = {nl_world['world1']}""",
+                    f"""world2 = {nl_world['world2']}""",
+                ],
             }
         )
     else:
@@ -330,13 +345,17 @@ class WorldTaggerExtractor:
         self._tagger_archive = load_archive(tagger_archive)
         self._tagger = Predictor.from_archive(self._tagger_archive)
 
-    def get_world_entities(self, question: str, tokenized_question: List[Token] = None) -> Dict[str, List[str]]:
+    def get_world_entities(
+        self, question: str, tokenized_question: List[Token] = None
+    ) -> Dict[str, List[str]]:
 
         # TODO: Fix protected access
         tokenized_question = tokenized_question or self._tagger._dataset_reader._tokenizer.tokenize(
             question.lower()
         )
-        instance = self._tagger._dataset_reader.text_to_instance(question, tokenized_question=tokenized_question)
+        instance = self._tagger._dataset_reader.text_to_instance(
+            question, tokenized_question=tokenized_question
+        )
         output = self._tagger._model.forward_on_instance(instance)
         tokens_text = [t.text for t in tokenized_question]
         res = group_worlds(output["tags"], tokens_text)
@@ -353,7 +372,9 @@ def get_stem_overlaps(query: str, references: List[str], stemmer: NltkPorterStem
     return [len(query_stems.intersection(reference_stems)) for reference_stems in references_stems]
 
 
-def align_entities(extracted: List[str], literals: JsonDict, stemmer: NltkPorterStemmer) -> List[str]:
+def align_entities(
+    extracted: List[str], literals: JsonDict, stemmer: NltkPorterStemmer
+) -> List[str]:
     """
     Use stemming to attempt alignment between extracted world and given world literals.
     If more words align to one world vs the other, it's considered aligned.

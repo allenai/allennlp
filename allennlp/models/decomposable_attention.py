@@ -93,7 +93,10 @@ class DecomposableAttention(Model):
             "attend feedforward input dim",
         )
         check_dimensions_match(
-            aggregate_feedforward.get_output_dim(), self._num_labels, "final output dimension", "number of labels"
+            aggregate_feedforward.get_output_dim(),
+            self._num_labels,
+            "final output dimension",
+            "number of labels",
         )
 
         self._accuracy = CategoricalAccuracy()

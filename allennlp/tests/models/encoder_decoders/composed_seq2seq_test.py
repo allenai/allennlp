@@ -24,15 +24,21 @@ class ComposedSeq2SeqTest(ModelTestCase):
                 }
             }
         )
-        self.ensure_model_can_train_save_and_load(self.param_file, tolerance=1e-2, overrides=param_overrides)
+        self.ensure_model_can_train_save_and_load(
+            self.param_file, tolerance=1e-2, overrides=param_overrides
+        )
 
     def test_no_attention_model_can_train_save_and_load(self):
         param_overrides = json.dumps({"model": {"decoder": {"decoder_net": {"attention": None}}}})
-        self.ensure_model_can_train_save_and_load(self.param_file, tolerance=1e-2, overrides=param_overrides)
+        self.ensure_model_can_train_save_and_load(
+            self.param_file, tolerance=1e-2, overrides=param_overrides
+        )
 
     def test_greedy_model_can_train_save_and_load(self):
         param_overrides = json.dumps({"model": {"decoder": {"beam_size": 1}}})
-        self.ensure_model_can_train_save_and_load(self.param_file, tolerance=1e-2, overrides=param_overrides)
+        self.ensure_model_can_train_save_and_load(
+            self.param_file, tolerance=1e-2, overrides=param_overrides
+        )
 
     def test_decode_runs_correctly(self):
         self.model.eval()

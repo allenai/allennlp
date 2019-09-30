@@ -23,7 +23,9 @@ def text_standardize(text):
     text = text.replace("―", "-")
     text = text.replace("…", "...")
     text = text.replace("´", "'")
-    text = re.sub(r"""(-+|~+|!+|"+|;+|\?+|\++|,+|\)+|\(+|\\+|\/+|\*+|\[+|\]+|}+|{+|\|+|_+)""", r" \1 ", text)
+    text = re.sub(
+        r"""(-+|~+|!+|"+|;+|\?+|\++|,+|\)+|\(+|\\+|\/+|\*+|\[+|\]+|}+|{+|\|+|_+)""", r" \1 ", text
+    )
     text = re.sub(r"\s*\n\s*", " \n ", text)
     text = re.sub(r"[^\S\n]+", " ", text)
     return text.strip()
@@ -65,7 +67,9 @@ class OpenaiTransformerBytePairIndexer(TokenIndexer[int]):
         too_little_information = not model_path and not (encoder and byte_pairs)
 
         if too_much_information or too_little_information:
-            raise ConfigurationError("must specify either model path or (encoder + byte_pairs) but not both")
+            raise ConfigurationError(
+                "must specify either model path or (encoder + byte_pairs) but not both"
+            )
 
         if model_path:
             model_path = cached_path(model_path)
@@ -238,7 +242,10 @@ class OpenaiTransformerBytePairIndexer(TokenIndexer[int]):
 
     @overrides
     def as_padded_tensor(
-        self, tokens: Dict[str, List[int]], desired_num_tokens: Dict[str, int], padding_lengths: Dict[str, int]
+        self,
+        tokens: Dict[str, List[int]],
+        desired_num_tokens: Dict[str, int],
+        padding_lengths: Dict[str, int],
     ) -> Dict[str, torch.Tensor]:
         return {
             key: torch.LongTensor(pad_sequence_to_length(val, desired_num_tokens[key]))

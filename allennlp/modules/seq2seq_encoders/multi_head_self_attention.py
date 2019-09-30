@@ -57,12 +57,14 @@ class MultiHeadSelfAttention(Seq2SeqEncoder):
 
         if attention_dim % num_heads != 0:
             raise ValueError(
-                f"Key size ({attention_dim}) must be divisible by the number of " f"attention heads ({num_heads})."
+                f"Key size ({attention_dim}) must be divisible by the number of "
+                f"attention heads ({num_heads})."
             )
 
         if values_dim % num_heads != 0:
             raise ValueError(
-                f"Value size ({values_dim}) must be divisible by the number of " f"attention heads ({num_heads})."
+                f"Value size ({values_dim}) must be divisible by the number of "
+                f"attention heads ({num_heads})."
             )
 
         self._combined_projection = Linear(input_dim, 2 * attention_dim + values_dim)
@@ -112,26 +114,36 @@ class MultiHeadSelfAttention(Seq2SeqEncoder):
         keys = keys.contiguous()
         values = torch.cat(values, -1).contiguous()
         # Shape (num_heads * batch_size, timesteps, values_dim / num_heads)
-        values_per_head = values.view(batch_size, timesteps, num_heads, int(self._values_dim / num_heads))
+        values_per_head = values.view(
+            batch_size, timesteps, num_heads, int(self._values_dim / num_heads)
+        )
         values_per_head = values_per_head.transpose(1, 2).contiguous()
         values_per_head = values_per_head.view(
             batch_size * num_heads, timesteps, int(self._values_dim / num_heads)
         )
 
         # Shape (num_heads * batch_size, timesteps, attention_dim / num_heads)
-        queries_per_head = queries.view(batch_size, timesteps, num_heads, int(self._attention_dim / num_heads))
+        queries_per_head = queries.view(
+            batch_size, timesteps, num_heads, int(self._attention_dim / num_heads)
+        )
         queries_per_head = queries_per_head.transpose(1, 2).contiguous()
         queries_per_head = queries_per_head.view(
             batch_size * num_heads, timesteps, int(self._attention_dim / num_heads)
         )
 
         # Shape (num_heads * batch_size, timesteps, attention_dim / num_heads)
-        keys_per_head = keys.view(batch_size, timesteps, num_heads, int(self._attention_dim / num_heads))
+        keys_per_head = keys.view(
+            batch_size, timesteps, num_heads, int(self._attention_dim / num_heads)
+        )
         keys_per_head = keys_per_head.transpose(1, 2).contiguous()
-        keys_per_head = keys_per_head.view(batch_size * num_heads, timesteps, int(self._attention_dim / num_heads))
+        keys_per_head = keys_per_head.view(
+            batch_size * num_heads, timesteps, int(self._attention_dim / num_heads)
+        )
 
         # shape (num_heads * batch_size, timesteps, timesteps)
-        scaled_similarities = torch.bmm(queries_per_head / self._scale, keys_per_head.transpose(1, 2))
+        scaled_similarities = torch.bmm(
+            queries_per_head / self._scale, keys_per_head.transpose(1, 2)
+        )
 
         # shape (num_heads * batch_size, timesteps, timesteps)
         # Normalise the distributions, using the same mask for all heads.

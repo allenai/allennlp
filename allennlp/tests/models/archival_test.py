@@ -74,7 +74,9 @@ class ArchivalTest(AllenNlpTestCase):
         # Train a model
         train_model(self.params, serialization_dir=serialization_dir)
         # Use a new path.
-        archive_model(serialization_dir=serialization_dir, archive_path=serialization_dir / "new_path.tar.gz")
+        archive_model(
+            serialization_dir=serialization_dir, archive_path=serialization_dir / "new_path.tar.gz"
+        )
         archive = load_archive(serialization_dir / "new_path.tar.gz")
         assert archive
 
@@ -86,7 +88,9 @@ class ArchivalTest(AllenNlpTestCase):
         train_model(self.params, serialization_dir=serialization_dir)
 
         # Archive model, and also archive the training data
-        files_to_archive = {"train_data_path": str(self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv")}
+        files_to_archive = {
+            "train_data_path": str(self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv")
+        }
         archive_model(serialization_dir=serialization_dir, files_to_archive=files_to_archive)
 
         archive = load_archive(serialization_dir / "model.tar.gz")
@@ -101,7 +105,9 @@ class ArchivalTest(AllenNlpTestCase):
         assert os.path.exists(params.get("train_data_path"))
 
         # The validation data path should be the same though.
-        assert params.get("validation_data_path") == str(self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv")
+        assert params.get("validation_data_path") == str(
+            self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv"
+        )
 
     def test_loading_serialization_directory(self):
         # copy params, since they'll get consumed during training

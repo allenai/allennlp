@@ -41,7 +41,10 @@ class TestConfigExplorer(AllenNlpTestCase):
         )
         data = json.loads(response.get_data())
 
-        assert "allennlp.data.dataset_readers.reading_comprehension.squad.SquadReader" in data["choices"]
+        assert (
+            "allennlp.data.dataset_readers.reading_comprehension.squad.SquadReader"
+            in data["choices"]
+        )
 
     def test_subclass(self):
         response = self.client.get(
@@ -60,7 +63,9 @@ class TestConfigExplorer(AllenNlpTestCase):
         assert "config" in data
         assert "choices" not in data
 
-        response = self.client.get("/api/config/?class=allennlp.data.vocabulary.Vocabulary&get_choices=true")
+        response = self.client.get(
+            "/api/config/?class=allennlp.data.vocabulary.Vocabulary&get_choices=true"
+        )
         data = json.loads(response.get_data())
         assert "config" not in data
         assert "choices" in data
@@ -70,7 +75,9 @@ class TestConfigExplorer(AllenNlpTestCase):
         Tests that if we try to get_choices on a non-registrable class
         it just fails back to the config.
         """
-        response = self.client.get("/api/config/?class=allennlp.modules.feedforward.FeedForward&get_choices=true")
+        response = self.client.get(
+            "/api/config/?class=allennlp.modules.feedforward.FeedForward&get_choices=true"
+        )
         data = json.loads(response.get_data())
         assert "config" in data
         assert "choices" not in data
@@ -99,7 +106,9 @@ class TestConfigExplorer(AllenNlpTestCase):
         assert any(item["name"] == "batch_first" for item in items)
 
     def test_initializers(self):
-        response = self.client.get("/api/config/?class=allennlp.nn.initializers.Initializer&get_choices=true")
+        response = self.client.get(
+            "/api/config/?class=allennlp.nn.initializers.Initializer&get_choices=true"
+        )
         data = json.loads(response.get_data())
 
         assert "torch.nn.init.constant_" in data["choices"]
@@ -121,7 +130,9 @@ class TestConfigExplorer(AllenNlpTestCase):
 
         assert "allennlp.nn.regularizers.regularizers.L1Regularizer" in data["choices"]
 
-        response = self.client.get("/api/config/?class=allennlp.nn.regularizers.regularizers.L1Regularizer")
+        response = self.client.get(
+            "/api/config/?class=allennlp.nn.regularizers.regularizers.L1Regularizer"
+        )
         data = json.loads(response.get_data())
         config = data["config"]
         items = config["items"]
@@ -154,7 +165,9 @@ class TestConfigExplorer(AllenNlpTestCase):
         app = make_app()
         app.testing = True
         client = app.test_client()
-        response = client.get("/api/config/?class=allennlp.predictors.predictor.Predictor&get_choices=true")
+        response = client.get(
+            "/api/config/?class=allennlp.predictors.predictor.Predictor&get_choices=true"
+        )
         data = json.loads(response.get_data())
         assert "allennlp.predictors.bidaf.BidafPredictor" in data["choices"]
         assert "configexplorer.predictor.BidafPredictor" not in data["choices"]
@@ -163,7 +176,9 @@ class TestConfigExplorer(AllenNlpTestCase):
         app = make_app(["configexplorer"])
         app.testing = True
         client = app.test_client()
-        response = client.get("/api/config/?class=allennlp.predictors.predictor.Predictor&get_choices=true")
+        response = client.get(
+            "/api/config/?class=allennlp.predictors.predictor.Predictor&get_choices=true"
+        )
         data = json.loads(response.get_data())
         assert "allennlp.predictors.bidaf.BidafPredictor" in data["choices"]
         assert "configexplorer.predictor.BidafPredictor" in data["choices"]

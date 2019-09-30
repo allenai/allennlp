@@ -103,7 +103,8 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
             for indexed_tokens_key in self._indexer_name_to_indexed_token[indexer_name]:
                 # This is a list of dicts, one for each token in the field.
                 token_lengths = [
-                    indexer.get_padding_lengths(token) for token in self._indexed_tokens[indexed_tokens_key]
+                    indexer.get_padding_lengths(token)
+                    for token in self._indexed_tokens[indexed_tokens_key]
                 ]
                 if not token_lengths:
                     # This is a padding edge case and occurs when we want to pad a ListField of
@@ -122,7 +123,9 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
         for token_index, token_list in self._indexed_tokens.items():
             indexer_name = self._token_index_to_indexer_name[token_index]
             indexer = self._token_indexers[indexer_name]
-            padding_lengths[f"{token_index}_length"] = max(len(token_list), indexer.get_token_min_padding_length())
+            padding_lengths[f"{token_index}_length"] = max(
+                len(token_list), indexer.get_token_min_padding_length()
+            )
             num_tokens.add(len(token_list))
 
         # We don't actually use this for padding anywhere, but we used to.  We add this key back in
@@ -153,7 +156,9 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
                 for indexed_tokens_key in self._indexer_name_to_indexed_token[indexer_name]
             }
 
-            indexer_tensors = indexer.as_padded_tensor(indices_to_pad, desired_num_tokens, padding_lengths)
+            indexer_tensors = indexer.as_padded_tensor(
+                indices_to_pad, desired_num_tokens, padding_lengths
+            )
             # We use the key of the indexer to recognise what the tensor corresponds to within the
             # field (i.e. the result of word indexing, or the result of character indexing, for
             # example).
@@ -181,10 +186,14 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
         return util.batch_tensor_dicts(tensor_list)
 
     def __str__(self) -> str:
-        indexers = {name: indexer.__class__.__name__ for name, indexer in self._token_indexers.items()}
+        indexers = {
+            name: indexer.__class__.__name__ for name, indexer in self._token_indexers.items()
+        }
 
         # Double tab to indent under the header.
-        formatted_text = "".join(["\t\t" + text + "\n" for text in textwrap.wrap(repr(self.tokens), 100)])
+        formatted_text = "".join(
+            ["\t\t" + text + "\n" for text in textwrap.wrap(repr(self.tokens), 100)]
+        )
         return (
             f"TextField of length {self.sequence_length()} with "
             f"text: \n {formatted_text} \t\tand TokenIndexers : {indexers}"

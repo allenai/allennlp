@@ -1,6 +1,8 @@
 import pytest
 
-from allennlp.data.dataset_readers.semantic_parsing.grammar_based_text2sql import GrammarBasedText2SqlDatasetReader
+from allennlp.data.dataset_readers.semantic_parsing.grammar_based_text2sql import (
+    GrammarBasedText2SqlDatasetReader,
+)
 from allennlp.common.testing import AllenNlpTestCase
 
 
@@ -22,7 +24,18 @@ class TestGrammarBasedText2SqlDatasetReader(AllenNlpTestCase):
         fields = instances[0].fields
         token_field = fields["tokens"]
         tokens = [t.text for t in token_field.tokens]
-        assert tokens == ["how", "many", "buttercup", "kitchen", "are", "there", "in", "san", "francisco", "?"]
+        assert tokens == [
+            "how",
+            "many",
+            "buttercup",
+            "kitchen",
+            "are",
+            "there",
+            "in",
+            "san",
+            "francisco",
+            "?",
+        ]
 
         action_sequence = fields["action_sequence"].field_list
         indices = [x.sequence_index for x in action_sequence]

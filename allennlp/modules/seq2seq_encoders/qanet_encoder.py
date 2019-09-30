@@ -185,14 +185,22 @@ class QaNetEncoderBlock(Seq2SeqEncoder):
 
         self._use_positional_encoding = use_positional_encoding
 
-        self._conv_norm_layers = torch.nn.ModuleList([LayerNorm(hidden_dim) for _ in range(num_convs)])
+        self._conv_norm_layers = torch.nn.ModuleList(
+            [LayerNorm(hidden_dim) for _ in range(num_convs)]
+        )
         self._conv_layers = torch.nn.ModuleList()
         for _ in range(num_convs):
-            padding = torch.nn.ConstantPad1d((conv_kernel_size // 2, (conv_kernel_size - 1) // 2), 0)
-            depthwise_conv = torch.nn.Conv1d(hidden_dim, hidden_dim, conv_kernel_size, groups=hidden_dim)
+            padding = torch.nn.ConstantPad1d(
+                (conv_kernel_size // 2, (conv_kernel_size - 1) // 2), 0
+            )
+            depthwise_conv = torch.nn.Conv1d(
+                hidden_dim, hidden_dim, conv_kernel_size, groups=hidden_dim
+            )
             pointwise_conv = torch.nn.Conv1d(hidden_dim, hidden_dim, 1)
             self._conv_layers.append(
-                torch.nn.Sequential(padding, depthwise_conv, pointwise_conv, Activation.by_name("relu")())
+                torch.nn.Sequential(
+                    padding, depthwise_conv, pointwise_conv, Activation.by_name("relu")()
+                )
             )
 
         self.attention_norm_layer = LayerNorm(hidden_dim)
@@ -243,15 +251,21 @@ class QaNetEncoderBlock(Seq2SeqEncoder):
             conv_norm_out = self.dropout(conv_norm_layer(output))
             conv_out = self.dropout(conv_layer(conv_norm_out.transpose_(1, 2)).transpose_(1, 2))
             sublayer_count += 1
-            output = self.residual_with_layer_dropout(output, conv_out, sublayer_count, total_sublayers)
+            output = self.residual_with_layer_dropout(
+                output, conv_out, sublayer_count, total_sublayers
+            )
 
         attention_norm_out = self.dropout(self.attention_norm_layer(output))
         attention_out = self.dropout(self.attention_layer(attention_norm_out, mask))
         sublayer_count += 1
-        output = self.residual_with_layer_dropout(output, attention_out, sublayer_count, total_sublayers)
+        output = self.residual_with_layer_dropout(
+            output, attention_out, sublayer_count, total_sublayers
+        )
 
         feedforward_norm_out = self.dropout(self.feedforward_norm_layer(output))
         feedforward_out = self.dropout(self.feedforward(feedforward_norm_out))
         sublayer_count += 1
-        output = self.residual_with_layer_dropout(output, feedforward_out, sublayer_count, total_sublayers)
+        output = self.residual_with_layer_dropout(
+            output, feedforward_out, sublayer_count, total_sublayers
+        )
         return output

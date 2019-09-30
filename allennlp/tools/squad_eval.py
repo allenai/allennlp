@@ -65,7 +65,9 @@ def evaluate(dataset, predictions):
                     continue
                 ground_truths = list(map(lambda x: x["text"], qa["answers"]))
                 prediction = predictions[qa["id"]]
-                exact_match += metric_max_over_ground_truths(exact_match_score, prediction, ground_truths)
+                exact_match += metric_max_over_ground_truths(
+                    exact_match_score, prediction, ground_truths
+                )
                 f1 += metric_max_over_ground_truths(f1_score, prediction, ground_truths)
 
     exact_match = 100.0 * exact_match / total
@@ -84,7 +86,10 @@ if __name__ == "__main__":
         dataset_json = json.load(dataset_file)
         if dataset_json["version"] != expected_version:
             print(
-                "Evaluation expects v-" + expected_version + ", but got dataset with v-" + dataset_json["version"],
+                "Evaluation expects v-"
+                + expected_version
+                + ", but got dataset with v-"
+                + dataset_json["version"],
                 file=sys.stderr,
             )
         dataset = dataset_json["data"]

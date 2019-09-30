@@ -65,17 +65,25 @@ logger = logging.getLogger(__name__)
 
 
 class FindLearningRate(Subcommand):
-    def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
+    def add_subparser(
+        self, name: str, parser: argparse._SubParsersAction
+    ) -> argparse.ArgumentParser:
 
         description = """Find a learning rate range where loss decreases quickly
                          for the specified model and dataset."""
-        subparser = parser.add_parser(name, description=description, help="Find a learning rate range.")
+        subparser = parser.add_parser(
+            name, description=description, help="Find a learning rate range."
+        )
 
         subparser.add_argument(
             "param_path", type=str, help="path to parameter file describing the model to be trained"
         )
         subparser.add_argument(
-            "-s", "--serialization-dir", required=True, type=str, help="The directory in which to save results."
+            "-s",
+            "--serialization-dir",
+            required=True,
+            type=str,
+            help="The directory in which to save results.",
         )
         subparser.add_argument(
             "-o",
@@ -84,10 +92,17 @@ class FindLearningRate(Subcommand):
             default="",
             help="a JSON structure used to override the experiment configuration",
         )
-        subparser.add_argument("--start-lr", type=float, default=1e-5, help="learning rate to start the search")
-        subparser.add_argument("--end-lr", type=float, default=10, help="learning rate up to which search is done")
         subparser.add_argument(
-            "--num-batches", type=int, default=100, help="number of mini-batches to run learning rate finder"
+            "--start-lr", type=float, default=1e-5, help="learning rate to start the search"
+        )
+        subparser.add_argument(
+            "--end-lr", type=float, default=10, help="learning rate up to which search is done"
+        )
+        subparser.add_argument(
+            "--num-batches",
+            type=int,
+            default=100,
+            help="number of mini-batches to run learning rate finder",
         )
         subparser.add_argument(
             "--stopping-factor",
@@ -97,7 +112,9 @@ class FindLearningRate(Subcommand):
             "multiple of stopping factor",
         )
         subparser.add_argument(
-            "--linear", action="store_true", help="increase learning rate linearly instead of exponential increase"
+            "--linear",
+            action="store_true",
+            help="increase learning rate linearly instead of exponential increase",
         )
         subparser.add_argument(
             "-f",
@@ -224,7 +241,9 @@ def find_learning_rate_model(
         validation_iterator=None,
     )
 
-    logger.info(f"Starting learning rate search from {start_lr} to {end_lr} in {num_batches} iterations.")
+    logger.info(
+        f"Starting learning rate search from {start_lr} to {end_lr} in {num_batches} iterations."
+    )
     learning_rates, losses = search_learning_rate(
         trainer,
         start_lr=start_lr,
@@ -271,7 +290,9 @@ def search_learning_rate(
         Note: The losses are recorded before applying the corresponding learning rate
     """
     if num_batches <= 10:
-        raise ConfigurationError("The number of iterations for learning rate finder should be greater than 10.")
+        raise ConfigurationError(
+            "The number of iterations for learning rate finder should be greater than 10."
+        )
 
     trainer.model.train()
 

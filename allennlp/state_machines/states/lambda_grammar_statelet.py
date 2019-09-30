@@ -119,7 +119,8 @@ class LambdaGrammarStatelet:
         """
         left_side, right_side = production_rule.split(" -> ")
         assert self._nonterminal_stack[-1] == left_side, (
-            f"Tried to expand {self._nonterminal_stack[-1]}" f"but got rule {left_side} -> {right_side}"
+            f"Tried to expand {self._nonterminal_stack[-1]}"
+            f"but got rule {left_side} -> {right_side}"
         )
         assert all(self._lambda_stacks[key][-1] == left_side for key in self._lambda_stacks)
 
@@ -152,7 +153,9 @@ class LambdaGrammarStatelet:
                     lambda_stack.append(production)
 
         # If any of the lambda stacks have now become empty, we remove them from our dictionary.
-        new_lambda_stacks = {key: new_lambda_stacks[key] for key in new_lambda_stacks if new_lambda_stacks[key]}
+        new_lambda_stacks = {
+            key: new_lambda_stacks[key] for key in new_lambda_stacks if new_lambda_stacks[key]
+        }
 
         return LambdaGrammarStatelet(
             nonterminal_stack=new_stack,

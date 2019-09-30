@@ -10,7 +10,9 @@ class TestConll2000Reader:
     @pytest.mark.parametrize("coding_scheme", ("BIO", "BIOUL"))
     def test_read_from_file(self, lazy, coding_scheme):
         conll_reader = Conll2000DatasetReader(lazy=lazy, coding_scheme=coding_scheme)
-        instances = conll_reader.read(str(AllenNlpTestCase.FIXTURES_ROOT / "data" / "conll2000.txt"))
+        instances = conll_reader.read(
+            str(AllenNlpTestCase.FIXTURES_ROOT / "data" / "conll2000.txt")
+        )
         instances = ensure_list(instances)
         assert len(instances) == 2
 

@@ -9,7 +9,9 @@ from torch.nn import Parameter
 from allennlp.modules import Attention
 from allennlp.nn import Activation
 from allennlp.state_machines.states import CoverageState, ChecklistStatelet
-from allennlp.state_machines.transition_functions.basic_transition_function import BasicTransitionFunction
+from allennlp.state_machines.transition_functions.basic_transition_function import (
+    BasicTransitionFunction,
+)
 
 
 class CoverageTransitionFunction(BasicTransitionFunction):
@@ -92,7 +94,9 @@ class CoverageTransitionFunction(BasicTransitionFunction):
 
             # This is just a matrix product between a (num_actions, embedding_dim) matrix and an
             # (embedding_dim, 1) matrix.
-            action_logits = action_embeddings.mm(predicted_action_embedding.unsqueeze(-1)).squeeze(-1)
+            action_logits = action_embeddings.mm(predicted_action_embedding.unsqueeze(-1)).squeeze(
+                -1
+            )
             current_log_probs = torch.nn.functional.log_softmax(action_logits, dim=-1)
 
             # This is now the total score for each state after taking each action.  We're going to
@@ -105,7 +109,10 @@ class CoverageTransitionFunction(BasicTransitionFunction):
         return batch_results
 
     def _get_predicted_embedding_addition(
-        self, checklist_state: ChecklistStatelet, action_ids: List[int], action_embeddings: torch.Tensor
+        self,
+        checklist_state: ChecklistStatelet,
+        action_ids: List[int],
+        action_embeddings: torch.Tensor,
     ) -> torch.Tensor:
         """
         Gets the embeddings of desired terminal actions yet to be produced by the decoder, and
@@ -138,7 +145,9 @@ class CoverageTransitionFunction(BasicTransitionFunction):
 
         # Shape: (action_embedding_dim,).  This is the sum of the action embeddings that we want
         # the model to prefer.
-        embedding_addition = torch.sum(action_embeddings * actions_to_encourage.unsqueeze(1), dim=0, keepdim=False)
+        embedding_addition = torch.sum(
+            action_embeddings * actions_to_encourage.unsqueeze(1), dim=0, keepdim=False
+        )
 
         if self._add_action_bias:
             # If we're adding an action bias, the last dimension of the action embedding is a bias

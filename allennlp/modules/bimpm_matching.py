@@ -10,7 +10,12 @@ import torch.nn.functional as F
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.registrable import FromParams
-from allennlp.nn.util import get_lengths_from_binary_sequence_mask, masked_max, masked_mean, masked_softmax
+from allennlp.nn.util import (
+    get_lengths_from_binary_sequence_mask,
+    masked_max,
+    masked_mean,
+    masked_softmax,
+)
 
 
 def multi_perspective_match(
@@ -149,7 +154,12 @@ class BiMpmMatching(nn.Module, FromParams):
         self.with_attentive_match = with_attentive_match
         self.with_max_attentive_match = with_max_attentive_match
 
-        if not (with_full_match or with_maxpool_match or with_attentive_match or with_max_attentive_match):
+        if not (
+            with_full_match
+            or with_maxpool_match
+            or with_attentive_match
+            or with_max_attentive_match
+        ):
             raise ConfigurationError("At least one of the matching method should be enabled")
 
         def create_parameter():  # utility function to create and initialize a parameter
@@ -160,7 +170,9 @@ class BiMpmMatching(nn.Module, FromParams):
         def share_or_create(weights_to_share):  # utility function to create or share the weights
             return weights_to_share if share_weights_between_directions else create_parameter()
 
-        output_dim = 2  # used to calculate total output dimension, 2 is for cosine max and cosine min
+        output_dim = (
+            2
+        )  # used to calculate total output dimension, 2 is for cosine max and cosine min
         if with_full_match:
             if is_forward is None:
                 raise ConfigurationError("Must specify is_forward to enable full matching")
@@ -179,7 +191,9 @@ class BiMpmMatching(nn.Module, FromParams):
 
         if with_max_attentive_match:
             self.max_attentive_match_weights = create_parameter()
-            self.max_attentive_match_weights_reversed = share_or_create(self.max_attentive_match_weights)
+            self.max_attentive_match_weights_reversed = share_or_create(
+                self.max_attentive_match_weights
+            )
             output_dim += num_perspectives + 1
 
         self.output_dim = output_dim
@@ -188,7 +202,11 @@ class BiMpmMatching(nn.Module, FromParams):
         return self.output_dim
 
     def forward(
-        self, context_1: torch.Tensor, mask_1: torch.Tensor, context_2: torch.Tensor, mask_2: torch.Tensor
+        self,
+        context_1: torch.Tensor,
+        mask_1: torch.Tensor,
+        context_2: torch.Tensor,
+        mask_2: torch.Tensor,
     ) -> Tuple[List[torch.Tensor], List[torch.Tensor]]:
 
         """
@@ -243,8 +261,12 @@ class BiMpmMatching(nn.Module, FromParams):
         # (batch, seq_len*, 1)
         cosine_max_1 = masked_max(cosine_sim, mask_2.unsqueeze(-2), dim=2, keepdim=True)
         cosine_mean_1 = masked_mean(cosine_sim, mask_2.unsqueeze(-2), dim=2, keepdim=True)
-        cosine_max_2 = masked_max(cosine_sim.permute(0, 2, 1), mask_1.unsqueeze(-2), dim=2, keepdim=True)
-        cosine_mean_2 = masked_mean(cosine_sim.permute(0, 2, 1), mask_1.unsqueeze(-2), dim=2, keepdim=True)
+        cosine_max_2 = masked_max(
+            cosine_sim.permute(0, 2, 1), mask_1.unsqueeze(-2), dim=2, keepdim=True
+        )
+        cosine_mean_2 = masked_mean(
+            cosine_sim.permute(0, 2, 1), mask_1.unsqueeze(-2), dim=2, keepdim=True
+        )
 
         matching_vector_1.extend([cosine_max_1, cosine_mean_1])
         matching_vector_2.extend([cosine_max_2, cosine_mean_2])
@@ -270,7 +292,9 @@ class BiMpmMatching(nn.Module, FromParams):
                 context_2_last = context_2[:, 0:1, :]
 
             # (batch, seq_len*, num_perspectives)
-            matching_vector_1_full = multi_perspective_match(context_1, context_2_last, self.full_match_weights)
+            matching_vector_1_full = multi_perspective_match(
+                context_1, context_2_last, self.full_match_weights
+            )
             matching_vector_2_full = multi_perspective_match(
                 context_2, context_1_last, self.full_match_weights_reversed
             )
@@ -290,8 +314,12 @@ class BiMpmMatching(nn.Module, FromParams):
             )
 
             # (batch, seq_len*, num_perspectives)
-            matching_vector_1_max = masked_max(matching_vector_max, mask_2.unsqueeze(-2).unsqueeze(-1), dim=2)
-            matching_vector_1_mean = masked_mean(matching_vector_max, mask_2.unsqueeze(-2).unsqueeze(-1), dim=2)
+            matching_vector_1_max = masked_max(
+                matching_vector_max, mask_2.unsqueeze(-2).unsqueeze(-1), dim=2
+            )
+            matching_vector_1_mean = masked_mean(
+                matching_vector_max, mask_2.unsqueeze(-2).unsqueeze(-1), dim=2
+            )
             matching_vector_2_max = masked_max(
                 matching_vector_max.permute(0, 2, 1, 3), mask_1.unsqueeze(-2).unsqueeze(-1), dim=2
             )
@@ -338,7 +366,9 @@ class BiMpmMatching(nn.Module, FromParams):
         if self.with_max_attentive_match:
             # (batch, seq_len*, hidden_dim)
             att_max_2 = masked_max(att_2, mask_2.unsqueeze(-2).unsqueeze(-1), dim=2)
-            att_max_1 = masked_max(att_1.permute(0, 2, 1, 3), mask_1.unsqueeze(-2).unsqueeze(-1), dim=2)
+            att_max_1 = masked_max(
+                att_1.permute(0, 2, 1, 3), mask_1.unsqueeze(-2).unsqueeze(-1), dim=2
+            )
 
             # (batch, seq_len*, num_perspectives)
             matching_vector_1_att_max = multi_perspective_match(

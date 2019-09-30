@@ -8,7 +8,9 @@ from allennlp.tests.data.iterators.basic_iterator_test import IteratorTest
 
 class TestBucketIterator(IteratorTest):
     def test_create_batches_groups_correctly(self):
-        iterator = BucketIterator(batch_size=2, padding_noise=0, sorting_keys=[("text", "num_tokens")])
+        iterator = BucketIterator(
+            batch_size=2, padding_noise=0, sorting_keys=[("text", "num_tokens")]
+        )
         iterator.index_with(self.vocab)
         batches = list(iterator._create_batches(self.instances, shuffle=False))
         grouped_instances = [batch.instances for batch in batches]
@@ -24,7 +26,10 @@ class TestBucketIterator(IteratorTest):
         # and then bucket them by size into batches of size 2 to get [2, 0] -> [1].
         # Then we load the remaining instances and bucket them by size to get [4, 3].
         iterator = BucketIterator(
-            batch_size=2, padding_noise=0, sorting_keys=[("text", "num_tokens")], max_instances_in_memory=3
+            batch_size=2,
+            padding_noise=0,
+            sorting_keys=[("text", "num_tokens")],
+            max_instances_in_memory=3,
         )
         iterator.index_with(self.vocab)
         for test_instances in (self.instances, self.lazy_instances):
@@ -38,7 +43,10 @@ class TestBucketIterator(IteratorTest):
 
     def test_biggest_batch_first_works(self):
         iterator = BucketIterator(
-            batch_size=2, padding_noise=0, sorting_keys=[("text", "num_tokens")], biggest_batch_first=True
+            batch_size=2,
+            padding_noise=0,
+            sorting_keys=[("text", "num_tokens")],
+            biggest_batch_first=True,
         )
         iterator.index_with(self.vocab)
         batches = list(iterator._create_batches(self.instances, shuffle=False))
@@ -128,7 +136,10 @@ class TestBucketIterator(IteratorTest):
 
     def test_skip_smaller_batches_works(self):
         iterator = BucketIterator(
-            batch_size=2, padding_noise=0, sorting_keys=[("text", "num_tokens")], skip_smaller_batches=True
+            batch_size=2,
+            padding_noise=0,
+            sorting_keys=[("text", "num_tokens")],
+            skip_smaller_batches=True,
         )
         iterator.index_with(self.vocab)
         batches = list(iterator._create_batches(self.instances, shuffle=False))

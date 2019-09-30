@@ -26,9 +26,9 @@ class ListField(SequenceField[DataArray]):
 
     def __init__(self, field_list: List[Field]) -> None:
         field_class_set = {field.__class__ for field in field_list}
-        assert len(field_class_set) == 1, "ListFields must contain a single field type, found " + str(
-            field_class_set
-        )
+        assert (
+            len(field_class_set) == 1
+        ), "ListFields must contain a single field type, found " + str(field_class_set)
         # Not sure why mypy has a hard time with this type...
         self.field_list: List[Field] = field_list
 
@@ -60,7 +60,9 @@ class ListField(SequenceField[DataArray]):
         # We take the set of all possible padding keys for all fields, rather
         # than just a random key, because it is possible for fields to be empty
         # when we pad ListFields.
-        possible_padding_keys = [key for field_length in field_lengths for key in list(field_length.keys())]
+        possible_padding_keys = [
+            key for field_length in field_lengths for key in list(field_length.keys())
+        ]
 
         for key in set(possible_padding_keys):
             # In order to be able to nest ListFields, we need to scope the padding length keys
@@ -87,7 +89,9 @@ class ListField(SequenceField[DataArray]):
         # Here we're removing the scoping on the padding length keys that we added in
         # `get_padding_lengths`; see the note there for more detail.
         child_padding_lengths = {
-            key.replace("list_", "", 1): value for key, value in padding_lengths.items() if key.startswith("list_")
+            key.replace("list_", "", 1): value
+            for key, value in padding_lengths.items()
+            if key.startswith("list_")
         }
         padded_fields = [field.as_tensor(child_padding_lengths) for field in padded_field_list]
         return self.field_list[0].batch_tensors(padded_fields)

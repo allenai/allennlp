@@ -44,10 +44,14 @@ class TestLegacyAttention(AllenNlpTestCase):
 
         # Testing general batched case.
         vector = torch.FloatTensor([[0.3, 0.1, 0.5], [0.3, 0.1, 0.5]])
-        matrix = torch.FloatTensor([[[0.6, 0.8, 0.1], [0.15, 0.5, 0.2]], [[0.6, 0.8, 0.1], [0.15, 0.5, 0.2]]])
+        matrix = torch.FloatTensor(
+            [[[0.6, 0.8, 0.1], [0.15, 0.5, 0.2]], [[0.6, 0.8, 0.1], [0.15, 0.5, 0.2]]]
+        )
 
         result = attention(vector, matrix).data.numpy()
-        assert_almost_equal(result, numpy.array([[0.52871835, 0.47128162], [0.52871835, 0.47128162]]))
+        assert_almost_equal(
+            result, numpy.array([[0.52871835, 0.47128162], [0.52871835, 0.47128162]])
+        )
 
     def test_batched_masked(self):
         attention = LegacyAttention()
@@ -62,7 +66,9 @@ class TestLegacyAttention(AllenNlpTestCase):
         )
         mask = torch.FloatTensor([[1.0, 1.0, 0.0], [1.0, 0.0, 1.0]])
         result = attention(vector, matrix, mask).data.numpy()
-        assert_almost_equal(result, numpy.array([[0.52871835, 0.47128162, 0.0], [0.50749944, 0.0, 0.49250056]]))
+        assert_almost_equal(
+            result, numpy.array([[0.52871835, 0.47128162, 0.0], [0.50749944, 0.0, 0.49250056]])
+        )
 
         # Test the case where a mask is all 0s and an input is all 0s.
         vector = torch.FloatTensor([[0.0, 0.0, 0.0], [0.3, 0.1, 0.5]])

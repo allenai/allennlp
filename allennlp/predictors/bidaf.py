@@ -7,7 +7,14 @@ import numpy
 from allennlp.common.util import JsonDict
 from allennlp.data import Instance
 from allennlp.predictors.predictor import Predictor
-from allennlp.data.fields import IndexField, ListField, LabelField, SpanField, SequenceLabelField, SequenceField
+from allennlp.data.fields import (
+    IndexField,
+    ListField,
+    LabelField,
+    SpanField,
+    SequenceLabelField,
+    SequenceField,
+)
 
 
 @Predictor.register("machine-comprehension")
@@ -117,7 +124,9 @@ class BidafPredictor(Predictor):
                 # Convert character span indices into word span indices
                 word_span_start = None
                 word_span_end = None
-                question_offsets = new_instance["metadata"].metadata["question_token_offsets"]  # type: ignore
+                question_offsets = new_instance["metadata"].metadata[
+                    "question_token_offsets"
+                ]  # type: ignore
                 for index, offset in enumerate(question_offsets):
                     if offset[0] == span[0]:
                         word_span_start = index

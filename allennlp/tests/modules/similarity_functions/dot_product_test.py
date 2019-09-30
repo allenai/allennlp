@@ -28,4 +28,7 @@ class TestDotProductSimilarityFunction(AllenNlpTestCase):
         assert_almost_equal(result[2, 3, 1], desired_result[2, 3, 1])
 
     def test_can_construct_from_params(self):
-        assert DotProductSimilarity.from_params(Params({})).__class__.__name__ == "DotProductSimilarity"
+        assert (
+            DotProductSimilarity.from_params(Params({})).__class__.__name__
+            == "DotProductSimilarity"
+        )

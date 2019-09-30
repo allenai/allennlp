@@ -55,7 +55,8 @@ class TestEvaluate(AllenNlpTestCase):
         weights = [10, 2, 1.5]
         inputs = zip(losses, weights)
         outputs = [
-            {"loss": torch.Tensor([loss]), "batch_weight": torch.Tensor([weight])} for loss, weight in inputs
+            {"loss": torch.Tensor([loss]), "batch_weight": torch.Tensor([weight])}
+            for loss, weight in inputs
         ]
         iterator = DummyIterator(outputs)
         metrics = evaluate(DummyModel(), None, iterator, -1, "batch_weight")
@@ -93,13 +94,17 @@ class TestEvaluate(AllenNlpTestCase):
         assert computed_metrics == saved_metrics
 
     def test_evaluate_works_with_vocab_expansion(self):
-        archive_path = str(self.FIXTURES_ROOT / "decomposable_attention" / "serialization" / "model.tar.gz")
+        archive_path = str(
+            self.FIXTURES_ROOT / "decomposable_attention" / "serialization" / "model.tar.gz"
+        )
         # snli2 has a extra token ("seahorse") in it.
         evaluate_data_path = str(self.FIXTURES_ROOT / "data" / "snli2.jsonl")
         embeddings_filename = str(
             self.FIXTURES_ROOT / "data" / "seahorse_embeddings.gz"
         )  # has only seahorse vector
-        embedding_sources_mapping = json.dumps({"_text_field_embedder.token_embedder_tokens": embeddings_filename})
+        embedding_sources_mapping = json.dumps(
+            {"_text_field_embedder.token_embedder_tokens": embeddings_filename}
+        )
         kebab_args = ["evaluate", archive_path, evaluate_data_path, "--cuda-device", "-1"]
 
         # Evaluate 1 with no vocab expansion,
@@ -108,7 +113,9 @@ class TestEvaluate(AllenNlpTestCase):
         metrics_1 = evaluate_from_args(self.parser.parse_args(kebab_args))
         metrics_2 = evaluate_from_args(self.parser.parse_args(kebab_args + ["--extend-vocab"]))
         metrics_3 = evaluate_from_args(
-            self.parser.parse_args(kebab_args + ["--embedding-sources-mapping", embedding_sources_mapping])
+            self.parser.parse_args(
+                kebab_args + ["--embedding-sources-mapping", embedding_sources_mapping]
+            )
         )
         assert metrics_1 != metrics_2
         assert metrics_2 != metrics_3

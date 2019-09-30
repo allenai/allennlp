@@ -11,7 +11,8 @@ class TestAdjacencyField(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
         self.text = TextField(
-            [Token(t) for t in ["here", "is", "a", "sentence", "."]], {"words": SingleIdTokenIndexer("words")}
+            [Token(t) for t in ["here", "is", "a", "sentence", "."]],
+            {"words": SingleIdTokenIndexer("words")},
         )
 
     def test_adjacency_field_can_index_with_vocab(self):

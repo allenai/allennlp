@@ -64,7 +64,9 @@ class CnnHighwayEncoder(Seq2VecEncoder):
         # Create the convolutions
         self._convolutions: List[torch.nn.Module] = []
         for i, (width, num) in enumerate(filters):
-            conv = torch.nn.Conv1d(in_channels=embedding_dim, out_channels=num, kernel_size=width, bias=True)
+            conv = torch.nn.Conv1d(
+                in_channels=embedding_dim, out_channels=num, kernel_size=width, bias=True
+            )
             conv.weight.data.uniform_(-0.05, 0.05)
             conv.bias.data.fill_(0.0)
             self.add_module(f"char_conv_{i}", conv)  # needs to match the old ELMo name

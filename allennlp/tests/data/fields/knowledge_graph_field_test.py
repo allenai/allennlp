@@ -20,7 +20,9 @@ class KnowledgeGraphFieldTest(AllenNlpTestCase):
         self.token_indexers = {"tokens": SingleIdTokenIndexer("tokens")}
 
         table_file = self.FIXTURES_ROOT / "data" / "wikitables" / "tables" / "341.tagged"
-        self.graph = TableQuestionContext.read_from_file(table_file, self.utterance).get_table_knowledge_graph()
+        self.graph = TableQuestionContext.read_from_file(
+            table_file, self.utterance
+        ).get_table_knowledge_graph()
         self.vocab = Vocabulary()
         self.name_index = self.vocab.add_token_to_namespace("name", namespace="tokens")
         self.in_index = self.vocab.add_token_to_namespace("in", namespace="tokens")
@@ -30,7 +32,9 @@ class KnowledgeGraphFieldTest(AllenNlpTestCase):
 
         self.oov_index = self.vocab.get_token_index("random OOV string", namespace="tokens")
         self.edirne_index = self.oov_index
-        self.field = KnowledgeGraphField(self.graph, self.utterance, self.token_indexers, self.tokenizer)
+        self.field = KnowledgeGraphField(
+            self.graph, self.utterance, self.token_indexers, self.tokenizer
+        )
 
         super().setUp()
 
@@ -38,7 +42,13 @@ class KnowledgeGraphFieldTest(AllenNlpTestCase):
         namespace_token_counts = defaultdict(lambda: defaultdict(int))
         self.field.count_vocab_items(namespace_token_counts)
 
-        assert namespace_token_counts["tokens"] == {"name": 1, "in": 2, "english": 2, "location": 1, "mersin": 1}
+        assert namespace_token_counts["tokens"] == {
+            "name": 1,
+            "in": 2,
+            "english": 2,
+            "location": 1,
+            "mersin": 1,
+        }
 
     def test_index_converts_field_correctly(self):
 
@@ -65,7 +75,9 @@ class KnowledgeGraphFieldTest(AllenNlpTestCase):
             "num_entity_tokens": 3,
             "num_utterance_tokens": 4,
         }
-        self.field._token_indexers["token_characters"] = TokenCharactersIndexer(min_padding_length=1)
+        self.field._token_indexers["token_characters"] = TokenCharactersIndexer(
+            min_padding_length=1
+        )
         self.field.index(self.vocab)
         assert self.field.get_padding_lengths() == {
             "num_entities": 3,
@@ -87,7 +99,9 @@ class KnowledgeGraphFieldTest(AllenNlpTestCase):
             [self.name_index, self.in_index, self.english_index],
             [0, 0, 0],
         ]
-        assert_almost_equal(tensor_dict["text"]["tokens"].detach().cpu().numpy(), expected_text_tensor)
+        assert_almost_equal(
+            tensor_dict["text"]["tokens"].detach().cpu().numpy(), expected_text_tensor
+        )
 
         linking_tensor = tensor_dict["linking"].detach().cpu().numpy()
         expected_linking_tensor = [
@@ -164,10 +178,13 @@ class KnowledgeGraphFieldTest(AllenNlpTestCase):
             [self.name_index, self.in_index, self.english_index],
         ]
         expected_batched_tensor = [expected_single_tensor, expected_single_tensor]
-        assert_almost_equal(batched_tensor_dict["text"]["tokens"].detach().cpu().numpy(), expected_batched_tensor)
+        assert_almost_equal(
+            batched_tensor_dict["text"]["tokens"].detach().cpu().numpy(), expected_batched_tensor
+        )
         expected_linking_tensor = torch.stack([tensor_dict1["linking"], tensor_dict2["linking"]])
         assert_almost_equal(
-            batched_tensor_dict["linking"].detach().cpu().numpy(), expected_linking_tensor.detach().cpu().numpy()
+            batched_tensor_dict["linking"].detach().cpu().numpy(),
+            expected_linking_tensor.detach().cpu().numpy(),
         )
 
     def test_field_initialized_with_empty_constructor(self):

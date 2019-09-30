@@ -87,16 +87,26 @@ class TriviaQaReader(DatasetReader):
             if "web" in file_path:
                 for result in question_json["SearchResults"]:
                     filename = result["Filename"]
-                    evidence_file = base_tarball.extractfile(os.path.join("evidence", "web", filename))
-                    evidence_files.append([line.decode("utf-8") for line in evidence_file.readlines()])
+                    evidence_file = base_tarball.extractfile(
+                        os.path.join("evidence", "web", filename)
+                    )
+                    evidence_files.append(
+                        [line.decode("utf-8") for line in evidence_file.readlines()]
+                    )
             else:
                 for result in question_json["EntityPages"]:
                     filename = result["Filename"]
-                    evidence_file = base_tarball.extractfile(os.path.join("evidence", "wikipedia", filename))
-                    evidence_files.append([line.decode("utf-8") for line in evidence_file.readlines()])
+                    evidence_file = base_tarball.extractfile(
+                        os.path.join("evidence", "wikipedia", filename)
+                    )
+                    evidence_files.append(
+                        [line.decode("utf-8") for line in evidence_file.readlines()]
+                    )
 
             answer_json = question_json["Answer"]
-            human_answers = [util.normalize_text(answer) for answer in answer_json.get("HumanAnswers", [])]
+            human_answers = [
+                util.normalize_text(answer) for answer in answer_json.get("HumanAnswers", [])
+            ]
             answer_texts = answer_json["NormalizedAliases"] + human_answers
             for paragraph in self.pick_paragraphs(evidence_files, question_text, answer_texts):
                 paragraph_tokens = self._tokenizer.tokenize(paragraph)
@@ -106,7 +116,12 @@ class TriviaQaReader(DatasetReader):
                     # Maybe we can do something smarter here later, but this will do for now.
                     continue
                 instance = self.text_to_instance(
-                    question_text, paragraph, token_spans, answer_texts, question_tokens, paragraph_tokens
+                    question_text,
+                    paragraph,
+                    token_spans,
+                    answer_texts,
+                    question_tokens,
+                    paragraph_tokens,
                 )
                 yield instance
 
@@ -147,5 +162,10 @@ class TriviaQaReader(DatasetReader):
         if not passage_tokens:
             passage_tokens = self._tokenizer.tokenize(passage_text)
         return util.make_reading_comprehension_instance(
-            question_tokens, passage_tokens, self._token_indexers, passage_text, token_spans, answer_texts
+            question_tokens,
+            passage_tokens,
+            self._token_indexers,
+            passage_text,
+            token_spans,
+            answer_texts,
         )

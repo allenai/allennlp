@@ -171,7 +171,9 @@ def datasets_from_params(
     validation_and_test_dataset_reader: DatasetReader = dataset_reader
     if validation_dataset_reader_params is not None:
         logger.info("Using a separate dataset reader to load validation and test data.")
-        validation_and_test_dataset_reader = DatasetReader.from_params(validation_dataset_reader_params)
+        validation_and_test_dataset_reader = DatasetReader.from_params(
+            validation_dataset_reader_params
+        )
 
     if train_cache_dir:
         dataset_reader.cache_data(train_cache_dir)
@@ -199,7 +201,10 @@ def datasets_from_params(
 
 
 def _set_up_cache_files(
-    train_params: Params, validation_params: Params = None, cache_directory: str = None, cache_prefix: str = None
+    train_params: Params,
+    validation_params: Params = None,
+    cache_directory: str = None,
+    cache_prefix: str = None,
 ) -> Tuple[str, str]:
     if not cache_directory:
         return None, None
@@ -242,7 +247,9 @@ def _dataset_reader_param_hash(params: Params) -> str:
     return copied_params.get_hash()
 
 
-def create_serialization_dir(params: Params, serialization_dir: str, recover: bool, force: bool) -> None:
+def create_serialization_dir(
+    params: Params, serialization_dir: str, recover: bool, force: bool
+) -> None:
     """
     This function creates the serialization directory if it doesn't exist.  If it already exists
     and is non-empty, then it verifies that we're recovering from a training with an identical configuration.
@@ -320,7 +327,9 @@ def create_serialization_dir(params: Params, serialization_dir: str, recover: bo
         os.makedirs(serialization_dir, exist_ok=True)
 
 
-def data_parallel(batch_group: List[TensorDict], model: Model, cuda_devices: List) -> Dict[str, torch.Tensor]:
+def data_parallel(
+    batch_group: List[TensorDict], model: Model, cuda_devices: List
+) -> Dict[str, torch.Tensor]:
     """
     Performs a forward pass using multiple GPUs.  This is a simplification
     of torch.nn.parallel.data_parallel to support the allennlp model
@@ -328,7 +337,9 @@ def data_parallel(batch_group: List[TensorDict], model: Model, cuda_devices: Lis
     """
     assert len(batch_group) <= len(cuda_devices)
 
-    moved = [nn_util.move_to_device(batch, device) for batch, device in zip(batch_group, cuda_devices)]
+    moved = [
+        nn_util.move_to_device(batch, device) for batch, device in zip(batch_group, cuda_devices)
+    ]
 
     used_device_ids = cuda_devices[: len(moved)]
     # Counterintuitively, it appears replicate expects the source device id to be the first element
@@ -351,7 +362,9 @@ def enable_gradient_clipping(model: Model, grad_clipping: Optional[float]) -> No
         for parameter in model.parameters():
             if parameter.requires_grad:
                 parameter.register_hook(
-                    lambda grad: nn_util.clamp_tensor(grad, minimum=-grad_clipping, maximum=grad_clipping)
+                    lambda grad: nn_util.clamp_tensor(
+                        grad, minimum=-grad_clipping, maximum=grad_clipping
+                    )
                 )
 
 
@@ -365,7 +378,9 @@ def rescale_gradients(model: Model, grad_norm: Optional[float] = None) -> Option
     return None
 
 
-def get_metrics(model: Model, total_loss: float, num_batches: int, reset: bool = False) -> Dict[str, float]:
+def get_metrics(
+    model: Model, total_loss: float, num_batches: int, reset: bool = False
+) -> Dict[str, float]:
     """
     Gets the metrics but sets ``"loss"`` to
     the total loss divided by the ``num_batches`` so that
@@ -424,12 +439,17 @@ def evaluate(
                 metric_name.startswith("_") for metric_name in metrics
             ):
                 logger.warning(
-                    'Metrics with names beginning with "_" will ' "not be logged to the tqdm progress bar."
+                    'Metrics with names beginning with "_" will '
+                    "not be logged to the tqdm progress bar."
                 )
                 HasBeenWarned.tqdm_ignores_underscores = True
             description = (
                 ", ".join(
-                    ["%s: %.2f" % (name, value) for name, value in metrics.items() if not name.startswith("_")]
+                    [
+                        "%s: %.2f" % (name, value)
+                        for name, value in metrics.items()
+                        if not name.startswith("_")
+                    ]
                 )
                 + " ||"
             )
@@ -439,17 +459,29 @@ def evaluate(
         if loss_count > 0:
             # Sanity check
             if loss_count != batch_count:
-                raise RuntimeError("The model you are trying to evaluate only sometimes " + "produced a loss!")
+                raise RuntimeError(
+                    "The model you are trying to evaluate only sometimes " + "produced a loss!"
+                )
             final_metrics["loss"] = total_loss / total_weight
 
         return final_metrics
 
 
 def description_from_metrics(metrics: Dict[str, float]) -> str:
-    if not HasBeenWarned.tqdm_ignores_underscores and any(metric_name.startswith("_") for metric_name in metrics):
-        logger.warning('Metrics with names beginning with "_" will ' "not be logged to the tqdm progress bar.")
+    if not HasBeenWarned.tqdm_ignores_underscores and any(
+        metric_name.startswith("_") for metric_name in metrics
+    ):
+        logger.warning(
+            'Metrics with names beginning with "_" will ' "not be logged to the tqdm progress bar."
+        )
         HasBeenWarned.tqdm_ignores_underscores = True
     return (
-        ", ".join(["%s: %.4f" % (name, value) for name, value in metrics.items() if not name.startswith("_")])
+        ", ".join(
+            [
+                "%s: %.4f" % (name, value)
+                for name, value in metrics.items()
+                if not name.startswith("_")
+            ]
+        )
         + " ||"
     )

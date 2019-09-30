@@ -36,7 +36,9 @@ logger = logging.getLogger(__name__)
 
 
 class PrintResults(Subcommand):
-    def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
+    def add_subparser(
+        self, name: str, parser: argparse._SubParsersAction
+    ) -> argparse.ArgumentParser:
 
         description = """Print results from allennlp training runs in a helpful CSV format."""
         subparser = parser.add_parser(
@@ -45,7 +47,9 @@ class PrintResults(Subcommand):
             help="Print results from allennlp serialization directories to the console.",
         )
         subparser.add_argument(
-            "path", type=str, help="Path to recursively search for allennlp serialization directories."
+            "path",
+            type=str,
+            help="Path to recursively search for allennlp serialization directories.",
         )
 
         subparser.add_argument(
@@ -53,7 +57,8 @@ class PrintResults(Subcommand):
             "--keys",
             type=str,
             nargs="+",
-            help="Keys to print from metrics.json." 'Keys not present in all metrics.json will result in "N/A"',
+            help="Keys to print from metrics.json."
+            'Keys not present in all metrics.json will result in "N/A"',
             default=None,
             required=False,
         )

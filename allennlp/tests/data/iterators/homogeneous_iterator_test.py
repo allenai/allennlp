@@ -23,7 +23,9 @@ class TestHomogeneousBatchIterator(AllenNlpTestCase):
         instances = list(reader.read(file_path))
         vocab = Vocabulary.from_instances(instances)
 
-        actual_instance_type_counts = Counter(instance.fields["dataset"].metadata for instance in instances)
+        actual_instance_type_counts = Counter(
+            instance.fields["dataset"].metadata for instance in instances
+        )
 
         iterator = HomogeneousBatchIterator(batch_size=3)
         iterator.index_with(vocab)

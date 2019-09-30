@@ -34,7 +34,9 @@ logger = logging.getLogger(__name__)
 
 
 class TestInstall(Subcommand):
-    def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
+    def add_subparser(
+        self, name: str, parser: argparse._SubParsersAction
+    ) -> argparse.ArgumentParser:
 
         description = """Test that installation works by running the unit tests."""
         subparser = parser.add_parser(name, description=description, help="Run the unit tests.")
@@ -45,7 +47,9 @@ class TestInstall(Subcommand):
             help="By default, we skip tests that are slow "
             "or download large files. This flag will run all tests.",
         )
-        subparser.add_argument("-k", type=str, default=None, help="Limit tests by setting pytest -k argument")
+        subparser.add_argument(
+            "-k", type=str, default=None, help="Limit tests by setting pytest -k argument"
+        )
 
         subparser.set_defaults(func=_run_test)
 

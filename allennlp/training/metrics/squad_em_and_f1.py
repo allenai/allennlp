@@ -30,7 +30,9 @@ class SquadEmAndF1(Metric):
         exact_match = squad_eval.metric_max_over_ground_truths(
             squad_eval.exact_match_score, best_span_string, answer_strings
         )
-        f1_score = squad_eval.metric_max_over_ground_truths(squad_eval.f1_score, best_span_string, answer_strings)
+        f1_score = squad_eval.metric_max_over_ground_truths(
+            squad_eval.f1_score, best_span_string, answer_strings
+        )
         self._total_em += exact_match
         self._total_f1 += f1_score
         self._count += 1

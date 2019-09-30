@@ -8,7 +8,10 @@ from parsimonious.exceptions import ParseError
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.semparse.contexts.sql_context_utils import SqlVisitor
-from allennlp.semparse.contexts.sql_context_utils import format_grammar_string, initialize_valid_actions
+from allennlp.semparse.contexts.sql_context_utils import (
+    format_grammar_string,
+    initialize_valid_actions,
+)
 from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import read_dataset_schema
 from allennlp.semparse.contexts.text2sql_table_context import GRAMMAR_DICTIONARY
 from allennlp.semparse.contexts.text2sql_table_context import update_grammar_with_table_values
@@ -17,7 +20,9 @@ from allennlp.semparse.contexts.text2sql_table_context import update_grammar_wit
 from allennlp.semparse.contexts.text2sql_table_context import update_grammar_to_be_variable_free
 from allennlp.semparse.contexts.text2sql_table_context import update_grammar_with_untyped_entities
 from allennlp.semparse.contexts.text2sql_table_context import update_grammar_values_with_variables
-from allennlp.semparse.contexts.text2sql_table_context import update_grammar_numbers_and_strings_with_variables
+from allennlp.semparse.contexts.text2sql_table_context import (
+    update_grammar_numbers_and_strings_with_variables,
+)
 
 
 class Text2SqlWorld:
@@ -63,7 +68,9 @@ class Text2SqlWorld:
         self.use_untyped_entities = use_untyped_entities
 
         # NOTE: This base dictionary should not be modified.
-        self.base_grammar_dictionary = self._initialize_grammar_dictionary(deepcopy(GRAMMAR_DICTIONARY))
+        self.base_grammar_dictionary = self._initialize_grammar_dictionary(
+            deepcopy(GRAMMAR_DICTIONARY)
+        )
 
     def get_action_sequence_and_all_actions(
         self, query: List[str] = None, prelinked_entities: Dict[str, Dict[str, str]] = None
@@ -100,7 +107,9 @@ class Text2SqlWorld:
 
         return action_sequence, sorted_actions
 
-    def _initialize_grammar_dictionary(self, grammar_dictionary: Dict[str, List[str]]) -> Dict[str, List[str]]:
+    def _initialize_grammar_dictionary(
+        self, grammar_dictionary: Dict[str, List[str]]
+    ) -> Dict[str, List[str]]:
         # Add all the table and column names to the grammar.
         update_grammar_with_tables(grammar_dictionary, self.schema)
 

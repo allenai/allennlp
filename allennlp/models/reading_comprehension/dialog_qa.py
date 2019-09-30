@@ -75,8 +75,12 @@ class DialogQA(Model):
         self._marker_embedding_dim = marker_embedding_dim
         self._encoding_dim = phrase_layer.get_output_dim()
 
-        self._matrix_attention = LinearMatrixAttention(self._encoding_dim, self._encoding_dim, "x,y,x*y")
-        self._merge_atten = TimeDistributed(torch.nn.Linear(self._encoding_dim * 4, self._encoding_dim))
+        self._matrix_attention = LinearMatrixAttention(
+            self._encoding_dim, self._encoding_dim, "x,y,x*y"
+        )
+        self._merge_atten = TimeDistributed(
+            torch.nn.Linear(self._encoding_dim * 4, self._encoding_dim)
+        )
 
         self._residual_encoder = residual_encoder
 
@@ -84,12 +88,18 @@ class DialogQA(Model):
             self._question_num_marker = torch.nn.Embedding(
                 max_turn_length, marker_embedding_dim * num_context_answers
             )
-            self._prev_ans_marker = torch.nn.Embedding((num_context_answers * 4) + 1, marker_embedding_dim)
+            self._prev_ans_marker = torch.nn.Embedding(
+                (num_context_answers * 4) + 1, marker_embedding_dim
+            )
 
-        self._self_attention = LinearMatrixAttention(self._encoding_dim, self._encoding_dim, "x,y,x*y")
+        self._self_attention = LinearMatrixAttention(
+            self._encoding_dim, self._encoding_dim, "x,y,x*y"
+        )
 
         self._followup_lin = torch.nn.Linear(self._encoding_dim, 3)
-        self._merge_self_attention = TimeDistributed(torch.nn.Linear(self._encoding_dim * 3, self._encoding_dim))
+        self._merge_self_attention = TimeDistributed(
+            torch.nn.Linear(self._encoding_dim * 3, self._encoding_dim)
+        )
 
         self._span_start_encoder = span_start_encoder
         self._span_end_encoder = span_end_encoder
@@ -217,7 +227,9 @@ class DialogQA(Model):
 
         if self._num_context_answers > 0:
             # Encode question turn number inside the dialog into question embedding.
-            question_num_ind = util.get_range_vector(max_qa_count, util.get_device_of(embedded_question))
+            question_num_ind = util.get_range_vector(
+                max_qa_count, util.get_device_of(embedded_question)
+            )
             question_num_ind = question_num_ind.unsqueeze(-1).repeat(1, max_q_len)
             question_num_ind = question_num_ind.unsqueeze(0).repeat(batch_size, 1, 1)
             question_num_ind = question_num_ind.reshape(total_qa_count, max_q_len)
@@ -233,11 +245,15 @@ class DialogQA(Model):
             # batch_size * max_qa_count, passage_length, word_embed_dim
             p1_answer_marker = p1_answer_marker.view(total_qa_count, passage_length)
             p1_answer_marker_emb = self._prev_ans_marker(p1_answer_marker)
-            repeated_embedded_passage = torch.cat([repeated_embedded_passage, p1_answer_marker_emb], dim=-1)
+            repeated_embedded_passage = torch.cat(
+                [repeated_embedded_passage, p1_answer_marker_emb], dim=-1
+            )
             if self._num_context_answers > 1:
                 p2_answer_marker = p2_answer_marker.view(total_qa_count, passage_length)
                 p2_answer_marker_emb = self._prev_ans_marker(p2_answer_marker)
-                repeated_embedded_passage = torch.cat([repeated_embedded_passage, p2_answer_marker_emb], dim=-1)
+                repeated_embedded_passage = torch.cat(
+                    [repeated_embedded_passage, p2_answer_marker_emb], dim=-1
+                )
                 if self._num_context_answers > 2:
                     p3_answer_marker = p3_answer_marker.view(total_qa_count, passage_length)
                     p3_answer_marker_emb = self._prev_ans_marker(p3_answer_marker)
@@ -249,16 +265,22 @@ class DialogQA(Model):
                 self._phrase_layer(repeated_embedded_passage, repeated_passage_mask)
             )
         else:
-            encoded_passage = self._variational_dropout(self._phrase_layer(embedded_passage, passage_mask))
+            encoded_passage = self._variational_dropout(
+                self._phrase_layer(embedded_passage, passage_mask)
+            )
             repeated_encoded_passage = encoded_passage.unsqueeze(1).repeat(1, max_qa_count, 1, 1)
             repeated_encoded_passage = repeated_encoded_passage.view(
                 total_qa_count, passage_length, self._encoding_dim
             )
 
-        encoded_question = self._variational_dropout(self._phrase_layer(embedded_question, question_mask))
+        encoded_question = self._variational_dropout(
+            self._phrase_layer(embedded_question, question_mask)
+        )
 
         # Shape: (batch_size * max_qa_count, passage_length, question_length)
-        passage_question_similarity = self._matrix_attention(repeated_encoded_passage, encoded_question)
+        passage_question_similarity = self._matrix_attention(
+            repeated_encoded_passage, encoded_question
+        )
         # Shape: (batch_size * max_qa_count, passage_length, question_length)
         passage_question_attention = util.masked_softmax(passage_question_similarity, question_mask)
         # Shape: (batch_size * max_qa_count, passage_length, encoding_dim)
@@ -271,9 +293,13 @@ class DialogQA(Model):
         )
 
         question_passage_similarity = masked_similarity.max(dim=-1)[0].squeeze(-1)
-        question_passage_attention = util.masked_softmax(question_passage_similarity, repeated_passage_mask)
+        question_passage_attention = util.masked_softmax(
+            question_passage_similarity, repeated_passage_mask
+        )
         # Shape: (batch_size * max_qa_count, encoding_dim)
-        question_passage_vector = util.weighted_sum(repeated_encoded_passage, question_passage_attention)
+        question_passage_vector = util.weighted_sum(
+            repeated_encoded_passage, question_passage_attention
+        )
         tiled_question_passage_vector = question_passage_vector.unsqueeze(1).expand(
             total_qa_count, passage_length, self._encoding_dim
         )
@@ -296,9 +322,9 @@ class DialogQA(Model):
         )
         self_attention_matrix = self._self_attention(residual_layer, residual_layer)
 
-        mask = repeated_passage_mask.reshape(total_qa_count, passage_length, 1) * repeated_passage_mask.reshape(
-            total_qa_count, 1, passage_length
-        )
+        mask = repeated_passage_mask.reshape(
+            total_qa_count, passage_length, 1
+        ) * repeated_passage_mask.reshape(total_qa_count, 1, passage_length)
         self_mask = torch.eye(passage_length, passage_length, device=self_attention_matrix.device)
         self_mask = self_mask.reshape(1, passage_length, passage_length)
         mask = mask * (1 - self_mask)
@@ -326,12 +352,18 @@ class DialogQA(Model):
         span_yesno_logits = self._span_yesno_predictor(end_rep).squeeze(-1)
         span_followup_logits = self._span_followup_predictor(end_rep).squeeze(-1)
 
-        span_start_logits = util.replace_masked_values(span_start_logits, repeated_passage_mask, -1e7)
+        span_start_logits = util.replace_masked_values(
+            span_start_logits, repeated_passage_mask, -1e7
+        )
         # batch_size * maxqa_len_pair, max_document_len
         span_end_logits = util.replace_masked_values(span_end_logits, repeated_passage_mask, -1e7)
 
         best_span = self._get_best_span_yesno_followup(
-            span_start_logits, span_end_logits, span_yesno_logits, span_followup_logits, self._max_span_length
+            span_start_logits,
+            span_end_logits,
+            span_yesno_logits,
+            span_followup_logits,
+            self._max_span_length,
         )
 
         output_dict: Dict[str, Any] = {}
@@ -345,7 +377,9 @@ class DialogQA(Model):
             )
             self._span_start_accuracy(span_start_logits, span_start.view(-1), mask=qa_mask)
             loss += nll_loss(
-                util.masked_log_softmax(span_end_logits, repeated_passage_mask), span_end.view(-1), ignore_index=-1
+                util.masked_log_softmax(span_end_logits, repeated_passage_mask),
+                span_end.view(-1),
+                ignore_index=-1,
             )
             self._span_end_accuracy(span_end_logits, span_end.view(-1), mask=qa_mask)
             self._span_accuracy(
@@ -372,7 +406,9 @@ class DialogQA(Model):
             _yesno = span_yesno_logits.view(-1).index_select(0, gold_span_end_loc).view(-1, 3)
             _followup = span_followup_logits.view(-1).index_select(0, gold_span_end_loc).view(-1, 3)
             loss += nll_loss(F.log_softmax(_yesno, dim=-1), yesno_list.view(-1), ignore_index=-1)
-            loss += nll_loss(F.log_softmax(_followup, dim=-1), followup_list.view(-1), ignore_index=-1)
+            loss += nll_loss(
+                F.log_softmax(_followup, dim=-1), followup_list.view(-1), ignore_index=-1
+            )
 
             _yesno = span_yesno_logits.view(-1).index_select(0, predicted_end).view(-1, 3)
             _followup = span_followup_logits.view(-1).index_select(0, predicted_end).view(-1, 3)

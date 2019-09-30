@@ -8,7 +8,8 @@ class TestESIM(ModelTestCase):
     def setUp(self):
         super().setUp()
         self.set_up_model(
-            self.FIXTURES_ROOT / "esim" / "experiment.json", self.FIXTURES_ROOT / "data" / "snli.jsonl"
+            self.FIXTURES_ROOT / "esim" / "experiment.json",
+            self.FIXTURES_ROOT / "data" / "snli.jsonl",
         )
 
     def test_forward_pass_runs_correctly(self):

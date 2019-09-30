@@ -7,7 +7,8 @@ class CorefTest(ModelTestCase):
     def setUp(self):
         super().setUp()
         self.set_up_model(
-            self.FIXTURES_ROOT / "coref" / "experiment.json", self.FIXTURES_ROOT / "coref" / "coref.gold_conll"
+            self.FIXTURES_ROOT / "coref" / "experiment.json",
+            self.FIXTURES_ROOT / "coref" / "coref.gold_conll",
         )
 
     def test_coref_model_can_train_save_and_load(self):

@@ -36,7 +36,9 @@ class LstmCellDecoderNet(DecoderNet):
     ) -> None:
 
         super().__init__(
-            decoding_dim=decoding_dim, target_embedding_dim=target_embedding_dim, decodes_parallel=False
+            decoding_dim=decoding_dim,
+            target_embedding_dim=target_embedding_dim,
+            decodes_parallel=False,
         )
 
         # In this particular type of decoder output of previous step passes directly to the input of current step
@@ -77,7 +79,9 @@ class LstmCellDecoderNet(DecoderNet):
 
         return attended_input
 
-    def init_decoder_state(self, encoder_out: Dict[str, torch.LongTensor]) -> Dict[str, torch.Tensor]:
+    def init_decoder_state(
+        self, encoder_out: Dict[str, torch.LongTensor]
+    ) -> Dict[str, torch.Tensor]:
 
         batch_size, _ = encoder_out["source_mask"].size()
 
@@ -85,7 +89,9 @@ class LstmCellDecoderNet(DecoderNet):
         # and the decoder context with zeros.
         # shape: (batch_size, encoder_output_dim)
         final_encoder_output = util.get_final_encoder_states(
-            encoder_out["encoder_outputs"], encoder_out["source_mask"], bidirectional=self._bidirectional_input
+            encoder_out["encoder_outputs"],
+            encoder_out["source_mask"],
+            bidirectional=self._bidirectional_input,
         )
 
         return {
@@ -112,7 +118,9 @@ class LstmCellDecoderNet(DecoderNet):
 
         if self._attention:
             # shape: (group_size, encoder_output_dim)
-            attended_input = self._prepare_attended_input(decoder_hidden, encoder_outputs, source_mask)
+            attended_input = self._prepare_attended_input(
+                decoder_hidden, encoder_outputs, source_mask
+            )
 
             # shape: (group_size, decoder_output_dim + target_embedding_dim)
             decoder_input = torch.cat((attended_input, last_predictions_embedding), -1)
@@ -122,6 +130,11 @@ class LstmCellDecoderNet(DecoderNet):
 
         # shape (decoder_hidden): (batch_size, decoder_output_dim)
         # shape (decoder_context): (batch_size, decoder_output_dim)
-        decoder_hidden, decoder_context = self._decoder_cell(decoder_input, (decoder_hidden, decoder_context))
+        decoder_hidden, decoder_context = self._decoder_cell(
+            decoder_input, (decoder_hidden, decoder_context)
+        )
 
-        return {"decoder_hidden": decoder_hidden, "decoder_context": decoder_context}, decoder_hidden
+        return (
+            {"decoder_hidden": decoder_hidden, "decoder_context": decoder_context},
+            decoder_hidden,
+        )

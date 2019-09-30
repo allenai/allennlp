@@ -7,7 +7,9 @@ from allennlp.common.testing import AllenNlpTestCase
 class TestOntonotes(AllenNlpTestCase):
     def test_dataset_iterator(self):
         reader = Ontonotes()
-        annotated_sentences = list(reader.dataset_iterator(self.FIXTURES_ROOT / "conll_2012" / "subdomain"))
+        annotated_sentences = list(
+            reader.dataset_iterator(self.FIXTURES_ROOT / "conll_2012" / "subdomain")
+        )
         annotation = annotated_sentences[0]
         assert annotation.document_id == "test/test/01/test_001"
         assert annotation.sentence_id == 0
@@ -24,7 +26,19 @@ class TestOntonotes(AllenNlpTestCase):
             "forced",
             ".",
         ]
-        assert annotation.pos_tags == ["NNP", "NN", "NNS", "VBP", "DT", "NN", "POS", "NN", "VBD", "JJ", "."]
+        assert annotation.pos_tags == [
+            "NNP",
+            "NN",
+            "NNS",
+            "VBP",
+            "DT",
+            "NN",
+            "POS",
+            "NN",
+            "VBD",
+            "JJ",
+            ".",
+        ]
         assert annotation.word_senses == [None, None, 1, 1, None, 2, None, None, 1, None, None]
         assert annotation.predicate_framenet_ids == [
             None,
@@ -56,9 +70,24 @@ class TestOntonotes(AllenNlpTestCase):
                     "O",
                 ],
             ),
-            ("was", ["O", "O", "O", "O", "B-ARG1", "I-ARG1", "I-ARG1", "I-ARG1", "B-V", "B-ARG2", "O"]),
+            (
+                "was",
+                ["O", "O", "O", "O", "B-ARG1", "I-ARG1", "I-ARG1", "I-ARG1", "B-V", "B-ARG2", "O"],
+            ),
         ]
-        assert annotation.named_entities == ["B-GPE", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O"]
+        assert annotation.named_entities == [
+            "B-GPE",
+            "O",
+            "O",
+            "O",
+            "O",
+            "O",
+            "O",
+            "O",
+            "O",
+            "O",
+            "O",
+        ]
         assert annotation.predicate_lemmas == [
             None,
             None,
@@ -72,7 +101,19 @@ class TestOntonotes(AllenNlpTestCase):
             None,
             None,
         ]
-        assert annotation.speakers == [None, None, None, None, None, None, None, None, None, None, None]
+        assert annotation.speakers == [
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        ]
 
         assert annotation.parse_tree == Tree.fromstring(
             "(TOP(S(NP(NML (NNP Mali)  (NN government) )"
@@ -116,7 +157,21 @@ class TestOntonotes(AllenNlpTestCase):
             "NNS",
             ".",
         ]
-        assert annotation.word_senses == [None, 2, 5, None, 2, None, None, None, None, 1, None, 1, None]
+        assert annotation.word_senses == [
+            None,
+            2,
+            5,
+            None,
+            2,
+            None,
+            None,
+            None,
+            None,
+            1,
+            None,
+            1,
+            None,
+        ]
         assert annotation.predicate_framenet_ids == [
             None,
             None,
@@ -216,11 +271,19 @@ class TestOntonotes(AllenNlpTestCase):
         assert annotation.word_senses == [None, None, None, None, None]
         assert annotation.predicate_framenet_ids == [None, None, None, None, None]
         assert annotation.srl_frames == []
-        assert annotation.named_entities == ["B-PERSON", "I-PERSON", "B-WORK_OF_ART", "I-WORK_OF_ART", "O"]
+        assert annotation.named_entities == [
+            "B-PERSON",
+            "I-PERSON",
+            "B-WORK_OF_ART",
+            "I-WORK_OF_ART",
+            "O",
+        ]
         assert annotation.predicate_lemmas == [None, None, None, None, None]
         assert annotation.speakers == [None, None, None, None, None]
         assert annotation.parse_tree == Tree.fromstring(
-            "(TOP(FRAG(NP (NNP Denise) " " (NNP Dillon) )(NP (NNP Headline)  " "(NNP News) ) (. .) ))"
+            "(TOP(FRAG(NP (NNP Denise) "
+            " (NNP Dillon) )(NP (NNP Headline)  "
+            "(NNP News) ) (. .) ))"
         )
         assert annotation.coref_spans == {(2, (0, 1))}
 
@@ -319,7 +382,23 @@ class TestOntonotes(AllenNlpTestCase):
             ),
             (
                 "is",
-                ["O", "O", "O", "O", "O", "O", "O", "O", "O", "B-ARG1", "B-V", "B-ARG2", "I-ARG2", "I-ARG2", "O"],
+                [
+                    "O",
+                    "O",
+                    "O",
+                    "O",
+                    "O",
+                    "O",
+                    "O",
+                    "O",
+                    "O",
+                    "B-ARG1",
+                    "B-V",
+                    "B-ARG2",
+                    "I-ARG2",
+                    "I-ARG2",
+                    "O",
+                ],
             ),
         ]
         assert annotation.named_entities == [

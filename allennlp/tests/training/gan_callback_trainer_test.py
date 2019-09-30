@@ -61,7 +61,9 @@ class GanOptimizer(torch.optim.Optimizer):
     """
 
     def __init__(
-        self, generator_optimizer: torch.optim.Optimizer, discriminator_optimizer: torch.optim.Optimizer
+        self,
+        generator_optimizer: torch.optim.Optimizer,
+        discriminator_optimizer: torch.optim.Optimizer,
     ) -> None:
         self.generator_optimizer = generator_optimizer
         self.discriminator_optimizer = discriminator_optimizer
@@ -87,20 +89,30 @@ class GanOptimizer(torch.optim.Optimizer):
         # Because we "tagged" the parameters, we can use getattr to figure out
         # which ones go with which model.
         generator_parameters = [("", param) for param in parameters if hasattr(param, "_generator")]
-        discriminator_parameters = [("", param) for param in parameters if hasattr(param, "_discriminator")]
+        discriminator_parameters = [
+            ("", param) for param in parameters if hasattr(param, "_discriminator")
+        ]
 
-        generator_optimizer = Optimizer.from_params(generator_parameters, params.pop("generator_optimizer"))
+        generator_optimizer = Optimizer.from_params(
+            generator_parameters, params.pop("generator_optimizer")
+        )
         discriminator_optimizer = Optimizer.from_params(
             discriminator_parameters, params.pop("discriminator_optimizer")
         )
 
-        return cls(generator_optimizer=generator_optimizer, discriminator_optimizer=discriminator_optimizer)
+        return cls(
+            generator_optimizer=generator_optimizer, discriminator_optimizer=discriminator_optimizer
+        )
 
 
 @DatasetReader.register("gan-callback")
 class GanCallbackDatasetReader(DatasetReader):
     def __init__(
-        self, sampler: InputSampler, noise_sampler: InputSampler, batch_size: int, batches_per_epoch: int
+        self,
+        sampler: InputSampler,
+        noise_sampler: InputSampler,
+        batch_size: int,
+        batches_per_epoch: int,
     ) -> None:
         super().__init__(lazy=False)
         self.sampler = sampler
@@ -154,7 +166,12 @@ def config(sample_size: int = 500, batches_per_epoch: int = 40, num_epochs: int 
             "train_data_path": "",
             "model": {
                 "type": "gan",
-                "generator": {"type": "generator-test", "input_dim": 1, "hidden_dim": 5, "output_dim": 1},
+                "generator": {
+                    "type": "generator-test",
+                    "input_dim": 1,
+                    "hidden_dim": 5,
+                    "output_dim": 1,
+                },
                 "discriminator": {
                     "type": "discriminator-test",
                     "input_dim": sample_size,
@@ -170,7 +187,10 @@ def config(sample_size: int = 500, batches_per_epoch: int = 40, num_epochs: int 
                     "discriminator_optimizer": {"type": "sgd", "lr": 0.05},
                 },
                 "num_epochs": num_epochs,
-                "callbacks": ["track-gan-metrics", {"type": "gradient_norm_and_clip", "grad_norm": 1.0}],
+                "callbacks": [
+                    "track-gan-metrics",
+                    {"type": "gradient_norm_and_clip", "grad_norm": 1.0},
+                ],
             },
         }
     )

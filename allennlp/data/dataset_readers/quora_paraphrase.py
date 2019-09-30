@@ -41,7 +41,10 @@ class QuoraParaphraseDatasetReader(DatasetReader):
     """
 
     def __init__(
-        self, lazy: bool = False, tokenizer: Tokenizer = None, token_indexers: Dict[str, TokenIndexer] = None
+        self,
+        lazy: bool = False,
+        tokenizer: Tokenizer = None,
+        token_indexers: Dict[str, TokenIndexer] = None,
     ) -> None:
         super().__init__(lazy)
         self._tokenizer = tokenizer or WordTokenizer(JustSpacesWordSplitter())

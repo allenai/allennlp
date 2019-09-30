@@ -6,7 +6,9 @@ import os
 import gzip
 import argparse
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir)))))
+sys.path.insert(
+    0, os.path.dirname(os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
+)
 
 from allennlp.data.dataset_readers import WikiTablesDatasetReader
 from allennlp.data.dataset_readers.semantic_parsing.wikitables import util
@@ -73,4 +75,10 @@ if __name__ == "__main__":
         default=10,
     )
     args = argparser.parse_args()
-    make_data(args.input, args.tables_directory, args.archived_model, args.output_dir, args.num_logical_forms)
+    make_data(
+        args.input,
+        args.tables_directory,
+        args.archived_model,
+        args.output_dir,
+        args.num_logical_forms,
+    )

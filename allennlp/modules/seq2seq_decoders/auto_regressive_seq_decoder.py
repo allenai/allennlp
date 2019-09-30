@@ -84,20 +84,28 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
         # end symbol as a way to indicate the end of the decoded sequence.
         self._start_index = self._vocab.get_token_index(START_SYMBOL, self._target_namespace)
         self._end_index = self._vocab.get_token_index(END_SYMBOL, self._target_namespace)
-        self._beam_search = BeamSearch(self._end_index, max_steps=max_decoding_steps, beam_size=beam_size)
+        self._beam_search = BeamSearch(
+            self._end_index, max_steps=max_decoding_steps, beam_size=beam_size
+        )
 
         target_vocab_size = self._vocab.get_vocab_size(self._target_namespace)
 
         if self.target_embedder.get_output_dim() != self._decoder_net.target_embedding_dim:
-            raise ConfigurationError("Target Embedder output_dim doesn't match decoder module's input.")
+            raise ConfigurationError(
+                "Target Embedder output_dim doesn't match decoder module's input."
+            )
 
         # We project the hidden state from the decoder into the output vocabulary space
         # in order to get log probabilities of each target token, at each time step.
-        self._output_projection_layer = Linear(self._decoder_net.get_output_dim(), target_vocab_size)
+        self._output_projection_layer = Linear(
+            self._decoder_net.get_output_dim(), target_vocab_size
+        )
 
         if tie_output_embedding:
             if self._output_projection_layer.weight.shape != self.target_embedder.weight.shape:
-                raise ConfigurationError("Can't tie embeddings with output linear layer, due to shape mismatch")
+                raise ConfigurationError(
+                    "Can't tie embeddings with output linear layer, due to shape mismatch"
+                )
             self._output_projection_layer.weight = self.target_embedder.weight
 
         # These metrics will be updated during training and validation
@@ -111,7 +119,9 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
         Prepare inputs for the beam search, does beam search and returns beam search results.
         """
         batch_size = state["source_mask"].size()[0]
-        start_predictions = state["source_mask"].new_full((batch_size,), fill_value=self._start_index)
+        start_predictions = state["source_mask"].new_full(
+            (batch_size,), fill_value=self._start_index
+        )
 
         # shape (all_top_k_predictions): (batch_size, beam_size, num_decoding_steps)
         # shape (log_probabilities): (batch_size, beam_size)
@@ -119,7 +129,10 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
             start_predictions, state, self.take_step
         )
 
-        output_dict = {"class_log_probabilities": log_probabilities, "predictions": all_top_k_predictions}
+        output_dict = {
+            "class_log_probabilities": log_probabilities,
+            "predictions": all_top_k_predictions,
+        }
         return output_dict
 
     def _forward_loss(
@@ -197,7 +210,9 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
                         state["previous_steps_predictions"] = target_embedding[:, :timestep]
 
                 # shape: (batch_size, num_classes)
-                output_projections, state = self._prepare_output_projections(effective_last_prediction, state)
+                output_projections, state = self._prepare_output_projections(
+                    effective_last_prediction, state
+                )
 
                 # list of tensors, shape: (batch_size, 1, num_classes)
                 step_logits.append(output_projections.unsqueeze(1))
@@ -262,7 +277,9 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
             previous_steps_predictions = last_predictions_embeddings
         else:
             # shape: (group_size, steps_count, target_embedding_dim)
-            previous_steps_predictions = torch.cat([previous_steps_predictions, last_predictions_embeddings], 1)
+            previous_steps_predictions = torch.cat(
+                [previous_steps_predictions, last_predictions_embeddings], 1
+            )
 
         decoder_state, decoder_output = self._decoder_net(
             previous_state=state,
@@ -370,14 +387,18 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
         all_metrics: Dict[str, float] = {}
         if not self.training:
             if self._tensor_based_metric is not None:
-                all_metrics.update(self._tensor_based_metric.get_metric(reset=reset))  # type: ignore
+                all_metrics.update(
+                    self._tensor_based_metric.get_metric(reset=reset)
+                )  # type: ignore
             if self._token_based_metric is not None:
                 all_metrics.update(self._token_based_metric.get_metric(reset=reset))  # type: ignore
         return all_metrics
 
     @overrides
     def forward(
-        self, encoder_out: Dict[str, torch.LongTensor], target_tokens: Dict[str, torch.LongTensor] = None
+        self,
+        encoder_out: Dict[str, torch.LongTensor],
+        target_tokens: Dict[str, torch.LongTensor] = None,
     ) -> Dict[str, torch.Tensor]:
         state = encoder_out
         decoder_init_state = self._decoder_net.init_decoder_state(state)
@@ -400,7 +421,9 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
                     best_predictions = top_k_predictions[:, 0, :]
                     # shape: (batch_size, target_sequence_length)
 
-                    self._tensor_based_metric(best_predictions, target_tokens["tokens"])  # type: ignore
+                    self._tensor_based_metric(
+                        best_predictions, target_tokens["tokens"]
+                    )  # type: ignore
 
                 if self._token_based_metric is not None:
                     output_dict = self.decode(output_dict)
@@ -433,7 +456,8 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
             if self._end_index in indices:
                 indices = indices[: indices.index(self._end_index)]
             predicted_tokens = [
-                self._vocab.get_token_from_index(x, namespace=self._target_namespace) for x in indices
+                self._vocab.get_token_from_index(x, namespace=self._target_namespace)
+                for x in indices
             ]
             all_predicted_tokens.append(predicted_tokens)
         output_dict["predicted_tokens"] = all_predicted_tokens

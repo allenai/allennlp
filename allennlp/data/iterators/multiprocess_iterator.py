@@ -112,7 +112,9 @@ class MultiprocessIterator(DataIterator):
         You might need to increase this if you're generating tensor dicts too quickly.
     """
 
-    def __init__(self, base_iterator: DataIterator, num_workers: int = 1, output_queue_size: int = 1000) -> None:
+    def __init__(
+        self, base_iterator: DataIterator, num_workers: int = 1, output_queue_size: int = 1000
+    ) -> None:
 
         super().__init__()
         self.num_workers = num_workers
@@ -146,7 +148,9 @@ class MultiprocessIterator(DataIterator):
         input_queue = Queue(self.output_queue_size * self.batch_size)
 
         # Start process that populates the queue.
-        self.queuer = Process(target=_queuer, args=(instances, input_queue, self.num_workers, num_epochs))
+        self.queuer = Process(
+            target=_queuer, args=(instances, input_queue, self.num_workers, num_epochs)
+        )
         self.queuer.start()
 
         # Start the tensor-dict workers.
@@ -174,7 +178,9 @@ class MultiprocessIterator(DataIterator):
             self.queuer.join()
             self.queuer = None
 
-    def _call_with_qiterable(self, qiterable: QIterable, num_epochs: int, shuffle: bool) -> Iterator[TensorDict]:
+    def _call_with_qiterable(
+        self, qiterable: QIterable, num_epochs: int, shuffle: bool
+    ) -> Iterator[TensorDict]:
         # JoinableQueue needed here as sharing tensors across processes
         # requires that the creating tensor not exit prematurely.
         output_queue = JoinableQueue(self.output_queue_size)
@@ -212,7 +218,9 @@ class MultiprocessIterator(DataIterator):
         # If you run it forever, the multiprocesses won't shut down correctly.
         # TODO(joelgrus) find a solution for this
         if num_epochs is None:
-            raise ConfigurationError("Multiprocess Iterator must be run for a fixed number of epochs")
+            raise ConfigurationError(
+                "Multiprocess Iterator must be run for a fixed number of epochs"
+            )
 
         if isinstance(instances, QIterable):
             return self._call_with_qiterable(instances, num_epochs, shuffle)

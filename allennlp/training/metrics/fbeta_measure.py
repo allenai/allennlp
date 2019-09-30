@@ -84,7 +84,12 @@ class FBetaMeasure(Metric):
         self._true_sum: Union[None, torch.Tensor] = None
 
     @overrides
-    def __call__(self, predictions: torch.Tensor, gold_labels: torch.Tensor, mask: Optional[torch.Tensor] = None):
+    def __call__(
+        self,
+        predictions: torch.Tensor,
+        gold_labels: torch.Tensor,
+        mask: Optional[torch.Tensor] = None,
+    ):
         """
         Parameters
         ----------
@@ -102,7 +107,8 @@ class FBetaMeasure(Metric):
         num_classes = predictions.size(-1)
         if (gold_labels >= num_classes).any():
             raise ConfigurationError(
-                "A gold label passed to FBetaMeasure contains " f"an id >= {num_classes}, the number of classes."
+                "A gold label passed to FBetaMeasure contains "
+                f"an id >= {num_classes}, the number of classes."
             )
 
         # It means we call this metric at the first time
@@ -127,7 +133,9 @@ class FBetaMeasure(Metric):
         if true_positives_bins.shape[0] == 0:
             true_positive_sum = torch.zeros(num_classes)
         else:
-            true_positive_sum = torch.bincount(true_positives_bins.long(), minlength=num_classes).float()
+            true_positive_sum = torch.bincount(
+                true_positives_bins.long(), minlength=num_classes
+            ).float()
 
         pred_bins = argmax_predictions[mask].long()
         # Watch it:
@@ -194,7 +202,11 @@ class FBetaMeasure(Metric):
             fscore = fscore[self._labels]
 
         if self._average is None:
-            return {"precision": precision.tolist(), "recall": recall.tolist(), "fscore": fscore.tolist()}
+            return {
+                "precision": precision.tolist(),
+                "recall": recall.tolist(),
+                "fscore": fscore.tolist(),
+            }
         else:
             return {"precision": precision.item(), "recall": recall.item(), "fscore": fscore.item()}
 
@@ -210,7 +222,9 @@ class FBetaMeasure(Metric):
         if self._total_sum is None:
             return None
         else:
-            true_negative_sum = self._total_sum - self._pred_sum - self._true_sum + self._true_positive_sum
+            true_negative_sum = (
+                self._total_sum - self._pred_sum - self._true_sum + self._true_positive_sum
+            )
             return true_negative_sum
 
 

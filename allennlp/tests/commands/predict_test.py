@@ -23,7 +23,9 @@ class TestPredict(AllenNlpTestCase):
         super().setUp()
         self.bidaf_model_path = self.FIXTURES_ROOT / "bidaf" / "serialization" / "model.tar.gz"
         self.bidaf_data_path = self.FIXTURES_ROOT / "data" / "squad.json"
-        self.atis_model_path = self.FIXTURES_ROOT / "semantic_parsing" / "atis" / "serialization" / "model.tar.gz"
+        self.atis_model_path = (
+            self.FIXTURES_ROOT / "semantic_parsing" / "atis" / "serialization" / "model.tar.gz"
+        )
         self.atis_data_path = self.FIXTURES_ROOT / "data" / "atis" / "sample.json"
         self.tempdir = pathlib.Path(tempfile.mkdtemp())
         self.infile = self.tempdir / "inputs.txt"
@@ -146,7 +148,9 @@ class TestPredict(AllenNlpTestCase):
         @Predictor.register("test-predictor")
         class _TestPredictor(Predictor):
             def dump_line(self, outputs: JsonDict) -> str:
-                data = {"keep_if_unparseable": self._dataset_reader._keep_if_unparseable}  # type: ignore
+                data = {
+                    "keep_if_unparseable": self._dataset_reader._keep_if_unparseable
+                }  # type: ignore
                 return json.dumps(data) + "\n"
 
         # --use-dataset-reader argument only should use validation
@@ -272,7 +276,11 @@ class TestPredict(AllenNlpTestCase):
         shutil.rmtree(self.tempdir)
 
     def test_fails_without_required_args(self):
-        sys.argv = ["run.py", "predict", "/path/to/archive"]  # executable  # command  # archive, but no input file
+        sys.argv = [
+            "run.py",
+            "predict",
+            "/path/to/archive",
+        ]  # executable  # command  # archive, but no input file
 
         with self.assertRaises(SystemExit) as cm:
             main()
@@ -437,10 +445,16 @@ class TestPredict(AllenNlpTestCase):
         with open(self.infile, "w") as f:
             writer = csv.writer(f)
             writer.writerow(
-                ["the seahawks won the super bowl in 2016", "when did the seahawks win the super bowl?"]
+                [
+                    "the seahawks won the super bowl in 2016",
+                    "when did the seahawks win the super bowl?",
+                ]
             )
             writer.writerow(
-                ["the mariners won the super bowl in 2037", "when did the mariners win the super bowl?"]
+                [
+                    "the mariners won the super bowl in 2037",
+                    "when did the mariners win the super bowl?",
+                ]
             )
 
         sys.argv = [

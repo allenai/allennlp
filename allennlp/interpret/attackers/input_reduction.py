@@ -41,12 +41,16 @@ class InputReduction(Attacker):
             raise ValueError("Input reduction does not implement targeted attacks")
         ignore_tokens = ["@@NULL@@"] if ignore_tokens is None else ignore_tokens
         original_instances = self.predictor.json_to_labeled_instances(inputs)
-        original_text_field: TextField = original_instances[0][input_field_to_attack]  # type: ignore
+        original_text_field: TextField = original_instances[0][
+            input_field_to_attack
+        ]  # type: ignore
         original_tokens = deepcopy(original_text_field.tokens)
         final_tokens = []
         for instance in original_instances:
             final_tokens.append(
-                self._attack_instance(inputs, instance, input_field_to_attack, grad_input_field, ignore_tokens)
+                self._attack_instance(
+                    inputs, instance, input_field_to_attack, grad_input_field, ignore_tokens
+                )
             )
         return sanitize({"final": final_tokens, "original": original_tokens})
 
@@ -101,7 +105,9 @@ class InputReduction(Attacker):
                 # Check if any fields have changed, if so, next beam
                 if "tags" not in instance:
                     # relabel beam_instance since last iteration removed an input token
-                    beam_instance = self.predictor.predictions_to_labeled_instances(beam_instance, outputs)[0]
+                    beam_instance = self.predictor.predictions_to_labeled_instances(
+                        beam_instance, outputs
+                    )[0]
                     if utils.instance_has_changed(beam_instance, fields_to_compare):
                         continue
 
@@ -110,7 +116,9 @@ class InputReduction(Attacker):
                     # remove the mask where you remove the input token from.
                     if smallest_idx != -1:  # Don't delete on the very first iteration
                         del beam_tag_mask[smallest_idx]
-                    cur_tags = [outputs["tags"][x] for x in range(len(outputs["tags"])) if beam_tag_mask[x]]
+                    cur_tags = [
+                        outputs["tags"][x] for x in range(len(outputs["tags"])) if beam_tag_mask[x]
+                    ]
                     if cur_tags != original_tags:
                         continue
 
@@ -186,7 +194,9 @@ def _remove_one_token(
     return reduced_instances_and_smallest
 
 
-def _get_ner_tags_and_mask(instance: Instance, input_field_to_attack: str, ignore_tokens: List[str]):
+def _get_ner_tags_and_mask(
+    instance: Instance, input_field_to_attack: str, ignore_tokens: List[str]
+):
     """
     Used for the NER task. Sets the num_ignore tokens, saves the original predicted tag and a 0/1
     mask in the position of the tags

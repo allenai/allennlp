@@ -94,7 +94,11 @@ class Generator(Model):
     """
 
     def __init__(
-        self, input_dim: int, hidden_dim: int, output_dim: int, activation: Activation = torch.nn.Tanh()
+        self,
+        input_dim: int,
+        hidden_dim: int,
+        output_dim: int,
+        activation: Activation = torch.nn.Tanh(),
     ) -> None:
         super().__init__(None)
         self.linear1 = torch.nn.Linear(input_dim, hidden_dim)
@@ -134,7 +138,9 @@ def get_moments(dist: torch.Tensor) -> torch.Tensor:
     std = torch.pow(var, 0.5)
     zscores = diffs / std
     skews = torch.mean(torch.pow(zscores, 3.0))
-    kurtoses = torch.mean(torch.pow(zscores, 4.0)) - 3.0  # excess kurtosis, should be 0 for Gaussian
+    kurtoses = (
+        torch.mean(torch.pow(zscores, 4.0)) - 3.0
+    )  # excess kurtosis, should be 0 for Gaussian
     final = torch.cat((mean.reshape(1), std.reshape(1), skews.reshape(1), kurtoses.reshape(1)))
     return final
 
@@ -307,7 +313,8 @@ class GanTestTrainer(TrainerBase):
         noise_iterator = DataIterator.from_params(params.pop("noise_iterator"))
 
         generator_optimizer = Optimizer.from_params(
-            [[n, p] for n, p in generator.named_parameters() if p.requires_grad], params.pop("generator_optimizer")
+            [[n, p] for n, p in generator.named_parameters() if p.requires_grad],
+            params.pop("generator_optimizer"),
         )
 
         discriminator_optimizer = Optimizer.from_params(
@@ -343,9 +350,17 @@ class GanTrainerTest(AllenNlpTestCase):
         params = Params(
             {
                 "trainer": {"type": "gan-test"},
-                "data_reader": {"type": "sampling", "sampler": {"type": "normal", "mean": 4.0, "stdev": 1.25}},
+                "data_reader": {
+                    "type": "sampling",
+                    "sampler": {"type": "normal", "mean": 4.0, "stdev": 1.25},
+                },
                 "noise_reader": {"type": "sampling", "sampler": {"type": "uniform"}},
-                "generator": {"type": "generator-test", "input_dim": 1, "hidden_dim": 5, "output_dim": 1},
+                "generator": {
+                    "type": "generator-test",
+                    "input_dim": 1,
+                    "hidden_dim": 5,
+                    "output_dim": 1,
+                },
                 "discriminator": {"type": "discriminator-test", "input_dim": 500, "hidden_dim": 10},
                 "iterator": {"type": "basic", "batch_size": 500},
                 "noise_iterator": {"type": "basic", "batch_size": 500},
@@ -373,9 +388,17 @@ if __name__ == "__main__":
     params_ = Params(
         {
             "trainer": {"type": "gan-test"},
-            "data_reader": {"type": "sampling", "sampler": {"type": "normal", "mean": 4.0, "stdev": 1.25}},
+            "data_reader": {
+                "type": "sampling",
+                "sampler": {"type": "normal", "mean": 4.0, "stdev": 1.25},
+            },
             "noise_reader": {"type": "sampling", "sampler": {"type": "uniform"}},
-            "generator": {"type": "generator-test", "input_dim": 1, "hidden_dim": 5, "output_dim": 1},
+            "generator": {
+                "type": "generator-test",
+                "input_dim": 1,
+                "hidden_dim": 5,
+                "output_dim": 1,
+            },
             "discriminator": {
                 "type": "discriminator-test",
                 "input_dim": sample_size,

@@ -49,7 +49,9 @@ class _LazyInstances(Iterable):
         else:
             instances = self.instance_generator()
             if isinstance(instances, list):
-                raise ConfigurationError("For a lazy dataset reader, _read() must return a generator")
+                raise ConfigurationError(
+                    "For a lazy dataset reader, _read() must return a generator"
+                )
             yield from instances
 
 
@@ -114,7 +116,10 @@ class DatasetReader(Registrable):
         lazy = getattr(self, "lazy", None)
 
         if lazy is None:
-            logger.warning("DatasetReader.lazy is not set, " "did you forget to call the superclass constructor?")
+            logger.warning(
+                "DatasetReader.lazy is not set, "
+                "did you forget to call the superclass constructor?"
+            )
 
         if self._cache_directory:
             cache_file = self._get_cache_location_for_file_path(file_path)
@@ -123,7 +128,10 @@ class DatasetReader(Registrable):
 
         if lazy:
             return _LazyInstances(
-                lambda: self._read(file_path), cache_file, self.deserialize_instance, self.serialize_instance
+                lambda: self._read(file_path),
+                cache_file,
+                self.deserialize_instance,
+                self.serialize_instance,
             )
         else:
             # First we read the instances, either from a cache or from the original file.
@@ -137,7 +145,8 @@ class DatasetReader(Registrable):
                 instances = [instance for instance in Tqdm.tqdm(instances)]
             if not instances:
                 raise ConfigurationError(
-                    "No instances were read from the given filepath {}. " "Is the path correct?".format(file_path)
+                    "No instances were read from the given filepath {}. "
+                    "Is the path correct?".format(file_path)
                 )
 
             # And finally we write to the cache if we need to.

@@ -44,9 +44,13 @@ class Checkpointer(Registrable):
         is_best_so_far: bool,
     ) -> None:
         if self._serialization_dir is not None:
-            model_path = os.path.join(self._serialization_dir, "model_state_epoch_{}.th".format(epoch))
+            model_path = os.path.join(
+                self._serialization_dir, "model_state_epoch_{}.th".format(epoch)
+            )
             torch.save(model_state, model_path)
-            training_path = os.path.join(self._serialization_dir, "training_state_epoch_{}.th".format(epoch))
+            training_path = os.path.join(
+                self._serialization_dir, "training_state_epoch_{}.th".format(epoch)
+            )
             torch.save({**training_states, "epoch": epoch}, training_path)
 
             if is_best_so_far:
@@ -56,7 +60,10 @@ class Checkpointer(Registrable):
                 )
                 shutil.copyfile(model_path, os.path.join(self._serialization_dir, "best.th"))
 
-            if self._num_serialized_models_to_keep is not None and self._num_serialized_models_to_keep >= 0:
+            if (
+                self._num_serialized_models_to_keep is not None
+                and self._num_serialized_models_to_keep >= 0
+            ):
                 self._serialized_paths.append((time.time(), model_path, training_path))
                 if len(self._serialized_paths) > self._num_serialized_models_to_keep:
                     paths_to_remove = self._serialized_paths.pop(0)
@@ -66,8 +73,13 @@ class Checkpointer(Registrable):
                     remove_path = True
                     if self._keep_serialized_model_every_num_seconds is not None:
                         save_time = paths_to_remove[0]
-                        time_since_checkpoint_kept = save_time - self._last_permanent_saved_checkpoint_time
-                        if time_since_checkpoint_kept > self._keep_serialized_model_every_num_seconds:
+                        time_since_checkpoint_kept = (
+                            save_time - self._last_permanent_saved_checkpoint_time
+                        )
+                        if (
+                            time_since_checkpoint_kept
+                            > self._keep_serialized_model_every_num_seconds
+                        ):
                             # We want to keep this checkpoint.
                             remove_path = False
                             self._last_permanent_saved_checkpoint_time = save_time
@@ -93,7 +105,9 @@ class Checkpointer(Registrable):
         # Get the last checkpoint file.  Epochs are specified as either an
         # int (for end of epoch files) or with epoch and timestamp for
         # within epoch checkpoints, e.g. 5.2018-02-02-15-33-42
-        found_epochs = [re.search(r"model_state_epoch_([0-9\.\-]+)\.th", x).group(1) for x in model_checkpoints]
+        found_epochs = [
+            re.search(r"model_state_epoch_([0-9\.\-]+)\.th", x).group(1) for x in model_checkpoints
+        ]
         int_epochs: Any = []
         for epoch in found_epochs:
             pieces = epoch.split(".")
@@ -109,7 +123,9 @@ class Checkpointer(Registrable):
         else:
             epoch_to_load = "{0}.{1}".format(last_epoch[0], last_epoch[1])
 
-        model_path = os.path.join(self._serialization_dir, "model_state_epoch_{}.th".format(epoch_to_load))
+        model_path = os.path.join(
+            self._serialization_dir, "model_state_epoch_{}.th".format(epoch_to_load)
+        )
         training_state_path = os.path.join(
             self._serialization_dir, "training_state_epoch_{}.th".format(epoch_to_load)
         )
@@ -156,6 +172,7 @@ class Checkpointer(Registrable):
             return torch.load(best_model_state_path)
         else:
             logger.info(
-                "cannot load best weights without `serialization_dir`, " "so you're just getting the last weights"
+                "cannot load best weights without `serialization_dir`, "
+                "so you're just getting the last weights"
             )
             return {}

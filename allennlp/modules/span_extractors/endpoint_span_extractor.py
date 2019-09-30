@@ -138,7 +138,9 @@ class EndpointSpanExtractor(SpanExtractor):
                 + float_start_sentinel_mask * self._start_sentinel
             )
 
-        combined_tensors = util.combine_tensors(self._combination, [start_embeddings, end_embeddings])
+        combined_tensors = util.combine_tensors(
+            self._combination, [start_embeddings, end_embeddings]
+        )
         if self._span_width_embedding is not None:
             # Embed the span widths and concatenate to the rest of the representations.
             if self._bucket_widths:

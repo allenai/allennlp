@@ -4,7 +4,9 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
-logging.basicConfig(format="%(asctime)s - %(levelname)s - %(name)s - %(message)s", level=logging.DEBUG)
+logging.basicConfig(
+    format="%(asctime)s - %(levelname)s - %(name)s - %(message)s", level=logging.DEBUG
+)
 from allennlp.commands.train import datasets_from_params
 from allennlp.common import Params
 from allennlp.data import Instance
@@ -25,7 +27,9 @@ def main(params: Params, outdir: str):
 def to_json_line(instance: Instance):
     json_obj = {}
     question_tokens = instance.fields["question"].tokens
-    json_obj["question_tokens"] = [{"text": token.text, "lemma": token.lemma_} for token in question_tokens]
+    json_obj["question_tokens"] = [
+        {"text": token.text, "lemma": token.lemma_} for token in question_tokens
+    ]
     json_obj["table_lines"] = instance.fields["table_metadata"].metadata
 
     action_map = {i: action.rule for i, action in enumerate(instance.fields["actions"].field_list)}

@@ -5,7 +5,8 @@ class TestBiMPM(ModelTestCase):
     def setUp(self):
         super().setUp()
         self.set_up_model(
-            self.FIXTURES_ROOT / "bimpm" / "experiment.json", self.FIXTURES_ROOT / "data" / "quora_paraphrase.tsv"
+            self.FIXTURES_ROOT / "bimpm" / "experiment.json",
+            self.FIXTURES_ROOT / "data" / "quora_paraphrase.tsv",
         )
 
     def test_forward_pass_runs_correctly(self):

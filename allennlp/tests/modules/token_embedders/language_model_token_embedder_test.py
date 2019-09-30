@@ -32,6 +32,8 @@ class TestLanguageModelTokenEmbedderWithoutBosEos(TestLanguageModelTokenEmbedder
     def setUp(self):
         super().setUp()
         self.set_up_model(
-            self.FIXTURES_ROOT / "language_model" / "characters_token_embedder_without_bos_eos.jsonnet",
+            self.FIXTURES_ROOT
+            / "language_model"
+            / "characters_token_embedder_without_bos_eos.jsonnet",
             self.FIXTURES_ROOT / "data" / "conll2003.txt",
         )

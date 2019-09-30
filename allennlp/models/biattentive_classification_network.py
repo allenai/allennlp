@@ -140,7 +140,9 @@ class BiattentiveClassificationNetwork(Model):
 
         # Calculate combined integrator output dim, taking into account elmo
         if self._use_integrator_output_elmo:
-            self._combined_integrator_output_dim = self._integrator.get_output_dim() + self._elmo.get_output_dim()
+            self._combined_integrator_output_dim = (
+                self._integrator.get_output_dim() + self._elmo.get_output_dim()
+            )
         else:
             self._combined_integrator_output_dim = self._integrator.get_output_dim()
 
@@ -190,10 +192,16 @@ class BiattentiveClassificationNetwork(Model):
             )
 
         check_dimensions_match(
-            self._output_layer.get_output_dim(), self._num_classes, "Output layer output dim", "Number of classes."
+            self._output_layer.get_output_dim(),
+            self._num_classes,
+            "Output layer output dim",
+            "Number of classes.",
         )
 
-        self.metrics = {"accuracy": CategoricalAccuracy(), "accuracy3": CategoricalAccuracy(top_k=3)}
+        self.metrics = {
+            "accuracy": CategoricalAccuracy(),
+            "accuracy3": CategoricalAccuracy(top_k=3),
+        }
         self.loss = torch.nn.CrossEntropyLoss()
         initializer(self)
 
@@ -245,7 +253,9 @@ class BiattentiveClassificationNetwork(Model):
                     input_elmo = elmo_representations.pop()
                 assert not elmo_representations
             else:
-                raise ConfigurationError("Model was built to use Elmo, but input text is not tokenized for Elmo.")
+                raise ConfigurationError(
+                    "Model was built to use Elmo, but input text is not tokenized for Elmo."
+                )
 
         if self._use_input_elmo:
             if embedded_text is not None:
@@ -286,7 +296,9 @@ class BiattentiveClassificationNetwork(Model):
         # Self-attentive pooling layer
         # Run through linear projection. Shape: (batch_size, sequence length, 1)
         # Then remove the last dimension to get the proper attention shape (batch_size, sequence length).
-        self_attentive_logits = self._self_attentive_pooling_projection(integrated_encodings).squeeze(2)
+        self_attentive_logits = self._self_attentive_pooling_projection(
+            integrated_encodings
+        ).squeeze(2)
         self_weights = util.masked_softmax(self_attentive_logits, text_mask)
         self_attentive_pool = util.weighted_sum(integrated_encodings, self_weights)
 
@@ -319,11 +331,15 @@ class BiattentiveClassificationNetwork(Model):
 
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
-        return {metric_name: metric.get_metric(reset) for metric_name, metric in self.metrics.items()}
+        return {
+            metric_name: metric.get_metric(reset) for metric_name, metric in self.metrics.items()
+        }
 
     # The FeedForward vs Maxout logic here requires a custom from_params.
     @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> "BiattentiveClassificationNetwork":  # type: ignore
+    def from_params(
+        cls, vocab: Vocabulary, params: Params
+    ) -> "BiattentiveClassificationNetwork":  # type: ignore
 
         embedder_params = params.pop("text_field_embedder")
         text_field_embedder = TextFieldEmbedder.from_params(vocab=vocab, params=embedder_params)

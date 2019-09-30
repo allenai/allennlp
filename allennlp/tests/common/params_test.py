@@ -88,7 +88,11 @@ class TestParams(AllenNlpTestCase):
 
         params = with_fallback(
             preferred=override_dict,
-            fallback={"train_data": "/test", "model": "bidaf", "trainer": {"num_epochs": 100, "optimizer": "sgd"}},
+            fallback={
+                "train_data": "/test",
+                "model": "bidaf",
+                "trainer": {"num_epochs": 100, "optimizer": "sgd"},
+            },
         )
 
         assert params == {
@@ -330,7 +334,10 @@ class TestParams(AllenNlpTestCase):
         # Construct ``A`` from params but then just throw it away.
         A.from_params(params.pop("a"))
 
-        assert params.files_to_archive == {"a.bs.0.filename": my_file, "a.bs.0.c.c_file": my_other_file}
+        assert params.files_to_archive == {
+            "a.bs.0.filename": my_file,
+            "a.bs.0.c.c_file": my_other_file,
+        }
 
     def test_as_ordered_dict(self):
         # keyD > keyC > keyE; keyDA > keyDB; Next all other keys alphabetically
@@ -377,7 +384,11 @@ class TestParams(AllenNlpTestCase):
             "c": "just a string",
         }
 
-        casted = {"a": [10, 1.3, True], "b": {"x": 10, "y": 20.1, "z": "other things"}, "c": "just a string"}
+        casted = {
+            "a": [10, 1.3, True],
+            "b": {"x": 10, "y": 20.1, "z": "other things"},
+            "c": "just a string",
+        }
 
         assert infer_and_cast(lots_of_strings) == casted
 

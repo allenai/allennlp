@@ -138,7 +138,9 @@ class LstmCellWithProjection(torch.nn.Module):
 
         current_length_index = batch_size - 1 if self.go_forward else 0
         if self.recurrent_dropout_probability > 0.0 and self.training:
-            dropout_mask = get_dropout_mask(self.recurrent_dropout_probability, full_batch_previous_state)
+            dropout_mask = get_dropout_mask(
+                self.recurrent_dropout_probability, full_batch_previous_state
+            )
         else:
             dropout_mask = None
 
@@ -209,7 +211,9 @@ class LstmCellWithProjection(torch.nn.Module):
 
             if self.memory_cell_clip_value:
 
-                memory = torch.clamp(memory, -self.memory_cell_clip_value, self.memory_cell_clip_value)
+                memory = torch.clamp(
+                    memory, -self.memory_cell_clip_value, self.memory_cell_clip_value
+                )
 
             # shape (current_length_index, cell_size)
             pre_projection_timestep_output = output_gate * torch.tanh(memory)
@@ -219,7 +223,9 @@ class LstmCellWithProjection(torch.nn.Module):
             if self.state_projection_clip_value:
 
                 timestep_output = torch.clamp(
-                    timestep_output, -self.state_projection_clip_value, self.state_projection_clip_value
+                    timestep_output,
+                    -self.state_projection_clip_value,
+                    self.state_projection_clip_value,
                 )
 
             # Only do dropout if the dropout prob is > 0.0 and we are in training mode.
@@ -238,6 +244,9 @@ class LstmCellWithProjection(torch.nn.Module):
         # Mimic the pytorch API by returning state in the following shape:
         # (num_layers * num_directions, batch_size, ...). As this
         # LSTM cell cannot be stacked, the first dimension here is just 1.
-        final_state = (full_batch_previous_state.unsqueeze(0), full_batch_previous_memory.unsqueeze(0))
+        final_state = (
+            full_batch_previous_state.unsqueeze(0),
+            full_batch_previous_memory.unsqueeze(0),
+        )
 
         return output_accumulator, final_state

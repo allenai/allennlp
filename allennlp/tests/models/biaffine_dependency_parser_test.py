@@ -60,7 +60,10 @@ class BiaffineDependencyParserTest(ModelTestCase):
 
     def test_mst_decodes_arc_labels_with_respect_to_unconstrained_scores(self):
         energy = (
-            torch.Tensor([[0, 2, 1], [10, 0, 0.5], [9, 0.2, 0]]).view(1, 1, 3, 3).expand(1, 2, 3, 3).contiguous()
+            torch.Tensor([[0, 2, 1], [10, 0, 0.5], [9, 0.2, 0]])
+            .view(1, 1, 3, 3)
+            .expand(1, 2, 3, 3)
+            .contiguous()
         )
         # Make the score for the root label for arcs to the root token be higher - it
         # will be masked for the MST, but we want to make sure that the tags are with

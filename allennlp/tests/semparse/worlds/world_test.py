@@ -44,11 +44,22 @@ class TestWorld(AllenNlpTestCase):
             ["e -> argument", "t -> [<e,t>, e]", "@start@ -> t"],
             ["e -> argument", "<e,t> -> [<e,<e,t>>, e]", "t -> [<e,t>, e]", "@start@ -> t"],
         ]
-        unary_function_paths = self.world_without_recursion.get_paths_to_root("<e,t> -> unary_function")
-        assert unary_function_paths == [["<e,t> -> unary_function", "t -> [<e,t>, e]", "@start@ -> t"]]
-        binary_function_paths = self.world_without_recursion.get_paths_to_root("<e,<e,t>> -> binary_function")
+        unary_function_paths = self.world_without_recursion.get_paths_to_root(
+            "<e,t> -> unary_function"
+        )
+        assert unary_function_paths == [
+            ["<e,t> -> unary_function", "t -> [<e,t>, e]", "@start@ -> t"]
+        ]
+        binary_function_paths = self.world_without_recursion.get_paths_to_root(
+            "<e,<e,t>> -> binary_function"
+        )
         assert binary_function_paths == [
-            ["<e,<e,t>> -> binary_function", "<e,t> -> [<e,<e,t>>, e]", "t -> [<e,t>, e]", "@start@ -> t"]
+            [
+                "<e,<e,t>> -> binary_function",
+                "<e,t> -> [<e,<e,t>>, e]",
+                "t -> [<e,t>, e]",
+                "@start@ -> t",
+            ]
         ]
 
     def test_get_paths_to_root_with_recursion(self):
@@ -59,11 +70,23 @@ class TestWorld(AllenNlpTestCase):
             ["e -> argument", "t -> [<e,t>, e]", "@start@ -> t"],
             ["e -> argument", "<e,t> -> [<e,<e,t>>, e]", "t -> [<e,t>, e]", "@start@ -> t"],
             ["e -> argument", "e -> [<e,e>, e]", "t -> [<e,t>, e]", "@start@ -> t"],
-            ["e -> argument", "e -> [<e,e>, e]", "<e,t> -> [<e,<e,t>>, e]", "t -> [<e,t>, e]", "@start@ -> t"],
+            [
+                "e -> argument",
+                "e -> [<e,e>, e]",
+                "<e,t> -> [<e,<e,t>>, e]",
+                "t -> [<e,t>, e]",
+                "@start@ -> t",
+            ],
         ]
         identity_paths = self.world_with_recursion.get_paths_to_root("<e,e> -> identity")
         # Two identity paths, one through each of unary and binary function productions.
         assert identity_paths == [
             ["<e,e> -> identity", "e -> [<e,e>, e]", "t -> [<e,t>, e]", "@start@ -> t"],
-            ["<e,e> -> identity", "e -> [<e,e>, e]", "<e,t> -> [<e,<e,t>>, e]", "t -> [<e,t>, e]", "@start@ -> t"],
+            [
+                "<e,e> -> identity",
+                "e -> [<e,e>, e]",
+                "<e,t> -> [<e,<e,t>>, e]",
+                "t -> [<e,t>, e]",
+                "@start@ -> t",
+            ],
         ]

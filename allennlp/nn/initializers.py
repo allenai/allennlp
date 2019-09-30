@@ -254,7 +254,9 @@ class PretrainedModelInitializer(Initializer):
         specified, the initializer will use the parameter's default name as the key.
     """
 
-    def __init__(self, weights_file_path: str, parameter_name_overrides: Dict[str, str] = None) -> None:
+    def __init__(
+        self, weights_file_path: str, parameter_name_overrides: Dict[str, str] = None
+    ) -> None:
         self.weights: Dict[str, torch.Tensor] = torch.load(weights_file_path)
         self.parameter_name_overrides = parameter_name_overrides or {}
 
@@ -317,7 +319,9 @@ class InitializerApplicator:
         # Store which initialisers were applied to which parameters.
         for name, parameter in module.named_parameters():
             for initializer_regex, initializer in self._initializers:
-                allow = self._prevent_regex is None or not bool(re.search(self._prevent_regex, name))
+                allow = self._prevent_regex is None or not bool(
+                    re.search(self._prevent_regex, name)
+                )
                 if allow and re.search(initializer_regex, name):
                     logger.info("Initializing %s using %s initializer", name, initializer_regex)
                     initializer(parameter, parameter_name=name)
@@ -375,5 +379,7 @@ class InitializerApplicator:
 
         prevent_regexes = [param[0] for param in params if is_prevent(param[1])]
         params = [param for param in params if param[1] if not is_prevent(param[1])]
-        initializers = [(name, Initializer.from_params(init_params)) for name, init_params in params]
+        initializers = [
+            (name, Initializer.from_params(init_params)) for name, init_params in params
+        ]
         return InitializerApplicator(initializers, prevent_regexes)

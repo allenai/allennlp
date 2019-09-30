@@ -21,7 +21,9 @@ class LearningRateScheduler(Scheduler, Registrable):
     def from_params(cls, optimizer: torch.optim.Optimizer, params: Params):  # type: ignore
 
         scheduler_type = params.pop_choice("type", LearningRateScheduler.list_available())
-        scheduler = LearningRateScheduler.by_name(scheduler_type)(optimizer, **params.as_dict())  # type: ignore
+        scheduler = LearningRateScheduler.by_name(scheduler_type)(
+            optimizer, **params.as_dict()
+        )  # type: ignore
         if isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
             return _PyTorchLearningRateSchedulerWithMetricsWrapper(scheduler)
         elif isinstance(scheduler, torch.optim.lr_scheduler._LRScheduler):

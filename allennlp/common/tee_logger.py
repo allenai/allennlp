@@ -30,7 +30,9 @@ class TeeLogger:
         sys.stderr = TeeLogger("stdout.log", sys.stderr)
     """
 
-    def __init__(self, filename: str, terminal: TextIO, file_friendly_terminal_output: bool) -> None:
+    def __init__(
+        self, filename: str, terminal: TextIO, file_friendly_terminal_output: bool
+    ) -> None:
         self.terminal = terminal
         self.file_friendly_terminal_output = file_friendly_terminal_output
         parent_directory = os.path.dirname(filename)

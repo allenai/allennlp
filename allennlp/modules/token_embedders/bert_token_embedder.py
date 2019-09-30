@@ -167,7 +167,9 @@ class BertEmbedder(TokenEmbedder):
 
                 last_window_size = split_token_type_ids[-1].size(-1)
                 padding_amount = self.max_pieces - last_window_size
-                split_token_type_ids[-1] = F.pad(split_token_type_ids[-1], pad=[0, padding_amount], value=0)
+                split_token_type_ids[-1] = F.pad(
+                    split_token_type_ids[-1], pad=[0, padding_amount], value=0
+                )
 
                 token_type_ids = torch.cat(split_token_type_ids, dim=0)
 
@@ -206,7 +208,9 @@ class BertEmbedder(TokenEmbedder):
             first_window = list(range(stride_offset))
 
             max_context_windows = [
-                i for i in range(full_seq_len) if stride_offset - 1 < i % self.max_pieces < stride_offset + stride
+                i
+                for i in range(full_seq_len)
+                if stride_offset - 1 < i % self.max_pieces < stride_offset + stride
             ]
 
             # Lookback what's left, unless it's the whole self.max_pieces window
@@ -246,7 +250,9 @@ class BertEmbedder(TokenEmbedder):
             # offsets is (batch_size, d1, ..., dn, orig_sequence_length)
             offsets2d = util.combine_initial_dims(offsets)
             # now offsets is (batch_size * d1 * ... * dn, orig_sequence_length)
-            range_vector = util.get_range_vector(offsets2d.size(0), device=util.get_device_of(mix)).unsqueeze(1)
+            range_vector = util.get_range_vector(
+                offsets2d.size(0), device=util.get_device_of(mix)
+            ).unsqueeze(1)
             # selected embeddings is also (batch_size * d1 * ... * dn, orig_sequence_length)
             selected_embeddings = mix[range_vector, offsets2d]
 
@@ -289,5 +295,7 @@ class PretrainedBertEmbedder(BertEmbedder):
             param.requires_grad = requires_grad
 
         super().__init__(
-            bert_model=model, top_layer_only=top_layer_only, scalar_mix_parameters=scalar_mix_parameters
+            bert_model=model,
+            top_layer_only=top_layer_only,
+            scalar_mix_parameters=scalar_mix_parameters,
         )

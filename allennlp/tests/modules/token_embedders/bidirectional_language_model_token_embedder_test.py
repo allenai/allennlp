@@ -5,7 +5,9 @@ class TestBidirectionalLanguageModelTokenEmbedder(TestLanguageModelTokenEmbedder
     def setUp(self):
         super().setUp()
         self.set_up_model(
-            self.FIXTURES_ROOT / "language_model" / "bidirectional_lm_characters_token_embedder.jsonnet",
+            self.FIXTURES_ROOT
+            / "language_model"
+            / "bidirectional_lm_characters_token_embedder.jsonnet",
             self.FIXTURES_ROOT / "data" / "conll2003.txt",
         )
 

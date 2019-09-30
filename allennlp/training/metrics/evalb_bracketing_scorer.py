@@ -14,7 +14,9 @@ from allennlp.training.metrics.metric import Metric
 logger = logging.getLogger(__name__)
 
 DEFAULT_EVALB_DIR = os.path.abspath(
-    os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir, os.pardir, "tools", "EVALB")
+    os.path.join(
+        os.path.dirname(os.path.realpath(__file__)), os.pardir, os.pardir, "tools", "EVALB"
+    )
 )
 
 
@@ -48,7 +50,9 @@ class EvalbBracketingScorer(Metric):
     """
 
     def __init__(
-        self, evalb_directory_path: str = DEFAULT_EVALB_DIR, evalb_param_filename: str = "COLLINS.prm"
+        self,
+        evalb_directory_path: str = DEFAULT_EVALB_DIR,
+        evalb_param_filename: str = "COLLINS.prm",
     ) -> None:
         self._evalb_directory_path = evalb_directory_path
         self._evalb_program_path = os.path.join(evalb_directory_path, "evalb")
@@ -84,7 +88,9 @@ class EvalbBracketingScorer(Metric):
             A list of gold NLTK Trees to use as a reference.
         """
         if not os.path.exists(self._evalb_program_path):
-            logger.warning(f"EVALB not found at {self._evalb_program_path}.  Attempting to compile it.")
+            logger.warning(
+                f"EVALB not found at {self._evalb_program_path}.  Attempting to compile it."
+            )
             EvalbBracketingScorer.compile_evalb(self._evalb_directory_path)
 
             # If EVALB executable still doesn't exist, raise an error.
@@ -111,8 +117,16 @@ class EvalbBracketingScorer(Metric):
             for tree in predicted_trees:
                 predicted_file.write(f"{tree.pformat(margin=1000000)}\n")
 
-        command = [self._evalb_program_path, "-p", self._evalb_param_path, gold_path, predicted_path]
-        completed_process = subprocess.run(command, stdout=subprocess.PIPE, universal_newlines=True, check=True)
+        command = [
+            self._evalb_program_path,
+            "-p",
+            self._evalb_param_path,
+            gold_path,
+            predicted_path,
+        ]
+        completed_process = subprocess.run(
+            command, stdout=subprocess.PIPE, universal_newlines=True, check=True
+        )
 
         for line in completed_process.stdout.split("\n"):
             stripped = line.strip().split()
@@ -132,13 +146,27 @@ class EvalbBracketingScorer(Metric):
         -------
         The average precision, recall and f1.
         """
-        recall = self._correct_predicted_brackets / self._gold_brackets if self._gold_brackets > 0 else 0.0
-        precision = self._correct_predicted_brackets / self._predicted_brackets if self._gold_brackets > 0 else 0.0
-        f1_measure = 2 * (precision * recall) / (precision + recall) if precision + recall > 0 else 0
+        recall = (
+            self._correct_predicted_brackets / self._gold_brackets
+            if self._gold_brackets > 0
+            else 0.0
+        )
+        precision = (
+            self._correct_predicted_brackets / self._predicted_brackets
+            if self._gold_brackets > 0
+            else 0.0
+        )
+        f1_measure = (
+            2 * (precision * recall) / (precision + recall) if precision + recall > 0 else 0
+        )
 
         if reset:
             self.reset()
-        return {"evalb_recall": recall, "evalb_precision": precision, "evalb_f1_measure": f1_measure}
+        return {
+            "evalb_recall": recall,
+            "evalb_precision": precision,
+            "evalb_f1_measure": f1_measure,
+        }
 
     @overrides
     def reset(self):

@@ -30,7 +30,10 @@ class PosTagIndexer(TokenIndexer[int]):
     """
 
     def __init__(
-        self, namespace: str = "pos_tokens", coarse_tags: bool = False, token_min_padding_length: int = 0
+        self,
+        namespace: str = "pos_tokens",
+        coarse_tags: bool = False,
+        token_min_padding_length: int = 0,
     ) -> None:
         super().__init__(token_min_padding_length)
         self._namespace = namespace
@@ -74,7 +77,10 @@ class PosTagIndexer(TokenIndexer[int]):
 
     @overrides
     def as_padded_tensor(
-        self, tokens: Dict[str, List[int]], desired_num_tokens: Dict[str, int], padding_lengths: Dict[str, int]
+        self,
+        tokens: Dict[str, List[int]],
+        desired_num_tokens: Dict[str, int],
+        padding_lengths: Dict[str, int],
     ) -> Dict[str, torch.Tensor]:
         return {
             key: torch.LongTensor(pad_sequence_to_length(val, desired_num_tokens[key]))

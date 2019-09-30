@@ -9,7 +9,9 @@ class TestMaskedLanguageModelPredictor(AllenNlpTestCase):
     def test_predictions_to_labeled_instances(self):
         inputs = {"sentence": "Eric [MASK] was an intern at [MASK]"}
 
-        archive = load_archive(self.FIXTURES_ROOT / "masked_language_model" / "serialization" / "model.tar.gz")
+        archive = load_archive(
+            self.FIXTURES_ROOT / "masked_language_model" / "serialization" / "model.tar.gz"
+        )
         predictor = Predictor.from_archive(archive, "masked_language_model")
 
         instance = predictor._json_to_instance(inputs)

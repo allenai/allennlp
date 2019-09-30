@@ -34,7 +34,10 @@ class BabiReader(DatasetReader):
     """
 
     def __init__(
-        self, keep_sentences: bool = False, token_indexers: Dict[str, TokenIndexer] = None, lazy: bool = False
+        self,
+        keep_sentences: bool = False,
+        token_indexers: Dict[str, TokenIndexer] = None,
+        lazy: bool = False,
     ) -> None:
 
         super().__init__(lazy)
@@ -82,12 +85,19 @@ class BabiReader(DatasetReader):
 
         if self._keep_sentences:
             context_field_ks = ListField(
-                [TextField([Token(word) for word in line], self._token_indexers) for line in context]
+                [
+                    TextField([Token(word) for word in line], self._token_indexers)
+                    for line in context
+                ]
             )
 
-            fields["supports"] = ListField([IndexField(support, context_field_ks) for support in supports])
+            fields["supports"] = ListField(
+                [IndexField(support, context_field_ks) for support in supports]
+            )
         else:
-            context_field = TextField([Token(word) for line in context for word in line], self._token_indexers)
+            context_field = TextField(
+                [Token(word) for line in context for word in line], self._token_indexers
+            )
 
         fields["context"] = context_field_ks if self._keep_sentences else context_field
         fields["question"] = TextField([Token(word) for word in question], self._token_indexers)

@@ -30,7 +30,9 @@ class NamespaceSwappingField(Field[torch.Tensor]):
 
     @overrides
     def index(self, vocab: Vocabulary):
-        self._mapping_array = [vocab.get_token_index(x.text, self._target_namespace) for x in self._source_tokens]
+        self._mapping_array = [
+            vocab.get_token_index(x.text, self._target_namespace) for x in self._source_tokens
+        ]
 
     @overrides
     def get_padding_lengths(self) -> Dict[str, int]:

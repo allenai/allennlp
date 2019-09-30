@@ -29,7 +29,9 @@ class TestGrammarStatelet(AllenNlpTestCase):
         assert state.get_valid_actions() == s_actions
         state = GrammarStatelet(["t"], {"s": s_actions, "t": t_actions}, is_nonterminal)
         assert state.get_valid_actions() == t_actions
-        state = GrammarStatelet(["e"], {"s": s_actions, "t": t_actions, "e": e_actions}, is_nonterminal)
+        state = GrammarStatelet(
+            ["e"], {"s": s_actions, "t": t_actions, "e": e_actions}, is_nonterminal
+        )
         assert state.get_valid_actions() == e_actions
 
     def test_take_action_crashes_with_mismatched_types(self):

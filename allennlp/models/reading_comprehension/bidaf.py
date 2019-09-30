@@ -82,7 +82,9 @@ class BidirectionalAttentionFlow(Model):
         super().__init__(vocab, regularizer)
 
         self._text_field_embedder = text_field_embedder
-        self._highway_layer = TimeDistributed(Highway(text_field_embedder.get_output_dim(), num_highway_layers))
+        self._highway_layer = TimeDistributed(
+            Highway(text_field_embedder.get_output_dim(), num_highway_layers)
+        )
         self._phrase_layer = phrase_layer
         self._matrix_attention = LegacyMatrixAttention(similarity_function)
         self._modeling_layer = modeling_layer
@@ -100,7 +102,10 @@ class BidirectionalAttentionFlow(Model):
         # Bidaf has lots of layer dimensions which need to match up - these aren't necessarily
         # obvious from the configuration files, so we check here.
         check_dimensions_match(
-            modeling_layer.get_input_dim(), 4 * encoding_dim, "modeling layer input dim", "4 * encoding dim"
+            modeling_layer.get_input_dim(),
+            4 * encoding_dim,
+            "modeling layer input dim",
+            "4 * encoding dim",
         )
         check_dimensions_match(
             text_field_embedder.get_output_dim(),
@@ -231,7 +236,9 @@ class BidirectionalAttentionFlow(Model):
             dim=-1,
         )
 
-        modeled_passage = self._dropout(self._modeling_layer(final_merged_passage, passage_lstm_mask))
+        modeled_passage = self._dropout(
+            self._modeling_layer(final_merged_passage, passage_lstm_mask)
+        )
         modeling_dim = modeled_passage.size(-1)
 
         # Shape: (batch_size, passage_length, encoding_dim * 4 + modeling_dim))
@@ -259,7 +266,9 @@ class BidirectionalAttentionFlow(Model):
             dim=-1,
         )
         # Shape: (batch_size, passage_length, encoding_dim)
-        encoded_span_end = self._dropout(self._span_end_encoder(span_end_representation, passage_lstm_mask))
+        encoded_span_end = self._dropout(
+            self._span_end_encoder(span_end_representation, passage_lstm_mask)
+        )
         # Shape: (batch_size, passage_length, encoding_dim * 4 + span_end_encoding_dim)
         span_end_input = self._dropout(torch.cat([final_merged_passage, encoded_span_end], dim=-1))
         span_end_logits = self._span_end_predictor(span_end_input).squeeze(-1)
@@ -279,9 +288,13 @@ class BidirectionalAttentionFlow(Model):
 
         # Compute the loss for training.
         if span_start is not None:
-            loss = nll_loss(util.masked_log_softmax(span_start_logits, passage_mask), span_start.squeeze(-1))
+            loss = nll_loss(
+                util.masked_log_softmax(span_start_logits, passage_mask), span_start.squeeze(-1)
+            )
             self._span_start_accuracy(span_start_logits, span_start.squeeze(-1))
-            loss += nll_loss(util.masked_log_softmax(span_end_logits, passage_mask), span_end.squeeze(-1))
+            loss += nll_loss(
+                util.masked_log_softmax(span_end_logits, passage_mask), span_end.squeeze(-1)
+            )
             self._span_end_accuracy(span_end_logits, span_end.squeeze(-1))
             self._span_accuracy(best_span, torch.cat([span_start, span_end], -1))
             output_dict["loss"] = loss
@@ -319,7 +332,9 @@ class BidirectionalAttentionFlow(Model):
         }
 
     @staticmethod
-    def get_best_span(span_start_logits: torch.Tensor, span_end_logits: torch.Tensor) -> torch.Tensor:
+    def get_best_span(
+        span_start_logits: torch.Tensor, span_end_logits: torch.Tensor
+    ) -> torch.Tensor:
         # We call the inputs "logits" - they could either be unnormalized logits or normalized log
         # probabilities.  A log_softmax operation is a constant shifting of the entire logit
         # vector, so taking an argmax over either one gives the same result.
@@ -331,7 +346,11 @@ class BidirectionalAttentionFlow(Model):
         span_log_probs = span_start_logits.unsqueeze(2) + span_end_logits.unsqueeze(1)
         # Only the upper triangle of the span matrix is valid; the lower triangle has entries where
         # the span ends before it starts.
-        span_log_mask = torch.triu(torch.ones((passage_length, passage_length), device=device)).log().unsqueeze(0)
+        span_log_mask = (
+            torch.triu(torch.ones((passage_length, passage_length), device=device))
+            .log()
+            .unsqueeze(0)
+        )
         valid_span_log_probs = span_log_probs + span_log_mask
 
         # Here we take the span matrix and flatten it, then find the best span using argmax.  We

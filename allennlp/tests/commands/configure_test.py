@@ -52,7 +52,9 @@ class TestConfigure(AllenNlpTestCase):
 
         client = app.test_client()
 
-        response = client.get("/api/config/?class=allennlp.predictors.predictor.Predictor&get_choices=true")
+        response = client.get(
+            "/api/config/?class=allennlp.predictors.predictor.Predictor&get_choices=true"
+        )
         data = json.loads(response.get_data())
         choices = data.get("choices", ())
         assert "configuretestpackage.predictor.BidafPredictor" in choices

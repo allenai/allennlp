@@ -75,7 +75,9 @@ class TestMultiprocessDatasetReader(AllenNlpTestCase):
 
     def test_multiprocess_read_partial_does_not_hang(self):
         # Use a small queue size such that the processes generating the data will block.
-        reader = MultiprocessDatasetReader(base_reader=self.base_reader, num_workers=4, output_queue_size=10)
+        reader = MultiprocessDatasetReader(
+            base_reader=self.base_reader, num_workers=4, output_queue_size=10
+        )
 
         all_instances = []
 
@@ -158,7 +160,9 @@ class TestMultiprocessDatasetReader(AllenNlpTestCase):
         assert actual_fingerprints == expected_fingerprints
 
     def test_multiple_epochs(self):
-        reader = MultiprocessDatasetReader(base_reader=self.base_reader, num_workers=2, epochs_per_read=3)
+        reader = MultiprocessDatasetReader(
+            base_reader=self.base_reader, num_workers=2, epochs_per_read=3
+        )
 
         all_instances = []
 

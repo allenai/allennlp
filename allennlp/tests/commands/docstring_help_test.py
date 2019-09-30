@@ -9,18 +9,24 @@ import allennlp.commands
 from allennlp.common.testing import AllenNlpTestCase
 
 
-@pytest.mark.skip(reason="This test is slow and somewhat fragile and doesn't need to run every commit.")
+@pytest.mark.skip(
+    reason="This test is slow and somewhat fragile and doesn't need to run every commit."
+)
 class TestDocstringHelp(AllenNlpTestCase):
     RE_DOCSTRING_CALL_SUBCOMMAND_HELP = re.compile(r"^\s*\$ (allennlp \S+ --help)$", re.MULTILINE)
     RE_STARTS_WITH_INDENTATION = re.compile(r"^ {4}", re.MULTILINE)
 
     def test_docstring_help(self):
         parent_module = allennlp.commands
-        for module_info in pkgutil.iter_modules(parent_module.__path__, parent_module.__name__ + "."):
+        for module_info in pkgutil.iter_modules(
+            parent_module.__path__, parent_module.__name__ + "."
+        ):
             module = importlib.import_module(module_info.name)
             match = self.RE_DOCSTRING_CALL_SUBCOMMAND_HELP.search(module.__doc__)
             if match:
-                expected_output = self.RE_STARTS_WITH_INDENTATION.sub("", module.__doc__[match.end(0) + 1 :])
+                expected_output = self.RE_STARTS_WITH_INDENTATION.sub(
+                    "", module.__doc__[match.end(0) + 1 :]
+                )
 
                 str_call_subcommand_help = match.group(1)
                 str_call_from_python_subcommand_help = str_call_subcommand_help.replace(
@@ -28,7 +34,10 @@ class TestDocstringHelp(AllenNlpTestCase):
                 )
 
                 actual_output = subprocess.run(
-                    str_call_from_python_subcommand_help, check=True, shell=True, stdout=subprocess.PIPE
+                    str_call_from_python_subcommand_help,
+                    check=True,
+                    shell=True,
+                    stdout=subprocess.PIPE,
                 ).stdout.decode()
 
                 pytorch_pretrained_bert_warning = (

@@ -14,7 +14,9 @@ class TestHotflip(AllenNlpTestCase):
             "hypothesis": "One time I didn't write any unit tests for my code.",
         }
 
-        archive = load_archive(self.FIXTURES_ROOT / "decomposable_attention" / "serialization" / "model.tar.gz")
+        archive = load_archive(
+            self.FIXTURES_ROOT / "decomposable_attention" / "serialization" / "model.tar.gz"
+        )
         predictor = Predictor.from_archive(archive, "textual-entailment")
 
         hotflipper = Hotflip(predictor)
@@ -24,7 +26,9 @@ class TestHotflip(AllenNlpTestCase):
         assert "final" in attack
         assert "original" in attack
         assert "outputs" in attack
-        assert len(attack["final"][0]) == len(attack["original"])  # hotflip replaces words without removing
+        assert len(attack["final"][0]) == len(
+            attack["original"]
+        )  # hotflip replaces words without removing
 
         # test using SQuAD model (tests different equals method)
         inputs = {
@@ -43,7 +47,9 @@ class TestHotflip(AllenNlpTestCase):
         assert "final" in attack
         assert "original" in attack
         assert "outputs" in attack
-        assert len(attack["final"][0]) == len(attack["original"])  # hotflip replaces words without removing
+        assert len(attack["final"][0]) == len(
+            attack["original"]
+        )  # hotflip replaces words without removing
 
         instance = predictor._json_to_instance(inputs)
         assert instance["question"] != attack["final"][0]  # check that the input has changed.
@@ -66,12 +72,17 @@ class TestHotflip(AllenNlpTestCase):
             # different.
             else:
                 if token == attack["final"][0][i]:
-                    assert original_span_start != flipped_span_start or original_span_end != flipped_span_end
+                    assert (
+                        original_span_start != flipped_span_start
+                        or original_span_end != flipped_span_end
+                    )
 
     def test_targeted_attack_from_json(self):
         inputs = {"sentence": "The doctor ran to the emergency room to see [MASK] patient."}
 
-        archive = load_archive(self.FIXTURES_ROOT / "masked_language_model" / "serialization" / "model.tar.gz")
+        archive = load_archive(
+            self.FIXTURES_ROOT / "masked_language_model" / "serialization" / "model.tar.gz"
+        )
         predictor = Predictor.from_archive(archive, "masked_language_model")
 
         hotflipper = Hotflip(predictor, vocab_namespace="tokens")
@@ -81,5 +92,7 @@ class TestHotflip(AllenNlpTestCase):
         assert "final" in attack
         assert "original" in attack
         assert "outputs" in attack
-        assert len(attack["final"][0]) == len(attack["original"])  # hotflip replaces words without removing
+        assert len(attack["final"][0]) == len(
+            attack["original"]
+        )  # hotflip replaces words without removing
         assert attack["final"][0] != attack["original"]

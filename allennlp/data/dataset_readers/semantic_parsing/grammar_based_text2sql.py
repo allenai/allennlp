@@ -78,7 +78,8 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
 
         if not self._use_prelinked_entities:
             raise ConfigurationError(
-                "The grammar based text2sql dataset reader " "currently requires the use of entity pre-linking."
+                "The grammar based text2sql dataset reader "
+                "currently requires the use of entity pre-linking."
             )
 
         self._cross_validation_split_to_exclude = str(cross_validation_split_to_exclude)
@@ -114,7 +115,9 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
             up into many small files, for which you only want to exclude one.
         """
         files = [
-            p for p in glob.glob(file_path) if self._cross_validation_split_to_exclude not in os.path.basename(p)
+            p
+            for p in glob.glob(file_path)
+            if self._cross_validation_split_to_exclude not in os.path.basename(p)
         ]
         schema = read_dataset_schema(self._schema_path)
 
@@ -129,7 +132,9 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
                 schema=schema,
             ):
                 linked_entities = sql_data.sql_variables if self._use_prelinked_entities else None
-                instance = self.text_to_instance(sql_data.text_with_variables, linked_entities, sql_data.sql)
+                instance = self.text_to_instance(
+                    sql_data.text_with_variables, linked_entities, sql_data.sql
+                )
                 if instance is not None:
                     yield instance
 
@@ -146,7 +151,9 @@ class GrammarBasedText2SqlDatasetReader(DatasetReader):
         fields["tokens"] = tokens
 
         if sql is not None:
-            action_sequence, all_actions = self._world.get_action_sequence_and_all_actions(sql, prelinked_entities)
+            action_sequence, all_actions = self._world.get_action_sequence_and_all_actions(
+                sql, prelinked_entities
+            )
             if action_sequence is None and self._keep_if_unparsable:
                 print("Parse error")
                 action_sequence = []

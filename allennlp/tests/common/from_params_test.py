@@ -203,9 +203,16 @@ class TestFromParams(AllenNlpTestCase):
         params = Params(
             {
                 "type": "D",
-                "arg1": [{"type": "A", "b": vals[0]}, {"type": "A", "b": vals[1]}, {"type": "A", "b": vals[2]}],
+                "arg1": [
+                    {"type": "A", "b": vals[0]},
+                    {"type": "A", "b": vals[1]},
+                    {"type": "A", "b": vals[2]},
+                ],
                 "arg2": [{"type": "A", "b": vals[0]}, {"type": "B", "b": vals[0]}],
-                "arg3": {"class_1": {"type": "A", "b": vals[0]}, "class_2": {"type": "A", "b": vals[1]}},
+                "arg3": {
+                    "class_1": {"type": "A", "b": vals[0]},
+                    "class_2": {"type": "A", "b": vals[1]},
+                },
                 "arg4": [
                     {"type": "A", "b": vals[0], "val": "M"},
                     {"type": "A", "b": vals[1], "val": "N"},
@@ -325,7 +332,10 @@ class TestFromParams(AllenNlpTestCase):
                 self.items = items
 
         params = Params(
-            {"type": "d", "items": {"first": {"type": "b", "size": 1}, "second": {"type": "b", "size": 2}}}
+            {
+                "type": "d",
+                "items": {"first": {"type": "b", "size": 1}, "second": {"type": "b", "size": 2}},
+            }
         )
         d = C.from_params(params)
 
@@ -367,7 +377,9 @@ class TestFromParams(AllenNlpTestCase):
             def __init__(self, items: List[A]) -> None:
                 self.items = items
 
-        params = Params({"type": "d", "items": [{"type": "b", "size": 1}, {"type": "b", "size": 2}]})
+        params = Params(
+            {"type": "d", "items": [{"type": "b", "size": 1}, {"type": "b", "size": 2}]}
+        )
         d = C.from_params(params)
 
         assert isinstance(d.items, list)
@@ -404,7 +416,9 @@ class TestFromParams(AllenNlpTestCase):
             def __init__(self, items: Tuple[A, C]) -> None:
                 self.items = items
 
-        params = Params({"type": "f", "items": [{"type": "b", "size": 1}, {"type": "d", "name": "item2"}]})
+        params = Params(
+            {"type": "f", "items": [{"type": "b", "size": 1}, {"type": "d", "name": "item2"}]}
+        )
         f = E.from_params(params)
 
         assert isinstance(f.items, tuple)
@@ -460,7 +474,9 @@ class TestFromParams(AllenNlpTestCase):
 
     def test_transferring_of_modules(self):
 
-        model_archive = str(self.FIXTURES_ROOT / "decomposable_attention" / "serialization" / "model.tar.gz")
+        model_archive = str(
+            self.FIXTURES_ROOT / "decomposable_attention" / "serialization" / "model.tar.gz"
+        )
         trained_model = load_archive(model_archive).model
 
         config_file = str(self.FIXTURES_ROOT / "decomposable_attention" / "experiment.json")
@@ -468,7 +484,11 @@ class TestFromParams(AllenNlpTestCase):
 
         # Override only text_field_embedder (freeze) and attend_feedforward params (tunable)
         model_params["text_field_embedder"] = {
-            "_pretrained": {"archive_file": model_archive, "module_path": "_text_field_embedder", "freeze": True}
+            "_pretrained": {
+                "archive_file": model_archive,
+                "module_path": "_text_field_embedder",
+                "freeze": True,
+            }
         }
         model_params["attend_feedforward"] = {
             "_pretrained": {
@@ -482,16 +502,19 @@ class TestFromParams(AllenNlpTestCase):
 
         # TextFieldEmbedder and AttendFeedforward parameters should be transferred
         for trained_parameter, transfer_parameter in zip(
-            trained_model._text_field_embedder.parameters(), transfer_model._text_field_embedder.parameters()
+            trained_model._text_field_embedder.parameters(),
+            transfer_model._text_field_embedder.parameters(),
         ):
             assert torch.all(trained_parameter == transfer_parameter)
         for trained_parameter, transfer_parameter in zip(
-            trained_model._attend_feedforward.parameters(), transfer_model._attend_feedforward.parameters()
+            trained_model._attend_feedforward.parameters(),
+            transfer_model._attend_feedforward.parameters(),
         ):
             assert torch.all(trained_parameter == transfer_parameter)
         # Any other module's parameters shouldn't be same (eg. compare_feedforward)
         for trained_parameter, transfer_parameter in zip(
-            trained_model._compare_feedforward.parameters(), transfer_model._compare_feedforward.parameters()
+            trained_model._compare_feedforward.parameters(),
+            transfer_model._compare_feedforward.parameters(),
         ):
             assert torch.all(trained_parameter != transfer_parameter)
 
@@ -505,7 +528,9 @@ class TestFromParams(AllenNlpTestCase):
 
     def test_transferring_of_modules_ensures_type_consistency(self):
 
-        model_archive = str(self.FIXTURES_ROOT / "decomposable_attention" / "serialization" / "model.tar.gz")
+        model_archive = str(
+            self.FIXTURES_ROOT / "decomposable_attention" / "serialization" / "model.tar.gz"
+        )
         trained_model = load_archive(model_archive).model
 
         config_file = str(self.FIXTURES_ROOT / "decomposable_attention" / "experiment.json")
@@ -513,7 +538,10 @@ class TestFromParams(AllenNlpTestCase):
 
         # Override only text_field_embedder and make it load AttendFeedForward
         model_params["text_field_embedder"] = {
-            "_pretrained": {"archive_file": model_archive, "module_path": "_attend_feedforward._module"}
+            "_pretrained": {
+                "archive_file": model_archive,
+                "module_path": "_attend_feedforward._module",
+            }
         }
         with pytest.raises(ConfigurationError):
             Model.from_params(vocab=trained_model.vocab, params=Params(model_params))

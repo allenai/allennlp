@@ -48,7 +48,9 @@ class TestInterleavingDatasetReader(AllenNlpTestCase):
     def test_all_at_once(self):
         readers = {"f": PlainTextReader(), "g": PlainTextReader(), "h": PlainTextReader()}
 
-        reader = InterleavingDatasetReader(readers, dataset_field_name="source", scheme="all_at_once")
+        reader = InterleavingDatasetReader(
+            readers, dataset_field_name="source", scheme="all_at_once"
+        )
         data_dir = self.FIXTURES_ROOT / "data"
 
         file_path = f"""{{

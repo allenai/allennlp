@@ -67,7 +67,9 @@ class TemplateText2SqlDatasetReader(DatasetReader):
             up into many small files, for which you only want to exclude one.
         """
         files = [
-            p for p in glob.glob(file_path) if self._cross_validation_split_to_exclude not in os.path.basename(p)
+            p
+            for p in glob.glob(file_path)
+            if self._cross_validation_split_to_exclude not in os.path.basename(p)
         ]
 
         for path in files:

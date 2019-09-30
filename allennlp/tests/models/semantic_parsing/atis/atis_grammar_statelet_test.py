@@ -6,10 +6,13 @@ from allennlp.semparse.worlds import AtisWorld
 
 class AtisGrammarStateletTest(AllenNlpTestCase):
     def test_atis_grammar_statelet(self):
-        world = AtisWorld([("give me all flights from boston to " "philadelphia next week arriving after lunch")])
+        world = AtisWorld(
+            [("give me all flights from boston to " "philadelphia next week arriving after lunch")]
+        )
         action_sequence = [
             'statement -> [query, ";"]',
-            'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, ' 'where_clause, ")"]',
+            'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
+            'where_clause, ")"]',
             'distinct -> ["DISTINCT"]',
             "select_results -> [col_refs]",
             'col_refs -> [col_ref, ",", col_refs]',
@@ -26,7 +29,9 @@ class AtisGrammarStateletTest(AllenNlpTestCase):
             "city_city_name_string -> [\"'BOSTON'\"]",
         ]
 
-        grammar_state = GrammarStatelet(["statement"], world.valid_actions, AtisSemanticParser.is_nonterminal)
+        grammar_state = GrammarStatelet(
+            ["statement"], world.valid_actions, AtisSemanticParser.is_nonterminal
+        )
         for action in action_sequence:
             grammar_state = grammar_state.take_action(action)
         assert grammar_state._nonterminal_stack == []

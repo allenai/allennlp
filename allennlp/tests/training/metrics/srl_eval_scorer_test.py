@@ -9,8 +9,32 @@ class SrlEvalScorerTest(AllenNlpTestCase):
     def test_srl_eval_correctly_scores_identical_tags(self):
         batch_verb_indices = [3, 8, 2]
         batch_sentences = [
-            ["Mali", "government", "officials", "say", "the", "woman", "'s", "confession", "was", "forced", "."],
-            ["Mali", "government", "officials", "say", "the", "woman", "'s", "confession", "was", "forced", "."],
+            [
+                "Mali",
+                "government",
+                "officials",
+                "say",
+                "the",
+                "woman",
+                "'s",
+                "confession",
+                "was",
+                "forced",
+                ".",
+            ],
+            [
+                "Mali",
+                "government",
+                "officials",
+                "say",
+                "the",
+                "woman",
+                "'s",
+                "confession",
+                "was",
+                "forced",
+                ".",
+            ],
             [
                 "The",
                 "prosecution",
@@ -28,7 +52,19 @@ class SrlEvalScorerTest(AllenNlpTestCase):
             ],
         ]
         batch_bio_predicted_tags = [
-            ["B-ARG0", "I-ARG0", "I-ARG0", "B-V", "B-ARG1", "I-ARG1", "I-ARG1", "I-ARG1", "I-ARG1", "I-ARG1", "O"],
+            [
+                "B-ARG0",
+                "I-ARG0",
+                "I-ARG0",
+                "B-V",
+                "B-ARG1",
+                "I-ARG1",
+                "I-ARG1",
+                "I-ARG1",
+                "I-ARG1",
+                "I-ARG1",
+                "O",
+            ],
             ["O", "O", "O", "O", "B-ARG1", "I-ARG1", "I-ARG1", "I-ARG1", "B-V", "B-ARG2", "O"],
             [
                 "B-ARG0",
@@ -46,9 +82,23 @@ class SrlEvalScorerTest(AllenNlpTestCase):
                 "O",
             ],
         ]
-        batch_conll_predicted_tags = [convert_bio_tags_to_conll_format(tags) for tags in batch_bio_predicted_tags]
+        batch_conll_predicted_tags = [
+            convert_bio_tags_to_conll_format(tags) for tags in batch_bio_predicted_tags
+        ]
         batch_bio_gold_tags = [
-            ["B-ARG0", "I-ARG0", "I-ARG0", "B-V", "B-ARG1", "I-ARG1", "I-ARG1", "I-ARG1", "I-ARG1", "I-ARG1", "O"],
+            [
+                "B-ARG0",
+                "I-ARG0",
+                "I-ARG0",
+                "B-V",
+                "B-ARG1",
+                "I-ARG1",
+                "I-ARG1",
+                "I-ARG1",
+                "I-ARG1",
+                "I-ARG1",
+                "O",
+            ],
             ["O", "O", "O", "O", "B-ARG1", "I-ARG1", "I-ARG1", "I-ARG1", "B-V", "B-ARG2", "O"],
             [
                 "B-ARG0",
@@ -66,10 +116,14 @@ class SrlEvalScorerTest(AllenNlpTestCase):
                 "O",
             ],
         ]
-        batch_conll_gold_tags = [convert_bio_tags_to_conll_format(tags) for tags in batch_bio_gold_tags]
+        batch_conll_gold_tags = [
+            convert_bio_tags_to_conll_format(tags) for tags in batch_bio_gold_tags
+        ]
 
         srl_scorer = SrlEvalScorer(ignore_classes=["V"])
-        srl_scorer(batch_verb_indices, batch_sentences, batch_conll_predicted_tags, batch_conll_gold_tags)
+        srl_scorer(
+            batch_verb_indices, batch_sentences, batch_conll_predicted_tags, batch_conll_gold_tags
+        )
         metrics = srl_scorer.get_metric()
         assert len(metrics) == 15
         assert_allclose(metrics["precision-ARG0"], 1.0)
@@ -92,12 +146,18 @@ class SrlEvalScorerTest(AllenNlpTestCase):
         batch_verb_indices = [2]
         batch_sentences = [["The", "cat", "loves", "hats", "."]]
         batch_bio_predicted_tags = [["B-ARG0", "B-ARG1", "B-V", "B-ARG1", "O"]]
-        batch_conll_predicted_tags = [convert_bio_tags_to_conll_format(tags) for tags in batch_bio_predicted_tags]
+        batch_conll_predicted_tags = [
+            convert_bio_tags_to_conll_format(tags) for tags in batch_bio_predicted_tags
+        ]
         batch_bio_gold_tags = [["B-ARG0", "I-ARG0", "B-V", "B-ARG1", "O"]]
-        batch_conll_gold_tags = [convert_bio_tags_to_conll_format(tags) for tags in batch_bio_gold_tags]
+        batch_conll_gold_tags = [
+            convert_bio_tags_to_conll_format(tags) for tags in batch_bio_gold_tags
+        ]
 
         srl_scorer = SrlEvalScorer(ignore_classes=["V"])
-        srl_scorer(batch_verb_indices, batch_sentences, batch_conll_predicted_tags, batch_conll_gold_tags)
+        srl_scorer(
+            batch_verb_indices, batch_sentences, batch_conll_predicted_tags, batch_conll_gold_tags
+        )
         metrics = srl_scorer.get_metric()
         assert len(metrics) == 9
         assert_allclose(metrics["precision-ARG0"], 0.0)
@@ -108,4 +168,6 @@ class SrlEvalScorerTest(AllenNlpTestCase):
         assert_allclose(metrics["f1-measure-ARG1"], 2 / 3)
         assert_allclose(metrics["precision-overall"], 1 / 3)
         assert_allclose(metrics["recall-overall"], 1 / 2)
-        assert_allclose(metrics["f1-measure-overall"], (2 * (1 / 3) * (1 / 2)) / ((1 / 3) + (1 / 2)))
+        assert_allclose(
+            metrics["f1-measure-overall"], (2 * (1 / 3) * (1 / 2)) / ((1 / 3) + (1 / 2))
+        )

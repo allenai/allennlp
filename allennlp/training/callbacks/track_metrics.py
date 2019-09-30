@@ -122,7 +122,9 @@ class TrackMetrics(Callback):
     def end_of_epoch(self, trainer: "CallbackTrainer"):
         # Create overall metrics dict
         training_elapsed_time = time.time() - trainer.training_start_time
-        trainer.metrics["training_duration"] = str(datetime.timedelta(seconds=training_elapsed_time))
+        trainer.metrics["training_duration"] = str(
+            datetime.timedelta(seconds=training_elapsed_time)
+        )
         trainer.metrics["training_start_epoch"] = self.starting_epoch
         trainer.metrics["training_epochs"] = trainer.epoch_number - self.starting_epoch + 1
         trainer.metrics["epoch"] = trainer.epoch_number
@@ -143,6 +145,8 @@ class TrackMetrics(Callback):
 
         if trainer._serialization_dir:
             dump_metrics(
-                os.path.join(trainer._serialization_dir, f"metrics_epoch_{trainer.epoch_number}.json"),
+                os.path.join(
+                    trainer._serialization_dir, f"metrics_epoch_{trainer.epoch_number}.json"
+                ),
                 trainer.metrics,
             )

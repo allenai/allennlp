@@ -27,7 +27,8 @@ class TestVocabulary(AllenNlpTestCase):
     def setUp(self):
         token_indexer = SingleIdTokenIndexer("tokens")
         text_field = TextField(
-            [Token(t) for t in ["a", "a", "a", "a", "b", "b", "c", "c", "c"]], {"tokens": token_indexer}
+            [Token(t) for t in ["a", "a", "a", "a", "b", "b", "c", "c", "c"]],
+            {"tokens": token_indexer},
         )
         self.instance = Instance({"text": text_field})
         self.dataset = Batch([self.instance])
@@ -88,7 +89,9 @@ class TestVocabulary(AllenNlpTestCase):
         assert "c" not in words
 
         vocab = Vocabulary.from_instances(
-            self.dataset, pretrained_files={"tokens": embeddings_filename}, only_include_pretrained_words=True
+            self.dataset,
+            pretrained_files={"tokens": embeddings_filename},
+            only_include_pretrained_words=True,
         )
         words = vocab.get_index_to_token_vocabulary().values()
         assert "a" in words
@@ -113,7 +116,9 @@ class TestVocabulary(AllenNlpTestCase):
         assert "c" not in words
 
         vocab = Vocabulary.from_instances(
-            self.dataset, pretrained_files={"tokens": embeddings_filename}, only_include_pretrained_words=False
+            self.dataset,
+            pretrained_files={"tokens": embeddings_filename},
+            only_include_pretrained_words=False,
         )
         words = vocab.get_index_to_token_vocabulary().values()
         assert "a" in words
@@ -240,7 +245,9 @@ class TestVocabulary(AllenNlpTestCase):
         vocab_dir = self.TEST_DIR / "vocab_save"
 
         vocab = Vocabulary(non_padded_namespaces=["a", "c"])
-        vocab.add_tokens_to_namespace(["a0", "a1", "a2"], namespace="a")  # non-padded, should start at 0
+        vocab.add_tokens_to_namespace(
+            ["a0", "a1", "a2"], namespace="a"
+        )  # non-padded, should start at 0
         vocab.add_tokens_to_namespace(["b2", "b3"], namespace="b")  # padded, should start at 2
 
         vocab.save_to_files(vocab_dir)
@@ -297,7 +304,9 @@ class TestVocabulary(AllenNlpTestCase):
         # Save a vocab to check we can load it from_params.
         vocab_dir = self.TEST_DIR / "vocab_save"
         vocab = Vocabulary(non_padded_namespaces=["a", "c"])
-        vocab.add_tokens_to_namespace(["a0", "a1", "a2"], namespace="a")  # non-padded, should start at 0
+        vocab.add_tokens_to_namespace(
+            ["a0", "a1", "a2"], namespace="a"
+        )  # non-padded, should start at 0
         vocab.add_tokens_to_namespace(["b2", "b3"], namespace="b")  # padded, should start at 2
         vocab.save_to_files(vocab_dir)
 
@@ -322,10 +331,14 @@ class TestVocabulary(AllenNlpTestCase):
         # Test from_params raises when there are any other dict keys
         # present apart from 'directory_path' and we aren't calling from_dataset.
         with pytest.raises(ConfigurationError):
-            _ = Vocabulary.from_params(Params({"directory_path": vocab_dir, "min_count": {"tokens": 2}}))
+            _ = Vocabulary.from_params(
+                Params({"directory_path": vocab_dir, "min_count": {"tokens": 2}})
+            )
 
     def test_from_params_adds_tokens_to_vocab(self):
-        vocab = Vocabulary.from_params(Params({"tokens_to_add": {"tokens": ["q", "x", "z"]}}), self.dataset)
+        vocab = Vocabulary.from_params(
+            Params({"tokens_to_add": {"tokens": ["q", "x", "z"]}}), self.dataset
+        )
         assert vocab.get_index_to_token_vocabulary("tokens") == {
             0: "@@PADDING@@",
             1: "@@UNKNOWN@@",
@@ -381,7 +394,9 @@ class TestVocabulary(AllenNlpTestCase):
         for non_padded_namespaces in non_padded_namespaces_list:
             original_vocab = Vocabulary(non_padded_namespaces=non_padded_namespaces)
             original_vocab.add_token_to_namespace("a", namespace="tokens1")  # index2
-            text_field = TextField([Token(t) for t in ["b"]], {"tokens2": SingleIdTokenIndexer("tokens2")})
+            text_field = TextField(
+                [Token(t) for t in ["b"]], {"tokens2": SingleIdTokenIndexer("tokens2")}
+            )
             instances = Batch([Instance({"text": text_field})])
 
             for way in extension_ways:
@@ -416,8 +431,12 @@ class TestVocabulary(AllenNlpTestCase):
         original_vocab.add_tokens_to_namespace(["a", "b"], namespace="tokens1")
         original_vocab.add_token_to_namespace("p", namespace="tokens2")
         original_vocab.save_to_files(vocab_dir)
-        text_field1 = TextField([Token(t) for t in ["a", "c"]], {"tokens1": SingleIdTokenIndexer("tokens1")})
-        text_field2 = TextField([Token(t) for t in ["p", "q", "r"]], {"tokens2": SingleIdTokenIndexer("tokens2")})
+        text_field1 = TextField(
+            [Token(t) for t in ["a", "c"]], {"tokens1": SingleIdTokenIndexer("tokens1")}
+        )
+        text_field2 = TextField(
+            [Token(t) for t in ["p", "q", "r"]], {"tokens2": SingleIdTokenIndexer("tokens2")}
+        )
         instances = Batch([Instance({"text1": text_field1, "text2": text_field2})])
 
         # Following 2 should give error: token1 is non-padded in original_vocab but not in instances
@@ -430,10 +449,14 @@ class TestVocabulary(AllenNlpTestCase):
             extended_vocab.extend_from_instances(params, instances)
         with pytest.raises(ConfigurationError):
             extended_vocab = copy.copy(original_vocab)
-            extended_vocab._extend(non_padded_namespaces=[], tokens_to_add={"tokens1": ["a"], "tokens2": ["p"]})
+            extended_vocab._extend(
+                non_padded_namespaces=[], tokens_to_add={"tokens1": ["a"], "tokens2": ["p"]}
+            )
 
         # Following 2 should not give error: overlapping namespaces have same padding setting
-        params = Params({"directory_path": vocab_dir, "extend": True, "non_padded_namespaces": ["tokens1"]})
+        params = Params(
+            {"directory_path": vocab_dir, "extend": True, "non_padded_namespaces": ["tokens1"]}
+        )
         Vocabulary.from_params(params, instances)
         extended_vocab = copy.copy(original_vocab)
         params = Params({"non_padded_namespaces": ["tokens1"]})
@@ -445,7 +468,11 @@ class TestVocabulary(AllenNlpTestCase):
 
         # Following 2 should give error: token1 is padded in instances but not in original_vocab
         params = Params(
-            {"directory_path": vocab_dir, "extend": True, "non_padded_namespaces": ["tokens1", "tokens2"]}
+            {
+                "directory_path": vocab_dir,
+                "extend": True,
+                "non_padded_namespaces": ["tokens1", "tokens2"],
+            }
         )
         with pytest.raises(ConfigurationError):
             _ = Vocabulary.from_params(params, instances)
@@ -456,7 +483,8 @@ class TestVocabulary(AllenNlpTestCase):
         with pytest.raises(ConfigurationError):
             extended_vocab = copy.copy(original_vocab)
             extended_vocab._extend(
-                non_padded_namespaces=["tokens1", "tokens2"], tokens_to_add={"tokens1": ["a"], "tokens2": ["p"]}
+                non_padded_namespaces=["tokens1", "tokens2"],
+                tokens_to_add={"tokens1": ["a"], "tokens2": ["p"]},
             )
 
     def test_from_params_extend_config(self):
@@ -466,7 +494,9 @@ class TestVocabulary(AllenNlpTestCase):
         original_vocab.add_token_to_namespace("a", namespace="tokens")
         original_vocab.save_to_files(vocab_dir)
 
-        text_field = TextField([Token(t) for t in ["a", "b"]], {"tokens": SingleIdTokenIndexer("tokens")})
+        text_field = TextField(
+            [Token(t) for t in ["a", "b"]], {"tokens": SingleIdTokenIndexer("tokens")}
+        )
         instances = Batch([Instance({"text": text_field})])
 
         # If you ask to extend vocab from `directory_path`, instances must be passed
@@ -541,13 +571,28 @@ class TestVocabulary(AllenNlpTestCase):
         text_field4 = TextField(
             [Token(t) for t in ["l", "m", "n", "o"]], {"tokens4": SingleIdTokenIndexer("tokens4")}
         )
-        text_field5 = TextField([Token(t) for t in ["x", "y", "z"]], {"tokens5": SingleIdTokenIndexer("tokens5")})
+        text_field5 = TextField(
+            [Token(t) for t in ["x", "y", "z"]], {"tokens5": SingleIdTokenIndexer("tokens5")}
+        )
         instances = Batch(
-            [Instance({"text0": text_field0, "text1": text_field1, "text4": text_field4, "text5": text_field5})]
+            [
+                Instance(
+                    {
+                        "text0": text_field0,
+                        "text1": text_field1,
+                        "text4": text_field4,
+                        "text5": text_field5,
+                    }
+                )
+            ]
         )
 
         params = Params(
-            {"directory_path": vocab_dir, "extend": True, "non_padded_namespaces": ["tokens1", "tokens5"]}
+            {
+                "directory_path": vocab_dir,
+                "extend": True,
+                "non_padded_namespaces": ["tokens1", "tokens5"],
+            }
         )
         extended_vocab = Vocabulary.from_params(params, instances)
 
@@ -671,7 +716,9 @@ class TestVocabulary(AllenNlpTestCase):
         assert "c" not in words
 
         vocab = Vocabulary.from_instances(
-            self.dataset, pretrained_files={"tokens": embeddings_file_uri}, only_include_pretrained_words=True
+            self.dataset,
+            pretrained_files={"tokens": embeddings_file_uri},
+            only_include_pretrained_words=True,
         )
         words = set(vocab.get_index_to_token_vocabulary().values())
         assert "a" in words
@@ -708,7 +755,11 @@ class TestVocabulary(AllenNlpTestCase):
             "token_characters": TokenCharactersIndexer(min_padding_length=3),
         }
         instance = Instance(
-            {"text": TextField([Token(w) for w in "Abc def ghi jkl mno pqr stu vwx yz".split(" ")], indexers)}
+            {
+                "text": TextField(
+                    [Token(w) for w in "Abc def ghi jkl mno pqr stu vwx yz".split(" ")], indexers
+                )
+            }
         )
         dataset = Batch([instance])
         params = Params({"max_vocab_size": {"tokens": 1}})
@@ -720,7 +771,9 @@ class TestVocabulary(AllenNlpTestCase):
     def test_min_pretrained_embeddings(self):
         params = Params(
             {
-                "pretrained_files": {"tokens": str(self.FIXTURES_ROOT / "embeddings/glove.6B.100d.sample.txt.gz")},
+                "pretrained_files": {
+                    "tokens": str(self.FIXTURES_ROOT / "embeddings/glove.6B.100d.sample.txt.gz")
+                },
                 "min_pretrained_embeddings": {"tokens": 50},
             }
         )

@@ -126,7 +126,9 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
                     ]
                     token_vectors = embedder(*tensors, **forward_params_values)
                 elif isinstance(indexer_map, dict):
-                    tensors = {name: text_field_input[argument] for name, argument in indexer_map.items()}
+                    tensors = {
+                        name: text_field_input[argument] for name, argument in indexer_map.items()
+                    }
                     token_vectors = embedder(**tensors, **forward_params_values)
                 else:
                     raise NotImplementedError
@@ -140,7 +142,9 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
 
     # This is some unusual logic, it needs a custom from_params.
     @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> "BasicTextFieldEmbedder":  # type: ignore
+    def from_params(
+        cls, vocab: Vocabulary, params: Params
+    ) -> "BasicTextFieldEmbedder":  # type: ignore
         # The original `from_params` for this class was designed in a way that didn't agree
         # with the constructor. The constructor wants a 'token_embedders' parameter that is a
         # `Dict[str, TokenEmbedder]`, but the original `from_params` implementation expected those
@@ -169,7 +173,9 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
             keys = list(params.keys())
             for key in keys:
                 embedder_params = params.pop(key)
-                token_embedders[key] = TokenEmbedder.from_params(vocab=vocab, params=embedder_params)
+                token_embedders[key] = TokenEmbedder.from_params(
+                    vocab=vocab, params=embedder_params
+                )
 
         params.assert_empty(cls.__name__)
         return cls(token_embedders, embedder_to_indexer_map, allow_unmatched_keys)

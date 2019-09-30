@@ -299,7 +299,9 @@ class Attention(torch.nn.Module):
 
 
 class MLP(torch.nn.Module):
-    def __init__(self, n_state: int, config: TransformerConfig) -> None:  # in MLP: n_state=3072 (4 * n_embd)
+    def __init__(
+        self, n_state: int, config: TransformerConfig
+    ) -> None:  # in MLP: n_state=3072 (4 * n_embd)
         super().__init__()
         self.c_fc = Conv1D(n_state, 1, config.embedding_dim)
         self.c_proj = Conv1D(config.embedding_dim, 1, n_state)
@@ -450,7 +452,9 @@ class OpenaiTransformer(torch.nn.Module, FromParams):
         transformer_model_path = cached_path(transformer_model_path)
 
         with tarfile.open(transformer_model_path) as tmp:
-            num_params_files = len([member for member in tmp.getmembers() if member.name.endswith(".npy")])
+            num_params_files = len(
+                [member for member in tmp.getmembers() if member.name.endswith(".npy")]
+            )
             shapesfile = tmp.extractfile("model/params_shapes.json")
             if shapesfile:
                 shapes = json.loads(shapesfile.read())
@@ -492,7 +496,12 @@ class OpenaiTransformer(torch.nn.Module, FromParams):
             # init_params[0] is (512, 768)
             # result is (40990 + n_special, 768)
             init_params[0] = np.concatenate(
-                [init_params[1], (np.random.randn(n_special, n_embd) * 0.02).astype(np.float32), init_params[0]], 0
+                [
+                    init_params[1],
+                    (np.random.randn(n_special, n_embd) * 0.02).astype(np.float32),
+                    init_params[0],
+                ],
+                0,
             )
         else:
             # result is (40990, 768)

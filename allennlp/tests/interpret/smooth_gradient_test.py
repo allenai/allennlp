@@ -7,7 +7,9 @@ from allennlp.interpret.saliency_interpreters import SmoothGradient
 class TestSmoothGradient(AllenNlpTestCase):
     def test_smooth_gradient(self):
         inputs = {"sentence": "It was the ending that I hated"}
-        archive = load_archive(self.FIXTURES_ROOT / "basic_classifier" / "serialization" / "model.tar.gz")
+        archive = load_archive(
+            self.FIXTURES_ROOT / "basic_classifier" / "serialization" / "model.tar.gz"
+        )
         predictor = Predictor.from_archive(archive, "text_classifier")
 
         interpreter = SmoothGradient(predictor)

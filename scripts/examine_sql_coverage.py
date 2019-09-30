@@ -87,10 +87,19 @@ def parse_dataset(filename: str, filter_by: str = None, verbose: bool = False):
         if (i + 1) % 500 == 0:
             print(f"\tProcessed {i + 1} queries.")
 
-    return num_parsed, num_queries, filtered_errors, non_basic_as_aliases, as_count, queries_with_weird_as
+    return (
+        num_parsed,
+        num_queries,
+        filtered_errors,
+        non_basic_as_aliases,
+        as_count,
+        queries_with_weird_as,
+    )
 
 
-def main(data_directory: int, dataset: str = None, filter_by: str = None, verbose: bool = False) -> None:
+def main(
+    data_directory: int, dataset: str = None, filter_by: str = None, verbose: bool = False
+) -> None:
     """
     Parameters
     ----------
@@ -137,15 +146,22 @@ def main(data_directory: int, dataset: str = None, filter_by: str = None, verbos
             f"\tFound {total_queries_with_weird_as} out of {total} queries with > 1 weird AS. percentage: {total_queries_with_weird_as/total}"
         )
         if filter_by is not None:
-            print(f"\tOf {total - parsed} errors, {filtered_errors/ (total - parsed + 1e-13)} contain {filter_by}")
+            print(
+                f"\tOf {total - parsed} errors, {filtered_errors/ (total - parsed + 1e-13)} contain {filter_by}"
+            )
 
 
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description="Check the coverage of a SQL Grammar on the text2sql datasets.")
+    parser = argparse.ArgumentParser(
+        description="Check the coverage of a SQL Grammar on the text2sql datasets."
+    )
     parser.add_argument("--data", type=str, help="The path to the text2sql data directory.")
     parser.add_argument(
-        "--dataset", type=str, default=None, help="The dataset to check coverage for. Defaults to all datasets."
+        "--dataset",
+        type=str,
+        default=None,
+        help="The dataset to check coverage for. Defaults to all datasets.",
     )
     parser.add_argument("--filter", type=str, default=None, help="A string to filter by.")
     parser.add_argument("--verbose", help="Verbose output.", action="store_true")

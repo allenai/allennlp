@@ -66,13 +66,16 @@ class SequenceTaggingDatasetReader(DatasetReader):
                     continue
 
                 tokens_and_tags = [
-                    pair.rsplit(self._word_tag_delimiter, 1) for pair in line.split(self._token_delimiter)
+                    pair.rsplit(self._word_tag_delimiter, 1)
+                    for pair in line.split(self._token_delimiter)
                 ]
                 tokens = [Token(token) for token, tag in tokens_and_tags]
                 tags = [tag for token, tag in tokens_and_tags]
                 yield self.text_to_instance(tokens, tags)
 
-    def text_to_instance(self, tokens: List[Token], tags: List[str] = None) -> Instance:  # type: ignore
+    def text_to_instance(
+        self, tokens: List[Token], tags: List[str] = None
+    ) -> Instance:  # type: ignore
         """
         We take `pre-tokenized` input here, because we don't have a tokenizer in this class.
         """

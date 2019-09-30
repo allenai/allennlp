@@ -68,7 +68,12 @@ class CosineWithRestartsTest(AllenNlpTestCase):
                 ],
                 [],
             ),
-            (210, {"t_initial": 30, "t_mul": 2, "eta_mul": 0.5}, [(0, 1.0), (30, 0.5), (90, 0.25)], [29, 90]),
+            (
+                210,
+                {"t_initial": 30, "t_mul": 2, "eta_mul": 0.5},
+                [(0, 1.0), (30, 0.5), (90, 0.25)],
+                [29, 90],
+            ),
             (
                 150,
                 {"t_initial": 30, "t_mul": 1},
@@ -87,7 +92,9 @@ class CosineWithRestartsTest(AllenNlpTestCase):
         ]
 
     def _get_optimizer(self, lr: float = 1.0):
-        return Optimizer.from_params(self.model.named_parameters(), Params({"type": "sgd", "lr": lr}))
+        return Optimizer.from_params(
+            self.model.named_parameters(), Params({"type": "sgd", "lr": lr})
+        )
 
     def test_from_params(self):
         """Make sure ``from_params`` initializes an instance properly."""
@@ -122,7 +129,9 @@ class CosineWithRestartsTest(AllenNlpTestCase):
         """Make sure scheduler will resume with the right state."""
 
         def init_and_restore_scheduler(
-            optimizer: torch.optim.Optimizer, params: Dict[str, Any], state_dict: Dict[str, Any] = None
+            optimizer: torch.optim.Optimizer,
+            params: Dict[str, Any],
+            state_dict: Dict[str, Any] = None,
         ):
             """
             Initialize a new scheduler and optionally restore its state from

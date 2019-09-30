@@ -193,9 +193,13 @@ class TestPennTreeBankConstituencySpanReader(AllenNlpTestCase):
     def test_strip_functional_tags(self):
         ptb_reader = PennTreeBankConstituencySpanDatasetReader()
         # Get gold spans should strip off all the functional tags.
-        tree = Tree.fromstring("(S (NP=PRP (D the) (N dog)) (VP-0 (V chased) (NP|FUN-TAGS (D the) (N cat))))")
+        tree = Tree.fromstring(
+            "(S (NP=PRP (D the) (N dog)) (VP-0 (V chased) (NP|FUN-TAGS (D the) (N cat))))"
+        )
         ptb_reader._strip_functional_tags(tree)
-        assert tree == Tree.fromstring("(S (NP (D the) (N dog)) (VP (V chased) (NP (D the) (N cat))))")
+        assert tree == Tree.fromstring(
+            "(S (NP (D the) (N dog)) (VP (V chased) (NP (D the) (N cat))))"
+        )
 
     def test_get_gold_spans_correctly_extracts_spans(self):
         ptb_reader = PennTreeBankConstituencySpanDatasetReader()

@@ -28,7 +28,9 @@ def format_grammar_string(grammar_dictionary: Dict[str, List[str]]) -> str:
     return grammar_string.replace("\\", "\\\\")
 
 
-def initialize_valid_actions(grammar: Grammar, keywords_to_uppercase: List[str] = None) -> Dict[str, List[str]]:
+def initialize_valid_actions(
+    grammar: Grammar, keywords_to_uppercase: List[str] = None
+) -> Dict[str, List[str]]:
     """
     We initialize the valid actions with the global actions. These include the
     valid actions that result from the grammar and also those that result from
@@ -44,20 +46,28 @@ def initialize_valid_actions(grammar: Grammar, keywords_to_uppercase: List[str] 
         # Eg. A -> B C
         if isinstance(rhs, Sequence):
             valid_actions[key].add(
-                format_action(key, " ".join(rhs._unicode_members()), keywords_to_uppercase=keywords_to_uppercase)
+                format_action(
+                    key,
+                    " ".join(rhs._unicode_members()),
+                    keywords_to_uppercase=keywords_to_uppercase,
+                )
             )
 
         # OneOf represents a series of expressions, one of which matches the text.
         # Eg. A -> B / C
         elif isinstance(rhs, OneOf):
             for option in rhs._unicode_members():
-                valid_actions[key].add(format_action(key, option, keywords_to_uppercase=keywords_to_uppercase))
+                valid_actions[key].add(
+                    format_action(key, option, keywords_to_uppercase=keywords_to_uppercase)
+                )
 
         # A string literal, eg. "A"
         elif isinstance(rhs, Literal):
             if rhs.literal != "":
                 valid_actions[key].add(
-                    format_action(key, repr(rhs.literal), keywords_to_uppercase=keywords_to_uppercase)
+                    format_action(
+                        key, repr(rhs.literal), keywords_to_uppercase=keywords_to_uppercase
+                    )
                 )
             else:
                 valid_actions[key] = set()
@@ -112,7 +122,9 @@ def format_action(
     else:
         right_hand_side = right_hand_side.lstrip("(").rstrip(")")
         child_strings = [token for token in WHITESPACE_REGEX.split(right_hand_side) if token]
-        child_strings = [tok.upper() if tok.upper() in keywords_to_uppercase else tok for tok in child_strings]
+        child_strings = [
+            tok.upper() if tok.upper() in keywords_to_uppercase else tok for tok in child_strings
+        ]
         return f"{nonterminal} -> [{', '.join(child_strings)}]"
 
 

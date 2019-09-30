@@ -136,7 +136,9 @@ def merge_overlapping_predictions(tags1: List[str], tags2: List[str]) -> List[st
     return ret_sequence
 
 
-def consolidate_predictions(outputs: List[List[str]], sent_tokens: List[Token]) -> Dict[str, List[str]]:
+def consolidate_predictions(
+    outputs: List[List[str]], sent_tokens: List[Token]
+) -> Dict[str, List[str]]:
     """
     Identify that certain predicates are part of a multiword predicate
     (e.g., "decided to run") in which case, we don't need to return
@@ -225,7 +227,8 @@ class OpenIePredictor(Predictor):
 
         # Create instances
         instances = [
-            self._json_to_instance({"sentence": sent_tokens, "predicate_index": pred_id}) for pred_id in pred_ids
+            self._json_to_instance({"sentence": sent_tokens, "predicate_index": pred_id})
+            for pred_id in pred_ids
         ]
 
         # Run model
@@ -249,7 +252,11 @@ class OpenIePredictor(Predictor):
 
             # Add a predicate prediction to the return dictionary.
             results["verbs"].append(
-                {"verb": get_predicate_text(sent_tokens, tags), "description": description, "tags": tags}
+                {
+                    "verb": get_predicate_text(sent_tokens, tags),
+                    "description": description,
+                    "tags": tags,
+                }
             )
 
         return sanitize(results)

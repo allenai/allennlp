@@ -63,7 +63,9 @@ class StanfordSentimentTreeBankDatasetReader(DatasetReader):
         allowed_granularities = ["5-class", "3-class", "2-class"]
         if granularity not in allowed_granularities:
             raise ConfigurationError(
-                "granularity is {}, but expected one of: {}".format(granularity, allowed_granularities)
+                "granularity is {}, but expected one of: {}".format(
+                    granularity, allowed_granularities
+                )
             )
         self._granularity = granularity
 
@@ -87,7 +89,9 @@ class StanfordSentimentTreeBankDatasetReader(DatasetReader):
                         yield instance
 
     @overrides
-    def text_to_instance(self, tokens: List[str], sentiment: str = None) -> Instance:  # type: ignore
+    def text_to_instance(
+        self, tokens: List[str], sentiment: str = None
+    ) -> Instance:  # type: ignore
         """
         We take `pre-tokenized` input here, because we don't have a tokenizer in this class.
 

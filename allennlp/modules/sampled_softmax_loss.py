@@ -103,7 +103,9 @@ class SampledSoftmaxLoss(torch.nn.Module):
         else:
             # just create tensors to use as the embeddings
             # Glorit init (std=(1.0 / sqrt(fan_in))
-            self.softmax_w = torch.nn.Parameter(torch.randn(num_words, embedding_dim) / np.sqrt(embedding_dim))
+            self.softmax_w = torch.nn.Parameter(
+                torch.randn(num_words, embedding_dim) / np.sqrt(embedding_dim)
+            )
             self.softmax_b = torch.nn.Parameter(torch.zeros(num_words))
 
         self.sparse = sparse
@@ -132,7 +134,10 @@ class SampledSoftmaxLoss(torch.nn.Module):
         ) / self._log_num_words_p1
 
     def forward(
-        self, embeddings: torch.Tensor, targets: torch.Tensor, target_token_embedding: torch.Tensor = None
+        self,
+        embeddings: torch.Tensor,
+        targets: torch.Tensor,
+        target_token_embedding: torch.Tensor = None,
     ) -> torch.Tensor:
         # embeddings is size (n, embedding_dim)
         # targets is (n_words, ) with the index of the actual target
@@ -193,10 +198,14 @@ class SampledSoftmaxLoss(torch.nn.Module):
 
         # compute the logits and remove log expected counts
         # [batch_size, ]
-        true_logits = (true_w * embeddings).sum(dim=1) + true_b - torch.log(target_expected_count + 1e-7)
+        true_logits = (
+            (true_w * embeddings).sum(dim=1) + true_b - torch.log(target_expected_count + 1e-7)
+        )
         # [batch_size, n_samples]
         sampled_logits = (
-            torch.matmul(embeddings, sampled_w.t()) + sampled_b - torch.log(sampled_expected_count + 1e-7)
+            torch.matmul(embeddings, sampled_w.t())
+            + sampled_b
+            - torch.log(sampled_expected_count + 1e-7)
         )
 
         # remove true labels -- we will take
@@ -257,10 +266,13 @@ class SampledSoftmaxLoss(torch.nn.Module):
 
         # Compute expected count = (1 - (1-p)^num_tries) = -expm1(num_tries * log1p(-p))
         # P(class) = (log(class + 2) - log(class + 1)) / log(range_max + 1)
-        target_probs = torch.log((targets.float() + 2.0) / (targets.float() + 1.0)) / self._log_num_words_p1
+        target_probs = (
+            torch.log((targets.float() + 2.0) / (targets.float() + 1.0)) / self._log_num_words_p1
+        )
         target_expected_count = -1.0 * (torch.exp(num_tries * torch.log1p(-target_probs)) - 1.0)
         sampled_probs = (
-            torch.log((sampled_ids.float() + 2.0) / (sampled_ids.float() + 1.0)) / self._log_num_words_p1
+            torch.log((sampled_ids.float() + 2.0) / (sampled_ids.float() + 1.0))
+            / self._log_num_words_p1
         )
         sampled_expected_count = -1.0 * (torch.exp(num_tries * torch.log1p(-sampled_probs)) - 1.0)
 

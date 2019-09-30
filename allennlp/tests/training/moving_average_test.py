@@ -18,7 +18,9 @@ class MovingAverageTest(AllenNlpTestCase):
     def test_exponential_moving_average_without_steps(self):
         param1 = torch.ones(5, 3)
         param2 = torch.ones(2)
-        moving_average = ExponentialMovingAverage([("param1", param1), ("param2", param2)], decay=0.9999)
+        moving_average = ExponentialMovingAverage(
+            [("param1", param1), ("param2", param2)], decay=0.9999
+        )
 
         param1.data *= 5  # now all 5s
         param2.data *= 10  # now all 10s
@@ -31,8 +33,12 @@ class MovingAverageTest(AllenNlpTestCase):
         # Get shadow variables
         moving_average.assign_average_value()
 
-        np.testing.assert_array_almost_equal(param1, 1 * 0.9999 ** 2 + 5 * 0.9999 * 0.0001 + 25 * 0.0001)
-        np.testing.assert_array_almost_equal(param2, 1 * 0.9999 ** 2 + 10 * 0.9999 * 0.0001 + 100 * 0.0001)
+        np.testing.assert_array_almost_equal(
+            param1, 1 * 0.9999 ** 2 + 5 * 0.9999 * 0.0001 + 25 * 0.0001
+        )
+        np.testing.assert_array_almost_equal(
+            param2, 1 * 0.9999 ** 2 + 10 * 0.9999 * 0.0001 + 100 * 0.0001
+        )
 
         # Restore original variables
         moving_average.restore()
@@ -42,7 +48,9 @@ class MovingAverageTest(AllenNlpTestCase):
     def test_exponential_moving_average_num_updates(self):
         param1 = torch.ones(5, 3)
         param2 = torch.ones(2)
-        moving_average = ExponentialMovingAverage([("param1", param1), ("param2", param2)], decay=0.9999)
+        moving_average = ExponentialMovingAverage(
+            [("param1", param1), ("param2", param2)], decay=0.9999
+        )
 
         param1.data *= 5  # now all 5s
         param2.data *= 10  # now all 10s

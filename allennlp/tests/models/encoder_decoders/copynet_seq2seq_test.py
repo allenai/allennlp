@@ -104,12 +104,19 @@ class CopyNetTest(ModelTestCase):
 
         generation_scores_mask = generation_scores.new_full(generation_scores.size(), 1.0)
         ll_actual, selective_weights_actual = self.model._get_ll_contrib(
-            generation_scores, generation_scores_mask, copy_scores, target_tokens, target_to_source, copy_mask
+            generation_scores,
+            generation_scores_mask,
+            copy_scores,
+            target_tokens,
+            target_to_source,
+            copy_mask,
         )
 
         np.testing.assert_almost_equal(ll_actual.data.numpy(), ll_check, decimal=6)
 
-        np.testing.assert_almost_equal(selective_weights_actual.data.numpy(), selective_weights_check, decimal=6)
+        np.testing.assert_almost_equal(
+            selective_weights_actual.data.numpy(), selective_weights_check, decimal=6
+        )
 
     def test_get_input_and_selective_weights(self):
         target_vocab_size = self.model._target_vocab_size
@@ -121,10 +128,16 @@ class CopyNetTest(ModelTestCase):
             [5, 6, target_vocab_size + 1]  # only generated.  # copied AND generated.
         )  # only copied.
         # shape: (group_size, trimmed_source_length)
-        source_to_target = torch.tensor([[6, oov_index, oov_index], [6, oov_index, 6], [5, oov_index, oov_index]])
+        source_to_target = torch.tensor(
+            [[6, oov_index, oov_index], [6, oov_index, 6], [5, oov_index, oov_index]]
+        )
         # shape: (group_size, trimmed_source_length)
         source_token_ids = torch.tensor(
-            [[0, 1, 2], [0, 1, 0], [0, 1, 1]]  # no duplicates.  # first and last source tokens match.
+            [
+                [0, 1, 2],
+                [0, 1, 0],
+                [0, 1, 1],
+            ]  # no duplicates.  # first and last source tokens match.
         )  # middle and last source tokens match.
         # shape: (group_size, trimmed_source_length)
         copy_probs = torch.tensor([[0.1, 0.1, 0.1], [0.1, 0.1, 0.1], [0.1, 0.1, 0.1]])
@@ -135,7 +148,9 @@ class CopyNetTest(ModelTestCase):
             "copy_log_probs": (copy_probs + 1e-45).log(),
         }
 
-        input_choices, selective_weights = self.model._get_input_and_selective_weights(last_predictions, state)
+        input_choices, selective_weights = self.model._get_input_and_selective_weights(
+            last_predictions, state
+        )
         assert list(input_choices.size()) == [3]
         assert list(selective_weights.size()) == [3, 3]
 
@@ -165,7 +180,9 @@ class CopyNetTest(ModelTestCase):
 
         state = {"source_to_target": source_to_target, "source_token_ids": source_token_ids}
 
-        final_log_probs = self.model._gather_final_log_probs(generation_probs.log(), copy_probs.log(), state)
+        final_log_probs = self.model._gather_final_log_probs(
+            generation_probs.log(), copy_probs.log(), state
+        )
         final_probs = final_log_probs.exp()
         assert list(final_probs.size()) == [2, target_vocab_size + 3]
 
@@ -227,17 +244,25 @@ class CopyNetTest(ModelTestCase):
 
         # shape: (batch_size, target_sequence_length)
         target_tokens = torch.tensor(
-            [[oov_index, tok_index, end_index, pad_index], [tok_index, oov_index, tok_index, end_index]]
+            [
+                [oov_index, tok_index, end_index, pad_index],
+                [tok_index, oov_index, tok_index, end_index],
+            ]
         )
         # shape: (batch_size, trimmed_source_length)
         source_token_ids = torch.tensor([[0, 1, 2, 3], [0, 1, 0, 2]])
         # shape: (batch_size, target_sequence_length)
         target_token_ids = torch.tensor([[4, 5, 6, 7], [1, 0, 3, 4]])
         # shape: (batch_size, target_sequence_length)
-        result = self.model._gather_extended_gold_tokens(target_tokens, source_token_ids, target_token_ids)
+        result = self.model._gather_extended_gold_tokens(
+            target_tokens, source_token_ids, target_token_ids
+        )
         # shape: (batch_size, target_sequence_length)
         check = np.array(
-            [[oov_index, tok_index, end_index, pad_index], [tok_index, vocab_size, tok_index, end_index]]
+            [
+                [oov_index, tok_index, end_index, pad_index],
+                [tok_index, vocab_size, tok_index, end_index],
+            ]
         )
         np.testing.assert_array_equal(result.numpy(), check)
 
@@ -249,12 +274,21 @@ class CopyNetTest(ModelTestCase):
         # shape: (batch_size, beam_size, max_predicted_length)
         predicted_indices = np.array(
             [
-                [[tok_index, vocab_size, vocab_size + 1, end_index], [tok_index, tok_index, tok_index, tok_index]],
-                [[tok_index, tok_index, tok_index, end_index], [tok_index, vocab_size + 1, end_index, end_index]],
+                [
+                    [tok_index, vocab_size, vocab_size + 1, end_index],
+                    [tok_index, tok_index, tok_index, tok_index],
+                ],
+                [
+                    [tok_index, tok_index, tok_index, end_index],
+                    [tok_index, vocab_size + 1, end_index, end_index],
+                ],
             ]
         )
 
-        batch_metadata = [{"source_tokens": ["hello", "world"]}, {"source_tokens": ["copynet", "is", "cool"]}]
+        batch_metadata = [
+            {"source_tokens": ["hello", "world"]},
+            {"source_tokens": ["copynet", "is", "cool"]},
+        ]
 
         predicted_tokens = self.model._get_predicted_tokens(predicted_indices, batch_metadata)
         assert len(predicted_tokens) == 2
@@ -263,7 +297,9 @@ class CopyNetTest(ModelTestCase):
         assert predicted_tokens[0][0] == ["tokens", "hello", "world"]
         assert predicted_tokens[0][1] == ["tokens", "tokens", "tokens", "tokens"]
 
-        predicted_tokens = self.model._get_predicted_tokens(predicted_indices, batch_metadata, n_best=1)
+        predicted_tokens = self.model._get_predicted_tokens(
+            predicted_indices, batch_metadata, n_best=1
+        )
         assert len(predicted_tokens) == 2
         assert predicted_tokens[0] == ["tokens", "hello", "world"]
         assert predicted_tokens[1] == ["tokens", "tokens", "tokens"]

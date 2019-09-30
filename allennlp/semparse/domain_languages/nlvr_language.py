@@ -175,7 +175,10 @@ class NlvrLanguage(DomainLanguage):
                 # We already dealt with top, bottom, touch_top and touch_bottom above.
                 continue
             if constant in sentence:
-                if "<Set[Object]:Set[Object]> ->" in production and "<Set[Box]:bool> -> box_exists" in agenda:
+                if (
+                    "<Set[Object]:Set[Object]> ->" in production
+                    and "<Set[Box]:bool> -> box_exists" in agenda
+                ):
                     if constant in ["square", "circle", "triangle"]:
                         agenda.append(self.terminal_productions[f"shape_{constant}"])
                     elif constant in ["yellow", "blue", "black"]:
@@ -673,14 +676,20 @@ class NlvrLanguage(DomainLanguage):
         Returns true iff the objects touch each other.
         """
         in_vertical_range = (
-            object1.y_loc <= object2.y_loc + object2.size and object1.y_loc + object1.size >= object2.y_loc
+            object1.y_loc <= object2.y_loc + object2.size
+            and object1.y_loc + object1.size >= object2.y_loc
         )
         in_horizantal_range = (
-            object1.x_loc <= object2.x_loc + object2.size and object1.x_loc + object1.size >= object2.x_loc
+            object1.x_loc <= object2.x_loc + object2.size
+            and object1.x_loc + object1.size >= object2.x_loc
         )
-        touch_side = object1.x_loc + object1.size == object2.x_loc or object2.x_loc + object2.size == object1.x_loc
+        touch_side = (
+            object1.x_loc + object1.size == object2.x_loc
+            or object2.x_loc + object2.size == object1.x_loc
+        )
         touch_top_or_bottom = (
-            object1.y_loc + object1.size == object2.y_loc or object2.y_loc + object2.size == object1.y_loc
+            object1.y_loc + object1.size == object2.y_loc
+            or object2.y_loc + object2.size == object1.y_loc
         )
         return (in_vertical_range and touch_side) or (in_horizantal_range and touch_top_or_bottom)
 
@@ -708,7 +717,9 @@ class NlvrLanguage(DomainLanguage):
             objects_of_attribute[attribute_function(entity)].add(entity)
         if not objects_of_attribute:
             return set()
-        most_frequent_attribute = max(objects_of_attribute, key=lambda x: len(objects_of_attribute[x]))
+        most_frequent_attribute = max(
+            objects_of_attribute, key=lambda x: len(objects_of_attribute[x])
+        )
         if len(objects_of_attribute[most_frequent_attribute]) <= 1:
             return set()
         return objects_of_attribute[most_frequent_attribute]

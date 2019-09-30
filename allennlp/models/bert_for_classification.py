@@ -117,7 +117,9 @@ class BertForClassification(Model):
         token_type_ids = tokens[f"{self._index}-type-ids"]
         input_mask = (input_ids != 0).long()
 
-        _, pooled = self.bert_model(input_ids=input_ids, token_type_ids=token_type_ids, attention_mask=input_mask)
+        _, pooled = self.bert_model(
+            input_ids=input_ids, token_type_ids=token_type_ids, attention_mask=input_mask
+        )
 
         pooled = self._dropout(pooled)
 

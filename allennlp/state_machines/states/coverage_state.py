@@ -94,7 +94,9 @@ class CoverageState(GrammarBasedState):
     @classmethod
     def combine_states(cls, states: Sequence["CoverageState"]) -> "CoverageState":  # type: ignore
         super_class_state = super().combine_states(states)
-        checklist_states = [checklist_state for state in states for checklist_state in state.checklist_state]
+        checklist_states = [
+            checklist_state for state in states for checklist_state in state.checklist_state
+        ]
         return CoverageState(
             batch_indices=super_class_state.batch_indices,
             action_history=super_class_state.action_history,

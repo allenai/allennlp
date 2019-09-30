@@ -12,7 +12,8 @@ class TestIndexField(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
         self.text = TextField(
-            [Token(t) for t in ["here", "is", "a", "sentence", "."]], {"words": SingleIdTokenIndexer("words")}
+            [Token(t) for t in ["here", "is", "a", "sentence", "."]],
+            {"words": SingleIdTokenIndexer("words")},
         )
 
     def test_as_tensor_converts_field_correctly(self):

@@ -14,7 +14,9 @@ import sys
 # thought it was a good idea to set the random seed on import...
 random_int = random.randint(0, 2 ** 32)
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(os.path.join(__file__, os.pardir), os.pardir))))
+sys.path.insert(
+    0, os.path.dirname(os.path.abspath(os.path.join(os.path.join(__file__, os.pardir), os.pardir)))
+)
 
 from allennlp.common.params import Params
 
@@ -113,7 +115,9 @@ def main(param_file: str, args: argparse.Namespace):
     config = {"tasks": [config_task]}
 
     output_path = (
-        args.spec_output_path if args.spec_output_path else tempfile.mkstemp(".yaml", "beaker-config-")[1]
+        args.spec_output_path
+        if args.spec_output_path
+        else tempfile.mkstemp(".yaml", "beaker-config-")[1]
     )
     with open(output_path, "w") as output:
         output.write(json.dumps(config, indent=4))
@@ -138,22 +142,42 @@ if __name__ == "__main__":
 
     parser.add_argument("param_file", type=str, help="The model configuration file.")
     parser.add_argument("--name", type=str, help="A name for the experiment.")
-    parser.add_argument("--spec_output_path", type=str, help="The destination to write the experiment spec.")
-    parser.add_argument("--dry-run", action="store_true", help="If specified, an experiment will not be created.")
-    parser.add_argument("--image", type=str, help="The image to use (if unspecified one will be built)")
+    parser.add_argument(
+        "--spec_output_path", type=str, help="The destination to write the experiment spec."
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true", help="If specified, an experiment will not be created."
+    )
+    parser.add_argument(
+        "--image", type=str, help="The image to use (if unspecified one will be built)"
+    )
     parser.add_argument("--desc", type=str, help="A description for the experiment.")
     parser.add_argument(
-        "--env", action="append", default=[], help="Set environment variables (e.g. NAME=value or NAME)"
+        "--env",
+        action="append",
+        default=[],
+        help="Set environment variables (e.g. NAME=value or NAME)",
     )
     parser.add_argument(
-        "--source", action="append", default=[], help="Bind a remote data source (e.g. source-id:/target/path)"
+        "--source",
+        action="append",
+        default=[],
+        help="Bind a remote data source (e.g. source-id:/target/path)",
     )
     parser.add_argument("--cpu", help="CPUs to reserve for this experiment (e.g., 0.5)")
-    parser.add_argument("--gpu-count", default=1, help="GPUs to use for this experiment (e.g., 1 (default))")
-    parser.add_argument("--memory", help="Memory to reserve for this experiment (e.g., 1GB)")
-    parser.add_argument("--preemptible", action="store_true", help="Allow task to run on preemptible hardware")
     parser.add_argument(
-        "--include-package", type=str, action="append", default=[], help="Additional packages to include"
+        "--gpu-count", default=1, help="GPUs to use for this experiment (e.g., 1 (default))"
+    )
+    parser.add_argument("--memory", help="Memory to reserve for this experiment (e.g., 1GB)")
+    parser.add_argument(
+        "--preemptible", action="store_true", help="Allow task to run on preemptible hardware"
+    )
+    parser.add_argument(
+        "--include-package",
+        type=str,
+        action="append",
+        default=[],
+        help="Additional packages to include",
     )
     parser.add_argument(
         "-o",

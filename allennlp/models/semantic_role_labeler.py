@@ -8,7 +8,10 @@ import torch.nn.functional as F
 
 from allennlp.common.checks import check_dimensions_match
 from allennlp.data import Vocabulary
-from allennlp.models.srl_util import convert_bio_tags_to_conll_format, write_bio_formatted_tags_to_file
+from allennlp.models.srl_util import (
+    convert_bio_tags_to_conll_format,
+    write_bio_formatted_tags_to_file,
+)
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
 from allennlp.modules.token_embedders import Embedding
 from allennlp.models.model import Model
@@ -86,7 +89,9 @@ class SemanticRoleLabeler(Model):
         self.encoder = encoder
         # There are exactly 2 binary features for the verb predicate embedding.
         self.binary_feature_embedding = Embedding(2, binary_feature_dim)
-        self.tag_projection_layer = TimeDistributed(Linear(self.encoder.get_output_dim(), self.num_classes))
+        self.tag_projection_layer = TimeDistributed(
+            Linear(self.encoder.get_output_dim(), self.num_classes)
+        )
         self.embedding_dropout = Dropout(p=embedding_dropout)
         self._label_smoothing = label_smoothing
         self.ignore_span_metric = ignore_span_metric
@@ -148,7 +153,9 @@ class SemanticRoleLabeler(Model):
         embedded_verb_indicator = self.binary_feature_embedding(verb_indicator.long())
         # Concatenate the verb feature onto the embedded text. This now
         # has shape (batch_size, sequence_length, embedding_dim + binary_feature_dim).
-        embedded_text_with_verb_indicator = torch.cat([embedded_text_input, embedded_verb_indicator], -1)
+        embedded_text_with_verb_indicator = torch.cat(
+            [embedded_text_input, embedded_verb_indicator], -1
+        )
         batch_size, sequence_length, _ = embedded_text_with_verb_indicator.size()
 
         encoded_text = self.encoder(embedded_text_with_verb_indicator, mask)
@@ -165,9 +172,13 @@ class SemanticRoleLabeler(Model):
         output_dict["mask"] = mask
 
         if tags is not None:
-            loss = sequence_cross_entropy_with_logits(logits, tags, mask, label_smoothing=self._label_smoothing)
+            loss = sequence_cross_entropy_with_logits(
+                logits, tags, mask, label_smoothing=self._label_smoothing
+            )
             if not self.ignore_span_metric and self.span_metric is not None and not self.training:
-                batch_verb_indices = [example_metadata["verb_index"] for example_metadata in metadata]
+                batch_verb_indices = [
+                    example_metadata["verb_index"] for example_metadata in metadata
+                ]
                 batch_sentences = [example_metadata["words"] for example_metadata in metadata]
                 # Get the BIO tags from decode()
                 # TODO (nfliu): This is kind of a hack, consider splitting out part
@@ -176,10 +187,17 @@ class SemanticRoleLabeler(Model):
                 batch_conll_predicted_tags = [
                     convert_bio_tags_to_conll_format(tags) for tags in batch_bio_predicted_tags
                 ]
-                batch_bio_gold_tags = [example_metadata["gold_tags"] for example_metadata in metadata]
-                batch_conll_gold_tags = [convert_bio_tags_to_conll_format(tags) for tags in batch_bio_gold_tags]
+                batch_bio_gold_tags = [
+                    example_metadata["gold_tags"] for example_metadata in metadata
+                ]
+                batch_conll_gold_tags = [
+                    convert_bio_tags_to_conll_format(tags) for tags in batch_bio_gold_tags
+                ]
                 self.span_metric(
-                    batch_verb_indices, batch_sentences, batch_conll_predicted_tags, batch_conll_gold_tags
+                    batch_verb_indices,
+                    batch_sentences,
+                    batch_conll_predicted_tags,
+                    batch_conll_gold_tags,
                 )
             output_dict["loss"] = loss
 
@@ -200,7 +218,9 @@ class SemanticRoleLabeler(Model):
         sequence_lengths = get_lengths_from_binary_sequence_mask(output_dict["mask"]).data.tolist()
 
         if all_predictions.dim() == 3:
-            predictions_list = [all_predictions[i].detach().cpu() for i in range(all_predictions.size(0))]
+            predictions_list = [
+                all_predictions[i].detach().cpu() for i in range(all_predictions.size(0))
+            ]
         else:
             predictions_list = [all_predictions]
         all_tags = []
@@ -210,7 +230,10 @@ class SemanticRoleLabeler(Model):
             max_likelihood_sequence, _ = viterbi_decode(
                 predictions[:length], transition_matrix, allowed_start_transitions=start_transitions
             )
-            tags = [self.vocab.get_token_from_index(x, namespace="labels") for x in max_likelihood_sequence]
+            tags = [
+                self.vocab.get_token_from_index(x, namespace="labels")
+                for x in max_likelihood_sequence
+            ]
             all_tags.append(tags)
         output_dict["tags"] = all_tags
         return output_dict
@@ -320,4 +343,6 @@ def write_to_conll_eval_file(
         "the identical 'write_bio_formatted_tags_to_file' function.",
         DeprecationWarning,
     )
-    write_bio_formatted_tags_to_file(prediction_file, gold_file, verb_index, sentence, prediction, gold_labels)
+    write_bio_formatted_tags_to_file(
+        prediction_file, gold_file, verb_index, sentence, prediction, gold_labels
+    )

@@ -78,7 +78,9 @@ logger = logging.getLogger(__name__)
 
 
 class FineTune(Subcommand):
-    def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
+    def add_subparser(
+        self, name: str, parser: argparse._SubParsersAction
+    ) -> argparse.ArgumentParser:
 
         description = """Continues training a saved model on a new dataset."""
         subparser = parser.add_parser(
@@ -213,7 +215,9 @@ def fine_tune_model_from_file_paths(
     archive = load_archive(model_archive_path)
     params = Params.from_file(config_file, overrides)
 
-    embedding_sources: Dict[str, str] = json.loads(embedding_sources_mapping) if embedding_sources_mapping else {}
+    embedding_sources: Dict[str, str] = json.loads(
+        embedding_sources_mapping
+    ) if embedding_sources_mapping else {}
     return fine_tune_model(
         model=archive.model,
         params=params,
@@ -298,7 +302,9 @@ def fine_tune_model(
             if dataset not in all_datasets:
                 raise ConfigurationError(f"invalid 'dataset_for_vocab_creation' {dataset}")
 
-        logger.info("Extending model vocabulary using %s data.", ", ".join(datasets_for_vocab_creation))
+        logger.info(
+            "Extending model vocabulary using %s data.", ", ".join(datasets_for_vocab_creation)
+        )
         vocab.extend_from_instances(
             vocabulary_params,
             (

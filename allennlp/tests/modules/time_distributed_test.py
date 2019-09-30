@@ -14,7 +14,9 @@ class TestTimeDistributed(AllenNlpTestCase):
         distributed_embedding = TimeDistributed(char_embedding)
         char_input = torch.LongTensor([[[1, 0], [1, 1]]])
         output = distributed_embedding(char_input)
-        assert_almost_equal(output.data.numpy(), [[[[0.5, 0.5], [0.4, 0.4]], [[0.5, 0.5], [0.5, 0.5]]]])
+        assert_almost_equal(
+            output.data.numpy(), [[[[0.5, 0.5], [0.4, 0.4]], [[0.5, 0.5], [0.5, 0.5]]]]
+        )
 
     def test_time_distributed_reshapes_positional_kwarg_correctly(self):
         char_embedding = Embedding(2, 2)
@@ -22,7 +24,9 @@ class TestTimeDistributed(AllenNlpTestCase):
         distributed_embedding = TimeDistributed(char_embedding)
         char_input = torch.LongTensor([[[1, 0], [1, 1]]])
         output = distributed_embedding(input=char_input)
-        assert_almost_equal(output.data.numpy(), [[[[0.5, 0.5], [0.4, 0.4]], [[0.5, 0.5], [0.5, 0.5]]]])
+        assert_almost_equal(
+            output.data.numpy(), [[[[0.5, 0.5], [0.4, 0.4]], [[0.5, 0.5], [0.5, 0.5]]]]
+        )
 
     def test_time_distributed_works_with_multiple_inputs(self):
         module = lambda x, y: x + y
@@ -69,6 +73,9 @@ class TestTimeDistributed(AllenNlpTestCase):
         input_tensor2 = torch.LongTensor([[[4, 2], [9, 1]]])
 
         output = distributed_module(
-            input_tensor1, number=input_number, another_tensor=input_tensor2, pass_through=["number"]
+            input_tensor1,
+            number=input_number,
+            another_tensor=input_tensor2,
+            pass_through=["number"],
         )
         assert_almost_equal(output.data.numpy(), [[[10, 9], [17, 10]]])

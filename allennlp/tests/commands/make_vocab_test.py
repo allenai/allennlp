@@ -114,7 +114,14 @@ class TestMakeVocab(AllenNlpTestCase):
         assert tokens[2] == "some_weird_token_2"
 
         tokens.sort()
-        assert tokens == [".", "@@UNKNOWN@@", "animals", "are", "some_weird_token_1", "some_weird_token_2"]
+        assert tokens == [
+            ".",
+            "@@UNKNOWN@@",
+            "animals",
+            "are",
+            "some_weird_token_1",
+            "some_weird_token_2",
+        ]
 
         with open(extended_vocab_path / "labels.txt") as f:
             labels = [line.strip() for line in f]

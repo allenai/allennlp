@@ -92,7 +92,8 @@ class Registrable(FromParams):
                 module = importlib.import_module(submodule)
             except ModuleNotFoundError:
                 raise ConfigurationError(
-                    f"tried to interpret {name} as a path to a class " f"but unable to import module {submodule}"
+                    f"tried to interpret {name} as a path to a class "
+                    f"but unable to import module {submodule}"
                 )
 
             try:

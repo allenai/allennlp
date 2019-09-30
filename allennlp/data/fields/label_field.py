@@ -55,7 +55,8 @@ class LabelField(Field[torch.Tensor]):
         if skip_indexing:
             if not isinstance(label, int):
                 raise ConfigurationError(
-                    "In order to skip indexing, your labels must be integers. " "Found label = {}".format(label)
+                    "In order to skip indexing, your labels must be integers. "
+                    "Found label = {}".format(label)
                 )
             self._label_id = label
         elif not isinstance(label, str):
@@ -84,7 +85,9 @@ class LabelField(Field[torch.Tensor]):
     @overrides
     def index(self, vocab: Vocabulary):
         if not self._skip_indexing:
-            self._label_id = vocab.get_token_index(self.label, self._label_namespace)  # type: ignore
+            self._label_id = vocab.get_token_index(
+                self.label, self._label_namespace
+            )  # type: ignore
 
     @overrides
     def get_padding_lengths(self) -> Dict[str, int]:

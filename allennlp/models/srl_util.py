@@ -39,7 +39,12 @@ def write_bio_formatted_tags_to_file(
     conll_formatted_predictions = convert_bio_tags_to_conll_format(prediction)
     conll_formatted_gold_labels = convert_bio_tags_to_conll_format(gold_labels)
     write_conll_formatted_tags_to_file(
-        prediction_file, gold_file, verb_index, sentence, conll_formatted_predictions, conll_formatted_gold_labels
+        prediction_file,
+        gold_file,
+        verb_index,
+        sentence,
+        conll_formatted_predictions,
+        conll_formatted_gold_labels,
     )
 
 
@@ -82,7 +87,9 @@ def write_conll_formatted_tags_to_file(
     if verb_index:
         verb_only_sentence[verb_index] = sentence[verb_index]
 
-    for word, predicted, gold in zip(verb_only_sentence, conll_formatted_predictions, conll_formatted_gold_labels):
+    for word, predicted, gold in zip(
+        verb_only_sentence, conll_formatted_predictions, conll_formatted_gold_labels
+    ):
         prediction_file.write(word.ljust(15))
         prediction_file.write(predicted.rjust(15) + "\n")
         gold_file.write(word.ljust(15))

@@ -13,7 +13,12 @@ class TestQuarelParserPredictor(AllenNlpTestCase):
         }
 
         archive_path = (
-            self.FIXTURES_ROOT / "semantic_parsing" / "quarel" / "zeroshot" / "serialization" / "model.tar.gz"
+            self.FIXTURES_ROOT
+            / "semantic_parsing"
+            / "quarel"
+            / "zeroshot"
+            / "serialization"
+            / "model.tar.gz"
         )
         archive = load_archive(archive_path)
         predictor = Predictor.from_archive(archive, "quarel-parser")

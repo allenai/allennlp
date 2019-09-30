@@ -18,7 +18,12 @@ class SequenceAccuracy(Metric):
         self.correct_count = 0.0
         self.total_count = 0.0
 
-    def __call__(self, predictions: torch.Tensor, gold_labels: torch.Tensor, mask: Optional[torch.Tensor] = None):
+    def __call__(
+        self,
+        predictions: torch.Tensor,
+        gold_labels: torch.Tensor,
+        mask: Optional[torch.Tensor] = None,
+    ):
         """
         Parameters
         ----------
@@ -39,7 +44,8 @@ class SequenceAccuracy(Metric):
             )
         if mask is not None and mask.size() != gold_labels.size():
             raise ConfigurationError(
-                "mask must have the same size as predictions but " "found tensor of shape: {}".format(mask.size())
+                "mask must have the same size as predictions but "
+                "found tensor of shape: {}".format(mask.size())
             )
 
         k = predictions.size()[1]

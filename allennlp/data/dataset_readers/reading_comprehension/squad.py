@@ -88,9 +88,15 @@ class SquadReader(DatasetReader):
                     question_text = question_answer["question"].strip().replace("\n", "")
                     answer_texts = [answer["text"] for answer in question_answer["answers"]]
                     span_starts = [answer["answer_start"] for answer in question_answer["answers"]]
-                    span_ends = [start + len(answer) for start, answer in zip(span_starts, answer_texts)]
+                    span_ends = [
+                        start + len(answer) for start, answer in zip(span_starts, answer_texts)
+                    ]
                     instance = self.text_to_instance(
-                        question_text, paragraph, zip(span_starts, span_ends), answer_texts, tokenized_paragraph
+                        question_text,
+                        paragraph,
+                        zip(span_starts, span_ends),
+                        answer_texts,
+                        tokenized_paragraph,
                     )
                     if instance is not None:
                         yield instance
@@ -139,5 +145,10 @@ class SquadReader(DatasetReader):
             else:
                 token_spans.append((len(passage_tokens) - 1, len(passage_tokens) - 1))
         return util.make_reading_comprehension_instance(
-            question_tokens, passage_tokens, self._token_indexers, passage_text, token_spans, answer_texts
+            question_tokens,
+            passage_tokens,
+            self._token_indexers,
+            passage_text,
+            token_spans,
+            answer_texts,
         )

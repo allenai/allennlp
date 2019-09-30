@@ -101,7 +101,9 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
             dropout=dropout,
         )
         self._agenda_coverage = Average()
-        self._decoder_trainer: DecoderTrainer[Callable[[CoverageState], torch.Tensor]] = ExpectedRiskMinimization(
+        self._decoder_trainer: DecoderTrainer[
+            Callable[[CoverageState], torch.Tensor]
+        ] = ExpectedRiskMinimization(
             beam_size=beam_size,
             normalize_by_length=normalize_beam_score_by_length,
             max_decoding_steps=max_decoding_steps,
@@ -148,7 +150,10 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         model_parameters = dict(self.named_parameters())
         archived_parameters = dict(archive.model.named_parameters())
         sentence_embedder_weight = "_sentence_embedder.token_embedder_tokens.weight"
-        if sentence_embedder_weight not in archived_parameters or sentence_embedder_weight not in model_parameters:
+        if (
+            sentence_embedder_weight not in archived_parameters
+            or sentence_embedder_weight not in model_parameters
+        ):
             raise RuntimeError(
                 "When initializing model weights from an MML model, we need "
                 "the sentence embedder to be a TokenEmbedder using namespace called "
@@ -167,7 +172,9 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                     for index, archived_index in vocab_index_mapping:
                         new_weights[index] = archived_embedding_weights[archived_index]
                     logger.info(
-                        "Copied embeddings of %d out of %d tokens", len(vocab_index_mapping), new_weights.size()[0]
+                        "Copied embeddings of %d out of %d tokens",
+                        len(vocab_index_mapping),
+                        new_weights.size()[0],
                     )
                 else:
                     new_weights = weights.data
@@ -183,7 +190,10 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
             # representations initialized to UNK token's representation. We do that by checking if
             # the two tokens are the same. They will not be if the token at the archived index is
             # UNK.
-            if archived_vocab.get_token_from_index(archived_token_index, namespace="tokens") == token:
+            if (
+                archived_vocab.get_token_from_index(archived_token_index, namespace="tokens")
+                == token
+            ):
                 vocab_index_mapping.append((index, archived_token_index))
         return vocab_index_mapping
 
@@ -209,7 +219,8 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         if self._dynamic_cost_rate is not None:
             if self.training and instance_epoch_num is None:
                 raise RuntimeError(
-                    "If you want a dynamic cost weight, use the " "BucketIterator with track_epoch=True."
+                    "If you want a dynamic cost weight, use the "
+                    "BucketIterator with track_epoch=True."
                 )
             if instance_epoch_num != self._last_epoch_in_forward:
                 if instance_epoch_num >= self._dynamic_cost_wait_epochs:
@@ -224,7 +235,9 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
             next(iter(sentence.values())).new_zeros(1, dtype=torch.float) for i in range(batch_size)
         ]
         # TODO (pradeep): Assuming all worlds give the same set of valid actions.
-        initial_grammar_state = [self._create_grammar_state(worlds[i][0], actions[i]) for i in range(batch_size)]
+        initial_grammar_state = [
+            self._create_grammar_state(worlds[i][0], actions[i]) for i in range(batch_size)
+        ]
 
         label_strings = self._get_label_strings(labels) if labels is not None else None
         # Each instance's agenda is of size (agenda_size, 1)
@@ -367,7 +380,9 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                     right_side = action_string.split(" -> ")[1]
                     if right_side.isdigit() or ("[" not in right_side and len(right_side) > 1):
                         terminal_agenda_actions.append(action_string)
-                actions_in_agenda = [action in instance_action_strings for action in terminal_agenda_actions]
+                actions_in_agenda = [
+                    action in instance_action_strings for action in terminal_agenda_actions
+                ]
                 in_agenda_ratio = sum(actions_in_agenda) / len(actions_in_agenda)
                 instance_label_strings = label_strings[i]
                 instance_worlds = worlds[i]
@@ -387,7 +402,9 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
             "agenda_coverage": self._agenda_coverage.get_metric(reset),
         }
 
-    def _get_state_cost(self, batch_worlds: List[List[NlvrLanguage]], state: CoverageState) -> torch.Tensor:
+    def _get_state_cost(
+        self, batch_worlds: List[List[NlvrLanguage]], state: CoverageState
+    ) -> torch.Tensor:
         """
         Return the cost of a finished state. Since it is a finished state, the group size will be
         1, and hence we'll return just one cost.
@@ -420,7 +437,9 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
             cost = checklist_cost + (1 - self._checklist_cost_weight) * denotation_cost
         return cost
 
-    def _get_state_info(self, state: CoverageState, batch_worlds: List[List[NlvrLanguage]]) -> Dict[str, List]:
+    def _get_state_info(
+        self, state: CoverageState, batch_worlds: List[List[NlvrLanguage]]
+    ) -> Dict[str, List]:
         """
         This method is here for debugging purposes, in case you want to look at the what the model
         is learning. It may be inefficient to call it while training the model on real data.
@@ -439,12 +458,16 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         all_agenda_indices = []
         for checklist_state in state.checklist_state:
             agenda_indices = []
-            for action, is_wanted in zip(checklist_state.terminal_actions, checklist_state.checklist_target):
+            for action, is_wanted in zip(
+                checklist_state.terminal_actions, checklist_state.checklist_target
+            ):
                 action_int = int(action.detach().cpu().numpy())
                 is_wanted_int = int(is_wanted.detach().cpu().numpy())
                 if is_wanted_int != 0:
                     agenda_indices.append(action_int)
-            agenda_sequences.append([self._get_action_string(all_actions[action]) for action in agenda_indices])
+            agenda_sequences.append(
+                [self._get_action_string(all_actions[action]) for action in agenda_indices]
+            )
             all_agenda_indices.append(agenda_indices)
         return {
             "agenda": agenda_sequences,

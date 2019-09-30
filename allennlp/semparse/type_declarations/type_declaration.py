@@ -13,7 +13,13 @@ from collections import defaultdict
 import itertools
 
 from overrides import overrides
-from nltk.sem.logic import Expression, ApplicationExpression, ConstantExpression, LogicParser, Variable
+from nltk.sem.logic import (
+    Expression,
+    ApplicationExpression,
+    ConstantExpression,
+    LogicParser,
+    Variable,
+)
 from nltk.sem.logic import Type, BasicType, ComplexType as NltkComplexType, ANY_TYPE
 
 from allennlp.common.util import START_SYMBOL
@@ -272,7 +278,10 @@ class UnaryOpType(PlaceholderType):
     """
 
     def __init__(
-        self, type_: BasicType = ANY_TYPE, allowed_substitutions: Set[BasicType] = None, signature: str = "<#1,#1>"
+        self,
+        type_: BasicType = ANY_TYPE,
+        allowed_substitutions: Set[BasicType] = None,
+        signature: str = "<#1,#1>",
     ) -> None:
         super().__init__(type_, type_)
         self._allowed_substitutions = allowed_substitutions
@@ -299,7 +308,9 @@ class UnaryOpType(PlaceholderType):
     def substitute_any_type(self, basic_types: Set[BasicType]) -> List[Type]:
         if self.first != ANY_TYPE:
             return [self]
-        allowed_basic_types = self._allowed_substitutions if self._allowed_substitutions else basic_types
+        allowed_basic_types = (
+            self._allowed_substitutions if self._allowed_substitutions else basic_types
+        )
         return [
             UnaryOpType(basic_type, self._allowed_substitutions, self._signature)
             for basic_type in allowed_basic_types
@@ -362,7 +373,9 @@ class BinaryOpType(PlaceholderType):
     def substitute_any_type(self, basic_types: Set[BasicType]) -> List[Type]:
         if self.first != ANY_TYPE:
             return [self]
-        allowed_basic_types = self._allowed_substitutions if self._allowed_substitutions else basic_types
+        allowed_basic_types = (
+            self._allowed_substitutions if self._allowed_substitutions else basic_types
+        )
         return [
             BinaryOpType(basic_type, self._allowed_substitutions, self._signature)
             for basic_type in allowed_basic_types
@@ -405,7 +418,9 @@ class DynamicTypeApplicationExpression(ApplicationExpression):
     appears in. This variable binding operation is implemented by overriding ``_set_type`` below.
     """
 
-    def __init__(self, function: Expression, argument: Expression, variables_with_placeholders: Set[str]) -> None:
+    def __init__(
+        self, function: Expression, argument: Expression, variables_with_placeholders: Set[str]
+    ) -> None:
         super().__init__(function, argument)
         self._variables_with_placeholders = variables_with_placeholders
 
@@ -477,7 +492,9 @@ class DynamicTypeLogicParser(LogicParser):
 
     @overrides
     def make_ApplicationExpression(self, function, argument):
-        return DynamicTypeApplicationExpression(function, argument, self._variables_with_placeholders)
+        return DynamicTypeApplicationExpression(
+            function, argument, self._variables_with_placeholders
+        )
 
     @overrides
     def make_VariableExpression(self, name):
@@ -486,7 +503,9 @@ class DynamicTypeLogicParser(LogicParser):
             if prefix in self._constant_type_prefixes:
                 return TypedConstantExpression(Variable(name), self._constant_type_prefixes[prefix])
             else:
-                raise RuntimeError(f"Unknown prefix: {prefix}. Did you forget to pass it to the constructor?")
+                raise RuntimeError(
+                    f"Unknown prefix: {prefix}. Did you forget to pass it to the constructor?"
+                )
         return super().make_VariableExpression(name)
 
     def __eq__(self, other):
@@ -592,7 +611,9 @@ def _get_complex_type_production(
     return_type = complex_type.return_type()
     if isinstance(return_type, MultiMatchNamedBasicType):
         return_types_matched = list(
-            multi_match_mapping[return_type] if return_type in multi_match_mapping else return_type.types_to_match
+            multi_match_mapping[return_type]
+            if return_type in multi_match_mapping
+            else return_type.types_to_match
         )
     else:
         return_types_matched = [return_type]
@@ -689,14 +710,18 @@ def get_valid_actions(
         name_type = type_signatures[alias]
         # Type to terminal productions.
         for substituted_type in substitute_any_type(name_type, basic_types):
-            valid_actions[str(substituted_type)].add(_make_production_string(substituted_type, name))
+            valid_actions[str(substituted_type)].add(
+                _make_production_string(substituted_type, name)
+            )
         # Keeping track of complex types.
         if isinstance(name_type, ComplexType) and name_type != ANY_TYPE:
             complex_types.add(name_type)
 
     for complex_type in complex_types:
         for substituted_type in substitute_any_type(complex_type, basic_types):
-            for head, production in _get_complex_type_production(substituted_type, multi_match_mapping or {}):
+            for head, production in _get_complex_type_production(
+                substituted_type, multi_match_mapping or {}
+            ):
                 valid_actions[str(head)].add(production)
 
     # We can produce complex types with a lambda expression, though we'll leave out
@@ -709,7 +734,9 @@ def get_valid_actions(
         for first_type in basic_types:
             for second_type in basic_types:
                 key = ComplexType(first_type, second_type)
-                production_string = _make_production_string(key, ["lambda " + lambda_var, second_type])
+                production_string = _make_production_string(
+                    key, ["lambda " + lambda_var, second_type]
+                )
                 valid_actions[str(key)].add(production_string)
 
     valid_action_strings = {key: sorted(value) for key, value in valid_actions.items()}

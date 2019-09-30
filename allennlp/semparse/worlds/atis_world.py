@@ -8,8 +8,16 @@ from parsimonious.grammar import Grammar
 from parsimonious.expressions import Expression, OneOf, Sequence, Literal
 
 from allennlp.semparse.contexts import atis_tables as at
-from allennlp.semparse.contexts.atis_sql_table_context import AtisSqlTableContext, KEYWORDS, NUMERIC_NONTERMINALS
-from allennlp.semparse.contexts.sql_context_utils import SqlVisitor, format_action, initialize_valid_actions
+from allennlp.semparse.contexts.atis_sql_table_context import (
+    AtisSqlTableContext,
+    KEYWORDS,
+    NUMERIC_NONTERMINALS,
+)
+from allennlp.semparse.contexts.sql_context_utils import (
+    SqlVisitor,
+    format_action,
+    initialize_valid_actions,
+)
 
 from allennlp.data.tokenizers import Token, Tokenizer, WordTokenizer
 
@@ -65,7 +73,9 @@ class AtisWorld:
             )
         self.utterances: List[str] = utterances
         self.tokenizer = tokenizer if tokenizer else WordTokenizer()
-        self.tokenized_utterances = [self.tokenizer.tokenize(utterance) for utterance in self.utterances]
+        self.tokenized_utterances = [
+            self.tokenizer.tokenize(utterance) for utterance in self.utterances
+        ]
         self.dates = self._get_dates()
         self.linked_entities = self._get_linked_entities()
 
@@ -204,7 +214,9 @@ class AtisWorld:
                     new_grammar["day_number"],
                 ],
             )
-            new_binary_expressions.extend([year_binary_expression, month_binary_expression, day_binary_expression])
+            new_binary_expressions.extend(
+                [year_binary_expression, month_binary_expression, day_binary_expression]
+            )
 
         new_binary_expressions = new_binary_expressions + list(new_grammar["biexpr"].members)
         new_grammar["biexpr"] = OneOf(*new_binary_expressions, name="biexpr")
@@ -213,7 +225,11 @@ class AtisWorld:
 
     def _get_numeric_database_values(self, nonterminal: str) -> List[str]:
         return sorted(
-            [value[1] for key, value in self.linked_entities["number"].items() if value[0] == nonterminal],
+            [
+                value[1]
+                for key, value in self.linked_entities["number"].items()
+                if value[0] == nonterminal
+            ],
             reverse=True,
         )
 
@@ -224,24 +240,33 @@ class AtisWorld:
             new_grammar[nonterminal] = OneOf(*number_literals, name=nonterminal)
 
     def _update_expression_reference(
-        self, grammar: Grammar, parent_expression_nonterminal: str, child_expression_nonterminal: str
+        self,
+        grammar: Grammar,
+        parent_expression_nonterminal: str,
+        child_expression_nonterminal: str,
     ) -> None:
         """
         When we add a new expression, there may be other expressions that refer to
         it, and we need to update those to point to the new expression.
         """
         grammar[parent_expression_nonterminal].members = [
-            member if member.name != child_expression_nonterminal else grammar[child_expression_nonterminal]
+            member
+            if member.name != child_expression_nonterminal
+            else grammar[child_expression_nonterminal]
             for member in grammar[parent_expression_nonterminal].members
         ]
 
-    def _get_sequence_with_spacing(self, new_grammar, expressions: List[Expression], name: str = "") -> Sequence:
+    def _get_sequence_with_spacing(
+        self, new_grammar, expressions: List[Expression], name: str = ""
+    ) -> Sequence:
         """
         This is a helper method for generating sequences, since we often want a list of expressions
         with whitespaces between them.
         """
         expressions = [
-            subexpression for expression in expressions for subexpression in (expression, new_grammar["ws"])
+            subexpression
+            for expression in expressions
+            for subexpression in (expression, new_grammar["ws"])
         ]
         return Sequence(*expressions, name=name)
 
@@ -331,7 +356,9 @@ class AtisWorld:
             for token_index in number_linking_dict.get(number, []):
                 if token_index < len(entity_linking):
                     entity_linking[token_index] = 1
-            action = format_action(nonterminal, number, is_number=True, keywords_to_uppercase=KEYWORDS)
+            action = format_action(
+                nonterminal, number, is_number=True, keywords_to_uppercase=KEYWORDS
+            )
             number_linking_scores[action] = (nonterminal, number, entity_linking)
 
     def _get_linked_entities(self) -> Dict[str, Dict[str, Tuple[str, str, List[int]]]]:
@@ -340,7 +367,9 @@ class AtisWorld:
         The entities are divided into two main groups, ``numbers`` and ``strings``. We rely on these
         entities later for updating the valid actions and the grammar.
         """
-        current_tokenized_utterance = [] if not self.tokenized_utterances else self.tokenized_utterances[-1]
+        current_tokenized_utterance = (
+            [] if not self.tokenized_utterances else self.tokenized_utterances[-1]
+        )
 
         # We generate a dictionary where the key is the type eg. ``number`` or ``string``.
         # The value is another dictionary where the key is the action and the value is a tuple
@@ -431,7 +460,9 @@ class AtisWorld:
     def _ignore_dates(self, query: str):
         tokens = query.split(" ")
         year_indices = [index for index, token in enumerate(tokens) if token.endswith("year")]
-        month_indices = [index for index, token in enumerate(tokens) if token.endswith("month_number")]
+        month_indices = [
+            index for index, token in enumerate(tokens) if token.endswith("month_number")
+        ]
         day_indices = [index for index, token in enumerate(tokens) if token.endswith("day_number")]
 
         if self.dates:

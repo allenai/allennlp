@@ -115,7 +115,11 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
             self._backward_combination, [unidirectional_dim, unidirectional_dim]
         )
         if self._span_width_embedding is not None:
-            return forward_combined_dim + backward_combined_dim + self._span_width_embedding.get_output_dim()
+            return (
+                forward_combined_dim
+                + backward_combined_dim
+                + self._span_width_embedding.get_output_dim()
+            )
         return forward_combined_dim + backward_combined_dim
 
     @overrides
@@ -128,7 +132,9 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
     ) -> torch.FloatTensor:
 
         # Both of shape (batch_size, sequence_length, embedding_size / 2)
-        forward_sequence, backward_sequence = sequence_tensor.split(int(self._input_dim / 2), dim=-1)
+        forward_sequence, backward_sequence = sequence_tensor.split(
+            int(self._input_dim / 2), dim=-1
+        )
         forward_sequence = forward_sequence.contiguous()
         backward_sequence = backward_sequence.contiguous()
 
@@ -155,12 +161,14 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
             sequence_lengths = util.get_lengths_from_binary_sequence_mask(sequence_mask)
         else:
             # shape (batch_size), filled with the sequence length size of the sequence_tensor.
-            sequence_lengths = torch.ones_like(sequence_tensor[:, 0, 0], dtype=torch.long) * sequence_tensor.size(
-                1
-            )
+            sequence_lengths = torch.ones_like(
+                sequence_tensor[:, 0, 0], dtype=torch.long
+            ) * sequence_tensor.size(1)
 
         # shape (batch_size, num_spans, 1)
-        end_sentinel_mask = (exclusive_span_ends >= sequence_lengths.unsqueeze(-1)).long().unsqueeze(-1)
+        end_sentinel_mask = (
+            (exclusive_span_ends >= sequence_lengths.unsqueeze(-1)).long().unsqueeze(-1)
+        )
 
         # As we added 1 to the span_ends to make them exclusive, which might have caused indices
         # equal to the sequence_length to become out of bounds, we multiply by the inverse of the
@@ -171,7 +179,9 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
 
         # We'll check the indices here at runtime, because it's difficult to debug
         # if this goes wrong and it's tricky to get right.
-        if (exclusive_span_starts < 0).any() or (exclusive_span_ends > sequence_lengths.unsqueeze(-1)).any():
+        if (exclusive_span_starts < 0).any() or (
+            exclusive_span_ends > sequence_lengths.unsqueeze(-1)
+        ).any():
             raise ValueError(
                 f"Adjusted span indices must lie inside the length of the sequence tensor, "
                 f"but found: exclusive_span_starts: {exclusive_span_starts}, "
@@ -180,7 +190,9 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
             )
 
         # Forward Direction: start indices are exclusive. Shape (batch_size, num_spans, input_size / 2)
-        forward_start_embeddings = util.batched_index_select(forward_sequence, exclusive_span_starts)
+        forward_start_embeddings = util.batched_index_select(
+            forward_sequence, exclusive_span_starts
+        )
         # Forward Direction: end indices are inclusive, so we can just use span_ends.
         # Shape (batch_size, num_spans, input_size / 2)
         forward_end_embeddings = util.batched_index_select(forward_sequence, span_ends)
@@ -188,7 +200,9 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
         # Backward Direction: The backward start embeddings use the `forward` end
         # indices, because we are going backwards.
         # Shape (batch_size, num_spans, input_size / 2)
-        backward_start_embeddings = util.batched_index_select(backward_sequence, exclusive_span_ends)
+        backward_start_embeddings = util.batched_index_select(
+            backward_sequence, exclusive_span_ends
+        )
         # Backward Direction: The backward end embeddings use the `forward` start
         # indices, because we are going backwards.
         # Shape (batch_size, num_spans, input_size / 2)

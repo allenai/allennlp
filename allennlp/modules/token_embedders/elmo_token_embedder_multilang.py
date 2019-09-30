@@ -82,7 +82,9 @@ class ElmoTokenEmbedderMultiLang(TokenEmbedder):
             output_dim_tmp = elmo.get_output_dim()
             if output_dim is not None:
                 # Verify that all ELMo embedders have the same output dimension.
-                check_dimensions_match(output_dim_tmp, output_dim, "%s output dim" % name, "elmo output dim")
+                check_dimensions_match(
+                    output_dim_tmp, output_dim, "%s output dim" % name, "elmo output dim"
+                )
 
             output_dim = output_dim_tmp
 
@@ -108,7 +110,9 @@ class ElmoTokenEmbedderMultiLang(TokenEmbedder):
     def get_output_dim(self):
         return self.output_dim
 
-    def forward(self, inputs: torch.Tensor, lang: str, word_inputs: torch.Tensor = None) -> torch.Tensor:
+    def forward(
+        self, inputs: torch.Tensor, lang: str, word_inputs: torch.Tensor = None
+    ) -> torch.Tensor:
         """
         Parameters
         ----------

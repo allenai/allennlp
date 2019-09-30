@@ -152,7 +152,10 @@ class ElmoLstm(_EncoderBase):
         sequence_length_difference = total_sequence_length - returned_timesteps
         if sequence_length_difference > 0:
             zeros = stacked_sequence_output.new_zeros(
-                num_layers, batch_size, sequence_length_difference, stacked_sequence_output[0].size(-1)
+                num_layers,
+                batch_size,
+                sequence_length_difference,
+                stacked_sequence_output[0].size(-1),
             )
             stacked_sequence_output = torch.cat([stacked_sequence_output, zeros], 2)
 
@@ -163,7 +166,9 @@ class ElmoLstm(_EncoderBase):
         return stacked_sequence_output.index_select(1, restoration_indices)
 
     def _lstm_forward(
-        self, inputs: PackedSequence, initial_state: Optional[Tuple[torch.Tensor, torch.Tensor]] = None
+        self,
+        inputs: PackedSequence,
+        initial_state: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
     ) -> Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         """
         Parameters
@@ -186,7 +191,9 @@ class ElmoLstm(_EncoderBase):
             for both the forward and backward layers.
         """
         if initial_state is None:
-            hidden_states: List[Optional[Tuple[torch.Tensor, torch.Tensor]]] = [None] * len(self.forward_layers)
+            hidden_states: List[Optional[Tuple[torch.Tensor, torch.Tensor]]] = [None] * len(
+                self.forward_layers
+            )
         elif initial_state[0].size()[0] != len(self.forward_layers):
             raise ConfigurationError(
                 "Initial states were passed to forward() but the number of "
@@ -228,7 +235,9 @@ class ElmoLstm(_EncoderBase):
                 forward_output_sequence += forward_cache
                 backward_output_sequence += backward_cache
 
-            sequence_outputs.append(torch.cat([forward_output_sequence, backward_output_sequence], -1))
+            sequence_outputs.append(
+                torch.cat([forward_output_sequence, backward_output_sequence], -1)
+            )
             # Append the state tuples in a list, so that we can return
             # the final states for all the layers.
             final_states.append(
@@ -261,7 +270,9 @@ class ElmoLstm(_EncoderBase):
                     # lstm is an instance of LSTMCellWithProjection
                     cell_size = lstm.cell_size
 
-                    dataset = fin["RNN_%s" % j_direction]["RNN"]["MultiRNNCell"]["Cell%s" % i_layer]["LSTMCell"]
+                    dataset = fin["RNN_%s" % j_direction]["RNN"]["MultiRNNCell"][
+                        "Cell%s" % i_layer
+                    ]["LSTMCell"]
 
                     # tensorflow packs together both W and U matrices into one matrix,
                     # but pytorch maintains individual matrices.  In addition, tensorflow
@@ -282,8 +293,12 @@ class ElmoLstm(_EncoderBase):
                         [input_weights, tf_input_weights],
                         [recurrent_weights, tf_recurrent_weights],
                     ]:
-                        torch_w[(1 * cell_size) : (2 * cell_size), :] = tf_w[(2 * cell_size) : (3 * cell_size), :]
-                        torch_w[(2 * cell_size) : (3 * cell_size), :] = tf_w[(1 * cell_size) : (2 * cell_size), :]
+                        torch_w[(1 * cell_size) : (2 * cell_size), :] = tf_w[
+                            (2 * cell_size) : (3 * cell_size), :
+                        ]
+                        torch_w[(2 * cell_size) : (3 * cell_size), :] = tf_w[
+                            (1 * cell_size) : (2 * cell_size), :
+                        ]
 
                     lstm.input_linearity.weight.data.copy_(torch.FloatTensor(input_weights))
                     lstm.state_linearity.weight.data.copy_(torch.FloatTensor(recurrent_weights))
@@ -296,8 +311,12 @@ class ElmoLstm(_EncoderBase):
                     # parameters...
                     tf_bias[(2 * cell_size) : (3 * cell_size)] += 1
                     torch_bias = tf_bias.copy()
-                    torch_bias[(1 * cell_size) : (2 * cell_size)] = tf_bias[(2 * cell_size) : (3 * cell_size)]
-                    torch_bias[(2 * cell_size) : (3 * cell_size)] = tf_bias[(1 * cell_size) : (2 * cell_size)]
+                    torch_bias[(1 * cell_size) : (2 * cell_size)] = tf_bias[
+                        (2 * cell_size) : (3 * cell_size)
+                    ]
+                    torch_bias[(2 * cell_size) : (3 * cell_size)] = tf_bias[
+                        (1 * cell_size) : (2 * cell_size)
+                    ]
                     lstm.state_linearity.bias.data.copy_(torch.FloatTensor(torch_bias))
                     lstm.state_linearity.bias.requires_grad = requires_grad
 

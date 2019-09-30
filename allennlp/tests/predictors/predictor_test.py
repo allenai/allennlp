@@ -16,7 +16,9 @@ class TestPredictor(AllenNlpTestCase):
         # The ATIS archive has both training and validation ``DatasetReaders``. The
         # ``keep_if_unparseable`` argument has a different value in each of them
         # (``True`` for validation, ``False`` for training).
-        archive = load_archive(self.FIXTURES_ROOT / "semantic_parsing" / "atis" / "serialization" / "model.tar.gz")
+        archive = load_archive(
+            self.FIXTURES_ROOT / "semantic_parsing" / "atis" / "serialization" / "model.tar.gz"
+        )
 
         predictor = Predictor.from_archive(archive, "atis-parser")
         assert predictor._dataset_reader._keep_if_unparseable is True
@@ -24,13 +26,20 @@ class TestPredictor(AllenNlpTestCase):
         predictor = Predictor.from_archive(archive, "atis-parser", dataset_reader_to_load="train")
         assert predictor._dataset_reader._keep_if_unparseable is False
 
-        predictor = Predictor.from_archive(archive, "atis-parser", dataset_reader_to_load="validation")
+        predictor = Predictor.from_archive(
+            archive, "atis-parser", dataset_reader_to_load="validation"
+        )
         assert predictor._dataset_reader._keep_if_unparseable is True
 
     def test_get_gradients(self):
-        inputs = {"premise": "I always write unit tests", "hypothesis": "One time I did not write any unit tests"}
+        inputs = {
+            "premise": "I always write unit tests",
+            "hypothesis": "One time I did not write any unit tests",
+        }
 
-        archive = load_archive(self.FIXTURES_ROOT / "decomposable_attention" / "serialization" / "model.tar.gz")
+        archive = load_archive(
+            self.FIXTURES_ROOT / "decomposable_attention" / "serialization" / "model.tar.gz"
+        )
         predictor = Predictor.from_archive(archive, "textual-entailment")
 
         instance = predictor._json_to_instance(inputs)

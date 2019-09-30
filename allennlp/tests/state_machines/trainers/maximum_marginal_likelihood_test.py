@@ -11,10 +11,16 @@ from ..simple_transition_system import SimpleState, SimpleTransitionFunction
 class TestMaximumMarginalLikelihood(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
-        self.initial_state = SimpleState([0, 1], [[], []], [torch.Tensor([0.0]), torch.Tensor([0.0])], [0, 1])
+        self.initial_state = SimpleState(
+            [0, 1], [[], []], [torch.Tensor([0.0]), torch.Tensor([0.0])], [0, 1]
+        )
         self.decoder_step = SimpleTransitionFunction()
-        self.targets = torch.Tensor([[[2, 3, 4], [1, 3, 4], [1, 2, 4]], [[3, 4, 0], [2, 3, 4], [0, 0, 0]]])
-        self.target_mask = torch.Tensor([[[1, 1, 1], [1, 1, 1], [1, 1, 1]], [[1, 1, 0], [1, 1, 1], [0, 0, 0]]])
+        self.targets = torch.Tensor(
+            [[[2, 3, 4], [1, 3, 4], [1, 2, 4]], [[3, 4, 0], [2, 3, 4], [0, 0, 0]]]
+        )
+        self.target_mask = torch.Tensor(
+            [[[1, 1, 1], [1, 1, 1], [1, 1, 1]], [[1, 1, 0], [1, 1, 1], [0, 0, 0]]]
+        )
 
         self.supervision = (self.targets, self.target_mask)
         # High beam size ensures exhaustive search.

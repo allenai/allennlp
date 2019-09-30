@@ -33,7 +33,8 @@ class _EncoderBase(torch.nn.Module):
     def sort_and_run_forward(
         self,
         module: Callable[
-            [PackedSequence, Optional[RnnState]], Tuple[Union[PackedSequence, torch.Tensor], RnnState]
+            [PackedSequence, Optional[RnnState]],
+            Tuple[Union[PackedSequence, torch.Tensor], RnnState],
         ],
         inputs: torch.Tensor,
         mask: torch.Tensor,
@@ -102,7 +103,9 @@ class _EncoderBase(torch.nn.Module):
 
         # Now create a PackedSequence with only the non-empty, sorted sequences.
         packed_sequence_input = pack_padded_sequence(
-            sorted_inputs[:num_valid, :, :], sorted_sequence_lengths[:num_valid].data.tolist(), batch_first=True
+            sorted_inputs[:num_valid, :, :],
+            sorted_sequence_lengths[:num_valid].data.tolist(),
+            batch_first=True,
         )
         # Prepare the initial states.
         if not self.stateful:
@@ -110,10 +113,13 @@ class _EncoderBase(torch.nn.Module):
                 initial_states: Any = hidden_state
             elif isinstance(hidden_state, tuple):
                 initial_states = [
-                    state.index_select(1, sorting_indices)[:, :num_valid, :].contiguous() for state in hidden_state
+                    state.index_select(1, sorting_indices)[:, :num_valid, :].contiguous()
+                    for state in hidden_state
                 ]
             else:
-                initial_states = hidden_state.index_select(1, sorting_indices)[:, :num_valid, :].contiguous()
+                initial_states = hidden_state.index_select(1, sorting_indices)[
+                    :, :num_valid, :
+                ].contiguous()
 
         else:
             initial_states = self._get_initial_states(batch_size, num_valid, sorting_indices)
@@ -203,10 +209,14 @@ class _EncoderBase(torch.nn.Module):
             return sorted_state[:, :num_valid, :].contiguous()
         else:
             # LSTMs have a state tuple of (state, memory).
-            sorted_states = [state.index_select(1, sorting_indices) for state in correctly_shaped_states]
+            sorted_states = [
+                state.index_select(1, sorting_indices) for state in correctly_shaped_states
+            ]
             return tuple(state[:, :num_valid, :].contiguous() for state in sorted_states)
 
-    def _update_states(self, final_states: RnnStateStorage, restoration_indices: torch.LongTensor) -> None:
+    def _update_states(
+        self, final_states: RnnStateStorage, restoration_indices: torch.LongTensor
+    ) -> None:
         """
         After the RNN has run forward, the states need to be updated.
         This method just sets the state to the updated new state, performing
@@ -251,7 +261,9 @@ class _EncoderBase(torch.nn.Module):
             if current_state_batch_size > new_state_batch_size:
                 # The new state is smaller than the old one,
                 # so just update the indices which we used.
-                for old_state, new_state, used_mask in zip(self._states, new_unsorted_states, used_new_rows_mask):
+                for old_state, new_state, used_mask in zip(
+                    self._states, new_unsorted_states, used_new_rows_mask
+                ):
                     # zero out all rows in the previous state
                     # which _were_ used in the current state.
                     masked_old_state = old_state[:, :new_state_batch_size, :] * (1 - used_mask)
@@ -262,7 +274,9 @@ class _EncoderBase(torch.nn.Module):
                 # The states are the same size, so we just have to
                 # deal with the possibility that some rows weren't used.
                 new_states = []
-                for old_state, new_state, used_mask in zip(self._states, new_unsorted_states, used_new_rows_mask):
+                for old_state, new_state, used_mask in zip(
+                    self._states, new_unsorted_states, used_new_rows_mask
+                ):
                     # zero out all rows which _were_ used in the current state.
                     masked_old_state = old_state * (1 - used_mask)
                     # The old state is larger, so update the relevant parts of it.

@@ -41,7 +41,9 @@ class CallbackHandler:
         use this for debugging purposes.
     """
 
-    def __init__(self, callbacks: Iterable[Callback], state: TrainerBase, verbose: bool = False) -> None:
+    def __init__(
+        self, callbacks: Iterable[Callback], state: TrainerBase, verbose: bool = False
+    ) -> None:
         # Set up callbacks
         self._callbacks: Dict[str, List[EventHandler]] = defaultdict(list)
 
@@ -62,7 +64,11 @@ class CallbackHandler:
         only returns callbacks of that type.
         """
         return list(
-            {callback.callback for callback_list in self._callbacks.values() for callback in callback_list}
+            {
+                callback.callback
+                for callback_list in self._callbacks.values()
+                for callback in callback_list
+            }
         )
 
     def add_callback(self, callback: Callback) -> None:

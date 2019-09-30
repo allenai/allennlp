@@ -86,13 +86,19 @@ class Text2SqlParser(Model):
         input_action_dim = action_embedding_dim
         if self._add_action_bias:
             input_action_dim += 1
-        self._action_embedder = Embedding(num_embeddings=num_actions, embedding_dim=input_action_dim)
-        self._output_action_embedder = Embedding(num_embeddings=num_actions, embedding_dim=action_embedding_dim)
+        self._action_embedder = Embedding(
+            num_embeddings=num_actions, embedding_dim=input_action_dim
+        )
+        self._output_action_embedder = Embedding(
+            num_embeddings=num_actions, embedding_dim=action_embedding_dim
+        )
 
         # This is what we pass as input in the first step of decoding, when we don't have a
         # previous action, or a previous utterance attention.
         self._first_action_embedding = torch.nn.Parameter(torch.FloatTensor(action_embedding_dim))
-        self._first_attended_utterance = torch.nn.Parameter(torch.FloatTensor(encoder.get_output_dim()))
+        self._first_attended_utterance = torch.nn.Parameter(
+            torch.FloatTensor(encoder.get_output_dim())
+        )
         torch.nn.init.normal_(self._first_action_embedding)
         torch.nn.init.normal_(self._first_attended_utterance)
 
@@ -154,7 +160,9 @@ class Text2SqlParser(Model):
             # target_action_sequence is of shape (batch_size, 1, target_sequence_length)
             # here after we unsqueeze it for the MML trainer.
             loss_output = self._decoder_trainer.decode(
-                initial_state, self._transition_function, (action_sequence.unsqueeze(1), target_mask.unsqueeze(1))
+                initial_state,
+                self._transition_function,
+                (action_sequence.unsqueeze(1), target_mask.unsqueeze(1)),
             )
             outputs.update(loss_output)
 
@@ -194,7 +202,9 @@ class Text2SqlParser(Model):
 
                 best_action_indices = best_final_states[i][0].action_history[0]
 
-                action_strings = [action_mapping[i][action_index] for action_index in best_action_indices]
+                action_strings = [
+                    action_mapping[i][action_index] for action_index in best_action_indices
+                ]
 
                 predicted_sql_query = action_sequence_to_sql(action_strings)
                 if action_sequence is not None:
@@ -208,7 +218,9 @@ class Text2SqlParser(Model):
                     self._action_similarity(similarity.ratio())
 
                 outputs["best_action_sequence"].append(action_strings)
-                outputs["predicted_sql_query"].append(sqlparse.format(predicted_sql_query, reindent=True))
+                outputs["predicted_sql_query"].append(
+                    sqlparse.format(predicted_sql_query, reindent=True)
+                )
                 outputs["debug_info"].append(best_final_states[i][0].debug_info[0])  # type: ignore
         return outputs
 
@@ -328,9 +340,13 @@ class Text2SqlParser(Model):
         """
         device = util.get_device_of(self._action_embedder.weight)
         # TODO(Mark): This type is pure \(- . ^)/
-        translated_valid_actions: Dict[str, Dict[str, Tuple[torch.Tensor, torch.Tensor, List[int]]]] = {}
+        translated_valid_actions: Dict[
+            str, Dict[str, Tuple[torch.Tensor, torch.Tensor, List[int]]]
+        ] = {}
 
-        actions_grouped_by_nonterminal: Dict[str, List[Tuple[ProductionRule, int]]] = defaultdict(list)
+        actions_grouped_by_nonterminal: Dict[str, List[Tuple[ProductionRule, int]]] = defaultdict(
+            list
+        )
         for i, action in enumerate(possible_actions):
             if action.rule == "":
                 continue
@@ -380,7 +396,9 @@ class Text2SqlParser(Model):
         best_actions = output_dict["best_action_sequence"]
         debug_infos = output_dict["debug_info"]
         batch_action_info = []
-        for batch_index, (predicted_actions, debug_info) in enumerate(zip(best_actions, debug_infos)):
+        for batch_index, (predicted_actions, debug_info) in enumerate(
+            zip(best_actions, debug_infos)
+        ):
             instance_action_info = []
             for predicted_action, action_debug_info in zip(predicted_actions, debug_info):
                 action_info = {}

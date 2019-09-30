@@ -160,7 +160,9 @@ def get_s3_resource():
     session = boto3.session.Session()
     if session.get_credentials() is None:
         # Use unsigned requests.
-        s3_resource = session.resource("s3", config=botocore.client.Config(signature_version=botocore.UNSIGNED))
+        s3_resource = session.resource(
+            "s3", config=botocore.client.Config(signature_version=botocore.UNSIGNED)
+        )
     else:
         s3_resource = session.resource("s3")
     return s3_resource
@@ -230,7 +232,11 @@ def get_from_cache(url: str, cache_dir: str = None) -> str:
         with session_with_backoff() as session:
             response = session.head(url, allow_redirects=True)
         if response.status_code != 200:
-            raise IOError("HEAD request failed for url {} with status code {}".format(url, response.status_code))
+            raise IOError(
+                "HEAD request failed for url {} with status code {}".format(
+                    url, response.status_code
+                )
+            )
         etag = response.headers.get("ETag")
 
     filename = url_to_filename(url, etag)

@@ -19,7 +19,9 @@ class CorefPredictor(Predictor):
     Predictor for the :class:`~allennlp.models.coreference_resolution.CoreferenceResolver` model.
     """
 
-    def __init__(self, model: Model, dataset_reader: DatasetReader, language: str = "en_core_web_sm") -> None:
+    def __init__(
+        self, model: Model, dataset_reader: DatasetReader, language: str = "en_core_web_sm"
+    ) -> None:
         super().__init__(model, dataset_reader)
 
         # We have to use spacy to tokenise our document here, because we need
@@ -97,14 +99,18 @@ class CorefPredictor(Predictor):
                 0 if (span.span_start, span.span_end) in cluster else -1  # type: ignore
                 for span in span_field
             ]  # type: ignore
-            new_instance.add_field("span_labels", SequenceLabelField(span_labels, span_field), self._model.vocab)
+            new_instance.add_field(
+                "span_labels", SequenceLabelField(span_labels, span_field), self._model.vocab
+            )
             new_instance["metadata"].metadata["clusters"] = [cluster]  # type: ignore
             instances.append(new_instance)
         if not instances:
             # No predicted clusters; we just give an empty coref prediction.
             new_instance = deepcopy(instance)
             span_labels = [-1] * len(span_field)  # type: ignore
-            new_instance.add_field("span_labels", SequenceLabelField(span_labels, span_field), self._model.vocab)
+            new_instance.add_field(
+                "span_labels", SequenceLabelField(span_labels, span_field), self._model.vocab
+            )
             new_instance["metadata"].metadata["clusters"] = []  # type: ignore
             instances.append(new_instance)
         return instances

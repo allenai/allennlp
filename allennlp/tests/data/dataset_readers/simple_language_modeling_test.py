@@ -26,7 +26,9 @@ class TestSimpleLanguageModelingDatasetReader(AllenNlpTestCase):
         batch = None
         for batch in dataset.read(prefix):
             break
-        self.assertEqual(sorted(list(expected_batch.fields.keys())), sorted(list(batch.fields.keys())))
+        self.assertEqual(
+            sorted(list(expected_batch.fields.keys())), sorted(list(batch.fields.keys()))
+        )
         for k in expected_batch.fields.keys():
             self.assertTrue(str(expected_batch.fields[k]) == str(batch.fields[k]))
 

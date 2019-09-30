@@ -27,9 +27,13 @@ class TestLambdaGrammarStatelet(AllenNlpTestCase):
         s_actions = object()
         t_actions = object()
         e_actions = object()
-        state = LambdaGrammarStatelet(["s"], {}, {"s": s_actions, "t": t_actions}, {}, is_nonterminal)
+        state = LambdaGrammarStatelet(
+            ["s"], {}, {"s": s_actions, "t": t_actions}, {}, is_nonterminal
+        )
         assert state.get_valid_actions() == s_actions
-        state = LambdaGrammarStatelet(["t"], {}, {"s": s_actions, "t": t_actions}, {}, is_nonterminal)
+        state = LambdaGrammarStatelet(
+            ["t"], {}, {"s": s_actions, "t": t_actions}, {}, is_nonterminal
+        )
         assert state.get_valid_actions() == t_actions
         state = LambdaGrammarStatelet(
             ["e"], {}, {"s": s_actions, "t": t_actions, "e": e_actions}, {}, is_nonterminal
@@ -83,12 +87,18 @@ class TestLambdaGrammarStatelet(AllenNlpTestCase):
 
         state = LambdaGrammarStatelet(["s"], {}, valid_actions, context_actions, is_nonterminal)
         next_state = state.take_action("s -> [t, r]")
-        expected_next_state = LambdaGrammarStatelet(["r", "t"], {}, valid_actions, context_actions, is_nonterminal)
+        expected_next_state = LambdaGrammarStatelet(
+            ["r", "t"], {}, valid_actions, context_actions, is_nonterminal
+        )
         assert next_state.__dict__ == expected_next_state.__dict__
 
-        state = LambdaGrammarStatelet(["r", "t"], {}, valid_actions, context_actions, is_nonterminal)
+        state = LambdaGrammarStatelet(
+            ["r", "t"], {}, valid_actions, context_actions, is_nonterminal
+        )
         next_state = state.take_action("t -> identity")
-        expected_next_state = LambdaGrammarStatelet(["r"], {}, valid_actions, context_actions, is_nonterminal)
+        expected_next_state = LambdaGrammarStatelet(
+            ["r"], {}, valid_actions, context_actions, is_nonterminal
+        )
         assert next_state.__dict__ == expected_next_state.__dict__
 
     def test_take_action_crashes_with_mismatched_types(self):
@@ -102,7 +112,9 @@ class TestLambdaGrammarStatelet(AllenNlpTestCase):
         valid_actions = object()
         context_actions = object()
 
-        state = LambdaGrammarStatelet(["t", "<s,d>"], {}, valid_actions, context_actions, is_nonterminal)
+        state = LambdaGrammarStatelet(
+            ["t", "<s,d>"], {}, valid_actions, context_actions, is_nonterminal
+        )
         next_state = state.take_action("<s,d> -> [lambda x, d]")
         expected_next_state = LambdaGrammarStatelet(
             ["t", "d"], {("s", "x"): ["d"]}, valid_actions, context_actions, is_nonterminal
@@ -112,7 +124,11 @@ class TestLambdaGrammarStatelet(AllenNlpTestCase):
         state = expected_next_state
         next_state = state.take_action("d -> [<s,r>, d]")
         expected_next_state = LambdaGrammarStatelet(
-            ["t", "d", "<s,r>"], {("s", "x"): ["d", "<s,r>"]}, valid_actions, context_actions, is_nonterminal
+            ["t", "d", "<s,r>"],
+            {("s", "x"): ["d", "<s,r>"]},
+            valid_actions,
+            context_actions,
+            is_nonterminal,
         )
         assert next_state.__dict__ == expected_next_state.__dict__
 
@@ -136,5 +152,7 @@ class TestLambdaGrammarStatelet(AllenNlpTestCase):
 
         state = expected_next_state
         next_state = state.take_action("d -> x")
-        expected_next_state = LambdaGrammarStatelet(["t"], {}, valid_actions, context_actions, is_nonterminal)
+        expected_next_state = LambdaGrammarStatelet(
+            ["t"], {}, valid_actions, context_actions, is_nonterminal
+        )
         assert next_state.__dict__ == expected_next_state.__dict__

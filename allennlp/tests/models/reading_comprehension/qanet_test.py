@@ -17,7 +17,8 @@ class QaNetTest(ModelTestCase):
     def setUp(self):
         super().setUp()
         self.set_up_model(
-            self.FIXTURES_ROOT / "qanet" / "experiment.json", self.FIXTURES_ROOT / "data" / "squad.json"
+            self.FIXTURES_ROOT / "qanet" / "experiment.json",
+            self.FIXTURES_ROOT / "data" / "squad.json",
         )
 
     def test_forward_pass_runs_correctly(self):
@@ -57,7 +58,9 @@ class QaNetTest(ModelTestCase):
         optimizer = torch.optim.SGD(self.model.parameters(), 0.01, momentum=0.9)
         multigpu_iterator = BasicIterator(batch_size=4)
         multigpu_iterator.index_with(model.vocab)
-        trainer = Trainer(model, optimizer, multigpu_iterator, self.instances, num_epochs=2, cuda_device=[0, 1])
+        trainer = Trainer(
+            model, optimizer, multigpu_iterator, self.instances, num_epochs=2, cuda_device=[0, 1]
+        )
         trainer.train()
 
     def test_batch_predictions_are_consistent(self):

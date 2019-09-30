@@ -32,7 +32,9 @@ class TestMultiprocessIterator(IteratorTest):
             batches = list(iterator(test_instances, num_epochs=1))
             # We just want to get the single-token array for the text field in the instance.
             instances = [
-                tuple(instance.detach().cpu().numpy()) for batch in batches for instance in batch["text"]["tokens"]
+                tuple(instance.detach().cpu().numpy())
+                for batch in batches
+                for instance in batch["text"]["tokens"]
             ]
             assert len(instances) == 5
 

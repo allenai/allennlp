@@ -74,7 +74,9 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
         assert selected_number == 2.0
 
     def test_execute_works_with_argmax(self):
-        logical_form = "(select_string (argmax all_rows number_column:avg_attendance) string_column:league)"
+        logical_form = (
+            "(select_string (argmax all_rows number_column:avg_attendance) string_column:league)"
+        )
         cell_list = self.language.execute(logical_form)
         assert cell_list == ["usl_a_league"]
 
@@ -84,7 +86,9 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
         assert cell_list == ["usl_first_division"]
 
     def test_execute_works_with_argmin(self):
-        logical_form = "(select_date (argmin all_rows number_column:avg_attendance) date_column:year)"
+        logical_form = (
+            "(select_date (argmin all_rows number_column:avg_attendance) date_column:year)"
+        )
         cell_list = self.language.execute(logical_form)
         assert cell_list == Date(2005, 3, -1)
 
@@ -130,7 +134,9 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
         count_result = self.language.execute(logical_form)
         assert count_result == 2
         # Replacing the filter value with an invalid value.
-        logical_form = """(count (filter_number_greater all_rows number_column:avg_attendance all_rows))"""
+        logical_form = (
+            """(count (filter_number_greater all_rows number_column:avg_attendance all_rows))"""
+        )
         with pytest.raises(ExecutionError):
             self.language.execute(logical_form)
         # Replacing the filter value with an invalid value.
@@ -173,7 +179,9 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
 
     def test_execute_works_with_filter_number_lesser_equals(self):
         # Counting rows that have year lesser than or equal to 2005.
-        logical_form = """(count (filter_number_lesser_equals all_rows number_column:avg_attendance 8000))"""
+        logical_form = (
+            """(count (filter_number_lesser_equals all_rows number_column:avg_attendance 8000))"""
+        )
         count_result = self.language.execute(logical_form)
         assert count_result == 2
 
@@ -191,7 +199,9 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
 
     def test_execute_works_with_filter_number_equals(self):
         # Counting rows that have year equal to 2010.
-        logical_form = """(count (filter_number_equals all_rows number_column:avg_attendance 8000))"""
+        logical_form = (
+            """(count (filter_number_equals all_rows number_column:avg_attendance 8000))"""
+        )
         count_result = self.language.execute(logical_form)
         assert count_result == 0
 
@@ -209,7 +219,9 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
 
     def test_execute_works_with_filter_number_not_equals(self):
         # Counting rows that have year not equal to 2010.
-        logical_form = """(count (filter_number_not_equals all_rows number_column:avg_attendance 8000))"""
+        logical_form = (
+            """(count (filter_number_not_equals all_rows number_column:avg_attendance 8000))"""
+        )
         count_result = self.language.execute(logical_form)
         assert count_result == 2
 
@@ -395,20 +407,26 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
         tokens = WordTokenizer().tokenize("when was the attendance the highest?")
         tagged_file = self.FIXTURES_ROOT / "data" / "corenlp_processed_tables" / "TEST-2.table"
         language = self._get_world_with_question_tokens_and_table_file(tokens, tagged_file)
-        result = language.execute("(select_date (argmax all_rows number_column:attendance) date_column:date)")
+        result = language.execute(
+            "(select_date (argmax all_rows number_column:attendance) date_column:date)"
+        )
         assert result == Date(-1, 11, 10)
 
     def test_evaluate_logical_form(self):
         logical_form = """(select_string (same_as (filter_in all_rows string_column:league string:a_league)
                                    string_column:playoffs)
                            string_column:league)"""
-        assert self.language.evaluate_logical_form(logical_form, ["USL A-League", "USL First Division"])
+        assert self.language.evaluate_logical_form(
+            logical_form, ["USL A-League", "USL First Division"]
+        )
 
     def test_evaluate_logical_form_with_invalid_logical_form(self):
         logical_form = """(select_string (same_as (filter_in all_rows string_column:league INVALID_CONSTANT)
                                    string_column:playoffs)
                            string_column:league)"""
-        assert not self.language.evaluate_logical_form(logical_form, ["USL A-League", "USL First Division"])
+        assert not self.language.evaluate_logical_form(
+            logical_form, ["USL A-League", "USL First Division"]
+        )
 
     def test_get_nonterminal_productions_all_column_types(self):
         # This test is long, but worth it.  These are all of the valid actions in the grammar, and
@@ -448,7 +466,8 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
         )
 
         check_productions_match(
-            productions["<List[Row],DateColumn:Date>"], ["select_date", "max_date", "min_date", "mode_date"]
+            productions["<List[Row],DateColumn:Date>"],
+            ["select_date", "max_date", "min_date", "mode_date"],
         )
 
         check_productions_match(
@@ -463,14 +482,17 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
             ],
         )
 
-        check_productions_match(productions["<List[Row],ComparableColumn:List[Row]>"], ["argmax", "argmin"])
+        check_productions_match(
+            productions["<List[Row],ComparableColumn:List[Row]>"], ["argmax", "argmin"]
+        )
 
         check_productions_match(productions["<List[Row],Column:List[Row]>"], ["same_as"])
 
         check_productions_match(productions["<List[Row],List[Row],NumberColumn:Number>"], ["diff"])
 
         check_productions_match(
-            productions["<List[Row],StringColumn,List[str]:List[Row]>"], ["filter_in", "filter_not_in"]
+            productions["<List[Row],StringColumn,List[str]:List[Row]>"],
+            ["filter_in", "filter_not_in"],
         )
 
         check_productions_match(productions["<Number,Number,Number:Date>"], ["date"])
@@ -492,7 +514,9 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
             ["average", "max_number", "min_number", "sum", "select_number", "mode_number"],
         )
 
-        check_productions_match(productions["<List[Row]:List[Row]>"], ["first", "last", "next", "previous"])
+        check_productions_match(
+            productions["<List[Row]:List[Row]>"], ["first", "last", "next", "previous"]
+        )
 
         check_productions_match(productions["<List[Row]:Number>"], ["count"])
 
@@ -616,7 +640,8 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
 
     def test_world_processes_logical_forms_correctly(self):
         logical_form = (
-            "(select_date (filter_in all_rows string_column:league string:usl_a_league)" " date_column:year)"
+            "(select_date (filter_in all_rows string_column:league string:usl_a_league)"
+            " date_column:year)"
         )
         action_sequence = self.language.logical_form_to_action_sequence(logical_form)
         assert self.language.action_sequence_to_logical_form(action_sequence) == logical_form
@@ -628,7 +653,8 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
             "@start@ -> Date",
             "Date -> [<List[Row],DateColumn:Date>, List[Row], DateColumn]",
             "<List[Row],DateColumn:Date> -> select_date",
-            "List[Row] -> [<List[Row],StringColumn,List[str]:List[Row]>, " "List[Row], StringColumn, List[str]]",
+            "List[Row] -> [<List[Row],StringColumn,List[str]:List[Row]>, "
+            "List[Row], StringColumn, List[str]]",
             "<List[Row],StringColumn,List[str]:List[Row]> -> filter_in",
             "List[Row] -> all_rows",
             "StringColumn -> string_column:league",
@@ -639,14 +665,16 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
 
     def test_world_processes_logical_forms_with_number_correctly(self):
         logical_form = (
-            "(select_date (filter_number_greater all_rows number_column:avg_attendance 8000) " "date_column:year)"
+            "(select_date (filter_number_greater all_rows number_column:avg_attendance 8000) "
+            "date_column:year)"
         )
         action_sequence = self.language.logical_form_to_action_sequence(logical_form)
         assert self.language.action_sequence_to_logical_form(action_sequence) == logical_form
 
     def test_world_processes_logical_forms_with_date_correctly(self):
         logical_form = (
-            "(select_date (filter_date_greater all_rows date_column:year (date 2013 -1 -1)) " "date_column:year)"
+            "(select_date (filter_date_greater all_rows date_column:year (date 2013 -1 -1)) "
+            "date_column:year)"
         )
         action_sequence = self.language.logical_form_to_action_sequence(logical_form)
         assert self.language.action_sequence_to_logical_form(action_sequence) == logical_form
@@ -730,7 +758,9 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
             "StringColumn -> string_column:avg_attendance",
             "NumberColumn -> number_column:avg_attendance",
         }
-        assert set(world.get_agenda(conservative=True)) == {"<List[Row],NumberColumn:Number> -> average"}
+        assert set(world.get_agenda(conservative=True)) == {
+            "<List[Row],NumberColumn:Number> -> average"
+        }
 
         tokens = [Token(x) for x in ["what", "was", "the", "largest", "avg.", "attendance", "?"]]
         world = self._get_world_with_question_tokens(tokens)
@@ -739,7 +769,9 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
             "StringColumn -> string_column:avg_attendance",
             "NumberColumn -> number_column:avg_attendance",
         }
-        assert set(world.get_agenda(conservative=True)) == {"<List[Row],ComparableColumn:List[Row]> -> argmax"}
+        assert set(world.get_agenda(conservative=True)) == {
+            "<List[Row],ComparableColumn:List[Row]> -> argmax"
+        }
 
         tokens = [Token(x) for x in ["when", "was", "the", "least", "avg.", "attendance", "?"]]
         world = self._get_world_with_question_tokens(tokens)
@@ -780,7 +812,9 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
             "NumberColumn -> number_column:avg_attendance",
         }
         # conservative disallows "after" mapping to "next"
-        assert set(world.get_agenda(conservative=True)) == {"<List[Row],ComparableColumn:List[Row]> -> argmin"}
+        assert set(world.get_agenda(conservative=True)) == {
+            "<List[Row],ComparableColumn:List[Row]> -> argmin"
+        }
 
         tokens = [
             Token(x)
@@ -838,7 +872,9 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
             "NumberColumn -> number_column:avg_attendance",
         }
         # conservative disallows "before" mapping to "previous"
-        assert set(world.get_agenda(conservative=True)) == {"<List[Row],ComparableColumn:List[Row]> -> argmin"}
+        assert set(world.get_agenda(conservative=True)) == {
+            "<List[Row],ComparableColumn:List[Row]> -> argmin"
+        }
 
         tokens = [
             Token(x)
@@ -913,7 +949,9 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
             "StringColumn -> string_column:avg_attendance",
             "NumberColumn -> number_column:avg_attendance",
         }
-        assert set(world.get_agenda(conservative=True)) == {"<List[Row],NumberColumn:Number> -> min_number"}
+        assert set(world.get_agenda(conservative=True)) == {
+            "<List[Row],NumberColumn:Number> -> min_number"
+        }
 
         tokens = [Token(x) for x in ["when", "did", "the", "team", "not", "qualify", "?"]]
         world = self._get_world_with_question_tokens(tokens)
@@ -926,7 +964,10 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
             "List[str] -> string:qualify",
         }
 
-        tokens = [Token(x) for x in ["when", "was", "the", "avg.", "attendance", "at", "least", "7000", "?"]]
+        tokens = [
+            Token(x)
+            for x in ["when", "was", "the", "avg.", "attendance", "at", "least", "7000", "?"]
+        ]
         world = self._get_world_with_question_tokens(tokens)
         assert set(world.get_agenda()) == {
             "<List[Row],NumberColumn,Number:List[Row]> -> filter_number_greater_equals",
@@ -941,7 +982,10 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
             "Number -> 7000",
         }
 
-        tokens = [Token(x) for x in ["when", "was", "the", "avg.", "attendance", "more", "than", "7000", "?"]]
+        tokens = [
+            Token(x)
+            for x in ["when", "was", "the", "avg.", "attendance", "more", "than", "7000", "?"]
+        ]
         world = self._get_world_with_question_tokens(tokens)
         assert set(world.get_agenda()) == {
             "<List[Row],NumberColumn,Number:List[Row]> -> filter_number_greater",
@@ -956,7 +1000,10 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
             "Number -> 7000",
         }
 
-        tokens = [Token(x) for x in ["when", "was", "the", "avg.", "attendance", "at", "most", "7000", "?"]]
+        tokens = [
+            Token(x)
+            for x in ["when", "was", "the", "avg.", "attendance", "at", "most", "7000", "?"]
+        ]
         world = self._get_world_with_question_tokens(tokens)
         assert set(world.get_agenda()) == {
             "<List[Row],NumberColumn,Number:List[Row]> -> filter_number_lesser_equals",
@@ -972,7 +1019,8 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
         }
 
         tokens = [
-            Token(x) for x in ["when", "was", "the", "avg.", "attendance", "no", "more", "than", "7000", "?"]
+            Token(x)
+            for x in ["when", "was", "the", "avg.", "attendance", "no", "more", "than", "7000", "?"]
         ]
         world = self._get_world_with_question_tokens(tokens)
         assert set(world.get_agenda()) == {
@@ -998,7 +1046,9 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
         }
         assert set(world.get_agenda(conservative=True)) == {"<List[Row]:List[Row]> -> first"}
 
-        tokens = [Token(x) for x in ["what", "was", "the", "year", "in", "the", "bottom", "row", "?"]]
+        tokens = [
+            Token(x) for x in ["what", "was", "the", "year", "in", "the", "bottom", "row", "?"]
+        ]
         world = self._get_world_with_question_tokens(tokens)
         assert set(world.get_agenda()) == {
             "<List[Row]:List[Row]> -> last",

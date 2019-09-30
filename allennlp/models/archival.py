@@ -73,7 +73,8 @@ class Archive(NamedTuple):
             )
         if not isinstance(module, Module):
             raise ConfigurationError(
-                f"The transferred object from model {type(self.model)} at path " f"{path} is not a PyTorch Module."
+                f"The transferred object from model {type(self.model)} at path "
+                f"{path} is not a PyTorch Module."
             )
 
         for parameter in module.parameters():  # type: ignore
@@ -217,7 +218,9 @@ def load_archive(
                 )
 
         overrides_dict = parse_overrides(overrides)
-        combined_dict = with_fallback(preferred=overrides_dict, fallback=unflatten(replacements_dict))
+        combined_dict = with_fallback(
+            preferred=overrides_dict, fallback=unflatten(replacements_dict)
+        )
         overrides = json.dumps(combined_dict)
 
     # Load config
@@ -234,7 +237,10 @@ def load_archive(
 
     # Instantiate model. Use a duplicate of the config, as it will get consumed.
     model = Model.load(
-        config.duplicate(), weights_file=weights_path, serialization_dir=serialization_dir, cuda_device=cuda_device
+        config.duplicate(),
+        weights_file=weights_path,
+        serialization_dir=serialization_dir,
+        cuda_device=cuda_device,
     )
 
     return Archive(model=model, config=config)

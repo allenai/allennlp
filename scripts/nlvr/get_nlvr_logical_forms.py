@@ -5,7 +5,9 @@ from typing import Tuple, List
 import os
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir)))))
+sys.path.insert(
+    0, os.path.dirname(os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
+)
 
 from allennlp.common.util import JsonDict
 from allennlp.semparse.domain_languages import NlvrLanguage
@@ -49,7 +51,10 @@ def process_data(
         instance_id, sentence, structured_reps, label_strings = read_json_line(line)
         worlds = []
         for structured_representation in structured_reps:
-            boxes = {Box(object_list, box_id) for box_id, object_list in enumerate(structured_representation)}
+            boxes = {
+                Box(object_list, box_id)
+                for box_id, object_list in enumerate(structured_representation)
+            }
             worlds.append(NlvrLanguage(boxes))
         labels = [label_string == "true" for label_string in label_strings]
         correct_logical_forms = []
@@ -60,7 +65,9 @@ def process_data(
         else:
             # TODO (pradeep): Assuming all worlds give the same agenda.
             sentence_agenda = worlds[0].get_agenda_for_sentence(sentence)
-            logical_forms = walker.get_logical_forms_with_agenda(sentence_agenda, max_num_logical_forms * 10)
+            logical_forms = walker.get_logical_forms_with_agenda(
+                sentence_agenda, max_num_logical_forms * 10
+            )
         for logical_form in logical_forms:
             if all([world.execute(logical_form) == label for world, label in zip(worlds, labels)]):
                 if len(correct_logical_forms) <= max_num_logical_forms:
@@ -75,10 +82,12 @@ def process_data(
                 break
         if write_sequences:
             correct_sequences = [
-                worlds[0].logical_form_to_action_sequence(logical_form) for logical_form in correct_logical_forms
+                worlds[0].logical_form_to_action_sequence(logical_form)
+                for logical_form in correct_logical_forms
             ]
             incorrect_sequences = [
-                worlds[0].logical_form_to_action_sequence(logical_form) for logical_form in incorrect_logical_forms
+                worlds[0].logical_form_to_action_sequence(logical_form)
+                for logical_form in incorrect_logical_forms
             ]
             processed_data.append(
                 {
@@ -129,7 +138,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--ignore-agenda",
         dest="ignore_agenda",
-        help="Should we ignore the " "agenda and use consistency as the only signal to get logical forms?",
+        help="Should we ignore the "
+        "agenda and use consistency as the only signal to get logical forms?",
         action="store_true",
     )
     parser.add_argument(

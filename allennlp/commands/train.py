@@ -48,7 +48,12 @@ import os
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.checks import check_for_gpu
 from allennlp.common import Params
-from allennlp.common.util import prepare_environment, prepare_global_logging, cleanup_global_logging, dump_metrics
+from allennlp.common.util import (
+    prepare_environment,
+    prepare_global_logging,
+    cleanup_global_logging,
+    dump_metrics,
+)
 from allennlp.models.archival import archive_model, CONFIG_NAME
 from allennlp.models.model import Model, _DEFAULT_WEIGHTS
 from allennlp.training.trainer import Trainer
@@ -60,7 +65,9 @@ logger = logging.getLogger(__name__)
 
 
 class Train(Subcommand):
-    def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
+    def add_subparser(
+        self, name: str, parser: argparse._SubParsersAction
+    ) -> argparse.ArgumentParser:
 
         description = """Train the specified model on the specified dataset."""
         subparser = parser.add_parser(name, description=description, help="Train a model.")
@@ -109,7 +116,10 @@ class Train(Subcommand):
         )
 
         subparser.add_argument(
-            "--cache-directory", type=str, default="", help="Location to store cache of data preprocessing"
+            "--cache-directory",
+            type=str,
+            default="",
+            help="Location to store cache of data preprocessing",
         )
 
         subparser.add_argument(
@@ -180,7 +190,13 @@ def train_model_from_file(
     # Load the experiment config from a file and pass it to ``train_model``.
     params = Params.from_file(parameter_filename, overrides)
     return train_model(
-        params, serialization_dir, file_friendly_logging, recover, force, cache_directory, cache_prefix
+        params,
+        serialization_dir,
+        file_friendly_logging,
+        recover,
+        force,
+        cache_directory,
+        cache_prefix,
     )
 
 
@@ -237,7 +253,9 @@ def train_model(
 
     if trainer_type == "default":
         # Special logic to instantiate backward-compatible trainer.
-        pieces = TrainerPieces.from_params(params, serialization_dir, recover, cache_directory, cache_prefix)
+        pieces = TrainerPieces.from_params(
+            params, serialization_dir, recover, cache_directory, cache_prefix
+        )
         trainer = Trainer.from_params(
             model=pieces.model,
             serialization_dir=serialization_dir,
@@ -260,7 +278,9 @@ def train_model(
                 "to run allennlp evaluate separately."
             )
 
-        trainer = TrainerBase.from_params(params, serialization_dir, recover, cache_directory, cache_prefix)
+        trainer = TrainerBase.from_params(
+            params, serialization_dir, recover, cache_directory, cache_prefix
+        )
         evaluation_dataset = None
 
     params.assert_empty("base train command")

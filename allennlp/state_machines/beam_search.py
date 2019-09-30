@@ -59,7 +59,9 @@ class BeamSearch(FromParams, Generic[StateType]):
             # construct_prefix_tree wants a tensor of shape (batch_size, num_sequences, sequence_length)
             # so we need to add the first two dimensions in. This returns a list, but we're assuming
             # batch size 1, so we extract the first element.
-            self._allowed_transitions = util.construct_prefix_tree(initial_sequence.view(1, 1, -1))[0]
+            self._allowed_transitions = util.construct_prefix_tree(initial_sequence.view(1, 1, -1))[
+                0
+            ]
         else:
             self._allowed_transitions = None
 
@@ -70,11 +72,15 @@ class BeamSearch(FromParams, Generic[StateType]):
         else:
             self.beam_snapshots = None
 
-    def constrained_to(self, initial_sequence: torch.Tensor, keep_beam_details: bool = True) -> "BeamSearch":
+    def constrained_to(
+        self, initial_sequence: torch.Tensor, keep_beam_details: bool = True
+    ) -> "BeamSearch":
         """
         Return a new BeamSearch instance that's like this one but with the specified constraint.
         """
-        return BeamSearch(self._beam_size, self._per_node_beam_size, initial_sequence, keep_beam_details)
+        return BeamSearch(
+            self._beam_size, self._per_node_beam_size, initial_sequence, keep_beam_details
+        )
 
     def search(
         self,
@@ -167,7 +173,9 @@ class BeamSearch(FromParams, Generic[StateType]):
                     while len(self.beam_snapshots[batch_index]) < len(action_history):
                         self.beam_snapshots[batch_index].append([])
 
-                    self.beam_snapshots[batch_index][len(action_history) - 1].append((score, action_history))
+                    self.beam_snapshots[batch_index][len(action_history) - 1].append(
+                        (score, action_history)
+                    )
 
         best_states: Dict[int, List[StateType]] = {}
         for batch_index, batch_states in finished_states.items():

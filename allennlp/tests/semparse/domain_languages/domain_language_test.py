@@ -215,7 +215,14 @@ class DomainLanguageTest(AllenNlpTestCase):
         check_productions_match(valid_actions["<int:int>"], ["halve"])
         check_productions_match(
             valid_actions["<int,int:int>"],
-            ["[<<int,int:int>:<int,int:int>>, <int,int:int>]", "add", "subtract", "multiply", "divide", "power"],
+            [
+                "[<<int,int:int>:<int,int:int>>, <int,int:int>]",
+                "add",
+                "subtract",
+                "multiply",
+                "divide",
+                "power",
+            ],
         )
         check_productions_match(valid_actions["<List[int]:int>"], ["sum"])
         check_productions_match(valid_actions["<int:List[int]>"], ["list1"])
@@ -234,7 +241,9 @@ class DomainLanguageTest(AllenNlpTestCase):
             "int -> 3",
         ]
 
-        action_sequence = self.language.logical_form_to_action_sequence("(halve (subtract 8 three))")
+        action_sequence = self.language.logical_form_to_action_sequence(
+            "(halve (subtract 8 three))"
+        )
         assert action_sequence == [
             "@start@ -> int",
             "int -> [<int:int>, int]",
@@ -321,7 +330,12 @@ class DomainLanguageTest(AllenNlpTestCase):
         language = SideArgumentLanguage()
 
         # (add 1)
-        action_sequence = ["@start@ -> int", "int -> [<int:int>, int]", "<int:int> -> add", "int -> 1"]
+        action_sequence = [
+            "@start@ -> int",
+            "int -> [<int:int>, int]",
+            "<int:int> -> add",
+            "int -> 1",
+        ]
         # For each action in the action sequence, we pass state.  We only actually _use_ the state
         # when the action we've predicted at that step needs the state.  In this case, the third
         # action will get {'num2': 3} passed to the `add()` function.
@@ -335,5 +349,10 @@ class DomainLanguageTest(AllenNlpTestCase):
             "<int:int> -> add",
             "int -> current_number",
         ]
-        state = [{"num2": 1, "num": 5}, {"num2": 2, "num": 6}, {"num2": 3, "num": 7}, {"num2": 4, "num": 8}]
+        state = [
+            {"num2": 1, "num": 5},
+            {"num2": 2, "num": 6},
+            {"num2": 3, "num": 7},
+            {"num2": 4, "num": 8},
+        ]
         assert language.execute_action_sequence(action_sequence, state) == 11

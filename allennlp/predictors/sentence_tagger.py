@@ -22,7 +22,9 @@ class SentenceTaggerPredictor(Predictor):
     the :class:`~allennlp.models.simple_tagger.SimpleTagger` model.
     """
 
-    def __init__(self, model: Model, dataset_reader: DatasetReader, language: str = "en_core_web_sm") -> None:
+    def __init__(
+        self, model: Model, dataset_reader: DatasetReader, language: str = "en_core_web_sm"
+    ) -> None:
         super().__init__(model, dataset_reader)
         self._tokenizer = SpacyWordSplitter(language=language, pos_tags=True)
 
@@ -82,7 +84,10 @@ class SentenceTaggerPredictor(Predictor):
                     i += 1
                     tag = predicted_tags[i]
                 end_idx = i
-                current_tags = [t if begin_idx <= idx <= end_idx else "O" for idx, t in enumerate(predicted_tags)]
+                current_tags = [
+                    t if begin_idx <= idx <= end_idx else "O"
+                    for idx, t in enumerate(predicted_tags)
+                ]
                 predicted_spans.append(current_tags)
             i += 1
 
@@ -91,7 +96,9 @@ class SentenceTaggerPredictor(Predictor):
         for labels in predicted_spans:
             new_instance = deepcopy(instance)
             text_field: TextField = instance["tokens"]  # type: ignore
-            new_instance.add_field("tags", SequenceLabelField(labels, text_field), self._model.vocab)
+            new_instance.add_field(
+                "tags", SequenceLabelField(labels, text_field), self._model.vocab
+            )
             instances.append(new_instance)
         instances.reverse()  # NER tags are in the opposite order as desired for the interpret UI
 

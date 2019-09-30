@@ -133,7 +133,9 @@ class QIterable(Iterable[Instance]):
         for _ in range(self.num_workers):
             self.input_queue.put(None)
 
-        assert not self.processes, "Process list non-empty! You must call QIterable.join() before restarting."
+        assert (
+            not self.processes
+        ), "Process list non-empty! You must call QIterable.join() before restarting."
         self.num_active_workers = Value("i", self.num_workers)
         self.num_inflight_items = Value("i", 0)
         for worker_id in range(self.num_workers):
@@ -202,7 +204,11 @@ class MultiprocessDatasetReader(DatasetReader):
     """
 
     def __init__(
-        self, base_reader: DatasetReader, num_workers: int, epochs_per_read: int = 1, output_queue_size: int = 1000
+        self,
+        base_reader: DatasetReader,
+        num_workers: int,
+        epochs_per_read: int = 1,
+        output_queue_size: int = 1000,
     ) -> None:
         # Multiprocess reader is intrinsically lazy.
         super().__init__(lazy=True)

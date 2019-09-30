@@ -28,7 +28,12 @@ class CategoricalAccuracy(Metric):
         self.correct_count = 0.0
         self.total_count = 0.0
 
-    def __call__(self, predictions: torch.Tensor, gold_labels: torch.Tensor, mask: Optional[torch.Tensor] = None):
+    def __call__(
+        self,
+        predictions: torch.Tensor,
+        gold_labels: torch.Tensor,
+        mask: Optional[torch.Tensor] = None,
+    ):
         """
         Parameters
         ----------
@@ -74,7 +79,9 @@ class CategoricalAccuracy(Metric):
             # max_predictions_mask is (rows X num_classes) and gold_labels is (batch_size)
             # ith entry in gold_labels points to index (0-num_classes) for ith row in max_predictions
             # For each row check if index pointed by gold_label is was 1 or not (among max scored classes)
-            correct = max_predictions_mask[torch.arange(gold_labels.numel()).long(), gold_labels].float()
+            correct = max_predictions_mask[
+                torch.arange(gold_labels.numel()).long(), gold_labels
+            ].float()
             tie_counts = max_predictions_mask.sum(-1)
             correct /= tie_counts.float()
             correct.unsqueeze_(-1)

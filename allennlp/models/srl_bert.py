@@ -137,9 +137,13 @@ class SrlBert(Model):
         output_dict["wordpiece_offsets"] = list(offsets)
 
         if tags is not None:
-            loss = sequence_cross_entropy_with_logits(logits, tags, mask, label_smoothing=self._label_smoothing)
+            loss = sequence_cross_entropy_with_logits(
+                logits, tags, mask, label_smoothing=self._label_smoothing
+            )
             if not self.ignore_span_metric and self.span_metric is not None and not self.training:
-                batch_verb_indices = [example_metadata["verb_index"] for example_metadata in metadata]
+                batch_verb_indices = [
+                    example_metadata["verb_index"] for example_metadata in metadata
+                ]
                 batch_sentences = [example_metadata["words"] for example_metadata in metadata]
                 # Get the BIO tags from decode()
                 # TODO (nfliu): This is kind of a hack, consider splitting out part
@@ -148,10 +152,17 @@ class SrlBert(Model):
                 batch_conll_predicted_tags = [
                     convert_bio_tags_to_conll_format(tags) for tags in batch_bio_predicted_tags
                 ]
-                batch_bio_gold_tags = [example_metadata["gold_tags"] for example_metadata in metadata]
-                batch_conll_gold_tags = [convert_bio_tags_to_conll_format(tags) for tags in batch_bio_gold_tags]
+                batch_bio_gold_tags = [
+                    example_metadata["gold_tags"] for example_metadata in metadata
+                ]
+                batch_conll_gold_tags = [
+                    convert_bio_tags_to_conll_format(tags) for tags in batch_bio_gold_tags
+                ]
                 self.span_metric(
-                    batch_verb_indices, batch_sentences, batch_conll_predicted_tags, batch_conll_gold_tags
+                    batch_verb_indices,
+                    batch_sentences,
+                    batch_conll_predicted_tags,
+                    batch_conll_gold_tags,
                 )
             output_dict["loss"] = loss
         return output_dict
@@ -179,7 +190,9 @@ class SrlBert(Model):
         sequence_lengths = get_lengths_from_binary_sequence_mask(output_dict["mask"]).data.tolist()
 
         if all_predictions.dim() == 3:
-            predictions_list = [all_predictions[i].detach().cpu() for i in range(all_predictions.size(0))]
+            predictions_list = [
+                all_predictions[i].detach().cpu() for i in range(all_predictions.size(0))
+            ]
         else:
             predictions_list = [all_predictions]
         wordpiece_tags = []
@@ -194,7 +207,10 @@ class SrlBert(Model):
             max_likelihood_sequence, _ = viterbi_decode(
                 predictions[:length], transition_matrix, allowed_start_transitions=start_transitions
             )
-            tags = [self.vocab.get_token_from_index(x, namespace="labels") for x in max_likelihood_sequence]
+            tags = [
+                self.vocab.get_token_from_index(x, namespace="labels")
+                for x in max_likelihood_sequence
+            ]
 
             wordpiece_tags.append(tags)
             word_tags.append([tags[i] for i in offsets])

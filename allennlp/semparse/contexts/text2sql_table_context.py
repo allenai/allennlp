@@ -29,7 +29,10 @@ GRAMMAR_DICTIONARY["select_core"] = [
     "(select_with_distinct ws select_results)",
 ]
 GRAMMAR_DICTIONARY["select_with_distinct"] = ['(ws "SELECT" ws "DISTINCT")', '(ws "SELECT")']
-GRAMMAR_DICTIONARY["select_results"] = ['(ws select_result ws "," ws select_results)', "(ws select_result)"]
+GRAMMAR_DICTIONARY["select_results"] = [
+    '(ws select_result ws "," ws select_results)',
+    "(ws select_result)",
+]
 GRAMMAR_DICTIONARY["select_result"] = [
     '"*"',
     '(table_name ws ".*")',
@@ -42,10 +45,16 @@ GRAMMAR_DICTIONARY["from_clause"] = ['ws "FROM" ws source']
 GRAMMAR_DICTIONARY["source"] = ['(ws single_source ws "," ws source)', "(ws single_source)"]
 GRAMMAR_DICTIONARY["single_source"] = ["source_table", "source_subq"]
 GRAMMAR_DICTIONARY["source_table"] = ['(table_name ws "AS" wsp name)', "table_name"]
-GRAMMAR_DICTIONARY["source_subq"] = ['("(" ws query ws ")" ws "AS" ws name)', '("(" ws query ws ")")']
+GRAMMAR_DICTIONARY["source_subq"] = [
+    '("(" ws query ws ")" ws "AS" ws name)',
+    '("(" ws query ws ")")',
+]
 GRAMMAR_DICTIONARY["limit"] = ['("LIMIT" ws "1")', '("LIMIT" ws number)']
 
-GRAMMAR_DICTIONARY["where_clause"] = ['(ws "WHERE" wsp expr ws where_conj)', '(ws "WHERE" wsp expr)']
+GRAMMAR_DICTIONARY["where_clause"] = [
+    '(ws "WHERE" wsp expr ws where_conj)',
+    '(ws "WHERE" wsp expr)',
+]
 GRAMMAR_DICTIONARY["where_conj"] = ['(ws "AND" wsp expr ws where_conj)', '(ws "AND" wsp expr)']
 
 GRAMMAR_DICTIONARY["groupby_clause"] = [

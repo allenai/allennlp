@@ -30,7 +30,11 @@ class BagOfWordCountsTokenEmbedder(TokenEmbedder):
     """
 
     def __init__(
-        self, vocab: Vocabulary, vocab_namespace: str, projection_dim: int = None, ignore_oov: bool = False
+        self,
+        vocab: Vocabulary,
+        vocab_namespace: str,
+        projection_dim: int = None,
+        ignore_oov: bool = False,
     ) -> None:
         super().__init__()
         self.vocab = vocab
@@ -43,7 +47,9 @@ class BagOfWordCountsTokenEmbedder(TokenEmbedder):
         oov_token = vocab._oov_token
         self._oov_idx = vocab.get_token_to_index_vocabulary(vocab_namespace).get(oov_token)
         if self._oov_idx is None:
-            raise ConfigurationError("OOV token does not exist in vocabulary namespace {}".format(vocab_namespace))
+            raise ConfigurationError(
+                "OOV token does not exist in vocabulary namespace {}".format(vocab_namespace)
+            )
         self.output_dim = projection_dim or self.vocab_size
 
     def get_output_dim(self):
@@ -81,7 +87,9 @@ class BagOfWordCountsTokenEmbedder(TokenEmbedder):
         return bag_of_words_output
 
     @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> "BagOfWordCountsTokenEmbedder":  # type: ignore
+    def from_params(
+        cls, vocab: Vocabulary, params: Params
+    ) -> "BagOfWordCountsTokenEmbedder":  # type: ignore
 
         """
         we look for a ``vocab_namespace`` key in the parameter dictionary
@@ -93,5 +101,8 @@ class BagOfWordCountsTokenEmbedder(TokenEmbedder):
         ignore_oov = params.pop_bool("ignore_oov", False)
         params.assert_empty(cls.__name__)
         return cls(
-            vocab=vocab, vocab_namespace=vocab_namespace, ignore_oov=ignore_oov, projection_dim=projection_dim
+            vocab=vocab,
+            vocab_namespace=vocab_namespace,
+            ignore_oov=ignore_oov,
+            projection_dim=projection_dim,
         )

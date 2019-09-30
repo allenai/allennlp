@@ -64,7 +64,9 @@ class TestInitializers(AllenNlpTestCase):
 
         def test_block_is_orthogonal(block) -> None:
             matrix_product = block.T @ block
-            numpy.testing.assert_array_almost_equal(matrix_product, numpy.eye(matrix_product.shape[-1]), 6)
+            numpy.testing.assert_array_almost_equal(
+                matrix_product, numpy.eye(matrix_product.shape[-1]), 6
+            )
 
         test_block_is_orthogonal(tensor[:5, :3])
         test_block_is_orthogonal(tensor[:5, 3:])
@@ -118,7 +120,11 @@ class TestInitializers(AllenNlpTestCase):
             for parameter in module.parameters():
                 assert torch.equal(parameter.data, torch.ones(parameter.size()) * 10)
 
-        transfered_modules = [model.linear_3_transfer, model.linear_4_transfer, model.pretrained_conv]
+        transfered_modules = [
+            model.linear_3_transfer,
+            model.linear_4_transfer,
+            model.pretrained_conv,
+        ]
 
         for module in transfered_modules:
             for parameter in module.parameters():

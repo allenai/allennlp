@@ -84,12 +84,16 @@ class TestAtisWorld(AllenNlpTestCase):
         }
         assert set(valid_actions["statement"]) == {'statement -> [query, ";"]'}
         assert set(valid_actions["query"]) == {
-            'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, ' 'where_clause, ")"]',
+            'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
+            'where_clause, ")"]',
             'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
             'where_clause, group_by_clause, ")"]',
             'query -> ["SELECT", distinct, select_results, "FROM", table_refs, ' "where_clause]",
         }
-        assert set(valid_actions["select_results"]) == {"select_results -> [agg]", "select_results -> [col_refs]"}
+        assert set(valid_actions["select_results"]) == {
+            "select_results -> [agg]",
+            "select_results -> [col_refs]",
+        }
         assert set(valid_actions["agg"]) == {
             'agg -> [agg_func, "(", col, ")"]',
             'agg -> [agg_func, "(", col_ref, ")"]',
@@ -99,7 +103,10 @@ class TestAtisWorld(AllenNlpTestCase):
             'agg_func -> ["MAX"]',
             'agg_func -> ["MIN"]',
         }
-        assert set(valid_actions["col_refs"]) == {"col_refs -> [col_ref]", 'col_refs -> [col_ref, ",", col_refs]'}
+        assert set(valid_actions["col_refs"]) == {
+            "col_refs -> [col_ref]",
+            'col_refs -> [col_ref, ",", col_refs]',
+        }
         assert set(valid_actions["table_refs"]) == {
             "table_refs -> [table_name]",
             'table_refs -> [table_name, ",", table_refs]',
@@ -123,9 +130,11 @@ class TestAtisWorld(AllenNlpTestCase):
         }
         assert set(valid_actions["in_clause"]) == {'in_clause -> [col_ref, "IN", query]'}
         assert set(valid_actions["biexpr"]) == {
-            'biexpr -> ["aircraft", ".", "aircraft_code", binaryop, ' "aircraft_aircraft_code_string]",
+            'biexpr -> ["aircraft", ".", "aircraft_code", binaryop, '
+            "aircraft_aircraft_code_string]",
             'biexpr -> ["aircraft", ".", "basic_type", binaryop, ' "aircraft_basic_type_string]",
-            'biexpr -> ["aircraft", ".", "manufacturer", binaryop, ' "aircraft_manufacturer_string]",
+            'biexpr -> ["aircraft", ".", "manufacturer", binaryop, '
+            "aircraft_manufacturer_string]",
             'biexpr -> ["aircraft", ".", "propulsion", binaryop, ' "aircraft_propulsion_string]",
             'biexpr -> ["airline", ".", "airline_code", binaryop, ' "airline_airline_code_string]",
             'biexpr -> ["airline", ".", "airline_name", binaryop, ' "airline_airline_name_string]",
@@ -142,23 +151,31 @@ class TestAtisWorld(AllenNlpTestCase):
             'biexpr -> ["days", ".", "days_code", binaryop, days_days_code_string]',
             'biexpr -> ["fare", ".", "fare_basis_code", binaryop, ' "fare_fare_basis_code_string]",
             'biexpr -> ["fare", ".", "one_direction_cost", binaryop, ' "fare_one_direction_cost]",
-            'biexpr -> ["fare", ".", "restriction_code", binaryop, ' "fare_restriction_code_string]",
+            'biexpr -> ["fare", ".", "restriction_code", binaryop, '
+            "fare_restriction_code_string]",
             'biexpr -> ["fare", ".", "round_trip_cost", binaryop, fare_round_trip_cost]',
-            'biexpr -> ["fare", ".", "round_trip_required", binaryop, ' "fare_round_trip_required_string]",
-            'biexpr -> ["fare_basis", ".", "booking_class", binaryop, ' "fare_basis_booking_class_string]",
-            'biexpr -> ["fare_basis", ".", "class_type", binaryop, ' "fare_basis_class_type_string]",
+            'biexpr -> ["fare", ".", "round_trip_required", binaryop, '
+            "fare_round_trip_required_string]",
+            'biexpr -> ["fare_basis", ".", "booking_class", binaryop, '
+            "fare_basis_booking_class_string]",
+            'biexpr -> ["fare_basis", ".", "class_type", binaryop, '
+            "fare_basis_class_type_string]",
             'biexpr -> ["fare_basis", ".", "economy", binaryop, ' "fare_basis_economy_string]",
-            'biexpr -> ["fare_basis", ".", "fare_basis_code", binaryop, ' "fare_basis_fare_basis_code_string]",
+            'biexpr -> ["fare_basis", ".", "fare_basis_code", binaryop, '
+            "fare_basis_fare_basis_code_string]",
             'biexpr -> ["flight", ".", "airline_code", binaryop, ' "flight_airline_code_string]",
             'biexpr -> ["flight", ".", "flight_days", binaryop, ' "flight_flight_days_string]",
             'biexpr -> ["flight", ".", "flight_number", binaryop, flight_number]',
-            'biexpr -> ["flight_stop", ".", "stop_airport", binaryop, ' "flight_stop_stop_airport_string]",
-            'biexpr -> ["food_service", ".", "compartment", binaryop, ' "food_service_compartment_string]",
+            'biexpr -> ["flight_stop", ".", "stop_airport", binaryop, '
+            "flight_stop_stop_airport_string]",
+            'biexpr -> ["food_service", ".", "compartment", binaryop, '
+            "food_service_compartment_string]",
             'biexpr -> ["food_service", ".", "meal_description", binaryop, '
             "food_service_meal_description_string]",
             'biexpr -> ["ground_service", ".", "transport_type", binaryop, '
             "ground_service_transport_type_string]",
-            'biexpr -> ["restriction", ".", "restriction_code", binaryop, ' "restriction_restriction_code_string]",
+            'biexpr -> ["restriction", ".", "restriction_code", binaryop, '
+            "restriction_restriction_code_string]",
             'biexpr -> ["state", ".", "state_code", binaryop, state_state_code_string]',
             'biexpr -> ["state", ".", "state_name", binaryop, state_state_name_string]',
             "biexpr -> [col_ref, binaryop, value]",
@@ -178,9 +195,13 @@ class TestAtisWorld(AllenNlpTestCase):
         }
         assert set(valid_actions["ternaryexpr"]) == {
             'ternaryexpr -> [col_ref, "BETWEEN", time_range_start, "AND", time_range_end]',
-            'ternaryexpr -> [col_ref, "NOT", "BETWEEN", time_range_start, "AND", ' "time_range_end]",
+            'ternaryexpr -> [col_ref, "NOT", "BETWEEN", time_range_start, "AND", '
+            "time_range_end]",
         }
-        assert set(valid_actions["value"]) == {'value -> ["NOT", pos_value]', "value -> [pos_value]"}
+        assert set(valid_actions["value"]) == {
+            'value -> ["NOT", pos_value]',
+            "value -> [pos_value]",
+        }
         assert set(valid_actions["pos_value"]) == {
             'pos_value -> ["ALL", query]',
             'pos_value -> ["ANY", query]',
@@ -191,7 +212,10 @@ class TestAtisWorld(AllenNlpTestCase):
             "pos_value -> [number]",
         }
         assert set(valid_actions["agg_results"]) == {
-            ('agg_results -> ["(", "SELECT", distinct, agg, "FROM", table_name, ' 'where_clause, ")"]'),
+            (
+                'agg_results -> ["(", "SELECT", distinct, agg, "FROM", table_name, '
+                'where_clause, ")"]'
+            ),
             'agg_results -> ["SELECT", distinct, agg, "FROM", table_name, where_clause]',
         }
         assert set(valid_actions["boolean"]) == {'boolean -> ["true"]', 'boolean -> ["false"]'}
@@ -350,7 +374,10 @@ class TestAtisWorld(AllenNlpTestCase):
         }
 
         world = AtisWorld(
-            ["show me the flights from denver at 12 o'clock", "show me the delta or united flights in afternoon"]
+            [
+                "show me the flights from denver at 12 o'clock",
+                "show me the delta or united flights in afternoon",
+            ]
         )
 
         assert set(world.valid_actions["number"]) == {
@@ -386,12 +413,20 @@ class TestAtisWorld(AllenNlpTestCase):
             'time_range_end -> ["1200"]',
             'time_range_end -> ["800"]',
         }
-        assert set(world.valid_actions["day_number"]) == {'day_number -> ["26"]', 'day_number -> ["9"]'}
-        assert set(world.valid_actions["month_number"]) == {'month_number -> ["5"]', 'month_number -> ["8"]'}
+        assert set(world.valid_actions["day_number"]) == {
+            'day_number -> ["26"]',
+            'day_number -> ["9"]',
+        }
+        assert set(world.valid_actions["month_number"]) == {
+            'month_number -> ["5"]',
+            'month_number -> ["8"]',
+        }
         assert set(world.valid_actions["year_number"]) == {'year_number -> ["1991"]'}
 
     def test_atis_simple_action_sequence(self):
-        world = AtisWorld([("give me all flights from boston to " "philadelphia next week arriving after lunch")])
+        world = AtisWorld(
+            [("give me all flights from boston to " "philadelphia next week arriving after lunch")]
+        )
         action_sequence = world.get_action_sequence(
             (
                 "(SELECT DISTINCT city . city_code , city . city_name "
@@ -400,7 +435,8 @@ class TestAtisWorld(AllenNlpTestCase):
         )
         assert action_sequence == [
             'statement -> [query, ";"]',
-            'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, ' 'where_clause, ")"]',
+            'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
+            'where_clause, ")"]',
             'distinct -> ["DISTINCT"]',
             "select_results -> [col_refs]",
             'col_refs -> [col_ref, ",", col_refs]',
@@ -428,7 +464,8 @@ class TestAtisWorld(AllenNlpTestCase):
         )
         assert action_sequence == [
             'statement -> [query, ";"]',
-            'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, ' 'where_clause, ")"]',
+            'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
+            'where_clause, ")"]',
             'distinct -> [""]',
             "select_results -> [col_refs]",
             "col_refs -> [col_ref]",
@@ -440,7 +477,8 @@ class TestAtisWorld(AllenNlpTestCase):
             "condition -> [in_clause]",
             'in_clause -> [col_ref, "IN", query]',
             'col_ref -> ["airport_service", ".", "city_code"]',
-            'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, ' 'where_clause, ")"]',
+            'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
+            'where_clause, ")"]',
             'distinct -> [""]',
             "select_results -> [col_refs]",
             "col_refs -> [col_ref]",
@@ -464,7 +502,8 @@ class TestAtisWorld(AllenNlpTestCase):
         )
         assert action_sequence == [
             'statement -> [query, ";"]',
-            'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, ' 'where_clause, ")"]',
+            'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
+            'where_clause, ")"]',
             'distinct -> [""]',
             "select_results -> [col_refs]",
             "col_refs -> [col_ref]",
@@ -476,7 +515,8 @@ class TestAtisWorld(AllenNlpTestCase):
             "condition -> [in_clause]",
             'in_clause -> [col_ref, "IN", query]',
             'col_ref -> ["airport_service", ".", "city_code"]',
-            'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, ' 'where_clause, ")"]',
+            'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
+            'where_clause, ")"]',
             'distinct -> [""]',
             "select_results -> [col_refs]",
             "col_refs -> [col_ref]",
@@ -501,7 +541,9 @@ class TestAtisWorld(AllenNlpTestCase):
             "pos_value -> [number]",
             'number -> ["1"]',
         ]
-        world = AtisWorld([("give me all flights from boston to " "philadelphia next week arriving after lunch")])
+        world = AtisWorld(
+            [("give me all flights from boston to " "philadelphia next week arriving after lunch")]
+        )
 
         action_sequence = world.get_action_sequence(
             (
@@ -517,7 +559,8 @@ class TestAtisWorld(AllenNlpTestCase):
         )
         assert action_sequence == [
             'statement -> [query, ";"]',
-            'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, ' 'where_clause, ")"]',
+            'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
+            'where_clause, ")"]',
             'distinct -> ["DISTINCT"]',
             "select_results -> [col_refs]",
             "col_refs -> [col_ref]",
@@ -529,7 +572,8 @@ class TestAtisWorld(AllenNlpTestCase):
             "condition -> [in_clause]",
             'in_clause -> [col_ref, "IN", query]',
             'col_ref -> ["flight", ".", "from_airport"]',
-            'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, ' 'where_clause, ")"]',
+            'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
+            'where_clause, ")"]',
             'distinct -> [""]',
             "select_results -> [col_refs]",
             "col_refs -> [col_ref]",
@@ -541,7 +585,8 @@ class TestAtisWorld(AllenNlpTestCase):
             "condition -> [in_clause]",
             'in_clause -> [col_ref, "IN", query]',
             'col_ref -> ["airport_service", ".", "city_code"]',
-            'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, ' 'where_clause, ")"]',
+            'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
+            'where_clause, ")"]',
             'distinct -> [""]',
             "select_results -> [col_refs]",
             "col_refs -> [col_ref]",
@@ -558,7 +603,12 @@ class TestAtisWorld(AllenNlpTestCase):
 
     def test_atis_long_action_sequence(self):
         world = AtisWorld(
-            [("what is the earliest flight in morning " "1993 june fourth from boston to pittsburgh")]
+            [
+                (
+                    "what is the earliest flight in morning "
+                    "1993 june fourth from boston to pittsburgh"
+                )
+            ]
         )
         action_sequence = world.get_action_sequence(
             "( SELECT DISTINCT flight.flight_id "
@@ -596,7 +646,8 @@ class TestAtisWorld(AllenNlpTestCase):
         )
         assert action_sequence == [
             'statement -> [query, ";"]',
-            'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, ' 'where_clause, ")"]',
+            'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
+            'where_clause, ")"]',
             'distinct -> ["DISTINCT"]',
             "select_results -> [col_refs]",
             "col_refs -> [col_ref]",
@@ -611,7 +662,8 @@ class TestAtisWorld(AllenNlpTestCase):
             'binaryop -> ["="]',
             "value -> [pos_value]",
             "pos_value -> [agg_results]",
-            'agg_results -> ["(", "SELECT", distinct, agg, "FROM", table_name, ' 'where_clause, ")"]',
+            'agg_results -> ["(", "SELECT", distinct, agg, "FROM", table_name, '
+            'where_clause, ")"]',
             'distinct -> [""]',
             'agg -> [agg_func, "(", col_ref, ")"]',
             'agg_func -> ["MIN"]',
@@ -630,7 +682,8 @@ class TestAtisWorld(AllenNlpTestCase):
             "condition -> [in_clause]",
             'in_clause -> [col_ref, "IN", query]',
             'col_ref -> ["flight", ".", "from_airport"]',
-            'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, ' 'where_clause, ")"]',
+            'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
+            'where_clause, ")"]',
             'distinct -> [""]',
             "select_results -> [col_refs]",
             "col_refs -> [col_ref]",
@@ -642,7 +695,8 @@ class TestAtisWorld(AllenNlpTestCase):
             "condition -> [in_clause]",
             'in_clause -> [col_ref, "IN", query]',
             'col_ref -> ["airport_service", ".", "city_code"]',
-            'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, ' 'where_clause, ")"]',
+            'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
+            'where_clause, ")"]',
             'distinct -> [""]',
             "select_results -> [col_refs]",
             "col_refs -> [col_ref]",
@@ -660,7 +714,8 @@ class TestAtisWorld(AllenNlpTestCase):
             "condition -> [in_clause]",
             'in_clause -> [col_ref, "IN", query]',
             'col_ref -> ["flight", ".", "to_airport"]',
-            'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, ' 'where_clause, ")"]',
+            'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
+            'where_clause, ")"]',
             'distinct -> [""]',
             "select_results -> [col_refs]",
             "col_refs -> [col_ref]",
@@ -672,7 +727,8 @@ class TestAtisWorld(AllenNlpTestCase):
             "condition -> [in_clause]",
             'in_clause -> [col_ref, "IN", query]',
             'col_ref -> ["airport_service", ".", "city_code"]',
-            'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, ' 'where_clause, ")"]',
+            'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
+            'where_clause, ")"]',
             'distinct -> [""]',
             "select_results -> [col_refs]",
             "col_refs -> [col_ref]",
@@ -699,7 +755,8 @@ class TestAtisWorld(AllenNlpTestCase):
             "condition -> [in_clause]",
             'in_clause -> [col_ref, "IN", query]',
             'col_ref -> ["flight", ".", "from_airport"]',
-            'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, ' 'where_clause, ")"]',
+            'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
+            'where_clause, ")"]',
             'distinct -> [""]',
             "select_results -> [col_refs]",
             "col_refs -> [col_ref]",
@@ -711,7 +768,8 @@ class TestAtisWorld(AllenNlpTestCase):
             "condition -> [in_clause]",
             'in_clause -> [col_ref, "IN", query]',
             'col_ref -> ["airport_service", ".", "city_code"]',
-            'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, ' 'where_clause, ")"]',
+            'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
+            'where_clause, ")"]',
             'distinct -> [""]',
             "select_results -> [col_refs]",
             "col_refs -> [col_ref]",
@@ -729,7 +787,8 @@ class TestAtisWorld(AllenNlpTestCase):
             "condition -> [in_clause]",
             'in_clause -> [col_ref, "IN", query]',
             'col_ref -> ["flight", ".", "to_airport"]',
-            'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, ' 'where_clause, ")"]',
+            'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
+            'where_clause, ")"]',
             'distinct -> [""]',
             "select_results -> [col_refs]",
             "col_refs -> [col_ref]",
@@ -741,7 +800,8 @@ class TestAtisWorld(AllenNlpTestCase):
             "condition -> [in_clause]",
             'in_clause -> [col_ref, "IN", query]',
             'col_ref -> ["airport_service", ".", "city_code"]',
-            'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, ' 'where_clause, ")"]',
+            'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
+            'where_clause, ")"]',
             'distinct -> [""]',
             "select_results -> [col_refs]",
             "col_refs -> [col_ref]",
@@ -760,7 +820,10 @@ class TestAtisWorld(AllenNlpTestCase):
         line = json.loads(self.data[0])
         for utterance_idx in range(len(line["interaction"])):
             world = AtisWorld(
-                [interaction["utterance"] for interaction in line["interaction"][: utterance_idx + 1]]
+                [
+                    interaction["utterance"]
+                    for interaction in line["interaction"][: utterance_idx + 1]
+                ]
             )
             action_sequence = world.get_action_sequence(line["interaction"][utterance_idx]["sql"])
             assert action_sequence is not None
@@ -773,13 +836,19 @@ class TestAtisWorld(AllenNlpTestCase):
         assert approximate_times == [445, 545]
 
         pm_times = [
-            at.pm_map_match_to_query_value(string) for string in ["12pm", "1pm", "830pm", "1230pm", "115pm"]
+            at.pm_map_match_to_query_value(string)
+            for string in ["12pm", "1pm", "830pm", "1230pm", "115pm"]
         ]
         assert pm_times == [[1200], [1300], [2030], [1230], [1315]]
 
     def test_atis_helper_methods(self):
         world = AtisWorld(
-            [("what is the earliest flight in morning " "1993 june fourth from boston to pittsburgh")]
+            [
+                (
+                    "what is the earliest flight in morning "
+                    "1993 june fourth from boston to pittsburgh"
+                )
+            ]
         )
         assert world.dates == [datetime(1993, 6, 4, 0, 0)]
         assert world._get_numeric_database_values("time_range_end") == ["800", "1200"]

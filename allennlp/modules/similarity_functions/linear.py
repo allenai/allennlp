@@ -44,7 +44,11 @@ class LinearSimilarity(SimilarityFunction):
     """
 
     def __init__(
-        self, tensor_1_dim: int, tensor_2_dim: int, combination: str = "x,y", activation: Activation = None
+        self,
+        tensor_1_dim: int,
+        tensor_2_dim: int,
+        combination: str = "x,y",
+        activation: Activation = None,
     ) -> None:
         super().__init__()
         self._combination = combination

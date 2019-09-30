@@ -37,7 +37,10 @@ class BertPooler(Seq2VecEncoder):
     """
 
     def __init__(
-        self, pretrained_model: Union[str, BertModel], requires_grad: bool = True, dropout: float = 0.0
+        self,
+        pretrained_model: Union[str, BertModel],
+        requires_grad: bool = True,
+        dropout: float = 0.0,
     ) -> None:
         super().__init__()
 

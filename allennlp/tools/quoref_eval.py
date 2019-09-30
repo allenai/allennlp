@@ -25,7 +25,9 @@ def _get_answers_from_data(annotations: Dict[str, Any]) -> Dict[str, List[str]]:
     return answers_dict
 
 
-def evaluate_json(annotations: Dict[str, Any], predicted_answers: Dict[str, Any]) -> Tuple[float, float]:
+def evaluate_json(
+    annotations: Dict[str, Any], predicted_answers: Dict[str, Any]
+) -> Tuple[float, float]:
     """
     Takes gold annotations and predicted answers and  evaluates the predictions for each question
     in the gold annotations.  Both JSON dictionaries must have query_id keys, which are used to
@@ -95,7 +97,11 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Evaluate Quoref predictions")
     parser.add_argument(
-        "--gold_path", type=str, required=False, default="quoref-test-v0.1.json", help="location of the gold file"
+        "--gold_path",
+        type=str,
+        required=False,
+        default="quoref-test-v0.1.json",
+        help="location of the gold file",
     )
     parser.add_argument(
         "--prediction_path",
@@ -105,7 +111,11 @@ if __name__ == "__main__":
         help="location of the prediction file",
     )
     parser.add_argument(
-        "--output_path", type=str, required=False, default=None, help="location of the output metrics file"
+        "--output_path",
+        type=str,
+        required=False,
+        default=None,
+        help="location of the output metrics file",
     )
 
     args = parser.parse_args()

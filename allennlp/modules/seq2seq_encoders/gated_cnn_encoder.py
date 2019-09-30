@@ -27,12 +27,20 @@ class ResidualBlock(torch.nn.Module):
             # we'll worry about slicing them in forward
             if len(layer) == 2:
                 # no dilation
-                conv = torch.nn.Conv1d(last_dim, layer[1] * 2, layer[0], stride=1, padding=layer[0] - 1, bias=True)
+                conv = torch.nn.Conv1d(
+                    last_dim, layer[1] * 2, layer[0], stride=1, padding=layer[0] - 1, bias=True
+                )
             elif len(layer) == 3:
                 # a dilation
                 assert layer[0] == 2, "only support kernel = 2 for now"
                 conv = torch.nn.Conv1d(
-                    last_dim, layer[1] * 2, layer[0], stride=1, padding=layer[2], dilation=layer[2], bias=True
+                    last_dim,
+                    layer[1] * 2,
+                    layer[0],
+                    stride=1,
+                    padding=layer[2],
+                    dilation=layer[2],
+                    bias=True,
                 )
             else:
                 raise ValueError("each layer must have length 2 or 3")
@@ -158,8 +166,12 @@ class GatedCnnEncoder(Seq2SeqEncoder):
         self._output_dim = input_dim * 2
 
         for layer in layers:
-            self._forward_residual_blocks.append(ResidualBlock(input_dim, layer, "forward", dropout=dropout))
-            self._backward_residual_blocks.append(ResidualBlock(input_dim, layer, "backward", dropout=dropout))
+            self._forward_residual_blocks.append(
+                ResidualBlock(input_dim, layer, "forward", dropout=dropout)
+            )
+            self._backward_residual_blocks.append(
+                ResidualBlock(input_dim, layer, "backward", dropout=dropout)
+            )
 
         self._return_all_layers = return_all_layers
 
@@ -192,7 +204,9 @@ class GatedCnnEncoder(Seq2SeqEncoder):
                 outputs.append(out)
 
         if self._return_all_layers:
-            return [torch.cat([fwd, bwd], dim=1).transpose(1, 2) for fwd, bwd in zip(*layer_outputs)]
+            return [
+                torch.cat([fwd, bwd], dim=1).transpose(1, 2) for fwd, bwd in zip(*layer_outputs)
+            ]
         else:
             # Concatenate forward and backward, then transpose back
             return torch.cat(outputs, dim=1).transpose(1, 2)

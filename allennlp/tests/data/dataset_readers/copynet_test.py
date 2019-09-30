@@ -10,7 +10,9 @@ from allennlp.data.vocabulary import Vocabulary, DEFAULT_OOV_TOKEN
 class TestCopyNetReader(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
-        params = Params.from_file(self.FIXTURES_ROOT / "encoder_decoder" / "copynet_seq2seq" / "experiment.json")
+        params = Params.from_file(
+            self.FIXTURES_ROOT / "encoder_decoder" / "copynet_seq2seq" / "experiment.json"
+        )
         self.reader = DatasetReader.from_params(params["dataset_reader"])
         instances = self.reader.read(self.FIXTURES_ROOT / "data" / "copynet" / "copyover.tsv")
         self.instances = ensure_list(instances)

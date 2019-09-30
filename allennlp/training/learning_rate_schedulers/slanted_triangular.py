@@ -109,7 +109,9 @@ class SlantedTriangular(LearningRateScheduler):
                 logger.info("Gradual unfreezing finished. Training all layers.")
                 self.freezing_current = False
             else:
-                logger.info(f"Gradual unfreezing. Training only the top {num_layers_to_unfreeze} layers.")
+                logger.info(
+                    f"Gradual unfreezing. Training only the top {num_layers_to_unfreeze} layers."
+                )
             for i, param_group in enumerate(reversed(self.optimizer.param_groups)):
                 for param in param_group["params"]:
                     # i = 0 is the default group; we care about i > 0

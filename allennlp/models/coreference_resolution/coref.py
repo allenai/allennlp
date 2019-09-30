@@ -86,7 +86,9 @@ class CoreferenceResolver(Model):
             TimeDistributed(torch.nn.Linear(mention_feedforward.get_output_dim(), 1)),
         )
         self._mention_pruner = Pruner(feedforward_scorer)
-        self._antecedent_scorer = TimeDistributed(torch.nn.Linear(antecedent_feedforward.get_output_dim(), 1))
+        self._antecedent_scorer = TimeDistributed(
+            torch.nn.Linear(antecedent_feedforward.get_output_dim(), 1)
+        )
 
         self._endpoint_span_extractor = EndpointSpanExtractor(
             context_layer.get_output_dim(),
@@ -95,7 +97,9 @@ class CoreferenceResolver(Model):
             span_width_embedding_dim=feature_size,
             bucket_widths=False,
         )
-        self._attentive_span_extractor = SelfAttentiveSpanExtractor(input_dim=text_field_embedder.get_output_dim())
+        self._attentive_span_extractor = SelfAttentiveSpanExtractor(
+            input_dim=text_field_embedder.get_output_dim()
+        )
 
         # 10 possible distance buckets.
         self._num_distance_buckets = 10
@@ -190,9 +194,12 @@ class CoreferenceResolver(Model):
         # Prune based on mention scores.
         num_spans_to_keep = int(math.floor(self._spans_per_word * document_length))
 
-        (top_span_embeddings, top_span_mask, top_span_indices, top_span_mention_scores) = self._mention_pruner(
-            span_embeddings, span_mask, num_spans_to_keep
-        )
+        (
+            top_span_embeddings,
+            top_span_mask,
+            top_span_indices,
+            top_span_mention_scores,
+        ) = self._mention_pruner(span_embeddings, span_mask, num_spans_to_keep)
         top_span_mask = top_span_mask.unsqueeze(-1)
         # Shape: (batch_size * num_spans_to_keep)
         # torch.index_select only accepts 1D indices, but here
@@ -274,14 +281,16 @@ class CoreferenceResolver(Model):
                 span_labels.unsqueeze(-1), top_span_indices, flat_top_span_indices
             )
 
-            antecedent_labels = util.flattened_index_select(pruned_gold_labels, valid_antecedent_indices).squeeze(
-                -1
-            )
+            antecedent_labels = util.flattened_index_select(
+                pruned_gold_labels, valid_antecedent_indices
+            ).squeeze(-1)
             antecedent_labels += valid_antecedent_log_mask.long()
 
             # Compute labels.
             # Shape: (batch_size, num_spans_to_keep, max_antecedents + 1)
-            gold_antecedent_labels = self._compute_antecedent_gold_labels(pruned_gold_labels, antecedent_labels)
+            gold_antecedent_labels = self._compute_antecedent_gold_labels(
+                pruned_gold_labels, antecedent_labels
+            )
             # Now, compute the loss using the negative marginal log-likelihood.
             # This is equal to the log of the sum of the probabilities of all antecedent predictions
             # that would be consistent with the data, in the sense that we are minimising, for a
@@ -297,7 +306,9 @@ class CoreferenceResolver(Model):
             negative_marginal_log_likelihood = -util.logsumexp(correct_antecedent_log_probs).sum()
 
             self._mention_recall(top_spans, metadata)
-            self._conll_coref_scores(top_spans, valid_antecedent_indices, predicted_antecedents, metadata)
+            self._conll_coref_scores(
+                top_spans, valid_antecedent_indices, predicted_antecedents, metadata
+            )
 
             output_dict["loss"] = negative_marginal_log_likelihood
 
@@ -361,7 +372,10 @@ class CoreferenceResolver(Model):
                 # most likely antecedent.
                 predicted_index = antecedent_indices[i, predicted_antecedent]
 
-                antecedent_span = (top_spans[predicted_index, 0].item(), top_spans[predicted_index, 1].item())
+                antecedent_span = (
+                    top_spans[predicted_index, 0].item(),
+                    top_spans[predicted_index, 1].item(),
+                )
 
                 # Check if we've seen the span before.
                 if antecedent_span in spans_to_cluster_ids:
@@ -505,7 +519,9 @@ class CoreferenceResolver(Model):
             antecedent_distance_embeddings.size(-1),
         )
         # Shape: (batch_size, num_spans_to_keep, max_antecedents, embedding_size)
-        antecedent_distance_embeddings = antecedent_distance_embeddings.expand(*expanded_distance_embeddings_shape)
+        antecedent_distance_embeddings = antecedent_distance_embeddings.expand(
+            *expanded_distance_embeddings_shape
+        )
 
         # Shape: (batch_size, num_spans_to_keep, max_antecedents, embedding_size)
         span_pair_embeddings = torch.cat(
@@ -520,7 +536,9 @@ class CoreferenceResolver(Model):
         return span_pair_embeddings
 
     @staticmethod
-    def _compute_antecedent_gold_labels(top_span_labels: torch.IntTensor, antecedent_labels: torch.IntTensor):
+    def _compute_antecedent_gold_labels(
+        top_span_labels: torch.IntTensor, antecedent_labels: torch.IntTensor
+    ):
         """
         Generates a binary indicator for every pair of spans. This label is one if and
         only if the pair of spans belong to the same cluster. The labels are augmented
@@ -596,7 +614,9 @@ class CoreferenceResolver(Model):
 
         """
         # Shape: (batch_size, num_spans_to_keep, max_antecedents)
-        antecedent_scores = self._antecedent_scorer(self._antecedent_feedforward(pairwise_embeddings)).squeeze(-1)
+        antecedent_scores = self._antecedent_scorer(
+            self._antecedent_feedforward(pairwise_embeddings)
+        ).squeeze(-1)
         antecedent_scores += top_span_mention_scores + antecedent_mention_scores
         antecedent_scores += antecedent_log_mask
 

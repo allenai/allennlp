@@ -67,7 +67,9 @@ class TestSimpleServer(AllenNlpTestCase):
         def sanitize(result: JsonDict) -> JsonDict:
             return {key: value for key, value in result.items() if key.startswith("best_span")}
 
-        app = make_app(predictor=self.bidaf_predictor, field_names=["passage", "question"], sanitizer=sanitize)
+        app = make_app(
+            predictor=self.bidaf_predictor, field_names=["passage", "question"], sanitizer=sanitize
+        )
         app.testing = True
         client = app.test_client()
 

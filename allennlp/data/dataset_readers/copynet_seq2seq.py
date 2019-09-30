@@ -129,7 +129,9 @@ class CopyNetDatasetReader(DatasetReader):
                     continue
                 line_parts = line.split("\t")
                 if len(line_parts) != 2:
-                    raise RuntimeError("Invalid line format: %s (line number %d)" % (line, line_num + 1))
+                    raise RuntimeError(
+                        "Invalid line format: %s (line number %d)" % (line, line_num + 1)
+                    )
                 source_sequence, target_sequence = line_parts
                 if not source_sequence:
                     continue
@@ -144,7 +146,9 @@ class CopyNetDatasetReader(DatasetReader):
         return out
 
     @overrides
-    def text_to_instance(self, source_string: str, target_string: str = None) -> Instance:  # type: ignore
+    def text_to_instance(
+        self, source_string: str, target_string: str = None
+    ) -> Instance:  # type: ignore
         """
         Turn raw source string and target string into an ``Instance``.
 
@@ -166,7 +170,9 @@ class CopyNetDatasetReader(DatasetReader):
 
         # For each token in the source sentence, we keep track of the matching token
         # in the target sentence (which will be the OOV symbol if there is no match).
-        source_to_target_field = NamespaceSwappingField(tokenized_source[1:-1], self._target_namespace)
+        source_to_target_field = NamespaceSwappingField(
+            tokenized_source[1:-1], self._target_namespace
+        )
 
         meta_fields = {"source_tokens": [x.text for x in tokenized_source[1:-1]]}
         fields_dict = {"source_tokens": source_field, "source_to_target": source_to_target_field}
@@ -179,7 +185,9 @@ class CopyNetDatasetReader(DatasetReader):
 
             fields_dict["target_tokens"] = target_field
             meta_fields["target_tokens"] = [y.text for y in tokenized_target[1:-1]]
-            source_and_target_token_ids = self._tokens_to_ids(tokenized_source[1:-1] + tokenized_target)
+            source_and_target_token_ids = self._tokens_to_ids(
+                tokenized_source[1:-1] + tokenized_target
+            )
             source_token_ids = source_and_target_token_ids[: len(tokenized_source) - 2]
             fields_dict["source_token_ids"] = ArrayField(np.array(source_token_ids))
             target_token_ids = source_and_target_token_ids[len(tokenized_source) - 2 :]

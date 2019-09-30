@@ -51,7 +51,10 @@ class NerTagIndexer(TokenIndexer[int]):
 
     @overrides
     def as_padded_tensor(
-        self, tokens: Dict[str, List[int]], desired_num_tokens: Dict[str, int], padding_lengths: Dict[str, int]
+        self,
+        tokens: Dict[str, List[int]],
+        desired_num_tokens: Dict[str, int],
+        padding_lengths: Dict[str, int],
     ) -> Dict[str, torch.Tensor]:
         return {
             key: torch.LongTensor(pad_sequence_to_length(val, desired_num_tokens[key]))

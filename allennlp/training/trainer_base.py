@@ -34,7 +34,9 @@ class TrainerBase(Registrable):
 
         # Configure GPUs:
         if not isinstance(cuda_device, int) and not isinstance(cuda_device, list):
-            raise ConfigurationError("Expected an int or list for cuda_device, got {}".format(cuda_device))
+            raise ConfigurationError(
+                "Expected an int or list for cuda_device, got {}".format(cuda_device)
+            )
 
         if isinstance(cuda_device, list):
             self._multiple_gpu = True
@@ -72,7 +74,9 @@ class TrainerBase(Registrable):
             from allennlp.training.trainer import Trainer
             from allennlp.training.trainer_pieces import TrainerPieces
 
-            pieces = TrainerPieces.from_params(params, serialization_dir, recover, cache_directory, cache_prefix)
+            pieces = TrainerPieces.from_params(
+                params, serialization_dir, recover, cache_directory, cache_prefix
+            )
             return Trainer.from_params(
                 model=pieces.model,
                 serialization_dir=serialization_dir,
@@ -85,6 +89,10 @@ class TrainerBase(Registrable):
         else:
             klass = TrainerBase.by_name(typ3)
             # Explicit check to prevent recursion.
-            is_overriden = klass.from_params.__func__ != TrainerBase.from_params.__func__  # type: ignore
+            is_overriden = (
+                klass.from_params.__func__ != TrainerBase.from_params.__func__
+            )  # type: ignore
             assert is_overriden, f"Class {klass.__name__} must override `from_params`."
-            return klass.from_params(params, serialization_dir, recover, cache_directory, cache_prefix)
+            return klass.from_params(
+                params, serialization_dir, recover, cache_directory, cache_prefix
+            )

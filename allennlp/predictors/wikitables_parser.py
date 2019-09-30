@@ -41,7 +41,8 @@ class WikiTablesParserPredictor(Predictor):
 
         # Get the rules out of the instance
         index_to_rule = [
-            production_rule_field.rule for production_rule_field in instance.fields["actions"].field_list
+            production_rule_field.rule
+            for production_rule_field in instance.fields["actions"].field_list
         ]
         rule_to_index = {rule: i for i, rule in enumerate(index_to_rule)}
 
@@ -50,7 +51,8 @@ class WikiTablesParserPredictor(Predictor):
 
         # Want to get initial_sequence on the same device as the model.
         initial_sequence = torch.tensor(
-            [rule_to_index[token] for token in initial_tokens], device=next(self._model.parameters()).device
+            [rule_to_index[token] for token in initial_tokens],
+            device=next(self._model.parameters()).device,
         )
 
         # Replace beam search with one that forces the initial sequence
@@ -77,7 +79,10 @@ class WikiTablesParserPredictor(Predictor):
                 # each of which is a list of pairs (score, sequence).
                 # The sequence is the *indices* of the rules, which we
                 # want to convert to the string representations.
-                [(score, [index_to_rule[idx] for idx in sequence]) for score, sequence in timestep_snapshot]
+                [
+                    (score, [index_to_rule[idx] for idx in sequence])
+                    for score, sequence in timestep_snapshot
+                ]
                 for timestep_snapshot in beam_snapshots
             ]
             for batch_index, beam_snapshots in interactive_beam_search.beam_snapshots.items()

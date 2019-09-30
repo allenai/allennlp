@@ -147,7 +147,10 @@ def make_app(
 def _get_predictor(args: argparse.Namespace) -> Predictor:
     check_for_gpu(args.cuda_device)
     archive = load_archive(
-        args.archive_path, weights_file=args.weights_file, cuda_device=args.cuda_device, overrides=args.overrides
+        args.archive_path,
+        weights_file=args.weights_file,
+        cuda_device=args.cuda_device,
+        overrides=args.overrides,
     )
 
     return Predictor.from_archive(archive, args.predictor)
@@ -160,9 +163,13 @@ def main(args):
 
     parser = argparse.ArgumentParser(description="Serve up a simple model")
 
-    parser.add_argument("--archive-path", type=str, required=True, help="path to trained archive file")
+    parser.add_argument(
+        "--archive-path", type=str, required=True, help="path to trained archive file"
+    )
     parser.add_argument("--predictor", type=str, required=True, help="name of predictor")
-    parser.add_argument("--weights-file", type=str, help="a path that overrides which weights file to use")
+    parser.add_argument(
+        "--weights-file", type=str, help="a path that overrides which weights file to use"
+    )
     parser.add_argument("--cuda-device", type=int, default=-1, help="id of GPU to use (if any)")
     parser.add_argument(
         "-o",
@@ -172,12 +179,20 @@ def main(args):
         help="a JSON structure used to override the experiment configuration",
     )
     parser.add_argument("--static-dir", type=str, help="serve index.html from this directory")
-    parser.add_argument("--title", type=str, help="change the default page title", default="AllenNLP Demo")
-    parser.add_argument("--field-name", type=str, action="append", help="field names to include in the demo")
+    parser.add_argument(
+        "--title", type=str, help="change the default page title", default="AllenNLP Demo"
+    )
+    parser.add_argument(
+        "--field-name", type=str, action="append", help="field names to include in the demo"
+    )
     parser.add_argument("--port", type=int, default=8000, help="port to serve the demo on")
 
     parser.add_argument(
-        "--include-package", type=str, action="append", default=[], help="additional packages to include"
+        "--include-package",
+        type=str,
+        action="append",
+        default=[],
+        help="additional packages to include",
     )
 
     args = parser.parse_args(args)
@@ -190,7 +205,9 @@ def main(args):
 
     field_names = args.field_name
 
-    app = make_app(predictor=predictor, field_names=field_names, static_dir=args.static_dir, title=args.title)
+    app = make_app(
+        predictor=predictor, field_names=field_names, static_dir=args.static_dir, title=args.title
+    )
     CORS(app)
 
     http_server = WSGIServer(("0.0.0.0", args.port), app)
@@ -756,7 +773,9 @@ def _html(title: str, field_names: List[str]) -> str:
     Returns bare bones HTML for serving up an input form with the
     specified fields that can render predictions from the configured model.
     """
-    inputs = "".join(_SINGLE_INPUT_TEMPLATE.substitute(field_name=field_name) for field_name in field_names)
+    inputs = "".join(
+        _SINGLE_INPUT_TEMPLATE.substitute(field_name=field_name) for field_name in field_names
+    )
 
     quoted_field_names = [f"'{field_name}'" for field_name in field_names]
     quoted_field_list = f"[{','.join(quoted_field_names)}]"

@@ -36,7 +36,9 @@ def generate_archive(
 
 
 if __name__ == "__main__":
-    generate_archive("tests/fixtures/bidaf/experiment.json", "tests/fixtures/bidaf/serialization", exist_ok=True)
+    generate_archive(
+        "tests/fixtures/bidaf/experiment.json", "tests/fixtures/bidaf/serialization", exist_ok=True
+    )
 
     generate_archive(
         "tests/fixtures/decomposable_attention/experiment.json",
@@ -44,4 +46,6 @@ if __name__ == "__main__":
         exist_ok=True,
     )
 
-    generate_archive("tests/fixtures/srl/experiment.json", "tests/fixtures/srl/serialization", exist_ok=True)
+    generate_archive(
+        "tests/fixtures/srl/experiment.json", "tests/fixtures/srl/serialization", exist_ok=True
+    )

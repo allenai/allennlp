@@ -104,14 +104,20 @@ class WordpieceIndexer(TokenIndexer[int]):
 
         # Convert the start_tokens and end_tokens to wordpiece_ids
         self._start_piece_ids = [
-            vocab[wordpiece] for token in (start_tokens or []) for wordpiece in wordpiece_tokenizer(token)
+            vocab[wordpiece]
+            for token in (start_tokens or [])
+            for wordpiece in wordpiece_tokenizer(token)
         ]
         self._end_piece_ids = [
-            vocab[wordpiece] for token in (end_tokens or []) for wordpiece in wordpiece_tokenizer(token)
+            vocab[wordpiece]
+            for token in (end_tokens or [])
+            for wordpiece in wordpiece_tokenizer(token)
         ]
 
         # Convert the separator_token to wordpiece_ids
-        self._separator_ids = [vocab[wordpiece] for wordpiece in wordpiece_tokenizer(separator_token)]
+        self._separator_ids = [
+            vocab[wordpiece] for wordpiece in wordpiece_tokenizer(separator_token)
+        ]
 
     @overrides
     def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):
@@ -144,13 +150,16 @@ class WordpieceIndexer(TokenIndexer[int]):
 
         # This lowercases tokens if necessary
         text = (
-            token.text.lower() if self._do_lowercase and token.text not in self._never_lowercase else token.text
+            token.text.lower()
+            if self._do_lowercase and token.text not in self._never_lowercase
+            else token.text
             for token in tokens
         )
 
         # Obtain a nested sequence of wordpieces, each represented by a list of wordpiece ids
         token_wordpiece_ids = [
-            [self.vocab[wordpiece] for wordpiece in self.wordpiece_tokenizer(token)] for token in text
+            [self.vocab[wordpiece] for wordpiece in self.wordpiece_tokenizer(token)]
+            for token in text
         ]
 
         # Flattened list of wordpieces. In the end, the output of the model (e.g., BERT) should
@@ -190,14 +199,21 @@ class WordpieceIndexer(TokenIndexer[int]):
         # so that the first offset is the index of the first wordpiece of tokens[0].
         # Otherwise, we want to start at len(text_tokens) - 1, so that the "previous"
         # offset is the last wordpiece of "tokens[-1]".
-        offset = len(self._start_piece_ids) if self.use_starting_offsets else len(self._start_piece_ids) - 1
+        offset = (
+            len(self._start_piece_ids)
+            if self.use_starting_offsets
+            else len(self._start_piece_ids) - 1
+        )
 
         # Count amount of wordpieces accumulated
         pieces_accumulated = 0
         for token in token_wordpiece_ids:
             # Truncate the sequence if specified, which depends on where the offsets are
             next_offset = 1 if self.use_starting_offsets else 0
-            if self._truncate_long_sequences and offset + len(token) - 1 >= window_length + next_offset:
+            if (
+                self._truncate_long_sequences
+                and offset + len(token) - 1 >= window_length + next_offset
+            ):
                 break
 
             # For initial offsets, the current value of ``offset`` is the start of
@@ -274,7 +290,11 @@ class WordpieceIndexer(TokenIndexer[int]):
         """
         first = token_type_ids[0] if token_type_ids else 0
         last = token_type_ids[-1] if token_type_ids else 0
-        return [first for _ in self._start_piece_ids] + token_type_ids + [last for _ in self._end_piece_ids]
+        return (
+            [first for _ in self._start_piece_ids]
+            + token_type_ids
+            + [last for _ in self._end_piece_ids]
+        )
 
     @overrides
     def get_padding_lengths(self, token: int) -> Dict[str, int]:
@@ -282,7 +302,10 @@ class WordpieceIndexer(TokenIndexer[int]):
 
     @overrides
     def as_padded_tensor(
-        self, tokens: Dict[str, List[int]], desired_num_tokens: Dict[str, int], padding_lengths: Dict[str, int]
+        self,
+        tokens: Dict[str, List[int]],
+        desired_num_tokens: Dict[str, int],
+        padding_lengths: Dict[str, int],
     ) -> Dict[str, torch.Tensor]:
         return {
             key: torch.LongTensor(pad_sequence_to_length(val, desired_num_tokens[key]))
@@ -343,9 +366,14 @@ class PretrainedBertIndexer(WordpieceIndexer):
         truncate_long_sequences: bool = True,
     ) -> None:
         if pretrained_model.endswith("-cased") and do_lowercase:
-            logger.warning("Your BERT model appears to be cased, " "but your indexer is lowercasing tokens.")
+            logger.warning(
+                "Your BERT model appears to be cased, " "but your indexer is lowercasing tokens."
+            )
         elif pretrained_model.endswith("-uncased") and not do_lowercase:
-            logger.warning("Your BERT model appears to be uncased, " "but your indexer is not lowercasing tokens.")
+            logger.warning(
+                "Your BERT model appears to be uncased, "
+                "but your indexer is not lowercasing tokens."
+            )
 
         bert_tokenizer = BertTokenizer.from_pretrained(pretrained_model, do_lower_case=do_lowercase)
         super().__init__(
@@ -388,7 +416,8 @@ def _get_token_type_ids(wordpiece_ids: List[int], separator_ids: List[int]) -> L
         # check content
         # when it is a separator
         elif all(
-            wordpiece_ids[cursor + index] == separator_id for index, separator_id in enumerate(separator_ids)
+            wordpiece_ids[cursor + index] == separator_id
+            for index, separator_id in enumerate(separator_ids)
         ):
             token_type_ids.extend(type_id for _ in separator_ids)
             type_id += 1

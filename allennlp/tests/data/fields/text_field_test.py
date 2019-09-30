@@ -26,7 +26,11 @@ class DictReturningTokenIndexer(TokenIndexer):
         self, tokens: List[Token], vocabulary: Vocabulary, index_name: str
     ) -> Dict[str, List[int]]:
         return {
-            "token_ids": ([10, 15] + [vocabulary.get_token_index(token.text, "words") for token in tokens] + [25]),
+            "token_ids": (
+                [10, 15]
+                + [vocabulary.get_token_index(token.text, "words") for token in tokens]
+                + [25]
+            ),
             "additional_key": [22, 29],
         }
 
@@ -34,7 +38,10 @@ class DictReturningTokenIndexer(TokenIndexer):
         return {}
 
     def as_padded_tensor(
-        self, tokens: Dict[str, List[int]], desired_num_tokens: Dict[str, int], padding_lengths: Dict[str, int]
+        self,
+        tokens: Dict[str, List[int]],
+        desired_num_tokens: Dict[str, int],
+        padding_lengths: Dict[str, int],
     ) -> Dict[str, torch.Tensor]:
         return {
             key: torch.LongTensor(pad_sequence_to_length(val, desired_num_tokens[key]))
@@ -76,7 +83,9 @@ class TestTextField(AllenNlpTestCase):
 
         field = TextField(
             [Token(t) for t in ["This", "is", "a", "sentence", "."]],
-            token_indexers={"characters": TokenCharactersIndexer("characters", min_padding_length=1)},
+            token_indexers={
+                "characters": TokenCharactersIndexer("characters", min_padding_length=1)
+            },
         )
         namespace_token_counts = defaultdict(lambda: defaultdict(int))
         field.count_vocab_items(namespace_token_counts)
@@ -131,7 +140,8 @@ class TestTextField(AllenNlpTestCase):
         c_index = vocab.add_token_to_namespace("c", namespace="characters")
 
         field = TextField(
-            [Token(t) for t in ["A", "sentence"]], {"words": SingleIdTokenIndexer(namespace="words")}
+            [Token(t) for t in ["A", "sentence"]],
+            {"words": SingleIdTokenIndexer(namespace="words")},
         )
         field.index(vocab)
 
@@ -180,11 +190,17 @@ class TestTextField(AllenNlpTestCase):
 
         field = TextField(
             [Token(t) for t in ["This", "is", "a", "sentence", "."]],
-            token_indexers={"characters": TokenCharactersIndexer("characters", min_padding_length=1)},
+            token_indexers={
+                "characters": TokenCharactersIndexer("characters", min_padding_length=1)
+            },
         )
         field.index(self.vocab)
         padding_lengths = field.get_padding_lengths()
-        assert padding_lengths == {"num_tokens": 5, "characters_length": 5, "num_token_characters": 8}
+        assert padding_lengths == {
+            "num_tokens": 5,
+            "characters_length": 5,
+            "num_token_characters": 8,
+        }
 
         field = TextField(
             [Token(t) for t in ["This", "is", "a", "sentence", "."]],
@@ -230,7 +246,9 @@ class TestTextField(AllenNlpTestCase):
     def test_as_tensor_handles_characters(self):
         field = TextField(
             [Token(t) for t in ["This", "is", "a", "sentence", "."]],
-            token_indexers={"characters": TokenCharactersIndexer("characters", min_padding_length=1)},
+            token_indexers={
+                "characters": TokenCharactersIndexer("characters", min_padding_length=1)
+            },
         )
         field.index(self.vocab)
         padding_lengths = field.get_padding_lengths()
@@ -250,7 +268,10 @@ class TestTextField(AllenNlpTestCase):
 
     def test_as_tensor_handles_characters_if_empty_field(self):
         field = TextField(
-            [], token_indexers={"characters": TokenCharactersIndexer("characters", min_padding_length=1)}
+            [],
+            token_indexers={
+                "characters": TokenCharactersIndexer("characters", min_padding_length=1)
+            },
         )
         field.index(self.vocab)
         padding_lengths = field.get_padding_lengths()
@@ -293,7 +314,8 @@ class TestTextField(AllenNlpTestCase):
 
     def test_printing_doesnt_crash(self):
         field = TextField(
-            [Token(t) for t in ["A", "sentence"]], {"words": SingleIdTokenIndexer(namespace="words")}
+            [Token(t) for t in ["A", "sentence"]],
+            {"words": SingleIdTokenIndexer(namespace="words")},
         )
         print(field)
 

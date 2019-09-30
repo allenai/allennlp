@@ -12,7 +12,9 @@ class TestInputReduction(AllenNlpTestCase):
             "hypothesis": "One time I didn't write any unit tests for my code.",
         }
 
-        archive = load_archive(self.FIXTURES_ROOT / "decomposable_attention" / "serialization" / "model.tar.gz")
+        archive = load_archive(
+            self.FIXTURES_ROOT / "decomposable_attention" / "serialization" / "model.tar.gz"
+        )
         predictor = Predictor.from_archive(archive, "textual-entailment")
 
         reducer = InputReduction(predictor)
@@ -21,14 +23,18 @@ class TestInputReduction(AllenNlpTestCase):
         assert "final" in reduced
         assert "original" in reduced
         assert reduced["final"][0]  # always at least one token
-        assert len(reduced["final"][0]) <= len(reduced["original"])  # input reduction removes tokens
+        assert len(reduced["final"][0]) <= len(
+            reduced["original"]
+        )  # input reduction removes tokens
         for word in reduced["final"][0]:  # no new words entered
             assert word in reduced["original"]
 
         # test using NER model (tests different underlying logic)
         inputs = {"sentence": "Eric Wallace was an intern at AI2"}
 
-        archive = load_archive(self.FIXTURES_ROOT / "simple_tagger" / "serialization" / "model.tar.gz")
+        archive = load_archive(
+            self.FIXTURES_ROOT / "simple_tagger" / "serialization" / "model.tar.gz"
+        )
         predictor = Predictor.from_archive(archive, "sentence-tagger")
 
         reducer = InputReduction(predictor)

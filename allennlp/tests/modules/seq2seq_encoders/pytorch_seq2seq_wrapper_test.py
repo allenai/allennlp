@@ -17,7 +17,9 @@ class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):
         encoder = PytorchSeq2SeqWrapper(lstm)
         assert encoder.get_output_dim() == 14
         assert encoder.get_input_dim() == 2
-        lstm = LSTM(bidirectional=False, num_layers=3, input_size=2, hidden_size=7, batch_first=True)
+        lstm = LSTM(
+            bidirectional=False, num_layers=3, input_size=2, hidden_size=7, batch_first=True
+        )
         encoder = PytorchSeq2SeqWrapper(lstm)
         assert encoder.get_output_dim() == 7
         assert encoder.get_input_dim() == 2
@@ -67,7 +69,9 @@ class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):
         mask[4, 1:] = 0
 
         sequence_lengths = get_lengths_from_binary_sequence_mask(mask)
-        packed_sequence = pack_padded_sequence(input_tensor, sequence_lengths.data.tolist(), batch_first=True)
+        packed_sequence = pack_padded_sequence(
+            input_tensor, sequence_lengths.data.tolist(), batch_first=True
+        )
         lstm_output, _ = lstm(packed_sequence)
         encoder_output = encoder(input_tensor, mask)
         lstm_tensor, _ = pad_packed_sequence(lstm_output, batch_first=True)
@@ -98,7 +102,8 @@ class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):
         encoder_output = encoder(input_tensor, mask)
         lstm_tensor, _ = pad_packed_sequence(lstm_output, batch_first=True)
         assert_almost_equal(
-            encoder_output.data.numpy(), lstm_tensor.index_select(0, restoration_indices).data.numpy()
+            encoder_output.data.numpy(),
+            lstm_tensor.index_select(0, restoration_indices).data.numpy(),
         )
 
     def test_forward_does_not_compress_tensors_padded_to_greater_than_the_max_sequence_length(self):
@@ -168,7 +173,9 @@ class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):
         assert_almost_equal(encoder_output[0, 3:, :].data.numpy(), numpy.zeros((4, 14)))
 
         for k in range(2):
-            assert_almost_equal(states[-1][k][:, -2:, :].data.numpy(), states[-2][k][:, -2:, :].data.numpy())
+            assert_almost_equal(
+                states[-1][k][:, -2:, :].data.numpy(), states[-2][k][:, -2:, :].data.numpy()
+            )
 
     def test_wrapper_stateful_single_state_gru(self):
         gru = GRU(bidirectional=True, num_layers=2, input_size=3, hidden_size=7, batch_first=True)
@@ -184,4 +191,6 @@ class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):
             states.append(encoder._states)
 
         assert_almost_equal(encoder_output[0, 3:, :].data.numpy(), numpy.zeros((2, 14)))
-        assert_almost_equal(states[-1][0][:, -5:, :].data.numpy(), states[-2][0][:, -5:, :].data.numpy())
+        assert_almost_equal(
+            states[-1][0][:, -5:, :].data.numpy(), states[-2][0][:, -5:, :].data.numpy()
+        )

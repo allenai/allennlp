@@ -22,7 +22,8 @@ class CovarianceTest(AllenNlpTestCase):
             # Flatten the predictions and labels thus far, so numpy treats them as
             # independent observations.
             expected_covariance = np.cov(
-                predictions[: stride * (i + 1), :].reshape(-1), labels[: stride * (i + 1), :].reshape(-1)
+                predictions[: stride * (i + 1), :].reshape(-1),
+                labels[: stride * (i + 1), :].reshape(-1),
             )[0, 1]
             covariance(timestep_predictions, timestep_labels)
             assert_allclose(expected_covariance, covariance.get_metric(), rtol=1e-5)
@@ -31,7 +32,9 @@ class CovarianceTest(AllenNlpTestCase):
         covariance.reset()
         covariance(torch.FloatTensor(predictions), torch.FloatTensor(labels))
         assert_allclose(
-            np.cov(predictions.reshape(-1), labels.reshape(-1))[0, 1], covariance.get_metric(), rtol=1e-5
+            np.cov(predictions.reshape(-1), labels.reshape(-1))[0, 1],
+            covariance.get_metric(),
+            rtol=1e-5,
         )
 
     def test_covariance_masked_computation(self):
@@ -60,7 +63,9 @@ class CovarianceTest(AllenNlpTestCase):
 
         # Test reset
         covariance.reset()
-        covariance(torch.FloatTensor(predictions), torch.FloatTensor(labels), torch.FloatTensor(mask))
+        covariance(
+            torch.FloatTensor(predictions), torch.FloatTensor(labels), torch.FloatTensor(mask)
+        )
         assert_allclose(
             np.cov(predictions.reshape(-1), labels.reshape(-1), fweights=mask.reshape(-1))[0, 1],
             covariance.get_metric(),

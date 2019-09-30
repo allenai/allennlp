@@ -65,7 +65,13 @@ class TestOntonotesNamedEntityRecognitionReader:
         fields = instances[2].fields
         tokens = [t.text for t in fields["tokens"].tokens]
         assert tokens == ["Denise", "Dillon", "Headline", "News", "."]
-        assert fields["tags"].labels == ["B-PERSON", "I-PERSON", "B-WORK_OF_ART", "I-WORK_OF_ART", "O"]
+        assert fields["tags"].labels == [
+            "B-PERSON",
+            "I-PERSON",
+            "B-WORK_OF_ART",
+            "I-WORK_OF_ART",
+            "O",
+        ]
 
     def test_ner_reader_can_filter_by_domain(self):
         conll_reader = OntonotesNamedEntityRecognition(domain_identifier="subdomain2")

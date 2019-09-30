@@ -36,7 +36,11 @@ def normalize_text(text: str) -> str:
     This involves splitting and rejoining the text, and could be a somewhat expensive operation.
     """
     return " ".join(
-        [token for token in text.lower().strip(STRIPPED_CHARACTERS).split() if token not in IGNORED_TOKENS]
+        [
+            token
+            for token in text.lower().strip(STRIPPED_CHARACTERS).split()
+            if token not in IGNORED_TOKENS
+        ]
     )
 
 
@@ -102,7 +106,9 @@ def char_span_to_token_span(
     return (start_index, end_index), error
 
 
-def find_valid_answer_spans(passage_tokens: List[Token], answer_texts: List[str]) -> List[Tuple[int, int]]:
+def find_valid_answer_spans(
+    passage_tokens: List[Token], answer_texts: List[str]
+) -> List[Tuple[int, int]]:
     """
     Finds a list of token spans in ``passage_tokens`` that match the given ``answer_texts``.  This
     tries to find all spans that would evaluate to correct given the SQuAD and TriviaQA official
@@ -283,11 +289,15 @@ def make_reading_comprehension_instance_quac(
     # This is separate so we can reference it later with a known type.
     passage_field = TextField(passage_tokens, token_indexers)
     fields["passage"] = passage_field
-    fields["question"] = ListField([TextField(q_tokens, token_indexers) for q_tokens in question_list_tokens])
+    fields["question"] = ListField(
+        [TextField(q_tokens, token_indexers) for q_tokens in question_list_tokens]
+    )
     metadata = {
         "original_passage": passage_text,
         "token_offsets": passage_offsets,
-        "question_tokens": [[token.text for token in question_tokens] for question_tokens in question_list_tokens],
+        "question_tokens": [
+            [token.text for token in question_tokens] for question_tokens in question_list_tokens
+        ],
         "passage_tokens": [token.text for token in passage_tokens],
     }
     p1_answer_marker_list: List[Field] = []
@@ -303,7 +313,11 @@ def make_reading_comprehension_instance_quac(
             assert span_start >= 0
             assert span_end >= 0
         except:  # noqa
-            raise ValueError("Previous {0:d}th answer span should have been updated!".format(prev_answer_distance))
+            raise ValueError(
+                "Previous {0:d}th answer span should have been updated!".format(
+                    prev_answer_distance
+                )
+            )
         # Modify "tags" to mark previous answer span.
         if span_start == span_end:
             passage_tags[prev_answer_distance][span_start] = get_tag(prev_answer_distance, "")
@@ -311,7 +325,9 @@ def make_reading_comprehension_instance_quac(
             passage_tags[prev_answer_distance][span_start] = get_tag(prev_answer_distance, "start")
             passage_tags[prev_answer_distance][span_end] = get_tag(prev_answer_distance, "end")
             for passage_index in range(span_start + 1, span_end):
-                passage_tags[prev_answer_distance][passage_index] = get_tag(prev_answer_distance, "in")
+                passage_tags[prev_answer_distance][passage_index] = get_tag(
+                    prev_answer_distance, "in"
+                )
 
     if token_span_lists:
         span_start_list: List[Field] = []
@@ -343,15 +359,21 @@ def make_reading_comprehension_instance_quac(
             p1_span_end = span_end
             if num_context_answers > 2:
                 p3_answer_marker_list.append(
-                    SequenceLabelField(prev_answer_marker_lists[3], passage_field, label_namespace="answer_tags")
+                    SequenceLabelField(
+                        prev_answer_marker_lists[3], passage_field, label_namespace="answer_tags"
+                    )
                 )
             if num_context_answers > 1:
                 p2_answer_marker_list.append(
-                    SequenceLabelField(prev_answer_marker_lists[2], passage_field, label_namespace="answer_tags")
+                    SequenceLabelField(
+                        prev_answer_marker_lists[2], passage_field, label_namespace="answer_tags"
+                    )
                 )
             if num_context_answers > 0:
                 p1_answer_marker_list.append(
-                    SequenceLabelField(prev_answer_marker_lists[1], passage_field, label_namespace="answer_tags")
+                    SequenceLabelField(
+                        prev_answer_marker_lists[1], passage_field, label_namespace="answer_tags"
+                    )
                 )
         fields["span_start"] = ListField(span_start_list)
         fields["span_end"] = ListField(span_end_list)

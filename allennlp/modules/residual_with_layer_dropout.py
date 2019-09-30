@@ -16,7 +16,8 @@ class ResidualWithLayerDropout(torch.nn.Module):
         super().__init__()
         if undecayed_dropout_prob < 0 or undecayed_dropout_prob > 1:
             raise ValueError(
-                f"undecayed dropout probability has to be between 0 and 1, " f"but got {undecayed_dropout_prob}"
+                f"undecayed dropout probability has to be between 0 and 1, "
+                f"but got {undecayed_dropout_prob}"
             )
         self.undecayed_dropout_prob = undecayed_dropout_prob
 

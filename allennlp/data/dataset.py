@@ -119,7 +119,9 @@ class Batch(Iterable):
         # given a max length for a particular field and padding key.  If we were, we use that
         # instead of the instance-based one.
         if verbose:
-            logger.info("Padding batch of size %d to lengths %s", len(self.instances), str(padding_lengths))
+            logger.info(
+                "Padding batch of size %d to lengths %s", len(self.instances), str(padding_lengths)
+            )
             logger.info("Getting max lengths from instances")
         instance_padding_lengths = self.get_padding_lengths()
         if verbose:
@@ -128,7 +130,9 @@ class Batch(Iterable):
         for field_name, instance_field_lengths in instance_padding_lengths.items():
             for padding_key in instance_field_lengths.keys():
                 if padding_key in padding_lengths[field_name]:
-                    lengths_to_use[field_name][padding_key] = padding_lengths[field_name][padding_key]
+                    lengths_to_use[field_name][padding_key] = padding_lengths[field_name][
+                        padding_key
+                    ]
                 else:
                     lengths_to_use[field_name][padding_key] = instance_field_lengths[padding_key]
 
@@ -163,7 +167,8 @@ class Batch(Iterable):
         for instance in self.instances:
             if not instance.indexed:
                 raise ConfigurationError(
-                    "Instances must be indexed with vocabulary " "before asking to print dataset statistics."
+                    "Instances must be indexed with vocabulary "
+                    "before asking to print dataset statistics."
                 )
             for field, field_padding_lengths in instance.get_padding_lengths().items():
                 for key, value in field_padding_lengths.items():

@@ -65,7 +65,9 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
         return self._is_bidirectional
 
     @overrides
-    def forward(self, inputs: torch.Tensor, mask: torch.Tensor, hidden_state: torch.Tensor = None) -> torch.Tensor:
+    def forward(
+        self, inputs: torch.Tensor, mask: torch.Tensor, hidden_state: torch.Tensor = None
+    ) -> torch.Tensor:
 
         if self.stateful and mask is None:
             raise ValueError("Always pass a mask with stateful RNNs.")

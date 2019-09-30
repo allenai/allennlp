@@ -6,7 +6,9 @@ from allennlp.models import load_archive
 
 class TestModel(AllenNlpTestCase):
     def test_extend_embedder_vocab(self):
-        model_archive = str(self.FIXTURES_ROOT / "decomposable_attention" / "serialization" / "model.tar.gz")
+        model_archive = str(
+            self.FIXTURES_ROOT / "decomposable_attention" / "serialization" / "model.tar.gz"
+        )
         trained_model = load_archive(model_archive).model
         # config_file used: str(self.FIXTURES_ROOT / 'decomposable_attention' / 'experiment.json')
         # dataset used: str(self.FIXTURES_ROOT / 'data' / 'snli.jsonl')

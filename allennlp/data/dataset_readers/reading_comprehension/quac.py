@@ -71,10 +71,14 @@ class QuACReader(DatasetReader):
                 answer_texts_list = [[answer["text"] for answer in qa["answers"]] for qa in qas]
                 metadata["question"] = question_text_list
                 metadata["answer_texts_list"] = answer_texts_list
-                span_starts_list = [[answer["answer_start"] for answer in qa["answers"]] for qa in qas]
+                span_starts_list = [
+                    [answer["answer_start"] for answer in qa["answers"]] for qa in qas
+                ]
                 span_ends_list = []
                 for answer_starts, an_list in zip(span_starts_list, answer_texts_list):
-                    span_ends = [start + len(answer) for start, answer in zip(answer_starts, an_list)]
+                    span_ends = [
+                        start + len(answer) for start, answer in zip(answer_starts, an_list)
+                    ]
                     span_ends_list.append(span_ends)
                 yesno_list = [str(qa["yesno"]) for qa in qas]
                 followup_list = [str(qa["followup"]) for qa in qas]

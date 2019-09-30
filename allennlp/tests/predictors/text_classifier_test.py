@@ -9,9 +9,13 @@ from allennlp.predictors import Predictor
 
 class TestTextClassifierPredictor(AllenNlpTestCase):
     def test_uses_named_inputs(self):
-        inputs = {"sentence": "It was the ending that I hated. I was disappointed that it was so bad."}
+        inputs = {
+            "sentence": "It was the ending that I hated. I was disappointed that it was so bad."
+        }
 
-        archive = load_archive(self.FIXTURES_ROOT / "basic_classifier" / "serialization" / "model.tar.gz")
+        archive = load_archive(
+            self.FIXTURES_ROOT / "basic_classifier" / "serialization" / "model.tar.gz"
+        )
         predictor = Predictor.from_archive(archive, "text_classifier")
         result = predictor.predict_json(inputs)
 
@@ -44,7 +48,9 @@ class TestTextClassifierPredictor(AllenNlpTestCase):
             {"sentence": "This one is honestly the worst movie I've ever watched."},
         ]
 
-        archive = load_archive(self.FIXTURES_ROOT / "basic_classifier" / "serialization" / "model.tar.gz")
+        archive = load_archive(
+            self.FIXTURES_ROOT / "basic_classifier" / "serialization" / "model.tar.gz"
+        )
         predictor = Predictor.from_archive(archive, "text_classifier")
         results = predictor.predict_batch_json(batch_inputs)
         assert len(results) == 2
@@ -74,9 +80,13 @@ class TestTextClassifierPredictor(AllenNlpTestCase):
                 assert e / sum_exps == approx(p)
 
     def test_predictions_to_labeled_instances(self):
-        inputs = {"sentence": "It was the ending that I hated. I was disappointed that it was so bad."}
+        inputs = {
+            "sentence": "It was the ending that I hated. I was disappointed that it was so bad."
+        }
 
-        archive = load_archive(self.FIXTURES_ROOT / "basic_classifier" / "serialization" / "model.tar.gz")
+        archive = load_archive(
+            self.FIXTURES_ROOT / "basic_classifier" / "serialization" / "model.tar.gz"
+        )
         predictor = Predictor.from_archive(archive, "text_classifier")
 
         instance = predictor._json_to_instance(inputs)

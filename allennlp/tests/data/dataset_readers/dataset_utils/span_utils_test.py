@@ -10,7 +10,12 @@ class SpanUtilsTest(AllenNlpTestCase):
     def test_bio_tags_to_spans_extracts_correct_spans(self):
         tag_sequence = ["O", "B-ARG1", "I-ARG1", "O", "B-ARG2", "I-ARG2", "B-ARG1", "B-ARG2"]
         spans = span_utils.bio_tags_to_spans(tag_sequence)
-        assert set(spans) == {("ARG1", (1, 2)), ("ARG2", (4, 5)), ("ARG1", (6, 6)), ("ARG2", (7, 7))}
+        assert set(spans) == {
+            ("ARG1", (1, 2)),
+            ("ARG2", (4, 5)),
+            ("ARG1", (6, 6)),
+            ("ARG2", (7, 7)),
+        }
 
         # Check that it raises when we use U- tags for single tokens.
         tag_sequence = ["O", "B-ARG1", "I-ARG1", "O", "B-ARG2", "I-ARG2", "U-ARG1", "U-ARG2"]
@@ -18,7 +23,18 @@ class SpanUtilsTest(AllenNlpTestCase):
             spans = span_utils.bio_tags_to_spans(tag_sequence)
 
         # Check that invalid BIO sequences are also handled as spans.
-        tag_sequence = ["O", "B-ARG1", "I-ARG1", "O", "I-ARG1", "B-ARG2", "I-ARG2", "B-ARG1", "I-ARG2", "I-ARG2"]
+        tag_sequence = [
+            "O",
+            "B-ARG1",
+            "I-ARG1",
+            "O",
+            "I-ARG1",
+            "B-ARG2",
+            "I-ARG2",
+            "B-ARG1",
+            "I-ARG2",
+            "I-ARG2",
+        ]
         spans = span_utils.bio_tags_to_spans(tag_sequence)
         assert set(spans) == {
             ("ARG1", (1, 2)),
@@ -44,7 +60,18 @@ class SpanUtilsTest(AllenNlpTestCase):
         assert set(spans) == {("", (1, 2)), ("", (4, 4)), ("", (5, 6)), ("", (7, 9))}
 
     def test_bio_tags_to_spans_ignores_specified_tags(self):
-        tag_sequence = ["B-V", "I-V", "O", "B-ARG1", "I-ARG1", "O", "B-ARG2", "I-ARG2", "B-ARG1", "B-ARG2"]
+        tag_sequence = [
+            "B-V",
+            "I-V",
+            "O",
+            "B-ARG1",
+            "I-ARG1",
+            "O",
+            "B-ARG2",
+            "I-ARG2",
+            "B-ARG1",
+            "B-ARG2",
+        ]
         spans = span_utils.bio_tags_to_spans(tag_sequence, ["ARG1", "V"])
         assert set(spans) == {("ARG2", (6, 7)), ("ARG2", (9, 9))}
 
@@ -80,7 +107,18 @@ class SpanUtilsTest(AllenNlpTestCase):
             spans = span_utils.iob1_tags_to_spans(tag_sequence)
 
         # Check that invalid IOB1 sequences are also handled as spans.
-        tag_sequence = ["O", "B-ARG1", "I-ARG1", "O", "I-ARG1", "B-ARG2", "I-ARG2", "B-ARG1", "I-ARG2", "I-ARG2"]
+        tag_sequence = [
+            "O",
+            "B-ARG1",
+            "I-ARG1",
+            "O",
+            "I-ARG1",
+            "B-ARG2",
+            "I-ARG2",
+            "B-ARG1",
+            "I-ARG2",
+            "I-ARG2",
+        ]
         spans = span_utils.iob1_tags_to_spans(tag_sequence)
         assert set(spans) == {
             ("ARG1", (1, 2)),

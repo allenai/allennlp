@@ -33,8 +33,20 @@ class TestSeq2SeqDatasetReader:
             "@end@",
         ]
         fields = instances[1].fields
-        assert [t.text for t in fields["source_tokens"].tokens] == ["@start@", "this", "is", "another", "@end@"]
-        assert [t.text for t in fields["target_tokens"].tokens] == ["@start@", "this", "is", "another", "@end@"]
+        assert [t.text for t in fields["source_tokens"].tokens] == [
+            "@start@",
+            "this",
+            "is",
+            "another",
+            "@end@",
+        ]
+        assert [t.text for t in fields["target_tokens"].tokens] == [
+            "@start@",
+            "this",
+            "is",
+            "another",
+            "@end@",
+        ]
         fields = instances[2].fields
         assert [t.text for t in fields["source_tokens"].tokens] == [
             "@start@",
@@ -64,7 +76,13 @@ class TestSeq2SeqDatasetReader:
 
         assert len(instances) == 3
         fields = instances[0].fields
-        assert [t.text for t in fields["source_tokens"].tokens] == ["this", "is", "a", "sentence", "@end@"]
+        assert [t.text for t in fields["source_tokens"].tokens] == [
+            "this",
+            "is",
+            "a",
+            "sentence",
+            "@end@",
+        ]
         assert [t.text for t in fields["target_tokens"].tokens] == [
             "@start@",
             "this",
@@ -82,7 +100,13 @@ class TestSeq2SeqDatasetReader:
         assert reader._target_max_exceeded == 1
         assert len(instances) == 3
         fields = instances[0].fields
-        assert [t.text for t in fields["source_tokens"].tokens] == ["@start@", "this", "is", "a", "@end@"]
+        assert [t.text for t in fields["source_tokens"].tokens] == [
+            "@start@",
+            "this",
+            "is",
+            "a",
+            "@end@",
+        ]
         assert [t.text for t in fields["target_tokens"].tokens] == [
             "@start@",
             "this",
@@ -156,5 +180,15 @@ class TestSeq2SeqDatasetReader:
             instances = ensure_list(instances)
             assert len(instances) == 1
             fields = instances[0].fields
-            assert [t.text for t in fields["source_tokens"].tokens] == ["@start@", "a", "b", "@end@"]
-            assert [t.text for t in fields["target_tokens"].tokens] == ["@start@", "c", "d", "@end@"]
+            assert [t.text for t in fields["source_tokens"].tokens] == [
+                "@start@",
+                "a",
+                "b",
+                "@end@",
+            ]
+            assert [t.text for t in fields["target_tokens"].tokens] == [
+                "@start@",
+                "c",
+                "d",
+                "@end@",
+            ]

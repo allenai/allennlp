@@ -48,7 +48,8 @@ class UnigramRecall(Metric):
             )
         if mask is not None and mask.size() != gold_labels.size():
             raise ConfigurationError(
-                "mask must have the same size as predictions but " "found tensor of shape: {}".format(mask.size())
+                "mask must have the same size as predictions but "
+                "found tensor of shape: {}".format(mask.size())
             )
 
         batch_size = predictions.size()[0]

@@ -4,7 +4,9 @@ import numpy
 from allennlp.common.checks import ConfigurationError
 
 
-def decode_mst(energy: numpy.ndarray, length: int, has_labels: bool = True) -> Tuple[numpy.ndarray, numpy.ndarray]:
+def decode_mst(
+    energy: numpy.ndarray, length: int, has_labels: bool = True
+) -> Tuple[numpy.ndarray, numpy.ndarray]:
     """
     Note: Counter to typical intuition, this function decodes the _maximum_
     spanning tree.
@@ -66,7 +68,9 @@ def decode_mst(energy: numpy.ndarray, length: int, has_labels: bool = True) -> T
     final_edges: Dict[int, int] = {}
 
     # The main algorithm operates inplace.
-    chu_liu_edmonds(length, score_matrix, current_nodes, final_edges, old_input, old_output, representatives)
+    chu_liu_edmonds(
+        length, score_matrix, current_nodes, final_edges, old_input, old_output, representatives
+    )
 
     heads = numpy.zeros([max_length], numpy.int32)
     if has_labels:
@@ -219,7 +223,9 @@ def chu_liu_edmonds(
             if i > 0:
                 representatives[cycle_representative].add(node)
 
-    chu_liu_edmonds(length, score_matrix, current_nodes, final_edges, old_input, old_output, representatives)
+    chu_liu_edmonds(
+        length, score_matrix, current_nodes, final_edges, old_input, old_output, representatives
+    )
 
     # Expansion stage.
     # check each node in cycle, if one of its representatives
@@ -243,7 +249,9 @@ def chu_liu_edmonds(
         previous = parents[previous]
 
 
-def _find_cycle(parents: List[int], length: int, current_nodes: List[bool]) -> Tuple[bool, List[int]]:
+def _find_cycle(
+    parents: List[int], length: int, current_nodes: List[bool]
+) -> Tuple[bool, List[int]]:
 
     added = [False for _ in range(length)]
     added[0] = True

@@ -27,7 +27,12 @@ class BooleanAccuracy(Metric):
         self._correct_count = 0.0
         self._total_count = 0.0
 
-    def __call__(self, predictions: torch.Tensor, gold_labels: torch.Tensor, mask: Optional[torch.Tensor] = None):
+    def __call__(
+        self,
+        predictions: torch.Tensor,
+        gold_labels: torch.Tensor,
+        mask: Optional[torch.Tensor] = None,
+    ):
         """
         Parameters
         ----------
@@ -48,7 +53,8 @@ class BooleanAccuracy(Metric):
             )
         if mask is not None and mask.size() != predictions.size():
             raise ValueError(
-                f"mask must have shape == predictions.size() but " f"found tensor of shape: {mask.size()}"
+                f"mask must have shape == predictions.size() but "
+                f"found tensor of shape: {mask.size()}"
             )
 
         batch_size = predictions.size(0)

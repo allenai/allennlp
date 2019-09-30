@@ -160,7 +160,12 @@ class DropReader(DatasetReader):
                     answer_annotations += question_answer["validated_answers"]
 
                 instance = self.text_to_instance(
-                    question_text, passage_text, question_id, passage_id, answer_annotations, passage_tokens
+                    question_text,
+                    passage_text,
+                    question_id,
+                    passage_id,
+                    answer_annotations,
+                    passage_tokens,
                 )
                 if instance is not None:
                     kept_count += 1
@@ -195,7 +200,9 @@ class DropReader(DatasetReader):
         if answer_annotations:
             # Currently we only use the first annotated answer here, but actually this doesn't affect
             # the training, because we only have one annotation for the train set.
-            answer_type, answer_texts = self.extract_answer_info_from_annotation(answer_annotations[0])
+            answer_type, answer_texts = self.extract_answer_info_from_annotation(
+                answer_annotations[0]
+            )
 
         # Tokenize the answer text in order to find the matched span based on token
         tokenized_answer_texts = []
@@ -206,7 +213,9 @@ class DropReader(DatasetReader):
 
         if self.instance_format == "squad":
             valid_passage_spans = (
-                self.find_valid_spans(passage_tokens, tokenized_answer_texts) if tokenized_answer_texts else []
+                self.find_valid_spans(passage_tokens, tokenized_answer_texts)
+                if tokenized_answer_texts
+                else []
             )
             if not valid_passage_spans:
                 if "passage_span" in self.skip_when_all_empty:
@@ -243,7 +252,10 @@ class DropReader(DatasetReader):
                     return None
                 else:
                     valid_passage_spans.append(
-                        (len(question_concat_passage_tokens) - 1, len(question_concat_passage_tokens) - 1)
+                        (
+                            len(question_concat_passage_tokens) - 1,
+                            len(question_concat_passage_tokens) - 1,
+                        )
                     )
             answer_info = {
                 "answer_texts": answer_texts,  # this `answer_texts` will not be used for evaluation
@@ -278,10 +290,14 @@ class DropReader(DatasetReader):
             numbers_as_tokens = [Token(str(number)) for number in numbers_in_passage]
 
             valid_passage_spans = (
-                self.find_valid_spans(passage_tokens, tokenized_answer_texts) if tokenized_answer_texts else []
+                self.find_valid_spans(passage_tokens, tokenized_answer_texts)
+                if tokenized_answer_texts
+                else []
             )
             valid_question_spans = (
-                self.find_valid_spans(question_tokens, tokenized_answer_texts) if tokenized_answer_texts else []
+                self.find_valid_spans(question_tokens, tokenized_answer_texts)
+                if tokenized_answer_texts
+                else []
             )
 
             target_numbers = []
@@ -341,7 +357,8 @@ class DropReader(DatasetReader):
             )
         else:
             raise ValueError(
-                f'Expect the instance format to be "drop", "squad" or "bert", ' f"but got {self.instance_format}"
+                f'Expect the instance format to be "drop", "squad" or "bert", '
+                f"but got {self.instance_format}"
             )
 
     @staticmethod
@@ -365,7 +382,9 @@ class DropReader(DatasetReader):
         question_field = TextField(question_tokens, token_indexers)
         fields["passage"] = passage_field
         fields["question"] = question_field
-        number_index_fields: List[Field] = [IndexField(index, passage_field) for index in number_indices]
+        number_index_fields: List[Field] = [
+            IndexField(index, passage_field) for index in number_indices
+        ]
         fields["number_indices"] = ListField(number_index_fields)
         # This field is actually not required in the model,
         # it is used to create the `answer_as_plus_minus_combinations` field, which is a `SequenceLabelField`.
@@ -385,14 +404,16 @@ class DropReader(DatasetReader):
             metadata["answer_texts"] = answer_info["answer_texts"]
 
             passage_span_fields: List[Field] = [
-                SpanField(span[0], span[1], passage_field) for span in answer_info["answer_passage_spans"]
+                SpanField(span[0], span[1], passage_field)
+                for span in answer_info["answer_passage_spans"]
             ]
             if not passage_span_fields:
                 passage_span_fields.append(SpanField(-1, -1, passage_field))
             fields["answer_as_passage_spans"] = ListField(passage_span_fields)
 
             question_span_fields: List[Field] = [
-                SpanField(span[0], span[1], question_field) for span in answer_info["answer_question_spans"]
+                SpanField(span[0], span[1], question_field)
+                for span in answer_info["answer_question_spans"]
             ]
             if not question_span_fields:
                 question_span_fields.append(SpanField(-1, -1, question_field))
@@ -404,7 +425,9 @@ class DropReader(DatasetReader):
                     SequenceLabelField(signs_for_one_add_sub_expression, numbers_in_passage_field)
                 )
             if not add_sub_signs_field:
-                add_sub_signs_field.append(SequenceLabelField([0] * len(number_tokens), numbers_in_passage_field))
+                add_sub_signs_field.append(
+                    SequenceLabelField([0] * len(number_tokens), numbers_in_passage_field)
+                )
             fields["answer_as_add_sub_expressions"] = ListField(add_sub_signs_field)
 
             count_fields: List[Field] = [
@@ -463,7 +486,9 @@ class DropReader(DatasetReader):
         return Instance(fields)
 
     @staticmethod
-    def extract_answer_info_from_annotation(answer_annotation: Dict[str, Any]) -> Tuple[str, List[str]]:
+    def extract_answer_info_from_annotation(
+        answer_annotation: Dict[str, Any]
+    ) -> Tuple[str, List[str]]:
         answer_type = None
         if answer_annotation["spans"]:
             answer_type = "spans"
@@ -530,8 +555,12 @@ class DropReader(DatasetReader):
             return number
 
     @staticmethod
-    def find_valid_spans(passage_tokens: List[Token], answer_texts: List[str]) -> List[Tuple[int, int]]:
-        normalized_tokens = [token.text.lower().strip(STRIPPED_CHARACTERS) for token in passage_tokens]
+    def find_valid_spans(
+        passage_tokens: List[Token], answer_texts: List[str]
+    ) -> List[Tuple[int, int]]:
+        normalized_tokens = [
+            token.text.lower().strip(STRIPPED_CHARACTERS) for token in passage_tokens
+        ]
         word_positions: Dict[str, List[int]] = defaultdict(list)
         for i, token in enumerate(normalized_tokens):
             word_positions[token].append(i)
@@ -565,7 +594,9 @@ class DropReader(DatasetReader):
         # TODO: Try smaller numbers?
         for number_of_numbers_to_consider in range(2, max_number_of_numbers_to_consider + 1):
             possible_signs = list(itertools.product((-1, 1), repeat=number_of_numbers_to_consider))
-            for number_combination in itertools.combinations(enumerate(numbers), number_of_numbers_to_consider):
+            for number_combination in itertools.combinations(
+                enumerate(numbers), number_of_numbers_to_consider
+            ):
                 indices = [it[0] for it in number_combination]
                 values = [it[1] for it in number_combination]
                 for signs in possible_signs:
@@ -573,7 +604,9 @@ class DropReader(DatasetReader):
                     if eval_value in targets:
                         labels_for_numbers = [0] * len(numbers)  # 0 represents ``not included''.
                         for index, sign in zip(indices, signs):
-                            labels_for_numbers[index] = 1 if sign == 1 else 2  # 1 for positive, 2 for negative
+                            labels_for_numbers[index] = (
+                                1 if sign == 1 else 2
+                            )  # 1 for positive, 2 for negative
                         valid_signs_for_add_sub_expressions.append(labels_for_numbers)
         return valid_signs_for_add_sub_expressions
 

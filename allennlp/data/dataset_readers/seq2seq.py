@@ -83,7 +83,9 @@ class Seq2SeqDatasetReader(DatasetReader):
             logger.info("Reading instances from lines in file at: %s", file_path)
             for line_num, row in enumerate(csv.reader(data_file, delimiter=self._delimiter)):
                 if len(row) != 2:
-                    raise ConfigurationError("Invalid line format: %s (line number %d)" % (row, line_num + 1))
+                    raise ConfigurationError(
+                        "Invalid line format: %s (line number %d)" % (row, line_num + 1)
+                    )
                 source_sequence, target_sequence = row
                 yield self.text_to_instance(source_sequence, target_sequence)
         if self._source_max_tokens and self._source_max_exceeded:
@@ -100,7 +102,9 @@ class Seq2SeqDatasetReader(DatasetReader):
             )
 
     @overrides
-    def text_to_instance(self, source_string: str, target_string: str = None) -> Instance:  # type: ignore
+    def text_to_instance(
+        self, source_string: str, target_string: str = None
+    ) -> Instance:  # type: ignore
 
         tokenized_source = self._source_tokenizer.tokenize(source_string)
         if self._source_max_tokens and len(tokenized_source) > self._source_max_tokens:

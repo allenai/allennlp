@@ -15,7 +15,9 @@ class TestCosineSimilarityFunction(AllenNlpTestCase):
         normed_a = a_vectors / numpy.expand_dims(numpy.linalg.norm(a_vectors, 2, -1), -1)
         normed_b = b_vectors / numpy.expand_dims(numpy.linalg.norm(b_vectors, 2, -1), -1)
         desired_result = numpy.sum(normed_a * normed_b, axis=-1)
-        result = cosine_similarity(torch.from_numpy(a_vectors), torch.from_numpy(b_vectors)).data.numpy()
+        result = cosine_similarity(
+            torch.from_numpy(a_vectors), torch.from_numpy(b_vectors)
+        ).data.numpy()
         assert result.shape == (1, 2)
         assert desired_result.shape == (1, 2)
         assert_almost_equal(result, desired_result)
@@ -27,7 +29,9 @@ class TestCosineSimilarityFunction(AllenNlpTestCase):
         normed_a = a_vectors / numpy.expand_dims(numpy.linalg.norm(a_vectors, 2, -1), -1)
         normed_b = b_vectors / numpy.expand_dims(numpy.linalg.norm(b_vectors, 2, -1), -1)
         desired_result = numpy.sum(normed_a * normed_b, axis=-1)
-        result = cosine_similarity(torch.from_numpy(a_vectors), torch.from_numpy(b_vectors)).data.numpy()
+        result = cosine_similarity(
+            torch.from_numpy(a_vectors), torch.from_numpy(b_vectors)
+        ).data.numpy()
         assert result.shape == (5, 4, 3, 6)
         # We're cutting this down here with a random partial index, so that if this test fails the
         # output isn't so huge and slow.

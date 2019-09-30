@@ -229,7 +229,9 @@ def get_dropout_mask(dropout_probability: float, tensor_for_masking: torch.Tenso
     This scaling ensures expected values and variances of the output of applying this mask
      and the original tensor are the same.
     """
-    binary_mask = (torch.rand(tensor_for_masking.size()) > dropout_probability).to(tensor_for_masking.device)
+    binary_mask = (torch.rand(tensor_for_masking.size()) > dropout_probability).to(
+        tensor_for_masking.device
+    )
     # Scale mask by 1/keep_prob to preserve output statistics.
     dropout_mask = binary_mask.float().div(1.0 - dropout_probability)
     return dropout_mask
@@ -393,7 +395,10 @@ def masked_flip(padded_sequence: torch.Tensor, sequence_lengths: List[int]) -> t
     ), f"sequence_lengths length ${len(sequence_lengths)} does not match batch size ${padded_sequence.size(0)}"
     num_timesteps = padded_sequence.size(1)
     flipped_padded_sequence = torch.flip(padded_sequence, [1])
-    sequences = [flipped_padded_sequence[i, num_timesteps - length :] for i, length in enumerate(sequence_lengths)]
+    sequences = [
+        flipped_padded_sequence[i, num_timesteps - length :]
+        for i, length in enumerate(sequence_lengths)
+    ]
     return torch.nn.utils.rnn.pad_sequence(sequences, batch_first=True)
 
 
@@ -444,7 +449,9 @@ def viterbi_decode(
     """
     sequence_length, num_tags = list(tag_sequence.size())
 
-    has_start_end_restrictions = allowed_end_transitions is not None or allowed_start_transitions is not None
+    has_start_end_restrictions = (
+        allowed_end_transitions is not None or allowed_start_transitions is not None
+    )
 
     if has_start_end_restrictions:
 
@@ -459,8 +466,12 @@ def viterbi_decode(
 
         # Start and end transitions are fully defined, but cannot transition between each other.
 
-        allowed_start_transitions = torch.cat([allowed_start_transitions, torch.tensor([-math.inf, -math.inf])])
-        allowed_end_transitions = torch.cat([allowed_end_transitions, torch.tensor([-math.inf, -math.inf])])
+        allowed_start_transitions = torch.cat(
+            [allowed_start_transitions, torch.tensor([-math.inf, -math.inf])]
+        )
+        allowed_end_transitions = torch.cat(
+            [allowed_end_transitions, torch.tensor([-math.inf, -math.inf])]
+        )
 
         # First define how we may transition FROM the start and end tags.
         new_transition_matrix[-2, :] = allowed_start_transitions
@@ -734,17 +745,23 @@ def sequence_cross_entropy_with_logits(
                 alpha_factor = torch.cat([1 - alpha_factor, alpha_factor])
         else:
             raise TypeError(
-                ("alpha must be float, list of float, or torch.FloatTensor, " "{} provided.").format(type(alpha))
+                (
+                    "alpha must be float, list of float, or torch.FloatTensor, " "{} provided."
+                ).format(type(alpha))
             )
         # shape : (batch, max_len)
-        alpha_factor = torch.gather(alpha_factor, dim=0, index=targets_flat.view(-1)).view(*targets.size())
+        alpha_factor = torch.gather(alpha_factor, dim=0, index=targets_flat.view(-1)).view(
+            *targets.size()
+        )
         weights = weights * alpha_factor
 
     if label_smoothing is not None and label_smoothing > 0.0:
         num_classes = logits.size(-1)
         smoothing_value = label_smoothing / num_classes
         # Fill all the correct indices with 1 - smoothing value.
-        one_hot_targets = torch.zeros_like(log_probs_flat).scatter_(-1, targets_flat, 1.0 - label_smoothing)
+        one_hot_targets = torch.zeros_like(log_probs_flat).scatter_(
+            -1, targets_flat, 1.0 - label_smoothing
+        )
         smoothed_targets = one_hot_targets + smoothing_value
         negative_log_likelihood_flat = -log_probs_flat * smoothed_targets
         negative_log_likelihood_flat = negative_log_likelihood_flat.sum(-1, keepdim=True)
@@ -772,7 +789,9 @@ def sequence_cross_entropy_with_logits(
         return per_batch_loss
 
 
-def replace_masked_values(tensor: torch.Tensor, mask: torch.Tensor, replace_with: float) -> torch.Tensor:
+def replace_masked_values(
+    tensor: torch.Tensor, mask: torch.Tensor, replace_with: float
+) -> torch.Tensor:
     """
     Replaces all masked values in ``tensor`` with ``replace_with``.  ``mask`` must be broadcastable
     to the same shape as ``tensor``. We require that ``tensor.dim() == mask.dim()``, as otherwise we
@@ -783,7 +802,9 @@ def replace_masked_values(tensor: torch.Tensor, mask: torch.Tensor, replace_with
     ``tensor.masked_fill((1 - mask).to(dtype=torch.bool), replace_with)``.
     """
     if tensor.dim() != mask.dim():
-        raise ConfigurationError("tensor.dim() (%d) != mask.dim() (%d)" % (tensor.dim(), mask.dim()))
+        raise ConfigurationError(
+            "tensor.dim() (%d) != mask.dim() (%d)" % (tensor.dim(), mask.dim())
+        )
     return tensor.masked_fill((1 - mask).to(dtype=torch.bool), replace_with)
 
 
@@ -1105,7 +1126,9 @@ def flatten_and_batch_shift_indices(indices: torch.Tensor, sequence_length: int)
     """
     # Shape: (batch_size)
     if torch.max(indices) >= sequence_length or torch.min(indices) < 0:
-        raise ConfigurationError(f"All elements in indices should be in range (0, {sequence_length - 1})")
+        raise ConfigurationError(
+            f"All elements in indices should be in range (0, {sequence_length - 1})"
+        )
     offsets = get_range_vector(indices.size(0), get_device_of(indices)) * sequence_length
     for _ in range(len(indices.size()) - 1):
         offsets = offsets.unsqueeze(1)
@@ -1119,7 +1142,9 @@ def flatten_and_batch_shift_indices(indices: torch.Tensor, sequence_length: int)
 
 
 def batched_index_select(
-    target: torch.Tensor, indices: torch.LongTensor, flattened_indices: Optional[torch.LongTensor] = None
+    target: torch.Tensor,
+    indices: torch.LongTensor,
+    flattened_indices: Optional[torch.LongTensor] = None,
 ) -> torch.Tensor:
     """
     The given ``indices`` of size ``(batch_size, d_1, ..., d_n)`` indexes into the sequence
@@ -1245,7 +1270,9 @@ def bucket_values(
     # We do this to make the buckets more granular in the initial range, where we expect
     # most values to fall. We then add (num_identity_buckets - 1) because we want these indices
     # to start _after_ the fixed number of buckets which we specified would only hold single values.
-    logspace_index = (distances.float().log() / math.log(2)).floor().long() + (num_identity_buckets - 1)
+    logspace_index = (distances.float().log() / math.log(2)).floor().long() + (
+        num_identity_buckets - 1
+    )
     # create a mask for values which will go into single number buckets (i.e not a range).
     use_identity_mask = (distances <= num_identity_buckets).long()
     use_buckets_mask = 1 + (-1 * use_identity_mask)
@@ -1312,7 +1339,9 @@ def add_sentence_boundary_token_ids(
     return tensor_with_boundary_tokens, new_mask
 
 
-def remove_sentence_boundaries(tensor: torch.Tensor, mask: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+def remove_sentence_boundaries(
+    tensor: torch.Tensor, mask: torch.Tensor
+) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Remove begin/end of sentence embeddings from the batch of sentences.
     Given a batch of sentences with size ``(batch_size, timesteps, dim)``
@@ -1354,7 +1383,9 @@ def remove_sentence_boundaries(tensor: torch.Tensor, mask: torch.Tensor) -> Tupl
     return tensor_without_boundary_tokens, new_mask
 
 
-def add_positional_features(tensor: torch.Tensor, min_timescale: float = 1.0, max_timescale: float = 1.0e4):
+def add_positional_features(
+    tensor: torch.Tensor, min_timescale: float = 1.0, max_timescale: float = 1.0e4
+):
 
     """
     Implements the frequency-based positional encoding described
@@ -1391,7 +1422,9 @@ def add_positional_features(tensor: torch.Tensor, min_timescale: float = 1.0, ma
     num_timescales = hidden_dim // 2
     timescale_range = get_range_vector(num_timescales, get_device_of(tensor)).data.float()
 
-    log_timescale_increments = math.log(float(max_timescale) / float(min_timescale)) / float(num_timescales - 1)
+    log_timescale_increments = math.log(float(max_timescale) / float(min_timescale)) / float(
+        num_timescales - 1
+    )
     inverse_timescales = min_timescale * torch.exp(timescale_range * -log_timescale_increments)
 
     # Broadcasted multiplication - shape (timesteps, num_timescales)
@@ -1489,7 +1522,9 @@ def find_embedding_layer(model: torch.nn.Module) -> torch.nn.Module:
     from pytorch_transformers.modeling_gpt2 import GPT2Model
     from pytorch_transformers.modeling_bert import BertEmbeddings as BertEmbeddingsNew
     from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
-    from allennlp.modules.text_field_embedders.basic_text_field_embedder import BasicTextFieldEmbedder
+    from allennlp.modules.text_field_embedders.basic_text_field_embedder import (
+        BasicTextFieldEmbedder,
+    )
     from allennlp.modules.token_embedders.embedding import Embedding
 
     for module in model.modules():

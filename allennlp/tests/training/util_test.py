@@ -12,7 +12,9 @@ class TestTrainerUtil(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
         self.snli_file = str(self.FIXTURES_ROOT / "data" / "snli.jsonl")
-        self.params = Params({"dataset_reader": {"type": "snli"}, "train_data_path": self.snli_file})
+        self.params = Params(
+            {"dataset_reader": {"type": "snli"}, "train_data_path": self.snli_file}
+        )
         self.cache_directory = str(self.FIXTURES_ROOT / "data_cache")
 
     def tearDown(self):
@@ -25,7 +27,9 @@ class TestTrainerUtil(AllenNlpTestCase):
         cache_prefix = "prefix"
         _ = util.datasets_from_params(self.params.duplicate(), self.cache_directory, cache_prefix)
 
-        expected_cache_file = f"{self.cache_directory}/{cache_prefix}/{flatten_filename(self.snli_file)}"
+        expected_cache_file = (
+            f"{self.cache_directory}/{cache_prefix}/{flatten_filename(self.snli_file)}"
+        )
         expected_param_file = f"{self.cache_directory}/{cache_prefix}/params.json"
         assert os.path.exists(expected_cache_file)
         assert os.path.exists(expected_param_file)
@@ -39,5 +43,7 @@ class TestTrainerUtil(AllenNlpTestCase):
         _ = util.datasets_from_params(self.params, self.cache_directory)
 
         cache_prefix = util._dataset_reader_param_hash(Params({"type": "snli"}))
-        expected_cache_file = f"{self.cache_directory}/{cache_prefix}/{flatten_filename(self.snli_file)}"
+        expected_cache_file = (
+            f"{self.cache_directory}/{cache_prefix}/{flatten_filename(self.snli_file)}"
+        )
         assert os.path.exists(expected_cache_file)

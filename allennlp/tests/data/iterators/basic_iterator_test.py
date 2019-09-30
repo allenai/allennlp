@@ -36,7 +36,9 @@ class IteratorTest(AllenNlpTestCase):
             self.create_instance(["this", "is", "a", "sentence"]),
             self.create_instance(["this", "is", "another", "sentence"]),
             self.create_instance(["yet", "another", "sentence"]),
-            self.create_instance(["this", "is", "a", "very", "very", "very", "very", "long", "sentence"]),
+            self.create_instance(
+                ["this", "is", "a", "very", "very", "very", "very", "long", "sentence"]
+            ),
             self.create_instance(["sentence"]),
         ]
 
@@ -58,7 +60,10 @@ class IteratorTest(AllenNlpTestCase):
         sample_sizes = []
         for batch in batches:
             batch_sequence_length = max(
-                [instance.get_padding_lengths()["text"]["num_tokens"] for instance in batch.instances]
+                [
+                    instance.get_padding_lengths()["text"]["num_tokens"]
+                    for instance in batch.instances
+                ]
             )
             sample_sizes.append(batch_sequence_length * len(batch.instances))
 
@@ -71,7 +76,9 @@ class IteratorTest(AllenNlpTestCase):
     def assert_instances_are_correct(self, candidate_instances):
         # First we need to remove padding tokens from the candidates.
 
-        candidate_instances = [tuple(w for w in instance if w != 0) for instance in candidate_instances]
+        candidate_instances = [
+            tuple(w for w in instance if w != 0) for instance in candidate_instances
+        ]
         expected_instances = [
             tuple(instance.fields["text"]._indexed_tokens["tokens"]) for instance in self.instances
         ]
@@ -83,9 +90,15 @@ class TestBasicIterator(IteratorTest):
         # Lazy and instances per epoch not specified.
         assert BasicIterator(batch_size=2).get_num_batches(self.lazy_instances) == 1
         # Lazy and instances per epoch specified.
-        assert BasicIterator(batch_size=2, instances_per_epoch=21).get_num_batches(self.lazy_instances) == 11
+        assert (
+            BasicIterator(batch_size=2, instances_per_epoch=21).get_num_batches(self.lazy_instances)
+            == 11
+        )
         # Not lazy and instances per epoch specified.
-        assert BasicIterator(batch_size=2, instances_per_epoch=21).get_num_batches(self.instances) == 11
+        assert (
+            BasicIterator(batch_size=2, instances_per_epoch=21).get_num_batches(self.instances)
+            == 11
+        )
         # Not lazy and instances per epoch not specified.
         assert BasicIterator(batch_size=2).get_num_batches(self.instances) == 3
 
@@ -98,7 +111,9 @@ class TestBasicIterator(IteratorTest):
             batches = list(iterator(test_instances, num_epochs=1))
             # We just want to get the single-token array for the text field in the instance.
             instances = [
-                tuple(instance.detach().cpu().numpy()) for batch in batches for instance in batch["text"]["tokens"]
+                tuple(instance.detach().cpu().numpy())
+                for batch in batches
+                for instance in batch["text"]["tokens"]
             ]
             assert len(instances) == 5
             self.assert_instances_are_correct(instances)
@@ -111,7 +126,9 @@ class TestBasicIterator(IteratorTest):
             batches = [next(generator) for _ in range(18)]  # going over the data 6 times
             # We just want to get the single-token array for the text field in the instance.
             instances = [
-                tuple(instance.detach().cpu().numpy()) for batch in batches for instance in batch["text"]["tokens"]
+                tuple(instance.detach().cpu().numpy())
+                for batch in batches
+                for instance in batch["text"]["tokens"]
             ]
             assert len(instances) == 5 * 6
             self.assert_instances_are_correct(instances)
@@ -135,15 +152,24 @@ class TestBasicIterator(IteratorTest):
             # First epoch: 3 instances -> [2, 1]
             batches = list(iterator._create_batches(test_instances, shuffle=False))
             grouped_instances = [batch.instances for batch in batches]
-            assert grouped_instances == [[self.instances[0], self.instances[1]], [self.instances[2]]]
+            assert grouped_instances == [
+                [self.instances[0], self.instances[1]],
+                [self.instances[2]],
+            ]
             # Second epoch: 3 instances -> [2, 1]
             batches = list(iterator._create_batches(test_instances, shuffle=False))
             grouped_instances = [batch.instances for batch in batches]
-            assert grouped_instances == [[self.instances[3], self.instances[4]], [self.instances[0]]]
+            assert grouped_instances == [
+                [self.instances[3], self.instances[4]],
+                [self.instances[0]],
+            ]
             # Third epoch: 3 instances -> [2, 1]
             batches = list(iterator._create_batches(test_instances, shuffle=False))
             grouped_instances = [batch.instances for batch in batches]
-            assert grouped_instances == [[self.instances[1], self.instances[2]], [self.instances[3]]]
+            assert grouped_instances == [
+                [self.instances[1], self.instances[2]],
+                [self.instances[3]],
+            ]
 
     def test_many_instances_per_epoch(self):
 
@@ -215,8 +241,12 @@ class TestBasicIterator(IteratorTest):
             assert in_order_batches != shuffled_batches
 
             # But not the counts of the instances.
-            in_order_counts = Counter(id(instance) for batch in in_order_batches for instance in batch)
-            shuffled_counts = Counter(id(instance) for batch in shuffled_batches for instance in batch)
+            in_order_counts = Counter(
+                id(instance) for batch in in_order_batches for instance in batch
+            )
+            shuffled_counts = Counter(
+                id(instance) for batch in shuffled_batches for instance in batch
+            )
             assert in_order_counts == shuffled_counts
 
     def test_max_instances_in_memory(self):
@@ -239,7 +269,10 @@ class TestBasicIterator(IteratorTest):
         eager_instances1 = self.instances[:]
         eager_instances2 = self.instances[:]
 
-        for instances1, instances2 in [(eager_instances1, eager_instances2), (lazy_instances1, lazy_instances2)]:
+        for instances1, instances2 in [
+            (eager_instances1, eager_instances2),
+            (lazy_instances1, lazy_instances2),
+        ]:
             iterator = BasicIterator(batch_size=1, instances_per_epoch=2)
             iterator.index_with(self.vocab)
 

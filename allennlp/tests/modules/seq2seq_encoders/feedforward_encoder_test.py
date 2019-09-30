@@ -22,10 +22,14 @@ class TestFeedforwardEncoder(AllenNlpTestCase):
         tensor = torch.randn([2, 3, 10])
         output = encoder(tensor)
         target = feedforward(tensor)
-        numpy.testing.assert_array_almost_equal(target.detach().cpu().numpy(), output.detach().cpu().numpy())
+        numpy.testing.assert_array_almost_equal(
+            target.detach().cpu().numpy(), output.detach().cpu().numpy()
+        )
 
         # mask should work
         mask = torch.LongTensor([[1, 1, 1], [1, 0, 0]])
         output = encoder(tensor, mask)
         target = feedforward(tensor) * mask.unsqueeze(dim=-1).float()
-        numpy.testing.assert_array_almost_equal(target.detach().cpu().numpy(), output.detach().cpu().numpy())
+        numpy.testing.assert_array_almost_equal(
+            target.detach().cpu().numpy(), output.detach().cpu().numpy()
+        )

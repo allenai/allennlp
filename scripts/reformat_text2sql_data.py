@@ -96,7 +96,9 @@ def main(output_directory: int, data: str) -> None:
 
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description="process text2sql data into a more readable format.")
+    parser = argparse.ArgumentParser(
+        description="process text2sql data into a more readable format."
+    )
     parser.add_argument("--out", type=str, help="The serialization directory.")
     parser.add_argument("--data", type=str, help="The path to the text2sql data directory.")
     args = parser.parse_args()

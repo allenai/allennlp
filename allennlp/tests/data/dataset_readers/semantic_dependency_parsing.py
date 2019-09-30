@@ -1,4 +1,6 @@
-from allennlp.data.dataset_readers.semantic_dependency_parsing import SemanticDependenciesDatasetReader
+from allennlp.data.dataset_readers.semantic_dependency_parsing import (
+    SemanticDependenciesDatasetReader,
+)
 from allennlp.common.util import ensure_list
 from allennlp.common.testing import AllenNlpTestCase
 

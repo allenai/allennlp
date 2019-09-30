@@ -92,7 +92,9 @@ class Event2MindDatasetReader(DatasetReader):
             for (line_num, line_parts) in enumerate(reader):
                 if len(line_parts) != 7:
                     line = ",".join([str(s) for s in line_parts])
-                    raise ConfigurationError("Invalid line format: %s (line number %d)" % (line, line_num + 1))
+                    raise ConfigurationError(
+                        "Invalid line format: %s (line number %d)" % (line, line_num + 1)
+                    )
                 source_sequence = line_parts[1]
                 xintents = json.loads(line_parts[2])
                 xreacts = json.loads(line_parts[3])
@@ -103,7 +105,9 @@ class Event2MindDatasetReader(DatasetReader):
                     for xintent in xintents:
                         for xreact in xreacts:
                             for oreact in oreacts:
-                                yield self.text_to_instance(source_sequence, xintent, xreact, oreact)
+                                yield self.text_to_instance(
+                                    source_sequence, xintent, xreact, oreact
+                                )
                 # Generate instances where each token of input appears once.
                 else:
                     for xintent in xintents:

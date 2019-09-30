@@ -171,7 +171,9 @@ def create_extras(cls: Type[T], extras: Dict[str, Any]) -> Dict[str, Any]:
     return subextras
 
 
-def construct_arg(cls: Type[T], param_name: str, annotation: Type, default: Any, params: Params, **extras) -> Any:
+def construct_arg(
+    cls: Type[T], param_name: str, annotation: Type, default: Any, params: Params, **extras
+) -> Any:
     """
     Does the work of actually constructing an individual argument for :func:`create_kwargs`.
 
@@ -202,7 +204,11 @@ def construct_arg(cls: Type[T], param_name: str, annotation: Type, default: Any,
     if name in extras:
         return extras[name]
     # Next case is when argument should be loaded from pretrained archive.
-    elif name in params and isinstance(params.get(name), Params) and "_pretrained" in params.get(name):
+    elif (
+        name in params
+        and isinstance(params.get(name), Params)
+        and "_pretrained" in params.get(name)
+    ):
         load_module_params = params.pop(name).pop("_pretrained")
         archive_file = load_module_params.pop("archive_file")
         module_path = load_module_params.pop("module_path")
@@ -360,7 +366,9 @@ class FromParams:
             as_registrable = cast(Type[Registrable], cls)
             default_to_first_choice = as_registrable.default_implementation is not None
             choice = params.pop_choice(
-                "type", choices=as_registrable.list_available(), default_to_first_choice=default_to_first_choice
+                "type",
+                choices=as_registrable.list_available(),
+                default_to_first_choice=default_to_first_choice,
             )
             subclass = registered_subclasses[choice]
 

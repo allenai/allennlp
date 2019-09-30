@@ -76,7 +76,9 @@ class ELMoCharacterMapper:
         elif word == ELMoCharacterMapper.eos_token:
             char_ids = ELMoCharacterMapper.end_of_sentence_characters
         else:
-            word_encoded = word.encode("utf-8", "ignore")[: (ELMoCharacterMapper.max_word_length - 2)]
+            word_encoded = word.encode("utf-8", "ignore")[
+                : (ELMoCharacterMapper.max_word_length - 2)
+            ]
             char_ids = [ELMoCharacterMapper.padding_character] * ELMoCharacterMapper.max_word_length
             char_ids[0] = ELMoCharacterMapper.beginning_of_word_character
             for k, chr_id in enumerate(word_encoded, start=1):
@@ -133,7 +135,9 @@ class ELMoTokenCharactersIndexer(TokenIndexer[List[int]]):
         texts = [token.text for token in tokens]
 
         if any(text is None for text in texts):
-            raise ConfigurationError("ELMoTokenCharactersIndexer needs a tokenizer " "that retains text")
+            raise ConfigurationError(
+                "ELMoTokenCharactersIndexer needs a tokenizer " "that retains text"
+            )
         return {index_name: [self._mapper.convert_word_to_char_ids(text) for text in texts]}
 
     @overrides
@@ -155,7 +159,9 @@ class ELMoTokenCharactersIndexer(TokenIndexer[List[int]]):
 
         return {
             key: torch.LongTensor(
-                pad_sequence_to_length(val, desired_num_tokens[key], default_value=self._default_value_for_padding)
+                pad_sequence_to_length(
+                    val, desired_num_tokens[key], default_value=self._default_value_for_padding
+                )
             )
             for key, val in tokens.items()
         }

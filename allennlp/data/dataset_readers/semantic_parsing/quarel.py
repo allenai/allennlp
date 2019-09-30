@@ -86,7 +86,9 @@ class QuarelDatasetReader(DatasetReader):
     ) -> None:
         super().__init__(lazy=lazy)
         self._tokenizer = tokenizer or WordTokenizer()
-        self._question_token_indexers = question_token_indexers or {"tokens": SingleIdTokenIndexer()}
+        self._question_token_indexers = question_token_indexers or {
+            "tokens": SingleIdTokenIndexer()
+        }
         self._entity_token_indexers = self._question_token_indexers
         self._sample = sample
         self._replace_world_entities = replace_world_entities
@@ -131,7 +133,10 @@ class QuarelDatasetReader(DatasetReader):
             qr_coeff_sets = self._world.qr_coeff_sets
             for qset in qr_coeff_sets:
                 for attribute in qset:
-                    if self._skip_attributes_regex is not None and self._skip_attributes_regex.search(attribute):
+                    if (
+                        self._skip_attributes_regex is not None
+                        and self._skip_attributes_regex.search(attribute)
+                    ):
                         continue
                     # Get text associated with each entity, both from entity identifier and
                     # associated lexical cues, if any
@@ -234,8 +239,9 @@ class QuarelDatasetReader(DatasetReader):
                     question_id = question_data["id"]
                     logical_forms = question_data["logical_forms"]
                     # Skip examples with certain attributes
-                    if self._skip_attributes_regex is not None and self._skip_attributes_regex.search(
-                        logical_forms[0]
+                    if (
+                        self._skip_attributes_regex is not None
+                        and self._skip_attributes_regex.search(logical_forms[0])
                     ):
                         continue
                     # Somewhat hacky filtering to "friction" subset of questions based on id
@@ -292,7 +298,9 @@ class QuarelDatasetReader(DatasetReader):
             dynamic_entities = dynamic_entities_override or self._dynamic_entities
             neighbors: Dict[str, List[str]] = {key: [] for key in dynamic_entities.keys()}
             knowledge_graph = KnowledgeGraph(
-                entities=set(dynamic_entities.keys()), neighbors=neighbors, entity_text=dynamic_entities
+                entities=set(dynamic_entities.keys()),
+                neighbors=neighbors,
+                entity_text=dynamic_entities,
             )
             world = QuarelWorld(knowledge_graph, self._lf_syntax, qr_coeff_sets=qr_spec_override)
         else:
@@ -300,7 +308,10 @@ class QuarelDatasetReader(DatasetReader):
             world = self._world
 
         table_field = KnowledgeGraphField(
-            knowledge_graph, tokenized_question, self._entity_token_indexers, tokenizer=self._tokenizer
+            knowledge_graph,
+            tokenized_question,
+            self._entity_token_indexers,
+            tokenizer=self._tokenizer,
         )
 
         if self._tagger_only:
@@ -328,7 +339,12 @@ class QuarelDatasetReader(DatasetReader):
             production_rule_fields.append(field)
         action_field = ListField(production_rule_fields)
 
-        fields = {"question": question_field, "table": table_field, "world": world_field, "actions": action_field}
+        fields = {
+            "question": question_field,
+            "table": table_field,
+            "world": world_field,
+            "actions": action_field,
+        }
 
         if self._denotation_only:
             denotation_field = LabelField(additional_metadata["answer_index"], skip_indexing=True)
@@ -349,7 +365,9 @@ class QuarelDatasetReader(DatasetReader):
             fields["entity_bits"] = entity_bits_field
 
         if logical_forms:
-            action_map = {action.rule: i for i, action in enumerate(action_field.field_list)}  # type: ignore
+            action_map = {
+                action.rule: i for i, action in enumerate(action_field.field_list)
+            }  # type: ignore
             action_sequence_fields: List[Field] = []
             for logical_form in logical_forms:
                 expression = world.parse_logical_form(logical_form)
@@ -378,7 +396,9 @@ class QuarelDatasetReader(DatasetReader):
             if "world" in self._collapse_tags:
                 all_tags = ["world" if "world" in x else x for x in all_tags]
             if "comparison" in self._collapse_tags:
-                all_tags = ["comparison" if "-higher" in x or "-lower" in x else x for x in all_tags]
+                all_tags = [
+                    "comparison" if "-higher" in x or "-lower" in x else x for x in all_tags
+                ]
             if "value" in self._collapse_tags:
                 all_tags = ["value" if "-high" in x or "-low" in x else x for x in all_tags]
         if self._entity_bits_mode == "label":
@@ -495,7 +515,9 @@ class QuarelDatasetReader(DatasetReader):
                 entity_pairs += [(key, v) for v in value]
         max_words = max([len(re.findall(r"\w+", string)) for _, string in entity_pairs])
         word_pos = [[match.start(0), match.end(0)] for match in re.finditer(r"\w+", question)]
-        entities_stemmed = {self._stem_phrase(value): entity_name_map.get(key, key) for key, value in entity_pairs}
+        entities_stemmed = {
+            self._stem_phrase(value): entity_name_map.get(key, key) for key, value in entity_pairs
+        }
 
         def substitute(string: str) -> str:
             replacement = entities_stemmed.get(self._stem_phrase(string))

@@ -16,7 +16,11 @@ class TestLstmCellWithProjection(AllenNlpTestCase):
         initial_memory_state = torch.ones([1, 4, 7])
 
         lstm = LstmCellWithProjection(
-            input_size=3, hidden_size=5, cell_size=7, memory_cell_clip_value=2, state_projection_clip_value=1
+            input_size=3,
+            hidden_size=5,
+            cell_size=7,
+            memory_cell_clip_value=2,
+            state_projection_clip_value=1,
         )
         output_sequence, lstm_state = lstm(
             input_tensor, [5, 4, 2, 1], (initial_hidden_state, initial_memory_state)

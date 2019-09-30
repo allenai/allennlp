@@ -8,7 +8,9 @@ import logging
 import math
 from multiprocessing import Process
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir)))))
+sys.path.insert(
+    0, os.path.dirname(os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
+)
 
 from allennlp.common.util import JsonDict
 from allennlp.data.tokenizers import WordTokenizer
@@ -81,7 +83,9 @@ def search(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "table_directory", type=str, help="Location of the 'tagged' directory in the" "WikiTableQuestions dataset"
+        "table_directory",
+        type=str,
+        help="Location of the 'tagged' directory in the" "WikiTableQuestions dataset",
     )
     parser.add_argument("data_file", type=str, help="Path to the *.examples file")
     parser.add_argument(
@@ -105,7 +109,10 @@ if __name__ == "__main__":
         help="Maximum number of logical forms returned",
     )
     parser.add_argument(
-        "--use-agenda", dest="use_agenda", action="store_true", help="Use agenda while searching for logical forms"
+        "--use-agenda",
+        dest="use_agenda",
+        action="store_true",
+        help="Use agenda while searching for logical forms",
     )
     parser.add_argument(
         "--conservative",
@@ -128,7 +135,9 @@ if __name__ == "__main__":
         help="Number of splits to make of the data, to run as many processes (default 0)",
     )
     args = parser.parse_args()
-    input_data = [wikitables_util.parse_example_line(example_line) for example_line in open(args.data_file)]
+    input_data = [
+        wikitables_util.parse_example_line(example_line) for example_line in open(args.data_file)
+    ]
     if args.num_splits == 0 or len(input_data) <= args.num_splits or not args.output_separate_files:
         search(
             args.table_directory,

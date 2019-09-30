@@ -52,7 +52,11 @@ class TestBagOfEmbeddingsEncoder(AllenNlpTestCase):
         assert_almost_equal(
             encoder_output.data.numpy(),
             numpy.asarray(
-                [[(0.7 + 0.1 + 0.3) / 3, (0.8 + 1.5 + 0.6) / 3], [(0.5 + 1.4) / 2, (0.3 + 1.1) / 2], [0.0, 0.0]]
+                [
+                    [(0.7 + 0.1 + 0.3) / 3, (0.8 + 1.5 + 0.6) / 3],
+                    [(0.5 + 1.4) / 2, (0.3 + 1.1) / 2],
+                    [0.0, 0.0],
+                ]
             ),
         )
 
@@ -65,6 +69,9 @@ class TestBagOfEmbeddingsEncoder(AllenNlpTestCase):
         assert_almost_equal(
             encoder_output.data.numpy(),
             numpy.asarray(
-                [[(0.7 + 0.1 + 0.3) / 3, (0.8 + 1.5 + 0.6) / 3], [(0.5 + 1.4 + 0.3) / 3, (0.3 + 1.1 + 0.9) / 3]]
+                [
+                    [(0.7 + 0.1 + 0.3) / 3, (0.8 + 1.5 + 0.6) / 3],
+                    [(0.5 + 1.4 + 0.3) / 3, (0.3 + 1.1 + 0.9) / 3],
+                ]
             ),
         )

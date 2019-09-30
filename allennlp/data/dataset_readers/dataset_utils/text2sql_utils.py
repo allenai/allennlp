@@ -66,7 +66,9 @@ def column_has_numeric_type(column: TableColumn) -> bool:
     return False
 
 
-def replace_variables(sentence: List[str], sentence_variables: Dict[str, str]) -> Tuple[List[str], List[str]]:
+def replace_variables(
+    sentence: List[str], sentence_variables: Dict[str, str]
+) -> Tuple[List[str], List[str]]:
     """
     Replaces abstract variables in text with their concrete counterparts.
     """
@@ -107,7 +109,9 @@ def clean_and_split_sql(sql: str) -> List[str]:
     return sql_tokens
 
 
-def resolve_primary_keys_in_schema(sql_tokens: List[str], schema: Dict[str, List[TableColumn]]) -> List[str]:
+def resolve_primary_keys_in_schema(
+    sql_tokens: List[str], schema: Dict[str, List[TableColumn]]
+) -> List[str]:
     """
     Some examples in the text2sql datasets use ID as a column reference to the
     column of a table which has a primary key. This causes problems if you are trying
@@ -253,7 +257,10 @@ def process_sql_data(
 
                 sql_variables = {}
                 for variable in example["variables"]:
-                    sql_variables[variable["name"]] = {"text": variable["example"], "type": variable["type"]}
+                    sql_variables[variable["name"]] = {
+                        "text": variable["example"],
+                        "type": variable["type"],
+                    }
 
                 sql_data = SqlData(
                     text=query_tokens,

@@ -1,7 +1,10 @@
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor
-from allennlp.predictors.open_information_extraction import consolidate_predictions, get_predicate_text
+from allennlp.predictors.open_information_extraction import (
+    consolidate_predictions,
+    get_predicate_text,
+)
 from allennlp.predictors.open_information_extraction import sanitize_label
 from allennlp.data.tokenizers import WordTokenizer
 from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
@@ -12,7 +15,9 @@ class TestOpenIePredictor(AllenNlpTestCase):
         """
         Tests whether the model outputs conform to the expected format.
         """
-        inputs = {"sentence": "Angela Merkel met and spoke to her EU counterparts during the climate summit."}
+        inputs = {
+            "sentence": "Angela Merkel met and spoke to her EU counterparts during the climate summit."
+        }
 
         archive = load_archive(self.FIXTURES_ROOT / "srl" / "serialization" / "model.tar.gz")
         predictor = Predictor.from_archive(archive, "open-information-extraction")

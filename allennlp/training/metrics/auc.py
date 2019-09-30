@@ -21,7 +21,12 @@ class Auc(Metric):
         self._all_predictions = torch.FloatTensor()
         self._all_gold_labels = torch.LongTensor()
 
-    def __call__(self, predictions: torch.Tensor, gold_labels: torch.Tensor, mask: Optional[torch.Tensor] = None):
+    def __call__(
+        self,
+        predictions: torch.Tensor,
+        gold_labels: torch.Tensor,
+        mask: Optional[torch.Tensor] = None,
+    ):
         """
         Parameters
         ----------
@@ -40,11 +45,13 @@ class Auc(Metric):
         # Sanity checks.
         if gold_labels.dim() != 1:
             raise ConfigurationError(
-                "gold_labels must be one-dimensional, " "but found tensor of shape: {}".format(gold_labels.size())
+                "gold_labels must be one-dimensional, "
+                "but found tensor of shape: {}".format(gold_labels.size())
             )
         if predictions.dim() != 1:
             raise ConfigurationError(
-                "predictions must be one-dimensional, " "but found tensor of shape: {}".format(predictions.size())
+                "predictions must be one-dimensional, "
+                "but found tensor of shape: {}".format(predictions.size())
             )
 
         unique_gold_labels = torch.unique(gold_labels)
@@ -77,7 +84,9 @@ class Auc(Metric):
         if self._all_gold_labels.shape[0] == 0:
             return 0.5
         false_positive_rates, true_positive_rates, _ = metrics.roc_curve(
-            self._all_gold_labels.numpy(), self._all_predictions.numpy(), pos_label=self._positive_label
+            self._all_gold_labels.numpy(),
+            self._all_predictions.numpy(),
+            pos_label=self._positive_label,
         )
         auc = metrics.auc(false_positive_rates, true_positive_rates)
         if reset:

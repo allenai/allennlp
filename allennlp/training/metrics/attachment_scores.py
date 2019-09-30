@@ -53,7 +53,9 @@ class AttachmentScores(Metric):
         mask: ``torch.Tensor``, optional (default = None).
             A tensor of the same shape as ``predicted_indices``.
         """
-        unwrapped = self.unwrap_to_tensors(predicted_indices, predicted_labels, gold_indices, gold_labels, mask)
+        unwrapped = self.unwrap_to_tensors(
+            predicted_indices, predicted_labels, gold_indices, gold_labels, mask
+        )
         predicted_indices, predicted_labels, gold_indices, gold_labels, mask = unwrapped
 
         mask = mask.long()
@@ -95,7 +97,9 @@ class AttachmentScores(Metric):
             unlabeled_attachment_score = float(self._unlabeled_correct) / float(self._total_words)
             labeled_attachment_score = float(self._labeled_correct) / float(self._total_words)
         if self._total_sentences > 0:
-            unlabeled_exact_match = float(self._exact_unlabeled_correct) / float(self._total_sentences)
+            unlabeled_exact_match = float(self._exact_unlabeled_correct) / float(
+                self._total_sentences
+            )
             labeled_exact_match = float(self._exact_labeled_correct) / float(self._total_sentences)
         if reset:
             self.reset()

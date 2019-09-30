@@ -78,7 +78,10 @@ class BidafEnsemble(Ensemble):
             question.
         """
 
-        subresults = [submodel(question, passage, span_start, span_end, metadata) for submodel in self.submodels]
+        subresults = [
+            submodel(question, passage, span_start, span_end, metadata)
+            for submodel in self.submodels
+        ]
 
         batch_size = len(subresults[0]["best_span"])
 
@@ -135,6 +138,8 @@ def ensemble(subresults: List[Dict[str, torch.Tensor]]) -> torch.Tensor:
 
     # Choose the highest average confidence span.
 
-    span_start_probs = sum(subresult["span_start_probs"] for subresult in subresults) / len(subresults)
+    span_start_probs = sum(subresult["span_start_probs"] for subresult in subresults) / len(
+        subresults
+    )
     span_end_probs = sum(subresult["span_end_probs"] for subresult in subresults) / len(subresults)
     return get_best_span(span_start_probs.log(), span_end_probs.log())  # type: ignore

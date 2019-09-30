@@ -66,11 +66,14 @@ class OpenaiTransformerEmbedder(TokenEmbedder):
         vocab_size = self._transformer.vocab_size - self._transformer.n_ctx
 
         # vocab_size, vocab_size + 1, ...
-        positional_encodings = get_range_vector(num_timesteps, device=get_device_of(inputs)) + vocab_size
+        positional_encodings = (
+            get_range_vector(num_timesteps, device=get_device_of(inputs)) + vocab_size
+        )
 
         # Combine the inputs with positional encodings
         batch_tensor = torch.stack(
-            [inputs, positional_encodings.expand(batch_size, num_timesteps)], dim=-1  # (batch_size, num_timesteps)
+            [inputs, positional_encodings.expand(batch_size, num_timesteps)],
+            dim=-1,  # (batch_size, num_timesteps)
         )
 
         byte_pairs_mask = inputs != 0

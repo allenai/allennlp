@@ -102,9 +102,13 @@ class Event2Mind(Model):
 
         self._states = ModuleDict()
         for name in target_names:
-            self._states[name] = StateDecoder(num_classes, target_embedding_dim, self._decoder_output_dim)
+            self._states[name] = StateDecoder(
+                num_classes, target_embedding_dim, self._decoder_output_dim
+            )
 
-        self._beam_search = BeamSearch(self._end_index, beam_size=beam_size, max_steps=max_decoding_steps)
+        self._beam_search = BeamSearch(
+            self._end_index, beam_size=beam_size, max_steps=max_decoding_steps
+        )
 
     def _update_recall(
         self,
@@ -274,7 +278,9 @@ class Event2Mind(Model):
         decoder_hidden = final_encoder_output
         batch_size = final_encoder_output.size()[0]
         predictions = [
-            final_encoder_output.new_full((batch_size,), fill_value=self._start_index, dtype=torch.long)
+            final_encoder_output.new_full(
+                (batch_size,), fill_value=self._start_index, dtype=torch.long
+            )
         ]
         for _ in range(num_decoding_steps):
             input_choices = predictions[-1]
@@ -331,7 +337,8 @@ class Event2Mind(Model):
             if self._end_index in indices:
                 indices = indices[: indices.index(self._end_index)]
             predicted_tokens = [
-                self.vocab.get_token_from_index(x, namespace=self._target_namespace) for x in indices
+                self.vocab.get_token_from_index(x, namespace=self._target_namespace)
+                for x in indices
             ]
             all_predicted_tokens.append(predicted_tokens)
         return all_predicted_tokens
@@ -348,7 +355,9 @@ class Event2Mind(Model):
         """
         for name in self._states:
             top_k_predicted_indices = output_dict[f"{name}_top_k_predictions"][0]
-            output_dict[f"{name}_top_k_predicted_tokens"] = [self.decode_all(top_k_predicted_indices)]
+            output_dict[f"{name}_top_k_predicted_tokens"] = [
+                self.decode_all(top_k_predicted_indices)
+            ]
 
         return output_dict
 

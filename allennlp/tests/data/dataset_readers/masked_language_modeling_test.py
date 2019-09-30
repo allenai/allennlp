@@ -28,7 +28,9 @@ class TestMaskedLanguageModelingDatasetReader(AllenNlpTestCase):
         tokenizer = PretrainedTransformerTokenizer("bert-base-cased", do_lowercase=False)
         token_indexer = PretrainedTransformerIndexer("bert-base-cased", do_lowercase=False)
         reader = MaskedLanguageModelingReader(tokenizer, {"bert": token_indexer})
-        instance = reader.text_to_instance(sentence="This is AllenNLP [MASK] token .", targets=["This"])
+        instance = reader.text_to_instance(
+            sentence="This is AllenNLP [MASK] token .", targets=["This"]
+        )
         assert [t.text for t in instance["tokens"]] == [
             "[CLS]",
             "This",

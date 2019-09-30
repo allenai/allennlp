@@ -149,7 +149,9 @@ class Model(torch.nn.Module, Registrable):
             model_input = util.move_to_device(dataset.as_tensor_dict(), cuda_device)
             outputs = self.decode(self(**model_input))
 
-            instance_separated_output: List[Dict[str, numpy.ndarray]] = [{} for _ in dataset.instances]
+            instance_separated_output: List[Dict[str, numpy.ndarray]] = [
+                {} for _ in dataset.instances
+            ]
             for name, output in list(outputs.items()):
                 if isinstance(output, torch.Tensor):
                     # NOTE(markn): This is a hack because 0-dim pytorch tensors are not iterable.
@@ -314,7 +316,9 @@ class Model(torch.nn.Module, Registrable):
         """
 
         # Peak at the class of the model.
-        model_type = config["model"] if isinstance(config["model"], str) else config["model"]["type"]
+        model_type = (
+            config["model"] if isinstance(config["model"], str) else config["model"]["type"]
+        )
 
         # Load using an overridable _load method.
         # This allows subclasses of Model to override _load.
@@ -344,7 +348,9 @@ class Model(torch.nn.Module, Registrable):
         for model_path, module in self.named_modules():
             if hasattr(module, "extend_vocab"):
                 pretrained_file = embedding_sources_mapping.get(model_path, None)
-                module.extend_vocab(self.vocab, extension_pretrained_file=pretrained_file, model_path=model_path)
+                module.extend_vocab(
+                    self.vocab, extension_pretrained_file=pretrained_file, model_path=model_path
+                )
 
 
 def remove_pretrained_embedding_params(params: Params):

@@ -37,7 +37,9 @@ class ActionSpaceWalkerTest(AllenNlpTestCase):
         self.walker = ActionSpaceWalker(self.world, max_path_length=10)
 
     def test_get_logical_forms_with_agenda(self):
-        black_logical_forms = self.walker.get_logical_forms_with_agenda(["<Set[Object]:Set[Object]> -> black"])
+        black_logical_forms = self.walker.get_logical_forms_with_agenda(
+            ["<Set[Object]:Set[Object]> -> black"]
+        )
         # These are all the possible logical forms with black
         assert len(black_logical_forms) == 25
         shortest_logical_form = self.walker.get_logical_forms_with_agenda(
@@ -63,7 +65,9 @@ class ActionSpaceWalkerTest(AllenNlpTestCase):
         }
 
     def test_get_logical_forms_with_agenda_and_partial_match(self):
-        black_logical_forms = self.walker.get_logical_forms_with_agenda(["<Set[Object]:Set[Object]> -> black"])
+        black_logical_forms = self.walker.get_logical_forms_with_agenda(
+            ["<Set[Object]:Set[Object]> -> black"]
+        )
         # These are all the possible logical forms with black
         assert len(black_logical_forms) == 25
         shortest_logical_form = self.walker.get_logical_forms_with_agenda(
@@ -76,7 +80,9 @@ class ActionSpaceWalkerTest(AllenNlpTestCase):
             "<Set[Object]:Set[Object]> -> triangle",
             "<Set[Object]:Set[Object]> -> touch_wall",
         ]
-        black_triangle_touch_forms = self.walker.get_logical_forms_with_agenda(agenda, allow_partial_match=True)
+        black_triangle_touch_forms = self.walker.get_logical_forms_with_agenda(
+            agenda, allow_partial_match=True
+        )
         # The first six logical forms will contain permutations of all three functions.
         assert set(black_triangle_touch_forms[:6]) == {
             "(object_exists (black (triangle (touch_wall all_objects))))",
@@ -107,7 +113,9 @@ class ActionSpaceWalkerTest(AllenNlpTestCase):
 
     def test_get_logical_forms_with_empty_agenda_returns_all_logical_forms(self):
         with self.assertLogs("allennlp.semparse.action_space_walker") as log:
-            empty_agenda_logical_forms = self.walker.get_logical_forms_with_agenda([], allow_partial_match=True)
+            empty_agenda_logical_forms = self.walker.get_logical_forms_with_agenda(
+                [], allow_partial_match=True
+            )
             first_four_logical_forms = empty_agenda_logical_forms[:4]
             assert set(first_four_logical_forms) == {
                 "(object_exists all_objects)",
@@ -117,7 +125,10 @@ class ActionSpaceWalkerTest(AllenNlpTestCase):
             }
         self.assertEqual(
             log.output,
-            ["WARNING:allennlp.semparse.action_space_walker:" "Agenda is empty! Returning all paths instead."],
+            [
+                "WARNING:allennlp.semparse.action_space_walker:"
+                "Agenda is empty! Returning all paths instead."
+            ],
         )
 
     def test_get_logical_forms_with_unmatched_agenda_returns_all_logical_forms(self):

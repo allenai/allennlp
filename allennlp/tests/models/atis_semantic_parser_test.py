@@ -19,7 +19,8 @@ class AtisSemanticParserTest(ModelTestCase):
     def test_action_sequence_to_sql(self):
         action_sequence = [
             'statement -> [query, ";"]',
-            'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, ' 'where_clause, ")"]',
+            'query -> ["(", "SELECT", distinct, select_results, "FROM", table_refs, '
+            'where_clause, ")"]',
             'distinct -> ["DISTINCT"]',
             "select_results -> [col_refs]",
             'col_refs -> [col_ref, ",", col_refs]',

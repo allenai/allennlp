@@ -19,7 +19,11 @@ class Sanitizable:
 
 class TestCommonUtils(AllenNlpTestCase):
     def test_group_by_count(self):
-        assert util.group_by_count([1, 2, 3, 4, 5, 6, 7], 3, 20) == [[1, 2, 3], [4, 5, 6], [7, 20, 20]]
+        assert util.group_by_count([1, 2, 3, 4, 5, 6, 7], 3, 20) == [
+            [1, 2, 3],
+            [4, 5, 6],
+            [7, 20, 20],
+        ]
 
     def test_lazy_groups_of(self):
         xs = [1, 2, 3, 4, 5, 6, 7]
@@ -78,6 +82,8 @@ class TestCommonUtils(AllenNlpTestCase):
         named_parameters = dict(model.named_parameters())
         named_parameters["linear.weight"].requires_grad_(False)
         named_parameters["linear.bias"].requires_grad_(False)
-        frozen_parameter_names, tunable_parameter_names = util.get_frozen_and_tunable_parameter_names(model)
+        frozen_parameter_names, tunable_parameter_names = util.get_frozen_and_tunable_parameter_names(
+            model
+        )
         assert set(frozen_parameter_names) == {"linear.weight", "linear.bias"}
         assert set(tunable_parameter_names) == {"conv.weight", "conv.bias"}

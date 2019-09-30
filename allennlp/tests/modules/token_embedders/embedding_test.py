@@ -42,7 +42,9 @@ class TestEmbedding(AllenNlpTestCase):
         vocab.add_token_to_namespace("a")
         params = Params(
             {
-                "pretrained_file": str(self.FIXTURES_ROOT / "embeddings/glove.6B.300d.sample.txt.gz"),
+                "pretrained_file": str(
+                    self.FIXTURES_ROOT / "embeddings/glove.6B.300d.sample.txt.gz"
+                ),
                 "embedding_dim": 300,
                 "projection_dim": 20,
             }
@@ -124,7 +126,10 @@ class TestEmbedding(AllenNlpTestCase):
             vocab.add_token_to_namespace(token)
 
         params = Params(
-            {"pretrained_file": str(self.FIXTURES_ROOT / "embeddings/multi-file-archive.zip"), "embedding_dim": 5}
+            {
+                "pretrained_file": str(self.FIXTURES_ROOT / "embeddings/multi-file-archive.zip"),
+                "embedding_dim": 5,
+            }
         )
         with pytest.raises(
             ValueError,
@@ -178,7 +183,9 @@ class TestEmbedding(AllenNlpTestCase):
             with open(test_filename, "w") as f:
                 f.write(first_line)
             with EmbeddingsTextFile(test_filename) as f:
-                assert f.num_tokens == expected_num_tokens, f"Wrong num tokens for line: {first_line}"
+                assert (
+                    f.num_tokens == expected_num_tokens
+                ), f"Wrong num tokens for line: {first_line}"
 
         valid_header_lines = ["1000000 300", "300 1000000", "1000000"]
         for line in valid_header_lines:
@@ -278,19 +285,27 @@ class TestEmbedding(AllenNlpTestCase):
             embeddings_file.write("word1 1.0 2.3 -1.0\n".encode("utf-8"))
 
         embedding_params = Params(
-            {"vocab_namespace": "tokens", "embedding_dim": 3, "pretrained_file": embeddings_filename}
+            {
+                "vocab_namespace": "tokens",
+                "embedding_dim": 3,
+                "pretrained_file": embeddings_filename,
+            }
         )
         embedder = Embedding.from_params(vocab, embedding_params)
 
         # Change weight to simulate embedding training
         embedder.weight.data += 1
-        assert torch.all(embedder.weight[2:, :] == torch.Tensor([[2.0, 3.3, 0.0], [1.1, 1.4, -3.0]]))
+        assert torch.all(
+            embedder.weight[2:, :] == torch.Tensor([[2.0, 3.3, 0.0], [1.1, 1.4, -3.0]])
+        )
         original_weight = embedder.weight
 
         assert tuple(original_weight.size()) == (4, 3)  # 4 because of padding and OOV
 
         vocab.add_token_to_namespace("word3")
-        embedder.extend_vocab(vocab, extension_pretrained_file=embeddings_filename)  # default namespace
+        embedder.extend_vocab(
+            vocab, extension_pretrained_file=embeddings_filename
+        )  # default namespace
         extended_weight = embedder.weight
 
         # Make sure extenstion happened for extra token in extended vocab

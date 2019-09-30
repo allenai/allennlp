@@ -24,7 +24,9 @@ class AllenNlpTestCase(TestCase):
     FIXTURES_ROOT = TESTS_ROOT / "fixtures"
 
     def setUp(self):
-        logging.basicConfig(format="%(asctime)s - %(levelname)s - %(name)s - %(message)s", level=logging.DEBUG)
+        logging.basicConfig(
+            format="%(asctime)s - %(levelname)s - %(name)s - %(message)s", level=logging.DEBUG
+        )
         # Disabling some of the more verbose logging statements that typically aren't very helpful
         # in tests.
         logging.getLogger("allennlp.common.params").disabled = True

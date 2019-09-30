@@ -20,7 +20,9 @@ class AttachmentScoresTest(AllenNlpTestCase):
         self.mask = torch.Tensor([[1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 0, 0]])
 
     def test_perfect_scores(self):
-        self.scorer(self.predictions, self.label_predictions, self.gold_indices, self.gold_labels, self.mask)
+        self.scorer(
+            self.predictions, self.label_predictions, self.gold_indices, self.gold_labels, self.mask
+        )
 
         for value in self.scorer.get_metric().values():
             assert value == 1.0
@@ -30,7 +32,9 @@ class AttachmentScoresTest(AllenNlpTestCase):
         # Change some stuff so our 4 of our label predictions are wrong.
         label_predictions[0, 3:] = 3
         label_predictions[1, 0] = 7
-        self.scorer(self.predictions, label_predictions, self.gold_indices, self.gold_labels, self.mask)
+        self.scorer(
+            self.predictions, label_predictions, self.gold_indices, self.gold_labels, self.mask
+        )
 
         metrics = self.scorer.get_metric()
 
@@ -50,7 +54,9 @@ class AttachmentScoresTest(AllenNlpTestCase):
         predictions[1, 0] = 7
         # This one is in the padded part, so it shouldn't affect anything.
         predictions[1, 5] = 7
-        self.scorer(predictions, self.label_predictions, self.gold_indices, self.gold_labels, self.mask)
+        self.scorer(
+            predictions, self.label_predictions, self.gold_indices, self.gold_labels, self.mask
+        )
 
         metrics = self.scorer.get_metric()
 

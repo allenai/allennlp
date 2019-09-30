@@ -251,12 +251,21 @@ class SpanBasedF1Test(AllenNlpTestCase):
         # Check that the number of true positive ARG1 labels is the same as the perl script's output:
         gold_file_path = os.path.join(self.TEST_DIR, "gold_conll_eval.txt")
         prediction_file_path = os.path.join(self.TEST_DIR, "prediction_conll_eval.txt")
-        with open(gold_file_path, "a+") as gold_file, open(prediction_file_path, "a+") as prediction_file:
+        with open(gold_file_path, "a+") as gold_file, open(
+            prediction_file_path, "a+"
+        ) as prediction_file:
             # Use the same bio tags as prediction vs gold to make it obvious by looking
             # at the perl script output if something is wrong.
-            write_bio_formatted_tags_to_file(gold_file, prediction_file, 4, sentence, bio_tags, bio_tags)
+            write_bio_formatted_tags_to_file(
+                gold_file, prediction_file, 4, sentence, bio_tags, bio_tags
+            )
         # Run the official perl script and collect stdout.
-        perl_script_command = ["perl", str(self.TOOLS_ROOT / "srl-eval.pl"), prediction_file_path, gold_file_path]
+        perl_script_command = [
+            "perl",
+            str(self.TOOLS_ROOT / "srl-eval.pl"),
+            prediction_file_path,
+            gold_file_path,
+        ]
         stdout = subprocess.check_output(perl_script_command, universal_newlines=True)
         stdout_lines = stdout.split("\n")
         # Parse the stdout of the perl script to find the ARG1 row (this happens to be line 8).
@@ -276,7 +285,10 @@ class SpanBasedF1Test(AllenNlpTestCase):
         prediction_tensor = torch.rand([1, 6, self.vocab.get_vocab_size("tags")])
 
         metric = SpanBasedF1Measure(
-            self.vocab, "tags", label_encoding=None, tags_to_spans_function=mock_tags_to_spans_function
+            self.vocab,
+            "tags",
+            label_encoding=None,
+            tags_to_spans_function=mock_tags_to_spans_function,
         )
 
         metric(prediction_tensor, gold_tensor)

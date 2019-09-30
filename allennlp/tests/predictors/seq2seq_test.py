@@ -8,7 +8,11 @@ class TestSeq2SeqPredictor(AllenNlpTestCase):
         inputs = {"source": "What kind of test succeeded on its first attempt?"}
 
         archive = load_archive(
-            self.FIXTURES_ROOT / "encoder_decoder" / "simple_seq2seq" / "serialization" / "model.tar.gz"
+            self.FIXTURES_ROOT
+            / "encoder_decoder"
+            / "simple_seq2seq"
+            / "serialization"
+            / "model.tar.gz"
         )
         predictor = Predictor.from_archive(archive, "seq2seq")
 
@@ -23,7 +27,11 @@ class TestSeq2SeqPredictor(AllenNlpTestCase):
         inputs = {"source": "What kind of test succeeded on its first attempt?"}
 
         archive = load_archive(
-            self.FIXTURES_ROOT / "encoder_decoder" / "composed_seq2seq" / "serialization" / "model.tar.gz"
+            self.FIXTURES_ROOT
+            / "encoder_decoder"
+            / "composed_seq2seq"
+            / "serialization"
+            / "model.tar.gz"
         )
         predictor = Predictor.from_archive(archive, "seq2seq")
 
@@ -36,7 +44,11 @@ class TestSeq2SeqPredictor(AllenNlpTestCase):
 
     def test_copynet_predictions(self):
         archive = load_archive(
-            self.FIXTURES_ROOT / "encoder_decoder" / "copynet_seq2seq" / "serialization" / "model.tar.gz"
+            self.FIXTURES_ROOT
+            / "encoder_decoder"
+            / "copynet_seq2seq"
+            / "serialization"
+            / "model.tar.gz"
         )
         predictor = Predictor.from_archive(archive, "seq2seq")
         model = predictor._model

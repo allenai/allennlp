@@ -83,7 +83,9 @@ class SlantedTriangularTest(AllenNlpTestCase):
         assert not is_hat_shaped([float(10 - k) for k in range(10)])
         assert is_hat_shaped([float(k) for k in range(10)] + [float(10 - k) for k in range(10)])
         assert not is_hat_shaped(
-            [float(k) for k in range(10)] + [float(10 - k) for k in range(10)] + [float(k) for k in range(10)]
+            [float(k) for k in range(10)]
+            + [float(10 - k) for k in range(10)]
+            + [float(k) for k in range(10)]
         )
 
     def test_from_params(self):
@@ -115,7 +117,9 @@ class SlantedTriangularTest(AllenNlpTestCase):
 
         with self.assertRaises(TypeError):
             # num_epochs and num_steps_per_epoch are required
-            LearningRateScheduler.from_params(optim, Params({"type": "slanted_triangular", "num_epochs": 5}))
+            LearningRateScheduler.from_params(
+                optim, Params({"type": "slanted_triangular", "num_epochs": 5})
+            )
             LearningRateScheduler.from_params(
                 optim, Params({"type": "slanted_triangular", "num_steps_epochs": 10})
             )
@@ -123,7 +127,11 @@ class SlantedTriangularTest(AllenNlpTestCase):
     def test_schedules(self):
         slanted_triangular_cases: List[Tuple[Dict[str, Any], List[Tuple[int, int, float]]]] = [
             (
-                {"num_epochs": 5, "num_steps_per_epoch": 10, "gradual_unfreezing": True},  # parameters
+                {
+                    "num_epochs": 5,
+                    "num_steps_per_epoch": 10,
+                    "gradual_unfreezing": True,
+                },  # parameters
                 [
                     (0, 1, 0.03125),  # iteration, layer, learning rate
                     (0, 0, 0.0),
@@ -185,7 +193,9 @@ class SlantedTriangularTest(AllenNlpTestCase):
             for it, layer, lr in lr_checks:
                 lr_check = round(lr, 5)
                 lr = round(lrs[it][layer], 5)
-                assert lr == lr_check, f"Learning rate {lr} at iteration {it} at layer {layer} != {lr_check}."
+                assert (
+                    lr == lr_check
+                ), f"Learning rate {lr} at iteration {it} at layer {layer} != {lr_check}."
 
     def test_schedules_num_steps_per_epoch(self):
         # ensure the learning rate schedule still maintains hat shape

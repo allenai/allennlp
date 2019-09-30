@@ -11,7 +11,13 @@ class TestSeq2VecEncoder(AllenNlpTestCase):
         # We're just making sure parameters get passed through correctly here, and that the basic
         # API works.
         params = Params(
-            {"type": "lstm", "bidirectional": True, "num_layers": 3, "input_size": 5, "hidden_size": 7}
+            {
+                "type": "lstm",
+                "bidirectional": True,
+                "num_layers": 3,
+                "input_size": 5,
+                "hidden_size": 7,
+            }
         )
         encoder = Seq2VecEncoder.from_params(params)
 

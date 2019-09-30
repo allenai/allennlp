@@ -22,7 +22,9 @@ from allennlp.common.checks import ConfigurationError
 class TestFineTune(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
-        self.model_archive = str(self.FIXTURES_ROOT / "decomposable_attention" / "serialization" / "model.tar.gz")
+        self.model_archive = str(
+            self.FIXTURES_ROOT / "decomposable_attention" / "serialization" / "model.tar.gz"
+        )
         self.config_file = str(self.FIXTURES_ROOT / "decomposable_attention" / "experiment.json")
         self.serialization_dir = str(self.TEST_DIR / "fine_tune")
 
@@ -56,7 +58,9 @@ class TestFineTune(AllenNlpTestCase):
         original_weight = trained_model._text_field_embedder.token_embedder_tokens.weight
 
         # If we do vocab expansion, we should not get error now.
-        fine_tuned_model = fine_tune_model(trained_model, params, self.serialization_dir, extend_vocab=True)
+        fine_tuned_model = fine_tune_model(
+            trained_model, params, self.serialization_dir, extend_vocab=True
+        )
         extended_weight = fine_tuned_model._text_field_embedder.token_embedder_tokens.weight
 
         assert tuple(original_weight.shape) == (24, 300)
@@ -79,8 +83,12 @@ class TestFineTune(AllenNlpTestCase):
             trained_model = load_archive(self.model_archive).model
             original_weight = trained_model._text_field_embedder.token_embedder_tokens.weight
             # Simulate the behavior of unavailable pretrained_file being stored as an attribute.
-            trained_model._text_field_embedder.token_embedder_tokens._pretrained_file = saved_pretrained_file
-            embedding_sources_mapping = {"_text_field_embedder.token_embedder_tokens": user_pretrained_file}
+            trained_model._text_field_embedder.token_embedder_tokens._pretrained_file = (
+                saved_pretrained_file
+            )
+            embedding_sources_mapping = {
+                "_text_field_embedder.token_embedder_tokens": user_pretrained_file
+            }
             shutil.rmtree(self.serialization_dir, ignore_errors=True)
             fine_tuned_model = fine_tune_model(
                 trained_model,
@@ -123,12 +131,22 @@ class TestFineTune(AllenNlpTestCase):
         params["train_data_path"] = str(self.FIXTURES_ROOT / "data" / "snli2.jsonl")
         trained_model = load_archive(self.model_archive).model
         shutil.rmtree(self.serialization_dir, ignore_errors=True)
-        fine_tune_model(trained_model, params.duplicate(), self.serialization_dir, extend_vocab=True)
+        fine_tune_model(
+            trained_model, params.duplicate(), self.serialization_dir, extend_vocab=True
+        )
         # self.serialization_dir = str(self.TEST_DIR / 'fine_tune')
         load_archive(str(self.TEST_DIR / "fine_tune" / "model.tar.gz"))
 
     def test_fine_tune_runs_from_parser_arguments(self):
-        raw_args = ["fine-tune", "-m", self.model_archive, "-c", self.config_file, "-s", self.serialization_dir]
+        raw_args = [
+            "fine-tune",
+            "-m",
+            self.model_archive,
+            "-c",
+            self.config_file,
+            "-s",
+            self.serialization_dir,
+        ]
 
         args = self.parser.parse_args(raw_args)
 
@@ -141,7 +159,9 @@ class TestFineTune(AllenNlpTestCase):
     def test_fine_tune_fails_without_required_args(self):
         # Configuration file is required.
         with self.assertRaises(SystemExit) as context:
-            self.parser.parse_args(["fine-tune", "-m", "path/to/archive", "-s", "serialization_dir"])
+            self.parser.parse_args(
+                ["fine-tune", "-m", "path/to/archive", "-s", "serialization_dir"]
+            )
             assert context.exception.code == 2  # argparse code for incorrect usage
 
         # Serialization dir is required.
@@ -157,7 +177,11 @@ class TestFineTune(AllenNlpTestCase):
     def test_fine_tune_nograd_regex(self):
         original_model = load_archive(self.model_archive).model
         name_parameters_original = dict(original_model.named_parameters())
-        regex_lists = [[], [".*attend_feedforward.*", ".*token_embedder.*"], [".*compare_feedforward.*"]]
+        regex_lists = [
+            [],
+            [".*attend_feedforward.*", ".*token_embedder.*"],
+            [".*compare_feedforward.*"],
+        ]
         for regex_list in regex_lists:
             params = Params.from_file(self.config_file)
             params["trainer"]["no_grad"] = regex_list

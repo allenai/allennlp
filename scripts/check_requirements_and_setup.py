@@ -85,7 +85,9 @@ def parse_setup() -> Tuple[PackagesType, PackagesType, Set[str], Set[str]]:
 
     # Parse packages only needed for testing.
     package_string = (
-        re.search(r"""tests_require=\[[\s\n]*['"](.*?)['"],?[\s\n]*\]""", contents, re.DOTALL).groups()[0].strip()
+        re.search(r"""tests_require=\[[\s\n]*['"](.*?)['"],?[\s\n]*\]""", contents, re.DOTALL)
+        .groups()[0]
+        .strip()
     )
     for package in re.split(r"""['"],[\s\n]+['"]""", package_string):
         module, version = parse_package(package)
@@ -112,12 +114,17 @@ def main() -> int:
     if essential_duplicates:
         exit_code = 1
         for module in essential_duplicates:
-            print(f"  ✗ '{module}' appears more than once in 'install_requires' " f"section of setup.py")
+            print(
+                f"  ✗ '{module}' appears more than once in 'install_requires' "
+                f"section of setup.py"
+            )
 
     if test_duplicates:
         exit_code = 1
         for module in test_duplicates:
-            print(f"  ✗ '{module}' appears more than once in 'tests_require' " f"section of setup.py")
+            print(
+                f"  ✗ '{module}' appears more than once in 'tests_require' " f"section of setup.py"
+            )
 
     # Find all packages listed as essential in requirements.txt that differ
     # in or are absent from setup.py.

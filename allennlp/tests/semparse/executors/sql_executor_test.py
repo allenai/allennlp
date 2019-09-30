@@ -19,7 +19,12 @@ class SqlExecutorTest(AllenNlpTestCase):
         executor = SqlExecutor(self._database_file)
         postprocessed_sql_query_label = executor.postprocess_query_sqlite(sql_query_label)
         # If the predicted query and the label are the same, then we should get 1.
-        assert executor.evaluate_sql_query(postprocessed_sql_query_label, [postprocessed_sql_query_label]) == 1
+        assert (
+            executor.evaluate_sql_query(
+                postprocessed_sql_query_label, [postprocessed_sql_query_label]
+            )
+            == 1
+        )
 
         predicted_sql_query = (
             "( SELECT airport_service . airport_code "
@@ -31,4 +36,9 @@ class SqlExecutorTest(AllenNlpTestCase):
 
         postprocessed_predicted_sql_query = executor.postprocess_query_sqlite(predicted_sql_query)
         # If the predicted query and the label are different we should get 0.
-        assert executor.evaluate_sql_query(postprocessed_predicted_sql_query, [postprocessed_sql_query_label]) == 0
+        assert (
+            executor.evaluate_sql_query(
+                postprocessed_predicted_sql_query, [postprocessed_sql_query_label]
+            )
+            == 0
+        )

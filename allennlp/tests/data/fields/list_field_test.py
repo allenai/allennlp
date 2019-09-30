@@ -56,11 +56,15 @@ class TestListField(AllenNlpTestCase):
             "words": SingleIdTokenIndexer("words"),
             "characters": TokenCharactersIndexer("characters", min_padding_length=1),
         }
-        self.field1 = TextField([Token(t) for t in ["this", "is", "a", "sentence"]], self.word_indexer)
+        self.field1 = TextField(
+            [Token(t) for t in ["this", "is", "a", "sentence"]], self.word_indexer
+        )
         self.field2 = TextField(
             [Token(t) for t in ["this", "is", "a", "different", "sentence"]], self.word_indexer
         )
-        self.field3 = TextField([Token(t) for t in ["this", "is", "another", "sentence"]], self.word_indexer)
+        self.field3 = TextField(
+            [Token(t) for t in ["this", "is", "another", "sentence"]], self.word_indexer
+        )
 
         self.empty_text_field = self.field1.empty_field()
         self.index_field = IndexField(1, self.field1)
@@ -100,7 +104,9 @@ class TestListField(AllenNlpTestCase):
         list_field = ListField([self.index_field, self.index_field, self.empty_index_field])
         list_field.index(self.vocab)
         tensor = list_field.as_tensor(list_field.get_padding_lengths())
-        numpy.testing.assert_array_equal(tensor.detach().cpu().numpy(), numpy.array([[1], [1], [-1]]))
+        numpy.testing.assert_array_equal(
+            tensor.detach().cpu().numpy(), numpy.array([[1], [1], [-1]])
+        )
 
     def test_list_field_can_handle_empty_sequence_label_fields(self):
         list_field = ListField(
@@ -277,7 +283,10 @@ class TestListField(AllenNlpTestCase):
         tokens = tokenizer.tokenize("Foo")
         text_field = TextField(tokens, self.word_indexer)
         list_field = ListField([text_field.empty_field()])
-        fields = {"list": list_field, "bar": TextField(tokenizer.tokenize("BAR"), self.word_indexer)}
+        fields = {
+            "list": list_field,
+            "bar": TextField(tokenizer.tokenize("BAR"), self.word_indexer),
+        }
         instance = Instance(fields)
         instance.index_fields(self.vocab)
         instance.as_tensor_dict()

@@ -46,7 +46,10 @@ class SequenceLabelField(Field[torch.Tensor]):
     _already_warned_namespaces: Set[str] = set()
 
     def __init__(
-        self, labels: Union[List[str], List[int]], sequence_field: SequenceField, label_namespace: str = "labels"
+        self,
+        labels: Union[List[str], List[int]],
+        sequence_field: SequenceField,
+        label_namespace: str = "labels",
     ) -> None:
         self.labels = labels
         self.sequence_field = sequence_field
@@ -129,7 +132,9 @@ class SequenceLabelField(Field[torch.Tensor]):
 
     def __str__(self) -> str:
         length = self.sequence_field.sequence_length()
-        formatted_labels = "".join(["\t\t" + labels + "\n" for labels in textwrap.wrap(repr(self.labels), 100)])
+        formatted_labels = "".join(
+            ["\t\t" + labels + "\n" for labels in textwrap.wrap(repr(self.labels), 100)]
+        )
         return (
             f"SequenceLabelField of length {length} with "
             f"labels:\n {formatted_labels} \t\tin namespace: '{self._label_namespace}'."

@@ -113,7 +113,9 @@ class TestElmoCommand(ElmoTestCase):
 
         embedder = ElmoEmbedder(options_file=self.options_file, weight_file=self.weight_file)
         expected_embedding = embedder.embed_sentence(sentence.split())
-        expected_embedding = (expected_embedding[0] + expected_embedding[1] + expected_embedding[2]) / 3
+        expected_embedding = (
+            expected_embedding[0] + expected_embedding[1] + expected_embedding[2]
+        ) / 3
 
         with h5py.File(self.output_path, "r") as h5py_file:
             assert set(h5py_file.keys()) == {"0", "sentence_to_index"}

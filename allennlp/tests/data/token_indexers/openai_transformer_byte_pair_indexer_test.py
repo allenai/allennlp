@@ -116,13 +116,22 @@ class TestOpenaiTransformerBytePairIndexer(AllenNlpTestCase):
 
     def test_with_extra_tokens(self):
         self._create_indexer_vocab(tokens_to_add=["<start>", "<predict>"])
-        tokens = [Token("<start>"), Token("ewoe"), Token("woe"), Token("ewe"), Token("ee"), Token("<predict>")]
+        tokens = [
+            Token("<start>"),
+            Token("ewoe"),
+            Token("woe"),
+            Token("ewe"),
+            Token("ee"),
+            Token("<predict>"),
+        ]
         indices = self.indexer.tokens_to_indices(tokens, self.vocab, "openai")
         assert indices["openai"][:9] == [50, 4, 21, 31, 4, 0, 1, 51, 0]
 
     @pytest.mark.skip()
     def test_for_correctness_with_fixture(self):
-        bpe_path = "https://allennlp.s3.amazonaws.com/models/openai-transformer-lm-2018.07.23.tar.gz"
+        bpe_path = (
+            "https://allennlp.s3.amazonaws.com/models/openai-transformer-lm-2018.07.23.tar.gz"
+        )
         indexer = OpenaiTransformerBytePairIndexer(model_path=bpe_path)
 
         with open(self.FIXTURES_ROOT / "openai_transformer" / "text.txt", "r") as fin:
@@ -135,6 +144,8 @@ class TestOpenaiTransformerBytePairIndexer(AllenNlpTestCase):
 
         for k, sentence in enumerate(sentences):
             tokens = [token.text for token in nlp(text_standardize(sentence)) if not token.is_space]
-            indices = indexer.tokens_to_indices([Token(token) for token in tokens], Vocabulary(), "openai_indexer")
+            indices = indexer.tokens_to_indices(
+                [Token(token) for token in tokens], Vocabulary(), "openai_indexer"
+            )
             non_padded_indices = [i for i in indices["openai_indexer"] if i != 0]
             assert non_padded_indices == expected_indices[k]

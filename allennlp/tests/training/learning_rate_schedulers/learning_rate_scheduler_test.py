@@ -43,7 +43,9 @@ class LearningRateSchedulersTest(AllenNlpTestCase):
 
     def test_exponential_works_properly(self):
         scheduler = LearningRateScheduler.from_params(
-            Optimizer.from_params(self.model.named_parameters(), Params({"type": "sgd", "lr": 1.0})),
+            Optimizer.from_params(
+                self.model.named_parameters(), Params({"type": "sgd", "lr": 1.0})
+            ),
             Params({"type": "exponential", "gamma": 0.5}),
         )
         optimizer = scheduler.lr_scheduler.optimizer

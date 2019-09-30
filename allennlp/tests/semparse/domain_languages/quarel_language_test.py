@@ -12,14 +12,20 @@ class QuaRelLanguageTest(AllenNlpTestCase):
     def test_infer_quarel(self):
         assert (
             self.language.execute(
-                ("(infer (speed higher world1) (friction higher world1) " "(friction lower world1))")
+                (
+                    "(infer (speed higher world1) (friction higher world1) "
+                    "(friction lower world1))"
+                )
             )
             == 1
         )
 
         assert (
             self.language.execute(
-                ("(infer (speed higher world2) (friction higher world1) " "(friction lower world1))")
+                (
+                    "(infer (speed higher world2) (friction higher world1) "
+                    "(friction lower world1))"
+                )
             )
             == 0
         )
@@ -27,7 +33,10 @@ class QuaRelLanguageTest(AllenNlpTestCase):
         # Both answer options are correct.
         assert (
             self.language.execute(
-                ("(infer (speed higher world2) (friction higher world1) " "(friction higher world1))")
+                (
+                    "(infer (speed higher world2) (friction higher world1) "
+                    "(friction higher world1))"
+                )
             )
             == -2
         )
@@ -35,7 +44,10 @@ class QuaRelLanguageTest(AllenNlpTestCase):
         # Neither answer option is correct.
         assert (
             self.language.execute(
-                ("(infer (speed higher world2) (friction higher world2) " "(friction higher world2))")
+                (
+                    "(infer (speed higher world2) (friction higher world2) "
+                    "(friction higher world2))"
+                )
             )
             == -1
         )
@@ -94,7 +106,8 @@ class QuaRelLanguageTest(AllenNlpTestCase):
             )
         ) == [
             "@start@ -> int",
-            "int -> [<QuaRelType,QuaRelType,QuaRelType:int>, QuaRelType, QuaRelType, " "QuaRelType]",
+            "int -> [<QuaRelType,QuaRelType,QuaRelType:int>, QuaRelType, QuaRelType, "
+            "QuaRelType]",
             "<QuaRelType,QuaRelType,QuaRelType:int> -> infer",
             "QuaRelType -> [<QuaRelType,QuaRelType:QuaRelType>, QuaRelType, QuaRelType]",
             "<QuaRelType,QuaRelType:QuaRelType> -> and",
@@ -160,7 +173,8 @@ class QuaRelLanguageTest(AllenNlpTestCase):
         check_productions_match(productions["Direction"], ["higher", "lower", "high", "low"])
         check_productions_match(productions["<QuaRelType,QuaRelType:QuaRelType>"], ["and"])
         check_productions_match(
-            productions["int"], ["[<QuaRelType,QuaRelType,QuaRelType:int>, QuaRelType, QuaRelType, QuaRelType]"]
+            productions["int"],
+            ["[<QuaRelType,QuaRelType,QuaRelType:int>, QuaRelType, QuaRelType, QuaRelType]"],
         )
         check_productions_match(productions["<QuaRelType,QuaRelType,QuaRelType:int>"], ["infer"])
         check_productions_match(

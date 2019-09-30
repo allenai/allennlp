@@ -38,7 +38,9 @@ class Highway(torch.nn.Module):
     ) -> None:
         super().__init__()
         self._input_dim = input_dim
-        self._layers = torch.nn.ModuleList([torch.nn.Linear(input_dim, input_dim * 2) for _ in range(num_layers)])
+        self._layers = torch.nn.ModuleList(
+            [torch.nn.Linear(input_dim, input_dim * 2) for _ in range(num_layers)]
+        )
         self._activation = activation
         for layer in self._layers:
             # We should bias the highway layer to just carry its input forward.  We do that by

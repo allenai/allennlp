@@ -282,7 +282,9 @@ class TableQuestionContext:
                 # Add column names to entities, with no neighbors yet.
                 entities.add(typed_column_name)
                 neighbors[typed_column_name] = []
-                entity_text[typed_column_name] = typed_column_name.split(":", 1)[-1].replace("_", " ")
+                entity_text[typed_column_name] = typed_column_name.split(":", 1)[-1].replace(
+                    "_", " "
+                )
 
             string_entities, numbers = self.get_entities_from_question()
             for entity, column_names in string_entities:
@@ -427,7 +429,14 @@ class TableQuestionContext:
     def read_from_lines(cls, lines: List, question_tokens: List[Token]) -> "TableQuestionContext":
 
         header = lines[0]
-        if isinstance(header, list) and header[:6] == ["row", "col", "id", "content", "tokens", "lemmaTokens"]:
+        if isinstance(header, list) and header[:6] == [
+            "row",
+            "col",
+            "id",
+            "content",
+            "tokens",
+            "lemmaTokens",
+        ]:
             # These lines are from the tagged table file from the official dataset.
             table_data, column_name_type_mapping = cls.get_table_data_from_tagged_lines(lines)
         else:
@@ -465,7 +474,12 @@ class TableQuestionContext:
                         else:
                             normalized_string = cls.normalize_string(cell_value_string)
                         table_data_with_column_types[-1][typed_column_name] = normalized_string
-        return cls(table_data_with_column_types, column_name_type_mapping, all_column_names, question_tokens)
+        return cls(
+            table_data_with_column_types,
+            column_name_type_mapping,
+            all_column_names,
+            question_tokens,
+        )
 
     @classmethod
     def read_from_file(cls, filename: str, question_tokens: List[Token]) -> "TableQuestionContext":

@@ -86,7 +86,8 @@ def split_predicate(ex: Extraction) -> Extraction:
     arguments.
     """
     rel_toks = ex.toks[
-        char_to_word_index(ex.rel.span[0], ex.sent) : char_to_word_index(ex.rel.span[1], ex.sent) + 1
+        char_to_word_index(ex.rel.span[0], ex.sent) : char_to_word_index(ex.rel.span[1], ex.sent)
+        + 1
     ]
     if not rel_toks:
         return ex
@@ -248,7 +249,11 @@ def pad_line_to_ontonotes(line, domain) -> List[str]:
     line_num = 0
     parse = "-"
     lemma = "-"
-    return [domain, line_num, word_ind, word, pos, parse, lemma, "-", "-", "-", "*"] + list(oie_tags) + ["-"]
+    return (
+        [domain, line_num, word_ind, word, pos, parse, lemma, "-", "-", "-", "*"]
+        + list(oie_tags)
+        + ["-"]
+    )
 
 
 def convert_sent_dict_to_conll(sent_dic, domain) -> str:
@@ -270,13 +275,20 @@ def convert_sent_dict_to_conll(sent_dic, domain) -> str:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Convert Open IE4 extractions to CoNLL (ontonotes) format.")
+    parser = argparse.ArgumentParser(
+        description="Convert Open IE4 extractions to CoNLL (ontonotes) format."
+    )
     parser.add_argument(
         "--inp", type=str, help="input file from which to read Open IE extractions.", required=True
     )
-    parser.add_argument("--domain", type=str, help="domain to use when writing the ontonotes file.", required=True)
     parser.add_argument(
-        "--out", type=str, help="path to the output file, where CoNLL format should be written.", required=True
+        "--domain", type=str, help="domain to use when writing the ontonotes file.", required=True
+    )
+    parser.add_argument(
+        "--out",
+        type=str,
+        help="path to the output file, where CoNLL format should be written.",
+        required=True,
     )
     args = parser.parse_args()
     main(args.inp, args.domain, args.out)

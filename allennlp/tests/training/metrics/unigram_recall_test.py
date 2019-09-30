@@ -9,7 +9,9 @@ class UnigramRecallTest(AllenNlpTestCase):
     def test_sequence_recall(self):
         recall = UnigramRecall()
         gold = torch.Tensor([[1, 2, 3], [2, 4, 8], [7, 1, 1]])
-        predictions = torch.Tensor([[[1, 2, 3], [1, 2, -1]], [[2, 4, 8], [2, 5, 9]], [[-1, -1, -1], [7, 1, -1]]])
+        predictions = torch.Tensor(
+            [[[1, 2, 3], [1, 2, -1]], [[2, 4, 8], [2, 5, 9]], [[-1, -1, -1], [7, 1, -1]]]
+        )
 
         recall(predictions, gold)
         actual_recall = recall.get_metric()

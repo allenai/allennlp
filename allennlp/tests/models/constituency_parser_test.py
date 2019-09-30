@@ -80,7 +80,9 @@ class SpanConstituencyParserTest(ModelTestCase):
         ]
         sentence = ["the", "dog", "chased", "the", "cat"]
         tree = self.model.construct_tree_from_spans({x: y for x, y in tree_spans}, sentence)
-        correct_tree = Tree.fromstring("(S (NP (D the) (N dog)) (VP (V chased) (NP (D the) (N cat))))")
+        correct_tree = Tree.fromstring(
+            "(S (NP (D the) (N dog)) (VP (V chased) (NP (D the) (N cat))))"
+        )
         assert tree == correct_tree
 
     def test_construct_tree_from_spans_handles_nested_labels(self):

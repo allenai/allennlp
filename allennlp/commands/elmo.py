@@ -102,7 +102,9 @@ class Elmo(Subcommand):
     See https://github.com/allenai/allennlp/blob/master/tutorials/how_to/elmo.md for more details.
     """
 
-    def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
+    def add_subparser(
+        self, name: str, parser: argparse._SubParsersAction
+    ) -> argparse.ArgumentParser:
 
         description = """Create word vectors using ELMo."""
         subparser = parser.add_parser(
@@ -110,30 +112,46 @@ class Elmo(Subcommand):
         )
 
         subparser.add_argument(
-            "input_file", type=argparse.FileType("r", encoding="utf-8"), help="The path to the input file."
+            "input_file",
+            type=argparse.FileType("r", encoding="utf-8"),
+            help="The path to the input file.",
         )
         subparser.add_argument("output_file", type=str, help="The path to the output file.")
 
         group = subparser.add_mutually_exclusive_group(required=True)
         group.add_argument("--all", action="store_true", help="Output all three ELMo vectors.")
         group.add_argument("--top", action="store_true", help="Output the top ELMo vector.")
-        group.add_argument("--average", action="store_true", help="Output the average of the ELMo vectors.")
+        group.add_argument(
+            "--average", action="store_true", help="Output the average of the ELMo vectors."
+        )
 
-        subparser.add_argument("--vocab-path", type=str, help="A path to a vocabulary file to generate.")
         subparser.add_argument(
-            "--options-file", type=str, default=DEFAULT_OPTIONS_FILE, help="The path to the ELMo options file."
+            "--vocab-path", type=str, help="A path to a vocabulary file to generate."
         )
         subparser.add_argument(
-            "--weight-file", type=str, default=DEFAULT_WEIGHT_FILE, help="The path to the ELMo weight file."
+            "--options-file",
+            type=str,
+            default=DEFAULT_OPTIONS_FILE,
+            help="The path to the ELMo options file.",
         )
-        subparser.add_argument("--batch-size", type=int, default=DEFAULT_BATCH_SIZE, help="The batch size to use.")
+        subparser.add_argument(
+            "--weight-file",
+            type=str,
+            default=DEFAULT_WEIGHT_FILE,
+            help="The path to the ELMo weight file.",
+        )
+        subparser.add_argument(
+            "--batch-size", type=int, default=DEFAULT_BATCH_SIZE, help="The batch size to use."
+        )
         subparser.add_argument(
             "--file-friendly-logging",
             default=False,
             action="store_true",
             help="outputs tqdm status on separate lines and slows tqdm refresh rate.",
         )
-        subparser.add_argument("--cuda-device", type=int, default=-1, help="The cuda_device to run on.")
+        subparser.add_argument(
+            "--cuda-device", type=int, default=-1, help="The cuda_device to run on."
+        )
         subparser.add_argument(
             "--forget-sentences",
             action="store_true",
@@ -209,7 +227,9 @@ class ElmoEmbedder:
         # without_bos_eos is a 3 element list of (activation, mask) tensor pairs,
         # each with size (batch_size, num_timesteps, dim and (batch_size, num_timesteps)
         # respectively.
-        without_bos_eos = [remove_sentence_boundaries(layer, mask_with_bos_eos) for layer in layer_activations]
+        without_bos_eos = [
+            remove_sentence_boundaries(layer, mask_with_bos_eos) for layer in layer_activations
+        ]
         # Converts a list of pairs (activation, mask) tensors to a single tensor of activations.
         activations = torch.cat([ele[0].unsqueeze(1) for ele in without_bos_eos], dim=1)
         # The mask is the same for each ELMo vector, so just take the first.
@@ -337,7 +357,8 @@ class ElmoEmbedder:
         blank_lines = [i for (i, line) in enumerate(sentences) if line == ""]
         if blank_lines:
             raise ConfigurationError(
-                f"Your input file contains empty lines at indexes " f"{blank_lines}. Please remove them."
+                f"Your input file contains empty lines at indexes "
+                f"{blank_lines}. Please remove them."
             )
         split_sentences = [sentence.split() for sentence in sentences]
         # Uses the sentence index as the key.
@@ -395,7 +416,9 @@ def elmo_command(args):
     elif args.average:
         output_format = "average"
 
-    prepare_global_logging(os.path.realpath(os.path.dirname(args.output_file)), args.file_friendly_logging)
+    prepare_global_logging(
+        os.path.realpath(os.path.dirname(args.output_file)), args.file_friendly_logging
+    )
 
     with torch.no_grad():
         elmo_embedder.embed_file(

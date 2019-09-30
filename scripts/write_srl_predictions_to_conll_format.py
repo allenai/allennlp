@@ -46,7 +46,9 @@ def main(serialization_directory: int, device: int, data: str, prefix: str, doma
     dataset_reader = DatasetReader.from_params(config["dataset_reader"])
     evaluation_data_path = data if data else config["validation_data_path"]
 
-    archive = load_archive(os.path.join(serialization_directory, "model.tar.gz"), cuda_device=device)
+    archive = load_archive(
+        os.path.join(serialization_directory, "model.tar.gz"), cuda_device=device
+    )
     model = archive.model
     model.eval()
 
@@ -76,7 +78,9 @@ def main(serialization_directory: int, device: int, data: str, prefix: str, doma
             verb_index = fields["metadata"]["verb_index"]
             gold_tags = fields["metadata"]["gold_tags"]
             sentence = fields["metadata"]["words"]
-            write_to_conll_eval_file(prediction_file, gold_file, verb_index, sentence, prediction, gold_tags)
+            write_to_conll_eval_file(
+                prediction_file, gold_file, verb_index, sentence, prediction, gold_tags
+            )
         prediction_file.close()
         gold_file.close()
 
@@ -88,10 +92,17 @@ if __name__ == "__main__":
     )
     parser.add_argument("--path", type=str, help="the serialization directory.")
     parser.add_argument("--device", type=int, default=-1, help="the device to load the model onto.")
-    parser.add_argument("--data", type=str, default=None, help="A directory containing a dataset to evaluate on.")
-    parser.add_argument("--prefix", type=str, default="", help="A prefix to distinguish model outputs.")
     parser.add_argument(
-        "--domain", type=str, default=None, help="An optional domain to filter by for producing results."
+        "--data", type=str, default=None, help="A directory containing a dataset to evaluate on."
+    )
+    parser.add_argument(
+        "--prefix", type=str, default="", help="A prefix to distinguish model outputs."
+    )
+    parser.add_argument(
+        "--domain",
+        type=str,
+        default=None,
+        help="An optional domain to filter by for producing results.",
     )
     args = parser.parse_args()
     main(args.path, args.device, args.data, args.prefix, args.domain)

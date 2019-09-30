@@ -45,7 +45,9 @@ class SpacyTokenIndexer(TokenIndexer[numpy.ndarray]):
     ) -> Dict[str, List[numpy.ndarray]]:
 
         if not all([isinstance(x, SpacyToken) for x in tokens]):
-            raise ValueError("The spacy indexer requires you to use a Tokenizer which produces SpacyTokens.")
+            raise ValueError(
+                "The spacy indexer requires you to use a Tokenizer which produces SpacyTokens."
+            )
         indices: List[numpy.ndarray] = []
         for token in tokens:
             indices.append(token.vector)
@@ -69,7 +71,9 @@ class SpacyTokenIndexer(TokenIndexer[numpy.ndarray]):
 
         val = {
             key: torch.FloatTensor(
-                pad_sequence_to_length(val, desired_num_tokens[key], default_value=self.get_padding_token)
+                pad_sequence_to_length(
+                    val, desired_num_tokens[key], default_value=self.get_padding_token
+                )
             )
             for key, val in tokens.items()
         }

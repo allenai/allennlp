@@ -32,7 +32,9 @@ class SimpleState(State["SimpleState"]):
     @classmethod
     def combine_states(cls, states) -> "SimpleState":
         batch_indices = [batch_index for state in states for batch_index in state.batch_indices]
-        action_histories = [action_history for state in states for action_history in state.action_history]
+        action_histories = [
+            action_history for state in states for action_history in state.action_history
+        ]
         scores = [score for state in states for score in state.score]
         start_values = [start_value for state in states for start_value in state.start_values]
         return SimpleState(batch_indices, action_histories, scores, start_values)
@@ -42,7 +44,9 @@ class SimpleState(State["SimpleState"]):
 
 
 class SimpleTransitionFunction(TransitionFunction[SimpleState]):
-    def __init__(self, valid_actions: Set[int] = None, include_value_in_score: bool = False) -> None:
+    def __init__(
+        self, valid_actions: Set[int] = None, include_value_in_score: bool = False
+    ) -> None:
         # The default allowed actions are adding 1 or 2 to the last element.
         self._valid_actions = valid_actions or {1, 2}
         # If True, we will add a small multiple of the action take to the score, to encourage
@@ -57,7 +61,11 @@ class SimpleTransitionFunction(TransitionFunction[SimpleState]):
         if not allowed_actions:
             allowed_actions = [None] * len(state.batch_indices)
         for batch_index, action_history, score, start_value, actions in zip(
-            state.batch_indices, state.action_history, state.score, state.start_values, allowed_actions
+            state.batch_indices,
+            state.action_history,
+            state.score,
+            state.start_values,
+            allowed_actions,
         ):
 
             prev_action = action_history[-1] if action_history else start_value

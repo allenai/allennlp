@@ -5,7 +5,8 @@ class GraphParserTest(ModelTestCase):
     def setUp(self):
         super().setUp()
         self.set_up_model(
-            self.FIXTURES_ROOT / "graph_parser" / "experiment.json", self.FIXTURES_ROOT / "data" / "dm.sdp"
+            self.FIXTURES_ROOT / "graph_parser" / "experiment.json",
+            self.FIXTURES_ROOT / "data" / "dm.sdp",
         )
 
     def test_graph_parser_can_save_and_load(self):

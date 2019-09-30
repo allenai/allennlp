@@ -124,7 +124,9 @@ class Conll2000DatasetReader(DatasetReader):
         # Recode the labels if necessary.
         if self.coding_scheme == "BIOUL":
             coded_chunks = (
-                to_bioul(chunk_tags, encoding=self._original_coding_scheme) if chunk_tags is not None else None
+                to_bioul(chunk_tags, encoding=self._original_coding_scheme)
+                if chunk_tags is not None
+                else None
             )
         else:
             # the default BIO
@@ -134,13 +136,15 @@ class Conll2000DatasetReader(DatasetReader):
         if "pos" in self.feature_labels:
             if pos_tags is None:
                 raise ConfigurationError(
-                    "Dataset reader was specified to use pos_tags as " "features. Pass them to text_to_instance."
+                    "Dataset reader was specified to use pos_tags as "
+                    "features. Pass them to text_to_instance."
                 )
             instance_fields["pos_tags"] = SequenceLabelField(pos_tags, sequence, "pos_tags")
         if "chunk" in self.feature_labels:
             if coded_chunks is None:
                 raise ConfigurationError(
-                    "Dataset reader was specified to use chunk tags as " "features. Pass them to text_to_instance."
+                    "Dataset reader was specified to use chunk tags as "
+                    "features. Pass them to text_to_instance."
                 )
             instance_fields["chunk_tags"] = SequenceLabelField(coded_chunks, sequence, "chunk_tags")
 
@@ -148,6 +152,8 @@ class Conll2000DatasetReader(DatasetReader):
         if self.tag_label == "pos" and pos_tags is not None:
             instance_fields["tags"] = SequenceLabelField(pos_tags, sequence, self.label_namespace)
         elif self.tag_label == "chunk" and coded_chunks is not None:
-            instance_fields["tags"] = SequenceLabelField(coded_chunks, sequence, self.label_namespace)
+            instance_fields["tags"] = SequenceLabelField(
+                coded_chunks, sequence, self.label_namespace
+            )
 
         return Instance(instance_fields)

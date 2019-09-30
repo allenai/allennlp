@@ -39,7 +39,12 @@ class PearsonCorrelation(Metric):
         self._predictions_variance = Covariance()
         self._labels_variance = Covariance()
 
-    def __call__(self, predictions: torch.Tensor, gold_labels: torch.Tensor, mask: Optional[torch.Tensor] = None):
+    def __call__(
+        self,
+        predictions: torch.Tensor,
+        gold_labels: torch.Tensor,
+        mask: Optional[torch.Tensor] = None,
+    ):
         """
         Parameters
         ----------

@@ -123,7 +123,9 @@ class WikiTablesDatasetReader(DatasetReader):
         self._max_offline_logical_forms = max_offline_logical_forms
         self._keep_if_no_logical_forms = keep_if_no_logical_forms
         self._tokenizer = tokenizer or WordTokenizer(SpacyWordSplitter(pos_tags=True))
-        self._question_token_indexers = question_token_indexers or {"tokens": SingleIdTokenIndexer()}
+        self._question_token_indexers = question_token_indexers or {
+            "tokens": SingleIdTokenIndexer()
+        }
         self._table_token_indexers = table_token_indexers or self._question_token_indexers
         self._use_table_for_vocab = use_table_for_vocab
         self._max_table_tokens = max_table_tokens
@@ -137,11 +139,17 @@ class WikiTablesDatasetReader(DatasetReader):
             tarball_with_all_lfs: str = None
             for filename in os.listdir(self._offline_logical_forms_directory):
                 if filename.endswith(".tar.gz"):
-                    tarball_with_all_lfs = os.path.join(self._offline_logical_forms_directory, filename)
+                    tarball_with_all_lfs = os.path.join(
+                        self._offline_logical_forms_directory, filename
+                    )
                     break
             if tarball_with_all_lfs is not None:
-                logger.info(f"Found a tarball in offline logical forms directory: {tarball_with_all_lfs}")
-                logger.info("Assuming it contains logical forms for all questions and un-taring it.")
+                logger.info(
+                    f"Found a tarball in offline logical forms directory: {tarball_with_all_lfs}"
+                )
+                logger.info(
+                    "Assuming it contains logical forms for all questions and un-taring it."
+                )
                 # If you're running this with beaker, the input directory will be read-only and we
                 # cannot untar the files in the directory itself. So we will do so in /tmp, but that
                 # means the new offline logical forms directory will be /tmp.
@@ -174,7 +182,9 @@ class WikiTablesDatasetReader(DatasetReader):
                         for logical_form_line in logical_forms_file:
                             logical_forms.append(logical_form_line.strip().decode("utf-8"))
                     except FileNotFoundError:
-                        logger.debug(f'Missing search output for instance {parsed_info["id"]}; skipping...')
+                        logger.debug(
+                            f'Missing search output for instance {parsed_info["id"]}; skipping...'
+                        )
                         logical_forms = None
                         num_missing_logical_forms += 1
                         if not self._keep_if_no_logical_forms:
@@ -194,7 +204,9 @@ class WikiTablesDatasetReader(DatasetReader):
                     yield instance
 
         if self._offline_logical_forms_directory:
-            logger.info(f"Missing logical forms for {num_missing_logical_forms} out of {num_lines} instances")
+            logger.info(
+                f"Missing logical forms for {num_missing_logical_forms} out of {num_lines} instances"
+            )
             logger.info(f"Kept {num_instances} instances")
 
     def text_to_instance(
@@ -262,7 +274,9 @@ class WikiTablesDatasetReader(DatasetReader):
         # the action list we made above.  We need to ignore the type here because mypy doesn't
         # like `action.rule` - it's hard to tell mypy that the ListField is made up of
         # ProductionRuleFields.
-        action_map = {action.rule: i for i, action in enumerate(action_field.field_list)}  # type: ignore
+        action_map = {
+            action.rule: i for i, action in enumerate(action_field.field_list)
+        }  # type: ignore
         if offline_search_output:
             action_sequence_fields: List[Field] = []
             for logical_form in offline_search_output:

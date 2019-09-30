@@ -7,7 +7,8 @@ from allennlp.modules.seq2seq_encoders.gated_cnn_encoder import GatedCnnEncoder
 class TestGatedCnnEncoder(AllenNlpTestCase):
     def test_gated_cnn_encoder(self):
         cnn_encoder = GatedCnnEncoder(
-            input_dim=32, layers=[[[4, 32]], [[1, 16], [5, 16], [1, 32]], [[1, 64], [5, 64], [1, 32]]]
+            input_dim=32,
+            layers=[[[4, 32]], [[1, 16], [5, 16], [1, 32]], [[1, 64], [5, 64], [1, 32]]],
         )
 
         token_embeddings = torch.rand(5, 10, 32)

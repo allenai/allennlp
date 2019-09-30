@@ -8,7 +8,13 @@ from allennlp.common.util import pad_sequence_to_length
 from allennlp.data import Vocabulary
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.models.model import Model
-from allennlp.modules import Embedding, Seq2SeqEncoder, Seq2VecEncoder, TextFieldEmbedder, TimeDistributed
+from allennlp.modules import (
+    Embedding,
+    Seq2SeqEncoder,
+    Seq2VecEncoder,
+    TextFieldEmbedder,
+    TimeDistributed,
+)
 from allennlp.modules.seq2vec_encoders import BagOfEmbeddingsEncoder
 from allennlp.nn import util
 from allennlp.semparse import ParsingError
@@ -98,13 +104,19 @@ class WikiTablesSemanticParser(Model):
         num_actions = vocab.get_vocab_size(self._rule_namespace)
         if self._add_action_bias:
             self._action_biases = Embedding(num_embeddings=num_actions, embedding_dim=1)
-        self._action_embedder = Embedding(num_embeddings=num_actions, embedding_dim=action_embedding_dim)
-        self._output_action_embedder = Embedding(num_embeddings=num_actions, embedding_dim=action_embedding_dim)
+        self._action_embedder = Embedding(
+            num_embeddings=num_actions, embedding_dim=action_embedding_dim
+        )
+        self._output_action_embedder = Embedding(
+            num_embeddings=num_actions, embedding_dim=action_embedding_dim
+        )
 
         # This is what we pass as input in the first step of decoding, when we don't have a
         # previous action, or a previous question attention.
         self._first_action_embedding = torch.nn.Parameter(torch.FloatTensor(action_embedding_dim))
-        self._first_attended_question = torch.nn.Parameter(torch.FloatTensor(encoder.get_output_dim()))
+        self._first_attended_question = torch.nn.Parameter(
+            torch.FloatTensor(encoder.get_output_dim())
+        )
         torch.nn.init.normal_(self._first_action_embedding)
         torch.nn.init.normal_(self._first_attended_question)
 
@@ -118,7 +130,9 @@ class WikiTablesSemanticParser(Model):
         self._num_entity_types = 5  # TODO(mattg): get this in a more principled way somehow?
         self._embedding_dim = question_embedder.get_output_dim()
         self._entity_type_encoder_embedding = Embedding(self._num_entity_types, self._embedding_dim)
-        self._entity_type_decoder_embedding = Embedding(self._num_entity_types, action_embedding_dim)
+        self._entity_type_decoder_embedding = Embedding(
+            self._num_entity_types, action_embedding_dim
+        )
         self._neighbor_params = torch.nn.Linear(self._embedding_dim, self._embedding_dim)
 
         if num_linking_features > 0:
@@ -180,14 +194,18 @@ class WikiTablesSemanticParser(Model):
             # Thus, the absolute value needs to be taken in the index_select, and 1 needs to
             # be added for the mask since that method expects 0 for padding.
             # (batch_size, num_entities, num_neighbors, embedding_dim)
-            embedded_neighbors = util.batched_index_select(encoded_table, torch.abs(neighbor_indices))
+            embedded_neighbors = util.batched_index_select(
+                encoded_table, torch.abs(neighbor_indices)
+            )
 
             neighbor_mask = util.get_text_field_mask(
                 {"ignored": neighbor_indices + 1}, num_wrapping_dims=1
             ).float()
 
             # Encoder initialized to easily obtain a masked average.
-            neighbor_encoder = TimeDistributed(BagOfEmbeddingsEncoder(self._embedding_dim, averaged=True))
+            neighbor_encoder = TimeDistributed(
+                BagOfEmbeddingsEncoder(self._embedding_dim, averaged=True)
+            )
             # (batch_size, num_entities, embedding_dim)
             embedded_neighbors = neighbor_encoder(embedded_neighbors, neighbor_mask)
             projected_neighbor_embeddings = self._neighbor_params(embedded_neighbors.float())
@@ -247,7 +265,9 @@ class WikiTablesSemanticParser(Model):
             projected_question_neighbor_similarity = self._question_neighbor_params(
                 question_neighbor_similarity_max_score.unsqueeze(-1)
             ).squeeze(-1)
-            linking_scores = projected_question_entity_similarity + projected_question_neighbor_similarity
+            linking_scores = (
+                projected_question_entity_similarity + projected_question_neighbor_similarity
+            )
 
         feature_scores = None
         if self._linking_params is not None:
@@ -347,7 +367,9 @@ class WikiTablesSemanticParser(Model):
                 # Pad with -1 instead of 0, since 0 represents a neighbor index.
                 padded = pad_sequence_to_length(entity_neighbors, num_neighbors, lambda: -1)
                 neighbor_indexes.append(padded)
-            neighbor_indexes = pad_sequence_to_length(neighbor_indexes, num_entities, lambda: [-1] * num_neighbors)
+            neighbor_indexes = pad_sequence_to_length(
+                neighbor_indexes, num_entities, lambda: [-1] * num_neighbors
+            )
             batch_neighbors.append(neighbor_indexes)
         # It is possible that none of the entities has any neighbors, since our definition of the
         # knowledge graph allows it when no entities or numbers were extracted from the question.
@@ -480,7 +502,9 @@ class WikiTablesSemanticParser(Model):
 
             # We need to add padding here if we don't have the right number of entities.
             if num_entities_in_instance != num_entities:
-                zeros = linking_scores.new_zeros(num_question_tokens, num_entities - num_entities_in_instance)
+                zeros = linking_scores.new_zeros(
+                    num_question_tokens, num_entities - num_entities_in_instance
+                )
                 all_probabilities.append(zeros)
 
             # (num_question_tokens, num_entities)
@@ -576,7 +600,9 @@ class WikiTablesSemanticParser(Model):
             entity_map[entity] = entity_index
 
         valid_actions = world.get_nonterminal_productions()
-        translated_valid_actions: Dict[str, Dict[str, Tuple[torch.Tensor, torch.Tensor, List[int]]]] = {}
+        translated_valid_actions: Dict[
+            str, Dict[str, Tuple[torch.Tensor, torch.Tensor, List[int]]]
+        ] = {}
         for key, action_strings in valid_actions.items():
             translated_valid_actions[key] = {}
             # `key` here is a non-terminal from the grammar, and `action_strings` are all the valid
@@ -599,7 +625,9 @@ class WikiTablesSemanticParser(Model):
                 global_input_embeddings = self._action_embedder(global_action_tensor)
                 if self._add_action_bias:
                     global_action_biases = self._action_biases(global_action_tensor)
-                    global_input_embeddings = torch.cat([global_input_embeddings, global_action_biases], dim=-1)
+                    global_input_embeddings = torch.cat(
+                        [global_input_embeddings, global_action_biases], dim=-1
+                    )
                 global_output_embeddings = self._output_action_embedder(global_action_tensor)
                 translated_valid_actions[key]["global"] = (
                     global_input_embeddings,
@@ -659,11 +687,14 @@ class WikiTablesSemanticParser(Model):
             outputs["logical_form"].append([])
             if i in best_final_states:
                 all_action_indices = [
-                    best_final_states[i][j].action_history[0] for j in range(len(best_final_states[i]))
+                    best_final_states[i][j].action_history[0]
+                    for j in range(len(best_final_states[i]))
                 ]
                 found_denotation = False
                 for action_indices in all_action_indices:
-                    action_strings = [action_mapping[(i, action_index)] for action_index in action_indices]
+                    action_strings = [
+                        action_mapping[(i, action_index)] for action_index in action_indices
+                    ]
                     has_logical_form = False
                     try:
                         logical_form = world[i].action_sequence_to_logical_form(action_strings)
@@ -671,7 +702,9 @@ class WikiTablesSemanticParser(Model):
                     except ParsingError:
                         logical_form = "Error producing logical form"
                     if target_list is not None:
-                        denotation_correct = world[i].evaluate_logical_form(logical_form, target_list[i])
+                        denotation_correct = world[i].evaluate_logical_form(
+                            logical_form, target_list[i]
+                        )
                     else:
                         denotation_correct = False
                     if not found_denotation:
@@ -717,7 +750,9 @@ class WikiTablesSemanticParser(Model):
         best_actions = output_dict["best_action_sequence"]
         debug_infos = output_dict["debug_info"]
         batch_action_info = []
-        for batch_index, (predicted_actions, debug_info) in enumerate(zip(best_actions, debug_infos)):
+        for batch_index, (predicted_actions, debug_info) in enumerate(
+            zip(best_actions, debug_infos)
+        ):
             instance_action_info = []
             for predicted_action, action_debug_info in zip(predicted_actions, debug_info):
                 action_info = {}

@@ -67,7 +67,9 @@ class IntraSentenceAttentionEncoder(Seq2SeqEncoder):
         self._num_attention_heads = num_attention_heads
         if isinstance(similarity_function, MultiHeadedSimilarity):
             if num_attention_heads == 1:
-                raise ConfigurationError("Similarity function has multiple heads but encoder doesn't")
+                raise ConfigurationError(
+                    "Similarity function has multiple heads but encoder doesn't"
+                )
             if num_attention_heads != similarity_function.num_heads:
                 raise ConfigurationError(
                     "Number of heads don't match between similarity function "

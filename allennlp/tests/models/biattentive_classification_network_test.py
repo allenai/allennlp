@@ -22,7 +22,9 @@ class BiattentiveClassificationNetworkTest(ModelTestCase):
     def test_feedforward_bcn_can_train_save_and_load(self):
 
         self.ensure_model_can_train_save_and_load(
-            self.FIXTURES_ROOT / "biattentive_classification_network" / "feedforward_experiment.json"
+            self.FIXTURES_ROOT
+            / "biattentive_classification_network"
+            / "feedforward_experiment.json"
         )
 
     def test_input_and_output_elmo_bcn_can_train_save_and_load(self):
@@ -34,7 +36,9 @@ class BiattentiveClassificationNetworkTest(ModelTestCase):
     def test_output_only_elmo_bcn_can_train_save_and_load(self):
 
         self.ensure_model_can_train_save_and_load(
-            self.FIXTURES_ROOT / "biattentive_classification_network" / "output_only_elmo_experiment.json"
+            self.FIXTURES_ROOT
+            / "biattentive_classification_network"
+            / "output_only_elmo_experiment.json"
         )
 
     def test_batch_predictions_are_consistent(self):

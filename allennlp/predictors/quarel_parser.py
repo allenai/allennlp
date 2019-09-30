@@ -7,7 +7,10 @@ from allennlp.data import Instance
 from allennlp.data.dataset_readers.semantic_parsing.quarel import QuarelDatasetReader
 from allennlp.predictors.predictor import Predictor
 from allennlp.semparse.contexts.quarel_utils import get_explanation, from_qr_spec_string
-from allennlp.semparse.contexts.quarel_utils import words_from_entity_string, from_entity_cues_string
+from allennlp.semparse.contexts.quarel_utils import (
+    words_from_entity_string,
+    from_entity_cues_string,
+)
 
 
 @Predictor.register("quarel-parser")

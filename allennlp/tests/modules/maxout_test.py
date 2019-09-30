@@ -23,7 +23,9 @@ class TestMaxout(AllenNlpTestCase):
             Maxout(input_dim=2, num_layers=3, output_dims=5, pool_sizes=4, dropout=[0.2, 0.3])
 
     def test_forward_gives_correct_output(self):
-        params = Params({"input_dim": 2, "output_dims": 3, "pool_sizes": 4, "dropout": 0.0, "num_layers": 2})
+        params = Params(
+            {"input_dim": 2, "output_dims": 3, "pool_sizes": 4, "dropout": 0.0, "num_layers": 2}
+        )
         maxout = Maxout.from_params(params)
 
         constant_init = Initializer.from_params(Params({"type": "constant", "val": 1.0}))

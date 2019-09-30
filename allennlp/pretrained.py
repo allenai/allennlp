@@ -30,7 +30,8 @@ def srl_with_elmo_luheng_2018() -> predictors.SemanticRoleLabelerPredictor:
     with warnings.catch_warnings():
         warnings.simplefilter(action="ignore", category=DeprecationWarning)
         model = PretrainedModel(
-            "https://allennlp.s3.amazonaws.com/models/srl-model-2018.05.25.tar.gz", "semantic-role-labeling"
+            "https://allennlp.s3.amazonaws.com/models/srl-model-2018.05.25.tar.gz",
+            "semantic-role-labeling",
         )
         return model.predictor()  # type: ignore
 
@@ -67,7 +68,8 @@ def naqanet_dua_2019() -> predictors.BidafPredictor:
 
 def open_information_extraction_stanovsky_2018() -> predictors.OpenIePredictor:
     model = PretrainedModel(
-        "https://allennlp.s3.amazonaws.com/models/openie-model.2018-08-20.tar.gz", "open-information-extraction"
+        "https://allennlp.s3.amazonaws.com/models/openie-model.2018-08-20.tar.gz",
+        "open-information-extraction",
     )
     return model.predictor()  # type: ignore
 
@@ -86,11 +88,14 @@ def neural_coreference_resolution_lee_2017() -> predictors.CorefPredictor:
     with warnings.catch_warnings():
         warnings.simplefilter(action="ignore", category=DeprecationWarning)
         model = PretrainedModel(
-            "https://allennlp.s3.amazonaws.com/models/coref-model-2018.02.05.tar.gz", "coreference-resolution"
+            "https://allennlp.s3.amazonaws.com/models/coref-model-2018.02.05.tar.gz",
+            "coreference-resolution",
         )
         predictor = model.predictor()
 
-        predictor._dataset_reader._token_indexers["token_characters"]._min_padding_length = 5  # type: ignore
+        predictor._dataset_reader._token_indexers[
+            "token_characters"
+        ]._min_padding_length = 5  # type: ignore
         return predictor  # type: ignore
 
 
@@ -98,21 +103,27 @@ def named_entity_recognition_with_elmo_peters_2018() -> predictors.SentenceTagge
     with warnings.catch_warnings():
         warnings.simplefilter(action="ignore", category=DeprecationWarning)
         model = PretrainedModel(
-            "https://allennlp.s3.amazonaws.com/models/ner-model-2018.12.18.tar.gz", "sentence-tagger"
+            "https://allennlp.s3.amazonaws.com/models/ner-model-2018.12.18.tar.gz",
+            "sentence-tagger",
         )
         predictor = model.predictor()
 
-        predictor._dataset_reader._token_indexers["token_characters"]._min_padding_length = 3  # type: ignore
+        predictor._dataset_reader._token_indexers[
+            "token_characters"
+        ]._min_padding_length = 3  # type: ignore
         return predictor  # type: ignore
 
 
 def fine_grained_named_entity_recognition_with_elmo_peters_2018() -> predictors.SentenceTaggerPredictor:
     model = PretrainedModel(
-        "https://allennlp.s3.amazonaws.com/models/fine-grained-ner-model-elmo-2018.12.21.tar.gz", "sentence-tagger"
+        "https://allennlp.s3.amazonaws.com/models/fine-grained-ner-model-elmo-2018.12.21.tar.gz",
+        "sentence-tagger",
     )
     predictor = model.predictor()
 
-    predictor._dataset_reader._token_indexers["token_characters"]._min_padding_length = 3  # type: ignore
+    predictor._dataset_reader._token_indexers[
+        "token_characters"
+    ]._min_padding_length = 3  # type: ignore
     return predictor  # type: ignore
 
 
@@ -153,6 +164,7 @@ def esim_nli_with_elmo_chen_2017() -> predictors.DecomposableAttentionPredictor:
     with warnings.catch_warnings():
         warnings.simplefilter(action="ignore", category=DeprecationWarning)
         model = PretrainedModel(
-            "https://allennlp.s3.amazonaws.com/models/esim-elmo-2018.05.17.tar.gz", "textual-entailment"
+            "https://allennlp.s3.amazonaws.com/models/esim-elmo-2018.05.17.tar.gz",
+            "textual-entailment",
         )
         return model.predictor()  # type: ignore

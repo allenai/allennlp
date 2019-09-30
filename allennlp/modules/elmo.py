@@ -20,8 +20,15 @@ from allennlp.common.util import lazy_groups_of
 from allennlp.modules.elmo_lstm import ElmoLstm
 from allennlp.modules.highway import Highway
 from allennlp.modules.scalar_mix import ScalarMix
-from allennlp.nn.util import remove_sentence_boundaries, add_sentence_boundary_token_ids, get_device_of
-from allennlp.data.token_indexers.elmo_indexer import ELMoCharacterMapper, ELMoTokenCharactersIndexer
+from allennlp.nn.util import (
+    remove_sentence_boundaries,
+    add_sentence_boundary_token_ids,
+    get_device_of,
+)
+from allennlp.data.token_indexers.elmo_indexer import (
+    ELMoCharacterMapper,
+    ELMoTokenCharactersIndexer,
+)
 from allennlp.data.dataset import Batch
 from allennlp.data import Token, Vocabulary, Instance
 from allennlp.data.fields import TextField
@@ -108,7 +115,10 @@ class Elmo(torch.nn.Module):
             self._elmo_lstm = module
         else:
             self._elmo_lstm = _ElmoBiLm(
-                options_file, weight_file, requires_grad=requires_grad, vocab_to_cache=vocab_to_cache
+                options_file,
+                weight_file,
+                requires_grad=requires_grad,
+                vocab_to_cache=vocab_to_cache,
             )
         self._has_cached_vocab = vocab_to_cache is not None
         self._keep_sentence_boundaries = keep_sentence_boundaries
@@ -161,7 +171,9 @@ class Elmo(torch.nn.Module):
             if self._has_cached_vocab and len(original_word_size) > 2:
                 reshaped_word_inputs = word_inputs.view(-1, original_word_size[-1])
             elif not self._has_cached_vocab:
-                logger.warning("Word inputs were passed to ELMo but it does not have a cached vocab.")
+                logger.warning(
+                    "Word inputs were passed to ELMo but it does not have a cached vocab."
+                )
                 reshaped_word_inputs = None
             else:
                 reshaped_word_inputs = word_inputs
@@ -193,12 +205,14 @@ class Elmo(torch.nn.Module):
         if word_inputs is not None and len(original_word_size) > 2:
             mask = processed_mask.view(original_word_size)
             elmo_representations = [
-                representation.view(original_word_size + (-1,)) for representation in representations
+                representation.view(original_word_size + (-1,))
+                for representation in representations
             ]
         elif len(original_shape) > 3:
             mask = processed_mask.view(original_shape[:-1])
             elmo_representations = [
-                representation.view(original_shape[:-1] + (-1,)) for representation in representations
+                representation.view(original_shape[:-1] + (-1,))
+                for representation in representations
             ]
         else:
             mask = processed_mask
@@ -405,7 +419,9 @@ class _ElmoCharacterEncoder(torch.nn.Module):
         with h5py.File(cached_path(self._weight_file), "r") as fin:
             char_embed_weights = fin["char_embed"][...]
 
-        weights = numpy.zeros((char_embed_weights.shape[0] + 1, char_embed_weights.shape[1]), dtype="float32")
+        weights = numpy.zeros(
+            (char_embed_weights.shape[0] + 1, char_embed_weights.shape[1]), dtype="float32"
+        )
         weights[1:, :] = char_embed_weights
 
         self._char_embedding_weights = torch.nn.Parameter(
@@ -419,7 +435,9 @@ class _ElmoCharacterEncoder(torch.nn.Module):
 
         convolutions = []
         for i, (width, num) in enumerate(filters):
-            conv = torch.nn.Conv1d(in_channels=char_embed_dim, out_channels=num, kernel_size=width, bias=True)
+            conv = torch.nn.Conv1d(
+                in_channels=char_embed_dim, out_channels=num, kernel_size=width, bias=True
+            )
             # load the weights
             with h5py.File(cached_path(self._weight_file), "r") as fin:
                 weight = fin["CNN"]["W_cnn_{}".format(i)][...]
@@ -509,11 +527,17 @@ class _ElmoBiLm(torch.nn.Module):
     """
 
     def __init__(
-        self, options_file: str, weight_file: str, requires_grad: bool = False, vocab_to_cache: List[str] = None
+        self,
+        options_file: str,
+        weight_file: str,
+        requires_grad: bool = False,
+        vocab_to_cache: List[str] = None,
     ) -> None:
         super().__init__()
 
-        self._token_embedder = _ElmoCharacterEncoder(options_file, weight_file, requires_grad=requires_grad)
+        self._token_embedder = _ElmoCharacterEncoder(
+            options_file, weight_file, requires_grad=requires_grad
+        )
 
         self._requires_grad = requires_grad
         if requires_grad and vocab_to_cache:
@@ -607,7 +631,8 @@ class _ElmoBiLm(torch.nn.Module):
         # mask passed on is correct, but the values in the padded areas
         # of the char cnn representations can change.
         output_tensors = [
-            torch.cat([type_representation, type_representation], dim=-1) * mask.float().unsqueeze(-1)
+            torch.cat([type_representation, type_representation], dim=-1)
+            * mask.float().unsqueeze(-1)
         ]
         for layer_activations in torch.chunk(lstm_outputs, lstm_outputs.size(0), dim=0):
             output_tensors.append(layer_activations.squeeze(0))

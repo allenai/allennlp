@@ -166,7 +166,9 @@ class BiMpm(Model):
 
         def add_matching_result(matcher, encoded_premise, encoded_hypothesis):
             # utility function to get matching result and add to the result list
-            matching_result = matcher(encoded_premise, mask_premise, encoded_hypothesis, mask_hypothesis)
+            matching_result = matcher(
+                encoded_premise, mask_premise, encoded_hypothesis, mask_hypothesis
+            )
             matching_vector_premise.extend(matching_result[0])
             matching_vector_hypothesis.extend(matching_result[1])
 
@@ -201,11 +203,17 @@ class BiMpm(Model):
         matching_vector_cat_hypothesis = self.dropout(torch.cat(matching_vector_hypothesis, dim=2))
 
         # aggregate the matching vectors
-        aggregated_premise = self.dropout(self.aggregator(matching_vector_cat_premise, mask_premise))
-        aggregated_hypothesis = self.dropout(self.aggregator(matching_vector_cat_hypothesis, mask_hypothesis))
+        aggregated_premise = self.dropout(
+            self.aggregator(matching_vector_cat_premise, mask_premise)
+        )
+        aggregated_hypothesis = self.dropout(
+            self.aggregator(matching_vector_cat_hypothesis, mask_hypothesis)
+        )
 
         # the final forward layer
-        logits = self.classifier_feedforward(torch.cat([aggregated_premise, aggregated_hypothesis], dim=-1))
+        logits = self.classifier_feedforward(
+            torch.cat([aggregated_premise, aggregated_hypothesis], dim=-1)
+        )
         probs = torch.nn.functional.softmax(logits, dim=-1)
 
         output_dict = {"logits": logits, "probs": probs}
@@ -230,4 +238,6 @@ class BiMpm(Model):
 
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
-        return {metric_name: metric.get_metric(reset) for metric_name, metric in self.metrics.items()}
+        return {
+            metric_name: metric.get_metric(reset) for metric_name, metric in self.metrics.items()
+        }

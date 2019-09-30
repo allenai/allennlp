@@ -29,17 +29,16 @@ class TestDropEvalGetMetrics:
         assert get_metrics(predicted=["td", "td"], gold="td") == (0.0, 0.5)
 
         # F1 score is mean([0.0, 0.0, 1.0, 0.0, 0.0, 0.0])
-        assert get_metrics(predicted=["the", "fat", "cat", "the fat", "fat cat", "the fat cat"], gold=["cat"]) == (
-            0.0,
-            0.17,
-        )
-        assert get_metrics(predicted=["cat"], gold=["the", "fat", "cat", "the fat", "fat cat", "the fat cat"]) == (
-            0.0,
-            0.17,
-        )
+        assert get_metrics(
+            predicted=["the", "fat", "cat", "the fat", "fat cat", "the fat cat"], gold=["cat"]
+        ) == (0.0, 0.17)
+        assert get_metrics(
+            predicted=["cat"], gold=["the", "fat", "cat", "the fat", "fat cat", "the fat cat"]
+        ) == (0.0, 0.17)
         # F1 score is mean([1.0, 0.5, 0.0, 0.0, 0.0, 0.0])
         assert get_metrics(
-            predicted=["the", "fat", "cat", "the fat", "fat cat", "the fat cat"], gold=["cat", "cat dog"]
+            predicted=["the", "fat", "cat", "the fat", "fat cat", "the fat cat"],
+            gold=["cat", "cat dog"],
         ) == (0.0, 0.25)
 
     def test_articles_are_ignored(self):
@@ -85,7 +84,8 @@ class TestDropEvalGetMetrics:
         # F1 scores of:     1.0        2/3   0.0   0.0   0.0   0.0
         # Average them to get F1 of 0.28
         assert get_metrics(
-            ["78-yard", "56", "28", "40", "44", "touchdown"], ["78-yard", "56 yard", "1 yard touchdown"]
+            ["78-yard", "56", "28", "40", "44", "touchdown"],
+            ["78-yard", "56 yard", "1 yard touchdown"],
         ) == (0.0, 0.28)
 
         # two copies of same value will account for only one match (using optimal 1-1 bag alignment)
@@ -95,7 +95,9 @@ class TestDropEvalGetMetrics:
         assert get_metrics(["John Karman", "Joe Hardy"], ["Joe Karman", "John Hardy"]) == (0.0, 0.5)
 
         # macro-averaging F1 over spans
-        assert get_metrics(["ottoman", "Kantakouzenous"], ["ottoman", "army of Kantakouzenous"]) == (0.0, 0.75)
+        assert get_metrics(
+            ["ottoman", "Kantakouzenous"], ["ottoman", "army of Kantakouzenous"]
+        ) == (0.0, 0.75)
 
     def test_order_invariance(self):
         assert get_metrics(["a"], ["a", "b"]) == (0, 0.5)
@@ -108,7 +110,11 @@ class TestDropEvalFunctional:
         annotation = {
             "pid1": {
                 "qa_pairs": [
-                    {"answer": {"number": "1"}, "validated_answers": [{"number": "0"}], "query_id": "qid1"}
+                    {
+                        "answer": {"number": "1"},
+                        "validated_answers": [{"number": "0"}],
+                        "query_id": "qid1",
+                    }
                 ]
             }
         }
@@ -118,7 +124,11 @@ class TestDropEvalFunctional:
         annotation = {
             "pid1": {
                 "qa_pairs": [
-                    {"answer": {"spans": ["2"]}, "validated_answers": [{"number": "2"}], "query_id": "qid1"}
+                    {
+                        "answer": {"spans": ["2"]},
+                        "validated_answers": [{"number": "2"}],
+                        "query_id": "qid1",
+                    }
                 ]
             }
         }
@@ -170,7 +180,11 @@ class TestDropEvalFunctional:
         annotation = {
             "pid1": {
                 "qa_pairs": [
-                    {"answer": {"spans": ["1"]}, "validated_answers": [{"number": "0"}], "query_id": "qid1"}
+                    {
+                        "answer": {"spans": ["1"]},
+                        "validated_answers": [{"number": "0"}],
+                        "query_id": "qid1",
+                    }
                 ]
             }
         }
@@ -206,7 +220,11 @@ class TestDropEvalFunctional:
         annotation = {
             "pid1": {
                 "qa_pairs": [
-                    {"answer": {"number": "5"}, "validated_answers": [{"spans": ["7-meters"]}], "query_id": "qid1"}
+                    {
+                        "answer": {"number": "5"},
+                        "validated_answers": [{"spans": ["7-meters"]}],
+                        "query_id": "qid1",
+                    }
                 ]
             }
         }
@@ -220,7 +238,11 @@ class TestDropEvalFunctional:
         annotation = {
             "pid1": {
                 "qa_pairs": [
-                    {"answer": {"spans": ["7-meters"]}, "validated_answers": [{"number": "5"}], "query_id": "qid1"}
+                    {
+                        "answer": {"spans": ["7-meters"]},
+                        "validated_answers": [{"number": "5"}],
+                        "query_id": "qid1",
+                    }
                 ]
             }
         }

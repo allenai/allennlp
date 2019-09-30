@@ -33,7 +33,8 @@ class TestDecomposableAttention(ModelTestCase):
     def test_model_load(self):
         params = Params.from_file(self.FIXTURES_ROOT / "decomposable_attention" / "experiment.json")
         model = Model.load(
-            params, serialization_dir=self.FIXTURES_ROOT / "decomposable_attention" / "serialization"
+            params,
+            serialization_dir=self.FIXTURES_ROOT / "decomposable_attention" / "serialization",
         )
 
         assert isinstance(model, DecomposableAttention)

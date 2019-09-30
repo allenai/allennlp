@@ -75,7 +75,9 @@ class TestAtisReader(AllenNlpTestCase):
             0,
             0,
         ]  # ``detroit`` -> ``DTW``
-        assert world.linked_entities["string"]["flight_stop_stop_airport_string -> [\"'DTW'\"]"][2] == [
+        assert world.linked_entities["string"]["flight_stop_stop_airport_string -> [\"'DTW'\"]"][
+            2
+        ] == [
             0,
             0,
             0,
@@ -114,7 +116,9 @@ class TestAtisReader(AllenNlpTestCase):
             0,
             0,
         ]  # ``one way`` -> ``NO``
-        assert world.linked_entities["string"]["city_city_name_string -> [\"'WESTCHESTER COUNTY'\"]"][2] == [
+        assert world.linked_entities["string"][
+            "city_city_name_string -> [\"'WESTCHESTER COUNTY'\"]"
+        ][2] == [
             0,
             0,
             0,

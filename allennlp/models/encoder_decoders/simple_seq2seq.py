@@ -93,7 +93,9 @@ class SimpleSeq2Seq(Model):
         self._end_index = self.vocab.get_token_index(END_SYMBOL, self._target_namespace)
 
         if use_bleu:
-            pad_index = self.vocab.get_token_index(self.vocab._padding_token, self._target_namespace)
+            pad_index = self.vocab.get_token_index(
+                self.vocab._padding_token, self._target_namespace
+            )
             self._bleu = BLEU(exclude_indices={pad_index, self._end_index, self._start_index})
         else:
             self._bleu = None
@@ -101,7 +103,9 @@ class SimpleSeq2Seq(Model):
         # At prediction time, we use a beam search to find the most likely sequence of target tokens.
         beam_size = beam_size or 1
         self._max_decoding_steps = max_decoding_steps
-        self._beam_search = BeamSearch(self._end_index, max_steps=max_decoding_steps, beam_size=beam_size)
+        self._beam_search = BeamSearch(
+            self._end_index, max_steps=max_decoding_steps, beam_size=beam_size
+        )
 
         # Dense embedding of source vocab tokens.
         self._source_embedder = source_embedder
@@ -115,7 +119,8 @@ class SimpleSeq2Seq(Model):
         if attention:
             if attention_function:
                 raise ConfigurationError(
-                    "You can only specify an attention module or an " "attention function, but not both."
+                    "You can only specify an attention module or an "
+                    "attention function, but not both."
                 )
             self._attention = attention
         elif attention_function:
@@ -263,7 +268,8 @@ class SimpleSeq2Seq(Model):
             if self._end_index in indices:
                 indices = indices[: indices.index(self._end_index)]
             predicted_tokens = [
-                self.vocab.get_token_from_index(x, namespace=self._target_namespace) for x in indices
+                self.vocab.get_token_from_index(x, namespace=self._target_namespace)
+                for x in indices
             ]
             all_predicted_tokens.append(predicted_tokens)
         output_dict["predicted_tokens"] = all_predicted_tokens
@@ -288,7 +294,9 @@ class SimpleSeq2Seq(Model):
         # shape: (batch_size, decoder_output_dim)
         state["decoder_hidden"] = final_encoder_output
         # shape: (batch_size, decoder_output_dim)
-        state["decoder_context"] = state["encoder_outputs"].new_zeros(batch_size, self._decoder_output_dim)
+        state["decoder_context"] = state["encoder_outputs"].new_zeros(
+            batch_size, self._decoder_output_dim
+        )
         return state
 
     def _forward_loop(
@@ -374,7 +382,9 @@ class SimpleSeq2Seq(Model):
     def _forward_beam_search(self, state: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """Make forward pass during prediction using a beam search."""
         batch_size = state["source_mask"].size()[0]
-        start_predictions = state["source_mask"].new_full((batch_size,), fill_value=self._start_index)
+        start_predictions = state["source_mask"].new_full(
+            (batch_size,), fill_value=self._start_index
+        )
 
         # shape (all_top_k_predictions): (batch_size, beam_size, num_decoding_steps)
         # shape (log_probabilities): (batch_size, beam_size)
@@ -382,7 +392,10 @@ class SimpleSeq2Seq(Model):
             start_predictions, state, self.take_step
         )
 
-        output_dict = {"class_log_probabilities": log_probabilities, "predictions": all_top_k_predictions}
+        output_dict = {
+            "class_log_probabilities": log_probabilities,
+            "predictions": all_top_k_predictions,
+        }
         return output_dict
 
     def _prepare_output_projections(
@@ -412,7 +425,9 @@ class SimpleSeq2Seq(Model):
 
         if self._attention:
             # shape: (group_size, encoder_output_dim)
-            attended_input = self._prepare_attended_input(decoder_hidden, encoder_outputs, source_mask)
+            attended_input = self._prepare_attended_input(
+                decoder_hidden, encoder_outputs, source_mask
+            )
 
             # shape: (group_size, decoder_output_dim + target_embedding_dim)
             decoder_input = torch.cat((attended_input, embedded_input), -1)
@@ -422,7 +437,9 @@ class SimpleSeq2Seq(Model):
 
         # shape (decoder_hidden): (batch_size, decoder_output_dim)
         # shape (decoder_context): (batch_size, decoder_output_dim)
-        decoder_hidden, decoder_context = self._decoder_cell(decoder_input, (decoder_hidden, decoder_context))
+        decoder_hidden, decoder_context = self._decoder_cell(
+            decoder_input, (decoder_hidden, decoder_context)
+        )
 
         state["decoder_hidden"] = decoder_hidden
         state["decoder_context"] = decoder_context

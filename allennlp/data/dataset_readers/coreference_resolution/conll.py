@@ -6,7 +6,14 @@ from overrides import overrides
 
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.fields import Field, ListField, TextField, SpanField, MetadataField, SequenceLabelField
+from allennlp.data.fields import (
+    Field,
+    ListField,
+    TextField,
+    SpanField,
+    MetadataField,
+    SequenceLabelField,
+)
 from allennlp.data.instance import Instance
 from allennlp.data.tokenizers import Token
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
@@ -15,7 +22,9 @@ from allennlp.data.dataset_readers.dataset_utils import Ontonotes, enumerate_spa
 logger = logging.getLogger(__name__)
 
 
-def canonicalize_clusters(clusters: DefaultDict[int, List[Tuple[int, int]]]) -> List[List[Tuple[int, int]]]:
+def canonicalize_clusters(
+    clusters: DefaultDict[int, List[Tuple[int, int]]]
+) -> List[List[Tuple[int, int]]]:
     """
     The CONLL 2012 data includes 2 annotated spans which are identical,
     but have different ids. This checks all clusters for spans which are
@@ -73,7 +82,10 @@ class ConllCorefReader(DatasetReader):
     """
 
     def __init__(
-        self, max_span_width: int, token_indexers: Dict[str, TokenIndexer] = None, lazy: bool = False
+        self,
+        max_span_width: int,
+        token_indexers: Dict[str, TokenIndexer] = None,
+        lazy: bool = False,
     ) -> None:
         super().__init__(lazy)
         self._max_span_width = max_span_width
@@ -132,7 +144,9 @@ class ConllCorefReader(DatasetReader):
                  how many spans we are considering), we represent this a as a ``SequenceLabelField``
                  with respect to the ``spans ``ListField``.
         """
-        flattened_sentences = [self._normalize_word(word) for sentence in sentences for word in sentence]
+        flattened_sentences = [
+            self._normalize_word(word) for sentence in sentences for word in sentence
+        ]
 
         metadata: Dict[str, Any] = {"original_text": flattened_sentences}
         if gold_clusters is not None:
@@ -166,7 +180,11 @@ class ConllCorefReader(DatasetReader):
         span_field = ListField(spans)
         metadata_field = MetadataField(metadata)
 
-        fields: Dict[str, Field] = {"text": text_field, "spans": span_field, "metadata": metadata_field}
+        fields: Dict[str, Field] = {
+            "text": text_field,
+            "spans": span_field,
+            "metadata": metadata_field,
+        }
         if span_labels is not None:
             fields["span_labels"] = SequenceLabelField(span_labels, span_field)
 

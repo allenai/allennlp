@@ -70,7 +70,9 @@ class BasicTransitionFunction(TransitionFunction[GrammarBasedState]):
         # Before making a prediction, we'll compute an attention over the input given our updated
         # hidden state. Then we concatenate those with the decoder state and project to
         # `action_embedding_dim` to make a prediction.
-        self._output_projection_layer = Linear(output_dim + encoder_output_dim, action_embedding_dim)
+        self._output_projection_layer = Linear(
+            output_dim + encoder_output_dim, action_embedding_dim
+        )
         if self._num_layers > 1:
             self._decoder_cell = LSTM(input_dim, output_dim, self._num_layers)
         else:
@@ -85,7 +87,10 @@ class BasicTransitionFunction(TransitionFunction[GrammarBasedState]):
 
     @overrides
     def take_step(
-        self, state: GrammarBasedState, max_actions: int = None, allowed_actions: List[Set[int]] = None
+        self,
+        state: GrammarBasedState,
+        max_actions: int = None,
+        allowed_actions: List[Set[int]] = None,
     ) -> List[GrammarBasedState]:
         # Taking a step in the decoder consists of three main parts.  First, we'll construct the
         # input to the decoder and update the decoder's hidden state.  Second, we'll use this new
@@ -101,7 +106,9 @@ class BasicTransitionFunction(TransitionFunction[GrammarBasedState]):
             updated_state["attention_weights"],
             updated_state["predicted_action_embeddings"],
         )
-        new_states = self._construct_next_states(state, updated_state, batch_results, max_actions, allowed_actions)
+        new_states = self._construct_next_states(
+            state, updated_state, batch_results, max_actions, allowed_actions
+        )
 
         return new_states
 
@@ -133,12 +140,18 @@ class BasicTransitionFunction(TransitionFunction[GrammarBasedState]):
                 decoder_input.unsqueeze(0), (hidden_state, memory_cell)
             )
         else:
-            hidden_state, memory_cell = self._decoder_cell(decoder_input, (hidden_state, memory_cell))
+            hidden_state, memory_cell = self._decoder_cell(
+                decoder_input, (hidden_state, memory_cell)
+            )
         hidden_state = self._dropout(hidden_state)
 
         # (group_size, encoder_output_dim)
-        encoder_outputs = torch.stack([state.rnn_state[0].encoder_outputs[i] for i in state.batch_indices])
-        encoder_output_mask = torch.stack([state.rnn_state[0].encoder_output_mask[i] for i in state.batch_indices])
+        encoder_outputs = torch.stack(
+            [state.rnn_state[0].encoder_outputs[i] for i in state.batch_indices]
+        )
+        encoder_output_mask = torch.stack(
+            [state.rnn_state[0].encoder_output_mask[i] for i in state.batch_indices]
+        )
 
         if self._num_layers > 1:
             attended_question, attention_weights = self.attend_on_question(
@@ -194,7 +207,9 @@ class BasicTransitionFunction(TransitionFunction[GrammarBasedState]):
             action_embeddings, output_action_embeddings, action_ids = instance_actions["global"]
             # This is just a matrix product between a (num_actions, embedding_dim) matrix and an
             # (embedding_dim, 1) matrix.
-            action_logits = action_embeddings.mm(predicted_action_embedding.unsqueeze(-1)).squeeze(-1)
+            action_logits = action_embeddings.mm(predicted_action_embedding.unsqueeze(-1)).squeeze(
+                -1
+            )
             current_log_probs = torch.nn.functional.log_softmax(action_logits, dim=-1)
 
             # This is now the total score for each state after taking each action.  We're going to
@@ -231,13 +246,17 @@ class BasicTransitionFunction(TransitionFunction[GrammarBasedState]):
 
         chunk_index = 1 if self._num_layers > 1 else 0
         hidden_state = [
-            x.squeeze(chunk_index) for x in updated_rnn_state["hidden_state"].chunk(group_size, chunk_index)
+            x.squeeze(chunk_index)
+            for x in updated_rnn_state["hidden_state"].chunk(group_size, chunk_index)
         ]
         memory_cell = [
-            x.squeeze(chunk_index) for x in updated_rnn_state["memory_cell"].chunk(group_size, chunk_index)
+            x.squeeze(chunk_index)
+            for x in updated_rnn_state["memory_cell"].chunk(group_size, chunk_index)
         ]
 
-        attended_question = [x.squeeze(0) for x in updated_rnn_state["attended_question"].chunk(group_size, 0)]
+        attended_question = [
+            x.squeeze(0) for x in updated_rnn_state["attended_question"].chunk(group_size, 0)
+        ]
 
         def make_state(
             group_index: int, action: int, new_score: torch.Tensor, action_embedding: torch.Tensor
@@ -272,9 +291,13 @@ class BasicTransitionFunction(TransitionFunction[GrammarBasedState]):
                 # If we're given a set of allowed actions, and we're not just keeping the top k of
                 # them, we don't need to do any sorting, so we can speed things up quite a bit.
                 for group_index, log_probs, _, action_embeddings, actions in results:
-                    for log_prob, action_embedding, action in zip(log_probs, action_embeddings, actions):
+                    for log_prob, action_embedding, action in zip(
+                        log_probs, action_embeddings, actions
+                    ):
                         if action in allowed_actions[group_index]:
-                            new_states.append(make_state(group_index, action, log_prob, action_embedding))
+                            new_states.append(
+                                make_state(group_index, action, log_prob, action_embedding)
+                            )
             else:
                 # In this case, we need to sort the actions.  We'll do that on CPU, as it's easier,
                 # and our action list is on the CPU, anyway.
@@ -291,9 +314,17 @@ class BasicTransitionFunction(TransitionFunction[GrammarBasedState]):
                 action_embeddings = torch.cat(group_action_embeddings, dim=0)
                 log_probs_cpu = log_probs.data.cpu().numpy().tolist()
                 batch_states = [
-                    (log_probs_cpu[i], group_indices[i], log_probs[i], action_embeddings[i], group_actions[i])
+                    (
+                        log_probs_cpu[i],
+                        group_indices[i],
+                        log_probs[i],
+                        action_embeddings[i],
+                        group_actions[i],
+                    )
                     for i in range(len(group_actions))
-                    if (not allowed_actions or group_actions[i] in allowed_actions[group_indices[i]])
+                    if (
+                        not allowed_actions or group_actions[i] in allowed_actions[group_indices[i]]
+                    )
                 ]
                 # We use a key here to make sure we're not trying to compare anything on the GPU.
                 batch_states.sort(key=lambda x: x[0], reverse=True)
@@ -316,7 +347,9 @@ class BasicTransitionFunction(TransitionFunction[GrammarBasedState]):
         logic in ``take_step``.
         """
         # (group_size, question_length)
-        question_attention_weights = self._input_attention(query, encoder_outputs, encoder_output_mask)
+        question_attention_weights = self._input_attention(
+            query, encoder_outputs, encoder_output_mask
+        )
         # (group_size, encoder_output_dim)
         attended_question = util.weighted_sum(encoder_outputs, question_attention_weights)
         return attended_question, question_attention_weights

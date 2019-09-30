@@ -71,7 +71,9 @@ class Pruner(torch.nn.Module):
         if isinstance(num_items_to_keep, int):
             batch_size = mask.size(0)
             # Put the tensor on same device as the mask.
-            num_items_to_keep = num_items_to_keep * torch.ones([batch_size], dtype=torch.long, device=mask.device)
+            num_items_to_keep = num_items_to_keep * torch.ones(
+                [batch_size], dtype=torch.long, device=mask.device
+            )
 
         max_items_to_keep = num_items_to_keep.max()
 

@@ -12,7 +12,9 @@ from allennlp.modules.attention.attention import Attention
 
 class LinearAttentionTest(AllenNlpTestCase):
     def test_can_init_linear(self):
-        legacy_attention = Attention.from_params(Params({"type": "linear", "tensor_1_dim": 3, "tensor_2_dim": 3}))
+        legacy_attention = Attention.from_params(
+            Params({"type": "linear", "tensor_1_dim": 3, "tensor_2_dim": 3})
+        )
         isinstance(legacy_attention, LinearAttention)
 
     def test_linear_similarity(self):
@@ -20,7 +22,8 @@ class LinearAttentionTest(AllenNlpTestCase):
         linear._weight_vector = Parameter(torch.FloatTensor([-0.3, 0.5, 2.0, -1.0, 1, 1]))
         linear._bias = Parameter(torch.FloatTensor([0.1]))
         output = linear(
-            Variable(torch.FloatTensor([[-7, -8, -9]])), Variable(torch.FloatTensor([[[1, 2, 3], [4, 5, 6]]]))
+            Variable(torch.FloatTensor([[-7, -8, -9]])),
+            Variable(torch.FloatTensor([[[1, 2, 3], [4, 5, 6]]])),
         )
 
         assert_almost_equal(output.data.numpy(), numpy.array([[0.0474, 0.9526]]), decimal=2)
@@ -29,7 +32,9 @@ class LinearAttentionTest(AllenNlpTestCase):
         linear = LinearAttention(2, 2, combination="x,y,x*y", normalize=False)
         linear._weight_vector = Parameter(torch.FloatTensor([-0.3, 0.5, 2.0, -1.0, 1, 1]))
         linear._bias = Parameter(torch.FloatTensor([0.0]))
-        output = linear(torch.FloatTensor([[4, 5]]), torch.FloatTensor([[[1, 2], [4, 5], [7, 8], [10, 11]]]))
+        output = linear(
+            torch.FloatTensor([[4, 5]]), torch.FloatTensor([[[1, 2], [4, 5], [7, 8], [10, 11]]])
+        )
 
         assert_almost_equal(
             output.data.numpy(),

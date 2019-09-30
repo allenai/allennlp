@@ -9,7 +9,9 @@ class SequenceAccuracyTest(AllenNlpTestCase):
     def test_sequence_accuracy(self):
         accuracy = SequenceAccuracy()
         gold = torch.Tensor([[1, 2, 3], [2, 4, 8], [0, 1, 1]])
-        predictions = torch.Tensor([[[1, 2, 3], [1, 2, -1]], [[2, 4, 8], [2, 5, 9]], [[-1, -1, -1], [0, 1, -1]]])
+        predictions = torch.Tensor(
+            [[[1, 2, 3], [1, 2, -1]], [[2, 4, 8], [2, 5, 9]], [[-1, -1, -1], [0, 1, -1]]]
+        )
 
         accuracy(predictions, gold)
         actual_accuracy = accuracy.get_metric()

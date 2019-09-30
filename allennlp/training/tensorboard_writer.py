@@ -44,7 +44,9 @@ class TensorboardWriter(FromParams):
     ) -> None:
         if serialization_dir is not None:
             self._train_log = SummaryWriter(os.path.join(serialization_dir, "log", "train"))
-            self._validation_log = SummaryWriter(os.path.join(serialization_dir, "log", "validation"))
+            self._validation_log = SummaryWriter(
+                os.path.join(serialization_dir, "log", "validation")
+            )
         else:
             self._train_log = self._validation_log = None
 
@@ -66,7 +68,10 @@ class TensorboardWriter(FromParams):
         return self._get_batch_num_total() % self._summary_interval == 0
 
     def should_log_histograms_this_batch(self) -> bool:
-        return self._histogram_interval is not None and self._get_batch_num_total() % self._histogram_interval == 0
+        return (
+            self._histogram_interval is not None
+            and self._get_batch_num_total() % self._histogram_interval == 0
+        )
 
     def add_train_scalar(self, name: str, value: float, timestep: int = None) -> None:
         timestep = timestep or self._get_batch_num_total()
@@ -141,7 +146,11 @@ class TensorboardWriter(FromParams):
                 self.add_train_histogram("parameter_histogram/" + name, param)
 
     def log_metrics(
-        self, train_metrics: dict, val_metrics: dict = None, epoch: int = None, log_to_console: bool = False
+        self,
+        train_metrics: dict,
+        val_metrics: dict = None,
+        epoch: int = None,
+        log_to_console: bool = False,
     ) -> None:
         """
         Sends all of the train metrics (and validation metrics, if provided) to tensorboard.
@@ -171,7 +180,9 @@ class TensorboardWriter(FromParams):
 
             # And maybe log to console
             if log_to_console and val_metric is not None and train_metric is not None:
-                logger.info(dual_message_template, name.ljust(name_length), train_metric, val_metric)
+                logger.info(
+                    dual_message_template, name.ljust(name_length), train_metric, val_metric
+                )
             elif log_to_console and val_metric is not None:
                 logger.info(no_train_message_template, name.ljust(name_length), "N/A", val_metric)
             elif log_to_console and train_metric is not None:

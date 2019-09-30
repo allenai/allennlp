@@ -10,8 +10,16 @@ from allennlp.data import Vocabulary
 from allennlp.data.fields.production_rule_field import ProductionRule
 from allennlp.models.archival import load_archive, Archive
 from allennlp.models.model import Model
-from allennlp.models.semantic_parsing.wikitables.wikitables_semantic_parser import WikiTablesSemanticParser
-from allennlp.modules import Attention, FeedForward, Seq2SeqEncoder, Seq2VecEncoder, TextFieldEmbedder
+from allennlp.models.semantic_parsing.wikitables.wikitables_semantic_parser import (
+    WikiTablesSemanticParser,
+)
+from allennlp.modules import (
+    Attention,
+    FeedForward,
+    Seq2SeqEncoder,
+    Seq2VecEncoder,
+    TextFieldEmbedder,
+)
 from allennlp.state_machines import BeamSearch
 from allennlp.state_machines.states import CoverageState, ChecklistStatelet
 from allennlp.state_machines.trainers import ExpectedRiskMinimization
@@ -162,7 +170,10 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         model_parameters = dict(self.named_parameters())
         archived_parameters = dict(archive.model.named_parameters())
         question_embedder_weight = "_question_embedder.token_embedder_tokens.weight"
-        if question_embedder_weight not in archived_parameters or question_embedder_weight not in model_parameters:
+        if (
+            question_embedder_weight not in archived_parameters
+            or question_embedder_weight not in model_parameters
+        ):
             raise RuntimeError(
                 "When initializing model weights from an MML model, we need "
                 "the question embedder to be a TokenEmbedder using namespace called "
@@ -181,7 +192,9 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                     for index, archived_index in vocab_index_mapping:
                         new_weights[index] = archived_embedding_weights[archived_index]
                     logger.info(
-                        "Copied embeddings of %d out of %d tokens", len(vocab_index_mapping), new_weights.size()[0]
+                        "Copied embeddings of %d out of %d tokens",
+                        len(vocab_index_mapping),
+                        new_weights.size()[0],
                     )
                 else:
                     new_weights = weights.data
@@ -197,7 +210,10 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
             # representations initialized to UNK token's representation. We do that by checking if
             # the two tokens are the same. They will not be if the token at the archived index is
             # UNK.
-            if archived_vocab.get_token_from_index(archived_token_index, namespace="tokens") == token:
+            if (
+                archived_vocab.get_token_from_index(archived_token_index, namespace="tokens")
+                == token
+            ):
                 vocab_index_mapping.append((index, archived_token_index))
         return vocab_index_mapping
 
@@ -245,7 +261,9 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         # Each instance's agenda is of size (agenda_size, 1)
         agenda_list = [agenda[i] for i in range(batch_size)]
         checklist_states = []
-        all_terminal_productions = [set(instance_world.terminal_productions.values()) for instance_world in world]
+        all_terminal_productions = [
+            set(instance_world.terminal_productions.values()) for instance_world in world
+        ]
         max_num_terminals = max([len(terminals) for terminals in all_terminal_productions])
         for instance_actions, instance_agenda, terminal_productions in zip(
             actions, agenda_list, all_terminal_productions
@@ -300,7 +318,10 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                 for action_index, action in enumerate(batch_actions):
                     action_mapping[(batch_index, action_index)] = action[0]
             best_final_states = self._beam_search.search(
-                self._max_decoding_steps, initial_state, self._decoder_step, keep_final_unfinished_states=False
+                self._max_decoding_steps,
+                initial_state,
+                self._decoder_step,
+                keep_final_unfinished_states=False,
             )
             for i in range(batch_size):
                 in_agenda_ratio = 0.0
@@ -309,7 +330,9 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                 # infinite action loop).
                 if i in best_final_states:
                     action_sequence = best_final_states[i][0].action_history[0]
-                    action_strings = [action_mapping[(i, action_index)] for action_index in action_sequence]
+                    action_strings = [
+                        action_mapping[(i, action_index)] for action_index in action_sequence
+                    ]
                     instance_possible_actions = actions[i]
                     agenda_actions = []
                     for rule_id in agenda_indices[i]:
@@ -325,7 +348,9 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                         in_agenda_ratio = sum(actions_in_agenda) / len(actions_in_agenda)
                 self._agenda_coverage(in_agenda_ratio)
 
-            self._compute_validation_outputs(actions, best_final_states, world, target_values, metadata, outputs)
+            self._compute_validation_outputs(
+                actions, best_final_states, world, target_values, metadata, outputs
+            )
         return outputs
 
     @staticmethod
@@ -378,7 +403,9 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         checklist_mask = (target_checklist != 0).float()
         return target_checklist, terminal_actions, checklist_mask
 
-    def _get_state_cost(self, worlds: List[WikiTablesLanguage], state: CoverageState) -> torch.Tensor:
+    def _get_state_cost(
+        self, worlds: List[WikiTablesLanguage], state: CoverageState
+    ) -> torch.Tensor:
         if not state.is_finished():
             raise RuntimeError("_get_state_cost() is not defined for unfinished states!")
         world = worlds[state.batch_indices[0]]
@@ -398,7 +425,9 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         action_strings = [state.possible_actions[batch_index][i][0] for i in action_history]
         target_values = state.extras[batch_index]
         evaluation = False
-        executor_logger = logging.getLogger("allennlp.semparse.domain_languages.wikitables_language")
+        executor_logger = logging.getLogger(
+            "allennlp.semparse.domain_languages.wikitables_language"
+        )
         executor_logger.setLevel(logging.ERROR)
         evaluation = world.evaluate_action_sequence(action_strings, target_values)
         if evaluation:

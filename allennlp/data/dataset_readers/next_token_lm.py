@@ -40,7 +40,10 @@ class NextTokenLmReader(DatasetReader):
     """
 
     def __init__(
-        self, tokenizer: Tokenizer = None, token_indexers: Dict[str, TokenIndexer] = None, lazy: bool = False
+        self,
+        tokenizer: Tokenizer = None,
+        token_indexers: Dict[str, TokenIndexer] = None,
+        lazy: bool = False,
     ) -> None:
         super().__init__(lazy)
         self._tokenizer = tokenizer or WordTokenizer(word_splitter=JustSpacesWordSplitter())

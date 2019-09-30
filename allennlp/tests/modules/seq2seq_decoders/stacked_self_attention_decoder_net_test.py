@@ -42,6 +42,8 @@ class TestStackedSelfAttentionDecoderNet(AllenNlpTestCase):
         prev_timesteps = 3
         prev_step_prediction_embeded = torch.rand(batch_size, prev_timesteps, decoder_inout_dim)
 
-        next_state, decoded_vec = decoder_net({}, encoded_state, source_mask, prev_step_prediction_embeded)
+        next_state, decoded_vec = decoder_net(
+            {}, encoded_state, source_mask, prev_step_prediction_embeded
+        )
         assert next_state == {}
         assert list(decoded_vec.shape) == [batch_size, prev_timesteps, decoder_inout_dim]

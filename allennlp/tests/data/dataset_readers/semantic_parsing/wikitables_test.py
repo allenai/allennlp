@@ -80,7 +80,9 @@ def assert_dataset_correct(dataset):
 
 class WikiTablesDatasetReaderTest(AllenNlpTestCase):
     def test_reader_reads(self):
-        offline_search_directory = self.FIXTURES_ROOT / "data" / "wikitables" / "action_space_walker_output"
+        offline_search_directory = (
+            self.FIXTURES_ROOT / "data" / "wikitables" / "action_space_walker_output"
+        )
         params = {
             "lazy": False,
             "tables_directory": self.FIXTURES_ROOT / "data" / "wikitables",
@@ -92,7 +94,10 @@ class WikiTablesDatasetReaderTest(AllenNlpTestCase):
 
     def test_reader_reads_with_lfs_in_tarball(self):
         offline_search_directory = (
-            self.FIXTURES_ROOT / "data" / "wikitables" / "action_space_walker_output_with_single_tarball"
+            self.FIXTURES_ROOT
+            / "data"
+            / "wikitables"
+            / "action_space_walker_output_with_single_tarball"
         )
         params = {
             "lazy": False,

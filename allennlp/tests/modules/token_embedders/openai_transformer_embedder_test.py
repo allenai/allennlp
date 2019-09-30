@@ -121,7 +121,9 @@ class TestOpenAiTransformerEmbedderCorrectWithFixture(AllenNlpTestCase):
     """
 
     def test_openai_transformer_matches_tensorflow(self):
-        model_path = "https://allennlp.s3.amazonaws.com/models/openai-transformer-lm-2018.07.23.tar.gz"
+        model_path = (
+            "https://allennlp.s3.amazonaws.com/models/openai-transformer-lm-2018.07.23.tar.gz"
+        )
         indexer = OpenaiTransformerBytePairIndexer(model_path=model_path)
         transformer = OpenaiTransformer(model_path=model_path)
 
@@ -137,7 +139,9 @@ class TestOpenAiTransformerEmbedderCorrectWithFixture(AllenNlpTestCase):
         batch_lengths = []
         for k, sentence in enumerate(sentences):
             tokens = [token.text for token in nlp(text_standardize(sentence)) if not token.is_space]
-            indices = indexer.tokens_to_indices([Token(token) for token in tokens], Vocabulary(), "openai_indexer")
+            indices = indexer.tokens_to_indices(
+                [Token(token) for token in tokens], Vocabulary(), "openai_indexer"
+            )
             batch_indices.append(indices["openai_indexer"])
             batch_lengths.append(len([i for i in indices["openai_indexer"] if i != 0]))
         batch_indices = torch.from_numpy(numpy.array(batch_indices))
@@ -147,7 +151,10 @@ class TestOpenAiTransformerEmbedderCorrectWithFixture(AllenNlpTestCase):
 
         # Combine the inputs with positional encodings
         batch_tensor = torch.stack(
-            [batch_indices, positional_encodings.expand(batch_size, num_timesteps)],  # (batch_size, num_timesteps)
+            [
+                batch_indices,
+                positional_encodings.expand(batch_size, num_timesteps),
+            ],  # (batch_size, num_timesteps)
             dim=-1,
         )
 
@@ -157,7 +164,9 @@ class TestOpenAiTransformerEmbedderCorrectWithFixture(AllenNlpTestCase):
 
         # load the expected activations
         expected_activations = []
-        with h5py.File(self.FIXTURES_ROOT / "openai_transformer" / "expected_embeddings.hdf5", "r") as fin:
+        with h5py.File(
+            self.FIXTURES_ROOT / "openai_transformer" / "expected_embeddings.hdf5", "r"
+        ) as fin:
             expected_activations.append(fin["0"][...])
             expected_activations.append(fin["1"][...])
 
@@ -202,5 +211,7 @@ def create_small_test_fixture(output_dir: str = "/tmp") -> None:
             bpe_file.write(f"{sym1} {sym2}\n")
         bpe_file.write("\n")
 
-    transformer = OpenaiTransformer(embedding_dim=10, num_heads=2, num_layers=2, vocab_size=(50 + 50), n_ctx=50)
+    transformer = OpenaiTransformer(
+        embedding_dim=10, num_heads=2, num_layers=2, vocab_size=(50 + 50), n_ctx=50
+    )
     transformer.dump_weights(output_dir, num_pieces=2)

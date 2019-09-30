@@ -89,12 +89,16 @@ class _NamespaceDependentDefaultDict(defaultdict):
 
 class _TokenToIndexDefaultDict(_NamespaceDependentDefaultDict):
     def __init__(self, non_padded_namespaces: Set[str], padding_token: str, oov_token: str) -> None:
-        super().__init__(non_padded_namespaces, lambda: {padding_token: 0, oov_token: 1}, lambda: {})
+        super().__init__(
+            non_padded_namespaces, lambda: {padding_token: 0, oov_token: 1}, lambda: {}
+        )
 
 
 class _IndexToTokenDefaultDict(_NamespaceDependentDefaultDict):
     def __init__(self, non_padded_namespaces: Set[str], padding_token: str, oov_token: str) -> None:
-        super().__init__(non_padded_namespaces, lambda: {0: padding_token, 1: oov_token}, lambda: {})
+        super().__init__(
+            non_padded_namespaces, lambda: {0: padding_token, 1: oov_token}, lambda: {}
+        )
 
 
 def _read_pretrained_tokens(embeddings_file_uri: str) -> List[str]:
@@ -251,7 +255,9 @@ class Vocabulary(Registrable):
         state["_index_to_token"] = dict(state["_index_to_token"])
 
         if "_retained_counter" in state:
-            state["_retained_counter"] = {key: dict(value) for key, value in state["_retained_counter"].items()}
+            state["_retained_counter"] = {
+                key: dict(value) for key, value in state["_retained_counter"].items()
+            }
 
         return state
 
@@ -285,13 +291,17 @@ class Vocabulary(Registrable):
         if os.listdir(directory):
             logging.warning("vocabulary serialization directory %s is not empty", directory)
 
-        with codecs.open(os.path.join(directory, NAMESPACE_PADDING_FILE), "w", "utf-8") as namespace_file:
+        with codecs.open(
+            os.path.join(directory, NAMESPACE_PADDING_FILE), "w", "utf-8"
+        ) as namespace_file:
             for namespace_str in self._non_padded_namespaces:
                 print(namespace_str, file=namespace_file)
 
         for namespace, mapping in self._index_to_token.items():
             # Each namespace gets written to its own file, in index order.
-            with codecs.open(os.path.join(directory, namespace + ".txt"), "w", "utf-8") as token_file:
+            with codecs.open(
+                os.path.join(directory, namespace + ".txt"), "w", "utf-8"
+            ) as token_file:
                 num_tokens = len(mapping)
                 start_index = 1 if mapping[0] == self._padding_token else 0
                 for i in range(start_index, num_tokens):
@@ -308,7 +318,9 @@ class Vocabulary(Registrable):
             The directory containing the serialized vocabulary.
         """
         logger.info("Loading token dictionary from %s.", directory)
-        with codecs.open(os.path.join(directory, NAMESPACE_PADDING_FILE), "r", "utf-8") as namespace_file:
+        with codecs.open(
+            os.path.join(directory, NAMESPACE_PADDING_FILE), "r", "utf-8"
+        ) as namespace_file:
             non_padded_namespaces = [namespace_str.strip() for namespace_str in namespace_file]
 
         vocab = cls(non_padded_namespaces=non_padded_namespaces)
@@ -330,7 +342,11 @@ class Vocabulary(Registrable):
         return vocab
 
     def set_from_file(
-        self, filename: str, is_padded: bool = True, oov_token: str = DEFAULT_OOV_TOKEN, namespace: str = "tokens"
+        self,
+        filename: str,
+        is_padded: bool = True,
+        oov_token: str = DEFAULT_OOV_TOKEN,
+        namespace: str = "tokens",
     ):
         """
         If you already have a vocabulary file for a trained model somewhere, and you really want to
@@ -415,7 +431,9 @@ class Vocabulary(Registrable):
 
     # There's enough logic here to require a custom from_params.
     @classmethod
-    def from_params(cls, params: Params, instances: Iterable["adi.Instance"] = None):  # type: ignore
+    def from_params(
+        cls, params: Params, instances: Iterable["adi.Instance"] = None
+    ):  # type: ignore
         """
         There are two possible ways to build a vocabulary; from a
         collection of instances, using :func:`Vocabulary.from_instances`, or
@@ -459,9 +477,13 @@ class Vocabulary(Registrable):
                 "vocab_directory key or a Dataset to build a vocabulary from."
             )
         if extend and not instances:
-            raise ConfigurationError("'extend' is true but there are not instances passed to extend.")
+            raise ConfigurationError(
+                "'extend' is true but there are not instances passed to extend."
+            )
         if extend and not vocabulary_directory:
-            raise ConfigurationError("'extend' is true but there is not 'directory_path' to extend from.")
+            raise ConfigurationError(
+                "'extend' is true but there is not 'directory_path' to extend from."
+            )
 
         if vocabulary_directory and instances:
             if extend:
@@ -534,7 +556,9 @@ class Vocabulary(Registrable):
             original_padded = not any(
                 namespace_match(pattern, namespace) for pattern in self._non_padded_namespaces
             )
-            extension_padded = not any(namespace_match(pattern, namespace) for pattern in non_padded_namespaces)
+            extension_padded = not any(
+                namespace_match(pattern, namespace) for pattern in non_padded_namespaces
+            )
             if original_padded != extension_padded:
                 raise ConfigurationError(
                     "Common namespace {} has conflicting ".format(namespace)
@@ -580,7 +604,9 @@ class Vocabulary(Registrable):
             for token in tokens:
                 self.add_token_to_namespace(token, namespace)
 
-    def extend_from_instances(self, params: Params, instances: Iterable["adi.Instance"] = ()) -> None:
+    def extend_from_instances(
+        self, params: Params, instances: Iterable["adi.Instance"] = ()
+    ) -> None:
         """
         Extends an already generated vocabulary using a collection of instances.
         """
@@ -671,14 +697,17 @@ class Vocabulary(Registrable):
         base_string = f"Vocabulary with namespaces:\n"
         non_padded_namespaces = f"\tNon Padded Namespaces: {self._non_padded_namespaces}\n"
         namespaces = [
-            f"\tNamespace: {name}, Size: {self.get_vocab_size(name)} \n" for name in self._index_to_token
+            f"\tNamespace: {name}, Size: {self.get_vocab_size(name)} \n"
+            for name in self._index_to_token
         ]
         return " ".join([base_string, non_padded_namespaces] + namespaces)
 
     def __repr__(self) -> str:
         # This is essentially the same as __str__, but with no newlines
         base_string = f"Vocabulary with namespaces: "
-        namespaces = [f"{name}, Size: {self.get_vocab_size(name)} ||" for name in self._index_to_token]
+        namespaces = [
+            f"{name}, Size: {self.get_vocab_size(name)} ||" for name in self._index_to_token
+        ]
         non_padded_namespaces = f"Non Padded Namespaces: {self._non_padded_namespaces}"
         return " ".join([base_string] + namespaces + [non_padded_namespaces])
 

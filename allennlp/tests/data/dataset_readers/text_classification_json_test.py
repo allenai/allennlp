@@ -9,7 +9,12 @@ class TestTextClassificationJsonReader:
     @pytest.mark.parametrize("lazy", (True, False))
     def test_set_skip_indexing_true(self, lazy):
         reader = TextClassificationJsonReader(lazy=lazy, skip_label_indexing=True)
-        ag_path = AllenNlpTestCase.FIXTURES_ROOT / "data" / "text_classification_json" / "integer_labels.jsonl"
+        ag_path = (
+            AllenNlpTestCase.FIXTURES_ROOT
+            / "data"
+            / "text_classification_json"
+            / "integer_labels.jsonl"
+        )
         instances = reader.read(ag_path)
         instances = ensure_list(instances)
 
@@ -25,14 +30,24 @@ class TestTextClassificationJsonReader:
         assert fields["label"].label == instance2["label"]
 
         with pytest.raises(ValueError) as exec_info:
-            ag_path = AllenNlpTestCase.FIXTURES_ROOT / "data" / "text_classification_json" / "imdb_corpus.jsonl"
+            ag_path = (
+                AllenNlpTestCase.FIXTURES_ROOT
+                / "data"
+                / "text_classification_json"
+                / "imdb_corpus.jsonl"
+            )
             ensure_list(reader.read(ag_path))
         assert str(exec_info.value) == "Labels must be integers if skip_label_indexing is True."
 
     @pytest.mark.parametrize("lazy", (True, False))
     def test_read_from_file_ag_news_corpus(self, lazy):
         reader = TextClassificationJsonReader(lazy=lazy)
-        ag_path = AllenNlpTestCase.FIXTURES_ROOT / "data" / "text_classification_json" / "ag_news_corpus.jsonl"
+        ag_path = (
+            AllenNlpTestCase.FIXTURES_ROOT
+            / "data"
+            / "text_classification_json"
+            / "ag_news_corpus.jsonl"
+        )
         instances = reader.read(ag_path)
         instances = ensure_list(instances)
 
@@ -166,7 +181,12 @@ class TestTextClassificationJsonReader:
     @pytest.mark.parametrize("lazy", (True, False))
     def test_read_from_file_ag_news_corpus_and_truncates_properly(self, lazy):
         reader = TextClassificationJsonReader(lazy=lazy, max_sequence_length=5)
-        ag_path = AllenNlpTestCase.FIXTURES_ROOT / "data" / "text_classification_json" / "ag_news_corpus.jsonl"
+        ag_path = (
+            AllenNlpTestCase.FIXTURES_ROOT
+            / "data"
+            / "text_classification_json"
+            / "ag_news_corpus.jsonl"
+        )
         instances = reader.read(ag_path)
         instances = ensure_list(instances)
 
@@ -189,7 +209,12 @@ class TestTextClassificationJsonReader:
     @pytest.mark.parametrize("lazy", (True, False))
     def test_read_from_file_ag_news_corpus_and_segments_sentences_properly(self, lazy):
         reader = TextClassificationJsonReader(lazy=lazy, segment_sentences=True)
-        ag_path = AllenNlpTestCase.FIXTURES_ROOT / "data" / "text_classification_json" / "ag_news_corpus.jsonl"
+        ag_path = (
+            AllenNlpTestCase.FIXTURES_ROOT
+            / "data"
+            / "text_classification_json"
+            / "ag_news_corpus.jsonl"
+        )
         instances = reader.read(ag_path)
         instances = ensure_list(instances)
 
@@ -272,7 +297,19 @@ class TestTextClassificationJsonReader:
                     "reporting",
                     ".",
                 ],
-                ["Some", "say", "they", "draw", "attention", "to", "under", "-", "reported", "stories", "."],
+                [
+                    "Some",
+                    "say",
+                    "they",
+                    "draw",
+                    "attention",
+                    "to",
+                    "under",
+                    "-",
+                    "reported",
+                    "stories",
+                    ".",
+                ],
                 [
                     "Others",
                     "struggle",

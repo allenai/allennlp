@@ -6,7 +6,14 @@ from overrides import overrides
 
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.fields import Field, ListField, TextField, SpanField, MetadataField, SequenceLabelField
+from allennlp.data.fields import (
+    Field,
+    ListField,
+    TextField,
+    SpanField,
+    MetadataField,
+    SequenceLabelField,
+)
 from allennlp.data.instance import Instance
 from allennlp.data.tokenizers import Token
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
@@ -50,7 +57,10 @@ class WinobiasReader(DatasetReader):
     """
 
     def __init__(
-        self, max_span_width: int, token_indexers: Dict[str, TokenIndexer] = None, lazy: bool = False
+        self,
+        max_span_width: int,
+        token_indexers: Dict[str, TokenIndexer] = None,
+        lazy: bool = False,
     ) -> None:
         super().__init__(lazy)
         self._max_span_width = max_span_width
@@ -151,7 +161,11 @@ class WinobiasReader(DatasetReader):
         span_field = ListField(spans)
         metadata_field = MetadataField(metadata)
 
-        fields: Dict[str, Field] = {"text": text_field, "spans": span_field, "metadata": metadata_field}
+        fields: Dict[str, Field] = {
+            "text": text_field,
+            "spans": span_field,
+            "metadata": metadata_field,
+        }
         if span_labels is not None:
             fields["span_labels"] = SequenceLabelField(span_labels, span_field)
 

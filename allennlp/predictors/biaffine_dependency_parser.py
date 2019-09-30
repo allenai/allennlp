@@ -82,7 +82,9 @@ class BiaffineDependencyParserPredictor(Predictor):
     Predictor for the :class:`~allennlp.models.BiaffineDependencyParser` model.
     """
 
-    def __init__(self, model: Model, dataset_reader: DatasetReader, language: str = "en_core_web_sm") -> None:
+    def __init__(
+        self, model: Model, dataset_reader: DatasetReader, language: str = "en_core_web_sm"
+    ) -> None:
         super().__init__(model, dataset_reader)
         # TODO(Mark) Make the language configurable and based on a model attribute.
         self._tokenizer = SpacyWordSplitter(language=language, pos_tags=True)

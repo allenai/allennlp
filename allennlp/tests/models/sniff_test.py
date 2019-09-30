@@ -14,7 +14,9 @@ class SniffTest(AllenNlpTestCase):
 
         result = predictor.predict_json({"passage": passage, "question": question})
 
-        correct = "Keanu Reeves, Laurence Fishburne, Carrie-Anne Moss, Hugo Weaving, and Joe Pantoliano"
+        correct = (
+            "Keanu Reeves, Laurence Fishburne, Carrie-Anne Moss, Hugo Weaving, and Joe Pantoliano"
+        )
 
         assert correct == result["best_span_str"]
 
@@ -278,7 +280,11 @@ class SniffTest(AllenNlpTestCase):
 
         result = predictor.predict_json({"document": document})
         print(result)
-        assert result["clusters"] == [[[0, 0], [10, 10]], [[33, 33], [37, 37]], [[26, 27], [42, 43]]]
+        assert result["clusters"] == [
+            [[0, 0], [10, 10]],
+            [[33, 33], [37, 37]],
+            [[26, 27], [42, 43]],
+        ]
         assert result["document"] == [
             "We",
             "'re",
@@ -342,7 +348,16 @@ class SniffTest(AllenNlpTestCase):
 
         result = predictor.predict_json({"sentence": sentence})
 
-        assert result["words"] == ["Michael", "Jordan", "is", "a", "professor", "at", "Berkeley", "."]
+        assert result["words"] == [
+            "Michael",
+            "Jordan",
+            "is",
+            "a",
+            "professor",
+            "at",
+            "Berkeley",
+            ".",
+        ]
         assert result["tags"] == ["B-PER", "L-PER", "O", "O", "O", "O", "U-LOC", "O"]
 
     @pytest.mark.skipif(spacy.__version__ < "2.1", reason="this model changed from 2.0 to 2.1")
@@ -381,5 +396,12 @@ class SniffTest(AllenNlpTestCase):
         # a trained dependency parser.
         assert result["words"] == ["He", "ate", "spaghetti", "with", "chopsticks", "."]
         assert result["pos"] == ["PRP", "VBD", "NNS", "IN", "NNS", "."]
-        assert result["predicted_dependencies"] == ["nsubj", "root", "dobj", "prep", "pobj", "punct"]
+        assert result["predicted_dependencies"] == [
+            "nsubj",
+            "root",
+            "dobj",
+            "prep",
+            "pobj",
+            "punct",
+        ]
         assert result["predicted_heads"] == [2, 0, 2, 2, 4, 2]

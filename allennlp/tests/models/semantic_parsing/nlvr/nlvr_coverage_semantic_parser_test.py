@@ -13,7 +13,10 @@ class NlvrCoverageSemanticParserTest(ModelTestCase):
     def setUp(self):
         super().setUp()
         self.set_up_model(
-            self.FIXTURES_ROOT / "semantic_parsing" / "nlvr_coverage_semantic_parser" / "experiment.json",
+            self.FIXTURES_ROOT
+            / "semantic_parsing"
+            / "nlvr_coverage_semantic_parser"
+            / "experiment.json",
             self.FIXTURES_ROOT / "data" / "nlvr" / "sample_grouped_data.jsonl",
         )
 
@@ -23,13 +26,19 @@ class NlvrCoverageSemanticParserTest(ModelTestCase):
     def test_ungrouped_model_can_train_save_and_load(self):
 
         self.ensure_model_can_train_save_and_load(
-            self.FIXTURES_ROOT / "semantic_parsing" / "nlvr_coverage_semantic_parser" / "ungrouped_experiment.json"
+            self.FIXTURES_ROOT
+            / "semantic_parsing"
+            / "nlvr_coverage_semantic_parser"
+            / "ungrouped_experiment.json"
         )
 
     def test_mml_initialized_model_can_train_save_and_load(self):
 
         self.ensure_model_can_train_save_and_load(
-            self.FIXTURES_ROOT / "semantic_parsing" / "nlvr_coverage_semantic_parser" / "mml_init_experiment.json"
+            self.FIXTURES_ROOT
+            / "semantic_parsing"
+            / "nlvr_coverage_semantic_parser"
+            / "mml_init_experiment.json"
         )
 
     def test_get_checklist_info(self):

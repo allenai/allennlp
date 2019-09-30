@@ -55,10 +55,20 @@ class TestElmoTokenEmbedderMultilang(ModelTestCase):
                 pathlib.Path("allennlp") / "tests" / "fixtures" / "elmo" / "lm_weights.hdf5"
             ),
             "model.text_field_embedder.token_embedders.elmo.options_files.fr": str(
-                pathlib.Path("allennlp") / "tests" / "fixtures" / "elmo_multilingual" / "fr" / "options.json"
+                pathlib.Path("allennlp")
+                / "tests"
+                / "fixtures"
+                / "elmo_multilingual"
+                / "fr"
+                / "options.json"
             ),
             "model.text_field_embedder.token_embedders.elmo.weight_files.fr": str(
-                pathlib.Path("allennlp") / "tests" / "fixtures" / "elmo_multilingual" / "fr" / "weights.hdf5"
+                pathlib.Path("allennlp")
+                / "tests"
+                / "fixtures"
+                / "elmo_multilingual"
+                / "fr"
+                / "weights.hdf5"
             ),
         }
 
@@ -97,7 +107,9 @@ class TestElmoTokenEmbedderMultilang(ModelTestCase):
         word2[1] = 2
         word2[2] = 1
         word2[3] = 0
-        embedding_layer = ElmoTokenEmbedderMultiLang.from_params(vocab=None, params=Params(params_dict))
+        embedding_layer = ElmoTokenEmbedderMultiLang.from_params(
+            vocab=None, params=Params(params_dict)
+        )
 
         input_tensor = torch.LongTensor([[word1, word2]])
         embedded_en = embedding_layer(input_tensor, lang="en").data.numpy()
@@ -135,7 +147,9 @@ class TestElmoTokenEmbedderMultilang(ModelTestCase):
         word2[1] = 2
         word2[2] = 1
         word2[3] = 0
-        embedding_layer = ElmoTokenEmbedderMultiLang.from_params(vocab=None, params=Params(params_dict))
+        embedding_layer = ElmoTokenEmbedderMultiLang.from_params(
+            vocab=None, params=Params(params_dict)
+        )
 
         input_tensor = torch.LongTensor([[word1, word2]])
         embedded_en = embedding_layer(input_tensor, lang="en").data.numpy()

@@ -130,7 +130,8 @@ class BiaffineDependencyParserMultiLang(BiaffineDependencyParser):
         """
         if "lang" not in metadata[0]:
             raise ConfigurationError(
-                "metadata is missing 'lang' key; " "Use the universal_dependencies_multilang dataset_reader."
+                "metadata is missing 'lang' key; "
+                "Use the universal_dependencies_multilang dataset_reader."
             )
 
         batch_lang = metadata[0]["lang"]
@@ -159,7 +160,11 @@ class BiaffineDependencyParserMultiLang(BiaffineDependencyParser):
             # but excluding the symbolic ROOT token at the start,
             # which is why we start from the second element in the sequence.
             self._lang_attachment_scores[batch_lang](
-                predicted_heads[:, 1:], predicted_head_tags[:, 1:], head_indices, head_tags, evaluation_mask
+                predicted_heads[:, 1:],
+                predicted_head_tags[:, 1:],
+                head_indices,
+                head_tags,
+                evaluation_mask,
             )
 
         output_dict = {

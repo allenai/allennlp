@@ -27,7 +27,9 @@ class TestLinearMatrixAttention(AllenNlpTestCase):
 
         assert_almost_equal(
             output.data.numpy(),
-            numpy.array([[[4.1000, 7.1000], [17.4000, 20.4000]], [[-9.8000, -6.8000], [36.6000, 39.6000]]]),
+            numpy.array(
+                [[[4.1000, 7.1000], [17.4000, 20.4000]], [[-9.8000, -6.8000], [36.6000, 39.6000]]]
+            ),
             decimal=2,
         )
 

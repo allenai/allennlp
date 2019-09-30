@@ -83,7 +83,9 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
         for token in itertools.chain(self._start_tokens, tokens, self._end_tokens):
             token_indices: List[int] = []
             if token.text is None:
-                raise ConfigurationError("TokenCharactersIndexer needs a tokenizer that retains text")
+                raise ConfigurationError(
+                    "TokenCharactersIndexer needs a tokenizer that retains text"
+                )
             for character in self._character_tokenizer.tokenize(token.text):
                 if getattr(character, "text_id", None) is not None:
                     # `text_id` being set on the token means that we aren't using the vocab, we just
@@ -132,4 +134,6 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
             # Removes the "dummy token".
             padded_tokens.pop()
         # Truncates all the tokens to the desired length, and return the result.
-        return {key: torch.LongTensor([list(token[:desired_token_length]) for token in padded_tokens])}
+        return {
+            key: torch.LongTensor([list(token[:desired_token_length]) for token in padded_tokens])
+        }

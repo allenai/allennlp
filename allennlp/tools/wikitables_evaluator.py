@@ -195,7 +195,9 @@ class DateValue(Value):
         self._day = day
         if not original_string:
             self._normalized = "{}-{}-{}".format(
-                year if year != -1 else "xx", month if month != -1 else "xx", day if day != "-1" else "xx"
+                year if year != -1 else "xx",
+                month if month != -1 else "xx",
+                day if day != "-1" else "xx",
             )
         else:
             self._normalized = normalize(original_string)
@@ -361,7 +363,8 @@ def main():
     )
     parser.add_argument(
         "prediction_path",
-        help="Path to the prediction file. Each line contains " "ex_id <tab> item1 <tab> item2 <tab> ...",
+        help="Path to the prediction file. Each line contains "
+        "ex_id <tab> item1 <tab> item2 <tab> ...",
     )
     args = parser.parse_args()
 

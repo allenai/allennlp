@@ -109,7 +109,9 @@ class CrfTagger(Model):
         self.label_encoding = label_encoding
         if constrain_crf_decoding:
             if not label_encoding:
-                raise ConfigurationError("constrain_crf_decoding is True, but " "no label_encoding was specified.")
+                raise ConfigurationError(
+                    "constrain_crf_decoding is True, but " "no label_encoding was specified."
+                )
             labels = self.vocab.get_index_to_token_vocabulary(label_namespace)
             constraints = allowed_transitions(label_encoding, labels)
         else:
@@ -120,11 +122,16 @@ class CrfTagger(Model):
             self.num_tags, constraints, include_start_end_transitions=include_start_end_transitions
         )
 
-        self.metrics = {"accuracy": CategoricalAccuracy(), "accuracy3": CategoricalAccuracy(top_k=3)}
+        self.metrics = {
+            "accuracy": CategoricalAccuracy(),
+            "accuracy3": CategoricalAccuracy(top_k=3),
+        }
         self.calculate_span_f1 = calculate_span_f1
         if calculate_span_f1:
             if not label_encoding:
-                raise ConfigurationError("calculate_span_f1 is True, but " "no label_encoding was specified.")
+                raise ConfigurationError(
+                    "calculate_span_f1 is True, but " "no label_encoding was specified."
+                )
             self._f1_metric = SpanBasedF1Measure(
                 vocab, tag_namespace=label_namespace, label_encoding=label_encoding
             )
@@ -237,7 +244,10 @@ class CrfTagger(Model):
         so we use an ugly nested list comprehension.
         """
         output_dict["tags"] = [
-            [self.vocab.get_token_from_index(tag, namespace=self.label_namespace) for tag in instance_tags]
+            [
+                self.vocab.get_token_from_index(tag, namespace=self.label_namespace)
+                for tag in instance_tags
+            ]
             for instance_tags in output_dict["tags"]
         ]
 
@@ -245,7 +255,9 @@ class CrfTagger(Model):
 
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
-        metrics_to_return = {metric_name: metric.get_metric(reset) for metric_name, metric in self.metrics.items()}
+        metrics_to_return = {
+            metric_name: metric.get_metric(reset) for metric_name, metric in self.metrics.items()
+        }
 
         if self.calculate_span_f1:
             f1_dict = self._f1_metric.get_metric(reset=reset)

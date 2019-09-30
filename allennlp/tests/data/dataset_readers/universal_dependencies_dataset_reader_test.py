@@ -21,8 +21,24 @@ class TestUniversalDependenciesDatasetReader(AllenNlpTestCase):
             "?",
         ]
 
-        assert fields["pos_tags"].labels == ["PRON", "SCONJ", "PROPN", "VERB", "ADP", "PROPN", "PUNCT"]
-        assert fields["head_tags"].labels == ["root", "mark", "nsubj", "advcl", "case", "obl", "punct"]
+        assert fields["pos_tags"].labels == [
+            "PRON",
+            "SCONJ",
+            "PROPN",
+            "VERB",
+            "ADP",
+            "PROPN",
+            "PUNCT",
+        ]
+        assert fields["head_tags"].labels == [
+            "root",
+            "mark",
+            "nsubj",
+            "advcl",
+            "case",
+            "obl",
+            "punct",
+        ]
         assert fields["head_indices"].labels == [0, 4, 4, 1, 6, 4, 4]
 
         instance = instances[1]
@@ -237,5 +253,13 @@ class TestUniversalDependenciesDatasetReader(AllenNlpTestCase):
         ]
 
         assert fields["pos_tags"].labels == ["WP", "IN", "NNP", "VBD", "IN", "NNP", "."]
-        assert fields["head_tags"].labels == ["root", "mark", "nsubj", "advcl", "case", "obl", "punct"]
+        assert fields["head_tags"].labels == [
+            "root",
+            "mark",
+            "nsubj",
+            "advcl",
+            "case",
+            "obl",
+            "punct",
+        ]
         assert fields["head_indices"].labels == [0, 4, 4, 1, 6, 4, 4]

@@ -60,10 +60,16 @@ class TestTrain(AllenNlpTestCase):
             train_model(params(), serialization_dir=os.path.join(self.TEST_DIR, "test_train_model"))
 
         # But it's OK if serialization dir exists and --recover is specified:
-        train_model(params(), serialization_dir=os.path.join(self.TEST_DIR, "test_train_model"), recover=True)
+        train_model(
+            params(),
+            serialization_dir=os.path.join(self.TEST_DIR, "test_train_model"),
+            recover=True,
+        )
 
         # It's ok serialization dir exists and --force is specified (it will be deleted):
-        train_model(params(), serialization_dir=os.path.join(self.TEST_DIR, "test_train_model"), force=True)
+        train_model(
+            params(), serialization_dir=os.path.join(self.TEST_DIR, "test_train_model"), force=True
+        )
 
         # But --force and --recover cannot both be specified
         with pytest.raises(ConfigurationError):
@@ -86,7 +92,11 @@ class TestTrain(AllenNlpTestCase):
                 "train_data_path": "tests/fixtures/data/sequence_tagging.tsv",
                 "validation_data_path": "tests/fixtures/data/sequence_tagging.tsv",
                 "iterator": {"type": "basic", "batch_size": 2},
-                "trainer": {"num_epochs": 2, "cuda_device": torch.cuda.device_count(), "optimizer": "adam"},
+                "trainer": {
+                    "num_epochs": 2,
+                    "cuda_device": torch.cuda.device_count(),
+                    "optimizer": "adam",
+                },
             }
         )
 
@@ -242,7 +252,9 @@ class TestTrainOnLazyDataset(AllenNlpTestCase):
         # (1) corresponds to model.extend_embedder_vocab() in trainer.py
         # (2) corresponds to model.extend_embedder_vocab() in model.py
         config_file = str(self.FIXTURES_ROOT / "decomposable_attention" / "experiment.json")
-        model_archive = str(self.FIXTURES_ROOT / "decomposable_attention" / "serialization" / "model.tar.gz")
+        model_archive = str(
+            self.FIXTURES_ROOT / "decomposable_attention" / "serialization" / "model.tar.gz"
+        )
         serialization_dir = str(self.TEST_DIR / "train")
 
         params = Params.from_file(config_file).as_dict()

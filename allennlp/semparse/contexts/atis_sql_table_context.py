@@ -37,15 +37,22 @@ GRAMMAR_DICTIONARY["statement"] = ['query ws ";" ws']
 GRAMMAR_DICTIONARY["query"] = [
     '(ws "(" ws "SELECT" ws distinct ws select_results ws '
     '"FROM" ws table_refs ws where_clause ws group_by_clause ws ")" ws)',
-    '(ws "(" ws "SELECT" ws distinct ws select_results ws ' '"FROM" ws table_refs ws where_clause ws ")" ws)',
+    '(ws "(" ws "SELECT" ws distinct ws select_results ws '
+    '"FROM" ws table_refs ws where_clause ws ")" ws)',
     '(ws "SELECT" ws distinct ws select_results ws ' '"FROM" ws table_refs ws where_clause ws)',
 ]
 GRAMMAR_DICTIONARY["select_results"] = ["col_refs", "agg"]
-GRAMMAR_DICTIONARY["agg"] = ['( agg_func ws "(" ws col_ref ws ")" )', '(agg_func ws "(" ws col ws ")" )']
+GRAMMAR_DICTIONARY["agg"] = [
+    '( agg_func ws "(" ws col_ref ws ")" )',
+    '(agg_func ws "(" ws col ws ")" )',
+]
 GRAMMAR_DICTIONARY["agg_func"] = ['"MIN"', '"min"', '"MAX"', '"max"', '"COUNT"', '"count"']
 GRAMMAR_DICTIONARY["col_refs"] = ['(col_ref ws "," ws col_refs)', "(col_ref)"]
 GRAMMAR_DICTIONARY["table_refs"] = ['(table_name ws "," ws table_refs)', "(table_name)"]
-GRAMMAR_DICTIONARY["where_clause"] = ['("WHERE" ws "(" ws conditions ws ")" ws)', '("WHERE" ws conditions ws)']
+GRAMMAR_DICTIONARY["where_clause"] = [
+    '("WHERE" ws "(" ws conditions ws ")" ws)',
+    '("WHERE" ws conditions ws)',
+]
 GRAMMAR_DICTIONARY["group_by_clause"] = ['("GROUP" ws "BY" ws col_ref)']
 GRAMMAR_DICTIONARY["conditions"] = [
     "(condition ws conj ws conditions)",
@@ -59,7 +66,19 @@ GRAMMAR_DICTIONARY["conditions"] = [
 GRAMMAR_DICTIONARY["condition"] = ["in_clause", "ternaryexpr", "biexpr"]
 GRAMMAR_DICTIONARY["in_clause"] = ['(ws col_ref ws "IN" ws query ws)']
 GRAMMAR_DICTIONARY["biexpr"] = ["( col_ref ws binaryop ws value)", "(value ws binaryop ws value)"]
-GRAMMAR_DICTIONARY["binaryop"] = ['"+"', '"-"', '"*"', '"/"', '"="', '">="', '"<="', '">"', '"<"', '"is"', '"IS"']
+GRAMMAR_DICTIONARY["binaryop"] = [
+    '"+"',
+    '"-"',
+    '"*"',
+    '"/"',
+    '"="',
+    '">="',
+    '"<="',
+    '">"',
+    '"<"',
+    '"is"',
+    '"IS"',
+]
 GRAMMAR_DICTIONARY["ternaryexpr"] = [
     '(col_ref ws "not" ws "BETWEEN" ws value ws "AND" ws value ws)',
     '(col_ref ws "NOT" ws "BETWEEN" ws value ws "AND" ws value ws)',
@@ -176,10 +195,14 @@ class AtisSqlTableContext:
             grammar_dictionary["col_ref"] = ['"*"', "agg"]
             all_columns = []
             for table, columns in self.all_tables.items():
-                grammar_dictionary["col_ref"].extend([f'("{table}" ws "." ws "{column}")' for column in columns])
+                grammar_dictionary["col_ref"].extend(
+                    [f'("{table}" ws "." ws "{column}")' for column in columns]
+                )
                 all_columns.extend(columns)
             grammar_dictionary["col_ref"] = sorted(grammar_dictionary["col_ref"], reverse=True)
-            grammar_dictionary["col"] = sorted([f'"{column}"' for column in all_columns], reverse=True)
+            grammar_dictionary["col"] = sorted(
+                [f'"{column}"' for column in all_columns], reverse=True
+            )
 
         biexprs = []
         if self.tables_with_strings:

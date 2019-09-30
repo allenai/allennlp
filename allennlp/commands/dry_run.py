@@ -44,16 +44,22 @@ logger = logging.getLogger(__name__)
 
 
 class DryRun(Subcommand):
-    def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
+    def add_subparser(
+        self, name: str, parser: argparse._SubParsersAction
+    ) -> argparse.ArgumentParser:
 
-        description = """Create a vocabulary, compute dataset statistics and other training utilities."""
+        description = (
+            """Create a vocabulary, compute dataset statistics and other training utilities."""
+        )
         subparser = parser.add_parser(
             name,
             description=description,
             help="Create a vocabulary, compute dataset statistics " "and other training utilities.",
         )
         subparser.add_argument(
-            "param_path", type=str, help="path to parameter file describing the model and its inputs"
+            "param_path",
+            type=str,
+            help="path to parameter file describing the model and its inputs",
         )
         subparser.add_argument(
             "-s",

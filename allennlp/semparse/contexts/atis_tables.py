@@ -37,7 +37,9 @@ def am_map_match_to_query_value(match: str):
 
 
 def get_times_from_utterance(
-    utterance: str, char_offset_to_token_index: Dict[int, int], indices_of_approximate_words: Set[int]
+    utterance: str,
+    char_offset_to_token_index: Dict[int, int],
+    indices_of_approximate_words: Set[int],
 ) -> Dict[str, List[int]]:
     """
     Given an utterance, we get the numbers that correspond to times and convert them to
@@ -45,11 +47,19 @@ def get_times_from_utterance(
     """
 
     pm_linking_dict = _time_regex_match(
-        r"\d+pm", utterance, char_offset_to_token_index, pm_map_match_to_query_value, indices_of_approximate_words
+        r"\d+pm",
+        utterance,
+        char_offset_to_token_index,
+        pm_map_match_to_query_value,
+        indices_of_approximate_words,
     )
 
     am_linking_dict = _time_regex_match(
-        r"\d+am", utterance, char_offset_to_token_index, am_map_match_to_query_value, indices_of_approximate_words
+        r"\d+am",
+        utterance,
+        char_offset_to_token_index,
+        am_map_match_to_query_value,
+        indices_of_approximate_words,
     )
 
     oclock_linking_dict = _time_regex_match(
@@ -127,7 +137,9 @@ def get_date_from_utterance(tokenized_utterance: List[Token], year: int = 1993) 
     return dates
 
 
-def get_numbers_from_utterance(utterance: str, tokenized_utterance: List[Token]) -> Dict[str, List[int]]:
+def get_numbers_from_utterance(
+    utterance: str, tokenized_utterance: List[Token]
+) -> Dict[str, List[int]]:
     """
     Given an utterance, this function finds all the numbers that are in the action space. Since we need to
     keep track of linking scores, we represent the numbers as a dictionary, where the keys are the string
@@ -135,7 +147,9 @@ def get_numbers_from_utterance(utterance: str, tokenized_utterance: List[Token])
     """
     # When we use a regex to find numbers or strings, we need a mapping from
     # the character to which token triggered it.
-    char_offset_to_token_index = {token.idx: token_index for token_index, token in enumerate(tokenized_utterance)}
+    char_offset_to_token_index = {
+        token.idx: token_index for token_index, token in enumerate(tokenized_utterance)
+    }
 
     # We want to look up later for each time whether it appears after a word
     # such as "about" or "approximately".
@@ -144,16 +158,23 @@ def get_numbers_from_utterance(utterance: str, tokenized_utterance: List[Token])
     }
 
     indices_of_words_preceding_time = {
-        index for index, token in enumerate(tokenized_utterance) if token.text in WORDS_PRECEDING_TIME
+        index
+        for index, token in enumerate(tokenized_utterance)
+        if token.text in WORDS_PRECEDING_TIME
     }
 
-    indices_of_am_pm = {index for index, token in enumerate(tokenized_utterance) if token.text in {"am", "pm"}}
+    indices_of_am_pm = {
+        index for index, token in enumerate(tokenized_utterance) if token.text in {"am", "pm"}
+    }
 
     number_linking_dict: Dict[str, List[int]] = defaultdict(list)
 
     for token_index, token in enumerate(tokenized_utterance):
         if token.text.isdigit():
-            if token_index - 1 in indices_of_words_preceding_time and token_index + 1 not in indices_of_am_pm:
+            if (
+                token_index - 1 in indices_of_words_preceding_time
+                and token_index + 1 not in indices_of_am_pm
+            ):
                 for time in digit_to_query_time(token.text):
                     number_linking_dict[str(time)].append(token_index)
     times_linking_dict = get_times_from_utterance(
@@ -172,8 +193,12 @@ def get_numbers_from_utterance(utterance: str, tokenized_utterance: List[Token])
     return number_linking_dict
 
 
-def get_time_range_start_from_utterance(utterance: str, tokenized_utterance: List[Token]) -> Dict[str, List[int]]:
-    late_indices = {index for index, token in enumerate(tokenized_utterance) if token.text == "late"}
+def get_time_range_start_from_utterance(
+    utterance: str, tokenized_utterance: List[Token]
+) -> Dict[str, List[int]]:
+    late_indices = {
+        index for index, token in enumerate(tokenized_utterance) if token.text == "late"
+    }
 
     time_range_start_linking_dict: Dict[str, List[int]] = defaultdict(list)
     for token_index, token in enumerate(tokenized_utterance):
@@ -189,8 +214,12 @@ def get_time_range_start_from_utterance(utterance: str, tokenized_utterance: Lis
     return time_range_start_linking_dict
 
 
-def get_time_range_end_from_utterance(utterance: str, tokenized_utterance: List[Token]) -> Dict[str, List[int]]:
-    early_indices = {index for index, token in enumerate(tokenized_utterance) if token.text == "early"}
+def get_time_range_end_from_utterance(
+    utterance: str, tokenized_utterance: List[Token]
+) -> Dict[str, List[int]]:
+    early_indices = {
+        index for index, token in enumerate(tokenized_utterance) if token.text == "early"
+    }
 
     time_range_end_linking_dict: Dict[str, List[int]] = defaultdict(list)
     for token_index, token in enumerate(tokenized_utterance):
@@ -206,7 +235,9 @@ def get_time_range_end_from_utterance(utterance: str, tokenized_utterance: List[
     return time_range_end_linking_dict
 
 
-def get_costs_from_utterance(utterance: str, tokenized_utterance: List[Token]) -> Dict[str, List[int]]:
+def get_costs_from_utterance(
+    utterance: str, tokenized_utterance: List[Token]
+) -> Dict[str, List[int]]:
     dollars_indices = {
         index
         for index, token in enumerate(tokenized_utterance)
@@ -220,7 +251,9 @@ def get_costs_from_utterance(utterance: str, tokenized_utterance: List[Token]) -
     return costs_linking_dict
 
 
-def get_flight_numbers_from_utterance(utterance: str, tokenized_utterance: List[Token]) -> Dict[str, List[int]]:
+def get_flight_numbers_from_utterance(
+    utterance: str, tokenized_utterance: List[Token]
+) -> Dict[str, List[int]]:
     indices_words_preceding_flight_number = {
         index
         for index, token in enumerate(tokenized_utterance)
@@ -318,7 +351,10 @@ def _time_regex_match(
         if match.start() in char_offset_to_token_index:
             for query_value in query_values:
                 linking_scores_dict[str(query_value)].extend(
-                    [char_offset_to_token_index[match.start()], char_offset_to_token_index[match.start()] + 1]
+                    [
+                        char_offset_to_token_index[match.start()],
+                        char_offset_to_token_index[match.start()] + 1,
+                    ]
                 )
     return linking_scores_dict
 
@@ -466,7 +502,11 @@ GROUND_SERVICE = {
     "taxi": ["TAXI"],
 }
 
-MISC_STR = {"every day": ["DAILY"], "saint petersburg": ["ST. PETERSBURG"], "saint louis": ["ST. LOUIS"]}
+MISC_STR = {
+    "every day": ["DAILY"],
+    "saint petersburg": ["ST. PETERSBURG"],
+    "saint louis": ["ST. LOUIS"],
+}
 
 DAY_NUMBERS = {
     "first": 1,
@@ -554,7 +594,13 @@ ALL_TABLES = {
         "time_zone_code",
         "minimum_connect_time",
     ],
-    "airport_service": ["city_code", "airport_code", "miles_distant", "direction", "minutes_distant"],
+    "airport_service": [
+        "city_code",
+        "airport_code",
+        "miles_distant",
+        "direction",
+        "minutes_distant",
+    ],
     "city": ["city_code", "city_name", "state_code", "country_name", "time_zone_code"],
     "class_of_service": ["booking_class", "rank", "class_description"],
     "date_day": ["day_name"],
@@ -1027,7 +1073,15 @@ TRIGGER_LISTS = [
     AIRCRAFT_BASIC_CODES,
 ]
 
-TRIGGER_DICTS = [CITY_AIRPORT_CODES, AIRLINE_CODES, CITY_CODES, GROUND_SERVICE, DAY_OF_WEEK_DICT, YES_NO, MISC_STR]
+TRIGGER_DICTS = [
+    CITY_AIRPORT_CODES,
+    AIRLINE_CODES,
+    CITY_CODES,
+    GROUND_SERVICE,
+    DAY_OF_WEEK_DICT,
+    YES_NO,
+    MISC_STR,
+]
 ATIS_TRIGGER_DICT = get_trigger_dict(TRIGGER_LISTS, TRIGGER_DICTS)
 
 NUMBER_TRIGGER_DICT: Dict[str, List[str]] = get_trigger_dict([], [MISC_TIME_TRIGGERS])

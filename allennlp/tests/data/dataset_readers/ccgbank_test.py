@@ -7,7 +7,9 @@ from allennlp.data.vocabulary import Vocabulary
 class TestCcgBankReader(AllenNlpTestCase):
     def test_read_from_file(self):
 
-        reader = CcgBankDatasetReader(feature_labels=["modified_pos", "original_pos", "predicate_arg"])
+        reader = CcgBankDatasetReader(
+            feature_labels=["modified_pos", "original_pos", "predicate_arg"]
+        )
         instances = ensure_list(reader.read(self.FIXTURES_ROOT / "data" / "ccgbank.txt"))
 
         assert len(instances) == 2
@@ -125,7 +127,9 @@ class TestCcgBankReader(AllenNlpTestCase):
         ]
 
     def test_vocab_from_instances_namespaces(self):
-        reader = CcgBankDatasetReader(feature_labels=["modified_pos", "original_pos", "predicate_arg"])
+        reader = CcgBankDatasetReader(
+            feature_labels=["modified_pos", "original_pos", "predicate_arg"]
+        )
         instances = ensure_list(reader.read(self.FIXTURES_ROOT / "data" / "ccgbank.txt"))
         # check that we didn't clobber the labels namespace
         vocab = Vocabulary.from_instances(instances)

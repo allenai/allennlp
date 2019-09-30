@@ -121,7 +121,9 @@ class NextTokenLM(Model):
             top_words.append(
                 [
                     [
-                        self.vocab.get_token_from_index(index.item(), namespace=self._target_namespace)
+                        self.vocab.get_token_from_index(
+                            index.item(), namespace=self._target_namespace
+                        )
                         for index in instance_indices
                     ]
                 ]
@@ -131,7 +133,9 @@ class NextTokenLM(Model):
         for instance_tokens in output_dict["token_ids"]:
             tokens.append(
                 [
-                    self.vocab.get_token_from_index(token_id.item(), namespace=self._target_namespace)
+                    self.vocab.get_token_from_index(
+                        token_id.item(), namespace=self._target_namespace
+                    )
                     for token_id in instance_tokens
                 ]
             )

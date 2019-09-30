@@ -11,17 +11,22 @@ class CrfTaggerTest(ModelTestCase):
     def setUp(self):
         super().setUp()
         self.set_up_model(
-            self.FIXTURES_ROOT / "crf_tagger" / "experiment.json", self.FIXTURES_ROOT / "data" / "conll2003.txt"
+            self.FIXTURES_ROOT / "crf_tagger" / "experiment.json",
+            self.FIXTURES_ROOT / "data" / "conll2003.txt",
         )
 
     def test_simple_tagger_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
 
     def test_simple_tagger_can_train_save_and_load_ccgbank(self):
-        self.ensure_model_can_train_save_and_load(self.FIXTURES_ROOT / "crf_tagger" / "experiment_ccgbank.json")
+        self.ensure_model_can_train_save_and_load(
+            self.FIXTURES_ROOT / "crf_tagger" / "experiment_ccgbank.json"
+        )
 
     def test_simple_tagger_can_train_save_and_conll2000(self):
-        self.ensure_model_can_train_save_and_load(self.FIXTURES_ROOT / "crf_tagger" / "experiment_conll2000.json")
+        self.ensure_model_can_train_save_and_load(
+            self.FIXTURES_ROOT / "crf_tagger" / "experiment_conll2000.json"
+        )
 
     @flaky
     def test_batch_predictions_are_consistent(self):

@@ -41,7 +41,9 @@ class TestElmoTokenEmbedder(ModelTestCase):
     def test_file_archiving(self):
         # This happens to be a good place to test auxiliary file archiving.
         # Train the model
-        params = Params.from_file(self.FIXTURES_ROOT / "elmo" / "config" / "characters_token_embedder.json")
+        params = Params.from_file(
+            self.FIXTURES_ROOT / "elmo" / "config" / "characters_token_embedder.json"
+        )
         serialization_dir = os.path.join(self.TEST_DIR, "serialization")
         train_model(params, serialization_dir)
 

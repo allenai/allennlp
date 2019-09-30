@@ -18,7 +18,11 @@ def main(checks):
 
         if "pylint" in checks:
             print("Linter (pylint):", flush=True)
-            run("pylint -d locally-disabled,locally-enabled -f colorized allennlp", shell=True, check=True)
+            run(
+                "pylint -d locally-disabled,locally-enabled -f colorized allennlp",
+                shell=True,
+                check=True,
+            )
             print("pylint checks passed")
 
         if "flake8" in checks:

@@ -1,5 +1,8 @@
 from allennlp.common.testing import ModelTestCase
-from allennlp.data.token_indexers.wordpiece_indexer import PretrainedBertIndexer, _get_token_type_ids
+from allennlp.data.token_indexers.wordpiece_indexer import (
+    PretrainedBertIndexer,
+    _get_token_type_ids,
+)
 from allennlp.data.tokenizers import WordTokenizer, Token
 from allennlp.data.tokenizers.word_splitter import BertBasicWordSplitter
 from allennlp.data.vocabulary import Vocabulary
@@ -81,7 +84,9 @@ class TestBertIndexer(ModelTestCase):
         assert indexed_tokens["bert"] == [16, 2, 15, 10, 11, 6, 0, 17]
 
         # Unless we manually override the never lowercases
-        token_indexer = PretrainedBertIndexer(str(vocab_path), do_lowercase=True, never_lowercase=())
+        token_indexer = PretrainedBertIndexer(
+            str(vocab_path), do_lowercase=True, never_lowercase=()
+        )
         indexed_tokens = token_indexer.tokens_to_indices(tokens, vocab, "bert")
 
         # now PAD should get lowercased and be UNK          # [UNK]
@@ -136,7 +141,9 @@ class TestBertIndexer(ModelTestCase):
         tokens = tokenizer.tokenize(sentence)
         #           2   15 10 11  6   17    2   15 10 11  6
         #           the laziest   fox [SEP] the laziest   fox
-        tokens = tokens + [Token("[SEP]")] + tokens  # have to do this b/c tokenizer splits `[SEP]` in three
+        tokens = (
+            tokens + [Token("[SEP]")] + tokens
+        )  # have to do this b/c tokenizer splits `[SEP]` in three
 
         vocab = Vocabulary()
         vocab_path = self.FIXTURES_ROOT / "bert" / "vocab.txt"
@@ -156,7 +163,10 @@ class TestBertIndexer(ModelTestCase):
         vocab = Vocabulary()
         vocab_path = self.FIXTURES_ROOT / "bert" / "vocab.txt"
         token_indexer = PretrainedBertIndexer(
-            str(vocab_path), truncate_long_sequences=False, use_starting_offsets=False, max_pieces=10
+            str(vocab_path),
+            truncate_long_sequences=False,
+            use_starting_offsets=False,
+            max_pieces=10,
         )
 
         indexed_tokens = token_indexer.tokens_to_indices(tokens, vocab, "bert")

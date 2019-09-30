@@ -82,7 +82,9 @@ class Instance(Mapping[str, Field]):
             lengths[field_name] = field.get_padding_lengths()
         return lengths
 
-    def as_tensor_dict(self, padding_lengths: Dict[str, Dict[str, int]] = None) -> Dict[str, DataArray]:
+    def as_tensor_dict(
+        self, padding_lengths: Dict[str, Dict[str, int]] = None
+    ) -> Dict[str, DataArray]:
         """
         Pads each ``Field`` in this instance to the lengths given in ``padding_lengths`` (which is
         keyed by field name, then by padding key, the same as the return value in
@@ -99,4 +101,6 @@ class Instance(Mapping[str, Field]):
 
     def __str__(self) -> str:
         base_string = f"Instance with fields:\n"
-        return " ".join([base_string] + [f"\t {name}: {field} \n" for name, field in self.fields.items()])
+        return " ".join(
+            [base_string] + [f"\t {name}: {field} \n" for name, field in self.fields.items()]
+        )

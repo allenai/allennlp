@@ -41,9 +41,13 @@ def main():
     output = parser.add_mutually_exclusive_group()
     output.add_argument("--output-file", help="path to output file")
     output.add_argument(
-        "--inplace", action="store_true", help="overwrite the input file with the modified configuration"
+        "--inplace",
+        action="store_true",
+        help="overwrite the input file with the modified configuration",
     )
-    parser.add_argument("-f", "--force", action="store_true", help="overwrite the output file if it exists")
+    parser.add_argument(
+        "-f", "--force", action="store_true", help="overwrite the output file if it exists"
+    )
 
     args = parser.parse_args()
 

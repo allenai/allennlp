@@ -68,7 +68,9 @@ logger = logging.getLogger(__name__)
 
 
 class Evaluate(Subcommand):
-    def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
+    def add_subparser(
+        self, name: str, parser: argparse._SubParsersAction
+    ) -> argparse.ArgumentParser:
 
         description = """Evaluate the specified model + dataset"""
         subparser = parser.add_parser(
@@ -77,14 +79,20 @@ class Evaluate(Subcommand):
 
         subparser.add_argument("archive_file", type=str, help="path to an archived trained model")
 
-        subparser.add_argument("input_file", type=str, help="path to the file containing the evaluation data")
+        subparser.add_argument(
+            "input_file", type=str, help="path to the file containing the evaluation data"
+        )
 
         subparser.add_argument("--output-file", type=str, help="path to output file")
 
-        subparser.add_argument("--weights-file", type=str, help="a path that overrides which weights file to use")
+        subparser.add_argument(
+            "--weights-file", type=str, help="a path that overrides which weights file to use"
+        )
 
         cuda_device = subparser.add_mutually_exclusive_group(required=False)
-        cuda_device.add_argument("--cuda-device", type=int, default=-1, help="id of GPU to use (if any)")
+        cuda_device.add_argument(
+            "--cuda-device", type=int, default=-1, help="id of GPU to use (if any)"
+        )
 
         subparser.add_argument(
             "-o",

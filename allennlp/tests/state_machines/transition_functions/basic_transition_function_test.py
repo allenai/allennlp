@@ -55,7 +55,9 @@ class BasicTransitionFunctionTest(AllenNlpTestCase):
             GrammarStatelet([nonterminal], valid_actions, is_nonterminal)
             for _, nonterminal in zip(batch_indices, ["e", "d", "e"])
         ]
-        self.encoder_outputs = torch.FloatTensor([[[1, 2], [3, 4], [5, 6]], [[10, 11], [12, 13], [14, 15]]])
+        self.encoder_outputs = torch.FloatTensor(
+            [[[1, 2], [3, 4], [5, 6]], [[10, 11], [12, 13], [14, 15]]]
+        )
         self.encoder_output_mask = torch.FloatTensor([[1, 1, 1], [1, 1, 0]])
         self.possible_actions = [
             [
@@ -65,7 +67,12 @@ class BasicTransitionFunctionTest(AllenNlpTestCase):
                 ("e -> i", True, None),
                 ("e -> j", True, None),
             ],
-            [("d -> q", True, None), ("d -> g", True, None), ("d -> h", True, None), ("d -> i", True, None)],
+            [
+                ("d -> q", True, None),
+                ("d -> g", True, None),
+                ("d -> h", True, None),
+                ("d -> i", True, None),
+            ],
         ]
 
         rnn_state = []
@@ -90,7 +97,9 @@ class BasicTransitionFunctionTest(AllenNlpTestCase):
         )
 
     def test_take_step(self):
-        new_states = self.decoder_step.take_step(self.state, max_actions=1, allowed_actions=[{2, 3}, {0}, {4}])
+        new_states = self.decoder_step.take_step(
+            self.state, max_actions=1, allowed_actions=[{2, 3}, {0}, {4}]
+        )
 
         assert len(new_states) == 2
         new_state = new_states[0]
@@ -100,7 +109,10 @@ class BasicTransitionFunctionTest(AllenNlpTestCase):
         # know which action will be taken); we'll just check that we got one of the actions we were
         # expecting.
         expected_possibilities = {((4,), ("j",)), ((1, 2), ("h",)), ((1, 3), ("i",))}
-        actual = (tuple(new_state.action_history[0]), tuple(new_state.grammar_state[0]._nonterminal_stack))
+        actual = (
+            tuple(new_state.action_history[0]),
+            tuple(new_state.grammar_state[0]._nonterminal_stack),
+        )
         assert actual in expected_possibilities
 
         # These should just be copied from the prior state, no matter which action we took.
@@ -108,7 +120,8 @@ class BasicTransitionFunctionTest(AllenNlpTestCase):
             new_state.rnn_state[0].encoder_outputs.cpu().numpy(), self.encoder_outputs.cpu().numpy()
         )
         assert_almost_equal(
-            new_state.rnn_state[0].encoder_output_mask.cpu().numpy(), self.encoder_output_mask.cpu().numpy()
+            new_state.rnn_state[0].encoder_output_mask.cpu().numpy(),
+            self.encoder_output_mask.cpu().numpy(),
         )
         assert new_state.possible_actions == self.possible_actions
 
@@ -125,6 +138,7 @@ class BasicTransitionFunctionTest(AllenNlpTestCase):
             new_state.rnn_state[0].encoder_outputs.cpu().numpy(), self.encoder_outputs.cpu().numpy()
         )
         assert_almost_equal(
-            new_state.rnn_state[0].encoder_output_mask.cpu().numpy(), self.encoder_output_mask.cpu().numpy()
+            new_state.rnn_state[0].encoder_output_mask.cpu().numpy(),
+            self.encoder_output_mask.cpu().numpy(),
         )
         assert new_state.possible_actions == self.possible_actions

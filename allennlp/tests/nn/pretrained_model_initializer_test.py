@@ -38,10 +38,15 @@ class TestPretrainedModelInitializer(AllenNlpTestCase):
         torch.save(self.net2.state_dict(), self.temp_file)
 
     def _are_equal(self, linear1: torch.nn.Linear, linear2: torch.nn.Linear) -> bool:
-        return torch.equal(linear1.weight, linear2.weight) and torch.equal(linear1.bias, linear2.bias)
+        return torch.equal(linear1.weight, linear2.weight) and torch.equal(
+            linear1.bias, linear2.bias
+        )
 
     def _get_applicator(
-        self, regex: str, weights_file_path: str, parameter_name_overrides: Optional[Dict[str, str]] = None
+        self,
+        regex: str,
+        weights_file_path: str,
+        parameter_name_overrides: Optional[Dict[str, str]] = None,
     ) -> InitializerApplicator:
         parameter_name_overrides = parameter_name_overrides or {}
         initializer_params = Params(
@@ -69,7 +74,11 @@ class TestPretrainedModelInitializer(AllenNlpTestCase):
 
         name_overrides = {"a": "b", "c": "d"}
         params = Params(
-            {"type": "pretrained", "weights_file_path": self.temp_file, "parameter_name_overrides": name_overrides}
+            {
+                "type": "pretrained",
+                "weights_file_path": self.temp_file,
+                "parameter_name_overrides": name_overrides,
+            }
         )
         initializer = Initializer.from_params(params)
         assert initializer.weights

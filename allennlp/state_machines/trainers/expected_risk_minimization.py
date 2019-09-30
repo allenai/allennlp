@@ -72,7 +72,10 @@ class ExpectedRiskMinimization(DecoderTrainer[Callable[[StateType], torch.Tensor
             renormalized_probs = nn_util.masked_softmax(logprobs, None)
             loss += renormalized_probs.dot(costs)
         mean_loss = loss / len(finished_model_scores)
-        return {"loss": mean_loss, "best_final_states": self._get_best_final_states(finished_states)}
+        return {
+            "loss": mean_loss,
+            "best_final_states": self._get_best_final_states(finished_states),
+        }
 
     def _get_finished_states(
         self, initial_state: State, transition_function: TransitionFunction
@@ -90,7 +93,9 @@ class ExpectedRiskMinimization(DecoderTrainer[Callable[[StateType], torch.Tensor
                 else:
                     next_states.append(next_state)
 
-            states = self._prune_beam(states=next_states, beam_size=self._beam_size, sort_states=False)
+            states = self._prune_beam(
+                states=next_states, beam_size=self._beam_size, sort_states=False
+            )
             num_steps += 1
         if self._max_num_finished_states is not None:
             finished_states = self._prune_beam(
@@ -127,7 +132,9 @@ class ExpectedRiskMinimization(DecoderTrainer[Callable[[StateType], torch.Tensor
     def _get_model_scores_by_batch(self, states: List[StateType]) -> Dict[int, List[torch.Tensor]]:
         batch_scores: Dict[int, List[torch.Tensor]] = defaultdict(list)
         for state in states:
-            for batch_index, model_score, history in zip(state.batch_indices, state.score, state.action_history):
+            for batch_index, model_score, history in zip(
+                state.batch_indices, state.score, state.action_history
+            ):
                 if self._normalize_by_length:
                     path_length = model_score.new_tensor([len(history)])
                     model_score = model_score / path_length
@@ -147,7 +154,9 @@ class ExpectedRiskMinimization(DecoderTrainer[Callable[[StateType], torch.Tensor
             batch_costs[batch_index].append(cost)
         return batch_costs
 
-    def _get_best_final_states(self, finished_states: List[StateType]) -> Dict[int, List[StateType]]:
+    def _get_best_final_states(
+        self, finished_states: List[StateType]
+    ) -> Dict[int, List[StateType]]:
         """
         Returns the best finished states for each batch instance based on model scores. We return
         at most ``self._max_num_decoded_sequences`` number of sequences per instance.

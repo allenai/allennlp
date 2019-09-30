@@ -110,7 +110,9 @@ class Predictor(Registrable):
 
         dataset = Batch(instances)
         dataset.index_instances(self._model.vocab)
-        outputs = self._model.decode(self._model.forward(**dataset.as_tensor_dict()))  # type: ignore
+        outputs = self._model.decode(
+            self._model.forward(**dataset.as_tensor_dict())
+        )  # type: ignore
 
         loss = outputs["loss"]
         self._model.zero_grad()
@@ -269,7 +271,10 @@ class Predictor(Registrable):
 
     @classmethod
     def from_archive(
-        cls, archive: Archive, predictor_name: str = None, dataset_reader_to_load: str = "validation"
+        cls,
+        archive: Archive,
+        predictor_name: str = None,
+        dataset_reader_to_load: str = "validation",
     ) -> "Predictor":
         """
         Instantiate a :class:`Predictor` from an :class:`~allennlp.models.archival.Archive`;

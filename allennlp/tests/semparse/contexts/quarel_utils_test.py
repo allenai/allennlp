@@ -6,7 +6,9 @@ from allennlp.semparse.worlds.quarel_world import QuarelWorld
 
 class TestQuarelUtils(AllenNlpTestCase):
     def test_get_explanation_provides_non_empty_explanation_for_typical_inputs(self):
-        logical_form = "(infer (a:sugar higher world1) (a:diabetes higher world2) (a:diabetes higher world1))"
+        logical_form = (
+            "(infer (a:sugar higher world1) (a:diabetes higher world2) (a:diabetes higher world1))"
+        )
         entities = {"a:sugar": "sugar", "a:diabetes": "diabetes"}
         world_extractions = {"world1": "bill", "world2": "sue"}
         answer_index = 0

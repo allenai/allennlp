@@ -109,8 +109,12 @@ class GrammarBasedState(State["GrammarBasedState"]):
 
     def print_action_history(self, group_index: int = None) -> None:
         scores = self.score if group_index is None else [self.score[group_index]]
-        batch_indices = self.batch_indices if group_index is None else [self.batch_indices[group_index]]
-        histories = self.action_history if group_index is None else [self.action_history[group_index]]
+        batch_indices = (
+            self.batch_indices if group_index is None else [self.batch_indices[group_index]]
+        )
+        histories = (
+            self.action_history if group_index is None else [self.action_history[group_index]]
+        )
         for score, batch_index, action_history in zip(scores, batch_indices, histories):
             print(
                 "  ",
@@ -132,10 +136,14 @@ class GrammarBasedState(State["GrammarBasedState"]):
     @classmethod
     def combine_states(cls, states: Sequence["GrammarBasedState"]) -> "GrammarBasedState":
         batch_indices = [batch_index for state in states for batch_index in state.batch_indices]
-        action_histories = [action_history for state in states for action_history in state.action_history]
+        action_histories = [
+            action_history for state in states for action_history in state.action_history
+        ]
         scores = [score for state in states for score in state.score]
         rnn_states = [rnn_state for state in states for rnn_state in state.rnn_state]
-        grammar_states = [grammar_state for state in states for grammar_state in state.grammar_state]
+        grammar_states = [
+            grammar_state for state in states for grammar_state in state.grammar_state
+        ]
         if states[0].debug_info is not None:
             debug_info = [debug_info for state in states for debug_info in state.debug_info]
         else:

@@ -18,11 +18,14 @@ class BertSrlTest(ModelTestCase):
         vocab_path = self.FIXTURES_ROOT / "bert" / "vocab.txt"
         config = BertConfig(str(config_path))
         self.monkeypatch.setattr(BertModel, "from_pretrained", lambda _: BertModel(config))
-        self.monkeypatch.setattr(BertTokenizer, "from_pretrained", lambda _: BertTokenizer(vocab_path))
+        self.monkeypatch.setattr(
+            BertTokenizer, "from_pretrained", lambda _: BertTokenizer(vocab_path)
+        )
 
         super().setUp()
         self.set_up_model(
-            self.FIXTURES_ROOT / "bert_srl" / "experiment.jsonnet", self.FIXTURES_ROOT / "conll_2012"
+            self.FIXTURES_ROOT / "bert_srl" / "experiment.jsonnet",
+            self.FIXTURES_ROOT / "conll_2012",
         )
 
     def tearDown(self):
@@ -41,7 +44,9 @@ class BertSrlTest(ModelTestCase):
         training_tensors = self.dataset.as_tensor_dict()
         output_dict = self.model(**training_tensors)
         class_probs = output_dict["class_probabilities"][0].data.numpy()
-        numpy.testing.assert_almost_equal(numpy.sum(class_probs, -1), numpy.ones(class_probs.shape[0]), decimal=6)
+        numpy.testing.assert_almost_equal(
+            numpy.sum(class_probs, -1), numpy.ones(class_probs.shape[0]), decimal=6
+        )
 
     @pytest.mark.skip("test-install fails on this test in some environments")
     def test_decode_runs_correctly(self):

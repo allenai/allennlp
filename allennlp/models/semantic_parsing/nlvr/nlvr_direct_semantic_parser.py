@@ -105,7 +105,9 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
         ]
         label_strings = self._get_label_strings(labels) if labels is not None else None
         # TODO (pradeep): Assuming all worlds give the same set of valid actions.
-        initial_grammar_state = [self._create_grammar_state(worlds[i][0], actions[i]) for i in range(batch_size)]
+        initial_grammar_state = [
+            self._create_grammar_state(worlds[i][0], actions[i]) for i in range(batch_size)
+        ]
 
         initial_state = GrammarBasedState(
             batch_indices=list(range(batch_size)),
@@ -134,7 +136,10 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
         if not self.training:
             initial_state.debug_info = [[] for _ in range(batch_size)]
             best_final_states = self._decoder_beam_search.search(
-                self._max_decoding_steps, initial_state, self._decoder_step, keep_final_unfinished_states=False
+                self._max_decoding_steps,
+                initial_state,
+                self._decoder_step,
+                keep_final_unfinished_states=False,
             )
             best_action_sequences: Dict[int, List[List[int]]] = {}
             for i in range(batch_size):
@@ -155,7 +160,9 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
                     outputs["sentence_tokens"] = [x["sentence_tokens"] for x in metadata]
                 outputs["debug_info"] = []
                 for i in range(batch_size):
-                    outputs["debug_info"].append(best_final_states[i][0].debug_info[0])  # type: ignore
+                    outputs["debug_info"].append(
+                        best_final_states[i][0].debug_info[0]
+                    )  # type: ignore
                 outputs["best_action_strings"] = batch_action_strings
                 outputs["denotations"] = batch_denotations
                 action_mapping = {}

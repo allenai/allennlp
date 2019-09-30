@@ -27,7 +27,9 @@ class _SoftmaxLoss(torch.nn.Module):
         # TODO(joelgrus): implement tie_embeddings (maybe)
         self.tie_embeddings = False
 
-        self.softmax_w = torch.nn.Parameter(torch.randn(embedding_dim, num_words) / np.sqrt(embedding_dim))
+        self.softmax_w = torch.nn.Parameter(
+            torch.randn(embedding_dim, num_words) / np.sqrt(embedding_dim)
+        )
         self.softmax_b = torch.nn.Parameter(torch.zeros(num_words))
 
     def forward(self, embeddings: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
@@ -35,7 +37,9 @@ class _SoftmaxLoss(torch.nn.Module):
         # embeddings is size (n, embedding_dim)
         # targets is (batch_size, ) with the correct class id
         # Does not do any count normalization / divide by batch size
-        probs = torch.nn.functional.log_softmax(torch.matmul(embeddings, self.softmax_w) + self.softmax_b, dim=-1)
+        probs = torch.nn.functional.log_softmax(
+            torch.matmul(embeddings, self.softmax_w) + self.softmax_b, dim=-1
+        )
 
         return torch.nn.functional.nll_loss(probs, targets.long(), reduction="sum")
 
@@ -128,7 +132,9 @@ class LanguageModel(Model):
                 sparse=sparse_embeddings,
             )
         else:
-            self._softmax_loss = _SoftmaxLoss(num_words=vocab.get_vocab_size(), embedding_dim=self._forward_dim)
+            self._softmax_loss = _SoftmaxLoss(
+                num_words=vocab.get_vocab_size(), embedding_dim=self._forward_dim
+            )
 
         # This buffer is now unused and exists only for backwards compatibility reasons.
         self.register_buffer("_last_average_loss", torch.zeros(1))
@@ -153,7 +159,9 @@ class LanguageModel(Model):
             shifted_mask = torch.cat([zero_col, mask[:, 0:-1]], dim=1)
         else:
             shifted_mask = torch.cat([mask[:, 1:], zero_col], dim=1)
-        return token_embeddings.masked_select(shifted_mask.unsqueeze(-1)).view(-1, self._forward_dim)
+        return token_embeddings.masked_select(shifted_mask.unsqueeze(-1)).view(
+            -1, self._forward_dim
+        )
 
     def _compute_loss(
         self,
@@ -168,7 +176,9 @@ class LanguageModel(Model):
         # shape (batch_size, timesteps) masked with 0
         if self._bidirectional:
             forward_embeddings, backward_embeddings = lm_embeddings.chunk(2, -1)
-            backward_loss = self._loss_helper(1, backward_embeddings, backward_targets, token_embeddings)
+            backward_loss = self._loss_helper(
+                1, backward_embeddings, backward_targets, token_embeddings
+            )
         else:
             forward_embeddings = lm_embeddings
             backward_loss = None
@@ -191,7 +201,9 @@ class LanguageModel(Model):
         non_masked_targets = direction_targets.masked_select(mask) - 1
 
         # shape (batch_size * timesteps, embedding_dim)
-        non_masked_embeddings = direction_embeddings.masked_select(mask.unsqueeze(-1)).view(-1, self._forward_dim)
+        non_masked_embeddings = direction_embeddings.masked_select(mask.unsqueeze(-1)).view(
+            -1, self._forward_dim
+        )
         # note: need to return average loss across forward and backward
         # directions, but total sum loss across all batches.
         # Assuming batches include full sentences, forward and backward
@@ -202,10 +214,16 @@ class LanguageModel(Model):
         else:
             # we also need the token embeddings corresponding to the
             # the targets
-            raise NotImplementedError("This requires SampledSoftmaxLoss, which isn't implemented yet.")
+            raise NotImplementedError(
+                "This requires SampledSoftmaxLoss, which isn't implemented yet."
+            )
 
-            non_masked_token_embeddings = self._get_target_token_embeddings(token_embeddings, mask, direction)
-            return self._softmax(non_masked_embeddings, non_masked_targets, non_masked_token_embeddings)
+            non_masked_token_embeddings = self._get_target_token_embeddings(
+                token_embeddings, mask, direction
+            )
+            return self._softmax(
+                non_masked_embeddings, non_masked_targets, non_masked_token_embeddings
+            )
 
     def delete_softmax(self) -> None:
         """
@@ -223,7 +241,8 @@ class LanguageModel(Model):
             return self._contextualizer.num_layers + 1
         else:
             raise NotImplementedError(
-                f"Contextualizer of type {type(self._contextualizer)} " + "does not report how many layers it has."
+                f"Contextualizer of type {type(self._contextualizer)} "
+                + "does not report how many layers it has."
             )
 
     def forward(
@@ -269,7 +288,9 @@ class LanguageModel(Model):
         embeddings = self._text_field_embedder(source)
 
         # Either the top layer or all layers.
-        contextual_embeddings: Union[torch.Tensor, List[torch.Tensor]] = self._contextualizer(embeddings, mask)
+        contextual_embeddings: Union[torch.Tensor, List[torch.Tensor]] = self._contextualizer(
+            embeddings, mask
+        )
 
         return_dict = {}
 

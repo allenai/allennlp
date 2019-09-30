@@ -67,14 +67,18 @@ class AdjacencyField(Field[torch.Tensor]):
         if len(set(indices)) != len(indices):
             raise ConfigurationError(f"Indices must be unique, but found {indices}")
 
-        if not all([0 <= index[1] < field_length and 0 <= index[0] < field_length for index in indices]):
+        if not all(
+            [0 <= index[1] < field_length and 0 <= index[0] < field_length for index in indices]
+        ):
             raise ConfigurationError(
-                f"Label indices and sequence length " f"are incompatible: {indices} and {field_length}"
+                f"Label indices and sequence length "
+                f"are incompatible: {indices} and {field_length}"
             )
 
         if labels is not None and len(indices) != len(labels):
             raise ConfigurationError(
-                f"Labelled indices were passed, but their lengths do not match: " f" {labels}, {indices}"
+                f"Labelled indices were passed, but their lengths do not match: "
+                f" {labels}, {indices}"
             )
 
     def _maybe_warn_for_namespace(self, label_namespace: str) -> None:
@@ -98,7 +102,9 @@ class AdjacencyField(Field[torch.Tensor]):
     @overrides
     def index(self, vocab: Vocabulary):
         if self.labels is not None:
-            self._indexed_labels = [vocab.get_token_index(label, self._label_namespace) for label in self.labels]
+            self._indexed_labels = [
+                vocab.get_token_index(label, self._label_namespace) for label in self.labels
+            ]
 
     @overrides
     def get_padding_lengths(self) -> Dict[str, int]:
@@ -126,8 +132,12 @@ class AdjacencyField(Field[torch.Tensor]):
 
     def __str__(self) -> str:
         length = self.sequence_field.sequence_length()
-        formatted_labels = "".join(["\t\t" + labels + "\n" for labels in textwrap.wrap(repr(self.labels), 100)])
-        formatted_indices = "".join(["\t\t" + index + "\n" for index in textwrap.wrap(repr(self.indices), 100)])
+        formatted_labels = "".join(
+            ["\t\t" + labels + "\n" for labels in textwrap.wrap(repr(self.labels), 100)]
+        )
+        formatted_indices = "".join(
+            ["\t\t" + index + "\n" for index in textwrap.wrap(repr(self.indices), 100)]
+        )
         return (
             f"AdjacencyField of length {length}\n"
             f"\t\twith indices:\n {formatted_indices}\n"

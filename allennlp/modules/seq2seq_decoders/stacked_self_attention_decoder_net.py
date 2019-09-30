@@ -67,23 +67,31 @@ class StackedSelfAttentionDecoderNet(DecoderNet):
     ) -> None:
 
         super().__init__(
-            decoding_dim=decoding_dim, target_embedding_dim=target_embedding_dim, decodes_parallel=True
+            decoding_dim=decoding_dim,
+            target_embedding_dim=target_embedding_dim,
+            decodes_parallel=True,
         )
 
         attn = MultiHeadedAttention(num_attention_heads, decoding_dim, attention_dropout_prob)
         feed_forward = PositionwiseFeedForward(decoding_dim, feedforward_hidden_dim, dropout_prob)
         self._embed_scale = math.sqrt(decoding_dim)
         self._positional_embedder = (
-            PositionalEncoding(decoding_dim, positional_encoding_max_steps) if use_positional_encoding else None
+            PositionalEncoding(decoding_dim, positional_encoding_max_steps)
+            if use_positional_encoding
+            else None
         )
         self._dropout = nn.Dropout(dropout_prob)
         self._self_attention = Decoder(
-            DecoderLayer(decoding_dim, deepcopy(attn), deepcopy(attn), feed_forward, residual_dropout_prob),
+            DecoderLayer(
+                decoding_dim, deepcopy(attn), deepcopy(attn), feed_forward, residual_dropout_prob
+            ),
             num_layers,
         )
 
     @overrides
-    def init_decoder_state(self, encoder_out: Dict[str, torch.LongTensor]) -> Dict[str, torch.Tensor]:
+    def init_decoder_state(
+        self, encoder_out: Dict[str, torch.LongTensor]
+    ) -> Dict[str, torch.Tensor]:
         return {}
 
     @overrides

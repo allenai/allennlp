@@ -13,7 +13,9 @@ class TestCnnEncoder(AllenNlpTestCase):
         encoder = CnnEncoder(embedding_dim=5, num_filters=4, ngram_filter_sizes=(3, 5))
         assert encoder.get_output_dim() == 8
         assert encoder.get_input_dim() == 5
-        encoder = CnnEncoder(embedding_dim=5, num_filters=4, ngram_filter_sizes=(3, 5), output_dim=7)
+        encoder = CnnEncoder(
+            embedding_dim=5, num_filters=4, ngram_filter_sizes=(3, 5), output_dim=7
+        )
         assert encoder.get_output_dim() == 7
         assert encoder.get_input_dim() == 5
 
@@ -21,7 +23,9 @@ class TestCnnEncoder(AllenNlpTestCase):
         params = Params({"embedding_dim": 5, "num_filters": 4, "ngram_filter_sizes": [3, 5]})
         encoder = CnnEncoder.from_params(params)
         assert encoder.get_output_dim() == 8
-        params = Params({"embedding_dim": 5, "num_filters": 4, "ngram_filter_sizes": [3, 5], "output_dim": 7})
+        params = Params(
+            {"embedding_dim": 5, "num_filters": 4, "ngram_filter_sizes": [3, 5], "output_dim": 7}
+        )
         encoder = CnnEncoder.from_params(params)
         assert encoder.get_output_dim() == 7
 
@@ -32,9 +36,13 @@ class TestCnnEncoder(AllenNlpTestCase):
         initializer(encoder)
         input_tensor = torch.FloatTensor([[[0.7, 0.8], [0.1, 1.5]]])
         encoder_output = encoder(input_tensor, None)
-        assert_almost_equal(encoder_output.data.numpy(), numpy.asarray([[1.6 + 1.0, 3.1 + 1.0]]), decimal=6)
+        assert_almost_equal(
+            encoder_output.data.numpy(), numpy.asarray([[1.6 + 1.0, 3.1 + 1.0]]), decimal=6
+        )
 
     def test_forward_runs_with_larger_input(self):
-        encoder = CnnEncoder(embedding_dim=7, num_filters=13, ngram_filter_sizes=(1, 2, 3, 4, 5), output_dim=30)
+        encoder = CnnEncoder(
+            embedding_dim=7, num_filters=13, ngram_filter_sizes=(1, 2, 3, 4, 5), output_dim=30
+        )
         tensor = torch.rand(4, 8, 7)
         assert encoder(tensor, None).size() == (4, 30)

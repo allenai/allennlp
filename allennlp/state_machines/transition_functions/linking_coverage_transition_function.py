@@ -10,7 +10,9 @@ from allennlp.common.checks import check_dimensions_match
 from allennlp.modules import Attention, FeedForward
 from allennlp.nn import Activation
 from allennlp.state_machines.states import CoverageState, ChecklistStatelet
-from allennlp.state_machines.transition_functions.coverage_transition_function import CoverageTransitionFunction
+from allennlp.state_machines.transition_functions.coverage_transition_function import (
+    CoverageTransitionFunction,
+)
 
 
 class LinkingCoverageTransitionFunction(CoverageTransitionFunction):
@@ -98,7 +100,9 @@ class LinkingCoverageTransitionFunction(CoverageTransitionFunction):
             predicted_action_embedding = predicted_action_embeddings[group_index]
             action_ids: List[int] = []
             if "global" in instance_actions:
-                action_embeddings, output_action_embeddings, embedded_actions = instance_actions["global"]
+                action_embeddings, output_action_embeddings, embedded_actions = instance_actions[
+                    "global"
+                ]
 
                 # This embedding addition the only difference between the logic here and the
                 # corresponding logic in the super class.
@@ -110,7 +114,9 @@ class LinkingCoverageTransitionFunction(CoverageTransitionFunction):
 
                 # This is just a matrix product between a (num_actions, embedding_dim) matrix and an
                 # (embedding_dim, 1) matrix.
-                embedded_action_logits = action_embeddings.mm(predicted_action_embedding.unsqueeze(-1)).squeeze(-1)
+                embedded_action_logits = action_embeddings.mm(
+                    predicted_action_embedding.unsqueeze(-1)
+                ).squeeze(-1)
                 action_ids += embedded_actions
             else:
                 embedded_action_logits = None
@@ -120,7 +126,9 @@ class LinkingCoverageTransitionFunction(CoverageTransitionFunction):
                 linking_scores, type_embeddings, linked_actions = instance_actions["linked"]
                 action_ids += linked_actions
                 # (num_question_tokens, 1)
-                linked_action_logits = linking_scores.mm(attention_weights[group_index].unsqueeze(-1)).squeeze(-1)
+                linked_action_logits = linking_scores.mm(
+                    attention_weights[group_index].unsqueeze(-1)
+                ).squeeze(-1)
 
                 linked_logits_addition = self._get_linked_logits_addition(
                     state.checklist_state[group_index], linked_actions, linked_action_logits
@@ -135,7 +143,9 @@ class LinkingCoverageTransitionFunction(CoverageTransitionFunction):
                 if output_action_embeddings is None:
                     output_action_embeddings = type_embeddings
                 else:
-                    output_action_embeddings = torch.cat([output_action_embeddings, type_embeddings], dim=0)
+                    output_action_embeddings = torch.cat(
+                        [output_action_embeddings, type_embeddings], dim=0
+                    )
 
                 if self._mixture_feedforward is not None:
                     # The linked and global logits are combined with a mixture weight to prevent the
@@ -145,19 +155,27 @@ class LinkingCoverageTransitionFunction(CoverageTransitionFunction):
                     mix1 = torch.log(mixture_weight)
                     mix2 = torch.log(1 - mixture_weight)
 
-                    entity_action_probs = torch.nn.functional.log_softmax(linked_action_logits, dim=-1) + mix1
+                    entity_action_probs = (
+                        torch.nn.functional.log_softmax(linked_action_logits, dim=-1) + mix1
+                    )
                     if embedded_action_logits is None:
                         current_log_probs = entity_action_probs
                     else:
                         embedded_action_probs = (
                             torch.nn.functional.log_softmax(embedded_action_logits, dim=-1) + mix2
                         )
-                        current_log_probs = torch.cat([embedded_action_probs, entity_action_probs], dim=-1)
+                        current_log_probs = torch.cat(
+                            [embedded_action_probs, entity_action_probs], dim=-1
+                        )
                 else:
                     if embedded_action_logits is None:
-                        current_log_probs = torch.nn.functional.log_softmax(linked_action_logits, dim=-1)
+                        current_log_probs = torch.nn.functional.log_softmax(
+                            linked_action_logits, dim=-1
+                        )
                     else:
-                        action_logits = torch.cat([embedded_action_logits, linked_action_logits], dim=-1)
+                        action_logits = torch.cat(
+                            [embedded_action_logits, linked_action_logits], dim=-1
+                        )
                         current_log_probs = torch.nn.functional.log_softmax(action_logits, dim=-1)
             else:
                 current_log_probs = torch.nn.functional.log_softmax(embedded_action_logits, dim=-1)

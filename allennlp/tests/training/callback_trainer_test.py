@@ -60,12 +60,16 @@ class TestCallbackTrainer(ModelTestCase):
 
         setattr(CallbackTrainer, "metric_tracker", property(metric_tracker))
 
-        self.instances = SequenceTaggingDatasetReader().read(self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv")
+        self.instances = SequenceTaggingDatasetReader().read(
+            self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv"
+        )
         vocab = Vocabulary.from_instances(self.instances)
         self.vocab = vocab
         self.model_params = Params(
             {
-                "text_field_embedder": {"token_embedders": {"tokens": {"type": "embedding", "embedding_dim": 5}}},
+                "text_field_embedder": {
+                    "token_embedders": {"tokens": {"type": "embedding", "embedding_dim": 5}}
+                },
                 "encoder": {"type": "lstm", "input_size": 5, "hidden_size": 7, "num_layers": 2},
             }
         )
@@ -234,7 +238,9 @@ class TestCallbackTrainer(ModelTestCase):
 
     def test_trainer_can_run_ema_from_params(self):
         uma_params = Params({"moving_average": {"decay": 0.9999}})
-        callbacks = self.default_callbacks() + [UpdateMovingAverage.from_params(uma_params, self.model)]
+        callbacks = self.default_callbacks() + [
+            UpdateMovingAverage.from_params(uma_params, self.model)
+        ]
         trainer = CallbackTrainer(
             model=self.model,
             training_data=self.instances,
@@ -312,7 +318,13 @@ class TestCallbackTrainer(ModelTestCase):
             tables_directory=wikitables_dir, offline_logical_forms_directory=offline_lf_directory
         )
         instances = wikitables_reader.read(wikitables_dir + "sample_data.examples")
-        archive_path = self.FIXTURES_ROOT / "semantic_parsing" / "wikitables" / "serialization" / "model.tar.gz"
+        archive_path = (
+            self.FIXTURES_ROOT
+            / "semantic_parsing"
+            / "wikitables"
+            / "serialization"
+            / "model.tar.gz"
+        )
         model = load_archive(archive_path).model
         model.cuda()
 
@@ -469,7 +481,9 @@ class TestCallbackTrainer(ModelTestCase):
         for key in ["accuracy", "accuracy3", "loss"]:
             np.testing.assert_almost_equal(metrics1[key], metrics2[key])
 
-    def test_metric_only_considered_best_so_far_when_strictly_better_than_those_before_it_increasing_metric(self):
+    def test_metric_only_considered_best_so_far_when_strictly_better_than_those_before_it_increasing_metric(
+        self
+    ):
         new_trainer = CallbackTrainer(
             self.model,
             training_data=self.instances,
@@ -501,7 +515,9 @@ class TestCallbackTrainer(ModelTestCase):
         new_tracker.add_metrics([0.3, 0.3, 0.3, 0.2, 0.5, 0.1, 0.0013])
         assert not new_tracker.is_best_so_far()
 
-    def test_metric_only_considered_best_so_far_when_strictly_better_than_those_before_it_decreasing_metric(self):
+    def test_metric_only_considered_best_so_far_when_strictly_better_than_those_before_it_decreasing_metric(
+        self
+    ):
         new_trainer = CallbackTrainer(
             self.model,
             training_data=self.instances,
@@ -803,7 +819,9 @@ class TestCallbackTrainer(ModelTestCase):
             optimizer=self.optimizer,
             num_epochs=6,
             serialization_dir=self.TEST_DIR,
-            callbacks=self.default_callbacks(max_checkpoints=2, checkpoint_every=5, validation_iterator=viterator),
+            callbacks=self.default_callbacks(
+                max_checkpoints=2, checkpoint_every=5, validation_iterator=viterator
+            ),
         )
         trainer.train()
 
@@ -817,7 +835,9 @@ class TestCallbackTrainer(ModelTestCase):
     def test_trainer_can_log_learning_rates_tensorboard(self):
         callbacks = [cb for cb in self.default_callbacks() if not isinstance(cb, LogToTensorboard)]
         # The lambda: None is unfortunate, but it will get replaced by the callback.
-        tensorboard = TensorboardWriter(lambda: None, should_log_learning_rate=True, summary_interval=2)
+        tensorboard = TensorboardWriter(
+            lambda: None, should_log_learning_rate=True, summary_interval=2
+        )
         callbacks.append(LogToTensorboard(tensorboard))
 
         trainer = CallbackTrainer(
@@ -962,7 +982,9 @@ class TestCallbackTrainer(ModelTestCase):
         assert best_epoch_1 == best_epoch_2 == 0
         assert best_validation_metrics_epoch_2 == best_validation_metrics_epoch_1
 
-    def test_restored_training_returns_best_epoch_metrics_even_if_no_better_epoch_is_found_after_restoring(self):
+    def test_restored_training_returns_best_epoch_metrics_even_if_no_better_epoch_is_found_after_restoring(
+        self
+    ):
         # Instead of -loss, use +loss to assure 2nd epoch is considered worse.
         # Run 1 epoch of original training.
         original_trainer = CallbackTrainer(

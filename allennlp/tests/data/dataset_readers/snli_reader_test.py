@@ -27,7 +27,18 @@ class TestSnliReader:
                 "airplane",
                 ".",
             ],
-            "hypothesis": ["A", "person", "is", "training", "his", "horse", "for", "a", "competition", "."],
+            "hypothesis": [
+                "A",
+                "person",
+                "is",
+                "training",
+                "his",
+                "horse",
+                "for",
+                "a",
+                "competition",
+                ".",
+            ],
             "label": "neutral",
         }
 
@@ -46,7 +57,19 @@ class TestSnliReader:
                 "airplane",
                 ".",
             ],
-            "hypothesis": ["A", "person", "is", "at", "a", "diner", ",", "ordering", "an", "omelette", "."],
+            "hypothesis": [
+                "A",
+                "person",
+                "is",
+                "at",
+                "a",
+                "diner",
+                ",",
+                "ordering",
+                "an",
+                "omelette",
+                ".",
+            ],
             "label": "contradiction",
         }
         instance3 = {

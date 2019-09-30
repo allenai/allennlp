@@ -10,7 +10,8 @@ from allennlp.predictors import CorefPredictor
 class TestCorefPredictor(AllenNlpTestCase):
     def test_uses_named_inputs(self):
         inputs = {
-            "document": "This is a single string document about a test. Sometimes it " "contains coreferent parts."
+            "document": "This is a single string document about a test. Sometimes it "
+            "contains coreferent parts."
         }
         archive = load_archive(self.FIXTURES_ROOT / "coref" / "serialization" / "model.tar.gz")
         predictor = Predictor.from_archive(archive, "coreference-resolution")
@@ -126,7 +127,8 @@ class TestCorefPredictor(AllenNlpTestCase):
 
     def test_predictions_to_labeled_instances(self):
         inputs = {
-            "document": "This is a single string document about a test. Sometimes it " "contains coreferent parts."
+            "document": "This is a single string document about a test. Sometimes it "
+            "contains coreferent parts."
         }
         archive = load_archive(self.FIXTURES_ROOT / "coref" / "serialization" / "model.tar.gz")
         predictor = Predictor.from_archive(archive, "coreference-resolution")

@@ -107,5 +107,7 @@ class CharacterTokenIndexerTest(AllenNlpTestCase):
         ]
 
     def test_warn_min_padding_length(self):
-        with pytest.warns(UserWarning, match=r"using the default value \(0\) of `min_padding_length`"):
+        with pytest.warns(
+            UserWarning, match=r"using the default value \(0\) of `min_padding_length`"
+        ):
             TokenCharactersIndexer("characters")

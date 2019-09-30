@@ -28,7 +28,8 @@ THREADS = 10
 http_session = requests.Session()
 for resource_prefix in ("http://", "https://"):
     http_session.mount(
-        resource_prefix, requests.adapters.HTTPAdapter(max_retries=5, pool_connections=20, pool_maxsize=THREADS)
+        resource_prefix,
+        requests.adapters.HTTPAdapter(max_retries=5, pool_connections=20, pool_maxsize=THREADS),
     )
 
 
@@ -42,7 +43,10 @@ def url_ok(match_tuple: MatchTuple) -> Tuple[bool, str]:
     """Check if a URL is reachable."""
     try:
         result = http_session.head(match_tuple.link, timeout=5, allow_redirects=True)
-        return result.ok or result.status_code in OK_STATUS_CODES, f"status code = {result.status_code}"
+        return (
+            result.ok or result.status_code in OK_STATUS_CODES,
+            f"status code = {result.status_code}",
+        )
     except (requests.ConnectionError, requests.Timeout):
         return False, "connection error"
 
@@ -85,7 +89,9 @@ def main():
 
     with Pool(processes=THREADS) as pool:
         results = pool.map(link_ok, [match for match in list(all_matches)])
-    unreachable_results = [(match_tuple, reason) for match_tuple, success, reason in results if not success]
+    unreachable_results = [
+        (match_tuple, reason) for match_tuple, success, reason in results if not success
+    ]
 
     if unreachable_results:
         print(f"Unreachable links ({len(unreachable_results)}):")

@@ -116,7 +116,9 @@ class Embedding(TokenEmbedder):
             torch.nn.init.xavier_uniform_(self.weight)
         else:
             if weight.size() != (num_embeddings, embedding_dim):
-                raise ConfigurationError("A weight matrix was passed with contradictory embedding shapes.")
+                raise ConfigurationError(
+                    "A weight matrix was passed with contradictory embedding shapes."
+                )
             self.weight = torch.nn.Parameter(weight, requires_grad=trainable)
 
         if self.padding_index is not None:
@@ -234,7 +236,9 @@ class Embedding(TokenEmbedder):
         # Case 4: no file is available, hope that pretrained embeddings weren't used in the first place and warn
         else:
             extra_info = (
-                f"Originally pretrained_file was at " f"{self._pretrained_file}. " if self._pretrained_file else ""
+                f"Originally pretrained_file was at " f"{self._pretrained_file}. "
+                if self._pretrained_file
+                else ""
             )
             # It's better to warn here and not give error because there is no way to distinguish between
             # whether pretrained-file wasn't used during training or user forgot to pass / passed incorrect
@@ -315,7 +319,9 @@ class Embedding(TokenEmbedder):
             # If we're loading a saved model, we don't want to actually read a pre-trained
             # embedding file - the embeddings will just be in our saved weights, and we might not
             # have the original embedding file anymore, anyway.
-            weight = _read_pretrained_embeddings_file(pretrained_file, embedding_dim, vocab, vocab_namespace)
+            weight = _read_pretrained_embeddings_file(
+                pretrained_file, embedding_dim, vocab, vocab_namespace
+            )
         else:
             weight = None
 
@@ -442,7 +448,9 @@ def _read_embeddings_from_text_file(
     # Now we initialize the weight matrix for an embedding layer, starting with random vectors,
     # then filling in the word vectors we just read.
     logger.info("Initializing pre-trained embedding layer")
-    embedding_matrix = torch.FloatTensor(vocab_size, embedding_dim).normal_(embeddings_mean, embeddings_std)
+    embedding_matrix = torch.FloatTensor(vocab_size, embedding_dim).normal_(
+        embeddings_mean, embeddings_std
+    )
     num_tokens_found = 0
     index_to_token = vocab.get_index_to_token_vocabulary(namespace)
     for i in range(vocab_size):
@@ -454,9 +462,13 @@ def _read_embeddings_from_text_file(
             embedding_matrix[i] = torch.FloatTensor(embeddings[token])
             num_tokens_found += 1
         else:
-            logger.debug("Token %s was not found in the embedding file. Initialising randomly.", token)
+            logger.debug(
+                "Token %s was not found in the embedding file. Initialising randomly.", token
+            )
 
-    logger.info("Pretrained embeddings were found for %d out of %d tokens", num_tokens_found, vocab_size)
+    logger.info(
+        "Pretrained embeddings were found for %d out of %d tokens", num_tokens_found, vocab_size
+    )
 
     return embedding_matrix
 
@@ -481,7 +493,9 @@ def _read_embeddings_from_hdf5(
     return torch.FloatTensor(embeddings)
 
 
-def format_embeddings_file_uri(main_file_path_or_url: str, path_inside_archive: Optional[str] = None) -> str:
+def format_embeddings_file_uri(
+    main_file_path_or_url: str, path_inside_archive: Optional[str] = None
+) -> str:
     if path_inside_archive:
         return "({})#{}".format(main_file_path_or_url, path_inside_archive)
     return main_file_path_or_url
@@ -522,7 +536,9 @@ class EmbeddingsTextFile(Iterator[str]):
 
     DEFAULT_ENCODING = "utf-8"
 
-    def __init__(self, file_uri: str, encoding: str = DEFAULT_ENCODING, cache_dir: str = None) -> None:
+    def __init__(
+        self, file_uri: str, encoding: str = DEFAULT_ENCODING, cache_dir: str = None
+    ) -> None:
 
         self.uri = file_uri
         self._encoding = encoding
@@ -571,7 +587,9 @@ class EmbeddingsTextFile(Iterator[str]):
                 )
                 package = io
 
-            self._handle = package.open(main_file_local_path, "rt", encoding=encoding)  # type: ignore
+            self._handle = package.open(
+                main_file_local_path, "rt", encoding=encoding
+            )  # type: ignore
 
         # To use this with tqdm we'd like to know the number of tokens. It's possible that the
         # first line of the embeddings file contains this: if it does, we want to start iteration
@@ -649,7 +667,10 @@ class EmbeddingsTextFile(Iterator[str]):
             raise ValueError(
                 "The archive %s contains multiple files, so you must select "
                 "one of the files inside providing a uri of the type: %s."
-                % (archive_path, format_embeddings_file_uri("path_or_url_to_archive", "path_inside_archive"))
+                % (
+                    archive_path,
+                    format_embeddings_file_uri("path_or_url_to_archive", "path_inside_archive"),
+                )
             )
         return members_list[0]
 
@@ -665,6 +686,9 @@ class EmbeddingsTextFile(Iterator[str]):
                 return None
             else:
                 num_tokens = max(int_fields)
-                logger.info("Recognized a header line in the embedding file with number of tokens: %d", num_tokens)
+                logger.info(
+                    "Recognized a header line in the embedding file with number of tokens: %d",
+                    num_tokens,
+                )
                 return num_tokens
         return None

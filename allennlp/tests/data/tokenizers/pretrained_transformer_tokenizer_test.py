@@ -7,5 +7,16 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
         tokenizer = PretrainedTransformerTokenizer("bert-base-cased", do_lowercase=False)
         sentence = "A, [MASK] AllenNLP sentence."
         tokens = [t.text for t in tokenizer.tokenize(sentence)]
-        expected_tokens = ["[CLS]", "A", ",", "[MASK]", "Allen", "##NL", "##P", "sentence", ".", "[SEP]"]
+        expected_tokens = [
+            "[CLS]",
+            "A",
+            ",",
+            "[MASK]",
+            "Allen",
+            "##NL",
+            "##P",
+            "sentence",
+            ".",
+            "[SEP]",
+        ]
         assert tokens == expected_tokens

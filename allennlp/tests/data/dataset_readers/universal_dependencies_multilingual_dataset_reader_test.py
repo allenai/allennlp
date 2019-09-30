@@ -62,7 +62,17 @@ class TestUniversalDependenciesMultilangDatasetReader(AllenNlpTestCase):
                 "1962",
                 ".",
             ]
-            assert fields2["pos_tags"].labels == ["DET", "NOUN", "ADP", "VERB", "VERB", "VERB", "ADP", "NUM", "."]
+            assert fields2["pos_tags"].labels == [
+                "DET",
+                "NOUN",
+                "ADP",
+                "VERB",
+                "VERB",
+                "VERB",
+                "ADP",
+                "NUM",
+                ".",
+            ]
             assert fields2["head_tags"].labels == [
                 "det",
                 "nsubjpass",
@@ -244,7 +254,10 @@ class TestUniversalDependenciesMultilangDatasetReader(AllenNlpTestCase):
         Note: assumes that each data file contains no more than 20 trees.
         """
         reader = UniversalDependenciesMultiLangDatasetReader(
-            languages=["es", "fr", "it"], is_first_pass_for_vocab=False, instances_per_file=1, lazy=True
+            languages=["es", "fr", "it"],
+            is_first_pass_for_vocab=False,
+            instances_per_file=1,
+            lazy=True,
         )
         counter_es, counter_fr, counter_it = 0, 0, 0
         for instance in reader.read(str(self.data_path)):

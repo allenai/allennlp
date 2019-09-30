@@ -6,13 +6,21 @@ import torch
 from allennlp.data import Vocabulary
 from allennlp.data.fields.production_rule_field import ProductionRuleArray
 from allennlp.models.model import Model
-from allennlp.modules import Attention, FeedForward, Seq2SeqEncoder, Seq2VecEncoder, TextFieldEmbedder
+from allennlp.modules import (
+    Attention,
+    FeedForward,
+    Seq2SeqEncoder,
+    Seq2VecEncoder,
+    TextFieldEmbedder,
+)
 from allennlp.state_machines import BeamSearch
 from allennlp.state_machines.states import GrammarBasedState
 from allennlp.state_machines.trainers import MaximumMarginalLikelihood
 from allennlp.state_machines.transition_functions import LinkingTransitionFunction
 from allennlp.semparse.domain_languages import WikiTablesLanguage
-from allennlp.models.semantic_parsing.wikitables.wikitables_semantic_parser import WikiTablesSemanticParser
+from allennlp.models.semantic_parsing.wikitables.wikitables_semantic_parser import (
+    WikiTablesSemanticParser,
+)
 
 
 @Model.register("wikitables_mml_parser")
@@ -218,8 +226,12 @@ class WikiTablesMmlSemanticParser(WikiTablesSemanticParser):
                         # Use a Tensor, not a Variable, to avoid a memory leak.
                         targets = target_action_sequences[i].data
                         sequence_in_targets = 0
-                        sequence_in_targets = self._action_history_match(best_action_indices, targets)
+                        sequence_in_targets = self._action_history_match(
+                            best_action_indices, targets
+                        )
                         self._action_sequence_accuracy(sequence_in_targets)
 
-            self._compute_validation_outputs(actions, best_final_states, world, target_values, metadata, outputs)
+            self._compute_validation_outputs(
+                actions, best_final_states, world, target_values, metadata, outputs
+            )
             return outputs

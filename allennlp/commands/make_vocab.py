@@ -41,12 +41,16 @@ logger = logging.getLogger(__name__)
 
 
 class MakeVocab(Subcommand):
-    def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
+    def add_subparser(
+        self, name: str, parser: argparse._SubParsersAction
+    ) -> argparse.ArgumentParser:
 
         description = """Create a vocabulary from the specified dataset."""
         subparser = parser.add_parser(name, description=description, help="Create a vocabulary.")
         subparser.add_argument(
-            "param_path", type=str, help="path to parameter file describing the model and its inputs"
+            "param_path",
+            type=str,
+            help="path to parameter file describing the model and its inputs",
         )
 
         subparser.add_argument(

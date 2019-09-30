@@ -34,7 +34,9 @@ class TestTypeDeclaration(AllenNlpTestCase):
         resolution = unary_type.resolve(ComplexType(CELL_TYPE, ANY_TYPE))
         assert resolution == UnaryOpType(CELL_TYPE)
 
-        reverse_type = ComplexType(ComplexType(CELL_TYPE, ROW_TYPE), ComplexType(CELL_TYPE, ROW_TYPE))
+        reverse_type = ComplexType(
+            ComplexType(CELL_TYPE, ROW_TYPE), ComplexType(CELL_TYPE, ROW_TYPE)
+        )
         resolution = unary_type.resolve(reverse_type)
         assert resolution == UnaryOpType(ComplexType(CELL_TYPE, ROW_TYPE))
 
@@ -71,7 +73,9 @@ class TestTypeDeclaration(AllenNlpTestCase):
         type_e = NamedBasicType("E")
         name_mapping = {"sample_function": "F"}
         # <e,<r,<d,r>>>
-        type_signatures = {"F": ComplexType(type_e, ComplexType(type_r, ComplexType(type_d, type_r)))}
+        type_signatures = {
+            "F": ComplexType(type_e, ComplexType(type_r, ComplexType(type_d, type_r)))
+        }
         basic_types = {type_r, type_d, type_e}
         valid_actions = types.get_valid_actions(name_mapping, type_signatures, basic_types)
         assert len(valid_actions) == 3

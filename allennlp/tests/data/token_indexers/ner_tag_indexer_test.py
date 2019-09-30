@@ -28,8 +28,12 @@ class TestNerTagIndexer(AllenNlpTestCase):
         none_index = vocab.add_token_to_namespace("NONE", namespace="ner_tags")
         vocab.add_token_to_namespace("ORG", namespace="ner_tags")
         indexer = NerTagIndexer(namespace="ner_tags")
-        assert indexer.tokens_to_indices([tokens[1]], vocab, "tokens1") == {"tokens1": [person_index]}
-        assert indexer.tokens_to_indices([tokens[-1]], vocab, "tokens-1") == {"tokens-1": [none_index]}
+        assert indexer.tokens_to_indices([tokens[1]], vocab, "tokens1") == {
+            "tokens1": [person_index]
+        }
+        assert indexer.tokens_to_indices([tokens[-1]], vocab, "tokens-1") == {
+            "tokens-1": [none_index]
+        }
 
     def test_padding_functions(self):
         indexer = NerTagIndexer()
@@ -41,7 +45,9 @@ class TestNerTagIndexer(AllenNlpTestCase):
         assert padded_tokens["key"].tolist() == [1, 2, 3, 4, 5, 0, 0, 0, 0, 0]
 
     def test_blank_ner_tag(self):
-        tokens = [Token(token)._replace(ent_type_="") for token in "allennlp is awesome .".split(" ")]
+        tokens = [
+            Token(token)._replace(ent_type_="") for token in "allennlp is awesome .".split(" ")
+        ]
         indexer = NerTagIndexer()
         counter = defaultdict(lambda: defaultdict(int))
         for token in tokens:

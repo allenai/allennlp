@@ -35,7 +35,10 @@ class KnowledgeGraph:
     """
 
     def __init__(
-        self, entities: Set[str], neighbors: Dict[str, List[str]], entity_text: Dict[str, str] = None
+        self,
+        entities: Set[str],
+        neighbors: Dict[str, List[str]],
+        entity_text: Dict[str, str] = None,
     ) -> None:
         self.entities = sorted(entities)
         self.neighbors = neighbors

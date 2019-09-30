@@ -47,7 +47,11 @@ class DepLabelIndexer(TokenIndexer[int]):
     ) -> Dict[str, List[int]]:
         dep_labels = [token.dep_ or "NONE" for token in tokens]
 
-        return {index_name: [vocabulary.get_token_index(dep_label, self.namespace) for dep_label in dep_labels]}
+        return {
+            index_name: [
+                vocabulary.get_token_index(dep_label, self.namespace) for dep_label in dep_labels
+            ]
+        }
 
     @overrides
     def get_padding_lengths(self, token: int) -> Dict[str, int]:
@@ -55,7 +59,10 @@ class DepLabelIndexer(TokenIndexer[int]):
 
     @overrides
     def as_padded_tensor(
-        self, tokens: Dict[str, List[int]], desired_num_tokens: Dict[str, int], padding_lengths: Dict[str, int]
+        self,
+        tokens: Dict[str, List[int]],
+        desired_num_tokens: Dict[str, int],
+        padding_lengths: Dict[str, int],
     ) -> Dict[str, torch.Tensor]:
         return {
             key: torch.LongTensor(pad_sequence_to_length(val, desired_num_tokens[key]))

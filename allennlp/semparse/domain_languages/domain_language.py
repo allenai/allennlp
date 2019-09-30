@@ -87,7 +87,9 @@ class PredicateType:
         return BasicType(name)
 
     @staticmethod
-    def get_function_type(arg_types: List["PredicateType"], return_type: "PredicateType") -> "PredicateType":
+    def get_function_type(
+        arg_types: List["PredicateType"], return_type: "PredicateType"
+    ) -> "PredicateType":
         """
         Constructs an NLTK ``ComplexType`` representing a function with the given argument and
         return types.
@@ -268,10 +270,14 @@ class DomainLanguage:
     :class:`~allennlp.semparse.domain_languages.wikitables_language.WikiTablesLanguage`.
     """
 
-    def __init__(self, allowed_constants: Dict[str, Any] = None, start_types: Set[Type] = None) -> None:
+    def __init__(
+        self, allowed_constants: Dict[str, Any] = None, start_types: Set[Type] = None
+    ) -> None:
         self._functions: Dict[str, Callable] = {}
         self._function_types: Dict[str, List[PredicateType]] = defaultdict(list)
-        self._start_types: Set[PredicateType] = {PredicateType.get_type(type_) for type_ in start_types}
+        self._start_types: Set[PredicateType] = {
+            PredicateType.get_type(type_) for type_ in start_types
+        }
         for name in dir(self):
             if isinstance(getattr(self, name), types.MethodType):
                 function = getattr(self, name)
@@ -292,7 +298,9 @@ class DomainLanguage:
         expression = util.lisp_to_nested_expression(logical_form)
         return self._execute_expression(expression)
 
-    def execute_action_sequence(self, action_sequence: List[str], side_arguments: List[Dict] = None):
+    def execute_action_sequence(
+        self, action_sequence: List[str], side_arguments: List[Dict] = None
+    ):
         """
         Executes the program defined by an action sequence directly, without needing the overhead
         of translating to a logical form first.  For any given program, :func:`execute` and this
@@ -382,7 +390,9 @@ class DomainLanguage:
         try:
             transitions, start_type = self._get_transitions(expression, expected_type=None)
             if self._start_types and start_type not in self._start_types:
-                raise ParsingError(f"Expression had unallowed start type of {start_type}: {expression}")
+                raise ParsingError(
+                    f"Expression had unallowed start type of {start_type}: {expression}"
+                )
         except ParsingError as error:
             logger.error(f"Error parsing logical form: {logical_form}: {error}")
             raise
@@ -441,7 +451,9 @@ class DomainLanguage:
         side_arguments = side_arguments or []
         signature = inspect.signature(function)
         argument_types = [
-            param.annotation for name, param in signature.parameters.items() if name not in side_arguments
+            param.annotation
+            for name, param in signature.parameters.items()
+            if name not in side_arguments
         ]
         return_type = signature.return_annotation
         argument_nltk_types: List[PredicateType] = [
@@ -497,7 +509,9 @@ class DomainLanguage:
                 return function(*arguments)
             except (TypeError, ValueError):
                 traceback.print_exc()
-                raise ExecutionError(f"Error executing expression {expression} (see stderr for stack trace)")
+                raise ExecutionError(
+                    f"Error executing expression {expression} (see stderr for stack trace)"
+                )
         elif isinstance(expression, str):
             if expression not in self._functions:
                 raise ExecutionError(f"Unrecognized constant: {expression}")
@@ -517,7 +531,9 @@ class DomainLanguage:
                 return self._functions[expression]()
             return self._functions[expression]
         else:
-            raise ExecutionError("Not sure how you got here. Please open a github issue with details.")
+            raise ExecutionError(
+                "Not sure how you got here. Please open a github issue with details."
+            )
 
     def _execute_sequence(
         self, action_sequence: List[str], side_arguments: List[Dict]
@@ -592,7 +608,9 @@ class DomainLanguage:
                 arguments.append(argument)
             return function(*arguments), remaining_actions, remaining_side_args
 
-    def _get_transitions(self, expression: Any, expected_type: PredicateType) -> Tuple[List[str], PredicateType]:
+    def _get_transitions(
+        self, expression: Any, expected_type: PredicateType
+    ) -> Tuple[List[str], PredicateType]:
         """
         This is used when converting a logical form into an action sequence.  This piece
         recursively translates a lisp expression into an action sequence, making sure we match the
@@ -617,7 +635,8 @@ class DomainLanguage:
                 # This constant had only one type; that's the easy case.
                 if expected_type and expected_type != constant_type:
                     raise ParsingError(
-                        f"{expression} did not have expected type {expected_type} " f"(found {constant_type})"
+                        f"{expression} did not have expected type {expected_type} "
+                        f"(found {constant_type})"
                     )
                 return [f"{constant_type} -> {expression}"], constant_type
             else:
@@ -634,7 +653,9 @@ class DomainLanguage:
                 return [f"{expected_type} -> {expression}"], expected_type
 
         else:
-            raise ParsingError("Not sure how you got here. Please open an issue on github with details.")
+            raise ParsingError(
+                "Not sure how you got here. Please open an issue on github with details."
+            )
 
     def _get_function_transitions(
         self, expression: Union[str, List], expected_type: PredicateType
@@ -657,7 +678,9 @@ class DomainLanguage:
             name = expression
             function_types = self._function_types[expression]
             if len(function_types) != 1:
-                raise ParsingError(f"{expression} had multiple types; this is not yet supported for functions")
+                raise ParsingError(
+                    f"{expression} had multiple types; this is not yet supported for functions"
+                )
             function_type = function_types[0]
             transitions = [f"{function_type} -> {name}"]
         else:
@@ -719,5 +742,7 @@ class DomainLanguage:
             # The current node is a pre-terminal; we'll add a single terminal child.  By
             # construction, the right-hand side of our production rules are only ever terminal
             # productions or lists of non-terminals.
-            current_node.append(Tree(right_side, []))  # you add a child to an nltk.Tree with `append`
+            current_node.append(
+                Tree(right_side, [])
+            )  # you add a child to an nltk.Tree with `append`
         return remaining_actions

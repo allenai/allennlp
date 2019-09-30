@@ -207,7 +207,10 @@ class Trainer(TrainerBase):
         if checkpointer is not None:
             # We can't easily check if these parameters were passed in, so check against their default values.
             # We don't check against serialization_dir since it is also used by the parent class.
-            if num_serialized_models_to_keep != 20 or keep_serialized_model_every_num_seconds is not None:
+            if (
+                num_serialized_models_to_keep != 20
+                or keep_serialized_model_every_num_seconds is not None
+            ):
                 raise ConfigurationError(
                     "When passing a custom Checkpointer, you may not also pass in separate checkpointer "
                     "args 'num_serialized_models_to_keep' or 'keep_serialized_model_every_num_seconds'."
@@ -215,7 +218,9 @@ class Trainer(TrainerBase):
             self._checkpointer = checkpointer
         else:
             self._checkpointer = Checkpointer(
-                serialization_dir, keep_serialized_model_every_num_seconds, num_serialized_models_to_keep
+                serialization_dir,
+                keep_serialized_model_every_num_seconds,
+                num_serialized_models_to_keep,
             )
 
         self._model_save_interval = model_save_interval
@@ -343,7 +348,8 @@ class Trainer(TrainerBase):
                 # We need a copy of current parameters to compute magnitude of updates,
                 # and copy them to CPU so large models won't go OOM on the GPU.
                 param_updates = {
-                    name: param.detach().cpu().clone() for name, param in self.model.named_parameters()
+                    name: param.detach().cpu().clone()
+                    for name, param in self.model.named_parameters()
                 }
                 self.optimizer.step()
                 for name, param in self.model.named_parameters():
@@ -391,7 +397,9 @@ class Trainer(TrainerBase):
                 time.time() - last_save_time > self._model_save_interval
             ):
                 last_save_time = time.time()
-                self._save_checkpoint("{0}.{1}".format(epoch, training_util.time_to_str(int(last_save_time))))
+                self._save_checkpoint(
+                    "{0}.{1}".format(epoch, training_util.time_to_str(int(last_save_time)))
+                )
         metrics = training_util.get_metrics(self.model, train_loss, batches_this_epoch, reset=True)
         metrics["cpu_memory_MB"] = peak_cpu_usage
         for (gpu_num, memory) in gpu_usage:
@@ -419,7 +427,9 @@ class Trainer(TrainerBase):
 
         raw_val_generator = val_iterator(self._validation_data, num_epochs=1, shuffle=False)
         val_generator = lazy_groups_of(raw_val_generator, num_gpus)
-        num_validation_batches = math.ceil(val_iterator.get_num_batches(self._validation_data) / num_gpus)
+        num_validation_batches = math.ceil(
+            val_iterator.get_num_batches(self._validation_data) / num_gpus
+        )
         val_generator_tqdm = Tqdm.tqdm(val_generator, total=num_validation_batches)
         batches_this_epoch = 0
         val_loss = 0
@@ -492,7 +502,9 @@ class Trainer(TrainerBase):
                 with torch.no_grad():
                     # We have a validation set, so compute all the metrics on it.
                     val_loss, num_batches = self._validation_loss()
-                    val_metrics = training_util.get_metrics(self.model, val_loss, num_batches, reset=True)
+                    val_metrics = training_util.get_metrics(
+                        self.model, val_loss, num_batches, reset=True
+                    )
 
                     # Check validation metric for early stopping
                     this_epoch_val_metric = val_metrics[self._validation_metric]
@@ -528,7 +540,9 @@ class Trainer(TrainerBase):
                 self._metric_tracker.best_epoch_metrics = val_metrics
 
             if self._serialization_dir:
-                dump_metrics(os.path.join(self._serialization_dir, f"metrics_epoch_{epoch}.json"), metrics)
+                dump_metrics(
+                    os.path.join(self._serialization_dir, f"metrics_epoch_{epoch}.json"), metrics
+                )
 
             # The Scheduler API is agnostic to whether your schedule requires a validation metric -
             # if it doesn't, the validation metric passed here is ignored.
@@ -628,7 +642,10 @@ class Trainer(TrainerBase):
 
         self.model.load_state_dict(model_state)
         self.optimizer.load_state_dict(training_state["optimizer"])
-        if self._learning_rate_scheduler is not None and "learning_rate_scheduler" in training_state:
+        if (
+            self._learning_rate_scheduler is not None
+            and "learning_rate_scheduler" in training_state
+        ):
             self._learning_rate_scheduler.load_state_dict(training_state["learning_rate_scheduler"])
         if self._momentum_scheduler is not None and "momentum_scheduler" in training_state:
             self._momentum_scheduler.load_state_dict(training_state["momentum_scheduler"])
@@ -693,7 +710,9 @@ class Trainer(TrainerBase):
         parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
         optimizer = Optimizer.from_params(parameters, params.pop("optimizer"))
         if "moving_average" in params:
-            moving_average = MovingAverage.from_params(params.pop("moving_average"), parameters=parameters)
+            moving_average = MovingAverage.from_params(
+                params.pop("moving_average"), parameters=parameters
+            )
         else:
             moving_average = None
 
@@ -707,7 +726,10 @@ class Trainer(TrainerBase):
             momentum_scheduler = None
 
         if "checkpointer" in params:
-            if "keep_serialized_model_every_num_seconds" in params or "num_serialized_models_to_keep" in params:
+            if (
+                "keep_serialized_model_every_num_seconds" in params
+                or "num_serialized_models_to_keep" in params
+            ):
                 raise ConfigurationError(
                     "Checkpointer may be initialized either from the 'checkpointer' key or from the "
                     "keys 'num_serialized_models_to_keep' and 'keep_serialized_model_every_num_seconds'"

@@ -16,7 +16,10 @@ logger = logging.getLogger(__name__)
 
 
 def sort_by_padding(
-    instances: List[Instance], sorting_keys: List[Tuple[str, str]], vocab: Vocabulary, padding_noise: float = 0.0
+    instances: List[Instance],
+    sorting_keys: List[Tuple[str, str]],
+    vocab: Vocabulary,
+    padding_noise: float = 0.0,
 ) -> List[Instance]:
     """
     Sorts the instances by their padding lengths, using the keys in
@@ -34,7 +37,10 @@ def sort_by_padding(
                 noisy_lengths[field_name] = add_noise_to_dict_values(field_lengths, padding_noise)
             padding_lengths = noisy_lengths
         instance_with_lengths = (
-            [padding_lengths[field_name][padding_key] for (field_name, padding_key) in sorting_keys],
+            [
+                padding_lengths[field_name][padding_key]
+                for (field_name, padding_key) in sorting_keys
+            ],
             instance,
         )
         instances_with_lengths.append(instance_with_lengths)
@@ -122,13 +128,20 @@ class BucketIterator(DataIterator):
     def _create_batches(self, instances: Iterable[Instance], shuffle: bool) -> Iterable[Batch]:
         for instance_list in self._memory_sized_lists(instances):
 
-            instance_list = sort_by_padding(instance_list, self._sorting_keys, self.vocab, self._padding_noise)
+            instance_list = sort_by_padding(
+                instance_list, self._sorting_keys, self.vocab, self._padding_noise
+            )
 
             batches = []
             excess: Deque[Instance] = deque()
             for batch_instances in lazy_groups_of(iter(instance_list), self._batch_size):
-                for possibly_smaller_batches in self._ensure_batch_is_sufficiently_small(batch_instances, excess):
-                    if self._skip_smaller_batches and len(possibly_smaller_batches) < self._batch_size:
+                for possibly_smaller_batches in self._ensure_batch_is_sufficiently_small(
+                    batch_instances, excess
+                ):
+                    if (
+                        self._skip_smaller_batches
+                        and len(possibly_smaller_batches) < self._batch_size
+                    ):
                         continue
                     batches.append(Batch(possibly_smaller_batches))
             if excess and (not self._skip_smaller_batches or len(excess) == self._batch_size):

@@ -114,18 +114,24 @@ class QuarelSemanticParser(Model):
         # entity_type stuff is irrelevant
         self._num_entity_types = 4  # TODO(mattg): get this in a more principled way somehow?
         self._entity_type_encoder_embedding = Embedding(self._num_entity_types, self._embedding_dim)
-        self._entity_type_decoder_embedding = Embedding(self._num_entity_types, action_embedding_dim)
+        self._entity_type_decoder_embedding = Embedding(
+            self._num_entity_types, action_embedding_dim
+        )
 
         self._entity_similarity_layer = None
         self._entity_similarity_mode = entity_similarity_mode
         if self._entity_similarity_mode == "weighted_dot_product":
-            self._entity_similarity_layer = TimeDistributed(torch.nn.Linear(self._embedding_dim, 1, bias=False))
+            self._entity_similarity_layer = TimeDistributed(
+                torch.nn.Linear(self._embedding_dim, 1, bias=False)
+            )
             # Center initial values around unweighted dot product
             self._entity_similarity_layer._module.weight.data += 1
         elif self._entity_similarity_mode == "dot_product":
             pass
         else:
-            raise ValueError("Invalid entity_similarity_mode: {}".format(self._entity_similarity_mode))
+            raise ValueError(
+                "Invalid entity_similarity_mode: {}".format(self._entity_similarity_mode)
+            )
 
         if num_linking_features > 0:
             self._linking_params = torch.nn.Linear(num_linking_features, 1)
@@ -146,14 +152,18 @@ class QuarelSemanticParser(Model):
         self._denotation_only = denotation_only
         if self._denotation_only:
             self._denotation_accuracy_cat = CategoricalAccuracy()
-            self._denotation_classifier = torch.nn.Linear(self._encoder_output_dim, self._num_denotation_cats)
+            self._denotation_classifier = torch.nn.Linear(
+                self._encoder_output_dim, self._num_denotation_cats
+            )
             # Rest of init not needed for denotation only where no decoding to actions needed
             return
 
         self._action_padding_index = -1  # the padding value used by IndexField
         num_actions = vocab.get_vocab_size(self._rule_namespace)
         self._num_actions = num_actions
-        self._action_embedder = Embedding(num_embeddings=num_actions, embedding_dim=action_embedding_dim)
+        self._action_embedder = Embedding(
+            num_embeddings=num_actions, embedding_dim=action_embedding_dim
+        )
         # We are tying the action embeddings used for input and output
         # self._output_action_embedder = Embedding(num_embeddings=num_actions, embedding_dim=action_embedding_dim)
         self._output_action_embedder = self._action_embedder  # tied weights
@@ -164,7 +174,9 @@ class QuarelSemanticParser(Model):
         # This is what we pass as input in the first step of decoding, when we don't have a
         # previous action, or a previous question attention.
         self._first_action_embedding = torch.nn.Parameter(torch.FloatTensor(action_embedding_dim))
-        self._first_attended_question = torch.nn.Parameter(torch.FloatTensor(self._encoder_output_dim))
+        self._first_attended_question = torch.nn.Parameter(
+            torch.FloatTensor(self._encoder_output_dim)
+        )
         torch.nn.init.normal_(self._first_action_embedding)
         torch.nn.init.normal_(self._first_attended_question)
 
@@ -256,10 +268,16 @@ class QuarelSemanticParser(Model):
             if self._entity_similarity_mode == "dot_product":
                 # Compute entity and question word cosine similarity. Need to add a small value to
                 # to the table norm since there are padding values which cause a divide by 0.
-                embedded_table = embedded_table / (embedded_table.norm(dim=-1, keepdim=True) + 1e-13)
-                embedded_question = embedded_question / (embedded_question.norm(dim=-1, keepdim=True) + 1e-13)
+                embedded_table = embedded_table / (
+                    embedded_table.norm(dim=-1, keepdim=True) + 1e-13
+                )
+                embedded_question = embedded_question / (
+                    embedded_question.norm(dim=-1, keepdim=True) + 1e-13
+                )
                 question_entity_similarity = torch.bmm(
-                    embedded_table.view(batch_size, num_entities * num_entity_tokens, self._embedding_dim),
+                    embedded_table.view(
+                        batch_size, num_entities * num_entity_tokens, self._embedding_dim
+                    ),
                     torch.transpose(embedded_question, 1, 2),
                 )
 
@@ -272,14 +290,24 @@ class QuarelSemanticParser(Model):
 
                 linking_scores = question_entity_similarity_max_score
             elif self._entity_similarity_mode == "weighted_dot_product":
-                embedded_table = embedded_table / (embedded_table.norm(dim=-1, keepdim=True) + 1e-13)
-                embedded_question = embedded_question / (embedded_question.norm(dim=-1, keepdim=True) + 1e-13)
-                eqe = embedded_question.unsqueeze(1).expand(-1, num_entities * num_entity_tokens, -1, -1)
-                ete = embedded_table.view(batch_size, num_entities * num_entity_tokens, self._embedding_dim)
+                embedded_table = embedded_table / (
+                    embedded_table.norm(dim=-1, keepdim=True) + 1e-13
+                )
+                embedded_question = embedded_question / (
+                    embedded_question.norm(dim=-1, keepdim=True) + 1e-13
+                )
+                eqe = embedded_question.unsqueeze(1).expand(
+                    -1, num_entities * num_entity_tokens, -1, -1
+                )
+                ete = embedded_table.view(
+                    batch_size, num_entities * num_entity_tokens, self._embedding_dim
+                )
                 ete = ete.unsqueeze(2).expand(-1, -1, num_question_tokens, -1)
                 product = torch.mul(eqe, ete)
                 product = product.view(
-                    batch_size, num_question_tokens * num_entities * num_entity_tokens, self._embedding_dim
+                    batch_size,
+                    num_question_tokens * num_entities * num_entity_tokens,
+                    self._embedding_dim,
                 )
                 question_entity_similarity = self._entity_similarity_layer(product)
                 question_entity_similarity = question_entity_similarity.view(
@@ -437,12 +465,18 @@ class QuarelSemanticParser(Model):
                     sequence_in_targets = 0
                     if target_action_sequences is not None:
                         targets = target_action_sequences[i].data
-                        sequence_in_targets = self._action_history_match(best_action_indices, targets)
+                        sequence_in_targets = self._action_history_match(
+                            best_action_indices, targets
+                        )
                         self._action_sequence_accuracy(sequence_in_targets)
-                    action_strings = [action_mapping[(i, action_index)] for action_index in best_action_indices]
+                    action_strings = [
+                        action_mapping[(i, action_index)] for action_index in best_action_indices
+                    ]
                     try:
                         self._has_logical_form(1.0)
-                        logical_form = world[i].get_logical_form(action_strings, add_var_function=False)
+                        logical_form = world[i].get_logical_form(
+                            action_strings, add_var_function=False
+                        )
                     except ParsingError:
                         self._has_logical_form(0.0)
                         logical_form = "Error producing logical form"
@@ -450,7 +484,9 @@ class QuarelSemanticParser(Model):
                     predicted_answer_index = world[i].execute(logical_form)
                     if metadata is not None and "answer_index" in metadata[i]:
                         answer_index = metadata[i]["answer_index"]
-                        denotation_accuracy = self._denotation_match(predicted_answer_index, answer_index)
+                        denotation_accuracy = self._denotation_match(
+                            predicted_answer_index, answer_index
+                        )
                         self._denotation_accuracy(denotation_accuracy)
                     score = math.exp(best_final_states[i][0].score[0].data.cpu().item())
                     outputs["answer_index"].append(predicted_answer_index)
@@ -459,7 +495,9 @@ class QuarelSemanticParser(Model):
                     outputs["best_action_sequence"].append(action_strings)
                     outputs["logical_form"].append(logical_form)
                     outputs["denotation_acc"].append(denotation_accuracy)
-                    outputs["debug_info"].append(best_final_states[i][0].debug_info[0])  # type: ignore
+                    outputs["debug_info"].append(
+                        best_final_states[i][0].debug_info[0]
+                    )  # type: ignore
                 else:
                     outputs["parse_acc"].append(0)
                     outputs["logical_form"].append("")
@@ -594,7 +632,9 @@ class QuarelSemanticParser(Model):
 
             # We need to add padding here if we don't have the right number of entities.
             if num_entities_in_instance != num_entities:
-                zeros = linking_scores.new_zeros(num_question_tokens, num_entities - num_entities_in_instance)
+                zeros = linking_scores.new_zeros(
+                    num_question_tokens, num_entities - num_entities_in_instance
+                )
                 all_probabilities.append(zeros)
 
             # (num_question_tokens, num_entities)
@@ -686,7 +726,9 @@ class QuarelSemanticParser(Model):
             entity_map[entity] = entity_index
 
         valid_actions = world.get_valid_actions()
-        translated_valid_actions: Dict[str, Dict[str, Tuple[torch.Tensor, torch.Tensor, List[int]]]] = {}
+        translated_valid_actions: Dict[
+            str, Dict[str, Tuple[torch.Tensor, torch.Tensor, List[int]]]
+        ] = {}
         for key, action_strings in valid_actions.items():
             translated_valid_actions[key] = {}
             # `key` here is a non-terminal from the grammar, and `action_strings` are all the valid
@@ -708,7 +750,9 @@ class QuarelSemanticParser(Model):
             global_input_embeddings = self._action_embedder(global_action_tensor)
             if self._add_action_bias:
                 global_action_biases = self._action_biases(global_action_tensor)
-                global_input_embeddings = torch.cat([global_input_embeddings, global_action_biases], dim=-1)
+                global_input_embeddings = torch.cat(
+                    [global_input_embeddings, global_action_biases], dim=-1
+                )
             global_output_embeddings = self._output_action_embedder(global_action_tensor)
             translated_valid_actions[key]["global"] = (
                 global_input_embeddings,
@@ -733,7 +777,9 @@ class QuarelSemanticParser(Model):
                     list(linked_action_ids),
                 )
 
-        return GrammarStatelet([START_SYMBOL], translated_valid_actions, type_declaration.is_nonterminal)
+        return GrammarStatelet(
+            [START_SYMBOL], translated_valid_actions, type_declaration.is_nonterminal
+        )
 
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
@@ -749,7 +795,9 @@ class QuarelSemanticParser(Model):
         best_actions = output_dict["best_action_sequence"]
         debug_infos = output_dict["debug_info"]
         batch_action_info = []
-        for batch_index, (predicted_actions, debug_info) in enumerate(zip(best_actions, debug_infos)):
+        for batch_index, (predicted_actions, debug_info) in enumerate(
+            zip(best_actions, debug_infos)
+        ):
             instance_action_info = []
             for predicted_action, action_debug_info in zip(predicted_actions, debug_info):
                 action_info = {}

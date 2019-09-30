@@ -15,7 +15,9 @@ logger = logging.getLogger(__name__)
 FIELDS = ["id", "form", "lemma", "pos", "head", "deprel", "top", "pred", "frame"]
 
 
-def parse_sentence(sentence_blob: str) -> Tuple[List[Dict[str, str]], List[Tuple[int, int]], List[str]]:
+def parse_sentence(
+    sentence_blob: str
+) -> Tuple[List[Dict[str, str]], List[Tuple[int, int]], List[str]]:
     """
     Parses a chunk of text in the SemEval SDP format.
 
@@ -41,7 +43,11 @@ def parse_sentence(sentence_blob: str) -> Tuple[List[Dict[str, str]], List[Tuple
     arc_tags = []
     predicates = []
 
-    lines = [line.split("\t") for line in sentence_blob.split("\n") if line and not line.strip().startswith("#")]
+    lines = [
+        line.split("\t")
+        for line in sentence_blob.split("\n")
+        if line and not line.strip().startswith("#")
+    ]
     for line_idx, line in enumerate(lines):
         annotated_token = {k: v for k, v in zip(FIELDS, line)}
         if annotated_token["pred"] == "+":

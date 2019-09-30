@@ -219,7 +219,9 @@ def prepare_environment(params: Params):
     log_pytorch_version_info()
 
 
-def prepare_global_logging(serialization_dir: str, file_friendly_logging: bool) -> logging.FileHandler:
+def prepare_global_logging(
+    serialization_dir: str, file_friendly_logging: bool
+) -> logging.FileHandler:
     """
     This function configures 3 global logging attributes - streaming stdout and stderr
     to a file as well as the terminal, setting the formatting for the python logging
@@ -262,7 +264,9 @@ def prepare_global_logging(serialization_dir: str, file_friendly_logging: bool) 
     )
 
     stdout_handler = logging.FileHandler(std_out_file)
-    stdout_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s"))
+    stdout_handler.setFormatter(
+        logging.Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s")
+    )
     logging.getLogger().addHandler(stdout_handler)
 
     return stdout_handler
@@ -289,7 +293,9 @@ def cleanup_global_logging(stdout_handler: logging.FileHandler) -> None:
 LOADED_SPACY_MODELS: Dict[Tuple[str, bool, bool, bool], SpacyModelType] = {}
 
 
-def get_spacy_model(spacy_model_name: str, pos_tags: bool, parse: bool, ner: bool) -> SpacyModelType:
+def get_spacy_model(
+    spacy_model_name: str, pos_tags: bool, parse: bool, ner: bool
+) -> SpacyModelType:
     """
     In order to avoid loading spacy models a whole bunch of times, we'll save references to them,
     keyed by the options we used to create the spacy model, so any particular configuration only
@@ -308,7 +314,9 @@ def get_spacy_model(spacy_model_name: str, pos_tags: bool, parse: bool, ner: boo
         try:
             spacy_model = spacy.load(spacy_model_name, disable=disable)
         except OSError:
-            logger.warning(f"Spacy models '{spacy_model_name}' not found.  Downloading and installing.")
+            logger.warning(
+                f"Spacy models '{spacy_model_name}' not found.  Downloading and installing."
+            )
             spacy_download(spacy_model_name)
             # NOTE(mattg): The following four lines are a workaround suggested by Ines for spacy
             # 2.1.0, which removed the linking that was done in spacy 2.0.  importlib doesn't find
@@ -396,7 +404,8 @@ def gpu_memory_mb() -> Dict[int, int]:
     """
     try:
         result = subprocess.check_output(
-            ["nvidia-smi", "--query-gpu=memory.used", "--format=csv,nounits,noheader"], encoding="utf-8"
+            ["nvidia-smi", "--query-gpu=memory.used", "--format=csv,nounits,noheader"],
+            encoding="utf-8",
         )
         gpu_memory = [int(x) for x in result.strip().split("\n")]
         return {gpu: memory for gpu, memory in enumerate(gpu_memory)}

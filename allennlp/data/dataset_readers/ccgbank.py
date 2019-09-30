@@ -99,7 +99,11 @@ class CcgBankDatasetReader(DatasetReader):
                     ]
 
                     yield self.text_to_instance(
-                        tokens, ccg_categories, original_pos_tags, modified_pos_tags, predicate_arg_categories
+                        tokens,
+                        ccg_categories,
+                        original_pos_tags,
+                        modified_pos_tags,
+                        predicate_arg_categories,
                     )
 
     @overrides
@@ -157,14 +161,18 @@ class CcgBankDatasetReader(DatasetReader):
                     "Dataset reader was specified to use original POS tags as "
                     "features. Pass them to text_to_instance."
                 )
-            fields["original_pos_tags"] = SequenceLabelField(original_pos_tags, text_field, "original_pos_tags")
+            fields["original_pos_tags"] = SequenceLabelField(
+                original_pos_tags, text_field, "original_pos_tags"
+            )
         if "modified_pos" in self.feature_labels:
             if modified_pos_tags is None:
                 raise ConfigurationError(
                     "Dataset reader was specified to use modified POS tags as "
                     " features. Pass them to text_to_instance."
                 )
-            fields["modified_pos_tags"] = SequenceLabelField(modified_pos_tags, text_field, "modified_pos_tags")
+            fields["modified_pos_tags"] = SequenceLabelField(
+                modified_pos_tags, text_field, "modified_pos_tags"
+            )
         if "predicate_arg" in self.feature_labels:
             if predicate_arg_categories is None:
                 raise ConfigurationError(
@@ -183,6 +191,8 @@ class CcgBankDatasetReader(DatasetReader):
         elif self.tag_label == "modified_pos" and modified_pos_tags is not None:
             fields["tags"] = SequenceLabelField(modified_pos_tags, text_field, self.label_namespace)
         elif self.tag_label == "predicate_arg" and predicate_arg_categories is not None:
-            fields["tags"] = SequenceLabelField(predicate_arg_categories, text_field, self.label_namespace)
+            fields["tags"] = SequenceLabelField(
+                predicate_arg_categories, text_field, self.label_namespace
+            )
 
         return Instance(fields)

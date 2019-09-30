@@ -81,13 +81,16 @@ class ComposedSeq2Seq(Model):
             source_embedder = self._source_text_embedder._token_embedders[tied_source_embedder_key]
             if not isinstance(source_embedder, Embedding):
                 raise ConfigurationError(
-                    "Unable to tie embeddings," "Selected source embedder is not an instance of `Embedding`."
+                    "Unable to tie embeddings,"
+                    "Selected source embedder is not an instance of `Embedding`."
                 )
             if source_embedder.get_output_dim() != self._decoder.target_embedder.get_output_dim():
                 raise ConfigurationError(
                     f"Output Dimensions mismatch between" f"source embedder and target embedder."
                 )
-            self._source_text_embedder._token_embedders[tied_source_embedder_key] = self._decoder.target_embedder
+            self._source_text_embedder._token_embedders[
+                tied_source_embedder_key
+            ] = self._decoder.target_embedder
         initializer(self)
 
     @overrides

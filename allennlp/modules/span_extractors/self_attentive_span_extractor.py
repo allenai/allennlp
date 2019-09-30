@@ -88,10 +88,14 @@ class SelfAttentiveSpanExtractor(SpanExtractor):
         span_indices = torch.nn.functional.relu(raw_span_indices.float()).long()
 
         # Shape: (batch_size * num_spans * max_batch_span_width)
-        flat_span_indices = util.flatten_and_batch_shift_indices(span_indices, sequence_tensor.size(1))
+        flat_span_indices = util.flatten_and_batch_shift_indices(
+            span_indices, sequence_tensor.size(1)
+        )
 
         # Shape: (batch_size, num_spans, max_batch_span_width, embedding_dim)
-        span_embeddings = util.batched_index_select(sequence_tensor, span_indices, flat_span_indices)
+        span_embeddings = util.batched_index_select(
+            sequence_tensor, span_indices, flat_span_indices
+        )
 
         # Shape: (batch_size, num_spans, max_batch_span_width)
         span_attention_logits = util.batched_index_select(

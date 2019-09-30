@@ -34,7 +34,9 @@ class DropEmAndF1(Metric):
         """
         # If you wanted to split this out by answer type, you could look at [1] here and group by
         # that, instead of only keeping [0].
-        ground_truth_answer_strings = [answer_json_to_strings(annotation)[0] for annotation in ground_truths]
+        ground_truth_answer_strings = [
+            answer_json_to_strings(annotation)[0] for annotation in ground_truths
+        ]
         exact_match, f1_score = metric_max_over_ground_truths(
             drop_em_and_f1, prediction, ground_truth_answer_strings
         )

@@ -116,5 +116,7 @@ class StackedAlternatingLstm(torch.nn.Module):
             output_sequence, final_state = layer(output_sequence, state)
             final_states.append(final_state)
 
-        final_hidden_state, final_cell_state = tuple(torch.cat(state_list, 0) for state_list in zip(*final_states))
+        final_hidden_state, final_cell_state = tuple(
+            torch.cat(state_list, 0) for state_list in zip(*final_states)
+        )
         return output_sequence, (final_hidden_state, final_cell_state)

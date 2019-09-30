@@ -106,7 +106,10 @@ class TestDropReader:
         assert len(instance["question_and_passage"]) == question_length + passage_length + 1
 
         assert len(instance["answer_as_passage_spans"]) == 1
-        assert instance["answer_as_passage_spans"][0] == (question_length + 1 + 46, question_length + 1 + 47)
+        assert instance["answer_as_passage_spans"][0] == (
+            question_length + 1 + 46,
+            question_length + 1 + 47,
+        )
         assert set(instance["metadata"].metadata.keys()) == {
             "answer_annotations",
             "answer_texts",
@@ -126,7 +129,13 @@ class TestDropReader:
 
         print(instances[0])
         instance = instances[0]
-        assert set(instance.fields.keys()) == {"question", "passage", "span_start", "span_end", "metadata"}
+        assert set(instance.fields.keys()) == {
+            "question",
+            "passage",
+            "span_start",
+            "span_end",
+            "metadata",
+        }
 
         assert [t.text for t in instance["question"][:3]] == ["What", "happened", "second"]
         assert [t.text for t in instance["passage"][:3]] == ["The", "Port", "of"]

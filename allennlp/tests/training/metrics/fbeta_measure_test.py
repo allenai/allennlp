@@ -34,7 +34,8 @@ class FBetaMeasureTest(AllenNlpTestCase):
         desired_precisions = [1.00, 0.25, 0.00, 1.00, 0.00]
         desired_recalls = [0.33, 1.00, 0.00, 1.00, 0.00]
         desired_fscores = [
-            (2 * p * r) / (p + r) if p + r != 0.0 else 0.0 for p, r in zip(desired_precisions, desired_recalls)
+            (2 * p * r) / (p + r) if p + r != 0.0 else 0.0
+            for p, r in zip(desired_precisions, desired_recalls)
         ]
         self.desired_precisions = desired_precisions
         self.desired_recalls = desired_recalls
@@ -98,7 +99,8 @@ class FBetaMeasureTest(AllenNlpTestCase):
         desired_precisions = [1.00, 0.33, 0.00, 1.00, 0.00]
         desired_recalls = [0.50, 1.00, 0.00, 1.00, 0.00]
         desired_fscores = [
-            (2 * p * r) / (p + r) if p + r != 0.0 else 0.0 for p, r in zip(desired_precisions, desired_recalls)
+            (2 * p * r) / (p + r) if p + r != 0.0 else 0.0
+            for p, r in zip(desired_precisions, desired_recalls)
         ]
         numpy.testing.assert_almost_equal(precisions, desired_precisions, decimal=2)
         numpy.testing.assert_almost_equal(recalls, desired_recalls, decimal=2)

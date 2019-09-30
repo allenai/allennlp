@@ -16,7 +16,12 @@ class InvertedTriangular(MomentumScheduler):
     """
 
     def __init__(
-        self, optimizer: torch.optim.Optimizer, cool_down: int, warm_up: int, ratio: int = 10, last_epoch: int = -1
+        self,
+        optimizer: torch.optim.Optimizer,
+        cool_down: int,
+        warm_up: int,
+        ratio: int = 10,
+        last_epoch: int = -1,
     ) -> None:
         self.cool_down = cool_down
         self.warm_up = warm_up

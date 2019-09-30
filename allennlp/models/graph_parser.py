@@ -117,7 +117,10 @@ class GraphParser(Model):
             representation_dim += pos_tag_embedding.get_output_dim()
 
         check_dimensions_match(
-            representation_dim, encoder.get_input_dim(), "text field embedding dim", "encoder input dim"
+            representation_dim,
+            encoder.get_input_dim(),
+            "text field embedding dim",
+            "encoder input dim",
         )
         check_dimensions_match(
             tag_representation_dim,
@@ -219,7 +222,9 @@ class GraphParser(Model):
             one_minus_arc_probs = 1 - arc_probs
             # We stack scores here because the f1 measure expects a
             # distribution, rather than a single value.
-            self._unlabelled_f1(torch.stack([one_minus_arc_probs, arc_probs], -1), arc_indices, tag_mask)
+            self._unlabelled_f1(
+                torch.stack([one_minus_arc_probs, arc_probs], -1), arc_indices, tag_mask
+            )
 
         return output_dict
 
@@ -231,7 +236,9 @@ class GraphParser(Model):
         lengths = get_lengths_from_binary_sequence_mask(mask)
         arcs = []
         arc_tags = []
-        for instance_arc_probs, instance_arc_tag_probs, length in zip(arc_probs, arc_tag_probs, lengths):
+        for instance_arc_probs, instance_arc_tag_probs, length in zip(
+            arc_probs, arc_tag_probs, lengths
+        ):
 
             arc_matrix = instance_arc_probs > self.edge_prediction_threshold
             edges = []
@@ -250,7 +257,11 @@ class GraphParser(Model):
         return output_dict
 
     def _construct_loss(
-        self, arc_scores: torch.Tensor, arc_tag_logits: torch.Tensor, arc_tags: torch.Tensor, mask: torch.Tensor
+        self,
+        arc_scores: torch.Tensor,
+        arc_tag_logits: torch.Tensor,
+        arc_tags: torch.Tensor,
+        mask: torch.Tensor,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Computes the arc and tag loss for an adjacency matrix.
@@ -282,7 +293,11 @@ class GraphParser(Model):
         # Make the arc tags not have negative values anywhere
         # (by default, no edge is indicated with -1).
         arc_tags = arc_tags * arc_indices
-        arc_nll = self._arc_loss(arc_scores, arc_indices) * float_mask.unsqueeze(1) * float_mask.unsqueeze(2)
+        arc_nll = (
+            self._arc_loss(arc_scores, arc_indices)
+            * float_mask.unsqueeze(1)
+            * float_mask.unsqueeze(2)
+        )
         # We want the mask for the tags to only include the unmasked words
         # and we only care about the loss with respect to the gold arcs.
         tag_mask = float_mask.unsqueeze(1) * float_mask.unsqueeze(2) * arc_indices
@@ -291,7 +306,9 @@ class GraphParser(Model):
         original_shape = [batch_size, sequence_length, sequence_length]
         reshaped_logits = arc_tag_logits.view(-1, num_tags)
         reshaped_tags = arc_tags.view(-1)
-        tag_nll = self._tag_loss(reshaped_logits, reshaped_tags.long()).view(original_shape) * tag_mask
+        tag_nll = (
+            self._tag_loss(reshaped_logits, reshaped_tags.long()).view(original_shape) * tag_mask
+        )
 
         valid_positions = tag_mask.sum()
 

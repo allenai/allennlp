@@ -58,9 +58,13 @@ class ConstrainedBeamSearch:
     ) -> None:
         self._beam_size = beam_size
         self._per_node_beam_size = per_node_beam_size or beam_size
-        self._allowed_transitions = util.construct_prefix_tree(allowed_sequences, allowed_sequence_mask)
+        self._allowed_transitions = util.construct_prefix_tree(
+            allowed_sequences, allowed_sequence_mask
+        )
 
-    def search(self, initial_state: State, transition_function: TransitionFunction) -> Dict[int, List[State]]:
+    def search(
+        self, initial_state: State, transition_function: TransitionFunction
+    ) -> Dict[int, List[State]]:
         """
         Parameters
         ----------
@@ -84,8 +88,12 @@ class ConstrainedBeamSearch:
             next_states: Dict[int, List[State]] = defaultdict(list)
             grouped_state = states[0].combine_states(states)
             allowed_actions = []
-            for batch_index, action_history in zip(grouped_state.batch_indices, grouped_state.action_history):
-                allowed_actions.append(self._allowed_transitions[batch_index][tuple(action_history)])
+            for batch_index, action_history in zip(
+                grouped_state.batch_indices, grouped_state.action_history
+            ):
+                allowed_actions.append(
+                    self._allowed_transitions[batch_index][tuple(action_history)]
+                )
             for next_state in transition_function.take_step(
                 grouped_state, max_actions=self._per_node_beam_size, allowed_actions=allowed_actions
             ):

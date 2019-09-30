@@ -314,7 +314,9 @@ class Ontonotes:
                 # sequence we are collecting.
                 current_span_labels = [None for _ in conll_components[10:-1]]
 
-            self._process_span_annotations_for_word(conll_components[10:-1], span_labels, current_span_labels)
+            self._process_span_annotations_for_word(
+                conll_components[10:-1], span_labels, current_span_labels
+            )
 
             # If any annotation marks this word as a verb predicate,
             # we need to record its index. This also has the side effect
@@ -324,7 +326,9 @@ class Ontonotes:
             if word_is_verbal_predicate:
                 verbal_predicates.append(word)
 
-            self._process_coref_span_annotations_for_word(conll_components[-1], index, clusters, coref_stacks)
+            self._process_coref_span_annotations_for_word(
+                conll_components[-1], index, clusters, coref_stacks
+            )
 
             sentence.append(word)
             pos_tags.append(pos_tag)
@@ -335,7 +339,9 @@ class Ontonotes:
             speakers.append(speaker if speaker != "-" else None)
 
         named_entities = span_labels[0]
-        srl_frames = [(predicate, labels) for predicate, labels in zip(verbal_predicates, span_labels[1:])]
+        srl_frames = [
+            (predicate, labels) for predicate, labels in zip(verbal_predicates, span_labels[1:])
+        ]
 
         if all(parse_pieces):
             parse_tree = Tree.fromstring("".join(parse_pieces))
@@ -412,7 +418,9 @@ class Ontonotes:
 
     @staticmethod
     def _process_span_annotations_for_word(
-        annotations: List[str], span_labels: List[List[str]], current_span_labels: List[Optional[str]]
+        annotations: List[str],
+        span_labels: List[List[str]],
+        current_span_labels: List[Optional[str]],
     ) -> None:
         """
         Given a sequence of different label types for a single word and the current

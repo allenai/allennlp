@@ -68,7 +68,8 @@ class TestConditionalRandomField(AllenNlpTestCase):
         for logits_i, tags_i in zip(self.logits, self.tags):
             numerator = self.score(logits_i.detach(), tags_i.detach())
             all_scores = [
-                self.score(logits_i.detach(), tags_j) for tags_j in itertools.product(range(5), repeat=3)
+                self.score(logits_i.detach(), tags_j)
+                for tags_j in itertools.product(range(5), repeat=3)
             ]
             denominator = math.log(sum(math.exp(score) for score in all_scores))
             # And include them in the manual calculation.
@@ -98,7 +99,8 @@ class TestConditionalRandomField(AllenNlpTestCase):
 
             numerator = self.score(logits_i, tags_i)
             all_scores = [
-                self.score(logits_i, tags_j) for tags_j in itertools.product(range(5), repeat=sequence_length)
+                self.score(logits_i, tags_j)
+                for tags_j in itertools.product(range(5), repeat=sequence_length)
             ]
             denominator = math.log(sum(math.exp(score) for score in all_scores))
             # And include them in the manual calculation.
@@ -140,7 +142,18 @@ class TestConditionalRandomField(AllenNlpTestCase):
         assert viterbi_scores == best_scores
 
     def test_constrained_viterbi_tags(self):
-        constraints = {(0, 0), (0, 1), (1, 1), (1, 2), (2, 2), (2, 3), (3, 3), (3, 4), (4, 4), (4, 0)}
+        constraints = {
+            (0, 0),
+            (0, 1),
+            (1, 1),
+            (1, 2),
+            (2, 2),
+            (2, 3),
+            (3, 3),
+            (3, 4),
+            (4, 4),
+            (4, 0),
+        }
 
         # Add the transitions to the end tag
         # and from the start tag.
@@ -200,7 +213,17 @@ class TestConditionalRandomField(AllenNlpTestCase):
             (5, 3),  # Extra row for start tag
         }
 
-        bioul_labels = ["O", "B-X", "I-X", "L-X", "U-X", "B-Y", "I-Y", "L-Y", "U-Y"]  # start tag, end tag
+        bioul_labels = [
+            "O",
+            "B-X",
+            "I-X",
+            "L-X",
+            "U-X",
+            "B-Y",
+            "I-Y",
+            "L-Y",
+            "U-Y",
+        ]  # start tag, end tag
         #                0     1      2      3      4      5      6      7      8          9        10
         allowed = allowed_transitions("BIOUL", dict(enumerate(bioul_labels)))
 

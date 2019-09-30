@@ -71,7 +71,9 @@ class SimpleTagger(Model):
         self.num_classes = self.vocab.get_vocab_size(label_namespace)
         self.encoder = encoder
         self._verbose_metrics = verbose_metrics
-        self.tag_projection_layer = TimeDistributed(Linear(self.encoder.get_output_dim(), self.num_classes))
+        self.tag_projection_layer = TimeDistributed(
+            Linear(self.encoder.get_output_dim(), self.num_classes)
+        )
 
         check_dimensions_match(
             text_field_embedder.get_output_dim(),
@@ -84,8 +86,13 @@ class SimpleTagger(Model):
         # the CrfTagger, even it is redundant in this class
         # (label_encoding serves the same purpose).
         if calculate_span_f1 and not label_encoding:
-            raise ConfigurationError("calculate_span_f1 is True, but " "no label_encoding was specified.")
-        self.metrics = {"accuracy": CategoricalAccuracy(), "accuracy3": CategoricalAccuracy(top_k=3)}
+            raise ConfigurationError(
+                "calculate_span_f1 is True, but " "no label_encoding was specified."
+            )
+        self.metrics = {
+            "accuracy": CategoricalAccuracy(),
+            "accuracy3": CategoricalAccuracy(top_k=3),
+        }
 
         if calculate_span_f1 or label_encoding:
             self._f1_metric = SpanBasedF1Measure(
@@ -182,7 +189,9 @@ class SimpleTagger(Model):
 
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
-        metrics_to_return = {metric_name: metric.get_metric(reset) for metric_name, metric in self.metrics.items()}
+        metrics_to_return = {
+            metric_name: metric.get_metric(reset) for metric_name, metric in self.metrics.items()
+        }
 
         if self._f1_metric is not None:
             f1_dict = self._f1_metric.get_metric(reset=reset)

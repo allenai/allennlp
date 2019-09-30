@@ -9,7 +9,9 @@ from ..modules.language_model_heads.linear import LinearLanguageModelHead
 class TestSimpleGradient(AllenNlpTestCase):
     def test_simple_gradient_basic_text(self):
         inputs = {"sentence": "It was the ending that I hated"}
-        archive = load_archive(self.FIXTURES_ROOT / "basic_classifier" / "serialization" / "model.tar.gz")
+        archive = load_archive(
+            self.FIXTURES_ROOT / "basic_classifier" / "serialization" / "model.tar.gz"
+        )
         predictor = Predictor.from_archive(archive, "text_classifier")
 
         interpreter = SimpleGradient(predictor)
@@ -28,7 +30,8 @@ class TestSimpleGradient(AllenNlpTestCase):
 
     def test_simple_gradient_coref(self):
         inputs = {
-            "document": "This is a single string document about a test. Sometimes it " "contains coreferent parts."
+            "document": "This is a single string document about a test. Sometimes it "
+            "contains coreferent parts."
         }
         archive = load_archive(self.FIXTURES_ROOT / "coref" / "serialization" / "model.tar.gz")
         predictor = Predictor.from_archive(archive, "coreference-resolution")
@@ -48,9 +51,12 @@ class TestSimpleGradient(AllenNlpTestCase):
 
     def test_simple_gradient_masked_lm(self):
         inputs = {
-            "sentence": "This is a single string [MASK] about a test . Sometimes it " "contains coreferent parts ."
+            "sentence": "This is a single string [MASK] about a test . Sometimes it "
+            "contains coreferent parts ."
         }
-        archive = load_archive(self.FIXTURES_ROOT / "masked_language_model" / "serialization" / "model.tar.gz")
+        archive = load_archive(
+            self.FIXTURES_ROOT / "masked_language_model" / "serialization" / "model.tar.gz"
+        )
         predictor = Predictor.from_archive(archive, "masked_language_model")
         interpreter = SimpleGradient(predictor)
         interpretation = interpreter.saliency_interpret_from_json(inputs)

@@ -85,7 +85,9 @@ class Optimizer(Registrable):
                             regex_use_counts[regex] = 0
                         if re.search(regex, name):
                             if group_index is not None and group_index != k:
-                                raise ValueError("{} was specified in two separate parameter groups".format(name))
+                                raise ValueError(
+                                    "{} was specified in two separate parameter groups".format(name)
+                                )
                             group_index = k
                             regex_use_counts[regex] += 1
 
@@ -100,13 +102,16 @@ class Optimizer(Registrable):
             # log the parameter groups
             logger.info("Done constructing parameter groups.")
             for k in range(len(groups) + 1):
-                group_options = {key: val for key, val in parameter_groups[k].items() if key != "params"}
+                group_options = {
+                    key: val for key, val in parameter_groups[k].items() if key != "params"
+                }
                 logger.info("Group %s: %s, %s", k, list(parameter_group_names[k]), group_options)
             # check for unused regex
             for regex, count in regex_use_counts.items():
                 if count == 0:
                     logger.warning(
-                        "When constructing parameter groups, " " %s not match any parameter name", regex
+                        "When constructing parameter groups, " " %s not match any parameter name",
+                        regex,
                     )
 
         else:
@@ -251,7 +256,9 @@ class DenseSparseAdam(torch.optim.Optimizer):
                     exp_avg_update_values = grad_values.sub(old_exp_avg_values).mul_(1 - beta1)
                     exp_avg.add_(make_sparse(exp_avg_update_values))
                     old_exp_avg_sq_values = _safe_sparse_mask(exp_avg_sq, grad)._values()
-                    exp_avg_sq_update_values = grad_values.pow(2).sub_(old_exp_avg_sq_values).mul_(1 - beta2)
+                    exp_avg_sq_update_values = (
+                        grad_values.pow(2).sub_(old_exp_avg_sq_values).mul_(1 - beta2)
+                    )
                     exp_avg_sq.add_(make_sparse(exp_avg_sq_update_values))
 
                     # Dense addition again is intended, avoiding another sparse_mask

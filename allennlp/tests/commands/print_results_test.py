@@ -23,12 +23,27 @@ class TestPrintResults(AllenNlpTestCase):
         os.makedirs(self.directory1)
         os.makedirs(self.directory2)
         os.makedirs(self.directory3)
-        json.dump({"train": 1, "test": 2, "dev": 3}, open(os.path.join(self.directory1 / "metrics.json"), "w+"))
-        json.dump({"train": 4, "dev": 5}, open(os.path.join(self.directory2 / "metrics.json"), "w+"))
-        json.dump({"train": 6, "dev": 7}, open(os.path.join(self.directory3 / "cool_metrics.json"), "w+"))
+        json.dump(
+            {"train": 1, "test": 2, "dev": 3},
+            open(os.path.join(self.directory1 / "metrics.json"), "w+"),
+        )
+        json.dump(
+            {"train": 4, "dev": 5}, open(os.path.join(self.directory2 / "metrics.json"), "w+")
+        )
+        json.dump(
+            {"train": 6, "dev": 7}, open(os.path.join(self.directory3 / "cool_metrics.json"), "w+")
+        )
 
     def test_print_results(self):
-        kebab_args = ["run.py", "print-results", str(self.TEST_DIR), "--keys", "train", "dev", "test"]
+        kebab_args = [
+            "run.py",
+            "print-results",
+            str(self.TEST_DIR),
+            "--keys",
+            "train",
+            "dev",
+            "test",
+        ]
         sys.argv = kebab_args
         with io.StringIO() as buf, redirect_stdout(buf):
             main()

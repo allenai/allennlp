@@ -68,7 +68,9 @@ def _normalize_number(text: str) -> str:
         return text
 
 
-def _answer_to_bags(answer: Union[str, List[str], Tuple[str, ...]]) -> Tuple[List[str], List[Set[str]]]:
+def _answer_to_bags(
+    answer: Union[str, List[str], Tuple[str, ...]]
+) -> Tuple[List[str], List[Set[str]]]:
     if isinstance(answer, (list, tuple)):
         raw_spans = answer
     else:
@@ -110,7 +112,11 @@ def _compute_f1(predicted_bag: Set[str], gold_bag: Set[str]) -> float:
         recall = 1.0
     else:
         recall = intersection / float(len(gold_bag))
-    f1 = (2 * precision * recall) / (precision + recall) if not (precision == 0.0 and recall == 0.0) else 0.0
+    f1 = (
+        (2 * precision * recall) / (precision + recall)
+        if not (precision == 0.0 and recall == 0.0)
+        else 0.0
+    )
     return f1
 
 
@@ -163,14 +169,24 @@ def answer_json_to_strings(answer: Dict[str, Any]) -> Tuple[Tuple[str, ...], str
         return tuple(answer["spans"]), "span" if len(answer["spans"]) == 1 else "spans"
     elif "date" in answer:
         return (
-            tuple(["{0} {1} {2}".format(answer["date"]["day"], answer["date"]["month"], answer["date"]["year"])]),
+            tuple(
+                [
+                    "{0} {1} {2}".format(
+                        answer["date"]["day"], answer["date"]["month"], answer["date"]["year"]
+                    )
+                ]
+            ),
             "date",
         )
     else:
-        raise ValueError(f"Answer type not found, should be one of number, spans or date at: {json.dumps(answer)}")
+        raise ValueError(
+            f"Answer type not found, should be one of number, spans or date at: {json.dumps(answer)}"
+        )
 
 
-def evaluate_json(annotations: Dict[str, Any], predicted_answers: Dict[str, Any]) -> Tuple[float, float]:
+def evaluate_json(
+    annotations: Dict[str, Any], predicted_answers: Dict[str, Any]
+) -> Tuple[float, float]:
     """
     Takes gold annotations and predicted answers and  evaluates the predictions for each question
     in the gold annotations.  Both JSON dictionaries must have query_id keys, which are used to
@@ -226,7 +242,11 @@ def evaluate_json(annotations: Dict[str, Any], predicted_answers: Dict[str, Any]
     print("----")
     total = np.sum([len(v) for v in type_to_em.values()])
     for typ in sorted(type_to_em.keys()):
-        print("{0}: {1} ({2:.2f}%)".format(typ, len(type_to_em[typ]), 100.0 * len(type_to_em[typ]) / total))
+        print(
+            "{0}: {1} ({2:.2f}%)".format(
+                typ, len(type_to_em[typ]), 100.0 * len(type_to_em[typ]) / total
+            )
+        )
         print("  Exact-match accuracy {0:.3f}".format(100.0 * np.mean(type_to_em[typ])))
         print("  F1 score {0:.3f}".format(100.0 * np.mean(type_to_f1[typ])))
     return global_em, global_f1
@@ -276,7 +296,11 @@ if __name__ == "__main__":
         help="location of the prediction file",
     )
     parser.add_argument(
-        "--output_path", type=str, required=False, default=None, help="location of the output metrics file"
+        "--output_path",
+        type=str,
+        required=False,
+        default=None,
+        help="location of the output metrics file",
     )
 
     args = parser.parse_args()

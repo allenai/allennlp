@@ -54,7 +54,9 @@ class PositionalEncoding(torch.nn.Module):
         # Compute the positional encodings once in log space.
         positional_encoding = torch.zeros(max_len, input_dim, requires_grad=False)
         position = torch.arange(0, max_len).unsqueeze(1).float()
-        div_term = torch.exp(torch.arange(0, input_dim, 2).float() * -(math.log(10000.0) / input_dim))
+        div_term = torch.exp(
+            torch.arange(0, input_dim, 2).float() * -(math.log(10000.0) / input_dim)
+        )
         positional_encoding[:, 0::2] = torch.sin(position * div_term)
         positional_encoding[:, 1::2] = torch.cos(position * div_term)
         positional_encoding = positional_encoding.unsqueeze(0)
@@ -82,7 +84,9 @@ class PositionwiseFeedForward(torch.nn.Module):
 class TransformerEncoder(torch.nn.Module):
     """Core encoder is a stack of N layers"""
 
-    def __init__(self, layer: torch.nn.Module, num_layers: int, return_all_layers: bool = False) -> None:
+    def __init__(
+        self, layer: torch.nn.Module, num_layers: int, return_all_layers: bool = False
+    ) -> None:
         super().__init__()
         self.layers = util.clone(layer, num_layers)
         self.norm = LayerNorm(layer.size)
@@ -113,7 +117,9 @@ class SublayerConnection(torch.nn.Module):
         self.norm = LayerNorm(size)
         self.dropout = torch.nn.Dropout(dropout)
 
-    def forward(self, x: torch.Tensor, sublayer: Callable[[torch.Tensor], torch.Tensor]) -> torch.Tensor:
+    def forward(
+        self, x: torch.Tensor, sublayer: Callable[[torch.Tensor], torch.Tensor]
+    ) -> torch.Tensor:
         """Apply residual connection to any sublayer with the same size."""
         return x + self.dropout(sublayer(self.norm(x)))
 

@@ -64,7 +64,9 @@ class BeamSearchTest(AllenNlpTestCase):
         state: Dict[str, torch.Tensor] = None,
     ) -> None:
         expected_top_k = expected_top_k if expected_top_k is not None else self.expected_top_k
-        expected_log_probs = expected_log_probs if expected_log_probs is not None else self.expected_log_probs
+        expected_log_probs = (
+            expected_log_probs if expected_log_probs is not None else self.expected_log_probs
+        )
         state = state or {}
 
         beam_search = beam_search or self.beam_search
@@ -125,7 +127,9 @@ class BeamSearchTest(AllenNlpTestCase):
         expected_top_k = np.array([[1, 2, 3, 4, 5]])
         expected_log_probs = np.log(np.array([0.4]))
         self._check_results(
-            expected_top_k=expected_top_k, expected_log_probs=expected_log_probs, beam_search=beam_search
+            expected_top_k=expected_top_k,
+            expected_log_probs=expected_log_probs,
+            beam_search=beam_search,
         )
 
     def test_early_stopping(self):
@@ -136,7 +140,9 @@ class BeamSearchTest(AllenNlpTestCase):
         expected_top_k = np.array([[1, 2, 3], [2, 3, 4], [3, 4, 5]])
         expected_log_probs = np.log(np.array([0.4, 0.3, 0.2]))
         self._check_results(
-            expected_top_k=expected_top_k, expected_log_probs=expected_log_probs, beam_search=beam_search
+            expected_top_k=expected_top_k,
+            expected_log_probs=expected_log_probs,
+            beam_search=beam_search,
         )
 
     def test_different_per_node_beam_size(self):

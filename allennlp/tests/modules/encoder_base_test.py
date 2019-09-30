@@ -11,8 +11,12 @@ from allennlp.nn.util import sort_batch_by_length, get_lengths_from_binary_seque
 class TestEncoderBase(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
-        self.lstm = LSTM(bidirectional=True, num_layers=3, input_size=3, hidden_size=7, batch_first=True)
-        self.rnn = RNN(bidirectional=True, num_layers=3, input_size=3, hidden_size=7, batch_first=True)
+        self.lstm = LSTM(
+            bidirectional=True, num_layers=3, input_size=3, hidden_size=7, batch_first=True
+        )
+        self.rnn = RNN(
+            bidirectional=True, num_layers=3, input_size=3, hidden_size=7, batch_first=True
+        )
         self.encoder_base = _EncoderBase(stateful=True)
 
         tensor = torch.rand([5, 7, 3])
@@ -62,7 +66,12 @@ class TestEncoderBase(AllenNlpTestCase):
 
     def test_get_initial_states(self):
         # First time we call it, there should be no state, so we should return None.
-        assert self.encoder_base._get_initial_states(self.batch_size, self.num_valid, self.sorting_indices) is None
+        assert (
+            self.encoder_base._get_initial_states(
+                self.batch_size, self.num_valid, self.sorting_indices
+            )
+            is None
+        )
 
         # First test the case that the previous state is _smaller_ than the current state input.
         initial_states = (torch.randn([1, 3, 7]), torch.randn([1, 3, 7]))
@@ -72,7 +81,9 @@ class TestEncoderBase(AllenNlpTestCase):
             self.batch_size, self.num_valid, self.sorting_indices
         )
 
-        correct_expanded_states = [torch.cat([state, torch.zeros([1, 2, 7])], 1) for state in initial_states]
+        correct_expanded_states = [
+            torch.cat([state, torch.zeros([1, 2, 7])], 1) for state in initial_states
+        ]
         # State should have been expanded with zeros to have shape (1, batch_size, hidden_size).
         numpy.testing.assert_array_equal(
             self.encoder_base._states[0].data.numpy(), correct_expanded_states[0].data.numpy()
@@ -90,8 +101,12 @@ class TestEncoderBase(AllenNlpTestCase):
             for state in correct_expanded_states
         ]
 
-        numpy.testing.assert_array_equal(returned_states[0].data.numpy(), correct_returned_states[0].data.numpy())
-        numpy.testing.assert_array_equal(returned_states[1].data.numpy(), correct_returned_states[1].data.numpy())
+        numpy.testing.assert_array_equal(
+            returned_states[0].data.numpy(), correct_returned_states[0].data.numpy()
+        )
+        numpy.testing.assert_array_equal(
+            returned_states[1].data.numpy(), correct_returned_states[1].data.numpy()
+        )
 
         # Now test the case that the previous state is larger:
         original_states = (torch.randn([1, 10, 7]), torch.randn([1, 10, 7]))
@@ -114,8 +129,12 @@ class TestEncoderBase(AllenNlpTestCase):
         correct_returned_state = [
             x.index_select(1, self.sorting_indices)[:, : self.num_valid, :] for x in original_states
         ]
-        numpy.testing.assert_array_equal(returned_states[0].data.numpy(), correct_returned_state[0].data.numpy())
-        numpy.testing.assert_array_equal(returned_states[1].data.numpy(), correct_returned_state[1].data.numpy())
+        numpy.testing.assert_array_equal(
+            returned_states[0].data.numpy(), correct_returned_state[0].data.numpy()
+        )
+        numpy.testing.assert_array_equal(
+            returned_states[1].data.numpy(), correct_returned_state[1].data.numpy()
+        )
 
     def test_update_states(self):
         assert self.encoder_base._states is None
@@ -263,7 +282,10 @@ class TestEncoderBase(AllenNlpTestCase):
         # A transposition will make the tensors non-contiguous, start them off at the wrong shape
         # and transpose them into the right shape.
         encoder_base = _EncoderBase(stateful=False)
-        initial_states = (torch.randn(5, 6, 7).permute(1, 0, 2), torch.randn(5, 6, 7).permute(1, 0, 2))
+        initial_states = (
+            torch.randn(5, 6, 7).permute(1, 0, 2),
+            torch.randn(5, 6, 7).permute(1, 0, 2),
+        )
         assert not initial_states[0].is_contiguous() and not initial_states[1].is_contiguous()
         assert initial_states[0].size() == torch.Size([6, 5, 7])
         assert initial_states[1].size() == torch.Size([6, 5, 7])
@@ -310,8 +332,12 @@ class TestEncoderBase(AllenNlpTestCase):
 
         # We'll pass them through an LSTM encoder and a vanilla RNN encoder to make sure it works
         # whether the initial states are a tuple of tensors or just a single tensor.
-        encoder_base.sort_and_run_forward(self.lstm.cuda(), self.tensor.cuda(), self.mask.cuda(), initial_states)
-        encoder_base.sort_and_run_forward(self.rnn.cuda(), self.tensor.cuda(), self.mask.cuda(), initial_states[0])
+        encoder_base.sort_and_run_forward(
+            self.lstm.cuda(), self.tensor.cuda(), self.mask.cuda(), initial_states
+        )
+        encoder_base.sort_and_run_forward(
+            self.rnn.cuda(), self.tensor.cuda(), self.mask.cuda(), initial_states[0]
+        )
 
         # Case 2: Encoder is stateful
 

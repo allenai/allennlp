@@ -75,7 +75,11 @@ class ProductionRuleField(Field[ProductionRule]):  # type: ignore
     """
 
     def __init__(
-        self, rule: str, is_global_rule: bool, vocab_namespace: str = "rule_labels", nonterminal: str = None
+        self,
+        rule: str,
+        is_global_rule: bool,
+        vocab_namespace: str = "rule_labels",
+        nonterminal: str = None,
     ) -> None:
         self.rule = rule
         self.nonterminal = nonterminal
@@ -115,7 +119,9 @@ class ProductionRuleField(Field[ProductionRule]):  # type: ignore
         return ProductionRuleField(rule="", is_global_rule=False)
 
     @overrides
-    def batch_tensors(self, tensor_list: List[ProductionRule]) -> List[ProductionRule]:  # type: ignore
+    def batch_tensors(
+        self, tensor_list: List[ProductionRule]
+    ) -> List[ProductionRule]:  # type: ignore
 
         return tensor_list
 

@@ -48,7 +48,9 @@ class LogToTensorboard(Callback):
         self.tensorboard._get_batch_num_total = lambda: trainer.batch_num_total
 
         # Get histogram parameters
-        self.histogram_parameters = set(trainer.model.get_parameters_for_histogram_tensorboard_logging())
+        self.histogram_parameters = set(
+            trainer.model.get_parameters_for_histogram_tensorboard_logging()
+        )
 
         # Enable activation logging.
         if self.tensorboard._histogram_interval is not None:
@@ -61,18 +63,23 @@ class LogToTensorboard(Callback):
             # We need a copy of current parameters to compute magnitude of updates,
             # and copy them to CPU so large models won't go OOM on the GPU.
             self.param_updates = {
-                name: param.detach().cpu().clone() for name, param in trainer.model.named_parameters()
+                name: param.detach().cpu().clone()
+                for name, param in trainer.model.named_parameters()
             }
 
     @handle_event(Events.BATCH_END)
     def batch_end_logging(self, trainer: "CallbackTrainer"):
         # Log parameter values to tensorboard
         if self.tensorboard.should_log_this_batch():
-            self.tensorboard.log_parameter_and_gradient_statistics(trainer.model, trainer.batch_grad_norm)
+            self.tensorboard.log_parameter_and_gradient_statistics(
+                trainer.model, trainer.batch_grad_norm
+            )
             self.tensorboard.log_learning_rates(trainer.model, trainer.optimizer)
 
             self.tensorboard.add_train_scalar("loss/loss_train", trainer.train_metrics["loss"])
-            self.tensorboard.log_metrics({"epoch_metrics/" + k: v for k, v in trainer.train_metrics.items()})
+            self.tensorboard.log_metrics(
+                {"epoch_metrics/" + k: v for k, v in trainer.train_metrics.items()}
+            )
 
         if self.log_batch_size_period:
             cur_batch = sum([training_util.get_batch_size(batch) for batch in trainer.batch_group])
@@ -88,7 +95,9 @@ class LogToTensorboard(Callback):
                 self.param_updates[name].sub_(param.detach().cpu())
                 update_norm = torch.norm(self.param_updates[name].view(-1))
                 param_norm = torch.norm(param.view(-1)).cpu()
-                self.tensorboard.add_train_scalar("gradient_update/" + name, update_norm / (param_norm + 1e-7))
+                self.tensorboard.add_train_scalar(
+                    "gradient_update/" + name, update_norm / (param_norm + 1e-7)
+                )
             self.param_updates.clear()
             self.tensorboard.log_histograms(trainer.model, self.histogram_parameters)
 
@@ -107,7 +116,9 @@ class LogToTensorboard(Callback):
         self.tensorboard.close()
 
     @classmethod
-    def from_params(cls, serialization_dir: str, params: Params) -> "LogToTensorboard":  # type: ignore
+    def from_params(
+        cls, serialization_dir: str, params: Params
+    ) -> "LogToTensorboard":  # type: ignore
         log_batch_size_period = params.pop_int("log_batch_size_period", None)
         tensorboard = TensorboardWriter.from_params(
             params=params, serialization_dir=serialization_dir, get_batch_num_total=lambda: None

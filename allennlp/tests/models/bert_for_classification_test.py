@@ -15,7 +15,10 @@ from allennlp.modules.token_embedders.bert_token_embedder import PretrainedBertM
 @DatasetReader.register("bert_classification_test")
 class BertClassificationTestReader(DatasetReader):
     def __init__(
-        self, lazy: bool = False, token_indexers: Dict[str, TokenIndexer] = None, tokenizer: WordTokenizer = None
+        self,
+        lazy: bool = False,
+        token_indexers: Dict[str, TokenIndexer] = None,
+        tokenizer: WordTokenizer = None,
     ) -> None:
         super().__init__(lazy)
         self._token_indexers = token_indexers or {}
@@ -32,8 +35,12 @@ class BertClassificationTestReader(DatasetReader):
         tokens2 = self.tokenizer.tokenize(sentence2)
         label2 = "negative"
 
-        instance1 = Instance({"tokens": TextField(tokens1, self._token_indexers), "label": LabelField(label1)})
-        instance2 = Instance({"tokens": TextField(tokens2, self._token_indexers), "label": LabelField(label2)})
+        instance1 = Instance(
+            {"tokens": TextField(tokens1, self._token_indexers), "label": LabelField(label1)}
+        )
+        instance2 = Instance(
+            {"tokens": TextField(tokens2, self._token_indexers), "label": LabelField(label2)}
+        )
 
         return [instance1, instance2]
 

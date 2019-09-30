@@ -33,7 +33,10 @@ class QangarooReader(DatasetReader):
     """
 
     def __init__(
-        self, tokenizer: Tokenizer = None, token_indexers: Dict[str, TokenIndexer] = None, lazy: bool = False
+        self,
+        tokenizer: Tokenizer = None,
+        token_indexers: Dict[str, TokenIndexer] = None,
+        lazy: bool = False,
     ) -> None:
 
         super().__init__(lazy)
@@ -87,7 +90,10 @@ class QangarooReader(DatasetReader):
         fields["query"] = TextField(self._tokenizer.tokenize(query), self._token_indexers)
 
         fields["supports"] = ListField(
-            [TextField(support, self._token_indexers) for support in self._tokenizer.batch_tokenize(supports)]
+            [
+                TextField(support, self._token_indexers)
+                for support in self._tokenizer.batch_tokenize(supports)
+            ]
         )
 
         fields["answer"] = TextField(self._tokenizer.tokenize(answer), self._token_indexers)

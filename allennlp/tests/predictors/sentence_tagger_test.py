@@ -7,7 +7,9 @@ class TestSentenceTaggerPredictor(AllenNlpTestCase):
     def test_predictions_to_labeled_instances(self):
         inputs = {"sentence": "Eric Wallace was an intern at AI2"}
 
-        archive = load_archive(self.FIXTURES_ROOT / "simple_tagger" / "serialization" / "model.tar.gz")
+        archive = load_archive(
+            self.FIXTURES_ROOT / "simple_tagger" / "serialization" / "model.tar.gz"
+        )
         predictor = Predictor.from_archive(archive, "sentence-tagger")
 
         instance = predictor._json_to_instance(inputs)

@@ -54,7 +54,22 @@ class SimpleWordSplitter(WordSplitter):
         self.special_cases = {"mr.", "mrs.", "etc.", "e.g.", "cf.", "c.f.", "eg.", "al."}
         self.contractions = {"n't", "'s", "'ve", "'re", "'ll", "'d", "'m"}
         self.contractions |= {x.replace("'", "’") for x in self.contractions}
-        self.ending_punctuation = {'"', "'", ".", ",", ";", ")", "]", "}", ":", "!", "?", "%", "”", "’"}
+        self.ending_punctuation = {
+            '"',
+            "'",
+            ".",
+            ",",
+            ";",
+            ")",
+            "]",
+            "}",
+            ":",
+            "!",
+            "?",
+            "%",
+            "”",
+            "’",
+        }
         self.beginning_punctuation = {'"', "'", "(", "[", "{", "#", "$", "“", "‘"}
 
     @overrides
@@ -113,7 +128,9 @@ class LettersDigitsWordSplitter(WordSplitter):
     @overrides
     def split_words(self, sentence: str) -> List[Token]:
         # We use the [^\W\d_] pattern as a trick to match unicode letters
-        tokens = [Token(m.group(), idx=m.start()) for m in re.finditer(r"[^\W\d_]+|\d+|\S", sentence)]
+        tokens = [
+            Token(m.group(), idx=m.start()) for m in re.finditer(r"[^\W\d_]+|\d+|\S", sentence)
+        ]
         return tokens
 
 
@@ -192,13 +209,24 @@ class SpacyWordSplitter(WordSplitter):
             return tokens
         else:
             return [
-                Token(token.text, token.idx, token.lemma_, token.pos_, token.tag_, token.dep_, token.ent_type_)
+                Token(
+                    token.text,
+                    token.idx,
+                    token.lemma_,
+                    token.pos_,
+                    token.tag_,
+                    token.dep_,
+                    token.ent_type_,
+                )
                 for token in tokens
             ]
 
     @overrides
     def batch_split_words(self, sentences: List[str]) -> List[List[Token]]:
-        return [self._sanitize(_remove_spaces(tokens)) for tokens in self.spacy.pipe(sentences, n_threads=-1)]
+        return [
+            self._sanitize(_remove_spaces(tokens))
+            for tokens in self.spacy.pipe(sentences, n_threads=-1)
+        ]
 
     @overrides
     def split_words(self, sentence: str) -> List[Token]:
@@ -222,7 +250,10 @@ class OpenAISplitter(WordSplitter):
     @overrides
     def batch_split_words(self, sentences: List[str]) -> List[List[Token]]:
         standardized_sentences = [self._standardize(sentence) for sentence in sentences]
-        return [_remove_spaces(tokens) for tokens in self.spacy.pipe(standardized_sentences, n_threads=-1)]
+        return [
+            _remove_spaces(tokens)
+            for tokens in self.spacy.pipe(standardized_sentences, n_threads=-1)
+        ]
 
     @overrides
     def split_words(self, sentence: str) -> List[Token]:

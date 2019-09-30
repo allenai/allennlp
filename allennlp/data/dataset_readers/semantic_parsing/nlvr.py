@@ -91,9 +91,15 @@ class NlvrDatasetReader(DatasetReader):
     ) -> None:
         super().__init__(lazy)
         self._tokenizer = tokenizer or WordTokenizer()
-        self._sentence_token_indexers = sentence_token_indexers or {"tokens": SingleIdTokenIndexer()}
-        self._nonterminal_indexers = nonterminal_indexers or {"tokens": SingleIdTokenIndexer("rule_labels")}
-        self._terminal_indexers = terminal_indexers or {"tokens": SingleIdTokenIndexer("rule_labels")}
+        self._sentence_token_indexers = sentence_token_indexers or {
+            "tokens": SingleIdTokenIndexer()
+        }
+        self._nonterminal_indexers = nonterminal_indexers or {
+            "tokens": SingleIdTokenIndexer("rule_labels")
+        }
+        self._terminal_indexers = terminal_indexers or {
+            "tokens": SingleIdTokenIndexer("rule_labels")
+        }
         self._output_agendas = output_agendas
 
     @overrides
@@ -160,7 +166,10 @@ class NlvrDatasetReader(DatasetReader):
 
         worlds = []
         for structured_representation in structured_representations:
-            boxes = {Box(object_list, box_id) for box_id, object_list in enumerate(structured_representation)}
+            boxes = {
+                Box(object_list, box_id)
+                for box_id, object_list in enumerate(structured_representation)
+            }
             worlds.append(NlvrLanguage(boxes))
         tokenized_sentence = self._tokenizer.tokenize(sentence)
         sentence_field = TextField(tokenized_sentence, self._sentence_token_indexers)
@@ -191,7 +200,10 @@ class NlvrDatasetReader(DatasetReader):
             action_sequence_fields: List[Field] = []
             for target_sequence in target_sequences:
                 index_fields = ListField(
-                    [IndexField(instance_action_ids[action], action_field) for action in target_sequence]
+                    [
+                        IndexField(instance_action_ids[action], action_field)
+                        for action in target_sequence
+                    ]
                 )
                 action_sequence_fields.append(index_fields)
                 # TODO(pradeep): Define a max length for this field.
@@ -202,10 +214,14 @@ class NlvrDatasetReader(DatasetReader):
             agenda = worlds[0].get_agenda_for_sentence(sentence)
             assert agenda, "No agenda found for sentence: %s" % sentence
             # agenda_field contains indices into actions.
-            agenda_field = ListField([IndexField(instance_action_ids[action], action_field) for action in agenda])
+            agenda_field = ListField(
+                [IndexField(instance_action_ids[action], action_field) for action in agenda]
+            )
             fields["agenda"] = agenda_field
         if labels:
-            labels_field = ListField([LabelField(label, label_namespace="denotations") for label in labels])
+            labels_field = ListField(
+                [LabelField(label, label_namespace="denotations") for label in labels]
+            )
             fields["labels"] = labels_field
 
         return Instance(fields)

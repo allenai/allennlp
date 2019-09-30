@@ -138,14 +138,22 @@ class TestBertEmbedder(ModelTestCase):
         )
         question2 = "What did Broca discover in the human brain?"
 
-        from allennlp.data.dataset_readers.reading_comprehension.util import make_reading_comprehension_instance
+        from allennlp.data.dataset_readers.reading_comprehension.util import (
+            make_reading_comprehension_instance,
+        )
 
         instance1 = make_reading_comprehension_instance(
-            tokenizer.tokenize(question1), tokenizer.tokenize(passage1), {"bert": token_indexer}, passage1
+            tokenizer.tokenize(question1),
+            tokenizer.tokenize(passage1),
+            {"bert": token_indexer},
+            passage1,
         )
 
         instance2 = make_reading_comprehension_instance(
-            tokenizer.tokenize(question2), tokenizer.tokenize(passage2), {"bert": token_indexer}, passage2
+            tokenizer.tokenize(question2),
+            tokenizer.tokenize(passage2),
+            {"bert": token_indexer},
+            passage2,
         )
 
         vocab = Vocabulary()
@@ -241,7 +249,9 @@ class TestBertEmbedder(ModelTestCase):
         vocab = Vocabulary()
 
         vocab_path = self.FIXTURES_ROOT / "bert" / "vocab.txt"
-        token_indexer = PretrainedBertIndexer(str(vocab_path), truncate_long_sequences=False, max_pieces=8)
+        token_indexer = PretrainedBertIndexer(
+            str(vocab_path), truncate_long_sequences=False, max_pieces=8
+        )
 
         config_path = self.FIXTURES_ROOT / "bert" / "config.json"
         config = BertConfig(str(config_path))
@@ -286,7 +296,9 @@ class TestBertEmbedder(ModelTestCase):
         vocab = Vocabulary()
 
         vocab_path = self.FIXTURES_ROOT / "bert" / "vocab.txt"
-        token_indexer = PretrainedBertIndexer(str(vocab_path), truncate_long_sequences=False, max_pieces=8)
+        token_indexer = PretrainedBertIndexer(
+            str(vocab_path), truncate_long_sequences=False, max_pieces=8
+        )
 
         config_path = self.FIXTURES_ROOT / "bert" / "config.json"
         config = BertConfig(str(config_path))
@@ -294,7 +306,9 @@ class TestBertEmbedder(ModelTestCase):
         token_embedder = BertEmbedder(bert_model, max_pieces=8)
 
         instance = Instance({"tokens": TextField(tokens, {"bert": token_indexer})})
-        instance2 = Instance({"tokens": TextField(tokens + tokens + tokens, {"bert": token_indexer})})
+        instance2 = Instance(
+            {"tokens": TextField(tokens + tokens + tokens, {"bert": token_indexer})}
+        )
 
         batch = Batch([instance, instance2])
         batch.index_instances(vocab)

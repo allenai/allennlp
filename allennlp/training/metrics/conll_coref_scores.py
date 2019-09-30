@@ -49,7 +49,9 @@ class ConllCorefScores(Metric):
                 top_spans[i], antecedent_indices, predicted_antecedents[i]
             )
             for scorer in self.scorers:
-                scorer.update(predicted_clusters, gold_clusters, mention_to_predicted, mention_to_gold)
+                scorer.update(
+                    predicted_clusters, gold_clusters, mention_to_predicted, mention_to_gold
+                )
 
     @overrides
     def get_metric(self, reset: bool = False) -> Tuple[float, float, float]:
@@ -76,8 +78,12 @@ class ConllCorefScores(Metric):
 
     @staticmethod
     def get_predicted_clusters(
-        top_spans: torch.Tensor, antecedent_indices: torch.Tensor, predicted_antecedents: torch.Tensor
-    ) -> Tuple[List[Tuple[Tuple[int, int], ...]], Dict[Tuple[int, int], Tuple[Tuple[int, int], ...]]]:
+        top_spans: torch.Tensor,
+        antecedent_indices: torch.Tensor,
+        predicted_antecedents: torch.Tensor,
+    ) -> Tuple[
+        List[Tuple[Tuple[int, int], ...]], Dict[Tuple[int, int], Tuple[Tuple[int, int], ...]]
+    ]:
         # Pytorch 0.4 introduced scalar tensors, so our calls to tuple() and such below don't
         # actually give ints unless we convert to numpy first.  So we do that here.
         top_spans = top_spans.numpy()  # (num_spans, 2)
@@ -113,7 +119,8 @@ class ConllCorefScores(Metric):
         final_clusters = [tuple(cluster) for cluster in clusters]
         # Return a mapping of each mention to the cluster containing it.
         mention_to_cluster: Dict[Tuple[int, int], Tuple[Tuple[int, int], ...]] = {
-            mention: final_clusters[cluster_id] for mention, cluster_id in predicted_clusters_to_ids.items()
+            mention: final_clusters[cluster_id]
+            for mention, cluster_id in predicted_clusters_to_ids.items()
         }
 
         return final_clusters, mention_to_cluster
@@ -144,9 +151,15 @@ class Scorer:
 
     def get_f1(self):
         precision = (
-            0 if self.precision_denominator == 0 else self.precision_numerator / float(self.precision_denominator)
+            0
+            if self.precision_denominator == 0
+            else self.precision_numerator / float(self.precision_denominator)
         )
-        recall = 0 if self.recall_denominator == 0 else self.recall_numerator / float(self.recall_denominator)
+        recall = (
+            0
+            if self.recall_denominator == 0
+            else self.recall_numerator / float(self.recall_denominator)
+        )
         return 0 if precision + recall == 0 else 2 * precision * recall / (precision + recall)
 
     def get_recall(self):

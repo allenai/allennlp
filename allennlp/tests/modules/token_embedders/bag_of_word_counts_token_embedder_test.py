@@ -41,7 +41,10 @@ class TestBagOfWordCountsTokenEmbedder(AllenNlpTestCase):
     def test_ignore_oov_should_fail_on_non_padded_vocab(self):
         params = Params({"ignore_oov": True})
         self.assertRaises(
-            ConfigurationError, BagOfWordCountsTokenEmbedder.from_params, self.non_padded_vocab, params
+            ConfigurationError,
+            BagOfWordCountsTokenEmbedder.from_params,
+            self.non_padded_vocab,
+            params,
         )
 
     def test_projects_properly(self):

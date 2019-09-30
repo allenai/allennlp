@@ -10,7 +10,14 @@ from nltk.tree import Tree
 
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.fields import TextField, SpanField, SequenceLabelField, ListField, MetadataField, Field
+from allennlp.data.fields import (
+    TextField,
+    SpanField,
+    SequenceLabelField,
+    ListField,
+    MetadataField,
+    Field,
+)
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.tokenizers import Token
@@ -19,7 +26,14 @@ from allennlp.common.checks import ConfigurationError
 
 logger = logging.getLogger(__name__)
 
-PTB_PARENTHESES = {"-LRB-": "(", "-RRB-": ")", "-LCB-": "{", "-RCB-": "}", "-LSB-": "[", "-RSB-": "]"}
+PTB_PARENTHESES = {
+    "-LRB-": "(",
+    "-RRB-": ")",
+    "-LCB-": "{",
+    "-RCB-": "}",
+    "-LSB-": "[",
+    "-RSB-": "]",
+}
 
 
 @DatasetReader.register("ptb_trees")
@@ -133,7 +147,8 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
             fields["pos_tags"] = pos_tag_field
         elif self._use_pos_tags:
             raise ConfigurationError(
-                "use_pos_tags was set to True but no gold pos" " tags were passed to the dataset reader."
+                "use_pos_tags was set to True but no gold pos"
+                " tags were passed to the dataset reader."
             )
         spans: List[Field] = []
         gold_labels = []
@@ -162,7 +177,9 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
         fields["spans"] = span_list_field
         if gold_tree is not None:
             fields["span_labels"] = SequenceLabelField(
-                gold_labels, span_list_field, label_namespace=self._label_namespace_prefix + "labels"
+                gold_labels,
+                span_list_field,
+                label_namespace=self._label_namespace_prefix + "labels",
             )
         return Instance(fields)
 
@@ -180,7 +197,9 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
             if not isinstance(child[0], str):
                 self._strip_functional_tags(child)
 
-    def _get_gold_spans(self, tree: Tree, index: int, typed_spans: Dict[Tuple[int, int], str]) -> int:
+    def _get_gold_spans(
+        self, tree: Tree, index: int, typed_spans: Dict[Tuple[int, int], str]
+    ) -> int:
         """
         Recursively construct the gold spans from an nltk ``Tree``.
         Labels are the constituents, and in the case of nested constituents

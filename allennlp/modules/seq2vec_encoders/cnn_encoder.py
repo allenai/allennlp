@@ -64,7 +64,11 @@ class CnnEncoder(Seq2VecEncoder):
         self._output_dim = output_dim
 
         self._convolution_layers = [
-            Conv1d(in_channels=self._embedding_dim, out_channels=self._num_filters, kernel_size=ngram_size)
+            Conv1d(
+                in_channels=self._embedding_dim,
+                out_channels=self._num_filters,
+                kernel_size=ngram_size,
+            )
             for ngram_size in self._ngram_filter_sizes
         ]
         for i, conv_layer in enumerate(self._convolution_layers):
@@ -108,7 +112,9 @@ class CnnEncoder(Seq2VecEncoder):
 
         # Now we have a list of `num_conv_layers` tensors of shape `(batch_size, num_filters)`.
         # Concatenating them gives us a tensor of shape `(batch_size, num_filters * num_conv_layers)`.
-        maxpool_output = torch.cat(filter_outputs, dim=1) if len(filter_outputs) > 1 else filter_outputs[0]
+        maxpool_output = (
+            torch.cat(filter_outputs, dim=1) if len(filter_outputs) > 1 else filter_outputs[0]
+        )
 
         if self.projection_layer:
             result = self.projection_layer(maxpool_output)

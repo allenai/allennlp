@@ -118,7 +118,10 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
             }
         )
         token_embedder = BasicTextFieldEmbedder.from_params(self.vocab, params)
-        inputs = {"words": (torch.rand(3, 6) * 20).long(), "elmo": (torch.rand(3, 6, 50) * 15).long()}
+        inputs = {
+            "words": (torch.rand(3, 6) * 20).long(),
+            "elmo": (torch.rand(3, 6, 50) * 15).long(),
+        }
         token_embedder(inputs)
 
     def test_forward_runs_with_non_bijective_mapping_with_null(self):
@@ -166,7 +169,10 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
             }
         )
         token_embedder = BasicTextFieldEmbedder.from_params(self.vocab, params)
-        inputs = {"words": (torch.rand(3, 6) * 20).long(), "elmo": (torch.rand(3, 6, 50) * 15).long()}
+        inputs = {
+            "words": (torch.rand(3, 6) * 20).long(),
+            "elmo": (torch.rand(3, 6, 50) * 15).long(),
+        }
         token_embedder(inputs)
 
     def test_old_from_params_new_from_params(self):

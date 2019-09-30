@@ -53,7 +53,9 @@ class ElmoTestCase(AllenNlpTestCase):
             with h5py.File(embed_fname, "r") as fin:
                 for i in range(10):
                     sent_embeds = fin["%s" % i][...]
-                    sent_embeds_concat = numpy.concatenate((sent_embeds[0, :, :], sent_embeds[1, :, :]), axis=-1)
+                    sent_embeds_concat = numpy.concatenate(
+                        (sent_embeds[0, :, :], sent_embeds[1, :, :]), axis=-1
+                    )
                     expected_lm_embeddings[-1].append(sent_embeds_concat)
 
         return sentences, expected_lm_embeddings
@@ -117,7 +119,9 @@ class TestElmoBiLm(ElmoTestCase):
             for k in range(3):
                 self.assertTrue(
                     numpy.allclose(
-                        top_layer_embeddings[k, : lengths[k], :].data.numpy(), expected_top_layer[k], atol=1.0e-6
+                        top_layer_embeddings[k, : lengths[k], :].data.numpy(),
+                        expected_top_layer[k],
+                        atol=1.0e-6,
                     )
                 )
 
@@ -179,7 +183,10 @@ class TestElmo(ElmoTestCase):
     def test_elmo(self):
         # Correctness checks are in ElmoBiLm and ScalarMix, here we just add a shallow test
         # to ensure things execute.
-        sentences = [["The", "sentence", "."], ["ELMo", "helps", "disambiguate", "ELMo", "from", "Elmo", "."]]
+        sentences = [
+            ["The", "sentence", "."],
+            ["ELMo", "helps", "disambiguate", "ELMo", "from", "Elmo", "."],
+        ]
 
         character_ids = self._sentences_to_ids(sentences)
         output = self.elmo(character_ids)
@@ -192,8 +199,13 @@ class TestElmo(ElmoTestCase):
         assert list(mask.size()) == [2, 7]
 
     def test_elmo_keep_sentence_boundaries(self):
-        sentences = [["The", "sentence", "."], ["ELMo", "helps", "disambiguate", "ELMo", "from", "Elmo", "."]]
-        elmo = Elmo(self.options_file, self.weight_file, 2, dropout=0.0, keep_sentence_boundaries=True)
+        sentences = [
+            ["The", "sentence", "."],
+            ["ELMo", "helps", "disambiguate", "ELMo", "from", "Elmo", "."],
+        ]
+        elmo = Elmo(
+            self.options_file, self.weight_file, 2, dropout=0.0, keep_sentence_boundaries=True
+        )
         character_ids = self._sentences_to_ids(sentences)
         output = elmo(character_ids)
         elmo_representations = output["elmo_representations"]
@@ -207,7 +219,10 @@ class TestElmo(ElmoTestCase):
 
     def test_elmo_4D_input(self):
         sentences = [
-            [["The", "sentence", "."], ["ELMo", "helps", "disambiguate", "ELMo", "from", "Elmo", "."]],
+            [
+                ["The", "sentence", "."],
+                ["ELMo", "helps", "disambiguate", "ELMo", "from", "Elmo", "."],
+            ],
             [["1", "2"], ["1", "2", "3", "4", "5", "6", "7"]],
             [["1", "2", "3", "4", "50", "60", "70"], ["The"]],
         ]
@@ -234,7 +249,10 @@ class TestElmo(ElmoTestCase):
 
     def test_elmo_with_module(self):
         # We will create the _ElmoBilm class and pass it in as a module.
-        sentences = [["The", "sentence", "."], ["ELMo", "helps", "disambiguate", "ELMo", "from", "Elmo", "."]]
+        sentences = [
+            ["The", "sentence", "."],
+            ["ELMo", "helps", "disambiguate", "ELMo", "from", "Elmo", "."],
+        ]
 
         character_ids = self._sentences_to_ids(sentences)
         elmo_bilm = _ElmoBiLm(self.options_file, self.weight_file)
@@ -260,16 +278,21 @@ class TestElmo(ElmoTestCase):
         expanded_word_ids = torch.stack([tensor["tokens"] for _ in range(4)], dim=1)
         expanded_char_ids = torch.stack([tensor["character_ids"] for _ in range(4)], dim=1)
         expanded_result = elmo_bilm(expanded_char_ids, expanded_word_ids)
-        split_result = [x.squeeze(1) for x in torch.split(expanded_result["elmo_representations"][0], 1, dim=1)]
+        split_result = [
+            x.squeeze(1) for x in torch.split(expanded_result["elmo_representations"][0], 1, dim=1)
+        ]
         for expanded in split_result:
             numpy.testing.assert_array_almost_equal(
-                expanded.data.cpu().numpy(), individual_dim["elmo_representations"][0].data.cpu().numpy()
+                expanded.data.cpu().numpy(),
+                individual_dim["elmo_representations"][0].data.cpu().numpy(),
             )
 
 
 class TestElmoRequiresGrad(ElmoTestCase):
     def _run_test(self, requires_grad):
-        embedder = ElmoTokenEmbedder(self.options_file, self.weight_file, requires_grad=requires_grad)
+        embedder = ElmoTokenEmbedder(
+            self.options_file, self.weight_file, requires_grad=requires_grad
+        )
         batch_size = 3
         seq_len = 4
         char_ids = torch.from_numpy(numpy.random.randint(0, 262, (batch_size, seq_len, 50)))
@@ -277,7 +300,9 @@ class TestElmoRequiresGrad(ElmoTestCase):
         loss = embeddings.sum()
         loss.backward()
 
-        elmo_grads = [param.grad for name, param in embedder.named_parameters() if "_elmo_lstm" in name]
+        elmo_grads = [
+            param.grad for name, param in embedder.named_parameters() if "_elmo_lstm" in name
+        ]
         if requires_grad:
             # None of the elmo grads should be None.
             assert all([grad is not None for grad in elmo_grads])
@@ -340,4 +365,6 @@ class TestElmoTokenRepresentation(ElmoTestCase):
             indices = indexer.tokens_to_indices([Token(token)], Vocabulary(), "correct")
             indices = torch.from_numpy(numpy.array(indices["correct"])).view(1, 1, -1)
             embeddings = elmo_token_embedder(indices)["token_embedding"]
-            assert numpy.allclose(embeddings[0, correct_index, :].data.numpy(), embeddings[0, 1, :].data.numpy())
+            assert numpy.allclose(
+                embeddings[0, correct_index, :].data.numpy(), embeddings[0, 1, :].data.numpy()
+            )

@@ -69,7 +69,9 @@ def enumerate_spans(
     return spans
 
 
-def bio_tags_to_spans(tag_sequence: List[str], classes_to_ignore: List[str] = None) -> List[TypedStringSpan]:
+def bio_tags_to_spans(
+    tag_sequence: List[str], classes_to_ignore: List[str] = None
+) -> List[TypedStringSpan]:
     """
     Given a sequence corresponding to BIO tags, extracts spans.
     Spans are inclusive and can be of zero length, representing a single word span.
@@ -141,7 +143,9 @@ def bio_tags_to_spans(tag_sequence: List[str], classes_to_ignore: List[str] = No
     return list(spans)
 
 
-def iob1_tags_to_spans(tag_sequence: List[str], classes_to_ignore: List[str] = None) -> List[TypedStringSpan]:
+def iob1_tags_to_spans(
+    tag_sequence: List[str], classes_to_ignore: List[str] = None
+) -> List[TypedStringSpan]:
     """
     Given a sequence corresponding to IOB1 tags, extracts spans.
     Spans are inclusive and can be of zero length, representing a single word span.
@@ -202,7 +206,10 @@ def iob1_tags_to_spans(tag_sequence: List[str], classes_to_ignore: List[str] = N
 
 
 def _iob1_start_of_chunk(
-    prev_bio_tag: Optional[str], prev_conll_tag: Optional[str], curr_bio_tag: str, curr_conll_tag: str
+    prev_bio_tag: Optional[str],
+    prev_conll_tag: Optional[str],
+    curr_bio_tag: str,
+    curr_conll_tag: str,
 ) -> bool:
     if curr_bio_tag == "B":
         return True
@@ -213,7 +220,9 @@ def _iob1_start_of_chunk(
     return False
 
 
-def bioul_tags_to_spans(tag_sequence: List[str], classes_to_ignore: List[str] = None) -> List[TypedStringSpan]:
+def bioul_tags_to_spans(
+    tag_sequence: List[str], classes_to_ignore: List[str] = None
+) -> List[TypedStringSpan]:
     """
     Given a sequence corresponding to BIOUL tags, extracts spans.
     Spans are inclusive and can be of zero length, representing a single word span.
@@ -260,7 +269,8 @@ def bioul_tags_to_spans(tag_sequence: List[str], classes_to_ignore: List[str] = 
 
 def iob1_to_bioul(tag_sequence: List[str]) -> List[str]:
     warnings.warn(
-        "iob1_to_bioul has been replaced with 'to_bioul' " "to allow more encoding options.", FutureWarning
+        "iob1_to_bioul has been replaced with 'to_bioul' " "to allow more encoding options.",
+        FutureWarning,
     )
     return to_bioul(tag_sequence)
 
@@ -371,7 +381,9 @@ def to_bioul(tag_sequence: List[str], encoding: str = "IOB1") -> List[str]:
     return bioul_sequence
 
 
-def bmes_tags_to_spans(tag_sequence: List[str], classes_to_ignore: List[str] = None) -> List[TypedStringSpan]:
+def bmes_tags_to_spans(
+    tag_sequence: List[str], classes_to_ignore: List[str] = None
+) -> List[TypedStringSpan]:
     """
     Given a sequence corresponding to BMES tags, extracts spans.
     Spans are inclusive and can be of zero length, representing a single word span.

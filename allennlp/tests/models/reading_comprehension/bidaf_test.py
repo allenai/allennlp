@@ -16,7 +16,8 @@ class BidirectionalAttentionFlowTest(ModelTestCase):
     def setUp(self):
         super().setUp()
         self.set_up_model(
-            self.FIXTURES_ROOT / "bidaf" / "experiment.json", self.FIXTURES_ROOT / "data" / "squad.json"
+            self.FIXTURES_ROOT / "bidaf" / "experiment.json",
+            self.FIXTURES_ROOT / "data" / "squad.json",
         )
 
     def test_forward_pass_runs_correctly(self):

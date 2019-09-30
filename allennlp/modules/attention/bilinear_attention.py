@@ -32,7 +32,11 @@ class BilinearAttention(Attention):
     """
 
     def __init__(
-        self, vector_dim: int, matrix_dim: int, activation: Activation = None, normalize: bool = True
+        self,
+        vector_dim: int,
+        matrix_dim: int,
+        activation: Activation = None,
+        normalize: bool = True,
     ) -> None:
         super().__init__(normalize)
         self._weight_matrix = Parameter(torch.Tensor(vector_dim, matrix_dim))

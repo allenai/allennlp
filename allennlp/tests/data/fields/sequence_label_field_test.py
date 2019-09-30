@@ -14,7 +14,8 @@ class TestSequenceLabelField(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
         self.text = TextField(
-            [Token(t) for t in ["here", "are", "some", "words", "."]], {"words": SingleIdTokenIndexer("words")}
+            [Token(t) for t in ["here", "are", "some", "words", "."]],
+            {"words": SingleIdTokenIndexer("words")},
         )
 
     def test_tag_length_mismatch_raises(self):
@@ -74,7 +75,9 @@ class TestSequenceLabelField(AllenNlpTestCase):
         # We've warned once, so we should have set the class variable to False.
         assert "text" in SequenceLabelField._already_warned_namespaces
         with pytest.raises(AssertionError):
-            with self.assertLogs(logger="allennlp.data.fields.sequence_label_field", level="WARNING"):
+            with self.assertLogs(
+                logger="allennlp.data.fields.sequence_label_field", level="WARNING"
+            ):
                 _ = SequenceLabelField(tags, self.text, label_namespace="text")
 
         # ... but a new namespace should still log a warning.

@@ -1,6 +1,9 @@
 import pytest
 
-from allennlp.data.dataset_readers.semantic_role_labeling import SrlReader, _convert_tags_to_wordpiece_tags
+from allennlp.data.dataset_readers.semantic_role_labeling import (
+    SrlReader,
+    _convert_tags_to_wordpiece_tags,
+)
 from allennlp.common.util import ensure_list
 from allennlp.common.testing import AllenNlpTestCase
 
@@ -133,7 +136,21 @@ class TestSrlReader:
             ".",
         ]
         assert fields["verb_indicator"].labels[11] == 1
-        assert fields["tags"].labels == ["O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "B-V", "O"]
+        assert fields["tags"].labels == [
+            "O",
+            "O",
+            "O",
+            "O",
+            "O",
+            "O",
+            "O",
+            "O",
+            "O",
+            "O",
+            "O",
+            "B-V",
+            "O",
+        ]
         assert fields["metadata"].metadata["words"] == tokens
         assert fields["metadata"].metadata["verb"] == tokens[11]
         assert fields["metadata"].metadata["gold_tags"] == fields["tags"].labels
@@ -249,7 +266,15 @@ class TestBertSrlReader(AllenNlpTestCase):
             "[SEP]",
         ]
         assert [wordpieces[i] for i in offsets] == ["this", "is", "a", "##s", "with", "a", "##word"]
-        assert [wordpieces[i] for i in start_offsets] == ["this", "is", "a", "sentence", "with", "a", "really"]
+        assert [wordpieces[i] for i in start_offsets] == [
+            "this",
+            "is",
+            "a",
+            "sentence",
+            "with",
+            "a",
+            "really",
+        ]
 
     def test_read_from_file(self):
         conll_reader = self.reader

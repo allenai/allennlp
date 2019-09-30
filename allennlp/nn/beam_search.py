@@ -32,7 +32,11 @@ class BeamSearch:
     """
 
     def __init__(
-        self, end_index: int, max_steps: int = 50, beam_size: int = 10, per_node_beam_size: int = None
+        self,
+        end_index: int,
+        max_steps: int = 50,
+        beam_size: int = 10,
+        per_node_beam_size: int = None,
     ) -> None:
         self._end_index = end_index
         self.max_steps = max_steps
@@ -118,7 +122,9 @@ class BeamSearch:
             )
 
         # shape: (batch_size, beam_size), (batch_size, beam_size)
-        start_top_log_probabilities, start_predicted_classes = start_class_log_probabilities.topk(self.beam_size)
+        start_top_log_probabilities, start_predicted_classes = start_class_log_probabilities.topk(
+            self.beam_size
+        )
         if self.beam_size == 1 and (start_predicted_classes == self._end_index).all():
             warnings.warn(
                 "Empty sequences predicted. You may want to increase the beam size or ensure "
@@ -176,11 +182,15 @@ class BeamSearch:
             # this timestep as well.
             # shape: (batch_size * beam_size, num_classes)
             cleaned_log_probabilities = torch.where(
-                last_predictions_expanded == self._end_index, log_probs_after_end, class_log_probabilities
+                last_predictions_expanded == self._end_index,
+                log_probs_after_end,
+                class_log_probabilities,
             )
 
             # shape (both): (batch_size * beam_size, per_node_beam_size)
-            top_log_probabilities, predicted_classes = cleaned_log_probabilities.topk(self.per_node_beam_size)
+            top_log_probabilities, predicted_classes = cleaned_log_probabilities.topk(
+                self.per_node_beam_size
+            )
 
             # Here we expand the last log probabilities to (batch_size * beam_size, per_node_beam_size)
             # so that we can add them to the current log probs for this timestep.
@@ -207,11 +217,15 @@ class BeamSearch:
 
             # Keep only the top `beam_size` beam indices.
             # shape: (batch_size, beam_size), (batch_size, beam_size)
-            restricted_beam_log_probs, restricted_beam_indices = reshaped_summed.topk(self.beam_size)
+            restricted_beam_log_probs, restricted_beam_indices = reshaped_summed.topk(
+                self.beam_size
+            )
 
             # Use the beam indices to extract the corresponding classes.
             # shape: (batch_size, beam_size)
-            restricted_predicted_classes = reshaped_predicted_classes.gather(1, restricted_beam_indices)
+            restricted_predicted_classes = reshaped_predicted_classes.gather(
+                1, restricted_beam_indices
+            )
 
             predictions.append(restricted_predicted_classes)
 

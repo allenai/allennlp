@@ -11,7 +11,9 @@ class TestProductionRuleField(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
         self.vocab = Vocabulary()
-        self.s_rule_index = self.vocab.add_token_to_namespace("S -> [NP, VP]", namespace="rule_labels")
+        self.s_rule_index = self.vocab.add_token_to_namespace(
+            "S -> [NP, VP]", namespace="rule_labels"
+        )
         self.np_index = self.vocab.add_token_to_namespace("NP -> test", namespace="rule_labels")
 
     def test_field_counts_vocab_items_correctly(self):

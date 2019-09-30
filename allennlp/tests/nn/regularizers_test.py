@@ -30,7 +30,9 @@ class TestRegularizers(AllenNlpTestCase):
         constant_init = Initializer.from_params(Params({"type": "constant", "val": 1.0}))
         initializer = InitializerApplicator([(".*", constant_init)])
         initializer(model)
-        value = RegularizerApplicator([("weight", L2Regularizer(0.5)), ("bias", L1Regularizer(1.0))])(model)
+        value = RegularizerApplicator(
+            [("weight", L2Regularizer(0.5)), ("bias", L1Regularizer(1.0))]
+        )(model)
         assert value.data.numpy() == 65.0
 
     def test_from_params(self):

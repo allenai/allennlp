@@ -40,7 +40,9 @@ class BLEU(Metric):
     """
 
     def __init__(
-        self, ngram_weights: Iterable[float] = (0.25, 0.25, 0.25, 0.25), exclude_indices: Set[int] = None
+        self,
+        ngram_weights: Iterable[float] = (0.25, 0.25, 0.25, 0.25),
+        exclude_indices: Set[int] = None,
     ) -> None:
         self._ngram_weights = ngram_weights
         self._exclude_indices = exclude_indices or set()
@@ -71,7 +73,10 @@ class BLEU(Metric):
         return ngram_counts
 
     def _get_modified_precision_counts(
-        self, predicted_tokens: torch.LongTensor, reference_tokens: torch.LongTensor, ngram_size: int
+        self,
+        predicted_tokens: torch.LongTensor,
+        reference_tokens: torch.LongTensor,
+        ngram_size: int,
     ) -> Tuple[int, int]:
         """
         Compare the predicted tokens to the reference (gold) tokens at the desired
@@ -148,7 +153,11 @@ class BLEU(Metric):
     def get_metric(self, reset: bool = False) -> Dict[str, float]:
         brevity_penalty = self._get_brevity_penalty()
         ngram_scores = (
-            weight * (math.log(self._precision_matches[n] + 1e-13) - math.log(self._precision_totals[n] + 1e-13))
+            weight
+            * (
+                math.log(self._precision_matches[n] + 1e-13)
+                - math.log(self._precision_totals[n] + 1e-13)
+            )
             for n, weight in enumerate(self._ngram_weights, start=1)
         )
         bleu = brevity_penalty * math.exp(sum(ngram_scores))

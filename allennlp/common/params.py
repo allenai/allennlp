@@ -270,7 +270,9 @@ class Params(MutableMapping):
             try:
                 value = self.params.pop(key)
             except KeyError:
-                raise ConfigurationError('key "{}" is required at location "{}"'.format(key, self.history))
+                raise ConfigurationError(
+                    'key "{}" is required at location "{}"'.format(key, self.history)
+                )
         else:
             value = self.params.pop(key, default)
 
@@ -326,13 +328,19 @@ class Params(MutableMapping):
             try:
                 value = self.params.get(key)
             except KeyError:
-                raise ConfigurationError('key "{}" is required at location "{}"'.format(key, self.history))
+                raise ConfigurationError(
+                    'key "{}" is required at location "{}"'.format(key, self.history)
+                )
         else:
             value = self.params.get(key, default)
         return self._check_is_dict(key, value)
 
     def pop_choice(
-        self, key: str, choices: List[Any], default_to_first_choice: bool = False, allow_class_names: bool = True
+        self,
+        key: str,
+        choices: List[Any],
+        default_to_first_choice: bool = False,
+        allow_class_names: bool = True,
     ) -> Any:
         """
         Gets the value of ``key`` in the ``params`` dictionary, ensuring that the value is one of
@@ -446,7 +454,9 @@ class Params(MutableMapping):
         parameters (if there are any).
         """
         if self.params:
-            raise ConfigurationError("Extra parameters passed to {}: {}".format(class_name, self.params))
+            raise ConfigurationError(
+                "Extra parameters passed to {}: {}".format(class_name, self.params)
+            )
 
     def __getitem__(self, key):
         if key in self.params:
@@ -480,7 +490,9 @@ class Params(MutableMapping):
         return value
 
     @classmethod
-    def from_file(cls, params_file: str, params_overrides: str = "", ext_vars: dict = None) -> "Params":
+    def from_file(
+        cls, params_file: str, params_overrides: str = "", ext_vars: dict = None
+    ) -> "Params":
         """
         Load a `Params` object from a configuration file.
 
@@ -550,7 +562,9 @@ class Params(MutableMapping):
             # Makes a tuple to use for ordering.  The tuple is an index into each of the `preference_orders`,
             # followed by the key itself.  This gives us integer sorting if you have a key in one of the
             # `preference_orders`, followed by alphabetical ordering if not.
-            order_tuple = [order.index(key) if key in order else len(order) for order in preference_orders]
+            order_tuple = [
+                order.index(key) if key in order else len(order) for order in preference_orders
+            ]
             return order_tuple + [key]
 
         def order_dict(dictionary, order_func):

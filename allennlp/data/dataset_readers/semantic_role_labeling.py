@@ -143,7 +143,9 @@ class SrlReader(DatasetReader):
             self.bert_tokenizer = None
             self.lowercase_input = False
 
-    def _wordpiece_tokenize_input(self, tokens: List[str]) -> Tuple[List[str], List[int], List[int]]:
+    def _wordpiece_tokenize_input(
+        self, tokens: List[str]
+    ) -> Tuple[List[str], List[int], List[int]]:
         """
         Convert a list of tokens to wordpiece tokens and offsets, as well as adding
         BERT CLS and SEP tokens to the begining and end of the sentence.
@@ -201,9 +203,14 @@ class SrlReader(DatasetReader):
         ontonotes_reader = Ontonotes()
         logger.info("Reading SRL instances from dataset files at: %s", file_path)
         if self._domain_identifier is not None:
-            logger.info("Filtering to only include file paths containing the %s domain", self._domain_identifier)
+            logger.info(
+                "Filtering to only include file paths containing the %s domain",
+                self._domain_identifier,
+            )
 
-        for sentence in self._ontonotes_subset(ontonotes_reader, file_path, self._domain_identifier):
+        for sentence in self._ontonotes_subset(
+            ontonotes_reader, file_path, self._domain_identifier
+        ):
             tokens = [Token(t) for t in sentence.words]
             if not sentence.srl_frames:
                 # Sentence contains no predicates.
@@ -242,7 +249,9 @@ class SrlReader(DatasetReader):
 
         metadata_dict: Dict[str, Any] = {}
         if self.bert_tokenizer is not None:
-            wordpieces, offsets, start_offsets = self._wordpiece_tokenize_input([t.text for t in tokens])
+            wordpieces, offsets, start_offsets = self._wordpiece_tokenize_input(
+                [t.text for t in tokens]
+            )
             new_verbs = _convert_verb_indices_to_wordpiece_indices(verb_label, offsets)
             metadata_dict["offsets"] = start_offsets
             # In order to override the indexing mechanism, we need to set the `text_id`

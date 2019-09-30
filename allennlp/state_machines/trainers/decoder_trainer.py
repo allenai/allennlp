@@ -24,7 +24,10 @@ class DecoderTrainer(Generic[SupervisionType]):
     """
 
     def decode(
-        self, initial_state: State, transition_function: TransitionFunction, supervision: SupervisionType
+        self,
+        initial_state: State,
+        transition_function: TransitionFunction,
+        supervision: SupervisionType,
     ) -> Dict[str, torch.Tensor]:
         """
         Takes an initial state object, a means of transitioning from state to state, and a

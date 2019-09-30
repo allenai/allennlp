@@ -108,7 +108,10 @@ class HomogeneousBatchIterator(DataIterator):
     """
 
     def __init__(
-        self, type_field_name: str = "dataset", allow_mixed_batches: bool = False, batch_size: int = 32
+        self,
+        type_field_name: str = "dataset",
+        allow_mixed_batches: bool = False,
+        batch_size: int = 32,
     ) -> None:
         super().__init__(batch_size)
         self.type_field_name = type_field_name
@@ -269,7 +272,9 @@ class MultiTaskTrainer(TrainerBase):
 
         params.assert_empty(__name__)
 
-        return MultiTaskTrainer(model, serialization_dir, iterator, mingler, optimizer, datasets, num_epochs)
+        return MultiTaskTrainer(
+            model, serialization_dir, iterator, mingler, optimizer, datasets, num_epochs
+        )
 
 
 class MultiTaskTest(AllenNlpTestCase):

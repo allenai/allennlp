@@ -43,6 +43,12 @@ class UpdateMomentum(Callback):
             self.momentum_scheduler.load_state_dict(state_dict)
 
     @classmethod
-    def from_params(cls, params: Params, optimizer: torch.optim.Optimizer) -> "UpdateMomentum":  # type: ignore
+    def from_params(
+        cls, params: Params, optimizer: torch.optim.Optimizer
+    ) -> "UpdateMomentum":  # type: ignore
 
-        return cls(MomentumScheduler.from_params(params=params.pop("momentum_scheduler"), optimizer=optimizer))
+        return cls(
+            MomentumScheduler.from_params(
+                params=params.pop("momentum_scheduler"), optimizer=optimizer
+            )
+        )

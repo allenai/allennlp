@@ -27,7 +27,9 @@ class TestLazyDatasetReader(AllenNlpTestCase):
         token_indexer = {"tokens": SingleIdTokenIndexer()}
 
         field1 = TextField([Token(t) for t in ["this", "is", "a", "sentence", "."]], token_indexer)
-        field2 = TextField([Token(t) for t in ["this", "is", "a", "different", "sentence", "."]], token_indexer)
+        field2 = TextField(
+            [Token(t) for t in ["this", "is", "a", "different", "sentence", "."]], token_indexer
+        )
         field3 = TextField([Token(t) for t in ["here", "is", "a", "sentence", "."]], token_indexer)
         field4 = TextField([Token(t) for t in ["this", "is", "short"]], token_indexer)
         self.instances = [

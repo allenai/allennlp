@@ -53,5 +53,7 @@ class UpdateLearningRate(Callback):
     ) -> "UpdateLearningRate":
 
         return cls(
-            LearningRateScheduler.from_params(params=params.pop("learning_rate_scheduler"), optimizer=optimizer)
+            LearningRateScheduler.from_params(
+                params=params.pop("learning_rate_scheduler"), optimizer=optimizer
+            )
         )

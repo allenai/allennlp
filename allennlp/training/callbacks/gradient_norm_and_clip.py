@@ -24,7 +24,9 @@ class GradientNormAndClip(Callback):
         If provided, we use this to clip gradients in our model.
     """
 
-    def __init__(self, grad_norm: Optional[float] = None, grad_clipping: Optional[float] = None) -> None:
+    def __init__(
+        self, grad_norm: Optional[float] = None, grad_clipping: Optional[float] = None
+    ) -> None:
         self.grad_norm = grad_norm
         self.grad_clipping = grad_clipping
 
