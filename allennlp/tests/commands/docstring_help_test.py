@@ -13,10 +13,10 @@ from allennlp.common.testing import AllenNlpTestCase
 
 def _subcommand_help_output(subcommand: str) -> str:
     parser = create_parser('allennlp')
-    for action in parser._actions:  # type: ignore
+    for action in parser._actions:
         if isinstance(action, argparse._SubParsersAction):
             file = io.StringIO()
-            action._name_parser_map[subcommand].print_help(file)  # type: ignore
+            action._name_parser_map[subcommand].print_help(file)
             file.seek(0)
             return file.read()
     raise LookupError("The main program parser does not contain a argparse._SubParsersAction object")
