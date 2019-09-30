@@ -23,7 +23,7 @@ class SemanticRoleLabeler(Model):
     """
     This model performs semantic role labeling using BIO tags using Propbank semantic roles.
     Specifically, it is an implementation of `Deep Semantic Role Labeling - What works
-    and what's next <https://homes.cs.washington.edu/~luheng/files/acl2017_hllz.pdf>`_ .
+    and what's next <https://www.aclweb.org/anthology/P17-1044>`_ .
 
     This implementation is effectively a series of stacked interleaved LSTMs with highway
     connections, applied to embedded sequences of words concatenated with a binary indicator
