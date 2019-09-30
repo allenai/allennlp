@@ -60,10 +60,10 @@ class BasicTransitionFunction(TransitionFunction[GrammarBasedState]):
         # hidden state of the decoder with the final hidden state of the encoder.
         output_dim = encoder_output_dim
         input_dim = output_dim
-        # Our decoder input will be the concatenation of the decoder hidden state and the previous
-        # action embedding, and we'll project that down to the decoder's `input_dim`, which we
-        # arbitrarily set to be the same as `output_dim`.
-        self._input_projection_layer = Linear(output_dim + action_embedding_dim, input_dim)
+        # Our decoder input will be the concatenation of the attended encoder hidden state (i.e., the
+        # attended question encoding) and the previous action embedding, and we'll project that down
+        # to the decoder's `input_dim`, which we arbitrarily set to be the same as `output_dim`.
+        self._input_projection_layer = Linear(encoder_output_dim + action_embedding_dim, input_dim)
         # Before making a prediction, we'll compute an attention over the input given our updated
         # hidden state. Then we concatenate those with the decoder state and project to
         # `action_embedding_dim` to make a prediction.
