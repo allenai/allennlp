@@ -227,7 +227,7 @@ class CoreferenceResolver(Model):
         # (num_spans_to_keep, max_antecedents),
         # (1, max_antecedents),
         # (1, num_spans_to_keep, max_antecedents)
-        valid_antecedent_indices, valid_antecedent_offsets, valid_antecedent_log_mask = self._generate_valid_antecedents(
+        valid_antecedent_indices, valid_antecedent_offsets, valid_antecedent_log_mask = self._generate_valid_antecedents(  # noqa
             num_spans_to_keep, max_antecedents, util.get_device_of(text_mask)
         )
         # Select tensors relating to the antecedent spans.
