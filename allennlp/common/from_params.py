@@ -351,7 +351,6 @@ class FromParams:
 
         if registered_subclasses is not None:
             # We know ``cls`` inherits from Registrable, so we'll use a cast to make mypy happy.
-            # We have to use a disable to make pylint happy.
 
             as_registrable = cast(Type[Registrable], cls)
             default_to_first_choice = as_registrable.default_implementation is not None

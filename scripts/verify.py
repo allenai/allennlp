@@ -15,11 +15,6 @@ def main(checks):
             print("Tests (pytest):", flush=True)
             run("pytest -v --color=yes", shell=True, check=True)
 
-        if "pylint" in checks:
-            print("Linter (pylint):", flush=True)
-            run("pylint -d locally-disabled,locally-enabled -f colorized allennlp", shell=True, check=True)
-            print("pylint checks passed")
-
         if "flake8" in checks:
             print("Linter (flake8)", flush=True)
             run("flake8 -v", shell=True, check=True)
