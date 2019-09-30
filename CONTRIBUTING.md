@@ -35,6 +35,12 @@ If your code fails one of these checks, you will be expected to fix your pull re
 You can run most of these tests locally with `./scripts/verify.py`, which will be faster than waiting for
 cloud systems to run tests.
 
+In addition, the `requirements.txt` includes the Python `pre-commit` library,
+and we provide a suggested configuration at `.pre-commit-config.yaml`.
+If you run `pre-commit install` at the root of your fork,
+it will create [git precommit hooks](https://git-scm.com/book/en/v2/Customizing-Git-Git-Hooks)
+that run `black` and `flake8` over the files in every commit.
+
 ### Do you have a suggestion for an enhancement?
 
 We use GitHub issues to track enhancement requests.  Before you create an enhancement request:
