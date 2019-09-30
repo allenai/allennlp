@@ -112,8 +112,8 @@ class ESIM(Model):
 
         initializer(self)
 
-    def forward(
-        self,  # type: ignore
+    def forward(  # type: ignore
+        self,
         premise: Dict[str, torch.LongTensor],
         hypothesis: Dict[str, torch.LongTensor],
         label: torch.IntTensor = None,

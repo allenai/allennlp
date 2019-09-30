@@ -290,8 +290,8 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
     def batch_tensors(self, tensor_list: List[Dict[str, torch.Tensor]]) -> Dict[str, torch.Tensor]:
 
         batched_text = nn_util.batch_tensor_dicts(
-            tensor["text"] for tensor in tensor_list
-        )  # type: ignore
+            tensor["text"] for tensor in tensor_list  # type: ignore
+        )
         batched_linking = torch.stack([tensor["linking"] for tensor in tensor_list])
         return {"text": batched_text, "linking": batched_linking}
 

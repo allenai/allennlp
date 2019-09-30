@@ -227,9 +227,8 @@ class CopyNetSeq2Seq(Model):
                     predicted_tokens = self._get_predicted_tokens(
                         output_dict["predictions"], metadata, n_best=1
                     )
-                    self._token_based_metric(
-                        predicted_tokens,  # type: ignore
-                        [x["target_tokens"] for x in metadata],
+                    self._token_based_metric(  # type: ignore
+                        predicted_tokens, [x["target_tokens"] for x in metadata]
                     )
 
         return output_dict
@@ -890,8 +889,8 @@ class CopyNetSeq2Seq(Model):
         if not self.training:
             if self._tensor_based_metric is not None:
                 all_metrics.update(
-                    self._tensor_based_metric.get_metric(reset=reset)
-                )  # type: ignore
+                    self._tensor_based_metric.get_metric(reset=reset)  # type: ignore
+                )
             if self._token_based_metric is not None:
                 all_metrics.update(self._token_based_metric.get_metric(reset=reset))  # type: ignore
         return all_metrics

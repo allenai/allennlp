@@ -155,8 +155,8 @@ class MyModel(Model):
         super().__init__(vocab)
         self.weight = torch.nn.Parameter(torch.randn(()))
 
-    def forward(
-        self,  # type: ignore
+    def forward(  # type: ignore
+        self,
         dataset: List[str],
         field_a: torch.Tensor = None,
         field_b: torch.Tensor = None,
@@ -240,8 +240,8 @@ class MultiTaskTrainer(TrainerBase):
         return {}
 
     @classmethod
-    def from_params(
-        cls,  # type: ignore
+    def from_params(  # type: ignore
+        cls,
         params: Params,
         serialization_dir: str,
         recover: bool = False,

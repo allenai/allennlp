@@ -20,8 +20,8 @@ class NoOpTrainer(TrainerBase):
         self.model = model
 
     @classmethod
-    def from_params(
-        cls,  # type: ignore
+    def from_params(  # type: ignore
+        cls,
         params: Params,
         serialization_dir: str,
         recover: bool = False,

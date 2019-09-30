@@ -86,10 +86,8 @@ class BertForClassification(Model):
         self._index = index
         initializer(self._classification_layer)
 
-    def forward(
-        self,  # type: ignore
-        tokens: Dict[str, torch.LongTensor],
-        label: torch.IntTensor = None,
+    def forward(  # type: ignore
+        self, tokens: Dict[str, torch.LongTensor], label: torch.IntTensor = None
     ) -> Dict[str, torch.Tensor]:
 
         """

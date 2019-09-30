@@ -209,9 +209,9 @@ class Hotflip(Attacker):
 
         # This is just for ease of access in the UI, so we know the original tokens.  It's not used
         # in the logic below.
-        original_text_field: TextField = original_instances[0][
+        original_text_field: TextField = original_instances[0][  # type: ignore
             input_field_to_attack
-        ]  # type: ignore
+        ]
         original_tokens = deepcopy(original_text_field.tokens)
 
         final_tokens = []

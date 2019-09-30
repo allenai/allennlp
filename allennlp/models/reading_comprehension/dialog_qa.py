@@ -130,8 +130,8 @@ class DialogQA(Model):
         self._official_f1 = Average()
         self._variational_dropout = InputVariationalDropout(dropout)
 
-    def forward(
-        self,  # type: ignore
+    def forward(  # type: ignore
+        self,
         question: Dict[str, torch.LongTensor],
         passage: Dict[str, torch.LongTensor],
         span_start: torch.IntTensor = None,

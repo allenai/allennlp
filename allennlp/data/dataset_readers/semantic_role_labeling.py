@@ -235,11 +235,8 @@ class SrlReader(DatasetReader):
             if domain_identifier is None or f"/{domain_identifier}/" in conll_file:
                 yield from ontonotes_reader.sentence_iterator(conll_file)
 
-    def text_to_instance(
-        self,  # type: ignore
-        tokens: List[Token],
-        verb_label: List[int],
-        tags: List[str] = None,
+    def text_to_instance(  # type: ignore
+        self, tokens: List[Token], verb_label: List[int], tags: List[str] = None
     ) -> Instance:
         """
         We take `pre-tokenized` input here, along with a verb label.  The verb label should be a

@@ -41,9 +41,9 @@ class InputReduction(Attacker):
             raise ValueError("Input reduction does not implement targeted attacks")
         ignore_tokens = ["@@NULL@@"] if ignore_tokens is None else ignore_tokens
         original_instances = self.predictor.json_to_labeled_instances(inputs)
-        original_text_field: TextField = original_instances[0][
+        original_text_field: TextField = original_instances[0][  # type: ignore
             input_field_to_attack
-        ]  # type: ignore
+        ]
         original_tokens = deepcopy(original_text_field.tokens)
         final_tokens = []
         for instance in original_instances:

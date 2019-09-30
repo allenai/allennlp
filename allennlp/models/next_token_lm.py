@@ -71,10 +71,8 @@ class NextTokenLM(Model):
         if initializer is not None:
             initializer(self)
 
-    def forward(
-        self,  # type: ignore
-        tokens: Dict[str, torch.LongTensor],
-        target_ids: Dict[str, torch.LongTensor] = None,
+    def forward(  # type: ignore
+        self, tokens: Dict[str, torch.LongTensor], target_ids: Dict[str, torch.LongTensor] = None
     ) -> Dict[str, torch.Tensor]:
 
         # Shape: (batch_size, num_tokens, embedding_dim)

@@ -31,8 +31,8 @@ class AttachmentScores(Metric):
 
         self._ignore_classes: List[int] = ignore_classes or []
 
-    def __call__(
-        self,  # type: ignore
+    def __call__(  # type: ignore
+        self,
         predicted_indices: torch.Tensor,
         predicted_labels: torch.Tensor,
         gold_indices: torch.Tensor,

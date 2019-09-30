@@ -147,8 +147,8 @@ class NumericallyAugmentedQaNet(Model):
 
         initializer(self)
 
-    def forward(
-        self,  # type: ignore
+    def forward(  # type: ignore
+        self,
         question: Dict[str, torch.LongTensor],
         passage: Dict[str, torch.LongTensor],
         number_indices: torch.LongTensor,

@@ -73,9 +73,9 @@ class SequenceTaggingDatasetReader(DatasetReader):
                 tags = [tag for token, tag in tokens_and_tags]
                 yield self.text_to_instance(tokens, tags)
 
-    def text_to_instance(
+    def text_to_instance(  # type: ignore
         self, tokens: List[Token], tags: List[str] = None
-    ) -> Instance:  # type: ignore
+    ) -> Instance:
         """
         We take `pre-tokenized` input here, because we don't have a tokenizer in this class.
         """

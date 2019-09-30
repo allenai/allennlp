@@ -587,9 +587,9 @@ class EmbeddingsTextFile(Iterator[str]):
                 )
                 package = io
 
-            self._handle = package.open(
+            self._handle = package.open(  # type: ignore
                 main_file_local_path, "rt", encoding=encoding
-            )  # type: ignore
+            )
 
         # To use this with tqdm we'd like to know the number of tokens. It's possible that the
         # first line of the embeddings file contains this: if it does, we want to start iteration

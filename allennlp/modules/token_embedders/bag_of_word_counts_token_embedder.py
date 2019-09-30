@@ -87,9 +87,9 @@ class BagOfWordCountsTokenEmbedder(TokenEmbedder):
         return bag_of_words_output
 
     @classmethod
-    def from_params(
+    def from_params(  # type: ignore
         cls, vocab: Vocabulary, params: Params
-    ) -> "BagOfWordCountsTokenEmbedder":  # type: ignore
+    ) -> "BagOfWordCountsTokenEmbedder":
 
         """
         we look for a ``vocab_namespace`` key in the parameter dictionary

@@ -431,9 +431,9 @@ class Vocabulary(Registrable):
 
     # There's enough logic here to require a custom from_params.
     @classmethod
-    def from_params(
+    def from_params(  # type: ignore
         cls, params: Params, instances: Iterable["adi.Instance"] = None
-    ):  # type: ignore
+    ):
         """
         There are two possible ways to build a vocabulary; from a
         collection of instances, using :func:`Vocabulary.from_instances`, or

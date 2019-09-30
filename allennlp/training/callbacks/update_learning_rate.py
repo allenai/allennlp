@@ -46,10 +46,8 @@ class UpdateLearningRate(Callback):
             self.learning_rate_scheduler.load_state_dict(state_dict)
 
     @classmethod
-    def from_params(
-        cls,  # type: ignore
-        params: Params,
-        optimizer: torch.optim.Optimizer,
+    def from_params(  # type: ignore
+        cls, params: Params, optimizer: torch.optim.Optimizer
     ) -> "UpdateLearningRate":
 
         return cls(

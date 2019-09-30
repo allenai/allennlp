@@ -23,10 +23,8 @@ class NlvrParserPredictor(Predictor):
                 structured_rep = json.loads(structured_rep)
             worlds = [structured_rep]
         identifier = json_dict["identifier"] if "identifier" in json_dict else None
-        instance = self._dataset_reader.text_to_instance(
-            sentence=sentence,  # type: ignore
-            structured_representations=worlds,
-            identifier=identifier,
+        instance = self._dataset_reader.text_to_instance(  # type: ignore
+            sentence=sentence, structured_representations=worlds, identifier=identifier
         )
         return instance
 

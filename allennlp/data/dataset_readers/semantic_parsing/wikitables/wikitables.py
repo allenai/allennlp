@@ -209,8 +209,8 @@ class WikiTablesDatasetReader(DatasetReader):
             )
             logger.info(f"Kept {num_instances} instances")
 
-    def text_to_instance(
-        self,  # type: ignore
+    def text_to_instance(  # type: ignore
+        self,
         question: str,
         table_lines: List[List[str]],
         target_values: List[str] = None,
@@ -275,8 +275,8 @@ class WikiTablesDatasetReader(DatasetReader):
         # like `action.rule` - it's hard to tell mypy that the ListField is made up of
         # ProductionRuleFields.
         action_map = {
-            action.rule: i for i, action in enumerate(action_field.field_list)
-        }  # type: ignore
+            action.rule: i for i, action in enumerate(action_field.field_list)  # type: ignore
+        }
         if offline_search_output:
             action_sequence_fields: List[Field] = []
             for logical_form in offline_search_output:

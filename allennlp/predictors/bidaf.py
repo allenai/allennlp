@@ -124,9 +124,9 @@ class BidafPredictor(Predictor):
                 # Convert character span indices into word span indices
                 word_span_start = None
                 word_span_end = None
-                question_offsets = new_instance["metadata"].metadata[
+                question_offsets = new_instance["metadata"].metadata[  # type: ignore
                     "question_token_offsets"
-                ]  # type: ignore
+                ]
                 for index, offset in enumerate(question_offsets):
                     if offset[0] == span[0]:
                         word_span_start = index

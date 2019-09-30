@@ -28,9 +28,8 @@ class DummyModel(Model):
         )
         self.embedder = BasicTextFieldEmbedder({"words": token_embedding})
 
-    def forward(
-        self,  # type: ignore
-        list_tensor: Dict[str, torch.LongTensor],
+    def forward(  # type: ignore
+        self, list_tensor: Dict[str, torch.LongTensor]
     ) -> Dict[str, torch.Tensor]:
         self.embedder(list_tensor)
         return {"loss": 1.0}

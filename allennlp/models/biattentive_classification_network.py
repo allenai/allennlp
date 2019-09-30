@@ -337,9 +337,9 @@ class BiattentiveClassificationNetwork(Model):
 
     # The FeedForward vs Maxout logic here requires a custom from_params.
     @classmethod
-    def from_params(
+    def from_params(  # type: ignore
         cls, vocab: Vocabulary, params: Params
-    ) -> "BiattentiveClassificationNetwork":  # type: ignore
+    ) -> "BiattentiveClassificationNetwork":
 
         embedder_params = params.pop("text_field_embedder")
         text_field_embedder = TextFieldEmbedder.from_params(vocab=vocab, params=embedder_params)

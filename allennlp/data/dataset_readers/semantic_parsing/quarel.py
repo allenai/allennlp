@@ -366,8 +366,8 @@ class QuarelDatasetReader(DatasetReader):
 
         if logical_forms:
             action_map = {
-                action.rule: i for i, action in enumerate(action_field.field_list)
-            }  # type: ignore
+                action.rule: i for i, action in enumerate(action_field.field_list)  # type: ignore
+            }
             action_sequence_fields: List[Field] = []
             for logical_form in logical_forms:
                 expression = world.parse_logical_form(logical_form)

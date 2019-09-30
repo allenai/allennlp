@@ -116,9 +116,9 @@ class LogToTensorboard(Callback):
         self.tensorboard.close()
 
     @classmethod
-    def from_params(
+    def from_params(  # type: ignore
         cls, serialization_dir: str, params: Params
-    ) -> "LogToTensorboard":  # type: ignore
+    ) -> "LogToTensorboard":
         log_batch_size_period = params.pop_int("log_batch_size_period", None)
         tensorboard = TensorboardWriter.from_params(
             params=params, serialization_dir=serialization_dir, get_batch_num_total=lambda: None

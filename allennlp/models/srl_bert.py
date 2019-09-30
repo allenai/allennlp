@@ -70,8 +70,8 @@ class SrlBert(Model):
         self.ignore_span_metric = ignore_span_metric
         initializer(self)
 
-    def forward(
-        self,  # type: ignore
+    def forward(  # type: ignore
+        self,
         tokens: Dict[str, torch.Tensor],
         verb_indicator: torch.Tensor,
         metadata: List[Any],

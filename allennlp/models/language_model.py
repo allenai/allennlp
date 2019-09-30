@@ -245,9 +245,8 @@ class LanguageModel(Model):
                 + "does not report how many layers it has."
             )
 
-    def forward(
-        self,  # type: ignore
-        source: Dict[str, torch.LongTensor],
+    def forward(  # type: ignore
+        self, source: Dict[str, torch.LongTensor]
     ) -> Dict[str, torch.Tensor]:
         """
         Computes the averaged forward (and backward, if language model is bidirectional)

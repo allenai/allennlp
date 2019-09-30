@@ -111,8 +111,8 @@ class Predictor(Registrable):
         dataset = Batch(instances)
         dataset.index_instances(self._model.vocab)
         outputs = self._model.decode(
-            self._model.forward(**dataset.as_tensor_dict())
-        )  # type: ignore
+            self._model.forward(**dataset.as_tensor_dict())  # type: ignore
+        )
 
         loss = outputs["loss"]
         self._model.zero_grad()

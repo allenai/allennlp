@@ -107,10 +107,8 @@ class Generator(Model):
         self.activation = activation
         self.loss = torch.nn.BCELoss()
 
-    def forward(
-        self,  # type: ignore
-        inputs: torch.Tensor,
-        discriminator: Model = None,
+    def forward(  # type: ignore
+        self, inputs: torch.Tensor, discriminator: Model = None
     ) -> Dict[str, torch.Tensor]:
 
         hidden1 = self.activation(self.linear1(inputs))
@@ -174,10 +172,8 @@ class Discriminator(Model):
         self.activation = activation
         self.loss = torch.nn.BCELoss()
 
-    def forward(
-        self,  # type: ignore
-        inputs: torch.Tensor,
-        label: torch.Tensor = None,
+    def forward(  # type: ignore
+        self, inputs: torch.Tensor, label: torch.Tensor = None
     ) -> Dict[str, torch.Tensor]:
 
         inputs = inputs.squeeze(-1)
@@ -293,8 +289,8 @@ class GanTestTrainer(TrainerBase):
         return metrics
 
     @classmethod
-    def from_params(
-        cls,  # type: ignore
+    def from_params(  # type: ignore
+        cls,
         params: Params,
         serialization_dir: str,
         recover: bool = False,

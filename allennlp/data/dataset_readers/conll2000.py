@@ -107,11 +107,8 @@ class Conll2000DatasetReader(DatasetReader):
 
                     yield self.text_to_instance(tokens, pos_tags, chunk_tags)
 
-    def text_to_instance(
-        self,  # type: ignore
-        tokens: List[Token],
-        pos_tags: List[str] = None,
-        chunk_tags: List[str] = None,
+    def text_to_instance(  # type: ignore
+        self, tokens: List[Token], pos_tags: List[str] = None, chunk_tags: List[str] = None
     ) -> Instance:
         """
         We take `pre-tokenized` input here, because we don't have a tokenizer in this class.

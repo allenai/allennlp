@@ -149,8 +149,8 @@ class TestPredict(AllenNlpTestCase):
         class _TestPredictor(Predictor):
             def dump_line(self, outputs: JsonDict) -> str:
                 data = {
-                    "keep_if_unparseable": self._dataset_reader._keep_if_unparseable
-                }  # type: ignore
+                    "keep_if_unparseable": self._dataset_reader._keep_if_unparseable  # type: ignore
+                }
                 return json.dumps(data) + "\n"
 
         # --use-dataset-reader argument only should use validation

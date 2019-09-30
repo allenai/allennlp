@@ -677,8 +677,8 @@ class Trainer(TrainerBase):
 
     # Requires custom from_params.
     @classmethod
-    def from_params(
-        cls,  # type: ignore
+    def from_params(  # type: ignore
+        cls,
         model: Model,
         serialization_dir: str,
         iterator: DataIterator,

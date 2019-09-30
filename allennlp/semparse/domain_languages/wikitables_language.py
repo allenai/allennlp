@@ -620,8 +620,8 @@ class WikiTablesLanguage(DomainLanguage):
             (row.values[column.name], row) for row in rows if row.values[column.name] is not None
         ]
         return [
-            row for cell_value, row in cell_row_pairs if cell_value > filter_value
-        ]  # type: ignore
+            row for cell_value, row in cell_row_pairs if cell_value > filter_value  # type: ignore
+        ]
 
     def filter_number_greater_equals(
         self, rows: List[Row], column: NumberColumn, filter_value: Number
@@ -630,8 +630,8 @@ class WikiTablesLanguage(DomainLanguage):
             (row.values[column.name], row) for row in rows if row.values[column.name] is not None
         ]
         return [
-            row for cell_value, row in cell_row_pairs if cell_value >= filter_value
-        ]  # type: ignore
+            row for cell_value, row in cell_row_pairs if cell_value >= filter_value  # type: ignore
+        ]
 
     def filter_number_lesser(
         self, rows: List[Row], column: NumberColumn, filter_value: Number
@@ -640,8 +640,8 @@ class WikiTablesLanguage(DomainLanguage):
             (row.values[column.name], row) for row in rows if row.values[column.name] is not None
         ]
         return [
-            row for cell_value, row in cell_row_pairs if cell_value < filter_value
-        ]  # type: ignore
+            row for cell_value, row in cell_row_pairs if cell_value < filter_value  # type: ignore
+        ]
 
     def filter_number_lesser_equals(
         self, rows: List[Row], column: NumberColumn, filter_value: Number
@@ -650,8 +650,8 @@ class WikiTablesLanguage(DomainLanguage):
             (row.values[column.name], row) for row in rows if row.values[column.name] is not None
         ]
         return [
-            row for cell_value, row in cell_row_pairs if cell_value <= filter_value
-        ]  # type: ignore
+            row for cell_value, row in cell_row_pairs if cell_value <= filter_value  # type: ignore
+        ]
 
     def filter_number_equals(
         self, rows: List[Row], column: NumberColumn, filter_value: Number

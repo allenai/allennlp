@@ -388,8 +388,8 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
         if not self.training:
             if self._tensor_based_metric is not None:
                 all_metrics.update(
-                    self._tensor_based_metric.get_metric(reset=reset)
-                )  # type: ignore
+                    self._tensor_based_metric.get_metric(reset=reset)  # type: ignore
+                )
             if self._token_based_metric is not None:
                 all_metrics.update(self._token_based_metric.get_metric(reset=reset))  # type: ignore
         return all_metrics
@@ -421,17 +421,16 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
                     best_predictions = top_k_predictions[:, 0, :]
                     # shape: (batch_size, target_sequence_length)
 
-                    self._tensor_based_metric(
+                    self._tensor_based_metric(  # type: ignore
                         best_predictions, target_tokens["tokens"]
-                    )  # type: ignore
+                    )
 
                 if self._token_based_metric is not None:
                     output_dict = self.decode(output_dict)
                     predicted_tokens = output_dict["predicted_tokens"]
 
-                    self._token_based_metric(
-                        predicted_tokens,  # type: ignore
-                        [y.text for y in target_tokens["tokens"][1:-1]],
+                    self._token_based_metric(  # type: ignore
+                        predicted_tokens, [y.text for y in target_tokens["tokens"][1:-1]]
                     )
 
         return output_dict

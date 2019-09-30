@@ -38,9 +38,9 @@ class TokenCharactersEncoder(TokenEmbedder):
 
     # The setdefault requires a custom from_params
     @classmethod
-    def from_params(
+    def from_params(  # type: ignore
         cls, vocab: Vocabulary, params: Params
-    ) -> "TokenCharactersEncoder":  # type: ignore
+    ) -> "TokenCharactersEncoder":
 
         embedding_params: Params = params.pop("embedding")
         # Embedding.from_params() uses "tokens" as the default namespace, but we need to change

@@ -122,8 +122,8 @@ class Conll2003DatasetReader(DatasetReader):
 
                     yield self.text_to_instance(tokens, pos_tags, chunk_tags, ner_tags)
 
-    def text_to_instance(
-        self,  # type: ignore
+    def text_to_instance(  # type: ignore
+        self,
         tokens: List[Token],
         pos_tags: List[str] = None,
         chunk_tags: List[str] = None,

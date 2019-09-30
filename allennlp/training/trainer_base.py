@@ -58,8 +58,8 @@ class TrainerBase(Registrable):
         raise NotImplementedError
 
     @classmethod
-    def from_params(
-        cls,  # type: ignore
+    def from_params(  # type: ignore
+        cls,
         params: Params,
         serialization_dir: str,
         recover: bool = False,
@@ -90,8 +90,8 @@ class TrainerBase(Registrable):
             klass = TrainerBase.by_name(typ3)
             # Explicit check to prevent recursion.
             is_overriden = (
-                klass.from_params.__func__ != TrainerBase.from_params.__func__
-            )  # type: ignore
+                klass.from_params.__func__ != TrainerBase.from_params.__func__  # type: ignore
+            )
             assert is_overriden, f"Class {klass.__name__} must override `from_params`."
             return klass.from_params(
                 params, serialization_dir, recover, cache_directory, cache_prefix

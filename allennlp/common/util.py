@@ -252,15 +252,11 @@ def prepare_global_logging(
 
     Tqdm.set_slower_interval(file_friendly_logging)
     std_out_file = os.path.join(serialization_dir, "stdout.log")
-    sys.stdout = TeeLogger(
-        std_out_file,  # type: ignore
-        sys.stdout,
-        file_friendly_logging,
+    sys.stdout = TeeLogger(  # type: ignore
+        std_out_file, sys.stdout, file_friendly_logging
     )
-    sys.stderr = TeeLogger(
-        os.path.join(serialization_dir, "stderr.log"),  # type: ignore
-        sys.stderr,
-        file_friendly_logging,
+    sys.stderr = TeeLogger(  # type: ignore
+        os.path.join(serialization_dir, "stderr.log"), sys.stderr, file_friendly_logging
     )
 
     stdout_handler = logging.FileHandler(std_out_file)
