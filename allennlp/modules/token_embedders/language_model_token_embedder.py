@@ -69,7 +69,7 @@ class LanguageModelTokenEmbedder(TokenEmbedder):
 
         # Load LM and the associated config.
         archive = load_archive(archive_file, overrides=json.dumps(overrides))
-        self._lm: LanguageModel = archive.model  # pylint: disable=used-before-assignment
+        self._lm: LanguageModel = archive.model
         self._lm.delete_softmax()
         config = archive.config
         dict_config = config.as_dict(quiet=True)

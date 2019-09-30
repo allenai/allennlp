@@ -55,7 +55,7 @@ class MaskedLanguageModelingReader(DatasetReader):
 
     @overrides
     def _read(self, file_path: str):
-        import sys  # pylint: disable=import-outside-toplevel
+        import sys
 
         # You can call pytest with either `pytest` or `py.test`.
         if "test" not in sys.argv[0]:
