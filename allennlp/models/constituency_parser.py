@@ -208,7 +208,7 @@ class SpanConstituencyParser(Model):
         span_representations = self.span_extractor(encoded_text, spans, mask, span_mask)
 
         if self.feedforward_layer is not None:
-            span_representations = self.feedforward_layer(span_representations)  # pylint: disable=not-callable
+            span_representations = self.feedforward_layer(span_representations)
 
         logits = self.tag_projection_layer(span_representations)
         class_probabilities = masked_softmax(logits, span_mask.unsqueeze(-1))
@@ -317,8 +317,7 @@ class SpanConstituencyParser(Model):
                 # Does the span have a label != NO-LABEL or is it the root node?
                 # If so, include it in the spans that we consider.
                 if int(label_index) != no_label_id or (start == 0 and end == len(sentence)):
-                    # TODO(Mark): Remove this once pylint sorts out named tuples.
-                    # https://github.com/PyCQA/pylint/issues/1418
+
                     selected_spans.append(SpanInformation(start=int(start),
                                                           end=int(end),
                                                           label_prob=float(label_prob),

@@ -73,8 +73,6 @@ class DropConnect(torch.nn.Module):
                     yield _Match(submodule_name, submodule, parameter_name, parameter)
 
     def forward(self, *args):
-        # pylint: disable=protected-access
-
         # Apply dropout to all of the matching parameters, and force them into their original
         # parent module's _parameter dictionary
         for match in self._matches:

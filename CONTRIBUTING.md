@@ -24,7 +24,7 @@ Once your pull request is created, our continuous build system will check your p
 build will test that:
 
 * [`pytest`](https://docs.pytest.org/en/latest/) All tests pass
-* [`pylint`](https://www.pylint.org/) accepts the code style (our guidelines are based on PEP8)
+* [`flake8`](http://flake8.pycqa.org/en/latest/) accepts the code style (our guidelines are based on PEP8)
 * [`mypy`](http://mypy-lang.org/) typechecks the Python code
 * The docs can be generated successfully
 * Test coverage remains high.  Please add unit tests so we maintain our code coverage.
