@@ -6,10 +6,10 @@ from allennlp.modules.drop_connect import DropConnect
 
 
 class DropConnectTest(AllenNlpTestCase):
-    #pylint: disable=no-self-use
+    # pylint: disable=no-self-use
 
     @flaky(max_runs=10, min_passes=1)
-    def test_linear_outputs(self):  #pylint: disable=no-self-use
+    def test_linear_outputs(self):  # pylint: disable=no-self-use
         # Check that weights are (probably) being dropped out properly. There's an extremely small
         # chance (p < 1e-86) that this test fails.
         input_tensor = torch.ones(10, dtype=torch.float32)
