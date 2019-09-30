@@ -205,8 +205,6 @@ class CrfTagger(Model):
             # Add negative log-likelihood as loss
             log_likelihood = self.crf(logits, tags, mask)
 
-            # It's not clear why, but pylint seems to think `log_likelihood` is tuple
-            # (in fact, it's a torch.Tensor), so we need a disable.
             output["loss"] = -log_likelihood
 
             # Represent viterbi tags as "class probabilities" that we can

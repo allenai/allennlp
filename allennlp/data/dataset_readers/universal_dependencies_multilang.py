@@ -142,7 +142,7 @@ class UniversalDependenciesMultiLangDatasetReader(DatasetReader):
                     try:
                         yield lang_iter.__next__()
                     except StopIteration:
-                        lang, file_path = file_paths[ind]  # pylint: disable=invalid-sequence-index
+                        lang, file_path = file_paths[ind]
                         lang_iter = iter(self._read_one_file(lang, file_path))
                         self._iterators[ind] = (lang, lang_iter)
                         yield lang_iter.__next__()

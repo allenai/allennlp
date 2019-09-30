@@ -29,7 +29,7 @@ class DropConnectTest(AllenNlpTestCase):
         assert torch.allclose(output_a, output_b)
 
     @flaky(max_runs=10, min_passes=1)
-    def test_lstm_outputs(self):  # pylint: disable=no-self-use
+    def test_lstm_outputs(self):
         # Check that lstm weights are (probably) being dropped out properly. There's an extremely
         # small chance (p < 1e-86) that this test fails.
         input_tensor = torch.ones(1, 2, 10, dtype=torch.float32)  # shape: (batch, seq_length, dim)
@@ -55,7 +55,7 @@ class DropConnectTest(AllenNlpTestCase):
         # parameters are properly moved to the top-level DropConnect module.
 
         # Create a mock module which contains a linear layer as well as a parameter in the top-level module.
-        class Mock(torch.nn.Module):  # pylint: disable=abstract-method
+        class Mock(torch.nn.Module):
             def __init__(self):
                 super().__init__()
                 self.linear = torch.nn.Linear(1, 1)
