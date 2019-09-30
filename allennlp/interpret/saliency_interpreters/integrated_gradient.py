@@ -1,4 +1,3 @@
-# pylint: disable=protected-access
 import math
 from typing import List, Dict, Any
 
@@ -8,6 +7,7 @@ from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import Instance
 from allennlp.interpret.saliency_interpreters.saliency_interpreter import SaliencyInterpreter
 from allennlp.nn import util
+
 
 @SaliencyInterpreter.register('integrated-gradient')
 class IntegratedGradient(SaliencyInterpreter):
@@ -43,7 +43,7 @@ class IntegratedGradient(SaliencyInterpreter):
         We store the embedding output into the embeddings_list when alpha is zero.  This is used
         later to element-wise multiply the input by the averaged gradients.
         """
-        def forward_hook(module, inputs, output):  # pylint: disable=unused-argument
+        def forward_hook(module, inputs, output):
             # Save the input for later use. Only do so on first call.
             if alpha == 0:
                 embeddings_list.append(output.squeeze(0).clone().detach().numpy())

@@ -13,7 +13,7 @@ from allennlp.data.fields import IndexField, Field, ListField, TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @DatasetReader.register("masked_language_modeling")
@@ -68,7 +68,7 @@ class MaskedLanguageModelingReader(DatasetReader):
                          sentence: str = None,
                          tokens: List[Token] = None,
                          targets: List[str] = None) -> Instance:
-        # pylint: disable=arguments-differ
+
         """
         Parameters
         ----------

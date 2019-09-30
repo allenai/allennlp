@@ -4,8 +4,6 @@
 """
 
 import argparse
-import os
-import shutil
 from subprocess import run
 from subprocess import CalledProcessError
 import sys
@@ -21,6 +19,11 @@ def main(checks):
             print("Linter (pylint):", flush=True)
             run("pylint -d locally-disabled,locally-enabled -f colorized allennlp", shell=True, check=True)
             print("pylint checks passed")
+
+        if "flake8" in checks:
+            print("Linter (flake8)", flush=True)
+            run("flake8 -v", shell=True, check=True)
+            print("flake8 checks passed")
 
         if "mypy" in checks:
             print("Typechecker (mypy):", flush=True)
@@ -68,8 +71,9 @@ def main(checks):
         # squelch the exception stacktrace
         sys.exit(1)
 
+
 if __name__ == "__main__":
-    checks = ['pytest', 'pylint', 'mypy', 'build-docs', 'check-docs', 'check-links', 'check-requirements',
+    checks = ['pytest', 'flake8', 'mypy', 'build-docs', 'check-docs', 'check-links', 'check-requirements',
               'check-large-files']
 
     parser = argparse.ArgumentParser()

@@ -10,9 +10,9 @@ from allennlp.data.fields import Field, ListField, TextField, SpanField, Metadat
 from allennlp.data.instance import Instance
 from allennlp.data.tokenizers import Token
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
-from allennlp.data.dataset_readers.dataset_utils import  enumerate_spans
+from allennlp.data.dataset_readers.dataset_utils import enumerate_spans
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @DatasetReader.register("winobias")
@@ -97,7 +97,7 @@ class WinobiasReader(DatasetReader):
     def text_to_instance(self,  # type: ignore
                          sentence: List[Token],
                          gold_clusters: Optional[List[List[Tuple[int, int]]]] = None) -> Instance:
-        # pylint: disable=arguments-differ
+
         """
         Parameters
         ----------

@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 import numpy
 import pytest
 
@@ -61,7 +60,7 @@ class TestMultiLabelField(AllenNlpTestCase):
         numpy.testing.assert_array_almost_equal(tensor, numpy.array([0, 0]))
 
     def test_class_variables_for_namespace_warnings_work_correctly(self):
-        # pylint: disable=protected-access
+
         assert "text" not in MultiLabelField._already_warned_namespaces
         with self.assertLogs(logger="allennlp.data.fields.multilabel_field", level="WARNING"):
             _ = MultiLabelField(["test"], label_namespace="text")

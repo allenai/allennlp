@@ -1,7 +1,7 @@
-# pylint: disable=invalid-name,arguments-differ,abstract-method
 import numpy as np
 
 from allennlp.common.testing import ModelTestCase
+
 
 class TestBidirectionalLanguageModel(ModelTestCase):
     def setUp(self):
@@ -34,6 +34,7 @@ class TestBidirectionalLanguageModel(ModelTestCase):
         backward_loss = result["backward_loss"].item()
         np.testing.assert_almost_equal(loss, (forward_loss + backward_loss) / 2,
                                        decimal=3)
+
 
 class TestBidirectionalLanguageModelUnsampled(TestBidirectionalLanguageModel):
     def setUp(self):

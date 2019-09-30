@@ -22,12 +22,12 @@ class LearningRateScheduler(Scheduler, Registrable):
     # Requires custom from_params so we can wrap the PyTorch LR schedulers.
     @classmethod
     def from_params(cls, optimizer: torch.optim.Optimizer, params: Params):  # type: ignore
-        # pylint: disable=arguments-differ
+
         scheduler_type = params.pop_choice("type", LearningRateScheduler.list_available())
         scheduler = LearningRateScheduler.by_name(scheduler_type)(optimizer, **params.as_dict())  # type: ignore
         if isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
             return _PyTorchLearningRateSchedulerWithMetricsWrapper(scheduler)
-        elif isinstance(scheduler, torch.optim.lr_scheduler._LRScheduler):  # pylint: disable=protected-access
+        elif isinstance(scheduler, torch.optim.lr_scheduler._LRScheduler):
             return _PyTorchLearningRateSchedulerWrapper(scheduler)
         else:
             return scheduler
@@ -35,7 +35,7 @@ class LearningRateScheduler(Scheduler, Registrable):
 
 class _PyTorchLearningRateSchedulerWrapper(LearningRateScheduler):
 
-    def __init__(self, lr_scheduler: torch.optim.lr_scheduler._LRScheduler) -> None:  # pylint: disable=protected-access,super-init-not-called
+    def __init__(self, lr_scheduler: torch.optim.lr_scheduler._LRScheduler) -> None:
         self.lr_scheduler = lr_scheduler
 
     def get_values(self):
@@ -66,7 +66,7 @@ class _PyTorchLearningRateSchedulerWithMetricsWrapper(_PyTorchLearningRateSchedu
 
 
 # Force PyTorch learning rate schedulers into the registry.
-Registrable._registry[LearningRateScheduler] = {   # pylint: disable=protected-access
+Registrable._registry[LearningRateScheduler] = {
         "step": torch.optim.lr_scheduler.StepLR,
         "multi_step": torch.optim.lr_scheduler.MultiStepLR,
         "exponential": torch.optim.lr_scheduler.ExponentialLR,

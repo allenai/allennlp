@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 import numpy
 import torch
 
@@ -6,11 +5,12 @@ from allennlp.common.testing import ModelTestCase
 from allennlp.data.dataset import Batch
 from allennlp.models.reading_comprehension.bidaf_ensemble import BidafEnsemble, ensemble
 
+
 class BidafEnsembleTest(ModelTestCase):
     def setUp(self):
         super().setUp()
         self.set_up_model(self.FIXTURES_ROOT / 'bidaf' / 'experiment.json',
-                          self.FIXTURES_ROOT / 'data' /  'squad.json')
+                          self.FIXTURES_ROOT / 'data' / 'squad.json')
         self.model.eval()
 
     def test_ensemble_chooses_highest_average_confidence_2(self):

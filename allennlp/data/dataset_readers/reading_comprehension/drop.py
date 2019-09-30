@@ -146,7 +146,7 @@ class DropReader(DatasetReader):
                          passage_id: str = None,
                          answer_annotations: List[Dict] = None,
                          passage_tokens: List[Token] = None) -> Union[Instance, None]:
-        # pylint: disable=arguments-differ
+
         if not passage_tokens:
             passage_tokens = self._tokenizer.tokenize(passage_text)
             passage_tokens = split_tokens_by_hyphen(passage_tokens)

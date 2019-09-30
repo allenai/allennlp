@@ -36,7 +36,7 @@ import torch.nn.init
 from allennlp.common import Registrable
 from allennlp.common.params import Params
 from allennlp.common.checks import ConfigurationError
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 class Initializer(Registrable):
@@ -142,6 +142,7 @@ def block_orthogonal(tensor: torch.Tensor,
 def zero(tensor: torch.Tensor) -> None:
     return tensor.data.zero_()
 
+
 def lstm_hidden_bias(tensor: torch.Tensor) -> None:
     """
     Initialize the biases of the forget gate to 1, and all other gates to 0,
@@ -152,6 +153,7 @@ def lstm_hidden_bias(tensor: torch.Tensor) -> None:
     hidden_size = tensor.shape[0] // 4
     tensor.data[hidden_size:(2 * hidden_size)] = 1.0
 
+
 def _initializer_wrapper(init_function: Callable[..., None]) -> Type[Initializer]:
     class Init(Initializer):
         _initializer_wrapper = True
@@ -159,19 +161,21 @@ def _initializer_wrapper(init_function: Callable[..., None]) -> Type[Initializer
         def __init__(self, **kwargs):
             self._init_function = init_function
             self._kwargs = kwargs
+
         def __call__(self, tensor: torch.Tensor, **kwargs) -> None:
             self._init_function(tensor, **self._kwargs)
+
         def __repr__(self):
             return 'Init: %s, with params: %s' % (self._init_function, self._kwargs)
+
         @classmethod
         def from_params(cls, params: Params):  # type: ignore
-            # pylint: disable=arguments-differ
             return cls(**params.as_dict())
     return Init
 
 
 # There are no classes to decorate, so we hack these into Registrable._registry
-Registrable._registry[Initializer] = {  # pylint: disable=protected-access
+Registrable._registry[Initializer] = {
         "normal": _initializer_wrapper(torch.nn.init.normal_),
         "uniform": _initializer_wrapper(torch.nn.init.uniform_),
         "orthogonal": _initializer_wrapper(torch.nn.init.orthogonal_),
@@ -358,9 +362,12 @@ class InitializerApplicator:
         -------
         An InitializerApplicator containing the specified initializers.
         """
-        # pylint: disable=arguments-differ
+
         params = params or []
-        is_prevent = lambda item: item == "prevent" or item == {"type": "prevent"}  # pylint: disable=consider-using-in
+
+        def is_prevent(item):
+            return item in ("prevent", {"type": "prevent"})
+
         prevent_regexes = [param[0] for param in params if is_prevent(param[1])]
         params = [param for param in params if param[1] if not is_prevent(param[1])]
         initializers = [(name, Initializer.from_params(init_params)) for name, init_params in params]

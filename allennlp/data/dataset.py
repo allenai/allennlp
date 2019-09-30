@@ -15,7 +15,8 @@ from allennlp.common.util import ensure_list
 from allennlp.data.instance import Instance
 from allennlp.data.vocabulary import Vocabulary
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
+
 
 class Batch(Iterable):
     """

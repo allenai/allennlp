@@ -1,4 +1,3 @@
-# pylint: disable=invalid-name,no-self-use
 import argparse
 import os
 
@@ -9,6 +8,7 @@ from allennlp.common.testing import AllenNlpTestCase
 from allennlp.commands.make_vocab import MakeVocab, make_vocab_from_args, make_vocab_from_params
 from allennlp.data import Vocabulary
 from allennlp.common.checks import ConfigurationError
+
 
 class TestMakeVocab(AllenNlpTestCase):
     def setUp(self):
@@ -77,7 +77,7 @@ class TestMakeVocab(AllenNlpTestCase):
         vocab_path = self.TEST_DIR / 'vocabulary'
 
         self.params['vocabulary'] = {}
-        self.params['vocabulary']['min_count'] = {"tokens" : 3}
+        self.params['vocabulary']['min_count'] = {"tokens": 3}
 
         make_vocab_from_params(self.params, self.TEST_DIR)
 
@@ -111,7 +111,7 @@ class TestMakeVocab(AllenNlpTestCase):
         self.params['vocabulary'] = {}
         self.params['vocabulary']['directory_path'] = existing_vocab_path
         self.params['vocabulary']['extend'] = True
-        self.params['vocabulary']['min_count'] = {"tokens" : 3}
+        self.params['vocabulary']['min_count'] = {"tokens": 3}
         make_vocab_from_params(self.params, extended_serialization_dir)
 
         vocab_files = os.listdir(extended_vocab_path)
@@ -173,6 +173,6 @@ class TestMakeVocab(AllenNlpTestCase):
         for serialization_arg in ["-s", "--serialization-dir"]:
             raw_args = ["make-vocab", "path/to/params", serialization_arg, "serialization_dir"]
             args = parser.parse_args(raw_args)
-            assert args.func == make_vocab_from_args  # pylint: disable=comparison-with-callable
+            assert args.func == make_vocab_from_args
             assert args.param_path == "path/to/params"
             assert args.serialization_dir == "serialization_dir"

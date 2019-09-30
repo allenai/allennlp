@@ -71,7 +71,7 @@ class StackedSelfAttentionDecoderNet(DecoderNet):
         self._embed_scale = math.sqrt(decoding_dim)
         self._positional_embedder = PositionalEncoding(decoding_dim,
                                                        positional_encoding_max_steps) \
-                                                       if use_positional_encoding else None
+            if use_positional_encoding else None
         self._dropout = nn.Dropout(dropout_prob)
         self._self_attention = Decoder(DecoderLayer(decoding_dim, deepcopy(attn), deepcopy(attn),
                                                     feed_forward, residual_dropout_prob), num_layers)
@@ -126,10 +126,11 @@ class Decoder(nn.Module):
     @overrides
     def forward(self, x: torch.Tensor, memory: torch.Tensor,
                 src_mask: torch.Tensor, tgt_mask: torch.Tensor) -> torch.Tensor:
-        # pylint: disable=arguments-differ
+
         for layer in self.layers:
             x = layer(x, memory, src_mask, tgt_mask)
         return self.norm(x)
+
 
 class DecoderLayer(nn.Module):
     """
@@ -148,7 +149,7 @@ class DecoderLayer(nn.Module):
 
     def forward(self, x: torch.Tensor, memory: torch.Tensor,
                 src_mask: torch.Tensor, tgt_mask: torch.Tensor) -> torch.Tensor:
-        # pylint: disable=arguments-differ
+
         "Follow Figure 1 (right) for connections."
         x = self.sublayer[0](x, lambda x: self.self_attn(x, x, x, tgt_mask))
         x = self.sublayer[1](x, lambda x: self.src_attn(x, memory, memory, src_mask))

@@ -1,10 +1,10 @@
-# pylint: disable=no-self-use
 import numpy as np
 import torch
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.modules.seq2vec_encoders.cnn_highway_encoder import CnnHighwayEncoder
 from allennlp.modules.time_distributed import TimeDistributed
+
 
 class TestCnnHighwayEncoder(AllenNlpTestCase):
     def run_encoder_against_random_embeddings(self, do_layer_norm):

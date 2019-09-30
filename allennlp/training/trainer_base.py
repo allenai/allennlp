@@ -6,7 +6,7 @@ Typically you might create a configuration file specifying the model and
 training parameters and then use :mod:`~allennlp.commands.train`
 rather than instantiating a ``Trainer`` yourself.
 """
-# pylint: disable=too-many-lines
+
 
 import logging
 from typing import Dict, List, Union, Any
@@ -63,7 +63,7 @@ class TrainerBase(Registrable):
                     recover: bool = False,
                     cache_directory: str = None,
                     cache_prefix: str = None):
-        # pylint: disable=arguments-differ
+
         typ3 = params.get("trainer", {}).pop("type", "default")
 
         if typ3 == "default":
@@ -71,7 +71,7 @@ class TrainerBase(Registrable):
             from allennlp.training.trainer import Trainer
             from allennlp.training.trainer_pieces import TrainerPieces
 
-            pieces = TrainerPieces.from_params(params, serialization_dir, recover, cache_directory, cache_prefix)  # pylint: disable=no-member
+            pieces = TrainerPieces.from_params(params, serialization_dir, recover, cache_directory, cache_prefix)
             return Trainer.from_params(model=pieces.model,
                                        serialization_dir=serialization_dir,
                                        iterator=pieces.iterator,
@@ -82,6 +82,6 @@ class TrainerBase(Registrable):
         else:
             klass = TrainerBase.by_name(typ3)
             # Explicit check to prevent recursion.
-            is_overriden = klass.from_params.__func__ != TrainerBase.from_params.__func__ # type: ignore
+            is_overriden = klass.from_params.__func__ != TrainerBase.from_params.__func__  # type: ignore
             assert is_overriden, f"Class {klass.__name__} must override `from_params`."
             return klass.from_params(params, serialization_dir, recover, cache_directory, cache_prefix)

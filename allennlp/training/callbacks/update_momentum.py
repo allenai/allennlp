@@ -8,7 +8,7 @@ from allennlp.training.callbacks.events import Events
 from allennlp.training.momentum_schedulers import MomentumScheduler
 
 if TYPE_CHECKING:
-    from allennlp.training.callback_trainer import CallbackTrainer  # pylint:disable=unused-import
+    from allennlp.training.callback_trainer import CallbackTrainer
 
 
 @Callback.register("update_momentum")
@@ -43,6 +43,6 @@ class UpdateMomentum(Callback):
 
     @classmethod
     def from_params(cls, params: Params, optimizer: torch.optim.Optimizer) -> 'UpdateMomentum':  # type: ignore
-        # pylint: disable=arguments-differ
+
         return cls(MomentumScheduler.from_params(params=params.pop("momentum_scheduler"),
                                                  optimizer=optimizer))

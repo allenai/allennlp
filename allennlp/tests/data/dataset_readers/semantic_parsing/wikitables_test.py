@@ -1,4 +1,4 @@
-# pylint: disable=no-self-use
+
 
 from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
@@ -52,7 +52,7 @@ def assert_dataset_correct(dataset):
                        '<List[Row],NumberColumn:Number> -> average',
                        'List[Row] -> [<List[Row]:List[Row]>, List[Row]]',
                        '<List[Row]:List[Row]> -> last',
-                       'List[Row] -> [<List[Row],StringColumn,List[str]:List[Row]>, List[Row], StringColumn, List[str]]',  # pylint: disable=line-too-long
+                       'List[Row] -> [<List[Row],StringColumn,List[str]:List[Row]>, List[Row], StringColumn, List[str]]',
                        '<List[Row],StringColumn,List[str]:List[Row]> -> filter_in',
                        'List[Row] -> all_rows',
                        'StringColumn -> string_column:league',

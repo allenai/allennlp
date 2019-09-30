@@ -1,7 +1,6 @@
-# pylint: disable=no-self-use,invalid-name
-
 from allennlp.data.dataset_readers import UniversalDependenciesDatasetReader
 from allennlp.common.testing import AllenNlpTestCase
+
 
 class TestUniversalDependenciesDatasetReader(AllenNlpTestCase):
     data_path = AllenNlpTestCase.FIXTURES_ROOT / "data" / "dependencies.conllu"

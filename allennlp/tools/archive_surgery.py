@@ -9,7 +9,7 @@ to modify the config.json, and then re-tar everything to a new archive.
 If your $EDITOR environment variable is not set, you'll have to explicitly
 specify which editor to use.
 """
-# pylint: disable=invalid-name,redefined-outer-name
+
 import argparse
 import atexit
 import logging

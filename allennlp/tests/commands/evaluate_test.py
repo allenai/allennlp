@@ -1,4 +1,3 @@
-# pylint: disable=invalid-name,no-self-use
 import argparse
 import json
 from typing import Iterator, List, Dict, Iterable
@@ -31,9 +30,9 @@ class DummyIterator(DataIterator):
 
 class DummyModel(Model):
     def __init__(self) -> None:
-        super().__init__(None) # type: ignore
+        super().__init__(None)  # type: ignore
 
-    def forward(self, **kwargs) -> Dict[str, torch.Tensor]:  # type: ignore # pylint: disable=arguments-differ
+    def forward(self, **kwargs) -> Dict[str, torch.Tensor]:  # type: ignore
         return kwargs
 
 
@@ -88,7 +87,7 @@ class TestEvaluate(AllenNlpTestCase):
         archive_path = str(self.FIXTURES_ROOT / "decomposable_attention" / "serialization" / "model.tar.gz")
         # snli2 has a extra token ("seahorse") in it.
         evaluate_data_path = str(self.FIXTURES_ROOT / 'data' / 'snli2.jsonl')
-        embeddings_filename = str(self.FIXTURES_ROOT / 'data' / 'seahorse_embeddings.gz') #has only seahorse vector
+        embeddings_filename = str(self.FIXTURES_ROOT / 'data' / 'seahorse_embeddings.gz')  # has only seahorse vector
         embedding_sources_mapping = json.dumps({"_text_field_embedder.token_embedder_tokens": embeddings_filename})
         kebab_args = ["evaluate", archive_path, evaluate_data_path, "--cuda-device", "-1"]
 

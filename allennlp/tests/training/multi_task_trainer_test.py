@@ -10,8 +10,6 @@ The main problem is that the ``SingleTaskTrainer`` expects
 a single ``train_path``. (Even that you could fudge by passing
 in a Dict[str, str] serialized as JSON, but that's really hacky.)
 """
-# pylint: disable=bad-continuation
-
 from typing import List, Dict, Iterable, Any, Set
 from collections import defaultdict
 import os
@@ -35,6 +33,7 @@ from allennlp.training.checkpointer import Checkpointer
 from allennlp.training.optimizers import Optimizer
 from allennlp.training.trainer_base import TrainerBase
 
+
 @DatasetReader.register("multi-task-test")
 class MyReader(DatasetReader):
     """
@@ -48,7 +47,7 @@ class MyReader(DatasetReader):
         self.token_indexers: Dict[str, TokenIndexer] = {"tokens": SingleIdTokenIndexer()}
 
     def text_to_instance(self, sentence: str) -> Instance:  # type: ignore
-        # pylint: disable=arguments-differ
+
         tokens = self.tokenizer.tokenize(sentence)
         return Instance({self.field_name: TextField(tokens, self.token_indexers)})
 
@@ -156,8 +155,8 @@ class MyModel(Model):
                 field_a: torch.Tensor = None,
                 field_b: torch.Tensor = None,
                 field_c: torch.Tensor = None) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
-        loss = torch.tensor(0.0)   # pylint: disable=not-callable
+
+        loss = torch.tensor(0.0)
         if dataset[0] == "a":
             loss += field_a["tokens"].sum() * self.weight
         elif dataset[0] == "b":
@@ -208,7 +207,6 @@ class MultiTaskTrainer(TrainerBase):
             self.model.load_state_dict(model_state)
             self.optimizer.load_state_dict(trainer_state["optimizer"])
             return trainer_state["epoch"] + 1
-
 
     def train(self) -> Dict:
         start_epoch = self.restore_checkpoint()
@@ -261,7 +259,6 @@ class MultiTaskTrainer(TrainerBase):
         params.assert_empty(__name__)
 
         return MultiTaskTrainer(model, serialization_dir, iterator, mingler, optimizer, datasets, num_epochs)
-
 
 
 class MultiTaskTest(AllenNlpTestCase):

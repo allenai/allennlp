@@ -5,6 +5,7 @@ from allennlp.modules.span_extractors.span_extractor import SpanExtractor
 from allennlp.modules.time_distributed import TimeDistributed
 from allennlp.nn import util
 
+
 @SpanExtractor.register("self_attentive")
 class SelfAttentiveSpanExtractor(SpanExtractor):
     """

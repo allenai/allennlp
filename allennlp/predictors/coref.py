@@ -57,7 +57,7 @@ class CorefPredictor(Predictor):
         -------
         A dictionary representation of the predicted coreference clusters.
         """
-        return self.predict_json({"document" : document})
+        return self.predict_json({"document": document})
 
     def predict_tokenized(self, tokenized_document: List[str]) -> JsonDict:
         """
@@ -143,7 +143,7 @@ class CorefPredictor(Predictor):
                 if final_token.tag_ in ["PRP$", "POS"]:
                     resolved[coref[0]] = mention_span.text + "'s" + final_token.whitespace_
                 else:
-                # If not possessive, then replace first token with main mention directly
+                    # If not possessive, then replace first token with main mention directly
                     resolved[coref[0]] = mention_span.text + final_token.whitespace_
                 # Mask out remaining tokens
                 for i in range(coref[0] + 1, coref[1] + 1):
@@ -183,7 +183,7 @@ class CorefPredictor(Predictor):
         for pipe in filter(None, self._spacy.pipeline):
             pipe[1](spacy_document)
 
-        sentences = [[token.text for token in sentence] for sentence in spacy_document.sents]  # pylint: disable=not-an-iterable
+        sentences = [[token.text for token in sentence] for sentence in spacy_document.sents]
         instance = self._dataset_reader.text_to_instance(sentences)
         return instance
 

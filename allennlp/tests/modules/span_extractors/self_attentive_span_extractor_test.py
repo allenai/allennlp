@@ -1,9 +1,9 @@
-# pylint: disable=no-self-use,invalid-name, protected-access
 import numpy
 import torch
 
 from allennlp.modules.span_extractors import SpanExtractor, SelfAttentiveSpanExtractor
 from allennlp.common.params import Params
+
 
 class TestSelfAttentiveSpanExtractor:
     def test_locally_normalised_span_extractor_can_build_from_params(self):
@@ -49,7 +49,6 @@ class TestSelfAttentiveSpanExtractor:
         # Second span.
         mean_embeddings = sequence_tensor[batch_element, 3:5, :].mean(0)
         numpy.testing.assert_array_almost_equal(spans[1].data.numpy(), mean_embeddings.data.numpy())
-
 
         # Now test the case in which we have some masked spans in our indices.
         indices_mask = torch.LongTensor([[1, 1], [1, 0]])

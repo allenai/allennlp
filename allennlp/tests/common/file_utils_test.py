@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 from collections import Counter
 import os
 import pathlib
@@ -27,6 +26,7 @@ def set_up_glove(url: str, byt: bytes, change_etag_every: int = 1000):
 
     etags_left = change_etag_every
     etag = "0"
+
     def head_callback(_):
         """
         Writing this as a callback allows different responses to different HEAD requests.

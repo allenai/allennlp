@@ -22,5 +22,5 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         return self.output_dim
 
     def forward(self, token_ids: torch.LongTensor) -> torch.Tensor:  # type: ignore
-        # pylint: disable=arguments-differ
+
         return self.transformer_model(token_ids)[0]

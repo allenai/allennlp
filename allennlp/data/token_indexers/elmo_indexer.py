@@ -41,7 +41,7 @@ class ELMoCharacterMapper:
     end_of_sentence_character = 257  # <end sentence>
     beginning_of_word_character = 258  # <begin word>
     end_of_word_character = 259  # <end word>
-    padding_character = 260 # <padding>
+    padding_character = 260  # <padding>
 
     beginning_of_sentence_characters = _make_bos_eos(
             beginning_of_sentence_character,
@@ -106,7 +106,7 @@ class ELMoTokenCharactersIndexer(TokenIndexer[List[int]]):
     token_min_padding_length : ``int``, optional (default=``0``)
         See :class:`TokenIndexer`.
     """
-    # pylint: disable=no-self-use
+
     def __init__(self,
                  namespace: str = 'elmo_characters',
                  tokens_to_add: Dict[str, int] = None,
@@ -125,10 +125,9 @@ class ELMoTokenCharactersIndexer(TokenIndexer[List[int]]):
                           vocabulary: Vocabulary,
                           index_name: str) -> Dict[str, List[List[int]]]:
         # TODO(brendanr): Retain the token to index mappings in the vocabulary and remove this
-        # pylint pragma. See:
+
         # https://github.com/allenai/allennlp/blob/master/allennlp/data/token_indexers/wordpiece_indexer.py#L113
 
-        # pylint: disable=unused-argument
         texts = [token.text for token in tokens]
 
         if any(text is None for text in texts):
@@ -138,7 +137,7 @@ class ELMoTokenCharactersIndexer(TokenIndexer[List[int]]):
 
     @overrides
     def get_padding_lengths(self, token: List[int]) -> Dict[str, int]:
-        # pylint: disable=unused-argument
+
         return {}
 
     @staticmethod
@@ -150,7 +149,7 @@ class ELMoTokenCharactersIndexer(TokenIndexer[List[int]]):
                          tokens: Dict[str, List[List[int]]],
                          desired_num_tokens: Dict[str, int],
                          padding_lengths: Dict[str, int]) -> Dict[str, torch.Tensor]:
-        # pylint: disable=unused-argument
+
         return {key: torch.LongTensor(pad_sequence_to_length(
                 val, desired_num_tokens[key], default_value=self._default_value_for_padding))
                 for key, val in tokens.items()}

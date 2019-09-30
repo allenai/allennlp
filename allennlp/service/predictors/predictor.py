@@ -1,4 +1,3 @@
-# pylint: disable=unused-import
 import warnings
 
 from allennlp.predictors.predictor import Predictor, DEFAULT_PREDICTORS

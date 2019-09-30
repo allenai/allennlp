@@ -12,6 +12,7 @@ from tqdm import tqdm as _tqdm
 # https://github.com/tqdm/tqdm/issues/469
 _tqdm.monitor_interval = 0
 
+
 class Tqdm:
     # These defaults are the same as the argument defaults in tqdm.
     default_mininterval: float = 0.1

@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 import gzip
 import warnings
 
@@ -21,7 +20,7 @@ from allennlp.modules.token_embedders.embedding import (Embedding,
 
 
 class TestEmbedding(AllenNlpTestCase):
-    # pylint: disable=protected-access
+
     def test_get_embedding_layer_uses_correct_embedding_dim(self):
         vocab = Vocabulary()
         vocab.add_token_to_namespace('word1')
@@ -238,7 +237,7 @@ class TestEmbedding(AllenNlpTestCase):
         extension_counter = {"tokens_a": {"word3": 1}}
         vocab._extend(extension_counter)
 
-        embedder.extend_vocab(vocab, "tokens_a") # specified namespace
+        embedder.extend_vocab(vocab, "tokens_a")  # specified namespace
 
         extended_weight = embedder.weight
         assert extended_weight.shape[0] == 5
@@ -258,7 +257,7 @@ class TestEmbedding(AllenNlpTestCase):
         extension_counter = {"tokens": {"word3": 1}}
         vocab._extend(extension_counter)
 
-        embedder.extend_vocab(vocab) # default namespace
+        embedder.extend_vocab(vocab)  # default namespace
 
         extended_weight = embedder.weight
         assert extended_weight.shape[0] == 5
@@ -280,7 +279,7 @@ class TestEmbedding(AllenNlpTestCase):
         extension_counter = {"tokens_a": {"word3": 1}}
         vocab._extend(extension_counter)
 
-        embedder.extend_vocab(vocab, "tokens_a") # specified namespace
+        embedder.extend_vocab(vocab, "tokens_a")  # specified namespace
 
         extended_weight = embedder.weight
         assert extended_weight.shape[0] == 5
@@ -310,7 +309,7 @@ class TestEmbedding(AllenNlpTestCase):
         assert tuple(original_weight.size()) == (4, 3)  # 4 because of padding and OOV
 
         vocab.add_token_to_namespace('word3')
-        embedder.extend_vocab(vocab, extension_pretrained_file=embeddings_filename) # default namespace
+        embedder.extend_vocab(vocab, extension_pretrained_file=embeddings_filename)  # default namespace
         extended_weight = embedder.weight
 
         # Make sure extenstion happened for extra token in extended vocab
@@ -342,7 +341,7 @@ class TestEmbedding(AllenNlpTestCase):
         embedder._vocab_namespace = None
         embedder.weight = torch.nn.Parameter(embedder.weight[:1, :])
         assert embedder.weight.shape[0] == 1
-        embedder.extend_vocab(vocab) # Don't specify namespace
+        embedder.extend_vocab(vocab)  # Don't specify namespace
         assert embedder.weight.shape[0] == 1
 
     def test_embedding_vocab_extension_raises_error_for_incorrect_vocab(self):

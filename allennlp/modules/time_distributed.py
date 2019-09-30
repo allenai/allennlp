@@ -28,7 +28,7 @@ class TimeDistributed(torch.nn.Module):
 
     @overrides
     def forward(self, *inputs, pass_through: List[str] = None, **kwargs):
-        # pylint: disable=arguments-differ
+
         pass_through = pass_through or []
 
         reshaped_inputs = [self._reshape_tensor(input_tensor) for input_tensor in inputs]

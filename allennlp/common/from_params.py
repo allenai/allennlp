@@ -47,13 +47,13 @@ import logging
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 T = TypeVar('T')
 
 # If a function parameter has no default value specified,
 # this is what the inspect module returns.
-_NO_DEFAULT = inspect.Parameter.empty  # pylint: disable=invalid-name
+_NO_DEFAULT = inspect.Parameter.empty
 
 
 def takes_arg(obj, arg: str) -> bool:
@@ -97,10 +97,11 @@ def remove_optional(annotation: type):
     """
     origin = getattr(annotation, '__origin__', None)
     args = getattr(annotation, '__args__', ())
-    if origin == Union and len(args) == 2 and args[1] == type(None):
+    if origin == Union and len(args) == 2 and args[1] == type(None):  # noqa
         return args[0]
     else:
         return annotation
+
 
 def create_kwargs(cls: Type[T], params: Params, **extras) -> Dict[str, Any]:
     """
@@ -166,7 +167,7 @@ def create_extras(cls: Type[T],
     return subextras
 
 
-def construct_arg(cls: Type[T], # pylint: disable=inconsistent-return-statements,too-many-return-statements
+def construct_arg(cls: Type[T],
                   param_name: str,
                   annotation: Type,
                   default: Any,
@@ -208,7 +209,7 @@ def construct_arg(cls: Type[T], # pylint: disable=inconsistent-return-statements
         module_path = load_module_params.pop("module_path")
         freeze = load_module_params.pop("freeze", True)
         archive = load_archive(archive_file)
-        result = archive.extract_module(module_path, freeze) # pylint: disable=no-member
+        result = archive.extract_module(module_path, freeze)
         if not isinstance(result, annotation):
             raise ConfigurationError(f"The module from model at {archive_file} at path {module_path} "
                                      f"was expected of type {annotation} but is of type {type(result)}")
@@ -334,7 +335,7 @@ class FromParams:
         If you need more complex logic in your from `from_params` method, you'll have to implement
         your own method that overrides this one.
         """
-        # pylint: disable=protected-access
+
         from allennlp.common.registrable import Registrable  # import here to avoid circular imports
 
         logger.info(f"instantiating class {cls} from params {getattr(params, 'params', params)} "
@@ -351,7 +352,7 @@ class FromParams:
         if registered_subclasses is not None:
             # We know ``cls`` inherits from Registrable, so we'll use a cast to make mypy happy.
             # We have to use a disable to make pylint happy.
-            # pylint: disable=no-member
+
             as_registrable = cast(Type[Registrable], cls)
             default_to_first_choice = as_registrable.default_implementation is not None
             choice = params.pop_choice("type",

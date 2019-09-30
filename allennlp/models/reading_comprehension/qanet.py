@@ -95,7 +95,7 @@ class QaNet(Model):
                 span_start: torch.IntTensor = None,
                 span_end: torch.IntTensor = None,
                 metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
+
         """
         Parameters
         ----------

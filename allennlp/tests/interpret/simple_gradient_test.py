@@ -1,10 +1,10 @@
-# pylint: disable=no-self-use,invalid-name
 from pytest import approx
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor
 from allennlp.interpret.saliency_interpreters import SimpleGradient
-from ..modules.language_model_heads.linear import LinearLanguageModelHead  # pylint: disable=unused-import
+from ..modules.language_model_heads.linear import LinearLanguageModelHead
+
 
 class TestSimpleGradient(AllenNlpTestCase):
     def test_simple_gradient_basic_text(self):

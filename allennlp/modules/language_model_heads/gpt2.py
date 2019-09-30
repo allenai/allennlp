@@ -23,7 +23,7 @@ class Gpt2LanguageModelHead(LanguageModelHead):
         # would only load the GPT2 weights once.  Though, it's not clear how to do that here, as we
         # need to load `GPT2LMHeadModel`, not just `GPT2Model`...
         gpt2_model = GPT2LMHeadModel.from_pretrained(model_name)
-        self.gpt2_lm_head = gpt2_model.lm_head  # pylint: disable=no-member
+        self.gpt2_lm_head = gpt2_model.lm_head
 
     @overrides
     def get_input_dim(self) -> int:

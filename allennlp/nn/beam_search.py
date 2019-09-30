@@ -6,8 +6,8 @@ import torch
 from allennlp.common.checks import ConfigurationError
 
 
-StateType = Dict[str, torch.Tensor]  # pylint: disable=invalid-name
-StepFunctionType = Callable[[torch.Tensor, StateType], Tuple[torch.Tensor, StateType]]  # pylint: disable=invalid-name
+StateType = Dict[str, torch.Tensor]
+StepFunctionType = Callable[[torch.Tensor, StateType], Tuple[torch.Tensor, StateType]]
 
 
 class BeamSearch:
@@ -120,7 +120,7 @@ class BeamSearch:
 
         # shape: (batch_size, beam_size), (batch_size, beam_size)
         start_top_log_probabilities, start_predicted_classes = \
-                start_class_log_probabilities.topk(self.beam_size)
+            start_class_log_probabilities.topk(self.beam_size)
         if self.beam_size == 1 and (start_predicted_classes == self._end_index).all():
             warnings.warn("Empty sequences predicted. You may want to increase the beam size or ensure "
                           "your step function is working properly.",
@@ -146,10 +146,10 @@ class BeamSearch:
         for key, state_tensor in state.items():
             _, *last_dims = state_tensor.size()
             # shape: (batch_size * beam_size, *)
-            state[key] = state_tensor.\
-                    unsqueeze(1).\
-                    expand(batch_size, self.beam_size, *last_dims).\
-                    reshape(batch_size * self.beam_size, *last_dims)
+            state[key] = (state_tensor.
+                          unsqueeze(1).
+                          expand(batch_size, self.beam_size, *last_dims).
+                          reshape(batch_size * self.beam_size, *last_dims))
 
         for timestep in range(self.max_steps - 1):
             # shape: (batch_size * beam_size,)
@@ -190,21 +190,21 @@ class BeamSearch:
             # so that we can add them to the current log probs for this timestep.
             # This lets us maintain the log probability of each element on the beam.
             # shape: (batch_size * beam_size, per_node_beam_size)
-            expanded_last_log_probabilities = last_log_probabilities.\
-                    unsqueeze(2).\
-                    expand(batch_size, self.beam_size, self.per_node_beam_size).\
-                    reshape(batch_size * self.beam_size, self.per_node_beam_size)
+            expanded_last_log_probabilities = (last_log_probabilities.
+                                               unsqueeze(2).
+                                               expand(batch_size, self.beam_size, self.per_node_beam_size).
+                                               reshape(batch_size * self.beam_size, self.per_node_beam_size))
 
             # shape: (batch_size * beam_size, per_node_beam_size)
             summed_top_log_probabilities = top_log_probabilities + expanded_last_log_probabilities
 
             # shape: (batch_size, beam_size * per_node_beam_size)
-            reshaped_summed = summed_top_log_probabilities.\
-                    reshape(batch_size, self.beam_size * self.per_node_beam_size)
+            reshaped_summed = (summed_top_log_probabilities.
+                               reshape(batch_size, self.beam_size * self.per_node_beam_size))
 
             # shape: (batch_size, beam_size * per_node_beam_size)
-            reshaped_predicted_classes = predicted_classes.\
-                    reshape(batch_size, self.beam_size * self.per_node_beam_size)
+            reshaped_predicted_classes = (predicted_classes.
+                                          reshape(batch_size, self.beam_size * self.per_node_beam_size))
 
             # Keep only the top `beam_size` beam indices.
             # shape: (batch_size, beam_size), (batch_size, beam_size)
@@ -233,15 +233,15 @@ class BeamSearch:
             for key, state_tensor in state.items():
                 _, *last_dims = state_tensor.size()
                 # shape: (batch_size, beam_size, *)
-                expanded_backpointer = backpointer.\
-                        view(batch_size, self.beam_size, *([1] * len(last_dims))).\
-                        expand(batch_size, self.beam_size, *last_dims)
+                expanded_backpointer = (backpointer.
+                                        view(batch_size, self.beam_size, *([1] * len(last_dims))).
+                                        expand(batch_size, self.beam_size, *last_dims))
 
                 # shape: (batch_size * beam_size, *)
-                state[key] = state_tensor.\
-                        reshape(batch_size, self.beam_size, *last_dims).\
-                        gather(1, expanded_backpointer).\
-                        reshape(batch_size * self.beam_size, *last_dims)
+                state[key] = (state_tensor.
+                              reshape(batch_size, self.beam_size, *last_dims).
+                              gather(1, expanded_backpointer).
+                              reshape(batch_size * self.beam_size, *last_dims))
 
         if not torch.isfinite(last_log_probabilities).all():
             warnings.warn("Infinite log probabilities encountered. Some final sequences may not make sense. "

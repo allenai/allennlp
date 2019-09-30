@@ -64,7 +64,7 @@ class LinearMatrixAttention(MatrixAttention):
         self._bias.data.fill_(0)
 
     @overrides
-    def forward(self,  # pylint: disable=arguments-differ
+    def forward(self,
                 matrix_1: torch.Tensor,
                 matrix_2: torch.Tensor) -> torch.Tensor:
         combined_tensors = util.combine_tensors_and_multiply(self._combination,

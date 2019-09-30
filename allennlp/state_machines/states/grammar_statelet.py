@@ -2,7 +2,7 @@ from typing import Callable, Dict, Generic, List, TypeVar
 
 from allennlp.nn import util
 
-ActionRepresentation = TypeVar('ActionRepresentation')  # pylint: disable=invalid-name
+ActionRepresentation = TypeVar('ActionRepresentation')
 
 
 class GrammarStatelet(Generic[ActionRepresentation]):
@@ -117,7 +117,7 @@ class GrammarStatelet(Generic[ActionRepresentation]):
 
     def __eq__(self, other):
         if isinstance(self, other.__class__):
-            # pylint: disable=protected-access
+
             return all([
                     self._nonterminal_stack == other._nonterminal_stack,
                     util.tensors_equal(self._valid_actions, other._valid_actions),

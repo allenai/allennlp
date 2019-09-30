@@ -1,5 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
-
 import torch
 
 from allennlp.common.testing import ModelTestCase

@@ -95,9 +95,9 @@ class ESIM(Model):
                 premise: Dict[str, torch.LongTensor],
                 hypothesis: Dict[str, torch.LongTensor],
                 label: torch.IntTensor = None,
-                metadata: List[Dict[str, Any]] = None  # pylint:disable=unused-argument
-               ) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
+                metadata: List[Dict[str, Any]] = None
+                ) -> Dict[str, torch.Tensor]:
+
         """
         Parameters
         ----------

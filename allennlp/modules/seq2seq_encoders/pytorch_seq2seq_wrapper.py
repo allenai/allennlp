@@ -64,7 +64,7 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
         return self._is_bidirectional
 
     @overrides
-    def forward(self,  # pylint: disable=arguments-differ
+    def forward(self,
                 inputs: torch.Tensor,
                 mask: torch.Tensor,
                 hidden_state: torch.Tensor = None) -> torch.Tensor:

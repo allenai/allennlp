@@ -13,7 +13,7 @@ from allennlp.predictors.predictor import Predictor
 @Predictor.register('masked_language_model')
 class MaskedLanguageModelPredictor(Predictor):
     def predict(self, sentence_with_masks: str) -> JsonDict:
-        return self.predict_json({"sentence" : sentence_with_masks})
+        return self.predict_json({"sentence": sentence_with_masks})
 
     @overrides
     def predictions_to_labeled_instances(self,
@@ -22,7 +22,7 @@ class MaskedLanguageModelPredictor(Predictor):
         new_instance = deepcopy(instance)
         token_field: TextField = instance['tokens']  # type: ignore
         mask_targets = [Token(target_top_k[0]) for target_top_k in outputs['words']]
-        # pylint: disable=protected-access
+
         new_instance.add_field('target_ids',
                                TextField(mask_targets, token_field._token_indexers),
                                vocab=self._model.vocab)

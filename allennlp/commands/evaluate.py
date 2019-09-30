@@ -64,12 +64,12 @@ from allennlp.models.archival import load_archive
 from allennlp.training.util import evaluate
 from allennlp.common import Params
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 class Evaluate(Subcommand):
     def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
-        # pylint: disable=protected-access
+
         description = '''Evaluate the specified model + dataset'''
         subparser = parser.add_parser(
                 name, description=description, help='Evaluate the specified model + dataset.')
@@ -118,6 +118,7 @@ class Evaluate(Subcommand):
         subparser.set_defaults(func=evaluate_from_args)
 
         return subparser
+
 
 def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     # Disable some of the more verbose logging statements

@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use
 from typing import Any, Dict, List, Mapping
 
 from overrides import overrides
@@ -51,7 +50,7 @@ class MetadataField(Field[DataArray], Mapping[str, Any]):
 
     @overrides
     def as_tensor(self, padding_lengths: Dict[str, int]) -> DataArray:
-        # pylint: disable=unused-argument
+
         return self.metadata  # type: ignore
 
     @overrides

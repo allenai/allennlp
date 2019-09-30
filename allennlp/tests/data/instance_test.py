@@ -1,8 +1,8 @@
-# pylint: disable=no-self-use,invalid-name,no-member
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Instance
 from allennlp.data.fields import TextField, LabelField
 from allennlp.data.tokenizers import Token
+
 
 class TestInstance(AllenNlpTestCase):
     def test_instance_implements_mutable_mapping(self):

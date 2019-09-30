@@ -1,8 +1,8 @@
-# pylint: disable=invalid-name,no-self-use
 import torch
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.modules.seq2seq_encoders.gated_cnn_encoder import GatedCnnEncoder
+
 
 class TestGatedCnnEncoder(AllenNlpTestCase):
     def test_gated_cnn_encoder(self):

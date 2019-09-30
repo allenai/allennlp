@@ -87,10 +87,10 @@ class LstmCellDecoderNet(DecoderNet):
                                                              bidirectional=self._bidirectional_input)
 
         return {
-                "decoder_hidden": final_encoder_output, # shape: (batch_size, decoder_output_dim)
+                "decoder_hidden": final_encoder_output,  # shape: (batch_size, decoder_output_dim)
                 "decoder_context": final_encoder_output.new_zeros(batch_size,
                                                                   self.decoding_dim)
-                                   # shape: (batch_size, decoder_output_dim)
+                #                  shape: (batch_size, decoder_output_dim)
         }
 
     @overrides

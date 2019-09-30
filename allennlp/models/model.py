@@ -18,7 +18,7 @@ from allennlp.data.dataset import Batch
 from allennlp.nn import util
 from allennlp.nn.regularizers import RegularizerApplicator
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 # When training a model, many sets of weights are saved. By default we want to
 # save/load this set of weights.
@@ -65,14 +65,14 @@ class Model(torch.nn.Module, Registrable):
         else:
             return self._regularizer(self)
 
-    def get_parameters_for_histogram_tensorboard_logging( # pylint: disable=invalid-name
+    def get_parameters_for_histogram_tensorboard_logging(
             self) -> List[str]:
         """
         Returns the name of model parameters used for logging histograms to tensorboard.
         """
         return [name for name, _ in self.named_parameters()]
 
-    def forward(self, *inputs) -> Dict[str, torch.Tensor]:  # pylint: disable=arguments-differ
+    def forward(self, *inputs) -> Dict[str, torch.Tensor]:
         """
         Defines the forward pass of the model. In addition, to facilitate easy training,
         this method is designed to compute a loss function defined by a user.
@@ -185,7 +185,7 @@ class Model(torch.nn.Module, Registrable):
         By default in the base class we do nothing.  If your model has some special decoding step,
         override this method.
         """
-        # pylint: disable=no-self-use
+
         return output_dict
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
@@ -200,7 +200,7 @@ class Model(torch.nn.Module, Registrable):
         :class:`~allennlp.training.Metric` handling the accumulation of the metric until this
         method is called.
         """
-        # pylint: disable=unused-argument,no-self-use
+
         return {}
 
     def _get_prediction_device(self) -> int:
@@ -229,7 +229,7 @@ class Model(torch.nn.Module, Registrable):
         by a class attribute ``_warn_for_unseperable_batches`` because it would be extremely verbose
         otherwise.
         """
-        if  output_key not in self._warn_for_unseparable_batches:
+        if output_key not in self._warn_for_unseparable_batches:
             logger.warning(f"Encountered the {output_key} key in the model's return dictionary which "
                            "couldn't be split by the batch size. Key will be ignored.")
             # We only want to warn once for this key,
@@ -323,7 +323,7 @@ class Model(torch.nn.Module, Registrable):
 
         # Load using an overridable _load method.
         # This allows subclasses of Model to override _load.
-        # pylint: disable=protected-access
+
         return cls.by_name(model_type)._load(config, serialization_dir, weights_file, cuda_device)
 
     def extend_embedder_vocab(self, embedding_sources_mapping: Dict[str, str] = None) -> None:
@@ -352,6 +352,7 @@ class Model(torch.nn.Module, Registrable):
                 module.extend_vocab(self.vocab,
                                     extension_pretrained_file=pretrained_file,
                                     model_path=model_path)
+
 
 def remove_pretrained_embedding_params(params: Params):
     if isinstance(params, Params):  # The model could possible be a string, for example.

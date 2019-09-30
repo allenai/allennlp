@@ -4,6 +4,7 @@ from allennlp.data.tokenizers.word_filter import RegexFilter
 from allennlp.data.tokenizers.word_filter import StopwordFilter
 from allennlp.data.tokenizers.token import Token
 
+
 class TestWordFilter(AllenNlpTestCase):
     def setUp(self):
         super().setUp()

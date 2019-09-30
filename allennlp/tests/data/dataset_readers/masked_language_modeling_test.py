@@ -1,9 +1,9 @@
-# pylint: disable=no-self-use,invalid-name
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.dataset_readers import MaskedLanguageModelingReader
 from allennlp.data import Vocabulary
 from allennlp.data.tokenizers import PretrainedTransformerTokenizer
 from allennlp.data.token_indexers import PretrainedTransformerIndexer
+
 
 class TestMaskedLanguageModelingDatasetReader(AllenNlpTestCase):
     def test_text_to_instance_with_basic_tokenizer_and_indexer(self):

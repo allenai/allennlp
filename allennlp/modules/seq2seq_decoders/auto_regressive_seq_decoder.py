@@ -211,7 +211,7 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
                 last_predictions_embeddings = self.target_embedder(last_predictions).unsqueeze(1)
 
                 # This step is required, since we want to keep up two different prediction history: gold and real
-                if steps_embeddings.shape[-1] == 0: # pylint: disable=unsubscriptable-object
+                if steps_embeddings.shape[-1] == 0:
                     # There is no previous steps, except for start vectors in ``last_predictions``
                     # shape: (group_size, 1, target_embedding_dim)
                     steps_embeddings = last_predictions_embeddings
@@ -382,8 +382,6 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
     def forward(self,
                 encoder_out: Dict[str, torch.LongTensor],
                 target_tokens: Dict[str, torch.LongTensor] = None) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
-
         state = encoder_out
         decoder_init_state = self._decoder_net.init_decoder_state(state)
         state.update(decoder_init_state)

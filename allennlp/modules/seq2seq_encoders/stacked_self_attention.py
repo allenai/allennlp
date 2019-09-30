@@ -14,7 +14,7 @@ from allennlp.nn.util import add_positional_features
 
 @Seq2SeqEncoder.register("stacked_self_attention")
 class StackedSelfAttentionEncoder(Seq2SeqEncoder):
-    # pylint: disable=line-too-long
+
     """
     Implements a stacked self-attention encoder similar to the Transformer
     architecture in `Attention is all you Need
@@ -57,7 +57,7 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
         The dropout probability for the residual connections.
     attention_dropout_prob : ``float``, optional, (default = 0.1)
         The dropout probability for the attention distributions in each attention layer.
-    """
+    """  # noqa
     def __init__(self,
                  input_dim: int,
                  hidden_dim: int,
@@ -127,7 +127,7 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
         return False
 
     @overrides
-    def forward(self, inputs: torch.Tensor, mask: torch.Tensor): # pylint: disable=arguments-differ
+    def forward(self, inputs: torch.Tensor, mask: torch.Tensor):
         if self._use_positional_encoding:
             output = add_positional_features(inputs)
         else:

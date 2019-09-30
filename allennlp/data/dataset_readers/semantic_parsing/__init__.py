@@ -1,4 +1,3 @@
-# pylint: disable=line-too-long
 from allennlp.data.dataset_readers.semantic_parsing.atis import AtisDatasetReader
 from allennlp.data.dataset_readers.semantic_parsing.nlvr import NlvrDatasetReader
 from allennlp.data.dataset_readers.semantic_parsing.wikitables.wikitables import WikiTablesDatasetReader

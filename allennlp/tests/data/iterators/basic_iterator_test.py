@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 from typing import List, Iterable, Dict, Union
 from collections import Counter
 
@@ -11,12 +10,14 @@ from allennlp.data.fields import TextField
 from allennlp.data.iterators import BasicIterator
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 
+
 class LazyIterable:
     def __init__(self, instances):
         self._instances = instances
 
     def __iter__(self):
         return (instance for instance in self._instances)
+
 
 class IteratorTest(AllenNlpTestCase):
     def setUp(self):
@@ -70,7 +71,7 @@ class IteratorTest(AllenNlpTestCase):
 
     def assert_instances_are_correct(self, candidate_instances):
         # First we need to remove padding tokens from the candidates.
-        # pylint: disable=protected-access
+
         candidate_instances = [tuple(w for w in instance if w != 0) for instance in candidate_instances]
         expected_instances = [tuple(instance.fields["text"]._indexed_tokens["tokens"])
                               for instance in self.instances]
@@ -116,7 +117,7 @@ class TestBasicIterator(IteratorTest):
             self.assert_instances_are_correct(instances)
 
     def test_create_batches_groups_correctly(self):
-        # pylint: disable=protected-access
+
         for test_instances in (self.instances, self.lazy_instances):
             iterator = BasicIterator(batch_size=2)
             batches = list(iterator._create_batches(test_instances, shuffle=False))
@@ -126,7 +127,7 @@ class TestBasicIterator(IteratorTest):
                                          [self.instances[4]]]
 
     def test_few_instances_per_epoch(self):
-        # pylint: disable=protected-access
+
         for test_instances in (self.instances, self.lazy_instances):
             iterator = BasicIterator(batch_size=2, instances_per_epoch=3)
             # First epoch: 3 instances -> [2, 1]
@@ -146,7 +147,7 @@ class TestBasicIterator(IteratorTest):
                                          [self.instances[3]]]
 
     def test_many_instances_per_epoch(self):
-        # pylint: disable=protected-access
+
         for test_instances in (self.instances, self.lazy_instances):
             iterator = BasicIterator(batch_size=2, instances_per_epoch=7)
             # First epoch: 7 instances -> [2, 2, 2, 1]
@@ -164,7 +165,6 @@ class TestBasicIterator(IteratorTest):
                                          [self.instances[4], self.instances[0]],
                                          [self.instances[1], self.instances[2]],
                                          [self.instances[3]]]
-
 
     def test_epoch_tracking_when_one_epoch_at_a_time(self):
         iterator = BasicIterator(batch_size=2, track_epoch=True)
@@ -184,7 +184,6 @@ class TestBasicIterator(IteratorTest):
             epoch = i // 3
             assert all(epoch_num == epoch for epoch_num in batch['epoch_num'])
 
-
     def test_epoch_tracking_forever(self):
         iterator = BasicIterator(batch_size=2, track_epoch=True)
         iterator.index_with(self.vocab)
@@ -199,9 +198,7 @@ class TestBasicIterator(IteratorTest):
             epoch = i // 3
             assert all(epoch_num == epoch for epoch_num in batch['epoch_num'])
 
-
     def test_shuffle(self):
-        # pylint: disable=protected-access
         for test_instances in (self.instances, self.lazy_instances):
 
             iterator = BasicIterator(batch_size=2, instances_per_epoch=100)
@@ -219,9 +216,7 @@ class TestBasicIterator(IteratorTest):
             shuffled_counts = Counter(id(instance) for batch in shuffled_batches for instance in batch)
             assert in_order_counts == shuffled_counts
 
-
     def test_max_instances_in_memory(self):
-        # pylint: disable=protected-access
         for test_instances in (self.instances, self.lazy_instances):
             iterator = BasicIterator(batch_size=2, max_instances_in_memory=3)
             # One epoch: 5 instances -> [2, 1, 2]
@@ -232,7 +227,7 @@ class TestBasicIterator(IteratorTest):
                                          [self.instances[3], self.instances[4]]]
 
     def test_multiple_cursors(self):
-        # pylint: disable=protected-access
+
         lazy_instances1 = _LazyInstances(lambda: (i for i in self.instances))
         lazy_instances2 = _LazyInstances(lambda: (i for i in self.instances))
 
@@ -265,7 +260,7 @@ class TestBasicIterator(IteratorTest):
             assert grouped_instances == [[self.instances[2]], [self.instances[3]]]
 
     def test_from_params(self):
-        # pylint: disable=protected-access
+
         params = Params({})
         iterator = BasicIterator.from_params(params)
         assert iterator._batch_size == 32  # default value
@@ -276,7 +271,7 @@ class TestBasicIterator(IteratorTest):
 
     def test_maximum_samples_per_batch(self):
         for test_instances in (self.instances, self.lazy_instances):
-            # pylint: disable=protected-access
+
             iterator = BasicIterator(
                     batch_size=3, maximum_samples_per_batch=['num_tokens', 9]
             )
@@ -294,7 +289,7 @@ class TestBasicIterator(IteratorTest):
             assert stats['sample_sizes'] == [8, 3, 9, 1]
 
     def test_maximum_samples_per_batch_packs_tightly(self):
-        # pylint: disable=protected-access
+
         token_counts = [10, 4, 3]
         test_instances = self.create_instances_from_token_counts(token_counts)
 

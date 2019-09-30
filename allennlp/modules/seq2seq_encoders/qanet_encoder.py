@@ -104,7 +104,7 @@ class QaNetEncoder(Seq2SeqEncoder):
         return False
 
     @overrides
-    def forward(self, inputs: torch.Tensor, mask: torch.Tensor = None) -> torch.Tensor:  # pylint: disable=arguments-differ
+    def forward(self, inputs: torch.Tensor, mask: torch.Tensor = None) -> torch.Tensor:
         inputs = self._input_projection_layer(inputs)
         output = inputs
         for encoder_block in self._encoder_blocks:
@@ -219,7 +219,7 @@ class QaNetEncoderBlock(Seq2SeqEncoder):
         return False
 
     @overrides
-    def forward(self, inputs: torch.Tensor, mask: torch.Tensor = None) -> torch.Tensor:  # pylint: disable=arguments-differ
+    def forward(self, inputs: torch.Tensor, mask: torch.Tensor = None) -> torch.Tensor:
         if self._use_positional_encoding:
             output = add_positional_features(inputs)
         else:

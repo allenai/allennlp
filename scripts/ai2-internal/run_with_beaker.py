@@ -86,7 +86,7 @@ def main(param_file: str, args: argparse.Namespace):
         allennlp_suffix.append("--include-package")
         allennlp_suffix.append(package_name)
 
-    allennlp_command  = allennlp_prefix + allennlp_suffix
+    allennlp_command = allennlp_prefix + allennlp_suffix
 
     dataset_mounts = []
     for source in args.source + [f"{config_dataset_id}:/config.json"]:
@@ -124,8 +124,7 @@ def main(param_file: str, args: argparse.Namespace):
         "tasks": [config_task]
     }
 
-    output_path = args.spec_output_path if args.spec_output_path else tempfile.mkstemp(".yaml",
-            "beaker-config-")[1]
+    output_path = args.spec_output_path if args.spec_output_path else tempfile.mkstemp(".yaml", "beaker-config-")[1]
     with open(output_path, "w") as output:
         output.write(json.dumps(config, indent=4))
     print(f"Beaker spec written to {output_path}.")
@@ -142,6 +141,7 @@ def main(param_file: str, args: argparse.Namespace):
         print(f"Running the experiment:")
         print(f"    " + " ".join(experiment_command))
         subprocess.run(experiment_command)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

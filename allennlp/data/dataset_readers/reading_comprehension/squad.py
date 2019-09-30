@@ -11,7 +11,7 @@ from allennlp.data.dataset_readers.reading_comprehension import util
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
 from allennlp.data.tokenizers import Token, Tokenizer, WordTokenizer
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @DatasetReader.register("squad")
@@ -101,7 +101,7 @@ class SquadReader(DatasetReader):
                          char_spans: List[Tuple[int, int]] = None,
                          answer_texts: List[str] = None,
                          passage_tokens: List[Token] = None) -> Optional[Instance]:
-        # pylint: disable=arguments-differ
+
         if not passage_tokens:
             passage_tokens = self._tokenizer.tokenize(passage_text)
         question_tokens = self._tokenizer.tokenize(question_text)

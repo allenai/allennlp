@@ -91,7 +91,7 @@ class SimpleSeq2Seq(Model):
         self._end_index = self.vocab.get_token_index(END_SYMBOL, self._target_namespace)
 
         if use_bleu:
-            pad_index = self.vocab.get_token_index(self.vocab._padding_token, self._target_namespace)  # pylint: disable=protected-access
+            pad_index = self.vocab.get_token_index(self.vocab._padding_token, self._target_namespace)
             self._bleu = BLEU(exclude_indices={pad_index, self._end_index, self._start_index})
         else:
             self._bleu = None
@@ -192,7 +192,7 @@ class SimpleSeq2Seq(Model):
     def forward(self,  # type: ignore
                 source_tokens: Dict[str, torch.LongTensor],
                 target_tokens: Dict[str, torch.LongTensor] = None) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
+
         """
         Make foward pass with decoder logic for producing the entire target sequence.
 
@@ -387,7 +387,8 @@ class SimpleSeq2Seq(Model):
 
     def _prepare_output_projections(self,
                                     last_predictions: torch.Tensor,
-                                    state: Dict[str, torch.Tensor]) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:  # pylint: disable=line-too-long
+                                    state: Dict[str, torch.Tensor]
+                                    ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
         """
         Decode current state and last prediction to produce produce projections
         into the target space, which can then be used to get probabilities of

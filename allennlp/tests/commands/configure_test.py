@@ -1,4 +1,3 @@
-# pylint: disable=invalid-name,no-self-use,protected-access
 import argparse
 import os
 import json
@@ -13,8 +12,8 @@ class TestConfigure(AllenNlpTestCase):
     def test_other_modules(self):
         # Create a new package in a temporary dir
         packagedir = self.TEST_DIR / 'configuretestpackage'
-        packagedir.mkdir()  # pylint: disable=no-member
-        (packagedir / '__init__.py').touch()  # pylint: disable=no-member
+        packagedir.mkdir()
+        (packagedir / '__init__.py').touch()
 
         # And add that directory to the path
         sys.path.insert(0, str(self.TEST_DIR))

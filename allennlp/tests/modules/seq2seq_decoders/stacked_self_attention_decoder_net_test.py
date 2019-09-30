@@ -1,11 +1,10 @@
-# pylint: disable=no-self-use,invalid-name
 import torch
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.modules.seq2seq_decoders import StackedSelfAttentionDecoderNet
 
-class TestStackedSelfAttentionDecoderNet(AllenNlpTestCase):
 
+class TestStackedSelfAttentionDecoderNet(AllenNlpTestCase):
     def test_stacked_self_attention_decoder_net_init(self):
         decoder_inout_dim = 10
         decoder_net = StackedSelfAttentionDecoderNet(
@@ -26,7 +25,6 @@ class TestStackedSelfAttentionDecoderNet(AllenNlpTestCase):
         }
         decoder_init_state = decoder_net.init_decoder_state(encoder_out)
         assert decoder_init_state == {}
-
 
     def test_stacked_self_attention_decoder_net_forward(self):
         decoder_inout_dim = 10

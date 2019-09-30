@@ -9,7 +9,7 @@ from torch.nn.utils.rnn import PackedSequence
 from allennlp.modules.augmented_lstm import AugmentedLstm
 from allennlp.common.checks import ConfigurationError
 
-TensorPair = Tuple[torch.Tensor, torch.Tensor]  # pylint: disable=invalid-name
+TensorPair = Tuple[torch.Tensor, torch.Tensor]
 
 
 class StackedAlternatingLstm(torch.nn.Module):
@@ -71,7 +71,7 @@ class StackedAlternatingLstm(torch.nn.Module):
             layers.append(layer)
         self.lstm_layers = layers
 
-    def forward(self,  # pylint: disable=arguments-differ
+    def forward(self,
                 inputs: PackedSequence,
                 initial_state: Optional[TensorPair] = None) -> \
             Tuple[Union[torch.Tensor, PackedSequence], TensorPair]:

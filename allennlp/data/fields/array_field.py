@@ -48,7 +48,7 @@ class ArrayField(Field[numpy.ndarray]):
         return tensor
 
     @overrides
-    def empty_field(self):  # pylint: disable=no-self-use
+    def empty_field(self):
         # Pass the padding_value, so that any outer field, e.g., `ListField[ArrayField]` uses the
         # same padding_value in the padded ArrayFields
         return ArrayField(numpy.array([], dtype=self.dtype),

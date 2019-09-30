@@ -1,4 +1,3 @@
-
 import logging
 import math
 import os
@@ -29,7 +28,7 @@ from allennlp.training.trainer_base import TrainerBase
 from allennlp.training import util as training_util
 from allennlp.training.moving_average import MovingAverage
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @TrainerBase.register("default")
@@ -304,7 +303,6 @@ class Trainer(TrainerBase):
             self._batch_num_total = 0
 
         histogram_parameters = set(self.model.get_parameters_for_histogram_tensorboard_logging())
-
 
         logger.info("Training")
         train_generator_tqdm = Tqdm.tqdm(train_generator,
@@ -664,7 +662,7 @@ class Trainer(TrainerBase):
                     validation_data: Optional[Iterable[Instance]],
                     params: Params,
                     validation_iterator: DataIterator = None) -> 'Trainer':
-        # pylint: disable=arguments-differ
+
         patience = params.pop_int("patience", None)
         validation_metric = params.pop("validation_metric", "-loss")
         shuffle = params.pop_bool("shuffle", True)

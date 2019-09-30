@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 import numpy
 import torch
 
@@ -87,7 +86,7 @@ class TestArrayField(AllenNlpTestCase):
         assert returned_tensor2.dtype == torch.uint8
 
         # Padding should not affect dtype
-        padding_lengths = {"dimension_" + str(i): 10 for i, _  in enumerate(shape)}
+        padding_lengths = {"dimension_" + str(i): 10 for i, _ in enumerate(shape)}
         padded_tensor = array_field2.as_tensor(padding_lengths)
         assert padded_tensor.dtype == torch.uint8
 

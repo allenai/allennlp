@@ -6,7 +6,7 @@ from allennlp.common.util import START_SYMBOL
 from allennlp.semparse.domain_languages.domain_language import DomainLanguage
 
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 class ActionSpaceWalker:

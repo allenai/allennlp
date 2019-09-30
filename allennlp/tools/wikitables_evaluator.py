@@ -6,45 +6,45 @@ This is the official evaluator taken from the original dataset. I made minimal c
 Python 3 compatible, and conform to our style guidelines.
 """
 
-#Official Evaluator for WikiTableQuestions Dataset
+# Official Evaluator for WikiTableQuestions Dataset
 #
-#There are 3 value types
-#1. String (unicode)
-#2. Number (float)
-#3. Date (a struct with 3 fields: year, month, and date)
-#Some fields (but not all) can be left unspecified. However, if only the year
-#is specified, the date is automatically converted into a number.
+# There are 3 value types
+# 1. String (unicode)
+# 2. Number (float)
+# 3. Date (a struct with 3 fields: year, month, and date)
+# Some fields (but not all) can be left unspecified. However, if only the year
+# is specified, the date is automatically converted into a number.
 #
-#Target denotation is a set of items
-#- Each item T is a raw unicode string from Mechanical Turk
-#- If T can be converted to a number or date (via Stanford CoreNLP), the converted value is precomputed
+# Target denotation is a set of items
+# - Each item T is a raw unicode string from Mechanical Turk
+# - If T can be converted to a number or date (via Stanford CoreNLP), the converted value is precomputed
 #
-#Predicted denotation is a set of items
-#- Each item P is a string, a number, or a date
-#- If P is read from a text file, assume the following
-#  - A string that can be converted into a number (float) is converted into a number
-#  - A string of the form "yyyy-mm-dd" is converted into a date. Unspecified fields can be marked as
-#  "xx". For example, "xx-01-02" represents the date January 2nd of an unknown year.
-#  - Otherwise, it is kept as a string
+# Predicted denotation is a set of items
+# - Each item P is a string, a number, or a date
+# - If P is read from a text file, assume the following
+#   - A string that can be converted into a number (float) is converted into a number
+#   - A string of the form "yyyy-mm-dd" is converted into a date. Unspecified fields can be marked as
+#    "xx". For example, "xx-01-02" represents the date January 2nd of an unknown year.
+#   - Otherwise, it is kept as a string
 #
-#The predicted denotation is correct if
-#1. The sizes of the target denotation and the predicted denotation are equal
-#2. Each item in the target denotation matches an item in the predicted denotation
+# The predicted denotation is correct if
+# 1. The sizes of the target denotation and the predicted denotation are equal
+# 2. Each item in the target denotation matches an item in the predicted denotation
 #
-#A target item T matches a predicted item P if one of the following is true:
-#1. normalize(raw string of T) and normalize(string form of P) are identical.
-#   The normalize method performs the following normalizations on strings:
-#   - Remove diacritics (é → e)
-#   - Convert smart quotes (‘’´`“”) and dashes (‐‑‒–—−) into ASCII ones
-#   - Remove citations (trailing •♦†‡*#+ or [...])
-#   - Remove details in parenthesis (trailing (...))
-#   - Remove outermost quotation marks
-#   - Remove trailing period (.)
-#   - Convert to lowercase
-#   - Collapse multiple whitespaces and strip outermost whitespaces
-#2. T can be interpreted as a number T_N, P is a number, and P = T_N
-#3. T can be interpreted as a date T_D, P is a date, and P = T_D
-#   (exact match on all fields; e.g., xx-01-12 and 1990-01-12 do not match)
+# A target item T matches a predicted item P if one of the following is true:
+# 1. normalize(raw string of T) and normalize(string form of P) are identical.
+#    The normalize method performs the following normalizations on strings:
+#    - Remove diacritics (é → e)
+#    - Convert smart quotes (‘’´`“”) and dashes (‐‑‒–—−) into ASCII ones
+#    - Remove citations (trailing •♦†‡*#+ or [...])
+#    - Remove details in parenthesis (trailing (...))
+#    - Remove outermost quotation marks
+#    - Remove trailing period (.)
+#    - Convert to lowercase
+#    - Collapse multiple whitespaces and strip outermost whitespaces
+# 2. T can be interpreted as a number T_N, P is a number, and P = T_N
+# 3. T can be interpreted as a date T_D, P is a date, and P = T_D
+#    (exact match on all fields; e.g., xx-01-12 and 1990-01-12 do not match)
 __version__ = '1.0.2'
 
 import sys
@@ -56,8 +56,8 @@ from codecs import open as codecs_open
 from math import isnan, isinf
 from abc import ABCMeta, abstractmethod
 
-# pylint: disable=invalid-name
-################ String Normalization ################
+
+# String Normalization
 def normalize(x):
     # Remove diacritics
     x = ''.join(c for c in unicodedata.normalize('NFKD', x)
@@ -84,7 +84,7 @@ def normalize(x):
     return x
 
 
-################ Value Types ################
+# Value Types
 
 class Value:
     __metaclass__ = ABCMeta
@@ -121,7 +121,7 @@ class StringValue(Value):
         return self._hash
 
     def __str__(self):
-        return 'S' +  str([self.normalized])
+        return 'S' + str([self.normalized])
     __repr__ = __str__
 
     def match(self, other):
@@ -247,7 +247,7 @@ class DateValue(Value):
             return None
 
 
-################ Value Instantiation ################
+# Value Instantiation
 
 def to_value(original_string, corenlp_value=None):
     """Convert the string to Value object.
@@ -277,6 +277,7 @@ def to_value(original_string, corenlp_value=None):
     # String.
     return StringValue(original_string)
 
+
 def to_value_list(original_strings, corenlp_values=None):
     """Convert a list of strings to a list of Values
 
@@ -296,7 +297,7 @@ def to_value_list(original_strings, corenlp_values=None):
         return list(set(to_value(x) for x in original_strings))
 
 
-################ Check the Predicted Denotations ################
+# Check the Predicted Denotations
 
 def check_denotation(target_values, predicted_values):
     """Return True if the predicted denotation is correct.
@@ -317,7 +318,7 @@ def check_denotation(target_values, predicted_values):
     return True
 
 
-################ Batch Mode ################
+# Batch Mode
 
 def tsv_unescape(x):
     """
@@ -337,6 +338,7 @@ def tsv_unescape(x):
     """
     return x.replace(r'\n', '\n').replace(r'\p', '|').replace('\\\\', '\\')
 
+
 def tsv_unescape_list(x):
     """Unescape a list in the TSV file.
     List items are joined with vertical bars (0x5C)
@@ -347,6 +349,7 @@ def tsv_unescape_list(x):
         a list of unicodes
     """
     return [tsv_unescape(y) for y in x.split('|')]
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -394,6 +397,7 @@ def main():
     print('Examples:', num_examples, file=sys.stderr)
     print('Correct:', num_correct, file=sys.stderr)
     print('Accuracy:', round((num_correct + 1e-9) / (num_examples + 1e-9), 4), file=sys.stderr)
+
 
 if __name__ == '__main__':
     main()

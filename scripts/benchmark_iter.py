@@ -18,11 +18,10 @@
 
 import argparse
 from enum import Enum
-import logging
 from multiprocessing import Process
 import time
 
-from allennlp.common import Params, Tqdm
+from allennlp.common import Params
 from allennlp.training.trainer_pieces import TrainerPieces
 from allennlp.training.util import get_batch_size
 
@@ -44,12 +43,9 @@ def log_iterable(iterable, assume_multiprocess_types):
 
     batch_count = 0
     cumulative_batch_size = 0
-    cumulative_token_count = 0
     for batch in iterable:
         batch_count += 1
         cumulative_batch_size += get_batch_size(batch)
-        tokens_size = batch['source']['tokens'].size()
-        cumulative_token_count += tokens_size[0] * tokens_size[1]
 
         if assume_multiprocess_types and not have_started_periodic_process:
             have_started_periodic_process = True
@@ -62,7 +58,7 @@ def log_iterable(iterable, assume_multiprocess_types):
                     # multiprocessing.managers or similar.
                     args=(iterable.gi_frame.f_locals['qiterable'].output_queue,
                           iterable.gi_frame.f_locals['output_queue']
-                    )
+                          )
                     )
             periodic_logging_process.start()
 
@@ -72,8 +68,7 @@ def log_iterable(iterable, assume_multiprocess_types):
             msg = (f"s/b total: {(end - start) / batch_count:.3f} " +
                    f"s/b last: {(end - last) / BATCH_INTERVAL:.3f} " +
                    f"batch count: {batch_count} " +
-                   f"batch size: {cumulative_batch_size / batch_count:.1f} " +
-                   f"total tokens {cumulative_token_count}")
+                   f"batch size: {cumulative_batch_size / batch_count:.1f} ")
             print(msg)
 
             last = end
@@ -115,6 +110,7 @@ class Action(Enum):
     def __str__(self):
         return self.name
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--action", type=Action, choices=list(Action), required=True)
@@ -138,5 +134,4 @@ if __name__ == "__main__":
     elif args.action is Action.first:
         time_to_first(raw_generator)
     else:
-        raise Exception(f"Unaccounted for action {action}")
-
+        raise Exception(f"Unaccounted for action {args.action}")

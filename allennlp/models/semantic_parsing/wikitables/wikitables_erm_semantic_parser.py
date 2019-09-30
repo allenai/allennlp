@@ -20,7 +20,7 @@ from allennlp.training.metrics import Average
 from allennlp.semparse.domain_languages import WikiTablesLanguage
 
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @Model.register("wikitables_erm_parser")
@@ -116,10 +116,10 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                          rule_namespace=rule_namespace)
         # Not sure why mypy needs a type annotation for this!
         self._decoder_trainer: ExpectedRiskMinimization = \
-                ExpectedRiskMinimization(beam_size=decoder_beam_size,
-                                         normalize_by_length=normalize_beam_score_by_length,
-                                         max_decoding_steps=self._max_decoding_steps,
-                                         max_num_finished_states=decoder_num_finished_states)
+            ExpectedRiskMinimization(beam_size=decoder_beam_size,
+                                     normalize_by_length=normalize_beam_score_by_length,
+                                     max_decoding_steps=self._max_decoding_steps,
+                                     max_num_finished_states=decoder_num_finished_states)
         self._decoder_step = LinkingCoverageTransitionFunction(encoder_output_dim=self._encoder.get_output_dim(),
                                                                action_embedding_dim=action_embedding_dim,
                                                                input_attention=attention,
@@ -198,7 +198,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                 agenda: torch.LongTensor,
                 target_values: List[List[str]] = None,
                 metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
+
         """
         Parameters
         ----------
@@ -385,7 +385,7 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         target_values = state.extras[batch_index]
         evaluation = False
         executor_logger = \
-                logging.getLogger('allennlp.semparse.domain_languages.wikitables_language')
+            logging.getLogger('allennlp.semparse.domain_languages.wikitables_language')
         executor_logger.setLevel(logging.ERROR)
         evaluation = world.evaluate_action_sequence(action_strings, target_values)
         if evaluation:

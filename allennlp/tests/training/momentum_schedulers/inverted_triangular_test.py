@@ -50,7 +50,7 @@ class InvertedTriangularTest(AllenNlpTestCase):
         # ... after the 6th epoch (epoch id 5), momentum should be set to `base_momentum / ratio`.
         scheduler.step(epoch=5)
         assert isclose(optimizer.param_groups[0]["momentum"],
-                       self.base_momentum  / 5)
+                       self.base_momentum / 5)
         # Then the momentum stars increasing again.
         scheduler.step(epoch=6)
         assert isclose(optimizer.param_groups[0]["momentum"],

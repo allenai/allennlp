@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 from numpy.testing import assert_almost_equal
 import pytest
 import torch
@@ -9,9 +8,10 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.modules.similarity_functions import MultiHeadedSimilarity
 
+
 class TestMultiHeadedSimilarityFunction(AllenNlpTestCase):
     def test_weights_are_correct_sizes(self):
-        # pylint: disable=protected-access
+
         similarity = MultiHeadedSimilarity(num_heads=3, tensor_1_dim=9, tensor_1_projected_dim=6,
                                            tensor_2_dim=6, tensor_2_projected_dim=12)
         assert list(similarity._tensor_1_projection.size()) == [9, 6]
@@ -23,7 +23,7 @@ class TestMultiHeadedSimilarityFunction(AllenNlpTestCase):
             MultiHeadedSimilarity.from_params(params)
 
     def test_forward(self):
-        # pylint: disable=protected-access
+
         similarity = MultiHeadedSimilarity(num_heads=3, tensor_1_dim=6)
         similarity._tensor_1_projection = Parameter(torch.eye(6))
         similarity._tensor_2_projection = Parameter(torch.eye(6))

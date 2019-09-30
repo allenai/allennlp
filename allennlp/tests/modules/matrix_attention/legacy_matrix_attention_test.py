@@ -1,5 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
-
 from numpy.testing import assert_allclose
 import torch
 
@@ -23,5 +21,5 @@ class TestLegacyMatrixAttention(AllenNlpTestCase):
     def test_can_build_from_params(self):
         params = Params({"type": "legacy", 'similarity_function': {'type': 'cosine'}})
         attention = MatrixAttention.from_params(params)
-        # pylint: disable=protected-access
+
         assert attention._similarity_function.__class__.__name__ == 'CosineSimilarity'

@@ -4,12 +4,6 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
 
 from typing import List
-import logging
-from pprint import pprint
-from pprint import pformat
-from docopt import docopt
-from collections import defaultdict
-from operator import itemgetter
 from collections import namedtuple
 import regex
 from tqdm import tqdm
@@ -17,20 +11,20 @@ from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
 from allennlp.data.tokenizers import WordTokenizer
 import argparse
 
-Extraction = namedtuple("Extraction",  # Open IE extraction
-                        ["sent",       # Sentence in which this extraction appears
-                         "toks",       # spaCy toks
-                         "arg1",       # Subject
-                         "rel",        # Relation
-                         "args2",      # A list of arguments after the predicate
-                         "confidence"] # Confidence in this extraction
-)
+Extraction = namedtuple("Extraction",   # Open IE extraction
+                        ["sent",        # Sentence in which this extraction appears
+                         "toks",        # spaCy toks
+                         "arg1",        # Subject
+                         "rel",         # Relation
+                         "args2",       # A list of arguments after the predicate
+                         "confidence"]  # Confidence in this extraction
+                        )
 
-Element = namedtuple("Element",    # An element (predicate or argument) in an Open IE extraction
-                     ["elem_type", # Predicate or argument ID
-                      "span",      # The element's character span in the sentence
-                      "text"]      # The textual representation of this element
-)
+Element = namedtuple("Element",     # An element (predicate or argument) in an Open IE extraction
+                     ["elem_type",  # Predicate or argument ID
+                      "span",       # The element's character span in the sentence
+                      "text"]       # The textual representation of this element
+                     )
 
 def main(inp_fn: str,
          domain: str,
@@ -82,8 +76,7 @@ def split_predicate(ex: Extraction) -> Extraction:
     by adding "before-predicate" and "after-predicate"
     arguments.
     """
-    rel_toks = ex.toks[char_to_word_index(ex.rel.span[0], ex.sent) \
-                       : char_to_word_index(ex.rel.span[1], ex.sent) + 1]
+    rel_toks = ex.toks[char_to_word_index(ex.rel.span[0], ex.sent):char_to_word_index(ex.rel.span[1], ex.sent) + 1]
     if not rel_toks:
         return ex
 
@@ -91,14 +84,13 @@ def split_predicate(ex: Extraction) -> Extraction:
                  in enumerate(rel_toks)
                  if tok.tag_.startswith('VB')]
 
-    last_verb_ind = verb_inds[-1] if verb_inds \
-                    else (len(rel_toks) - 1)
+    last_verb_ind = verb_inds[-1] if verb_inds else (len(rel_toks) - 1)
 
     rel_parts = [element_from_span([rel_toks[last_verb_ind]],
                                    'V')]
 
-    before_verb = rel_toks[ : last_verb_ind]
-    after_verb = rel_toks[last_verb_ind + 1 : ]
+    before_verb = rel_toks[:last_verb_ind]
+    after_verb = rel_toks[last_verb_ind + 1:]
 
     if before_verb:
         rel_parts.append(element_from_span(before_verb, "BV"))
@@ -116,11 +108,8 @@ def extraction_to_conll(ex: Extraction) -> List[str]:
     toks = ex.sent.split(' ')
     ret = ['*'] * len(toks)
     args = [ex.arg1] + ex.args2
-    rels_and_args = [("ARG{}".format(arg_ind), arg)
-                     for arg_ind, arg in enumerate(args)] + \
-                         [(rel_part.elem_type, rel_part)
-                          for rel_part
-                          in ex.rel]
+    rels_and_args = ([("ARG{}".format(arg_ind), arg) for arg_ind, arg in enumerate(args)] +
+                     [(rel_part.elem_type, rel_part) for rel_part in ex.rel])
 
     for rel, arg in rels_and_args:
         # Add brackets
@@ -137,8 +126,7 @@ def interpret_span(text_spans: str) -> List[int]:
     Return an integer tuple from
     textual representation of closed / open spans.
     """
-    m = regex.match("^(?:(?:([\(\[]\d+, \d+[\)\]])|({\d+}))[,]?\s*)+$",
-                    text_spans)
+    m = regex.match("^(?:(?:([\(\[]\d+, \d+[\)\]])|({\d+}))[,]?\s*)+$", text_spans)  # noqa
 
     spans = m.captures(1) + m.captures(2)
 
@@ -187,7 +175,7 @@ def parse_element(raw_element: str) -> List[Element]:
     """
     Parse a raw element into text and indices (integers).
     """
-    elements = [regex.match("^(([a-zA-Z]+)\(([^;]+),List\(([^;]*)\)\))$",
+    elements = [regex.match("^(([a-zA-Z]+)\(([^;]+),List\(([^;]*)\)\))$",  # noqa
                             elem.lstrip().rstrip())
                 for elem
                 in raw_element.split(';')]
@@ -197,7 +185,7 @@ def parse_element(raw_element: str) -> List[Element]:
 
 
 def read(fn: str) -> List[Extraction]:
-    tokenizer = WordTokenizer(word_splitter = SpacyWordSplitter(pos_tags=True))
+    tokenizer = WordTokenizer(word_splitter=SpacyWordSplitter(pos_tags=True))
     prev_sent = []
 
     with open(fn) as fin:
@@ -212,17 +200,14 @@ def read(fn: str) -> List[Extraction]:
 
             # Exactly one subject and one relation
             # and at least one object
-            if ((len(rel) == 1) and \
-                (len(arg1) == 1) and \
-                (len(args2) >= 1)):
+            if ((len(rel) == 1) and (len(arg1) == 1) and (len(args2) >= 1)):
                 sent = data[5]
-                cur_ex = Extraction(sent = sent,
-                                    toks = tokenizer.tokenize(sent),
-                                    arg1 = arg1[0],
-                                    rel = rel[0],
-                                    args2 = args2,
-                                    confidence = confidence)
-
+                cur_ex = Extraction(sent=sent,
+                                    toks=tokenizer.tokenize(sent),
+                                    arg1=arg1[0],
+                                    rel=rel[0],
+                                    args2=args2,
+                                    confidence=confidence)
 
                 # Decide whether to append or yield
                 if (not prev_sent) or (prev_sent[0].sent == sent):
@@ -243,24 +228,23 @@ def convert_sent_to_conll(sent_ls: List[Extraction]):
     assert(len({ex.sent for ex in sent_ls}) == 1)
     toks = sent_ls[0].sent.split(' ')
 
-    return safe_zip(*[range(len(toks)),
-                      toks] + \
-                    [extraction_to_conll(ex)
-                     for ex in sent_ls])
+    return safe_zip(*[range(len(toks)), toks] +
+                    [extraction_to_conll(ex) for ex in sent_ls])
 
 
 def pad_line_to_ontonotes(line, domain) -> List[str]:
     """
     Pad line to conform to ontonotes representation.
     """
-    word_ind, word = line[ : 2]
+    word_ind, word = line[:2]
     pos = 'XX'
-    oie_tags = line[2 : ]
+    oie_tags = line[2:]
     line_num = 0
     parse = "-"
     lemma = "-"
-    return [domain, line_num, word_ind, word, pos, parse, lemma, '-',\
-            '-', '-', '*'] + list(oie_tags) + ['-', ]
+    return ([domain, line_num, word_ind, word, pos, parse, lemma, '-', '-', '-', '*'] +
+            list(oie_tags) +
+            ['-', ])
 
 def convert_sent_dict_to_conll(sent_dic, domain) -> str:
     """
@@ -272,10 +256,11 @@ def convert_sent_dict_to_conll(sent_dic, domain) -> str:
                         for sent_ls
                         in sent_dic.iteritems()])
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Convert Open IE4 extractions to CoNLL (ontonotes) format.")
-    parser.add_argument("--inp", type=str, help="input file from which to read Open IE extractions.", required = True)
-    parser.add_argument("--domain", type=str, help="domain to use when writing the ontonotes file.", required = True)
-    parser.add_argument("--out", type=str, help="path to the output file, where CoNLL format should be written.", required = True)
+    parser.add_argument("--inp", type=str, help="input file from which to read Open IE extractions.", required=True)
+    parser.add_argument("--domain", type=str, help="domain to use when writing the ontonotes file.", required=True)
+    parser.add_argument("--out", type=str, help="path to the output file, where CoNLL format should be written.", required=True)
     args = parser.parse_args()
     main(args.inp, args.domain, args.out)

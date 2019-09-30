@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name, protected-access
 import math
 
 from pytest import approx

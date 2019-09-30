@@ -41,7 +41,7 @@ from allennlp.modules.seq2seq_encoders.feedforward_encoder import FeedForwardEnc
 from allennlp.modules.seq2seq_encoders.qanet_encoder import QaNetEncoder
 
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 class _Seq2SeqWrapper:
@@ -88,7 +88,7 @@ class _Seq2SeqWrapper:
         module = self._module_class(**params.as_dict(infer_type_and_cast=True))
         return PytorchSeq2SeqWrapper(module, stateful=stateful)
 
-# pylint: disable=protected-access
+
 Seq2SeqEncoder.register("gru")(_Seq2SeqWrapper(torch.nn.GRU))
 Seq2SeqEncoder.register("lstm")(_Seq2SeqWrapper(torch.nn.LSTM))
 Seq2SeqEncoder.register("rnn")(_Seq2SeqWrapper(torch.nn.RNN))

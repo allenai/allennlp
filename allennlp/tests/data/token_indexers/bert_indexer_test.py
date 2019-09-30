@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name,protected-access,bad-whitespace,bad-continuation
 from allennlp.common.testing import ModelTestCase
 from allennlp.data.token_indexers.wordpiece_indexer import PretrainedBertIndexer, _get_token_type_ids
 from allennlp.data.tokenizers import WordTokenizer, Token
@@ -146,7 +145,7 @@ class TestBertIndexer(ModelTestCase):
         indexed_tokens = token_indexer.tokens_to_indices(tokens, vocab, "bert")
 
         #                                          [CLS] 2, 15, 10, 11, 6, 17, 2  15, 10, 11, 6, [SEP]
-        assert indexed_tokens["bert-type-ids"] == [0,    0, 0,  0,  0,  0, 0,  1, 1,  1,  1,  1, 1]  #pylint: disable=bad-whitespace
+        assert indexed_tokens["bert-type-ids"] == [0,    0, 0,  0,  0,  0, 0,  1, 1,  1,  1,  1, 1]
 
     def test_sliding_window(self):
         tokenizer = WordTokenizer(word_splitter=BertBasicWordSplitter())

@@ -1,8 +1,7 @@
-# pylint: disable=invalid-name
-
 import json
 
 from allennlp.common.testing import ModelTestCase
+
 
 class ComposedSeq2SeqTest(ModelTestCase):
 
@@ -15,7 +14,7 @@ class ComposedSeq2SeqTest(ModelTestCase):
         self.ensure_model_can_train_save_and_load(self.param_file, tolerance=1e-2)
 
     def test_bidirectional_model_can_train_save_and_load(self):
-        # pylint: disable=bad-continuation
+
         param_overrides = json.dumps({
             "model": {
                 "encoder": {"bidirectional": True},

@@ -22,7 +22,7 @@ class logger:
 
     @classmethod
     def info(cls, message: str) -> None:
-        # pylint: disable=no-self-use
+
         if cls._logger is None:
             cls._logger = log_to_stderr()
             cls._logger.setLevel(logging.INFO)
@@ -129,7 +129,6 @@ class QIterable(Iterable[Instance]):
         for _ in range(self.num_workers):
             self.input_queue.put(None)
 
-
         assert not self.processes, "Process list non-empty! You must call QIterable.join() before restarting."
         self.num_active_workers = Value('i', self.num_workers)
         self.num_inflight_items = Value('i', 0)
@@ -206,7 +205,6 @@ class MultiprocessDatasetReader(DatasetReader):
         """
         Just delegate to the base reader text_to_instance.
         """
-        # pylint: disable=arguments-differ
         return self.reader.text_to_instance(*args, **kwargs)  # type: ignore
 
     def _read(self, file_path: str) -> Iterable[Instance]:

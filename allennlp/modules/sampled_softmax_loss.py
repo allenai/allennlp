@@ -121,19 +121,16 @@ class SampledSoftmaxLoss(torch.nn.Module):
             num_words = self.softmax_w.size(0)
 
         self._num_words = num_words
-        self._log_num_words_p1 = np.log(num_words + 1)  # pylint: disable=assignment-from-no-return
+        self._log_num_words_p1 = np.log(num_words + 1)
 
         # compute the probability of each sampled id
         self._probs = (np.log(np.arange(num_words) + 2) -
                        np.log(np.arange(num_words) + 1)) / self._log_num_words_p1
 
-
     def forward(self,
                 embeddings: torch.Tensor,
                 targets: torch.Tensor,
                 target_token_embedding: torch.Tensor = None) -> torch.Tensor:
-        # pylint: disable=arguments-differ
-
         # embeddings is size (n, embedding_dim)
         # targets is (n_words, ) with the index of the actual target
         # when tieing weights, target_token_embedding is required.
@@ -143,7 +140,7 @@ class SampledSoftmaxLoss(torch.nn.Module):
 
         if embeddings.shape[0] == 0:
             # empty batch
-            return torch.tensor(0.0).to(embeddings.device)  # pylint: disable=not-callable
+            return torch.tensor(0.0).to(embeddings.device)
 
         if not self.training:
             return self._forward_eval(embeddings, targets)
@@ -154,7 +151,7 @@ class SampledSoftmaxLoss(torch.nn.Module):
                        embeddings: torch.Tensor,
                        targets: torch.Tensor,
                        target_token_embedding: torch.Tensor) -> torch.Tensor:
-        # pylint: disable=unused-argument
+
         # (target_token_embedding is only used in the tie_embeddings case,
         #  which is not implemented)
 
@@ -214,12 +211,11 @@ class SampledSoftmaxLoss(torch.nn.Module):
         # the likelihood loss can become very large if the corresponding
         # true logit is very small, so we apply a per-target cap here
         # so that a single logit for a very rare word won't dominate the batch.
-        #nll_loss = -1.0 * torch.clamp(log_softmax[:, 0], -1000, 1e6).sum()
         nll_loss = -1.0 * log_softmax[:, 0].sum()
         return nll_loss
 
     def _forward_eval(self, embeddings: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
-        # pylint: disable=invalid-name
+
         # evaluation mode, use full softmax
         if self.sparse:
             w = self.softmax_w.weight

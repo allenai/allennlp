@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 from typing import Dict
 
 import pytest

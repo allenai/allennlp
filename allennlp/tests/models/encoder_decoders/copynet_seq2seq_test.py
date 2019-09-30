@@ -1,5 +1,3 @@
-# pylint: disable=protected-access,not-callable
-
 import numpy as np
 from scipy.special import logsumexp
 import torch

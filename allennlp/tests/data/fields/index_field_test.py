@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name,comparison-with-itself
 import numpy
 import pytest
 

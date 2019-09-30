@@ -1,15 +1,14 @@
-# pylint: disable=invalid-name,line-too-long
-
 import pytest
 
 from allennlp.data.dataset_readers.semantic_parsing.grammar_based_text2sql import GrammarBasedText2SqlDatasetReader
 from allennlp.common.testing import AllenNlpTestCase
 
+
 @pytest.mark.skip(reason="Mark will fix in a nearby PR.")
 class TestGrammarBasedText2SqlDatasetReader(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
-        self.data_path = str(self.FIXTURES_ROOT / 'data' / 'text2sql'/ '*.json')
+        self.data_path = str(self.FIXTURES_ROOT / 'data' / 'text2sql' / '*.json')
         self.schema = str(self.FIXTURES_ROOT / 'data' / 'text2sql' / 'restaurants-schema.csv')
         self.database = str(self.FIXTURES_ROOT / 'data' / 'text2sql' / 'restaurants.db')
 

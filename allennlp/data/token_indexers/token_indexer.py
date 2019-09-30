@@ -8,7 +8,7 @@ from allennlp.common import Registrable
 from allennlp.data.tokenizers.token import Token
 from allennlp.data.vocabulary import Vocabulary
 
-TokenType = TypeVar("TokenType", int, List[int], numpy.ndarray)  # pylint: disable=invalid-name
+TokenType = TypeVar("TokenType", int, List[int], numpy.ndarray)
 
 
 class TokenIndexer(Generic[TokenType], Registrable):
@@ -62,7 +62,7 @@ class TokenIndexer(Generic[TokenType], Registrable):
         """
         raise NotImplementedError
 
-    def get_padding_token(self) -> TokenType: # pylint: disable=no-self-use
+    def get_padding_token(self) -> TokenType:
         """
         Deprecated. Please just implement the padding token in `as_padded_tensor` instead.
         TODO(Mark): remove in 1.0 release. This is only a concrete implementation to preserve
@@ -74,7 +74,7 @@ class TokenIndexer(Generic[TokenType], Registrable):
         warnings.warn("Using a Field with get_padding_token as an inherited method,"
                       " which will be depreciated in 1.0.0."
                       "Please implement as_padded_tensor instead.", FutureWarning)
-        return 0 # type: ignore
+        return 0  # type: ignore
 
     def get_padding_lengths(self, token: TokenType) -> Dict[str, int]:
         """
@@ -130,7 +130,7 @@ class TokenIndexer(Generic[TokenType], Registrable):
         """
         Return a list of the keys this indexer return from ``tokens_to_indices``.
         """
-        # pylint: disable=no-self-use
+
         return [index_name]
 
     def __eq__(self, other) -> bool:

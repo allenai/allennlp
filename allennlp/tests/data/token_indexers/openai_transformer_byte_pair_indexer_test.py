@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name,protected-access
 import json
 import tarfile
 import spacy
@@ -27,7 +26,6 @@ class TestOpenaiTransformerBytePairIndexer(AllenNlpTestCase):
                       for end in ('</w>', '')]   # if tie, prefer ending a word
         encoding = {f"{sym1}{sym2}": idx + 1 for idx, (sym1, sym2) in enumerate(byte_pairs)}
 
-
         with open(encoder_path, 'w') as encoder_file:
             json.dump(encoding, encoder_file)
 
@@ -45,7 +43,7 @@ class TestOpenaiTransformerBytePairIndexer(AllenNlpTestCase):
         self.byte_pairs = byte_pairs
 
     def _create_indexer_vocab(self, tokens_to_add=None):
-        # pylint: disable=attribute-defined-outside-init
+
         self.indexer = OpenaiTransformerBytePairIndexer(
                 self.encoding, self.byte_pairs, tokens_to_add=tokens_to_add
         )

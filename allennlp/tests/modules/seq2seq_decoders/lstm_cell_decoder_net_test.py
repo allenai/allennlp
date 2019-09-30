@@ -1,12 +1,11 @@
-# pylint: disable=no-self-use,invalid-name
 import torch
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.modules.seq2seq_decoders import LstmCellDecoderNet
 from allennlp.modules.attention import DotProductAttention
 
-class TestLstmCellDecoderNet(AllenNlpTestCase):
 
+class TestLstmCellDecoderNet(AllenNlpTestCase):
     def test_lstm_cell_decoder_net_init(self):
         decoder_inout_dim = 10
         lstm_decoder_net = LstmCellDecoderNet(

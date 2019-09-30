@@ -36,12 +36,12 @@ class IndexField(Field[torch.Tensor]):
 
     @overrides
     def get_padding_lengths(self) -> Dict[str, int]:
-        # pylint: disable=no-self-use
+
         return {}
 
     @overrides
     def as_tensor(self, padding_lengths: Dict[str, int]) -> torch.Tensor:
-        # pylint: disable=unused-argument
+
         tensor = torch.LongTensor([self.sequence_index])
         return tensor
 

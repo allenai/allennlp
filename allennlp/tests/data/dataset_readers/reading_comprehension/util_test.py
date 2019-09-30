@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.dataset_readers.reading_comprehension import util
 from allennlp.data.tokenizers import WordTokenizer
@@ -43,6 +42,6 @@ class TestReadingComprehensionUtil(AllenNlpTestCase):
         start = 912
         end = 912 + len("Paris.")
         tokens = tokenizer.tokenize(passage)
-        offsets = [(t.idx, t.idx + len(t.text)) for  t in tokens]
+        offsets = [(t.idx, t.idx + len(t.text)) for t in tokens]
         token_span = util.char_span_to_token_span(offsets, (start, end))[0]
         assert token_span == (184, 185)

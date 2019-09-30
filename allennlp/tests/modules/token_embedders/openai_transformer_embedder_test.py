@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name,import-outside-toplevel
 import pytest
 import spacy
 import torch
@@ -78,7 +77,7 @@ class TestOpenaiTransformerEmbedderSmall(ModelTestCase):
                         "num_layers": 2,
                         "vocab_size": 50,
                         "n_ctx": 50
-                },
+                        },
                 "top_layer_only": True
         })
         embedder = OpenaiTransformerEmbedder.from_params(params)
@@ -96,7 +95,7 @@ class TestOpenaiTransformerEmbedderSmall(ModelTestCase):
                         "num_layers": 2,
                         "vocab_size": 50,
                         "n_ctx": 50
-                },
+                        },
         })
         embedder = OpenaiTransformerEmbedder.from_params(params)
         training_tensors = self._get_training_tensors()
@@ -173,7 +172,7 @@ def create_small_test_fixture(output_dir: str = '/tmp') -> None:
     import pathlib
 
     model_dir = pathlib.Path(output_dir) / 'model'
-    model_dir.mkdir(exist_ok=True)  # pylint: disable=no-member
+    model_dir.mkdir(exist_ok=True)
 
     symbols = ["e", "w", "o", "wo", "."]
     byte_pairs = [(sym1, sym2 + end)

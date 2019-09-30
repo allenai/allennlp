@@ -14,6 +14,7 @@ from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_lo
 from allennlp.nn.util import get_lengths_from_binary_sequence_mask, viterbi_decode
 from allennlp.training.metrics.srl_eval_scorer import SrlEvalScorer, DEFAULT_SRL_EVAL_PATH
 
+
 @Model.register("srl_bert")
 class SrlBert(Model):
     """
@@ -66,12 +67,12 @@ class SrlBert(Model):
         self.ignore_span_metric = ignore_span_metric
         initializer(self)
 
-    def forward(self, # type: ignore
+    def forward(self,  # type: ignore
                 tokens: Dict[str, torch.Tensor],
                 verb_indicator: torch.Tensor,
                 metadata: List[Any],
                 tags: torch.LongTensor = None):
-        # pylint: disable=arguments-differ
+
         """
         Parameters
         ----------
@@ -235,7 +236,6 @@ class SrlBert(Model):
                 if i != j and label[0] == 'I' and not previous_label == 'B' + label[1:]:
                     transition_matrix[i, j] = float("-inf")
         return transition_matrix
-
 
     def get_start_transitions(self):
         """

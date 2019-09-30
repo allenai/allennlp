@@ -12,10 +12,11 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.training.metrics.metric import Metric
 from allennlp.models.srl_util import write_conll_formatted_tags_to_file
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 DEFAULT_SRL_EVAL_PATH = os.path.abspath(os.path.join(
         os.path.dirname(os.path.realpath(__file__)), os.pardir, os.pardir, "tools", "srl-eval.pl"))
+
 
 @Metric.register("srl_eval")
 class SrlEvalScorer(Metric):
@@ -52,7 +53,7 @@ class SrlEvalScorer(Metric):
                  batch_sentences: List[List[str]],
                  batch_conll_formatted_predicted_tags: List[List[str]],
                  batch_conll_formatted_gold_tags: List[List[str]]) -> None:
-        # pylint: disable=signature-differs
+
         """
         Parameters
         ----------

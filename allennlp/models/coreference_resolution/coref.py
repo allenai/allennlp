@@ -15,7 +15,7 @@ from allennlp.modules.span_extractors import SelfAttentiveSpanExtractor, Endpoin
 from allennlp.nn import util, InitializerApplicator, RegularizerApplicator
 from allennlp.training.metrics import MentionRecall, ConllCorefScores
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @Model.register("coref")
@@ -113,7 +113,7 @@ class CoreferenceResolver(Model):
                 spans: torch.IntTensor,
                 span_labels: torch.IntTensor = None,
                 metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
+
         """
         Parameters
         ----------

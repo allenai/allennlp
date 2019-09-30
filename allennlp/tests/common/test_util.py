@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 import sys
 from collections import OrderedDict
 
@@ -8,12 +7,15 @@ import torch
 from allennlp.common import util
 from allennlp.common.testing import AllenNlpTestCase
 
+
 class Unsanitizable:
     pass
+
 
 class Sanitizable:
     def to_json(self):
         return {"sanitizable": True}
+
 
 class TestCommonUtils(AllenNlpTestCase):
     def test_group_by_count(self):
@@ -50,7 +52,7 @@ class TestCommonUtils(AllenNlpTestCase):
         assert util.sanitize(Sanitizable()) == {"sanitizable": True}
 
     def test_import_submodules(self):
-        # pylint: disable=no-member
+
         (self.TEST_DIR / 'mymodule').mkdir()
         (self.TEST_DIR / 'mymodule' / '__init__.py').touch()
         (self.TEST_DIR / 'mymodule' / 'submodule').mkdir()
@@ -69,7 +71,6 @@ class TestCommonUtils(AllenNlpTestCase):
 
         sys.path.remove(str(self.TEST_DIR))
 
-
     def test_get_frozen_and_tunable_parameter_names(self):
         model = torch.nn.Sequential(OrderedDict([
                 ('conv', torch.nn.Conv1d(5, 5, 5)),
@@ -79,6 +80,6 @@ class TestCommonUtils(AllenNlpTestCase):
         named_parameters['linear.weight'].requires_grad_(False)
         named_parameters['linear.bias'].requires_grad_(False)
         frozen_parameter_names, tunable_parameter_names = \
-                       util.get_frozen_and_tunable_parameter_names(model)
+            util.get_frozen_and_tunable_parameter_names(model)
         assert set(frozen_parameter_names) == {'linear.weight', 'linear.bias'}
         assert set(tunable_parameter_names) == {'conv.weight', 'conv.bias'}

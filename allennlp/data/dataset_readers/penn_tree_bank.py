@@ -1,11 +1,10 @@
-
 from typing import Dict, List, Tuple
 import logging
 import os
 
 from overrides import overrides
 # NLTK is so performance orientated (ha ha) that they have lazy imports. Why? Who knows.
-from nltk.corpus.reader.bracket_parse import BracketParseCorpusReader # pylint: disable=no-name-in-module
+from nltk.corpus.reader.bracket_parse import BracketParseCorpusReader
 from nltk.tree import Tree
 
 from allennlp.common.file_utils import cached_path
@@ -17,7 +16,7 @@ from allennlp.data.tokenizers import Token
 from allennlp.data.dataset_readers.dataset_utils.span_utils import enumerate_spans
 from allennlp.common.checks import ConfigurationError
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 PTB_PARENTHESES = {
         "-LRB-": "(",
@@ -89,7 +88,7 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
             yield self.text_to_instance(parse.leaves(), pos_tags, parse)
 
     @overrides
-    def text_to_instance(self, # type: ignore
+    def text_to_instance(self,  # type: ignore
                          tokens: List[str],
                          pos_tags: List[str] = None,
                          gold_tree: Tree = None) -> Instance:
@@ -123,7 +122,7 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
             gold_tree : ``MetadataField(Tree)``
                 The gold NLTK parse tree for use in evaluation.
         """
-        # pylint: disable=arguments-differ
+
         if self._convert_parentheses:
             tokens = [PTB_PARENTHESES.get(token, token) for token in tokens]
         text_field = TextField([Token(x) for x in tokens], token_indexers=self._token_indexers)
@@ -182,7 +181,7 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
             if not isinstance(child[0], str):
                 self._strip_functional_tags(child)
 
-    def _get_gold_spans(self, # pylint: disable=arguments-differ
+    def _get_gold_spans(self,
                         tree: Tree,
                         index: int,
                         typed_spans: Dict[Tuple[int, int], str]) -> int:

@@ -13,7 +13,7 @@ from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import TokenIndexer
 from allennlp.data.tokenizers import Token
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 # These are tokens and characters that are stripped by the standard SQuAD and TriviaQA evaluation
 # scripts.
@@ -272,7 +272,7 @@ def make_reading_comprehension_instance_quac(question_list_tokens: List[List[Tok
     fields['question'] = ListField([TextField(q_tokens, token_indexers) for q_tokens in question_list_tokens])
     metadata = {'original_passage': passage_text,
                 'token_offsets': passage_offsets,
-                'question_tokens': [[token.text for token in question_tokens] \
+                'question_tokens': [[token.text for token in question_tokens]
                                     for question_tokens in question_list_tokens],
                 'passage_tokens': [token.text for token in passage_tokens], }
     p1_answer_marker_list: List[Field] = []
@@ -287,7 +287,7 @@ def make_reading_comprehension_instance_quac(question_list_tokens: List[List[Tok
         try:
             assert span_start >= 0
             assert span_end >= 0
-        except:
+        except:  # noqa
             raise ValueError("Previous {0:d}th answer span should have been updated!".format(prev_answer_distance))
         # Modify "tags" to mark previous answer span.
         if span_start == span_end:
@@ -342,9 +342,9 @@ def make_reading_comprehension_instance_quac(question_list_tokens: List[List[Tok
                 fields['p2_answer_marker'] = ListField(p2_answer_marker_list)
                 if num_context_answers > 2:
                     fields['p3_answer_marker'] = ListField(p3_answer_marker_list)
-        fields['yesno_list'] = ListField( \
-            [LabelField(yesno, label_namespace="yesno_labels") for yesno in yesno_list])
-        fields['followup_list'] = ListField([LabelField(followup, label_namespace="followup_labels") \
+        fields['yesno_list'] = ListField([LabelField(yesno, label_namespace="yesno_labels")
+                                          for yesno in yesno_list])
+        fields['followup_list'] = ListField([LabelField(followup, label_namespace="followup_labels")
                                              for followup in followup_list])
     metadata.update(additional_metadata)
     fields['metadata'] = MetadataField(metadata)

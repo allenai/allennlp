@@ -360,7 +360,7 @@ class BinaryOpType(PlaceholderType):
 
 
 class TypedConstantExpression(ConstantExpression):
-    # pylint: disable=abstract-method
+
     """
     NLTK assumes all constants are of type ``EntityType`` (e) by default. We define this new class
     where we can pass a default type to the constructor and use that in the ``_set_type`` method.
@@ -430,10 +430,10 @@ class DynamicTypeApplicationExpression(ApplicationExpression):
         super()._set_type(other_type, signature)
         # TODO(pradeep): Assuming the mapping of "var" function is "V". Do something better.
         if isinstance(self.argument, ApplicationExpression) and str(self.argument.function) == "V":
-            # pylint: disable=protected-access
+
             self.argument.argument._set_type(self.function.type.first)
         if str(self.argument) == "X" and str(self.function) != "V":
-            # pylint: disable=protected-access
+
             self.argument._set_type(self.function.type.first)
 
 
@@ -699,6 +699,7 @@ START_TYPE = NamedBasicType(START_SYMBOL)
 # If you allow for more than three nested lambdas, or if you want to use different lambda
 # variable names, you'll have to change this somehow.
 LAMBDA_VARIABLES = {'x', 'y', 'z'}
+
 
 def is_nonterminal(production: str) -> bool:
     # TODO(pradeep): This is pretty specific to the assumptions made in converting types to

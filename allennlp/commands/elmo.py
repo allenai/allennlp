@@ -86,10 +86,10 @@ from allennlp.nn.util import remove_sentence_boundaries
 from allennlp.modules.elmo import _ElmoBiLm, batch_to_ids
 from allennlp.commands.subcommand import Subcommand
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
-DEFAULT_OPTIONS_FILE = "https://allennlp.s3.amazonaws.com/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json" # pylint: disable=line-too-long
-DEFAULT_WEIGHT_FILE = "https://allennlp.s3.amazonaws.com/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5" # pylint: disable=line-too-long
+DEFAULT_OPTIONS_FILE = "https://allennlp.s3.amazonaws.com/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json"  # noqa
+DEFAULT_WEIGHT_FILE = "https://allennlp.s3.amazonaws.com/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5"   # noqa
 DEFAULT_BATCH_SIZE = 64
 
 
@@ -102,7 +102,7 @@ class Elmo(Subcommand):
     See https://github.com/allenai/allennlp/blob/master/tutorials/how_to/elmo.md for more details.
     """
     def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
-        # pylint: disable=protected-access
+
         description = '''Create word vectors using ELMo.'''
         subparser = parser.add_parser(
                 name, description=description, help='Create word vectors using a pretrained ELMo model.')
@@ -153,6 +153,7 @@ class Elmo(Subcommand):
 
 def empty_embedding() -> numpy.ndarray:
     return numpy.zeros((3, 0, 1024))
+
 
 class ElmoEmbedder():
     def __init__(self,
@@ -373,6 +374,7 @@ class ElmoEmbedder():
                 sentence_index_dataset[0] = json.dumps(sentence_to_index)
 
         input_file.close()
+
 
 def elmo_command(args):
     elmo_embedder = ElmoEmbedder(args.options_file, args.weight_file, args.cuda_device)

@@ -38,7 +38,7 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
     token_min_padding_length : ``int``, optional (default=``0``)
         See :class:`TokenIndexer`.
     """
-    # pylint: disable=no-self-use
+
     def __init__(self,
                  namespace: str = 'token_characters',
                  character_tokenizer: CharacterTokenizer = CharacterTokenizer(),

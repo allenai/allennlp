@@ -17,22 +17,24 @@ WORDS_PRECEDING_TIME = ['at', 'between', 'to', 'before', 'after']
 
 
 def pm_map_match_to_query_value(match: str):
-    if len(match.rstrip('pm')) < 3: # This will match something like ``5pm``.
+    if len(match.rstrip('pm')) < 3:  # This will match something like ``5pm``.
         if match.startswith('12'):
             return [int(match.rstrip('pm')) * HOUR_TO_TWENTY_FOUR]
         else:
             return [int(match.rstrip('pm')) * HOUR_TO_TWENTY_FOUR + TWELVE_TO_TWENTY_FOUR]
-    else: # This will match something like ``530pm``.
+    else:  # This will match something like ``530pm``.
         if match.startswith('12'):
             return [int(match.rstrip('pm'))]
         else:
             return [int(match.rstrip('pm')) + TWELVE_TO_TWENTY_FOUR]
+
 
 def am_map_match_to_query_value(match: str):
     if len(match.rstrip('am')) < 3:
         return [int(match.rstrip('am')) * HOUR_TO_TWENTY_FOUR]
     else:
         return [int(match.rstrip('am'))]
+
 
 def get_times_from_utterance(utterance: str,
                              char_offset_to_token_index: Dict[int, int],
@@ -66,7 +68,6 @@ def get_times_from_utterance(utterance: str,
                                            lambda match: [int(match.rstrip(" hours"))],
                                            indices_of_approximate_words)
 
-
     times_linking_dict: Dict[str, List[int]] = defaultdict(list)
     linking_dicts = [pm_linking_dict, am_linking_dict, oclock_linking_dict, hours_linking_dict]
 
@@ -75,6 +76,7 @@ def get_times_from_utterance(utterance: str,
             times_linking_dict[key].extend(value)
 
     return times_linking_dict
+
 
 def get_date_from_utterance(tokenized_utterance: List[Token],
                             year: int = 1993) -> List[datetime]:
@@ -125,6 +127,7 @@ def get_date_from_utterance(tokenized_utterance: List[Token],
                 print('invalid month day')
     return dates
 
+
 def get_numbers_from_utterance(utterance: str, tokenized_utterance: List[Token]) -> Dict[str, List[int]]:
     """
     Given an utterance, this function finds all the numbers that are in the action space. Since we need to
@@ -133,7 +136,7 @@ def get_numbers_from_utterance(utterance: str, tokenized_utterance: List[Token])
     """
     # When we use a regex to find numbers or strings, we need a mapping from
     # the character to which token triggered it.
-    char_offset_to_token_index = {token.idx : token_index
+    char_offset_to_token_index = {token.idx: token_index
                                   for token_index, token in enumerate(tokenized_utterance)}
 
     # We want to look up later for each time whether it appears after a word
@@ -169,7 +172,8 @@ def get_numbers_from_utterance(utterance: str, tokenized_utterance: List[Token])
                 number_linking_dict[number].append(index)
     return number_linking_dict
 
-def get_time_range_start_from_utterance(utterance: str, # pylint: disable=unused-argument
+
+def get_time_range_start_from_utterance(utterance: str,
                                         tokenized_utterance: List[Token]) -> Dict[str, List[int]]:
     late_indices = {index for index, token in enumerate(tokenized_utterance)
                     if token.text == 'late'}
@@ -187,7 +191,8 @@ def get_time_range_start_from_utterance(utterance: str, # pylint: disable=unused
 
     return time_range_start_linking_dict
 
-def get_time_range_end_from_utterance(utterance: str, # pylint: disable=unused-argument
+
+def get_time_range_end_from_utterance(utterance: str,
                                       tokenized_utterance: List[Token]) -> Dict[str, List[int]]:
     early_indices = {index for index, token in enumerate(tokenized_utterance)
                      if token.text == 'early'}
@@ -205,7 +210,8 @@ def get_time_range_end_from_utterance(utterance: str, # pylint: disable=unused-a
 
     return time_range_end_linking_dict
 
-def get_costs_from_utterance(utterance: str, # pylint: disable=unused-argument
+
+def get_costs_from_utterance(utterance: str,
                              tokenized_utterance: List[Token]) -> Dict[str, List[int]]:
     dollars_indices = {index for index, token in enumerate(tokenized_utterance)
                        if token.text == 'dollars' or token.text == 'dollar'}
@@ -216,7 +222,8 @@ def get_costs_from_utterance(utterance: str, # pylint: disable=unused-argument
             costs_linking_dict[token.text].append(token_index)
     return costs_linking_dict
 
-def get_flight_numbers_from_utterance(utterance: str, # pylint: disable=unused-argument
+
+def get_flight_numbers_from_utterance(utterance: str,
                                       tokenized_utterance: List[Token]) -> Dict[str, List[int]]:
     indices_words_preceding_flight_number = {index for index, token in enumerate(tokenized_utterance)
                                              if token.text in {'flight', 'number'}
@@ -235,6 +242,7 @@ def get_flight_numbers_from_utterance(utterance: str, # pylint: disable=unused-a
                 flight_numbers_linking_dict[token.text].append(token_index)
     return flight_numbers_linking_dict
 
+
 def digit_to_query_time(digit: str) -> List[int]:
     """
     Given a digit in the utterance, return a list of the times that it corresponds to.
@@ -245,6 +253,7 @@ def digit_to_query_time(digit: str) -> List[int]:
         return [0, 1200, 2400]
     return [int(digit) * HOUR_TO_TWENTY_FOUR,
             (int(digit) * HOUR_TO_TWENTY_FOUR + TWELVE_TO_TWENTY_FOUR) % HOURS_IN_DAY]
+
 
 def get_approximate_times(times: List[int]) -> List[int]:
     """
@@ -266,6 +275,7 @@ def get_approximate_times(times: List[int]) -> List[int]:
                                   end_time_range.hour * HOUR_TO_TWENTY_FOUR + end_time_range.minute])
 
     return approximate_times
+
 
 def _time_regex_match(regex: str,
                       utterance: str,
@@ -303,6 +313,7 @@ def _time_regex_match(regex: str,
                                                               char_offset_to_token_index[match.start()] + 1])
     return linking_scores_dict
 
+
 def get_trigger_dict(trigger_lists: List[List[str]],
                      trigger_dicts: List[Dict[str, List[str]]]) -> Dict[str, List[str]]:
     merged_trigger_dict: Dict[str, List[str]] = defaultdict(list)
@@ -316,8 +327,10 @@ def get_trigger_dict(trigger_lists: List[List[str]],
 
     return merged_trigger_dict
 
+
 def convert_to_string_list_value_dict(trigger_dict: Dict[str, int]) -> Dict[str, List[str]]:
     return {key: [str(value)] for key, value in trigger_dict.items()}
+
 
 AIRLINE_CODES = {'alaska': ['AS'],
                  'alliance': ['3J'],
@@ -435,7 +448,7 @@ GROUND_SERVICE = {'air taxi': ['AIR TAXI OPERATION'],
                   'rental': ['RENTAL CAR'],
                   'taxi': ['TAXI']}
 
-MISC_STR = {"every day" : ["DAILY"],
+MISC_STR = {"every day": ["DAILY"],
             "saint petersburg": ["ST. PETERSBURG"],
             "saint louis": ["ST. LOUIS"]}
 
@@ -533,19 +546,19 @@ ALL_TABLES = {'aircraft': ['aircraft_code', 'aircraft_description', 'capacity',
                               'application', 'no_discounts'],
               'state': ['state_code', 'state_name', 'country_name']}
 
-TABLES_WITH_STRINGS = {'airline' : ['airline_code', 'airline_name'],
-                       'city' : ['city_name', 'state_code', 'city_code'],
-                       'fare' : ['round_trip_required', 'fare_basis_code', 'restriction_code'],
-                       'flight' : ['airline_code', 'flight_days'],
-                       'flight_stop' : ['stop_airport'],
-                       'airport' : ['airport_code', 'airport_name'],
-                       'state' : ['state_name', 'state_code'],
-                       'fare_basis' : ['fare_basis_code', 'class_type', 'economy', 'booking_class'],
-                       'class_of_service' : ['booking_class', 'class_description'],
-                       'aircraft' : ['basic_type', 'manufacturer', 'aircraft_code', 'propulsion'],
-                       'restriction' : ['restriction_code'],
-                       'ground_service' : ['transport_type'],
-                       'days' : ['day_name', 'days_code'],
+TABLES_WITH_STRINGS = {'airline': ['airline_code', 'airline_name'],
+                       'city': ['city_name', 'state_code', 'city_code'],
+                       'fare': ['round_trip_required', 'fare_basis_code', 'restriction_code'],
+                       'flight': ['airline_code', 'flight_days'],
+                       'flight_stop': ['stop_airport'],
+                       'airport': ['airport_code', 'airport_name'],
+                       'state': ['state_name', 'state_code'],
+                       'fare_basis': ['fare_basis_code', 'class_type', 'economy', 'booking_class'],
+                       'class_of_service': ['booking_class', 'class_description'],
+                       'aircraft': ['basic_type', 'manufacturer', 'aircraft_code', 'propulsion'],
+                       'restriction': ['restriction_code'],
+                       'ground_service': ['transport_type'],
+                       'days': ['day_name', 'days_code'],
                        'food_service': ['meal_description', 'compartment']}
 
 DAY_OF_WEEK = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY']
@@ -567,11 +580,11 @@ STATE_CODES = ['TN', 'MA', 'CA', 'MD', 'IL', 'OH', 'NC', 'CO', 'TX', 'MI', 'NY',
                'IN', 'NJ', 'NV', 'GA', 'FL', 'MO', 'WI', 'MN', 'PA', 'AZ', 'WA',
                'UT', 'DC', 'PQ', 'ON']
 
-DAY_OF_WEEK_DICT = {'weekdays' : ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY']}
+DAY_OF_WEEK_DICT = {'weekdays': ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY']}
 YES_NO = {'one way': ['NO'],
           'economy': ['YES']}
-CITY_AIRPORT_CODES = {'atlanta' : ['ATL'],
-                      'boston' : ['BOS'],
+CITY_AIRPORT_CODES = {'atlanta': ['ATL'],
+                      'boston': ['BOS'],
                       'baltimore': ['BWI'],
                       'charlotte': ['CLT'],
                       'dallas': ['DFW'],
@@ -619,7 +632,7 @@ AIRCRAFT_MANUFACTURERS = ['BOEING', 'MCDONNELL DOUGLAS', 'FOKKER']
 
 AIRCRAFT_BASIC_CODES = ['DC9', '737', '767', '747', 'DC10', '757', 'MD80']
 
-DAY_OF_WEEK_INDEX = {idx : [day] for idx, day in enumerate(DAY_OF_WEEK)}
+DAY_OF_WEEK_INDEX = {idx: [day] for idx, day in enumerate(DAY_OF_WEEK)}
 
 TRIGGER_LISTS = [CITIES, AIRPORT_CODES,
                  STATES, STATE_CODES,

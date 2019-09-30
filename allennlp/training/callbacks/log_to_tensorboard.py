@@ -1,5 +1,3 @@
-# pylint: disable=unused-variable,arguments-differ
-
 # These should probably all live in separate files
 from typing import Set, Dict, TYPE_CHECKING
 import logging
@@ -13,7 +11,7 @@ from allennlp.training.callbacks.events import Events
 from allennlp.training.tensorboard_writer import TensorboardWriter
 
 if TYPE_CHECKING:
-    from allennlp.training.callback_trainer import CallbackTrainer  # pylint:disable=unused-import
+    from allennlp.training.callback_trainer import CallbackTrainer
 
 logger = logging.getLogger(__name__)
 
@@ -45,8 +43,6 @@ class LogToTensorboard(Callback):
 
     @handle_event(Events.TRAINING_START)
     def training_start(self, trainer: 'CallbackTrainer'):
-        # pylint: disable=protected-access
-
         # This is an ugly hack to get the tensorboard instance to know about the trainer, because
         # the callbacks are defined before the trainer.
         # TODO: figure out a better way to handle this.
@@ -80,7 +76,6 @@ class LogToTensorboard(Callback):
             self.tensorboard.add_train_scalar("loss/loss_train", trainer.train_metrics["loss"])
             self.tensorboard.log_metrics({"epoch_metrics/" + k: v for k, v in trainer.train_metrics.items()})
 
-
         if self.log_batch_size_period:
             cur_batch = sum([training_util.get_batch_size(batch) for batch in trainer.batch_group])
             self.cumulative_batch_size += cur_batch
@@ -109,7 +104,7 @@ class LogToTensorboard(Callback):
 
     @handle_event(Events.TRAINING_END)
     def training_end(self, trainer: 'CallbackTrainer'):
-        # pylint: disable=unused-argument
+
         self.tensorboard.close()
 
     @classmethod

@@ -67,20 +67,18 @@ class NextTokenLM(Model):
     def forward(self,  # type: ignore
                 tokens: Dict[str, torch.LongTensor],
                 target_ids: Dict[str, torch.LongTensor] = None) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
 
-         # Shape: (batch_size, num_tokens, embedding_dim)
+        # Shape: (batch_size, num_tokens, embedding_dim)
         embeddings = self._text_field_embedder(tokens)
         batch_size = embeddings.size(0)
 
-         # Shape: (batch_size, num_tokens, encoding_dim)
+        # Shape: (batch_size, num_tokens, encoding_dim)
         if self._contextualizer:
             mask = util.get_text_field_mask(embeddings)
             contextual_embeddings = self._contextualizer(embeddings, mask)
             final_embeddings = util.get_final_encoder_states(contextual_embeddings, mask)
         else:
             final_embeddings = embeddings[:, -1]
-
 
         target_logits = self._language_model_head(self._dropout(final_embeddings))
 

@@ -82,7 +82,7 @@ class MaskedLanguageModel(Model):
             that there is exactly one entry in the dictionary, and that it has a shape identical to
             ``mask_positions`` - one target token per mask position.
         """
-        # pylint: disable=arguments-differ
+
         targets = None
         if target_ids is not None:
             # A bit of a hack to get the right targets out of the TextField output...

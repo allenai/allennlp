@@ -14,7 +14,8 @@ from allennlp.data.instance import Instance
 from allennlp.data.tokenizers import Token, Tokenizer, WordTokenizer
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
+
 
 @DatasetReader.register("event2mind")
 class Event2MindDatasetReader(DatasetReader):
@@ -83,7 +84,7 @@ class Event2MindDatasetReader(DatasetReader):
             logger.info("Reading instances from lines in file at: %s", file_path)
             reader = csv.reader(data_file)
             # Skip header
-            next(reader) # pylint: disable=stop-iteration-return
+            next(reader)
 
             for (line_num, line_parts) in enumerate(reader):
                 if len(line_parts) != 7:
@@ -130,7 +131,7 @@ class Event2MindDatasetReader(DatasetReader):
         word_tokens = tokenizer.tokenize(string.lower())
         words = [token.text for token in word_tokens]
         if "person y" in string.lower():
-            #tokenize the string, reformat PersonY if mentioned for consistency
+            # tokenize the string, reformat PersonY if mentioned for consistency
             words_with_persony = []
             skip = False
             for i in range(0, len(words)-1):
@@ -172,7 +173,7 @@ class Event2MindDatasetReader(DatasetReader):
                          xintent_string: str = None,
                          xreact_string: str = None,
                          oreact_string: str = None) -> Instance:
-        # pylint: disable=arguments-differ
+
         processed = self._preprocess_string(self._source_tokenizer, source_string)
         tokenized_source = self._source_tokenizer.tokenize(processed)
         if self._source_add_start_token:

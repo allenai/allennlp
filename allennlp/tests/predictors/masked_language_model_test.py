@@ -1,9 +1,8 @@
-# pylint: disable=no-self-use, protected-access
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor
 
-from ..modules.language_model_heads.linear import LinearLanguageModelHead  # pylint: disable=unused-import
+from ..modules.language_model_heads.linear import LinearLanguageModelHead
 
 
 class TestMaskedLanguageModelPredictor(AllenNlpTestCase):

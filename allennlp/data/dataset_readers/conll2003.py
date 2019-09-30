@@ -13,7 +13,8 @@ from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.tokenizers import Token
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
+
 
 def _is_divider(line: str) -> bool:
     empty_line = line.strip() == ''
@@ -21,7 +22,7 @@ def _is_divider(line: str) -> bool:
         return True
     else:
         first_token = line.split()[0]
-        if first_token == "-DOCSTART-":  # pylint: disable=simplifiable-if-statement
+        if first_token == "-DOCSTART-":
             return True
         else:
             return False
@@ -118,7 +119,7 @@ class Conll2003DatasetReader(DatasetReader):
 
                     yield self.text_to_instance(tokens, pos_tags, chunk_tags, ner_tags)
 
-    def text_to_instance(self, # type: ignore
+    def text_to_instance(self,  # type: ignore
                          tokens: List[Token],
                          pos_tags: List[str] = None,
                          chunk_tags: List[str] = None,
@@ -126,7 +127,7 @@ class Conll2003DatasetReader(DatasetReader):
         """
         We take `pre-tokenized` input here, because we don't have a tokenizer in this class.
         """
-        # pylint: disable=arguments-differ
+
         sequence = TextField(tokens, self._token_indexers)
         instance_fields: Dict[str, Field] = {'tokens': sequence}
         instance_fields["metadata"] = MetadataField({"words": [x.text for x in tokens]})

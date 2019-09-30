@@ -23,7 +23,7 @@ class BertLanguageModelHead(LanguageModelHead):
         # would only load the BERT weights once.  Though, it's not clear how to do that here, as we
         # need to load `BertForMaskedLM`, not just `BertModel`...
         bert_model = BertForMaskedLM.from_pretrained(model_name)
-        self.bert_lm_head = bert_model.cls  # pylint: disable=no-member
+        self.bert_lm_head = bert_model.cls
 
     @overrides
     def get_input_dim(self) -> int:

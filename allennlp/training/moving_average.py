@@ -4,7 +4,7 @@ import torch
 
 from allennlp.common.registrable import Registrable
 
-NamedParameter = Tuple[str, torch.Tensor]  # pylint: disable=invalid-name
+NamedParameter = Tuple[str, torch.Tensor]
 
 
 class MovingAverage(Registrable):

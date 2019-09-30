@@ -70,7 +70,6 @@ class InterleavingDatasetReader(DatasetReader):
                 instance.fields[self._dataset_field_name] = MetadataField(key)
                 yield instance
 
-
     def _read(self, file_path: str) -> Iterable[Instance]:
         try:
             file_paths = json.loads(file_path)
@@ -92,5 +91,5 @@ class InterleavingDatasetReader(DatasetReader):
             raise RuntimeError("impossible to get here")
 
     def text_to_instance(self) -> Instance:  # type: ignore
-        # pylint: disable=arguments-differ
+
         raise RuntimeError("text_to_instance doesn't make sense here")

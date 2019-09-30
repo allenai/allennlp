@@ -88,9 +88,9 @@ class BiMpm(Model):
 
         self.aggregator = aggregator
 
-        matching_dim = self.matcher_word.get_output_dim() + \
-                       self.matcher_forward1.get_output_dim() + self.matcher_backward1.get_output_dim() + \
-                       self.matcher_forward2.get_output_dim() + self.matcher_backward2.get_output_dim()
+        matching_dim = (self.matcher_word.get_output_dim() +
+                        self.matcher_forward1.get_output_dim() + self.matcher_backward1.get_output_dim() +
+                        self.matcher_forward2.get_output_dim() + self.matcher_backward2.get_output_dim())
 
         check_dimensions_match(matching_dim, self.aggregator.get_input_dim(),
                                "sum of dim of all matching layers", "aggregator input dim")
@@ -110,9 +110,8 @@ class BiMpm(Model):
                 premise: Dict[str, torch.LongTensor],
                 hypothesis: Dict[str, torch.LongTensor],
                 label: torch.LongTensor = None,
-                metadata: List[Dict[str, Any]] = None  # pylint:disable=unused-argument
-               ) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
+                metadata: List[Dict[str, Any]] = None
+                ) -> Dict[str, torch.Tensor]:
         """
 
         Parameters

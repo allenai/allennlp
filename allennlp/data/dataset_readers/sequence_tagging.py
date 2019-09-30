@@ -10,9 +10,10 @@ from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.tokenizers import Token
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 DEFAULT_WORD_TAG_DELIMITER = "###"
+
 
 @DatasetReader.register("sequence_tagging")
 class SequenceTaggingDatasetReader(DatasetReader):
@@ -71,7 +72,7 @@ class SequenceTaggingDatasetReader(DatasetReader):
         """
         We take `pre-tokenized` input here, because we don't have a tokenizer in this class.
         """
-        # pylint: disable=arguments-differ
+
         fields: Dict[str, Field] = {}
         sequence = TextField(tokens, self._token_indexers)
         fields["tokens"] = sequence

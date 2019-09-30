@@ -12,7 +12,7 @@ from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.tokenizers import Token
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 _VALID_LABELS = {'ccg', 'modified_pos', 'original_pos', 'predicate_arg'}
 
@@ -92,7 +92,7 @@ class CcgBankDatasetReader(DatasetReader):
 
                     # Convert to lists and assign to variables.
                     ccg_categories, modified_pos_tags, original_pos_tags, tokens, predicate_arg_categories = \
-                            [list(result) for result in tuples]
+                        [list(result) for result in tuples]
 
                     yield self.text_to_instance(tokens,
                                                 ccg_categories,
@@ -101,7 +101,7 @@ class CcgBankDatasetReader(DatasetReader):
                                                 predicate_arg_categories)
 
     @overrides
-    def text_to_instance(self, # type: ignore
+    def text_to_instance(self,  # type: ignore
                          tokens: List[str],
                          ccg_categories: List[str] = None,
                          original_pos_tags: List[str] = None,
@@ -135,7 +135,7 @@ class CcgBankDatasetReader(DatasetReader):
                 Tags corresponding to each feature_label (if any) specified in the
                 ``feature_labels`` constructor argument.
         """
-        # pylint: disable=arguments-differ
+
         text_field = TextField([Token(x) for x in tokens], token_indexers=self._token_indexers)
         fields: Dict[str, Field] = {"tokens": text_field}
 

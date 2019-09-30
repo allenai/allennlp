@@ -1,4 +1,3 @@
-# pylint: disable=invalid-name
 import os
 import re
 import time

@@ -14,9 +14,9 @@ from allennlp.data.fields import MetadataField
 from allennlp.data.instance import Instance
 from allennlp.data.vocabulary import Vocabulary
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
-TensorDict = Dict[str, Union[torch.Tensor, Dict[str, torch.Tensor]]]  # pylint: disable=invalid-name
+TensorDict = Dict[str, Union[torch.Tensor, Dict[str, torch.Tensor]]]
 
 
 def add_epoch_number(batch: Batch, epoch: int) -> Batch:
