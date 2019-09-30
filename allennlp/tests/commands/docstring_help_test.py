@@ -11,7 +11,6 @@ from allennlp.commands import create_parser
 from allennlp.common.testing import AllenNlpTestCase
 
 
-# pylint: disable=protected-access
 def _subcommand_help_output(subcommand: str) -> str:
     parser = create_parser('allennlp')
     for action in parser._actions:  # type: ignore
