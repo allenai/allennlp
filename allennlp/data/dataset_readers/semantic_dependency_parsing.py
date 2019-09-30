@@ -10,9 +10,10 @@ from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
 from allennlp.data.tokenizers import Token
 from allennlp.data.instance import Instance
 
-logger = logging.getLogger(__name__) # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 FIELDS = ["id", "form", "lemma", "pos", "head", "deprel", "top", "pred", "frame"]
+
 
 def parse_sentence(sentence_blob: str) -> Tuple[List[Dict[str, str]], List[Tuple[int, int]], List[str]]:
     """
@@ -43,7 +44,7 @@ def parse_sentence(sentence_blob: str) -> Tuple[List[Dict[str, str]], List[Tuple
     lines = [line.split("\t") for line in sentence_blob.split("\n")
              if line and not line.strip().startswith("#")]
     for line_idx, line in enumerate(lines):
-        annotated_token = {k:v for k, v in zip(FIELDS, line)}
+        annotated_token = {k: v for k, v in zip(FIELDS, line)}
         if annotated_token['pred'] == "+":
             predicates.append(line_idx)
         annotated_sentence.append(annotated_token)
@@ -96,12 +97,12 @@ class SemanticDependenciesDatasetReader(DatasetReader):
                 yield self.text_to_instance(tokens, pos_tags, directed_arc_indices, arc_tags)
 
     @overrides
-    def text_to_instance(self, # type: ignore
+    def text_to_instance(self,  # type: ignore
                          tokens: List[str],
                          pos_tags: List[str] = None,
                          arc_indices: List[Tuple[int, int]] = None,
                          arc_tags: List[str] = None) -> Instance:
-        # pylint: disable=arguments-differ
+
         fields: Dict[str, Field] = {}
         token_field = TextField([Token(t) for t in tokens], self._token_indexers)
         fields["tokens"] = token_field

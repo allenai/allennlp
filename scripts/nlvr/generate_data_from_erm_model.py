@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-# pylint: disable=invalid-name,wrong-import-position
+
 import sys
 import os
 import json
@@ -25,7 +25,7 @@ def make_data(input_file: str,
         raise RuntimeError(f"Expected an archived NlvrCoverageSemanticParser, but found {model_type} instead")
     # Tweaking the decoder trainer to coerce the it to generate a k-best list. Setting k to 100
     # here, so that we can filter out the inconsistent ones later.
-    model._decoder_trainer._max_num_decoded_sequences = 100  # pylint: disable=protected-access
+    model._decoder_trainer._max_num_decoded_sequences = 100
     num_outputs = 0
     num_sentences = 0
     with open(output_file, "w") as outfile:

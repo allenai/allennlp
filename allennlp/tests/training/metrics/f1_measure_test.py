@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name,protected-access
 import torch
 import pytest
 import numpy
@@ -56,7 +55,6 @@ class F1MeasureTest(AllenNlpTestCase):
         numpy.testing.assert_almost_equal(recall, 0.5)
         numpy.testing.assert_almost_equal(f1, 0.6666666666)
 
-
     def test_f1_measure_other_positive_label(self):
         f1_measure = F1Measure(positive_label=1)
         predictions = torch.Tensor([[0.35, 0.25, 0.1, 0.1, 0.2],
@@ -83,7 +81,6 @@ class F1MeasureTest(AllenNlpTestCase):
         assert isinstance(precision, float)
         assert isinstance(recall, float)
         assert isinstance(f1, float)
-
 
     def test_f1_measure_accumulates_and_resets_correctly(self):
         f1_measure = F1Measure(positive_label=0)

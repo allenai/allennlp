@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use
 from typing import Dict, List, Callable
 import logging
 
@@ -119,7 +118,7 @@ class WordpieceIndexer(TokenIndexer[int]):
         pass
 
     def _add_encoding_to_vocabulary(self, vocabulary: Vocabulary) -> None:
-        # pylint: disable=protected-access
+
         for word, idx in self.vocab.items():
             vocabulary._token_to_index[self._namespace][word] = idx
             vocabulary._index_to_token[self._namespace][idx] = word
@@ -242,7 +241,6 @@ class WordpieceIndexer(TokenIndexer[int]):
         # Flatten the wordpiece windows
         wordpiece_ids = [wordpiece for sequence in wordpiece_windows for wordpiece in sequence]
 
-
         # Our mask should correspond to the original tokens,
         # because calling util.get_text_field_mask on the
         # "wordpiece_id" tokens will produce the wrong shape.
@@ -272,14 +270,14 @@ class WordpieceIndexer(TokenIndexer[int]):
                 [last for _ in self._end_piece_ids])
 
     @overrides
-    def get_padding_lengths(self, token: int) -> Dict[str, int]:  # pylint: disable=unused-argument
+    def get_padding_lengths(self, token: int) -> Dict[str, int]:
         return {}
 
     @overrides
     def as_padded_tensor(self,
                          tokens: Dict[str, List[int]],
                          desired_num_tokens: Dict[str, int],
-                         padding_lengths: Dict[str, int]) -> Dict[str, torch.Tensor]:  # pylint: disable=unused-argument
+                         padding_lengths: Dict[str, int]) -> Dict[str, torch.Tensor]:
         return {key: torch.LongTensor(pad_sequence_to_length(val, desired_num_tokens[key]))
                 for key, val in tokens.items()}
 
@@ -288,13 +286,13 @@ class WordpieceIndexer(TokenIndexer[int]):
         """
         We need to override this because the indexer generates multiple keys.
         """
-        # pylint: disable=no-self-use
+
         return [index_name, f"{index_name}-offsets", f"{index_name}-type-ids", "mask"]
 
 
 @TokenIndexer.register("bert-pretrained")
 class PretrainedBertIndexer(WordpieceIndexer):
-    # pylint: disable=line-too-long
+
     """
     A ``TokenIndexer`` corresponding to a pretrained BERT model.
 

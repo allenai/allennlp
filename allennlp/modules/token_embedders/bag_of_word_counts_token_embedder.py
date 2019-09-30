@@ -41,7 +41,7 @@ class BagOfWordCountsTokenEmbedder(TokenEmbedder):
         else:
             self._projection = None
         self._ignore_oov = ignore_oov
-        oov_token = vocab._oov_token  # pylint: disable=protected-access
+        oov_token = vocab._oov_token
         self._oov_idx = vocab.get_token_to_index_vocabulary(vocab_namespace).get(oov_token)
         if self._oov_idx is None:
             raise ConfigurationError("OOV token does not exist in vocabulary namespace {}".format(vocab_namespace))
@@ -50,7 +50,7 @@ class BagOfWordCountsTokenEmbedder(TokenEmbedder):
     def get_output_dim(self):
         return self.output_dim
 
-    def forward(self,  # pylint: disable=arguments-differ
+    def forward(self,
                 inputs: torch.Tensor) -> torch.Tensor:
         """
         Parameters
@@ -84,7 +84,7 @@ class BagOfWordCountsTokenEmbedder(TokenEmbedder):
 
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'BagOfWordCountsTokenEmbedder':  # type: ignore
-        # pylint: disable=arguments-differ
+
         """
         we look for a ``vocab_namespace`` key in the parameter dictionary
         to know which vocabulary to use.

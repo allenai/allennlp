@@ -18,6 +18,7 @@ from allennlp.training.metrics import CategoricalAccuracy
 from allennlp.training.metrics import EvalbBracketingScorer, DEFAULT_EVALB_DIR
 from allennlp.common.checks import ConfigurationError
 
+
 class SpanInformation(NamedTuple):
     """
     A helper namedtuple for handling decoding information.
@@ -132,7 +133,7 @@ class SpanConstituencyParser(Model):
                 metadata: List[Dict[str, Any]],
                 pos_tags: Dict[str, torch.LongTensor] = None,
                 span_labels: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
+
         """
         Parameters
         ----------
@@ -318,7 +319,7 @@ class SpanConstituencyParser(Model):
                 if int(label_index) != no_label_id or (start == 0 and end == len(sentence)):
                     # TODO(Mark): Remove this once pylint sorts out named tuples.
                     # https://github.com/PyCQA/pylint/issues/1418
-                    selected_spans.append(SpanInformation(start=int(start), # pylint: disable=no-value-for-parameter
+                    selected_spans.append(SpanInformation(start=int(start),
                                                           end=int(end),
                                                           label_prob=float(label_prob),
                                                           no_label_prob=float(no_label_prob),
@@ -373,8 +374,8 @@ class SpanConstituencyParser(Model):
             conflicts_exist = False
             for span1_index, span1 in enumerate(spans):
                 for span2_index, span2 in list(enumerate(spans))[span1_index + 1:]:
-                    if (span1.start < span2.start < span1.end < span2.end or
-                                span2.start < span1.start < span2.end < span1.end):
+                    if span1.start < span2.start < span1.end < span2.end or \
+                       span2.start < span1.start < span2.end < span1.end:
                         # The spans overlap.
                         conflicts_exist = True
                         # What's the more likely situation: that span2 was labeled
@@ -382,8 +383,7 @@ class SpanConstituencyParser(Model):
                         # was unlabled? In the first case, we delete span2 from the
                         # set of spans to form the tree - in the second case, we delete
                         # span1.
-                        if (span1.no_label_prob + span2.label_prob <
-                                    span2.no_label_prob + span1.label_prob):
+                        if span1.no_label_prob + span2.label_prob < span2.no_label_prob + span1.label_prob:
                             spans.pop(span2_index)
                         else:
                             spans.pop(span1_index)

@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name,not-callable
 import numpy
 import pytest
 import torch
@@ -6,6 +5,7 @@ import torch
 from allennlp.modules import Pruner
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.nn.util import batched_index_select
+
 
 class TestPruner(AllenNlpTestCase):
     def test_pruner_selects_top_scored_items_and_respects_masking(self):
@@ -41,7 +41,7 @@ class TestPruner(AllenNlpTestCase):
     def test_scorer_raises_with_incorrect_scorer_spec(self):
         # Mis-configured scorer - doesn't produce a tensor with 1 as it's final dimension.
         scorer = lambda tensor: tensor.sum(-1)
-        pruner = Pruner(scorer=scorer) # type: ignore
+        pruner = Pruner(scorer=scorer)  # type: ignore
         items = torch.randn([3, 4, 5]).clamp(min=0.0, max=1.0)
         mask = torch.ones([3, 4])
 
@@ -51,7 +51,7 @@ class TestPruner(AllenNlpTestCase):
     def test_scorer_works_for_completely_masked_rows(self):
         # Really simple scorer - sum up the embedding_dim.
         scorer = lambda tensor: tensor.sum(-1).unsqueeze(-1)
-        pruner = Pruner(scorer=scorer) # type: ignore
+        pruner = Pruner(scorer=scorer)  # type: ignore
 
         items = torch.randn([3, 4, 5]).clamp(min=0.0, max=1.0)
         items[0, :2, :] = 1

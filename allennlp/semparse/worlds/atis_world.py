@@ -2,15 +2,17 @@ from typing import List, Dict, Tuple, Set, Callable
 from copy import copy
 import numpy
 from nltk import ngrams, bigrams
+from collections import defaultdict
 
 from parsimonious.grammar import Grammar
 from parsimonious.expressions import Expression, OneOf, Sequence, Literal
 
-from allennlp.semparse.contexts.atis_tables import * # pylint: disable=wildcard-import,unused-wildcard-import
+from allennlp.semparse.contexts import atis_tables as at
 from allennlp.semparse.contexts.atis_sql_table_context import AtisSqlTableContext, KEYWORDS, NUMERIC_NONTERMINALS
 from allennlp.semparse.contexts.sql_context_utils import SqlVisitor, format_action, initialize_valid_actions
 
 from allennlp.data.tokenizers import Token, Tokenizer, WordTokenizer
+
 
 def get_strings_from_utterance(tokenized_utterance: List[Token]) -> Dict[str, List[int]]:
     """
@@ -20,12 +22,12 @@ def get_strings_from_utterance(tokenized_utterance: List[Token]) -> Dict[str, Li
     string_linking_scores: Dict[str, List[int]] = defaultdict(list)
 
     for index, token in enumerate(tokenized_utterance):
-        for string in ATIS_TRIGGER_DICT.get(token.text.lower(), []):
+        for string in at.ATIS_TRIGGER_DICT.get(token.text.lower(), []):
             string_linking_scores[string].append(index)
 
     token_bigrams = bigrams([token.text for token in tokenized_utterance])
     for index, token_bigram in enumerate(token_bigrams):
-        for string in ATIS_TRIGGER_DICT.get(' '.join(token_bigram).lower(), []):
+        for string in at.ATIS_TRIGGER_DICT.get(' '.join(token_bigram).lower(), []):
             string_linking_scores[string].extend([index,
                                                   index + 1])
 
@@ -35,7 +37,7 @@ def get_strings_from_utterance(tokenized_utterance: List[Token]) -> Dict[str, Li
             natural_language_key = f'st. {trigram[2]}'.lower()
         else:
             natural_language_key = ' '.join(trigram).lower()
-        for string in ATIS_TRIGGER_DICT.get(natural_language_key, []):
+        for string in at.ATIS_TRIGGER_DICT.get(natural_language_key, []):
             string_linking_scores[string].extend([index,
                                                   index + 1,
                                                   index + 2])
@@ -63,8 +65,8 @@ class AtisWorld():
                  utterances: List[str],
                  tokenizer: Tokenizer = None) -> None:
         if AtisWorld.sql_table_context is None:
-            AtisWorld.sql_table_context = AtisSqlTableContext(ALL_TABLES,
-                                                              TABLES_WITH_STRINGS,
+            AtisWorld.sql_table_context = AtisSqlTableContext(at.ALL_TABLES,
+                                                              at.TABLES_WITH_STRINGS,
                                                               AtisWorld.database_file)
         self.utterances: List[str] = utterances
         self.tokenizer = tokenizer if tokenizer else WordTokenizer()
@@ -127,31 +129,31 @@ class AtisWorld():
         new_binary_expressions = []
 
         fare_round_trip_cost_expression = \
-                    self._get_sequence_with_spacing(new_grammar,
-                                                    [Literal('fare'),
-                                                     Literal('.'),
-                                                     Literal('round_trip_cost'),
-                                                     new_grammar['binaryop'],
-                                                     new_grammar['fare_round_trip_cost']])
+            self._get_sequence_with_spacing(new_grammar,
+                                            [Literal('fare'),
+                                             Literal('.'),
+                                             Literal('round_trip_cost'),
+                                             new_grammar['binaryop'],
+                                             new_grammar['fare_round_trip_cost']])
         new_binary_expressions.append(fare_round_trip_cost_expression)
 
         fare_one_direction_cost_expression = \
-                    self._get_sequence_with_spacing(new_grammar,
-                                                    [Literal('fare'),
-                                                     Literal('.'),
-                                                     Literal('one_direction_cost'),
-                                                     new_grammar['binaryop'],
-                                                     new_grammar['fare_one_direction_cost']])
+            self._get_sequence_with_spacing(new_grammar,
+                                            [Literal('fare'),
+                                             Literal('.'),
+                                             Literal('one_direction_cost'),
+                                             new_grammar['binaryop'],
+                                             new_grammar['fare_one_direction_cost']])
 
         new_binary_expressions.append(fare_one_direction_cost_expression)
 
         flight_number_expression = \
-                    self._get_sequence_with_spacing(new_grammar,
-                                                    [Literal('flight'),
-                                                     Literal('.'),
-                                                     Literal('flight_number'),
-                                                     new_grammar['binaryop'],
-                                                     new_grammar['flight_number']])
+            self._get_sequence_with_spacing(new_grammar,
+                                            [Literal('flight'),
+                                             Literal('.'),
+                                             Literal('flight_number'),
+                                             new_grammar['binaryop'],
+                                             new_grammar['flight_number']])
         new_binary_expressions.append(flight_number_expression)
 
         if self.dates:
@@ -195,7 +197,7 @@ class AtisWorld():
         if number_literals:
             new_grammar[nonterminal] = OneOf(*number_literals, name=nonterminal)
 
-    def _update_expression_reference(self, # pylint: disable=no-self-use
+    def _update_expression_reference(self,
                                      grammar: Grammar,
                                      parent_expression_nonterminal: str,
                                      child_expression_nonterminal: str) -> None:
@@ -204,11 +206,11 @@ class AtisWorld():
         it, and we need to update those to point to the new expression.
         """
         grammar[parent_expression_nonterminal].members = \
-                [member if member.name != child_expression_nonterminal
-                 else grammar[child_expression_nonterminal]
-                 for member in grammar[parent_expression_nonterminal].members]
+            [member if member.name != child_expression_nonterminal
+             else grammar[child_expression_nonterminal]
+             for member in grammar[parent_expression_nonterminal].members]
 
-    def _get_sequence_with_spacing(self, # pylint: disable=no-self-use
+    def _get_sequence_with_spacing(self,
                                    new_grammar,
                                    expressions: List[Expression],
                                    name: str = '') -> Sequence:
@@ -228,8 +230,8 @@ class AtisWorld():
                                            number_linking_scores: Dict[str, Tuple[str, str, List[int]]],
                                            current_tokenized_utterance: List[Token]) -> None:
 
-        month_reverse_lookup = {str(number): string for string, number in MONTH_NUMBERS.items()}
-        day_reverse_lookup = {str(number) : string for string, number in DAY_NUMBERS.items()}
+        month_reverse_lookup = {str(number): string for string, number in at.MONTH_NUMBERS.items()}
+        day_reverse_lookup = {str(number): string for string, number in at.DAY_NUMBERS.items()}
 
         if self.dates:
             for date in self.dates:
@@ -243,7 +245,6 @@ class AtisWorld():
                                        is_number=True,
                                        keywords_to_uppercase=KEYWORDS)
                 number_linking_scores[action] = ('year_number', str(date.year), entity_linking)
-
 
                 entity_linking = [0 for token in current_tokenized_utterance]
                 for token_index, token in enumerate(current_tokenized_utterance):
@@ -301,7 +302,6 @@ class AtisWorld():
             action = format_action(nonterminal, number, is_number=True, keywords_to_uppercase=KEYWORDS)
             number_linking_scores[action] = (nonterminal, number, entity_linking)
 
-
     def _get_linked_entities(self) -> Dict[str, Dict[str, Tuple[str, str, List[int]]]]:
         """
         This method gets entities from the current utterance finds which tokens they are linked to.
@@ -309,7 +309,7 @@ class AtisWorld():
         entities later for updating the valid actions and the grammar.
         """
         current_tokenized_utterance = [] if not self.tokenized_utterances \
-                else self.tokenized_utterances[-1]
+            else self.tokenized_utterances[-1]
 
         # We generate a dictionary where the key is the type eg. ``number`` or ``string``.
         # The value is another dictionary where the key is the action and the value is a tuple
@@ -322,37 +322,37 @@ class AtisWorld():
         # Get time range start
         self.add_to_number_linking_scores({'0'},
                                           number_linking_scores,
-                                          get_time_range_start_from_utterance,
+                                          at.get_time_range_start_from_utterance,
                                           current_tokenized_utterance,
                                           'time_range_start')
 
         self.add_to_number_linking_scores({'1200'},
                                           number_linking_scores,
-                                          get_time_range_end_from_utterance,
+                                          at.get_time_range_end_from_utterance,
                                           current_tokenized_utterance,
                                           'time_range_end')
 
         self.add_to_number_linking_scores({'0', '1', '60', '41'},
                                           number_linking_scores,
-                                          get_numbers_from_utterance,
+                                          at.get_numbers_from_utterance,
                                           current_tokenized_utterance,
                                           'number')
 
         self.add_to_number_linking_scores({'0'},
                                           number_linking_scores,
-                                          get_costs_from_utterance,
+                                          at.get_costs_from_utterance,
                                           current_tokenized_utterance,
                                           'fare_round_trip_cost')
 
         self.add_to_number_linking_scores({'0'},
                                           number_linking_scores,
-                                          get_costs_from_utterance,
+                                          at.get_costs_from_utterance,
                                           current_tokenized_utterance,
                                           'fare_one_direction_cost')
 
         self.add_to_number_linking_scores({'0'},
                                           number_linking_scores,
-                                          get_flight_numbers_from_utterance,
+                                          at.get_flight_numbers_from_utterance,
                                           current_tokenized_utterance,
                                           'flight_number')
 
@@ -383,7 +383,7 @@ class AtisWorld():
     def _get_dates(self):
         dates = []
         for tokenized_utterance in self.tokenized_utterances:
-            dates.extend(get_date_from_utterance(tokenized_utterance))
+            dates.extend(at.get_date_from_utterance(tokenized_utterance))
         return dates
 
     def _ignore_dates(self, query: str):

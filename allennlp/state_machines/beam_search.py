@@ -8,7 +8,7 @@ from allennlp.state_machines import util
 from allennlp.state_machines.states import State
 from allennlp.state_machines.transition_functions import TransitionFunction
 
-StateType = TypeVar('StateType', bound=State)  # pylint: disable=invalid-name
+StateType = TypeVar('StateType', bound=State)
 
 
 class BeamSearch(FromParams, Generic[StateType]):

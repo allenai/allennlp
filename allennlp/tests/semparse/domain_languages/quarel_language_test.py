@@ -27,21 +27,21 @@ class QuaRelLanguageTest(AllenNlpTestCase):
         assert self.language.logical_form_to_action_sequence(('(infer (speed higher world1) '
                                                               '(friction higher world1) '
                                                               '(friction lower world1))')) == \
-                ['@start@ -> int',
-                 'int -> [<QuaRelType,QuaRelType,QuaRelType:int>, QuaRelType, QuaRelType, QuaRelType]',
-                 '<QuaRelType,QuaRelType,QuaRelType:int> -> infer',
-                 'QuaRelType -> [<Direction,World:QuaRelType>, Direction, World]',
-                 '<Direction,World:QuaRelType> -> speed',
-                 'Direction -> higher',
-                 'World -> world1',
-                 'QuaRelType -> [<Direction,World:QuaRelType>, Direction, World]',
-                 '<Direction,World:QuaRelType> -> friction',
-                 'Direction -> higher',
-                 'World -> world1',
-                 'QuaRelType -> [<Direction,World:QuaRelType>, Direction, World]',
-                 '<Direction,World:QuaRelType> -> friction',
-                 'Direction -> lower',
-                 'World -> world1']
+            ['@start@ -> int',
+             'int -> [<QuaRelType,QuaRelType,QuaRelType:int>, QuaRelType, QuaRelType, QuaRelType]',
+             '<QuaRelType,QuaRelType,QuaRelType:int> -> infer',
+             'QuaRelType -> [<Direction,World:QuaRelType>, Direction, World]',
+             '<Direction,World:QuaRelType> -> speed',
+             'Direction -> higher',
+             'World -> world1',
+             'QuaRelType -> [<Direction,World:QuaRelType>, Direction, World]',
+             '<Direction,World:QuaRelType> -> friction',
+             'Direction -> higher',
+             'World -> world1',
+             'QuaRelType -> [<Direction,World:QuaRelType>, Direction, World]',
+             '<Direction,World:QuaRelType> -> friction',
+             'Direction -> lower',
+             'World -> world1']
 
     def test_infer_quaval(self):
         assert self.language.execute(('(infer (and (thickness low world1) '
@@ -58,28 +58,28 @@ class QuaRelLanguageTest(AllenNlpTestCase):
                                                               '(thickness high world2)) '
                                                               '(strength lower world1) '
                                                               '(strength lower world2))')) == \
-                ['@start@ -> int',
-                 'int -> [<QuaRelType,QuaRelType,QuaRelType:int>, QuaRelType, QuaRelType, '
-                 'QuaRelType]',
-                 '<QuaRelType,QuaRelType,QuaRelType:int> -> infer',
-                 'QuaRelType -> [<QuaRelType,QuaRelType:QuaRelType>, QuaRelType, QuaRelType]',
-                 '<QuaRelType,QuaRelType:QuaRelType> -> and',
-                 'QuaRelType -> [<Direction,World:QuaRelType>, Direction, World]',
-                 '<Direction,World:QuaRelType> -> thickness',
-                 'Direction -> low',
-                 'World -> world1',
-                 'QuaRelType -> [<Direction,World:QuaRelType>, Direction, World]',
-                 '<Direction,World:QuaRelType> -> thickness',
-                 'Direction -> high',
-                 'World -> world2',
-                 'QuaRelType -> [<Direction,World:QuaRelType>, Direction, World]',
-                 '<Direction,World:QuaRelType> -> strength',
-                 'Direction -> lower',
-                 'World -> world1',
-                 'QuaRelType -> [<Direction,World:QuaRelType>, Direction, World]',
-                 '<Direction,World:QuaRelType> -> strength',
-                 'Direction -> lower',
-                 'World -> world2']
+            ['@start@ -> int',
+             'int -> [<QuaRelType,QuaRelType,QuaRelType:int>, QuaRelType, QuaRelType, '
+             'QuaRelType]',
+             '<QuaRelType,QuaRelType,QuaRelType:int> -> infer',
+             'QuaRelType -> [<QuaRelType,QuaRelType:QuaRelType>, QuaRelType, QuaRelType]',
+             '<QuaRelType,QuaRelType:QuaRelType> -> and',
+             'QuaRelType -> [<Direction,World:QuaRelType>, Direction, World]',
+             '<Direction,World:QuaRelType> -> thickness',
+             'Direction -> low',
+             'World -> world1',
+             'QuaRelType -> [<Direction,World:QuaRelType>, Direction, World]',
+             '<Direction,World:QuaRelType> -> thickness',
+             'Direction -> high',
+             'World -> world2',
+             'QuaRelType -> [<Direction,World:QuaRelType>, Direction, World]',
+             '<Direction,World:QuaRelType> -> strength',
+             'Direction -> lower',
+             'World -> world1',
+             'QuaRelType -> [<Direction,World:QuaRelType>, Direction, World]',
+             '<Direction,World:QuaRelType> -> strength',
+             'Direction -> lower',
+             'World -> world2']
 
     def test_action_sequence_to_logical_form(self):
         logical_form = ('(infer (and (thickness low world1) '

@@ -12,7 +12,7 @@ from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.model import Model
 from allennlp.training import util as training_util
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 class TrainerPieces(NamedTuple):
@@ -91,7 +91,7 @@ class TrainerPieces(NamedTuple):
                 parameter.requires_grad_(False)
 
         frozen_parameter_names, tunable_parameter_names = \
-                    get_frozen_and_tunable_parameter_names(model)
+            get_frozen_and_tunable_parameter_names(model)
         logger.info("Following parameters are Frozen  (without gradient):")
         for name in frozen_parameter_names:
             logger.info(name)

@@ -71,12 +71,12 @@ from allennlp.training.trainer import Trainer
 from allennlp.training.util import datasets_from_params, evaluate
 from allennlp.common.checks import ConfigurationError
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 class FineTune(Subcommand):
     def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
-        # pylint: disable=protected-access
+
         description = """Continues training a saved model on a new dataset."""
         subparser = parser.add_parser(name,
                                       description=description,
@@ -195,6 +195,7 @@ def fine_tune_model_from_file_paths(model_archive_path: str,
                            batch_weight_key=batch_weight_key,
                            embedding_sources_mapping=embedding_sources)
 
+
 def fine_tune_model(model: Model,
                     params: Params,
                     serialization_dir: str,
@@ -291,7 +292,7 @@ def fine_tune_model(model: Model,
             parameter.requires_grad_(False)
 
     frozen_parameter_names, tunable_parameter_names = \
-                   get_frozen_and_tunable_parameter_names(model)
+        get_frozen_and_tunable_parameter_names(model)
     logger.info("Following parameters are Frozen  (without gradient):")
     for name in frozen_parameter_names:
         logger.info(name)
@@ -328,7 +329,7 @@ def fine_tune_model(model: Model,
     if test_data and evaluate_on_test:
         logger.info("The model will be evaluated using the best epoch weights.")
         test_metrics = evaluate(model, test_data, validation_iterator or iterator,
-                                cuda_device=trainer._cuda_devices[0], # pylint: disable=protected-access,
+                                cuda_device=trainer._cuda_devices[0],
                                 batch_weight_key=batch_weight_key)
 
         for key, value in test_metrics.items():
@@ -337,7 +338,6 @@ def fine_tune_model(model: Model,
     elif test_data:
         logger.info("To evaluate on the test set after training, pass the "
                     "'evaluate_on_test' flag, or use the 'allennlp evaluate' command.")
-
 
     # Now tar up results
     archive_model(serialization_dir, files_to_archive=params.files_to_archive)

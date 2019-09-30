@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 import filecmp
 import json
 import os
@@ -89,7 +88,7 @@ class TestElmoTokenEmbedderMultilang(ModelTestCase):
                 },
                 'aligning_files': {
                         'en':
-                        self.FIXTURES_ROOT / 'elmo_multilingual' / 'fr' /  'align_zero.pth',
+                        self.FIXTURES_ROOT / 'elmo_multilingual' / 'fr' / 'align_zero.pth',
                         'fr':
                         self.FIXTURES_ROOT / 'elmo_multilingual' / 'fr' / 'align.pth'
                 },
@@ -137,7 +136,7 @@ class TestElmoTokenEmbedderMultilang(ModelTestCase):
                 },
                 'aligning_files': {
                         'en':
-                        self.FIXTURES_ROOT / 'elmo_multilingual' / 'fr' /  'align.pth',
+                        self.FIXTURES_ROOT / 'elmo_multilingual' / 'fr' / 'align.pth',
                         'fr':
                         self.FIXTURES_ROOT / 'elmo_multilingual' / 'fr' / 'align.pth'
                 },

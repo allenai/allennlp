@@ -32,7 +32,8 @@ from allennlp.common.util import import_submodules
 from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
+
 
 class ServerError(Exception):
     status_code = 400
@@ -82,16 +83,16 @@ def make_app(predictor: Predictor,
         print("Neither build_dir nor field_names passed. Demo won't render on this port.\n"
               "You must use nodejs + react app to interact with the server.")
 
-    app = Flask(__name__)  # pylint: disable=invalid-name
+    app = Flask(__name__)
 
     @app.errorhandler(ServerError)
-    def handle_invalid_usage(error: ServerError) -> Response:  # pylint: disable=unused-variable
+    def handle_invalid_usage(error: ServerError) -> Response:
         response = jsonify(error.to_dict())
         response.status_code = error.status_code
         return response
 
     @app.route('/')
-    def index() -> Response: # pylint: disable=unused-variable
+    def index() -> Response:
         if static_dir is not None:
             return send_file(os.path.join(static_dir, 'index.html'))
         else:
@@ -99,7 +100,7 @@ def make_app(predictor: Predictor,
             return Response(response=html, status=200)
 
     @app.route('/predict', methods=['POST', 'OPTIONS'])
-    def predict() -> Response:  # pylint: disable=unused-variable
+    def predict() -> Response:
         """make a prediction using the specified model and return the results"""
         if request.method == "OPTIONS":
             return Response(response="", status=200)
@@ -116,7 +117,7 @@ def make_app(predictor: Predictor,
         return jsonify(prediction)
 
     @app.route('/predict_batch', methods=['POST', 'OPTIONS'])
-    def predict_batch() -> Response:  # pylint: disable=unused-variable
+    def predict_batch() -> Response:
         """make a prediction using the specified model and return the results"""
         if request.method == "OPTIONS":
             return Response(response="", status=200)
@@ -130,13 +131,14 @@ def make_app(predictor: Predictor,
         return jsonify(prediction)
 
     @app.route('/<path:path>')
-    def static_proxy(path: str) -> Response: # pylint: disable=unused-variable
+    def static_proxy(path: str) -> Response:
         if static_dir is not None:
             return send_from_directory(static_dir, path)
         else:
             raise ServerError("static_dir not specified", 404)
 
     return app
+
 
 def _get_predictor(args: argparse.Namespace) -> Predictor:
     check_for_gpu(args.cuda_device)
@@ -146,6 +148,7 @@ def _get_predictor(args: argparse.Namespace) -> Predictor:
                            overrides=args.overrides)
 
     return Predictor.from_archive(archive, args.predictor)
+
 
 def main(args):
     # Executing this file with no extra options runs the simple service with the bidaf test fixture
@@ -197,6 +200,7 @@ def main(args):
 # HTML and Templates for the default bare-bones app are below
 #
 
+
 _PAGE_TEMPLATE = Template("""
 <html>
     <head>
@@ -216,7 +220,9 @@ _PAGE_TEMPLATE = Template("""
                         <div class="model__content">
                             $inputs
                             <div class="form__field form__field--btn">
-                                <button type="button" class="btn btn--icon-disclosure" onclick="predict()">Predict</button>
+                                <button type="button" class="btn btn--icon-disclosure" onclick="predict()">
+                                    Predict
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -738,6 +744,7 @@ h1 {
 }
 """
 
+
 def _html(title: str, field_names: List[str]) -> str:
     """
     Returns bare bones HTML for serving up an input form with the
@@ -753,6 +760,7 @@ def _html(title: str, field_names: List[str]) -> str:
                                      css=_CSS,
                                      inputs=inputs,
                                      qfl=quoted_field_list)
+
 
 if __name__ == "__main__":
     main(sys.argv[1:])

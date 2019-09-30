@@ -77,7 +77,7 @@ class ConstituencyParserPredictor(Predictor):
         -------
         A dictionary representation of the constituency tree.
         """
-        return self.predict_json({"sentence" : sentence})
+        return self.predict_json({"sentence": sentence})
 
     @overrides
     def _json_to_instance(self, json_dict: JsonDict) -> Instance:
@@ -108,7 +108,6 @@ class ConstituencyParserPredictor(Predictor):
             output["hierplane_tree"] = self._build_hierplane_tree(tree, 0, is_root=True)
             output["trees"] = tree.pformat(margin=1000000)
         return sanitize(outputs)
-
 
     def _build_hierplane_tree(self, tree: Tree, index: int, is_root: bool) -> JsonDict:
         """

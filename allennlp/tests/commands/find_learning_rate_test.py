@@ -1,4 +1,3 @@
-# pylint: disable=invalid-name,no-self-use,bad-continuation
 import argparse
 import os
 import pytest
@@ -106,20 +105,19 @@ class TestFindLearningRate(AllenNlpTestCase):
 
             args = parser.parse_args(raw_args)
 
-            assert args.func == find_learning_rate_from_args  # pylint: disable=comparison-with-callable
+            assert args.func == find_learning_rate_from_args
             assert args.param_path == "path/to/params"
             assert args.serialization_dir == "serialization_dir"
 
         # config is required
-        with self.assertRaises(SystemExit) as cm:  # pylint: disable=invalid-name
+        with self.assertRaises(SystemExit) as cm:
             args = parser.parse_args(["find_lr", "-s", "serialization_dir"])
             assert cm.exception.code == 2  # argparse code for incorrect usage
 
         # serialization dir is required
-        with self.assertRaises(SystemExit) as cm:  # pylint: disable=invalid-name
+        with self.assertRaises(SystemExit) as cm:
             args = parser.parse_args(["find_lr", "path/to/params"])
             assert cm.exception.code == 2  # argparse code for incorrect usage
-
 
     @pytest.mark.skipif(torch.cuda.device_count() < 2,
                         reason="Need multiple GPUs.")

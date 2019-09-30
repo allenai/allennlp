@@ -7,6 +7,7 @@ from allennlp.common.params import Params
 from allennlp.models.model import Model
 from allennlp.models.model import remove_pretrained_embedding_params
 
+
 class Ensemble(Model):
     """
     An ensemble runs multiple instances of a model and selects an answer from the subresults via some
@@ -16,8 +17,6 @@ class Ensemble(Model):
     (instead they rely on the vocabulary and weights from submodels).  Instead, the submodels are trained
     independently and the ensemble is created from the result.
     """
-    # pylint: disable=abstract-method
-
     def __init__(self, submodels: List[Model]) -> None:
         vocab = submodels[0].vocab
         for submodel in submodels:

@@ -1,4 +1,3 @@
-
 import torch
 from torch.nn.parameter import Parameter
 from overrides import overrides
@@ -125,8 +124,8 @@ class EndpointSpanExtractor(SpanExtractor):
             # We're using sentinels, so we need to replace all the elements which were
             # outside the dimensions of the sequence_tensor with the start sentinel.
             float_start_sentinel_mask = start_sentinel_mask.float()
-            start_embeddings = start_embeddings * (1 - float_start_sentinel_mask) \
-                                        + float_start_sentinel_mask * self._start_sentinel
+            start_embeddings = (start_embeddings * (1 - float_start_sentinel_mask)
+                                + float_start_sentinel_mask * self._start_sentinel)
 
         combined_tensors = util.combine_tensors(self._combination, [start_embeddings, end_embeddings])
         if self._span_width_embedding is not None:

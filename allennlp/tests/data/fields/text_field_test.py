@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 from collections import defaultdict
 from typing import Dict, List
 
@@ -14,7 +13,7 @@ from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import pad_sequence_to_length
 
-# pylint: disable=abstract-method
+
 class DictReturningTokenIndexer(TokenIndexer):
     """
     A stub TokenIndexer that returns multiple arrays of different lengths.
@@ -24,28 +23,29 @@ class DictReturningTokenIndexer(TokenIndexer):
 
     def tokens_to_indices(self, tokens: List[Token],
                           vocabulary: Vocabulary,
-                          index_name: str) -> Dict[str, List[int]]: # pylint: disable=unused-argument
+                          index_name: str) -> Dict[str, List[int]]:
         return {
-                "token_ids": [10, 15] + \
-                         [vocabulary.get_token_index(token.text, 'words') for token in tokens] + \
-                         [25],
+                "token_ids": (
+                    [10, 15] +
+                    [vocabulary.get_token_index(token.text, 'words') for token in tokens] +
+                    [25]),
                 "additional_key": [22, 29]
         }
 
-    def get_padding_lengths(self, token: int) -> Dict[str, int]:  # pylint: disable=unused-argument
+    def get_padding_lengths(self, token: int) -> Dict[str, int]:
         return {}
 
     def as_padded_tensor(self,
                          tokens: Dict[str, List[int]],
                          desired_num_tokens: Dict[str, int],
-                         padding_lengths: Dict[str, int]) -> Dict[str, torch.Tensor]:  # pylint: disable=unused-argument
+                         padding_lengths: Dict[str, int]) -> Dict[str, torch.Tensor]:
         return {key: torch.LongTensor(pad_sequence_to_length(val, desired_num_tokens[key]))
                 for key, val in tokens.items()}
 
     def get_keys(self, index_name: str) -> List[str]:
-        # pylint: disable=unused-argument,no-self-use
+
         return ["token_ids", "additional_key"]
-# pylint: enable=abstract-method
+
 
 class TestTextField(AllenNlpTestCase):
     def setUp(self):
@@ -128,7 +128,7 @@ class TestTextField(AllenNlpTestCase):
         field = TextField([Token(t) for t in ["A", "sentence"]],
                           {"words": SingleIdTokenIndexer(namespace="words")})
         field.index(vocab)
-        # pylint: disable=protected-access
+
         assert field._indexed_tokens["words"] == [capital_a_index, sentence_index]
 
         field1 = TextField([Token(t) for t in ["A", "sentence"]],
@@ -147,7 +147,6 @@ class TestTextField(AllenNlpTestCase):
         assert field2._indexed_tokens["characters"] == [[capital_a_char_index],
                                                         [s_index, e_index, n_index, t_index,
                                                          e_index, n_index, c_index, e_index]]
-        # pylint: enable=protected-access
 
     def test_get_padding_lengths_raises_if_no_indexed_tokens(self):
 

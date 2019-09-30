@@ -11,7 +11,7 @@ from allennlp.data.fields import Field, TextField, ListField, MetadataField, Ind
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.tokenizers import Tokenizer, WordTokenizer
 
-logger = logging.getLogger(__name__) # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @DatasetReader.register("qangaroo")
@@ -60,7 +60,7 @@ class QangarooReader(DatasetReader):
             yield instance
 
     @overrides
-    def text_to_instance(self, # type: ignore
+    def text_to_instance(self,  # type: ignore
                          candidates: List[str],
                          query: str,
                          supports: List[str],
@@ -68,7 +68,6 @@ class QangarooReader(DatasetReader):
                          answer: str = None,
                          annotations: List[List[str]] = None) -> Instance:
 
-        # pylint: disable=arguments-differ
         fields: Dict[str, Field] = {}
 
         candidates_field = ListField([TextField(candidate, self._token_indexers)

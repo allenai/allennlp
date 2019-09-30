@@ -16,7 +16,7 @@ from allennlp.data.token_indexers.token_indexer import TokenIndexer, TokenType
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.nn import util
 
-TokenList = List[TokenType]  # pylint: disable=invalid-name
+TokenList = List[TokenType]
 
 
 class TextField(SequenceField[Dict[str, torch.Tensor]]):
@@ -156,7 +156,7 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
 
     @overrides
     def empty_field(self):
-        # pylint: disable=protected-access
+
         text_field = TextField([], self._token_indexers)
         text_field._indexed_tokens = {}
         text_field._indexer_name_to_indexed_token = {}
@@ -169,7 +169,7 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
 
     @overrides
     def batch_tensors(self, tensor_list: List[Dict[str, torch.Tensor]]) -> Dict[str, torch.Tensor]:
-        # pylint: disable=no-self-use
+
         # This is creating a dict of {token_indexer_key: batch_tensor} for each token indexer used
         # to index this field.
         return util.batch_tensor_dicts(tensor_list)

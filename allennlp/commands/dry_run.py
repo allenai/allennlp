@@ -40,12 +40,12 @@ from allennlp.data.dataset import Batch
 from allennlp.models import Model
 from allennlp.training.util import datasets_from_params
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 class DryRun(Subcommand):
     def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
-        # pylint: disable=protected-access
+
         description = '''Create a vocabulary, compute dataset statistics and other training utilities.'''
         subparser = parser.add_parser(name,
                                       description=description,
@@ -80,6 +80,7 @@ def dry_run_from_args(args: argparse.Namespace):
     params = Params.from_file(parameter_path, overrides)
 
     dry_run_from_params(params, serialization_dir)
+
 
 def dry_run_from_params(params: Params, serialization_dir: str) -> None:
     prepare_environment(params)
@@ -123,7 +124,7 @@ def dry_run_from_params(params: Params, serialization_dir: str) -> None:
             parameter.requires_grad_(False)
 
     frozen_parameter_names, tunable_parameter_names = \
-                   get_frozen_and_tunable_parameter_names(model)
+        get_frozen_and_tunable_parameter_names(model)
     logger.info("Following parameters are Frozen  (without gradient):")
     for name in frozen_parameter_names:
         logger.info(name)

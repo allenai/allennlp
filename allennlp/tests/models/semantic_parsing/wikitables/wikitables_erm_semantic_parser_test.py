@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use
 from flaky import flaky
 
 from allennlp.common.testing import ModelTestCase
@@ -7,7 +6,7 @@ from allennlp.common.testing import ModelTestCase
 class WikiTablesVariableFreeErmTest(ModelTestCase):
     def setUp(self):
         super().setUp()
-        config_path = self.FIXTURES_ROOT /  "semantic_parsing" / "wikitables" / "experiment-erm.json"
+        config_path = self.FIXTURES_ROOT / "semantic_parsing" / "wikitables" / "experiment-erm.json"
         data_path = self.FIXTURES_ROOT / "data" / "wikitables" / "sample_data.examples"
         self.set_up_model(config_path, data_path)
 

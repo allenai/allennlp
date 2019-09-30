@@ -45,7 +45,7 @@ class TestCcgBankReader(AllenNlpTestCase):
         # check that we didn't clobber the labels namespace
         vocab = Vocabulary.from_instances(instances)
         self.assertSetEqual(
-                set(vocab._token_to_index.keys()), # pylint: disable=protected-access
+                set(vocab._token_to_index.keys()),
                 {'tokens', 'labels', 'modified_pos_tags', 'original_pos_tags',
                  'predicate_arg_tags'}
         )

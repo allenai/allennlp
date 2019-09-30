@@ -23,7 +23,7 @@ from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 from allennlp.modules.time_distributed import TimeDistributed
 from allennlp.nn import util
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @TokenEmbedder.register("embedding")
@@ -128,7 +128,7 @@ class Embedding(TokenEmbedder):
         return self.output_dim
 
     @overrides
-    def forward(self, inputs):  # pylint: disable=arguments-differ
+    def forward(self, inputs):
         # inputs may have extra dimensions (batch_size, d1, ..., dn, sequence_length),
         # but embedding expects (batch_size, sequence_length), so pass inputs to
         # util.combine_initial_dims (which is a no-op if there are no extra dimensions).
@@ -153,7 +153,7 @@ class Embedding(TokenEmbedder):
             embedded = projection(embedded)
         return embedded
 
-    def extend_vocab(self,  # pylint: disable=arguments-differ
+    def extend_vocab(self,
                      extended_vocab: Vocabulary,
                      vocab_namespace: str = None,
                      extension_pretrained_file: str = None,
@@ -274,7 +274,7 @@ class Embedding(TokenEmbedder):
 
                     "(https://nlp.stanford.edu/data/glove.twitter.27B.zip)#glove.twitter.27B.200d.txt"
         """
-        # pylint: disable=arguments-differ
+
         num_embeddings = params.pop_int('num_embeddings', None)
         # If num_embeddings is present, set default namespace to None so that extend_vocab
         # call doesn't misinterpret that some namespace was originally used.
@@ -533,7 +533,6 @@ class EmbeddingsTextFile(Iterator[str]):
 
             # Some systems don't have support for all of these libraries, so we import them only
             # when necessary.
-            # pylint: disable=import-outside-toplevel
             package = None
             if extension in ['.txt', '.vec']:
                 package = io

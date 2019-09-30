@@ -26,9 +26,7 @@ from allennlp.data import Token, Vocabulary, Instance
 from allennlp.data.fields import TextField
 
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
-
-# pylint: disable=attribute-defined-outside-init
+logger = logging.getLogger(__name__)
 
 
 class Elmo(torch.nn.Module):
@@ -126,7 +124,7 @@ class Elmo(torch.nn.Module):
     def get_output_dim(self):
         return self._elmo_lstm.get_output_dim()
 
-    def forward(self,    # pylint: disable=arguments-differ
+    def forward(self,
                 inputs: torch.Tensor,
                 word_inputs: torch.Tensor = None) -> Dict[str, Union[torch.Tensor, List[torch.Tensor]]]:
         """
@@ -323,7 +321,7 @@ class _ElmoCharacterEncoder(torch.nn.Module):
         return self.output_dim
 
     @overrides
-    def forward(self, inputs: torch.Tensor) -> Dict[str, torch.Tensor]:  # pylint: disable=arguments-differ
+    def forward(self, inputs: torch.Tensor) -> Dict[str, torch.Tensor]:
         """
         Compute context insensitive token embeddings for ELMo representations.
 
@@ -449,7 +447,7 @@ class _ElmoCharacterEncoder(torch.nn.Module):
         self._convolutions = convolutions
 
     def _load_highway(self):
-        # pylint: disable=protected-access
+
         # the highway layers have same dimensionality as the number of cnn filters
         cnn_options = self._options['char_cnn']
         filters = cnn_options['filters']
@@ -560,7 +558,7 @@ class _ElmoBiLm(torch.nn.Module):
     def get_output_dim(self):
         return 2 * self._token_embedder.get_output_dim()
 
-    def forward(self,  # pylint: disable=arguments-differ
+    def forward(self,
                 inputs: torch.Tensor,
                 word_inputs: torch.Tensor = None) -> Dict[str, Union[torch.Tensor, List[torch.Tensor]]]:
         """
@@ -589,7 +587,7 @@ class _ElmoBiLm(torch.nn.Module):
             try:
                 mask_without_bos_eos = (word_inputs > 0).long()
                 # The character cnn part is cached - just look it up.
-                embedded_inputs = self._word_embedding(word_inputs) # type: ignore
+                embedded_inputs = self._word_embedding(word_inputs)  # type: ignore
                 # shape (batch_size, timesteps + 2, embedding_dim)
                 type_representation, mask = add_sentence_boundary_token_ids(
                         embedded_inputs,
@@ -677,10 +675,10 @@ class _ElmoBiLm(torch.nn.Module):
         embedding = full_embedding[2:len(tokens), :]
         vocab_size, embedding_dim = list(embedding.size())
 
-        from allennlp.modules.token_embedders import Embedding # type: ignore
+        from allennlp.modules.token_embedders import Embedding  # type: ignore
         self._bos_embedding = full_embedding[0, :]
         self._eos_embedding = full_embedding[1, :]
-        self._word_embedding = Embedding(vocab_size, # type: ignore
+        self._word_embedding = Embedding(vocab_size,  # type: ignore
                                          embedding_dim,
                                          weight=embedding.data,
                                          trainable=self._requires_grad,

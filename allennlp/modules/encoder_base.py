@@ -8,12 +8,12 @@ from allennlp.nn.util import get_lengths_from_binary_sequence_mask, sort_batch_b
 # which is Iterable (like a tuple, below), is helpful for internal manipulation
 # - however, the states are consumed as either Tensors or a Tuple of Tensors, so
 # returning them in this format is unhelpful.
-RnnState = Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]  # pylint: disable=invalid-name
-RnnStateStorage = Tuple[torch.Tensor, ...]  # pylint: disable=invalid-name
+RnnState = Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]
+RnnStateStorage = Tuple[torch.Tensor, ...]
 
 
 class _EncoderBase(torch.nn.Module):
-    # pylint: disable=abstract-method
+
     """
     This abstract class serves as a base for the 3 ``Encoder`` abstractions in AllenNLP.
     - :class:`~allennlp.modules.seq2seq_encoders.Seq2SeqEncoders`

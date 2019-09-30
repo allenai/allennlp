@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name,line-too-long
 import json
 import os
 
@@ -17,6 +16,7 @@ def post_json(client: flask.testing.FlaskClient, endpoint: str, data: JsonDict) 
                        content_type="application/json",
                        data=json.dumps(data))
 
+
 PAYLOAD = {
         'passage': """The Matrix is a 1999 science fiction action film written and directed by The Wachowskis, starring Keanu Reeves, Laurence Fishburne, Carrie-Anne Moss, Hugo Weaving, and Joe Pantoliano.""",
         'question': """Who stars in the matrix?"""
@@ -30,7 +30,6 @@ class TestSimpleServer(AllenNlpTestCase):
 
         archive = load_archive(self.FIXTURES_ROOT / 'bidaf' / 'serialization' / 'model.tar.gz')
         self.bidaf_predictor = Predictor.from_archive(archive, 'machine-comprehension')
-
 
     def tearDown(self):
         super().tearDown()

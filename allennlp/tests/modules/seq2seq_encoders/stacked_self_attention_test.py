@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 import torch
 from torch.nn.parallel.data_parallel import DataParallel
 

@@ -88,7 +88,7 @@ def is_transition_allowed(constraint_type: str,
     ``bool``
         Whether the transition is allowed under the given ``constraint_type``.
     """
-    # pylint: disable=too-many-return-statements
+
     if to_tag == "START" or from_tag == "END":
         # Cannot transition into START or from END
         return False
@@ -312,7 +312,7 @@ class ConditionalRandomField(torch.nn.Module):
         """
         Computes the log likelihood.
         """
-        # pylint: disable=arguments-differ
+
         if mask is None:
             mask = torch.ones(*tags.size(), dtype=torch.long)
 

@@ -1,4 +1,3 @@
-# pylint: disable=protected-access
 from copy import deepcopy
 from typing import Dict, List
 
@@ -36,7 +35,7 @@ class BidafPredictor(Predictor):
         A dictionary that represents the prediction made by the system.  The answer string will be under the
         "best_span_str" key.
         """
-        return self.predict_json({"passage" : passage, "question" : question})
+        return self.predict_json({"passage": passage, "question": question})
 
     @overrides
     def _json_to_instance(self, json_dict: JsonDict) -> Instance:
@@ -128,7 +127,7 @@ class BidafPredictor(Predictor):
                     if offset[1] == span[1]:
                         word_span_end = index
 
-                question_field: SequenceField = new_instance['question'] # type: ignore
+                question_field: SequenceField = new_instance['question']  # type: ignore
                 field = ListField([SpanField(word_span_start,
                                              word_span_end,
                                              question_field)])

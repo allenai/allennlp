@@ -26,7 +26,7 @@ class SentenceTaggerPredictor(Predictor):
         self._tokenizer = SpacyWordSplitter(language=language, pos_tags=True)
 
     def predict(self, sentence: str) -> JsonDict:
-        return self.predict_json({"sentence" : sentence})
+        return self.predict_json({"sentence": sentence})
 
     @overrides
     def _json_to_instance(self, json_dict: JsonDict) -> Instance:
@@ -81,8 +81,8 @@ class SentenceTaggerPredictor(Predictor):
                     i += 1
                     tag = predicted_tags[i]
                 end_idx = i
-                current_tags = [t if begin_idx <= idx <= end_idx else 'O' \
-                    for idx, t in enumerate(predicted_tags)]
+                current_tags = [t if begin_idx <= idx <= end_idx else 'O'
+                                for idx, t in enumerate(predicted_tags)]
                 predicted_spans.append(current_tags)
             i += 1
 
@@ -93,6 +93,6 @@ class SentenceTaggerPredictor(Predictor):
             text_field: TextField = instance['tokens']  # type: ignore
             new_instance.add_field('tags', SequenceLabelField(labels, text_field), self._model.vocab)
             instances.append(new_instance)
-        instances.reverse() # NER tags are in the opposite order as desired for the interpret UI
+        instances.reverse()  # NER tags are in the opposite order as desired for the interpret UI
 
         return instances

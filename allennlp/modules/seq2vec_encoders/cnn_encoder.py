@@ -50,7 +50,7 @@ class CnnEncoder(Seq2VecEncoder):
     def __init__(self,
                  embedding_dim: int,
                  num_filters: int,
-                 ngram_filter_sizes: Tuple[int, ...] = (2, 3, 4, 5),  # pylint: disable=bad-whitespace
+                 ngram_filter_sizes: Tuple[int, ...] = (2, 3, 4, 5),
                  conv_layer_activation: Activation = None,
                  output_dim: Optional[int] = None) -> None:
         super().__init__()
@@ -82,7 +82,7 @@ class CnnEncoder(Seq2VecEncoder):
     def get_output_dim(self) -> int:
         return self._output_dim
 
-    def forward(self, tokens: torch.Tensor, mask: torch.Tensor):  # pylint: disable=arguments-differ
+    def forward(self, tokens: torch.Tensor, mask: torch.Tensor):
         if mask is not None:
             tokens = tokens * mask.unsqueeze(-1).float()
 

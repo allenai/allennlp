@@ -5,6 +5,7 @@ from torch.nn import ParameterList, Parameter
 
 from allennlp.common.checks import ConfigurationError
 
+
 class ScalarMix(torch.nn.Module):
     """
     Computes a parameterised scalar mixture of N tensors, ``mixture = gamma * sum(s_k * tensor_k)``
@@ -35,7 +36,7 @@ class ScalarMix(torch.nn.Module):
                  in range(mixture_size)])
         self.gamma = Parameter(torch.FloatTensor([1.0]), requires_grad=trainable)
 
-    def forward(self, tensors: List[torch.Tensor],  # pylint: disable=arguments-differ
+    def forward(self, tensors: List[torch.Tensor],
                 mask: torch.Tensor = None) -> torch.Tensor:
         """
         Compute a weighted average of the ``tensors``.  The input tensors an be any shape

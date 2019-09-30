@@ -2,6 +2,7 @@ from typing import Callable
 
 from allennlp.common.registrable import Registrable
 
+
 def handle_event(event: str, priority: int = 0):
     def wrapper(method: Callable[[], None]):
         setattr(method, '_event', event)
@@ -44,7 +45,7 @@ class Callback(Registrable):
 
         This default implementation suffices when there's no state to checkpoint.
         """
-        # pylint: disable=no-self-use
+
         return {}
 
     def restore_training_state(self, training_state: dict) -> None:

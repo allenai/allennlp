@@ -37,12 +37,12 @@ from allennlp.common.util import prepare_environment
 from allennlp.data import Vocabulary
 from allennlp.training.util import datasets_from_params
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 class MakeVocab(Subcommand):
     def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
-        # pylint: disable=protected-access
+
         description = '''Create a vocabulary from the specified dataset.'''
         subparser = parser.add_parser(
                 name, description=description, help='Create a vocabulary.')

@@ -46,7 +46,7 @@ class NoamLR(LearningRateScheduler):
 
     def get_values(self):
         step = max(self.last_epoch, 1)
-        scale = self.factor *  (self.model_size ** (-0.5) *
-                                min(step ** (-0.5), step * self.warmup_steps ** (-1.5)))
+        scale = self.factor * (self.model_size ** (-0.5) *
+                               min(step ** (-0.5), step * self.warmup_steps ** (-1.5)))
 
         return [scale for _ in range(len(self.base_values))]

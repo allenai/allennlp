@@ -61,7 +61,7 @@ LEXICAL_CUES["values"] = {
         "mass": ["heavy", "light", "heavier", "lighter", "massive"],
         "strength": ["strong", "weak", "stronger", "weaker"],
         "thickness": ["thick", "thin", "thicker", "thinner", "skinny"],
-        "time": ["long", "short",],
+        "time": ["long", "short"],
         "weight": ["heavy", "light", "heavier", "lighter"]
 }
 
@@ -72,6 +72,8 @@ LEXICAL_CUES["values"] = {
 
 # Split entity names into words (camel case, hyphen or underscore)
 RE_DECAMEL = re.compile(r"\B([A-Z])")
+
+
 def words_from_entity_string(entity: str) -> str:
     res = entity.replace("_", " ").replace("-", " ")
     res = RE_DECAMEL.sub(r" \1", res)
@@ -164,7 +166,7 @@ def get_explanation(logical_form: str,
     s_dir = world.qr_size[setup_core[1]]
     s_world = nl_world[setup_core[2]]
     a_attr = answers[answer_index][0]
-    qr_dir = world._get_qr_coeff(strip_entity_type(s_attr), strip_entity_type(a_attr))  # pylint: disable=protected-access
+    qr_dir = world._get_qr_coeff(strip_entity_type(s_attr), strip_entity_type(a_attr))
     a_dir = s_dir * qr_dir
     a_world = nl_world[answers[answer_index][2]]
 
@@ -182,7 +184,7 @@ def get_explanation(logical_form: str,
     return output
 
 
-## Code for processing QR specs to/from string format
+# Code for processing QR specs to/from string format
 
 RE_GROUP = re.compile(r"\[([^[\]].*?)\]")
 RE_SEP = re.compile(r" *, *")
@@ -214,7 +216,7 @@ def from_qr_spec_string(qr_spec: str) -> List[Dict[str, int]]:
 
 def to_qr_spec_string(qr_coeff_sets: List[Dict[str, int]]) -> str:
     res = []
-    signs = {1:"+", -1:"-"}
+    signs = {1: "+", -1: "-"}
     for qr_set in qr_coeff_sets:
         first = True
         group_list = []
@@ -266,7 +268,7 @@ def delete_duplicates(expr: List) -> List:
     seen: Set = set()
     res: List = []
     for expr1 in expr:
-        if not expr1 in seen:
+        if expr1 not in seen:
             seen.add(expr1)
             res.append(expr1)
     return res
@@ -338,10 +340,10 @@ class WorldTaggerExtractor:
 
         # TODO: Fix protected access
         tokenized_question = tokenized_question or \
-                             self._tagger._dataset_reader._tokenizer.tokenize(question.lower())  # pylint: disable=protected-access
-        instance = self._tagger._dataset_reader.text_to_instance(question,  # pylint: disable=protected-access
+                             self._tagger._dataset_reader._tokenizer.tokenize(question.lower())
+        instance = self._tagger._dataset_reader.text_to_instance(question,
                                                                  tokenized_question=tokenized_question)
-        output = self._tagger._model.forward_on_instance(instance)  # pylint: disable=protected-access
+        output = self._tagger._model.forward_on_instance(instance)
         tokens_text = [t.text for t in tokenized_question]
         res = group_worlds(output['tags'], tokens_text)
         return res

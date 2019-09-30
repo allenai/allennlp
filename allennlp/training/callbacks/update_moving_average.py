@@ -7,7 +7,7 @@ from allennlp.training.callbacks.events import Events
 from allennlp.training.moving_average import MovingAverage
 
 if TYPE_CHECKING:
-    from allennlp.training.callback_trainer import CallbackTrainer  # pylint:disable=unused-import
+    from allennlp.training.callback_trainer import CallbackTrainer
 
 
 @Callback.register("update_moving_average")
@@ -29,7 +29,7 @@ class UpdateMovingAverage(Callback):
 
     @classmethod
     def from_params(cls, params: Params, model: Model) -> 'UpdateMovingAverage':  # type: ignore
-        # pylint: disable=arguments-differ
+
         moving_average_params = params.pop("moving_average")
         model_parameters = [[name, param] for name, param in model.named_parameters() if param.requires_grad]
         moving_average = MovingAverage.from_params(params=moving_average_params, parameters=model_parameters)

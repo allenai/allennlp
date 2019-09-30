@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-# pylint: disable=invalid-name,wrong-import-position,protected-access
+
 import sys
 import os
 import gzip

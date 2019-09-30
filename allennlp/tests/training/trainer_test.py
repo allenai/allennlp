@@ -1,4 +1,3 @@
-# pylint: disable=invalid-name,too-many-public-methods,protected-access
 import copy
 import glob
 import json
@@ -115,6 +114,7 @@ class TestTrainer(AllenNlpTestCase):
                         reason="Need multiple GPUs.")
     def test_trainer_can_run_multiple_gpu(self):
         self.model.cuda()
+
         class MetaDataCheckWrapper(Model):
             """
             Checks that the metadata field has been correctly split across the batch dimension
@@ -124,7 +124,7 @@ class TestTrainer(AllenNlpTestCase):
                 super().__init__(model.vocab)
                 self.model = model
 
-            def forward(self, **kwargs) -> Dict[str, torch.Tensor]:  # type: ignore # pylint: disable=arguments-differ
+            def forward(self, **kwargs) -> Dict[str, torch.Tensor]:  # type: ignore
                 assert 'metadata' in kwargs and 'tags' in kwargs, \
                     f'tokens and metadata must be provided. Got {kwargs.keys()} instead.'
                 batch_size = kwargs['tokens']['tokens'].size()[0]
@@ -201,12 +201,12 @@ class TestTrainer(AllenNlpTestCase):
                               num_epochs=3, serialization_dir=self.TEST_DIR,
                               moving_average=new_moving_average)
 
-        epoch = new_trainer._restore_checkpoint()  # pylint: disable=protected-access
+        epoch = new_trainer._restore_checkpoint()
         assert epoch == 1
 
-        tracker = trainer._metric_tracker  # pylint: disable=protected-access
+        tracker = trainer._metric_tracker
         assert tracker.is_best_so_far()
-        assert tracker._best_so_far is not None  # pylint: disable=protected-access
+        assert tracker._best_so_far is not None
 
         new_trainer.train()
 
@@ -423,7 +423,7 @@ class TestTrainer(AllenNlpTestCase):
 
     def test_trainer_raises_on_model_with_no_loss_key(self):
         class FakeModel(Model):
-            def forward(self, **kwargs):  # pylint: disable=arguments-differ,unused-argument
+            def forward(self, **kwargs):
                 return {}
         with pytest.raises(RuntimeError):
             trainer = Trainer(FakeModel(None), self.optimizer,
@@ -483,7 +483,7 @@ class TestTrainer(AllenNlpTestCase):
         #   Check the resulting checkpoints.  Should then have models at epochs
         #       2, 4, plus the last two at 5 and 6.
         class WaitingIterator(BasicIterator):
-            # pylint: disable=arguments-differ
+
             def _create_batches(self, *args, **kwargs):
                 time.sleep(2.5)
                 return super()._create_batches(*args, **kwargs)
@@ -678,6 +678,7 @@ class TestTrainer(AllenNlpTestCase):
         assert trainer._metric_tracker._best_so_far == 0.1
         assert trainer._metric_tracker._epochs_with_no_improvement == 1
 
+
 class TestSparseClipGrad(AllenNlpTestCase):
     def test_sparse_clip_grad(self):
         # create a sparse embedding layer, then take gradient
@@ -689,13 +690,14 @@ class TestSparseClipGrad(AllenNlpTestCase):
         ids[:5] = 5
         loss = embedding(ids).sum()
         loss.backward()
-        assert embedding.weight.grad.is_sparse  # pylint: disable=no-member
+        assert embedding.weight.grad.is_sparse
 
         # Now try to clip the gradients.
         _ = sparse_clip_norm([embedding.weight], 1.5)
         # Final norm should be 1.5
-        grad = embedding.weight.grad.coalesce()  # pylint: disable=no-member
+        grad = embedding.weight.grad.coalesce()
         self.assertAlmostEqual(grad._values().norm(2.0).item(), 1.5, places=5)
+
 
 class TestLanguageModelWithMultiprocessDatasetReader(ModelTestCase):
     def setUp(self):

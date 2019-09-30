@@ -9,7 +9,8 @@ from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.data.iterators.bucket_iterator import BucketIterator
 from allennlp.data.dataset import Batch
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
+
 
 def split_by_language(instance_list):
     insts_by_lang = defaultdict(lambda: [])
@@ -18,6 +19,7 @@ def split_by_language(instance_list):
         insts_by_lang[inst_lang].append(inst)
 
     return iter(insts_by_lang.values())
+
 
 @DataIterator.register("same_language")
 class SameLanguageIterator(BucketIterator):
@@ -39,8 +41,10 @@ class SameLanguageIterator(BucketIterator):
                 excess: Deque[Instance] = deque()
                 # Then break each memory-sized list into batches.
                 for batch_instances in lazy_groups_of(iterator, self._batch_size):
-                    for poss_smaller_batches in self._ensure_batch_is_sufficiently_small( # type: ignore
-                            batch_instances, excess):
+                    for poss_smaller_batches in self._ensure_batch_is_sufficiently_small(
+                            batch_instances,  # type: ignore
+                            excess
+                            ):
                         batch = Batch(poss_smaller_batches)
                         yield batch
                 if excess:

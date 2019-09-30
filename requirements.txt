@@ -105,10 +105,10 @@ responses>=0.7
 #### TESTING-RELATED PACKAGES ####
 
 # Checks style, syntax, and other useful errors.
-pylint>=2.4
+flake8>=3.7.8
 
 # Static type checking
-mypy>=0.720
+mypy>=0.730
 
 # Allows generation of coverage reports with pytest.
 pytest-cov

@@ -11,7 +11,7 @@ from allennlp.data.dataset_readers.reading_comprehension import util
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
 from allennlp.data.tokenizers import Token, Tokenizer, WordTokenizer
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @DatasetReader.register("quac")
@@ -96,7 +96,7 @@ class QuACReader(DatasetReader):
                          yesno_list: List[int] = None,
                          followup_list: List[int] = None,
                          additional_metadata: Dict[str, Any] = None) -> Instance:
-        # pylint: disable=arguments-differ
+
         # We need to convert character indices in `passage_text` to token indices in
         # `passage_tokens`, as the latter is what we'll actually use for supervision.
         answer_token_span_list = []
@@ -117,8 +117,8 @@ class QuACReader(DatasetReader):
             answer_token_span_list.append(token_spans)
         question_list_tokens = [self._tokenizer.tokenize(q) for q in question_text_list]
         # Map answer texts to "CANNOTANSWER" if more than half of them marked as so.
-        additional_metadata['answer_texts_list'] = [util.handle_cannot(ans_list) for ans_list \
-                                                    in additional_metadata['answer_texts_list']]
+        additional_metadata['answer_texts_list'] = [util.handle_cannot(ans_list)
+                                                    for ans_list in additional_metadata['answer_texts_list']]
         return util.make_reading_comprehension_instance_quac(question_list_tokens,
                                                              passage_tokens,
                                                              self._token_indexers,

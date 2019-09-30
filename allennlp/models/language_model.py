@@ -34,7 +34,7 @@ class _SoftmaxLoss(torch.nn.Module):
         self.softmax_b = torch.nn.Parameter(torch.zeros(num_words))
 
     def forward(self, embeddings: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
-        # pylint: disable=arguments-differ
+
         # embeddings is size (n, embedding_dim)
         # targets is (batch_size, ) with the correct class id
         # Does not do any count normalization / divide by batch size
@@ -176,7 +176,7 @@ class LanguageModel(Model):
         forward_loss = self._loss_helper(0, forward_embeddings, forward_targets, token_embeddings)
         return forward_loss, backward_loss
 
-    def _loss_helper(self,  # pylint: disable=inconsistent-return-statements
+    def _loss_helper(self,
                      direction: int,
                      direction_embeddings: torch.Tensor,
                      direction_targets: torch.Tensor,
@@ -203,7 +203,7 @@ class LanguageModel(Model):
             # we also need the token embeddings corresponding to the
             # the targets
             raise NotImplementedError("This requires SampledSoftmaxLoss, which isn't implemented yet.")
-            # pylint: disable=unreachable
+
             non_masked_token_embeddings = self._get_target_token_embeddings(token_embeddings, mask, direction)
             return self._softmax(non_masked_embeddings,
                                  non_masked_targets,
@@ -261,7 +261,7 @@ class LanguageModel(Model):
         ``'mask'``: ``torch.Tensor``
             (batch_size, timesteps) mask for the embeddings
         """
-        # pylint: disable=arguments-differ
+
         mask = get_text_field_mask(source)
 
         # shape (batch_size, timesteps, embedding_size)
@@ -305,7 +305,7 @@ class LanguageModel(Model):
                 else:
                     average_loss = forward_loss / num_targets.float()
             else:
-                average_loss = torch.tensor(0.0).to(forward_targets.device)  # pylint: disable=not-callable
+                average_loss = torch.tensor(0.0).to(forward_targets.device)
 
             self._perplexity(average_loss)
 

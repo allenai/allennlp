@@ -8,17 +8,18 @@ import copy
 import logging
 import os
 from collections import defaultdict
-from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Union
-from typing import TextIO  # pylint: disable=unused-import
+from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Union, TYPE_CHECKING
 
 from allennlp.common.util import namespace_match
 from allennlp.common import Params, Registrable
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.tqdm import Tqdm
-from allennlp.data import instance as adi  # pylint: disable=unused-import
+
+if TYPE_CHECKING:
+    from allennlp.data import instance as adi  # noqa
 
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 DEFAULT_NON_PADDED_NAMESPACES = ("*tags", "*labels")
 DEFAULT_PADDING_TOKEN = "@@PADDING@@"
@@ -81,6 +82,7 @@ class _NamespaceDependentDefaultDict(defaultdict):
     def add_non_padded_namespaces(self, non_padded_namespaces: Set[str]):
         # add non_padded_namespaces which weren't already present
         self._non_padded_namespaces.update(non_padded_namespaces)
+
 
 class _TokenToIndexDefaultDict(_NamespaceDependentDefaultDict):
     def __init__(self, non_padded_namespaces: Set[str], padding_token: str, oov_token: str) -> None:
@@ -231,7 +233,6 @@ class Vocabulary(Registrable):
                      tokens_to_add,
                      min_pretrained_embeddings)
 
-
     def __getstate__(self):
         """
         Need to sanitize defaultdict and defaultdict-like objects
@@ -252,7 +253,7 @@ class Vocabulary(Registrable):
         Conversely, when we unpickle, we need to reload the plain dicts
         into our special DefaultDict subclasses.
         """
-        # pylint: disable=attribute-defined-outside-init
+
         self.__dict__ = copy.copy(state)
         self._token_to_index = _TokenToIndexDefaultDict(self._non_padded_namespaces,
                                                         self._padding_token,
@@ -431,7 +432,7 @@ class Vocabulary(Registrable):
         -------
         A ``Vocabulary``.
         """
-        # pylint: disable=arguments-differ
+
         # Vocabulary is ``Registrable`` so that you can configure a custom subclass,
         # but (unlike most of our registrables) almost everyone will want to use the
         # base implementation. So instead of having an abstract ``VocabularyBase`` or
@@ -520,8 +521,8 @@ class Vocabulary(Registrable):
             extension_padded = not any(namespace_match(pattern, namespace)
                                        for pattern in non_padded_namespaces)
             if original_padded != extension_padded:
-                raise ConfigurationError("Common namespace {} has conflicting ".format(namespace)+
-                                         "setting of padded = True/False. "+
+                raise ConfigurationError("Common namespace {} has conflicting ".format(namespace) +
+                                         "setting of padded = True/False. " +
                                          "Hence extension cannot be done.")
 
         # Add new non-padded namespaces for extension
@@ -664,8 +665,8 @@ class Vocabulary(Registrable):
 
     def print_statistics(self) -> None:
         if self._retained_counter:
-            logger.info("Printed vocabulary statistics are only for the part of the vocabulary generated " \
-                        "from instances. If vocabulary is constructed by extending saved vocabulary with " \
+            logger.info("Printed vocabulary statistics are only for the part of the vocabulary generated "
+                        "from instances. If vocabulary is constructed by extending saved vocabulary with "
                         "dataset instances, the directly loaded portion won't be considered here.")
             print("\n\n----Vocabulary Statistics----\n")
             # Since we don't saved counter info, it is impossible to consider pre-saved portion.
@@ -687,7 +688,7 @@ class Vocabulary(Registrable):
                     print(f"\tToken: {token}\t\tlength: {len(token)}\tFrequency: {freq}")
         else:
             # _retained_counter would be set only if instances were used for vocabulary construction.
-            logger.info("Vocabulary statistics cannot be printed since " \
+            logger.info("Vocabulary statistics cannot be printed since "
                         "dataset instances were not used for its construction.")
 
 

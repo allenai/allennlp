@@ -15,7 +15,7 @@ from allennlp.semparse.domain_languages import NlvrLanguage
 from allennlp.semparse.domain_languages.nlvr_language import Box
 
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @DatasetReader.register("nlvr")
@@ -155,7 +155,7 @@ class NlvrDatasetReader(DatasetReader):
         identifier : ``str`` (optional)
             The identifier from the dataset if available.
         """
-        # pylint: disable=arguments-differ
+
         worlds = []
         for structured_representation in structured_representations:
             boxes = {Box(object_list, box_id)

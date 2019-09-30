@@ -1,10 +1,10 @@
-# pylint: disable=no-self-use,invalid-name
 import pytest
 
 from allennlp.common import Params
 from allennlp.common.util import ensure_list
 from allennlp.data.dataset_readers import TriviaQaReader
 from allennlp.common.testing import AllenNlpTestCase
+
 
 class TestTriviaQaReader:
     @pytest.mark.parametrize("lazy", (True, False))

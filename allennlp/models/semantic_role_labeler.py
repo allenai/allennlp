@@ -17,6 +17,7 @@ from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_lo
 from allennlp.nn.util import get_lengths_from_binary_sequence_mask, viterbi_decode
 from allennlp.training.metrics.srl_eval_scorer import SrlEvalScorer, DEFAULT_SRL_EVAL_PATH
 
+
 @Model.register("srl")
 class SemanticRoleLabeler(Model):
     """
@@ -98,7 +99,7 @@ class SemanticRoleLabeler(Model):
                 verb_indicator: torch.LongTensor,
                 tags: torch.LongTensor = None,
                 metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
+
         """
         Parameters
         ----------
@@ -270,6 +271,7 @@ class SemanticRoleLabeler(Model):
                 start_transitions[i] = float("-inf")
 
         return start_transitions
+
 
 def write_to_conll_eval_file(prediction_file: TextIO,
                              gold_file: TextIO,

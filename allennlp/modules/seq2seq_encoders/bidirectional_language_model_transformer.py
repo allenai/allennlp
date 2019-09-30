@@ -7,7 +7,7 @@ This code should be considered "private" in that we have several
 transformer implementations and may end up deleting this one.
 If you use it, consider yourself warned.
 """
-# pylint: disable=arguments-differ,invalid-name,no-self-use
+
 from typing import Tuple, Callable
 import math
 import warnings
@@ -59,7 +59,7 @@ class PositionalEncoding(torch.nn.Module):
         self.register_buffer('positional_encoding', positional_encoding)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # pylint: disable=arguments-differ
+
         return x + self.positional_encoding[:, :x.size(1)]
 
 
@@ -73,7 +73,7 @@ class PositionwiseFeedForward(torch.nn.Module):
         self.dropout = torch.nn.Dropout(dropout)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # pylint: disable=arguments-differ
+
         return self.w_2(self.dropout(F.relu(self.w_1(x))))
 
 

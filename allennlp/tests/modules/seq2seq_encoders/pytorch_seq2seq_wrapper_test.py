@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 import numpy
 from numpy.testing import assert_almost_equal
 import pytest
@@ -10,6 +9,7 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.modules.seq2seq_encoders import PytorchSeq2SeqWrapper
 from allennlp.nn.util import sort_batch_by_length, get_lengths_from_binary_sequence_mask
+
 
 class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):
     def test_get_dimension_is_correct(self):
@@ -160,7 +160,7 @@ class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):
             mask = torch.ones(batch_size, sequence_length)
             mask.data[0, 3:] = 0
             encoder_output = encoder(tensor, mask)
-            states.append(encoder._states)  # pylint: disable=protected-access
+            states.append(encoder._states)
 
         # Check that the output is masked properly.
         assert_almost_equal(encoder_output[0, 3:, :].data.numpy(), numpy.zeros((4, 14)))
@@ -181,7 +181,7 @@ class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):
             mask = torch.ones(batch_size, 5)
             mask.data[0, 3:] = 0
             encoder_output = encoder(tensor, mask)
-            states.append(encoder._states)   # pylint: disable=protected-access
+            states.append(encoder._states)
 
         assert_almost_equal(encoder_output[0, 3:, :].data.numpy(), numpy.zeros((2, 14)))
         assert_almost_equal(

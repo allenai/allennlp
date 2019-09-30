@@ -1,4 +1,3 @@
-# pylint: disable=invalid-name,protected-access
 from flaky import flaky
 import pytest
 

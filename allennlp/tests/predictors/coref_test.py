@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name,protected-access
 import spacy
 
 from allennlp.common.testing import AllenNlpTestCase

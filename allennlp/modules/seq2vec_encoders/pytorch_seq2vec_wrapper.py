@@ -55,7 +55,7 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
             is_bidirectional = False
         return self._module.hidden_size * (2 if is_bidirectional else 1)
 
-    def forward(self,  # pylint: disable=arguments-differ
+    def forward(self,
                 inputs: torch.Tensor,
                 mask: torch.Tensor,
                 hidden_state: torch.Tensor = None) -> torch.Tensor:

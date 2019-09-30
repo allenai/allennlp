@@ -13,7 +13,7 @@ from allennlp.data.instance import Instance
 from allennlp.data.tokenizers import Token, Tokenizer, WordTokenizer
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @DatasetReader.register("seq2seq")
@@ -92,7 +92,7 @@ class Seq2SeqDatasetReader(DatasetReader):
 
     @overrides
     def text_to_instance(self, source_string: str, target_string: str = None) -> Instance:  # type: ignore
-        # pylint: disable=arguments-differ
+
         tokenized_source = self._source_tokenizer.tokenize(source_string)
         if self._source_max_tokens and len(tokenized_source) > self._source_max_tokens:
             self._source_max_exceeded += 1

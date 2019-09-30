@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name,too-many-public-methods
 import inspect
 import os
 import sys
@@ -44,7 +43,7 @@ class TestRegistrable(AllenNlpTestCase):
 
         @base_class.register('fake')
         class Fake(base_class):
-            # pylint: disable=abstract-method
+
             pass
 
         assert base_class.by_name('fake') == Fake
@@ -65,18 +64,18 @@ class TestRegistrable(AllenNlpTestCase):
         with pytest.raises(ConfigurationError):
             @base_class.register('fake')
             class FakeAlternate(base_class):
-                # pylint: disable=abstract-method
+
                 pass
 
         # Registering under a name that already exists should overwrite
         # if exist_ok=True.
-        @base_class.register('fake', exist_ok=True)  # pylint: disable=function-redefined
+        @base_class.register('fake', exist_ok=True)  # noqa
         class FakeAlternate(base_class):
-            # pylint: disable=abstract-method
+
             pass
         assert base_class.by_name('fake') == FakeAlternate
 
-        del Registrable._registry[base_class]['fake']  # pylint: disable=protected-access
+        del Registrable._registry[base_class]['fake']
 
     # TODO(mattg): maybe move all of these into tests for the base class?
 
@@ -117,7 +116,7 @@ class TestRegistrable(AllenNlpTestCase):
                 "eye": torch.nn.init.eye_,
         }
         for key, value in all_initializers.items():
-            # pylint: disable=protected-access
+
             assert Initializer.by_name(key)()._init_function == value
 
     def test_registry_has_builtin_learning_rate_schedulers(self):
@@ -138,14 +137,14 @@ class TestRegistrable(AllenNlpTestCase):
         assert TextFieldEmbedder.by_name("basic").__name__ == 'BasicTextFieldEmbedder'
 
     def test_registry_has_builtin_seq2seq_encoders(self):
-        # pylint: disable=protected-access
+
         assert Seq2SeqEncoder.by_name('gru')._module_class.__name__ == 'GRU'
         assert Seq2SeqEncoder.by_name('lstm')._module_class.__name__ == 'LSTM'
         assert Seq2SeqEncoder.by_name('rnn')._module_class.__name__ == 'RNN'
 
     def test_registry_has_builtin_seq2vec_encoders(self):
         assert Seq2VecEncoder.by_name('cnn').__name__ == 'CnnEncoder'
-        # pylint: disable=protected-access
+
         assert Seq2VecEncoder.by_name('gru')._module_class.__name__ == 'GRU'
         assert Seq2VecEncoder.by_name('lstm')._module_class.__name__ == 'LSTM'
         assert Seq2VecEncoder.by_name('rnn')._module_class.__name__ == 'RNN'
@@ -159,8 +158,8 @@ class TestRegistrable(AllenNlpTestCase):
     def test_implicit_include_package(self):
         # Create a new package in a temporary dir
         packagedir = self.TEST_DIR / 'testpackage'
-        packagedir.mkdir()  # pylint: disable=no-member
-        (packagedir / '__init__.py').touch()  # pylint: disable=no-member
+        packagedir.mkdir()
+        (packagedir / '__init__.py').touch()
 
         # And add that directory to the path
         sys.path.insert(0, str(self.TEST_DIR))

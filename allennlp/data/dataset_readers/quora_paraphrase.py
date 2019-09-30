@@ -12,7 +12,7 @@ from allennlp.data.tokenizers import Tokenizer, WordTokenizer
 from allennlp.data.tokenizers.word_splitter import JustSpacesWordSplitter
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @DatasetReader.register("quora_paraphrase")
@@ -61,7 +61,7 @@ class QuoraParaphraseDatasetReader(DatasetReader):
                          premise: str,
                          hypothesis: str,
                          label: str = None) -> Instance:
-        # pylint: disable=arguments-differ
+
         fields: Dict[str, Field] = {}
         tokenized_premise = self._tokenizer.tokenize(premise)
         tokenized_hypothesis = self._tokenizer.tokenize(hypothesis)

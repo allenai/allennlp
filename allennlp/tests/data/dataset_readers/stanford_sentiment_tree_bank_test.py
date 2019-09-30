@@ -1,10 +1,10 @@
-# pylint: disable=no-self-use,invalid-name
 import pytest
 
 from allennlp.data.dataset_readers import StanfordSentimentTreeBankDatasetReader
 from allennlp.common import Params
 from allennlp.common.util import ensure_list
 from allennlp.common.testing import AllenNlpTestCase
+
 
 class TestStanfordSentimentTreebankReader():
     sst_path = AllenNlpTestCase.FIXTURES_ROOT / "data" / "sst.txt"
@@ -98,7 +98,7 @@ class TestStanfordSentimentTreebankReader():
         assert fields["label"].label == instance2["label"]
 
     def test_from_params(self):
-        # pylint: disable=protected-access
+
         params = Params({"use_subtrees": True, "granularity": "5-class"})
         reader = StanfordSentimentTreeBankDatasetReader.from_params(params)
         assert reader._use_subtrees is True

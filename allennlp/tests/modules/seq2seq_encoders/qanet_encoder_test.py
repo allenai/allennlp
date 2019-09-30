@@ -1,4 +1,3 @@
-# pylint: disable=invalid-name,no-self-use,too-many-public-methods
 import torch
 
 from allennlp.common.testing import AllenNlpTestCase

@@ -1,4 +1,3 @@
-# pylint: disable=abstract-method,no-self-use
 from typing import Dict
 
 from pytorch_pretrained_bert.modeling import BertConfig, BertModel

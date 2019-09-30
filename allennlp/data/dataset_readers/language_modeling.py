@@ -14,7 +14,7 @@ from allennlp.data.fields import TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @DatasetReader.register("language_modeling")
@@ -90,7 +90,7 @@ class LanguageModelingReader(DatasetReader):
 
     @overrides
     def text_to_instance(self, sentence: str) -> Instance:  # type: ignore
-        # pylint: disable=arguments-differ
+
         tokenized_string = self._tokenizer.tokenize(sentence)
         input_field = TextField(tokenized_string[:-1], self._token_indexers)
         output_field = TextField(tokenized_string[1:], self._output_indexer)

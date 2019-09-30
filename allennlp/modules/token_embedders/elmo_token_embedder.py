@@ -75,7 +75,7 @@ class ElmoTokenEmbedder(TokenEmbedder):
     def get_output_dim(self) -> int:
         return self.output_dim
 
-    def forward(self, # pylint: disable=arguments-differ
+    def forward(self,
                 inputs: torch.Tensor,
                 word_inputs: torch.Tensor = None) -> torch.Tensor:
         """
@@ -104,7 +104,7 @@ class ElmoTokenEmbedder(TokenEmbedder):
     # Custom vocab_to_cache logic requires a from_params implementation.
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'ElmoTokenEmbedder':  # type: ignore
-        # pylint: disable=arguments-differ
+
         params.add_file_to_archive('options_file')
         params.add_file_to_archive('weight_file')
         options_file = params.pop('options_file')

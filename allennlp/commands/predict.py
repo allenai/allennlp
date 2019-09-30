@@ -62,9 +62,10 @@ from allennlp.models.archival import load_archive
 from allennlp.predictors.predictor import Predictor, JsonDict
 from allennlp.data import Instance
 
+
 class Predict(Subcommand):
     def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
-        # pylint: disable=protected-access
+
         description = '''Run the specified model against a JSON-lines input file.'''
         subparser = parser.add_parser(
                 name, description=description, help='Use a trained model to make predictions.')
@@ -112,6 +113,7 @@ class Predict(Subcommand):
 
         return subparser
 
+
 def _get_predictor(args: argparse.Namespace) -> Predictor:
     check_for_gpu(args.cuda_device)
     archive = load_archive(args.archive_file,
@@ -124,7 +126,6 @@ def _get_predictor(args: argparse.Namespace) -> Predictor:
 
 
 class _PredictManager:
-
     def __init__(self,
                  predictor: Predictor,
                  input_file: str,
@@ -142,7 +143,7 @@ class _PredictManager:
         self._batch_size = batch_size
         self._print_to_console = print_to_console
         if has_dataset_reader:
-            self._dataset_reader = predictor._dataset_reader # pylint: disable=protected-access
+            self._dataset_reader = predictor._dataset_reader
         else:
             self._dataset_reader = None
 
@@ -209,6 +210,7 @@ class _PredictManager:
 
         if self._output_file is not None:
             self._output_file.close()
+
 
 def _predict(args: argparse.Namespace) -> None:
     predictor = _get_predictor(args)

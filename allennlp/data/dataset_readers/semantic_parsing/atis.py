@@ -18,18 +18,19 @@ from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
 from allennlp.semparse.worlds.atis_world import AtisWorld
 from allennlp.semparse.contexts.atis_sql_table_context import NUMERIC_NONTERMINALS
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 END_OF_UTTERANCE_TOKEN = "@@EOU@@"
+
 
 def _lazy_parse(text: str):
     for interaction in text.split("\n"):
         if interaction:
             yield json.loads(interaction)
 
+
 @DatasetReader.register("atis")
 class AtisDatasetReader(DatasetReader):
-    # pylint: disable=line-too-long
     """
     This ``DatasetReader`` takes json files and converts them into ``Instances`` for the
     ``AtisSemanticParser``.
@@ -68,7 +69,7 @@ class AtisDatasetReader(DatasetReader):
         that are allowed.
     num_turns_to_concatenate: ``str``, optional
         The number of utterances to concatenate as the conversation context.
-    """
+    """  # noqa
     def __init__(self,
                  token_indexers: Dict[str, TokenIndexer] = None,
                  keep_if_unparseable: bool = False,
@@ -106,7 +107,7 @@ class AtisDatasetReader(DatasetReader):
     def text_to_instance(self,  # type: ignore
                          utterances: List[str],
                          sql_query_labels: List[str] = None) -> Instance:
-        # pylint: disable=arguments-differ
+
         """
         Parameters
         ----------
@@ -149,14 +150,14 @@ class AtisDatasetReader(DatasetReader):
             production_rule_fields.append(field)
 
         action_field = ListField(production_rule_fields)
-        action_map = {action.rule: i # type: ignore
+        action_map = {action.rule: i  # type: ignore
                       for i, action in enumerate(action_field.field_list)}
         index_fields: List[Field] = []
         world_field = MetadataField(world)
-        fields = {'utterance' : utterance_field,
-                  'actions' : action_field,
-                  'world' : world_field,
-                  'linking_scores' : ArrayField(world.linking_scores)}
+        fields = {'utterance': utterance_field,
+                  'actions': action_field,
+                  'world': world_field,
+                  'linking_scores': ArrayField(world.linking_scores)}
 
         if sql_query_labels is not None:
             fields['sql_queries'] = MetadataField(sql_query_labels)

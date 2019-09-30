@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 from flaky import flaky
 import pytest
 import numpy
@@ -59,7 +58,6 @@ class BidirectionalAttentionFlowTest(ModelTestCase):
         # from the model for this test.  If/when we fix the CNN encoder to work correctly with
         # masking, we can change this back to how the other models run this test, with just a
         # single line.
-        # pylint: disable=protected-access,attribute-defined-outside-init
 
         # Save some state.
         saved_model = self.model
@@ -84,8 +82,6 @@ class BidirectionalAttentionFlowTest(ModelTestCase):
         self.instances = saved_instances
 
     def test_get_best_span(self):
-        # pylint: disable=protected-access
-
         span_begin_probs = torch.FloatTensor([[0.1, 0.3, 0.05, 0.3, 0.25]]).log()
         span_end_probs = torch.FloatTensor([[0.65, 0.05, 0.2, 0.05, 0.05]]).log()
         begin_end_idxs = BidirectionalAttentionFlow.get_best_span(span_begin_probs, span_end_probs)

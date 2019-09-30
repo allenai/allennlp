@@ -1,5 +1,6 @@
 from typing import Dict
 
+
 def parse_example_line(lisp_string: str) -> Dict:
     """
     Training data in WikitableQuestions comes with examples in the form of lisp strings in the format:

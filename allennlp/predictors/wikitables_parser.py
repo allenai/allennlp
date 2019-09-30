@@ -24,7 +24,7 @@ class WikiTablesParserPredictor(Predictor):
 
         # We are directly passing the raw table rows here. The code in ``TableQuestionContext`` will do some
         # minimal processing to extract dates and numbers from the cells.
-        # pylint: enable=protected-access
+
         instance = self._dataset_reader.text_to_instance(question_text,  # type: ignore
                                                          table_rows)
         return instance
@@ -34,7 +34,7 @@ class WikiTablesParserPredictor(Predictor):
         """
         We need to override this because of the interactive beam search aspects.
         """
-        # pylint: disable=protected-access,not-callable
+
         instance = self._json_to_instance(inputs)
 
         # Get the rules out of the instance

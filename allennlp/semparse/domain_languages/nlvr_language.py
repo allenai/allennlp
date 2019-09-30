@@ -86,7 +86,7 @@ class Shape(NamedTuple):
 
 
 class NlvrLanguage(DomainLanguage):
-    # pylint: disable=no-self-use,too-many-public-methods
+
     def __init__(self, boxes: Set[Box]) -> None:
         self.boxes = boxes
         self.objects: Set[Object] = set()
@@ -655,14 +655,14 @@ class NlvrLanguage(DomainLanguage):
         """
         Returns true iff the objects touch each other.
         """
-        in_vertical_range = object1.y_loc <= object2.y_loc + object2.size and \
-                            object1.y_loc + object1.size >= object2.y_loc
-        in_horizantal_range = object1.x_loc <= object2.x_loc + object2.size and \
-                            object1.x_loc + object1.size >= object2.x_loc
-        touch_side = object1.x_loc + object1.size == object2.x_loc or \
-                     object2.x_loc + object2.size == object1.x_loc
-        touch_top_or_bottom = object1.y_loc + object1.size == object2.y_loc or \
-                              object2.y_loc + object2.size == object1.y_loc
+        in_vertical_range = (object1.y_loc <= object2.y_loc + object2.size and
+                             object1.y_loc + object1.size >= object2.y_loc)
+        in_horizantal_range = (object1.x_loc <= object2.x_loc + object2.size and
+                               object1.x_loc + object1.size >= object2.x_loc)
+        touch_side = (object1.x_loc + object1.size == object2.x_loc or
+                      object2.x_loc + object2.size == object1.x_loc)
+        touch_top_or_bottom = (object1.y_loc + object1.size == object2.y_loc or
+                               object2.y_loc + object2.size == object1.y_loc)
         return (in_vertical_range and touch_side) or (in_horizantal_range and touch_top_or_bottom)
 
     def _separate_objects_by_boxes(self, objects: Set[Object]) -> Dict[Box, List[Object]]:

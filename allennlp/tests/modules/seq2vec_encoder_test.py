@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 import pytest
 
 from allennlp.common import Params
@@ -19,7 +18,7 @@ class TestSeq2VecEncoder(AllenNlpTestCase):
                 "hidden_size": 7
                 })
         encoder = Seq2VecEncoder.from_params(params)
-        # pylint: disable=protected-access
+
         assert encoder.__class__.__name__ == 'PytorchSeq2VecWrapper'
         assert encoder._module.__class__.__name__ == 'LSTM'
         assert encoder._module.num_layers == 3
@@ -34,5 +33,4 @@ class TestSeq2VecEncoder(AllenNlpTestCase):
                 "batch_first": False,
                 })
         with pytest.raises(ConfigurationError):
-            # pylint: disable=unused-variable
-            encoder = Seq2VecEncoder.from_params(params)
+            Seq2VecEncoder.from_params(params)

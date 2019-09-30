@@ -1,6 +1,5 @@
 #! /usr/bin/env python
 
-# pylint: disable=invalid-name,wrong-import-position
 import sys
 import os
 import argparse
@@ -74,7 +73,6 @@ def search(tables_directory: str,
             print(file=output_file_pointer)
     if not output_separate_files:
         output_file_pointer.close()
-
 
 
 if __name__ == "__main__":

@@ -18,11 +18,10 @@
 
 import argparse
 from enum import Enum
-import logging
 from multiprocessing import Process
 import time
 
-from allennlp.common import Params, Tqdm
+from allennlp.common import Params
 from allennlp.training.trainer_pieces import TrainerPieces
 from allennlp.training.util import get_batch_size
 
@@ -59,7 +58,7 @@ def log_iterable(iterable, assume_multiprocess_types):
                     # multiprocessing.managers or similar.
                     args=(iterable.gi_frame.f_locals['qiterable'].output_queue,
                           iterable.gi_frame.f_locals['output_queue']
-                    )
+                          )
                     )
             periodic_logging_process.start()
 
@@ -111,6 +110,7 @@ class Action(Enum):
     def __str__(self):
         return self.name
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--action", type=Action, choices=list(Action), required=True)
@@ -134,5 +134,4 @@ if __name__ == "__main__":
     elif args.action is Action.first:
         time_to_first(raw_generator)
     else:
-        raise Exception(f"Unaccounted for action {action}")
-
+        raise Exception(f"Unaccounted for action {args.action}")

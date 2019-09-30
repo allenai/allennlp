@@ -1,4 +1,3 @@
-# pylint: disable=invalid-name,no-self-use
 import argparse
 import os
 
@@ -9,6 +8,7 @@ from allennlp.common.testing import AllenNlpTestCase
 from allennlp.commands.dry_run import DryRun, dry_run_from_args, dry_run_from_params
 from allennlp.data import Vocabulary
 from allennlp.common.checks import ConfigurationError
+
 
 class TestDryRun(AllenNlpTestCase):
     def setUp(self):
@@ -90,7 +90,7 @@ class TestDryRun(AllenNlpTestCase):
         self.params['vocabulary'] = {}
         self.params['vocabulary']['directory_path'] = existing_vocab_path
         self.params['vocabulary']['extend'] = True
-        self.params['vocabulary']['min_count'] = {"tokens" : 3}
+        self.params['vocabulary']['min_count'] = {"tokens": 3}
         dry_run_from_params(self.params, extended_serialization_dir)
 
         vocab_files = os.listdir(extended_vocab_path)
@@ -152,6 +152,6 @@ class TestDryRun(AllenNlpTestCase):
         for serialization_arg in ["-s", "--serialization-dir"]:
             raw_args = ["dry-run", "path/to/params", serialization_arg, "serialization_dir"]
             args = parser.parse_args(raw_args)
-            assert args.func == dry_run_from_args  # pylint: disable=comparison-with-callable
+            assert args.func == dry_run_from_args
             assert args.param_path == "path/to/params"
             assert args.serialization_dir == "serialization_dir"

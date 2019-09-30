@@ -28,15 +28,14 @@ def is_callable(type_: Type) -> bool:
         return getattr(type_, '_name', None) == 'Callable'
 
 
-# pylint: disable=no-name-in-module
 def is_generic(type_: Type) -> bool:
     if sys.version_info < (3, 7):
         from typing import GenericMeta  # type: ignore
         return isinstance(type_, GenericMeta)  # type: ignore
     else:
-        # pylint: disable=protected-access
+
         from typing import _GenericAlias
-        return isinstance(type_, _GenericAlias) # type: ignore
+        return isinstance(type_, _GenericAlias)  # type: ignore
 
 
 def get_generic_name(type_: Type) -> str:
@@ -45,7 +44,7 @@ def get_generic_name(type_: Type) -> str:
     else:
         # In python 3.7, type_.__origin__ switched to the built-in class, instead of the typing
         # class.
-        origin = type_._name  # pylint: disable=protected-access
+        origin = type_._name
     args = type_.__args__
     return f'{origin}[{",".join(arg.__name__ for arg in args)}]'
 
@@ -141,7 +140,7 @@ class FunctionType(PredicateType):
         return NotImplemented
 
 
-def predicate(function: Callable) -> Callable:  # pylint: disable=invalid-name
+def predicate(function: Callable) -> Callable:
     """
     This is intended to be used as a decorator when you are implementing your ``DomainLanguage``.
     This marks a function on a ``DomainLanguage`` subclass as a predicate that can be used in the
@@ -151,7 +150,8 @@ def predicate(function: Callable) -> Callable:  # pylint: disable=invalid-name
     setattr(function, '_is_predicate', True)
     return function
 
-def predicate_with_side_args(side_arguments: List[str]) -> Callable:  # pylint: disable=invalid-name
+
+def predicate_with_side_args(side_arguments: List[str]) -> Callable:
     """
     Like :func:`predicate`, but used when some of the arguments to the function are meant to be
     provided by the decoder or other state, instead of from the language.  For example, you might
@@ -183,7 +183,7 @@ def nltk_tree_to_logical_form(tree: Tree) -> str:
     # We're going to be explicit about checking length, instead of using `if tree:`, just to avoid
     # any funny business nltk might have done (e.g., it's really odd if `if tree:` evaluates to
     # `False` if there's a single leaf node with no children).
-    if len(tree) == 0:  # pylint: disable=len-as-condition
+    if len(tree) == 0:
         return tree.label()
     if len(tree) == 1:
         return tree[0].label()
@@ -465,7 +465,6 @@ class DomainLanguage:
         nonterminal_productions = self.get_nonterminal_productions()
         return symbol in nonterminal_productions
 
-    # pylint: disable=inconsistent-return-statements
     def _execute_expression(self, expression: Any):
         """
         This does the bulk of the work of executing a logical form, recursively executing a single
@@ -473,7 +472,7 @@ class DomainLanguage:
         arguments then call the function.  If it's a list, we evaluate all elements of the list.
         If it's a constant (or a zero-argument function), we evaluate the constant.
         """
-        # pylint: disable=too-many-return-statements
+
         if isinstance(expression, list):
             if isinstance(expression[0], list):
                 function = self._execute_expression(expression[0])

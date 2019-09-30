@@ -1,4 +1,3 @@
-# pylint: disable=invalid-name,protected-access
 from flaky import flaky
 import numpy
 import pytest
@@ -11,6 +10,7 @@ from allennlp.data.dataset_readers import DatasetReader
 from allennlp.data.iterators import DataIterator, BasicIterator
 from allennlp.models import Model
 from allennlp.training import Trainer
+
 
 class SimpleTaggerTest(ModelTestCase):
     def setUp(self):
@@ -35,7 +35,7 @@ class SimpleTaggerTest(ModelTestCase):
     def test_forward_on_instances_ignores_loss_key_when_batched(self):
         batch_outputs = self.model.forward_on_instances(self.dataset.instances)
         for output in batch_outputs:
-            assert not "loss" in output.keys()
+            assert "loss" not in output.keys()
 
         # It should be in the single batch case, because we special case it.
         single_output = self.model.forward_on_instance(self.dataset.instances[0])
@@ -102,7 +102,6 @@ class SimpleTaggerRegularizationTest(ModelTestCase):
                 None,
                 params.get('trainer')
         )
-
 
     def test_regularization(self):
         penalty = self.model.get_regularization_penalty().data

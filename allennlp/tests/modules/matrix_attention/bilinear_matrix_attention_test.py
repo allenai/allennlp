@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name,protected-access
 from numpy.testing import assert_almost_equal
 import torch
 from torch.nn.parameter import Parameter
@@ -6,6 +5,7 @@ from torch.nn.parameter import Parameter
 from allennlp.common import Params
 from allennlp.modules.matrix_attention import BilinearMatrixAttention
 from allennlp.common.testing import AllenNlpTestCase
+
 
 class TestBilinearMatrixAttention(AllenNlpTestCase):
     def test_forward_does_a_bilinear_product(self):

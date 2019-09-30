@@ -13,6 +13,7 @@ from allennlp.common import Params
 from allennlp.data import Vocabulary
 from allennlp.training.metrics import SquadEmAndF1
 
+
 @Model.register("bidaf-ensemble")
 class BidafEnsemble(Ensemble):
     """
@@ -33,7 +34,7 @@ class BidafEnsemble(Ensemble):
                 span_start: torch.IntTensor = None,
                 span_end: torch.IntTensor = None,
                 metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
+
         """
         The forward method runs each of the submodels, then selects the best span from the subresults.
         The best span is determined by averaging the probabilities for the start and end of the spans.
@@ -110,7 +111,7 @@ class BidafEnsemble(Ensemble):
     # The logic here requires a custom from_params.
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'BidafEnsemble':  # type: ignore
-        # pylint: disable=arguments-differ
+
         if vocab:
             raise ConfigurationError("vocab should be None")
 
@@ -120,6 +121,7 @@ class BidafEnsemble(Ensemble):
             submodels.append(load_archive(path).model)
 
         return cls(submodels=submodels)
+
 
 def ensemble(subresults: List[Dict[str, torch.Tensor]]) -> torch.Tensor:
     """
@@ -139,4 +141,4 @@ def ensemble(subresults: List[Dict[str, torch.Tensor]]) -> torch.Tensor:
 
     span_start_probs = sum(subresult['span_start_probs'] for subresult in subresults) / len(subresults)
     span_end_probs = sum(subresult['span_end_probs'] for subresult in subresults) / len(subresults)
-    return get_best_span(span_start_probs.log(), span_end_probs.log()) # type: ignore
+    return get_best_span(span_start_probs.log(), span_end_probs.log())  # type: ignore

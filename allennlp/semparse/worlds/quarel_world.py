@@ -13,6 +13,7 @@ from allennlp.semparse.contexts.knowledge_graph import KnowledgeGraph
 from allennlp.semparse.type_declarations.quarel_type_declaration import QuarelTypeDeclaration
 from allennlp.semparse.worlds.world import World
 
+
 class QuarelWorld(World):
     """
     Class defining the QuaRel domain theory world.

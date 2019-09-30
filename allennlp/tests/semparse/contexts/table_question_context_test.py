@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name,protected-access,too-many-public-methods
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.semparse.contexts import TableQuestionContext
 from allennlp.semparse.contexts.table_question_context import Date
@@ -56,7 +55,7 @@ class TestTableQuestionContext(AllenNlpTestCase):
         assert table_question_context.table_data == [{'number_column:year': 2001.0,
                                                       # The value extraction logic we have for untagged lines does
                                                       # not extract this value as a date.
-                                                      #'date_column:year': Date(2001, -1, -1),
+                                                      #    'date_column:year': Date(2001, -1, -1),
                                                       'string_column:year': '2001',
                                                       'number_column:division': 2.0,
                                                       'string_column:division': '2',
@@ -64,15 +63,15 @@ class TestTableQuestionContext(AllenNlpTestCase):
                                                       'string_column:regular_season': '4th_western',
                                                       # We only check for strings that are entirely numbers. So 4.0
                                                       # will not be extracted.
-                                                      #'number_column:regular_season': 4.0,
+                                                      #   'number_column:regular_season': 4.0,
                                                       'string_column:playoffs': 'quarterfinals',
                                                       'string_column:open_cup': 'did_not_qualify',
-                                                      #'number_column:open_cup': None,
+                                                      #   'number_column:open_cup': None,
                                                       'number_column:score': 20.0,
                                                       'num2_column:score': 30.0,
                                                       'string_column:score': '20_30'},
                                                      {'number_column:year': 2005.0,
-                                                      #'date_column:year': Date(2005, -1, -1),
+                                                      #    'date_column:year': Date(2005, -1, -1),
                                                       'string_column:year': '2005',
                                                       'number_column:division': 2.0,
                                                       'string_column:division': '2',
@@ -80,10 +79,10 @@ class TestTableQuestionContext(AllenNlpTestCase):
                                                       'string_column:regular_season': '5th',
                                                       # Same here as in the "division" column for the first row.
                                                       # 5.0 will not be extracted from "5th".
-                                                      #'number_column:regular_season': 5.0,
+                                                      #    'number_column:regular_season': 5.0,
                                                       'string_column:playoffs': 'quarterfinals',
                                                       'string_column:open_cup': '4th_round',
-                                                      #'number_column:open_cup': 4.0,
+                                                      #     'number_column:open_cup': 4.0,
                                                       'number_column:score': 50.0,
                                                       'num2_column:score': 40.0,
                                                       'string_column:score': '50_40'}]
@@ -235,7 +234,6 @@ class TestTableQuestionContext(AllenNlpTestCase):
                                'string_column:swara': 'swara',
                                'number_column:position': 'position',
                                'string_column:position': 'position'}
-
 
     def test_knowledge_graph_has_correct_neighbors(self):
         question = "when was the attendance greater than 5000?"

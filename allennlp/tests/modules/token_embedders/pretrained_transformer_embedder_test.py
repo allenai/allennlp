@@ -1,9 +1,9 @@
-# pylint: disable=no-self-use,invalid-name
 import torch
 
 from allennlp.common import Params
 from allennlp.modules.token_embedders import PretrainedTransformerEmbedder
 from allennlp.common.testing import AllenNlpTestCase
+
 
 class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
     def test_forward_runs_when_initialized_from_params(self):

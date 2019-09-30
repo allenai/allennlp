@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name, protected-access
 import pytest
 
 from allennlp.common import Params
@@ -44,7 +43,7 @@ class TestDropReader:
         assert len(instance["answer_as_question_spans"]) == 1
         assert instance["answer_as_question_spans"][0] == (5, 6)
         assert len(instance["answer_as_add_sub_expressions"]) == 1
-        assert instance["answer_as_add_sub_expressions"][0].labels == [0,] * 22
+        assert instance["answer_as_add_sub_expressions"][0].labels == [0] * 22
         assert len(instance["answer_as_counts"]) == 1
         assert instance["answer_as_counts"][0].label == -1
         assert set(instance['metadata'].metadata.keys()) == {

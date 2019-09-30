@@ -10,6 +10,7 @@ from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
 
 _VALID_PROJECTION_LOCATIONS = {'after_cnn', 'after_highway', None}
 
+
 @Seq2VecEncoder.register('cnn-highway')
 class CnnHighwayEncoder(Seq2VecEncoder):
     """
@@ -77,7 +78,7 @@ class CnnHighwayEncoder(Seq2VecEncoder):
             # highway_dim is the number of cnn filters
             highway_dim = num_filters
         self._highways = Highway(highway_dim, num_highway, activation=torch.nn.functional.relu)
-        for highway_layer in self._highways._layers:   # pylint: disable=protected-access
+        for highway_layer in self._highways._layers:
             # highway is a linear layer for each highway layer
             # with fused W and b weights
             highway_layer.weight.data.normal_(mean=0.0, std=np.sqrt(1.0 / highway_dim))
@@ -95,7 +96,7 @@ class CnnHighwayEncoder(Seq2VecEncoder):
         else:
             self._layer_norm = lambda tensor: tensor
 
-    def forward(self, inputs: torch.Tensor, mask: torch.Tensor) -> Dict[str, torch.Tensor]: # pylint: disable=unused-argument
+    def forward(self, inputs: torch.Tensor, mask: torch.Tensor) -> Dict[str, torch.Tensor]:
         """
         Compute context insensitive token embeddings for ELMo representations.
 
@@ -113,8 +114,6 @@ class CnnHighwayEncoder(Seq2VecEncoder):
         ``encoding``:
             Shape ``(batch_size, projection_dim)`` tensor with context-insensitive token representations.
         """
-        # pylint: disable=arguments-differ
-
         # convolutions want (batch_size, embedding_dim, num_characters)
         inputs = inputs.transpose(1, 2)
 

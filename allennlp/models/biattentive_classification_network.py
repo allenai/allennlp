@@ -87,7 +87,7 @@ class BiattentiveClassificationNetwork(Model):
         super().__init__(vocab, regularizer)
 
         self._text_field_embedder = text_field_embedder
-        if "elmo" in self._text_field_embedder._token_embedders.keys():  # pylint: disable=protected-access
+        if "elmo" in self._text_field_embedder._token_embedders.keys():
             raise ConfigurationError("To use ELMo in the BiattentiveClassificationNetwork input, "
                                      "remove elmo from the text_field_embedder and pass an "
                                      "Elmo object to the BiattentiveClassificationNetwork and set the "
@@ -117,7 +117,7 @@ class BiattentiveClassificationNetwork(Model):
                                          "and 'use_integrator_output_elmo' are 'False'. Set one of them to "
                                          "'True' to use Elmo, or do not provide an Elmo object upon construction.")
             # Check that the number of flags set is equal to the num_output_representations of the Elmo object
-            # pylint: disable=protected-access,too-many-format-args
+
             if len(self._elmo._scalar_mixes) != self._num_elmo_layers:
                 raise ConfigurationError("Elmo object has num_output_representations=%s, but this does not "
                                          "match the number of use_*_elmo flags set to true. use_input_elmo "
@@ -184,7 +184,7 @@ class BiattentiveClassificationNetwork(Model):
     def forward(self,  # type: ignore
                 tokens: Dict[str, torch.LongTensor],
                 label: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
+
         """
         Parameters
         ----------
@@ -307,7 +307,7 @@ class BiattentiveClassificationNetwork(Model):
     # The FeedForward vs Maxout logic here requires a custom from_params.
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'BiattentiveClassificationNetwork':  # type: ignore
-        # pylint: disable=arguments-differ
+
         embedder_params = params.pop("text_field_embedder")
         text_field_embedder = TextFieldEmbedder.from_params(vocab=vocab, params=embedder_params)
         embedding_dropout = params.pop("embedding_dropout")
