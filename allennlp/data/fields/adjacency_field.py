@@ -10,7 +10,7 @@ from allennlp.data.fields.field import Field
 from allennlp.data.fields.sequence_field import SequenceField
 from allennlp.data.vocabulary import Vocabulary
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 class AdjacencyField(Field[torch.Tensor]):
@@ -102,7 +102,7 @@ class AdjacencyField(Field[torch.Tensor]):
     def as_tensor(self, padding_lengths: Dict[str, int]) -> torch.Tensor:
         desired_num_tokens = padding_lengths['num_tokens']
         tensor = torch.ones(desired_num_tokens, desired_num_tokens) * self._padding_value
-        labels = self._indexed_labels or [1 for _  in range(len(self.indices))]
+        labels = self._indexed_labels or [1 for _ in range(len(self.indices))]
 
         for index, label in zip(self.indices, labels):
             tensor[index] = label
@@ -110,7 +110,7 @@ class AdjacencyField(Field[torch.Tensor]):
 
     @overrides
     def empty_field(self) -> 'AdjacencyField':
-        # pylint: disable=protected-access
+
         # The empty_list here is needed for mypy
         empty_list: List[Tuple[int, int]] = []
         adjacency_field = AdjacencyField(empty_list,

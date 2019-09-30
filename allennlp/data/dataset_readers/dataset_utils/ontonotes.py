@@ -6,10 +6,11 @@ import logging
 
 from nltk import Tree
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
-TypedSpan = Tuple[int, Tuple[int, int]]  # pylint: disable=invalid-name
-TypedStringSpan = Tuple[str, Tuple[int, int]]  # pylint: disable=invalid-name
+TypedSpan = Tuple[int, Tuple[int, int]]
+TypedStringSpan = Tuple[str, Tuple[int, int]]
+
 
 class OntonotesSentence:
     """

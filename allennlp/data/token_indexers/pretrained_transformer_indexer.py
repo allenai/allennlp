@@ -11,7 +11,7 @@ from allennlp.data.tokenizers.token import Token
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
 
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @TokenIndexer.register("pretrained_transformer")
@@ -35,7 +35,7 @@ class PretrainedTransformerIndexer(TokenIndexer[int]):
         tokens to this namespace, which would break on loading because we wouldn't find our default
         OOV token.
     """
-    # pylint: disable=no-self-use
+
     def __init__(self,
                  model_name: str,
                  do_lowercase: bool,
@@ -61,7 +61,7 @@ class PretrainedTransformerIndexer(TokenIndexer[int]):
         pass
 
     def _add_encoding_to_vocabulary(self, vocabulary: Vocabulary) -> None:
-        # pylint: disable=protected-access
+
         for word, idx in self.tokenizer.vocab.items():
             vocabulary._token_to_index[self._namespace][word] = idx
             vocabulary._index_to_token[self._namespace][idx] = word
@@ -80,14 +80,14 @@ class PretrainedTransformerIndexer(TokenIndexer[int]):
         return {index_name: indices}
 
     @overrides
-    def get_padding_lengths(self, token: int) -> Dict[str, int]:  # pylint: disable=unused-argument
+    def get_padding_lengths(self, token: int) -> Dict[str, int]:
         return {}
 
     @overrides
     def as_padded_tensor(self,
                          tokens: Dict[str, List[int]],
                          desired_num_tokens: Dict[str, int],
-                         padding_lengths: Dict[str, int]) -> Dict[str, torch.Tensor]:  # pylint: disable=unused-argument
+                         padding_lengths: Dict[str, int]) -> Dict[str, torch.Tensor]:
         return {key: torch.LongTensor(pad_sequence_to_length(val,
                                                              desired_num_tokens[key],
                                                              default_value=lambda: self._padding_value))

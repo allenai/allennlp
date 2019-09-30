@@ -14,7 +14,7 @@ from allennlp.modules.matrix_attention.legacy_matrix_attention import LegacyMatr
 from allennlp.nn import util, InitializerApplicator, RegularizerApplicator
 from allennlp.training.metrics import BooleanAccuracy, CategoricalAccuracy, SquadEmAndF1
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @Model.register("bidaf")
@@ -121,7 +121,7 @@ class BidirectionalAttentionFlow(Model):
                 span_start: torch.IntTensor = None,
                 span_end: torch.IntTensor = None,
                 metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
+
         """
         Parameters
         ----------

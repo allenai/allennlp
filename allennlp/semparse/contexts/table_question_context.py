@@ -77,7 +77,7 @@ NUMBER_WORDS = {
         }
 
 
-CellValueType = Union[str, float, Date]  # pylint: disable=invalid-name
+CellValueType = Union[str, float, Date]
 
 
 class TableQuestionContext:
@@ -354,7 +354,7 @@ class TableQuestionContext:
         for entity in self._expand_entities(self.question_tokens, entity_data):
             if entity["token_type"] == "string":
                 expanded_entities.append((f"string:{entity['value']}", entity['token_in_columns']))
-        return expanded_entities, extracted_numbers  #TODO(shikhar) Handle conjunctions
+        return expanded_entities, extracted_numbers  # TODO(shikhar) Handle conjunctions
 
     @staticmethod
     def _get_numbers_from_tokens(tokens: List[Token]) -> List[Tuple[str, int]]:
@@ -455,7 +455,7 @@ class TableQuestionContext:
                 if next_token_normalized == "":
                     current_end += 1
                     continue
-                candidate = "%s_%s" %(current_token, next_token_normalized)
+                candidate = "%s_%s" % (current_token, next_token_normalized)
                 candidate_columns = self._string_in_table(candidate)
                 candidate_columns = list(set(candidate_columns).intersection(current_token_columns))
                 if not candidate_columns:
@@ -467,9 +467,9 @@ class TableQuestionContext:
                 current_token = candidate
                 current_token_columns = candidate_columns
 
-            new_entities.append({'token_start' : current_start,
-                                 'token_end' : current_end,
-                                 'value' : current_token,
+            new_entities.append({'token_start': current_start,
+                                 'token_end': current_end,
+                                 'value': current_token,
                                  'token_type': current_token_type,
                                  'token_in_columns': current_token_columns})
         return new_entities

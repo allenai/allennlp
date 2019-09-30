@@ -1,5 +1,6 @@
 from typing import NamedTuple
 
+
 class Token(NamedTuple):
     """
     A simple token representation, keeping track of the token's text, offset in the passage it was

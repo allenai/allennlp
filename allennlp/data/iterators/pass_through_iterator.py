@@ -8,7 +8,7 @@ from allennlp.data.dataset import Batch
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator, TensorDict
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @DataIterator.register("pass_through")

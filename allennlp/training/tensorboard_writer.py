@@ -82,7 +82,7 @@ class TensorboardWriter(FromParams):
         if self._validation_log is not None:
             self._validation_log.add_scalar(name, self._item(value), timestep)
 
-    def log_parameter_and_gradient_statistics(self, # pylint: disable=invalid-name
+    def log_parameter_and_gradient_statistics(self,
                                               model: Model,
                                               batch_grad_norm: float) -> None:
         """
@@ -97,13 +97,13 @@ class TensorboardWriter(FromParams):
                     self.add_train_scalar("parameter_std/" + name, param.data.std())
                 if param.grad is not None:
                     if param.grad.is_sparse:
-                        # pylint: disable=protected-access
+
                         grad_data = param.grad.data._values()
                     else:
                         grad_data = param.grad.data
 
                     # skip empty gradients
-                    if torch.prod(torch.tensor(grad_data.shape)).item() > 0: # pylint: disable=not-callable
+                    if torch.prod(torch.tensor(grad_data.shape)).item() > 0:
                         self.add_train_scalar("gradient_mean/" + name, grad_data.mean())
                         if grad_data.numel() > 1:
                             self.add_train_scalar("gradient_std/" + name, grad_data.std())
@@ -192,7 +192,7 @@ class TensorboardWriter(FromParams):
                     continue
 
                 def hook(module_, inputs, outputs):
-                    # pylint: disable=unused-argument,cell-var-from-loop
+
                     log_prefix = 'activation_histogram/{0}'.format(module_.__class__)
                     if self.should_log_histograms_this_batch():
                         self.log_activation_histogram(outputs, log_prefix)

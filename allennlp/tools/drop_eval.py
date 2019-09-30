@@ -18,21 +18,28 @@ def _remove_articles(text: str) -> str:
     regex = re.compile(r'\b(a|an|the)\b', re.UNICODE)
     return re.sub(regex, ' ', text)
 
+
 def _white_space_fix(text: str) -> str:
     return ' '.join(text.split())
 
+
 EXCLUDE = set(string.punctuation)
+
+
 def _remove_punc(text: str) -> str:
     if not _is_number(text):
         return ''.join(ch for ch in text if ch not in EXCLUDE)
     else:
         return text
 
+
 def _lower(text: str) -> str:
     return text.lower()
 
+
 def _tokenize(text: str) -> List[str]:
     return re.split(" |-", text)
+
 
 def _normalize_answer(text: str) -> str:
     """Lower text and remove punctuation, articles and extra whitespace."""
@@ -43,12 +50,14 @@ def _normalize_answer(text: str) -> str:
     normalized = ' '.join(parts).strip()
     return normalized
 
+
 def _is_number(text: str) -> bool:
     try:
         float(text)
         return True
     except ValueError:
         return False
+
 
 def _normalize_number(text: str) -> str:
     if _is_number(text):
@@ -246,7 +255,7 @@ def evaluate_prediction_file(prediction_path: str, gold_path: str,
 
 
 if __name__ == "__main__":
-    # pylint: disable=invalid-name
+
     parser = argparse.ArgumentParser(description='evaluate on drop dataset')
     parser.add_argument("--gold_path",
                         type=str,

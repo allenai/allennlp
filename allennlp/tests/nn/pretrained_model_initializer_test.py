@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use, invalid-name
 from typing import Dict, Optional
 
 import pytest
@@ -9,14 +8,16 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.params import Params
 
+
 class _Net1(torch.nn.Module):
     def __init__(self):
         super().__init__()
         self.linear_1 = torch.nn.Linear(5, 10)
         self.linear_2 = torch.nn.Linear(10, 5)
 
-    def forward(self, inputs):  # pylint: disable=arguments-differ
+    def forward(self, inputs):
         pass
+
 
 class _Net2(torch.nn.Module):
     def __init__(self):
@@ -24,7 +25,7 @@ class _Net2(torch.nn.Module):
         self.linear_1 = torch.nn.Linear(5, 10)
         self.linear_3 = torch.nn.Linear(10, 5)
 
-    def forward(self, inputs):  # pylint: disable=arguments-differ
+    def forward(self, inputs):
         pass
 
 

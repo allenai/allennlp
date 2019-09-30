@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 from typing import cast
 
 import pytest
@@ -9,8 +8,10 @@ from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.fields import TextField
 from allennlp.data.instance import Instance
 
+
 def get_text(key: str, instance: Instance):
     return [t.text for t in cast(TextField, instance.fields[key]).tokens]
+
 
 class TestEvent2MindDatasetReader:
     @pytest.mark.parametrize("lazy", (True, False))

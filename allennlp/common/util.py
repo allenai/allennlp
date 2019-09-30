@@ -26,15 +26,14 @@ from spacy.language import Language as SpacyModelType
 
 # This base import is so we can refer to allennlp.data.Token in `sanitize()` without creating
 # circular dependencies.
-import allennlp
 from allennlp.common.checks import log_pytorch_version_info
 from allennlp.common.params import Params
 from allennlp.common.tqdm import Tqdm
 from allennlp.common.tee_logger import TeeLogger
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
-JsonDict = Dict[str, Any]  # pylint: disable=invalid-name
+JsonDict = Dict[str, Any]
 
 # If you want to have start and/or end symbols for any reason in your code, we recommend you use
 # these, to have a common place to import from.  Also, it's important for some edge cases in how
@@ -45,11 +44,14 @@ START_SYMBOL = '@start@'
 END_SYMBOL = '@end@'
 
 
-def sanitize(x: Any) -> Any:  # pylint: disable=invalid-name,too-many-return-statements
+def sanitize(x: Any) -> Any:
     """
     Sanitize turns PyTorch and Numpy types into basic Python types so they
     can be serialized into JSON.
     """
+    # Import here to avoid circular references
+    from allennlp.data.tokenizers.token import Token
+
     if isinstance(x, (str, float, int, bool)):
         # x is already serializable
         return x
@@ -59,7 +61,7 @@ def sanitize(x: Any) -> Any:  # pylint: disable=invalid-name,too-many-return-sta
     elif isinstance(x, numpy.ndarray):
         # array needs to be converted to a list
         return x.tolist()
-    elif isinstance(x, numpy.number):  # pylint: disable=no-member
+    elif isinstance(x, numpy.number):
         # NumPy numbers need to be converted to Python numbers
         return x.item()
     elif isinstance(x, dict):
@@ -68,7 +70,7 @@ def sanitize(x: Any) -> Any:  # pylint: disable=invalid-name,too-many-return-sta
     elif isinstance(x, numpy.bool_):
         # Numpy bool_ need to be converted to python bool.
         return bool(x)
-    elif isinstance(x, (spacy.tokens.Token, allennlp.data.Token)):
+    elif isinstance(x, (spacy.tokens.Token, Token)):
         # Tokens get sanitized to just their text.
         return x.text
     elif isinstance(x, (list, tuple)):
@@ -82,6 +84,7 @@ def sanitize(x: Any) -> Any:  # pylint: disable=invalid-name,too-many-return-sta
         raise ValueError(f"Cannot sanitize {x} of type {type(x)}. "
                          "If this is your own custom class, add a `to_json(self)` method "
                          "that returns a JSON-like object.")
+
 
 def group_by_count(iterable: List[Any], count: int, default_value: Any) -> List[List[Any]]:
     """
@@ -97,7 +100,9 @@ def group_by_count(iterable: List[Any], count: int, default_value: Any) -> List[
     """
     return [list(l) for l in zip_longest(*[iter(iterable)] * count, fillvalue=default_value)]
 
+
 A = TypeVar('A')
+
 
 def lazy_groups_of(iterator: Iterator[A], group_size: int) -> Iterator[List[A]]:
     """
@@ -105,6 +110,7 @@ def lazy_groups_of(iterator: Iterator[A], group_size: int) -> Iterator[List[A]]:
     specified size. The last list may be smaller if there are instances left over.
     """
     return iter(lambda: list(islice(iterator, 0, group_size)), [])
+
 
 def pad_sequence_to_length(sequence: List,
                            desired_length: int,
@@ -208,6 +214,7 @@ def prepare_environment(params: Params):
 
     log_pytorch_version_info()
 
+
 def prepare_global_logging(serialization_dir: str, file_friendly_logging: bool) -> logging.FileHandler:
     """
     This function configures 3 global logging attributes - streaming stdout and stderr
@@ -239,10 +246,10 @@ def prepare_global_logging(serialization_dir: str, file_friendly_logging: bool) 
 
     Tqdm.set_slower_interval(file_friendly_logging)
     std_out_file = os.path.join(serialization_dir, "stdout.log")
-    sys.stdout = TeeLogger(std_out_file, # type: ignore
+    sys.stdout = TeeLogger(std_out_file,  # type: ignore
                            sys.stdout,
                            file_friendly_logging)
-    sys.stderr = TeeLogger(os.path.join(serialization_dir, "stderr.log"), # type: ignore
+    sys.stderr = TeeLogger(os.path.join(serialization_dir, "stderr.log"),  # type: ignore
                            sys.stderr,
                            file_friendly_logging)
 
@@ -251,6 +258,7 @@ def prepare_global_logging(serialization_dir: str, file_friendly_logging: bool) 
     logging.getLogger().addHandler(stdout_handler)
 
     return stdout_handler
+
 
 def cleanup_global_logging(stdout_handler: logging.FileHandler) -> None:
     """
@@ -268,6 +276,7 @@ def cleanup_global_logging(stdout_handler: logging.FileHandler) -> None:
         sys.stdout = sys.stdout.cleanup()
     if isinstance(sys.stderr, TeeLogger):
         sys.stderr = sys.stderr.cleanup()
+
 
 LOADED_SPACY_MODELS: Dict[Tuple[str, bool, bool, bool], SpacyModelType] = {}
 
@@ -307,6 +316,7 @@ def get_spacy_model(spacy_model_name: str, pos_tags: bool, parse: bool, ner: boo
 
         LOADED_SPACY_MODELS[options] = spacy_model
     return LOADED_SPACY_MODELS[options]
+
 
 def import_submodules(package_name: str) -> None:
     """
@@ -362,6 +372,7 @@ def peak_memory_mb() -> float:
         # On Linux the result is in kilobytes.
         return peak / 1_000
 
+
 def gpu_memory_mb() -> Dict[int, int]:
     """
     Get the current GPU memory usage.
@@ -374,7 +385,6 @@ def gpu_memory_mb() -> Dict[int, int]:
         Values are memory usage as integers in MB.
         Returns an empty ``dict`` if GPUs are not available.
     """
-    # pylint: disable=bare-except,unexpected-keyword-arg
     try:
         result = subprocess.check_output(['nvidia-smi', '--query-gpu=memory.used',
                                           '--format=csv,nounits,noheader'],
@@ -384,7 +394,7 @@ def gpu_memory_mb() -> Dict[int, int]:
     except FileNotFoundError:
         # `nvidia-smi` doesn't exist, assume that means no GPU.
         return {}
-    except:
+    except:  # noqa
         # Catch *all* exceptions, because this memory check is a nice-to-have
         # and we'd never want a training run to fail because of it.
         logger.exception("unable to check gpu_memory_mb(), continuing")
@@ -401,12 +411,14 @@ def ensure_list(iterable: Iterable[A]) -> List[A]:
     else:
         return list(iterable)
 
+
 def is_lazy(iterable: Iterable[A]) -> bool:
     """
     Checks if the given iterable is lazy,
     which here just means it's not a list.
     """
     return not isinstance(iterable, list)
+
 
 def get_frozen_and_tunable_parameter_names(model: torch.nn.Module) -> List:
     frozen_parameter_names = []
@@ -418,12 +430,14 @@ def get_frozen_and_tunable_parameter_names(model: torch.nn.Module) -> List:
             tunable_parameter_names.append(name)
     return [frozen_parameter_names, tunable_parameter_names]
 
+
 def dump_metrics(file_path: str, metrics: Dict[str, Any], log: bool = False) -> None:
     metrics_json = json.dumps(metrics, indent=2)
     with open(file_path, "w") as metrics_file:
         metrics_file.write(metrics_json)
     if log:
         logger.info("Metrics: %s", metrics_json)
+
 
 def flatten_filename(file_path: str) -> str:
     return file_path.replace('/', '_SLASH_')

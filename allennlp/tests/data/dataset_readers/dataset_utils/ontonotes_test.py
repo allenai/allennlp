@@ -1,5 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
-
 from nltk import Tree
 
 from allennlp.data.dataset_readers.dataset_utils import Ontonotes

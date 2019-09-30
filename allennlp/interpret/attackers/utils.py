@@ -1,6 +1,7 @@
 from allennlp.common.util import JsonDict
 from allennlp.data import Instance
 
+
 def get_fields_to_compare(inputs: JsonDict, instance: Instance, input_field_to_attack: str) -> JsonDict:
     """
     Gets a list of the fields that should be checked for equality after an attack is performed.
@@ -29,6 +30,7 @@ def get_fields_to_compare(inputs: JsonDict, instance: Instance, input_field_to_a
             if key not in inputs and key != input_field_to_attack and key != 'metadata' and key != 'output'
     }
     return fields_to_compare
+
 
 def instance_has_changed(instance: Instance, fields_to_compare: JsonDict):
     if 'clusters' in fields_to_compare:

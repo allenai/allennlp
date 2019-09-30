@@ -26,10 +26,12 @@ from allennlp.nn import util as nn_util
 
 logger = logging.getLogger(__name__)
 
+
 # We want to warn people that tqdm ignores metrics that start with underscores
 # exactly once. This variable keeps track of whether we have.
 class HasBeenWarned:
     tqdm_ignores_underscores = False
+
 
 def sparse_clip_norm(parameters, max_norm, norm_type=2) -> float:
     """Clips gradient norm of an iterable of parameters.
@@ -51,7 +53,6 @@ def sparse_clip_norm(parameters, max_norm, norm_type=2) -> float:
     -------
     Total norm of the parameters (viewed as a single vector).
     """
-    # pylint: disable=invalid-name,protected-access
     parameters = list(filter(lambda p: p.grad is not None, parameters))
     max_norm = float(max_norm)
     norm_type = float(norm_type)
@@ -99,7 +100,7 @@ def get_batch_size(batch: Union[Dict, torch.Tensor]) -> int:
     returns 0 otherwise.
     """
     if isinstance(batch, torch.Tensor):
-        return batch.size(0) # type: ignore
+        return batch.size(0)  # type: ignore
     elif isinstance(batch, Dict):
         return get_batch_size(next(iter(batch.values())))
     else:
@@ -307,6 +308,7 @@ def create_serialization_dir(
                                      "does not exist.  There is nothing to recover from.")
         os.makedirs(serialization_dir, exist_ok=True)
 
+
 def data_parallel(batch_group: List[TensorDict],
                   model: Model,
                   cuda_devices: List) -> Dict[str, torch.Tensor]:
@@ -335,6 +337,7 @@ def data_parallel(batch_group: List[TensorDict],
     losses = gather([output['loss'].unsqueeze(0) for output in outputs], used_device_ids[0], 0)
     return {'loss': losses.mean()}
 
+
 def enable_gradient_clipping(model: Model, grad_clipping: Optional[float]) -> None:
     if grad_clipping is not None:
         for parameter in model.parameters():
@@ -342,6 +345,7 @@ def enable_gradient_clipping(model: Model, grad_clipping: Optional[float]) -> No
                 parameter.register_hook(lambda grad: nn_util.clamp_tensor(grad,
                                                                           minimum=-grad_clipping,
                                                                           maximum=grad_clipping))
+
 
 def rescale_gradients(model: Model, grad_norm: Optional[float] = None) -> Optional[float]:
     """
@@ -352,6 +356,7 @@ def rescale_gradients(model: Model, grad_norm: Optional[float] = None) -> Option
                               if p.grad is not None]
         return sparse_clip_norm(parameters_to_clip, grad_norm)
     return None
+
 
 def get_metrics(model: Model, total_loss: float, num_batches: int, reset: bool = False) -> Dict[str, float]:
     """
@@ -408,8 +413,8 @@ def evaluate(model: Model,
                 # Report the average loss so far.
                 metrics["loss"] = total_loss / total_weight
 
-            if (not HasBeenWarned.tqdm_ignores_underscores and
-                        any(metric_name.startswith("_") for metric_name in metrics)):
+            if not HasBeenWarned.tqdm_ignores_underscores and \
+               any(metric_name.startswith("_") for metric_name in metrics):
                 logger.warning("Metrics with names beginning with \"_\" will "
                                "not be logged to the tqdm progress bar.")
                 HasBeenWarned.tqdm_ignores_underscores = True
@@ -427,9 +432,10 @@ def evaluate(model: Model,
 
         return final_metrics
 
+
 def description_from_metrics(metrics: Dict[str, float]) -> str:
-    if (not HasBeenWarned.tqdm_ignores_underscores and
-                any(metric_name.startswith("_") for metric_name in metrics)):
+    if not HasBeenWarned.tqdm_ignores_underscores and \
+       any(metric_name.startswith("_") for metric_name in metrics):
         logger.warning("Metrics with names beginning with \"_\" will "
                        "not be logged to the tqdm progress bar.")
         HasBeenWarned.tqdm_ignores_underscores = True

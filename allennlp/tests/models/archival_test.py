@@ -1,4 +1,3 @@
-# pylint: disable=invalid-name
 import copy
 import os
 
@@ -8,6 +7,7 @@ from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.commands.train import train_model
 from allennlp.models.archival import load_archive, archive_model
+
 
 def assert_models_equal(model, model2):
     # check that model weights are the same
@@ -23,8 +23,9 @@ def assert_models_equal(model, model2):
     vocab = model.vocab
     vocab2 = model2.vocab
 
-    assert vocab._token_to_index == vocab2._token_to_index  # pylint: disable=protected-access
-    assert vocab._index_to_token == vocab2._index_to_token  # pylint: disable=protected-access
+    assert vocab._token_to_index == vocab2._token_to_index
+    assert vocab._index_to_token == vocab2._index_to_token
+
 
 class ArchivalTest(AllenNlpTestCase):
     def setUp(self):

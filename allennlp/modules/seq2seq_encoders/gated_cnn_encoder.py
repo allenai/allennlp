@@ -6,6 +6,7 @@ import torch
 from allennlp.common.checks import ConfigurationError
 from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
 
+
 class ResidualBlock(torch.nn.Module):
     def __init__(self,
                  input_dim: int,
@@ -64,7 +65,7 @@ class ResidualBlock(torch.nn.Module):
         self._direction = direction
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # pylint: disable=arguments-differ
+
         # x = (batch_size, dim, timesteps)
         # outputs: (batch_size, dim, timesteps) = f(x) + x
         out = x
@@ -163,7 +164,7 @@ class GatedCnnEncoder(Seq2SeqEncoder):
     def forward(self,
                 token_embeddings: torch.Tensor,
                 mask: torch.Tensor):
-        # pylint: disable=arguments-differ
+
         # Convolutions need transposed input
         transposed_embeddings = torch.transpose(token_embeddings, 1, 2)
 

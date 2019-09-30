@@ -20,7 +20,7 @@ from allennlp.state_machines.states import CoverageState, ChecklistStatelet
 from allennlp.state_machines.transition_functions import CoverageTransitionFunction
 from allennlp.training.metrics import Average
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @Model.register("nlvr_coverage_parser")
@@ -97,10 +97,10 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                          dropout=dropout)
         self._agenda_coverage = Average()
         self._decoder_trainer: DecoderTrainer[Callable[[CoverageState], torch.Tensor]] = \
-                ExpectedRiskMinimization(beam_size=beam_size,
-                                         normalize_by_length=normalize_beam_score_by_length,
-                                         max_decoding_steps=max_decoding_steps,
-                                         max_num_finished_states=max_num_finished_states)
+            ExpectedRiskMinimization(beam_size=beam_size,
+                                     normalize_by_length=normalize_beam_score_by_length,
+                                     max_decoding_steps=max_decoding_steps,
+                                     max_num_finished_states=max_num_finished_states)
 
         # Instantiating an empty NlvrLanguage just to get the number of terminals.
         self._terminal_productions = set(NlvrLanguage(set()).terminal_productions.values())
@@ -185,7 +185,7 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                 labels: torch.LongTensor = None,
                 epoch_num: List[int] = None,
                 metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
+
         """
         Decoder logic for producing type constrained target sequences that maximize coverage of
         their respective agendas, and minimize a denotation based loss.

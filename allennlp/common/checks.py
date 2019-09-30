@@ -10,7 +10,7 @@ import subprocess
 
 from torch import cuda
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 class ConfigurationError(Exception):
@@ -36,7 +36,6 @@ class ExperimentalFeatureWarning(RuntimeWarning):
 
 
 def log_pytorch_version_info():
-    # pylint: disable=import-outside-toplevel
     import torch
     logger.info("Pytorch version: %s", torch.__version__)
 
@@ -48,6 +47,7 @@ def check_dimensions_match(dimension_1: int,
     if dimension_1 != dimension_2:
         raise ConfigurationError(f"{dim_1_name} must match {dim_2_name}, but got {dimension_1} "
                                  f"and {dimension_2} instead")
+
 
 def parse_cuda_device(cuda_device: Union[str, int, List[int]]) -> Union[int, List[int]]:
     """
@@ -70,6 +70,7 @@ def parse_cuda_device(cuda_device: Union[str, int, List[int]]) -> Union[int, Lis
     else:
         # TODO(brendanr): Determine why mypy can't tell that this matches the Union.
         return int(cuda_device)  # type: ignore
+
 
 def check_for_gpu(device_id: Union[int, list]):
     device_id = parse_cuda_device(device_id)

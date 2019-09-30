@@ -29,7 +29,7 @@ class InvertedTriangular(MomentumScheduler):
     def get_values(self):
         step = self.last_epoch + 1
         if step <= self.cool_down:
-            values = [m  - (m - m / self.ratio) * (step / self.cool_down)
+            values = [m - (m - m / self.ratio) * (step / self.cool_down)
                       for m in self.base_values]
         elif step <= self.cool_down + self.warm_up:
             values = [(m / self.ratio) + (m - m / self.ratio) * (step - self.cool_down) / self.warm_up

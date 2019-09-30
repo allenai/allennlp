@@ -1,8 +1,8 @@
-# pylint: disable=no-self-use,invalid-name
 import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.state_machines.states import GrammarStatelet
+
 
 def is_nonterminal(symbol: str) -> bool:
     if symbol == 'identity':

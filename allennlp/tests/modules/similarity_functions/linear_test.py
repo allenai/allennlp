@@ -1,5 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
-
 import numpy
 from numpy.testing import assert_almost_equal
 import torch
@@ -9,8 +7,8 @@ from allennlp.common import Params
 from allennlp.modules.similarity_functions import LinearSimilarity
 from allennlp.common.testing import AllenNlpTestCase
 
+
 class TestLinearSimilarityFunction(AllenNlpTestCase):
-    # pylint: disable=protected-access
     def test_weights_are_correct_sizes(self):
         linear = LinearSimilarity(tensor_1_dim=3, tensor_2_dim=6, combination='x,y')
         assert list(linear._weight_vector.size()) == [9]

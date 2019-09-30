@@ -26,7 +26,8 @@ from allennlp.training.optimizers import Optimizer
 from allennlp.training.trainer_pieces import TrainerPieces
 from allennlp.training.trainer_base import TrainerBase
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
+
 
 def handle_errors(method):
     @functools.wraps(method)
@@ -283,7 +284,7 @@ class CallbackTrainer(TrainerBase):
                     recover: bool = False,
                     cache_directory: str = None,
                     cache_prefix: str = None) -> 'CallbackTrainer':
-        pieces = TrainerPieces.from_params(params, serialization_dir, recover, cache_directory, cache_prefix)  # pylint: disable=no-member
+        pieces = TrainerPieces.from_params(params, serialization_dir, recover, cache_directory, cache_prefix)
         model = pieces.model
         params = pieces.params
         validation_iterator = pieces.validation_iterator or pieces.iterator

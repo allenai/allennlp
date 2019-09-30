@@ -1,4 +1,3 @@
-# pylint: disable=invalid-name,no-self-use,protected-access
 from collections import namedtuple
 from flaky import flaky
 from numpy.testing import assert_almost_equal
@@ -12,7 +11,7 @@ from allennlp.data.iterators import DataIterator
 class WikiTablesMmlSemanticParserTest(ModelTestCase):
     def setUp(self):
         super().setUp()
-        config_path = self.FIXTURES_ROOT /  "semantic_parsing" / "wikitables" / "experiment.json"
+        config_path = self.FIXTURES_ROOT / "semantic_parsing" / "wikitables" / "experiment.json"
         data_path = self.FIXTURES_ROOT / "data" / "wikitables" / "sample_data.examples"
         self.set_up_model(config_path, data_path)
 
@@ -97,17 +96,20 @@ class WikiTablesMmlSemanticParserTest(ModelTestCase):
         FakeWorld = namedtuple('FakeWorld', ['table_graph'])
         entities = [['-1', '2010', '2012', 'string:bmw', 'date_column:year', 'string_column:make'],
                     ['-1', '2012', 'date_column:year']]
-        neighbors = [{'2010': ['date_column:year'],
-                      '2012': ['date_column:year'],
-                      'string:bmw': ['string_column:make'],
-                      'date_column:year': ['2010', '2012'],
-                      'string_column:make': ['string:bmw'],
-                      '-1': [],
-                     },
-                     {'2012': ['date_column:year'],
-                      'date_column:year': ['2012'],
-                      '-1': [],
-                     }]
+        neighbors = [
+            {
+                '2010': ['date_column:year'],
+                '2012': ['date_column:year'],
+                'string:bmw': ['string_column:make'],
+                'date_column:year': ['2010', '2012'],
+                'string_column:make': ['string:bmw'],
+                '-1': [],
+                },
+            {
+                '2012': ['date_column:year'],
+                'date_column:year': ['2012'],
+                '-1': [],
+                }]
 
         worlds = [FakeWorld(FakeTable(entity_list, entity2neighbors))
                   for entity_list, entity2neighbors in zip(entities, neighbors)]

@@ -1,4 +1,3 @@
-# pylint: disable=invalid-name,no-self-use,protected-access
 import argparse
 from typing import Iterable
 import os
@@ -17,6 +16,7 @@ from allennlp.data.vocabulary import Vocabulary
 from allennlp.models import load_archive
 
 SEQUENCE_TAGGING_DATA_PATH = str(AllenNlpTestCase.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv')
+
 
 class TestTrain(AllenNlpTestCase):
 
@@ -84,30 +84,30 @@ class TestTrain(AllenNlpTestCase):
 
     def test_error_is_throw_when_cuda_device_is_not_available(self):
         params = Params({
-                "model": {
-                        "type": "simple_tagger",
-                        "text_field_embedder": {
-                                "tokens": {
-                                        "type": "embedding",
-                                        "embedding_dim": 5
-                                }
-                        },
-                        "encoder": {
-                                "type": "lstm",
-                                "input_size": 5,
-                                "hidden_size": 7,
-                                "num_layers": 2
+            "model": {
+                "type": "simple_tagger",
+                "text_field_embedder": {
+                    "tokens": {
+                        "type": "embedding",
+                        "embedding_dim": 5
                         }
+                    },
+                "encoder": {
+                    "type": "lstm",
+                    "input_size": 5,
+                    "hidden_size": 7,
+                    "num_layers": 2
+                    }
                 },
-                "dataset_reader": {"type": "sequence_tagging"},
-                "train_data_path": 'tests/fixtures/data/sequence_tagging.tsv',
-                "validation_data_path": 'tests/fixtures/data/sequence_tagging.tsv',
-                "iterator": {"type": "basic", "batch_size": 2},
-                "trainer": {
-                        "num_epochs": 2,
-                        "cuda_device": torch.cuda.device_count(),
-                        "optimizer": "adam"
-                }
+            "dataset_reader": {"type": "sequence_tagging"},
+            "train_data_path": 'tests/fixtures/data/sequence_tagging.tsv',
+            "validation_data_path": 'tests/fixtures/data/sequence_tagging.tsv',
+            "iterator": {"type": "basic", "batch_size": 2},
+            "trainer": {
+                "num_epochs": 2,
+                "cuda_device": torch.cuda.device_count(),
+                "optimizer": "adam"
+            }
         })
 
         with pytest.raises(ConfigurationError, match="Experiment specified"):
@@ -115,32 +115,32 @@ class TestTrain(AllenNlpTestCase):
 
     def test_train_with_test_set(self):
         params = Params({
-                "model": {
-                        "type": "simple_tagger",
-                        "text_field_embedder": {
-                                "token_embedders": {
-                                        "tokens": {
-                                                "type": "embedding",
-                                                "embedding_dim": 5
-                                        }
-                                }
-                        },
-                        "encoder": {
-                                "type": "lstm",
-                                "input_size": 5,
-                                "hidden_size": 7,
-                                "num_layers": 2
+            "model": {
+                "type": "simple_tagger",
+                "text_field_embedder": {
+                    "token_embedders": {
+                        "tokens": {
+                            "type": "embedding",
+                            "embedding_dim": 5
+                            }
                         }
+                    },
+                "encoder": {
+                    "type": "lstm",
+                    "input_size": 5,
+                    "hidden_size": 7,
+                    "num_layers": 2
+                    }
                 },
-                "dataset_reader": {"type": "sequence_tagging"},
-                "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
-                "test_data_path": SEQUENCE_TAGGING_DATA_PATH,
-                "validation_data_path": SEQUENCE_TAGGING_DATA_PATH,
-                "evaluate_on_test": True,
-                "iterator": {"type": "basic", "batch_size": 2},
-                "trainer": {
-                        "num_epochs": 2,
-                        "optimizer": "adam"
+            "dataset_reader": {"type": "sequence_tagging"},
+            "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
+            "test_data_path": SEQUENCE_TAGGING_DATA_PATH,
+            "validation_data_path": SEQUENCE_TAGGING_DATA_PATH,
+            "evaluate_on_test": True,
+            "iterator": {"type": "basic", "batch_size": 2},
+            "trainer": {
+                "num_epochs": 2,
+                "optimizer": "adam"
                 }
         })
 
@@ -156,23 +156,23 @@ class TestTrain(AllenNlpTestCase):
 
             args = parser.parse_args(raw_args)
 
-            assert args.func == train_model_from_args  # pylint: disable=comparison-with-callable
+            assert args.func == train_model_from_args
             assert args.param_path == "path/to/params"
             assert args.serialization_dir == "serialization_dir"
 
         # config is required
-        with self.assertRaises(SystemExit) as cm:  # pylint: disable=invalid-name
+        with self.assertRaises(SystemExit) as cm:
             args = parser.parse_args(["train", "-s", "serialization_dir"])
             assert cm.exception.code == 2  # argparse code for incorrect usage
 
         # serialization dir is required
-        with self.assertRaises(SystemExit) as cm:  # pylint: disable=invalid-name
+        with self.assertRaises(SystemExit) as cm:
             args = parser.parse_args(["train", "path/to/params"])
             assert cm.exception.code == 2  # argparse code for incorrect usage
 
+
 @DatasetReader.register('lazy-test')
 class LazyFakeReader(DatasetReader):
-    # pylint: disable=abstract-method
     def __init__(self) -> None:
         super().__init__(lazy=True)
         self.reader = DatasetReader.from_params(Params({'type': 'sequence_tagging', 'lazy': True}))
@@ -187,30 +187,30 @@ class LazyFakeReader(DatasetReader):
 class TestTrainOnLazyDataset(AllenNlpTestCase):
     def test_train_model(self):
         params = Params({
-                "model": {
-                        "type": "simple_tagger",
-                        "text_field_embedder": {
-                                "token_embedders": {
-                                        "tokens": {
-                                                "type": "embedding",
-                                                "embedding_dim": 5
-                                        }
-                                }
-                        },
-                        "encoder": {
-                                "type": "lstm",
-                                "input_size": 5,
-                                "hidden_size": 7,
-                                "num_layers": 2
+            "model": {
+                "type": "simple_tagger",
+                "text_field_embedder": {
+                    "token_embedders": {
+                        "tokens": {
+                            "type": "embedding",
+                            "embedding_dim": 5
+                            }
                         }
+                    },
+                "encoder": {
+                    "type": "lstm",
+                    "input_size": 5,
+                    "hidden_size": 7,
+                    "num_layers": 2
+                    }
                 },
-                "dataset_reader": {"type": "lazy-test"},
-                "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
-                "validation_data_path": SEQUENCE_TAGGING_DATA_PATH,
-                "iterator": {"type": "basic", "batch_size": 2},
-                "trainer": {
-                        "num_epochs": 2,
-                        "optimizer": "adam"
+            "dataset_reader": {"type": "lazy-test"},
+            "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
+            "validation_data_path": SEQUENCE_TAGGING_DATA_PATH,
+            "iterator": {"type": "basic", "batch_size": 2},
+            "trainer": {
+                "num_epochs": 2,
+                "optimizer": "adam"
                 }
         })
 
@@ -218,32 +218,32 @@ class TestTrainOnLazyDataset(AllenNlpTestCase):
 
     def test_train_with_test_set(self):
         params = Params({
-                "model": {
-                        "type": "simple_tagger",
-                        "text_field_embedder": {
-                                "token_embedders": {
-                                        "tokens": {
-                                                "type": "embedding",
-                                                "embedding_dim": 5
-                                        }
-                                }
-                        },
-                        "encoder": {
-                                "type": "lstm",
-                                "input_size": 5,
-                                "hidden_size": 7,
-                                "num_layers": 2
+            "model": {
+                "type": "simple_tagger",
+                "text_field_embedder": {
+                    "token_embedders": {
+                        "tokens": {
+                            "type": "embedding",
+                            "embedding_dim": 5
+                            }
                         }
+                    },
+                "encoder": {
+                    "type": "lstm",
+                    "input_size": 5,
+                    "hidden_size": 7,
+                    "num_layers": 2
+                    }
                 },
-                "dataset_reader": {"type": "lazy-test"},
-                "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
-                "test_data_path": SEQUENCE_TAGGING_DATA_PATH,
-                "validation_data_path": SEQUENCE_TAGGING_DATA_PATH,
-                "evaluate_on_test": True,
-                "iterator": {"type": "basic", "batch_size": 2},
-                "trainer": {
-                        "num_epochs": 2,
-                        "optimizer": "adam"
+            "dataset_reader": {"type": "lazy-test"},
+            "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
+            "test_data_path": SEQUENCE_TAGGING_DATA_PATH,
+            "validation_data_path": SEQUENCE_TAGGING_DATA_PATH,
+            "evaluate_on_test": True,
+            "iterator": {"type": "basic", "batch_size": 2},
+            "trainer": {
+                "num_epochs": 2,
+                "optimizer": "adam"
                 }
         })
 

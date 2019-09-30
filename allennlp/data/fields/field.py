@@ -4,7 +4,7 @@ import torch
 
 from allennlp.data.vocabulary import Vocabulary
 
-DataArray = TypeVar("DataArray", torch.Tensor, Dict[str, torch.Tensor])  # pylint: disable=invalid-name
+DataArray = TypeVar("DataArray", torch.Tensor, Dict[str, torch.Tensor])
 
 
 class Field(Generic[DataArray]):
@@ -107,7 +107,7 @@ class Field(Generic[DataArray]):
         contained in ``self`` in order to perform the batching, so this is an instance method, not
         a class method.
         """
-        # pylint: disable=no-self-use
+
         return torch.stack(tensor_list)
 
     def __eq__(self, other) -> bool:

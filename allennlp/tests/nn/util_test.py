@@ -1,4 +1,3 @@
-# pylint: disable=invalid-name,no-self-use,too-many-public-methods,not-callable,too-many-lines,protected-access
 import json
 from typing import NamedTuple
 
@@ -856,7 +855,6 @@ class TestNnUtil(AllenNlpTestCase):
         with pytest.raises(ConfigurationError):
             util.batched_index_select(targets, indices)
 
-
     def test_flattened_index_select(self):
         indices = numpy.array([[1, 2],
                                [3, 4]])
@@ -1077,7 +1075,7 @@ class TestNnUtil(AllenNlpTestCase):
         )
 
     def test_has_tensor(self):
-        # pylint: disable=bad-continuation
+
         has_tensor = util.has_tensor
         tensor = torch.tensor([1, 2, 3])
 
@@ -1134,9 +1132,10 @@ class TestNnUtil(AllenNlpTestCase):
         # We're faking the tensor here so that we can test the calls to .cuda() without actually
         # needing a GPU.
         class FakeTensor(torch.Tensor):
-            # pylint: disable=abstract-method,super-init-not-called
+
             def __init__(self):
                 self._device = None
+
             def cuda(self, device):
                 self._device = device
                 return self

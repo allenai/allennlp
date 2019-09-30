@@ -52,7 +52,7 @@ class ComposedSeq2Seq(Model):
                  decoder: SeqDecoder,
                  tied_source_embedder_key: Optional[str] = None,
                  initializer: InitializerApplicator = InitializerApplicator(),
-                 regularizer: Optional[RegularizerApplicator] = None)-> None:
+                 regularizer: Optional[RegularizerApplicator] = None) -> None:
 
         super().__init__(vocab, regularizer)
 
@@ -71,7 +71,7 @@ class ComposedSeq2Seq(Model):
             if not isinstance(self._source_text_embedder, BasicTextFieldEmbedder):
                 raise ConfigurationError("Unable to tie embeddings,"
                                          "Source text embedder is not an instance of `BasicTextFieldEmbedder`.")
-            # pylint: disable=protected-access
+
             source_embedder = self._source_text_embedder._token_embedders[tied_source_embedder_key]
             if not isinstance(source_embedder, Embedding):
                 raise ConfigurationError("Unable to tie embeddings,"
@@ -86,7 +86,7 @@ class ComposedSeq2Seq(Model):
     def forward(self,  # type: ignore
                 source_tokens: Dict[str, torch.LongTensor],
                 target_tokens: Dict[str, torch.LongTensor] = None) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
+
         """
         Make foward pass on the encoder and decoder for producing the entire target sequence.
 

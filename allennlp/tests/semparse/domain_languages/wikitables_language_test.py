@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name,too-many-public-methods
 from typing import List
 
 import pytest
@@ -465,7 +464,7 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
                                  '[<List[Row],DateColumn,Date:List[Row]>, List[Row], DateColumn, Date]',
                                  '[<List[Row],ComparableColumn:List[Row]>, List[Row], ComparableColumn]',
                                  '[<List[Row],NumberColumn,Number:List[Row]>, List[Row], NumberColumn, Number]',
-                                 '[<List[Row],StringColumn,List[str]:List[Row]>, List[Row], StringColumn, List[str]]',  # pylint: disable=line-too-long
+                                 '[<List[Row],StringColumn,List[str]:List[Row]>, List[Row], StringColumn, List[str]]',
                                  '[<List[Row]:List[Row]>, List[Row]]'])
 
         check_productions_match(productions['Date'],
@@ -559,7 +558,7 @@ class TestWikiTablesLanguage(AllenNlpTestCase):
                              'Date -> [<List[Row],DateColumn:Date>, List[Row], DateColumn]',
                              '<List[Row],DateColumn:Date> -> select_date',
                              'List[Row] -> [<List[Row],StringColumn,List[str]:List[Row]>, '
-                                     'List[Row], StringColumn, List[str]]',  # pylint: disable=bad-continuation
+                             'List[Row], StringColumn, List[str]]',
                              '<List[Row],StringColumn,List[str]:List[Row]> -> filter_in',
                              'List[Row] -> all_rows',
                              'StringColumn -> string_column:league',

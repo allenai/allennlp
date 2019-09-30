@@ -33,7 +33,7 @@ class DecomposableAttentionPredictor(Predictor):
         A dictionary where the key "label_probs" determines the probabilities of each of
         [entailment, contradiction, neutral].
         """
-        return self.predict_json({"premise" : premise, "hypothesis": hypothesis})
+        return self.predict_json({"premise": premise, "hypothesis": hypothesis})
 
     @overrides
     def _json_to_instance(self, json_dict: JsonDict) -> Instance:

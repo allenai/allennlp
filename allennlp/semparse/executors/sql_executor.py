@@ -7,8 +7,9 @@ import multiprocessing
 from multiprocessing import Process
 from allennlp.common.file_utils import cached_path
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 MULTIPROCESSING_LOGGER = multiprocessing.get_logger()
+
 
 class SqlExecutor:
     """
@@ -38,7 +39,7 @@ class SqlExecutor:
 
         # If the query has not finished in 3 seconds then we will proceed.
         process.join(3)
-        denotation_correct = process.exitcode # type: ignore
+        denotation_correct = process.exitcode  # type: ignore
 
         if process.is_alive():
             logger.warning("Evaluating query took over 3 seconds, skipping query")

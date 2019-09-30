@@ -9,8 +9,6 @@ and from uniform noise. We'll then adversarially train a generator `Model`
 to transform the noise into something that (hopefully) looks like the true distribution
 and a discriminator `Model` to (hopefully) distinguish between the "true" and generated data.
 """
-# pylint: disable=bad-continuation,redefined-outer-name
-
 from typing import Iterable, List, Iterator, Union, Optional
 import tempfile
 
@@ -32,13 +30,13 @@ from allennlp.training.trainer_base import TrainerBase
 
 from allennlp.tests.training.gan_trainer_test import InputSampler
 
+
 @Model.register("gan")
 class Gan(Model):
     """
     Our trainer wants a single model, so we cheat by encapsulating both the
     generator and discriminator inside a single model. We'll access them individually.
     """
-    # pylint: disable=abstract-method
     def __init__(self,
                  generator: Model,
                  discriminator: Model) -> None:
@@ -62,7 +60,6 @@ class GanOptimizer(torch.optim.Optimizer):
     so we cheat by encapsulating both in a single optimizer that has a state
     indicating which one to use.
     """
-    # pylint: disable=super-init-not-called,arguments-differ
     def __init__(self,
                  generator_optimizer: torch.optim.Optimizer,
                  discriminator_optimizer: torch.optim.Optimizer) -> None:
@@ -101,7 +98,6 @@ class GanOptimizer(torch.optim.Optimizer):
 
 @DatasetReader.register("gan-callback")
 class GanCallbackDatasetReader(DatasetReader):
-    # pylint: disable=abstract-method
     def __init__(self,
                  sampler: InputSampler,
                  noise_sampler: InputSampler,
@@ -135,7 +131,7 @@ class GanCallbackDatasetReader(DatasetReader):
 class TrainGan(Callback):
     @handle_event(Events.BATCH_END)
     def compute_metrics(self, trainer: 'GanCallbackTrainer'):
-        # pylint: disable=no-self-use
+
         trainer.train_metrics = {
             "dfl": trainer.discriminator_fake_loss,
             "drl": trainer.discriminator_real_loss,
@@ -158,7 +154,7 @@ def config(sample_size: int = 500,
                 "mean": 4.0,
                 "stdev": 1.25
             },
-                "noise_sampler": {
+            "noise_sampler": {
                 "type": "uniform"
             }
         },
@@ -199,6 +195,7 @@ def config(sample_size: int = 500,
             ]
         }
     })
+
 
 @TrainerBase.register('gan-callback')
 class GanCallbackTrainer(CallbackTrainer):
@@ -302,7 +299,7 @@ if __name__ == "__main__":
     #
     # python -m allennlp.tests.training.gan_callback_trainer_test
     #
-    # pylint: disable=invalid-name
+
     serialization_dir = tempfile.mkdtemp()
 
     params = config()

@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,protected-access
 import torch
 import numpy as np
 from numpy.testing import assert_almost_equal
@@ -14,7 +13,7 @@ class TestExpectedRiskMinimization(AllenNlpTestCase):
         self.initial_state = SimpleState([0], [[0]], [torch.Tensor([0.0])])
         self.decoder_step = SimpleTransitionFunction()
         # Cost is the number of odd elements in the action history.
-        self.supervision = lambda state: torch.Tensor([sum([x%2 != 0 for x in
+        self.supervision = lambda state: torch.Tensor([sum([x % 2 != 0 for x in
                                                             state.action_history[0]])])
         # High beam size ensures exhaustive search.
         self.trainer = ExpectedRiskMinimization(beam_size=100,

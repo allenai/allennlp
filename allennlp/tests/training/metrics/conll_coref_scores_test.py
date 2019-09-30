@@ -1,8 +1,8 @@
-# pylint: disable=no-self-use,invalid-name,protected-access
 import torch
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.training.metrics import ConllCorefScores
+
 
 class ConllCorefScoresTest(AllenNlpTestCase):
     def test_get_predicted_clusters(self):

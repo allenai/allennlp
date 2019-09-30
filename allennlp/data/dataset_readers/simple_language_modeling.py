@@ -13,7 +13,7 @@ from allennlp.data.token_indexers.token_indexer import TokenIndexer
 from allennlp.data.tokenizers import WordTokenizer
 from allennlp.data.tokenizers.tokenizer import Tokenizer
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @DatasetReader.register("simple_language_modeling")
@@ -60,7 +60,7 @@ class SimpleLanguageModelingDatasetReader(DatasetReader):
     @overrides
     def text_to_instance(self,  # type: ignore
                          sentence: str) -> Instance:
-        # pylint: disable=arguments-differ
+
         tokenized = self._tokenizer.tokenize(sentence)
         tokenized_with_ends = []
         tokenized_with_ends.extend(self._start_tokens)
@@ -73,7 +73,7 @@ class SimpleLanguageModelingDatasetReader(DatasetReader):
 
     @overrides
     def _read(self, file_path: str) -> Iterable[Instance]:
-        # pylint: disable=arguments-differ
+
         logger.info('Loading data from %s', file_path)
         dropped_instances = 0
 

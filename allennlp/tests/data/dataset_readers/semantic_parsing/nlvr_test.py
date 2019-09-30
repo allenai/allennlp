@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.dataset_readers import NlvrDatasetReader
 from allennlp.semparse.domain_languages import NlvrLanguage

@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 import pytest
 
 from allennlp.common import Params
@@ -8,7 +7,7 @@ from allennlp.tests.data.iterators.basic_iterator_test import IteratorTest
 
 
 class TestBucketIterator(IteratorTest):
-    # pylint: disable=protected-access
+
     def test_create_batches_groups_correctly(self):
         iterator = BucketIterator(batch_size=2, padding_noise=0, sorting_keys=[('text', 'num_tokens')])
         iterator.index_with(self.vocab)
@@ -48,7 +47,7 @@ class TestBucketIterator(IteratorTest):
                                      [self.instances[4], self.instances[2]]]
 
     def test_from_params(self):
-        # pylint: disable=protected-access
+
         params = Params({})
 
         with pytest.raises(ConfigurationError):

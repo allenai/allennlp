@@ -1,5 +1,3 @@
-# pylint: disable=no-self-use,invalid-name,protected-access
-
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor

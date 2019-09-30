@@ -1,8 +1,8 @@
-
 import torch
 from overrides import overrides
 
 from allennlp.common.registrable import Registrable
+
 
 class SpanExtractor(torch.nn.Module, Registrable):
     """
@@ -16,7 +16,7 @@ class SpanExtractor(torch.nn.Module, Registrable):
     spans.
     """
     @overrides
-    def forward(self, # pylint: disable=arguments-differ
+    def forward(self,
                 sequence_tensor: torch.FloatTensor,
                 span_indices: torch.LongTensor,
                 sequence_mask: torch.LongTensor = None,

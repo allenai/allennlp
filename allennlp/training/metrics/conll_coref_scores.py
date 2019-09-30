@@ -8,6 +8,7 @@ import torch
 
 from allennlp.training.metrics.metric import Metric
 
+
 @Metric.register("conll_coref_scores")
 class ConllCorefScores(Metric):
     def __init__(self) -> None:
@@ -130,7 +131,7 @@ class Scorer:
         self.metric = metric
 
     def update(self, predicted, gold, mention_to_predicted, mention_to_gold):
-        if self.metric == self.ceafe:  # pylint: disable=comparison-with-callable
+        if self.metric == self.ceafe:
             p_num, p_den, r_num, r_den = self.metric(predicted, gold)
         else:
             p_num, p_den = self.metric(predicted, mention_to_gold)
@@ -211,7 +212,7 @@ class Scorer:
         predicted mentions in a cluster.
         """
         return 2 * len([mention for mention in gold_clustering if mention in predicted_clustering]) \
-               / float(len(gold_clustering) + len(predicted_clustering))
+            / float(len(gold_clustering) + len(predicted_clustering))
 
     @staticmethod
     def ceafe(clusters, gold_clusters):

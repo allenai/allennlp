@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 from flaky import flaky
 import pytest
 import numpy

@@ -1,7 +1,6 @@
 from typing import Callable, List, Set, Tuple, TypeVar, Optional
 import warnings
 
-
 from allennlp.data.dataset_readers.dataset_utils.ontonotes import TypedStringSpan
 from allennlp.common.checks import ConfigurationError
 from allennlp.data.tokenizers.token import Token
@@ -17,6 +16,8 @@ class InvalidTagSequence(Exception):
 
 
 T = TypeVar("T", str, Token)
+
+
 def enumerate_spans(sentence: List[T],
                     offset: int = 0,
                     max_span_width: int = None,
@@ -90,7 +91,6 @@ def bio_tags_to_spans(tag_sequence: List[str],
         The typed, extracted spans from the sequence, in the format (label, (span_start, span_end)).
         Note that the label `does not` contain any BIO tag prefixes.
     """
-    # pylint: disable=no-else-continue
     classes_to_ignore = classes_to_ignore or []
     spans: Set[Tuple[str, Tuple[int, int]]] = set()
     span_start = 0
@@ -260,10 +260,12 @@ def bioul_tags_to_spans(tag_sequence: List[str],
         index += 1
     return [span for span in spans if span[0] not in classes_to_ignore]
 
+
 def iob1_to_bioul(tag_sequence: List[str]) -> List[str]:
     warnings.warn("iob1_to_bioul has been replaced with 'to_bioul' "
                   "to allow more encoding options.", FutureWarning)
     return to_bioul(tag_sequence)
+
 
 def to_bioul(tag_sequence: List[str], encoding: str = "IOB1") -> List[str]:
     """
@@ -288,10 +290,8 @@ def to_bioul(tag_sequence: List[str], encoding: str = "IOB1") -> List[str]:
     bioul_sequence: ``List[str]``
         The tag sequence encoded in IOB1, e.g. ["B-PER", "L-PER", "O"].
     """
-
-    if not encoding in {"IOB1", "BIO"}:
+    if encoding not in {"IOB1", "BIO"}:
         raise ConfigurationError(f"Invalid encoding {encoding} passed to 'to_bioul'.")
-    # pylint: disable=len-as-condition
 
     def replace_label(full_label, new_label):
         # example: full_label = 'I-PER', new_label = 'U', returns 'U-PER'
@@ -320,7 +320,6 @@ def to_bioul(tag_sequence: List[str], encoding: str = "IOB1") -> List[str]:
             pop_replace_append(stack, recoded_stack, 'B')
             recoded_stack.reverse()
             out_stack.extend(recoded_stack)
-
 
     # Process the tag_sequence one tag at a time, adding spans to a stack,
     # then recode them.

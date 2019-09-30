@@ -103,7 +103,7 @@ class InputReduction(Attacker):
                 # special case for sentence tagging (we have tested NER)
                 else:
                     # remove the mask where you remove the input token from.
-                    if smallest_idx != -1: # Don't delete on the very first iteration
+                    if smallest_idx != -1:  # Don't delete on the very first iteration
                         del beam_tag_mask[smallest_idx]
                     cur_tags = [outputs["tags"][x] for x in range(len(outputs["tags"])) if beam_tag_mask[x]]
                     if cur_tags != original_tags:
@@ -151,13 +151,13 @@ def _remove_one_token(instance: Instance,
     for _ in range(beam_size):
         # copy instance and edit later
         copied_instance = deepcopy(instance)
-        copied_text_field: TextField = copied_instance[input_field_to_attack] # type: ignore
+        copied_text_field: TextField = copied_instance[input_field_to_attack]  # type: ignore
 
         # find smallest
         smallest = np.argmin(grads_mag)
         if grads_mag[smallest] == float("inf"):  # if all are ignored tokens, return.
             break
-        grads_mag[smallest] = float("inf") # so the other beams don't use this token
+        grads_mag[smallest] = float("inf")  # so the other beams don't use this token
 
         # remove smallest
         inputs_before_smallest = copied_text_field.tokens[0:smallest]

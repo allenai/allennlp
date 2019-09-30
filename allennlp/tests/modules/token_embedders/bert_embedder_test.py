@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 import torch
 
 from pytorch_pretrained_bert.modeling import BertConfig, BertModel
@@ -109,7 +108,7 @@ class TestBertEmbedder(ModelTestCase):
         assert tokens["bert-offsets"].tolist() == [[1, 2, 3, 4, 5, 6, 7, 8, 9]]
 
     def test_squad_with_unwordpieceable_passage(self):
-        # pylint: disable=line-too-long
+
         tokenizer = WordTokenizer()
 
         token_indexer = PretrainedBertIndexer("bert-base-uncased")

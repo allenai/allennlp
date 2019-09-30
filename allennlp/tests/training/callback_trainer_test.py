@@ -1,4 +1,3 @@
-# pylint: disable=invalid-name,too-many-public-methods,protected-access,no-member
 import copy
 import glob
 import json
@@ -76,7 +75,6 @@ class TestCallbackTrainer(ModelTestCase):
         self.iterator = BasicIterator(batch_size=2)
         self.iterator.index_with(vocab)
 
-
     def tearDown(self):
         super().tearDown()
         delattr(CallbackTrainer, 'metric_tracker')
@@ -116,7 +114,7 @@ class TestCallbackTrainer(ModelTestCase):
                 self.FIXTURES_ROOT / 'simple_tagger' / 'experiment_callback_trainer.json')
 
     def test_trainer_can_run_from_params(self):
-        # pylint: disable=bad-continuation
+
         from allennlp.commands.train import train_model
 
         params = Params({
@@ -222,7 +220,6 @@ class TestCallbackTrainer(ModelTestCase):
         assert len(responses.calls) == 1
         assert responses.calls[0].response.request.body == b'{"text": "only a test"}'
 
-
     def test_trainer_can_run_exponential_moving_average(self):
         moving_average = ExponentialMovingAverage(self.model.named_parameters(), decay=0.9999)
         callbacks = self.default_callbacks() + [UpdateMovingAverage(moving_average)]
@@ -245,7 +242,6 @@ class TestCallbackTrainer(ModelTestCase):
                                   callbacks=callbacks)
         trainer.train()
 
-
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="No CUDA device registered.")
     def test_trainer_can_run_cuda(self):
         self.model.cuda()
@@ -262,6 +258,7 @@ class TestCallbackTrainer(ModelTestCase):
                         reason="Need multiple GPUs.")
     def test_trainer_can_run_multiple_gpu(self):
         self.model.cuda()
+
         class MetaDataCheckWrapper(Model):
             """
             Checks that the metadata field has been correctly split across the batch dimension
@@ -271,7 +268,7 @@ class TestCallbackTrainer(ModelTestCase):
                 super().__init__(model.vocab)
                 self.model = model
 
-            def forward(self, **kwargs) -> Dict[str, torch.Tensor]:  # type: ignore # pylint: disable=arguments-differ
+            def forward(self, **kwargs) -> Dict[str, torch.Tensor]:  # type: ignore
                 assert 'metadata' in kwargs and 'tags' in kwargs, \
                     f'tokens and metadata must be provided. Got {kwargs.keys()} instead.'
                 batch_size = kwargs['tokens']['tokens'].size()[0]
@@ -313,7 +310,6 @@ class TestCallbackTrainer(ModelTestCase):
         multigpu_iterator = BasicIterator(batch_size=4)
         multigpu_iterator.index_with(model.vocab)
 
-
         trainer = CallbackTrainer(
                 model,
                 instances,
@@ -334,7 +330,6 @@ class TestCallbackTrainer(ModelTestCase):
                                   callbacks=self.default_callbacks(),
                                   num_epochs=1, serialization_dir=self.TEST_DIR)
         trainer.train()
-
 
         new_trainer = CallbackTrainer(self.model,
                                       training_data=self.instances,
@@ -377,12 +372,12 @@ class TestCallbackTrainer(ModelTestCase):
                                       num_epochs=3, serialization_dir=self.TEST_DIR,
                                       callbacks=new_callbacks)
 
-        new_trainer.handler.fire_event(Events.TRAINING_START)  # pylint: disable=protected-access
+        new_trainer.handler.fire_event(Events.TRAINING_START)
         assert new_trainer.epoch_number == 1
 
-        tracker = trainer.metric_tracker  # pylint: disable=protected-access
+        tracker = trainer.metric_tracker
         assert tracker.is_best_so_far()
-        assert tracker._best_so_far is not None  # pylint: disable=protected-access
+        assert tracker._best_so_far is not None
 
         new_trainer.train()
 
@@ -516,7 +511,6 @@ class TestCallbackTrainer(ModelTestCase):
         new_tracker.add_metrics([.3, .3, .3, .2, .5, .1])
         assert not new_tracker.should_stop_early()
 
-
     def test_should_stop_early_with_decreasing_metric(self):
         new_trainer = CallbackTrainer(self.model,
                                       training_data=self.instances,
@@ -642,7 +636,7 @@ class TestCallbackTrainer(ModelTestCase):
 
     def test_trainer_raises_on_model_with_no_loss_key(self):
         class FakeModel(Model):
-            def forward(self, **kwargs):  # pylint: disable=arguments-differ,unused-argument
+            def forward(self, **kwargs):
                 return {}
         with pytest.raises(RuntimeError):
             trainer = CallbackTrainer(FakeModel(None),
@@ -715,7 +709,7 @@ class TestCallbackTrainer(ModelTestCase):
         #   Check the resulting checkpoints.  Should then have models at epochs
         #       2, 4, plus the last two at 5 and 6.
         class WaitingIterator(BasicIterator):
-            # pylint: disable=arguments-differ
+
             def _create_batches(self, *args, **kwargs):
                 time.sleep(2.5)
                 return super()._create_batches(*args, **kwargs)
@@ -914,7 +908,7 @@ class TestCallbackTrainer(ModelTestCase):
         assert training_metrics["validation_loss"] > restored_metrics["validation_loss"]
 
     def test_handle_errors(self):
-        # pylint: disable=unused-argument,no-self-use
+
         class ErrorTest(Callback):
             """
             A callback with three triggers
@@ -949,7 +943,7 @@ class TestCallbackTrainer(ModelTestCase):
                                            num_epochs=1, serialization_dir=self.TEST_DIR)
 
         with pytest.raises(RuntimeError):
-            # pylint: disable=not-callable
+
             original_trainer.train()
 
         # The callback should have captured the exception.

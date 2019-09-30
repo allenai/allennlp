@@ -1,4 +1,3 @@
-# pylint: disable=unused-import
 import warnings
 
 from allennlp.predictors.decomposable_attention import DecomposableAttentionPredictor

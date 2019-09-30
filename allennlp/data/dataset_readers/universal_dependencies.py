@@ -11,7 +11,7 @@ from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
 from allennlp.data.tokenizers import Token, Tokenizer
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @DatasetReader.register("universal_dependencies")
@@ -70,7 +70,7 @@ class UniversalDependenciesDatasetReader(DatasetReader):
                          words: List[str],
                          upos_tags: List[str],
                          dependencies: List[Tuple[str, int]] = None) -> Instance:
-        # pylint: disable=arguments-differ
+
         """
         Parameters
         ----------

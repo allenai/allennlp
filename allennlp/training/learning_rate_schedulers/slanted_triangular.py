@@ -86,7 +86,7 @@ class SlantedTriangular(LearningRateScheduler):
 
     @overrides
     def step(self, metric: float = None, epoch: int = None) -> None:
-        if len(self.batch_num_total_epoch_end) == 0: # pylint: disable=len-as-condition
+        if len(self.batch_num_total_epoch_end) == 0:
             self.batch_num_total_epoch_end.append(0)
         else:
             self.batch_num_total_epoch_end.append(self.last_batch_num_total)

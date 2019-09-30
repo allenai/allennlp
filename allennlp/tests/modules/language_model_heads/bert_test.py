@@ -1,4 +1,3 @@
-# pylint: disable=invalid-name,no-self-use,protected-access
 import torch
 
 from allennlp.common import Params

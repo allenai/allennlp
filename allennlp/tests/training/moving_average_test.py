@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name,arguments-differ,protected-access
 from typing import Dict
 
 import torch
@@ -8,6 +7,7 @@ from allennlp.common.params import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.model import Model
 from allennlp.training.moving_average import MovingAverage, ExponentialMovingAverage
+
 
 class MovingAverageTest(AllenNlpTestCase):
     def test_from_params(self):
@@ -37,7 +37,7 @@ class MovingAverageTest(AllenNlpTestCase):
 
         np.testing.assert_array_almost_equal(
                 param1,
-                1 * .9999 ** 2 +  5 * .9999 * .0001 +  25 * 0.0001
+                1 * .9999 ** 2 + 5 * .9999 * .0001 + 25 * 0.0001
         )
         np.testing.assert_array_almost_equal(
                 param2,
@@ -68,7 +68,7 @@ class MovingAverageTest(AllenNlpTestCase):
 
         np.testing.assert_array_almost_equal(
                 param1,
-                1 * (101 / 110) * .9999 +  5 * (9 / 110) * .9999 +  25 * 0.0001
+                1 * (101 / 110) * .9999 + 5 * (9 / 110) * .9999 + 25 * 0.0001
         )
 
         np.testing.assert_array_almost_equal(

@@ -1,8 +1,8 @@
-
 from typing import List, Set, Tuple, Dict
 import numpy
 
 from allennlp.common.checks import ConfigurationError
+
 
 def decode_mst(energy: numpy.ndarray,
                length: int,
@@ -83,6 +83,7 @@ def decode_mst(energy: numpy.ndarray,
             head_type[child] = label_id_matrix[parent, child]
 
     return heads, head_type
+
 
 def chu_liu_edmonds(length: int,
                     score_matrix: numpy.ndarray,

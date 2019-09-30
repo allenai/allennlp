@@ -31,9 +31,9 @@ except ImportError:
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
-# pylint: disable=inconsistent-return-statements
+
 def infer_and_cast(value: Any):
     """
     In some cases we'll be feeding params dicts to functions we don't own;
@@ -42,7 +42,7 @@ def infer_and_cast(value: Any):
     using environment variables). This function takes something that looks JSON-like
     and recursively casts things that look like (bool, int, float) to (bool, int, float).
     """
-    # pylint: disable=too-many-return-statements
+
     if isinstance(value, (int, float, bool)):
         # Already one of our desired types, so leave as is.
         return value
@@ -72,7 +72,7 @@ def infer_and_cast(value: Any):
                 return value
     else:
         raise ValueError(f"cannot infer type of {value}")
-# pylint: enable=inconsistent-return-statements
+
 
 def _is_encodable(value: str) -> bool:
     """
@@ -84,6 +84,7 @@ def _is_encodable(value: str) -> bool:
     # but mypy doesn't like that.
     return (value == "") or (value.encode('utf-8', 'ignore') != b"")
 
+
 def _environment_variables() -> Dict[str, str]:
     """
     Wraps `os.environ` to filter out non-encodable values.
@@ -91,6 +92,7 @@ def _environment_variables() -> Dict[str, str]:
     return {key: value
             for key, value in os.environ.items()
             if _is_encodable(value)}
+
 
 def unflatten(flat_dict: Dict[str, Any]) -> Dict[str, Any]:
     """
@@ -118,6 +120,7 @@ def unflatten(flat_dict: Dict[str, Any]) -> Dict[str, Any]:
         curr_dict[parts[-1]] = value
 
     return unflat
+
 
 def with_fallback(preferred: Dict[str, Any], fallback: Dict[str, Any]) -> Dict[str, Any]:
     """
@@ -161,6 +164,7 @@ def with_fallback(preferred: Dict[str, Any], fallback: Dict[str, Any]) -> Dict[s
         merged[key] = merge(preferred_value, fallback_value)
     return merged
 
+
 def parse_overrides(serialized_overrides: str) -> Dict[str, Any]:
     if serialized_overrides:
         ext_vars = _environment_variables()
@@ -168,6 +172,7 @@ def parse_overrides(serialized_overrides: str) -> Dict[str, Any]:
         return unflatten(json.loads(evaluate_snippet("", serialized_overrides, ext_vars=ext_vars)))
     else:
         return {}
+
 
 def _is_dict_free(obj: Any) -> bool:
     """
@@ -179,6 +184,7 @@ def _is_dict_free(obj: Any) -> bool:
         return all(_is_dict_free(item) for item in obj)
     else:
         return True
+
 
 class Params(MutableMapping):
     """
@@ -244,7 +250,7 @@ class Params(MutableMapping):
 
     @overrides
     def pop(self, key: str, default: Any = DEFAULT, keep_as_dict: bool = False) -> Any:
-        # pylint: disable=arguments-differ
+
         """
         Performs the functionality associated with dict.pop(key), along with checking for
         returned dictionaries, replacing them with Param objects with an updated history
@@ -386,7 +392,7 @@ class Params(MutableMapping):
         def log_recursively(parameters, history):
             for key, value in parameters.items():
                 if isinstance(value, dict):
-                    new_local_history = history + key  + "."
+                    new_local_history = history + key + "."
                     log_recursively(value, new_local_history)
                 else:
                     logger.info(f"{history}{key} = {value}")
@@ -404,6 +410,7 @@ class Params(MutableMapping):
         Nested structure is collapsed with periods.
         """
         flat_params = {}
+
         def recurse(parameters, path):
             for key, value in parameters.items():
                 newpath = path + [key]

@@ -1,7 +1,6 @@
-# pylint: disable=no-self-use,invalid-name
-
 from allennlp.data.dataset_readers import UniversalDependenciesMultiLangDatasetReader
 from allennlp.common.testing import AllenNlpTestCase
+
 
 class TestUniversalDependenciesMultilangDatasetReader(AllenNlpTestCase):
     data_path = AllenNlpTestCase.FIXTURES_ROOT / "data" / "dependencies_multilang" / "*"

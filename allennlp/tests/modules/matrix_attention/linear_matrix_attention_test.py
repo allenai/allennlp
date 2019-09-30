@@ -1,4 +1,3 @@
-# pylint: disable=invalid-name,no-self-use,protected-access
 import numpy
 from numpy.testing import assert_almost_equal
 import torch

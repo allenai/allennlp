@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,protected-access,invalid-name
 from numpy.testing import assert_almost_equal
 import torch
 
@@ -21,12 +20,12 @@ class NlvrCoverageSemanticParserTest(ModelTestCase):
         self.ensure_model_can_train_save_and_load(self.param_file)
 
     def test_ungrouped_model_can_train_save_and_load(self):
-        # pylint: disable=line-too-long
+
         self.ensure_model_can_train_save_and_load(self.FIXTURES_ROOT / "semantic_parsing" /
                                                   "nlvr_coverage_semantic_parser" / "ungrouped_experiment.json")
 
     def test_mml_initialized_model_can_train_save_and_load(self):
-        # pylint: disable=line-too-long
+
         self.ensure_model_can_train_save_and_load(self.FIXTURES_ROOT / "semantic_parsing" /
                                                   "nlvr_coverage_semantic_parser" / "mml_init_experiment.json")
 
@@ -65,7 +64,7 @@ class NlvrCoverageSemanticParserTest(ModelTestCase):
         original_model_parameters = self.model.named_parameters()
         original_model_weights = {name: parameter.data.clone().numpy()
                                   for name, parameter in original_model_parameters}
-        # pylint: disable=line-too-long
+
         mml_model_archive_file = (self.FIXTURES_ROOT / "semantic_parsing" / "nlvr_direct_semantic_parser" /
                                   "serialization" / "model.tar.gz")
         archive = load_archive(mml_model_archive_file)
@@ -85,7 +84,7 @@ class NlvrCoverageSemanticParserTest(ModelTestCase):
             assert_almost_equal(archived_weight, changed_weight)
 
     def test_get_vocab_index_mapping(self):
-        # pylint: disable=line-too-long
+
         mml_model_archive_file = (self.FIXTURES_ROOT / "semantic_parsing" / "nlvr_direct_semantic_parser" /
                                   "serialization" / "model.tar.gz")
         archive = load_archive(mml_model_archive_file)
@@ -94,9 +93,11 @@ class NlvrCoverageSemanticParserTest(ModelTestCase):
         assert mapping == expected_mapping
 
         new_vocab = Vocabulary()
+
         def copy_token_at_index(i):
             token = self.vocab.get_token_from_index(i, "tokens")
             new_vocab.add_token_to_namespace(token, "tokens")
+
         copy_token_at_index(5)
         copy_token_at_index(7)
         copy_token_at_index(10)

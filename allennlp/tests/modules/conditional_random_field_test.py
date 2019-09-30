@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 import itertools
 import math
 
@@ -76,7 +75,6 @@ class TestConditionalRandomField(AllenNlpTestCase):
         # The manually computed log likelihood should equal the result of crf.forward.
         assert manual_log_likelihood.item() == approx(log_likelihood)
 
-
     def test_forward_works_with_mask(self):
         # Use a non-trivial mask
         mask = torch.LongTensor([
@@ -108,7 +106,6 @@ class TestConditionalRandomField(AllenNlpTestCase):
 
         # The manually computed log likelihood should equal the result of crf.forward.
         assert manual_log_likelihood.item() == approx(log_likelihood)
-
 
     def test_viterbi_tags(self):
         mask = torch.LongTensor([
@@ -183,7 +180,7 @@ class TestConditionalRandomField(AllenNlpTestCase):
         ]
 
     def test_allowed_transitions(self):
-        # pylint: disable=bad-whitespace,bad-continuation
+
         bio_labels = ['O', 'B-X', 'I-X', 'B-Y', 'I-Y'] # start tag, end tag
         #              0     1      2      3      4         5          6
         allowed = allowed_transitions("BIO", dict(enumerate(bio_labels)))
@@ -205,7 +202,7 @@ class TestConditionalRandomField(AllenNlpTestCase):
         # The empty spaces in this matrix indicate disallowed transitions.
         assert set(allowed) == {                                                   # Extra column for end tag.
             (0, 0), (0, 1),                 (0, 4), (0, 5),                 (0, 8),       (0, 10),
-                            (1, 2), (1, 3),
+                            (1, 2), (1, 3),                                                           # noqa
                             (2, 2), (2, 3),
             (3, 0), (3, 1),                 (3, 4), (3, 5),                 (3, 8),       (3, 10),
             (4, 0), (4, 1),                 (4, 4), (4, 5),                 (4, 8),       (4, 10),
@@ -239,7 +236,7 @@ class TestConditionalRandomField(AllenNlpTestCase):
         assert set(allowed) == {
                     (0, 1), (0, 2),
                     (1, 1), (1, 2),                                         # Extra column for end tag.
-            (2, 0),                 (2, 3), (2, 4),                 (2, 7), (2, 9),
+            (2, 0),                 (2, 3), (2, 4),                 (2, 7), (2, 9),            # noqa
             (3, 0),                 (3, 3), (3, 4),                 (3, 7), (3, 9),
                                                     (4, 5), (4, 6),
                                                     (5, 5), (5, 6),

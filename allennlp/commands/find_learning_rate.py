@@ -61,12 +61,12 @@ from allennlp.training import Trainer
 from allennlp.training.util import datasets_from_params
 
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 class FindLearningRate(Subcommand):
     def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
-        # pylint: disable=protected-access
+
         description = '''Find a learning rate range where loss decreases quickly
                          for the specified model and dataset.'''
         subparser = parser.add_parser(name,
@@ -113,6 +113,7 @@ class FindLearningRate(Subcommand):
 
         return subparser
 
+
 def find_learning_rate_from_args(args: argparse.Namespace) -> None:
     """
     Start learning rate finder for given args
@@ -125,6 +126,7 @@ def find_learning_rate_from_args(args: argparse.Namespace) -> None:
                              linear_steps=args.linear,
                              stopping_factor=args.stopping_factor,
                              force=args.force)
+
 
 def find_learning_rate_model(params: Params, serialization_dir: str,
                              start_lr: float = 1e-5,
@@ -199,7 +201,6 @@ def find_learning_rate_model(params: Params, serialization_dir: str,
         if any(re.search(regex, name) for regex in no_grad_regexes):
             parameter.requires_grad_(False)
 
-
     trainer_choice = trainer_params.pop("type", "default")
     if trainer_choice != "default":
         raise ConfigurationError("currently find-learning-rate only works with the default Trainer")
@@ -222,6 +223,7 @@ def find_learning_rate_model(params: Params, serialization_dir: str,
     losses = _smooth(losses, 0.98)
 
     _save_plot(learning_rates, losses, os.path.join(serialization_dir, 'lr-losses.png'))
+
 
 def search_learning_rate(trainer: Trainer,
                          start_lr: float = 1e-5,
@@ -257,7 +259,7 @@ def search_learning_rate(trainer: Trainer,
 
     trainer.model.train()
 
-    num_gpus = len(trainer._cuda_devices) # pylint: disable=protected-access
+    num_gpus = len(trainer._cuda_devices)
 
     raw_train_generator = trainer.iterator(trainer.train_data,
                                            shuffle=trainer.shuffle)
@@ -318,8 +320,7 @@ def _smooth(values: List[float], beta: float) -> List[float]:
 
 
 def _save_plot(learning_rates: List[float], losses: List[float], save_path: str):
-    # pylint: disable=multiple-statements,wrong-import-position,import-outside-toplevel
-    import matplotlib; matplotlib.use('Agg')
+    import matplotlib; matplotlib.use('Agg')  # noqa
     import matplotlib.pyplot as plt
     plt.ylabel('loss')
     plt.xlabel('learning rate (log10 scale)')

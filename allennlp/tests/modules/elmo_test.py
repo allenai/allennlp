@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name,protected-access
 import os
 import json
 import warnings
@@ -166,6 +165,7 @@ class TestElmoBiLm(ElmoTestCase):
             numpy.testing.assert_array_almost_equal(activation_cached.data.cpu().numpy(),
                                                     activation.data.cpu().numpy(), decimal=6)
 
+
 class TestElmo(ElmoTestCase):
     def setUp(self):
         super().setUp()
@@ -219,7 +219,6 @@ class TestElmo(ElmoTestCase):
         assert list(elmo_representations[0].size()) == [2, 7+2, 32]
         assert list(elmo_representations[1].size()) == [2, 7+2, 32]
         assert list(mask.size()) == [2, 7+2]
-
 
     def test_elmo_4D_input(self):
         sentences = [[['The', 'sentence', '.'],

@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 import numpy
 import pytest
 import torch
@@ -10,6 +9,7 @@ from allennlp.modules.seq2vec_encoders import Seq2VecEncoder
 from allennlp.common.params import Params
 from allennlp.nn import InitializerApplicator, Initializer
 from allennlp.nn.util import sort_batch_by_length
+
 
 class TestStackedBidirectionalLstm():
     def test_stacked_bidirectional_lstm_completes_forward_pass(self):
@@ -56,7 +56,6 @@ class TestStackedBidirectionalLstm():
         mask = torch.ones(4, 5)
         output = encoder(input_tensor, mask)
         assert output.detach().numpy().shape == (4, 18)
-
 
     @pytest.mark.parametrize("dropout_name", ('layer_dropout_probability',
                                               'recurrent_dropout_probability'))

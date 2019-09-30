@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 import numpy
 from numpy.testing import assert_almost_equal
 import torch
@@ -87,6 +86,6 @@ class TestLegacyAttention(AllenNlpTestCase):
     def test_can_build_from_params(self):
         params = Params({'similarity_function': {'type': 'cosine'}, 'normalize': False})
         attention = LegacyAttention.from_params(params)
-        # pylint: disable=protected-access
+
         assert attention._similarity_function.__class__.__name__ == 'CosineSimilarity'
         assert attention._normalize is False

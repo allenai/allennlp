@@ -75,6 +75,7 @@ LINK_TO_POSITION["xcomp"] = "right"
 LINK_TO_POSITION["ccomp"] = "right"
 LINK_TO_POSITION["acomp"] = "right"
 
+
 @Predictor.register('biaffine-dependency-parser')
 class BiaffineDependencyParserPredictor(Predictor):
     """
@@ -96,7 +97,7 @@ class BiaffineDependencyParserPredictor(Predictor):
         -------
         A dictionary representation of the dependency tree.
         """
-        return self.predict_json({"sentence" : sentence})
+        return self.predict_json({"sentence": sentence})
 
     @overrides
     def _json_to_instance(self, json_dict: JsonDict) -> Instance:
@@ -105,7 +106,7 @@ class BiaffineDependencyParserPredictor(Predictor):
         """
         spacy_tokens = self._tokenizer.split_words(json_dict["sentence"])
         sentence_text = [token.text for token in spacy_tokens]
-        if self._dataset_reader.use_language_specific_pos: # type: ignore
+        if self._dataset_reader.use_language_specific_pos:  # type: ignore
             # fine-grained part of speech
             pos_tags = [token.tag_ for token in spacy_tokens]
         else:

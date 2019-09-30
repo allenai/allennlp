@@ -28,7 +28,7 @@ from allennlp.semparse.contexts.quarel_utils import LEXICAL_CUES, align_entities
 from allennlp.semparse.worlds.quarel_world import QuarelWorld
 
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @DatasetReader.register("quarel")
@@ -127,8 +127,8 @@ class QuarelDatasetReader(DatasetReader):
             qr_coeff_sets = self._world.qr_coeff_sets
             for qset in qr_coeff_sets:
                 for attribute in qset:
-                    if (self._skip_attributes_regex is not None and
-                                self._skip_attributes_regex.search(attribute)):
+                    if self._skip_attributes_regex is not None and \
+                       self._skip_attributes_regex.search(attribute):
                         continue
                     # Get text associated with each entity, both from entity identifier and
                     # associated lexical cues, if any
@@ -194,7 +194,7 @@ class QuarelDatasetReader(DatasetReader):
 
         output = [question_data]
         need_extractions = self._replace_world_entities and not predict
-        if not 'world_extractions' in question_data and need_extractions:
+        if 'world_extractions' not in question_data and need_extractions:
             output = []
         # Can potentially return different variants of question here, currently
         # output is either 0 or 1 entries
@@ -229,8 +229,8 @@ class QuarelDatasetReader(DatasetReader):
                     question_id = question_data['id']
                     logical_forms = question_data['logical_forms']
                     # Skip examples with certain attributes
-                    if (self._skip_attributes_regex is not None and
-                                self._skip_attributes_regex.search(logical_forms[0])):
+                    if self._skip_attributes_regex is not None and \
+                       self._skip_attributes_regex.search(logical_forms[0]):
                         continue
                     # Somewhat hacky filtering to "friction" subset of questions based on id
                     if not self._compatible_question(question_data):
@@ -265,7 +265,6 @@ class QuarelDatasetReader(DatasetReader):
                          qr_spec_override: List[Dict[str, int]] = None,
                          dynamic_entities_override: Dict[str, str] = None) -> Instance:
 
-        # pylint: disable=arguments-differ
         tokenized_question = tokenized_question or self._tokenizer.tokenize(question.lower())
         additional_metadata = additional_metadata or dict()
         additional_metadata['question_tokens'] = [token.text for token in tokenized_question]
@@ -389,7 +388,7 @@ class QuarelDatasetReader(DatasetReader):
         question_id = question_data.get('id')
         if not question_id:
             return True
-        if not '_friction' in self._lf_syntax:
+        if '_friction' not in self._lf_syntax:
             return True
         return '_Fr_' in question_id or 'Friction' in question_id
 
@@ -413,7 +412,7 @@ class QuarelDatasetReader(DatasetReader):
             return maybe_list[0]
 
     def _check_world_flip(self, question_data: JsonDict) -> bool:
-        if not 'world_literals' in question_data or not 'world_extractions' in question_data:
+        if 'world_literals' not in question_data or 'world_extractions' not in question_data:
             return False
         flip = False
         world_extractions = question_data['world_extractions']
@@ -441,7 +440,7 @@ class QuarelDatasetReader(DatasetReader):
         res = []
         # Hackily access last two feature extractors for table field (span overlaps which don't
         # depend on the actual table information)
-        features = table_field._feature_extractors[8:]  # pylint: disable=protected-access
+        features = table_field._feature_extractors[8:]
         for i, token in enumerate(tokenized_question):
             tag_best = 0
             score_max = 0.0
@@ -472,7 +471,7 @@ class QuarelDatasetReader(DatasetReader):
         return re.sub(r"\w+", lambda x: self._stemmer.stem(x.group(0)), phrase)
 
     def _replace_stemmed_entities(self, question_data: JsonDict) -> JsonDict:
-        entity_name_map = {"world1": "worldone", "world2":"worldtwo"}
+        entity_name_map = {"world1": "worldone", "world2": "worldtwo"}
         question = question_data['question']
         entities = question_data['world_extractions']
         entity_pairs: List[Tuple[str, str]] = []

@@ -1,7 +1,7 @@
 """
 Assorted utilities for working with neural networks in AllenNLP.
 """
-# pylint: disable=too-many-lines
+
 from collections import defaultdict
 from typing import Any, Dict, List, Optional, Sequence, Tuple, TypeVar, Union
 import logging
@@ -14,7 +14,7 @@ import torch
 
 from allennlp.common.checks import ConfigurationError
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 T = TypeVar('T')
 
@@ -39,7 +39,7 @@ def move_to_device(obj, cuda_device: int):
     Given a structure (possibly) containing Tensors on the CPU,
     move all the Tensors to the specified GPU (or do nothing, if they should be on the CPU).
     """
-    # pylint: disable=too-many-return-statements
+
     if cuda_device < 0 or not has_tensor(obj):
         return obj
     elif isinstance(obj, torch.Tensor):
@@ -65,7 +65,7 @@ def clamp_tensor(tensor, minimum, maximum):
     """
     if tensor.is_sparse:
         coalesced_tensor = tensor.coalesce()
-        # pylint: disable=protected-access
+
         coalesced_tensor._values().clamp_(minimum, maximum)
         return coalesced_tensor
     else:
@@ -457,10 +457,9 @@ def viterbi_decode(tag_sequence: torch.Tensor,
         new_transition_matrix[:-2, :-2] = transition_matrix
 
         # Start and end transitions are fully defined, but cannot transition between each other.
-        # pylint: disable=not-callable
+
         allowed_start_transitions = torch.cat([allowed_start_transitions, torch.tensor([-math.inf, -math.inf])])
         allowed_end_transitions = torch.cat([allowed_end_transitions, torch.tensor([-math.inf, -math.inf])])
-        # pylint: enable=not-callable
 
         # First define how we may transition FROM the start and end tags.
         new_transition_matrix[-2, :] = allowed_start_transitions
@@ -480,7 +479,6 @@ def viterbi_decode(tag_sequence: torch.Tensor,
                                      .format(sequence_length, tag_observations))
     else:
         tag_observations = [-1 for _ in range(sequence_length)]
-
 
     if has_start_end_restrictions:
         tag_observations = [num_tags - 2] + tag_observations + [num_tags - 1]
@@ -632,7 +630,7 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
                                        label_smoothing: float = None,
                                        gamma: float = None,
                                        alpha: Union[float, List[float], torch.FloatTensor] = None
-                                      ) -> torch.FloatTensor:
+                                       ) -> torch.FloatTensor:
     """
     Computes the cross entropy loss of a sequence, weighted with respect to
     some user provided weights. Note that the weighting here is not the same as
@@ -711,16 +709,16 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
     if alpha is not None:
         # shape : () / (num_classes,)
         if isinstance(alpha, (float, int)):
-            # pylint: disable=not-callable
+
             # shape : (2,)
             alpha_factor = torch.tensor([1. - float(alpha), float(alpha)],
                                         dtype=weights.dtype, device=weights.device)
-            # pylint: enable=not-callable
+
         elif isinstance(alpha, (list, numpy.ndarray, torch.Tensor)):
-            # pylint: disable=not-callable
+
             # shape : (c,)
             alpha_factor = torch.tensor(alpha, dtype=weights.dtype, device=weights.device)
-            # pylint: enable=not-callable
+
             if not alpha_factor.size():
                 # shape : (1,)
                 alpha_factor = alpha_factor.view(1)
@@ -791,7 +789,7 @@ def tensors_equal(tensor1: torch.Tensor, tensor2: torch.Tensor, tolerance: float
     This is kind of a catch-all method that's designed to make implementing ``__eq__`` methods
     easier, in a way that's really only intended to be useful for tests.
     """
-    # pylint: disable=too-many-return-statements
+
     if isinstance(tensor1, (list, tuple)):
         if not isinstance(tensor2, (list, tuple)) or len(tensor1) != len(tensor2):
             return False
@@ -823,7 +821,7 @@ def device_mapping(cuda_device: int):
     the desired `cuda_device` to get the function that `torch.load()` needs.
     """
 
-    def inner_device_mapping(storage: torch.Storage, location) -> torch.Storage:  # pylint: disable=unused-argument
+    def inner_device_mapping(storage: torch.Storage, location) -> torch.Storage:
         if cuda_device >= 0:
             return storage.cuda(cuda_device)
         else:
@@ -1354,7 +1352,7 @@ def remove_sentence_boundaries(tensor: torch.Tensor,
 def add_positional_features(tensor: torch.Tensor,
                             min_timescale: float = 1.0,
                             max_timescale: float = 1.0e4):
-    # pylint: disable=line-too-long
+
     """
     Implements the frequency-based positional encoding described
     in `Attention is all you Need
@@ -1381,7 +1379,7 @@ def add_positional_features(tensor: torch.Tensor,
     Returns
     -------
     The input tensor augmented with the sinusoidal frequencies.
-    """
+    """  # noqa
     _, timesteps, hidden_dim = tensor.size()
 
     timestep_range = get_range_vector(timesteps, get_device_of(tensor)).data.float()
@@ -1499,7 +1497,7 @@ def find_embedding_layer(model: torch.nn.Module) -> torch.nn.Module:
             return module.wte
     for module in model.modules():
         if isinstance(module, TextFieldEmbedder):
-            # pylint: disable=protected-access
+
             if isinstance(module, BasicTextFieldEmbedder):
                 # We'll have a check for single Embedding cases, because we can be more efficient
                 # in cases like this.  If this check fails, then for something like hotflip we need
@@ -1507,7 +1505,7 @@ def find_embedding_layer(model: torch.nn.Module) -> torch.nn.Module:
                 if len(module._token_embedders) == 1:
                     embedder = list(module._token_embedders.values())[0]
                     if isinstance(embedder, Embedding):
-                        if embedder._projection is None:  # pylint: disable=protected-access
+                        if embedder._projection is None:
                             # If there's a projection inside the Embedding, then we need to return
                             # the whole TextFieldEmbedder, because there's more computation that
                             # needs to be done than just multiply by an embedding matrix.

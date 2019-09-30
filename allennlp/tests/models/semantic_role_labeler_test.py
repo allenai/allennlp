@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 import subprocess
 import os
 
@@ -15,6 +14,7 @@ from allennlp.models.srl_util import (
 from allennlp.nn.util import get_lengths_from_binary_sequence_mask
 
 from allennlp.data.dataset_readers.dataset_utils.span_utils import to_bioul
+
 
 class SemanticRoleLabelerTest(ModelTestCase):
     def setUp(self):

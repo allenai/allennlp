@@ -24,6 +24,7 @@ def _get_answers_from_data(annotations: Dict[str, Any]) -> Dict[str, List[str]]:
                 answers_dict[query_id] = candidate_answers
     return answers_dict
 
+
 def evaluate_json(annotations: Dict[str, Any], predicted_answers: Dict[str, Any]) -> Tuple[float, float]:
     """
     Takes gold annotations and predicted answers and  evaluates the predictions for each question
@@ -91,7 +92,7 @@ def evaluate_prediction_file(prediction_path: str, gold_path: str,
 
 
 if __name__ == "__main__":
-    # pylint: disable=invalid-name
+
     parser = argparse.ArgumentParser(description='Evaluate Quoref predictions')
     parser.add_argument("--gold_path",
                         type=str,

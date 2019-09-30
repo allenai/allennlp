@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 import pytest
 
 from allennlp.common import Params
@@ -22,5 +21,5 @@ class TestQangarooReader:
 
     def test_can_build_from_params(self):
         reader = QangarooReader.from_params(Params({}))
-        # pylint: disable=protected-access
+
         assert reader._token_indexers['tokens'].__class__.__name__ == 'SingleIdTokenIndexer'

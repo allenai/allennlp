@@ -82,7 +82,7 @@ GRAMMAR_DICTIONARY["function"] = ['(fname ws "(" ws "DISTINCT" ws arg_list_or_st
 
 GRAMMAR_DICTIONARY["arg_list_or_star"] = ['arg_list', '"*"']
 GRAMMAR_DICTIONARY["arg_list"] = ['(expr ws "," ws arg_list)', 'expr']
- # TODO(MARK): Massive hack, remove and modify the grammar accordingly
+# TODO(MARK): Massive hack, remove and modify the grammar accordingly
 GRAMMAR_DICTIONARY["number"] = [r'~"\d*\.?\d+"i', "'3'", "'4'"]
 GRAMMAR_DICTIONARY["string_set"] = ['ws "(" ws string_set_vals ws ")"']
 GRAMMAR_DICTIONARY["string_set_vals"] = ['(string ws "," ws string_set_vals)', 'string']
@@ -94,8 +94,6 @@ GRAMMAR_DICTIONARY["boolean"] = ['"true"', '"false"']
 GRAMMAR_DICTIONARY["binaryop"] = ['"+"', '"-"', '"*"', '"/"', '"="', '"<>"',
                                   '">="', '"<="', '">"', '"<"', '"AND"', '"OR"', '"LIKE"']
 GRAMMAR_DICTIONARY["unaryop"] = ['"+"', '"-"', '"not"', '"NOT"']
-
-
 
 GLOBAL_DATASET_VALUES: Dict[str, List[str]] = {
         # These are used to check values are present, or numbers of authors.
@@ -118,6 +116,7 @@ def update_grammar_with_tables(grammar_dictionary: Dict[str, List[str]],
         all_columns.update([column.name for column in table])
     sorted_columns = sorted([f'"{column}"' for column in all_columns], reverse=True)
     grammar_dictionary['column_name'] = sorted_columns
+
 
 def update_grammar_with_table_values(grammar_dictionary: Dict[str, List[str]],
                                      schema: Dict[str, List[TableColumn]],
@@ -178,6 +177,7 @@ def update_grammar_to_be_variable_free(grammar_dictionary: Dict[str, List[str]])
     # to recognise new variables.
     del grammar_dictionary["name"]
 
+
 def update_grammar_with_untyped_entities(grammar_dictionary: Dict[str, List[str]]) -> None:
     """
     Variables can be treated as numbers or strings if their type can be inferred -
@@ -201,7 +201,7 @@ def update_grammar_values_with_variables(grammar_dictionary: Dict[str, List[str]
         grammar_dictionary["value"] = [f'"\'{variable}\'"'] + grammar_dictionary["value"]
 
 
-def update_grammar_numbers_and_strings_with_variables(grammar_dictionary: Dict[str, List[str]], # pylint: disable=invalid-name
+def update_grammar_numbers_and_strings_with_variables(grammar_dictionary: Dict[str, List[str]],
                                                       prelinked_entities: Dict[str, Dict[str, str]],
                                                       columns: Dict[str, TableColumn]) -> None:
     for variable, info in prelinked_entities.items():

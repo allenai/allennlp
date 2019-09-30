@@ -126,7 +126,7 @@ class BertEmbedder(TokenEmbedder):
             the second sentence should have type 1.  If you don't provide this
             (the default BertIndexer doesn't) then it's assumed to be all 0s.
         """
-        # pylint: disable=arguments-differ
+
         batch_size, full_seq_len = input_ids.size(0), input_ids.size(-1)
         initial_dims = list(input_ids.shape[:-1])
 
@@ -245,7 +245,7 @@ class BertEmbedder(TokenEmbedder):
 
 @TokenEmbedder.register("bert-pretrained")
 class PretrainedBertEmbedder(BertEmbedder):
-    # pylint: disable=line-too-long
+
     """
     Parameters
     ----------
@@ -272,4 +272,6 @@ class PretrainedBertEmbedder(BertEmbedder):
         for param in model.parameters():
             param.requires_grad = requires_grad
 
-        super().__init__(bert_model=model, top_layer_only=top_layer_only, scalar_mix_parameters=scalar_mix_parameters)
+        super().__init__(bert_model=model,
+                         top_layer_only=top_layer_only,
+                         scalar_mix_parameters=scalar_mix_parameters)

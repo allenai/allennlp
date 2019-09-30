@@ -15,7 +15,7 @@ from allennlp.common import Params
 from allennlp.training.metrics import EvalbBracketingScorer
 
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 def train_fixture(config_prefix: str) -> None:

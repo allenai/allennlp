@@ -8,7 +8,7 @@ import logging
 sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
 from allennlp.models.archival import CONFIG_NAME, _WEIGHTS_NAME
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 def generate_archive(config_file: str,
                      serialization_dir: str,
@@ -30,6 +30,7 @@ def generate_archive(config_file: str,
         archive.add(config_file, arcname=CONFIG_NAME)
         archive.add(os.path.join(serialization_dir, weights_file), arcname=_WEIGHTS_NAME)
         archive.add(os.path.join(serialization_dir, "vocabulary"), arcname="vocabulary")
+
 
 if __name__ == "__main__":
     generate_archive("tests/fixtures/bidaf/experiment.json",

@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name,bad-continuation
 import json
 import os
 import re
@@ -124,9 +123,9 @@ class TestParams(AllenNlpTestCase):
         params = Params({
                 'a': 10,
                 'b': {
-                        'c': 20,
-                        'd': 'stuff'
-                }
+                    'c': 20,
+                    'd': 'stuff'
+                    }
         }).as_flat_dict()
 
         assert params == {'a': 10, 'b.c': 20, 'b.d': 'stuff'}
@@ -291,14 +290,14 @@ class TestParams(AllenNlpTestCase):
                 return cls(B.from_params(b_params))
 
         params = Params({
-                "a": {
-                        "b": {
-                                "filename": my_file,
-                                "c": {
-                                        "c_file": my_other_file
-                                }
+            "a": {
+                "b": {
+                    "filename": my_file,
+                    "c": {
+                        "c_file": my_other_file
                         }
-                }
+                    }
+            }
         })
 
         # Construct ``A`` from params but then just throw it away.
@@ -357,16 +356,16 @@ class TestParams(AllenNlpTestCase):
                 return cls(bs=[B.from_params(b_params) for b_params in bs])
 
         params = Params({
-                "a": {
-                        "bs": [
-                                {
-                                    "filename": my_file,
-                                    "c": {
-                                            "c_file": my_other_file
-                                    },
-                                },
-                            ],
-                }
+            "a": {
+                "bs": [
+                    {
+                        "filename": my_file,
+                        "c": {
+                            "c_file": my_other_file
+                            },
+                        },
+                ],
+            }
         })
 
         # Construct ``A`` from params but then just throw it away.

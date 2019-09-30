@@ -1,4 +1,3 @@
-
 #!/bin/bash
 
 # This script downloads and compiles the Ontonotes 2012 data in a helpful format

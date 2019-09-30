@@ -8,7 +8,7 @@ from allennlp.training.callbacks.events import Events
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
 
 if TYPE_CHECKING:
-    from allennlp.training.callback_trainer import CallbackTrainer  # pylint:disable=unused-import
+    from allennlp.training.callback_trainer import CallbackTrainer
 
 
 @Callback.register("update_learning_rate")
@@ -48,6 +48,6 @@ class UpdateLearningRate(Callback):
     def from_params(cls,                # type: ignore
                     params: Params,
                     optimizer: torch.optim.Optimizer) -> 'UpdateLearningRate':
-        # pylint: disable=arguments-differ
+
         return cls(LearningRateScheduler.from_params(params=params.pop("learning_rate_scheduler"),
                                                      optimizer=optimizer))

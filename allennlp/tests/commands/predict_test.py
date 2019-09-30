@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 import argparse
 import csv
 import io
@@ -111,14 +110,14 @@ class TestPredict(AllenNlpTestCase):
         shutil.rmtree(self.tempdir)
 
     def test_uses_correct_dataset_reader(self):
-        # pylint: disable=protected-access
+
         # The ATIS archive has both a training and validation ``DatasetReader``
         # with different values for ``keep_if_unparseable`` (``True`` for validation
         # and ``False`` for training). We create a new ``Predictor`` class that
         # outputs this value so we can test which ``DatasetReader`` was used.
         @Predictor.register('test-predictor')
         class _TestPredictor(Predictor):
-            # pylint: disable=abstract-method
+
             def dump_line(self, outputs: JsonDict) -> str:
                 data = {'keep_if_unparseable': self._dataset_reader._keep_if_unparseable}  # type: ignore
                 return json.dumps(data) + '\n'
@@ -216,16 +215,16 @@ class TestPredict(AllenNlpTestCase):
         sys.argv = ["run.py",            # executable
                     "predict",           # command
                     "/path/to/archive",  # archive, but no input file
-                   ]
+                    ]
 
-        with self.assertRaises(SystemExit) as cm:  # pylint: disable=invalid-name
+        with self.assertRaises(SystemExit) as cm:
             main()
 
         assert cm.exception.code == 2  # argparse code for incorrect usage
 
     def test_can_specify_predictor(self):
 
-        @Predictor.register('bidaf-explicit')  # pylint: disable=unused-variable
+        @Predictor.register('bidaf-explicit')
         class Bidaf3Predictor(BidafPredictor):
             """same as bidaf predictor but with an extra field"""
             def predict_json(self, inputs: JsonDict) -> JsonDict:
@@ -266,8 +265,8 @@ class TestPredict(AllenNlpTestCase):
     def test_other_modules(self):
         # Create a new package in a temporary dir
         packagedir = self.TEST_DIR / 'testpackage'
-        packagedir.mkdir()  # pylint: disable=no-member
-        (packagedir / '__init__.py').touch()  # pylint: disable=no-member
+        packagedir.mkdir()
+        (packagedir / '__init__.py').touch()
 
         # And add that directory to the path
         sys.path.insert(0, str(self.TEST_DIR))
@@ -322,7 +321,7 @@ class TestPredict(AllenNlpTestCase):
         sys.path.remove(str(self.TEST_DIR))
 
     def test_alternative_file_formats(self):
-        @Predictor.register('bidaf-csv')  # pylint: disable=unused-variable
+        @Predictor.register('bidaf-csv')
         class BidafCsvPredictor(BidafPredictor):
             """same as bidaf predictor but using CSV inputs and outputs"""
             def load_line(self, line: str) -> JsonDict:

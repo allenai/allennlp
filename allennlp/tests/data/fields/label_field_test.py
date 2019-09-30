@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 import pytest
 
 from allennlp.common.checks import ConfigurationError
@@ -39,7 +38,7 @@ class TestLabelField(AllenNlpTestCase):
         assert empty_label.label == -1
 
     def test_class_variables_for_namespace_warnings_work_correctly(self):
-        # pylint: disable=protected-access
+
         assert "text" not in LabelField._already_warned_namespaces
         with self.assertLogs(logger="allennlp.data.fields.label_field", level="WARNING"):
             _ = LabelField("test", label_namespace="text")

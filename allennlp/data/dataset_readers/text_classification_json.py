@@ -10,7 +10,7 @@ from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.tokenizers import Tokenizer, WordTokenizer
 from allennlp.data.tokenizers.sentence_splitter import SpacySentenceSplitter
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @DatasetReader.register("text_classification_json")
@@ -106,7 +106,7 @@ class TextClassificationJsonReader(DatasetReader):
             label : ``LabelField``
                 The label label of the sentence or phrase.
         """
-        # pylint: disable=arguments-differ
+
         fields: Dict[str, Field] = {}
         if self._segment_sentences:
             sentences: List[Field] = []

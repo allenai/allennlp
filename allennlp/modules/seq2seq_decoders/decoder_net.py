@@ -2,8 +2,9 @@ from typing import Tuple, Dict, Optional
 import torch
 from allennlp.common import Registrable
 
+
 class DecoderNet(torch.nn.Module, Registrable):
-    # pylint: disable=abstract-method
+
     """
     This class abstracts the neural architectures for decoding the encoded states and
     embedded previous step prediction vectors into a new sequence of output vectors.
@@ -67,7 +68,7 @@ class DecoderNet(torch.nn.Module, Registrable):
                 previous_steps_predictions: torch.Tensor,
                 previous_steps_mask: Optional[torch.Tensor] = None) -> Tuple[Dict[str, torch.Tensor],
                                                                              torch.Tensor]:
-        # pylint: disable=arguments-differ
+
         """
         Performs a decoding step, and returns dictionary with decoder hidden state or cache and the decoder output.
         The decoder output is a 3d tensor (group_size, steps_count, decoder_output_dim)

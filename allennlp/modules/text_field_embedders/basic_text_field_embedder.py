@@ -135,8 +135,6 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
     # This is some unusual logic, it needs a custom from_params.
     @classmethod
     def from_params(cls, vocab: Vocabulary, params: Params) -> 'BasicTextFieldEmbedder':  # type: ignore
-        # pylint: disable=arguments-differ,bad-super-call
-
         # The original `from_params` for this class was designed in a way that didn't agree
         # with the constructor. The constructor wants a 'token_embedders' parameter that is a
         # `Dict[str, TokenEmbedder]`, but the original `from_params` implementation expected those

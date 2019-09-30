@@ -11,9 +11,10 @@ import logging
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.from_params import FromParams
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 T = TypeVar('T')
+
 
 class Registrable(FromParams):
     """
@@ -53,6 +54,7 @@ class Registrable(FromParams):
             throws an error if a model is already registered under ``name``.
         """
         registry = Registrable._registry[cls]
+
         def add_subclass_to_registry(subclass: Type[T]):
             # Add to registry, raise an error if key has already been used.
             if name in registry:
@@ -99,7 +101,6 @@ class Registrable(FromParams):
                                      "to load your custom code. Alternatively, you can specify your choices "
                                      """using fully-qualified paths, e.g. {"model": "my_module.models.MyModel"} """
                                      "in which case they will be automatically imported correctly.")
-
 
     @classmethod
     def list_available(cls) -> List[str]:

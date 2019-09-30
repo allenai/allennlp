@@ -11,7 +11,7 @@ from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
 from allennlp.data.tokenizers import Tokenizer, WordTokenizer
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @DatasetReader.register("snli")
@@ -65,7 +65,7 @@ class SnliReader(DatasetReader):
                          premise: str,
                          hypothesis: str,
                          label: str = None) -> Instance:
-        # pylint: disable=arguments-differ
+
         fields: Dict[str, Field] = {}
         premise_tokens = self._tokenizer.tokenize(premise)
         hypothesis_tokens = self._tokenizer.tokenize(hypothesis)
