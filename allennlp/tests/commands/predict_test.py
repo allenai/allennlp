@@ -349,8 +349,8 @@ class TestPredict(AllenNlpTestCase):
 
         with open(bidaf.__file__) as f:
             code = f.read().replace(
-                """@Predictor.register('machine-comprehension')""",
-                """@Predictor.register('duplicate-test-predictor')""",
+                """@Predictor.register("machine-comprehension")""",
+                """@Predictor.register("duplicate-test-predictor")""",
             )
 
         with open(os.path.join(packagedir, "predictor.py"), "w") as f:
