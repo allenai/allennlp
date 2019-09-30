@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from allennlp.models.language_model import LanguageModel
 
 
-@TokenEmbedder.register('language_model_token_embedder')
+@TokenEmbedder.register("language_model_token_embedder")
 class LanguageModelTokenEmbedder(TokenEmbedder):
     """
     Compute a single layer of representations from a (optionally bidirectional)
@@ -47,24 +47,22 @@ class LanguageModelTokenEmbedder(TokenEmbedder):
     requires_grad : ``bool``, optional (default: False)
         If True, compute gradient of bidirectional language model parameters for fine tuning.
     """
-    def __init__(self,
-                 archive_file: str,
-                 dropout: float = None,
-                 bos_eos_tokens: Tuple[str, str] = ("<S>", "</S>"),
-                 remove_bos_eos: bool = True,
-                 requires_grad: bool = False) -> None:
+
+    def __init__(
+        self,
+        archive_file: str,
+        dropout: float = None,
+        bos_eos_tokens: Tuple[str, str] = ("<S>", "</S>"),
+        remove_bos_eos: bool = True,
+        requires_grad: bool = False,
+    ) -> None:
         super().__init__()
 
-        overrides = {
-                "model": {
-                        "contextualizer": {
-                                "return_all_layers": True
-                        }
-                }
-        }
+        overrides = {"model": {"contextualizer": {"return_all_layers": True}}}
 
         # Import here to avoid circular dependency.
         from allennlp.models.archival import load_archive
+
         # Load LM and the associated config.
         archive = load_archive(archive_file, overrides=json.dumps(overrides))
         self._lm: LanguageModel = archive.model  # pylint: disable=used-before-assignment
@@ -127,13 +125,14 @@ class LanguageModelTokenEmbedder(TokenEmbedder):
 
         if contextual_dim % character_dim != 0:
             raise ConfigurationError(
-                    "The output dimensions for the text_field_embedder " +
-                    f"({character_dim}) and the contextualizer ({contextual_dim})" +
-                    f" from the language model loaded from {archive_file} are " +
-                    "not compatible. Please check the config used to train that " +
-                    "model and ensure that the output dimension of the " +
-                    "text_field_embedder divides the output dimension of the " +
-                    "contextualizer.")
+                "The output dimensions for the text_field_embedder "
+                + f"({character_dim}) and the contextualizer ({contextual_dim})"
+                + f" from the language model loaded from {archive_file} are "
+                + "not compatible. Please check the config used to train that "
+                + "model and ensure that the output dimension of the "
+                + "text_field_embedder divides the output dimension of the "
+                + "contextualizer."
+            )
         self._character_embedding_duplication_count = contextual_dim // character_dim
 
         for param in self._lm.parameters():
@@ -142,8 +141,10 @@ class LanguageModelTokenEmbedder(TokenEmbedder):
     def get_output_dim(self) -> int:
         return self._lm._contextualizer.get_output_dim()
 
-    def forward(self,  # type: ignore
-                inputs: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def forward(
+        self,  # type: ignore
+        inputs: torch.Tensor,
+    ) -> Dict[str, torch.Tensor]:
         """
         Parameters
         ----------
@@ -159,9 +160,7 @@ class LanguageModelTokenEmbedder(TokenEmbedder):
 
         if self._bos_indices is not None:
             mask = get_text_field_mask({"": inputs})
-            inputs, mask = add_sentence_boundary_token_ids(
-                    inputs, mask, self._bos_indices, self._eos_indices
-            )
+            inputs, mask = add_sentence_boundary_token_ids(inputs, mask, self._bos_indices, self._eos_indices)
 
         source = {self._token_name: inputs}
         result_dict = self._lm(source)
@@ -174,17 +173,13 @@ class LanguageModelTokenEmbedder(TokenEmbedder):
         # Since we're averaging all the layers we need to make their dimensions match. Simply
         # repeating the non-contextual embeddings is a crude, but effective, way to do this.
         duplicated_character_embeddings = torch.cat(
-                [noncontextual_token_embeddings] * self._character_embedding_duplication_count, -1
+            [noncontextual_token_embeddings] * self._character_embedding_duplication_count, -1
         )
-        averaged_embeddings = self._scalar_mix(
-                [duplicated_character_embeddings] + contextual_embeddings
-        )
+        averaged_embeddings = self._scalar_mix([duplicated_character_embeddings] + contextual_embeddings)
 
         # Add dropout
         averaged_embeddings = self._dropout(averaged_embeddings)
         if self._remove_bos_eos:
-            averaged_embeddings, _ = remove_sentence_boundaries(
-                    averaged_embeddings, result_dict["mask"]
-            )
+            averaged_embeddings, _ = remove_sentence_boundaries(averaged_embeddings, result_dict["mask"])
 
         return averaged_embeddings

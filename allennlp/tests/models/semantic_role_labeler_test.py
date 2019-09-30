@@ -9,8 +9,7 @@ from allennlp.common.testing import ModelTestCase
 from allennlp.common.params import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.models import Model
-from allennlp.models.srl_util import (
-        convert_bio_tags_to_conll_format, write_bio_formatted_tags_to_file)
+from allennlp.models.srl_util import convert_bio_tags_to_conll_format, write_bio_formatted_tags_to_file
 from allennlp.nn.util import get_lengths_from_binary_sequence_mask
 
 from allennlp.data.dataset_readers.dataset_utils.span_utils import to_bioul
@@ -19,8 +18,7 @@ from allennlp.data.dataset_readers.dataset_utils.span_utils import to_bioul
 class SemanticRoleLabelerTest(ModelTestCase):
     def setUp(self):
         super().setUp()
-        self.set_up_model(self.FIXTURES_ROOT / 'srl' / 'experiment.json',
-                          self.FIXTURES_ROOT / 'conll_2012')
+        self.set_up_model(self.FIXTURES_ROOT / "srl" / "experiment.json", self.FIXTURES_ROOT / "conll_2012")
 
     def test_srl_model_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
@@ -32,10 +30,8 @@ class SemanticRoleLabelerTest(ModelTestCase):
     def test_forward_pass_runs_correctly(self):
         training_tensors = self.dataset.as_tensor_dict()
         output_dict = self.model(**training_tensors)
-        class_probs = output_dict['class_probabilities'][0].data.numpy()
-        numpy.testing.assert_almost_equal(numpy.sum(class_probs, -1),
-                                          numpy.ones(class_probs.shape[0]),
-                                          decimal=6)
+        class_probs = output_dict["class_probabilities"][0].data.numpy()
+        numpy.testing.assert_almost_equal(numpy.sum(class_probs, -1), numpy.ones(class_probs.shape[0]), decimal=6)
 
     def test_decode_runs_correctly(self):
         training_tensors = self.dataset.as_tensor_dict()

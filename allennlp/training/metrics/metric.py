@@ -9,10 +9,8 @@ class Metric(Registrable):
     A very general abstract class representing a metric which can be
     accumulated.
     """
-    def __call__(self,
-                 predictions: torch.Tensor,
-                 gold_labels: torch.Tensor,
-                 mask: Optional[torch.Tensor]):
+
+    def __call__(self, predictions: torch.Tensor, gold_labels: torch.Tensor, mask: Optional[torch.Tensor]):
         """
         Parameters
         ----------

@@ -8,6 +8,8 @@ subclass this and add functionality to it.
 
 from allennlp.state_machines.transition_functions.basic_transition_function import BasicTransitionFunction
 from allennlp.state_machines.transition_functions.coverage_transition_function import CoverageTransitionFunction
-from allennlp.state_machines.transition_functions.linking_coverage_transition_function import LinkingCoverageTransitionFunction
+from allennlp.state_machines.transition_functions.linking_coverage_transition_function import (
+    LinkingCoverageTransitionFunction,
+)
 from allennlp.state_machines.transition_functions.linking_transition_function import LinkingTransitionFunction
 from allennlp.state_machines.transition_functions.transition_function import TransitionFunction

@@ -18,6 +18,7 @@ class BasicIterator(DataIterator):
 
     It takes the same parameters as :class:`allennlp.data.iterators.DataIterator`
     """
+
     def _create_batches(self, instances: Iterable[Instance], shuffle: bool) -> Iterable[Batch]:
         # First break the dataset into memory-sized lists:
         for instance_list in self._memory_sized_lists(instances):

@@ -6,8 +6,12 @@ import pytest
 import torch
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.commands.fine_tune import FineTune, fine_tune_model_from_file_paths, \
-                               fine_tune_model_from_args, fine_tune_model
+from allennlp.commands.fine_tune import (
+    FineTune,
+    fine_tune_model_from_file_paths,
+    fine_tune_model_from_args,
+    fine_tune_model,
+)
 from allennlp.common.params import Params
 from allennlp.models import load_archive
 from allennlp.modules.token_embedders.embedding import _read_pretrained_embeddings_file
@@ -18,23 +22,25 @@ from allennlp.common.checks import ConfigurationError
 class TestFineTune(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
-        self.model_archive = str(self.FIXTURES_ROOT / 'decomposable_attention' / 'serialization' / 'model.tar.gz')
-        self.config_file = str(self.FIXTURES_ROOT / 'decomposable_attention' / 'experiment.json')
-        self.serialization_dir = str(self.TEST_DIR / 'fine_tune')
+        self.model_archive = str(self.FIXTURES_ROOT / "decomposable_attention" / "serialization" / "model.tar.gz")
+        self.config_file = str(self.FIXTURES_ROOT / "decomposable_attention" / "experiment.json")
+        self.serialization_dir = str(self.TEST_DIR / "fine_tune")
 
         self.parser = argparse.ArgumentParser(description="Testing")
-        subparsers = self.parser.add_subparsers(title='Commands', metavar='')
-        FineTune().add_subparser('fine-tune', subparsers)
+        subparsers = self.parser.add_subparsers(title="Commands", metavar="")
+        FineTune().add_subparser("fine-tune", subparsers)
 
     def test_fine_tune_model_runs_from_file_paths(self):
-        fine_tune_model_from_file_paths(model_archive_path=self.model_archive,
-                                        config_file=self.config_file,
-                                        serialization_dir=self.serialization_dir)
+        fine_tune_model_from_file_paths(
+            model_archive_path=self.model_archive,
+            config_file=self.config_file,
+            serialization_dir=self.serialization_dir,
+        )
 
     def test_fine_tune_does_not_expand_vocab_by_default(self):
         params = Params.from_file(self.config_file)
         # snli2 has a new token in it
-        params["train_data_path"] = str(self.FIXTURES_ROOT / 'data' / 'snli2.jsonl')
+        params["train_data_path"] = str(self.FIXTURES_ROOT / "data" / "snli2.jsonl")
 
         model = load_archive(self.model_archive).model
 
@@ -44,7 +50,7 @@ class TestFineTune(AllenNlpTestCase):
     def test_fine_tune_works_with_vocab_expansion(self):
         params = Params.from_file(self.config_file)
         # snli2 has a new token in it
-        params["train_data_path"] = str(self.FIXTURES_ROOT / 'data' / 'snli2.jsonl')
+        params["train_data_path"] = str(self.FIXTURES_ROOT / "data" / "snli2.jsonl")
 
         trained_model = load_archive(self.model_archive).model
         original_weight = trained_model._text_field_embedder.token_embedder_tokens.weight
@@ -60,12 +66,13 @@ class TestFineTune(AllenNlpTestCase):
     def test_fine_tune_works_with_vocab_expansion_with_pretrained_file(self):
         params = Params.from_file(self.config_file)
         # snli2 has a new token (seahorse) in it
-        params["train_data_path"] = str(self.FIXTURES_ROOT / 'data' / 'snli2.jsonl')
+        params["train_data_path"] = str(self.FIXTURES_ROOT / "data" / "snli2.jsonl")
 
         # seahorse_embeddings.gz has only token embedding for 'seahorse'.
-        embeddings_filename = str(self.FIXTURES_ROOT / 'data' / 'seahorse_embeddings.gz')
-        extra_token_vector = _read_pretrained_embeddings_file(embeddings_filename, 300,
-                                                              Vocabulary({"tokens": {"seahorse": 1}}))[2, :]
+        embeddings_filename = str(self.FIXTURES_ROOT / "data" / "seahorse_embeddings.gz")
+        extra_token_vector = _read_pretrained_embeddings_file(
+            embeddings_filename, 300, Vocabulary({"tokens": {"seahorse": 1}})
+        )[2, :]
         unavailable_embeddings_filename = "file-not-found"
 
         def check_embedding_extension(user_pretrained_file, saved_pretrained_file, use_pretrained):
@@ -75,9 +82,13 @@ class TestFineTune(AllenNlpTestCase):
             trained_model._text_field_embedder.token_embedder_tokens._pretrained_file = saved_pretrained_file
             embedding_sources_mapping = {"_text_field_embedder.token_embedder_tokens": user_pretrained_file}
             shutil.rmtree(self.serialization_dir, ignore_errors=True)
-            fine_tuned_model = fine_tune_model(trained_model, params.duplicate(),
-                                               self.serialization_dir, extend_vocab=True,
-                                               embedding_sources_mapping=embedding_sources_mapping)
+            fine_tuned_model = fine_tune_model(
+                trained_model,
+                params.duplicate(),
+                self.serialization_dir,
+                extend_vocab=True,
+                embedding_sources_mapping=embedding_sources_mapping,
+            )
             extended_weight = fine_tuned_model._text_field_embedder.token_embedder_tokens.weight
             assert original_weight.shape[0] + 1 == extended_weight.shape[0] == 25
             assert torch.all(original_weight == extended_weight[:24, :])
@@ -109,19 +120,15 @@ class TestFineTune(AllenNlpTestCase):
     def test_fine_tune_extended_model_is_loadable(self):
         params = Params.from_file(self.config_file)
         # snli2 has a new token (seahorse) in it
-        params["train_data_path"] = str(self.FIXTURES_ROOT / 'data' / 'snli2.jsonl')
+        params["train_data_path"] = str(self.FIXTURES_ROOT / "data" / "snli2.jsonl")
         trained_model = load_archive(self.model_archive).model
         shutil.rmtree(self.serialization_dir, ignore_errors=True)
-        fine_tune_model(trained_model, params.duplicate(),
-                        self.serialization_dir, extend_vocab=True)
+        fine_tune_model(trained_model, params.duplicate(), self.serialization_dir, extend_vocab=True)
         # self.serialization_dir = str(self.TEST_DIR / 'fine_tune')
-        load_archive(str(self.TEST_DIR / 'fine_tune' / "model.tar.gz"))
+        load_archive(str(self.TEST_DIR / "fine_tune" / "model.tar.gz"))
 
     def test_fine_tune_runs_from_parser_arguments(self):
-        raw_args = ["fine-tune",
-                    "-m", self.model_archive,
-                    "-c", self.config_file,
-                    "-s", self.serialization_dir]
+        raw_args = ["fine-tune", "-m", self.model_archive, "-c", self.config_file, "-s", self.serialization_dir]
 
         args = self.parser.parse_args(raw_args)
 
@@ -150,16 +157,14 @@ class TestFineTune(AllenNlpTestCase):
     def test_fine_tune_nograd_regex(self):
         original_model = load_archive(self.model_archive).model
         name_parameters_original = dict(original_model.named_parameters())
-        regex_lists = [[],
-                       [".*attend_feedforward.*", ".*token_embedder.*"],
-                       [".*compare_feedforward.*"]]
+        regex_lists = [[], [".*attend_feedforward.*", ".*token_embedder.*"], [".*compare_feedforward.*"]]
         for regex_list in regex_lists:
             params = Params.from_file(self.config_file)
             params["trainer"]["no_grad"] = regex_list
             shutil.rmtree(self.serialization_dir, ignore_errors=True)
-            tuned_model = fine_tune_model(model=original_model,
-                                          params=params,
-                                          serialization_dir=self.serialization_dir)
+            tuned_model = fine_tune_model(
+                model=original_model, params=params, serialization_dir=self.serialization_dir
+            )
             # If regex is matched, parameter name should have requires_grad False
             # If regex is matched, parameter name should have same requires_grad
             # as the originally loaded model
@@ -173,6 +178,6 @@ class TestFineTune(AllenNlpTestCase):
             params = Params.from_file(self.config_file)
             params["trainer"]["no_grad"] = ["*"]
             shutil.rmtree(self.serialization_dir, ignore_errors=True)
-            tuned_model = fine_tune_model(model=original_model,
-                                          params=params,
-                                          serialization_dir=self.serialization_dir)
+            tuned_model = fine_tune_model(
+                model=original_model, params=params, serialization_dir=self.serialization_dir
+            )

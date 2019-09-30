@@ -24,11 +24,10 @@ class TrainerBase(Registrable):
     anything you want. Your subclass should implement ``train``
     and also probably ``from_params``.
     """
+
     default_implementation = "default"
 
-    def __init__(self,
-                 serialization_dir: str,
-                 cuda_device: Union[int, List] = -1) -> None:
+    def __init__(self, serialization_dir: str, cuda_device: Union[int, List] = -1) -> None:
         check_for_gpu(cuda_device)
 
         self._serialization_dir = serialization_dir
@@ -57,12 +56,14 @@ class TrainerBase(Registrable):
         raise NotImplementedError
 
     @classmethod
-    def from_params(cls,   # type: ignore
-                    params: Params,
-                    serialization_dir: str,
-                    recover: bool = False,
-                    cache_directory: str = None,
-                    cache_prefix: str = None):
+    def from_params(
+        cls,  # type: ignore
+        params: Params,
+        serialization_dir: str,
+        recover: bool = False,
+        cache_directory: str = None,
+        cache_prefix: str = None,
+    ):
 
         typ3 = params.get("trainer", {}).pop("type", "default")
 
@@ -72,13 +73,15 @@ class TrainerBase(Registrable):
             from allennlp.training.trainer_pieces import TrainerPieces
 
             pieces = TrainerPieces.from_params(params, serialization_dir, recover, cache_directory, cache_prefix)
-            return Trainer.from_params(model=pieces.model,
-                                       serialization_dir=serialization_dir,
-                                       iterator=pieces.iterator,
-                                       train_data=pieces.train_dataset,
-                                       validation_data=pieces.validation_dataset,
-                                       params=pieces.params,
-                                       validation_iterator=pieces.validation_iterator)
+            return Trainer.from_params(
+                model=pieces.model,
+                serialization_dir=serialization_dir,
+                iterator=pieces.iterator,
+                train_data=pieces.train_dataset,
+                validation_data=pieces.validation_dataset,
+                params=pieces.params,
+                validation_iterator=pieces.validation_iterator,
+            )
         else:
             klass = TrainerBase.by_name(typ3)
             # Explicit check to prevent recursion.

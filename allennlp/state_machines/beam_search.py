@@ -8,7 +8,7 @@ from allennlp.state_machines import util
 from allennlp.state_machines.states import State
 from allennlp.state_machines.transition_functions import TransitionFunction
 
-StateType = TypeVar('StateType', bound=State)
+StateType = TypeVar("StateType", bound=State)
 
 
 class BeamSearch(FromParams, Generic[StateType]):
@@ -44,11 +44,14 @@ class BeamSearch(FromParams, Generic[StateType]):
         where a "timestep history" is just a pair (score, action_history) that was considered
         at that timestep.
     """
-    def __init__(self,
-                 beam_size: int,
-                 per_node_beam_size: int = None,
-                 initial_sequence: torch.Tensor = None,
-                 keep_beam_details: bool = False) -> None:
+
+    def __init__(
+        self,
+        beam_size: int,
+        per_node_beam_size: int = None,
+        initial_sequence: torch.Tensor = None,
+        keep_beam_details: bool = False,
+    ) -> None:
         self._beam_size = beam_size
         self._per_node_beam_size = per_node_beam_size or beam_size
 
@@ -67,17 +70,19 @@ class BeamSearch(FromParams, Generic[StateType]):
         else:
             self.beam_snapshots = None
 
-    def constrained_to(self, initial_sequence: torch.Tensor, keep_beam_details: bool = True) -> 'BeamSearch':
+    def constrained_to(self, initial_sequence: torch.Tensor, keep_beam_details: bool = True) -> "BeamSearch":
         """
         Return a new BeamSearch instance that's like this one but with the specified constraint.
         """
         return BeamSearch(self._beam_size, self._per_node_beam_size, initial_sequence, keep_beam_details)
 
-    def search(self,
-               num_steps: int,
-               initial_state: StateType,
-               transition_function: TransitionFunction,
-               keep_final_unfinished_states: bool = True) -> Dict[int, List[StateType]]:
+    def search(
+        self,
+        num_steps: int,
+        initial_state: StateType,
+        transition_function: TransitionFunction,
+        keep_final_unfinished_states: bool = True,
+    ) -> Dict[int, List[StateType]]:
         """
         Parameters
         ----------
@@ -126,9 +131,9 @@ class BeamSearch(FromParams, Generic[StateType]):
                 # No initial sequence was provided, so all actions are allowed.
                 allowed_actions = None
 
-            for next_state in transition_function.take_step(grouped_state,
-                                                            max_actions=self._per_node_beam_size,
-                                                            allowed_actions=allowed_actions):
+            for next_state in transition_function.take_step(
+                grouped_state, max_actions=self._per_node_beam_size, allowed_actions=allowed_actions
+            ):
                 # NOTE: we're doing state.batch_indices[0] here (and similar things below),
                 # hard-coding a group size of 1.  But, our use of `next_state.is_finished()`
                 # already checks for that, as it crashes if the group size is not 1.
@@ -143,13 +148,12 @@ class BeamSearch(FromParams, Generic[StateType]):
             for batch_index, batch_states in next_states.items():
                 # The states from the generator are already sorted, so we can just take the first
                 # ones here, without an additional sort.
-                states.extend(batch_states[:self._beam_size])
+                states.extend(batch_states[: self._beam_size])
 
                 if self.beam_snapshots is not None:
                     # Add to beams
                     self.beam_snapshots[batch_index].append(
-                            [(state.score[0].item(), state.action_history[0])
-                             for state in batch_states]
+                        [(state.score[0].item(), state.action_history[0]) for state in batch_states]
                     )
             step_num += 1
 
@@ -171,5 +175,5 @@ class BeamSearch(FromParams, Generic[StateType]):
             # yet.  Maybe with a larger beam size...
             finished_to_sort = [(-state.score[0].item(), state) for state in batch_states]
             finished_to_sort.sort(key=lambda x: x[0])
-            best_states[batch_index] = [state[1] for state in finished_to_sort[:self._beam_size]]
+            best_states[batch_index] = [state[1] for state in finished_to_sort[: self._beam_size]]
         return best_states

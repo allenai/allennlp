@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 def split_by_language(instance_list):
     insts_by_lang = defaultdict(lambda: [])
     for inst in instance_list:
-        inst_lang = inst.fields['metadata'].metadata['lang']
+        inst_lang = inst.fields["metadata"].metadata["lang"]
         insts_by_lang[inst_lang].append(inst)
 
     return iter(insts_by_lang.values())
@@ -30,6 +30,7 @@ class SameLanguageIterator(BucketIterator):
 
     It takes the same parameters as :class:`allennlp.data.iterators.BucketIterator`
     """
+
     def _create_batches(self, instances: Iterable[Instance], shuffle: bool) -> Iterable[Batch]:
         # First break the dataset into memory-sized lists:
         for instance_list in self._memory_sized_lists(instances):
@@ -42,9 +43,9 @@ class SameLanguageIterator(BucketIterator):
                 # Then break each memory-sized list into batches.
                 for batch_instances in lazy_groups_of(iterator, self._batch_size):
                     for poss_smaller_batches in self._ensure_batch_is_sufficiently_small(
-                            batch_instances,  # type: ignore
-                            excess
-                            ):
+                        batch_instances,  # type: ignore
+                        excess,
+                    ):
                         batch = Batch(poss_smaller_batches)
                         yield batch
                 if excess:

@@ -5,11 +5,12 @@ from allennlp.data import Instance
 from allennlp.predictors.predictor import Predictor
 
 
-@Predictor.register('atis-parser')
+@Predictor.register("atis-parser")
 class AtisParserPredictor(Predictor):
     """
     Predictor for the :class:`~allennlp.models.semantic_parsing.atis.AtisSemanticParser` model.
     """
+
     @overrides
     def _json_to_instance(self, json_dict: JsonDict) -> Instance:
         """

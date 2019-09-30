@@ -5,7 +5,7 @@ from allennlp.data import Instance
 from allennlp.predictors.predictor import Predictor
 
 
-@Predictor.register('seq2seq')
+@Predictor.register("seq2seq")
 class Seq2SeqPredictor(Predictor):
     """
     Predictor for sequence to sequence models, including

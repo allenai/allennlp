@@ -48,10 +48,10 @@ class WinobiasReader(DatasetReader):
         This is used to index the words in the sentence.  See :class:`TokenIndexer`.
         Default is ``{"tokens": SingleIdTokenIndexer()}``.
     """
-    def __init__(self,
-                 max_span_width: int,
-                 token_indexers: Dict[str, TokenIndexer] = None,
-                 lazy: bool = False) -> None:
+
+    def __init__(
+        self, max_span_width: int, token_indexers: Dict[str, TokenIndexer] = None, lazy: bool = False
+    ) -> None:
         super().__init__(lazy)
         self._max_span_width = max_span_width
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
@@ -94,9 +94,11 @@ class WinobiasReader(DatasetReader):
             yield self.text_to_instance([Token(x) for x in words], [x for x in clusters.values()])
 
     @overrides
-    def text_to_instance(self,  # type: ignore
-                         sentence: List[Token],
-                         gold_clusters: Optional[List[List[Tuple[int, int]]]] = None) -> Instance:
+    def text_to_instance(
+        self,  # type: ignore
+        sentence: List[Token],
+        gold_clusters: Optional[List[List[Tuple[int, int]]]] = None,
+    ) -> Instance:
 
         """
         Parameters
@@ -149,9 +151,7 @@ class WinobiasReader(DatasetReader):
         span_field = ListField(spans)
         metadata_field = MetadataField(metadata)
 
-        fields: Dict[str, Field] = {"text": text_field,
-                                    "spans": span_field,
-                                    "metadata": metadata_field}
+        fields: Dict[str, Field] = {"text": text_field, "spans": span_field, "metadata": metadata_field}
         if span_labels is not None:
             fields["span_labels"] = SequenceLabelField(span_labels, span_field)
 

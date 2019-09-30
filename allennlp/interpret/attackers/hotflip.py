@@ -6,9 +6,7 @@ import torch
 
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data.fields import TextField
-from allennlp.data.token_indexers import (ELMoTokenCharactersIndexer,
-                                          TokenCharactersIndexer,
-                                          SingleIdTokenIndexer)
+from allennlp.data.token_indexers import ELMoTokenCharactersIndexer, TokenCharactersIndexer, SingleIdTokenIndexer
 from allennlp.data.tokenizers import Token
 from allennlp.interpret.attackers import utils
 from allennlp.interpret.attackers.attacker import Attacker
@@ -16,10 +14,10 @@ from allennlp.modules.token_embedders import Embedding
 from allennlp.nn import util
 from allennlp.predictors.predictor import Predictor
 
-DEFAULT_IGNORE_TOKENS = ["@@NULL@@", '.', ',', ';', '!', '?', '[MASK]', '[SEP]', '[CLS]']
+DEFAULT_IGNORE_TOKENS = ["@@NULL@@", ".", ",", ";", "!", "?", "[MASK]", "[SEP]", "[CLS]"]
 
 
-@Attacker.register('hotflip')
+@Attacker.register("hotflip")
 class Hotflip(Attacker):
     """
     Runs the HotFlip style attack at the word-level https://arxiv.org/abs/1712.06751.  We use the
@@ -51,10 +49,8 @@ class Hotflip(Attacker):
         a lot of memory when the vocab size is large.  This parameter puts a cap on the number of
         tokens to use, so the fake embedding matrix doesn't take as much memory.
     """
-    def __init__(self,
-                 predictor: Predictor,
-                 vocab_namespace: str = 'tokens',
-                 max_tokens: int = 5000) -> None:
+
+    def __init__(self, predictor: Predictor, vocab_namespace: str = "tokens", max_tokens: int = 5000) -> None:
         super().__init__(predictor)
         self.vocab = self.predictor._model.vocab
         self.namespace = vocab_namespace
@@ -96,7 +92,7 @@ class Hotflip(Attacker):
         # We take the top `self.max_tokens` as candidates for hotflip.  Because we have to
         # construct a new vector for each of these, we can't always afford to use the whole vocab,
         # for both runtime and memory considerations.
-        all_tokens = list(self.vocab._token_to_index[self.namespace])[:self.max_tokens]
+        all_tokens = list(self.vocab._token_to_index[self.namespace])[: self.max_tokens]
         max_index = self.vocab.get_token_index(all_tokens[-1], self.namespace)
         self.invalid_replacement_indices = [i for i in self.invalid_replacement_indices if i < max_index]
 
@@ -119,28 +115,30 @@ class Hotflip(Attacker):
                 tokens = [Token(x) for x in all_tokens]
                 max_token_length = max(len(x) for x in all_tokens)
                 indexed_tokens = token_indexer.tokens_to_indices(tokens, self.vocab, "token_characters")
-                padded_tokens = token_indexer.as_padded_tensor(indexed_tokens,
-                                                               {"token_characters": len(tokens)},
-                                                               {"num_token_characters": max_token_length})
-                inputs[indexer_name] = torch.LongTensor(padded_tokens['token_characters']).unsqueeze(0)
+                padded_tokens = token_indexer.as_padded_tensor(
+                    indexed_tokens, {"token_characters": len(tokens)}, {"num_token_characters": max_token_length}
+                )
+                inputs[indexer_name] = torch.LongTensor(padded_tokens["token_characters"]).unsqueeze(0)
             elif isinstance(token_indexer, ELMoTokenCharactersIndexer):
                 elmo_tokens = []
                 for token in all_tokens:
-                    elmo_indexed_token = token_indexer.tokens_to_indices([Token(text=token)],
-                                                                         self.vocab,
-                                                                         "sentence")["sentence"]
+                    elmo_indexed_token = token_indexer.tokens_to_indices(
+                        [Token(text=token)], self.vocab, "sentence"
+                    )["sentence"]
                     elmo_tokens.append(elmo_indexed_token[0])
                 inputs[indexer_name] = torch.LongTensor(elmo_tokens).unsqueeze(0)
             else:
-                raise RuntimeError('Unsupported token indexer:', token_indexer)
+                raise RuntimeError("Unsupported token indexer:", token_indexer)
         return inputs
 
-    def attack_from_json(self,
-                         inputs: JsonDict,
-                         input_field_to_attack: str = 'tokens',
-                         grad_input_field: str = 'grad_input_1',
-                         ignore_tokens: List[str] = None,
-                         target: JsonDict = None) -> JsonDict:
+    def attack_from_json(
+        self,
+        inputs: JsonDict,
+        input_field_to_attack: str = "tokens",
+        grad_input_field: str = "grad_input_1",
+        ignore_tokens: List[str] = None,
+        target: JsonDict = None,
+    ) -> JsonDict:
         """
         Replaces one token at a time from the input until the model's prediction changes.
         ``input_field_to_attack`` is for example ``tokens``, it says what the input field is
@@ -222,7 +220,7 @@ class Hotflip(Attacker):
             for index, token in enumerate(text_field.tokens):
                 if token.text in ignore_tokens:
                     flipped.append(index)
-            if 'clusters' in outputs:
+            if "clusters" in outputs:
                 # Coref unfortunately needs a special case here.  We don't want to flip words in
                 # the same predicted coref cluster, but we can't really specify a list of tokens,
                 # because, e.g., "he" could show up in several different clusters.
@@ -230,9 +228,9 @@ class Hotflip(Attacker):
                 # return the set of tokens that shouldn't be changed for each instance?  E.g., you
                 # could imagine setting a field on the `Token` object, that we could then read
                 # here...
-                for cluster in outputs['clusters']:
+                for cluster in outputs["clusters"]:
                     for mention in cluster:
-                        for index in range(mention[0], mention[1]+1):
+                        for index in range(mention[0], mention[1] + 1):
                             flipped.append(index)
 
             while True:
@@ -258,9 +256,7 @@ class Hotflip(Attacker):
                 original_id_of_token_to_flip = input_tokens[index_of_token_to_flip]
 
                 # Get new token using taylor approximation.
-                new_id = self._first_order_taylor(grad[index_of_token_to_flip],
-                                                  original_id_of_token_to_flip,
-                                                  sign)
+                new_id = self._first_order_taylor(grad[index_of_token_to_flip], original_id_of_token_to_flip, sign)
 
                 # Flip token.  We need to tell the instance to re-index itself, so the text field
                 # will actually update.
@@ -292,9 +288,7 @@ class Hotflip(Attacker):
 
             final_tokens.append(text_field.tokens)
 
-        return sanitize({"final": final_tokens,
-                         "original": original_tokens,
-                         "outputs": outputs})
+        return sanitize({"final": final_tokens, "original": original_tokens, "outputs": outputs})
 
     def _first_order_taylor(self, grad: numpy.ndarray, token_idx: int, sign: int) -> int:
         """
@@ -314,8 +308,7 @@ class Hotflip(Attacker):
             inputs = self._make_embedder_input([self.vocab.get_token_from_index(token_idx)])
             word_embedding = self.embedding_layer(inputs)[0]
         else:
-            word_embedding = torch.nn.functional.embedding(torch.LongTensor([token_idx]),
-                                                           self.embedding_matrix)
+            word_embedding = torch.nn.functional.embedding(torch.LongTensor([token_idx]), self.embedding_matrix)
         word_embedding = word_embedding.detach().unsqueeze(0)
         grad = grad.unsqueeze(0).unsqueeze(0)
         # solves equation (3) here https://arxiv.org/abs/1903.06620

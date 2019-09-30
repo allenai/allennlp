@@ -20,21 +20,25 @@ logger = logging.getLogger(__name__)
 # 3.6 and 3.7, so we need to do some gymnastics to get some of our checks to work with both.
 # That's what these three methods are about.
 
+
 def is_callable(type_: Type) -> bool:
     if sys.version_info < (3, 7):
         from typing import CallableMeta  # type: ignore
+
         return isinstance(type_, CallableMeta)  # type: ignore
     else:
-        return getattr(type_, '_name', None) == 'Callable'
+        return getattr(type_, "_name", None) == "Callable"
 
 
 def is_generic(type_: Type) -> bool:
     if sys.version_info < (3, 7):
         from typing import GenericMeta  # type: ignore
+
         return isinstance(type_, GenericMeta)  # type: ignore
     else:
 
         from typing import _GenericAlias
+
         return isinstance(type_, _GenericAlias)  # type: ignore
 
 
@@ -56,8 +60,9 @@ class PredicateType:
     for them and group them together under ``PredicateType`` to have a good type annotation for
     these types.
     """
+
     @staticmethod
-    def get_type(type_: Type) -> 'PredicateType':
+    def get_type(type_: Type) -> "PredicateType":
         """
         Converts a python ``Type`` (as you might get from a type annotation) into a
         ``PredicateType``.  If the ``Type`` is callable, this will return a ``FunctionType``;
@@ -82,7 +87,7 @@ class PredicateType:
         return BasicType(name)
 
     @staticmethod
-    def get_function_type(arg_types: List['PredicateType'], return_type: 'PredicateType') -> 'PredicateType':
+    def get_function_type(arg_types: List["PredicateType"], return_type: "PredicateType") -> "PredicateType":
         """
         Constructs an NLTK ``ComplexType`` representing a function with the given argument and
         return types.
@@ -101,6 +106,7 @@ class BasicType(PredicateType):
     A ``PredicateType`` representing a zero-argument predicate (which could technically be a
     function with no arguments or a constant; both are treated the same here).
     """
+
     def __init__(self, name: str) -> None:
         self.name = name
 
@@ -123,6 +129,7 @@ class FunctionType(PredicateType):
     separated from argument types with a colon.  For example, ``def f(a: str) -> int:`` would look
     like ``<str:int>``, and ``def g(a: int, b: int) -> int`` would look like ``<int,int:int>``.
     """
+
     def __init__(self, argument_types: List[PredicateType], return_type: PredicateType) -> None:
         self.argument_types = argument_types
         self.return_type = return_type
@@ -147,7 +154,7 @@ def predicate(function: Callable) -> Callable:
     language.  See the :class:`DomainLanguage` docstring for an example usage, and for what using
     this does.
     """
-    setattr(function, '_is_predicate', True)
+    setattr(function, "_is_predicate", True)
     return function
 
 
@@ -164,9 +171,11 @@ def predicate_with_side_args(side_arguments: List[str]) -> Callable:
     is because we use ``*args`` to pass the non-side arguments, and ``**kwargs`` to pass the side
     arguments, and python requires that ``*args`` be before ``**kwargs``.
     """
+
     def decorator(function: Callable) -> Callable:
-        setattr(function, '_side_arguments', side_arguments)
+        setattr(function, "_side_arguments", side_arguments)
         return predicate(function)
+
     return decorator
 
 
@@ -187,7 +196,7 @@ def nltk_tree_to_logical_form(tree: Tree) -> str:
         return tree.label()
     if len(tree) == 1:
         return tree[0].label()
-    return '(' + ' '.join(nltk_tree_to_logical_form(child) for child in tree) + ')'
+    return "(" + " ".join(nltk_tree_to_logical_form(child) for child in tree) + ")"
 
 
 class DomainLanguage:
@@ -258,17 +267,16 @@ class DomainLanguage:
     You can see a concrete example of how this works in the
     :class:`~allennlp.semparse.domain_languages.wikitables_language.WikiTablesLanguage`.
     """
-    def __init__(self,
-                 allowed_constants: Dict[str, Any] = None,
-                 start_types: Set[Type] = None) -> None:
+
+    def __init__(self, allowed_constants: Dict[str, Any] = None, start_types: Set[Type] = None) -> None:
         self._functions: Dict[str, Callable] = {}
         self._function_types: Dict[str, List[PredicateType]] = defaultdict(list)
         self._start_types: Set[PredicateType] = {PredicateType.get_type(type_) for type_ in start_types}
         for name in dir(self):
             if isinstance(getattr(self, name), types.MethodType):
                 function = getattr(self, name)
-                if getattr(function, '_is_predicate', False):
-                    side_arguments = getattr(function, '_side_arguments', None)
+                if getattr(function, "_is_predicate", False):
+                    side_arguments = getattr(function, "_side_arguments", None)
                     self.add_predicate(name, function, side_arguments)
         if allowed_constants:
             for name, value in allowed_constants.items():
@@ -278,7 +286,7 @@ class DomainLanguage:
 
     def execute(self, logical_form: str):
         """Executes a logical form, using whatever predicates you have defined."""
-        if not hasattr(self, '_functions'):
+        if not hasattr(self, "_functions"):
             raise RuntimeError("You must call super().__init__() in your Language constructor")
         logical_form = logical_form.replace(",", " ")
         expression = util.lisp_to_nested_expression(logical_form)
@@ -298,9 +306,9 @@ class DomainLanguage:
         """
         # We'll strip off the first action, because it doesn't matter for execution.
         first_action = action_sequence[0]
-        left_side = first_action.split(' -> ')[0]
-        if left_side != '@start@':
-            raise ExecutionError('invalid action sequence')
+        left_side = first_action.split(" -> ")[0]
+        if left_side != "@start@":
+            raise ExecutionError("invalid action sequence")
         remaining_actions = action_sequence[1:]
         remaining_side_args = side_arguments[1:] if side_arguments else None
         return self._execute_sequence(remaining_actions, remaining_side_args)[0]
@@ -376,9 +384,9 @@ class DomainLanguage:
             if self._start_types and start_type not in self._start_types:
                 raise ParsingError(f"Expression had unallowed start type of {start_type}: {expression}")
         except ParsingError as error:
-            logger.error(f'Error parsing logical form: {logical_form}: {error}')
+            logger.error(f"Error parsing logical form: {logical_form}: {error}")
             raise
-        transitions.insert(0, f'@start@ -> {start_type}')
+        transitions.insert(0, f"@start@ -> {start_type}")
         return transitions
 
     def action_sequence_to_logical_form(self, action_sequence: List[str]) -> str:
@@ -432,11 +440,13 @@ class DomainLanguage:
         """
         side_arguments = side_arguments or []
         signature = inspect.signature(function)
-        argument_types = [param.annotation for name, param in signature.parameters.items()
-                          if name not in side_arguments]
+        argument_types = [
+            param.annotation for name, param in signature.parameters.items() if name not in side_arguments
+        ]
         return_type = signature.return_annotation
-        argument_nltk_types: List[PredicateType] = [PredicateType.get_type(arg_type)
-                                                    for arg_type in argument_types]
+        argument_nltk_types: List[PredicateType] = [
+            PredicateType.get_type(arg_type) for arg_type in argument_types
+        ]
         return_nltk_type = PredicateType.get_type(return_type)
         function_nltk_type = PredicateType.get_function_type(argument_nltk_types, return_nltk_type)
         self._functions[name] = function
@@ -509,9 +519,9 @@ class DomainLanguage:
         else:
             raise ExecutionError("Not sure how you got here. Please open a github issue with details.")
 
-    def _execute_sequence(self,
-                          action_sequence: List[str],
-                          side_arguments: List[Dict]) -> Tuple[Any, List[str], List[Dict]]:
+    def _execute_sequence(
+        self, action_sequence: List[str], side_arguments: List[Dict]
+    ) -> Tuple[Any, List[str], List[Dict]]:
         """
         This does the bulk of the work of :func:`execute_action_sequence`, recursively executing
         the functions it finds and trimming actions off of the action sequence.  The return value
@@ -523,7 +533,7 @@ class DomainLanguage:
         first_action = action_sequence[0]
         remaining_actions = action_sequence[1:]
         remaining_side_args = side_arguments[1:] if side_arguments else None
-        right_side = first_action.split(' -> ')[1]
+        right_side = first_action.split(" -> ")[1]
         if right_side in self._functions:
             function = self._functions[right_side]
             # mypy doesn't like this check, saying that Callable isn't a reasonable thing to pass
@@ -548,6 +558,7 @@ class DomainLanguage:
                         # left.
                         def curried_function(*args):
                             return function(*args, **kwargs)
+
                         execution_value = curried_function
                     elif kwargs:
                         # This is a function that _only_ has side arguments - we just call the
@@ -566,16 +577,18 @@ class DomainLanguage:
             # Because we linearize the abstract syntax tree depth first, left-to-right, we can just
             # recursively call `_execute_sequence` for the function and all of its arguments, and
             # things will just work.
-            right_side_parts = right_side.split(', ')
+            right_side_parts = right_side.split(", ")
 
             # We don't really need to know what the types are, just how many of them there are, so
             # we recurse the right number of times.
-            function, remaining_actions, remaining_side_args = self._execute_sequence(remaining_actions,
-                                                                                      remaining_side_args)
+            function, remaining_actions, remaining_side_args = self._execute_sequence(
+                remaining_actions, remaining_side_args
+            )
             arguments = []
             for _ in right_side_parts[1:]:
-                argument, remaining_actions, remaining_side_args = self._execute_sequence(remaining_actions,
-                                                                                          remaining_side_args)
+                argument, remaining_actions, remaining_side_args = self._execute_sequence(
+                    remaining_actions, remaining_side_args
+                )
                 arguments.append(argument)
             return function(*arguments), remaining_actions, remaining_side_args
 
@@ -586,10 +599,11 @@ class DomainLanguage:
         expected type (or using the expected type to get the right type for constant expressions).
         """
         if isinstance(expression, (list, tuple)):
-            function_transitions, return_type, argument_types = self._get_function_transitions(expression[0],
-                                                                                               expected_type)
+            function_transitions, return_type, argument_types = self._get_function_transitions(
+                expression[0], expected_type
+            )
             if len(argument_types) != len(expression[1:]):
-                raise ParsingError(f'Wrong number of arguments for function in {expression}')
+                raise ParsingError(f"Wrong number of arguments for function in {expression}")
             argument_transitions = []
             for argument_type, subexpression in zip(argument_types, expression[1:]):
                 argument_transitions.extend(self._get_transitions(subexpression, argument_type)[0])
@@ -602,26 +616,29 @@ class DomainLanguage:
                 constant_type = constant_types[0]
                 # This constant had only one type; that's the easy case.
                 if expected_type and expected_type != constant_type:
-                    raise ParsingError(f'{expression} did not have expected type {expected_type} '
-                                       f'(found {constant_type})')
-                return [f'{constant_type} -> {expression}'], constant_type
+                    raise ParsingError(
+                        f"{expression} did not have expected type {expected_type} " f"(found {constant_type})"
+                    )
+                return [f"{constant_type} -> {expression}"], constant_type
             else:
                 if not expected_type:
-                    raise ParsingError('With no expected type and multiple types to pick from '
-                                       f"I don't know what type to use (constant was {expression})")
+                    raise ParsingError(
+                        "With no expected type and multiple types to pick from "
+                        f"I don't know what type to use (constant was {expression})"
+                    )
                 if expected_type not in constant_types:
-                    raise ParsingError(f'{expression} did not have expected type {expected_type} '
-                                       f'(found these options: {constant_types}; none matched)')
-                return [f'{expected_type} -> {expression}'], expected_type
+                    raise ParsingError(
+                        f"{expression} did not have expected type {expected_type} "
+                        f"(found these options: {constant_types}; none matched)"
+                    )
+                return [f"{expected_type} -> {expression}"], expected_type
 
         else:
-            raise ParsingError('Not sure how you got here. Please open an issue on github with details.')
+            raise ParsingError("Not sure how you got here. Please open an issue on github with details.")
 
-    def _get_function_transitions(self,
-                                  expression: Union[str, List],
-                                  expected_type: PredicateType) -> Tuple[List[str],
-                                                                         PredicateType,
-                                                                         List[PredicateType]]:
+    def _get_function_transitions(
+        self, expression: Union[str, List], expected_type: PredicateType
+    ) -> Tuple[List[str], PredicateType, List[PredicateType]]:
         """
         A helper method for ``_get_transitions``.  This gets the transitions for the predicate
         itself in a function call.  If we only had simple functions (e.g., "(add 2 3)"), this would
@@ -642,29 +659,30 @@ class DomainLanguage:
             if len(function_types) != 1:
                 raise ParsingError(f"{expression} had multiple types; this is not yet supported for functions")
             function_type = function_types[0]
-            transitions = [f'{function_type} -> {name}']
+            transitions = [f"{function_type} -> {name}"]
         else:
             if isinstance(expression, str):
                 raise ParsingError(f"Unrecognized function: {expression[0]}")
             raise ParsingError(f"Unsupported expression type: {expression}")
         if not isinstance(function_type, FunctionType):
-            raise ParsingError(f'Zero-arg function or constant called with arguments: {name}')
+            raise ParsingError(f"Zero-arg function or constant called with arguments: {name}")
 
         # Now that we have the transitions for the function itself, and the function's type, we can
         # get argument types and do the rest of the transitions.
         argument_types = function_type.argument_types
         return_type = function_type.return_type
         right_side = f'[{function_type}, {", ".join(str(arg) for arg in argument_types)}]'
-        first_transition = f'{return_type} -> {right_side}'
+        first_transition = f"{return_type} -> {right_side}"
         transitions.insert(0, first_transition)
         if expected_type and expected_type != return_type:
-            raise ParsingError(f'{expression} did not have expected type {expected_type} '
-                               f'(found {return_type})')
+            raise ParsingError(
+                f"{expression} did not have expected type {expected_type} " f"(found {return_type})"
+            )
         return transitions, return_type, argument_types
 
-    def _construct_node_from_actions(self,
-                                     current_node: Tree,
-                                     remaining_actions: List[List[str]]) -> List[List[str]]:
+    def _construct_node_from_actions(
+        self, current_node: Tree, remaining_actions: List[List[str]]
+    ) -> List[List[str]]:
         """
         Given a current node in the logical form tree, and a list of actions in an action sequence,
         this method fills in the children of the current node from the action sequence, then
@@ -688,9 +706,9 @@ class DomainLanguage:
             logger.error("Next action: %s -> %s", left_side, right_side)
             logger.error("Remaining actions were: %s", remaining_actions)
             raise ParsingError("Current node does not match next action")
-        if right_side[0] == '[':
+        if right_side[0] == "[":
             # This is a non-terminal expansion, with more than one child node.
-            for child_type in right_side[1:-1].split(', '):
+            for child_type in right_side[1:-1].split(", "):
                 child_node = Tree(child_type, [])
                 current_node.append(child_node)  # you add a child to an nltk.Tree with `append`
                 # For now, we assume that all children in a list like this are non-terminals, so we

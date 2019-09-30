@@ -16,11 +16,11 @@ import requests
 
 
 OK_STATUS_CODES = (
-        200,
-        401,  # the resource exists but may require some sort of login.
-        403,  # ^ same
-        405,  # HEAD method not allowed.
-        406,  # the resource exists, but our default 'Accept-' header may not match what the server can provide.
+    200,
+    401,  # the resource exists but may require some sort of login.
+    403,  # ^ same
+    405,  # HEAD method not allowed.
+    406,  # the resource exists, but our default 'Accept-' header may not match what the server can provide.
 )
 
 THREADS = 10
@@ -28,12 +28,7 @@ THREADS = 10
 http_session = requests.Session()
 for resource_prefix in ("http://", "https://"):
     http_session.mount(
-            resource_prefix,
-            requests.adapters.HTTPAdapter(
-                    max_retries=5,
-                    pool_connections=20,
-                    pool_maxsize=THREADS,
-            )
+        resource_prefix, requests.adapters.HTTPAdapter(max_retries=5, pool_connections=20, pool_maxsize=THREADS)
     )
 
 
@@ -73,16 +68,16 @@ def main():
     print("Finding all markdown files in the current directory...")
 
     project_root = (pathlib.Path(__file__).parent / "..").resolve()
-    markdown_files = project_root.glob('**/*.md')
+    markdown_files = project_root.glob("**/*.md")
 
     all_matches = set()
-    url_regex = re.compile(r'\[([^!][^\]]+)\]\(([^)(]+)\)')
+    url_regex = re.compile(r"\[([^!][^\]]+)\]\(([^)(]+)\)")
     for markdown_file in markdown_files:
         with open(markdown_file) as handle:
             for line in handle.readlines():
                 matches = url_regex.findall(line)
                 for name, link in matches:
-                    if 'localhost' not in link:
+                    if "localhost" not in link:
                         all_matches.add(MatchTuple(source=str(markdown_file), name=name, link=link))
 
     print(f"  {len(all_matches)} markdown files found")

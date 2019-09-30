@@ -16,7 +16,7 @@ from allennlp.common.checks import ConfigurationError
 
 logger = logging.getLogger(__name__)
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 def has_tensor(obj) -> bool:
@@ -48,7 +48,7 @@ def move_to_device(obj, cuda_device: int):
         return {key: move_to_device(value, cuda_device) for key, value in obj.items()}
     elif isinstance(obj, list):
         return [move_to_device(item, cuda_device) for item in obj]
-    elif isinstance(obj, tuple) and hasattr(obj, '_fields'):
+    elif isinstance(obj, tuple) and hasattr(obj, "_fields"):
         # This is the best way to detect a NamedTuple, it turns out.
         return obj.__class__(*[move_to_device(item, cuda_device) for item in obj])
     elif isinstance(obj, tuple):
@@ -72,8 +72,9 @@ def clamp_tensor(tensor, minimum, maximum):
         return tensor.clamp(minimum, maximum)
 
 
-def batch_tensor_dicts(tensor_dicts: List[Dict[str, torch.Tensor]],
-                       remove_trailing_dimension: bool = False) -> Dict[str, torch.Tensor]:
+def batch_tensor_dicts(
+    tensor_dicts: List[Dict[str, torch.Tensor]], remove_trailing_dimension: bool = False
+) -> Dict[str, torch.Tensor]:
     """
     Takes a list of tensor dictionaries, where each dictionary is assumed to have matching keys,
     and returns a single dictionary with all tensors with the same key batched together.
@@ -175,9 +176,9 @@ def sort_batch_by_length(tensor: torch.Tensor, sequence_lengths: torch.Tensor):
     return sorted_tensor, sorted_sequence_lengths, restoration_indices, permutation_index
 
 
-def get_final_encoder_states(encoder_outputs: torch.Tensor,
-                             mask: torch.Tensor,
-                             bidirectional: bool = False) -> torch.Tensor:
+def get_final_encoder_states(
+    encoder_outputs: torch.Tensor, mask: torch.Tensor, bidirectional: bool = False
+) -> torch.Tensor:
     """
     Given the output from a ``Seq2SeqEncoder``, with shape ``(batch_size, sequence_length,
     encoding_dim)``, this method returns the final hidden state for each element of the batch,
@@ -202,8 +203,8 @@ def get_final_encoder_states(encoder_outputs: torch.Tensor,
     final_encoder_output = encoder_outputs.gather(1, expanded_indices)
     final_encoder_output = final_encoder_output.squeeze(1)  # (batch_size, encoder_output_dim)
     if bidirectional:
-        final_forward_output = final_encoder_output[:, :(encoder_output_dim // 2)]
-        final_backward_output = encoder_outputs[:, 0, (encoder_output_dim // 2):]
+        final_forward_output = final_encoder_output[:, : (encoder_output_dim // 2)]
+        final_backward_output = encoder_outputs[:, 0, (encoder_output_dim // 2) :]
         final_encoder_output = torch.cat([final_forward_output, final_backward_output], dim=-1)
     return final_encoder_output
 
@@ -234,11 +235,13 @@ def get_dropout_mask(dropout_probability: float, tensor_for_masking: torch.Tenso
     return dropout_mask
 
 
-def masked_softmax(vector: torch.Tensor,
-                   mask: torch.Tensor,
-                   dim: int = -1,
-                   memory_efficient: bool = False,
-                   mask_fill_value: float = -1e32) -> torch.Tensor:
+def masked_softmax(
+    vector: torch.Tensor,
+    mask: torch.Tensor,
+    dim: int = -1,
+    memory_efficient: bool = False,
+    mask_fill_value: float = -1e32,
+) -> torch.Tensor:
     """
     ``torch.nn.functional.softmax(vector)`` does not work if some elements of ``vector`` should be
     masked.  This performs a softmax on just the non-masked portions of ``vector``.  Passing
@@ -309,11 +312,9 @@ def masked_log_softmax(vector: torch.Tensor, mask: torch.Tensor, dim: int = -1) 
     return torch.nn.functional.log_softmax(vector, dim=dim)
 
 
-def masked_max(vector: torch.Tensor,
-               mask: torch.Tensor,
-               dim: int,
-               keepdim: bool = False,
-               min_val: float = -1e7) -> torch.Tensor:
+def masked_max(
+    vector: torch.Tensor, mask: torch.Tensor, dim: int, keepdim: bool = False, min_val: float = -1e7
+) -> torch.Tensor:
     """
     To calculate max along certain dimensions on masked values
 
@@ -340,11 +341,9 @@ def masked_max(vector: torch.Tensor,
     return max_value
 
 
-def masked_mean(vector: torch.Tensor,
-                mask: torch.Tensor,
-                dim: int,
-                keepdim: bool = False,
-                eps: float = 1e-8) -> torch.Tensor:
+def masked_mean(
+    vector: torch.Tensor, mask: torch.Tensor, dim: int, keepdim: bool = False, eps: float = 1e-8
+) -> torch.Tensor:
     """
     To calculate mean along certain dimensions on masked values
 
@@ -373,8 +372,7 @@ def masked_mean(vector: torch.Tensor,
     return value_sum / value_count.clamp(min=eps)
 
 
-def masked_flip(padded_sequence: torch.Tensor,
-                sequence_lengths: List[int]) -> torch.Tensor:
+def masked_flip(padded_sequence: torch.Tensor, sequence_lengths: List[int]) -> torch.Tensor:
     """
         Flips a padded tensor along the time dimension without affecting masked entries.
 
@@ -390,19 +388,22 @@ def masked_flip(padded_sequence: torch.Tensor,
         -------
         A ``torch.Tensor`` of the same shape as padded_sequence.
         """
-    assert padded_sequence.size(0) == len(sequence_lengths), \
-        f'sequence_lengths length ${len(sequence_lengths)} does not match batch size ${padded_sequence.size(0)}'
+    assert padded_sequence.size(0) == len(
+        sequence_lengths
+    ), f"sequence_lengths length ${len(sequence_lengths)} does not match batch size ${padded_sequence.size(0)}"
     num_timesteps = padded_sequence.size(1)
     flipped_padded_sequence = torch.flip(padded_sequence, [1])
-    sequences = [flipped_padded_sequence[i, num_timesteps - length:] for i, length in enumerate(sequence_lengths)]
+    sequences = [flipped_padded_sequence[i, num_timesteps - length :] for i, length in enumerate(sequence_lengths)]
     return torch.nn.utils.rnn.pad_sequence(sequences, batch_first=True)
 
 
-def viterbi_decode(tag_sequence: torch.Tensor,
-                   transition_matrix: torch.Tensor,
-                   tag_observations: Optional[List[int]] = None,
-                   allowed_start_transitions: torch.Tensor = None,
-                   allowed_end_transitions: torch.Tensor = None):
+def viterbi_decode(
+    tag_sequence: torch.Tensor,
+    transition_matrix: torch.Tensor,
+    tag_observations: Optional[List[int]] = None,
+    allowed_start_transitions: torch.Tensor = None,
+    allowed_end_transitions: torch.Tensor = None,
+):
     """
     Perform Viterbi decoding in log space over a sequence given a transition matrix
     specifying pairwise (transition) potentials between tags and a matrix of shape
@@ -474,9 +475,12 @@ def viterbi_decode(tag_sequence: torch.Tensor,
 
     if tag_observations:
         if len(tag_observations) != sequence_length:
-            raise ConfigurationError("Observations were provided, but they were not the same length "
-                                     "as the sequence. Found sequence of length: {} and evidence: {}"
-                                     .format(sequence_length, tag_observations))
+            raise ConfigurationError(
+                "Observations were provided, but they were not the same length "
+                "as the sequence. Found sequence of length: {} and evidence: {}".format(
+                    sequence_length, tag_observations
+                )
+            )
     else:
         tag_observations = [-1 for _ in range(sequence_length)]
 
@@ -493,7 +497,7 @@ def viterbi_decode(tag_sequence: torch.Tensor,
 
     if tag_observations[0] != -1:
         one_hot = torch.zeros(num_tags)
-        one_hot[tag_observations[0]] = 100000.
+        one_hot[tag_observations[0]] = 100000.0
         path_scores.append(one_hot)
     else:
         path_scores.append(tag_sequence[0, :])
@@ -511,12 +515,14 @@ def viterbi_decode(tag_sequence: torch.Tensor,
         # invalid/extremely unlikely evidence.
         if tag_observations[timestep - 1] != -1 and observation != -1:
             if transition_matrix[tag_observations[timestep - 1], observation] < -10000:
-                logger.warning("The pairwise potential between tags you have passed as "
-                               "observations is extremely unlikely. Double check your evidence "
-                               "or transition potentials!")
+                logger.warning(
+                    "The pairwise potential between tags you have passed as "
+                    "observations is extremely unlikely. Double check your evidence "
+                    "or transition potentials!"
+                )
         if observation != -1:
             one_hot = torch.zeros(num_tags)
-            one_hot[observation] = 100000.
+            one_hot[observation] = 100000.0
             path_scores.append(one_hot)
         else:
             path_scores.append(tag_sequence[timestep, :] + scores.squeeze())
@@ -535,8 +541,9 @@ def viterbi_decode(tag_sequence: torch.Tensor,
     return viterbi_path, viterbi_score
 
 
-def get_text_field_mask(text_field_tensors: Dict[str, torch.Tensor],
-                        num_wrapping_dims: int = 0) -> torch.LongTensor:
+def get_text_field_mask(
+    text_field_tensors: Dict[str, torch.Tensor], num_wrapping_dims: int = 0
+) -> torch.LongTensor:
     """
     Takes the dictionary of tensors produced by a ``TextField`` and returns a mask
     with 0 where the tokens are padding, and 1 otherwise.  We also handle ``TextFields``
@@ -623,14 +630,15 @@ def weighted_sum(matrix: torch.Tensor, attention: torch.Tensor) -> torch.Tensor:
     return intermediate.sum(dim=-2)
 
 
-def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
-                                       targets: torch.LongTensor,
-                                       weights: torch.FloatTensor,
-                                       average: str = "batch",
-                                       label_smoothing: float = None,
-                                       gamma: float = None,
-                                       alpha: Union[float, List[float], torch.FloatTensor] = None
-                                       ) -> torch.FloatTensor:
+def sequence_cross_entropy_with_logits(
+    logits: torch.FloatTensor,
+    targets: torch.LongTensor,
+    weights: torch.FloatTensor,
+    average: str = "batch",
+    label_smoothing: float = None,
+    gamma: float = None,
+    alpha: Union[float, List[float], torch.FloatTensor] = None,
+) -> torch.FloatTensor:
     """
     Computes the cross entropy loss of a sequence, weighted with respect to
     some user provided weights. Note that the weighting here is not the same as
@@ -679,8 +687,7 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
 
     """
     if average not in {None, "token", "batch"}:
-        raise ValueError("Got average f{average}, expected one of "
-                         "None, 'token', or 'batch'")
+        raise ValueError("Got average f{average}, expected one of " "None, 'token', or 'batch'")
 
     # make sure weights are float
     weights = weights.float()
@@ -701,7 +708,7 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
         # shape : (batch * sequence_length,)
         probs_flat = torch.gather(probs_flat, dim=1, index=targets_flat)
         # shape : (batch * sequence_length,)
-        focal_factor = (1. - probs_flat) ** gamma
+        focal_factor = (1.0 - probs_flat) ** gamma
         # shape : (batch, sequence_length)
         focal_factor = focal_factor.view(*targets.size())
         weights = weights * focal_factor
@@ -711,8 +718,9 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
         if isinstance(alpha, (float, int)):
 
             # shape : (2,)
-            alpha_factor = torch.tensor([1. - float(alpha), float(alpha)],
-                                        dtype=weights.dtype, device=weights.device)
+            alpha_factor = torch.tensor(
+                [1.0 - float(alpha), float(alpha)], dtype=weights.dtype, device=weights.device
+            )
 
         elif isinstance(alpha, (list, numpy.ndarray, torch.Tensor)):
 
@@ -725,8 +733,9 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
                 # shape : (2,)
                 alpha_factor = torch.cat([1 - alpha_factor, alpha_factor])
         else:
-            raise TypeError(('alpha must be float, list of float, or torch.FloatTensor, '
-                             '{} provided.').format(type(alpha)))
+            raise TypeError(
+                ("alpha must be float, list of float, or torch.FloatTensor, " "{} provided.").format(type(alpha))
+            )
         # shape : (batch, max_len)
         alpha_factor = torch.gather(alpha_factor, dim=0, index=targets_flat.view(-1)).view(*targets.size())
         weights = weights * alpha_factor
@@ -737,14 +746,14 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
         # Fill all the correct indices with 1 - smoothing value.
         one_hot_targets = torch.zeros_like(log_probs_flat).scatter_(-1, targets_flat, 1.0 - label_smoothing)
         smoothed_targets = one_hot_targets + smoothing_value
-        negative_log_likelihood_flat = - log_probs_flat * smoothed_targets
+        negative_log_likelihood_flat = -log_probs_flat * smoothed_targets
         negative_log_likelihood_flat = negative_log_likelihood_flat.sum(-1, keepdim=True)
     else:
         # Contribution to the negative log likelihood only comes from the exact indices
         # of the targets, as the target distributions are one-hot. Here we use torch.gather
         # to extract the indices of the num_classes dimension which contribute to the loss.
         # shape : (batch * sequence_length, 1)
-        negative_log_likelihood_flat = - torch.gather(log_probs_flat, dim=1, index=targets_flat)
+        negative_log_likelihood_flat = -torch.gather(log_probs_flat, dim=1, index=targets_flat)
     # shape : (batch, sequence_length)
     negative_log_likelihood = negative_log_likelihood_flat.view(*targets.size())
     # shape : (batch, sequence_length)
@@ -753,7 +762,7 @@ def sequence_cross_entropy_with_logits(logits: torch.FloatTensor,
     if average == "batch":
         # shape : (batch_size,)
         per_batch_loss = negative_log_likelihood.sum(non_batch_dims) / (weights_batch_sum + 1e-13)
-        num_non_empty_sequences = ((weights_batch_sum > 0).float().sum() + 1e-13)
+        num_non_empty_sequences = (weights_batch_sum > 0).float().sum() + 1e-13
         return per_batch_loss.sum() / num_non_empty_sequences
     elif average == "token":
         return negative_log_likelihood.sum() / (weights_batch_sum.sum() + 1e-13)
@@ -856,8 +865,8 @@ def combine_tensors(combination: str, tensors: List[torch.Tensor]) -> torch.Tens
     """
     if len(tensors) > 9:
         raise ConfigurationError("Double-digit tensor lists not currently supported")
-    combination = combination.replace('x', '1').replace('y', '2')
-    to_concatenate = [_get_combination(piece, tensors) for piece in combination.split(',')]
+    combination = combination.replace("x", "1").replace("y", "2")
+    to_concatenate = [_get_combination(piece, tensors) for piece in combination.split(",")]
     return torch.cat(to_concatenate, dim=-1)
 
 
@@ -892,21 +901,21 @@ def _get_combination(combination: str, tensors: List[torch.Tensor]) -> torch.Ten
         first_tensor = _get_combination(combination[0], tensors)
         second_tensor = _get_combination(combination[2], tensors)
         operation = combination[1]
-        if operation == '*':
+        if operation == "*":
             return first_tensor * second_tensor
-        elif operation == '/':
+        elif operation == "/":
             return first_tensor / second_tensor
-        elif operation == '+':
+        elif operation == "+":
             return first_tensor + second_tensor
-        elif operation == '-':
+        elif operation == "-":
             return first_tensor - second_tensor
         else:
             raise ConfigurationError("Invalid operation: " + operation)
 
 
-def combine_tensors_and_multiply(combination: str,
-                                 tensors: List[torch.Tensor],
-                                 weights: torch.nn.Parameter) -> torch.Tensor:
+def combine_tensors_and_multiply(
+    combination: str, tensors: List[torch.Tensor], weights: torch.nn.Parameter
+) -> torch.Tensor:
     """
     Like :func:`combine_tensors`, but does a weighted (linear) multiplication while combining.
     This is a separate function from ``combine_tensors`` because we try to avoid instantiating
@@ -928,14 +937,14 @@ def combine_tensors_and_multiply(combination: str,
     """
     if len(tensors) > 9:
         raise ConfigurationError("Double-digit tensor lists not currently supported")
-    combination = combination.replace('x', '1').replace('y', '2')
-    pieces = combination.split(',')
+    combination = combination.replace("x", "1").replace("y", "2")
+    pieces = combination.split(",")
     tensor_dims = [tensor.size(-1) for tensor in tensors]
     combination_dims = [_get_combination_dim(piece, tensor_dims) for piece in pieces]
     dims_so_far = 0
     to_sum = []
     for piece, combination_dim in zip(pieces, combination_dims):
-        weight = weights[dims_so_far:(dims_so_far + combination_dim)]
+        weight = weights[dims_so_far : (dims_so_far + combination_dim)]
         dims_so_far += combination_dim
         to_sum.append(_get_combination_and_multiply(piece, tensors, weight))
     result = to_sum[0]
@@ -944,9 +953,9 @@ def combine_tensors_and_multiply(combination: str,
     return result
 
 
-def _get_combination_and_multiply(combination: str,
-                                  tensors: List[torch.Tensor],
-                                  weight: torch.nn.Parameter) -> torch.Tensor:
+def _get_combination_and_multiply(
+    combination: str, tensors: List[torch.Tensor], weight: torch.nn.Parameter
+) -> torch.Tensor:
     if combination.isdigit():
         index = int(combination) - 1
         return torch.matmul(tensors[index], weight)
@@ -956,7 +965,7 @@ def _get_combination_and_multiply(combination: str,
         first_tensor = _get_combination(combination[0], tensors)
         second_tensor = _get_combination(combination[2], tensors)
         operation = combination[1]
-        if operation == '*':
+        if operation == "*":
             if first_tensor.dim() > 4 or second_tensor.dim() > 4:
                 raise ValueError("Tensors with dim > 4 not currently supported")
             desired_dim = max(first_tensor.dim(), second_tensor.dim()) - 1
@@ -971,7 +980,7 @@ def _get_combination_and_multiply(combination: str,
             if result.dim() == desired_dim + 1:
                 result = result.squeeze(-1)
             return result
-        elif operation == '/':
+        elif operation == "/":
             if first_tensor.dim() > 4 or second_tensor.dim() > 4:
                 raise ValueError("Tensors with dim > 4 not currently supported")
             desired_dim = max(first_tensor.dim(), second_tensor.dim()) - 1
@@ -986,9 +995,9 @@ def _get_combination_and_multiply(combination: str,
             if result.dim() == desired_dim + 1:
                 result = result.squeeze(-1)
             return result
-        elif operation == '+':
+        elif operation == "+":
             return torch.matmul(first_tensor, weight) + torch.matmul(second_tensor, weight)
-        elif operation == '-':
+        elif operation == "-":
             return torch.matmul(first_tensor, weight) - torch.matmul(second_tensor, weight)
         else:
             raise ConfigurationError("Invalid operation: " + operation)
@@ -1012,8 +1021,8 @@ def get_combined_dim(combination: str, tensor_dims: List[int]) -> int:
     """
     if len(tensor_dims) > 9:
         raise ConfigurationError("Double-digit tensor lists not currently supported")
-    combination = combination.replace('x', '1').replace('y', '2')
-    return sum([_get_combination_dim(piece, tensor_dims) for piece in combination.split(',')])
+    combination = combination.replace("x", "1").replace("y", "2")
+    return sum([_get_combination_dim(piece, tensor_dims) for piece in combination.split(",")])
 
 
 def _get_combination_dim(combination: str, tensor_dims: List[int]) -> int:
@@ -1027,13 +1036,11 @@ def _get_combination_dim(combination: str, tensor_dims: List[int]) -> int:
         second_tensor_dim = _get_combination_dim(combination[2], tensor_dims)
         operation = combination[1]
         if first_tensor_dim != second_tensor_dim:
-            raise ConfigurationError("Tensor dims must match for operation \"{}\"".format(operation))
+            raise ConfigurationError('Tensor dims must match for operation "{}"'.format(operation))
         return first_tensor_dim
 
 
-def logsumexp(tensor: torch.Tensor,
-              dim: int = -1,
-              keepdim: bool = False) -> torch.Tensor:
+def logsumexp(tensor: torch.Tensor, dim: int = -1, keepdim: bool = False) -> torch.Tensor:
     """
     A numerically stable computation of logsumexp. This is mathematically equivalent to
     `tensor.exp().sum(dim, keep=keepdim).log()`.  This function is typically used for summing log
@@ -1066,8 +1073,7 @@ def get_device_of(tensor: torch.Tensor) -> int:
         return tensor.get_device()
 
 
-def flatten_and_batch_shift_indices(indices: torch.Tensor,
-                                    sequence_length: int) -> torch.Tensor:
+def flatten_and_batch_shift_indices(indices: torch.Tensor, sequence_length: int) -> torch.Tensor:
     """
     This is a subroutine for :func:`~batched_index_select`. The given ``indices`` of size
     ``(batch_size, d_1, ..., d_n)`` indexes into dimension 2 of a target tensor, which has size
@@ -1112,9 +1118,9 @@ def flatten_and_batch_shift_indices(indices: torch.Tensor,
     return offset_indices
 
 
-def batched_index_select(target: torch.Tensor,
-                         indices: torch.LongTensor,
-                         flattened_indices: Optional[torch.LongTensor] = None) -> torch.Tensor:
+def batched_index_select(
+    target: torch.Tensor, indices: torch.LongTensor, flattened_indices: Optional[torch.LongTensor] = None
+) -> torch.Tensor:
     """
     The given ``indices`` of size ``(batch_size, d_1, ..., d_n)`` indexes into the sequence
     dimension (dimension 2) of the target, which has size ``(batch_size, sequence_length,
@@ -1166,8 +1172,7 @@ def batched_index_select(target: torch.Tensor,
     return selected_targets
 
 
-def flattened_index_select(target: torch.Tensor,
-                           indices: torch.LongTensor) -> torch.Tensor:
+def flattened_index_select(target: torch.Tensor, indices: torch.LongTensor) -> torch.Tensor:
     """
     The given ``indices`` of size ``(set_size, subset_size)`` specifies subsets of the ``target``
     that each of the set_size rows should select. The `target` has size
@@ -1188,8 +1193,10 @@ def flattened_index_select(target: torch.Tensor,
         A Tensor of shape (batch_size, set_size, subset_size, embedding_size).
     """
     if indices.dim() != 2:
-        raise ConfigurationError("Indices passed to flattened_index_select had shape {} but "
-                                 "only 2 dimensional inputs are supported.".format(indices.size()))
+        raise ConfigurationError(
+            "Indices passed to flattened_index_select had shape {} but "
+            "only 2 dimensional inputs are supported.".format(indices.size())
+        )
     # Shape: (batch_size, set_size * subset_size, embedding_size)
     flattened_selected = target.index_select(1, indices.view(-1))
 
@@ -1209,9 +1216,9 @@ def get_range_vector(size: int, device: int) -> torch.Tensor:
         return torch.arange(0, size, dtype=torch.long)
 
 
-def bucket_values(distances: torch.Tensor,
-                  num_identity_buckets: int = 4,
-                  num_total_buckets: int = 10) -> torch.Tensor:
+def bucket_values(
+    distances: torch.Tensor, num_identity_buckets: int = 4, num_total_buckets: int = 10
+) -> torch.Tensor:
     """
     Places the given values (designed for distances) into ``num_total_buckets``semi-logscale
     buckets, with ``num_identity_buckets`` of these capturing single values.
@@ -1249,10 +1256,9 @@ def bucket_values(distances: torch.Tensor,
     return combined_index.clamp(0, num_total_buckets - 1)
 
 
-def add_sentence_boundary_token_ids(tensor: torch.Tensor,
-                                    mask: torch.Tensor,
-                                    sentence_begin_token: Any,
-                                    sentence_end_token: Any) -> Tuple[torch.Tensor, torch.Tensor]:
+def add_sentence_boundary_token_ids(
+    tensor: torch.Tensor, mask: torch.Tensor, sentence_begin_token: Any, sentence_end_token: Any
+) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Add begin/end of sentence tokens to the batch of sentences.
     Given a batch of sentences with size ``(batch_size, timesteps)`` or
@@ -1306,8 +1312,7 @@ def add_sentence_boundary_token_ids(tensor: torch.Tensor,
     return tensor_with_boundary_tokens, new_mask
 
 
-def remove_sentence_boundaries(tensor: torch.Tensor,
-                               mask: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+def remove_sentence_boundaries(tensor: torch.Tensor, mask: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Remove begin/end of sentence embeddings from the batch of sentences.
     Given a batch of sentences with size ``(batch_size, timesteps, dim)``
@@ -1343,15 +1348,13 @@ def remove_sentence_boundaries(tensor: torch.Tensor,
     new_mask = tensor.new_zeros((new_shape[0], new_shape[1]), dtype=torch.long)
     for i, j in enumerate(sequence_lengths):
         if j > 2:
-            tensor_without_boundary_tokens[i, :(j - 2), :] = tensor[i, 1:(j - 1), :]
-            new_mask[i, :(j - 2)] = 1
+            tensor_without_boundary_tokens[i, : (j - 2), :] = tensor[i, 1 : (j - 1), :]
+            new_mask[i, : (j - 2)] = 1
 
     return tensor_without_boundary_tokens, new_mask
 
 
-def add_positional_features(tensor: torch.Tensor,
-                            min_timescale: float = 1.0,
-                            max_timescale: float = 1.0e4):
+def add_positional_features(tensor: torch.Tensor, min_timescale: float = 1.0, max_timescale: float = 1.0e4):
 
     """
     Implements the frequency-based positional encoding described
@@ -1488,6 +1491,7 @@ def find_embedding_layer(model: torch.nn.Module) -> torch.nn.Module:
     from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
     from allennlp.modules.text_field_embedders.basic_text_field_embedder import BasicTextFieldEmbedder
     from allennlp.modules.token_embedders.embedding import Embedding
+
     for module in model.modules():
         if isinstance(module, BertEmbeddingsOld):
             return module.word_embeddings

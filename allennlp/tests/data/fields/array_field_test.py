@@ -6,7 +6,6 @@ from allennlp.data.fields import ArrayField, ListField
 
 
 class TestArrayField(AllenNlpTestCase):
-
     def test_get_padding_lengths_correctly_returns_ordered_shape(self):
         shape = [3, 4, 5, 6]
         array = numpy.zeros(shape)
@@ -22,7 +21,7 @@ class TestArrayField(AllenNlpTestCase):
 
         padded_tensor = array_field.as_tensor({"dimension_0": 5, "dimension_1": 6}).detach().cpu().numpy()
         numpy.testing.assert_array_equal(padded_tensor[:3, :4], array)
-        numpy.testing.assert_array_equal(padded_tensor[3:, 4:], 0.)
+        numpy.testing.assert_array_equal(padded_tensor[3:, 4:], 0.0)
 
     def test_padding_handles_list_fields(self):
         array1 = ArrayField(numpy.ones([2, 3]))
@@ -31,12 +30,13 @@ class TestArrayField(AllenNlpTestCase):
         list_field = ListField([array1, array2, empty_array])
 
         returned_tensor = list_field.as_tensor(list_field.get_padding_lengths()).detach().cpu().numpy()
-        correct_tensor = numpy.array([[[1., 1., 1., 0., 0.],
-                                       [1., 1., 1., 0., 0.]],
-                                      [[1., 1., 1., 1., 1.],
-                                       [0., 0., 0., 0., 0.]],
-                                      [[0., 0., 0., 0., 0.],
-                                       [0., 0., 0., 0., 0.]]])
+        correct_tensor = numpy.array(
+            [
+                [[1.0, 1.0, 1.0, 0.0, 0.0], [1.0, 1.0, 1.0, 0.0, 0.0]],
+                [[1.0, 1.0, 1.0, 1.0, 1.0], [0.0, 0.0, 0.0, 0.0, 0.0]],
+                [[0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0]],
+            ]
+        )
         numpy.testing.assert_array_equal(returned_tensor, correct_tensor)
 
     def test_padding_handles_list_fields_with_padding_values(self):
@@ -46,12 +46,13 @@ class TestArrayField(AllenNlpTestCase):
         list_field = ListField([array1, array2, empty_array])
 
         returned_tensor = list_field.as_tensor(list_field.get_padding_lengths()).detach().cpu().numpy()
-        correct_tensor = numpy.array([[[1., 1., 1., -1., -1.],
-                                       [1., 1., 1., -1., -1.]],
-                                      [[1., 1., 1., 1., 1.],
-                                       [-1., -1., -1., -1., -1.]],
-                                      [[-1., -1., -1., -1., -1.],
-                                       [-1., -1., -1., -1., -1.]]])
+        correct_tensor = numpy.array(
+            [
+                [[1.0, 1.0, 1.0, -1.0, -1.0], [1.0, 1.0, 1.0, -1.0, -1.0]],
+                [[1.0, 1.0, 1.0, 1.0, 1.0], [-1.0, -1.0, -1.0, -1.0, -1.0]],
+                [[-1.0, -1.0, -1.0, -1.0, -1.0], [-1.0, -1.0, -1.0, -1.0, -1.0]],
+            ]
+        )
         numpy.testing.assert_array_equal(returned_tensor, correct_tensor)
 
     def test_printing_doesnt_crash(self):

@@ -55,17 +55,21 @@ class OntonotesNamedEntityRecognition(DatasetReader):
     A ``Dataset`` of ``Instances`` for Fine-Grained NER.
 
     """
-    def __init__(self,
-                 token_indexers: Dict[str, TokenIndexer] = None,
-                 domain_identifier: str = None,
-                 coding_scheme: str = "BIO",
-                 lazy: bool = False) -> None:
+
+    def __init__(
+        self,
+        token_indexers: Dict[str, TokenIndexer] = None,
+        domain_identifier: str = None,
+        coding_scheme: str = "BIO",
+        lazy: bool = False,
+    ) -> None:
         super().__init__(lazy)
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._domain_identifier = domain_identifier
         if domain_identifier == "pt":
-            raise ConfigurationError("The Ontonotes 5.0 dataset does not contain annotations for"
-                                     " the old and new testament sections.")
+            raise ConfigurationError(
+                "The Ontonotes 5.0 dataset does not contain annotations for" " the old and new testament sections."
+            )
         self._coding_scheme = coding_scheme
 
     @overrides
@@ -82,9 +86,9 @@ class OntonotesNamedEntityRecognition(DatasetReader):
             yield self.text_to_instance(tokens, sentence.named_entities)
 
     @staticmethod
-    def _ontonotes_subset(ontonotes_reader: Ontonotes,
-                          file_path: str,
-                          domain_identifier: str) -> Iterable[OntonotesSentence]:
+    def _ontonotes_subset(
+        ontonotes_reader: Ontonotes, file_path: str, domain_identifier: str
+    ) -> Iterable[OntonotesSentence]:
         """
         Iterates over the Ontonotes 5.0 dataset using an optional domain identifier.
         If the domain identifier is present, only examples which contain the domain
@@ -95,19 +99,21 @@ class OntonotesNamedEntityRecognition(DatasetReader):
                 yield from ontonotes_reader.sentence_iterator(conll_file)
 
     @overrides
-    def text_to_instance(self,  # type: ignore
-                         tokens: List[Token],
-                         ner_tags: List[str] = None) -> Instance:
+    def text_to_instance(
+        self,  # type: ignore
+        tokens: List[Token],
+        ner_tags: List[str] = None,
+    ) -> Instance:
         """
         We take `pre-tokenized` input here, because we don't have a tokenizer in this class.
         """
 
         sequence = TextField(tokens, self._token_indexers)
-        instance_fields: Dict[str, Field] = {'tokens': sequence}
+        instance_fields: Dict[str, Field] = {"tokens": sequence}
         instance_fields["metadata"] = MetadataField({"words": [x.text for x in tokens]})
         # Add "tag label" to instance
         if ner_tags is not None:
             if self._coding_scheme == "BIOUL":
                 ner_tags = to_bioul(ner_tags, encoding="BIO")
-            instance_fields['tags'] = SequenceLabelField(ner_tags, sequence)
+            instance_fields["tags"] = SequenceLabelField(ner_tags, sequence)
         return Instance(instance_fields)

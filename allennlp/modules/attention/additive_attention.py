@@ -29,10 +29,8 @@ class AdditiveAttention(Attention):
         If true, we normalize the computed similarities with a softmax, to return a probability
         distribution for your attention.  If false, this is just computing a similarity score.
     """
-    def __init__(self,
-                 vector_dim: int,
-                 matrix_dim: int,
-                 normalize: bool = True) -> None:
+
+    def __init__(self, vector_dim: int, matrix_dim: int, normalize: bool = True) -> None:
         super().__init__(normalize)
         self._w_matrix = Parameter(torch.Tensor(vector_dim, vector_dim))
         self._u_matrix = Parameter(torch.Tensor(matrix_dim, vector_dim))

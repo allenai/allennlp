@@ -10,6 +10,7 @@ class Attacker(Registrable):
     An ``Attacker`` will modify an input (e.g., add or delete tokens) to try to change an AllenNLP
     Predictor's output in a desired manner (e.g., make it incorrect).
     """
+
     def __init__(self, predictor: Predictor) -> None:
         self.predictor = predictor
 
@@ -20,12 +21,14 @@ class Attacker(Registrable):
         """
         pass
 
-    def attack_from_json(self,
-                         inputs: JsonDict,
-                         input_field_to_attack: str,
-                         grad_input_field: str,
-                         ignore_tokens: List[str],
-                         target: JsonDict) -> JsonDict:
+    def attack_from_json(
+        self,
+        inputs: JsonDict,
+        input_field_to_attack: str,
+        grad_input_field: str,
+        ignore_tokens: List[str],
+        target: JsonDict,
+    ) -> JsonDict:
         """
         This function finds a modification to the input text that would change the model's
         prediction in some desired manner (e.g., an adversarial attack).

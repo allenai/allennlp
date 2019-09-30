@@ -5,8 +5,9 @@ import torch
 import numpy as np
 
 
-def construct_prefix_tree(targets: Union[torch.Tensor, List[List[List[int]]]],
-                          target_mask: Optional[torch.Tensor] = None) -> List[Dict[Tuple[int, ...], Set[int]]]:
+def construct_prefix_tree(
+    targets: Union[torch.Tensor, List[List[List[int]]]], target_mask: Optional[torch.Tensor] = None
+) -> List[Dict[Tuple[int, ...], Set[int]]]:
     """
     Takes a list of valid target action sequences and creates a mapping from all possible
     (valid) action prefixes to allowed actions given that prefix.  While the method is called

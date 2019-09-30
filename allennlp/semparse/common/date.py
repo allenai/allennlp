@@ -64,7 +64,7 @@ class Date:
         return str(self)
 
     @classmethod
-    def make_date(cls, string: str) -> 'Date':
+    def make_date(cls, string: str) -> "Date":
         year_string, month_string, day_string = string.split("-")
         year = -1
         month = -1

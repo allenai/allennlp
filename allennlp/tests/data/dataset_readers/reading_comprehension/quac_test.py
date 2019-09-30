@@ -9,9 +9,9 @@ from allennlp.common.testing import AllenNlpTestCase
 class TestQuACReader:
     @pytest.mark.parametrize("lazy", (True, False))
     def test_read(self, lazy):
-        params = Params({'lazy': lazy, 'num_context_answers': 2})
+        params = Params({"lazy": lazy, "num_context_answers": 2})
         reader = QuACReader.from_params(params)
-        instances = reader.read(str(AllenNlpTestCase.FIXTURES_ROOT / 'data' / 'quac_sample.json'))
+        instances = reader.read(str(AllenNlpTestCase.FIXTURES_ROOT / "data" / "quac_sample.json"))
         instances = ensure_list(instances)
 
         assert instances[0].fields["question"].sequence_length() == 6
@@ -29,8 +29,8 @@ class TestQuACReader:
         # Check the previous answer marking here
         prev_1_list = ["O"] * passage_length
         prev_2_list = ["O"] * passage_length
-        q0_span_start = instances[0].fields['span_start'].field_list[0].sequence_index
-        q0_span_end = instances[0].fields['span_end'].field_list[0].sequence_index
+        q0_span_start = instances[0].fields["span_start"].field_list[0].sequence_index
+        q0_span_end = instances[0].fields["span_end"].field_list[0].sequence_index
         prev_1_list[q0_span_start] = "<{0:d}_{1:s}>".format(1, "start")
         prev_1_list[q0_span_end] = "<{0:d}_{1:s}>".format(1, "end")
         prev_2_list[q0_span_start] = "<{0:d}_{1:s}>".format(2, "start")

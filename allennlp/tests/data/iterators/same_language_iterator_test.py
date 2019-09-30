@@ -7,7 +7,7 @@ class SameLanguageIteratorTest(AllenNlpTestCase):
     data_path = AllenNlpTestCase.FIXTURES_ROOT / "data" / "dependencies_multilang" / "*"
 
     def test_instances_of_different_languages_are_in_different_batches(self):
-        reader = UniversalDependenciesMultiLangDatasetReader(languages=['es', 'fr', 'it'])
+        reader = UniversalDependenciesMultiLangDatasetReader(languages=["es", "fr", "it"])
         iterator = SameLanguageIterator(batch_size=2, sorting_keys=[["words", "num_tokens"]])
         instances = list(reader.read(str(self.data_path)))
 
@@ -15,9 +15,9 @@ class SameLanguageIteratorTest(AllenNlpTestCase):
         assert len(batches) == 3
 
         for batch in batches:
-            lang = ''
+            lang = ""
             for instance in batch:
-                batch_lang = instance.fields['metadata'].metadata['lang']
-                if lang == '':
+                batch_lang = instance.fields["metadata"].metadata["lang"]
+                if lang == "":
                     lang = batch_lang
                 assert lang == batch_lang

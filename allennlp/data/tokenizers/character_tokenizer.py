@@ -32,11 +32,14 @@ class CharacterTokenizer(Tokenizer):
         If given, these tokens will be added to the end of every string we tokenize.  If using byte
         encoding, this should actually be a ``List[int]``, not a ``List[str]``.
     """
-    def __init__(self,
-                 byte_encoding: str = None,
-                 lowercase_characters: bool = False,
-                 start_tokens: List[str] = None,
-                 end_tokens: List[str] = None) -> None:
+
+    def __init__(
+        self,
+        byte_encoding: str = None,
+        lowercase_characters: bool = False,
+        start_tokens: List[str] = None,
+        end_tokens: List[str] = None,
+    ) -> None:
         # TODO(brendanr): Add length truncation.
         self._byte_encoding = byte_encoding
         self._lowercase_characters = lowercase_characters

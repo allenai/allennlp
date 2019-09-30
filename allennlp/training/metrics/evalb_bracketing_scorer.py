@@ -13,8 +13,9 @@ from allennlp.training.metrics.metric import Metric
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_EVALB_DIR = os.path.abspath(os.path.join(
-        os.path.dirname(os.path.realpath(__file__)), os.pardir, os.pardir, "tools", "EVALB"))
+DEFAULT_EVALB_DIR = os.path.abspath(
+    os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir, os.pardir, "tools", "EVALB")
+)
 
 
 @Metric.register("evalb")
@@ -45,15 +46,28 @@ class EvalbBracketingScorer(Metric):
         By default, this uses the COLLINS.prm configuration file which comes with EVALB.
         This configuration ignores POS tags and some punctuation labels.
     """
-    def __init__(self,
-                 evalb_directory_path: str = DEFAULT_EVALB_DIR,
-                 evalb_param_filename: str = "COLLINS.prm") -> None:
+
+    def __init__(
+        self, evalb_directory_path: str = DEFAULT_EVALB_DIR, evalb_param_filename: str = "COLLINS.prm"
+    ) -> None:
         self._evalb_directory_path = evalb_directory_path
         self._evalb_program_path = os.path.join(evalb_directory_path, "evalb")
         self._evalb_param_path = os.path.join(evalb_directory_path, evalb_param_filename)
 
-        self._header_line = ['ID', 'Len.', 'Stat.', 'Recal', 'Prec.', 'Bracket',
-                             'gold', 'test', 'Bracket', 'Words', 'Tags', 'Accracy']
+        self._header_line = [
+            "ID",
+            "Len.",
+            "Stat.",
+            "Recal",
+            "Prec.",
+            "Bracket",
+            "gold",
+            "test",
+            "Bracket",
+            "Words",
+            "Tags",
+            "Accracy",
+        ]
 
         self._correct_predicted_brackets = 0.0
         self._gold_brackets = 0.0
@@ -75,12 +89,17 @@ class EvalbBracketingScorer(Metric):
 
             # If EVALB executable still doesn't exist, raise an error.
             if not os.path.exists(self._evalb_program_path):
-                compile_command = (f"python -c 'from allennlp.training.metrics import EvalbBracketingScorer; "
-                                   f"EvalbBracketingScorer.compile_evalb(\"{self._evalb_directory_path}\")'")
-                raise ConfigurationError(f"EVALB still not found at {self._evalb_program_path}. "
-                                         "You must compile the EVALB scorer before using it."
-                                         " Run 'make' in the '{}' directory or run: {}".format(
-                                                 self._evalb_program_path, compile_command))
+                compile_command = (
+                    f"python -c 'from allennlp.training.metrics import EvalbBracketingScorer; "
+                    f'EvalbBracketingScorer.compile_evalb("{self._evalb_directory_path}")\''
+                )
+                raise ConfigurationError(
+                    f"EVALB still not found at {self._evalb_program_path}. "
+                    "You must compile the EVALB scorer before using it."
+                    " Run 'make' in the '{}' directory or run: {}".format(
+                        self._evalb_program_path, compile_command
+                    )
+                )
         tempdir = tempfile.mkdtemp()
         gold_path = os.path.join(tempdir, "gold.txt")
         predicted_path = os.path.join(tempdir, "predicted.txt")
@@ -92,10 +111,8 @@ class EvalbBracketingScorer(Metric):
             for tree in predicted_trees:
                 predicted_file.write(f"{tree.pformat(margin=1000000)}\n")
 
-        command = [self._evalb_program_path, "-p", self._evalb_param_path,
-                   gold_path, predicted_path]
-        completed_process = subprocess.run(command, stdout=subprocess.PIPE,
-                                           universal_newlines=True, check=True)
+        command = [self._evalb_program_path, "-p", self._evalb_param_path, gold_path, predicted_path]
+        completed_process = subprocess.run(command, stdout=subprocess.PIPE, universal_newlines=True, check=True)
 
         for line in completed_process.stdout.split("\n"):
             stripped = line.strip().split()

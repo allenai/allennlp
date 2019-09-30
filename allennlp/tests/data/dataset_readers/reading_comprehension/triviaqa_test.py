@@ -9,12 +9,14 @@ from allennlp.common.testing import AllenNlpTestCase
 class TestTriviaQaReader:
     @pytest.mark.parametrize("lazy", (True, False))
     def test_read(self, lazy):
-        params = Params({
-                'base_tarball_path': str(AllenNlpTestCase.FIXTURES_ROOT / 'data' / 'triviaqa-sample.tgz'),
-                'lazy': lazy
-                })
+        params = Params(
+            {
+                "base_tarball_path": str(AllenNlpTestCase.FIXTURES_ROOT / "data" / "triviaqa-sample.tgz"),
+                "lazy": lazy,
+            }
+        )
         reader = TriviaQaReader.from_params(params)
-        instances = reader.read('web-train.json')
+        instances = reader.read("web-train.json")
         instances = ensure_list(instances)
         assert len(instances) == 3
 

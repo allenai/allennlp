@@ -28,11 +28,10 @@ class BagOfWordCountsTokenEmbedder(TokenEmbedder):
     ignore_oov : ``bool``, optional (default = ``False``)
         If true, we ignore the OOV token.
     """
-    def __init__(self,
-                 vocab: Vocabulary,
-                 vocab_namespace: str,
-                 projection_dim: int = None,
-                 ignore_oov: bool = False) -> None:
+
+    def __init__(
+        self, vocab: Vocabulary, vocab_namespace: str, projection_dim: int = None, ignore_oov: bool = False
+    ) -> None:
         super().__init__()
         self.vocab = vocab
         self.vocab_size = vocab.get_vocab_size(vocab_namespace)
@@ -50,8 +49,7 @@ class BagOfWordCountsTokenEmbedder(TokenEmbedder):
     def get_output_dim(self):
         return self.output_dim
 
-    def forward(self,
-                inputs: torch.Tensor) -> torch.Tensor:
+    def forward(self, inputs: torch.Tensor) -> torch.Tensor:
         """
         Parameters
         ----------
@@ -66,7 +64,7 @@ class BagOfWordCountsTokenEmbedder(TokenEmbedder):
         """
         bag_of_words_vectors = []
 
-        mask = get_text_field_mask({'tokens': inputs})
+        mask = get_text_field_mask({"tokens": inputs})
         if self._ignore_oov:
             # also mask out positions corresponding to oov
             mask *= (inputs != self._oov_idx).long()
@@ -83,7 +81,7 @@ class BagOfWordCountsTokenEmbedder(TokenEmbedder):
         return bag_of_words_output
 
     @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> 'BagOfWordCountsTokenEmbedder':  # type: ignore
+    def from_params(cls, vocab: Vocabulary, params: Params) -> "BagOfWordCountsTokenEmbedder":  # type: ignore
 
         """
         we look for a ``vocab_namespace`` key in the parameter dictionary
@@ -94,7 +92,6 @@ class BagOfWordCountsTokenEmbedder(TokenEmbedder):
         projection_dim = params.pop_int("projection_dim", None)
         ignore_oov = params.pop_bool("ignore_oov", False)
         params.assert_empty(cls.__name__)
-        return cls(vocab=vocab,
-                   vocab_namespace=vocab_namespace,
-                   ignore_oov=ignore_oov,
-                   projection_dim=projection_dim)
+        return cls(
+            vocab=vocab, vocab_namespace=vocab_namespace, ignore_oov=ignore_oov, projection_dim=projection_dim
+        )

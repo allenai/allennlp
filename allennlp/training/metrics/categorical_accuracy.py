@@ -15,21 +15,20 @@ class CategoricalAccuracy(Metric):
     Tie break enables equal distribution of scores among the
     classes with same maximum predicted scores.
     """
+
     def __init__(self, top_k: int = 1, tie_break: bool = False) -> None:
         if top_k > 1 and tie_break:
-            raise ConfigurationError("Tie break in Categorical Accuracy "
-                                     "can be done only for maximum (top_k = 1)")
+            raise ConfigurationError(
+                "Tie break in Categorical Accuracy " "can be done only for maximum (top_k = 1)"
+            )
         if top_k <= 0:
             raise ConfigurationError("top_k passed to Categorical Accuracy must be > 0")
         self._top_k = top_k
         self._tie_break = tie_break
-        self.correct_count = 0.
-        self.total_count = 0.
+        self.correct_count = 0.0
+        self.total_count = 0.0
 
-    def __call__(self,
-                 predictions: torch.Tensor,
-                 gold_labels: torch.Tensor,
-                 mask: Optional[torch.Tensor] = None):
+    def __call__(self, predictions: torch.Tensor, gold_labels: torch.Tensor, mask: Optional[torch.Tensor] = None):
         """
         Parameters
         ----------
@@ -46,11 +45,15 @@ class CategoricalAccuracy(Metric):
         # Some sanity checks.
         num_classes = predictions.size(-1)
         if gold_labels.dim() != predictions.dim() - 1:
-            raise ConfigurationError("gold_labels must have dimension == predictions.size() - 1 but "
-                                     "found tensor of shape: {}".format(predictions.size()))
+            raise ConfigurationError(
+                "gold_labels must have dimension == predictions.size() - 1 but "
+                "found tensor of shape: {}".format(predictions.size())
+            )
         if (gold_labels >= num_classes).any():
-            raise ConfigurationError("A gold label passed to Categorical Accuracy contains an id >= {}, "
-                                     "the number of classes.".format(num_classes))
+            raise ConfigurationError(
+                "A gold label passed to Categorical Accuracy contains an id >= {}, "
+                "the number of classes.".format(num_classes)
+            )
 
         predictions = predictions.view((-1, num_classes))
         gold_labels = gold_labels.view(-1).long()

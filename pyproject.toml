@@ -6,14 +6,14 @@ include = '\.pyi?$'
 exclude = '''
 (
       __pycache__
-    | tutorials
-    | ^build/
+    | \btutorials\b
+    | \bbuild\b
     | \.git
     | \.mypy_cache
     | \.pytest_cache
     | \.vscode
     | \.venv
-    | ^dist
-    | ^doc
+    | \bdist\b
+    | \bdoc\b
 )
 '''

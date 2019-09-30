@@ -24,6 +24,7 @@ class ActionSpaceWalker:
         The maximum path length till which the action space will be explored. Paths longer than this
         length will be discarded.
     """
+
     def __init__(self, world: DomainLanguage, max_path_length: int) -> None:
         self._world = world
         self._max_path_length = max_path_length
@@ -38,8 +39,9 @@ class ActionSpaceWalker:
         actions = self._world.get_nonterminal_productions()
         start_productions = actions[START_SYMBOL]
         # Buffer of NTs to expand, previous actions
-        incomplete_paths = [([start_production.split(' -> ')[-1]], [start_production])
-                            for start_production in start_productions]
+        incomplete_paths = [
+            ([start_production.split(" -> ")[-1]], [start_production]) for start_production in start_productions
+        ]
         self._completed_paths = []
         # Overview: We keep track of the buffer of non-terminals to expand, and the action history
         # for each incomplete path. At every iteration in the while loop below, we iterate over all
@@ -102,10 +104,9 @@ class ActionSpaceWalker:
             right_side_parts = [right_side]
         return right_side_parts
 
-    def get_logical_forms_with_agenda(self,
-                                      agenda: List[str],
-                                      max_num_logical_forms: int = None,
-                                      allow_partial_match: bool = False) -> List[str]:
+    def get_logical_forms_with_agenda(
+        self, agenda: List[str], max_num_logical_forms: int = None, allow_partial_match: bool = False
+    ) -> List[str]:
         """
         Parameters
         ----------
@@ -154,8 +155,7 @@ class ActionSpaceWalker:
                 num_items_grouped_paths[num_items].append(self._completed_paths[index])
             paths = []
             # Sort by number of agenda items present in the paths.
-            for num_items, corresponding_paths in sorted(num_items_grouped_paths.items(),
-                                                         reverse=True):
+            for num_items, corresponding_paths in sorted(num_items_grouped_paths.items(), reverse=True):
                 # Given those paths, sort them by length, so that the first path in ``paths`` will
                 # be the shortest path with the most agenda items.
                 paths.extend(sorted(corresponding_paths, key=len))
@@ -171,8 +171,7 @@ class ActionSpaceWalker:
         logical_forms = [self._world.action_sequence_to_logical_form(path) for path in paths]
         return logical_forms
 
-    def get_all_logical_forms(self,
-                              max_num_logical_forms: int = None) -> List[str]:
+    def get_all_logical_forms(self, max_num_logical_forms: int = None) -> List[str]:
         if self._completed_paths is None:
             self._walk()
         paths = self._completed_paths

@@ -124,11 +124,14 @@ class SrlReader(DatasetReader):
     -------
     A ``Dataset`` of ``Instances`` for Semantic Role Labelling.
     """
-    def __init__(self,
-                 token_indexers: Dict[str, TokenIndexer] = None,
-                 domain_identifier: str = None,
-                 lazy: bool = False,
-                 bert_model_name: str = None) -> None:
+
+    def __init__(
+        self,
+        token_indexers: Dict[str, TokenIndexer] = None,
+        domain_identifier: str = None,
+        lazy: bool = False,
+        bert_model_name: str = None,
+    ) -> None:
         super().__init__(lazy)
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._domain_identifier = domain_identifier
@@ -213,9 +216,9 @@ class SrlReader(DatasetReader):
                     yield self.text_to_instance(tokens, verb_indicator, tags)
 
     @staticmethod
-    def _ontonotes_subset(ontonotes_reader: Ontonotes,
-                          file_path: str,
-                          domain_identifier: str) -> Iterable[OntonotesSentence]:
+    def _ontonotes_subset(
+        ontonotes_reader: Ontonotes, file_path: str, domain_identifier: str
+    ) -> Iterable[OntonotesSentence]:
         """
         Iterates over the Ontonotes 5.0 dataset using an optional domain identifier.
         If the domain identifier is present, only examples which contain the domain
@@ -225,10 +228,12 @@ class SrlReader(DatasetReader):
             if domain_identifier is None or f"/{domain_identifier}/" in conll_file:
                 yield from ontonotes_reader.sentence_iterator(conll_file)
 
-    def text_to_instance(self,  # type: ignore
-                         tokens: List[Token],
-                         verb_label: List[int],
-                         tags: List[str] = None) -> Instance:
+    def text_to_instance(
+        self,  # type: ignore
+        tokens: List[Token],
+        verb_label: List[int],
+        tags: List[str] = None,
+    ) -> Instance:
         """
         We take `pre-tokenized` input here, along with a verb label.  The verb label should be a
         one-hot binary vector, the same length as the tokens, indicating the position of the verb
@@ -242,8 +247,10 @@ class SrlReader(DatasetReader):
             metadata_dict["offsets"] = start_offsets
             # In order to override the indexing mechanism, we need to set the `text_id`
             # attribute directly. This causes the indexing to use this id.
-            text_field = TextField([Token(t, text_id=self.bert_tokenizer.vocab[t]) for t in wordpieces],
-                                   token_indexers=self._token_indexers)
+            text_field = TextField(
+                [Token(t, text_id=self.bert_tokenizer.vocab[t]) for t in wordpieces],
+                token_indexers=self._token_indexers,
+            )
             verb_indicator = SequenceLabelField(new_verbs, text_field)
 
         else:
@@ -251,8 +258,8 @@ class SrlReader(DatasetReader):
             verb_indicator = SequenceLabelField(verb_label, text_field)
 
         fields: Dict[str, Field] = {}
-        fields['tokens'] = text_field
-        fields['verb_indicator'] = verb_indicator
+        fields["tokens"] = text_field
+        fields["verb_indicator"] = verb_indicator
 
         if all([x == 0 for x in verb_label]):
             verb = None
@@ -268,9 +275,9 @@ class SrlReader(DatasetReader):
         if tags:
             if self.bert_tokenizer is not None:
                 new_tags = _convert_tags_to_wordpiece_tags(tags, offsets)
-                fields['tags'] = SequenceLabelField(new_tags, text_field)
+                fields["tags"] = SequenceLabelField(new_tags, text_field)
             else:
-                fields['tags'] = SequenceLabelField(tags, text_field)
+                fields["tags"] = SequenceLabelField(tags, text_field)
             metadata_dict["gold_tags"] = tags
 
         fields["metadata"] = MetadataField(metadata_dict)

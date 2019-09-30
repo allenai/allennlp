@@ -41,16 +41,17 @@ class HomogeneousBatchIterator(DataIterator):
         If set to `True`, those smaller batches will be discarded.
     """
 
-    def __init__(self,
-                 batch_size: int = 32,
-                 instances_per_epoch: int = None,
-                 max_instances_in_memory: int = None,
-                 cache_instances: bool = False,
-                 track_epoch: bool = False,
-                 partition_key: str = "dataset",
-                 skip_smaller_batches: bool = False) -> None:
-        super().__init__(batch_size, instances_per_epoch, max_instances_in_memory,
-                         cache_instances, track_epoch)
+    def __init__(
+        self,
+        batch_size: int = 32,
+        instances_per_epoch: int = None,
+        max_instances_in_memory: int = None,
+        cache_instances: bool = False,
+        track_epoch: bool = False,
+        partition_key: str = "dataset",
+        skip_smaller_batches: bool = False,
+    ) -> None:
+        super().__init__(batch_size, instances_per_epoch, max_instances_in_memory, cache_instances, track_epoch)
         self._partition_key = partition_key
         self._skip_smaller_batches = skip_smaller_batches
 

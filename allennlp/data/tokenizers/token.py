@@ -33,6 +33,7 @@ class Token(NamedTuple):
         The other fields on ``Token`` follow the fields on spacy's ``Token`` object; this is one we
         added, similar to spacy's ``lex_id``.
     """
+
     text: str = None
     idx: int = None
     lemma_: str = None
@@ -50,10 +51,12 @@ class Token(NamedTuple):
 
 
 def show_token(token: Token) -> str:
-    return (f"{token.text} "
-            f"(idx: {token.idx}) "
-            f"(lemma: {token.lemma_}) "
-            f"(pos: {token.pos_}) "
-            f"(tag: {token.tag_}) "
-            f"(dep: {token.dep_}) "
-            f"(ent_type: {token.ent_type_}) ")
+    return (
+        f"{token.text} "
+        f"(idx: {token.idx}) "
+        f"(lemma: {token.lemma_}) "
+        f"(pos: {token.pos_}) "
+        f"(tag: {token.tag_}) "
+        f"(dep: {token.dep_}) "
+        f"(ent_type: {token.ent_type_}) "
+    )

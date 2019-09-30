@@ -12,18 +12,30 @@ class TestOpenIePredictor(AllenNlpTestCase):
         """
         Tests whether the model outputs conform to the expected format.
         """
-        inputs = {
-                "sentence": "Angela Merkel met and spoke to her EU counterparts during the climate summit."
-        }
+        inputs = {"sentence": "Angela Merkel met and spoke to her EU counterparts during the climate summit."}
 
-        archive = load_archive(self.FIXTURES_ROOT / 'srl' / 'serialization' / 'model.tar.gz')
-        predictor = Predictor.from_archive(archive, 'open-information-extraction')
+        archive = load_archive(self.FIXTURES_ROOT / "srl" / "serialization" / "model.tar.gz")
+        predictor = Predictor.from_archive(archive, "open-information-extraction")
 
         result = predictor.predict_json(inputs)
 
         words = result.get("words")
-        assert words == ["Angela", "Merkel", "met", "and", "spoke", "to", "her", "EU", "counterparts",
-                         "during", "the", "climate", "summit", "."]
+        assert words == [
+            "Angela",
+            "Merkel",
+            "met",
+            "and",
+            "spoke",
+            "to",
+            "her",
+            "EU",
+            "counterparts",
+            "during",
+            "the",
+            "climate",
+            "summit",
+            ".",
+        ]
         num_words = len(words)
 
         verbs = result.get("verbs")
@@ -46,11 +58,11 @@ class TestOpenIePredictor(AllenNlpTestCase):
         Tests whether the model copes with sentences without verbs.
         """
         input1 = {"sentence": "Blah no verb sentence."}
-        archive = load_archive(self.FIXTURES_ROOT / 'srl' / 'serialization' / 'model.tar.gz')
-        predictor = Predictor.from_archive(archive, 'open-information-extraction')
+        archive = load_archive(self.FIXTURES_ROOT / "srl" / "serialization" / "model.tar.gz")
+        predictor = Predictor.from_archive(archive, "open-information-extraction")
 
         result = predictor.predict_json(input1)
-        assert result == {'words': ['Blah', 'no', 'verb', 'sentence', '.'], 'verbs': []}
+        assert result == {"words": ["Blah", "no", "verb", "sentence", "."], "verbs": []}
 
     def test_predicate_consolidation(self):
         """
@@ -62,10 +74,10 @@ class TestOpenIePredictor(AllenNlpTestCase):
         sent_tokens = tokenizer.tokenize("In December, John decided to join the party.")
 
         # Emulate predications - for both "decided" and "join"
-        predictions = [['B-ARG2', 'I-ARG2', 'O', 'B-ARG0', 'B-V', 'B-ARG1', 'I-ARG1',
-                        'I-ARG1', 'I-ARG1', 'O'],
-                       ['O', 'O', 'O', 'B-ARG0', 'B-BV', 'I-BV', 'B-V', 'B-ARG1',
-                        'I-ARG1', 'O']]
+        predictions = [
+            ["B-ARG2", "I-ARG2", "O", "B-ARG0", "B-V", "B-ARG1", "I-ARG1", "I-ARG1", "I-ARG1", "O"],
+            ["O", "O", "O", "B-ARG0", "B-BV", "I-BV", "B-V", "B-ARG1", "I-ARG1", "O"],
+        ]
         # Consolidate
         pred_dict = consolidate_predictions(predictions, sent_tokens)
 
@@ -84,9 +96,11 @@ class TestOpenIePredictor(AllenNlpTestCase):
         sent_tokens = tokenizer.tokenize("John refused to consider joining the club.")
 
         # Emulate predications - for "refused" and "consider" and "joining"
-        predictions = [['B-ARG0', 'B-V', 'B-ARG1', 'I-ARG1', 'I-ARG1', 'I-ARG1', 'I-ARG1', 'O'],
-                       ['B-ARG0', 'B-BV', 'I-BV', 'B-V', 'B-ARG1', 'I-ARG1', 'I-ARG1', 'O'],
-                       ['B-ARG0', 'B-BV', 'I-BV', 'I-BV', 'B-V', 'B-ARG1', 'I-ARG1', 'O']]
+        predictions = [
+            ["B-ARG0", "B-V", "B-ARG1", "I-ARG1", "I-ARG1", "I-ARG1", "I-ARG1", "O"],
+            ["B-ARG0", "B-BV", "I-BV", "B-V", "B-ARG1", "I-ARG1", "I-ARG1", "O"],
+            ["B-ARG0", "B-BV", "I-BV", "I-BV", "B-V", "B-ARG1", "I-ARG1", "O"],
+        ]
 
         # Consolidate
         pred_dict = consolidate_predictions(predictions, sent_tokens)

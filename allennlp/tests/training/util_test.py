@@ -29,9 +29,9 @@ class TestTrainerUtil(AllenNlpTestCase):
         expected_param_file = f"{self.cache_directory}/{cache_prefix}/params.json"
         assert os.path.exists(expected_cache_file)
         assert os.path.exists(expected_param_file)
-        with open(expected_param_file, 'r') as param_file:
+        with open(expected_param_file, "r") as param_file:
             saved_params = json.load(param_file)
-            assert saved_params == self.params.pop('dataset_reader').as_dict(quiet=True)
+            assert saved_params == self.params.pop("dataset_reader").as_dict(quiet=True)
 
     def test_datasets_from_params_uses_caching_correctly_with_hashed_params(self):
         # We'll rely on the dataset reader tests to be sure of the functionality of this caching;

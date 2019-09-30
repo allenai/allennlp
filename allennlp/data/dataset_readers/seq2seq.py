@@ -49,16 +49,19 @@ class Seq2SeqDatasetReader(DatasetReader):
     delimiter : str, (optional, default="\t")
         Set delimiter for tsv/csv file.
     """
-    def __init__(self,
-                 source_tokenizer: Tokenizer = None,
-                 target_tokenizer: Tokenizer = None,
-                 source_token_indexers: Dict[str, TokenIndexer] = None,
-                 target_token_indexers: Dict[str, TokenIndexer] = None,
-                 source_add_start_token: bool = True,
-                 delimiter: str = "\t",
-                 source_max_tokens: Optional[int] = None,
-                 target_max_tokens: Optional[int] = None,
-                 lazy: bool = False) -> None:
+
+    def __init__(
+        self,
+        source_tokenizer: Tokenizer = None,
+        target_tokenizer: Tokenizer = None,
+        source_token_indexers: Dict[str, TokenIndexer] = None,
+        target_token_indexers: Dict[str, TokenIndexer] = None,
+        source_add_start_token: bool = True,
+        delimiter: str = "\t",
+        source_max_tokens: Optional[int] = None,
+        target_max_tokens: Optional[int] = None,
+        lazy: bool = False,
+    ) -> None:
         super().__init__(lazy)
         self._source_tokenizer = source_tokenizer or WordTokenizer()
         self._target_tokenizer = target_tokenizer or self._source_tokenizer
@@ -84,11 +87,17 @@ class Seq2SeqDatasetReader(DatasetReader):
                 source_sequence, target_sequence = row
                 yield self.text_to_instance(source_sequence, target_sequence)
         if self._source_max_tokens and self._source_max_exceeded:
-            logger.info("In %d instances, the source token length exceeded the max limit (%d) and were truncated.",
-                        self._source_max_exceeded, self._source_max_tokens)
+            logger.info(
+                "In %d instances, the source token length exceeded the max limit (%d) and were truncated.",
+                self._source_max_exceeded,
+                self._source_max_tokens,
+            )
         if self._target_max_tokens and self._target_max_exceeded:
-            logger.info("In %d instances, the target token length exceeded the max limit (%d) and were truncated.",
-                        self._target_max_exceeded, self._target_max_tokens)
+            logger.info(
+                "In %d instances, the target token length exceeded the max limit (%d) and were truncated.",
+                self._target_max_exceeded,
+                self._target_max_tokens,
+            )
 
     @overrides
     def text_to_instance(self, source_string: str, target_string: str = None) -> Instance:  # type: ignore
@@ -96,7 +105,7 @@ class Seq2SeqDatasetReader(DatasetReader):
         tokenized_source = self._source_tokenizer.tokenize(source_string)
         if self._source_max_tokens and len(tokenized_source) > self._source_max_tokens:
             self._source_max_exceeded += 1
-            tokenized_source = tokenized_source[:self._source_max_tokens]
+            tokenized_source = tokenized_source[: self._source_max_tokens]
         if self._source_add_start_token:
             tokenized_source.insert(0, Token(START_SYMBOL))
         tokenized_source.append(Token(END_SYMBOL))
@@ -105,10 +114,10 @@ class Seq2SeqDatasetReader(DatasetReader):
             tokenized_target = self._target_tokenizer.tokenize(target_string)
             if self._target_max_tokens and len(tokenized_target) > self._target_max_tokens:
                 self._target_max_exceeded += 1
-                tokenized_target = tokenized_target[:self._target_max_tokens]
+                tokenized_target = tokenized_target[: self._target_max_tokens]
             tokenized_target.insert(0, Token(START_SYMBOL))
             tokenized_target.append(Token(END_SYMBOL))
             target_field = TextField(tokenized_target, self._target_token_indexers)
             return Instance({"source_tokens": source_field, "target_tokens": target_field})
         else:
-            return Instance({'source_tokens': source_field})
+            return Instance({"source_tokens": source_field})

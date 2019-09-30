@@ -26,10 +26,7 @@ class Scheduler:
            scheduler.step(validation_metrics, epoch)
     """
 
-    def __init__(self,
-                 optimizer: torch.optim.Optimizer,
-                 param_group_field: str,
-                 last_epoch: int = -1) -> None:
+    def __init__(self, optimizer: torch.optim.Optimizer, param_group_field: str, last_epoch: int = -1) -> None:
         self.optimizer = optimizer
         self.param_group_field = param_group_field
         self._initial_param_group_field = f"initial_{param_group_field}"
@@ -50,7 +47,7 @@ class Scheduler:
         """
         Returns the state of the scheduler as a ``dict``.
         """
-        return {key: value for key, value in self.__dict__.items() if key != 'optimizer'}
+        return {key: value for key, value in self.__dict__.items() if key != "optimizer"}
 
     def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
         """

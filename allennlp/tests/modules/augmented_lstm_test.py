@@ -53,7 +53,7 @@ class TestAugmentedLSTM(AllenNlpTestCase):
         augmented_lstm = AugmentedLstm(10, 11)
         pytorch_lstm = LSTM(10, 11, num_layers=1, batch_first=True)
         # Initialize all weights to be == 1.
-        constant_init = Initializer.from_params(Params({"type": "constant", "val": 1.}))
+        constant_init = Initializer.from_params(Params({"type": "constant", "val": 1.0}))
         initializer = InitializerApplicator([(".*", constant_init)])
         initializer(augmented_lstm)
         initializer(pytorch_lstm)
@@ -62,7 +62,9 @@ class TestAugmentedLSTM(AllenNlpTestCase):
         initial_memory = torch.zeros([1, 5, 11])
 
         # Use bigger numbers to avoid floating point instability.
-        sorted_tensor, sorted_sequence, _, _ = sort_batch_by_length(self.random_tensor * 5., self.sequence_lengths)
+        sorted_tensor, sorted_sequence, _, _ = sort_batch_by_length(
+            self.random_tensor * 5.0, self.sequence_lengths
+        )
         lstm_input = pack_padded_sequence(sorted_tensor, sorted_sequence.data.tolist(), batch_first=True)
 
         augmented_output, augmented_state = augmented_lstm(lstm_input, (initial_state, initial_memory))
@@ -70,12 +72,15 @@ class TestAugmentedLSTM(AllenNlpTestCase):
         pytorch_output_sequence, _ = pad_packed_sequence(pytorch_output, batch_first=True)
         augmented_output_sequence, _ = pad_packed_sequence(augmented_output, batch_first=True)
 
-        numpy.testing.assert_array_almost_equal(pytorch_output_sequence.data.numpy(),
-                                                augmented_output_sequence.data.numpy(), decimal=4)
-        numpy.testing.assert_array_almost_equal(pytorch_state[0].data.numpy(),
-                                                augmented_state[0].data.numpy(), decimal=4)
-        numpy.testing.assert_array_almost_equal(pytorch_state[1].data.numpy(),
-                                                augmented_state[1].data.numpy(), decimal=4)
+        numpy.testing.assert_array_almost_equal(
+            pytorch_output_sequence.data.numpy(), augmented_output_sequence.data.numpy(), decimal=4
+        )
+        numpy.testing.assert_array_almost_equal(
+            pytorch_state[0].data.numpy(), augmented_state[0].data.numpy(), decimal=4
+        )
+        numpy.testing.assert_array_almost_equal(
+            pytorch_state[1].data.numpy(), augmented_state[1].data.numpy(), decimal=4
+        )
 
     def test_augmented_lstm_works_with_highway_connections(self):
         augmented_lstm = AugmentedLstm(10, 11, use_highway=True)
@@ -138,11 +143,14 @@ class TestAugmentedLSTM(AllenNlpTestCase):
         dropped_output_sequence, _ = pad_packed_sequence(dropped_output, batch_first=True)
         augmented_output_sequence, _ = pad_packed_sequence(augmented_output, batch_first=True)
         with pytest.raises(AssertionError):
-            numpy.testing.assert_array_almost_equal(dropped_output_sequence.data.numpy(),
-                                                    augmented_output_sequence.data.numpy(), decimal=4)
+            numpy.testing.assert_array_almost_equal(
+                dropped_output_sequence.data.numpy(), augmented_output_sequence.data.numpy(), decimal=4
+            )
         with pytest.raises(AssertionError):
-            numpy.testing.assert_array_almost_equal(dropped_state[0].data.numpy(),
-                                                    augmented_state[0].data.numpy(), decimal=4)
+            numpy.testing.assert_array_almost_equal(
+                dropped_state[0].data.numpy(), augmented_state[0].data.numpy(), decimal=4
+            )
         with pytest.raises(AssertionError):
-            numpy.testing.assert_array_almost_equal(dropped_state[1].data.numpy(),
-                                                    augmented_state[1].data.numpy(), decimal=4)
+            numpy.testing.assert_array_almost_equal(
+                dropped_state[1].data.numpy(), augmented_state[1].data.numpy(), decimal=4
+            )

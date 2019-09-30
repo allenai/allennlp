@@ -73,20 +73,22 @@ class CopyNetSeq2Seq(Model):
         An initialization strategy for the model weights.
     """
 
-    def __init__(self,
-                 vocab: Vocabulary,
-                 source_embedder: TextFieldEmbedder,
-                 encoder: Seq2SeqEncoder,
-                 attention: Attention,
-                 beam_size: int,
-                 max_decoding_steps: int,
-                 target_embedding_dim: int = 30,
-                 copy_token: str = "@COPY@",
-                 source_namespace: str = "source_tokens",
-                 target_namespace: str = "target_tokens",
-                 tensor_based_metric: Metric = None,
-                 token_based_metric: Metric = None,
-                 initializer: InitializerApplicator = InitializerApplicator()) -> None:
+    def __init__(
+        self,
+        vocab: Vocabulary,
+        source_embedder: TextFieldEmbedder,
+        encoder: Seq2SeqEncoder,
+        attention: Attention,
+        beam_size: int,
+        max_decoding_steps: int,
+        target_embedding_dim: int = 30,
+        copy_token: str = "@COPY@",
+        source_namespace: str = "source_tokens",
+        target_namespace: str = "target_tokens",
+        tensor_based_metric: Metric = None,
+        token_based_metric: Metric = None,
+        initializer: InitializerApplicator = InitializerApplicator(),
+    ) -> None:
         super().__init__(vocab)
         self._source_namespace = source_namespace
         self._target_namespace = target_namespace
@@ -98,8 +100,9 @@ class CopyNetSeq2Seq(Model):
         self._pad_index = self.vocab.get_token_index(self.vocab._padding_token, self._target_namespace)
         self._copy_index = self.vocab.add_token_to_namespace(copy_token, self._target_namespace)
 
-        self._tensor_based_metric = tensor_based_metric or \
-            BLEU(exclude_indices={self._pad_index, self._end_index, self._start_index})
+        self._tensor_based_metric = tensor_based_metric or BLEU(
+            exclude_indices={self._pad_index, self._end_index, self._start_index}
+        )
         self._token_based_metric = token_based_metric
 
         self._target_vocab_size = self.vocab.get_vocab_size(self._target_namespace)
@@ -127,8 +130,8 @@ class CopyNetSeq2Seq(Model):
         self._target_embedder = Embedding(target_vocab_size, target_embedding_dim)
         self._attention = attention
         self._input_projection_layer = Linear(
-                target_embedding_dim + self.encoder_output_dim * 2,
-                self.decoder_input_dim)
+            target_embedding_dim + self.encoder_output_dim * 2, self.decoder_input_dim
+        )
 
         # We then run the projected decoder input through an LSTM cell to produce
         # the next hidden state.
@@ -149,13 +152,15 @@ class CopyNetSeq2Seq(Model):
         initializer(self)
 
     @overrides
-    def forward(self,  # type: ignore
-                source_tokens: Dict[str, torch.LongTensor],
-                source_token_ids: torch.Tensor,
-                source_to_target: torch.Tensor,
-                metadata: List[Dict[str, Any]],
-                target_tokens: Dict[str, torch.LongTensor] = None,
-                target_token_ids: torch.Tensor = None) -> Dict[str, torch.Tensor]:
+    def forward(
+        self,  # type: ignore
+        source_tokens: Dict[str, torch.LongTensor],
+        source_token_ids: torch.Tensor,
+        source_to_target: torch.Tensor,
+        metadata: List[Dict[str, Any]],
+        target_tokens: Dict[str, torch.LongTensor] = None,
+        target_token_ids: torch.Tensor = None,
+    ) -> Dict[str, torch.Tensor]:
 
         """
         Make foward pass with decoder logic for producing the entire target sequence.
@@ -210,23 +215,22 @@ class CopyNetSeq2Seq(Model):
                     # shape: (batch_size, max_predicted_sequence_length)
                     best_predictions = top_k_predictions[:, 0, :]
                     # shape: (batch_size, target_sequence_length)
-                    gold_tokens = self._gather_extended_gold_tokens(target_tokens["tokens"],
-                                                                    source_token_ids,
-                                                                    target_token_ids)
+                    gold_tokens = self._gather_extended_gold_tokens(
+                        target_tokens["tokens"], source_token_ids, target_token_ids
+                    )
                     self._tensor_based_metric(best_predictions, gold_tokens)  # type: ignore
                 if self._token_based_metric is not None:
-                    predicted_tokens = self._get_predicted_tokens(output_dict["predictions"],
-                                                                  metadata,
-                                                                  n_best=1)
-                    self._token_based_metric(predicted_tokens,  # type: ignore
-                                             [x["target_tokens"] for x in metadata])
+                    predicted_tokens = self._get_predicted_tokens(output_dict["predictions"], metadata, n_best=1)
+                    self._token_based_metric(
+                        predicted_tokens,  # type: ignore
+                        [x["target_tokens"] for x in metadata],
+                    )
 
         return output_dict
 
-    def _gather_extended_gold_tokens(self,
-                                     target_tokens: torch.Tensor,
-                                     source_token_ids: torch.Tensor,
-                                     target_token_ids: torch.Tensor) -> torch.LongTensor:
+    def _gather_extended_gold_tokens(
+        self, target_tokens: torch.Tensor, source_token_ids: torch.Tensor, target_token_ids: torch.Tensor
+    ) -> torch.LongTensor:
         """
         Modify the gold target tokens relative to the extended vocabulary.
 
@@ -253,19 +257,19 @@ class CopyNetSeq2Seq(Model):
         trimmed_source_length = source_token_ids.size(1)
         # Only change indices for tokens that were OOV in target vocab but copied from source.
         # shape: (batch_size, target_sequence_length)
-        oov = (target_tokens == self._oov_index)
+        oov = target_tokens == self._oov_index
         # shape: (batch_size, target_sequence_length, trimmed_source_length)
-        expanded_source_token_ids = source_token_ids\
-            .unsqueeze(1)\
-            .expand(batch_size, target_sequence_length, trimmed_source_length)
+        expanded_source_token_ids = source_token_ids.unsqueeze(1).expand(
+            batch_size, target_sequence_length, trimmed_source_length
+        )
         # shape: (batch_size, target_sequence_length, trimmed_source_length)
-        expanded_target_token_ids = target_token_ids\
-            .unsqueeze(-1)\
-            .expand(batch_size, target_sequence_length, trimmed_source_length)
+        expanded_target_token_ids = target_token_ids.unsqueeze(-1).expand(
+            batch_size, target_sequence_length, trimmed_source_length
+        )
         # shape: (batch_size, target_sequence_length, trimmed_source_length)
-        matches = (expanded_source_token_ids == expanded_target_token_ids)
+        matches = expanded_source_token_ids == expanded_target_token_ids
         # shape: (batch_size, target_sequence_length)
-        copied = (matches.sum(-1) > 0)
+        copied = matches.sum(-1) > 0
         # shape: (batch_size, target_sequence_length)
         mask = (oov & copied).long()
         # shape: (batch_size, target_sequence_length)
@@ -284,9 +288,8 @@ class CopyNetSeq2Seq(Model):
         # and the decoder context with zeros.
         # shape: (batch_size, encoder_output_dim)
         final_encoder_output = util.get_final_encoder_states(
-                state["encoder_outputs"],
-                state["source_mask"],
-                self._encoder.is_bidirectional())
+            state["encoder_outputs"], state["source_mask"], self._encoder.is_bidirectional()
+        )
         # shape: (batch_size, decoder_output_dim)
         state["decoder_hidden"] = final_encoder_output
         # shape: (batch_size, decoder_output_dim)
@@ -306,17 +309,17 @@ class CopyNetSeq2Seq(Model):
         encoder_outputs = self._encoder(embedded_input, source_mask)
         return {"source_mask": source_mask, "encoder_outputs": encoder_outputs}
 
-    def _decoder_step(self,
-                      last_predictions: torch.Tensor,
-                      selective_weights: torch.Tensor,
-                      state: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def _decoder_step(
+        self, last_predictions: torch.Tensor, selective_weights: torch.Tensor, state: Dict[str, torch.Tensor]
+    ) -> Dict[str, torch.Tensor]:
         # shape: (group_size, max_input_sequence_length, encoder_output_dim)
         encoder_outputs_mask = state["source_mask"].float()
         # shape: (group_size, target_embedding_dim)
         embedded_input = self._target_embedder(last_predictions)
         # shape: (group_size, max_input_sequence_length)
         attentive_weights = self._attention(
-                state["decoder_hidden"], state["encoder_outputs"], encoder_outputs_mask)
+            state["decoder_hidden"], state["encoder_outputs"], encoder_outputs_mask
+        )
         # shape: (group_size, encoder_output_dim)
         attentive_read = util.weighted_sum(state["encoder_outputs"], attentive_weights)
         # shape: (group_size, encoder_output_dim)
@@ -327,8 +330,8 @@ class CopyNetSeq2Seq(Model):
         projected_decoder_input = self._input_projection_layer(decoder_input)
 
         state["decoder_hidden"], state["decoder_context"] = self._decoder_cell(
-                projected_decoder_input,
-                (state["decoder_hidden"], state["decoder_context"]))
+            projected_decoder_input, (state["decoder_hidden"], state["decoder_context"])
+        )
         return state
 
     def _get_generation_scores(self, state: Dict[str, torch.Tensor]) -> torch.Tensor:
@@ -345,13 +348,15 @@ class CopyNetSeq2Seq(Model):
         copy_scores = copy_projection.bmm(state["decoder_hidden"].unsqueeze(-1)).squeeze(-1)
         return copy_scores
 
-    def _get_ll_contrib(self,
-                        generation_scores: torch.Tensor,
-                        generation_scores_mask: torch.Tensor,
-                        copy_scores: torch.Tensor,
-                        target_tokens: torch.Tensor,
-                        target_to_source: torch.Tensor,
-                        copy_mask: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def _get_ll_contrib(
+        self,
+        generation_scores: torch.Tensor,
+        generation_scores_mask: torch.Tensor,
+        copy_scores: torch.Tensor,
+        target_tokens: torch.Tensor,
+        target_to_source: torch.Tensor,
+        copy_mask: torch.Tensor,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Get the log-likelihood contribution from a single timestep.
 
@@ -416,10 +421,12 @@ class CopyNetSeq2Seq(Model):
 
         return step_log_likelihood, selective_weights
 
-    def _forward_loss(self,
-                      target_tokens: Dict[str, torch.LongTensor],
-                      target_token_ids: torch.Tensor,
-                      state: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def _forward_loss(
+        self,
+        target_tokens: Dict[str, torch.LongTensor],
+        target_token_ids: torch.Tensor,
+        state: Dict[str, torch.Tensor],
+    ) -> Dict[str, torch.Tensor]:
         """
         Calculate the loss against gold targets.
         """
@@ -448,8 +455,9 @@ class CopyNetSeq2Seq(Model):
 
         # This is just a tensor of ones which we use repeatedly in `self._get_ll_contrib`,
         # so we create it once here to avoid doing it over-and-over.
-        generation_scores_mask = state["decoder_hidden"].new_full((batch_size, self._target_vocab_size),
-                                                                  fill_value=1.0)
+        generation_scores_mask = state["decoder_hidden"].new_full(
+            (batch_size, self._target_vocab_size), fill_value=1.0
+        )
 
         step_log_likelihoods = []
         for timestep in range(num_decoding_steps):
@@ -461,12 +469,11 @@ class CopyNetSeq2Seq(Model):
             if timestep < num_decoding_steps - 1:
                 # Get mask tensor indicating which instances were copied.
                 # shape: (batch_size,)
-                copied = ((input_choices == self._oov_index) &
-                          (target_to_source.sum(-1) > 0)).long()
+                copied = ((input_choices == self._oov_index) & (target_to_source.sum(-1) > 0)).long()
                 # shape: (batch_size,)
                 input_choices = input_choices * (1 - copied) + copy_input_choices * copied
                 # shape: (batch_size, trimmed_source_length)
-                target_to_source = state["source_token_ids"] == target_token_ids[:, timestep+1].unsqueeze(-1)
+                target_to_source = state["source_token_ids"] == target_token_ids[:, timestep + 1].unsqueeze(-1)
             # Update the decoder state by taking a step through the RNN.
             state = self._decoder_step(input_choices, selective_weights, state)
             # Get generation scores for each token in the target vocab.
@@ -479,12 +486,13 @@ class CopyNetSeq2Seq(Model):
             # shape: (batch_size,)
             step_target_tokens = target_tokens["tokens"][:, timestep + 1]
             step_log_likelihood, selective_weights = self._get_ll_contrib(
-                    generation_scores,
-                    generation_scores_mask,
-                    copy_scores,
-                    step_target_tokens,
-                    target_to_source,
-                    copy_mask)
+                generation_scores,
+                generation_scores_mask,
+                copy_scores,
+                step_target_tokens,
+                target_to_source,
+                copy_mask,
+            )
             step_log_likelihoods.append(step_log_likelihood.unsqueeze(1))
 
         # Gather step log-likelihoods.
@@ -501,7 +509,7 @@ class CopyNetSeq2Seq(Model):
         # shape: (batch_size,)
         log_likelihood = (log_likelihoods * target_mask).sum(dim=-1)
         # The loss is the negative log-likelihood, averaged over the batch.
-        loss = - log_likelihood.sum() / batch_size
+        loss = -log_likelihood.sum() / batch_size
 
         return {"loss": loss}
 
@@ -509,22 +517,21 @@ class CopyNetSeq2Seq(Model):
         batch_size, source_length = state["source_mask"].size()
         trimmed_source_length = source_length - 2
         # Initialize the copy scores to zero.
-        state["copy_log_probs"] = \
-            (state["decoder_hidden"].new_zeros((batch_size, trimmed_source_length)) + 1e-45).log()
+        state["copy_log_probs"] = (
+            state["decoder_hidden"].new_zeros((batch_size, trimmed_source_length)) + 1e-45
+        ).log()
         # shape: (batch_size,)
         start_predictions = state["source_mask"].new_full((batch_size,), fill_value=self._start_index)
         # shape (all_top_k_predictions): (batch_size, beam_size, num_decoding_steps)
         # shape (log_probabilities): (batch_size, beam_size)
         all_top_k_predictions, log_probabilities = self._beam_search.search(
-                start_predictions, state, self.take_search_step)
-        return {
-                "predicted_log_probs": log_probabilities,
-                "predictions": all_top_k_predictions,
-        }
+            start_predictions, state, self.take_search_step
+        )
+        return {"predicted_log_probs": log_probabilities, "predictions": all_top_k_predictions}
 
-    def _get_input_and_selective_weights(self,
-                                         last_predictions: torch.LongTensor,
-                                         state: Dict[str, torch.Tensor]) -> Tuple[torch.LongTensor, torch.Tensor]:
+    def _get_input_and_selective_weights(
+        self, last_predictions: torch.LongTensor, state: Dict[str, torch.Tensor]
+    ) -> Tuple[torch.LongTensor, torch.Tensor]:
         """
         Get input choices for the decoder and the selective copy weights.
 
@@ -603,10 +610,9 @@ class CopyNetSeq2Seq(Model):
 
         return input_choices, selective_weights
 
-    def _gather_final_log_probs(self,
-                                generation_log_probs: torch.Tensor,
-                                copy_log_probs: torch.Tensor,
-                                state: Dict[str, torch.Tensor]) -> torch.Tensor:
+    def _gather_final_log_probs(
+        self, generation_log_probs: torch.Tensor, copy_log_probs: torch.Tensor, state: Dict[str, torch.Tensor]
+    ) -> torch.Tensor:
         """
         Combine copy probabilities with generation probabilities for matching tokens.
 
@@ -647,10 +653,11 @@ class CopyNetSeq2Seq(Model):
             # shape: (batch_size, 1)
             selected_generation_log_probs = generation_log_probs.gather(1, source_to_target_slice.unsqueeze(-1))
             combined_scores = util.logsumexp(
-                    torch.cat((selected_generation_log_probs, copy_log_probs_to_add), dim=1))
-            generation_log_probs = generation_log_probs.scatter(-1,
-                                                                source_to_target_slice.unsqueeze(-1),
-                                                                combined_scores.unsqueeze(-1))
+                torch.cat((selected_generation_log_probs, copy_log_probs_to_add), dim=1)
+            )
+            generation_log_probs = generation_log_probs.scatter(
+                -1, source_to_target_slice.unsqueeze(-1), combined_scores.unsqueeze(-1)
+            )
             # We have to combine copy scores for duplicate source tokens so that
             # we can find the overall most likely source token. So, if this is the first
             # occurence of this particular source token, we add the log_probs from all other
@@ -658,9 +665,11 @@ class CopyNetSeq2Seq(Model):
             if i < (trimmed_source_length - 1):
                 # Sum copy scores from future occurences of source token.
                 # shape: (group_size, trimmed_source_length - i)
-                source_future_occurences = (source_token_ids[:, (i+1):] == source_token_ids[:, i].unsqueeze(-1)).float()  # noqa
+                source_future_occurences = (
+                    source_token_ids[:, (i + 1) :] == source_token_ids[:, i].unsqueeze(-1)
+                ).float()  # noqa
                 # shape: (group_size, trimmed_source_length - i)
-                future_copy_log_probs = copy_log_probs[:, (i+1):] + (source_future_occurences + 1e-45).log()
+                future_copy_log_probs = copy_log_probs[:, (i + 1) :] + (source_future_occurences + 1e-45).log()
                 # shape: (group_size, 1 + trimmed_source_length - i)
                 combined = torch.cat((copy_log_probs_slice.unsqueeze(-1), future_copy_log_probs), dim=-1)
                 # shape: (group_size,)
@@ -685,9 +694,9 @@ class CopyNetSeq2Seq(Model):
 
         return modified_log_probs
 
-    def take_search_step(self,
-                         last_predictions: torch.Tensor,
-                         state: Dict[str, torch.Tensor]) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
+    def take_search_step(
+        self, last_predictions: torch.Tensor, state: Dict[str, torch.Tensor]
+    ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
         """
         Take step during beam search.
 
@@ -764,7 +773,8 @@ class CopyNetSeq2Seq(Model):
         log_probs = util.masked_log_softmax(all_scores, mask)
         # shape: (group_size, target_vocab_size), (group_size, trimmed_source_length)
         generation_log_probs, copy_log_probs = log_probs.split(
-                [self._target_vocab_size, trimmed_source_length], dim=-1)
+            [self._target_vocab_size, trimmed_source_length], dim=-1
+        )
         # Update copy_probs needed for getting the `selective_weights` at the next timestep.
         state["copy_log_probs"] = copy_log_probs
         # We now have normalized generation and copy scores, but to produce the final
@@ -776,10 +786,9 @@ class CopyNetSeq2Seq(Model):
 
         return final_log_probs, state
 
-    def _get_predicted_tokens(self,
-                              predicted_indices: Union[torch.Tensor, numpy.ndarray],
-                              batch_metadata: List[Any],
-                              n_best: int = None) -> List[Union[List[List[str]], List[str]]]:
+    def _get_predicted_tokens(
+        self, predicted_indices: Union[torch.Tensor, numpy.ndarray], batch_metadata: List[Any], n_best: int = None
+    ) -> List[Union[List[List[str]], List[str]]]:
         """
         Convert predicted indices into tokens.
 
@@ -795,7 +804,7 @@ class CopyNetSeq2Seq(Model):
                 tokens: List[str] = []
                 indices = list(indices)
                 if self._end_index in indices:
-                    indices = indices[:indices.index(self._end_index)]
+                    indices = indices[: indices.index(self._end_index)]
                 for index in indices:
                     if index >= self._target_vocab_size:
                         adjusted_index = index - self._target_vocab_size
@@ -819,8 +828,7 @@ class CopyNetSeq2Seq(Model):
         OR tokens in source sentence. Here we gather the actual tokens corresponding to
         the indices.
         """
-        predicted_tokens = self._get_predicted_tokens(output_dict["predictions"],
-                                                      output_dict["metadata"])
+        predicted_tokens = self._get_predicted_tokens(output_dict["predictions"], output_dict["metadata"])
         output_dict["predicted_tokens"] = predicted_tokens
         return output_dict
 

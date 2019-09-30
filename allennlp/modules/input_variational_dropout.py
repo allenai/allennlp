@@ -11,6 +11,7 @@ class InputVariationalDropout(torch.nn.Dropout):
     and samples a single dropout mask of shape ``(batch_size, embedding_dim)`` and applies
     it to every time step.
     """
+
     def forward(self, input_tensor):
 
         """

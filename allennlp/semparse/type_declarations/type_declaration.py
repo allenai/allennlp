@@ -26,6 +26,7 @@ class ComplexType(NltkComplexType):
     for us, and we mitigate the problems by adding ``return_type`` and ``argument_type`` functions
     to ``ComplexType``.
     """
+
     def return_type(self) -> Type:
         """
         Gives the final return type for this function.  If the function takes a single argument,
@@ -81,6 +82,7 @@ class HigherOrderType(ComplexType):
     second : ``Type``
         Passed to NLTK's ComplexType.
     """
+
     def __init__(self, num_arguments: int, first: Type, second: Type) -> None:
         super().__init__(first, second)
         self.num_arguments = num_arguments
@@ -113,6 +115,7 @@ class NamedBasicType(BasicType):
     string_rep : ``str``
         String representation of the type.
     """
+
     def __init__(self, string_rep) -> None:
         self._string_rep = string_rep
 
@@ -141,9 +144,8 @@ class MultiMatchNamedBasicType(NamedBasicType):
     types_to_match : ``List[BasicType]``
         List of types that this type should match with.
     """
-    def __init__(self,
-                 string_rep,
-                 types_to_match: List[BasicType]) -> None:
+
+    def __init__(self, string_rep, types_to_match: List[BasicType]) -> None:
         super().__init__(string_rep)
         self.types_to_match = set(types_to_match)
 
@@ -178,6 +180,7 @@ class PlaceholderType(ComplexType):
     inheriting from this class, ``get_application_type`` gets an argument of type ``<a,b>``, it
     should return ``<b,a>`` .
     """
+
     _signature: str = None
 
     @overrides
@@ -267,10 +270,10 @@ class UnaryOpType(PlaceholderType):
         restricted set of allowed substitutions, you likely want to change the type signature to
         reflect that.
     """
-    def __init__(self,
-                 type_: BasicType = ANY_TYPE,
-                 allowed_substitutions: Set[BasicType] = None,
-                 signature: str = '<#1,#1>') -> None:
+
+    def __init__(
+        self, type_: BasicType = ANY_TYPE, allowed_substitutions: Set[BasicType] = None, signature: str = "<#1,#1>"
+    ) -> None:
         super().__init__(type_, type_)
         self._allowed_substitutions = allowed_substitutions
         self._signature = signature
@@ -297,8 +300,10 @@ class UnaryOpType(PlaceholderType):
         if self.first != ANY_TYPE:
             return [self]
         allowed_basic_types = self._allowed_substitutions if self._allowed_substitutions else basic_types
-        return [UnaryOpType(basic_type, self._allowed_substitutions, self._signature)
-                for basic_type in allowed_basic_types]
+        return [
+            UnaryOpType(basic_type, self._allowed_substitutions, self._signature)
+            for basic_type in allowed_basic_types
+        ]
 
 
 class BinaryOpType(PlaceholderType):
@@ -320,10 +325,13 @@ class BinaryOpType(PlaceholderType):
         restricted set of allowed substitutions, you likely want to change the type signature to
         reflect that.
     """
-    def __init__(self,
-                 type_: BasicType = ANY_TYPE,
-                 allowed_substitutions: Set[BasicType] = None,
-                 signature: str = '<#1,<#1,#1>>') -> None:
+
+    def __init__(
+        self,
+        type_: BasicType = ANY_TYPE,
+        allowed_substitutions: Set[BasicType] = None,
+        signature: str = "<#1,<#1,#1>>",
+    ) -> None:
         super().__init__(type_, ComplexType(type_, type_))
         self._allowed_substitutions = allowed_substitutions
         self._signature = signature
@@ -355,8 +363,10 @@ class BinaryOpType(PlaceholderType):
         if self.first != ANY_TYPE:
             return [self]
         allowed_basic_types = self._allowed_substitutions if self._allowed_substitutions else basic_types
-        return [BinaryOpType(basic_type, self._allowed_substitutions, self._signature)
-                for basic_type in allowed_basic_types]
+        return [
+            BinaryOpType(basic_type, self._allowed_substitutions, self._signature)
+            for basic_type in allowed_basic_types
+        ]
 
 
 class TypedConstantExpression(ConstantExpression):
@@ -365,6 +375,7 @@ class TypedConstantExpression(ConstantExpression):
     NLTK assumes all constants are of type ``EntityType`` (e) by default. We define this new class
     where we can pass a default type to the constructor and use that in the ``_set_type`` method.
     """
+
     def __init__(self, variable, default_type: Type) -> None:
         super().__init__(variable)
         self._default_type = default_type
@@ -393,6 +404,7 @@ class DynamicTypeApplicationExpression(ApplicationExpression):
     later gets resolved based on the type signature of the function whose scope the variable
     appears in. This variable binding operation is implemented by overriding ``_set_type`` below.
     """
+
     def __init__(self, function: Expression, argument: Expression, variables_with_placeholders: Set[str]) -> None:
         super().__init__(function, argument)
         self._variables_with_placeholders = variables_with_placeholders
@@ -450,14 +462,18 @@ class DynamicTypeLogicParser(LogicParser):
     Secondly, since we defined a new kind of ``ApplicationExpression`` above, the ``LogicParser``
     should be able to create this new kind of expression.
     """
-    def __init__(self,
-                 type_check: bool = True,
-                 constant_type_prefixes: Dict[str, BasicType] = None,
-                 type_signatures: Dict[str, Type] = None) -> None:
+
+    def __init__(
+        self,
+        type_check: bool = True,
+        constant_type_prefixes: Dict[str, BasicType] = None,
+        type_signatures: Dict[str, Type] = None,
+    ) -> None:
         super().__init__(type_check)
         self._constant_type_prefixes = constant_type_prefixes or {}
-        self._variables_with_placeholders = {name for name, type_ in type_signatures.items()
-                                             if isinstance(type_, PlaceholderType)}
+        self._variables_with_placeholders = {
+            name for name, type_ in type_signatures.items() if isinstance(type_, PlaceholderType)
+        }
 
     @overrides
     def make_ApplicationExpression(self, function, argument):
@@ -499,28 +515,27 @@ class NameMapper:
         instance of this class for you language. If not, you can specify a different prefix for each
         name mapping you use for your language.
     """
-    def __init__(self,
-                 language_has_lambda: bool = False,
-                 alias_prefix: str = "F") -> None:
+
+    def __init__(self, language_has_lambda: bool = False, alias_prefix: str = "F") -> None:
         self.name_mapping: Dict[str, str] = {}
         if language_has_lambda:
             self.name_mapping["lambda"] = "\\"
         self.type_signatures: Dict[str, Type] = {}
-        assert len(alias_prefix) == 1 and alias_prefix.isalpha(), (f"Invalid alias prefix: {alias_prefix}"
-                                                                   "Needs to be a single upper case character.")
+        assert len(alias_prefix) == 1 and alias_prefix.isalpha(), (
+            f"Invalid alias prefix: {alias_prefix}" "Needs to be a single upper case character."
+        )
         self._alias_prefix = alias_prefix.upper()
         self._name_counter = 0
 
-    def map_name_with_signature(self,
-                                name: str,
-                                signature: Type,
-                                alias: str = None) -> None:
+    def map_name_with_signature(self, name: str, signature: Type, alias: str = None) -> None:
         if name in self.name_mapping:
             alias = self.name_mapping[name]
             old_signature = self.type_signatures[alias]
             if old_signature != signature:
-                raise RuntimeError(f"{name} already added with signature {old_signature}. "
-                                   f"Cannot add it again with {signature}!")
+                raise RuntimeError(
+                    f"{name} already added with signature {old_signature}. "
+                    f"Cannot add it again with {signature}!"
+                )
         else:
             alias = alias or f"{self._alias_prefix}{self._name_counter}"
             self._name_counter += 1
@@ -558,8 +573,9 @@ def _make_production_string(source: Type, target: Union[List[Type], Type]) -> st
     return f"{source} -> {target}"
 
 
-def _get_complex_type_production(complex_type: ComplexType,
-                                 multi_match_mapping: Dict[Type, List[Type]]) -> List[Tuple[Type, str]]:
+def _get_complex_type_production(
+    complex_type: ComplexType, multi_match_mapping: Dict[Type, List[Type]]
+) -> List[Tuple[Type, str]]:
     """
     Takes a complex type (without any placeholders), gets its return values, and returns productions
     (perhaps each with multiple arguments) that produce the return values.  This method also takes
@@ -575,34 +591,43 @@ def _get_complex_type_production(complex_type: ComplexType,
     """
     return_type = complex_type.return_type()
     if isinstance(return_type, MultiMatchNamedBasicType):
-        return_types_matched = list(multi_match_mapping[return_type] if return_type in
-                                    multi_match_mapping else return_type.types_to_match)
+        return_types_matched = list(
+            multi_match_mapping[return_type] if return_type in multi_match_mapping else return_type.types_to_match
+        )
     else:
         return_types_matched = [return_type]
     arguments = complex_type.argument_types()
     argument_types_matched = []
     for argument_type in arguments:
         if isinstance(argument_type, MultiMatchNamedBasicType):
-            matched_types = list(multi_match_mapping[argument_type] if argument_type in
-                                 multi_match_mapping else argument_type.types_to_match)
+            matched_types = list(
+                multi_match_mapping[argument_type]
+                if argument_type in multi_match_mapping
+                else argument_type.types_to_match
+            )
             argument_types_matched.append(matched_types)
         else:
             argument_types_matched.append([argument_type])
     complex_type_productions: List[Tuple[Type, str]] = []
     for matched_return_type in return_types_matched:
         for matched_arguments in itertools.product(*argument_types_matched):
-            complex_type_productions.append((matched_return_type,
-                                             _make_production_string(return_type,
-                                                                     [complex_type] + list(matched_arguments))))
+            complex_type_productions.append(
+                (
+                    matched_return_type,
+                    _make_production_string(return_type, [complex_type] + list(matched_arguments)),
+                )
+            )
     return complex_type_productions
 
 
-def get_valid_actions(name_mapping: Dict[str, str],
-                      type_signatures: Dict[str, Type],
-                      basic_types: Set[Type],
-                      multi_match_mapping: Dict[Type, List[Type]] = None,
-                      valid_starting_types: Set[Type] = None,
-                      num_nested_lambdas: int = 0) -> Dict[str, List[str]]:
+def get_valid_actions(
+    name_mapping: Dict[str, str],
+    type_signatures: Dict[str, Type],
+    basic_types: Set[Type],
+    multi_match_mapping: Dict[Type, List[Type]] = None,
+    valid_starting_types: Set[Type] = None,
+    num_nested_lambdas: int = 0,
+) -> Dict[str, List[str]]:
     """
     Generates all the valid actions starting from each non-terminal. For terminals of a specific
     type, we simply add a production from the type to the terminal. For all terminal `functions`,
@@ -671,21 +696,20 @@ def get_valid_actions(name_mapping: Dict[str, str],
 
     for complex_type in complex_types:
         for substituted_type in substitute_any_type(complex_type, basic_types):
-            for head, production in _get_complex_type_production(substituted_type,
-                                                                 multi_match_mapping or {}):
+            for head, production in _get_complex_type_production(substituted_type, multi_match_mapping or {}):
                 valid_actions[str(head)].add(production)
 
     # We can produce complex types with a lambda expression, though we'll leave out
     # placeholder types for now.
     for i in range(num_nested_lambdas):
-        lambda_var = chr(ord('x') + i)
+        lambda_var = chr(ord("x") + i)
         # We'll only allow lambdas to be functions that take and return basic types as their
         # arguments, for now.  Also, we're doing this for all possible complex types where
         # the first and second types are basic types. So we may be overgenerating a bit.
         for first_type in basic_types:
             for second_type in basic_types:
                 key = ComplexType(first_type, second_type)
-                production_string = _make_production_string(key, ['lambda ' + lambda_var, second_type])
+                production_string = _make_production_string(key, ["lambda " + lambda_var, second_type])
                 valid_actions[str(key)].add(production_string)
 
     valid_action_strings = {key: sorted(value) for key, value in valid_actions.items()}
@@ -698,7 +722,7 @@ START_TYPE = NamedBasicType(START_SYMBOL)
 # this; it's just something that works for now, that we can fix later if / when it's needed.
 # If you allow for more than three nested lambdas, or if you want to use different lambda
 # variable names, you'll have to change this somehow.
-LAMBDA_VARIABLES = {'x', 'y', 'z'}
+LAMBDA_VARIABLES = {"x", "y", "z"}
 
 
 def is_nonterminal(production: str) -> bool:
@@ -707,14 +731,14 @@ def is_nonterminal(production: str) -> bool:
     # TODO(pradeep): Also we simply check the surface forms here, and this works for
     # wikitables and nlvr. We should ideally let the individual type declarations define their own
     # variants of this method.
-    if production in ['<=', '<']:
+    if production in ["<=", "<"]:
         # Some grammars (including the wikitables grammar) have "less than" and "less than or
         # equal to" functions that are terminals.  We don't want to treat those like our
         # "<t,d>" types.
         return False
-    if production[0] == '<':
+    if production[0] == "<":
         return True
-    if production.startswith('fb:'):
+    if production.startswith("fb:"):
         return False
     if len(production) > 1 or production in LAMBDA_VARIABLES:
         return False

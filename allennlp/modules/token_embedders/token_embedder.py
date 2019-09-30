@@ -17,6 +17,7 @@ class TokenEmbedder(torch.nn.Module, Registrable):
     which we might need when defining model parameters such as LSTMs or linear layers, which need
     to know their input dimension before the layers are called.
     """
+
     default_implementation = "embedding"
 
     def get_output_dim(self) -> int:
