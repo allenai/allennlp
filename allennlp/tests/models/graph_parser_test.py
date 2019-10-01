@@ -2,11 +2,12 @@ from allennlp.common.testing.model_test_case import ModelTestCase
 
 
 class GraphParserTest(ModelTestCase):
-
     def setUp(self):
         super().setUp()
-        self.set_up_model(self.FIXTURES_ROOT / "graph_parser" / "experiment.json",
-                          self.FIXTURES_ROOT / "data" / "dm.sdp")
+        self.set_up_model(
+            self.FIXTURES_ROOT / "graph_parser" / "experiment.json",
+            self.FIXTURES_ROOT / "data" / "dm.sdp",
+        )
 
     def test_graph_parser_can_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
@@ -20,6 +21,14 @@ class GraphParserTest(ModelTestCase):
         output_dict = self.model(**training_tensors)
         decode_output_dict = self.model.decode(output_dict)
 
-        assert set(decode_output_dict.keys()) == {'arc_loss', 'tag_loss', 'loss',
-                                                  'arcs', 'arc_tags', 'arc_tag_probs',
-                                                  'arc_probs', 'tokens', 'mask'}
+        assert set(decode_output_dict.keys()) == {
+            "arc_loss",
+            "tag_loss",
+            "loss",
+            "arcs",
+            "arc_tags",
+            "arc_tag_probs",
+            "arc_probs",
+            "tokens",
+            "mask",
+        }

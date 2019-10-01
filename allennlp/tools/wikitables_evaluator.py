@@ -45,7 +45,7 @@ Python 3 compatible, and conform to our style guidelines.
 # 2. T can be interpreted as a number T_N, P is a number, and P = T_N
 # 3. T can be interpreted as a date T_D, P is a date, and P = T_D
 #    (exact match on all fields; e.g., xx-01-12 and 1990-01-12 do not match)
-__version__ = '1.0.2'
+__version__ = "1.0.2"
 
 import sys
 import os
@@ -60,11 +60,10 @@ from abc import ABCMeta, abstractmethod
 # String Normalization
 def normalize(x):
     # Remove diacritics
-    x = ''.join(c for c in unicodedata.normalize('NFKD', x)
-                if unicodedata.category(c) != 'Mn')
+    x = "".join(c for c in unicodedata.normalize("NFKD", x) if unicodedata.category(c) != "Mn")
     # Normalize quotes and dashes
     x = re.sub(r"[‘’´`]", "'", x)
-    x = re.sub(r"[“”]", "\"", x)
+    x = re.sub(r"[“”]", '"', x)
     x = re.sub(r"[‐‑‒–—−]", "-", x)
     while True:
         old_x = x
@@ -73,18 +72,19 @@ def normalize(x):
         # Remove details in parenthesis
         x = re.sub(r"(?<!^)( \([^)]*\))*$", "", x.strip())
         # Remove outermost quotation mark
-        x = re.sub(r'^"([^"]*)"$', r'\1', x.strip())
+        x = re.sub(r'^"([^"]*)"$', r"\1", x.strip())
         if x == old_x:
             break
     # Remove final '.'
-    if x and x[-1] == '.':
+    if x and x[-1] == ".":
         x = x[:-1]
     # Collapse whitespaces and convert to lower case
-    x = re.sub(r'\s+', ' ', x, flags=re.U).lower().strip()
+    x = re.sub(r"\s+", " ", x, flags=re.U).lower().strip()
     return x
 
 
 # Value Types
+
 
 class Value:
     __metaclass__ = ABCMeta
@@ -109,7 +109,6 @@ class Value:
 
 
 class StringValue(Value):
-
     def __init__(self, content):
         self._normalized = normalize(content)
         self._hash = hash(self._normalized)
@@ -121,7 +120,8 @@ class StringValue(Value):
         return self._hash
 
     def __str__(self):
-        return 'S' + str([self.normalized])
+        return "S" + str([self.normalized])
+
     __repr__ = __str__
 
     def match(self, other):
@@ -130,7 +130,6 @@ class StringValue(Value):
 
 
 class NumberValue(Value):
-
     def __init__(self, amount, original_string=None):
         assert isinstance(amount, (int, float))
         if abs(amount - round(amount)) < 1e-6:
@@ -154,7 +153,8 @@ class NumberValue(Value):
         return self._hash
 
     def __str__(self):
-        return ('N(%f)' % self.amount) + str([self.normalized])
+        return ("N(%f)" % self.amount) + str([self.normalized])
+
     __repr__ = __str__
 
     def match(self, other):
@@ -184,7 +184,6 @@ class NumberValue(Value):
 
 
 class DateValue(Value):
-
     def __init__(self, year, month, day, original_string=None):
         """Create a new DateValue. Placeholders are marked as -1."""
         assert isinstance(year, int)
@@ -195,10 +194,11 @@ class DateValue(Value):
         self._month = month
         self._day = day
         if not original_string:
-            self._normalized = '{}-{}-{}'.format(
-                    year if year != -1 else 'xx',
-                    month if month != -1 else 'xx',
-                    day if day != '-1' else 'xx')
+            self._normalized = "{}-{}-{}".format(
+                year if year != -1 else "xx",
+                month if month != -1 else "xx",
+                day if day != "-1" else "xx",
+            )
         else:
             self._normalized = normalize(original_string)
         self._hash = hash((self._year, self._month, self._day))
@@ -214,8 +214,8 @@ class DateValue(Value):
         return self._hash
 
     def __str__(self):
-        return (('D(%d,%d,%d)' % (self._year, self._month, self._day))
-                + str([self._normalized]))
+        return ("D(%d,%d,%d)" % (self._year, self._month, self._day)) + str([self._normalized])
+
     __repr__ = __str__
 
     def match(self, other):
@@ -234,11 +234,11 @@ class DateValue(Value):
             tuple (year, month, date) if successful; otherwise None.
         """
         try:
-            ymd = text.lower().split('-')
+            ymd = text.lower().split("-")
             assert len(ymd) == 3
-            year = -1 if ymd[0] in ('xx', 'xxxx') else int(ymd[0])
-            month = -1 if ymd[1] == 'xx' else int(ymd[1])
-            day = -1 if ymd[2] == 'xx' else int(ymd[2])
+            year = -1 if ymd[0] in ("xx", "xxxx") else int(ymd[0])
+            month = -1 if ymd[1] == "xx" else int(ymd[1])
+            day = -1 if ymd[2] == "xx" else int(ymd[2])
             assert not year == month == day == -1
             assert month == -1 or 1 <= month <= 12
             assert day == -1 or 1 <= day <= 31
@@ -248,6 +248,7 @@ class DateValue(Value):
 
 
 # Value Instantiation
+
 
 def to_value(original_string, corenlp_value=None):
     """Convert the string to Value object.
@@ -291,13 +292,13 @@ def to_value_list(original_strings, corenlp_values=None):
     if corenlp_values is not None:
         assert isinstance(corenlp_values, (list, tuple, set))
         assert len(original_strings) == len(corenlp_values)
-        return list(set(to_value(x, y) for (x, y)
-                        in zip(original_strings, corenlp_values)))
+        return list(set(to_value(x, y) for (x, y) in zip(original_strings, corenlp_values)))
     else:
         return list(set(to_value(x) for x in original_strings))
 
 
 # Check the Predicted Denotations
+
 
 def check_denotation(target_values, predicted_values):
     """Return True if the predicted denotation is correct.
@@ -320,6 +321,7 @@ def check_denotation(target_values, predicted_values):
 
 # Batch Mode
 
+
 def tsv_unescape(x):
     """
     Unescape strings in the TSV file.
@@ -336,7 +338,7 @@ def tsv_unescape(x):
     -------
     ``str``
     """
-    return x.replace(r'\n', '\n').replace(r'\p', '|').replace('\\\\', '\\')
+    return x.replace(r"\n", "\n").replace(r"\p", "|").replace("\\\\", "\\")
 
 
 def tsv_unescape_list(x):
@@ -348,40 +350,44 @@ def tsv_unescape_list(x):
     Returns:
         a list of unicodes
     """
-    return [tsv_unescape(y) for y in x.split('|')]
+    return [tsv_unescape(y) for y in x.split("|")]
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-t', '--tagged-dataset-path',
-                        default=os.path.join('.', 'tagged', 'data'),
-                        help='Directory containing CoreNLP-tagged dataset TSV file')
-    parser.add_argument('prediction_path',
-                        help='Path to the prediction file. Each line contains '
-                        'ex_id <tab> item1 <tab> item2 <tab> ...')
+    parser.add_argument(
+        "-t",
+        "--tagged-dataset-path",
+        default=os.path.join(".", "tagged", "data"),
+        help="Directory containing CoreNLP-tagged dataset TSV file",
+    )
+    parser.add_argument(
+        "prediction_path",
+        help="Path to the prediction file. Each line contains "
+        "ex_id <tab> item1 <tab> item2 <tab> ...",
+    )
     args = parser.parse_args()
 
     # ID string --> list[Value]
     target_values_map = {}
     for filename in os.listdir(args.tagged_dataset_path):
         filename = os.path.join(args.tagged_dataset_path, filename)
-        print('Reading dataset from', filename, file=sys.stderr)
-        with codecs_open(filename, 'r', 'utf8') as fin:
-            header = fin.readline().rstrip('\n').split('\t')
+        print("Reading dataset from", filename, file=sys.stderr)
+        with codecs_open(filename, "r", "utf8") as fin:
+            header = fin.readline().rstrip("\n").split("\t")
             for line in fin:
-                stuff = dict(zip(header, line.rstrip('\n').split('\t')))
-                ex_id = stuff['id']
-                original_strings = tsv_unescape_list(stuff['targetValue'])
-                canon_strings = tsv_unescape_list(stuff['targetCanon'])
-                target_values_map[ex_id] = to_value_list(
-                        original_strings, canon_strings)
-    print('Read', len(target_values_map), 'examples', file=sys.stderr)
+                stuff = dict(zip(header, line.rstrip("\n").split("\t")))
+                ex_id = stuff["id"]
+                original_strings = tsv_unescape_list(stuff["targetValue"])
+                canon_strings = tsv_unescape_list(stuff["targetCanon"])
+                target_values_map[ex_id] = to_value_list(original_strings, canon_strings)
+    print("Read", len(target_values_map), "examples", file=sys.stderr)
 
-    print('Reading predictions from', args.prediction_path, file=sys.stderr)
+    print("Reading predictions from", args.prediction_path, file=sys.stderr)
     num_examples, num_correct = 0, 0
-    with codecs_open(args.prediction_path, 'r', 'utf8') as fin:
+    with codecs_open(args.prediction_path, "r", "utf8") as fin:
         for line in fin:
-            line = line.rstrip('\n').split('\t')
+            line = line.rstrip("\n").split("\t")
             ex_id = line[0]
             if ex_id not in target_values_map:
                 print('WARNING: Example ID "%s" not found' % ex_id)
@@ -389,15 +395,14 @@ def main():
                 target_values = target_values_map[ex_id]
                 predicted_values = to_value_list(line[1:])
                 correct = check_denotation(target_values, predicted_values)
-                print(u'%s\t%s\t%s\t%s' % (ex_id, correct, target_values,
-                                           predicted_values))
+                print(u"%s\t%s\t%s\t%s" % (ex_id, correct, target_values, predicted_values))
                 num_examples += 1
                 if correct:
                     num_correct += 1
-    print('Examples:', num_examples, file=sys.stderr)
-    print('Correct:', num_correct, file=sys.stderr)
-    print('Accuracy:', round((num_correct + 1e-9) / (num_examples + 1e-9), 4), file=sys.stderr)
+    print("Examples:", num_examples, file=sys.stderr)
+    print("Correct:", num_correct, file=sys.stderr)
+    print("Accuracy:", round((num_correct + 1e-9) / (num_examples + 1e-9), 4), file=sys.stderr)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -7,25 +7,25 @@ from allennlp.data import Instance
 from allennlp.predictors.predictor import Predictor
 
 
-@Predictor.register('nlvr-parser')
+@Predictor.register("nlvr-parser")
 class NlvrParserPredictor(Predictor):
     @overrides
     def _json_to_instance(self, json_dict: JsonDict) -> Instance:
-        sentence = json_dict['sentence']
-        if 'worlds' in json_dict:
+        sentence = json_dict["sentence"]
+        if "worlds" in json_dict:
             # This is grouped data
-            worlds = json_dict['worlds']
+            worlds = json_dict["worlds"]
             if isinstance(worlds, str):
                 worlds = json.loads(worlds)
         else:
-            structured_rep = json_dict['structured_rep']
+            structured_rep = json_dict["structured_rep"]
             if isinstance(structured_rep, str):
                 structured_rep = json.loads(structured_rep)
             worlds = [structured_rep]
-        identifier = json_dict['identifier'] if 'identifier' in json_dict else None
-        instance = self._dataset_reader.text_to_instance(sentence=sentence,  # type: ignore
-                                                         structured_representations=worlds,
-                                                         identifier=identifier)
+        identifier = json_dict["identifier"] if "identifier" in json_dict else None
+        instance = self._dataset_reader.text_to_instance(  # type: ignore
+            sentence=sentence, structured_representations=worlds, identifier=identifier
+        )
         return instance
 
     @overrides

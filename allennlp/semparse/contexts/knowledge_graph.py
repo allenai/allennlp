@@ -33,10 +33,13 @@ class KnowledgeGraph:
         you can store that here.  This might be, e.g., the text in a table cell, or the description
         of a wikipedia entity.
     """
-    def __init__(self,
-                 entities: Set[str],
-                 neighbors: Dict[str, List[str]],
-                 entity_text: Dict[str, str] = None) -> None:
+
+    def __init__(
+        self,
+        entities: Set[str],
+        neighbors: Dict[str, List[str]],
+        entity_text: Dict[str, str] = None,
+    ) -> None:
         self.entities = sorted(entities)
         self.neighbors = neighbors
         self.entity_text = entity_text

@@ -75,41 +75,51 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         If you want to initialize this model using weights from another model trained using MML,
         pass the path to the ``model.tar.gz`` file of that model here.
     """
-    def __init__(self,
-                 vocab: Vocabulary,
-                 sentence_embedder: TextFieldEmbedder,
-                 action_embedding_dim: int,
-                 encoder: Seq2SeqEncoder,
-                 attention: Attention,
-                 beam_size: int,
-                 max_decoding_steps: int,
-                 max_num_finished_states: int = None,
-                 dropout: float = 0.0,
-                 normalize_beam_score_by_length: bool = False,
-                 checklist_cost_weight: float = 0.6,
-                 dynamic_cost_weight: Dict[str, Union[int, float]] = None,
-                 penalize_non_agenda_actions: bool = False,
-                 initial_mml_model_file: str = None) -> None:
-        super().__init__(vocab=vocab,
-                         sentence_embedder=sentence_embedder,
-                         action_embedding_dim=action_embedding_dim,
-                         encoder=encoder,
-                         dropout=dropout)
+
+    def __init__(
+        self,
+        vocab: Vocabulary,
+        sentence_embedder: TextFieldEmbedder,
+        action_embedding_dim: int,
+        encoder: Seq2SeqEncoder,
+        attention: Attention,
+        beam_size: int,
+        max_decoding_steps: int,
+        max_num_finished_states: int = None,
+        dropout: float = 0.0,
+        normalize_beam_score_by_length: bool = False,
+        checklist_cost_weight: float = 0.6,
+        dynamic_cost_weight: Dict[str, Union[int, float]] = None,
+        penalize_non_agenda_actions: bool = False,
+        initial_mml_model_file: str = None,
+    ) -> None:
+        super().__init__(
+            vocab=vocab,
+            sentence_embedder=sentence_embedder,
+            action_embedding_dim=action_embedding_dim,
+            encoder=encoder,
+            dropout=dropout,
+        )
         self._agenda_coverage = Average()
-        self._decoder_trainer: DecoderTrainer[Callable[[CoverageState], torch.Tensor]] = \
-            ExpectedRiskMinimization(beam_size=beam_size,
-                                     normalize_by_length=normalize_beam_score_by_length,
-                                     max_decoding_steps=max_decoding_steps,
-                                     max_num_finished_states=max_num_finished_states)
+        self._decoder_trainer: DecoderTrainer[
+            Callable[[CoverageState], torch.Tensor]
+        ] = ExpectedRiskMinimization(
+            beam_size=beam_size,
+            normalize_by_length=normalize_beam_score_by_length,
+            max_decoding_steps=max_decoding_steps,
+            max_num_finished_states=max_num_finished_states,
+        )
 
         # Instantiating an empty NlvrLanguage just to get the number of terminals.
         self._terminal_productions = set(NlvrLanguage(set()).terminal_productions.values())
-        self._decoder_step = CoverageTransitionFunction(encoder_output_dim=self._encoder.get_output_dim(),
-                                                        action_embedding_dim=action_embedding_dim,
-                                                        input_attention=attention,
-                                                        activation=Activation.by_name('tanh')(),
-                                                        add_action_bias=False,
-                                                        dropout=dropout)
+        self._decoder_step = CoverageTransitionFunction(
+            encoder_output_dim=self._encoder.get_output_dim(),
+            action_embedding_dim=action_embedding_dim,
+            input_attention=attention,
+            activation=Activation.by_name("tanh")(),
+            add_action_bias=False,
+            dropout=dropout,
+        )
         self._checklist_cost_weight = checklist_cost_weight
         self._dynamic_cost_wait_epochs = None
         self._dynamic_cost_rate = None
@@ -130,19 +140,25 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                 # A model file is passed, but it does not exist. This is expected to happen when
                 # you're using a trained ERM model to decode. But it may also happen if the path to
                 # the file is really just incorrect. So throwing a warning.
-                logger.warning("MML model file for initializing weights is passed, but does not exist."
-                               " This is fine if you're just decoding.")
+                logger.warning(
+                    "MML model file for initializing weights is passed, but does not exist."
+                    " This is fine if you're just decoding."
+                )
 
     def _initialize_weights_from_archive(self, archive: Archive) -> None:
         logger.info("Initializing weights from MML model.")
         model_parameters = dict(self.named_parameters())
         archived_parameters = dict(archive.model.named_parameters())
         sentence_embedder_weight = "_sentence_embedder.token_embedder_tokens.weight"
-        if sentence_embedder_weight not in archived_parameters or \
-           sentence_embedder_weight not in model_parameters:
-            raise RuntimeError("When initializing model weights from an MML model, we need "
-                               "the sentence embedder to be a TokenEmbedder using namespace called "
-                               "tokens.")
+        if (
+            sentence_embedder_weight not in archived_parameters
+            or sentence_embedder_weight not in model_parameters
+        ):
+            raise RuntimeError(
+                "When initializing model weights from an MML model, we need "
+                "the sentence embedder to be a TokenEmbedder using namespace called "
+                "tokens."
+            )
         for name, weights in archived_parameters.items():
             if name in model_parameters:
                 if name == "_sentence_embedder.token_embedder_tokens.weight":
@@ -155,8 +171,11 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                     new_weights = model_parameters[name].data.clone()
                     for index, archived_index in vocab_index_mapping:
                         new_weights[index] = archived_embedding_weights[archived_index]
-                    logger.info("Copied embeddings of %d out of %d tokens",
-                                len(vocab_index_mapping), new_weights.size()[0])
+                    logger.info(
+                        "Copied embeddings of %d out of %d tokens",
+                        len(vocab_index_mapping),
+                        new_weights.size()[0],
+                    )
                 else:
                     new_weights = weights.data
                 logger.info("Copying parameter %s", name)
@@ -164,27 +183,32 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
 
     def _get_vocab_index_mapping(self, archived_vocab: Vocabulary) -> List[Tuple[int, int]]:
         vocab_index_mapping: List[Tuple[int, int]] = []
-        for index in range(self.vocab.get_vocab_size(namespace='tokens')):
-            token = self.vocab.get_token_from_index(index=index, namespace='tokens')
-            archived_token_index = archived_vocab.get_token_index(token, namespace='tokens')
+        for index in range(self.vocab.get_vocab_size(namespace="tokens")):
+            token = self.vocab.get_token_from_index(index=index, namespace="tokens")
+            archived_token_index = archived_vocab.get_token_index(token, namespace="tokens")
             # Checking if we got the UNK token index, because we don't want all new token
             # representations initialized to UNK token's representation. We do that by checking if
             # the two tokens are the same. They will not be if the token at the archived index is
             # UNK.
-            if archived_vocab.get_token_from_index(archived_token_index, namespace="tokens") == token:
+            if (
+                archived_vocab.get_token_from_index(archived_token_index, namespace="tokens")
+                == token
+            ):
                 vocab_index_mapping.append((index, archived_token_index))
         return vocab_index_mapping
 
     @overrides
-    def forward(self,  # type: ignore
-                sentence: Dict[str, torch.LongTensor],
-                worlds: List[List[NlvrLanguage]],
-                actions: List[List[ProductionRule]],
-                agenda: torch.LongTensor,
-                identifier: List[str] = None,
-                labels: torch.LongTensor = None,
-                epoch_num: List[int] = None,
-                metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
+    def forward(
+        self,  # type: ignore
+        sentence: Dict[str, torch.LongTensor],
+        worlds: List[List[NlvrLanguage]],
+        actions: List[List[ProductionRule]],
+        agenda: torch.LongTensor,
+        identifier: List[str] = None,
+        labels: torch.LongTensor = None,
+        epoch_num: List[int] = None,
+        metadata: List[Dict[str, Any]] = None,
+    ) -> Dict[str, torch.Tensor]:
 
         """
         Decoder logic for producing type constrained target sequences that maximize coverage of
@@ -194,8 +218,10 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         instance_epoch_num = epoch_num[0] if epoch_num is not None else None
         if self._dynamic_cost_rate is not None:
             if self.training and instance_epoch_num is None:
-                raise RuntimeError("If you want a dynamic cost weight, use the "
-                                   "BucketIterator with track_epoch=True.")
+                raise RuntimeError(
+                    "If you want a dynamic cost weight, use the "
+                    "BucketIterator with track_epoch=True."
+                )
             if instance_epoch_num != self._last_epoch_in_forward:
                 if instance_epoch_num >= self._dynamic_cost_wait_epochs:
                     decrement = self._checklist_cost_weight * self._dynamic_cost_rate
@@ -205,11 +231,13 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         batch_size = len(worlds)
 
         initial_rnn_state = self._get_initial_rnn_state(sentence)
-        initial_score_list = [next(iter(sentence.values())).new_zeros(1, dtype=torch.float)
-                              for i in range(batch_size)]
+        initial_score_list = [
+            next(iter(sentence.values())).new_zeros(1, dtype=torch.float) for i in range(batch_size)
+        ]
         # TODO (pradeep): Assuming all worlds give the same set of valid actions.
-        initial_grammar_state = [self._create_grammar_state(worlds[i][0], actions[i]) for i in
-                                 range(batch_size)]
+        initial_grammar_state = [
+            self._create_grammar_state(worlds[i][0], actions[i]) for i in range(batch_size)
+        ]
 
         label_strings = self._get_label_strings(labels) if labels is not None else None
         # Each instance's agenda is of size (agenda_size, 1)
@@ -222,28 +250,36 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
             checklist_target, terminal_actions, checklist_mask = checklist_info
 
             initial_checklist = checklist_target.new_zeros(checklist_target.size())
-            initial_checklist_states.append(ChecklistStatelet(terminal_actions=terminal_actions,
-                                                              checklist_target=checklist_target,
-                                                              checklist_mask=checklist_mask,
-                                                              checklist=initial_checklist))
-        initial_state = CoverageState(batch_indices=list(range(batch_size)),
-                                      action_history=[[] for _ in range(batch_size)],
-                                      score=initial_score_list,
-                                      rnn_state=initial_rnn_state,
-                                      grammar_state=initial_grammar_state,
-                                      possible_actions=actions,
-                                      extras=label_strings,
-                                      checklist_state=initial_checklist_states)
+            initial_checklist_states.append(
+                ChecklistStatelet(
+                    terminal_actions=terminal_actions,
+                    checklist_target=checklist_target,
+                    checklist_mask=checklist_mask,
+                    checklist=initial_checklist,
+                )
+            )
+        initial_state = CoverageState(
+            batch_indices=list(range(batch_size)),
+            action_history=[[] for _ in range(batch_size)],
+            score=initial_score_list,
+            rnn_state=initial_rnn_state,
+            grammar_state=initial_grammar_state,
+            possible_actions=actions,
+            extras=label_strings,
+            checklist_state=initial_checklist_states,
+        )
         if not self.training:
             initial_state.debug_info = [[] for _ in range(batch_size)]
 
         agenda_data = [agenda_[:, 0].cpu().data for agenda_ in agenda_list]
-        outputs = self._decoder_trainer.decode(initial_state,  # type: ignore
-                                               self._decoder_step,
-                                               partial(self._get_state_cost, worlds))
+        outputs = self._decoder_trainer.decode(
+            initial_state,  # type: ignore
+            self._decoder_step,
+            partial(self._get_state_cost, worlds),
+        )
         if identifier is not None:
-            outputs['identifier'] = identifier
-        best_final_states = outputs['best_final_states']
+            outputs["identifier"] = identifier
+        best_final_states = outputs["best_final_states"]
         best_action_sequences = {}
         for batch_index, states in best_final_states.items():
             best_action_sequences[batch_index] = [state.action_history[0] for state in states]
@@ -251,32 +287,32 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
         batch_denotations = self._get_denotations(batch_action_strings, worlds)
         if labels is not None:
             # We're either training or validating.
-            self._update_metrics(action_strings=batch_action_strings,
-                                 worlds=worlds,
-                                 label_strings=label_strings,
-                                 possible_actions=actions,
-                                 agenda_data=agenda_data)
+            self._update_metrics(
+                action_strings=batch_action_strings,
+                worlds=worlds,
+                label_strings=label_strings,
+                possible_actions=actions,
+                agenda_data=agenda_data,
+            )
         else:
             # We're testing.
             if metadata is not None:
                 outputs["sentence_tokens"] = [x["sentence_tokens"] for x in metadata]
-            outputs['debug_info'] = []
+            outputs["debug_info"] = []
             for i in range(batch_size):
-                outputs['debug_info'].append(best_final_states[i][0].debug_info[0])  # type: ignore
+                outputs["debug_info"].append(best_final_states[i][0].debug_info[0])  # type: ignore
             outputs["best_action_strings"] = batch_action_strings
             outputs["denotations"] = batch_denotations
             action_mapping = {}
             for batch_index, batch_actions in enumerate(actions):
                 for action_index, action in enumerate(batch_actions):
                     action_mapping[(batch_index, action_index)] = action[0]
-            outputs['action_mapping'] = action_mapping
+            outputs["action_mapping"] = action_mapping
         return outputs
 
-    def _get_checklist_info(self,
-                            agenda: torch.LongTensor,
-                            all_actions: List[ProductionRule]) -> Tuple[torch.Tensor,
-                                                                        torch.Tensor,
-                                                                        torch.Tensor]:
+    def _get_checklist_info(
+        self, agenda: torch.LongTensor, all_actions: List[ProductionRule]
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Takes an agenda and a list of all actions and returns a target checklist against which the
         checklist at each state will be compared to compute a loss, indices of ``terminal_actions``,
@@ -317,12 +353,14 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
             checklist_mask = (target_checklist != 0).float()
         return target_checklist, terminal_actions, checklist_mask
 
-    def _update_metrics(self,
-                        action_strings: List[List[List[str]]],
-                        worlds: List[List[NlvrLanguage]],
-                        label_strings: List[List[str]],
-                        possible_actions: List[List[ProductionRule]],
-                        agenda_data: List[List[int]]) -> None:
+    def _update_metrics(
+        self,
+        action_strings: List[List[List[str]]],
+        worlds: List[List[NlvrLanguage]],
+        label_strings: List[List[str]],
+        possible_actions: List[List[ProductionRule]],
+        agenda_data: List[List[int]],
+    ) -> None:
         # TODO(pradeep): Move this to the base class.
         # TODO(pradeep): action_strings contains k-best lists. This method only uses the top decoded
         # sequence currently. Maybe define top-k metrics?
@@ -340,16 +378,17 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                         continue
                     action_string = instance_possible_actions[rule_id][0]
                     right_side = action_string.split(" -> ")[1]
-                    if right_side.isdigit() or ('[' not in right_side and len(right_side) > 1):
+                    if right_side.isdigit() or ("[" not in right_side and len(right_side) > 1):
                         terminal_agenda_actions.append(action_string)
-                actions_in_agenda = [action in instance_action_strings for action in
-                                     terminal_agenda_actions]
+                actions_in_agenda = [
+                    action in instance_action_strings for action in terminal_agenda_actions
+                ]
                 in_agenda_ratio = sum(actions_in_agenda) / len(actions_in_agenda)
                 instance_label_strings = label_strings[i]
                 instance_worlds = worlds[i]
-                sequence_is_correct = self._check_denotation(instance_action_strings,
-                                                             instance_label_strings,
-                                                             instance_worlds)
+                sequence_is_correct = self._check_denotation(
+                    instance_action_strings, instance_label_strings, instance_worlds
+                )
             for correct_in_world in sequence_is_correct:
                 self._denotation_accuracy(1 if correct_in_world else 0)
             self._consistency(1 if all(sequence_is_correct) else 0)
@@ -358,12 +397,14 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         return {
-                'denotation_accuracy': self._denotation_accuracy.get_metric(reset),
-                'consistency': self._consistency.get_metric(reset),
-                'agenda_coverage': self._agenda_coverage.get_metric(reset)
+            "denotation_accuracy": self._denotation_accuracy.get_metric(reset),
+            "consistency": self._consistency.get_metric(reset),
+            "agenda_coverage": self._agenda_coverage.get_metric(reset),
         }
 
-    def _get_state_cost(self, batch_worlds: List[List[NlvrLanguage]], state: CoverageState) -> torch.Tensor:
+    def _get_state_cost(
+        self, batch_worlds: List[List[NlvrLanguage]], state: CoverageState
+    ) -> torch.Tensor:
         """
         Return the cost of a finished state. Since it is a finished state, the group size will be
         1, and hence we'll return just one cost.
@@ -396,9 +437,9 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
             cost = checklist_cost + (1 - self._checklist_cost_weight) * denotation_cost
         return cost
 
-    def _get_state_info(self,
-                        state: CoverageState,
-                        batch_worlds: List[List[NlvrLanguage]]) -> Dict[str, List]:
+    def _get_state_info(
+        self, state: CoverageState, batch_worlds: List[List[NlvrLanguage]]
+    ) -> Dict[str, List]:
         """
         This method is here for debugging purposes, in case you want to look at the what the model
         is learning. It may be inefficient to call it while training the model on real data.
@@ -409,23 +450,30 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
             costs = []
         model_scores = [float(score.detach().cpu().numpy()) for score in state.score]
         all_actions = state.possible_actions[0]
-        action_sequences = [[self._get_action_string(all_actions[action]) for action in history]
-                            for history in state.action_history]
+        action_sequences = [
+            [self._get_action_string(all_actions[action]) for action in history]
+            for history in state.action_history
+        ]
         agenda_sequences = []
         all_agenda_indices = []
         for checklist_state in state.checklist_state:
             agenda_indices = []
-            for action, is_wanted in zip(checklist_state.terminal_actions, checklist_state.checklist_target):
+            for action, is_wanted in zip(
+                checklist_state.terminal_actions, checklist_state.checklist_target
+            ):
                 action_int = int(action.detach().cpu().numpy())
                 is_wanted_int = int(is_wanted.detach().cpu().numpy())
                 if is_wanted_int != 0:
                     agenda_indices.append(action_int)
-            agenda_sequences.append([self._get_action_string(all_actions[action])
-                                     for action in agenda_indices])
+            agenda_sequences.append(
+                [self._get_action_string(all_actions[action]) for action in agenda_indices]
+            )
             all_agenda_indices.append(agenda_indices)
-        return {"agenda": agenda_sequences,
-                "agenda_indices": all_agenda_indices,
-                "history": action_sequences,
-                "history_indices": state.action_history,
-                "costs": costs,
-                "scores": model_scores}
+        return {
+            "agenda": agenda_sequences,
+            "agenda_indices": all_agenda_indices,
+            "history": action_sequences,
+            "history_indices": state.action_history,
+            "costs": costs,
+            "scores": model_scores,
+        }

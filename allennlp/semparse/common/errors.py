@@ -5,6 +5,7 @@ class ParsingError(Exception):
     and having this error provides a consistent way to catch those errors and log how frequently
     this occurs.
     """
+
     def __init__(self, message):
         super().__init__()
         self.message = message
@@ -19,6 +20,7 @@ class ExecutionError(Exception):
     not understand. This may be because your logical form contains a function with an invalid name
     or a set of arguments whose types do not match those that the function expects.
     """
+
     def __init__(self, message):
         super().__init__()
         self.message = message

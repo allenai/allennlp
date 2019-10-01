@@ -10,17 +10,19 @@ class TestSeq2VecEncoder(AllenNlpTestCase):
     def test_from_params_builders_encoder_correctly(self):
         # We're just making sure parameters get passed through correctly here, and that the basic
         # API works.
-        params = Params({
+        params = Params(
+            {
                 "type": "lstm",
                 "bidirectional": True,
                 "num_layers": 3,
                 "input_size": 5,
-                "hidden_size": 7
-                })
+                "hidden_size": 7,
+            }
+        )
         encoder = Seq2VecEncoder.from_params(params)
 
-        assert encoder.__class__.__name__ == 'PytorchSeq2VecWrapper'
-        assert encoder._module.__class__.__name__ == 'LSTM'
+        assert encoder.__class__.__name__ == "PytorchSeq2VecWrapper"
+        assert encoder._module.__class__.__name__ == "LSTM"
         assert encoder._module.num_layers == 3
         assert encoder._module.input_size == 5
         assert encoder._module.hidden_size == 7
@@ -28,9 +30,6 @@ class TestSeq2VecEncoder(AllenNlpTestCase):
         assert encoder._module.batch_first is True
 
     def test_from_params_requires_batch_first(self):
-        params = Params({
-                "type": "lstm",
-                "batch_first": False,
-                })
+        params = Params({"type": "lstm", "batch_first": False})
         with pytest.raises(ConfigurationError):
             Seq2VecEncoder.from_params(params)

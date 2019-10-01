@@ -28,9 +28,7 @@ class SpacyTokenIndexer(TokenIndexer[numpy.ndarray]):
         See :class:`TokenIndexer`.
     """
 
-    def __init__(self,
-                 hidden_dim: int = 96,
-                 token_min_padding_length: int = 0) -> None:
+    def __init__(self, hidden_dim: int = 96, token_min_padding_length: int = 0) -> None:
         self._hidden_dim = hidden_dim
         super().__init__(token_min_padding_length)
 
@@ -42,13 +40,14 @@ class SpacyTokenIndexer(TokenIndexer[numpy.ndarray]):
         pass
 
     @overrides
-    def tokens_to_indices(self,
-                          tokens: List[SpacyToken],
-                          vocabulary: Vocabulary,
-                          index_name: str) -> Dict[str, List[numpy.ndarray]]:
+    def tokens_to_indices(
+        self, tokens: List[SpacyToken], vocabulary: Vocabulary, index_name: str
+    ) -> Dict[str, List[numpy.ndarray]]:
 
         if not all([isinstance(x, SpacyToken) for x in tokens]):
-            raise ValueError("The spacy indexer requires you to use a Tokenizer which produces SpacyTokens.")
+            raise ValueError(
+                "The spacy indexer requires you to use a Tokenizer which produces SpacyTokens."
+            )
         indices: List[numpy.ndarray] = []
         for token in tokens:
             indices.append(token.vector)
@@ -59,17 +58,23 @@ class SpacyTokenIndexer(TokenIndexer[numpy.ndarray]):
         return numpy.zeros(self._hidden_dim, dtype=numpy.float32)
 
     @overrides
-    def get_padding_lengths(self,
-                            token: numpy.ndarray) -> Dict[str, numpy.ndarray]:
+    def get_padding_lengths(self, token: numpy.ndarray) -> Dict[str, numpy.ndarray]:
         return {}
 
     @overrides
-    def as_padded_tensor(self,
-                         tokens: Dict[str, List[numpy.ndarray]],
-                         desired_num_tokens: Dict[str, int],
-                         padding_lengths: Dict[str, int]) -> Dict[str, torch.Tensor]:
+    def as_padded_tensor(
+        self,
+        tokens: Dict[str, List[numpy.ndarray]],
+        desired_num_tokens: Dict[str, int],
+        padding_lengths: Dict[str, int],
+    ) -> Dict[str, torch.Tensor]:
 
-        val = {key: torch.FloatTensor(pad_sequence_to_length(
-                val, desired_num_tokens[key], default_value=self.get_padding_token))
-               for key, val in tokens.items()}
+        val = {
+            key: torch.FloatTensor(
+                pad_sequence_to_length(
+                    val, desired_num_tokens[key], default_value=self.get_padding_token
+                )
+            )
+            for key, val in tokens.items()
+        }
         return val

@@ -11,6 +11,7 @@ class RegularizerApplicator:
     """
     Applies regularizers to the parameters of a Module based on regex matches.
     """
+
     def __init__(self, regularizers: Sequence[Tuple[str, Regularizer]] = ()) -> None:
         """
         Parameters
@@ -43,7 +44,9 @@ class RegularizerApplicator:
 
     # Requires custom from_params because of complex logic.
     @classmethod
-    def from_params(cls, params: Iterable[Tuple[str, Params]] = ()) -> Optional['RegularizerApplicator']:
+    def from_params(
+        cls, params: Iterable[Tuple[str, Params]] = ()
+    ) -> Optional["RegularizerApplicator"]:
         """
         Converts a List of pairs (regex, params) into an RegularizerApplicator.
         This list should look like

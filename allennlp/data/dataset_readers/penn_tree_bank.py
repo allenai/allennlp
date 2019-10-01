@@ -3,13 +3,21 @@ import logging
 import os
 
 from overrides import overrides
+
 # NLTK is so performance orientated (ha ha) that they have lazy imports. Why? Who knows.
 from nltk.corpus.reader.bracket_parse import BracketParseCorpusReader
 from nltk.tree import Tree
 
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.fields import TextField, SpanField, SequenceLabelField, ListField, MetadataField, Field
+from allennlp.data.fields import (
+    TextField,
+    SpanField,
+    SequenceLabelField,
+    ListField,
+    MetadataField,
+    Field,
+)
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.tokenizers import Token
@@ -19,12 +27,12 @@ from allennlp.common.checks import ConfigurationError
 logger = logging.getLogger(__name__)
 
 PTB_PARENTHESES = {
-        "-LRB-": "(",
-        "-RRB-": ")",
-        "-LCB-": "{",
-        "-RCB-": "}",
-        "-LSB-": "[",
-        "-RSB-": "]"
+    "-LRB-": "(",
+    "-RRB-": ")",
+    "-LCB-": "{",
+    "-RCB-": "}",
+    "-LSB-": "[",
+    "-RSB-": "]",
 }
 
 
@@ -57,15 +65,18 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
     pos_label_namespace : ``str``, optional, (default = ``"pos"``)
         The POS tag namespace is ``label_namespace_prefix + pos_label_namespace``.
     """
-    def __init__(self,
-                 token_indexers: Dict[str, TokenIndexer] = None,
-                 use_pos_tags: bool = True,
-                 convert_parentheses: bool = False,
-                 lazy: bool = False,
-                 label_namespace_prefix: str = "",
-                 pos_label_namespace: str = "pos") -> None:
+
+    def __init__(
+        self,
+        token_indexers: Dict[str, TokenIndexer] = None,
+        use_pos_tags: bool = True,
+        convert_parentheses: bool = False,
+        lazy: bool = False,
+        label_namespace_prefix: str = "",
+        pos_label_namespace: str = "pos",
+    ) -> None:
         super().__init__(lazy=lazy)
-        self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
+        self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._use_pos_tags = use_pos_tags
         self._convert_parentheses = convert_parentheses
         self._label_namespace_prefix = label_namespace_prefix
@@ -88,10 +99,12 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
             yield self.text_to_instance(parse.leaves(), pos_tags, parse)
 
     @overrides
-    def text_to_instance(self,  # type: ignore
-                         tokens: List[str],
-                         pos_tags: List[str] = None,
-                         gold_tree: Tree = None) -> Instance:
+    def text_to_instance(
+        self,  # type: ignore
+        tokens: List[str],
+        pos_tags: List[str] = None,
+        gold_tree: Tree = None,
+    ) -> Instance:
         """
         We take `pre-tokenized` input here, because we don't have a tokenizer in this class.
 
@@ -130,12 +143,13 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
 
         pos_namespace = self._label_namespace_prefix + self._pos_label_namespace
         if self._use_pos_tags and pos_tags is not None:
-            pos_tag_field = SequenceLabelField(pos_tags, text_field,
-                                               label_namespace=pos_namespace)
+            pos_tag_field = SequenceLabelField(pos_tags, text_field, label_namespace=pos_namespace)
             fields["pos_tags"] = pos_tag_field
         elif self._use_pos_tags:
-            raise ConfigurationError("use_pos_tags was set to True but no gold pos"
-                                     " tags were passed to the dataset reader.")
+            raise ConfigurationError(
+                "use_pos_tags was set to True but no gold pos"
+                " tags were passed to the dataset reader."
+            )
         spans: List[Field] = []
         gold_labels = []
 
@@ -162,9 +176,11 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
         span_list_field: ListField = ListField(spans)
         fields["spans"] = span_list_field
         if gold_tree is not None:
-            fields["span_labels"] = SequenceLabelField(gold_labels,
-                                                       span_list_field,
-                                                       label_namespace=self._label_namespace_prefix + "labels")
+            fields["span_labels"] = SequenceLabelField(
+                gold_labels,
+                span_list_field,
+                label_namespace=self._label_namespace_prefix + "labels",
+            )
         return Instance(fields)
 
     def _strip_functional_tags(self, tree: Tree) -> None:
@@ -181,10 +197,9 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
             if not isinstance(child[0], str):
                 self._strip_functional_tags(child)
 
-    def _get_gold_spans(self,
-                        tree: Tree,
-                        index: int,
-                        typed_spans: Dict[Tuple[int, int], str]) -> int:
+    def _get_gold_spans(
+        self, tree: Tree, index: int, typed_spans: Dict[Tuple[int, int], str]
+    ) -> int:
         """
         Recursively construct the gold spans from an nltk ``Tree``.
         Labels are the constituents, and in the case of nested constituents

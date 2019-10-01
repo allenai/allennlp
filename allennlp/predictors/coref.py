@@ -18,7 +18,10 @@ class CorefPredictor(Predictor):
     """
     Predictor for the :class:`~allennlp.models.coreference_resolution.CoreferenceResolver` model.
     """
-    def __init__(self, model: Model, dataset_reader: DatasetReader, language: str = 'en_core_web_sm') -> None:
+
+    def __init__(
+        self, model: Model, dataset_reader: DatasetReader, language: str = "en_core_web_sm"
+    ) -> None:
         super().__init__(model, dataset_reader)
 
         # We have to use spacy to tokenise our document here, because we need
@@ -76,9 +79,9 @@ class CorefPredictor(Predictor):
         return self.predict_instance(instance)
 
     @overrides
-    def predictions_to_labeled_instances(self,
-                                         instance: Instance,
-                                         outputs: Dict[str, numpy.ndarray]) -> List[Instance]:
+    def predictions_to_labeled_instances(
+        self, instance: Instance, outputs: Dict[str, numpy.ndarray]
+    ) -> List[Instance]:
         """
         Takes each predicted cluster and makes it into a labeled ``Instance`` with only that
         cluster labeled, so we can compute gradients of the loss `on the model's prediction of that
@@ -87,26 +90,28 @@ class CorefPredictor(Predictor):
         """
         # Digging into an Instance makes mypy go crazy, because we have all kinds of things where
         # the type has been lost.  So there are lots of `type: ignore`s here...
-        predicted_clusters = outputs['clusters']
-        span_field: ListField = instance['spans']  # type: ignore
+        predicted_clusters = outputs["clusters"]
+        span_field: ListField = instance["spans"]  # type: ignore
         instances = []
         for cluster in predicted_clusters:
             new_instance = deepcopy(instance)
-            span_labels = [0 if (span.span_start, span.span_end) in cluster else -1  # type: ignore
-                           for span in span_field]  # type: ignore
-            new_instance.add_field('span_labels',
-                                   SequenceLabelField(span_labels, span_field),
-                                   self._model.vocab)
-            new_instance['metadata'].metadata['clusters'] = [cluster]  # type: ignore
+            span_labels = [
+                0 if (span.span_start, span.span_end) in cluster else -1  # type: ignore
+                for span in span_field
+            ]  # type: ignore
+            new_instance.add_field(
+                "span_labels", SequenceLabelField(span_labels, span_field), self._model.vocab
+            )
+            new_instance["metadata"].metadata["clusters"] = [cluster]  # type: ignore
             instances.append(new_instance)
         if not instances:
             # No predicted clusters; we just give an empty coref prediction.
             new_instance = deepcopy(instance)
             span_labels = [-1] * len(span_field)  # type: ignore
-            new_instance.add_field('span_labels',
-                                   SequenceLabelField(span_labels, span_field),
-                                   self._model.vocab)
-            new_instance['metadata'].metadata['clusters'] = []  # type: ignore
+            new_instance.add_field(
+                "span_labels", SequenceLabelField(span_labels, span_field), self._model.vocab
+            )
+            new_instance["metadata"].metadata["clusters"] = []  # type: ignore
             instances.append(new_instance)
         return instances
 
@@ -122,7 +127,7 @@ class CorefPredictor(Predictor):
         for cluster in clusters:
             # The main mention is the first item in the cluster
             mention_start, mention_end = cluster[0][0], cluster[0][1] + 1
-            mention_span = document[mention_start: mention_end]
+            mention_span = document[mention_start:mention_end]
 
             # The coreferences are all items following the first in the cluster
             for coref in cluster[1:]:

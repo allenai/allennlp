@@ -24,7 +24,7 @@ def join_mwp(tags: List[str]) -> List[str]:
             prefix, _ = tag.split("-", 1)
             if verb_flag:
                 # Continue a verb label across the different predicate parts
-                prefix = 'I'
+                prefix = "I"
             ret.append(f"{prefix}-V")
             verb_flag = True
         else:
@@ -67,15 +67,14 @@ def get_predicate_indices(tags: List[str]) -> List[int]:
     """
     Return the word indices of a predicate in BIO tags.
     """
-    return [ind for ind, tag in enumerate(tags) if 'V' in tag]
+    return [ind for ind, tag in enumerate(tags) if "V" in tag]
 
 
 def get_predicate_text(sent_tokens: List[Token], tags: List[str]) -> str:
     """
     Get the predicate in this prediction.
     """
-    return " ".join([sent_tokens[pred_id].text
-                     for pred_id in get_predicate_indices(tags)])
+    return " ".join([sent_tokens[pred_id].text for pred_id in get_predicate_indices(tags)])
 
 
 def predicates_overlap(tags1: List[str], tags2: List[str]) -> bool:
@@ -137,7 +136,9 @@ def merge_overlapping_predictions(tags1: List[str], tags2: List[str]) -> List[st
     return ret_sequence
 
 
-def consolidate_predictions(outputs: List[List[str]], sent_tokens: List[Token]) -> Dict[str, List[str]]:
+def consolidate_predictions(
+    outputs: List[List[str]], sent_tokens: List[Token]
+) -> Dict[str, List[str]]:
     """
     Identify that certain predicates are part of a multiword predicate
     (e.g., "decided to run") in which case, we don't need to return
@@ -145,8 +146,7 @@ def consolidate_predictions(outputs: List[List[str]], sent_tokens: List[Token]) 
     """
     pred_dict: Dict[str, List[str]] = {}
     merged_outputs = [join_mwp(output) for output in outputs]
-    predicate_texts = [get_predicate_text(sent_tokens, tags)
-                       for tags in merged_outputs]
+    predicate_texts = [get_predicate_text(sent_tokens, tags) for tags in merged_outputs]
 
     for pred1_text, tags1 in zip(predicate_texts, merged_outputs):
         # A flag indicating whether to add tags1 to predictions
@@ -179,15 +179,14 @@ def sanitize_label(label: str) -> str:
         return label
 
 
-@Predictor.register('open-information-extraction')
+@Predictor.register("open-information-extraction")
 class OpenIePredictor(Predictor):
     """
     Predictor for the :class: `models.SemanticRolelabeler` model (in its Open Information variant).
     Used by online demo and for prediction on an input file using command line.
     """
-    def __init__(self,
-                 model: Model,
-                 dataset_reader: DatasetReader) -> None:
+
+    def __init__(self, model: Model, dataset_reader: DatasetReader) -> None:
         super().__init__(model, dataset_reader)
         self._tokenizer = WordTokenizer(word_splitter=SpacyWordSplitter(pos_tags=True))
 
@@ -224,18 +223,19 @@ class OpenIePredictor(Predictor):
         sent_tokens = self._tokenizer.tokenize(inputs["sentence"])
 
         # Find all verbs in the input sentence
-        pred_ids = [i for (i, t)
-                    in enumerate(sent_tokens)
-                    if t.pos_ == "VERB"]
+        pred_ids = [i for (i, t) in enumerate(sent_tokens) if t.pos_ == "VERB"]
 
         # Create instances
-        instances = [self._json_to_instance({"sentence": sent_tokens,
-                                             "predicate_index": pred_id})
-                     for pred_id in pred_ids]
+        instances = [
+            self._json_to_instance({"sentence": sent_tokens, "predicate_index": pred_id})
+            for pred_id in pred_ids
+        ]
 
         # Run model
-        outputs = [[sanitize_label(label) for label in self._model.forward_on_instance(instance)["tags"]]
-                   for instance in instances]
+        outputs = [
+            [sanitize_label(label) for label in self._model.forward_on_instance(instance)["tags"]]
+            for instance in instances
+        ]
 
         # Consolidate predictions
         pred_dict = consolidate_predictions(outputs, sent_tokens)
@@ -251,10 +251,12 @@ class OpenIePredictor(Predictor):
             description = make_oie_string(sent_tokens, tags)
 
             # Add a predicate prediction to the return dictionary.
-            results["verbs"].append({
+            results["verbs"].append(
+                {
                     "verb": get_predicate_text(sent_tokens, tags),
                     "description": description,
                     "tags": tags,
-            })
+                }
+            )
 
         return sanitize(results)

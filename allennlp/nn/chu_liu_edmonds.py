@@ -4,9 +4,9 @@ import numpy
 from allennlp.common.checks import ConfigurationError
 
 
-def decode_mst(energy: numpy.ndarray,
-               length: int,
-               has_labels: bool = True) -> Tuple[numpy.ndarray, numpy.ndarray]:
+def decode_mst(
+    energy: numpy.ndarray, length: int, has_labels: bool = True
+) -> Tuple[numpy.ndarray, numpy.ndarray]:
     """
     Note: Counter to typical intuition, this function decodes the _maximum_
     spanning tree.
@@ -68,8 +68,9 @@ def decode_mst(energy: numpy.ndarray,
     final_edges: Dict[int, int] = {}
 
     # The main algorithm operates inplace.
-    chu_liu_edmonds(length, score_matrix, current_nodes,
-                    final_edges, old_input, old_output, representatives)
+    chu_liu_edmonds(
+        length, score_matrix, current_nodes, final_edges, old_input, old_output, representatives
+    )
 
     heads = numpy.zeros([max_length], numpy.int32)
     if has_labels:
@@ -85,13 +86,15 @@ def decode_mst(energy: numpy.ndarray,
     return heads, head_type
 
 
-def chu_liu_edmonds(length: int,
-                    score_matrix: numpy.ndarray,
-                    current_nodes: List[bool],
-                    final_edges: Dict[int, int],
-                    old_input: numpy.ndarray,
-                    old_output: numpy.ndarray,
-                    representatives: List[Set[int]]):
+def chu_liu_edmonds(
+    length: int,
+    score_matrix: numpy.ndarray,
+    current_nodes: List[bool],
+    final_edges: Dict[int, int],
+    old_input: numpy.ndarray,
+    old_output: numpy.ndarray,
+    representatives: List[Set[int]],
+):
     """
     Applies the chu-liu-edmonds algorithm recursively
     to a graph with edge weights defined by score_matrix.
@@ -182,9 +185,11 @@ def chu_liu_edmonds(length: int,
 
             # Add the new edge score to the cycle weight
             # and subtract the edge we're considering removing.
-            score = (cycle_weight +
-                     score_matrix[node, node_in_cycle] -
-                     score_matrix[parents[node_in_cycle], node_in_cycle])
+            score = (
+                cycle_weight
+                + score_matrix[node, node_in_cycle]
+                - score_matrix[parents[node_in_cycle], node_in_cycle]
+            )
 
             if score > out_edge_weight:
                 out_edge_weight = score
@@ -218,7 +223,9 @@ def chu_liu_edmonds(length: int,
             if i > 0:
                 representatives[cycle_representative].add(node)
 
-    chu_liu_edmonds(length, score_matrix, current_nodes, final_edges, old_input, old_output, representatives)
+    chu_liu_edmonds(
+        length, score_matrix, current_nodes, final_edges, old_input, old_output, representatives
+    )
 
     # Expansion stage.
     # check each node in cycle, if one of its representatives
@@ -242,9 +249,9 @@ def chu_liu_edmonds(length: int,
         previous = parents[previous]
 
 
-def _find_cycle(parents: List[int],
-                length: int,
-                current_nodes: List[bool]) -> Tuple[bool, List[int]]:
+def _find_cycle(
+    parents: List[int], length: int, current_nodes: List[bool]
+) -> Tuple[bool, List[int]]:
 
     added = [False for _ in range(length)]
     added[0] = True

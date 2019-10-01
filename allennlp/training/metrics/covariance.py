@@ -25,16 +25,19 @@ class Covariance(Metric):
     `C_AB = C_A + C_B + (E[x_A] - E[x_B]) * (E[y_A] - E[y_B]) * n_A * n_B / n_AB`
     The comoment for a single batch of data is simply `sum((x - E[x]) * (y - E[y]))`, optionally masked.
     """
+
     def __init__(self) -> None:
         self._total_prediction_mean = 0.0
         self._total_label_mean = 0.0
         self._total_co_moment = 0.0
         self._total_count = 0.0
 
-    def __call__(self,
-                 predictions: torch.Tensor,
-                 gold_labels: torch.Tensor,
-                 mask: Optional[torch.Tensor] = None):
+    def __call__(
+        self,
+        predictions: torch.Tensor,
+        gold_labels: torch.Tensor,
+        mask: Optional[torch.Tensor] = None,
+    ):
         """
         Parameters
         ----------
@@ -69,13 +72,16 @@ class Covariance(Metric):
         updated_count = self._total_count + num_batch_items
 
         batch_mean_prediction = torch.sum(predictions) / num_batch_items
-        delta_mean_prediction = ((batch_mean_prediction - self._total_prediction_mean) *
-                                 num_batch_items) / updated_count
+        delta_mean_prediction = (
+            (batch_mean_prediction - self._total_prediction_mean) * num_batch_items
+        ) / updated_count
         previous_total_prediction_mean = self._total_prediction_mean
         self._total_prediction_mean += delta_mean_prediction.item()
 
         batch_mean_label = torch.sum(gold_labels) / num_batch_items
-        delta_mean_label = ((batch_mean_label - self._total_label_mean) * num_batch_items) / updated_count
+        delta_mean_label = (
+            (batch_mean_label - self._total_label_mean) * num_batch_items
+        ) / updated_count
         previous_total_label_mean = self._total_label_mean
         self._total_label_mean += delta_mean_label.item()
 
@@ -84,10 +90,11 @@ class Covariance(Metric):
             batch_co_moment = torch.sum(batch_coresiduals * mask)
         else:
             batch_co_moment = torch.sum(batch_coresiduals)
-        delta_co_moment = (
-                batch_co_moment + (previous_total_prediction_mean - batch_mean_prediction) *
-                (previous_total_label_mean - batch_mean_label) *
-                (previous_count * num_batch_items / updated_count))
+        delta_co_moment = batch_co_moment + (
+            previous_total_prediction_mean - batch_mean_prediction
+        ) * (previous_total_label_mean - batch_mean_label) * (
+            previous_count * num_batch_items / updated_count
+        )
         self._total_co_moment += delta_co_moment.item()
         self._total_count = updated_count
 

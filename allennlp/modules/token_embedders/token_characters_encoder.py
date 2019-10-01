@@ -19,6 +19,7 @@ class TokenCharactersEncoder(TokenEmbedder):
 
     We take the embedding and encoding modules as input, so this class is itself quite simple.
     """
+
     def __init__(self, embedding: Embedding, encoder: Seq2VecEncoder, dropout: float = 0.0) -> None:
         super().__init__()
         self._embedding = TimeDistributed(embedding)
@@ -37,13 +38,17 @@ class TokenCharactersEncoder(TokenEmbedder):
 
     # The setdefault requires a custom from_params
     @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> 'TokenCharactersEncoder':  # type: ignore
+    def from_params(  # type: ignore
+        cls, vocab: Vocabulary, params: Params
+    ) -> "TokenCharactersEncoder":
 
         embedding_params: Params = params.pop("embedding")
         # Embedding.from_params() uses "tokens" as the default namespace, but we need to change
         # that to be "token_characters" by default. If num_embeddings is present, set default namespace
         # to None so that extend_vocab call doesn't misinterpret that some namespace was originally used.
-        default_namespace = None if embedding_params.get("num_embeddings", None) else "token_characters"
+        default_namespace = (
+            None if embedding_params.get("num_embeddings", None) else "token_characters"
+        )
         embedding_params.setdefault("vocab_namespace", default_namespace)
         embedding = Embedding.from_params(vocab, embedding_params)
         encoder_params: Params = params.pop("encoder")

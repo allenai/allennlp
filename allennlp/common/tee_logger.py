@@ -14,10 +14,10 @@ def replace_cr_with_newline(message: str):
     :param message: the message to permute
     :return: the message with carriage returns replaced with newlines
     """
-    if '\r' in message:
-        message = message.replace('\r', '')
-        if not message or message[-1] != '\n':
-            message += '\n'
+    if "\r" in message:
+        message = message.replace("\r", "")
+        if not message or message[-1] != "\n":
+            message += "\n"
     return message
 
 
@@ -29,12 +29,15 @@ class TeeLogger:
         sys.stdout = TeeLogger("stdout.log", sys.stdout)
         sys.stderr = TeeLogger("stdout.log", sys.stderr)
     """
-    def __init__(self, filename: str, terminal: TextIO, file_friendly_terminal_output: bool) -> None:
+
+    def __init__(
+        self, filename: str, terminal: TextIO, file_friendly_terminal_output: bool
+    ) -> None:
         self.terminal = terminal
         self.file_friendly_terminal_output = file_friendly_terminal_output
         parent_directory = os.path.dirname(filename)
         os.makedirs(parent_directory, exist_ok=True)
-        self.log = open(filename, 'a')
+        self.log = open(filename, "a")
 
     def write(self, message):
         cleaned = replace_cr_with_newline(message)

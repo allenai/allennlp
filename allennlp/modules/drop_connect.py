@@ -10,11 +10,14 @@ class _Match:
     Helper object that stores ``Parameter`` objects along with their parent ``Module`` objects
     and associated names.
     """
-    def __init__(self,
-                 module_name: str,
-                 module: torch.nn.Module,
-                 parameter_name: str,
-                 parameter: torch.nn.Parameter) -> None:
+
+    def __init__(
+        self,
+        module_name: str,
+        module: torch.nn.Module,
+        parameter_name: str,
+        parameter: torch.nn.Parameter,
+    ) -> None:
         self.module_name = module_name
         self.module = module
         self.parameter_name = parameter_name
@@ -22,8 +25,10 @@ class _Match:
 
     @property
     def raw_parameter_name(self):
-        prefix = self.module_name.replace('.', '_')  # PyTorch will complain if the name contains a '.'
-        return '_'.join((prefix, self.parameter_name)) + '_raw'
+        prefix = self.module_name.replace(
+            ".", "_"
+        )  # PyTorch will complain if the name contains a '.'
+        return "_".join((prefix, self.parameter_name)) + "_raw"
 
 
 class DropConnect(torch.nn.Module):
@@ -41,10 +46,8 @@ class DropConnect(torch.nn.Module):
     dropout : ``float``, optional (default = 0.0)
         Probability that a given weight is dropped.
     """
-    def __init__(self,
-                 module: torch.nn.Module,
-                 parameter_regex: str,
-                 dropout: float = 0.0) -> None:
+
+    def __init__(self, module: torch.nn.Module, parameter_regex: str, dropout: float = 0.0) -> None:
         super().__init__()
         self._module = module
         self._parameter_regex = parameter_regex
@@ -77,9 +80,9 @@ class DropConnect(torch.nn.Module):
         # parent module's _parameter dictionary
         for match in self._matches:
             raw_parameter = getattr(self, match.raw_parameter_name)
-            match.module._parameters[match.parameter_name] = F.dropout(raw_parameter,
-                                                                       p=self._dropout,
-                                                                       training=self.training)
+            match.module._parameters[match.parameter_name] = F.dropout(
+                raw_parameter, p=self._dropout, training=self.training
+            )
         # Call the top-level module on the inputs.
         output = self._module(*args)
         # Lastly, remove the dropped out parameters from their parent module's _parameter
@@ -91,7 +94,7 @@ class DropConnect(torch.nn.Module):
         return output
 
     def reset(self):
-        if hasattr(self._module, 'reset'):
+        if hasattr(self._module, "reset"):
             self._module.reset()
 
         self._matches = list(self._search_parameters(self._parameter_regex))

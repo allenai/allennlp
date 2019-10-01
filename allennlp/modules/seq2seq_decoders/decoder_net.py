@@ -27,10 +27,9 @@ class DecoderNet(torch.nn.Module, Registrable):
         Defines whether the decoder generates multiple next step predictions at in a single `forward`.
     """
 
-    def __init__(self,
-                 decoding_dim: int,
-                 target_embedding_dim: int,
-                 decodes_parallel: bool) -> None:
+    def __init__(
+        self, decoding_dim: int, target_embedding_dim: int, decodes_parallel: bool
+    ) -> None:
         super().__init__()
         self.target_embedding_dim = target_embedding_dim
         self.decoding_dim = decoding_dim
@@ -43,7 +42,9 @@ class DecoderNet(torch.nn.Module, Registrable):
         """
         return self.decoding_dim
 
-    def init_decoder_state(self, encoder_out: Dict[str, torch.LongTensor]) -> Dict[str, torch.Tensor]:
+    def init_decoder_state(
+        self, encoder_out: Dict[str, torch.LongTensor]
+    ) -> Dict[str, torch.Tensor]:
         """
         Initialize the encoded state to be passed to the first decoding time step.
 
@@ -61,13 +62,14 @@ class DecoderNet(torch.nn.Module, Registrable):
         """
         raise NotImplementedError()
 
-    def forward(self,
-                previous_state: Dict[str, torch.Tensor],
-                encoder_outputs: torch.Tensor,
-                source_mask: torch.Tensor,
-                previous_steps_predictions: torch.Tensor,
-                previous_steps_mask: Optional[torch.Tensor] = None) -> Tuple[Dict[str, torch.Tensor],
-                                                                             torch.Tensor]:
+    def forward(
+        self,
+        previous_state: Dict[str, torch.Tensor],
+        encoder_outputs: torch.Tensor,
+        source_mask: torch.Tensor,
+        previous_steps_predictions: torch.Tensor,
+        previous_steps_mask: Optional[torch.Tensor] = None,
+    ) -> Tuple[Dict[str, torch.Tensor], torch.Tensor]:
 
         """
         Performs a decoding step, and returns dictionary with decoder hidden state or cache and the decoder output.

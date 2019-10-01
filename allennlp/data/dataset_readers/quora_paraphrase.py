@@ -39,10 +39,13 @@ class QuoraParaphraseDatasetReader(DatasetReader):
         Indexers used to define input token representations. Defaults to ``{"tokens":
         SingleIdTokenIndexer()}``.
     """
-    def __init__(self,
-                 lazy: bool = False,
-                 tokenizer: Tokenizer = None,
-                 token_indexers: Dict[str, TokenIndexer] = None) -> None:
+
+    def __init__(
+        self,
+        lazy: bool = False,
+        tokenizer: Tokenizer = None,
+        token_indexers: Dict[str, TokenIndexer] = None,
+    ) -> None:
         super().__init__(lazy)
         self._tokenizer = tokenizer or WordTokenizer(JustSpacesWordSplitter())
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
@@ -51,16 +54,18 @@ class QuoraParaphraseDatasetReader(DatasetReader):
     def _read(self, file_path):
         logger.info("Reading instances from lines in file at: %s", file_path)
         with open(cached_path(file_path), "r") as data_file:
-            tsv_in = csv.reader(data_file, delimiter='\t')
+            tsv_in = csv.reader(data_file, delimiter="\t")
             for row in tsv_in:
                 if len(row) == 4:
                     yield self.text_to_instance(premise=row[1], hypothesis=row[2], label=row[0])
 
     @overrides
-    def text_to_instance(self,  # type: ignore
-                         premise: str,
-                         hypothesis: str,
-                         label: str = None) -> Instance:
+    def text_to_instance(
+        self,  # type: ignore
+        premise: str,
+        hypothesis: str,
+        label: str = None,
+    ) -> Instance:
 
         fields: Dict[str, Field] = {}
         tokenized_premise = self._tokenizer.tokenize(premise)
@@ -68,6 +73,6 @@ class QuoraParaphraseDatasetReader(DatasetReader):
         fields["premise"] = TextField(tokenized_premise, self._token_indexers)
         fields["hypothesis"] = TextField(tokenized_hypothesis, self._token_indexers)
         if label is not None:
-            fields['label'] = LabelField(label)
+            fields["label"] = LabelField(label)
 
         return Instance(fields)
