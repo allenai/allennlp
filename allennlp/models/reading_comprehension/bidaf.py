@@ -308,6 +308,7 @@ class BidirectionalAttentionFlow(Model):
             for i in range(batch_size):
                 question_tokens.append(metadata[i]["question_tokens"])
                 passage_tokens.append(metadata[i]["passage_tokens"])
+                token_offsets.append(metadata[i]["token_offsets"])
                 passage_str = metadata[i]["original_passage"]
                 offsets = metadata[i]["token_offsets"]
                 predicted_span = tuple(best_span[i].detach().cpu().numpy())
