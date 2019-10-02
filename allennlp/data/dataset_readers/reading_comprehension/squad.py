@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Dict, List, Tuple, Optional
+from typing import Any, Dict, List, Tuple, Optional
 
 from overrides import overrides
 
@@ -91,12 +91,14 @@ class SquadReader(DatasetReader):
                     span_ends = [
                         start + len(answer) for start, answer in zip(span_starts, answer_texts)
                     ]
+                    additional_metadata = {"id": question_answer["id"]}
                     instance = self.text_to_instance(
                         question_text,
                         paragraph,
                         zip(span_starts, span_ends),
                         answer_texts,
                         tokenized_paragraph,
+                        additional_metadata,
                     )
                     if instance is not None:
                         yield instance
@@ -109,6 +111,7 @@ class SquadReader(DatasetReader):
         char_spans: List[Tuple[int, int]] = None,
         answer_texts: List[str] = None,
         passage_tokens: List[Token] = None,
+        additional_metadata: Dict[str, Any] = None,
     ) -> Optional[Instance]:
 
         if not passage_tokens:
@@ -151,4 +154,5 @@ class SquadReader(DatasetReader):
             passage_text,
             token_spans,
             answer_texts,
+            additional_metadata,
         )
