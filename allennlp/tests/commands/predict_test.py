@@ -98,7 +98,7 @@ class TestPredict(AllenNlpTestCase):
                 "span_end_probs",
                 "best_span",
                 "best_span_str",
-                "token_offsets"
+                "token_offsets",
             }
 
         shutil.rmtree(self.tempdir)
@@ -273,7 +273,7 @@ class TestPredict(AllenNlpTestCase):
                 "span_end_probs",
                 "best_span",
                 "best_span_str",
-                "token_offsets"
+                "token_offsets",
             }
 
         shutil.rmtree(self.tempdir)
