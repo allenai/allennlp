@@ -51,7 +51,9 @@ class ArgumentParserWithDefaults(argparse.ArgumentParser):
         super().add_argument(*args, **kwargs)
 
 
-def create_parser(prog: str = None, subcommand_overrides: Dict[str, Subcommand] = None) -> argparse.ArgumentParser:
+def create_parser(
+    prog: str = None, subcommand_overrides: Dict[str, Subcommand] = None
+) -> argparse.ArgumentParser:
     """
     Creates the argument parser for the main program.
     """

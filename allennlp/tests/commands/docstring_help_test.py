@@ -12,22 +12,24 @@ from allennlp.common.testing import AllenNlpTestCase
 
 
 def _subcommand_help_output(subcommand: str) -> str:
-    parser = create_parser('allennlp')
+    parser = create_parser("allennlp")
     for action in parser._actions:
         if isinstance(action, argparse._SubParsersAction):
             file = io.StringIO()
             action._name_parser_map[subcommand].print_help(file)
             file.seek(0)
             return file.read()
-    raise LookupError("The main program parser does not contain a argparse._SubParsersAction object")
+    raise LookupError(
+        "The main program parser does not contain a argparse._SubParsersAction object"
+    )
 
 
 @pytest.mark.skip(
     reason="This test is slow and somewhat fragile and doesn't need to run every commit."
 )
 class TestDocstringHelp(AllenNlpTestCase):
-    RE_DOCSTRING_CALL_SUBCOMMAND_HELP = re.compile(r'^\s*\$ (allennlp (\S+) --help)$', re.MULTILINE)
-    RE_STARTS_WITH_INDENTATION = re.compile(r'^ {4}', re.MULTILINE)
+    RE_DOCSTRING_CALL_SUBCOMMAND_HELP = re.compile(r"^\s*\$ (allennlp (\S+) --help)$", re.MULTILINE)
+    RE_STARTS_WITH_INDENTATION = re.compile(r"^ {4}", re.MULTILINE)
 
     def test_docstring_help(self):
         parent_module = allennlp.commands
