@@ -24,9 +24,6 @@ def _subcommand_help_output(subcommand: str) -> str:
     )
 
 
-@pytest.mark.skip(
-    reason="This test is slow and somewhat fragile and doesn't need to run every commit."
-)
 class TestDocstringHelp(AllenNlpTestCase):
     RE_DOCSTRING_CALL_SUBCOMMAND_HELP = re.compile(r"^\s*\$ (allennlp (\S+) --help)$", re.MULTILINE)
     RE_STARTS_WITH_INDENTATION = re.compile(r"^ {4}", re.MULTILINE)
