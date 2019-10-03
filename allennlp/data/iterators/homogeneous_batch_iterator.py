@@ -41,16 +41,19 @@ class HomogeneousBatchIterator(DataIterator):
         If set to `True`, those smaller batches will be discarded.
     """
 
-    def __init__(self,
-                 batch_size: int = 32,
-                 instances_per_epoch: int = None,
-                 max_instances_in_memory: int = None,
-                 cache_instances: bool = False,
-                 track_epoch: bool = False,
-                 partition_key: str = "dataset",
-                 skip_smaller_batches: bool = False) -> None:
-        super().__init__(batch_size, instances_per_epoch, max_instances_in_memory,
-                         cache_instances, track_epoch)
+    def __init__(
+        self,
+        batch_size: int = 32,
+        instances_per_epoch: int = None,
+        max_instances_in_memory: int = None,
+        cache_instances: bool = False,
+        track_epoch: bool = False,
+        partition_key: str = "dataset",
+        skip_smaller_batches: bool = False,
+    ) -> None:
+        super().__init__(
+            batch_size, instances_per_epoch, max_instances_in_memory, cache_instances, track_epoch
+        )
         self._partition_key = partition_key
         self._skip_smaller_batches = skip_smaller_batches
 
@@ -67,7 +70,10 @@ class HomogeneousBatchIterator(DataIterator):
                 hoppers[partition].append(instance)
 
             # Get a `lazy_groups_of` iterator over each set of homogeneous instances.
-            batches = {key: lazy_groups_of(iter(hopper), self._batch_size) for key, hopper in hoppers.items()}
+            batches = {
+                key: lazy_groups_of(iter(hopper), self._batch_size)
+                for key, hopper in hoppers.items()
+            }
 
             remaining = set(batches)
 

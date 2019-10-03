@@ -57,12 +57,15 @@ NODE_TYPE_TO_STYLE["RRC"] = ["color5"]
 NODE_TYPE_TO_STYLE["UCP"] = ["color5"]
 
 
-@Predictor.register('constituency-parser')
+@Predictor.register("constituency-parser")
 class ConstituencyParserPredictor(Predictor):
     """
     Predictor for the :class:`~allennlp.models.SpanConstituencyParser` model.
     """
-    def __init__(self, model: Model, dataset_reader: DatasetReader, language: str = 'en_core_web_sm') -> None:
+
+    def __init__(
+        self, model: Model, dataset_reader: DatasetReader, language: str = "en_core_web_sm"
+    ) -> None:
         super().__init__(model, dataset_reader)
         self._tokenizer = SpacyWordSplitter(language=language, pos_tags=True)
 
@@ -141,20 +144,15 @@ class ConstituencyParserPredictor(Predictor):
 
         label = tree.label()
         span = " ".join(tree.leaves())
-        hierplane_node = {
-                "word": span,
-                "nodeType": label,
-                "attributes": [label],
-                "link": label
-        }
+        hierplane_node = {"word": span, "nodeType": label, "attributes": [label], "link": label}
         if children:
             hierplane_node["children"] = children
         # TODO(Mark): Figure out how to span highlighting to the leaves.
         if is_root:
             hierplane_node = {
-                    "linkNameToLabel": LINK_TO_LABEL,
-                    "nodeTypeToStyle": NODE_TYPE_TO_STYLE,
-                    "text": span,
-                    "root": hierplane_node
+                "linkNameToLabel": LINK_TO_LABEL,
+                "nodeTypeToStyle": NODE_TYPE_TO_STYLE,
+                "text": span,
+                "root": hierplane_node,
             }
         return hierplane_node

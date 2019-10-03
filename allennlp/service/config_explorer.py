@@ -44,11 +44,11 @@ def make_app(include_packages: Sequence[str] = ()) -> Flask:
         response.status_code = error.status_code
         return response
 
-    @app.route('/')
+    @app.route("/")
     def index() -> Response:
-        return send_file('config_explorer.html')
+        return send_file("config_explorer.html")
 
-    @app.route('/api/config/')
+    @app.route("/api/config/")
     def api_config() -> Response:
         """
         There are basically two things that can happen here.
@@ -80,8 +80,8 @@ def make_app(include_packages: Sequence[str] = ()) -> Flask:
 
         This is not elegant, but it works.
         """
-        class_name = request.args.get('class', '')
-        get_choices = request.args.get('get_choices', None)
+        class_name = request.args.get("class", "")
+        get_choices = request.args.get("get_choices", None)
 
         # Get the configuration for this class name
         config = configure(class_name)
@@ -92,14 +92,8 @@ def make_app(include_packages: Sequence[str] = ()) -> Flask:
             choice5 = []
 
         if get_choices and choice5:
-            return jsonify({
-                    "className": class_name,
-                    "choices": choice5
-            })
+            return jsonify({"className": class_name, "choices": choice5})
         else:
-            return jsonify({
-                    "className": class_name,
-                    "config": config.to_json()
-            })
+            return jsonify({"className": class_name, "config": config.to_json()})
 
     return app

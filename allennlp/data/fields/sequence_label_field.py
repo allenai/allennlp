@@ -38,24 +38,29 @@ class SequenceLabelField(Field[torch.Tensor]):
         integers for you, and this parameter tells the ``Vocabulary`` object which mapping from
         strings to integers to use (so that "O" as a tag doesn't get the same id as "O" as a word).
     """
+
     # It is possible that users want to use this field with a namespace which uses OOV/PAD tokens.
     # This warning will be repeated for every instantiation of this class (i.e for every data
     # instance), spewing a lot of warnings so this class variable is used to only log a single
     # warning per namespace.
     _already_warned_namespaces: Set[str] = set()
 
-    def __init__(self,
-                 labels: Union[List[str], List[int]],
-                 sequence_field: SequenceField,
-                 label_namespace: str = 'labels') -> None:
+    def __init__(
+        self,
+        labels: Union[List[str], List[int]],
+        sequence_field: SequenceField,
+        label_namespace: str = "labels",
+    ) -> None:
         self.labels = labels
         self.sequence_field = sequence_field
         self._label_namespace = label_namespace
         self._indexed_labels = None
         self._maybe_warn_for_namespace(label_namespace)
         if len(labels) != sequence_field.sequence_length():
-            raise ConfigurationError("Label length and sequence length "
-                                     "don't match: %d and %d" % (len(labels), sequence_field.sequence_length()))
+            raise ConfigurationError(
+                "Label length and sequence length "
+                "don't match: %d and %d" % (len(labels), sequence_field.sequence_length())
+            )
 
         self._skip_indexing = False
         if all([isinstance(x, int) for x in labels]):
@@ -63,18 +68,22 @@ class SequenceLabelField(Field[torch.Tensor]):
             self._skip_indexing = True
 
         elif not all([isinstance(x, str) for x in labels]):
-            raise ConfigurationError("SequenceLabelFields must be passed either all "
-                                     "strings or all ints. Found labels {} with "
-                                     "types: {}.".format(labels, [type(x) for x in labels]))
+            raise ConfigurationError(
+                "SequenceLabelFields must be passed either all "
+                "strings or all ints. Found labels {} with "
+                "types: {}.".format(labels, [type(x) for x in labels])
+            )
 
     def _maybe_warn_for_namespace(self, label_namespace: str) -> None:
         if not (self._label_namespace.endswith("labels") or self._label_namespace.endswith("tags")):
             if label_namespace not in self._already_warned_namespaces:
-                logger.warning("Your label namespace was '%s'. We recommend you use a namespace "
-                               "ending with 'labels' or 'tags', so we don't add UNK and PAD tokens by "
-                               "default to your vocabulary.  See documentation for "
-                               "`non_padded_namespaces` parameter in Vocabulary.",
-                               self._label_namespace)
+                logger.warning(
+                    "Your label namespace was '%s'. We recommend you use a namespace "
+                    "ending with 'labels' or 'tags', so we don't add UNK and PAD tokens by "
+                    "default to your vocabulary.  See documentation for "
+                    "`non_padded_namespaces` parameter in Vocabulary.",
+                    self._label_namespace,
+                )
                 self._already_warned_namespaces.add(label_namespace)
 
     # Sequence methods
@@ -96,22 +105,24 @@ class SequenceLabelField(Field[torch.Tensor]):
     @overrides
     def index(self, vocab: Vocabulary):
         if not self._skip_indexing:
-            self._indexed_labels = [vocab.get_token_index(label, self._label_namespace)  # type: ignore
-                                    for label in self.labels]
+            self._indexed_labels = [
+                vocab.get_token_index(label, self._label_namespace)  # type: ignore
+                for label in self.labels
+            ]
 
     @overrides
     def get_padding_lengths(self) -> Dict[str, int]:
-        return {'num_tokens': self.sequence_field.sequence_length()}
+        return {"num_tokens": self.sequence_field.sequence_length()}
 
     @overrides
     def as_tensor(self, padding_lengths: Dict[str, int]) -> torch.Tensor:
-        desired_num_tokens = padding_lengths['num_tokens']
+        desired_num_tokens = padding_lengths["num_tokens"]
         padded_tags = pad_sequence_to_length(self._indexed_labels, desired_num_tokens)
         tensor = torch.LongTensor(padded_tags)
         return tensor
 
     @overrides
-    def empty_field(self) -> 'SequenceLabelField':
+    def empty_field(self) -> "SequenceLabelField":
 
         # The empty_list here is needed for mypy
         empty_list: List[str] = []
@@ -121,7 +132,10 @@ class SequenceLabelField(Field[torch.Tensor]):
 
     def __str__(self) -> str:
         length = self.sequence_field.sequence_length()
-        formatted_labels = "".join(["\t\t" + labels + "\n"
-                                    for labels in textwrap.wrap(repr(self.labels), 100)])
-        return f"SequenceLabelField of length {length} with " \
-               f"labels:\n {formatted_labels} \t\tin namespace: '{self._label_namespace}'."
+        formatted_labels = "".join(
+            ["\t\t" + labels + "\n" for labels in textwrap.wrap(repr(self.labels), 100)]
+        )
+        return (
+            f"SequenceLabelField of length {length} with "
+            f"labels:\n {formatted_labels} \t\tin namespace: '{self._label_namespace}'."
+        )

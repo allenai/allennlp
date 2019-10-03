@@ -35,12 +35,15 @@ class WordTokenizer(Tokenizer):
     end_tokens : ``List[str]``, optional
         If given, these tokens will be added to the end of every string we tokenize.
     """
-    def __init__(self,
-                 word_splitter: WordSplitter = None,
-                 word_filter: WordFilter = PassThroughWordFilter(),
-                 word_stemmer: WordStemmer = PassThroughWordStemmer(),
-                 start_tokens: List[str] = None,
-                 end_tokens: List[str] = None) -> None:
+
+    def __init__(
+        self,
+        word_splitter: WordSplitter = None,
+        word_filter: WordFilter = PassThroughWordFilter(),
+        word_stemmer: WordStemmer = PassThroughWordStemmer(),
+        start_tokens: List[str] = None,
+        end_tokens: List[str] = None,
+    ) -> None:
         self._word_splitter = word_splitter or SpacyWordSplitter()
         self._word_filter = word_filter
         self._word_stemmer = word_stemmer

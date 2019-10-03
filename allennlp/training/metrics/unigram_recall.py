@@ -16,15 +16,18 @@ class UnigramRecall(Metric):
     integer labels, with each item to be classified having a single correct
     class.
     """
+
     def __init__(self) -> None:
         self.correct_count = 0.0
         self.total_count = 0.0
 
-    def __call__(self,
-                 predictions: torch.Tensor,
-                 gold_labels: torch.Tensor,
-                 mask: Optional[torch.Tensor] = None,
-                 end_index: int = sys.maxsize):
+    def __call__(
+        self,
+        predictions: torch.Tensor,
+        gold_labels: torch.Tensor,
+        mask: Optional[torch.Tensor] = None,
+        end_index: int = sys.maxsize,
+    ):
         """
         Parameters
         ----------
@@ -39,11 +42,15 @@ class UnigramRecall(Metric):
 
         # Some sanity checks.
         if gold_labels.dim() != predictions.dim() - 1:
-            raise ConfigurationError("gold_labels must have dimension == predictions.dim() - 1 but "
-                                     "found tensor of shape: {}".format(gold_labels.size()))
+            raise ConfigurationError(
+                "gold_labels must have dimension == predictions.dim() - 1 but "
+                "found tensor of shape: {}".format(gold_labels.size())
+            )
         if mask is not None and mask.size() != gold_labels.size():
-            raise ConfigurationError("mask must have the same size as predictions but "
-                                     "found tensor of shape: {}".format(mask.size()))
+            raise ConfigurationError(
+                "mask must have the same size as predictions but "
+                "found tensor of shape: {}".format(mask.size())
+            )
 
         batch_size = predictions.size()[0]
         correct = 0.0
@@ -57,7 +64,7 @@ class UnigramRecall(Metric):
                 masked_gold = cur_gold
             cleaned_gold = [x for x in masked_gold if x not in (0, end_index)]
 
-            retval = 0.
+            retval = 0.0
             for word in cleaned_gold:
                 stillsearch = True
                 for beam in beams:
@@ -65,7 +72,7 @@ class UnigramRecall(Metric):
                     # end_index, so we don't need to explicitly remove those
                     # from beam.
                     if stillsearch and (word in beam):
-                        retval += 1./float(len(cleaned_gold))
+                        retval += 1.0 / float(len(cleaned_gold))
                         stillsearch = False
             correct += retval
 

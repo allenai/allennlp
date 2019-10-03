@@ -18,7 +18,9 @@ class ConstantModel(Model):
 class TestNoOpTrainer(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
-        self.instances = SequenceTaggingDatasetReader().read(self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv')
+        self.instances = SequenceTaggingDatasetReader().read(
+            self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv"
+        )
         vocab = Vocabulary.from_instances(self.instances)
         self.vocab = vocab
         self.model = ConstantModel(vocab)

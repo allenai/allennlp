@@ -21,7 +21,8 @@ class WordSplitter(Registrable):
     higher-level object that splits strings into tokens (which could just be character tokens).
     So, we're using "word splitter" here for this.
     """
-    default_implementation = 'spacy'
+
+    default_implementation = "spacy"
 
     def batch_split_words(self, sentences: List[str]) -> List[List[Token]]:
         """
@@ -39,7 +40,7 @@ class WordSplitter(Registrable):
         raise NotImplementedError
 
 
-@WordSplitter.register('simple')
+@WordSplitter.register("simple")
 class SimpleWordSplitter(WordSplitter):
     """
     Does really simple tokenization.  NLTK was too slow, so we wrote our own simple tokenizer
@@ -47,13 +48,29 @@ class SimpleWordSplitter(WordSplitter):
     whitespace-delimited token, separating contractions and punctuation.  We assume lower-cased,
     reasonably well-formed English sentences as input.
     """
+
     def __init__(self):
         # These are certainly incomplete.  But at least it's a start.
-        self.special_cases = {'mr.', 'mrs.', 'etc.', 'e.g.', 'cf.', 'c.f.', 'eg.', 'al.'}
+        self.special_cases = {"mr.", "mrs.", "etc.", "e.g.", "cf.", "c.f.", "eg.", "al."}
         self.contractions = {"n't", "'s", "'ve", "'re", "'ll", "'d", "'m"}
         self.contractions |= {x.replace("'", "’") for x in self.contractions}
-        self.ending_punctuation = {'"', "'", '.', ',', ';', ')', ']', '}', ':', '!', '?', '%', '”', "’"}
-        self.beginning_punctuation = {'"', "'", '(', '[', '{', '#', '$', '“', "‘"}
+        self.ending_punctuation = {
+            '"',
+            "'",
+            ".",
+            ",",
+            ";",
+            ")",
+            "]",
+            "}",
+            ":",
+            "!",
+            "?",
+            "%",
+            "”",
+            "’",
+        }
+        self.beginning_punctuation = {'"', "'", "(", "[", "{", "#", "$", "“", "‘"}
 
     @overrides
     def split_words(self, sentence: str) -> List[Token]:
@@ -89,8 +106,8 @@ class SimpleWordSplitter(WordSplitter):
                 remove_contractions = False
                 for contraction in self.contractions:
                     if self._can_split(field) and field.lower().endswith(contraction):
-                        add_at_end.insert(0, Token(field[-len(contraction):]))
-                        field = field[:-len(contraction)]
+                        add_at_end.insert(0, Token(field[-len(contraction) :]))
+                        field = field[: -len(contraction)]
                         remove_contractions = True
             if field:
                 tokens.append(Token(field))
@@ -101,21 +118,23 @@ class SimpleWordSplitter(WordSplitter):
         return token and token.lower() not in self.special_cases
 
 
-@WordSplitter.register('letters_digits')
+@WordSplitter.register("letters_digits")
 class LettersDigitsWordSplitter(WordSplitter):
     """
     A ``WordSplitter`` which keeps runs of (unicode) letters and runs of digits together, while
     every other non-whitespace character becomes a separate word.
     """
+
     @overrides
     def split_words(self, sentence: str) -> List[Token]:
         # We use the [^\W\d_] pattern as a trick to match unicode letters
-        tokens = [Token(m.group(), idx=m.start())
-                  for m in re.finditer(r'[^\W\d_]+|\d+|\S', sentence)]
+        tokens = [
+            Token(m.group(), idx=m.start()) for m in re.finditer(r"[^\W\d_]+|\d+|\S", sentence)
+        ]
         return tokens
 
 
-@WordSplitter.register('just_spaces')
+@WordSplitter.register("just_spaces")
 class JustSpacesWordSplitter(WordSplitter):
     """
     A ``WordSplitter`` that assumes you've already done your own tokenization somehow and have
@@ -126,6 +145,7 @@ class JustSpacesWordSplitter(WordSplitter):
     Note that we use ``sentence.split()``, which means that the amount of whitespace between the
     tokens does not matter.  This will never result in spaces being included as tokens.
     """
+
     @overrides
     def split_words(self, sentence: str) -> List[Token]:
         return [Token(t) for t in sentence.split()]
@@ -146,16 +166,17 @@ class WhitespaceTokenizer:
     nlp.tokenizer = WhitespaceTokenizer(nlp.vocab)
     ... use nlp("here is some text") as normal.
     """
+
     def __init__(self, vocab):
         self.vocab = vocab
 
     def __call__(self, text):
-        words = text.split(' ')
+        words = text.split(" ")
         spaces = [True] * len(words)
         return Doc(self.vocab, words=words, spaces=spaces)
 
 
-@WordSplitter.register('spacy')
+@WordSplitter.register("spacy")
 class SpacyWordSplitter(WordSplitter):
     """
     A ``WordSplitter`` that uses spaCy's tokenizer.  It's fast and reasonable - this is the
@@ -163,13 +184,16 @@ class SpacyWordSplitter(WordSplitter):
     which are small, efficient NamedTuples (and are serializable). If you want
     to keep the original spaCy tokens, pass keep_spacy_tokens=True.
     """
-    def __init__(self,
-                 language: str = 'en_core_web_sm',
-                 pos_tags: bool = False,
-                 parse: bool = False,
-                 ner: bool = False,
-                 keep_spacy_tokens: bool = False,
-                 split_on_spaces: bool = False) -> None:
+
+    def __init__(
+        self,
+        language: str = "en_core_web_sm",
+        pos_tags: bool = False,
+        parse: bool = False,
+        ner: bool = False,
+        keep_spacy_tokens: bool = False,
+        split_on_spaces: bool = False,
+    ) -> None:
         self.spacy = get_spacy_model(language, pos_tags, parse, ner)
         if split_on_spaces:
             self.spacy.tokenizer = WhitespaceTokenizer(self.spacy.vocab)
@@ -184,18 +208,25 @@ class SpacyWordSplitter(WordSplitter):
         if self._keep_spacy_tokens:
             return tokens
         else:
-            return [Token(token.text,
-                          token.idx,
-                          token.lemma_,
-                          token.pos_,
-                          token.tag_,
-                          token.dep_,
-                          token.ent_type_) for token in tokens]
+            return [
+                Token(
+                    token.text,
+                    token.idx,
+                    token.lemma_,
+                    token.pos_,
+                    token.tag_,
+                    token.dep_,
+                    token.ent_type_,
+                )
+                for token in tokens
+            ]
 
     @overrides
     def batch_split_words(self, sentences: List[str]) -> List[List[Token]]:
-        return [self._sanitize(_remove_spaces(tokens))
-                for tokens in self.spacy.pipe(sentences, n_threads=-1)]
+        return [
+            self._sanitize(_remove_spaces(tokens))
+            for tokens in self.spacy.pipe(sentences, n_threads=-1)
+        ]
 
     @overrides
     def split_words(self, sentence: str) -> List[Token]:
@@ -203,12 +234,13 @@ class SpacyWordSplitter(WordSplitter):
         return self._sanitize(_remove_spaces(self.spacy(sentence)))
 
 
-@WordSplitter.register('openai')
+@WordSplitter.register("openai")
 class OpenAISplitter(WordSplitter):
     """
     For OpenAI transformer
     """
-    def __init__(self, language: str = 'en_core_web_sm') -> None:
+
+    def __init__(self, language: str = "en_core_web_sm") -> None:
         self.spacy = get_spacy_model(language, False, False, False)
 
     @staticmethod
@@ -218,8 +250,10 @@ class OpenAISplitter(WordSplitter):
     @overrides
     def batch_split_words(self, sentences: List[str]) -> List[List[Token]]:
         standardized_sentences = [self._standardize(sentence) for sentence in sentences]
-        return [_remove_spaces(tokens)
-                for tokens in self.spacy.pipe(standardized_sentences, n_threads=-1)]
+        return [
+            _remove_spaces(tokens)
+            for tokens in self.spacy.pipe(standardized_sentences, n_threads=-1)
+        ]
 
     @overrides
     def split_words(self, sentence: str) -> List[Token]:
@@ -234,9 +268,8 @@ class BertBasicWordSplitter(WordSplitter):
     This is used to split a sentence into words.
     Then the ``BertTokenIndexer`` converts each word into wordpieces.
     """
-    def __init__(self,
-                 do_lower_case: bool = True,
-                 never_split: Optional[List[str]] = None) -> None:
+
+    def __init__(self, do_lower_case: bool = True, never_split: Optional[List[str]] = None) -> None:
         if never_split is None:
             # Let BertTokenizer use its default
             self.basic_tokenizer = BertTokenizer(do_lower_case)

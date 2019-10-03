@@ -19,11 +19,19 @@ from allennlp.models.encoder_decoders.simple_seq2seq import SimpleSeq2Seq
 from allennlp.models.reading_comprehension.bidaf import BidirectionalAttentionFlow
 from allennlp.models.reading_comprehension.naqanet import NumericallyAugmentedQaNet
 from allennlp.models.reading_comprehension.qanet import QaNet
-from allennlp.models.semantic_parsing.nlvr.nlvr_coverage_semantic_parser import NlvrCoverageSemanticParser
-from allennlp.models.semantic_parsing.nlvr.nlvr_direct_semantic_parser import NlvrDirectSemanticParser
+from allennlp.models.semantic_parsing.nlvr.nlvr_coverage_semantic_parser import (
+    NlvrCoverageSemanticParser,
+)
+from allennlp.models.semantic_parsing.nlvr.nlvr_direct_semantic_parser import (
+    NlvrDirectSemanticParser,
+)
 from allennlp.models.semantic_parsing.quarel.quarel_semantic_parser import QuarelSemanticParser
-from allennlp.models.semantic_parsing.wikitables.wikitables_mml_semantic_parser import WikiTablesMmlSemanticParser
-from allennlp.models.semantic_parsing.wikitables.wikitables_erm_semantic_parser import WikiTablesErmSemanticParser
+from allennlp.models.semantic_parsing.wikitables.wikitables_mml_semantic_parser import (
+    WikiTablesMmlSemanticParser,
+)
+from allennlp.models.semantic_parsing.wikitables.wikitables_erm_semantic_parser import (
+    WikiTablesErmSemanticParser,
+)
 from allennlp.models.semantic_parsing.atis.atis_semantic_parser import AtisSemanticParser
 from allennlp.models.semantic_parsing.text2sql_parser import Text2SqlParser
 from allennlp.models.semantic_role_labeler import SemanticRoleLabeler

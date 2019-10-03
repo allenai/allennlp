@@ -36,8 +36,16 @@ class TestBiMPMMatching(AllenNlpTestCase):
 
         vecs_p_fw, vecs_h_fw = ml_fw(test1_fw, mask1, test2_fw, mask2)
         vecs_p_bw, vecs_h_bw = ml_bw(test1_bw, mask1, test2_bw, mask2)
-        vecs_p, vecs_h = torch.cat(vecs_p_fw + vecs_p_bw, dim=2), torch.cat(vecs_h_fw + vecs_h_bw, dim=2)
+        vecs_p, vecs_h = (
+            torch.cat(vecs_p_fw + vecs_p_bw, dim=2),
+            torch.cat(vecs_h_fw + vecs_h_bw, dim=2),
+        )
 
         assert vecs_p.size() == torch.Size([batch, len1, 10 + 10 * n])
         assert vecs_h.size() == torch.Size([batch, len2, 10 + 10 * n])
-        assert ml_fw.get_output_dim() == ml_bw.get_output_dim() == vecs_p.size(2) // 2 == vecs_h.size(2) // 2
+        assert (
+            ml_fw.get_output_dim()
+            == ml_bw.get_output_dim()
+            == vecs_p.size(2) // 2
+            == vecs_h.size(2) // 2
+        )

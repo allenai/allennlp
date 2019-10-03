@@ -23,17 +23,16 @@ class NamespaceSwappingField(Field[torch.Tensor]):
         The namespace that the tokens from the source sentence will be mapped to.
     """
 
-    def __init__(self,
-                 source_tokens: List[Token],
-                 target_namespace: str) -> None:
+    def __init__(self, source_tokens: List[Token], target_namespace: str) -> None:
         self._source_tokens = source_tokens
         self._target_namespace = target_namespace
         self._mapping_array: List[int] = None
 
     @overrides
     def index(self, vocab: Vocabulary):
-        self._mapping_array = [vocab.get_token_index(x.text, self._target_namespace)
-                               for x in self._source_tokens]
+        self._mapping_array = [
+            vocab.get_token_index(x.text, self._target_namespace) for x in self._source_tokens
+        ]
 
     @overrides
     def get_padding_lengths(self) -> Dict[str, int]:
@@ -47,5 +46,5 @@ class NamespaceSwappingField(Field[torch.Tensor]):
         return tensor
 
     @overrides
-    def empty_field(self) -> 'NamespaceSwappingField':
+    def empty_field(self) -> "NamespaceSwappingField":
         return NamespaceSwappingField([], self._target_namespace)

@@ -24,7 +24,8 @@ Once your pull request is created, our continuous build system will check your p
 build will test that:
 
 * [`pytest`](https://docs.pytest.org/en/latest/) All tests pass
-* [`pylint`](https://www.pylint.org/) accepts the code style (our guidelines are based on PEP8)
+* [`flake8`](http://flake8.pycqa.org/) accepts the code style (our guidelines are based on PEP8)
+* [`black`](https://black.readthedocs.io) accepts the code formatting
 * [`mypy`](http://mypy-lang.org/) typechecks the Python code
 * The docs can be generated successfully
 * Test coverage remains high.  Please add unit tests so we maintain our code coverage.
@@ -33,6 +34,12 @@ If your code fails one of these checks, you will be expected to fix your pull re
 
 You can run most of these tests locally with `./scripts/verify.py`, which will be faster than waiting for
 cloud systems to run tests.
+
+In addition, the `requirements.txt` includes the Python `pre-commit` library,
+and we provide a suggested configuration at `.pre-commit-config.yaml`.
+If you run `pre-commit install` at the root of your fork,
+it will create [git precommit hooks](https://git-scm.com/book/en/v2/Customizing-Git-Git-Hooks)
+that run `black` and `flake8` over the files in every commit.
 
 ### Do you have a suggestion for an enhancement?
 
@@ -55,12 +62,12 @@ When creating your enhancement request, please:
 
 ### Do you have a new state-of-the-art model?
 
-We are always looking for new models to add to our collection.  If you have trained a model and would like to include it in 
+We are always looking for new models to add to our collection.  If you have trained a model and would like to include it in
 AllenNLP, please create [a pull request](https://github.com/allenai/allennlp/pulls) that includes:
 
 * Any code changes needed to support your new model.
-* A link to the model itself.  Please do not check your model into the GitHub repository, but instead upload it in the 
+* A link to the model itself.  Please do not check your model into the GitHub repository, but instead upload it in the
 PR conversation or provide a link to it at an external location.
 
-In the description of your PR, please clearly explain the task your model performs along with precision and recall statistics 
+In the description of your PR, please clearly explain the task your model performs along with precision and recall statistics
 on an established dataset.

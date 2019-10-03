@@ -48,18 +48,23 @@ class ConstrainedBeamSearch:
         more diversity into the search. See Freitag and Al-Onaizan 2017,
         "Beam Search Strategies for Neural Machine Translation".
     """
-    def __init__(self,
-                 beam_size: Optional[int],
-                 allowed_sequences: torch.Tensor,
-                 allowed_sequence_mask: torch.Tensor,
-                 per_node_beam_size: int = None) -> None:
+
+    def __init__(
+        self,
+        beam_size: Optional[int],
+        allowed_sequences: torch.Tensor,
+        allowed_sequence_mask: torch.Tensor,
+        per_node_beam_size: int = None,
+    ) -> None:
         self._beam_size = beam_size
         self._per_node_beam_size = per_node_beam_size or beam_size
-        self._allowed_transitions = util.construct_prefix_tree(allowed_sequences, allowed_sequence_mask)
+        self._allowed_transitions = util.construct_prefix_tree(
+            allowed_sequences, allowed_sequence_mask
+        )
 
-    def search(self,
-               initial_state: State,
-               transition_function: TransitionFunction) -> Dict[int, List[State]]:
+    def search(
+        self, initial_state: State, transition_function: TransitionFunction
+    ) -> Dict[int, List[State]]:
         """
         Parameters
         ----------
@@ -83,12 +88,15 @@ class ConstrainedBeamSearch:
             next_states: Dict[int, List[State]] = defaultdict(list)
             grouped_state = states[0].combine_states(states)
             allowed_actions = []
-            for batch_index, action_history in zip(grouped_state.batch_indices,
-                                                   grouped_state.action_history):
-                allowed_actions.append(self._allowed_transitions[batch_index][tuple(action_history)])
-            for next_state in transition_function.take_step(grouped_state,
-                                                            max_actions=self._per_node_beam_size,
-                                                            allowed_actions=allowed_actions):
+            for batch_index, action_history in zip(
+                grouped_state.batch_indices, grouped_state.action_history
+            ):
+                allowed_actions.append(
+                    self._allowed_transitions[batch_index][tuple(action_history)]
+                )
+            for next_state in transition_function.take_step(
+                grouped_state, max_actions=self._per_node_beam_size, allowed_actions=allowed_actions
+            ):
                 # NOTE: we're doing state.batch_indices[0] here (and similar things below),
                 # hard-coding a group size of 1.  But, our use of `next_state.is_finished()`
                 # already checks for that, as it crashes if the group size is not 1.
@@ -102,7 +110,7 @@ class ConstrainedBeamSearch:
                 # The states from the generator are already sorted, so we can just take the first
                 # ones here, without an additional sort.
                 if self._beam_size:
-                    batch_states = batch_states[:self._beam_size]
+                    batch_states = batch_states[: self._beam_size]
                 states.extend(batch_states)
         best_states: Dict[int, List[State]] = {}
         for batch_index, batch_states in finished_states.items():
@@ -110,5 +118,5 @@ class ConstrainedBeamSearch:
             # yet.  Maybe with a larger beam size...
             finished_to_sort = [(-state.score[0].item(), state) for state in batch_states]
             finished_to_sort.sort(key=lambda x: x[0])
-            best_states[batch_index] = [state[1] for state in finished_to_sort[:self._beam_size]]
+            best_states[batch_index] = [state[1] for state in finished_to_sort[: self._beam_size]]
         return best_states

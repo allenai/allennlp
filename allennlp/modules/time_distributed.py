@@ -22,6 +22,7 @@ class TimeDistributed(torch.nn.Module):
     It also reshapes keyword arguments unless they are not tensors or their name is specified in
     the optional ``pass_through`` iterable.
     """
+
     def __init__(self, module):
         super().__init__()
         self._module = module

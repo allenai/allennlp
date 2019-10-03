@@ -8,6 +8,7 @@ class DotProductAttention(Attention):
     """
     Computes attention between a vector and a matrix using dot product.
     """
+
     @overrides
     def _forward_internal(self, vector: torch.Tensor, matrix: torch.Tensor) -> torch.Tensor:
         return matrix.bmm(vector.unsqueeze(-1)).squeeze(-1)

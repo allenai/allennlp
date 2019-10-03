@@ -75,39 +75,52 @@ class BiaffineDependencyParserMultiLang(BiaffineDependencyParser):
         If provided, will be used to calculate the regularization penalty during training.
     """
 
-    def __init__(self,
-                 vocab: Vocabulary,
-                 text_field_embedder: TextFieldEmbedder,
-                 encoder: Seq2SeqEncoder,
-                 tag_representation_dim: int,
-                 arc_representation_dim: int,
-                 tag_feedforward: FeedForward = None,
-                 arc_feedforward: FeedForward = None,
-                 pos_tag_embedding: Embedding = None,
-                 use_mst_decoding_for_validation: bool = True,
-                 langs_for_early_stop: List[str] = None,
-                 dropout: float = 0.0,
-                 input_dropout: float = 0.0,
-                 initializer: InitializerApplicator = InitializerApplicator(),
-                 regularizer: Optional[RegularizerApplicator] = None) -> None:
+    def __init__(
+        self,
+        vocab: Vocabulary,
+        text_field_embedder: TextFieldEmbedder,
+        encoder: Seq2SeqEncoder,
+        tag_representation_dim: int,
+        arc_representation_dim: int,
+        tag_feedforward: FeedForward = None,
+        arc_feedforward: FeedForward = None,
+        pos_tag_embedding: Embedding = None,
+        use_mst_decoding_for_validation: bool = True,
+        langs_for_early_stop: List[str] = None,
+        dropout: float = 0.0,
+        input_dropout: float = 0.0,
+        initializer: InitializerApplicator = InitializerApplicator(),
+        regularizer: Optional[RegularizerApplicator] = None,
+    ) -> None:
         super().__init__(
-                vocab, text_field_embedder, encoder, tag_representation_dim,
-                arc_representation_dim, tag_feedforward, arc_feedforward,
-                pos_tag_embedding, use_mst_decoding_for_validation, dropout,
-                input_dropout, initializer, regularizer)
+            vocab,
+            text_field_embedder,
+            encoder,
+            tag_representation_dim,
+            arc_representation_dim,
+            tag_feedforward,
+            arc_feedforward,
+            pos_tag_embedding,
+            use_mst_decoding_for_validation,
+            dropout,
+            input_dropout,
+            initializer,
+            regularizer,
+        )
 
         self._langs_for_early_stop = langs_for_early_stop or []
 
-        self._lang_attachment_scores: Dict[
-                str, AttachmentScores] = defaultdict(AttachmentScores)
+        self._lang_attachment_scores: Dict[str, AttachmentScores] = defaultdict(AttachmentScores)
 
     @overrides
-    def forward(self,  # type: ignore
-                words: Dict[str, torch.LongTensor],
-                pos_tags: torch.LongTensor,
-                metadata: List[Dict[str, Any]],
-                head_tags: torch.LongTensor = None,
-                head_indices: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
+    def forward(
+        self,  # type: ignore
+        words: Dict[str, torch.LongTensor],
+        pos_tags: torch.LongTensor,
+        metadata: List[Dict[str, Any]],
+        head_tags: torch.LongTensor = None,
+        head_indices: torch.LongTensor = None,
+    ) -> Dict[str, torch.Tensor]:
 
         """
         Embedding each language by the corresponding parameters for
@@ -115,29 +128,29 @@ class BiaffineDependencyParserMultiLang(BiaffineDependencyParser):
         single language.
         Metadata should have a ``lang`` key.
         """
-        if 'lang' not in metadata[0]:
+        if "lang" not in metadata[0]:
             raise ConfigurationError(
-                    "metadata is missing 'lang' key; "
-                    "Use the universal_dependencies_multilang dataset_reader.")
+                "metadata is missing 'lang' key; "
+                "Use the universal_dependencies_multilang dataset_reader."
+            )
 
-        batch_lang = metadata[0]['lang']
+        batch_lang = metadata[0]["lang"]
         for entry in metadata:
-            if entry['lang'] != batch_lang:
+            if entry["lang"] != batch_lang:
                 raise ConfigurationError("Two languages in the same batch.")
 
         embedded_text_input = self.text_field_embedder(words, lang=batch_lang)
         if pos_tags is not None and self._pos_tag_embedding is not None:
             embedded_pos_tags = self._pos_tag_embedding(pos_tags)
-            embedded_text_input = torch.cat(
-                    [embedded_text_input, embedded_pos_tags], -1)
+            embedded_text_input = torch.cat([embedded_text_input, embedded_pos_tags], -1)
         elif self._pos_tag_embedding is not None:
-            raise ConfigurationError(
-                    "Model uses a POS embedding, but no POS tags were passed.")
+            raise ConfigurationError("Model uses a POS embedding, but no POS tags were passed.")
 
         mask = get_text_field_mask(words)
 
         predicted_heads, predicted_head_tags, mask, arc_nll, tag_nll = self._parse(
-                embedded_text_input, mask, head_tags, head_indices)
+            embedded_text_input, mask, head_tags, head_indices
+        )
 
         loss = arc_nll + tag_nll
 
@@ -146,21 +159,23 @@ class BiaffineDependencyParserMultiLang(BiaffineDependencyParser):
             # We calculate attatchment scores for the whole sentence
             # but excluding the symbolic ROOT token at the start,
             # which is why we start from the second element in the sequence.
-            self._lang_attachment_scores[batch_lang](predicted_heads[:, 1:],
-                                                     predicted_head_tags[:, 1:],
-                                                     head_indices,
-                                                     head_tags,
-                                                     evaluation_mask)
+            self._lang_attachment_scores[batch_lang](
+                predicted_heads[:, 1:],
+                predicted_head_tags[:, 1:],
+                head_indices,
+                head_tags,
+                evaluation_mask,
+            )
 
         output_dict = {
-                "heads": predicted_heads,
-                "head_tags": predicted_head_tags,
-                "arc_loss": arc_nll,
-                "tag_loss": tag_nll,
-                "loss": loss,
-                "mask": mask,
-                "words": [meta["words"] for meta in metadata],
-                "pos": [meta["pos"] for meta in metadata]
+            "heads": predicted_heads,
+            "head_tags": predicted_head_tags,
+            "arc_loss": arc_nll,
+            "tag_loss": tag_nll,
+            "loss": loss,
+            "mask": mask,
+            "words": [meta["words"] for meta in metadata],
+            "pos": [meta["pos"] for meta in metadata],
         }
 
         return output_dict
@@ -175,7 +190,7 @@ class BiaffineDependencyParserMultiLang(BiaffineDependencyParser):
 
             for key in lang_metrics.keys():
                 # Store only those metrics.
-                if key in ['UAS', 'LAS', 'loss']:
+                if key in ["UAS", "LAS", "loss"]:
                     metrics["{}_{}".format(key, lang)] = lang_metrics[key]
 
             # Include in the average only languages that should count for early stopping.
@@ -184,9 +199,6 @@ class BiaffineDependencyParserMultiLang(BiaffineDependencyParser):
                 all_las.append(metrics["LAS_{}".format(lang)])
 
         if self._langs_for_early_stop:
-            metrics.update({
-                    "UAS_AVG": numpy.mean(all_uas),
-                    "LAS_AVG": numpy.mean(all_las)
-            })
+            metrics.update({"UAS_AVG": numpy.mean(all_uas), "LAS_AVG": numpy.mean(all_las)})
 
         return metrics

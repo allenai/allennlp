@@ -17,6 +17,7 @@ class Ensemble(Model):
     (instead they rely on the vocabulary and weights from submodels).  Instead, the submodels are trained
     independently and the ensemble is created from the result.
     """
+
     def __init__(self, submodels: List[Model]) -> None:
         vocab = submodels[0].vocab
         for submodel in submodels:
@@ -30,15 +31,13 @@ class Ensemble(Model):
         self.submodels = torch.nn.ModuleList(submodels)
 
     @classmethod
-    def _load(cls,
-              config: Params,
-              serialization_dir: str,
-              weights_file: str = None,
-              cuda_device: int = -1) -> 'Model':
+    def _load(
+        cls, config: Params, serialization_dir: str, weights_file: str = None, cuda_device: int = -1
+    ) -> "Model":
         """
         Ensembles don't have vocabularies or weights of their own, so they override _load.
         """
-        model_params = config.get('model')
+        model_params = config.get("model")
 
         # The experiment config tells us how to _train_ a model, including where to get pre-trained
         # embeddings from.  We're now _loading_ the model, so those embeddings will already be

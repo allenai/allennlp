@@ -49,18 +49,24 @@ class StanfordSentimentTreeBankDatasetReader(DatasetReader):
     lazy : ``bool``, optional, (default = ``False``)
         Whether or not instances can be read lazily.
     """
-    def __init__(self,
-                 token_indexers: Dict[str, TokenIndexer] = None,
-                 use_subtrees: bool = False,
-                 granularity: str = "5-class",
-                 lazy: bool = False) -> None:
+
+    def __init__(
+        self,
+        token_indexers: Dict[str, TokenIndexer] = None,
+        use_subtrees: bool = False,
+        granularity: str = "5-class",
+        lazy: bool = False,
+    ) -> None:
         super().__init__(lazy=lazy)
-        self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
+        self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._use_subtrees = use_subtrees
         allowed_granularities = ["5-class", "3-class", "2-class"]
         if granularity not in allowed_granularities:
-            raise ConfigurationError("granularity is {}, but expected one of: {}".format(
-                    granularity, allowed_granularities))
+            raise ConfigurationError(
+                "granularity is {}, but expected one of: {}".format(
+                    granularity, allowed_granularities
+                )
+            )
         self._granularity = granularity
 
     @overrides
@@ -83,7 +89,9 @@ class StanfordSentimentTreeBankDatasetReader(DatasetReader):
                         yield instance
 
     @overrides
-    def text_to_instance(self, tokens: List[str], sentiment: str = None) -> Instance:  # type: ignore
+    def text_to_instance(
+        self, tokens: List[str], sentiment: str = None
+    ) -> Instance:  # type: ignore
         """
         We take `pre-tokenized` input here, because we don't have a tokenizer in this class.
 
@@ -126,5 +134,5 @@ class StanfordSentimentTreeBankDatasetReader(DatasetReader):
                     return None
                 else:
                     sentiment = "1"
-            fields['label'] = LabelField(sentiment)
+            fields["label"] = LabelField(sentiment)
         return Instance(fields)
