@@ -18,9 +18,7 @@ class TestMaskedLayerNorm(AllenNlpTestCase):
 
         N = 7 * 5
         mean = (x_n * np.expand_dims(mask_n, axis=-1)).sum() / N
-        std = np.sqrt(
-                (((x_n - mean) * np.expand_dims(mask_n, axis=-1)) ** 2).sum() / N + 1e-6
-        )
+        std = np.sqrt((((x_n - mean) * np.expand_dims(mask_n, axis=-1)) ** 2).sum() / N + 1e-6)
         expected = 0.2 * (x_n - mean) / (std + 1e-6)
 
         assert np.allclose(normed_x.data.numpy(), expected)

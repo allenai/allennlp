@@ -15,8 +15,10 @@ from allennlp.models import BidirectionalAttentionFlow, Model
 class BidirectionalAttentionFlowTest(ModelTestCase):
     def setUp(self):
         super().setUp()
-        self.set_up_model(self.FIXTURES_ROOT / 'bidaf' / 'experiment.json',
-                          self.FIXTURES_ROOT / 'data' / 'squad.json')
+        self.set_up_model(
+            self.FIXTURES_ROOT / "bidaf" / "experiment.json",
+            self.FIXTURES_ROOT / "data" / "squad.json",
+        )
 
     def test_forward_pass_runs_correctly(self):
         batch = Batch(self.instances)
@@ -31,17 +33,17 @@ class BidirectionalAttentionFlowTest(ModelTestCase):
         # error with using the evaluation script, this will fail.  This makes sure that we've
         # loaded the evaluation data correctly and have hooked things up to the official evaluation
         # script.
-        assert metrics['f1'] > 0
+        assert metrics["f1"] > 0
 
-        span_start_probs = output_dict['span_start_probs'][0].data.numpy()
-        span_end_probs = output_dict['span_start_probs'][0].data.numpy()
+        span_start_probs = output_dict["span_start_probs"][0].data.numpy()
+        span_end_probs = output_dict["span_start_probs"][0].data.numpy()
         assert_almost_equal(numpy.sum(span_start_probs, -1), 1, decimal=6)
         assert_almost_equal(numpy.sum(span_end_probs, -1), 1, decimal=6)
-        span_start, span_end = tuple(output_dict['best_span'][0].data.numpy())
+        span_start, span_end = tuple(output_dict["best_span"][0].data.numpy())
         assert span_start >= 0
         assert span_start <= span_end
-        assert span_end < self.instances[0].fields['passage'].sequence_length()
-        assert isinstance(output_dict['best_span_str'][0], str)
+        assert span_end < self.instances[0].fields["passage"].sequence_length()
+        assert isinstance(output_dict["best_span_str"][0], str)
 
     # Some recent efficiency changes (using bmm for `weighted_sum`, the more efficient
     # `masked_softmax`...) have made this _very_ flaky...
@@ -65,15 +67,15 @@ class BidirectionalAttentionFlowTest(ModelTestCase):
 
         # Modify the state, run the test with modified state.
         params = Params.from_file(self.param_file)
-        reader = DatasetReader.from_params(params['dataset_reader'])
-        reader._token_indexers = {'tokens': reader._token_indexers['tokens']}
-        self.instances = reader.read(self.FIXTURES_ROOT / 'data' / 'squad.json')
+        reader = DatasetReader.from_params(params["dataset_reader"])
+        reader._token_indexers = {"tokens": reader._token_indexers["tokens"]}
+        self.instances = reader.read(self.FIXTURES_ROOT / "data" / "squad.json")
         vocab = Vocabulary.from_instances(self.instances)
         for instance in self.instances:
             instance.index_fields(vocab)
-        del params['model']['text_field_embedder']['token_embedders']['token_characters']
-        params['model']['phrase_layer']['input_size'] = 2
-        self.model = Model.from_params(vocab=vocab, params=params['model'])
+        del params["model"]["text_field_embedder"]["token_embedders"]["token_characters"]
+        params["model"]["phrase_layer"]["input_size"] = 2
+        self.model = Model.from_params(vocab=vocab, params=params["model"])
 
         self.ensure_batch_predictions_are_consistent()
 

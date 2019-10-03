@@ -8,10 +8,10 @@ from allennlp.modules.layer_norm import LayerNorm
 from allennlp.modules.highway import Highway
 from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
 
-_VALID_PROJECTION_LOCATIONS = {'after_cnn', 'after_highway', None}
+_VALID_PROJECTION_LOCATIONS = {"after_cnn", "after_highway", None}
 
 
-@Seq2VecEncoder.register('cnn-highway')
+@Seq2VecEncoder.register("cnn-highway")
 class CnnHighwayEncoder(Seq2VecEncoder):
     """
     The character CNN + highway encoder from Kim et al "Character aware neural language models"
@@ -34,14 +34,17 @@ class CnnHighwayEncoder(Seq2VecEncoder):
         Where to apply the projection layer. Valid values are
         'after_highway', 'after_cnn', and None.
     """
-    def __init__(self,
-                 embedding_dim: int,
-                 filters: Sequence[Sequence[int]],
-                 num_highway: int,
-                 projection_dim: int,
-                 activation: str = 'relu',
-                 projection_location: str = 'after_highway',
-                 do_layer_norm: bool = False) -> None:
+
+    def __init__(
+        self,
+        embedding_dim: int,
+        filters: Sequence[Sequence[int]],
+        num_highway: int,
+        projection_dim: int,
+        activation: str = "relu",
+        projection_location: str = "after_highway",
+        do_layer_norm: bool = False,
+    ) -> None:
         super().__init__()
 
         if projection_location not in _VALID_PROJECTION_LOCATIONS:
@@ -51,9 +54,9 @@ class CnnHighwayEncoder(Seq2VecEncoder):
         self.output_dim = projection_dim
         self._projection_location = projection_location
 
-        if activation == 'tanh':
+        if activation == "tanh":
             self._activation = torch.nn.functional.tanh
-        elif activation == 'relu':
+        elif activation == "relu":
             self._activation = torch.nn.functional.relu
         else:
             raise ConfigurationError(f"unknown activation {activation}")
@@ -61,10 +64,9 @@ class CnnHighwayEncoder(Seq2VecEncoder):
         # Create the convolutions
         self._convolutions: List[torch.nn.Module] = []
         for i, (width, num) in enumerate(filters):
-            conv = torch.nn.Conv1d(in_channels=embedding_dim,
-                                   out_channels=num,
-                                   kernel_size=width,
-                                   bias=True)
+            conv = torch.nn.Conv1d(
+                in_channels=embedding_dim, out_channels=num, kernel_size=width, bias=True
+            )
             conv.weight.data.uniform_(-0.05, 0.05)
             conv.bias.data.fill_(0.0)
             self.add_module(f"char_conv_{i}", conv)  # needs to match the old ELMo name
@@ -72,7 +74,7 @@ class CnnHighwayEncoder(Seq2VecEncoder):
 
         # Create the highway layers
         num_filters = sum(num for _, num in filters)
-        if projection_location == 'after_cnn':
+        if projection_location == "after_cnn":
             highway_dim = projection_dim
         else:
             # highway_dim is the number of cnn filters
@@ -130,13 +132,13 @@ class CnnHighwayEncoder(Seq2VecEncoder):
         # (batch_size, n_filters)
         token_embedding = torch.cat(convolutions, dim=-1)
 
-        if self._projection_location == 'after_cnn':
+        if self._projection_location == "after_cnn":
             token_embedding = self._projection(token_embedding)
 
         # apply the highway layers (batch_size, highway_dim)
         token_embedding = self._highways(token_embedding)
 
-        if self._projection_location == 'after_highway':
+        if self._projection_location == "after_highway":
             # final projection  (batch_size, projection_dim)
             token_embedding = self._projection(token_embedding)
 

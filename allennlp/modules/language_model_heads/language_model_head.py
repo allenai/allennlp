@@ -8,6 +8,7 @@ class LanguageModelHead(torch.nn.Module, Registrable):
     A ``LanguageModelHead`` encapsulates a function that goes from some hidden state to logits over
     a vocabulary.
     """
+
     def get_input_dim(self) -> int:
         raise NotImplementedError
 

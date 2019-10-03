@@ -24,9 +24,8 @@ class LayerNorm(torch.nn.Module):
     -------
     The normalized layer output.
     """  # noqa
-    def __init__(self,
-                 dimension: int,
-                 eps: float = 1e-6) -> None:
+
+    def __init__(self, dimension: int, eps: float = 1e-6) -> None:
         super().__init__()
         self.gamma = torch.nn.Parameter(torch.ones(dimension))
         self.beta = torch.nn.Parameter(torch.zeros(dimension))

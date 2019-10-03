@@ -26,7 +26,7 @@ class Perplexity(Average):
         """
         average_loss = super().get_metric(reset)
         if average_loss == 0:
-            return 0.
+            return 0.0
 
         # Exponentiate the loss to compute perplexity
         return float(torch.exp(average_loss))

@@ -73,11 +73,14 @@ class ProductionRuleField(Field[ProductionRule]):  # type: ignore
         The left hand side of the rule. Sometimes having this as separate part of the ``ProductionRule``
         can deduplicate work.
     """
-    def __init__(self,
-                 rule: str,
-                 is_global_rule: bool,
-                 vocab_namespace: str = 'rule_labels',
-                 nonterminal: str = None) -> None:
+
+    def __init__(
+        self,
+        rule: str,
+        is_global_rule: bool,
+        vocab_namespace: str = "rule_labels",
+        nonterminal: str = None,
+    ) -> None:
         self.rule = rule
         self.nonterminal = nonterminal
         self.is_global_rule = is_global_rule
@@ -113,13 +116,17 @@ class ProductionRuleField(Field[ProductionRule]):  # type: ignore
         # This _does_ get called, because we don't want to bother with modifying the ListField to
         # ignore padding for these.  We just make sure the rule is the empty string, which the
         # model will use to know that this rule is just padding.
-        return ProductionRuleField(rule='', is_global_rule=False)
+        return ProductionRuleField(rule="", is_global_rule=False)
 
     @overrides
-    def batch_tensors(self, tensor_list: List[ProductionRule]) -> List[ProductionRule]:  # type: ignore
+    def batch_tensors(
+        self, tensor_list: List[ProductionRule]
+    ) -> List[ProductionRule]:  # type: ignore
 
         return tensor_list
 
     def __str__(self) -> str:
-        return f"ProductionRuleField with rule: {self.rule} (is_global_rule: " \
-               f"{self.is_global_rule}) in namespace: '{self._vocab_namespace}'.'"
+        return (
+            f"ProductionRuleField with rule: {self.rule} (is_global_rule: "
+            f"{self.is_global_rule}) in namespace: '{self._vocab_namespace}'.'"
+        )

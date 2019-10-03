@@ -19,7 +19,8 @@ class SimilarityFunction(torch.nn.Module, Registrable):
     The :class:`~allennlp.modules.Attention` and :class:`~allennlp.modules.MatrixAttention` modules
     do this.
     """
-    default_implementation = 'dot_product'
+
+    default_implementation = "dot_product"
 
     def forward(self, tensor_1: torch.Tensor, tensor_2: torch.Tensor) -> torch.Tensor:
 

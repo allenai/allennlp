@@ -8,6 +8,7 @@ class SaliencyInterpreter(Registrable):
     A ``SaliencyInterpreter`` interprets an AllenNLP Predictor's outputs by assigning a saliency
     score to each input token.
     """
+
     def __init__(self, predictor: Predictor) -> None:
         self.predictor = predictor
 

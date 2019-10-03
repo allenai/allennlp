@@ -40,8 +40,8 @@ JsonDict = Dict[str, Any]
 # data is processed for these symbols to be lowercase, not uppercase (because we have code that
 # will lowercase tokens for you in some circumstances, and we need this symbol to not change in
 # those cases).
-START_SYMBOL = '@start@'
-END_SYMBOL = '@end@'
+START_SYMBOL = "@start@"
+END_SYMBOL = "@end@"
 
 
 def sanitize(x: Any) -> Any:
@@ -78,12 +78,14 @@ def sanitize(x: Any) -> Any:
         return [sanitize(x_i) for x_i in x]
     elif x is None:
         return "None"
-    elif hasattr(x, 'to_json'):
+    elif hasattr(x, "to_json"):
         return x.to_json()
     else:
-        raise ValueError(f"Cannot sanitize {x} of type {type(x)}. "
-                         "If this is your own custom class, add a `to_json(self)` method "
-                         "that returns a JSON-like object.")
+        raise ValueError(
+            f"Cannot sanitize {x} of type {type(x)}. "
+            "If this is your own custom class, add a `to_json(self)` method "
+            "that returns a JSON-like object."
+        )
 
 
 def group_by_count(iterable: List[Any], count: int, default_value: Any) -> List[List[Any]]:
@@ -101,7 +103,7 @@ def group_by_count(iterable: List[Any], count: int, default_value: Any) -> List[
     return [list(l) for l in zip_longest(*[iter(iterable)] * count, fillvalue=default_value)]
 
 
-A = TypeVar('A')
+A = TypeVar("A")
 
 
 def lazy_groups_of(iterator: Iterator[A], group_size: int) -> Iterator[List[A]]:
@@ -112,10 +114,12 @@ def lazy_groups_of(iterator: Iterator[A], group_size: int) -> Iterator[List[A]]:
     return iter(lambda: list(islice(iterator, 0, group_size)), [])
 
 
-def pad_sequence_to_length(sequence: List,
-                           desired_length: int,
-                           default_value: Callable[[], Any] = lambda: 0,
-                           padding_on_right: bool = True) -> List:
+def pad_sequence_to_length(
+    sequence: List,
+    desired_length: int,
+    default_value: Callable[[], Any] = lambda: 0,
+    padding_on_right: bool = True,
+) -> List:
     """
     Take a list of objects and pads it to the desired length, returning the padded list.  The
     original list is not modified.
@@ -176,7 +180,7 @@ def namespace_match(pattern: str, namespace: str):
     ``passage_tags`` and ``question_tags`` and ``tokens`` matches ``tokens`` but not
     ``stemmed_tokens``.
     """
-    if pattern[0] == '*' and namespace.endswith(pattern[1:]):
+    if pattern[0] == "*" and namespace.endswith(pattern[1:]):
         return True
     elif pattern == namespace:
         return True
@@ -215,7 +219,9 @@ def prepare_environment(params: Params):
     log_pytorch_version_info()
 
 
-def prepare_global_logging(serialization_dir: str, file_friendly_logging: bool) -> logging.FileHandler:
+def prepare_global_logging(
+    serialization_dir: str, file_friendly_logging: bool
+) -> logging.FileHandler:
     """
     This function configures 3 global logging attributes - streaming stdout and stderr
     to a file as well as the terminal, setting the formatting for the python logging
@@ -246,15 +252,17 @@ def prepare_global_logging(serialization_dir: str, file_friendly_logging: bool) 
 
     Tqdm.set_slower_interval(file_friendly_logging)
     std_out_file = os.path.join(serialization_dir, "stdout.log")
-    sys.stdout = TeeLogger(std_out_file,  # type: ignore
-                           sys.stdout,
-                           file_friendly_logging)
-    sys.stderr = TeeLogger(os.path.join(serialization_dir, "stderr.log"),  # type: ignore
-                           sys.stderr,
-                           file_friendly_logging)
+    sys.stdout = TeeLogger(  # type: ignore
+        std_out_file, sys.stdout, file_friendly_logging
+    )
+    sys.stderr = TeeLogger(  # type: ignore
+        os.path.join(serialization_dir, "stderr.log"), sys.stderr, file_friendly_logging
+    )
 
     stdout_handler = logging.FileHandler(std_out_file)
-    stdout_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s'))
+    stdout_handler.setFormatter(
+        logging.Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s")
+    )
     logging.getLogger().addHandler(stdout_handler)
 
     return stdout_handler
@@ -281,7 +289,9 @@ def cleanup_global_logging(stdout_handler: logging.FileHandler) -> None:
 LOADED_SPACY_MODELS: Dict[Tuple[str, bool, bool, bool], SpacyModelType] = {}
 
 
-def get_spacy_model(spacy_model_name: str, pos_tags: bool, parse: bool, ner: bool) -> SpacyModelType:
+def get_spacy_model(
+    spacy_model_name: str, pos_tags: bool, parse: bool, ner: bool
+) -> SpacyModelType:
     """
     In order to avoid loading spacy models a whole bunch of times, we'll save references to them,
     keyed by the options we used to create the spacy model, so any particular configuration only
@@ -290,17 +300,19 @@ def get_spacy_model(spacy_model_name: str, pos_tags: bool, parse: bool, ner: boo
 
     options = (spacy_model_name, pos_tags, parse, ner)
     if options not in LOADED_SPACY_MODELS:
-        disable = ['vectors', 'textcat']
+        disable = ["vectors", "textcat"]
         if not pos_tags:
-            disable.append('tagger')
+            disable.append("tagger")
         if not parse:
-            disable.append('parser')
+            disable.append("parser")
         if not ner:
-            disable.append('ner')
+            disable.append("ner")
         try:
             spacy_model = spacy.load(spacy_model_name, disable=disable)
         except OSError:
-            logger.warning(f"Spacy models '{spacy_model_name}' not found.  Downloading and installing.")
+            logger.warning(
+                f"Spacy models '{spacy_model_name}' not found.  Downloading and installing."
+            )
             spacy_download(spacy_model_name)
             # NOTE(mattg): The following four lines are a workaround suggested by Ines for spacy
             # 2.1.0, which removed the linking that was done in spacy 2.0.  importlib doesn't find
@@ -310,6 +322,7 @@ def get_spacy_model(spacy_model_name: str, pos_tags: bool, parse: bool, ner: boo
             # See https://github.com/explosion/spaCy/issues/3435.
             from spacy.cli import link
             from spacy.util import get_package_path
+
             package_path = get_package_path(spacy_model_name)
             link(spacy_model_name, spacy_model_name, model_path=package_path)
             spacy_model = spacy.load(spacy_model_name, disable=disable)
@@ -330,12 +343,12 @@ def import_submodules(package_name: str) -> None:
     # For some reason, python doesn't always add this by default to your path, but you pretty much
     # always want it when using `--include-package`.  And if it's already there, adding it again at
     # the end won't hurt anything.
-    sys.path.append('.')
+    sys.path.append(".")
 
     # Import at top level
     module = importlib.import_module(package_name)
-    path = getattr(module, '__path__', [])
-    path_string = '' if not path else path[0]
+    path = getattr(module, "__path__", [])
+    path_string = "" if not path else path[0]
 
     # walk_packages only finds immediate children, so need to recurse.
     for module_finder, name, _ in pkgutil.walk_packages(path):
@@ -356,7 +369,7 @@ def peak_memory_mb() -> float:
 
     Only works on OSX and Linux, returns 0.0 otherwise.
     """
-    if resource is None or sys.platform not in ('linux', 'darwin'):
+    if resource is None or sys.platform not in ("linux", "darwin"):
         return 0.0
 
     # TODO(joelgrus): For whatever, our pinned version 0.521 of mypy does not like
@@ -364,7 +377,7 @@ def peak_memory_mb() -> float:
     # figured out, remove the type: ignore.
     peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss  # type: ignore
 
-    if sys.platform == 'darwin':
+    if sys.platform == "darwin":
         # On OSX the result is in bytes.
         return peak / 1_000_000
 
@@ -386,10 +399,11 @@ def gpu_memory_mb() -> Dict[int, int]:
         Returns an empty ``dict`` if GPUs are not available.
     """
     try:
-        result = subprocess.check_output(['nvidia-smi', '--query-gpu=memory.used',
-                                          '--format=csv,nounits,noheader'],
-                                         encoding='utf-8')
-        gpu_memory = [int(x) for x in result.strip().split('\n')]
+        result = subprocess.check_output(
+            ["nvidia-smi", "--query-gpu=memory.used", "--format=csv,nounits,noheader"],
+            encoding="utf-8",
+        )
+        gpu_memory = [int(x) for x in result.strip().split("\n")]
         return {gpu: memory for gpu, memory in enumerate(gpu_memory)}
     except FileNotFoundError:
         # `nvidia-smi` doesn't exist, assume that means no GPU.
@@ -440,4 +454,4 @@ def dump_metrics(file_path: str, metrics: Dict[str, Any], log: bool = False) -> 
 
 
 def flatten_filename(file_path: str) -> str:
-    return file_path.replace('/', '_SLASH_')
+    return file_path.replace("/", "_SLASH_")

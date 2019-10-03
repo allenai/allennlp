@@ -12,11 +12,11 @@ class TestDate(AllenNlpTestCase):
         assert Date(2013, -1, -1) >= Date(2013, 12, 31)
 
         assert not (Date(2013, 12, -1) > Date(2013, 12, 31))
-        with pytest.raises(ExecutionError, match='only compare Dates with Dates'):
+        with pytest.raises(ExecutionError, match="only compare Dates with Dates"):
             assert not (Date(2013, 12, 31) > 2013)
-        with pytest.raises(ExecutionError, match='only compare Dates with Dates'):
+        with pytest.raises(ExecutionError, match="only compare Dates with Dates"):
             assert not (Date(2013, 12, 31) >= 2013)
-        with pytest.raises(ExecutionError, match='only compare Dates with Dates'):
+        with pytest.raises(ExecutionError, match="only compare Dates with Dates"):
             assert Date(2013, 12, 31) != 2013
         assert not (Date(2018, 1, 1) >= Date(-1, 2, 1))
         assert not (Date(2018, 1, 1) < Date(-1, 2, 1))

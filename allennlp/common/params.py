@@ -19,14 +19,16 @@ from overrides import overrides
 try:
     from _jsonnet import evaluate_file, evaluate_snippet
 except ImportError:
+
     def evaluate_file(filename: str, **_kwargs) -> str:
         logger.warning(f"_jsonnet not loaded, treating {filename} as json")
-        with open(filename, 'r') as evaluation_file:
+        with open(filename, "r") as evaluation_file:
             return evaluation_file.read()
 
     def evaluate_snippet(_filename: str, expr: str, **_kwargs) -> str:
         logger.warning(f"_jsonnet not loaded, treating snippet as json")
         return expr
+
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
@@ -82,16 +84,14 @@ def _is_encodable(value: str) -> bool:
     """
     # Idiomatically you'd like to not check the != b""
     # but mypy doesn't like that.
-    return (value == "") or (value.encode('utf-8', 'ignore') != b"")
+    return (value == "") or (value.encode("utf-8", "ignore") != b"")
 
 
 def _environment_variables() -> Dict[str, str]:
     """
     Wraps `os.environ` to filter out non-encodable values.
     """
-    return {key: value
-            for key, value in os.environ.items()
-            if _is_encodable(value)}
+    return {key: value for key, value in os.environ.items() if _is_encodable(value)}
 
 
 def unflatten(flat_dict: Dict[str, Any]) -> Dict[str, Any]:
@@ -126,6 +126,7 @@ def with_fallback(preferred: Dict[str, Any], fallback: Dict[str, Any]) -> Dict[s
     """
     Deep merge two dicts, preferring values from `preferred`.
     """
+
     def merge(preferred_value: Any, fallback_value: Any) -> Any:
         if isinstance(preferred_value, dict) and isinstance(fallback_value, dict):
             return with_fallback(preferred_value, fallback_value)
@@ -137,11 +138,15 @@ def with_fallback(preferred: Dict[str, Any], fallback: Dict[str, Any]) -> Dict[s
                     index = int(elem_key)
                     merged_list[index] = merge(preferred_element, fallback_value[index])
                 except ValueError:
-                    raise ConfigurationError("could not merge dicts - the preferred dict contains "
-                                             f"invalid keys (key {elem_key} is not a valid list index)")
+                    raise ConfigurationError(
+                        "could not merge dicts - the preferred dict contains "
+                        f"invalid keys (key {elem_key} is not a valid list index)"
+                    )
                 except IndexError:
-                    raise ConfigurationError("could not merge dicts - the preferred dict contains "
-                                             f"invalid keys (key {index} is out of bounds)")
+                    raise ConfigurationError(
+                        "could not merge dicts - the preferred dict contains "
+                        f"invalid keys (key {index} is out of bounds)"
+                    )
             return merged_list
         else:
             return copy.deepcopy(preferred_value)
@@ -213,11 +218,13 @@ class Params(MutableMapping):
     # and passing no value to the default parameter of "pop".
     DEFAULT = object()
 
-    def __init__(self,
-                 params: Dict[str, Any],
-                 history: str = "",
-                 loading_from_archive: bool = False,
-                 files_to_archive: Dict[str, str] = None) -> None:
+    def __init__(
+        self,
+        params: Dict[str, Any],
+        history: str = "",
+        loading_from_archive: bool = False,
+        files_to_archive: Dict[str, str] = None,
+    ) -> None:
         self.params = _replace_none(params)
         self.history = history
         self.loading_from_archive = loading_from_archive
@@ -263,7 +270,9 @@ class Params(MutableMapping):
             try:
                 value = self.params.pop(key)
             except KeyError:
-                raise ConfigurationError("key \"{}\" is required at location \"{}\"".format(key, self.history))
+                raise ConfigurationError(
+                    'key "{}" is required at location "{}"'.format(key, self.history)
+                )
         else:
             value = self.params.pop(key, default)
 
@@ -319,16 +328,20 @@ class Params(MutableMapping):
             try:
                 value = self.params.get(key)
             except KeyError:
-                raise ConfigurationError("key \"{}\" is required at location \"{}\"".format(key, self.history))
+                raise ConfigurationError(
+                    'key "{}" is required at location "{}"'.format(key, self.history)
+                )
         else:
             value = self.params.get(key, default)
         return self._check_is_dict(key, value)
 
-    def pop_choice(self,
-                   key: str,
-                   choices: List[Any],
-                   default_to_first_choice: bool = False,
-                   allow_class_names: bool = True) -> Any:
+    def pop_choice(
+        self,
+        key: str,
+        choices: List[Any],
+        default_to_first_choice: bool = False,
+        allow_class_names: bool = True,
+    ) -> Any:
         """
         Gets the value of ``key`` in the ``params`` dictionary, ensuring that the value is one of
         the given choices. Note that this `pops` the key from params, modifying the dictionary,
@@ -359,13 +372,15 @@ class Params(MutableMapping):
         """
         default = choices[0] if default_to_first_choice else self.DEFAULT
         value = self.pop(key, default)
-        ok_because_class_name = allow_class_names and '.' in value
+        ok_because_class_name = allow_class_names and "." in value
         if value not in choices and not ok_because_class_name:
             key_str = self.history + key
-            message = (f"{value} not in acceptable choices for {key_str}: {choices}. "
-                       "You should either use the --include-package flag to make sure the correct module "
-                       "is loaded, or use a fully qualified class name in your config file like "
-                       """{"model": "my_module.models.MyModel"} to have it imported automatically.""")
+            message = (
+                f"{value} not in acceptable choices for {key_str}: {choices}. "
+                "You should either use the --include-package flag to make sure the correct module "
+                "is loaded, or use a fully qualified class name in your config file like "
+                """{"model": "my_module.models.MyModel"} to have it imported automatically."""
+            )
             raise ConfigurationError(message)
         return value
 
@@ -397,9 +412,11 @@ class Params(MutableMapping):
                 else:
                     logger.info(f"{history}{key} = {value}")
 
-        logger.info("Converting Params object to dict; logging of default "
-                    "values will not occur when dictionary parameters are "
-                    "used subsequently.")
+        logger.info(
+            "Converting Params object to dict; logging of default "
+            "values will not occur when dictionary parameters are "
+            "used subsequently."
+        )
         logger.info("CURRENTLY DEFINED PARAMETERS: ")
         log_recursively(self.params, self.history)
         return params_as_dict
@@ -417,12 +434,12 @@ class Params(MutableMapping):
                 if isinstance(value, dict):
                     recurse(value, newpath)
                 else:
-                    flat_params['.'.join(newpath)] = value
+                    flat_params[".".join(newpath)] = value
 
         recurse(self.params, [])
         return flat_params
 
-    def duplicate(self) -> 'Params':
+    def duplicate(self) -> "Params":
         """
         Uses ``copy.deepcopy()`` to create a duplicate (but fully distinct)
         copy of these Params.
@@ -437,7 +454,9 @@ class Params(MutableMapping):
         parameters (if there are any).
         """
         if self.params:
-            raise ConfigurationError("Extra parameters passed to {}: {}".format(class_name, self.params))
+            raise ConfigurationError(
+                "Extra parameters passed to {}: {}".format(class_name, self.params)
+            )
 
     def __getitem__(self, key):
         if key in self.params:
@@ -460,16 +479,20 @@ class Params(MutableMapping):
     def _check_is_dict(self, new_history, value):
         if isinstance(value, dict):
             new_history = self.history + new_history + "."
-            return Params(value,
-                          history=new_history,
-                          loading_from_archive=self.loading_from_archive,
-                          files_to_archive=self.files_to_archive)
+            return Params(
+                value,
+                history=new_history,
+                loading_from_archive=self.loading_from_archive,
+                files_to_archive=self.files_to_archive,
+            )
         if isinstance(value, list):
             value = [self._check_is_dict(f"{new_history}.{i}", v) for i, v in enumerate(value)]
         return value
 
     @classmethod
-    def from_file(cls, params_file: str, params_overrides: str = "", ext_vars: dict = None) -> 'Params':
+    def from_file(
+        cls, params_file: str, params_overrides: str = "", ext_vars: dict = None
+    ) -> "Params":
         """
         Load a `Params` object from a configuration file.
 
@@ -521,16 +544,27 @@ class Params(MutableMapping):
         params_dict = self.as_dict(quiet=True)
         if not preference_orders:
             preference_orders = []
-            preference_orders.append(["dataset_reader", "iterator", "model",
-                                      "train_data_path", "validation_data_path", "test_data_path",
-                                      "trainer", "vocabulary"])
+            preference_orders.append(
+                [
+                    "dataset_reader",
+                    "iterator",
+                    "model",
+                    "train_data_path",
+                    "validation_data_path",
+                    "test_data_path",
+                    "trainer",
+                    "vocabulary",
+                ]
+            )
             preference_orders.append(["type"])
 
         def order_func(key):
             # Makes a tuple to use for ordering.  The tuple is an index into each of the `preference_orders`,
             # followed by the key itself.  This gives us integer sorting if you have a key in one of the
             # `preference_orders`, followed by alphabetical ordering if not.
-            order_tuple = [order.index(key) if key in order else len(order) for order in preference_orders]
+            order_tuple = [
+                order.index(key) if key in order else len(order) for order in preference_orders
+            ]
             return order_tuple + [key]
 
         def order_dict(dictionary, order_func):
@@ -556,12 +590,14 @@ class Params(MutableMapping):
         return str(hashed)
 
 
-def pop_choice(params: Dict[str, Any],
-               key: str,
-               choices: List[Any],
-               default_to_first_choice: bool = False,
-               history: str = "?.",
-               allow_class_names: bool = True) -> Any:
+def pop_choice(
+    params: Dict[str, Any],
+    key: str,
+    choices: List[Any],
+    default_to_first_choice: bool = False,
+    history: str = "?.",
+    allow_class_names: bool = True,
+) -> Any:
     """
     Performs the same function as :func:`Params.pop_choice`, but is required in order to deal with
     places that the Params object is not welcome, such as inside Keras layers.  See the docstring
@@ -572,10 +608,9 @@ def pop_choice(params: Dict[str, Any],
     history, so you'll have to fix that in the log if you want to actually recover the logged
     parameters.
     """
-    value = Params(params, history).pop_choice(key,
-                                               choices,
-                                               default_to_first_choice,
-                                               allow_class_names=allow_class_names)
+    value = Params(params, history).pop_choice(
+        key, choices, default_to_first_choice, allow_class_names=allow_class_names
+    )
     return value
 
 

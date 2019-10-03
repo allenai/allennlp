@@ -45,14 +45,16 @@ class ComposedSeq2Seq(Model):
         If provided, will be used to calculate the regularization penalty during training.
     """
 
-    def __init__(self,
-                 vocab: Vocabulary,
-                 source_text_embedder: TextFieldEmbedder,
-                 encoder: Seq2SeqEncoder,
-                 decoder: SeqDecoder,
-                 tied_source_embedder_key: Optional[str] = None,
-                 initializer: InitializerApplicator = InitializerApplicator(),
-                 regularizer: Optional[RegularizerApplicator] = None) -> None:
+    def __init__(
+        self,
+        vocab: Vocabulary,
+        source_text_embedder: TextFieldEmbedder,
+        encoder: Seq2SeqEncoder,
+        decoder: SeqDecoder,
+        tied_source_embedder_key: Optional[str] = None,
+        initializer: InitializerApplicator = InitializerApplicator(),
+        regularizer: Optional[RegularizerApplicator] = None,
+    ) -> None:
 
         super().__init__(vocab, regularizer)
 
@@ -61,31 +63,42 @@ class ComposedSeq2Seq(Model):
         self._decoder = decoder
 
         if self._encoder.get_output_dim() != self._decoder.get_output_dim():
-            raise ConfigurationError(f"Encoder output dimension {self._encoder.get_output_dim()} should be"
-                                     f" equal to decoder dimension {self._decoder.get_output_dim()}.")
+            raise ConfigurationError(
+                f"Encoder output dimension {self._encoder.get_output_dim()} should be"
+                f" equal to decoder dimension {self._decoder.get_output_dim()}."
+            )
         if tied_source_embedder_key:
             # A bit of a ugly hack to tie embeddings.
             # Works only for `BasicTextFieldEmbedder`, and since
             # it can have multiple embedders, and `SeqDecoder` contains only a single embedder, we need
             # the key to select the source embedder to replace it with the target embedder from the decoder.
             if not isinstance(self._source_text_embedder, BasicTextFieldEmbedder):
-                raise ConfigurationError("Unable to tie embeddings,"
-                                         "Source text embedder is not an instance of `BasicTextFieldEmbedder`.")
+                raise ConfigurationError(
+                    "Unable to tie embeddings,"
+                    "Source text embedder is not an instance of `BasicTextFieldEmbedder`."
+                )
 
             source_embedder = self._source_text_embedder._token_embedders[tied_source_embedder_key]
             if not isinstance(source_embedder, Embedding):
-                raise ConfigurationError("Unable to tie embeddings,"
-                                         "Selected source embedder is not an instance of `Embedding`.")
+                raise ConfigurationError(
+                    "Unable to tie embeddings,"
+                    "Selected source embedder is not an instance of `Embedding`."
+                )
             if source_embedder.get_output_dim() != self._decoder.target_embedder.get_output_dim():
-                raise ConfigurationError(f"Output Dimensions mismatch between"
-                                         f"source embedder and target embedder.")
-            self._source_text_embedder._token_embedders[tied_source_embedder_key] = self._decoder.target_embedder
+                raise ConfigurationError(
+                    f"Output Dimensions mismatch between" f"source embedder and target embedder."
+                )
+            self._source_text_embedder._token_embedders[
+                tied_source_embedder_key
+            ] = self._decoder.target_embedder
         initializer(self)
 
     @overrides
-    def forward(self,  # type: ignore
-                source_tokens: Dict[str, torch.LongTensor],
-                target_tokens: Dict[str, torch.LongTensor] = None) -> Dict[str, torch.Tensor]:
+    def forward(
+        self,  # type: ignore
+        source_tokens: Dict[str, torch.LongTensor],
+        target_tokens: Dict[str, torch.LongTensor] = None,
+    ) -> Dict[str, torch.Tensor]:
 
         """
         Make foward pass on the encoder and decoder for producing the entire target sequence.
@@ -139,10 +152,7 @@ class ComposedSeq2Seq(Model):
         source_mask = util.get_text_field_mask(source_tokens)
         # shape: (batch_size, max_input_sequence_length, encoder_output_dim)
         encoder_outputs = self._encoder(embedded_input, source_mask)
-        return {
-                "source_mask": source_mask,
-                "encoder_outputs": encoder_outputs,
-        }
+        return {"source_mask": source_mask, "encoder_outputs": encoder_outputs}
 
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:

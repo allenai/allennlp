@@ -43,7 +43,9 @@ class ArgumentParserWithDefaults(argparse.ArgumentParser):
 
         # Add default value to the help message when the default is meaningful.
         default = kwargs.get("default")
-        if kwargs.get("action") not in self._action_defaults_to_ignore and not self._is_empty_default(default):
+        if kwargs.get(
+            "action"
+        ) not in self._action_defaults_to_ignore and not self._is_empty_default(default):
             description = kwargs.get("help") or ""
             kwargs["help"] = f"{description} (default = {default})"
         super().add_argument(*args, **kwargs)
@@ -56,26 +58,26 @@ def create_parser(prog: str = None, subcommand_overrides: Dict[str, Subcommand] 
     if subcommand_overrides is None:
         subcommand_overrides = {}
 
-    parser = ArgumentParserWithDefaults(description="Run AllenNLP", usage='%(prog)s', prog=prog)
-    parser.add_argument('--version', action='version', version='%(prog)s ' + __version__)
+    parser = ArgumentParserWithDefaults(description="Run AllenNLP", usage="%(prog)s", prog=prog)
+    parser.add_argument("--version", action="version", version="%(prog)s " + __version__)
 
-    subparsers = parser.add_subparsers(title='Commands', metavar='')
+    subparsers = parser.add_subparsers(title="Commands", metavar="")
 
     subcommands = {
-            # Default commands
-            "configure": Configure(),
-            "train": Train(),
-            "evaluate": Evaluate(),
-            "predict": Predict(),
-            "make-vocab": MakeVocab(),
-            "elmo": Elmo(),
-            "fine-tune": FineTune(),
-            "dry-run": DryRun(),
-            "test-install": TestInstall(),
-            "find-lr": FindLearningRate(),
-            "print-results": PrintResults(),
-            # Superseded by overrides
-            **subcommand_overrides
+        # Default commands
+        "configure": Configure(),
+        "train": Train(),
+        "evaluate": Evaluate(),
+        "predict": Predict(),
+        "make-vocab": MakeVocab(),
+        "elmo": Elmo(),
+        "fine-tune": FineTune(),
+        "dry-run": DryRun(),
+        "test-install": TestInstall(),
+        "find-lr": FindLearningRate(),
+        "print-results": PrintResults(),
+        # Superseded by overrides
+        **subcommand_overrides,
     }
 
     for name, subcommand in subcommands.items():
@@ -83,11 +85,13 @@ def create_parser(prog: str = None, subcommand_overrides: Dict[str, Subcommand] 
         # configure doesn't need include-package because it imports
         # whatever classes it needs.
         if name != "configure":
-            subparser.add_argument('--include-package',
-                                   type=str,
-                                   action='append',
-                                   default=[],
-                                   help='additional packages to include')
+            subparser.add_argument(
+                "--include-package",
+                type=str,
+                action="append",
+                default=[],
+                help="additional packages to include",
+            )
 
     return parser
 
@@ -107,9 +111,9 @@ def main(prog: str = None, subcommand_overrides: Dict[str, Subcommand] = None) -
     # If a subparser is triggered, it adds its work as `args.func`.
     # So if no such attribute has been added, no subparser was triggered,
     # so give the user some help.
-    if 'func' in dir(args):
+    if "func" in dir(args):
         # Import any additional modules needed (to register custom classes).
-        for package_name in getattr(args, 'include_package', ()):
+        for package_name in getattr(args, "include_package", ()):
             import_submodules(package_name)
         args.func(args)
     else:

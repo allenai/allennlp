@@ -1,4 +1,3 @@
-
 import logging
 import os
 import pathlib
@@ -17,6 +16,7 @@ class AllenNlpTestCase(TestCase):
     more verbose AllenNLP logging and that creates and destroys a temp directory
     as a test fixture.
     """
+
     PROJECT_ROOT = (pathlib.Path(__file__).parent / ".." / ".." / "..").resolve()
     MODULE_ROOT = PROJECT_ROOT / "allennlp"
     TOOLS_ROOT = MODULE_ROOT / "tools"
@@ -24,14 +24,15 @@ class AllenNlpTestCase(TestCase):
     FIXTURES_ROOT = TESTS_ROOT / "fixtures"
 
     def setUp(self):
-        logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
-                            level=logging.DEBUG)
+        logging.basicConfig(
+            format="%(asctime)s - %(levelname)s - %(name)s - %(message)s", level=logging.DEBUG
+        )
         # Disabling some of the more verbose logging statements that typically aren't very helpful
         # in tests.
-        logging.getLogger('allennlp.common.params').disabled = True
-        logging.getLogger('allennlp.nn.initializers').disabled = True
-        logging.getLogger('allennlp.modules.token_embedders.embedding').setLevel(logging.INFO)
-        logging.getLogger('urllib3.connectionpool').disabled = True
+        logging.getLogger("allennlp.common.params").disabled = True
+        logging.getLogger("allennlp.nn.initializers").disabled = True
+        logging.getLogger("allennlp.modules.token_embedders.embedding").setLevel(logging.INFO)
+        logging.getLogger("urllib3.connectionpool").disabled = True
         log_pytorch_version_info()
 
         self.TEST_DIR = pathlib.Path(TEST_DIR)

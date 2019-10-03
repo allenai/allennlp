@@ -17,24 +17,24 @@ from allennlp.nn import util
 
 # a mapping from model `type` to the default Predictor for that type
 DEFAULT_PREDICTORS = {
-        'atis_parser': 'atis-parser',
-        'basic_classifier': 'text_classifier',
-        'biaffine_parser': 'biaffine-dependency-parser',
-        'bidaf': 'machine-comprehension',
-        'bidaf-ensemble': 'machine-comprehension',
-        'bimpm': 'textual-entailment',
-        'constituency_parser': 'constituency-parser',
-        'coref': 'coreference-resolution',
-        'crf_tagger': 'sentence-tagger',
-        'decomposable_attention': 'textual-entailment',
-        'dialog_qa': 'dialog_qa',
-        'event2mind': 'event2mind',
-        'naqanet': 'machine-comprehension',
-        'simple_tagger': 'sentence-tagger',
-        'srl': 'semantic-role-labeling',
-        'srl_bert': 'semantic-role-labeling',
-        'quarel_parser': 'quarel-parser',
-        'wikitables_mml_parser': 'wikitables-parser'
+    "atis_parser": "atis-parser",
+    "basic_classifier": "text_classifier",
+    "biaffine_parser": "biaffine-dependency-parser",
+    "bidaf": "machine-comprehension",
+    "bidaf-ensemble": "machine-comprehension",
+    "bimpm": "textual-entailment",
+    "constituency_parser": "constituency-parser",
+    "coref": "coreference-resolution",
+    "crf_tagger": "sentence-tagger",
+    "decomposable_attention": "textual-entailment",
+    "dialog_qa": "dialog_qa",
+    "event2mind": "event2mind",
+    "naqanet": "machine-comprehension",
+    "simple_tagger": "sentence-tagger",
+    "srl": "semantic-role-labeling",
+    "srl_bert": "semantic-role-labeling",
+    "quarel_parser": "quarel-parser",
+    "wikitables_mml_parser": "wikitables-parser",
 }
 
 
@@ -43,6 +43,7 @@ class Predictor(Registrable):
     a ``Predictor`` is a thin wrapper around an AllenNLP model that handles JSON -> JSON predictions
     that can be used for serving models through the web API or making predictions in bulk.
     """
+
     def __init__(self, model: Model, dataset_reader: DatasetReader) -> None:
         self._model = model
         self._dataset_reader = dataset_reader
@@ -81,8 +82,7 @@ class Predictor(Registrable):
         new_instances = self.predictions_to_labeled_instances(instance, outputs)
         return new_instances
 
-    def get_gradients(self,
-                      instances: List[Instance]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    def get_gradients(self, instances: List[Instance]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """
         Gets the gradients of the loss with respect to the model inputs.
 
@@ -110,9 +110,11 @@ class Predictor(Registrable):
 
         dataset = Batch(instances)
         dataset.index_instances(self._model.vocab)
-        outputs = self._model.decode(self._model.forward(**dataset.as_tensor_dict()))  # type: ignore
+        outputs = self._model.decode(
+            self._model.forward(**dataset.as_tensor_dict())  # type: ignore
+        )
 
-        loss = outputs['loss']
+        loss = outputs["loss"]
         self._model.zero_grad()
         loss.backward()
 
@@ -121,7 +123,7 @@ class Predictor(Registrable):
 
         grad_dict = dict()
         for idx, grad in enumerate(embedding_gradients):
-            key = 'grad_input_' + str(idx + 1)
+            key = "grad_input_" + str(idx + 1)
             grad_dict[key] = grad.detach().cpu().numpy()
 
         return grad_dict, outputs
@@ -136,6 +138,7 @@ class Predictor(Registrable):
         will be called multiple times. We append all the embeddings gradients
         to a list.
         """
+
         def hook_layers(module, grad_in, grad_out):
             embedding_gradients.append(grad_out[0])
 
@@ -164,6 +167,7 @@ class Predictor(Registrable):
         def add_output(idx: int):
             def _add_output(mod, _, outputs):
                 results[idx] = {"name": str(mod), "output": sanitize(outputs)}
+
             return _add_output
 
         for idx, module in enumerate(self._model.modules()):
@@ -182,9 +186,9 @@ class Predictor(Registrable):
         outputs = self._model.forward_on_instance(instance)
         return sanitize(outputs)
 
-    def predictions_to_labeled_instances(self,
-                                         instance: Instance,
-                                         outputs: Dict[str, numpy.ndarray]) -> List[Instance]:
+    def predictions_to_labeled_instances(
+        self, instance: Instance, outputs: Dict[str, numpy.ndarray]
+    ) -> List[Instance]:
         """
         This function takes a model's outputs for an Instance, and it labels that instance according
         to the output. For example, in classification this function labels the instance according
@@ -228,8 +232,13 @@ class Predictor(Registrable):
         return instances
 
     @classmethod
-    def from_path(cls, archive_path: str, predictor_name: str = None, cuda_device: int = -1,
-                  dataset_reader_to_load: str = "validation") -> 'Predictor':
+    def from_path(
+        cls,
+        archive_path: str,
+        predictor_name: str = None,
+        cuda_device: int = -1,
+        dataset_reader_to_load: str = "validation",
+    ) -> "Predictor":
         """
         Instantiate a :class:`Predictor` from an archive path.
 
@@ -254,12 +263,19 @@ class Predictor(Registrable):
         -------
         A Predictor instance.
         """
-        return Predictor.from_archive(load_archive(archive_path, cuda_device=cuda_device), predictor_name,
-                                      dataset_reader_to_load=dataset_reader_to_load)
+        return Predictor.from_archive(
+            load_archive(archive_path, cuda_device=cuda_device),
+            predictor_name,
+            dataset_reader_to_load=dataset_reader_to_load,
+        )
 
     @classmethod
-    def from_archive(cls, archive: Archive, predictor_name: str = None,
-                     dataset_reader_to_load: str = "validation") -> 'Predictor':
+    def from_archive(
+        cls,
+        archive: Archive,
+        predictor_name: str = None,
+        dataset_reader_to_load: str = "validation",
+    ) -> "Predictor":
         """
         Instantiate a :class:`Predictor` from an :class:`~allennlp.models.archival.Archive`;
         that is, from the result of training a model. Optionally specify which `Predictor`
@@ -273,8 +289,10 @@ class Predictor(Registrable):
         if not predictor_name:
             model_type = config.get("model").get("type")
             if model_type not in DEFAULT_PREDICTORS:
-                raise ConfigurationError(f"No default predictor for model type {model_type}.\n"
-                                         f"Please specify a predictor explicitly.")
+                raise ConfigurationError(
+                    f"No default predictor for model type {model_type}.\n"
+                    f"Please specify a predictor explicitly."
+                )
             predictor_name = DEFAULT_PREDICTORS[model_type]
 
         if dataset_reader_to_load == "validation" and "validation_dataset_reader" in config:

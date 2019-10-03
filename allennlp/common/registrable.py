@@ -13,7 +13,7 @@ from allennlp.common.from_params import FromParams
 
 logger = logging.getLogger(__name__)
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class Registrable(FromParams):
@@ -37,6 +37,7 @@ class Registrable(FromParams):
     module in which they reside (as this causes any import of either the abstract class or
     a subclass to load all other subclasses and the abstract class).
     """
+
     _registry: Dict[Type, Dict[str, Type]] = defaultdict(dict)
     default_implementation: str = None
 
@@ -59,15 +60,20 @@ class Registrable(FromParams):
             # Add to registry, raise an error if key has already been used.
             if name in registry:
                 if exist_ok:
-                    message = (f"{name} has already been registered as {registry[name].__name__}, but "
-                               f"exist_ok=True, so overwriting with {cls.__name__}")
+                    message = (
+                        f"{name} has already been registered as {registry[name].__name__}, but "
+                        f"exist_ok=True, so overwriting with {cls.__name__}"
+                    )
                     logger.info(message)
                 else:
-                    message = (f"Cannot register {name} as {cls.__name__}; "
-                               f"name already in use for {registry[name].__name__}")
+                    message = (
+                        f"Cannot register {name} as {cls.__name__}; "
+                        f"name already in use for {registry[name].__name__}"
+                    )
                     raise ConfigurationError(message)
             registry[name] = subclass
             return subclass
+
         return add_subclass_to_registry
 
     @classmethod
@@ -85,22 +91,28 @@ class Registrable(FromParams):
             try:
                 module = importlib.import_module(submodule)
             except ModuleNotFoundError:
-                raise ConfigurationError(f"tried to interpret {name} as a path to a class "
-                                         f"but unable to import module {submodule}")
+                raise ConfigurationError(
+                    f"tried to interpret {name} as a path to a class "
+                    f"but unable to import module {submodule}"
+                )
 
             try:
                 return getattr(module, class_name)
             except AttributeError:
-                raise ConfigurationError(f"tried to interpret {name} as a path to a class "
-                                         f"but unable to find class {class_name} in {submodule}")
+                raise ConfigurationError(
+                    f"tried to interpret {name} as a path to a class "
+                    f"but unable to find class {class_name} in {submodule}"
+                )
 
         else:
             # is not a qualified class name
-            raise ConfigurationError(f"{name} is not a registered name for {cls.__name__}. "
-                                     "You probably need to use the --include-package flag "
-                                     "to load your custom code. Alternatively, you can specify your choices "
-                                     """using fully-qualified paths, e.g. {"model": "my_module.models.MyModel"} """
-                                     "in which case they will be automatically imported correctly.")
+            raise ConfigurationError(
+                f"{name} is not a registered name for {cls.__name__}. "
+                "You probably need to use the --include-package flag "
+                "to load your custom code. Alternatively, you can specify your choices "
+                """using fully-qualified paths, e.g. {"model": "my_module.models.MyModel"} """
+                "in which case they will be automatically imported correctly."
+            )
 
     @classmethod
     def list_available(cls) -> List[str]:

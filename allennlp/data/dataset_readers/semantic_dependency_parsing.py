@@ -15,7 +15,9 @@ logger = logging.getLogger(__name__)
 FIELDS = ["id", "form", "lemma", "pos", "head", "deprel", "top", "pred", "frame"]
 
 
-def parse_sentence(sentence_blob: str) -> Tuple[List[Dict[str, str]], List[Tuple[int, int]], List[str]]:
+def parse_sentence(
+    sentence_blob: str
+) -> Tuple[List[Dict[str, str]], List[Tuple[int, int]], List[str]]:
     """
     Parses a chunk of text in the SemEval SDP format.
 
@@ -41,16 +43,19 @@ def parse_sentence(sentence_blob: str) -> Tuple[List[Dict[str, str]], List[Tuple
     arc_tags = []
     predicates = []
 
-    lines = [line.split("\t") for line in sentence_blob.split("\n")
-             if line and not line.strip().startswith("#")]
+    lines = [
+        line.split("\t")
+        for line in sentence_blob.split("\n")
+        if line and not line.strip().startswith("#")
+    ]
     for line_idx, line in enumerate(lines):
         annotated_token = {k: v for k, v in zip(FIELDS, line)}
-        if annotated_token['pred'] == "+":
+        if annotated_token["pred"] == "+":
             predicates.append(line_idx)
         annotated_sentence.append(annotated_token)
 
     for line_idx, line in enumerate(lines):
-        for predicate_idx, arg in enumerate(line[len(FIELDS):]):
+        for predicate_idx, arg in enumerate(line[len(FIELDS) :]):
             if arg != "_":
                 arc_indices.append((line_idx, predicates[predicate_idx]))
                 arc_tags.append(arg)
@@ -74,11 +79,10 @@ class SemanticDependenciesDatasetReader(DatasetReader):
     token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
         The token indexers to be applied to the words TextField.
     """
-    def __init__(self,
-                 token_indexers: Dict[str, TokenIndexer] = None,
-                 lazy: bool = False) -> None:
+
+    def __init__(self, token_indexers: Dict[str, TokenIndexer] = None, lazy: bool = False) -> None:
         super().__init__(lazy)
-        self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
+        self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
 
     @overrides
     def _read(self, file_path: str):
@@ -97,11 +101,13 @@ class SemanticDependenciesDatasetReader(DatasetReader):
                 yield self.text_to_instance(tokens, pos_tags, directed_arc_indices, arc_tags)
 
     @overrides
-    def text_to_instance(self,  # type: ignore
-                         tokens: List[str],
-                         pos_tags: List[str] = None,
-                         arc_indices: List[Tuple[int, int]] = None,
-                         arc_tags: List[str] = None) -> Instance:
+    def text_to_instance(
+        self,  # type: ignore
+        tokens: List[str],
+        pos_tags: List[str] = None,
+        arc_indices: List[Tuple[int, int]] = None,
+        arc_tags: List[str] = None,
+    ) -> Instance:
 
         fields: Dict[str, Field] = {}
         token_field = TextField([Token(t) for t in tokens], self._token_indexers)
