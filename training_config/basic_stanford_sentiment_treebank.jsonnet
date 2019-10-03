@@ -1,3 +1,4 @@
+// Configuration for a basic LSTM sentiment analysis classifier, using the binary Stanford Sentiment Treebank (Socher at al. 2013).
 {
   "dataset_reader":{
     "type": "sst_tokens",
