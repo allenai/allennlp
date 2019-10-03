@@ -1,0 +1,22 @@
+{
+  "drop_exact_match": 1.0,
+  "drop_f1": 1.0,
+  "squad1_exact_match": 1.0,
+  "squad1_f1": 1.0,
+  "squad2_exact_match": 1.0,
+  "squad2_f1": 1.0,
+  "newsqa_exact_match": 1.0,
+  "newsqa_f1": 0.9992257065427798,
+  "quoref_exact_match": 1.0,
+  "quoref_f1": 1.0,
+  "ropes_exact_match": 1.0,
+  "ropes_f1": 0.9950166112956811,
+  "narrativeqa_bleu_1": 1.0,
+  "narrativeqa_bleu_4": 0.5229702398150824,
+  "narrativeqa_meteor": 0.8781508234614317,
+  "narrativeqa_rouge_f": 1.0,
+  "narrativeqa_rouge_p": 1.0,
+  "narrativeqa_rouge_r": 1.0,
+  "duorc_exact_match": 1.0,
+  "duorc_f1": 0.9999256450293702
+}
