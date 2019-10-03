@@ -21,14 +21,18 @@ class Tokenizer(Registrable):
     token.  Splitting word tokens into character arrays is handled separately, in the
     :class:`..token_representations.TokenRepresentation` class.
     """
-    default_implementation = 'word'
+
+    default_implementation = "word"
 
     def batch_tokenize(self, texts: List[str]) -> List[List[Token]]:
         """
         Batches together tokenization of several texts, in case that is faster for particular
         tokenizers.
+
+        By default we just do this without batching.  Override this in your tokenizer if you have a
+        good way of doing batched computation.
         """
-        raise NotImplementedError
+        return [self.tokenize(text) for text in texts]
 
     def tokenize(self, text: str) -> List[Token]:
         """

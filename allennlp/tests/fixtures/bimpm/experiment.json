@@ -23,7 +23,7 @@
   "validation_data_path": "allennlp/tests/fixtures/data/quora_paraphrase.tsv",
   "model": {
     "type": "bimpm",
-    "dropout": 0.1,
+    "dropout": 0.0,
     "text_field_embedder": {
       "token_embedders": {
         "tokens": {
@@ -95,14 +95,14 @@
       "input_size": 264,
       "hidden_size": 100,
       "num_layers": 2,
-      "dropout": 0.1
+      "dropout": 0.0
     },
     "classifier_feedforward": {
       "input_dim": 400,
       "num_layers": 2,
       "hidden_dims": [200, 2],
       "activations": ["relu", "linear"],
-      "dropout": [0.1, 0.0]
+      "dropout": [0.0, 0.0]
     },
     "initializer": [
       [".*linear_layers.*weight", {"type": "xavier_normal"}],

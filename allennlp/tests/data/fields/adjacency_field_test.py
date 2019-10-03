@@ -1,4 +1,3 @@
-# pylint: disable=invalid-name
 import pytest
 import numpy
 from allennlp.common.checks import ConfigurationError
@@ -9,11 +8,12 @@ from allennlp.data import Vocabulary, Token
 
 
 class TestAdjacencyField(AllenNlpTestCase):
-
     def setUp(self):
         super().setUp()
-        self.text = TextField([Token(t) for t in ["here", "is", "a", "sentence", "."]],
-                              {"words": SingleIdTokenIndexer("words")})
+        self.text = TextField(
+            [Token(t) for t in ["here", "is", "a", "sentence", "."]],
+            {"words": SingleIdTokenIndexer("words")},
+        )
 
     def test_adjacency_field_can_index_with_vocab(self):
         vocab = Vocabulary()
@@ -26,11 +26,18 @@ class TestAdjacencyField(AllenNlpTestCase):
         adjacency_field = AdjacencyField(indices, self.text, labels)
         adjacency_field.index(vocab)
         tensor = adjacency_field.as_tensor(adjacency_field.get_padding_lengths())
-        numpy.testing.assert_equal(tensor.numpy(), numpy.array([[-1, 0, -1, -1, -1],
-                                                                [-1, -1, -1, -1, -1],
-                                                                [-1, 1, -1, -1, -1],
-                                                                [-1, -1, -1, -1, -1],
-                                                                [-1, -1, -1, -1, -1]]))
+        numpy.testing.assert_equal(
+            tensor.numpy(),
+            numpy.array(
+                [
+                    [-1, 0, -1, -1, -1],
+                    [-1, -1, -1, -1, -1],
+                    [-1, 1, -1, -1, -1],
+                    [-1, -1, -1, -1, -1],
+                    [-1, -1, -1, -1, -1],
+                ]
+            ),
+        )
 
     def test_adjacency_field_raises_with_out_of_bounds_indices(self):
         with pytest.raises(ConfigurationError):

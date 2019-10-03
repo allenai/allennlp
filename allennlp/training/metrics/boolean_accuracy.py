@@ -22,14 +22,17 @@ class BooleanAccuracy(Metric):
     some kind of constrained inference and don't have a prediction tensor that matches the API of
     :class:`CategoricalAccuracy`, which assumes a final dimension of size ``num_classes``.
     """
-    def __init__(self) -> None:
-        self._correct_count = 0.
-        self._total_count = 0.
 
-    def __call__(self,
-                 predictions: torch.Tensor,
-                 gold_labels: torch.Tensor,
-                 mask: Optional[torch.Tensor] = None):
+    def __init__(self) -> None:
+        self._correct_count = 0.0
+        self._total_count = 0.0
+
+    def __call__(
+        self,
+        predictions: torch.Tensor,
+        gold_labels: torch.Tensor,
+        mask: Optional[torch.Tensor] = None,
+    ):
         """
         Parameters
         ----------
@@ -41,6 +44,19 @@ class BooleanAccuracy(Metric):
             A tensor of the same shape as ``predictions``.
         """
         predictions, gold_labels, mask = self.unwrap_to_tensors(predictions, gold_labels, mask)
+
+        # Some sanity checks.
+        if gold_labels.size() != predictions.size():
+            raise ValueError(
+                f"gold_labels must have shape == predictions.size() but "
+                f"found tensor of shape: {gold_labels.size()}"
+            )
+        if mask is not None and mask.size() != predictions.size():
+            raise ValueError(
+                f"mask must have shape == predictions.size() but "
+                f"found tensor of shape: {mask.size()}"
+            )
+
         batch_size = predictions.size(0)
 
         if mask is not None:
@@ -75,7 +91,10 @@ class BooleanAccuracy(Metric):
         -------
         The accumulated accuracy.
         """
-        accuracy = float(self._correct_count) / float(self._total_count)
+        if self._total_count > 0:
+            accuracy = float(self._correct_count) / float(self._total_count)
+        else:
+            accuracy = 0.0
         if reset:
             self.reset()
         return accuracy

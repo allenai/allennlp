@@ -6,7 +6,8 @@ import torch
 # lists of a `State` subclass and output structures with the subclass.  Really ugly that we
 # have to do this generic typing _for our own class_, but it makes mypy happy and gives us good
 # type checking in a few important methods.
-T = TypeVar('T', bound='State')
+T = TypeVar("T", bound="State")
+
 
 class State(Generic[T]):
     """
@@ -43,10 +44,10 @@ class State(Generic[T]):
         this score, and using it for backprop during training.  Like the other variables here, this
         is a ``group_size``-length list.
     """
-    def __init__(self,
-                 batch_indices: List[int],
-                 action_history: List[List[int]],
-                 score: List[torch.Tensor]) -> None:
+
+    def __init__(
+        self, batch_indices: List[int], action_history: List[List[int]], score: List[torch.Tensor]
+    ) -> None:
         self.batch_indices = batch_indices
         self.action_history = action_history
         self.score = score

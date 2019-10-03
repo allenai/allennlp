@@ -6,14 +6,17 @@ from overrides import overrides
 from allennlp.data.fields.field import Field
 from allennlp.data.vocabulary import Vocabulary
 
+
 class ProductionRule(NamedTuple):
     rule: str
     is_global_rule: bool
     rule_id: Optional[torch.LongTensor] = None
     nonterminal: Optional[str] = None
 
+
 # This is just here for backward compatability.
 ProductionRuleArray = ProductionRule
+
 
 # mypy doesn't like that we're using a crazy data type - the data type we use here is _supposed_ to
 # be in the bounds of DataArray, but ProductionRule definitely isn't.  TODO(mattg): maybe we
@@ -70,11 +73,14 @@ class ProductionRuleField(Field[ProductionRule]):  # type: ignore
         The left hand side of the rule. Sometimes having this as separate part of the ``ProductionRule``
         can deduplicate work.
     """
-    def __init__(self,
-                 rule: str,
-                 is_global_rule: bool,
-                 vocab_namespace: str = 'rule_labels',
-                 nonterminal: str = None) -> None:
+
+    def __init__(
+        self,
+        rule: str,
+        is_global_rule: bool,
+        vocab_namespace: str = "rule_labels",
+        nonterminal: str = None,
+    ) -> None:
         self.rule = rule
         self.nonterminal = nonterminal
         self.is_global_rule = is_global_rule
@@ -93,12 +99,12 @@ class ProductionRuleField(Field[ProductionRule]):  # type: ignore
 
     @overrides
     def get_padding_lengths(self) -> Dict[str, int]:
-        # pylint: disable=no-self-use
+
         return {}
 
     @overrides
     def as_tensor(self, padding_lengths: Dict[str, int]) -> ProductionRule:
-        # pylint: disable=unused-argument
+
         if self.is_global_rule:
             tensor = torch.LongTensor([self._rule_id])
         else:
@@ -106,17 +112,21 @@ class ProductionRuleField(Field[ProductionRule]):  # type: ignore
         return ProductionRule(self.rule, self.is_global_rule, tensor, self.nonterminal)
 
     @overrides
-    def empty_field(self): # pylint: disable=no-self-use
+    def empty_field(self):
         # This _does_ get called, because we don't want to bother with modifying the ListField to
         # ignore padding for these.  We just make sure the rule is the empty string, which the
         # model will use to know that this rule is just padding.
-        return ProductionRuleField(rule='', is_global_rule=False)
+        return ProductionRuleField(rule="", is_global_rule=False)
 
     @overrides
-    def batch_tensors(self, tensor_list: List[ProductionRule]) -> List[ProductionRule]:  # type: ignore
-        # pylint: disable=no-self-use
+    def batch_tensors(
+        self, tensor_list: List[ProductionRule]
+    ) -> List[ProductionRule]:  # type: ignore
+
         return tensor_list
 
     def __str__(self) -> str:
-        return f"ProductionRuleField with rule: {self.rule} (is_global_rule: " \
-               f"{self.is_global_rule}) in namespace: '{self._vocab_namespace}'.'"
+        return (
+            f"ProductionRuleField with rule: {self.rule} (is_global_rule: "
+            f"{self.is_global_rule}) in namespace: '{self._vocab_namespace}'.'"
+        )

@@ -1,20 +1,20 @@
-# pylint: disable=no-self-use,invalid-name
 from flaky import flaky
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor
 
+
 class TestAtisParserPredictor(AllenNlpTestCase):
     @flaky
     def test_atis_parser_uses_named_inputs(self):
-        inputs = {
-                "utterance": "show me the flights to seattle",
-        }
+        inputs = {"utterance": "show me the flights to seattle"}
 
-        archive_path = self.FIXTURES_ROOT / 'semantic_parsing' / 'atis' / 'serialization' / 'model.tar.gz'
+        archive_path = (
+            self.FIXTURES_ROOT / "semantic_parsing" / "atis" / "serialization" / "model.tar.gz"
+        )
         archive = load_archive(archive_path)
-        predictor = Predictor.from_archive(archive, 'atis-parser')
+        predictor = Predictor.from_archive(archive, "atis-parser")
 
         result = predictor.predict_json(inputs)
         action_sequence = result.get("best_action_sequence")
@@ -29,13 +29,13 @@ class TestAtisParserPredictor(AllenNlpTestCase):
 
     @flaky
     def test_atis_parser_predicted_sql_present(self):
-        inputs = {
-                "utterance": "show me flights to seattle"
-        }
+        inputs = {"utterance": "show me flights to seattle"}
 
-        archive_path = self.FIXTURES_ROOT / 'semantic_parsing' / 'atis' / 'serialization' / 'model.tar.gz'
+        archive_path = (
+            self.FIXTURES_ROOT / "semantic_parsing" / "atis" / "serialization" / "model.tar.gz"
+        )
         archive = load_archive(archive_path)
-        predictor = Predictor.from_archive(archive, 'atis-parser')
+        predictor = Predictor.from_archive(archive, "atis-parser")
 
         result = predictor.predict_json(inputs)
         predicted_sql_query = result.get("predicted_sql_query")
@@ -43,13 +43,13 @@ class TestAtisParserPredictor(AllenNlpTestCase):
 
     @flaky
     def test_atis_parser_batch_predicted_sql_present(self):
-        inputs = [{
-                "utterance": "show me flights to seattle",
-        }]
+        inputs = [{"utterance": "show me flights to seattle"}]
 
-        archive_path = self.FIXTURES_ROOT / 'semantic_parsing' / 'atis' / 'serialization' / 'model.tar.gz'
+        archive_path = (
+            self.FIXTURES_ROOT / "semantic_parsing" / "atis" / "serialization" / "model.tar.gz"
+        )
         archive = load_archive(archive_path)
-        predictor = Predictor.from_archive(archive, 'atis-parser')
+        predictor = Predictor.from_archive(archive, "atis-parser")
 
         result = predictor.predict_batch_json(inputs)
         predicted_sql_query = result[0].get("predicted_sql_query")

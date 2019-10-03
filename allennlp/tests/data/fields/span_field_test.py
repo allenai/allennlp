@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 import numpy
 import pytest
 
@@ -10,9 +9,11 @@ from allennlp.data.token_indexers import SingleIdTokenIndexer
 
 class TestSpanField(AllenNlpTestCase):
     def setUp(self):
-        super(TestSpanField, self).setUp()
-        self.text = TextField([Token(t) for t in ["here", "is", "a", "sentence", "for", "spans", "."]],
-                              {"words": SingleIdTokenIndexer("words")})
+        super().setUp()
+        self.indexers = {"words": SingleIdTokenIndexer("words")}
+        self.text = TextField(
+            [Token(t) for t in ["here", "is", "a", "sentence", "for", "spans", "."]], self.indexers
+        )
 
     def test_as_tensor_converts_span_field_correctly(self):
         span_field = SpanField(2, 3, self.text)
@@ -44,7 +45,12 @@ class TestSpanField(AllenNlpTestCase):
     def test_equality(self):
         span_field1 = SpanField(2, 3, self.text)
         span_field2 = SpanField(2, 3, self.text)
+        span_field3 = SpanField(
+            2, 3, TextField([Token(t) for t in ["not", "the", "same", "tokens"]], self.indexers)
+        )
 
         assert span_field1 == (2, 3)
         assert span_field1 == span_field1
-        assert span_field1 != span_field2
+        assert span_field1 == span_field2
+        assert span_field1 != span_field3
+        assert span_field2 != span_field3

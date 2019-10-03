@@ -7,10 +7,11 @@ from allennlp.state_machines.states.grammar_statelet import GrammarStatelet
 from allennlp.state_machines.states.rnn_statelet import RnnStatelet
 from allennlp.state_machines.states.state import State
 
+
 # This syntax is pretty weird and ugly, but it's necessary to make mypy happy with the API that
 # we've defined.  We're using generics to make the type of `combine_states` come out right.  See
 # the note in `state_machines.state.py` for a little more detail.
-class GrammarBasedState(State['GrammarBasedState']):
+class GrammarBasedState(State["GrammarBasedState"]):
     """
     A generic State that's suitable for most models that do grammar-based decoding.  We keep around
     a `group` of states, and each element in the group has a few things: a batch index, an action
@@ -52,15 +53,18 @@ class GrammarBasedState(State['GrammarBasedState']):
         around between ``States`` as-is, without copying.
     debug_info : ``List[Any]``, optional (default=None).
     """
-    def __init__(self,
-                 batch_indices: List[int],
-                 action_history: List[List[int]],
-                 score: List[torch.Tensor],
-                 rnn_state: List[RnnStatelet],
-                 grammar_state: List[GrammarStatelet],
-                 possible_actions: List[List[ProductionRule]],
-                 extras: List[Any] = None,
-                 debug_info: List = None) -> None:
+
+    def __init__(
+        self,
+        batch_indices: List[int],
+        action_history: List[List[int]],
+        score: List[torch.Tensor],
+        rnn_state: List[RnnStatelet],
+        grammar_state: List[GrammarStatelet],
+        possible_actions: List[List[ProductionRule]],
+        extras: List[Any] = None,
+        debug_info: List = None,
+    ) -> None:
         super().__init__(batch_indices, action_history, score)
         self.rnn_state = rnn_state
         self.grammar_state = grammar_state
@@ -68,14 +72,16 @@ class GrammarBasedState(State['GrammarBasedState']):
         self.extras = extras
         self.debug_info = debug_info
 
-    def new_state_from_group_index(self,
-                                   group_index: int,
-                                   action: int,
-                                   new_score: torch.Tensor,
-                                   new_rnn_state: RnnStatelet,
-                                   considered_actions: List[int] = None,
-                                   action_probabilities: List[float] = None,
-                                   attention_weights: torch.Tensor = None) -> 'GrammarBasedState':
+    def new_state_from_group_index(
+        self,
+        group_index: int,
+        action: int,
+        new_score: torch.Tensor,
+        new_rnn_state: RnnStatelet,
+        considered_actions: List[int] = None,
+        action_probabilities: List[float] = None,
+        attention_weights: torch.Tensor = None,
+    ) -> "GrammarBasedState":
         batch_index = self.batch_indices[group_index]
         new_action_history = self.action_history[group_index] + [action]
         production_rule = self.possible_actions[batch_index][action][0]
@@ -83,29 +89,38 @@ class GrammarBasedState(State['GrammarBasedState']):
         if self.debug_info is not None:
             attention = attention_weights[group_index] if attention_weights is not None else None
             debug_info = {
-                    'considered_actions': considered_actions,
-                    'question_attention': attention,
-                    'probabilities': action_probabilities,
-                    }
+                "considered_actions": considered_actions,
+                "question_attention": attention,
+                "probabilities": action_probabilities,
+            }
             new_debug_info = [self.debug_info[group_index] + [debug_info]]
         else:
             new_debug_info = None
-        return GrammarBasedState(batch_indices=[batch_index],
-                                 action_history=[new_action_history],
-                                 score=[new_score],
-                                 rnn_state=[new_rnn_state],
-                                 grammar_state=[new_grammar_state],
-                                 possible_actions=self.possible_actions,
-                                 extras=self.extras,
-                                 debug_info=new_debug_info)
+        return GrammarBasedState(
+            batch_indices=[batch_index],
+            action_history=[new_action_history],
+            score=[new_score],
+            rnn_state=[new_rnn_state],
+            grammar_state=[new_grammar_state],
+            possible_actions=self.possible_actions,
+            extras=self.extras,
+            debug_info=new_debug_info,
+        )
 
     def print_action_history(self, group_index: int = None) -> None:
         scores = self.score if group_index is None else [self.score[group_index]]
-        batch_indices = self.batch_indices if group_index is None else [self.batch_indices[group_index]]
-        histories = self.action_history if group_index is None else [self.action_history[group_index]]
+        batch_indices = (
+            self.batch_indices if group_index is None else [self.batch_indices[group_index]]
+        )
+        histories = (
+            self.action_history if group_index is None else [self.action_history[group_index]]
+        )
         for score, batch_index, action_history in zip(scores, batch_indices, histories):
-            print('  ', score.detach().cpu().numpy()[0],
-                  [self.possible_actions[batch_index][action][0] for action in action_history])
+            print(
+                "  ",
+                score.detach().cpu().numpy()[0],
+                [self.possible_actions[batch_index][action][0] for action in action_history],
+            )
 
     def get_valid_actions(self) -> List[Dict[str, Tuple[torch.Tensor, torch.Tensor, List[int]]]]:
         """
@@ -119,21 +134,27 @@ class GrammarBasedState(State['GrammarBasedState']):
         return self.grammar_state[0].is_finished()
 
     @classmethod
-    def combine_states(cls, states: Sequence['GrammarBasedState']) -> 'GrammarBasedState':
+    def combine_states(cls, states: Sequence["GrammarBasedState"]) -> "GrammarBasedState":
         batch_indices = [batch_index for state in states for batch_index in state.batch_indices]
-        action_histories = [action_history for state in states for action_history in state.action_history]
+        action_histories = [
+            action_history for state in states for action_history in state.action_history
+        ]
         scores = [score for state in states for score in state.score]
         rnn_states = [rnn_state for state in states for rnn_state in state.rnn_state]
-        grammar_states = [grammar_state for state in states for grammar_state in state.grammar_state]
+        grammar_states = [
+            grammar_state for state in states for grammar_state in state.grammar_state
+        ]
         if states[0].debug_info is not None:
             debug_info = [debug_info for state in states for debug_info in state.debug_info]
         else:
             debug_info = None
-        return GrammarBasedState(batch_indices=batch_indices,
-                                 action_history=action_histories,
-                                 score=scores,
-                                 rnn_state=rnn_states,
-                                 grammar_state=grammar_states,
-                                 possible_actions=states[0].possible_actions,
-                                 extras=states[0].extras,
-                                 debug_info=debug_info)
+        return GrammarBasedState(
+            batch_indices=batch_indices,
+            action_history=action_histories,
+            score=scores,
+            rnn_state=rnn_states,
+            grammar_state=grammar_states,
+            possible_actions=states[0].possible_actions,
+            extras=states[0].extras,
+            debug_info=debug_info,
+        )

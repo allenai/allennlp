@@ -31,13 +31,16 @@ class Maxout(torch.nn.Module, FromParams):
         If given, we will apply this amount of dropout after each layer.  Semantics of ``float``
         versus ``Sequence[float]`` is the same as with other parameters.
     """
-    def __init__(self,
-                 input_dim: int,
-                 num_layers: int,
-                 output_dims: Union[int, Sequence[int]],
-                 pool_sizes: Union[int, Sequence[int]],
-                 dropout: Union[float, Sequence[float]] = 0.0) -> None:
-        super(Maxout, self).__init__()
+
+    def __init__(
+        self,
+        input_dim: int,
+        num_layers: int,
+        output_dims: Union[int, Sequence[int]],
+        pool_sizes: Union[int, Sequence[int]],
+        dropout: Union[float, Sequence[float]] = 0.0,
+    ) -> None:
+        super().__init__()
         if not isinstance(output_dims, list):
             output_dims = [output_dims] * num_layers  # type: ignore
         if not isinstance(pool_sizes, list):
@@ -45,19 +48,24 @@ class Maxout(torch.nn.Module, FromParams):
         if not isinstance(dropout, list):
             dropout = [dropout] * num_layers  # type: ignore
         if len(output_dims) != num_layers:
-            raise ConfigurationError("len(output_dims) (%d) != num_layers (%d)" %
-                                     (len(output_dims), num_layers))
+            raise ConfigurationError(
+                "len(output_dims) (%d) != num_layers (%d)" % (len(output_dims), num_layers)
+            )
         if len(pool_sizes) != num_layers:
-            raise ConfigurationError("len(pool_sizes) (%d) != num_layers (%d)" %
-                                     (len(pool_sizes), num_layers))
+            raise ConfigurationError(
+                "len(pool_sizes) (%d) != num_layers (%d)" % (len(pool_sizes), num_layers)
+            )
         if len(dropout) != num_layers:
-            raise ConfigurationError("len(dropout) (%d) != num_layers (%d)" %
-                                     (len(dropout), num_layers))
+            raise ConfigurationError(
+                "len(dropout) (%d) != num_layers (%d)" % (len(dropout), num_layers)
+            )
 
         self._pool_sizes = pool_sizes
         input_dims = [input_dim] + output_dims[:-1]
         linear_layers = []
-        for layer_input_dim, layer_output_dim, pool_size in zip(input_dims, output_dims, pool_sizes):
+        for layer_input_dim, layer_output_dim, pool_size in zip(
+            input_dims, output_dims, pool_sizes
+        ):
             linear_layers.append(torch.nn.Linear(layer_input_dim, layer_output_dim * pool_size))
         self._linear_layers = torch.nn.ModuleList(linear_layers)
         dropout_layers = [torch.nn.Dropout(p=value) for value in dropout]
@@ -73,10 +81,11 @@ class Maxout(torch.nn.Module, FromParams):
         return self._input_dim
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
-        # pylint: disable=arguments-differ
+
         output = inputs
-        for layer, layer_output_dim, dropout, pool_size in zip(self._linear_layers, self._output_dims,
-                                                               self._dropout, self._pool_sizes):
+        for layer, layer_output_dim, dropout, pool_size in zip(
+            self._linear_layers, self._output_dims, self._dropout, self._pool_sizes
+        ):
             affine_output = layer(output)
             # Compute and apply the proper shape for the max.
             shape = list(inputs.size())

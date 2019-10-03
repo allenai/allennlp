@@ -14,7 +14,7 @@ from allennlp.nn.util import add_positional_features
 
 @Seq2SeqEncoder.register("stacked_self_attention")
 class StackedSelfAttentionEncoder(Seq2SeqEncoder):
-    # pylint: disable=line-too-long
+
     """
     Implements a stacked self-attention encoder similar to the Transformer
     architecture in `Attention is all you Need
@@ -57,19 +57,22 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
         The dropout probability for the residual connections.
     attention_dropout_prob : ``float``, optional, (default = 0.1)
         The dropout probability for the attention distributions in each attention layer.
-    """
-    def __init__(self,
-                 input_dim: int,
-                 hidden_dim: int,
-                 projection_dim: int,
-                 feedforward_hidden_dim: int,
-                 num_layers: int,
-                 num_attention_heads: int,
-                 use_positional_encoding: bool = True,
-                 dropout_prob: float = 0.1,
-                 residual_dropout_prob: float = 0.2,
-                 attention_dropout_prob: float = 0.1) -> None:
-        super(StackedSelfAttentionEncoder, self).__init__()
+    """  # noqa
+
+    def __init__(
+        self,
+        input_dim: int,
+        hidden_dim: int,
+        projection_dim: int,
+        feedforward_hidden_dim: int,
+        num_layers: int,
+        num_attention_heads: int,
+        use_positional_encoding: bool = True,
+        dropout_prob: float = 0.1,
+        residual_dropout_prob: float = 0.2,
+        attention_dropout_prob: float = 0.1,
+    ) -> None:
+        super().__init__()
 
         self._use_positional_encoding = use_positional_encoding
         self._attention_layers: List[MultiHeadSelfAttention] = []
@@ -79,12 +82,13 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
 
         feedfoward_input_dim = input_dim
         for i in range(num_layers):
-            feedfoward = FeedForward(feedfoward_input_dim,
-                                     activations=[Activation.by_name('relu')(),
-                                                  Activation.by_name('linear')()],
-                                     hidden_dims=[feedforward_hidden_dim, hidden_dim],
-                                     num_layers=2,
-                                     dropout=dropout_prob)
+            feedfoward = FeedForward(
+                feedfoward_input_dim,
+                activations=[Activation.by_name("relu")(), Activation.by_name("linear")()],
+                hidden_dims=[feedforward_hidden_dim, hidden_dim],
+                num_layers=2,
+                dropout=dropout_prob,
+            )
 
             # Note: Please use `ModuleList` in new code. It provides better
             # support for running on multiple GPUs. We've kept `add_module` here
@@ -96,11 +100,13 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
             self.add_module(f"feedforward_layer_norm_{i}", feedforward_layer_norm)
             self._feed_forward_layer_norm_layers.append(feedforward_layer_norm)
 
-            self_attention = MultiHeadSelfAttention(num_heads=num_attention_heads,
-                                                    input_dim=hidden_dim,
-                                                    attention_dim=projection_dim,
-                                                    values_dim=projection_dim,
-                                                    attention_dropout_prob=attention_dropout_prob)
+            self_attention = MultiHeadSelfAttention(
+                num_heads=num_attention_heads,
+                input_dim=hidden_dim,
+                attention_dim=projection_dim,
+                values_dim=projection_dim,
+                attention_dropout_prob=attention_dropout_prob,
+            )
             self.add_module(f"self_attention_{i}", self_attention)
             self._attention_layers.append(self_attention)
 
@@ -127,7 +133,7 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
         return False
 
     @overrides
-    def forward(self, inputs: torch.Tensor, mask: torch.Tensor): # pylint: disable=arguments-differ
+    def forward(self, inputs: torch.Tensor, mask: torch.Tensor):
         if self._use_positional_encoding:
             output = add_positional_features(inputs)
         else:

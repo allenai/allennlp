@@ -1,5 +1,5 @@
 # from https://pytorch.org/tutorials/beginner/nlp/sequence_models_tutorial.html
-# pylint: disable=invalid-name,arguments-differ,redefined-outer-name
+
 from typing import Iterator, List, Dict
 import shutil
 import tempfile

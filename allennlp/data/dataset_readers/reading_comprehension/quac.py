@@ -11,7 +11,7 @@ from allennlp.data.dataset_readers.reading_comprehension import util
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
 from allennlp.data.tokenizers import Token, Tokenizer, WordTokenizer
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @DatasetReader.register("quac")
@@ -39,14 +39,16 @@ class QuACReader(DatasetReader):
         How many previous question answers to consider in a context.
     """
 
-    def __init__(self,
-                 tokenizer: Tokenizer = None,
-                 token_indexers: Dict[str, TokenIndexer] = None,
-                 lazy: bool = False,
-                 num_context_answers: int = 0) -> None:
+    def __init__(
+        self,
+        tokenizer: Tokenizer = None,
+        token_indexers: Dict[str, TokenIndexer] = None,
+        lazy: bool = False,
+        num_context_answers: int = 0,
+    ) -> None:
         super().__init__(lazy)
         self._tokenizer = tokenizer or WordTokenizer()
-        self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
+        self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._num_context_answers = num_context_answers
 
     @overrides
@@ -56,47 +58,55 @@ class QuACReader(DatasetReader):
         logger.info("Reading file at %s", file_path)
         with open(file_path) as dataset_file:
             dataset_json = json.load(dataset_file)
-            dataset = dataset_json['data']
+            dataset = dataset_json["data"]
         logger.info("Reading the dataset")
         for article in dataset:
-            for paragraph_json in article['paragraphs']:
+            for paragraph_json in article["paragraphs"]:
                 paragraph = paragraph_json["context"]
                 tokenized_paragraph = self._tokenizer.tokenize(paragraph)
-                qas = paragraph_json['qas']
+                qas = paragraph_json["qas"]
                 metadata = {}
-                metadata["instance_id"] = [qa['id'] for qa in qas]
+                metadata["instance_id"] = [qa["id"] for qa in qas]
                 question_text_list = [qa["question"].strip().replace("\n", "") for qa in qas]
-                answer_texts_list = [[answer['text'] for answer in qa['answers']] for qa in qas]
+                answer_texts_list = [[answer["text"] for answer in qa["answers"]] for qa in qas]
                 metadata["question"] = question_text_list
-                metadata['answer_texts_list'] = answer_texts_list
-                span_starts_list = [[answer['answer_start'] for answer in qa['answers']] for qa in qas]
+                metadata["answer_texts_list"] = answer_texts_list
+                span_starts_list = [
+                    [answer["answer_start"] for answer in qa["answers"]] for qa in qas
+                ]
                 span_ends_list = []
                 for answer_starts, an_list in zip(span_starts_list, answer_texts_list):
-                    span_ends = [start + len(answer) for start, answer in zip(answer_starts, an_list)]
+                    span_ends = [
+                        start + len(answer) for start, answer in zip(answer_starts, an_list)
+                    ]
                     span_ends_list.append(span_ends)
-                yesno_list = [str(qa['yesno']) for qa in qas]
-                followup_list = [str(qa['followup']) for qa in qas]
-                instance = self.text_to_instance(question_text_list,
-                                                 paragraph,
-                                                 span_starts_list,
-                                                 span_ends_list,
-                                                 tokenized_paragraph,
-                                                 yesno_list,
-                                                 followup_list,
-                                                 metadata)
+                yesno_list = [str(qa["yesno"]) for qa in qas]
+                followup_list = [str(qa["followup"]) for qa in qas]
+                instance = self.text_to_instance(
+                    question_text_list,
+                    paragraph,
+                    span_starts_list,
+                    span_ends_list,
+                    tokenized_paragraph,
+                    yesno_list,
+                    followup_list,
+                    metadata,
+                )
                 yield instance
 
     @overrides
-    def text_to_instance(self,  # type: ignore
-                         question_text_list: List[str],
-                         passage_text: str,
-                         start_span_list: List[List[int]] = None,
-                         end_span_list: List[List[int]] = None,
-                         passage_tokens: List[Token] = None,
-                         yesno_list: List[int] = None,
-                         followup_list: List[int] = None,
-                         additional_metadata: Dict[str, Any] = None) -> Instance:
-        # pylint: disable=arguments-differ
+    def text_to_instance(
+        self,  # type: ignore
+        question_text_list: List[str],
+        passage_text: str,
+        start_span_list: List[List[int]] = None,
+        end_span_list: List[List[int]] = None,
+        passage_tokens: List[Token] = None,
+        yesno_list: List[int] = None,
+        followup_list: List[int] = None,
+        additional_metadata: Dict[str, Any] = None,
+    ) -> Instance:
+
         # We need to convert character indices in `passage_text` to token indices in
         # `passage_tokens`, as the latter is what we'll actually use for supervision.
         answer_token_span_list = []
@@ -104,27 +114,31 @@ class QuACReader(DatasetReader):
         for start_list, end_list in zip(start_span_list, end_span_list):
             token_spans: List[Tuple[int, int]] = []
             for char_span_start, char_span_end in zip(start_list, end_list):
-                (span_start, span_end), error = util.char_span_to_token_span(passage_offsets,
-                                                                             (char_span_start, char_span_end))
+                (span_start, span_end), error = util.char_span_to_token_span(
+                    passage_offsets, (char_span_start, char_span_end)
+                )
                 if error:
                     logger.debug("Passage: %s", passage_text)
                     logger.debug("Passage tokens: %s", passage_tokens)
                     logger.debug("Answer span: (%d, %d)", char_span_start, char_span_end)
                     logger.debug("Token span: (%d, %d)", span_start, span_end)
-                    logger.debug("Tokens in answer: %s", passage_tokens[span_start:span_end + 1])
+                    logger.debug("Tokens in answer: %s", passage_tokens[span_start : span_end + 1])
                     logger.debug("Answer: %s", passage_text[char_span_start:char_span_end])
                 token_spans.append((span_start, span_end))
             answer_token_span_list.append(token_spans)
         question_list_tokens = [self._tokenizer.tokenize(q) for q in question_text_list]
         # Map answer texts to "CANNOTANSWER" if more than half of them marked as so.
-        additional_metadata['answer_texts_list'] = [util.handle_cannot(ans_list) for ans_list \
-                                                    in additional_metadata['answer_texts_list']]
-        return util.make_reading_comprehension_instance_quac(question_list_tokens,
-                                                             passage_tokens,
-                                                             self._token_indexers,
-                                                             passage_text,
-                                                             answer_token_span_list,
-                                                             yesno_list,
-                                                             followup_list,
-                                                             additional_metadata,
-                                                             self._num_context_answers)
+        additional_metadata["answer_texts_list"] = [
+            util.handle_cannot(ans_list) for ans_list in additional_metadata["answer_texts_list"]
+        ]
+        return util.make_reading_comprehension_instance_quac(
+            question_list_tokens,
+            passage_tokens,
+            self._token_indexers,
+            passage_text,
+            answer_token_span_list,
+            yesno_list,
+            followup_list,
+            additional_metadata,
+            self._num_context_answers,
+        )

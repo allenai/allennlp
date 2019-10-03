@@ -10,7 +10,7 @@ but the serialized weights depend on the exact parameter setup
 here, so it's easiest to just reimplement them.
 """
 
-# pylint: disable=invalid-name,arguments-differ
+
 from typing import NamedTuple, List
 import copy
 import io
@@ -31,58 +31,167 @@ from allennlp.common.from_params import FromParams
 
 logger = logging.getLogger(__name__)
 
+
 def gelu(x: torch.Tensor) -> torch.Tensor:
     return 0.5 * x * (1 + torch.tanh(math.sqrt(2 / math.pi) * (x + 0.044715 * torch.pow(x, 3))))
+
 
 def swish(x: torch.Tensor) -> torch.Tensor:
     return x * torch.sigmoid(x)
 
-_ACTIVATION_FUNCTIONS = {
-        'relu': torch.nn.ReLU,
-        'swish': swish,
-        'gelu': gelu
-}
 
-# pylint: disable=line-too-long
-_PARAMETER_NAMES = ["model/we:0",
-                    "model/h0/attn/c_attn/w:0", "model/h0/attn/c_attn/b:0", "model/h0/attn/c_proj/w:0",
-                    "model/h0/attn/c_proj/b:0", "model/h0/ln_1/g:0", "model/h0/ln_1/b:0", "model/h0/mlp/c_fc/w:0",
-                    "model/h0/mlp/c_fc/b:0", "model/h0/mlp/c_proj/w:0", "model/h0/mlp/c_proj/b:0", "model/h0/ln_2/g:0",
-                    "model/h0/ln_2/b:0", "model/h1/attn/c_attn/w:0", "model/h1/attn/c_attn/b:0", "model/h1/attn/c_proj/w:0",
-                    "model/h1/attn/c_proj/b:0", "model/h1/ln_1/g:0", "model/h1/ln_1/b:0", "model/h1/mlp/c_fc/w:0",
-                    "model/h1/mlp/c_fc/b:0", "model/h1/mlp/c_proj/w:0", "model/h1/mlp/c_proj/b:0", "model/h1/ln_2/g:0",
-                    "model/h1/ln_2/b:0", "model/h2/attn/c_attn/w:0", "model/h2/attn/c_attn/b:0", "model/h2/attn/c_proj/w:0",
-                    "model/h2/attn/c_proj/b:0", "model/h2/ln_1/g:0", "model/h2/ln_1/b:0", "model/h2/mlp/c_fc/w:0",
-                    "model/h2/mlp/c_fc/b:0", "model/h2/mlp/c_proj/w:0", "model/h2/mlp/c_proj/b:0", "model/h2/ln_2/g:0",
-                    "model/h2/ln_2/b:0", "model/h3/attn/c_attn/w:0", "model/h3/attn/c_attn/b:0", "model/h3/attn/c_proj/w:0",
-                    "model/h3/attn/c_proj/b:0", "model/h3/ln_1/g:0", "model/h3/ln_1/b:0", "model/h3/mlp/c_fc/w:0",
-                    "model/h3/mlp/c_fc/b:0", "model/h3/mlp/c_proj/w:0", "model/h3/mlp/c_proj/b:0", "model/h3/ln_2/g:0",
-                    "model/h3/ln_2/b:0", "model/h4/attn/c_attn/w:0", "model/h4/attn/c_attn/b:0", "model/h4/attn/c_proj/w:0",
-                    "model/h4/attn/c_proj/b:0", "model/h4/ln_1/g:0", "model/h4/ln_1/b:0", "model/h4/mlp/c_fc/w:0",
-                    "model/h4/mlp/c_fc/b:0", "model/h4/mlp/c_proj/w:0", "model/h4/mlp/c_proj/b:0", "model/h4/ln_2/g:0",
-                    "model/h4/ln_2/b:0", "model/h5/attn/c_attn/w:0", "model/h5/attn/c_attn/b:0", "model/h5/attn/c_proj/w:0",
-                    "model/h5/attn/c_proj/b:0", "model/h5/ln_1/g:0", "model/h5/ln_1/b:0", "model/h5/mlp/c_fc/w:0",
-                    "model/h5/mlp/c_fc/b:0", "model/h5/mlp/c_proj/w:0", "model/h5/mlp/c_proj/b:0", "model/h5/ln_2/g:0",
-                    "model/h5/ln_2/b:0", "model/h6/attn/c_attn/w:0", "model/h6/attn/c_attn/b:0", "model/h6/attn/c_proj/w:0",
-                    "model/h6/attn/c_proj/b:0", "model/h6/ln_1/g:0", "model/h6/ln_1/b:0", "model/h6/mlp/c_fc/w:0",
-                    "model/h6/mlp/c_fc/b:0", "model/h6/mlp/c_proj/w:0", "model/h6/mlp/c_proj/b:0", "model/h6/ln_2/g:0",
-                    "model/h6/ln_2/b:0", "model/h7/attn/c_attn/w:0", "model/h7/attn/c_attn/b:0", "model/h7/attn/c_proj/w:0",
-                    "model/h7/attn/c_proj/b:0", "model/h7/ln_1/g:0", "model/h7/ln_1/b:0", "model/h7/mlp/c_fc/w:0",
-                    "model/h7/mlp/c_fc/b:0", "model/h7/mlp/c_proj/w:0", "model/h7/mlp/c_proj/b:0", "model/h7/ln_2/g:0",
-                    "model/h7/ln_2/b:0", "model/h8/attn/c_attn/w:0", "model/h8/attn/c_attn/b:0", "model/h8/attn/c_proj/w:0",
-                    "model/h8/attn/c_proj/b:0", "model/h8/ln_1/g:0", "model/h8/ln_1/b:0", "model/h8/mlp/c_fc/w:0",
-                    "model/h8/mlp/c_fc/b:0", "model/h8/mlp/c_proj/w:0", "model/h8/mlp/c_proj/b:0", "model/h8/ln_2/g:0",
-                    "model/h8/ln_2/b:0", "model/h9/attn/c_attn/w:0", "model/h9/attn/c_attn/b:0", "model/h9/attn/c_proj/w:0",
-                    "model/h9/attn/c_proj/b:0", "model/h9/ln_1/g:0", "model/h9/ln_1/b:0", "model/h9/mlp/c_fc/w:0",
-                    "model/h9/mlp/c_fc/b:0", "model/h9/mlp/c_proj/w:0", "model/h9/mlp/c_proj/b:0", "model/h9/ln_2/g:0",
-                    "model/h9/ln_2/b:0", "model/h10/attn/c_attn/w:0", "model/h10/attn/c_attn/b:0", "model/h10/attn/c_proj/w:0",
-                    "model/h10/attn/c_proj/b:0", "model/h10/ln_1/g:0", "model/h10/ln_1/b:0", "model/h10/mlp/c_fc/w:0",
-                    "model/h10/mlp/c_fc/b:0", "model/h10/mlp/c_proj/w:0", "model/h10/mlp/c_proj/b:0", "model/h10/ln_2/g:0",
-                    "model/h10/ln_2/b:0", "model/h11/attn/c_attn/w:0", "model/h11/attn/c_attn/b:0", "model/h11/attn/c_proj/w:0",
-                    "model/h11/attn/c_proj/b:0", "model/h11/ln_1/g:0", "model/h11/ln_1/b:0", "model/h11/mlp/c_fc/w:0",
-                    "model/h11/mlp/c_fc/b:0", "model/h11/mlp/c_proj/w:0", "model/h11/mlp/c_proj/b:0", "model/h11/ln_2/g:0",
-                    "model/h11/ln_2/b:0", "model/clf/w:0", "model/clf/b:0"]
-# pylint: enable=line-too-long
+_ACTIVATION_FUNCTIONS = {"relu": torch.nn.ReLU, "swish": swish, "gelu": gelu}
+
+
+_PARAMETER_NAMES = [
+    "model/we:0",
+    "model/h0/attn/c_attn/w:0",
+    "model/h0/attn/c_attn/b:0",
+    "model/h0/attn/c_proj/w:0",
+    "model/h0/attn/c_proj/b:0",
+    "model/h0/ln_1/g:0",
+    "model/h0/ln_1/b:0",
+    "model/h0/mlp/c_fc/w:0",
+    "model/h0/mlp/c_fc/b:0",
+    "model/h0/mlp/c_proj/w:0",
+    "model/h0/mlp/c_proj/b:0",
+    "model/h0/ln_2/g:0",
+    "model/h0/ln_2/b:0",
+    "model/h1/attn/c_attn/w:0",
+    "model/h1/attn/c_attn/b:0",
+    "model/h1/attn/c_proj/w:0",
+    "model/h1/attn/c_proj/b:0",
+    "model/h1/ln_1/g:0",
+    "model/h1/ln_1/b:0",
+    "model/h1/mlp/c_fc/w:0",
+    "model/h1/mlp/c_fc/b:0",
+    "model/h1/mlp/c_proj/w:0",
+    "model/h1/mlp/c_proj/b:0",
+    "model/h1/ln_2/g:0",
+    "model/h1/ln_2/b:0",
+    "model/h2/attn/c_attn/w:0",
+    "model/h2/attn/c_attn/b:0",
+    "model/h2/attn/c_proj/w:0",
+    "model/h2/attn/c_proj/b:0",
+    "model/h2/ln_1/g:0",
+    "model/h2/ln_1/b:0",
+    "model/h2/mlp/c_fc/w:0",
+    "model/h2/mlp/c_fc/b:0",
+    "model/h2/mlp/c_proj/w:0",
+    "model/h2/mlp/c_proj/b:0",
+    "model/h2/ln_2/g:0",
+    "model/h2/ln_2/b:0",
+    "model/h3/attn/c_attn/w:0",
+    "model/h3/attn/c_attn/b:0",
+    "model/h3/attn/c_proj/w:0",
+    "model/h3/attn/c_proj/b:0",
+    "model/h3/ln_1/g:0",
+    "model/h3/ln_1/b:0",
+    "model/h3/mlp/c_fc/w:0",
+    "model/h3/mlp/c_fc/b:0",
+    "model/h3/mlp/c_proj/w:0",
+    "model/h3/mlp/c_proj/b:0",
+    "model/h3/ln_2/g:0",
+    "model/h3/ln_2/b:0",
+    "model/h4/attn/c_attn/w:0",
+    "model/h4/attn/c_attn/b:0",
+    "model/h4/attn/c_proj/w:0",
+    "model/h4/attn/c_proj/b:0",
+    "model/h4/ln_1/g:0",
+    "model/h4/ln_1/b:0",
+    "model/h4/mlp/c_fc/w:0",
+    "model/h4/mlp/c_fc/b:0",
+    "model/h4/mlp/c_proj/w:0",
+    "model/h4/mlp/c_proj/b:0",
+    "model/h4/ln_2/g:0",
+    "model/h4/ln_2/b:0",
+    "model/h5/attn/c_attn/w:0",
+    "model/h5/attn/c_attn/b:0",
+    "model/h5/attn/c_proj/w:0",
+    "model/h5/attn/c_proj/b:0",
+    "model/h5/ln_1/g:0",
+    "model/h5/ln_1/b:0",
+    "model/h5/mlp/c_fc/w:0",
+    "model/h5/mlp/c_fc/b:0",
+    "model/h5/mlp/c_proj/w:0",
+    "model/h5/mlp/c_proj/b:0",
+    "model/h5/ln_2/g:0",
+    "model/h5/ln_2/b:0",
+    "model/h6/attn/c_attn/w:0",
+    "model/h6/attn/c_attn/b:0",
+    "model/h6/attn/c_proj/w:0",
+    "model/h6/attn/c_proj/b:0",
+    "model/h6/ln_1/g:0",
+    "model/h6/ln_1/b:0",
+    "model/h6/mlp/c_fc/w:0",
+    "model/h6/mlp/c_fc/b:0",
+    "model/h6/mlp/c_proj/w:0",
+    "model/h6/mlp/c_proj/b:0",
+    "model/h6/ln_2/g:0",
+    "model/h6/ln_2/b:0",
+    "model/h7/attn/c_attn/w:0",
+    "model/h7/attn/c_attn/b:0",
+    "model/h7/attn/c_proj/w:0",
+    "model/h7/attn/c_proj/b:0",
+    "model/h7/ln_1/g:0",
+    "model/h7/ln_1/b:0",
+    "model/h7/mlp/c_fc/w:0",
+    "model/h7/mlp/c_fc/b:0",
+    "model/h7/mlp/c_proj/w:0",
+    "model/h7/mlp/c_proj/b:0",
+    "model/h7/ln_2/g:0",
+    "model/h7/ln_2/b:0",
+    "model/h8/attn/c_attn/w:0",
+    "model/h8/attn/c_attn/b:0",
+    "model/h8/attn/c_proj/w:0",
+    "model/h8/attn/c_proj/b:0",
+    "model/h8/ln_1/g:0",
+    "model/h8/ln_1/b:0",
+    "model/h8/mlp/c_fc/w:0",
+    "model/h8/mlp/c_fc/b:0",
+    "model/h8/mlp/c_proj/w:0",
+    "model/h8/mlp/c_proj/b:0",
+    "model/h8/ln_2/g:0",
+    "model/h8/ln_2/b:0",
+    "model/h9/attn/c_attn/w:0",
+    "model/h9/attn/c_attn/b:0",
+    "model/h9/attn/c_proj/w:0",
+    "model/h9/attn/c_proj/b:0",
+    "model/h9/ln_1/g:0",
+    "model/h9/ln_1/b:0",
+    "model/h9/mlp/c_fc/w:0",
+    "model/h9/mlp/c_fc/b:0",
+    "model/h9/mlp/c_proj/w:0",
+    "model/h9/mlp/c_proj/b:0",
+    "model/h9/ln_2/g:0",
+    "model/h9/ln_2/b:0",
+    "model/h10/attn/c_attn/w:0",
+    "model/h10/attn/c_attn/b:0",
+    "model/h10/attn/c_proj/w:0",
+    "model/h10/attn/c_proj/b:0",
+    "model/h10/ln_1/g:0",
+    "model/h10/ln_1/b:0",
+    "model/h10/mlp/c_fc/w:0",
+    "model/h10/mlp/c_fc/b:0",
+    "model/h10/mlp/c_proj/w:0",
+    "model/h10/mlp/c_proj/b:0",
+    "model/h10/ln_2/g:0",
+    "model/h10/ln_2/b:0",
+    "model/h11/attn/c_attn/w:0",
+    "model/h11/attn/c_attn/b:0",
+    "model/h11/attn/c_proj/w:0",
+    "model/h11/attn/c_proj/b:0",
+    "model/h11/ln_1/g:0",
+    "model/h11/ln_1/b:0",
+    "model/h11/mlp/c_fc/w:0",
+    "model/h11/mlp/c_fc/b:0",
+    "model/h11/mlp/c_proj/w:0",
+    "model/h11/mlp/c_proj/b:0",
+    "model/h11/ln_2/g:0",
+    "model/h11/ln_2/b:0",
+    "model/clf/w:0",
+    "model/clf/b:0",
+]
 
 
 class TransformerConfig(NamedTuple):
@@ -90,12 +199,13 @@ class TransformerConfig(NamedTuple):
     The transformer has to pass a bunch of params to its submodules,
     this bundles them together to make things easier.
     """
+
     embedding_dim: int = 768
     num_heads: int = 12
     embedding_dropout_probability: float = 0.1
     attention_dropout_probability: float = 0.1
     residual_dropout_probability: float = 0.1
-    activation_function: str = 'gelu'
+    activation_function: str = "gelu"
 
 
 class LayerNorm(torch.nn.Module):
@@ -136,17 +246,14 @@ class Conv1D(torch.nn.Module):
             raise NotImplementedError
         return x
 
+
 class Attention(torch.nn.Module):
-    def __init__(self,
-                 nx: int,
-                 n_ctx: int,
-                 config: TransformerConfig,
-                 scale: bool = False) -> None:
+    def __init__(self, nx: int, n_ctx: int, config: TransformerConfig, scale: bool = False) -> None:
         super().__init__()
         n_state = nx  # in Attention: n_state=768 (nx=n_embd)
         # [switch nx => n_state from Block to Attention to keep identical to TF implem]
         assert n_state % config.num_heads == 0
-        self.register_buffer('b', torch.tril(torch.ones(n_ctx, n_ctx)).view(1, 1, n_ctx, n_ctx))
+        self.register_buffer("b", torch.tril(torch.ones(n_ctx, n_ctx)).view(1, 1, n_ctx, n_ctx))
         self.n_head = config.num_heads
         self.split_size = n_state
         self.scale = scale
@@ -165,7 +272,7 @@ class Attention(torch.nn.Module):
         return torch.matmul(w, v)
 
     def merge_heads(self, x: torch.Tensor):
-        # pylint: disable=no-self-use
+
         x = x.permute(0, 2, 1, 3).contiguous()
         new_x_shape = x.size()[:-2] + (x.size(-2) * x.size(-1),)
         return x.view(*new_x_shape)  # in Tensorflow implem: fct merge_states
@@ -192,7 +299,9 @@ class Attention(torch.nn.Module):
 
 
 class MLP(torch.nn.Module):
-    def __init__(self, n_state: int, config: TransformerConfig) -> None:  # in MLP: n_state=3072 (4 * n_embd)
+    def __init__(
+        self, n_state: int, config: TransformerConfig
+    ) -> None:  # in MLP: n_state=3072 (4 * n_embd)
         super().__init__()
         self.c_fc = Conv1D(n_state, 1, config.embedding_dim)
         self.c_proj = Conv1D(config.embedding_dim, 1, n_state)
@@ -206,10 +315,7 @@ class MLP(torch.nn.Module):
 
 
 class Block(torch.nn.Module):
-    def __init__(self,
-                 n_ctx: int,
-                 config: TransformerConfig,
-                 scale: bool = False) -> None:
+    def __init__(self, n_ctx: int, config: TransformerConfig, scale: bool = False) -> None:
         super().__init__()
         nx = config.embedding_dim
         self.attn = Attention(nx, n_ctx, config, scale)
@@ -223,6 +329,7 @@ class Block(torch.nn.Module):
         m = self.mlp(n)
         h = self.ln_2(n + m)
         return h
+
 
 class OpenaiTransformer(torch.nn.Module, FromParams):
     """
@@ -259,28 +366,31 @@ class OpenaiTransformer(torch.nn.Module, FromParams):
         The number of special tokens added to the byte pair vocabulary
         (via ``OpenaiTransformerBytePairIndexer``).
     """
-    def __init__(self,
-                 vocab_size: int = 40478,
-                 n_ctx: int = 512,
-                 embedding_dim: int = 768,
-                 num_heads: int = 12,
-                 num_layers: int = 12,
-                 embedding_dropout_probability: float = 0.1,
-                 attention_dropout_probability: float = 0.1,
-                 residual_dropout_probability: float = 0.1,
-                 activation_function: str = 'gelu',
-                 model_path: str = None,
-                 requires_grad: bool = False,
-                 n_special: int = -1) -> None:
+
+    def __init__(
+        self,
+        vocab_size: int = 40478,
+        n_ctx: int = 512,
+        embedding_dim: int = 768,
+        num_heads: int = 12,
+        num_layers: int = 12,
+        embedding_dropout_probability: float = 0.1,
+        attention_dropout_probability: float = 0.1,
+        residual_dropout_probability: float = 0.1,
+        activation_function: str = "gelu",
+        model_path: str = None,
+        requires_grad: bool = False,
+        n_special: int = -1,
+    ) -> None:
         super().__init__()
 
         config = TransformerConfig(
-                embedding_dim,
-                num_heads,
-                embedding_dropout_probability,
-                attention_dropout_probability,
-                residual_dropout_probability,
-                activation_function,
+            embedding_dim,
+            num_heads,
+            embedding_dropout_probability,
+            attention_dropout_probability,
+            residual_dropout_probability,
+            activation_function,
         )
 
         # the embedding size is vocab_size + n_special embeddings + n_ctx
@@ -309,7 +419,7 @@ class OpenaiTransformer(torch.nn.Module, FromParams):
             self.load_weights(model_path, n_special=n_special, n_ctx=n_ctx)
 
     def forward(self, x: torch.Tensor) -> List[torch.Tensor]:
-        #x = x.view(-1, x.size(2), x.size(3))
+        # x = x.view(-1, x.size(2), x.size(3))
 
         # x is (batch_size, sequence_length) tensor of byte-pair ids
 
@@ -327,22 +437,25 @@ class OpenaiTransformer(torch.nn.Module, FromParams):
         # result is list of (batch_size, sequence_length, embedding_dim)
         return all_layers
 
-    def load_weights(self,
-                     transformer_model_path: str,
-                     n_ctx: int = -1,
-                     n_special: int = -1,
-                     n_transfer: int = 12,
-                     n_embd: int = 768,
-                     names: List[str] = _PARAMETER_NAMES) -> None:
-        # pylint: disable=dangerous-default-value
+    def load_weights(
+        self,
+        transformer_model_path: str,
+        n_ctx: int = -1,
+        n_special: int = -1,
+        n_transfer: int = 12,
+        n_embd: int = 768,
+        names: List[str] = _PARAMETER_NAMES,
+    ) -> None:
 
         logger.info(f"loading weights from {transformer_model_path}")
         # if `file_path` is a URL, redirect to the cache
         transformer_model_path = cached_path(transformer_model_path)
 
         with tarfile.open(transformer_model_path) as tmp:
-            num_params_files = len([member for member in tmp.getmembers() if member.name.endswith('.npy')])
-            shapesfile = tmp.extractfile('model/params_shapes.json')
+            num_params_files = len(
+                [member for member in tmp.getmembers() if member.name.endswith(".npy")]
+            )
+            shapesfile = tmp.extractfile("model/params_shapes.json")
             if shapesfile:
                 shapes = json.loads(shapesfile.read())
             else:
@@ -353,7 +466,7 @@ class OpenaiTransformer(torch.nn.Module, FromParams):
             init_params: List[np.ndarray] = []
             for n in range(num_params_files):
                 array_file = io.BytesIO()
-                array_file.write(tmp.extractfile(f'model/params_{n}.npy').read())
+                array_file.write(tmp.extractfile(f"model/params_{n}.npy").read())
                 array_file.seek(0)
                 # each np.load is a (11653478,) numpy array
                 init_params.append(np.load(array_file))
@@ -383,10 +496,12 @@ class OpenaiTransformer(torch.nn.Module, FromParams):
             # init_params[0] is (512, 768)
             # result is (40990 + n_special, 768)
             init_params[0] = np.concatenate(
-                    [init_params[1],
-                     (np.random.randn(n_special, n_embd) * 0.02).astype(np.float32),
-                     init_params[0]],
-                    0
+                [
+                    init_params[1],
+                    (np.random.randn(n_special, n_embd) * 0.02).astype(np.float32),
+                    init_params[0],
+                ],
+                0,
             )
         else:
             # result is (40990, 768)
@@ -416,21 +531,21 @@ class OpenaiTransformer(torch.nn.Module, FromParams):
 
         # for each (name, array) pair to transfer over
         for name, ip in zip(names[1:n_transfer], init_params[1:n_transfer]):
-                                            # "model/h0/attn/c_attn/w:0"
-            name = name[6:]                 # "h0/attn/c_attn/w:0"
+            # name is initially e.g.          "model/h0/attn/c_attn/w:0"
+            name = name[6:]  # "h0/attn/c_attn/w:0"
             assert name[-2:] == ":0"
-            name = name[:-2]                # "h0/attn/c_attn/w"
-            name_parts = name.split('/')    # ['h0', 'attn', 'c_attn', 'w']
+            name = name[:-2]  # "h0/attn/c_attn/w"
+            name_parts = name.split("/")  # ['h0', 'attn', 'c_attn', 'w']
 
             pointer = self
             for m_name in name_parts:
-                if re.fullmatch(r'[A-Za-z]+\d+', m_name):
-                    l = re.split(r'(\d+)', m_name)   # ['h', '0', '']
+                if re.fullmatch(r"[A-Za-z]+\d+", m_name):
+                    pieces = re.split(r"(\d+)", m_name)  # ['h', '0', '']
                 else:
-                    l = [m_name]                     # ['attn']
-                pointer = getattr(pointer, l[0])
-                if len(l) >= 2:
-                    num = int(l[1])
+                    pieces = [m_name]  # ['attn']
+                pointer = getattr(pointer, pieces[0])
+                if len(pieces) >= 2:
+                    num = int(pieces[1])
                     pointer = pointer[num]
             try:
                 assert pointer.shape == ip.shape
@@ -438,13 +553,11 @@ class OpenaiTransformer(torch.nn.Module, FromParams):
                 e.args += (pointer.shape, ip.shape)
                 raise
 
-            pointer.data = torch.from_numpy(ip)  # pylint: disable=attribute-defined-outside-init
+            pointer.data = torch.from_numpy(ip)
 
-    def dump_weights(self,
-                     output_dir: str,
-                     num_pieces: int = 10) -> None:
-        output_path = pathlib.Path(output_dir) / 'model'
-        output_path.mkdir(exist_ok=True, parents=True)  # pylint: disable=no-member
+    def dump_weights(self, output_dir: str, num_pieces: int = 10) -> None:
+        output_path = pathlib.Path(output_dir) / "model"
+        output_path.mkdir(exist_ok=True, parents=True)
 
         named_parameters = list(self.named_parameters())
 
@@ -459,9 +572,9 @@ class OpenaiTransformer(torch.nn.Module, FromParams):
         names = ["model/we:0"]
 
         for param_name, tensor in named_parameters[1:]:
-            param_name = f'h{param_name}'            # 'h0.attn.c_attn.w'
-            parts = param_name.split(".")            # ['h0', 'attn', 'c_attn', 'w']
-            name = "model/" + '/'.join(parts) + ':0' # 'model/h0/attn/c_attn/w:0'
+            param_name = f"h{param_name}"  # 'h0.attn.c_attn.w'
+            parts = param_name.split(".")  # ['h0', 'attn', 'c_attn', 'w']
+            name = "model/" + "/".join(parts) + ":0"  # 'model/h0/attn/c_attn/w:0'
             array = tensor.numpy().ravel()
 
             arrays.append(array)
@@ -482,5 +595,5 @@ class OpenaiTransformer(torch.nn.Module, FromParams):
             np.save(filename, subarray)
 
         # write out the shapes
-        with open(output_path / 'params_shapes.json', 'w') as shapes_file:
+        with open(output_path / "params_shapes.json", "w") as shapes_file:
             json.dump(shapes, shapes_file)

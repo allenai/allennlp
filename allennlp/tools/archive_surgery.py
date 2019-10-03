@@ -9,7 +9,7 @@ to modify the config.json, and then re-tar everything to a new archive.
 If your $EDITOR environment variable is not set, you'll have to explicitly
 specify which editor to use.
 """
-# pylint: disable=invalid-name,redefined-outer-name
+
 import argparse
 import atexit
 import logging
@@ -27,19 +27,27 @@ logger.setLevel(logging.ERROR)
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Perform surgery on a model.tar.gz archive",
-                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description="Perform surgery on a model.tar.gz archive",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
 
-    parser.add_argument("--input-file", required=True,
-                        help="path to input file")
-    parser.add_argument("--editor", default=os.environ.get("EDITOR"),
-                        help="editor to launch, whose default value is `$EDITOR` the environment variable")
+    parser.add_argument("--input-file", required=True, help="path to input file")
+    parser.add_argument(
+        "--editor",
+        default=os.environ.get("EDITOR"),
+        help="editor to launch, whose default value is `$EDITOR` the environment variable",
+    )
     output = parser.add_mutually_exclusive_group()
     output.add_argument("--output-file", help="path to output file")
-    output.add_argument("--inplace", action="store_true",
-                        help="overwrite the input file with the modified configuration")
-    parser.add_argument("-f", "--force", action="store_true",
-                        help="overwrite the output file if it exists")
+    output.add_argument(
+        "--inplace",
+        action="store_true",
+        help="overwrite the input file with the modified configuration",
+    )
+    parser.add_argument(
+        "-f", "--force", action="store_true", help="overwrite the output file if it exists"
+    )
 
     args = parser.parse_args()
 
@@ -59,12 +67,12 @@ def main():
 
     # Extract archive to temp dir
     tempdir = tempfile.mkdtemp()
-    with tarfile.open(archive_file, 'r:gz') as archive:
+    with tarfile.open(archive_file, "r:gz") as archive:
         archive.extractall(tempdir)
     atexit.register(lambda: shutil.rmtree(tempdir))
 
     config_path = os.path.join(tempdir, CONFIG_NAME)
-    subprocess.run([args.editor, config_path])
+    subprocess.run([args.editor, config_path], check=False)
 
     with tarfile.open(output_file, "w:gz") as tar:
         tar.add(tempdir, arcname=os.path.sep)

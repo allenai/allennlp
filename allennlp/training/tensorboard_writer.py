@@ -5,12 +5,13 @@ import os
 from tensorboardX import SummaryWriter
 import torch
 
+from allennlp.common.from_params import FromParams
 from allennlp.models.model import Model
 
 logger = logging.getLogger(__name__)
 
 
-class TensorboardWriter:
+class TensorboardWriter(FromParams):
     """
     Class that handles Tensorboard (and other) logging.
 
@@ -31,16 +32,21 @@ class TensorboardWriter:
     should_log_learning_rate : bool, optional (default = False)
         Whether to log learning rate.
     """
-    def __init__(self,
-                 get_batch_num_total: Callable[[], int],
-                 serialization_dir: Optional[str] = None,
-                 summary_interval: int = 100,
-                 histogram_interval: int = None,
-                 should_log_parameter_statistics: bool = True,
-                 should_log_learning_rate: bool = False) -> None:
+
+    def __init__(
+        self,
+        get_batch_num_total: Callable[[], int],
+        serialization_dir: Optional[str] = None,
+        summary_interval: int = 100,
+        histogram_interval: int = None,
+        should_log_parameter_statistics: bool = True,
+        should_log_learning_rate: bool = False,
+    ) -> None:
         if serialization_dir is not None:
             self._train_log = SummaryWriter(os.path.join(serialization_dir, "log", "train"))
-            self._validation_log = SummaryWriter(os.path.join(serialization_dir, "log", "validation"))
+            self._validation_log = SummaryWriter(
+                os.path.join(serialization_dir, "log", "validation")
+            )
         else:
             self._train_log = self._validation_log = None
 
@@ -52,7 +58,7 @@ class TensorboardWriter:
 
     @staticmethod
     def _item(value: Any):
-        if hasattr(value, 'item'):
+        if hasattr(value, "item"):
             val = value.item()
         else:
             val = value
@@ -62,7 +68,10 @@ class TensorboardWriter:
         return self._get_batch_num_total() % self._summary_interval == 0
 
     def should_log_histograms_this_batch(self) -> bool:
-        return self._histogram_interval is not None and self._get_batch_num_total() % self._histogram_interval == 0
+        return (
+            self._histogram_interval is not None
+            and self._get_batch_num_total() % self._histogram_interval == 0
+        )
 
     def add_train_scalar(self, name: str, value: float, timestep: int = None) -> None:
         timestep = timestep or self._get_batch_num_total()
@@ -81,9 +90,7 @@ class TensorboardWriter:
         if self._validation_log is not None:
             self._validation_log.add_scalar(name, self._item(value), timestep)
 
-    def log_parameter_and_gradient_statistics(self, # pylint: disable=invalid-name
-                                              model: Model,
-                                              batch_grad_norm: float) -> None:
+    def log_parameter_and_gradient_statistics(self, model: Model, batch_grad_norm: float) -> None:
         """
         Send the mean and std of all parameters and gradients to tensorboard, as well
         as logging the average gradient norm.
@@ -92,18 +99,20 @@ class TensorboardWriter:
             # Log parameter values to Tensorboard
             for name, param in model.named_parameters():
                 self.add_train_scalar("parameter_mean/" + name, param.data.mean())
-                self.add_train_scalar("parameter_std/" + name, param.data.std())
+                if param.data.numel() > 1:
+                    self.add_train_scalar("parameter_std/" + name, param.data.std())
                 if param.grad is not None:
                     if param.grad.is_sparse:
-                        # pylint: disable=protected-access
+
                         grad_data = param.grad.data._values()
                     else:
                         grad_data = param.grad.data
 
                     # skip empty gradients
-                    if torch.prod(torch.tensor(grad_data.shape)).item() > 0: # pylint: disable=not-callable
+                    if torch.prod(torch.tensor(grad_data.shape)).item() > 0:
                         self.add_train_scalar("gradient_mean/" + name, grad_data.mean())
-                        self.add_train_scalar("gradient_std/" + name, grad_data.std())
+                        if grad_data.numel() > 1:
+                            self.add_train_scalar("gradient_std/" + name, grad_data.std())
                     else:
                         # no gradient for a parameter with sparse gradients
                         logger.info("No gradient for %s, skipping tensorboard logging.", name)
@@ -111,9 +120,7 @@ class TensorboardWriter:
             if batch_grad_norm is not None:
                 self.add_train_scalar("gradient_norm", batch_grad_norm)
 
-    def log_learning_rates(self,
-                           model: Model,
-                           optimizer: torch.optim.Optimizer):
+    def log_learning_rates(self, model: Model, optimizer: torch.optim.Optimizer):
         """
         Send current parameter specific learning rates to tensorboard
         """
@@ -122,10 +129,10 @@ class TensorboardWriter:
             # we want to log with parameter name
             names = {param: name for name, param in model.named_parameters()}
             for group in optimizer.param_groups:
-                if 'lr' not in group:
+                if "lr" not in group:
                     continue
-                rate = group['lr']
-                for param in group['params']:
+                rate = group["lr"]
+                for param in group["params"]:
                     # check whether params has requires grad or not
                     effective_rate = rate * float(param.requires_grad)
                     self.add_train_scalar("learning_rate/" + names[param], effective_rate)
@@ -138,11 +145,13 @@ class TensorboardWriter:
             if name in histogram_parameters:
                 self.add_train_histogram("parameter_histogram/" + name, param)
 
-    def log_metrics(self,
-                    train_metrics: dict,
-                    val_metrics: dict = None,
-                    epoch: int = None,
-                    log_to_console: bool = False) -> None:
+    def log_metrics(
+        self,
+        train_metrics: dict,
+        val_metrics: dict = None,
+        epoch: int = None,
+        log_to_console: bool = False,
+    ) -> None:
         """
         Sends all of the train metrics (and validation metrics, if provided) to tensorboard.
         """
@@ -171,7 +180,9 @@ class TensorboardWriter:
 
             # And maybe log to console
             if log_to_console and val_metric is not None and train_metric is not None:
-                logger.info(dual_message_template, name.ljust(name_length), train_metric, val_metric)
+                logger.info(
+                    dual_message_template, name.ljust(name_length), train_metric, val_metric
+                )
             elif log_to_console and val_metric is not None:
                 logger.info(no_train_message_template, name.ljust(name_length), "N/A", val_metric)
             elif log_to_console and train_metric is not None:
@@ -184,15 +195,16 @@ class TensorboardWriter:
             # This uses a closure to determine whether to log the activations,
             # since we don't want them on every call.
             for _, module in model.named_modules():
-                if not getattr(module, 'should_log_activations', False):
+                if not getattr(module, "should_log_activations", False):
                     # skip it
                     continue
 
                 def hook(module_, inputs, outputs):
-                    # pylint: disable=unused-argument,cell-var-from-loop
-                    log_prefix = 'activation_histogram/{0}'.format(module_.__class__)
+
+                    log_prefix = "activation_histogram/{0}".format(module_.__class__)
                     if self.should_log_histograms_this_batch():
                         self.log_activation_histogram(outputs, log_prefix)
+
                 module.register_forward_hook(hook)
 
     def log_activation_histogram(self, outputs, log_prefix: str) -> None:
@@ -210,3 +222,13 @@ class TensorboardWriter:
         else:
             # skip it
             pass
+
+    def close(self) -> None:
+        """
+        Calls the ``close`` method of the ``SummaryWriter`` s which makes sure that pending
+        scalars are flushed to disk and the tensorboard event files are closed properly.
+        """
+        if self._train_log is not None:
+            self._train_log.close()
+        if self._validation_log is not None:
+            self._validation_log.close()

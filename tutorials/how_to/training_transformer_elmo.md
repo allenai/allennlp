@@ -1,16 +1,17 @@
 # Training Transformer ELMo
 
-This document describes how to train and use a transformer-based version of ELMo with `allennlp`. The model is a port of the the one described in [Dissecting Contextual Word Embeddings: Architecture and Representation](https://www.semanticscholar.org/paper/4dc99343fdc57cf974746e9549c6ee56f013cee5) by Peters et al.
+This document describes how to train and use a transformer-based version of ELMo with `allennlp`. The model is a port of the the one described in [Dissecting Contextual Word Embeddings: Architecture and Representation](https://www.semanticscholar.org/paper/4dc99343fdc57cf974746e9549c6ee56f013cee5) by Peters et al. You can find a pretrained version of this model [here](https://allennlp.s3.amazonaws.com/models/transformer-elmo-2019.01.10.tar.gz).
 
 ## Training
 
-1. Obtain training data from http://www.statmt.org/lm-benchmark/1-billion-word-language-modeling-benchmark-r13output.tar.gz.
+1. Obtain training data from https://www.statmt.org/lm-benchmark/1-billion-word-language-modeling-benchmark-r13output.tar.gz.
     ```
     export BIDIRECTIONAL_LM_DATA_PATH=$PWD'/1-billion-word-language-modeling-benchmark-r13output'
     export BIDIRECTIONAL_LM_TRAIN_PATH=$BIDIRECTIONAL_LM_DATA_PATH'/training-monolingual.tokenized.shuffled/*'
     ```
 2. Obtain vocab.
     ```
+    pip install --user awscli
     mkdir vocabulary
     export BIDIRECTIONAL_LM_VOCAB_PATH=$PWD'/vocabulary'
     cd $BIDIRECTIONAL_LM_VOCAB_PATH
@@ -57,8 +58,8 @@ The one exception is that inside the `text_field_embedder` block in your trainin
   "token_embedders": {
     "elmo": {
       "type": "elmo_token_embedder",
-      "options_file": "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json",
-      "weight_file": "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5",
+      "options_file": "https://allennlp.s3.amazonaws.com/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json",
+      "weight_file": "https://allennlp.s3.amazonaws.com/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5",
       "do_layer_norm": false,
       "dropout": 0.5
     }

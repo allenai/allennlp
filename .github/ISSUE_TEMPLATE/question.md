@@ -1,15 +1,20 @@
 ---
 name: Question
 about: Ask about something you don't understand
+title: ''
+labels: ''
+assignees: ''
 
 ---
 
-Please first search our GitHub repository for similar questions.  If you don't find a similar example you can use the following template:
+Please first search our GitHub repository and [Discourse forum](https://discourse.allennlp.org/) for similar questions.  While we are encouraging users to ask questions in our new [Discourse forum](https://discourse.allennlp.org/), we are still accepting questions as GitHub issues as well.
+
+If you don't find a similar example and you would like to ask a question on GitHub you can use the following template:
 
 **System (please complete the following information):**
  - OS: [e.g. OSX, Linux]
  - Python version: [e.g. 3.6.1]
- - AllenNLP version: [e.g. v0.8.3, or "I installed from master"]
+ - AllenNLP version: [e.g. v0.9.0, or "I installed from master"]
  - PyTorch version: (if you installed it yourself)
 
 **Question**

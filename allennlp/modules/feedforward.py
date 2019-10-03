@@ -33,14 +33,17 @@ class FeedForward(torch.nn.Module, FromParams):
         If given, we will apply this amount of dropout after each layer.  Semantics of ``float``
         versus ``List[float]`` is the same as with other parameters.
     """
-    def __init__(self,
-                 input_dim: int,
-                 num_layers: int,
-                 hidden_dims: Union[int, List[int]],
-                 activations: Union[Activation, List[Activation]],
-                 dropout: Union[float, List[float]] = 0.0) -> None:
 
-        super(FeedForward, self).__init__()
+    def __init__(
+        self,
+        input_dim: int,
+        num_layers: int,
+        hidden_dims: Union[int, List[int]],
+        activations: Union[Activation, List[Activation]],
+        dropout: Union[float, List[float]] = 0.0,
+    ) -> None:
+
+        super().__init__()
         if not isinstance(hidden_dims, list):
             hidden_dims = [hidden_dims] * num_layers  # type: ignore
         if not isinstance(activations, list):
@@ -48,14 +51,17 @@ class FeedForward(torch.nn.Module, FromParams):
         if not isinstance(dropout, list):
             dropout = [dropout] * num_layers  # type: ignore
         if len(hidden_dims) != num_layers:
-            raise ConfigurationError("len(hidden_dims) (%d) != num_layers (%d)" %
-                                     (len(hidden_dims), num_layers))
+            raise ConfigurationError(
+                "len(hidden_dims) (%d) != num_layers (%d)" % (len(hidden_dims), num_layers)
+            )
         if len(activations) != num_layers:
-            raise ConfigurationError("len(activations) (%d) != num_layers (%d)" %
-                                     (len(activations), num_layers))
+            raise ConfigurationError(
+                "len(activations) (%d) != num_layers (%d)" % (len(activations), num_layers)
+            )
         if len(dropout) != num_layers:
-            raise ConfigurationError("len(dropout) (%d) != num_layers (%d)" %
-                                     (len(dropout), num_layers))
+            raise ConfigurationError(
+                "len(dropout) (%d) != num_layers (%d)" % (len(dropout), num_layers)
+            )
         self._activations = activations
         input_dims = [input_dim] + hidden_dims[:-1]
         linear_layers = []
@@ -74,8 +80,10 @@ class FeedForward(torch.nn.Module, FromParams):
         return self.input_dim
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
-        # pylint: disable=arguments-differ
+
         output = inputs
-        for layer, activation, dropout in zip(self._linear_layers, self._activations, self._dropout):
+        for layer, activation, dropout in zip(
+            self._linear_layers, self._activations, self._dropout
+        ):
             output = dropout(activation(layer(output)))
         return output

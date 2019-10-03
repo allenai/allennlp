@@ -13,6 +13,7 @@ from allennlp.semparse.contexts.knowledge_graph import KnowledgeGraph
 from allennlp.semparse.type_declarations.quarel_type_declaration import QuarelTypeDeclaration
 from allennlp.semparse.worlds.world import World
 
+
 class QuarelWorld(World):
     """
     Class defining the QuaRel domain theory world.
@@ -20,16 +21,17 @@ class QuarelWorld(World):
     Parameters
     ----------
     """
-    def __init__(self,
-                 table_graph: KnowledgeGraph,
-                 syntax: str,
-                 qr_coeff_sets: List[Dict[str, int]] = None) -> None:
+
+    def __init__(
+        self, table_graph: KnowledgeGraph, syntax: str, qr_coeff_sets: List[Dict[str, int]] = None
+    ) -> None:
 
         self._syntax = syntax
         self.types = QuarelTypeDeclaration(syntax)
         super().__init__(
-                global_type_signatures=self.types.name_mapper.type_signatures,
-                global_name_mapping=self.types.name_mapper.name_mapping)
+            global_type_signatures=self.types.name_mapper.type_signatures,
+            global_name_mapping=self.types.name_mapper.name_mapping,
+        )
         self.table_graph = table_graph
 
         # Keep map and counter for each entity type encountered (first letter in entity string)
@@ -74,7 +76,7 @@ class QuarelWorld(World):
         elif name in self.local_name_mapping:
             translated_name = self.local_name_mapping[name]
         elif name.startswith("a:"):
-            translated_name = "A"+str(10+self._entity_index(name))
+            translated_name = "A" + str(10 + self._entity_index(name))
             self._add_name_mapping(name, translated_name, self.types.attr_function_type)
 
         return translated_name
@@ -93,26 +95,21 @@ class QuarelWorld(World):
     # Simple table for how attributes relates to each other
     # First entry is by convention (above in __init__) the friction subset
     qr_coeff_sets_default = [
-            {"friction": 1, "speed": -1, "smoothness": -1, "distance": -1, "heat": 1},
-            {"speed": 1, "time": -1},
-            {"speed": 1, "distance": 1},
-            {"time": 1, "distance": 1},
-            {"weight": 1, "acceleration": -1},
-            {"strength": 1, "distance": 1},
-            {"strength": 1, "thickness": 1},
-            {"mass": 1, "gravity": 1},
-            {"flexibility": 1, "breakability": -1},
-            {"distance": 1, "loudness": -1, "brightness": -1, "apparentSize": -1},
-            {"exerciseIntensity": 1, "amountSweat": 1}
+        {"friction": 1, "speed": -1, "smoothness": -1, "distance": -1, "heat": 1},
+        {"speed": 1, "time": -1},
+        {"speed": 1, "distance": 1},
+        {"time": 1, "distance": 1},
+        {"weight": 1, "acceleration": -1},
+        {"strength": 1, "distance": 1},
+        {"strength": 1, "thickness": 1},
+        {"mass": 1, "gravity": 1},
+        {"flexibility": 1, "breakability": -1},
+        {"distance": 1, "loudness": -1, "brightness": -1, "apparentSize": -1},
+        {"exerciseIntensity": 1, "amountSweat": 1},
     ]
 
     # Size translation for absolute and relative values
-    qr_size = {
-            'higher': 1,
-            'high': 1,
-            'low': -1,
-            'lower': -1
-    }
+    qr_size = {"higher": 1, "high": 1, "low": -1, "lower": -1}
 
     def _get_qr_coeff(self, attr1, attr2):
         for qset in self.qr_coeff_sets:
@@ -151,7 +148,7 @@ class QuarelWorld(World):
         return answer_index
 
     def _exec_and(self, expr):
-        if not expr or expr[0] != 'and':
+        if not expr or expr[0] != "and":
             return expr
         args = expr[1:]
         if len(args) == 1:
@@ -174,7 +171,7 @@ class QuarelWorld(World):
         parse = semparse_util.lisp_to_nested_expression(logical_form)
         if len(parse) < 2:
             return -1
-        if parse[0] == 'infer':
+        if parse[0] == "infer":
             args = [self._exec_and(arg) for arg in parse[1:]]
             if None in args:
                 return -1

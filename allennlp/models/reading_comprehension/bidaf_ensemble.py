@@ -13,6 +13,7 @@ from allennlp.common import Params
 from allennlp.data import Vocabulary
 from allennlp.training.metrics import SquadEmAndF1
 
+
 @Model.register("bidaf-ensemble")
 class BidafEnsemble(Ensemble):
     """
@@ -27,13 +28,15 @@ class BidafEnsemble(Ensemble):
         self._squad_metrics = SquadEmAndF1()
 
     @overrides
-    def forward(self,  # type: ignore
-                question: Dict[str, torch.LongTensor],
-                passage: Dict[str, torch.LongTensor],
-                span_start: torch.IntTensor = None,
-                span_end: torch.IntTensor = None,
-                metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
+    def forward(
+        self,  # type: ignore
+        question: Dict[str, torch.LongTensor],
+        passage: Dict[str, torch.LongTensor],
+        span_start: torch.IntTensor = None,
+        span_end: torch.IntTensor = None,
+        metadata: List[Dict[str, Any]] = None,
+    ) -> Dict[str, torch.Tensor]:
+
         """
         The forward method runs each of the submodels, then selects the best span from the subresults.
         The best span is determined by averaging the probabilities for the start and end of the spans.
@@ -75,26 +78,26 @@ class BidafEnsemble(Ensemble):
             question.
         """
 
-        subresults = [submodel(question, passage, span_start, span_end, metadata) for submodel in self.submodels]
+        subresults = [
+            submodel(question, passage, span_start, span_end, metadata)
+            for submodel in self.submodels
+        ]
 
         batch_size = len(subresults[0]["best_span"])
 
         best_span = ensemble(subresults)
-        output = {
-                "best_span": best_span,
-                "best_span_str": []
-        }
+        output = {"best_span": best_span, "best_span_str": []}
         for index in range(batch_size):
             if metadata is not None:
-                passage_str = metadata[index]['original_passage']
-                offsets = metadata[index]['token_offsets']
+                passage_str = metadata[index]["original_passage"]
+                offsets = metadata[index]["token_offsets"]
                 predicted_span = tuple(best_span[index].detach().cpu().numpy())
                 start_offset = offsets[predicted_span[0]][0]
                 end_offset = offsets[predicted_span[1]][1]
                 best_span_string = passage_str[start_offset:end_offset]
                 output["best_span_str"].append(best_span_string)
 
-                answer_texts = metadata[index].get('answer_texts', [])
+                answer_texts = metadata[index].get("answer_texts", [])
                 if answer_texts:
                     self._squad_metrics(best_span_string, answer_texts)
 
@@ -102,15 +105,12 @@ class BidafEnsemble(Ensemble):
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         exact_match, f1_score = self._squad_metrics.get_metric(reset)
-        return {
-                'em': exact_match,
-                'f1': f1_score,
-        }
+        return {"em": exact_match, "f1": f1_score}
 
     # The logic here requires a custom from_params.
     @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> 'BidafEnsemble':  # type: ignore
-        # pylint: disable=arguments-differ
+    def from_params(cls, vocab: Vocabulary, params: Params) -> "BidafEnsemble":  # type: ignore
+
         if vocab:
             raise ConfigurationError("vocab should be None")
 
@@ -120,6 +120,7 @@ class BidafEnsemble(Ensemble):
             submodels.append(load_archive(path).model)
 
         return cls(submodels=submodels)
+
 
 def ensemble(subresults: List[Dict[str, torch.Tensor]]) -> torch.Tensor:
     """
@@ -137,6 +138,8 @@ def ensemble(subresults: List[Dict[str, torch.Tensor]]) -> torch.Tensor:
 
     # Choose the highest average confidence span.
 
-    span_start_probs = sum(subresult['span_start_probs'] for subresult in subresults) / len(subresults)
-    span_end_probs = sum(subresult['span_end_probs'] for subresult in subresults) / len(subresults)
-    return get_best_span(span_start_probs.log(), span_end_probs.log()) # type: ignore
+    span_start_probs = sum(subresult["span_start_probs"] for subresult in subresults) / len(
+        subresults
+    )
+    span_end_probs = sum(subresult["span_end_probs"] for subresult in subresults) / len(subresults)
+    return get_best_span(span_start_probs.log(), span_end_probs.log())  # type: ignore

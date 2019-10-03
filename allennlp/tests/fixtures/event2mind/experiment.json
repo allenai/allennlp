@@ -31,7 +31,7 @@
         }
       }
     },
-    "embedding_dropout": 0.2,
+    "embedding_dropout": 0.0,
     "encoder": {
       "type": "gru",
       "input_size": 10,
