@@ -304,9 +304,11 @@ class BidirectionalAttentionFlow(Model):
             output_dict["best_span_str"] = []
             question_tokens = []
             passage_tokens = []
+            token_offsets = []
             for i in range(batch_size):
                 question_tokens.append(metadata[i]["question_tokens"])
                 passage_tokens.append(metadata[i]["passage_tokens"])
+                token_offsets.append(metadata[i]["token_offsets"])
                 passage_str = metadata[i]["original_passage"]
                 offsets = metadata[i]["token_offsets"]
                 predicted_span = tuple(best_span[i].detach().cpu().numpy())
@@ -319,6 +321,7 @@ class BidirectionalAttentionFlow(Model):
                     self._squad_metrics(best_span_string, answer_texts)
             output_dict["question_tokens"] = question_tokens
             output_dict["passage_tokens"] = passage_tokens
+            output_dict["token_offsets"] = token_offsets
         return output_dict
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:

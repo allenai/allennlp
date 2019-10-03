@@ -98,6 +98,7 @@ class TestPredict(AllenNlpTestCase):
                 "span_end_probs",
                 "best_span",
                 "best_span_str",
+                "token_offsets",
             }
 
         shutil.rmtree(self.tempdir)
@@ -134,6 +135,7 @@ class TestPredict(AllenNlpTestCase):
                 "span_end_probs",
                 "best_span",
                 "best_span_str",
+                "token_offsets",
                 "loss",
             }
 
@@ -271,6 +273,7 @@ class TestPredict(AllenNlpTestCase):
                 "span_end_probs",
                 "best_span",
                 "best_span_str",
+                "token_offsets",
             }
 
         shutil.rmtree(self.tempdir)
@@ -338,6 +341,7 @@ class TestPredict(AllenNlpTestCase):
                 "span_end_probs",
                 "best_span",
                 "best_span_str",
+                "token_offsets",
                 "explicit",
             }
 
@@ -414,6 +418,7 @@ class TestPredict(AllenNlpTestCase):
                 "span_start_probs",
                 "span_end_probs",
                 "best_span",
+                "token_offsets",
                 "best_span_str",
             }
 
