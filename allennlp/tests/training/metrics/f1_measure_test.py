@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name,protected-access
 import torch
 import pytest
 import numpy
@@ -18,12 +17,16 @@ class F1MeasureTest(AllenNlpTestCase):
 
     def test_f1_measure(self):
         f1_measure = F1Measure(positive_label=0)
-        predictions = torch.Tensor([[0.35, 0.25, 0.1, 0.1, 0.2],
-                                    [0.1, 0.6, 0.1, 0.2, 0.0],
-                                    [0.1, 0.6, 0.1, 0.2, 0.0],
-                                    [0.1, 0.5, 0.1, 0.2, 0.0],
-                                    [0.1, 0.2, 0.1, 0.7, 0.0],
-                                    [0.1, 0.6, 0.1, 0.2, 0.0]])
+        predictions = torch.Tensor(
+            [
+                [0.35, 0.25, 0.1, 0.1, 0.2],
+                [0.1, 0.6, 0.1, 0.2, 0.0],
+                [0.1, 0.6, 0.1, 0.2, 0.0],
+                [0.1, 0.5, 0.1, 0.2, 0.0],
+                [0.1, 0.2, 0.1, 0.7, 0.0],
+                [0.1, 0.6, 0.1, 0.2, 0.0],
+            ]
+        )
         # [True Positive, True Negative, True Negative,
         #  False Negative, True Negative, False Negative]
         targets = torch.Tensor([0, 4, 1, 0, 3, 0])
@@ -56,15 +59,18 @@ class F1MeasureTest(AllenNlpTestCase):
         numpy.testing.assert_almost_equal(recall, 0.5)
         numpy.testing.assert_almost_equal(f1, 0.6666666666)
 
-
     def test_f1_measure_other_positive_label(self):
         f1_measure = F1Measure(positive_label=1)
-        predictions = torch.Tensor([[0.35, 0.25, 0.1, 0.1, 0.2],
-                                    [0.1, 0.6, 0.1, 0.2, 0.0],
-                                    [0.1, 0.6, 0.1, 0.2, 0.0],
-                                    [0.1, 0.5, 0.1, 0.2, 0.0],
-                                    [0.1, 0.2, 0.1, 0.7, 0.0],
-                                    [0.1, 0.6, 0.1, 0.2, 0.0]])
+        predictions = torch.Tensor(
+            [
+                [0.35, 0.25, 0.1, 0.1, 0.2],
+                [0.1, 0.6, 0.1, 0.2, 0.0],
+                [0.1, 0.6, 0.1, 0.2, 0.0],
+                [0.1, 0.5, 0.1, 0.2, 0.0],
+                [0.1, 0.2, 0.1, 0.7, 0.0],
+                [0.1, 0.6, 0.1, 0.2, 0.0],
+            ]
+        )
         # [True Negative, False Positive, True Positive,
         #  False Positive, True Negative, False Positive]
         targets = torch.Tensor([0, 4, 1, 0, 3, 0])
@@ -84,15 +90,18 @@ class F1MeasureTest(AllenNlpTestCase):
         assert isinstance(recall, float)
         assert isinstance(f1, float)
 
-
     def test_f1_measure_accumulates_and_resets_correctly(self):
         f1_measure = F1Measure(positive_label=0)
-        predictions = torch.Tensor([[0.35, 0.25, 0.1, 0.1, 0.2],
-                                    [0.1, 0.6, 0.1, 0.2, 0.0],
-                                    [0.1, 0.6, 0.1, 0.2, 0.0],
-                                    [0.1, 0.5, 0.1, 0.2, 0.0],
-                                    [0.1, 0.2, 0.1, 0.7, 0.0],
-                                    [0.1, 0.6, 0.1, 0.2, 0.0]])
+        predictions = torch.Tensor(
+            [
+                [0.35, 0.25, 0.1, 0.1, 0.2],
+                [0.1, 0.6, 0.1, 0.2, 0.0],
+                [0.1, 0.6, 0.1, 0.2, 0.0],
+                [0.1, 0.5, 0.1, 0.2, 0.0],
+                [0.1, 0.2, 0.1, 0.7, 0.0],
+                [0.1, 0.6, 0.1, 0.2, 0.0],
+            ]
+        )
         # [True Positive, True Negative, True Negative,
         #  False Negative, True Negative, False Negative]
         targets = torch.Tensor([0, 4, 1, 0, 3, 0])
@@ -114,16 +123,15 @@ class F1MeasureTest(AllenNlpTestCase):
 
     def test_f1_measure_works_for_sequences(self):
         f1_measure = F1Measure(positive_label=0)
-        predictions = torch.Tensor([[[0.35, 0.25, 0.1, 0.1, 0.2],
-                                     [0.1, 0.6, 0.1, 0.2, 0.0],
-                                     [0.1, 0.6, 0.1, 0.2, 0.0]],
-                                    [[0.35, 0.25, 0.1, 0.1, 0.2],
-                                     [0.1, 0.6, 0.1, 0.2, 0.0],
-                                     [0.1, 0.6, 0.1, 0.2, 0.0]]])
+        predictions = torch.Tensor(
+            [
+                [[0.35, 0.25, 0.1, 0.1, 0.2], [0.1, 0.6, 0.1, 0.2, 0.0], [0.1, 0.6, 0.1, 0.2, 0.0]],
+                [[0.35, 0.25, 0.1, 0.1, 0.2], [0.1, 0.6, 0.1, 0.2, 0.0], [0.1, 0.6, 0.1, 0.2, 0.0]],
+            ]
+        )
         # [[True Positive, True Negative, True Negative],
         #  [True Positive, True Negative, False Negative]]
-        targets = torch.Tensor([[0, 3, 4],
-                                [0, 1, 0]])
+        targets = torch.Tensor([[0, 3, 4], [0, 1, 0]])
         f1_measure(predictions, targets)
         precision, recall, f1 = f1_measure.get_metric()
         assert f1_measure._true_positives == 2.0
@@ -136,8 +144,7 @@ class F1MeasureTest(AllenNlpTestCase):
         numpy.testing.assert_almost_equal(f1, 0.8)
 
         # Test the same thing with a mask:
-        mask = torch.Tensor([[0, 1, 0],
-                             [1, 1, 1]])
+        mask = torch.Tensor([[0, 1, 0], [1, 1, 1]])
         f1_measure(predictions, targets, mask)
         precision, recall, f1 = f1_measure.get_metric()
         assert f1_measure._true_positives == 1.0

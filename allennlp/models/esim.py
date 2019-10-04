@@ -9,7 +9,12 @@ from allennlp.modules import FeedForward, InputVariationalDropout
 from allennlp.modules.matrix_attention.legacy_matrix_attention import LegacyMatrixAttention
 from allennlp.modules import Seq2SeqEncoder, SimilarityFunction, TextFieldEmbedder
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
-from allennlp.nn.util import get_text_field_mask, masked_softmax, weighted_sum, replace_masked_values
+from allennlp.nn.util import (
+    get_text_field_mask,
+    masked_softmax,
+    weighted_sum,
+    replace_masked_values,
+)
 from allennlp.training.metrics import CategoricalAccuracy
 
 
@@ -46,17 +51,21 @@ class ESIM(Model):
     regularizer : ``RegularizerApplicator``, optional (default=``None``)
         If provided, will be used to calculate the regularization penalty during training.
     """
-    def __init__(self, vocab: Vocabulary,
-                 text_field_embedder: TextFieldEmbedder,
-                 encoder: Seq2SeqEncoder,
-                 similarity_function: SimilarityFunction,
-                 projection_feedforward: FeedForward,
-                 inference_encoder: Seq2SeqEncoder,
-                 output_feedforward: FeedForward,
-                 output_logit: FeedForward,
-                 dropout: float = 0.5,
-                 initializer: InitializerApplicator = InitializerApplicator(),
-                 regularizer: Optional[RegularizerApplicator] = None) -> None:
+
+    def __init__(
+        self,
+        vocab: Vocabulary,
+        text_field_embedder: TextFieldEmbedder,
+        encoder: Seq2SeqEncoder,
+        similarity_function: SimilarityFunction,
+        projection_feedforward: FeedForward,
+        inference_encoder: Seq2SeqEncoder,
+        output_feedforward: FeedForward,
+        output_logit: FeedForward,
+        dropout: float = 0.5,
+        initializer: InitializerApplicator = InitializerApplicator(),
+        regularizer: Optional[RegularizerApplicator] = None,
+    ) -> None:
         super().__init__(vocab, regularizer)
 
         self._text_field_embedder = text_field_embedder
@@ -79,25 +88,38 @@ class ESIM(Model):
 
         self._num_labels = vocab.get_vocab_size(namespace="labels")
 
-        check_dimensions_match(text_field_embedder.get_output_dim(), encoder.get_input_dim(),
-                               "text field embedding dim", "encoder input dim")
-        check_dimensions_match(encoder.get_output_dim() * 4, projection_feedforward.get_input_dim(),
-                               "encoder output dim", "projection feedforward input")
-        check_dimensions_match(projection_feedforward.get_output_dim(), inference_encoder.get_input_dim(),
-                               "proj feedforward output dim", "inference lstm input dim")
+        check_dimensions_match(
+            text_field_embedder.get_output_dim(),
+            encoder.get_input_dim(),
+            "text field embedding dim",
+            "encoder input dim",
+        )
+        check_dimensions_match(
+            encoder.get_output_dim() * 4,
+            projection_feedforward.get_input_dim(),
+            "encoder output dim",
+            "projection feedforward input",
+        )
+        check_dimensions_match(
+            projection_feedforward.get_output_dim(),
+            inference_encoder.get_input_dim(),
+            "proj feedforward output dim",
+            "inference lstm input dim",
+        )
 
         self._accuracy = CategoricalAccuracy()
         self._loss = torch.nn.CrossEntropyLoss()
 
         initializer(self)
 
-    def forward(self,  # type: ignore
-                premise: Dict[str, torch.LongTensor],
-                hypothesis: Dict[str, torch.LongTensor],
-                label: torch.IntTensor = None,
-                metadata: List[Dict[str, Any]] = None  # pylint:disable=unused-argument
-               ) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
+    def forward(  # type: ignore
+        self,
+        premise: Dict[str, torch.LongTensor],
+        hypothesis: Dict[str, torch.LongTensor],
+        label: torch.IntTensor = None,
+        metadata: List[Dict[str, Any]] = None,
+    ) -> Dict[str, torch.Tensor]:
+
         """
         Parameters
         ----------
@@ -153,16 +175,22 @@ class ESIM(Model):
 
         # the "enhancement" layer
         premise_enhanced = torch.cat(
-                [encoded_premise, attended_hypothesis,
-                 encoded_premise - attended_hypothesis,
-                 encoded_premise * attended_hypothesis],
-                dim=-1
+            [
+                encoded_premise,
+                attended_hypothesis,
+                encoded_premise - attended_hypothesis,
+                encoded_premise * attended_hypothesis,
+            ],
+            dim=-1,
         )
         hypothesis_enhanced = torch.cat(
-                [encoded_hypothesis, attended_premise,
-                 encoded_hypothesis - attended_premise,
-                 encoded_hypothesis * attended_premise],
-                dim=-1
+            [
+                encoded_hypothesis,
+                attended_premise,
+                encoded_hypothesis - attended_premise,
+                encoded_hypothesis * attended_premise,
+            ],
+            dim=-1,
         )
 
         # The projection layer down to the model dimension.  Dropout is not applied before
@@ -179,18 +207,14 @@ class ESIM(Model):
 
         # The pooling layer -- max and avg pooling.
         # (batch_size, model_dim)
-        v_a_max, _ = replace_masked_values(
-                v_ai, premise_mask.unsqueeze(-1), -1e7
-        ).max(dim=1)
-        v_b_max, _ = replace_masked_values(
-                v_bi, hypothesis_mask.unsqueeze(-1), -1e7
-        ).max(dim=1)
+        v_a_max, _ = replace_masked_values(v_ai, premise_mask.unsqueeze(-1), -1e7).max(dim=1)
+        v_b_max, _ = replace_masked_values(v_bi, hypothesis_mask.unsqueeze(-1), -1e7).max(dim=1)
 
         v_a_avg = torch.sum(v_ai * premise_mask.unsqueeze(-1), dim=1) / torch.sum(
-                premise_mask, 1, keepdim=True
+            premise_mask, 1, keepdim=True
         )
         v_b_avg = torch.sum(v_bi * hypothesis_mask.unsqueeze(-1), dim=1) / torch.sum(
-                hypothesis_mask, 1, keepdim=True
+            hypothesis_mask, 1, keepdim=True
         )
 
         # Now concat
@@ -215,4 +239,4 @@ class ESIM(Model):
         return output_dict
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
-        return {'accuracy': self._accuracy.get_metric(reset)}
+        return {"accuracy": self._accuracy.get_metric(reset)}

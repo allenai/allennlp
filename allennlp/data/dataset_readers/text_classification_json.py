@@ -10,7 +10,7 @@ from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.tokenizers import Tokenizer, WordTokenizer
 from allennlp.data.tokenizers.sentence_splitter import SpacySentenceSplitter
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @DatasetReader.register("text_classification_json")
@@ -43,19 +43,22 @@ class TextClassificationJsonReader(DatasetReader):
     lazy : ``bool``, optional, (default = ``False``)
         Whether or not instances can be read lazily.
     """
-    def __init__(self,
-                 token_indexers: Dict[str, TokenIndexer] = None,
-                 tokenizer: Tokenizer = None,
-                 segment_sentences: bool = False,
-                 max_sequence_length: int = None,
-                 skip_label_indexing: bool = False,
-                 lazy: bool = False) -> None:
+
+    def __init__(
+        self,
+        token_indexers: Dict[str, TokenIndexer] = None,
+        tokenizer: Tokenizer = None,
+        segment_sentences: bool = False,
+        max_sequence_length: int = None,
+        skip_label_indexing: bool = False,
+        lazy: bool = False,
+    ) -> None:
         super().__init__(lazy=lazy)
         self._tokenizer = tokenizer or WordTokenizer()
         self._segment_sentences = segment_sentences
         self._max_sequence_length = max_sequence_length
         self._skip_label_indexing = skip_label_indexing
-        self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
+        self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         if self._segment_sentences:
             self._sentence_segmenter = SpacySentenceSplitter()
 
@@ -73,7 +76,9 @@ class TextClassificationJsonReader(DatasetReader):
                         try:
                             label = int(label)
                         except ValueError:
-                            raise ValueError('Labels must be integers if skip_label_indexing is True.')
+                            raise ValueError(
+                                "Labels must be integers if skip_label_indexing is True."
+                            )
                     else:
                         label = str(label)
                 instance = self.text_to_instance(text=text, label=label)
@@ -85,11 +90,13 @@ class TextClassificationJsonReader(DatasetReader):
         truncate a set of tokens using the provided sequence length
         """
         if len(tokens) > self._max_sequence_length:
-            tokens = tokens[:self._max_sequence_length]
+            tokens = tokens[: self._max_sequence_length]
         return tokens
 
     @overrides
-    def text_to_instance(self, text: str, label: Union[str, int] = None) -> Instance:  # type: ignore
+    def text_to_instance(
+        self, text: str, label: Union[str, int] = None
+    ) -> Instance:  # type: ignore
         """
         Parameters
         ----------
@@ -106,7 +113,7 @@ class TextClassificationJsonReader(DatasetReader):
             label : ``LabelField``
                 The label label of the sentence or phrase.
         """
-        # pylint: disable=arguments-differ
+
         fields: Dict[str, Field] = {}
         if self._segment_sentences:
             sentences: List[Field] = []
@@ -116,13 +123,12 @@ class TextClassificationJsonReader(DatasetReader):
                 if self._max_sequence_length is not None:
                     word_tokens = self._truncate(word_tokens)
                 sentences.append(TextField(word_tokens, self._token_indexers))
-            fields['tokens'] = ListField(sentences)
+            fields["tokens"] = ListField(sentences)
         else:
             tokens = self._tokenizer.tokenize(text)
             if self._max_sequence_length is not None:
                 tokens = self._truncate(tokens)
-            fields['tokens'] = TextField(tokens, self._token_indexers)
+            fields["tokens"] = TextField(tokens, self._token_indexers)
         if label is not None:
-            fields['label'] = LabelField(label,
-                                         skip_indexing=self._skip_label_indexing)
+            fields["label"] = LabelField(label, skip_indexing=self._skip_label_indexing)
         return Instance(fields)

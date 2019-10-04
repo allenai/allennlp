@@ -1,11 +1,14 @@
 from typing import List, TextIO, Optional
 
-def write_bio_formatted_tags_to_file(prediction_file: TextIO,
-                                     gold_file: TextIO,
-                                     verb_index: Optional[int],
-                                     sentence: List[str],
-                                     prediction: List[str],
-                                     gold_labels: List[str]):
+
+def write_bio_formatted_tags_to_file(
+    prediction_file: TextIO,
+    gold_file: TextIO,
+    verb_index: Optional[int],
+    sentence: List[str],
+    prediction: List[str],
+    gold_labels: List[str],
+):
     """
     Prints predicate argument predictions and gold labels for a single verbal
     predicate in a sentence to two provided file references.
@@ -35,20 +38,24 @@ def write_bio_formatted_tags_to_file(prediction_file: TextIO,
     """
     conll_formatted_predictions = convert_bio_tags_to_conll_format(prediction)
     conll_formatted_gold_labels = convert_bio_tags_to_conll_format(gold_labels)
-    write_conll_formatted_tags_to_file(prediction_file,
-                                       gold_file,
-                                       verb_index,
-                                       sentence,
-                                       conll_formatted_predictions,
-                                       conll_formatted_gold_labels)
+    write_conll_formatted_tags_to_file(
+        prediction_file,
+        gold_file,
+        verb_index,
+        sentence,
+        conll_formatted_predictions,
+        conll_formatted_gold_labels,
+    )
 
 
-def write_conll_formatted_tags_to_file(prediction_file: TextIO,
-                                       gold_file: TextIO,
-                                       verb_index: Optional[int],
-                                       sentence: List[str],
-                                       conll_formatted_predictions: List[str],
-                                       conll_formatted_gold_labels: List[str]):
+def write_conll_formatted_tags_to_file(
+    prediction_file: TextIO,
+    gold_file: TextIO,
+    verb_index: Optional[int],
+    sentence: List[str],
+    conll_formatted_predictions: List[str],
+    conll_formatted_gold_labels: List[str],
+):
     """
     Prints predicate argument predictions and gold labels for a single verbal
     predicate in a sentence to two provided file references.
@@ -80,9 +87,9 @@ def write_conll_formatted_tags_to_file(prediction_file: TextIO,
     if verb_index:
         verb_only_sentence[verb_index] = sentence[verb_index]
 
-    for word, predicted, gold in zip(verb_only_sentence,
-                                     conll_formatted_predictions,
-                                     conll_formatted_gold_labels):
+    for word, predicted, gold in zip(
+        verb_only_sentence, conll_formatted_predictions, conll_formatted_gold_labels
+    ):
         prediction_file.write(word.ljust(15))
         prediction_file.write(predicted.rjust(15) + "\n")
         gold_file.write(word.ljust(15))

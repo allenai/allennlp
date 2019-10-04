@@ -5,7 +5,7 @@ import torch
 from allennlp.modules.language_model_heads.language_model_head import LanguageModelHead
 
 
-@LanguageModelHead.register('gpt2')
+@LanguageModelHead.register("gpt2")
 class Gpt2LanguageModelHead(LanguageModelHead):
     """
     Loads just the LM head from ``pytorch_transformers.GPT2LMHeadModel``.  It was easiest to load
@@ -13,6 +13,7 @@ class Gpt2LanguageModelHead(LanguageModelHead):
     but for practical use in a model, the few seconds of extra loading time is probably not a big
     deal.
     """
+
     def __init__(self, model_name: str) -> None:
         super().__init__()
         config = GPT2Config.from_pretrained(model_name)
@@ -23,7 +24,7 @@ class Gpt2LanguageModelHead(LanguageModelHead):
         # would only load the GPT2 weights once.  Though, it's not clear how to do that here, as we
         # need to load `GPT2LMHeadModel`, not just `GPT2Model`...
         gpt2_model = GPT2LMHeadModel.from_pretrained(model_name)
-        self.gpt2_lm_head = gpt2_model.lm_head  # pylint: disable=no-member
+        self.gpt2_lm_head = gpt2_model.lm_head
 
     @overrides
     def get_input_dim(self) -> int:

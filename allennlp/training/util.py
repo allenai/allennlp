@@ -26,10 +26,12 @@ from allennlp.nn import util as nn_util
 
 logger = logging.getLogger(__name__)
 
+
 # We want to warn people that tqdm ignores metrics that start with underscores
 # exactly once. This variable keeps track of whether we have.
 class HasBeenWarned:
     tqdm_ignores_underscores = False
+
 
 def sparse_clip_norm(parameters, max_norm, norm_type=2) -> float:
     """Clips gradient norm of an iterable of parameters.
@@ -51,11 +53,10 @@ def sparse_clip_norm(parameters, max_norm, norm_type=2) -> float:
     -------
     Total norm of the parameters (viewed as a single vector).
     """
-    # pylint: disable=invalid-name,protected-access
     parameters = list(filter(lambda p: p.grad is not None, parameters))
     max_norm = float(max_norm)
     norm_type = float(norm_type)
-    if norm_type == float('inf'):
+    if norm_type == float("inf"):
         total_norm = max(p.grad.data.abs().max() for p in parameters)
     else:
         total_norm = 0
@@ -67,7 +68,7 @@ def sparse_clip_norm(parameters, max_norm, norm_type=2) -> float:
             else:
                 param_norm = p.grad.data.norm(norm_type)
             total_norm += param_norm ** norm_type
-        total_norm = total_norm ** (1. / norm_type)
+        total_norm = total_norm ** (1.0 / norm_type)
     clip_coef = max_norm / (total_norm + 1e-6)
     if clip_coef < 1:
         for p in parameters:
@@ -85,7 +86,7 @@ def move_optimizer_to_cuda(optimizer):
     will be located on the same device as the parameter.
     """
     for param_group in optimizer.param_groups:
-        for param in param_group['params']:
+        for param in param_group["params"]:
             if param.is_cuda:
                 param_state = optimizer.state[param]
                 for k in param_state.keys():
@@ -99,7 +100,7 @@ def get_batch_size(batch: Union[Dict, torch.Tensor]) -> int:
     returns 0 otherwise.
     """
     if isinstance(batch, torch.Tensor):
-        return batch.size(0) # type: ignore
+        return batch.size(0)  # type: ignore
     elif isinstance(batch, Dict):
         return get_batch_size(next(iter(batch.values())))
     else:
@@ -111,9 +112,13 @@ def time_to_str(timestamp: int) -> str:
     Convert seconds past Epoch to human readable string.
     """
     datetimestamp = datetime.datetime.fromtimestamp(timestamp)
-    return '{:04d}-{:02d}-{:02d}-{:02d}-{:02d}-{:02d}'.format(
-            datetimestamp.year, datetimestamp.month, datetimestamp.day,
-            datetimestamp.hour, datetimestamp.minute, datetimestamp.second
+    return "{:04d}-{:02d}-{:02d}-{:02d}-{:02d}-{:02d}".format(
+        datetimestamp.year,
+        datetimestamp.month,
+        datetimestamp.day,
+        datetimestamp.hour,
+        datetimestamp.minute,
+        datetimestamp.second,
     )
 
 
@@ -121,13 +126,13 @@ def str_to_time(time_str: str) -> datetime.datetime:
     """
     Convert human readable string to datetime.datetime.
     """
-    pieces: Any = [int(piece) for piece in time_str.split('-')]
+    pieces: Any = [int(piece) for piece in time_str.split("-")]
     return datetime.datetime(*pieces)
 
 
-def datasets_from_params(params: Params,
-                         cache_directory: str = None,
-                         cache_prefix: str = None) -> Dict[str, Iterable[Instance]]:
+def datasets_from_params(
+    params: Params, cache_directory: str = None, cache_prefix: str = None
+) -> Dict[str, Iterable[Instance]]:
     """
     Load all the datasets specified by the config.
 
@@ -155,31 +160,32 @@ def datasets_from_params(params: Params,
         specify the ``cache_prefix``.  Note that in some rare cases this can be dangerous, as we'll
         use the `same` prefix for both train and validation dataset readers.
     """
-    dataset_reader_params = params.pop('dataset_reader')
-    validation_dataset_reader_params = params.pop('validation_dataset_reader', None)
-    train_cache_dir, validation_cache_dir = _set_up_cache_files(dataset_reader_params,
-                                                                validation_dataset_reader_params,
-                                                                cache_directory,
-                                                                cache_prefix)
+    dataset_reader_params = params.pop("dataset_reader")
+    validation_dataset_reader_params = params.pop("validation_dataset_reader", None)
+    train_cache_dir, validation_cache_dir = _set_up_cache_files(
+        dataset_reader_params, validation_dataset_reader_params, cache_directory, cache_prefix
+    )
 
     dataset_reader = DatasetReader.from_params(dataset_reader_params)
 
     validation_and_test_dataset_reader: DatasetReader = dataset_reader
     if validation_dataset_reader_params is not None:
         logger.info("Using a separate dataset reader to load validation and test data.")
-        validation_and_test_dataset_reader = DatasetReader.from_params(validation_dataset_reader_params)
+        validation_and_test_dataset_reader = DatasetReader.from_params(
+            validation_dataset_reader_params
+        )
 
     if train_cache_dir:
         dataset_reader.cache_data(train_cache_dir)
         validation_and_test_dataset_reader.cache_data(validation_cache_dir)
 
-    train_data_path = params.pop('train_data_path')
+    train_data_path = params.pop("train_data_path")
     logger.info("Reading training data from %s", train_data_path)
     train_data = dataset_reader.read(train_data_path)
 
     datasets: Dict[str, Iterable[Instance]] = {"train": train_data}
 
-    validation_data_path = params.pop('validation_data_path', None)
+    validation_data_path = params.pop("validation_data_path", None)
     if validation_data_path is not None:
         logger.info("Reading validation data from %s", validation_data_path)
         validation_data = validation_and_test_dataset_reader.read(validation_data_path)
@@ -194,10 +200,12 @@ def datasets_from_params(params: Params,
     return datasets
 
 
-def _set_up_cache_files(train_params: Params,
-                        validation_params: Params = None,
-                        cache_directory: str = None,
-                        cache_prefix: str = None) -> Tuple[str, str]:
+def _set_up_cache_files(
+    train_params: Params,
+    validation_params: Params = None,
+    cache_directory: str = None,
+    cache_prefix: str = None,
+) -> Tuple[str, str]:
     if not cache_directory:
         return None, None
 
@@ -221,10 +229,10 @@ def _set_up_cache_files(train_params: Params,
     # different parameters, without clearing the cache first.  But correctly handling that case
     # is more work than it's worth.
     os.makedirs(train_cache_dir, exist_ok=True)
-    with open(train_cache_dir / 'params.json', 'w') as param_file:
+    with open(train_cache_dir / "params.json", "w") as param_file:
         json.dump(train_params.as_dict(quiet=True), param_file)
     os.makedirs(validation_cache_dir, exist_ok=True)
-    with open(validation_cache_dir / 'params.json', 'w') as param_file:
+    with open(validation_cache_dir / "params.json", "w") as param_file:
         if validation_params:
             json.dump(validation_params.as_dict(quiet=True), param_file)
         else:
@@ -235,15 +243,13 @@ def _set_up_cache_files(train_params: Params,
 def _dataset_reader_param_hash(params: Params) -> str:
     copied_params = params.duplicate()
     # Laziness doesn't affect how the data is computed, so it shouldn't affect the hash.
-    copied_params.pop('lazy', default=None)
+    copied_params.pop("lazy", default=None)
     return copied_params.get_hash()
 
 
 def create_serialization_dir(
-        params: Params,
-        serialization_dir: str,
-        recover: bool,
-        force: bool) -> None:
+    params: Params, serialization_dir: str, recover: bool, force: bool
+) -> None:
     """
     This function creates the serialization directory if it doesn't exist.  If it already exists
     and is non-empty, then it verifies that we're recovering from a training with an identical configuration.
@@ -268,15 +274,19 @@ def create_serialization_dir(
 
     if os.path.exists(serialization_dir) and os.listdir(serialization_dir):
         if not recover:
-            raise ConfigurationError(f"Serialization directory ({serialization_dir}) already exists and is "
-                                     f"not empty. Specify --recover to recover training from existing output.")
+            raise ConfigurationError(
+                f"Serialization directory ({serialization_dir}) already exists and is "
+                f"not empty. Specify --recover to recover training from existing output."
+            )
 
         logger.info(f"Recovering from prior training at {serialization_dir}.")
 
         recovered_config_file = os.path.join(serialization_dir, CONFIG_NAME)
         if not os.path.exists(recovered_config_file):
-            raise ConfigurationError("The serialization directory already exists but doesn't "
-                                     "contain a config.json. You probably gave the wrong directory.")
+            raise ConfigurationError(
+                "The serialization directory already exists but doesn't "
+                "contain a config.json. You probably gave the wrong directory."
+            )
         loaded_params = Params.from_file(recovered_config_file)
 
         # Check whether any of the training configuration differs from the configuration we are
@@ -285,31 +295,41 @@ def create_serialization_dir(
         flat_params = params.as_flat_dict()
         flat_loaded = loaded_params.as_flat_dict()
         for key in flat_params.keys() - flat_loaded.keys():
-            logger.error(f"Key '{key}' found in training configuration but not in the serialization "
-                         f"directory we're recovering from.")
+            logger.error(
+                f"Key '{key}' found in training configuration but not in the serialization "
+                f"directory we're recovering from."
+            )
             fail = True
         for key in flat_loaded.keys() - flat_params.keys():
-            logger.error(f"Key '{key}' found in the serialization directory we're recovering from "
-                         f"but not in the training config.")
+            logger.error(
+                f"Key '{key}' found in the serialization directory we're recovering from "
+                f"but not in the training config."
+            )
             fail = True
         for key in flat_params.keys():
             if flat_params.get(key, None) != flat_loaded.get(key, None):
-                logger.error(f"Value for '{key}' in training configuration does not match that the value in "
-                             f"the serialization directory we're recovering from: "
-                             f"{flat_params[key]} != {flat_loaded[key]}")
+                logger.error(
+                    f"Value for '{key}' in training configuration does not match that the value in "
+                    f"the serialization directory we're recovering from: "
+                    f"{flat_params[key]} != {flat_loaded[key]}"
+                )
                 fail = True
         if fail:
-            raise ConfigurationError("Training configuration does not match the configuration we're "
-                                     "recovering from.")
+            raise ConfigurationError(
+                "Training configuration does not match the configuration we're " "recovering from."
+            )
     else:
         if recover:
-            raise ConfigurationError(f"--recover specified but serialization_dir ({serialization_dir}) "
-                                     "does not exist.  There is nothing to recover from.")
+            raise ConfigurationError(
+                f"--recover specified but serialization_dir ({serialization_dir}) "
+                "does not exist.  There is nothing to recover from."
+            )
         os.makedirs(serialization_dir, exist_ok=True)
 
-def data_parallel(batch_group: List[TensorDict],
-                  model: Model,
-                  cuda_devices: List) -> Dict[str, torch.Tensor]:
+
+def data_parallel(
+    batch_group: List[TensorDict], model: Model, cuda_devices: List
+) -> Dict[str, torch.Tensor]:
     """
     Performs a forward pass using multiple GPUs.  This is a simplification
     of torch.nn.parallel.data_parallel to support the allennlp model
@@ -317,10 +337,11 @@ def data_parallel(batch_group: List[TensorDict],
     """
     assert len(batch_group) <= len(cuda_devices)
 
-    moved = [nn_util.move_to_device(batch, device)
-             for batch, device in zip(batch_group, cuda_devices)]
+    moved = [
+        nn_util.move_to_device(batch, device) for batch, device in zip(batch_group, cuda_devices)
+    ]
 
-    used_device_ids = cuda_devices[:len(moved)]
+    used_device_ids = cuda_devices[: len(moved)]
     # Counterintuitively, it appears replicate expects the source device id to be the first element
     # in the device id list. See torch.cuda.comm.broadcast_coalesced, which is called indirectly.
     replicas = replicate(model, used_device_ids)
@@ -332,28 +353,34 @@ def data_parallel(batch_group: List[TensorDict],
 
     # Only the 'loss' is needed.
     # a (num_gpu, ) tensor with loss on each GPU
-    losses = gather([output['loss'].unsqueeze(0) for output in outputs], used_device_ids[0], 0)
-    return {'loss': losses.mean()}
+    losses = gather([output["loss"].unsqueeze(0) for output in outputs], used_device_ids[0], 0)
+    return {"loss": losses.mean()}
+
 
 def enable_gradient_clipping(model: Model, grad_clipping: Optional[float]) -> None:
     if grad_clipping is not None:
         for parameter in model.parameters():
             if parameter.requires_grad:
-                parameter.register_hook(lambda grad: nn_util.clamp_tensor(grad,
-                                                                          minimum=-grad_clipping,
-                                                                          maximum=grad_clipping))
+                parameter.register_hook(
+                    lambda grad: nn_util.clamp_tensor(
+                        grad, minimum=-grad_clipping, maximum=grad_clipping
+                    )
+                )
+
 
 def rescale_gradients(model: Model, grad_norm: Optional[float] = None) -> Optional[float]:
     """
     Performs gradient rescaling. Is a no-op if gradient rescaling is not enabled.
     """
     if grad_norm:
-        parameters_to_clip = [p for p in model.parameters()
-                              if p.grad is not None]
+        parameters_to_clip = [p for p in model.parameters() if p.grad is not None]
         return sparse_clip_norm(parameters_to_clip, grad_norm)
     return None
 
-def get_metrics(model: Model, total_loss: float, num_batches: int, reset: bool = False) -> Dict[str, float]:
+
+def get_metrics(
+    model: Model, total_loss: float, num_batches: int, reset: bool = False
+) -> Dict[str, float]:
     """
     Gets the metrics but sets ``"loss"`` to
     the total loss divided by the ``num_batches`` so that
@@ -364,18 +391,18 @@ def get_metrics(model: Model, total_loss: float, num_batches: int, reset: bool =
     return metrics
 
 
-def evaluate(model: Model,
-             instances: Iterable[Instance],
-             data_iterator: DataIterator,
-             cuda_device: int,
-             batch_weight_key: str) -> Dict[str, Any]:
+def evaluate(
+    model: Model,
+    instances: Iterable[Instance],
+    data_iterator: DataIterator,
+    cuda_device: int,
+    batch_weight_key: str,
+) -> Dict[str, Any]:
     check_for_gpu(cuda_device)
     with torch.no_grad():
         model.eval()
 
-        iterator = data_iterator(instances,
-                                 num_epochs=1,
-                                 shuffle=False)
+        iterator = data_iterator(instances, num_epochs=1, shuffle=False)
         logger.info("Iterating over dataset")
         generator_tqdm = Tqdm.tqdm(iterator, total=data_iterator.get_num_batches(instances))
 
@@ -408,31 +435,53 @@ def evaluate(model: Model,
                 # Report the average loss so far.
                 metrics["loss"] = total_loss / total_weight
 
-            if (not HasBeenWarned.tqdm_ignores_underscores and
-                        any(metric_name.startswith("_") for metric_name in metrics)):
-                logger.warning("Metrics with names beginning with \"_\" will "
-                               "not be logged to the tqdm progress bar.")
+            if not HasBeenWarned.tqdm_ignores_underscores and any(
+                metric_name.startswith("_") for metric_name in metrics
+            ):
+                logger.warning(
+                    'Metrics with names beginning with "_" will '
+                    "not be logged to the tqdm progress bar."
+                )
                 HasBeenWarned.tqdm_ignores_underscores = True
-            description = ', '.join(["%s: %.2f" % (name, value) for name, value
-                                     in metrics.items() if not name.startswith("_")]) + " ||"
+            description = (
+                ", ".join(
+                    [
+                        "%s: %.2f" % (name, value)
+                        for name, value in metrics.items()
+                        if not name.startswith("_")
+                    ]
+                )
+                + " ||"
+            )
             generator_tqdm.set_description(description, refresh=False)
 
         final_metrics = model.get_metrics(reset=True)
         if loss_count > 0:
             # Sanity check
             if loss_count != batch_count:
-                raise RuntimeError("The model you are trying to evaluate only sometimes " +
-                                   "produced a loss!")
+                raise RuntimeError(
+                    "The model you are trying to evaluate only sometimes " + "produced a loss!"
+                )
             final_metrics["loss"] = total_loss / total_weight
 
         return final_metrics
 
+
 def description_from_metrics(metrics: Dict[str, float]) -> str:
-    if (not HasBeenWarned.tqdm_ignores_underscores and
-                any(metric_name.startswith("_") for metric_name in metrics)):
-        logger.warning("Metrics with names beginning with \"_\" will "
-                       "not be logged to the tqdm progress bar.")
+    if not HasBeenWarned.tqdm_ignores_underscores and any(
+        metric_name.startswith("_") for metric_name in metrics
+    ):
+        logger.warning(
+            'Metrics with names beginning with "_" will ' "not be logged to the tqdm progress bar."
+        )
         HasBeenWarned.tqdm_ignores_underscores = True
-    return ', '.join(["%s: %.4f" % (name, value)
-                      for name, value in
-                      metrics.items() if not name.startswith("_")]) + " ||"
+    return (
+        ", ".join(
+            [
+                "%s: %.4f" % (name, value)
+                for name, value in metrics.items()
+                if not name.startswith("_")
+            ]
+        )
+        + " ||"
+    )

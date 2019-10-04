@@ -5,7 +5,8 @@ import torch
 from allennlp.state_machines.states import State
 from allennlp.state_machines.transition_functions import TransitionFunction
 
-SupervisionType = TypeVar('SupervisionType')  # pylint: disable=invalid-name
+SupervisionType = TypeVar("SupervisionType")
+
 
 class DecoderTrainer(Generic[SupervisionType]):
     """
@@ -21,10 +22,13 @@ class DecoderTrainer(Generic[SupervisionType]):
     for each timestep (as in, e.g., typical machine translation training regimes), there are way
     more efficient ways to do that than using this API.
     """
-    def decode(self,
-               initial_state: State,
-               transition_function: TransitionFunction,
-               supervision: SupervisionType) -> Dict[str, torch.Tensor]:
+
+    def decode(
+        self,
+        initial_state: State,
+        transition_function: TransitionFunction,
+        supervision: SupervisionType,
+    ) -> Dict[str, torch.Tensor]:
         """
         Takes an initial state object, a means of transitioning from state to state, and a
         supervision signal, and uses the supervision to train the transition function to pick

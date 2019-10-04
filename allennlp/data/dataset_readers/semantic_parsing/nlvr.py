@@ -15,7 +15,7 @@ from allennlp.semparse.domain_languages import NlvrLanguage
 from allennlp.semparse.domain_languages.nlvr_language import Box
 
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @DatasetReader.register("nlvr")
@@ -79,19 +79,27 @@ class NlvrDatasetReader(DatasetReader):
         If preparing data for a trainer that uses agendas, set this flag and the datset reader will
         output agendas.
     """
-    def __init__(self,
-                 lazy: bool = False,
-                 tokenizer: Tokenizer = None,
-                 sentence_token_indexers: Dict[str, TokenIndexer] = None,
-                 nonterminal_indexers: Dict[str, TokenIndexer] = None,
-                 terminal_indexers: Dict[str, TokenIndexer] = None,
-                 output_agendas: bool = True) -> None:
+
+    def __init__(
+        self,
+        lazy: bool = False,
+        tokenizer: Tokenizer = None,
+        sentence_token_indexers: Dict[str, TokenIndexer] = None,
+        nonterminal_indexers: Dict[str, TokenIndexer] = None,
+        terminal_indexers: Dict[str, TokenIndexer] = None,
+        output_agendas: bool = True,
+    ) -> None:
         super().__init__(lazy)
         self._tokenizer = tokenizer or WordTokenizer()
-        self._sentence_token_indexers = sentence_token_indexers or {"tokens": SingleIdTokenIndexer()}
-        self._nonterminal_indexers = nonterminal_indexers or {"tokens":
-                                                              SingleIdTokenIndexer("rule_labels")}
-        self._terminal_indexers = terminal_indexers or {"tokens": SingleIdTokenIndexer("rule_labels")}
+        self._sentence_token_indexers = sentence_token_indexers or {
+            "tokens": SingleIdTokenIndexer()
+        }
+        self._nonterminal_indexers = nonterminal_indexers or {
+            "tokens": SingleIdTokenIndexer("rule_labels")
+        }
+        self._terminal_indexers = terminal_indexers or {
+            "tokens": SingleIdTokenIndexer("rule_labels")
+        }
         self._output_agendas = output_agendas
 
     @overrides
@@ -124,21 +132,21 @@ class NlvrDatasetReader(DatasetReader):
                     # We are reading the processed file and these are the "correct" logical form
                     # sequences. See ``scripts/nlvr/get_nlvr_logical_forms.py``.
                     target_sequences = data["correct_sequences"]
-                instance = self.text_to_instance(sentence,
-                                                 structured_representations,
-                                                 labels,
-                                                 target_sequences,
-                                                 identifier)
+                instance = self.text_to_instance(
+                    sentence, structured_representations, labels, target_sequences, identifier
+                )
                 if instance is not None:
                     yield instance
 
     @overrides
-    def text_to_instance(self,  # type: ignore
-                         sentence: str,
-                         structured_representations: List[List[List[JsonDict]]],
-                         labels: List[str] = None,
-                         target_sequences: List[List[str]] = None,
-                         identifier: str = None) -> Instance:
+    def text_to_instance(
+        self,  # type: ignore
+        sentence: str,
+        structured_representations: List[List[List[JsonDict]]],
+        labels: List[str] = None,
+        target_sequences: List[List[str]] = None,
+        identifier: str = None,
+    ) -> Instance:
         """
         Parameters
         ----------
@@ -155,11 +163,13 @@ class NlvrDatasetReader(DatasetReader):
         identifier : ``str`` (optional)
             The identifier from the dataset if available.
         """
-        # pylint: disable=arguments-differ
+
         worlds = []
         for structured_representation in structured_representations:
-            boxes = {Box(object_list, box_id)
-                     for box_id, object_list in enumerate(structured_representation)}
+            boxes = {
+                Box(object_list, box_id)
+                for box_id, object_list in enumerate(structured_representation)
+            }
             worlds.append(NlvrLanguage(boxes))
         tokenized_sentence = self._tokenizer.tokenize(sentence)
         sentence_field = TextField(tokenized_sentence, self._sentence_token_indexers)
@@ -174,10 +184,12 @@ class NlvrDatasetReader(DatasetReader):
         action_field = ListField(production_rule_fields)
         worlds_field = ListField([MetadataField(world) for world in worlds])
         metadata: Dict[str, Any] = {"sentence_tokens": [x.text for x in tokenized_sentence]}
-        fields: Dict[str, Field] = {"sentence": sentence_field,
-                                    "worlds": worlds_field,
-                                    "actions": action_field,
-                                    "metadata": MetadataField(metadata)}
+        fields: Dict[str, Field] = {
+            "sentence": sentence_field,
+            "worlds": worlds_field,
+            "actions": action_field,
+            "metadata": MetadataField(metadata),
+        }
         if identifier is not None:
             fields["identifier"] = MetadataField(identifier)
         # Depending on the type of supervision used for training the parser, we may want either
@@ -187,8 +199,12 @@ class NlvrDatasetReader(DatasetReader):
         if target_sequences:
             action_sequence_fields: List[Field] = []
             for target_sequence in target_sequences:
-                index_fields = ListField([IndexField(instance_action_ids[action], action_field)
-                                          for action in target_sequence])
+                index_fields = ListField(
+                    [
+                        IndexField(instance_action_ids[action], action_field)
+                        for action in target_sequence
+                    ]
+                )
                 action_sequence_fields.append(index_fields)
                 # TODO(pradeep): Define a max length for this field.
             fields["target_action_sequences"] = ListField(action_sequence_fields)
@@ -198,12 +214,14 @@ class NlvrDatasetReader(DatasetReader):
             agenda = worlds[0].get_agenda_for_sentence(sentence)
             assert agenda, "No agenda found for sentence: %s" % sentence
             # agenda_field contains indices into actions.
-            agenda_field = ListField([IndexField(instance_action_ids[action], action_field)
-                                      for action in agenda])
+            agenda_field = ListField(
+                [IndexField(instance_action_ids[action], action_field) for action in agenda]
+            )
             fields["agenda"] = agenda_field
         if labels:
-            labels_field = ListField([LabelField(label, label_namespace='denotations')
-                                      for label in labels])
+            labels_field = ListField(
+                [LabelField(label, label_namespace="denotations") for label in labels]
+            )
             fields["labels"] = labels_field
 
         return Instance(fields)

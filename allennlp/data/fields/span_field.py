@@ -1,4 +1,3 @@
-# pylint: disable=access-member-before-definition
 from typing import Dict
 
 from overrides import overrides
@@ -24,31 +23,37 @@ class SpanField(Field[torch.Tensor]):
     sequence_field : ``SequenceField``, required.
         A field containing the sequence that this ``SpanField`` is a span inside.
     """
+
     def __init__(self, span_start: int, span_end: int, sequence_field: SequenceField) -> None:
         self.span_start = span_start
         self.span_end = span_end
         self.sequence_field = sequence_field
 
         if not isinstance(span_start, int) or not isinstance(span_end, int):
-            raise TypeError(f"SpanFields must be passed integer indices. Found span indices: "
-                            f"({span_start}, {span_end}) with types "
-                            f"({type(span_start)} {type(span_end)})")
+            raise TypeError(
+                f"SpanFields must be passed integer indices. Found span indices: "
+                f"({span_start}, {span_end}) with types "
+                f"({type(span_start)} {type(span_end)})"
+            )
         if span_start > span_end:
-            raise ValueError(f"span_start must be less than span_end, "
-                             f"but found ({span_start}, {span_end}).")
+            raise ValueError(
+                f"span_start must be less than span_end, " f"but found ({span_start}, {span_end})."
+            )
 
         if span_end > self.sequence_field.sequence_length() - 1:
-            raise ValueError(f"span_end must be <= len(sequence_length) - 1, but found "
-                             f"{span_end} and {self.sequence_field.sequence_length() - 1} respectively.")
+            raise ValueError(
+                f"span_end must be <= len(sequence_length) - 1, but found "
+                f"{span_end} and {self.sequence_field.sequence_length() - 1} respectively."
+            )
 
     @overrides
     def get_padding_lengths(self) -> Dict[str, int]:
-        # pylint: disable=no-self-use
+
         return {}
 
     @overrides
     def as_tensor(self, padding_lengths: Dict[str, int]) -> torch.Tensor:
-        # pylint: disable=unused-argument
+
         tensor = torch.LongTensor([self.span_start, self.span_end])
         return tensor
 

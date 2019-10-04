@@ -21,6 +21,7 @@ else:
 # https://github.com/tqdm/tqdm/issues/469
 _tqdm.monitor_interval = 0
 
+
 class Tqdm:
     # These defaults are the same as the argument defaults in tqdm.
     default_mininterval: float = 0.1
@@ -44,9 +45,6 @@ class Tqdm:
 
     @staticmethod
     def tqdm(*args, **kwargs):
-        new_kwargs = {
-                'mininterval': Tqdm.default_mininterval,
-                **kwargs
-        }
+        new_kwargs = {"mininterval": Tqdm.default_mininterval, **kwargs}
 
         return _tqdm(*args, **new_kwargs)

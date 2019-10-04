@@ -39,6 +39,7 @@ class Activation(Registrable):
     to think about masking when you do a softmax or other similar activation function, so it
     requires a different API.
     """
+
     def __call__(self, tensor: torch.Tensor) -> torch.Tensor:
         """
         This function is here just to make mypy happy.  We expect activation functions to follow
@@ -48,24 +49,24 @@ class Activation(Registrable):
         """
         raise NotImplementedError
 
+
 # There are no classes to decorate, so we hack these into Registrable._registry.
 # If you want to instantiate it, you can do like this:
 # Activation.by_name('relu')()
-# pylint: disable=protected-access
-Registrable._registry[Activation] = {  # type: ignore
-        "linear": lambda: lambda x: x,
-        "relu": torch.nn.ReLU,
-        "relu6": torch.nn.ReLU6,
-        "elu": torch.nn.ELU,
-        "prelu": torch.nn.PReLU,
-        "leaky_relu": torch.nn.LeakyReLU,
-        "threshold": torch.nn.Threshold,
-        "hardtanh": torch.nn.Hardtanh,
-        "sigmoid": torch.nn.Sigmoid,
-        "tanh": torch.nn.Tanh,
-        "log_sigmoid": torch.nn.LogSigmoid,
-        "softplus": torch.nn.Softplus,
-        "softshrink": torch.nn.Softshrink,
-        "softsign": torch.nn.Softsign,
-        "tanhshrink": torch.nn.Tanhshrink,
+Registrable._registry[Activation] = {
+    "linear": lambda: lambda x: x,  # type: ignore
+    "relu": torch.nn.ReLU,
+    "relu6": torch.nn.ReLU6,
+    "elu": torch.nn.ELU,
+    "prelu": torch.nn.PReLU,
+    "leaky_relu": torch.nn.LeakyReLU,
+    "threshold": torch.nn.Threshold,
+    "hardtanh": torch.nn.Hardtanh,
+    "sigmoid": torch.nn.Sigmoid,
+    "tanh": torch.nn.Tanh,
+    "log_sigmoid": torch.nn.LogSigmoid,
+    "softplus": torch.nn.Softplus,
+    "softshrink": torch.nn.Softshrink,
+    "softsign": torch.nn.Softsign,
+    "tanhshrink": torch.nn.Tanhshrink,
 }

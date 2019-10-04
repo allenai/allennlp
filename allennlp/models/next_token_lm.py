@@ -11,7 +11,7 @@ from allennlp.nn import util, InitializerApplicator
 from allennlp.training.metrics import Perplexity
 
 
-@Model.register('next_token_lm')
+@Model.register("next_token_lm")
 class NextTokenLM(Model):
     """
     The ``NextTokenLM`` embeds some input tokens, contextualizes them, then predicts the next word,
@@ -42,20 +42,27 @@ class NextTokenLM(Model):
         If specified, dropout is applied to the contextualized embeddings before computation of
         the softmax. The contextualized embeddings themselves are returned without dropout.
     """
-    def __init__(self,
-                 vocab: Vocabulary,
-                 text_field_embedder: TextFieldEmbedder,
-                 language_model_head: LanguageModelHead,
-                 contextualizer: Seq2SeqEncoder = None,
-                 target_namespace: str = 'bert',
-                 dropout: float = 0.0,
-                 initializer: InitializerApplicator = None) -> None:
+
+    def __init__(
+        self,
+        vocab: Vocabulary,
+        text_field_embedder: TextFieldEmbedder,
+        language_model_head: LanguageModelHead,
+        contextualizer: Seq2SeqEncoder = None,
+        target_namespace: str = "bert",
+        dropout: float = 0.0,
+        initializer: InitializerApplicator = None,
+    ) -> None:
         super().__init__(vocab)
         self._text_field_embedder = text_field_embedder
         self._contextualizer = contextualizer
         if contextualizer:
-            check_dimensions_match(text_field_embedder.get_output_dim(), contextualizer.get_input_dim(),
-                                   "text field embedder output", "contextualizer input")
+            check_dimensions_match(
+                text_field_embedder.get_output_dim(),
+                contextualizer.get_input_dim(),
+                "text field embedder output",
+                "contextualizer input",
+            )
         self._language_model_head = language_model_head
         self._target_namespace = target_namespace
         self._perplexity = Perplexity()
@@ -64,23 +71,21 @@ class NextTokenLM(Model):
         if initializer is not None:
             initializer(self)
 
-    def forward(self,  # type: ignore
-                tokens: Dict[str, torch.LongTensor],
-                target_ids: Dict[str, torch.LongTensor] = None) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
+    def forward(  # type: ignore
+        self, tokens: Dict[str, torch.LongTensor], target_ids: Dict[str, torch.LongTensor] = None
+    ) -> Dict[str, torch.Tensor]:
 
-         # Shape: (batch_size, num_tokens, embedding_dim)
+        # Shape: (batch_size, num_tokens, embedding_dim)
         embeddings = self._text_field_embedder(tokens)
         batch_size = embeddings.size(0)
 
-         # Shape: (batch_size, num_tokens, encoding_dim)
+        # Shape: (batch_size, num_tokens, encoding_dim)
         if self._contextualizer:
             mask = util.get_text_field_mask(embeddings)
             contextual_embeddings = self._contextualizer(embeddings, mask)
             final_embeddings = util.get_final_encoder_states(contextual_embeddings, mask)
         else:
             final_embeddings = embeddings[:, -1]
-
 
         target_logits = self._language_model_head(self._dropout(final_embeddings))
 
@@ -100,7 +105,7 @@ class NextTokenLM(Model):
             target_logits = target_logits.view(batch_size, vocab_size)
             loss = torch.nn.functional.cross_entropy(target_logits, targets)
             self._perplexity(loss)
-            output_dict['loss'] = loss
+            output_dict["loss"] = loss
 
         return output_dict
 
@@ -110,16 +115,28 @@ class NextTokenLM(Model):
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         top_words = []
-        for instance_indices in output_dict['top_indices']:
-            top_words.append([[self.vocab.get_token_from_index(index.item(),
-                                                               namespace=self._target_namespace)
-                               for index in instance_indices]])
+        for instance_indices in output_dict["top_indices"]:
+            top_words.append(
+                [
+                    [
+                        self.vocab.get_token_from_index(
+                            index.item(), namespace=self._target_namespace
+                        )
+                        for index in instance_indices
+                    ]
+                ]
+            )
             output_dict["words"] = top_words
         tokens = []
-        for instance_tokens in output_dict['token_ids']:
-            tokens.append([self.vocab.get_token_from_index(token_id.item(),
-                                                           namespace=self._target_namespace)
-                           for token_id in instance_tokens])
+        for instance_tokens in output_dict["token_ids"]:
+            tokens.append(
+                [
+                    self.vocab.get_token_from_index(
+                        token_id.item(), namespace=self._target_namespace
+                    )
+                    for token_id in instance_tokens
+                ]
+            )
         output_dict["tokens"] = tokens
 
         return output_dict

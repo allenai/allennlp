@@ -11,14 +11,17 @@ class MeanAbsoluteError(Metric):
     """
     This ``Metric`` calculates the mean absolute error (MAE) between two tensors.
     """
+
     def __init__(self) -> None:
         self._absolute_error = 0.0
         self._total_count = 0.0
 
-    def __call__(self,
-                 predictions: torch.Tensor,
-                 gold_labels: torch.Tensor,
-                 mask: Optional[torch.Tensor] = None):
+    def __call__(
+        self,
+        predictions: torch.Tensor,
+        gold_labels: torch.Tensor,
+        mask: Optional[torch.Tensor] = None,
+    ):
         """
         Parameters
         ----------

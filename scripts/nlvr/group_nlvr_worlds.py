@@ -5,7 +5,7 @@ appearing with four worlds), identified by the prefixes in identifiers. This scr
 worlds and corresponding labels together to enable training a parser with this information.
 """
 
-# pylint: disable=invalid-name
+
 import json
 import argparse
 from collections import defaultdict
@@ -27,7 +27,7 @@ def group_dataset(input_file: str, output_file: str) -> None:
     with open(output_file, "w") as output:
         for instance_group in instance_groups.values():
             json.dump(instance_group, output)
-            output.write('\n')
+            output.write("\n")
 
 
 if __name__ == "__main__":

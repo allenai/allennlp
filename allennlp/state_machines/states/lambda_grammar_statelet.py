@@ -55,12 +55,15 @@ class LambdaGrammarStatelet:
         ``type_declaraction.is_nonterminal`` here, or write your own function if that one doesn't
         work for your domain.
     """
-    def __init__(self,
-                 nonterminal_stack: List[str],
-                 lambda_stacks: Dict[Tuple[str, str], List[str]],
-                 valid_actions: Dict[str, Dict[str, Tuple[torch.Tensor, torch.Tensor, List[int]]]],
-                 context_actions: Dict[str, Tuple[torch.Tensor, torch.Tensor, int]],
-                 is_nonterminal: Callable[[str], bool]) -> None:
+
+    def __init__(
+        self,
+        nonterminal_stack: List[str],
+        lambda_stacks: Dict[Tuple[str, str], List[str]],
+        valid_actions: Dict[str, Dict[str, Tuple[torch.Tensor, torch.Tensor, List[int]]]],
+        context_actions: Dict[str, Tuple[torch.Tensor, torch.Tensor, int]],
+        is_nonterminal: Callable[[str], bool],
+    ) -> None:
         self._nonterminal_stack = nonterminal_stack
         self._lambda_stacks = lambda_stacks
         self._valid_actions = valid_actions
@@ -86,7 +89,7 @@ class LambdaGrammarStatelet:
                 production_string = f"{type_} -> {variable}"
                 context_actions.append(self._context_actions[production_string])
         if context_actions:
-            input_tensor, output_tensor, action_ids = actions['global']
+            input_tensor, output_tensor, action_ids = actions["global"]
             new_inputs = [input_tensor] + [x[0] for x in context_actions]
             input_tensor = torch.cat(new_inputs, dim=0)
             new_outputs = [output_tensor] + [x[1] for x in context_actions]
@@ -95,11 +98,11 @@ class LambdaGrammarStatelet:
             # We can't just reassign to actions['global'], because that would modify the state of
             # self._valid_actions.  Instead, we need to construct a new actions dictionary.
             new_actions = {**actions}
-            new_actions['global'] = (input_tensor, output_tensor, new_action_ids)
+            new_actions["global"] = (input_tensor, output_tensor, new_action_ids)
             actions = new_actions
         return actions
 
-    def take_action(self, production_rule: str) -> 'LambdaGrammarStatelet':
+    def take_action(self, production_rule: str) -> "LambdaGrammarStatelet":
         """
         Takes an action in the current grammar state, returning a new grammar state with whatever
         updates are necessary.  The production rule is assumed to be formatted as "LHS -> RHS".
@@ -114,9 +117,11 @@ class LambdaGrammarStatelet:
         ``action`` is ``d -> [<e,d>, e]``, the resulting stack will be ``["r", "<e,r>", "e",
         "<e,d>"]``.
         """
-        left_side, right_side = production_rule.split(' -> ')
-        assert self._nonterminal_stack[-1] == left_side, (f"Tried to expand {self._nonterminal_stack[-1]}"
-                                                          f"but got rule {left_side} -> {right_side}")
+        left_side, right_side = production_rule.split(" -> ")
+        assert self._nonterminal_stack[-1] == left_side, (
+            f"Tried to expand {self._nonterminal_stack[-1]}"
+            f"but got rule {left_side} -> {right_side}"
+        )
         assert all(self._lambda_stacks[key][-1] == left_side for key in self._lambda_stacks)
 
         new_stack = self._nonterminal_stack[:-1]
@@ -125,13 +130,13 @@ class LambdaGrammarStatelet:
         productions = self._get_productions_from_string(right_side)
         # Looking for lambda productions, but not for cells or columns with the word "lambda" in
         # them.
-        if 'lambda' in productions[0] and 'fb:' not in productions[0]:
+        if "lambda" in productions[0] and "fb:" not in productions[0]:
             production = productions[0]
             if production[0] == "'" and production[-1] == "'":
                 # The production rule with a lambda is typically "<t,d> -> ['lambda x', d]".  We
                 # need to strip the quotes.
                 production = production[1:-1]
-            lambda_variable = production.split(' ')[1]
+            lambda_variable = production.split(" ")[1]
             # The left side must be formatted as "<t,d>", where "t" is the type of the lambda
             # variable, and "d" is the return type of the lambda function.  We need to pull out the
             # "t" here.  TODO(mattg): this is pretty limiting, but I'm not sure how general we
@@ -148,14 +153,17 @@ class LambdaGrammarStatelet:
                     lambda_stack.append(production)
 
         # If any of the lambda stacks have now become empty, we remove them from our dictionary.
-        new_lambda_stacks = {key: new_lambda_stacks[key]
-                             for key in new_lambda_stacks if new_lambda_stacks[key]}
+        new_lambda_stacks = {
+            key: new_lambda_stacks[key] for key in new_lambda_stacks if new_lambda_stacks[key]
+        }
 
-        return LambdaGrammarStatelet(nonterminal_stack=new_stack,
-                                     lambda_stacks=new_lambda_stacks,
-                                     valid_actions=self._valid_actions,
-                                     context_actions=self._context_actions,
-                                     is_nonterminal=self._is_nonterminal)
+        return LambdaGrammarStatelet(
+            nonterminal_stack=new_stack,
+            lambda_stacks=new_lambda_stacks,
+            valid_actions=self._valid_actions,
+            context_actions=self._context_actions,
+            is_nonterminal=self._is_nonterminal,
+        )
 
     @staticmethod
     def _get_productions_from_string(production_string: str) -> List[str]:
@@ -164,19 +172,21 @@ class LambdaGrammarStatelet:
         production strings that are not lists, like '<e,d>', we return a single-element list:
         ['<e,d>'].
         """
-        if production_string[0] == '[':
-            return production_string[1:-1].split(', ')
+        if production_string[0] == "[":
+            return production_string[1:-1].split(", ")
         else:
             return [production_string]
 
     def __eq__(self, other):
         if isinstance(self, other.__class__):
-            # pylint: disable=protected-access
-            return all([
+
+            return all(
+                [
                     self._nonterminal_stack == other._nonterminal_stack,
                     self._lambda_stacks == other._lambda_stacks,
                     util.tensors_equal(self._valid_actions, other._valid_actions),
                     util.tensors_equal(self._context_actions, other._context_actions),
                     self._is_nonterminal == other._is_nonterminal,
-                    ])
+                ]
+            )
         return NotImplemented

@@ -12,13 +12,12 @@ class F1Measure(FBetaMeasure):
     the tag you are interested in, resulting in the Precision, Recall and F1 score being
     calculated for this tag only.
     """
+
     def __init__(self, positive_label: int) -> None:
-        super().__init__(beta=1,
-                         labels=[positive_label])
+        super().__init__(beta=1, labels=[positive_label])
         self._positive_label = positive_label
 
-    def get_metric(self,
-                   reset: bool = False) -> Tuple[float, float, float]:
+    def get_metric(self, reset: bool = False) -> Tuple[float, float, float]:
         """
         Returns
         -------
@@ -30,9 +29,9 @@ class F1Measure(FBetaMeasure):
         metric = super().get_metric(reset=reset)
         # Because we just care about the class `positive_label`
         # there is just one item in `precision`, `recall`, `fscore`
-        precision = metric['precision'][0]
-        recall = metric['recall'][0]
-        fscore = metric['fscore'][0]
+        precision = metric["precision"][0]
+        recall = metric["recall"][0]
+        fscore = metric["fscore"][0]
         return precision, recall, fscore
 
     @property

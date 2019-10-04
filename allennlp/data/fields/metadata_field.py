@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use
 from typing import Any, Dict, List, Mapping
 
 from overrides import overrides
@@ -24,6 +23,7 @@ class MetadataField(Field[DataArray], Mapping[str, Any]):
         Some object containing the metadata that you want to store.  It's likely that you'll want
         this to be a dictionary, but it could be anything you want.
     """
+
     def __init__(self, metadata: Any) -> None:
         self.metadata = metadata
 
@@ -51,11 +51,11 @@ class MetadataField(Field[DataArray], Mapping[str, Any]):
 
     @overrides
     def as_tensor(self, padding_lengths: Dict[str, int]) -> DataArray:
-        # pylint: disable=unused-argument
+
         return self.metadata  # type: ignore
 
     @overrides
-    def empty_field(self) -> 'MetadataField':
+    def empty_field(self) -> "MetadataField":
         return MetadataField(None)
 
     @overrides

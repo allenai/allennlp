@@ -11,8 +11,15 @@ import tarfile
 from overrides import overrides
 
 from allennlp.data.instance import Instance
-from allennlp.data.fields import (Field, TextField, MetadataField, ProductionRuleField,
-                                  ListField, IndexField, KnowledgeGraphField)
+from allennlp.data.fields import (
+    Field,
+    TextField,
+    MetadataField,
+    ProductionRuleField,
+    ListField,
+    IndexField,
+    KnowledgeGraphField,
+)
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.dataset_readers.semantic_parsing.wikitables import util as wikitables_util
 from allennlp.data.tokenizers import WordTokenizer
@@ -25,7 +32,7 @@ from allennlp.semparse.contexts import TableQuestionContext
 from allennlp.semparse.domain_languages import WikiTablesLanguage
 
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @DatasetReader.register("wikitables")
@@ -95,25 +102,30 @@ class WikiTablesDatasetReader(DatasetReader):
         Should we output agenda fields? This needs to be true if you want to train a coverage based
         parser.
     """
-    def __init__(self,
-                 lazy: bool = False,
-                 tables_directory: str = None,
-                 offline_logical_forms_directory: str = None,
-                 max_offline_logical_forms: int = 10,
-                 keep_if_no_logical_forms: bool = False,
-                 tokenizer: Tokenizer = None,
-                 question_token_indexers: Dict[str, TokenIndexer] = None,
-                 table_token_indexers: Dict[str, TokenIndexer] = None,
-                 use_table_for_vocab: bool = False,
-                 max_table_tokens: int = None,
-                 output_agendas: bool = False) -> None:
+
+    def __init__(
+        self,
+        lazy: bool = False,
+        tables_directory: str = None,
+        offline_logical_forms_directory: str = None,
+        max_offline_logical_forms: int = 10,
+        keep_if_no_logical_forms: bool = False,
+        tokenizer: Tokenizer = None,
+        question_token_indexers: Dict[str, TokenIndexer] = None,
+        table_token_indexers: Dict[str, TokenIndexer] = None,
+        use_table_for_vocab: bool = False,
+        max_table_tokens: int = None,
+        output_agendas: bool = False,
+    ) -> None:
         super().__init__(lazy=lazy)
         self._tables_directory = tables_directory
         self._offline_logical_forms_directory = offline_logical_forms_directory
         self._max_offline_logical_forms = max_offline_logical_forms
         self._keep_if_no_logical_forms = keep_if_no_logical_forms
         self._tokenizer = tokenizer or WordTokenizer(SpacyWordSplitter(pos_tags=True))
-        self._question_token_indexers = question_token_indexers or {"tokens": SingleIdTokenIndexer()}
+        self._question_token_indexers = question_token_indexers or {
+            "tokens": SingleIdTokenIndexer()
+        }
         self._table_token_indexers = table_token_indexers or self._question_token_indexers
         self._use_table_for_vocab = use_table_for_vocab
         self._max_table_tokens = max_table_tokens
@@ -127,18 +139,24 @@ class WikiTablesDatasetReader(DatasetReader):
             tarball_with_all_lfs: str = None
             for filename in os.listdir(self._offline_logical_forms_directory):
                 if filename.endswith(".tar.gz"):
-                    tarball_with_all_lfs = os.path.join(self._offline_logical_forms_directory,
-                                                        filename)
+                    tarball_with_all_lfs = os.path.join(
+                        self._offline_logical_forms_directory, filename
+                    )
                     break
             if tarball_with_all_lfs is not None:
-                logger.info(f"Found a tarball in offline logical forms directory: {tarball_with_all_lfs}")
-                logger.info("Assuming it contains logical forms for all questions and un-taring it.")
+                logger.info(
+                    f"Found a tarball in offline logical forms directory: {tarball_with_all_lfs}"
+                )
+                logger.info(
+                    "Assuming it contains logical forms for all questions and un-taring it."
+                )
                 # If you're running this with beaker, the input directory will be read-only and we
                 # cannot untar the files in the directory itself. So we will do so in /tmp, but that
                 # means the new offline logical forms directory will be /tmp.
                 self._offline_logical_forms_directory = "/tmp/"
-                tarfile.open(tarball_with_all_lfs,
-                             mode='r:gz').extractall(path=self._offline_logical_forms_directory)
+                tarfile.open(tarball_with_all_lfs, mode="r:gz").extractall(
+                    path=self._offline_logical_forms_directory
+                )
         with open(file_path, "r") as data_file:
             num_missing_logical_forms = 0
             num_lines = 0
@@ -151,18 +169,22 @@ class WikiTablesDatasetReader(DatasetReader):
                 parsed_info = wikitables_util.parse_example_line(line)
                 question = parsed_info["question"]
                 # We want the tagged file, but the ``*.examples`` files typically point to CSV.
-                table_filename = os.path.join(self._tables_directory,
-                                              parsed_info["table_filename"].replace("csv", "tagged"))
+                table_filename = os.path.join(
+                    self._tables_directory, parsed_info["table_filename"].replace("csv", "tagged")
+                )
                 if self._offline_logical_forms_directory:
-                    logical_forms_filename = os.path.join(self._offline_logical_forms_directory,
-                                                          parsed_info["id"] + '.gz')
+                    logical_forms_filename = os.path.join(
+                        self._offline_logical_forms_directory, parsed_info["id"] + ".gz"
+                    )
                     try:
                         logical_forms_file = gzip.open(logical_forms_filename)
                         logical_forms = []
                         for logical_form_line in logical_forms_file:
-                            logical_forms.append(logical_form_line.strip().decode('utf-8'))
+                            logical_forms.append(logical_form_line.strip().decode("utf-8"))
                     except FileNotFoundError:
-                        logger.debug(f'Missing search output for instance {parsed_info["id"]}; skipping...')
+                        logger.debug(
+                            f'Missing search output for instance {parsed_info["id"]}; skipping...'
+                        )
                         logical_forms = None
                         num_missing_logical_forms += 1
                         if not self._keep_if_no_logical_forms:
@@ -171,23 +193,29 @@ class WikiTablesDatasetReader(DatasetReader):
                     logical_forms = None
 
                 table_lines = [line.split("\t") for line in open(table_filename).readlines()]
-                instance = self.text_to_instance(question=question,
-                                                 table_lines=table_lines,
-                                                 target_values=parsed_info["target_values"],
-                                                 offline_search_output=logical_forms)
+                instance = self.text_to_instance(
+                    question=question,
+                    table_lines=table_lines,
+                    target_values=parsed_info["target_values"],
+                    offline_search_output=logical_forms,
+                )
                 if instance is not None:
                     num_instances += 1
                     yield instance
 
         if self._offline_logical_forms_directory:
-            logger.info(f"Missing logical forms for {num_missing_logical_forms} out of {num_lines} instances")
+            logger.info(
+                f"Missing logical forms for {num_missing_logical_forms} out of {num_lines} instances"
+            )
             logger.info(f"Kept {num_instances} instances")
 
-    def text_to_instance(self,  # type: ignore
-                         question: str,
-                         table_lines: List[List[str]],
-                         target_values: List[str] = None,
-                         offline_search_output: List[str] = None) -> Instance:
+    def text_to_instance(  # type: ignore
+        self,
+        question: str,
+        table_lines: List[List[str]],
+        target_values: List[str] = None,
+        offline_search_output: List[str] = None,
+    ) -> Instance:
         """
         Reads text inputs and makes an instance. We pass the ``table_lines`` to ``TableQuestionContext``, and that
         method accepts this field either as lines from CoreNLP processed tagged files that come with the dataset,
@@ -205,7 +233,7 @@ class WikiTablesDatasetReader(DatasetReader):
         offline_search_output : ``List[str]``, optional
             List of logical forms, produced by offline search. Not required during test.
         """
-        # pylint: disable=arguments-differ
+
         tokenized_question = self._tokenizer.tokenize(question.lower())
         question_field = TextField(tokenized_question, self._question_token_indexers)
         metadata: Dict[str, Any] = {"question_tokens": [x.text for x in tokenized_question]}
@@ -214,35 +242,41 @@ class WikiTablesDatasetReader(DatasetReader):
         world_field = MetadataField(world)
         # Note: Not passing any featre extractors when instantiating the field below. This will make
         # it use all the available extractors.
-        table_field = KnowledgeGraphField(table_context.get_table_knowledge_graph(),
-                                          tokenized_question,
-                                          self._table_token_indexers,
-                                          tokenizer=self._tokenizer,
-                                          include_in_vocab=self._use_table_for_vocab,
-                                          max_table_tokens=self._max_table_tokens)
+        table_field = KnowledgeGraphField(
+            table_context.get_table_knowledge_graph(),
+            tokenized_question,
+            self._table_token_indexers,
+            tokenizer=self._tokenizer,
+            include_in_vocab=self._use_table_for_vocab,
+            max_table_tokens=self._max_table_tokens,
+        )
         production_rule_fields: List[Field] = []
         for production_rule in world.all_possible_productions():
-            _, rule_right_side = production_rule.split(' -> ')
+            _, rule_right_side = production_rule.split(" -> ")
             is_global_rule = not world.is_instance_specific_entity(rule_right_side)
             field = ProductionRuleField(production_rule, is_global_rule=is_global_rule)
             production_rule_fields.append(field)
         action_field = ListField(production_rule_fields)
 
-        fields = {'question': question_field,
-                  'metadata': MetadataField(metadata),
-                  'table': table_field,
-                  'world': world_field,
-                  'actions': action_field}
+        fields = {
+            "question": question_field,
+            "metadata": MetadataField(metadata),
+            "table": table_field,
+            "world": world_field,
+            "actions": action_field,
+        }
 
         if target_values is not None:
             target_values_field = MetadataField(target_values)
-            fields['target_values'] = target_values_field
+            fields["target_values"] = target_values_field
 
         # We'll make each target action sequence a List[IndexField], where the index is into
         # the action list we made above.  We need to ignore the type here because mypy doesn't
         # like `action.rule` - it's hard to tell mypy that the ListField is made up of
         # ProductionRuleFields.
-        action_map = {action.rule: i for i, action in enumerate(action_field.field_list)}  # type: ignore
+        action_map = {
+            action.rule: i for i, action in enumerate(action_field.field_list)  # type: ignore
+        }
         if offline_search_output:
             action_sequence_fields: List[Field] = []
             for logical_form in offline_search_output:
@@ -253,18 +287,18 @@ class WikiTablesDatasetReader(DatasetReader):
                         index_fields.append(IndexField(action_map[production_rule], action_field))
                     action_sequence_fields.append(ListField(index_fields))
                 except ParsingError as error:
-                    logger.debug(f'Parsing error: {error.message}, skipping logical form')
-                    logger.debug(f'Question was: {question}')
-                    logger.debug(f'Logical form was: {logical_form}')
-                    logger.debug(f'Table info was: {table_lines}')
+                    logger.debug(f"Parsing error: {error.message}, skipping logical form")
+                    logger.debug(f"Question was: {question}")
+                    logger.debug(f"Logical form was: {logical_form}")
+                    logger.debug(f"Table info was: {table_lines}")
                     continue
                 except KeyError as error:
-                    logger.debug(f'Missing production rule: {error.args}, skipping logical form')
-                    logger.debug(f'Question was: {question}')
-                    logger.debug(f'Table info was: {table_lines}')
-                    logger.debug(f'Logical form was: {logical_form}')
+                    logger.debug(f"Missing production rule: {error.args}, skipping logical form")
+                    logger.debug(f"Question was: {question}")
+                    logger.debug(f"Table info was: {table_lines}")
+                    logger.debug(f"Logical form was: {logical_form}")
                     continue
-                except:
+                except:  # noqa
                     logger.error(logical_form)
                     raise
                 if len(action_sequence_fields) >= self._max_offline_logical_forms:
@@ -277,12 +311,12 @@ class WikiTablesDatasetReader(DatasetReader):
                 # _dev_ and _test_ instances, too, so your metrics could be over-estimates on the
                 # full test data.
                 return None
-            fields['target_action_sequences'] = ListField(action_sequence_fields)
+            fields["target_action_sequences"] = ListField(action_sequence_fields)
         if self._output_agendas:
             agenda_index_fields: List[Field] = []
             for agenda_string in world.get_agenda(conservative=True):
                 agenda_index_fields.append(IndexField(action_map[agenda_string], action_field))
             if not agenda_index_fields:
                 agenda_index_fields = [IndexField(-1, action_field)]
-            fields['agenda'] = ListField(agenda_index_fields)
+            fields["agenda"] = ListField(agenda_index_fields)
         return Instance(fields)

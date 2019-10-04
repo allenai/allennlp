@@ -10,6 +10,7 @@ class FeedForwardEncoder(Seq2SeqEncoder):
     """
     This class applies the `FeedForward` to each item in sequences.
     """
+
     def __init__(self, feedforward: FeedForward) -> None:
         super().__init__()
         self._feedforward = feedforward
@@ -27,9 +28,7 @@ class FeedForwardEncoder(Seq2SeqEncoder):
         return False
 
     @overrides
-    def forward(self,  # pylint: disable=arguments-differ
-                inputs: torch.Tensor,
-                mask: torch.LongTensor = None) -> torch.Tensor:
+    def forward(self, inputs: torch.Tensor, mask: torch.LongTensor = None) -> torch.Tensor:
         """
         Parameters
         ----------

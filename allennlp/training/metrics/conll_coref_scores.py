@@ -8,17 +8,20 @@ import torch
 
 from allennlp.training.metrics.metric import Metric
 
+
 @Metric.register("conll_coref_scores")
 class ConllCorefScores(Metric):
     def __init__(self) -> None:
         self.scorers = [Scorer(m) for m in (Scorer.muc, Scorer.b_cubed, Scorer.ceafe)]
 
     @overrides
-    def __call__(self,  # type: ignore
-                 top_spans: torch.Tensor,
-                 antecedent_indices: torch.Tensor,
-                 predicted_antecedents: torch.Tensor,
-                 metadata_list: List[Dict[str, Any]]):
+    def __call__(
+        self,  # type: ignore
+        top_spans: torch.Tensor,
+        antecedent_indices: torch.Tensor,
+        predicted_antecedents: torch.Tensor,
+        metadata_list: List[Dict[str, Any]],
+    ):
         """
         Parameters
         ----------
@@ -37,22 +40,25 @@ class ConllCorefScores(Metric):
             A metadata dictionary for each instance in the batch.  We use the "clusters" key from
             this dictionary, which has the annotated gold coreference clusters for that instance.
         """
-        top_spans, antecedent_indices, predicted_antecedents = self.unwrap_to_tensors(top_spans,
-                                                                                      antecedent_indices,
-                                                                                      predicted_antecedents)
+        top_spans, antecedent_indices, predicted_antecedents = self.unwrap_to_tensors(
+            top_spans, antecedent_indices, predicted_antecedents
+        )
         for i, metadata in enumerate(metadata_list):
             gold_clusters, mention_to_gold = self.get_gold_clusters(metadata["clusters"])
-            predicted_clusters, mention_to_predicted = self.get_predicted_clusters(top_spans[i],
-                                                                                   antecedent_indices,
-                                                                                   predicted_antecedents[i])
+            predicted_clusters, mention_to_predicted = self.get_predicted_clusters(
+                top_spans[i], antecedent_indices, predicted_antecedents[i]
+            )
             for scorer in self.scorers:
-                scorer.update(predicted_clusters, gold_clusters, mention_to_predicted, mention_to_gold)
+                scorer.update(
+                    predicted_clusters, gold_clusters, mention_to_predicted, mention_to_gold
+                )
 
     @overrides
     def get_metric(self, reset: bool = False) -> Tuple[float, float, float]:
         metrics = (lambda e: e.get_precision(), lambda e: e.get_recall(), lambda e: e.get_f1())
-        precision, recall, f1_score = tuple(sum(metric(e) for e in self.scorers) / len(self.scorers)
-                                            for metric in metrics)
+        precision, recall, f1_score = tuple(
+            sum(metric(e) for e in self.scorers) / len(self.scorers) for metric in metrics
+        )
         if reset:
             self.reset()
         return precision, recall, f1_score
@@ -71,11 +77,13 @@ class ConllCorefScores(Metric):
         return gold_clusters, mention_to_gold
 
     @staticmethod
-    def get_predicted_clusters(top_spans: torch.Tensor,
-                               antecedent_indices: torch.Tensor,
-                               predicted_antecedents: torch.Tensor) -> Tuple[List[Tuple[Tuple[int, int], ...]],
-                                                                             Dict[Tuple[int, int],
-                                                                                  Tuple[Tuple[int, int], ...]]]:
+    def get_predicted_clusters(
+        top_spans: torch.Tensor,
+        antecedent_indices: torch.Tensor,
+        predicted_antecedents: torch.Tensor,
+    ) -> Tuple[
+        List[Tuple[Tuple[int, int], ...]], Dict[Tuple[int, int], Tuple[Tuple[int, int], ...]]
+    ]:
         # Pytorch 0.4 introduced scalar tensors, so our calls to tuple() and such below don't
         # actually give ints unless we convert to numpy first.  So we do that here.
         top_spans = top_spans.numpy()  # (num_spans, 2)
@@ -111,9 +119,9 @@ class ConllCorefScores(Metric):
         final_clusters = [tuple(cluster) for cluster in clusters]
         # Return a mapping of each mention to the cluster containing it.
         mention_to_cluster: Dict[Tuple[int, int], Tuple[Tuple[int, int], ...]] = {
-                mention: final_clusters[cluster_id]
-                for mention, cluster_id in predicted_clusters_to_ids.items()
-                }
+            mention: final_clusters[cluster_id]
+            for mention, cluster_id in predicted_clusters_to_ids.items()
+        }
 
         return final_clusters, mention_to_cluster
 
@@ -122,6 +130,7 @@ class Scorer:
     """
     Mostly borrowed from <https://github.com/clarkkev/deep-coref/blob/master/evaluation.py>
     """
+
     def __init__(self, metric):
         self.precision_numerator = 0
         self.precision_denominator = 0
@@ -130,7 +139,7 @@ class Scorer:
         self.metric = metric
 
     def update(self, predicted, gold, mention_to_predicted, mention_to_gold):
-        if self.metric == self.ceafe:  # pylint: disable=comparison-with-callable
+        if self.metric == self.ceafe:
             p_num, p_den, r_num, r_den = self.metric(predicted, gold)
         else:
             p_num, p_den = self.metric(predicted, mention_to_gold)
@@ -141,10 +150,16 @@ class Scorer:
         self.recall_denominator += r_den
 
     def get_f1(self):
-        precision = 0 if self.precision_denominator == 0 else \
-            self.precision_numerator / float(self.precision_denominator)
-        recall = 0 if self.recall_denominator == 0 else \
-            self.recall_numerator / float(self.recall_denominator)
+        precision = (
+            0
+            if self.precision_denominator == 0
+            else self.precision_numerator / float(self.precision_denominator)
+        )
+        recall = (
+            0
+            if self.recall_denominator == 0
+            else self.recall_numerator / float(self.recall_denominator)
+        )
         return 0 if precision + recall == 0 else 2 * precision * recall / (precision + recall)
 
     def get_recall(self):
@@ -210,8 +225,11 @@ class Scorer:
         Subroutine for ceafe. Computes the mention F measure between gold and
         predicted mentions in a cluster.
         """
-        return 2 * len([mention for mention in gold_clustering if mention in predicted_clustering]) \
-               / float(len(gold_clustering) + len(predicted_clustering))
+        return (
+            2
+            * len([mention for mention in gold_clustering if mention in predicted_clustering])
+            / float(len(gold_clustering) + len(predicted_clustering))
+        )
 
     @staticmethod
     def ceafe(clusters, gold_clusters):

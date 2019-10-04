@@ -35,10 +35,13 @@ class BertPooler(Seq2VecEncoder):
     dropout : ``float``, optional, (default = 0.0)
         Amount of dropout to apply after pooling
     """
-    def __init__(self,
-                 pretrained_model: Union[str, BertModel],
-                 requires_grad: bool = True,
-                 dropout: float = 0.0) -> None:
+
+    def __init__(
+        self,
+        pretrained_model: Union[str, BertModel],
+        requires_grad: bool = True,
+        dropout: float = 0.0,
+    ) -> None:
         super().__init__()
 
         if isinstance(pretrained_model, str):
@@ -61,7 +64,7 @@ class BertPooler(Seq2VecEncoder):
     def get_output_dim(self) -> int:
         return self._embedding_dim
 
-    def forward(self, tokens: torch.Tensor, mask: torch.Tensor = None):  # pylint: disable=arguments-differ,unused-argument
+    def forward(self, tokens: torch.Tensor, mask: torch.Tensor = None):
         pooled = self.pooler(tokens)
         pooled = self._dropout(pooled)
         return pooled

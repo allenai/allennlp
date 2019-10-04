@@ -8,15 +8,16 @@ from allennlp.training.metrics.metric import Metric
 
 @Metric.register("entropy")
 class Entropy(Metric):
-
     def __init__(self) -> None:
         self._entropy = 0.0
         self._count = 0
 
     @overrides
-    def __call__(self,  # type: ignore
-                 logits: torch.Tensor,
-                 mask: Optional[torch.Tensor] = None):
+    def __call__(
+        self,  # type: ignore
+        logits: torch.Tensor,
+        mask: Optional[torch.Tensor] = None,
+    ):
         """
         Parameters
         ----------
@@ -32,7 +33,7 @@ class Entropy(Metric):
 
         log_probs = torch.nn.functional.log_softmax(logits, dim=-1)
         probabilities = torch.exp(log_probs) * mask.unsqueeze(-1)
-        weighted_negative_likelihood = - log_probs * probabilities
+        weighted_negative_likelihood = -log_probs * probabilities
         entropy = weighted_negative_likelihood.sum(-1)
 
         self._entropy += entropy.sum() / mask.sum()

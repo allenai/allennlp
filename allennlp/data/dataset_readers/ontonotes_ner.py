@@ -13,13 +13,15 @@ from allennlp.data.tokenizers import Token
 from allennlp.data.dataset_readers.dataset_utils import Ontonotes, OntonotesSentence, to_bioul
 
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
+
 
 def _normalize_word(word: str):
     if word in ("/.", "/?"):
         return word[1:]
     else:
         return word
+
 
 @DatasetReader.register("ontonotes_ner")
 class OntonotesNamedEntityRecognition(DatasetReader):
@@ -53,17 +55,22 @@ class OntonotesNamedEntityRecognition(DatasetReader):
     A ``Dataset`` of ``Instances`` for Fine-Grained NER.
 
     """
-    def __init__(self,
-                 token_indexers: Dict[str, TokenIndexer] = None,
-                 domain_identifier: str = None,
-                 coding_scheme: str = "BIO",
-                 lazy: bool = False) -> None:
+
+    def __init__(
+        self,
+        token_indexers: Dict[str, TokenIndexer] = None,
+        domain_identifier: str = None,
+        coding_scheme: str = "BIO",
+        lazy: bool = False,
+    ) -> None:
         super().__init__(lazy)
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._domain_identifier = domain_identifier
         if domain_identifier == "pt":
-            raise ConfigurationError("The Ontonotes 5.0 dataset does not contain annotations for"
-                                     " the old and new testament sections.")
+            raise ConfigurationError(
+                "The Ontonotes 5.0 dataset does not contain annotations for"
+                " the old and new testament sections."
+            )
         self._coding_scheme = coding_scheme
 
     @overrides
@@ -73,39 +80,48 @@ class OntonotesNamedEntityRecognition(DatasetReader):
         ontonotes_reader = Ontonotes()
         logger.info("Reading Fine-Grained NER instances from dataset files at: %s", file_path)
         if self._domain_identifier is not None:
-            logger.info("Filtering to only include file paths containing the %s domain", self._domain_identifier)
+            logger.info(
+                "Filtering to only include file paths containing the %s domain",
+                self._domain_identifier,
+            )
 
-        for sentence in self._ontonotes_subset(ontonotes_reader, file_path, self._domain_identifier):
+        for sentence in self._ontonotes_subset(
+            ontonotes_reader, file_path, self._domain_identifier
+        ):
             tokens = [Token(_normalize_word(t)) for t in sentence.words]
             yield self.text_to_instance(tokens, sentence.named_entities)
 
     @staticmethod
-    def _ontonotes_subset(ontonotes_reader: Ontonotes,
-                          file_path: str,
-                          domain_identifier: str) -> Iterable[OntonotesSentence]:
+    def _ontonotes_subset(
+        ontonotes_reader: Ontonotes, file_path: str, domain_identifier: str
+    ) -> Iterable[OntonotesSentence]:
         """
         Iterates over the Ontonotes 5.0 dataset using an optional domain identifier.
         If the domain identifier is present, only examples which contain the domain
         identifier in the file path are yielded.
         """
         for conll_file in ontonotes_reader.dataset_path_iterator(file_path):
-            if (domain_identifier is None or f"/{domain_identifier}/" in conll_file) and "/pt/" not in conll_file:
+            if (
+                domain_identifier is None or f"/{domain_identifier}/" in conll_file
+            ) and "/pt/" not in conll_file:
                 yield from ontonotes_reader.sentence_iterator(conll_file)
 
     @overrides
-    def text_to_instance(self, # type: ignore
-                         tokens: List[Token],
-                         ner_tags: List[str] = None) -> Instance:
+    def text_to_instance(
+        self,  # type: ignore
+        tokens: List[Token],
+        ner_tags: List[str] = None,
+    ) -> Instance:
         """
         We take `pre-tokenized` input here, because we don't have a tokenizer in this class.
         """
-        # pylint: disable=arguments-differ
+
         sequence = TextField(tokens, self._token_indexers)
-        instance_fields: Dict[str, Field] = {'tokens': sequence}
+        instance_fields: Dict[str, Field] = {"tokens": sequence}
         instance_fields["metadata"] = MetadataField({"words": [x.text for x in tokens]})
         # Add "tag label" to instance
         if ner_tags is not None:
             if self._coding_scheme == "BIOUL":
                 ner_tags = to_bioul(ner_tags, encoding="BIO")
-            instance_fields['tags'] = SequenceLabelField(ner_tags, sequence)
+            instance_fields["tags"] = SequenceLabelField(ner_tags, sequence)
         return Instance(instance_fields)

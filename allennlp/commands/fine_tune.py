@@ -61,8 +61,11 @@ from typing import Dict
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common import Params
-from allennlp.common.util import prepare_environment, prepare_global_logging, \
-                                 get_frozen_and_tunable_parameter_names
+from allennlp.common.util import (
+    prepare_environment,
+    prepare_global_logging,
+    get_frozen_and_tunable_parameter_names,
+)
 from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.models import load_archive, archive_model
 from allennlp.models.archival import CONFIG_NAME
@@ -71,62 +74,84 @@ from allennlp.training.trainer import Trainer
 from allennlp.training.util import datasets_from_params, evaluate
 from allennlp.common.checks import ConfigurationError
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 class FineTune(Subcommand):
-    def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
-        # pylint: disable=protected-access
+    def add_subparser(
+        self, name: str, parser: argparse._SubParsersAction
+    ) -> argparse.ArgumentParser:
+
         description = """Continues training a saved model on a new dataset."""
-        subparser = parser.add_parser(name,
-                                      description=description,
-                                      help='Continue training a model on a new dataset.')
+        subparser = parser.add_parser(
+            name, description=description, help="Continue training a model on a new dataset."
+        )
 
-        subparser.add_argument('-m', '--model-archive',
-                               required=True,
-                               type=str,
-                               help='path to the saved model archive from training on the original data')
+        subparser.add_argument(
+            "-m",
+            "--model-archive",
+            required=True,
+            type=str,
+            help="path to the saved model archive from training on the original data",
+        )
 
-        subparser.add_argument('-c', '--config-file',
-                               required=True,
-                               type=str,
-                               help='configuration file to use for training. Format is the same as '
-                               'for the "train" command, but the "model" section is ignored.')
+        subparser.add_argument(
+            "-c",
+            "--config-file",
+            required=True,
+            type=str,
+            help="configuration file to use for training. Format is the same as "
+            'for the "train" command, but the "model" section is ignored.',
+        )
 
-        subparser.add_argument('-s', '--serialization-dir',
-                               required=True,
-                               type=str,
-                               help='directory in which to save the fine-tuned model and its logs')
+        subparser.add_argument(
+            "-s",
+            "--serialization-dir",
+            required=True,
+            type=str,
+            help="directory in which to save the fine-tuned model and its logs",
+        )
 
-        subparser.add_argument('-o', '--overrides',
-                               type=str,
-                               default="",
-                               help='a JSON structure used to override the training configuration '
-                               '(only affects the config_file, _not_ the model_archive)')
+        subparser.add_argument(
+            "-o",
+            "--overrides",
+            type=str,
+            default="",
+            help="a JSON structure used to override the training configuration "
+            "(only affects the config_file, _not_ the model_archive)",
+        )
 
-        subparser.add_argument('--extend-vocab',
-                               action='store_true',
-                               default=False,
-                               help='if specified, we will use the instances in your new dataset to '
-                                    'extend your vocabulary. If pretrained-file was used to initialize '
-                                    'embedding layers, you may also need to pass --embedding-sources-mapping.')
-        subparser.add_argument('--file-friendly-logging',
-                               action='store_true',
-                               default=False,
-                               help='outputs tqdm status on separate lines and slows tqdm refresh rate')
+        subparser.add_argument(
+            "--extend-vocab",
+            action="store_true",
+            default=False,
+            help="if specified, we will use the instances in your new dataset to "
+            "extend your vocabulary. If pretrained-file was used to initialize "
+            "embedding layers, you may also need to pass --embedding-sources-mapping.",
+        )
+        subparser.add_argument(
+            "--file-friendly-logging",
+            action="store_true",
+            default=False,
+            help="outputs tqdm status on separate lines and slows tqdm refresh rate",
+        )
 
-        subparser.add_argument('--batch-weight-key',
-                               type=str,
-                               default="",
-                               help='If non-empty, name of metric used to weight the loss on a per-batch basis.')
+        subparser.add_argument(
+            "--batch-weight-key",
+            type=str,
+            default="",
+            help="If non-empty, name of metric used to weight the loss on a per-batch basis.",
+        )
 
-        subparser.add_argument('--embedding-sources-mapping',
-                               type=str,
-                               default="",
-                               help='a JSON dict defining mapping from embedding module path to embedding'
-                               'pretrained-file used during training. If not passed, and embedding needs to be '
-                               'extended, we will try to use the original file paths used during training. If '
-                               'they are not available we will use random vectors for embedding extension.')
+        subparser.add_argument(
+            "--embedding-sources-mapping",
+            type=str,
+            default="",
+            help="a JSON dict defining mapping from embedding module path to embedding"
+            "pretrained-file used during training. If not passed, and embedding needs to be "
+            "extended, we will try to use the original file paths used during training. If "
+            "they are not available we will use random vectors for embedding extension.",
+        )
         subparser.set_defaults(func=fine_tune_model_from_args)
 
         return subparser
@@ -136,24 +161,28 @@ def fine_tune_model_from_args(args: argparse.Namespace):
     """
     Just converts from an ``argparse.Namespace`` object to string paths.
     """
-    fine_tune_model_from_file_paths(model_archive_path=args.model_archive,
-                                    config_file=args.config_file,
-                                    serialization_dir=args.serialization_dir,
-                                    overrides=args.overrides,
-                                    extend_vocab=args.extend_vocab,
-                                    file_friendly_logging=args.file_friendly_logging,
-                                    batch_weight_key=args.batch_weight_key,
-                                    embedding_sources_mapping=args.embedding_sources_mapping)
+    fine_tune_model_from_file_paths(
+        model_archive_path=args.model_archive,
+        config_file=args.config_file,
+        serialization_dir=args.serialization_dir,
+        overrides=args.overrides,
+        extend_vocab=args.extend_vocab,
+        file_friendly_logging=args.file_friendly_logging,
+        batch_weight_key=args.batch_weight_key,
+        embedding_sources_mapping=args.embedding_sources_mapping,
+    )
 
 
-def fine_tune_model_from_file_paths(model_archive_path: str,
-                                    config_file: str,
-                                    serialization_dir: str,
-                                    overrides: str = "",
-                                    extend_vocab: bool = False,
-                                    file_friendly_logging: bool = False,
-                                    batch_weight_key: str = "",
-                                    embedding_sources_mapping: str = "") -> Model:
+def fine_tune_model_from_file_paths(
+    model_archive_path: str,
+    config_file: str,
+    serialization_dir: str,
+    overrides: str = "",
+    extend_vocab: bool = False,
+    file_friendly_logging: bool = False,
+    batch_weight_key: str = "",
+    embedding_sources_mapping: str = "",
+) -> Model:
     """
     A wrapper around :func:`fine_tune_model` which loads the model archive from a file.
 
@@ -186,22 +215,29 @@ def fine_tune_model_from_file_paths(model_archive_path: str,
     archive = load_archive(model_archive_path)
     params = Params.from_file(config_file, overrides)
 
-    embedding_sources: Dict[str, str] = json.loads(embedding_sources_mapping) if embedding_sources_mapping else {}
-    return fine_tune_model(model=archive.model,
-                           params=params,
-                           serialization_dir=serialization_dir,
-                           extend_vocab=extend_vocab,
-                           file_friendly_logging=file_friendly_logging,
-                           batch_weight_key=batch_weight_key,
-                           embedding_sources_mapping=embedding_sources)
+    embedding_sources: Dict[str, str] = json.loads(
+        embedding_sources_mapping
+    ) if embedding_sources_mapping else {}
+    return fine_tune_model(
+        model=archive.model,
+        params=params,
+        serialization_dir=serialization_dir,
+        extend_vocab=extend_vocab,
+        file_friendly_logging=file_friendly_logging,
+        batch_weight_key=batch_weight_key,
+        embedding_sources_mapping=embedding_sources,
+    )
 
-def fine_tune_model(model: Model,
-                    params: Params,
-                    serialization_dir: str,
-                    extend_vocab: bool = False,
-                    file_friendly_logging: bool = False,
-                    batch_weight_key: str = "",
-                    embedding_sources_mapping: Dict[str, str] = None) -> Model:
+
+def fine_tune_model(
+    model: Model,
+    params: Params,
+    serialization_dir: str,
+    extend_vocab: bool = False,
+    file_friendly_logging: bool = False,
+    batch_weight_key: str = "",
+    embedding_sources_mapping: Dict[str, str] = None,
+) -> Model:
     """
     Fine tunes the given model, using a set of parameters that is largely identical to those used
     for :func:`~allennlp.commands.train.train_model`, except that the ``model`` section is ignored,
@@ -232,8 +268,9 @@ def fine_tune_model(model: Model,
     """
     prepare_environment(params)
     if os.path.exists(serialization_dir) and os.listdir(serialization_dir):
-        raise ConfigurationError(f"Serialization directory ({serialization_dir}) "
-                                 f"already exists and is not empty.")
+        raise ConfigurationError(
+            f"Serialization directory ({serialization_dir}) " f"already exists and is not empty."
+        )
 
     os.makedirs(serialization_dir, exist_ok=True)
     prepare_global_logging(serialization_dir, file_friendly_logging)
@@ -242,14 +279,18 @@ def fine_tune_model(model: Model,
     with open(os.path.join(serialization_dir, CONFIG_NAME), "w") as param_file:
         json.dump(serialization_params, param_file, indent=4)
 
-    if params.pop('model', None):
-        logger.warning("You passed parameters for the model in your configuration file, but we "
-                       "are ignoring them, using instead the model parameters in the archive.")
+    if params.pop("model", None):
+        logger.warning(
+            "You passed parameters for the model in your configuration file, but we "
+            "are ignoring them, using instead the model parameters in the archive."
+        )
 
-    vocabulary_params = params.pop('vocabulary', {})
-    if vocabulary_params.get('directory_path', None):
-        logger.warning("You passed `directory_path` in parameters for the vocabulary in "
-                       "your configuration file, but it will be ignored. ")
+    vocabulary_params = params.pop("vocabulary", {})
+    if vocabulary_params.get("directory_path", None):
+        logger.warning(
+            "You passed `directory_path` in parameters for the vocabulary in "
+            "your configuration file, but it will be ignored. "
+        )
 
     all_datasets = datasets_from_params(params)
     vocab = model.vocab
@@ -261,11 +302,18 @@ def fine_tune_model(model: Model,
             if dataset not in all_datasets:
                 raise ConfigurationError(f"invalid 'dataset_for_vocab_creation' {dataset}")
 
-        logger.info("Extending model vocabulary using %s data.", ", ".join(datasets_for_vocab_creation))
-        vocab.extend_from_instances(vocabulary_params,
-                                    (instance for key, dataset in all_datasets.items()
-                                     for instance in dataset
-                                     if key in datasets_for_vocab_creation))
+        logger.info(
+            "Extending model vocabulary using %s data.", ", ".join(datasets_for_vocab_creation)
+        )
+        vocab.extend_from_instances(
+            vocabulary_params,
+            (
+                instance
+                for key, dataset in all_datasets.items()
+                for instance in dataset
+                if key in datasets_for_vocab_creation
+            ),
+        )
 
         model.extend_embedder_vocab(embedding_sources_mapping)
 
@@ -280,9 +328,9 @@ def fine_tune_model(model: Model,
     else:
         validation_iterator = None
 
-    train_data = all_datasets['train']
-    validation_data = all_datasets.get('validation')
-    test_data = all_datasets.get('test')
+    train_data = all_datasets["train"]
+    validation_data = all_datasets.get("validation")
+    test_data = all_datasets.get("test")
 
     trainer_params = params.pop("trainer")
     no_grad_regexes = trainer_params.pop("no_grad", ())
@@ -290,8 +338,7 @@ def fine_tune_model(model: Model,
         if any(re.search(regex, name) for regex in no_grad_regexes):
             parameter.requires_grad_(False)
 
-    frozen_parameter_names, tunable_parameter_names = \
-                   get_frozen_and_tunable_parameter_names(model)
+    frozen_parameter_names, tunable_parameter_names = get_frozen_and_tunable_parameter_names(model)
     logger.info("Following parameters are Frozen  (without gradient):")
     for name in frozen_parameter_names:
         logger.info(name)
@@ -301,43 +348,52 @@ def fine_tune_model(model: Model,
 
     trainer_type = trainer_params.pop("type", "default")
     if trainer_type == "default":
-        trainer = Trainer.from_params(model=model,
-                                      serialization_dir=serialization_dir,
-                                      iterator=iterator,
-                                      train_data=train_data,
-                                      validation_data=validation_data,
-                                      params=trainer_params,
-                                      validation_iterator=validation_iterator)
+        trainer = Trainer.from_params(
+            model=model,
+            serialization_dir=serialization_dir,
+            iterator=iterator,
+            train_data=train_data,
+            validation_data=validation_data,
+            params=trainer_params,
+            validation_iterator=validation_iterator,
+        )
     else:
         raise ConfigurationError("currently fine-tune only works with the default Trainer")
 
     evaluate_on_test = params.pop_bool("evaluate_on_test", False)
 
-    params.assert_empty('base train command')
+    params.assert_empty("base train command")
     try:
         metrics = trainer.train()
     except KeyboardInterrupt:
         # if we have completed an epoch, try to create a model archive.
         if os.path.exists(os.path.join(serialization_dir, _DEFAULT_WEIGHTS)):
-            logging.info("Fine-tuning interrupted by the user. Attempting to create "
-                         "a model archive using the current best epoch weights.")
+            logging.info(
+                "Fine-tuning interrupted by the user. Attempting to create "
+                "a model archive using the current best epoch weights."
+            )
             archive_model(serialization_dir, files_to_archive=params.files_to_archive)
         raise
 
     # Evaluate
     if test_data and evaluate_on_test:
         logger.info("The model will be evaluated using the best epoch weights.")
-        test_metrics = evaluate(model, test_data, validation_iterator or iterator,
-                                cuda_device=trainer._cuda_devices[0], # pylint: disable=protected-access,
-                                batch_weight_key=batch_weight_key)
+        test_metrics = evaluate(
+            model,
+            test_data,
+            validation_iterator or iterator,
+            cuda_device=trainer._cuda_devices[0],
+            batch_weight_key=batch_weight_key,
+        )
 
         for key, value in test_metrics.items():
             metrics["test_" + key] = value
 
     elif test_data:
-        logger.info("To evaluate on the test set after training, pass the "
-                    "'evaluate_on_test' flag, or use the 'allennlp evaluate' command.")
-
+        logger.info(
+            "To evaluate on the test set after training, pass the "
+            "'evaluate_on_test' flag, or use the 'allennlp evaluate' command."
+        )
 
     # Now tar up results
     archive_model(serialization_dir, files_to_archive=params.files_to_archive)

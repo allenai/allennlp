@@ -1,5 +1,3 @@
-# pylint: disable=unused-variable,arguments-differ
-
 # These should probably all live in separate files
 from typing import Set, Dict, TYPE_CHECKING
 import logging
@@ -13,7 +11,7 @@ from allennlp.training.callbacks.events import Events
 from allennlp.training.tensorboard_writer import TensorboardWriter
 
 if TYPE_CHECKING:
-    from allennlp.training.callback_trainer import CallbackTrainer  # pylint:disable=unused-import
+    from allennlp.training.callback_trainer import CallbackTrainer
 
 logger = logging.getLogger(__name__)
 
@@ -31,9 +29,8 @@ class LogToTensorboard(Callback):
         If provided, we'll log the average batch sizes to Tensorboard
         every this-many batches.
     """
-    def __init__(self,
-                 tensorboard: TensorboardWriter,
-                 log_batch_size_period: int = None) -> None:
+
+    def __init__(self, tensorboard: TensorboardWriter, log_batch_size_period: int = None) -> None:
         self.log_batch_size_period = log_batch_size_period
         self.tensorboard = tensorboard
 
@@ -44,9 +41,7 @@ class LogToTensorboard(Callback):
         self.param_updates: Dict[str, torch.Tensor] = {}
 
     @handle_event(Events.TRAINING_START)
-    def training_start(self, trainer: 'CallbackTrainer'):
-        # pylint: disable=protected-access
-
+    def training_start(self, trainer: "CallbackTrainer"):
         # This is an ugly hack to get the tensorboard instance to know about the trainer, because
         # the callbacks are defined before the trainer.
         # TODO: figure out a better way to handle this.
@@ -54,7 +49,7 @@ class LogToTensorboard(Callback):
 
         # Get histogram parameters
         self.histogram_parameters = set(
-                trainer.model.get_parameters_for_histogram_tensorboard_logging()
+            trainer.model.get_parameters_for_histogram_tensorboard_logging()
         )
 
         # Enable activation logging.
@@ -62,24 +57,29 @@ class LogToTensorboard(Callback):
             self.tensorboard.enable_activation_logging(trainer.model)
 
     @handle_event(Events.BATCH_START)
-    def copy_current_parameters(self, trainer: 'CallbackTrainer'):
+    def copy_current_parameters(self, trainer: "CallbackTrainer"):
         if self.tensorboard.should_log_histograms_this_batch():
             # Get the magnitude of parameter updates for logging
             # We need a copy of current parameters to compute magnitude of updates,
             # and copy them to CPU so large models won't go OOM on the GPU.
-            self.param_updates = {name: param.detach().cpu().clone()
-                                  for name, param in trainer.model.named_parameters()}
+            self.param_updates = {
+                name: param.detach().cpu().clone()
+                for name, param in trainer.model.named_parameters()
+            }
 
     @handle_event(Events.BATCH_END)
-    def batch_end_logging(self, trainer: 'CallbackTrainer'):
+    def batch_end_logging(self, trainer: "CallbackTrainer"):
         # Log parameter values to tensorboard
         if self.tensorboard.should_log_this_batch():
-            self.tensorboard.log_parameter_and_gradient_statistics(trainer.model, trainer.batch_grad_norm)
+            self.tensorboard.log_parameter_and_gradient_statistics(
+                trainer.model, trainer.batch_grad_norm
+            )
             self.tensorboard.log_learning_rates(trainer.model, trainer.optimizer)
 
             self.tensorboard.add_train_scalar("loss/loss_train", trainer.train_metrics["loss"])
-            self.tensorboard.log_metrics({"epoch_metrics/" + k: v for k, v in trainer.train_metrics.items()})
-
+            self.tensorboard.log_metrics(
+                {"epoch_metrics/" + k: v for k, v in trainer.train_metrics.items()}
+            )
 
         if self.log_batch_size_period:
             cur_batch = sum([training_util.get_batch_size(batch) for batch in trainer.batch_group])
@@ -93,29 +93,34 @@ class LogToTensorboard(Callback):
         if self.tensorboard.should_log_histograms_this_batch():
             for name, param in trainer.model.named_parameters():
                 self.param_updates[name].sub_(param.detach().cpu())
-                update_norm = torch.norm(self.param_updates[name].view(-1, ))
-                param_norm = torch.norm(param.view(-1, )).cpu()
-                self.tensorboard.add_train_scalar("gradient_update/" + name,
-                                                  update_norm / (param_norm + 1e-7))
+                update_norm = torch.norm(self.param_updates[name].view(-1))
+                param_norm = torch.norm(param.view(-1)).cpu()
+                self.tensorboard.add_train_scalar(
+                    "gradient_update/" + name, update_norm / (param_norm + 1e-7)
+                )
             self.param_updates.clear()
             self.tensorboard.log_histograms(trainer.model, self.histogram_parameters)
 
     @handle_event(Events.EPOCH_END)
-    def epoch_end_logging(self, trainer: 'CallbackTrainer'):
-        self.tensorboard.log_metrics(trainer.train_metrics,
-                                     val_metrics=trainer.val_metrics,
-                                     log_to_console=True,
-                                     epoch=trainer.epoch_number + 1)
+    def epoch_end_logging(self, trainer: "CallbackTrainer"):
+        self.tensorboard.log_metrics(
+            trainer.train_metrics,
+            val_metrics=trainer.val_metrics,
+            log_to_console=True,
+            epoch=trainer.epoch_number + 1,
+        )
 
     @handle_event(Events.TRAINING_END)
-    def training_end(self, trainer: 'CallbackTrainer'):
-        # pylint: disable=unused-argument
+    def training_end(self, trainer: "CallbackTrainer"):
+
         self.tensorboard.close()
 
     @classmethod
-    def from_params(cls, serialization_dir: str, params: Params) -> 'LogToTensorboard':  # type: ignore
+    def from_params(  # type: ignore
+        cls, serialization_dir: str, params: Params
+    ) -> "LogToTensorboard":
         log_batch_size_period = params.pop_int("log_batch_size_period", None)
-        tensorboard = TensorboardWriter.from_params(params=params,
-                                                    serialization_dir=serialization_dir,
-                                                    get_batch_num_total=lambda: None)
+        tensorboard = TensorboardWriter.from_params(
+            params=params, serialization_dir=serialization_dir, get_batch_num_total=lambda: None
+        )
         return LogToTensorboard(tensorboard, log_batch_size_period)

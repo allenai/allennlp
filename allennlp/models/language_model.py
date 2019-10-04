@@ -20,33 +20,31 @@ class _SoftmaxLoss(torch.nn.Module):
     to create logits over possible words and then returns the
     negative log likelihood.
     """
-    def __init__(self,
-                 num_words: int,
-                 embedding_dim: int) -> None:
+
+    def __init__(self, num_words: int, embedding_dim: int) -> None:
         super().__init__()
 
         # TODO(joelgrus): implement tie_embeddings (maybe)
         self.tie_embeddings = False
 
         self.softmax_w = torch.nn.Parameter(
-                torch.randn(embedding_dim, num_words) / np.sqrt(embedding_dim)
+            torch.randn(embedding_dim, num_words) / np.sqrt(embedding_dim)
         )
         self.softmax_b = torch.nn.Parameter(torch.zeros(num_words))
 
     def forward(self, embeddings: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
-        # pylint: disable=arguments-differ
+
         # embeddings is size (n, embedding_dim)
         # targets is (batch_size, ) with the correct class id
         # Does not do any count normalization / divide by batch size
         probs = torch.nn.functional.log_softmax(
-                torch.matmul(embeddings, self.softmax_w) + self.softmax_b,
-                dim=-1
+            torch.matmul(embeddings, self.softmax_w) + self.softmax_b, dim=-1
         )
 
         return torch.nn.functional.nll_loss(probs, targets.long(), reduction="sum")
 
 
-@Model.register('language_model')
+@Model.register("language_model")
 class LanguageModel(Model):
     """
     The ``LanguageModel`` applies a "contextualizing"
@@ -91,25 +89,29 @@ class LanguageModel(Model):
     regularizer : ``RegularizerApplicator``, optional (default=``None``)
         If provided, will be used to calculate the regularization penalty during training.
     """
-    def __init__(self,
-                 vocab: Vocabulary,
-                 text_field_embedder: TextFieldEmbedder,
-                 contextualizer: Seq2SeqEncoder,
-                 dropout: float = None,
-                 num_samples: int = None,
-                 sparse_embeddings: bool = False,
-                 bidirectional: bool = False,
-                 initializer: InitializerApplicator = None,
-                 regularizer: Optional[RegularizerApplicator] = None) -> None:
+
+    def __init__(
+        self,
+        vocab: Vocabulary,
+        text_field_embedder: TextFieldEmbedder,
+        contextualizer: Seq2SeqEncoder,
+        dropout: float = None,
+        num_samples: int = None,
+        sparse_embeddings: bool = False,
+        bidirectional: bool = False,
+        initializer: InitializerApplicator = None,
+        regularizer: Optional[RegularizerApplicator] = None,
+    ) -> None:
         super().__init__(vocab, regularizer)
         self._text_field_embedder = text_field_embedder
 
         if contextualizer.is_bidirectional() is not bidirectional:
             raise ConfigurationError(
-                    "Bidirectionality of contextualizer must match bidirectionality of "
-                    "language model. "
-                    f"Contextualizer bidirectional: {contextualizer.is_bidirectional()}, "
-                    f"language model bidirectional: {bidirectional}")
+                "Bidirectionality of contextualizer must match bidirectionality of "
+                "language model. "
+                f"Contextualizer bidirectional: {contextualizer.is_bidirectional()}, "
+                f"language model bidirectional: {bidirectional}"
+            )
 
         self._contextualizer = contextualizer
         self._bidirectional = bidirectional
@@ -123,16 +125,19 @@ class LanguageModel(Model):
 
         # TODO(joelgrus): more sampled softmax configuration options, as needed.
         if num_samples is not None:
-            self._softmax_loss = SampledSoftmaxLoss(num_words=vocab.get_vocab_size(),
-                                                    embedding_dim=self._forward_dim,
-                                                    num_samples=num_samples,
-                                                    sparse=sparse_embeddings)
+            self._softmax_loss = SampledSoftmaxLoss(
+                num_words=vocab.get_vocab_size(),
+                embedding_dim=self._forward_dim,
+                num_samples=num_samples,
+                sparse=sparse_embeddings,
+            )
         else:
-            self._softmax_loss = _SoftmaxLoss(num_words=vocab.get_vocab_size(),
-                                              embedding_dim=self._forward_dim)
+            self._softmax_loss = _SoftmaxLoss(
+                num_words=vocab.get_vocab_size(), embedding_dim=self._forward_dim
+            )
 
         # This buffer is now unused and exists only for backwards compatibility reasons.
-        self.register_buffer('_last_average_loss', torch.zeros(1))
+        self.register_buffer("_last_average_loss", torch.zeros(1))
 
         self._perplexity = Perplexity()
 
@@ -144,10 +149,9 @@ class LanguageModel(Model):
         if initializer is not None:
             initializer(self)
 
-    def _get_target_token_embeddings(self,
-                                     token_embeddings: torch.Tensor,
-                                     mask: torch.Tensor,
-                                     direction: int) -> torch.Tensor:
+    def _get_target_token_embeddings(
+        self, token_embeddings: torch.Tensor, mask: torch.Tensor, direction: int
+    ) -> torch.Tensor:
         # Need to shift the mask in the correct direction
         zero_col = token_embeddings.new_zeros(mask.size(0), 1).to(dtype=torch.bool)
         if direction == 0:
@@ -155,20 +159,26 @@ class LanguageModel(Model):
             shifted_mask = torch.cat([zero_col, mask[:, 0:-1]], dim=1)
         else:
             shifted_mask = torch.cat([mask[:, 1:], zero_col], dim=1)
-        return token_embeddings.masked_select(shifted_mask.unsqueeze(-1)).view(-1, self._forward_dim)
+        return token_embeddings.masked_select(shifted_mask.unsqueeze(-1)).view(
+            -1, self._forward_dim
+        )
 
-    def _compute_loss(self,
-                      lm_embeddings: torch.Tensor,
-                      token_embeddings: torch.Tensor,
-                      forward_targets: torch.Tensor,
-                      backward_targets: torch.Tensor = None) -> Tuple[torch.Tensor, torch.Tensor]:
+    def _compute_loss(
+        self,
+        lm_embeddings: torch.Tensor,
+        token_embeddings: torch.Tensor,
+        forward_targets: torch.Tensor,
+        backward_targets: torch.Tensor = None,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         # If bidirectional, lm_embeddings is shape (batch_size, timesteps, dim * 2)
         # If unidirectional, lm_embeddings is shape (batch_size, timesteps, dim)
         # forward_targets, backward_targets (None in the unidirectional case) are
         # shape (batch_size, timesteps) masked with 0
         if self._bidirectional:
             forward_embeddings, backward_embeddings = lm_embeddings.chunk(2, -1)
-            backward_loss = self._loss_helper(1, backward_embeddings, backward_targets, token_embeddings)
+            backward_loss = self._loss_helper(
+                1, backward_embeddings, backward_targets, token_embeddings
+            )
         else:
             forward_embeddings = lm_embeddings
             backward_loss = None
@@ -176,11 +186,13 @@ class LanguageModel(Model):
         forward_loss = self._loss_helper(0, forward_embeddings, forward_targets, token_embeddings)
         return forward_loss, backward_loss
 
-    def _loss_helper(self,  # pylint: disable=inconsistent-return-statements
-                     direction: int,
-                     direction_embeddings: torch.Tensor,
-                     direction_targets: torch.Tensor,
-                     token_embeddings: torch.Tensor) -> Tuple[int, int]:
+    def _loss_helper(
+        self,
+        direction: int,
+        direction_embeddings: torch.Tensor,
+        direction_targets: torch.Tensor,
+        token_embeddings: torch.Tensor,
+    ) -> Tuple[int, int]:
         mask = direction_targets > 0
         # we need to subtract 1 to undo the padding id since the softmax
         # does not include a padding dimension
@@ -189,9 +201,9 @@ class LanguageModel(Model):
         non_masked_targets = direction_targets.masked_select(mask) - 1
 
         # shape (batch_size * timesteps, embedding_dim)
-        non_masked_embeddings = direction_embeddings.masked_select(
-                mask.unsqueeze(-1)
-        ).view(-1, self._forward_dim)
+        non_masked_embeddings = direction_embeddings.masked_select(mask.unsqueeze(-1)).view(
+            -1, self._forward_dim
+        )
         # note: need to return average loss across forward and backward
         # directions, but total sum loss across all batches.
         # Assuming batches include full sentences, forward and backward
@@ -202,12 +214,16 @@ class LanguageModel(Model):
         else:
             # we also need the token embeddings corresponding to the
             # the targets
-            raise NotImplementedError("This requires SampledSoftmaxLoss, which isn't implemented yet.")
-            # pylint: disable=unreachable
-            non_masked_token_embeddings = self._get_target_token_embeddings(token_embeddings, mask, direction)
-            return self._softmax(non_masked_embeddings,
-                                 non_masked_targets,
-                                 non_masked_token_embeddings)
+            raise NotImplementedError(
+                "This requires SampledSoftmaxLoss, which isn't implemented yet."
+            )
+
+            non_masked_token_embeddings = self._get_target_token_embeddings(
+                token_embeddings, mask, direction
+            )
+            return self._softmax(
+                non_masked_embeddings, non_masked_targets, non_masked_token_embeddings
+            )
 
     def delete_softmax(self) -> None:
         """
@@ -221,14 +237,17 @@ class LanguageModel(Model):
         Returns the depth of this LM. That is, how many layers the contextualizer has plus one for
         the non-contextual layer.
         """
-        if hasattr(self._contextualizer, 'num_layers'):
+        if hasattr(self._contextualizer, "num_layers"):
             return self._contextualizer.num_layers + 1
         else:
-            raise NotImplementedError(f"Contextualizer of type {type(self._contextualizer)} " +
-                                      "does not report how many layers it has.")
+            raise NotImplementedError(
+                f"Contextualizer of type {type(self._contextualizer)} "
+                + "does not report how many layers it has."
+            )
 
-    def forward(self,  # type: ignore
-                source: Dict[str, torch.LongTensor]) -> Dict[str, torch.Tensor]:
+    def forward(  # type: ignore
+        self, source: Dict[str, torch.LongTensor]
+    ) -> Dict[str, torch.Tensor]:
         """
         Computes the averaged forward (and backward, if language model is bidirectional)
         LM loss from the batch.
@@ -261,7 +280,7 @@ class LanguageModel(Model):
         ``'mask'``: ``torch.Tensor``
             (batch_size, timesteps) mask for the embeddings
         """
-        # pylint: disable=arguments-differ
+
         mask = get_text_field_mask(source)
 
         # shape (batch_size, timesteps, embedding_size)
@@ -269,7 +288,7 @@ class LanguageModel(Model):
 
         # Either the top layer or all layers.
         contextual_embeddings: Union[torch.Tensor, List[torch.Tensor]] = self._contextualizer(
-                embeddings, mask
+            embeddings, mask
         )
 
         return_dict = {}
@@ -293,10 +312,9 @@ class LanguageModel(Model):
             contextual_embeddings_with_dropout = self._dropout(contextual_embeddings)
 
             # compute softmax loss
-            forward_loss, backward_loss = self._compute_loss(contextual_embeddings_with_dropout,
-                                                             embeddings,
-                                                             forward_targets,
-                                                             backward_targets)
+            forward_loss, backward_loss = self._compute_loss(
+                contextual_embeddings_with_dropout, embeddings, forward_targets, backward_targets
+            )
 
             num_targets = torch.sum((forward_targets > 0).long())
             if num_targets > 0:
@@ -305,33 +323,34 @@ class LanguageModel(Model):
                 else:
                     average_loss = forward_loss / num_targets.float()
             else:
-                average_loss = torch.tensor(0.0).to(forward_targets.device)  # pylint: disable=not-callable
+                average_loss = torch.tensor(0.0).to(forward_targets.device)
 
             self._perplexity(average_loss)
 
             if num_targets > 0:
-                return_dict.update({
-                        'loss': average_loss,
-                        'forward_loss': forward_loss / num_targets.float(),
-                        'batch_weight': num_targets.float()
-                })
+                return_dict.update(
+                    {
+                        "loss": average_loss,
+                        "forward_loss": forward_loss / num_targets.float(),
+                        "batch_weight": num_targets.float(),
+                    }
+                )
                 if backward_loss is not None:
-                    return_dict['backward_loss'] = backward_loss / num_targets.float()
+                    return_dict["backward_loss"] = backward_loss / num_targets.float()
             else:
                 # average_loss zero tensor, return it for all
-                return_dict.update({
-                        'loss': average_loss,
-                        'forward_loss': average_loss,
-                })
+                return_dict.update({"loss": average_loss, "forward_loss": average_loss})
                 if backward_loss is not None:
-                    return_dict['backward_loss'] = average_loss
+                    return_dict["backward_loss"] = average_loss
 
-        return_dict.update({
+        return_dict.update(
+            {
                 # Note: These embeddings do not have dropout applied.
-                'lm_embeddings': contextual_embeddings,
-                'noncontextual_token_embeddings': embeddings,
-                'mask': mask
-        })
+                "lm_embeddings": contextual_embeddings,
+                "noncontextual_token_embeddings": embeddings,
+                "mask": mask,
+            }
+        )
 
         return return_dict
 

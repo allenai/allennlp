@@ -15,8 +15,9 @@ class EventHandler(NamedTuple):
     handler: Callable[[TrainerBase], None]
     priority: int
 
+
 def _is_event_handler(member) -> bool:
-    return inspect.ismethod(member) and hasattr(member, '_event') and hasattr(member, '_priority')
+    return inspect.ismethod(member) and hasattr(member, "_event") and hasattr(member, "_priority")
 
 
 class CallbackHandler:
@@ -39,10 +40,10 @@ class CallbackHandler:
         If true, will log every event -> callback. Please only
         use this for debugging purposes.
     """
-    def __init__(self,
-                 callbacks: Iterable[Callback],
-                 state: TrainerBase,
-                 verbose: bool = False) -> None:
+
+    def __init__(
+        self, callbacks: Iterable[Callback], state: TrainerBase, verbose: bool = False
+    ) -> None:
         # Set up callbacks
         self._callbacks: Dict[str, List[EventHandler]] = defaultdict(list)
 
@@ -55,21 +56,25 @@ class CallbackHandler:
             self.add_callback(callback)
 
     def callbacks(self) -> List[Callback]:
-        # pylint: disable=function-redefined
+
         """
         Returns the callbacks associated with this handler.
         Each callback may be registered under multiple events,
         but we make sure to only return it once. If `typ` is specified,
         only returns callbacks of that type.
         """
-        return list({callback.callback
-                     for callback_list in self._callbacks.values()
-                     for callback in callback_list})
+        return list(
+            {
+                callback.callback
+                for callback_list in self._callbacks.values()
+                for callback in callback_list
+            }
+        )
 
     def add_callback(self, callback: Callback) -> None:
         for name, method in inspect.getmembers(callback, _is_event_handler):
-            event = getattr(method, '_event')
-            priority = getattr(method, '_priority')
+            event = getattr(method, "_event")
+            priority = getattr(method, "_priority")
             self._callbacks[event].append(EventHandler(name, callback, method, priority))
             self._callbacks[event].sort(key=lambda eh: eh.priority)
 

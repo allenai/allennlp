@@ -6,13 +6,16 @@ import torch
 from allennlp.common.checks import ConfigurationError
 from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
 
+
 class ResidualBlock(torch.nn.Module):
-    def __init__(self,
-                 input_dim: int,
-                 layers: Sequence[Sequence[int]],
-                 direction: str,
-                 do_weight_norm: bool = True,
-                 dropout: float = 0.0) -> None:
+    def __init__(
+        self,
+        input_dim: int,
+        layers: Sequence[Sequence[int]],
+        direction: str,
+        do_weight_norm: bool = True,
+        dropout: float = 0.0,
+    ) -> None:
         super().__init__()
 
         self.dropout = dropout
@@ -24,14 +27,21 @@ class ResidualBlock(torch.nn.Module):
             # we'll worry about slicing them in forward
             if len(layer) == 2:
                 # no dilation
-                conv = torch.nn.Conv1d(last_dim, layer[1] * 2, layer[0],
-                                       stride=1, padding=layer[0] - 1, bias=True)
+                conv = torch.nn.Conv1d(
+                    last_dim, layer[1] * 2, layer[0], stride=1, padding=layer[0] - 1, bias=True
+                )
             elif len(layer) == 3:
                 # a dilation
                 assert layer[0] == 2, "only support kernel = 2 for now"
-                conv = torch.nn.Conv1d(last_dim, layer[1] * 2, layer[0],
-                                       stride=1, padding=layer[2],
-                                       dilation=layer[2], bias=True)
+                conv = torch.nn.Conv1d(
+                    last_dim,
+                    layer[1] * 2,
+                    layer[0],
+                    stride=1,
+                    padding=layer[2],
+                    dilation=layer[2],
+                    bias=True,
+                )
             else:
                 raise ValueError("each layer must have length 2 or 3")
 
@@ -52,19 +62,19 @@ class ResidualBlock(torch.nn.Module):
                 #   for ConvTBC.  In ConvTBC, weight norm is applied as
                 #   nn.utils.weight_norm(m, dim=2) over the output dimension.
                 # so for regular 1D convs we need to apply over dimension=0
-                conv = torch.nn.utils.weight_norm(conv, name='weight', dim=0)
+                conv = torch.nn.utils.weight_norm(conv, name="weight", dim=0)
 
             self._convolutions.append(conv)
             last_dim = layer[1]
 
         assert last_dim == input_dim
 
-        if direction not in ('forward', 'backward'):
+        if direction not in ("forward", "backward"):
             raise ConfigurationError(f"invalid direction: {direction}")
         self._direction = direction
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # pylint: disable=arguments-differ
+
         # x = (batch_size, dim, timesteps)
         # outputs: (batch_size, dim, timesteps) = f(x) + x
         out = x
@@ -80,7 +90,7 @@ class ResidualBlock(torch.nn.Module):
             # x is padded by convolution width - 1 in each direction
             dims_to_remove = conv_out.size(2) - timesteps
             if dims_to_remove > 0:
-                if self._direction == 'forward':
+                if self._direction == "forward":
                     # remove from the end of the sequence
                     conv_out = conv_out.narrow(2, 0, timesteps)
                 else:
@@ -93,7 +103,7 @@ class ResidualBlock(torch.nn.Module):
         return (out + x) * math.sqrt(0.5)
 
 
-@Seq2SeqEncoder.register('gated-cnn-encoder')
+@Seq2SeqEncoder.register("gated-cnn-encoder")
 class GatedCnnEncoder(Seq2SeqEncoder):
     """
     **This is work-in-progress and has not been fully tested yet. Use at your own risk!**
@@ -140,11 +150,14 @@ class GatedCnnEncoder(Seq2SeqEncoder):
     return_all_layers : bool, optional (default: False)
         Whether to return all layers or just the last layer.
     """
-    def __init__(self,
-                 input_dim: int,
-                 layers: Sequence[Sequence[Sequence[int]]],
-                 dropout: float = 0.0,
-                 return_all_layers: bool = False) -> None:
+
+    def __init__(
+        self,
+        input_dim: int,
+        layers: Sequence[Sequence[Sequence[int]]],
+        dropout: float = 0.0,
+        return_all_layers: bool = False,
+    ) -> None:
         super().__init__()
 
         self._forward_residual_blocks = torch.nn.ModuleList()
@@ -154,16 +167,16 @@ class GatedCnnEncoder(Seq2SeqEncoder):
 
         for layer in layers:
             self._forward_residual_blocks.append(
-                    ResidualBlock(input_dim, layer, 'forward', dropout=dropout))
+                ResidualBlock(input_dim, layer, "forward", dropout=dropout)
+            )
             self._backward_residual_blocks.append(
-                    ResidualBlock(input_dim, layer, 'backward', dropout=dropout))
+                ResidualBlock(input_dim, layer, "backward", dropout=dropout)
+            )
 
         self._return_all_layers = return_all_layers
 
-    def forward(self,
-                token_embeddings: torch.Tensor,
-                mask: torch.Tensor):
-        # pylint: disable=arguments-differ
+    def forward(self, token_embeddings: torch.Tensor, mask: torch.Tensor):
+
         # Convolutions need transposed input
         transposed_embeddings = torch.transpose(token_embeddings, 1, 2)
 
@@ -178,8 +191,7 @@ class GatedCnnEncoder(Seq2SeqEncoder):
             # outputs will be [forward final layer, backward final layer]
             outputs: List[torch.Tensor] = []
 
-        for k, blocks in enumerate([self._forward_residual_blocks,
-                                    self._backward_residual_blocks]):
+        for k, blocks in enumerate([self._forward_residual_blocks, self._backward_residual_blocks]):
             out = transposed_embeddings
             # Due to zero padding for backward sequences, we need
             # to ensure that the input has zeros everywhere where
@@ -192,8 +204,9 @@ class GatedCnnEncoder(Seq2SeqEncoder):
                 outputs.append(out)
 
         if self._return_all_layers:
-            return [torch.cat([fwd, bwd], dim=1).transpose(1, 2)
-                    for fwd, bwd in zip(*layer_outputs)]
+            return [
+                torch.cat([fwd, bwd], dim=1).transpose(1, 2) for fwd, bwd in zip(*layer_outputs)
+            ]
         else:
             # Concatenate forward and backward, then transpose back
             return torch.cat(outputs, dim=1).transpose(1, 2)

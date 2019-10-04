@@ -26,8 +26,9 @@ import torch
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.modules.augmented_lstm import AugmentedLstm
-from allennlp.modules.seq2seq_encoders.bidirectional_language_model_transformer import \
-        BidirectionalLanguageModelTransformer
+from allennlp.modules.seq2seq_encoders.bidirectional_language_model_transformer import (
+    BidirectionalLanguageModelTransformer,
+)
 from allennlp.modules.seq2seq_encoders.gated_cnn_encoder import GatedCnnEncoder
 from allennlp.modules.seq2seq_encoders.intra_sentence_attention import IntraSentenceAttentionEncoder
 from allennlp.modules.seq2seq_encoders.pytorch_seq2seq_wrapper import PytorchSeq2SeqWrapper
@@ -41,7 +42,7 @@ from allennlp.modules.seq2seq_encoders.feedforward_encoder import FeedForwardEnc
 from allennlp.modules.seq2seq_encoders.qanet_encoder import QaNetEncoder
 
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 class _Seq2SeqWrapper:
@@ -70,6 +71,7 @@ class _Seq2SeqWrapper:
     ``PytorchSeq2SeqWrapper``.  This lets us use this class in the registry and have everything just
     work.
     """
+
     PYTORCH_MODELS = [torch.nn.GRU, torch.nn.LSTM, torch.nn.RNN]
 
     def __init__(self, module_class: Type[torch.nn.modules.RNNBase]) -> None:
@@ -80,15 +82,15 @@ class _Seq2SeqWrapper:
 
     # Logic requires custom from_params
     def from_params(self, params: Params) -> PytorchSeq2SeqWrapper:
-        if not params.pop_bool('batch_first', True):
+        if not params.pop_bool("batch_first", True):
             raise ConfigurationError("Our encoder semantics assumes batch is always first!")
         if self._module_class in self.PYTORCH_MODELS:
-            params['batch_first'] = True
-        stateful = params.pop_bool('stateful', False)
+            params["batch_first"] = True
+        stateful = params.pop_bool("stateful", False)
         module = self._module_class(**params.as_dict(infer_type_and_cast=True))
         return PytorchSeq2SeqWrapper(module, stateful=stateful)
 
-# pylint: disable=protected-access
+
 Seq2SeqEncoder.register("gru")(_Seq2SeqWrapper(torch.nn.GRU))
 Seq2SeqEncoder.register("lstm")(_Seq2SeqWrapper(torch.nn.LSTM))
 Seq2SeqEncoder.register("rnn")(_Seq2SeqWrapper(torch.nn.RNN))

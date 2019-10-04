@@ -15,7 +15,7 @@ import sys
 from typing import Set, Dict, Tuple, Optional
 
 
-PackagesType = Dict[str, Optional[str]]  # pylint: disable=invalid-name
+PackagesType = Dict[str, Optional[str]]
 
 
 def parse_section_name(line: str) -> str:
@@ -67,12 +67,15 @@ def parse_setup() -> Tuple[PackagesType, PackagesType, Set[str], Set[str]]:
     essential_duplicates: Set[str] = set()
     test_duplicates: Set[str] = set()
 
-    with open('setup.py') as setup_file:
+    with open("setup.py") as setup_file:
         contents = setup_file.read()
 
     # Parse out essential packages.
-    package_string = re.search(r"""install_requires=\[[\s\n]*['"](.*?)['"],?[\s\n]*\]""",
-                               contents, re.DOTALL).groups()[0].strip()
+    package_string = (
+        re.search(r"""install_requires=\[[\s\n]*['"](.*?)['"],?[\s\n]*\]""", contents, re.DOTALL)
+        .groups()[0]
+        .strip()
+    )
     for package in re.split(r"""['"],[\s\n]+['"]""", package_string):
         module, version = parse_package(package)
         if module in essential_packages:
@@ -81,8 +84,11 @@ def parse_setup() -> Tuple[PackagesType, PackagesType, Set[str], Set[str]]:
             essential_packages[module] = version
 
     # Parse packages only needed for testing.
-    package_string = re.search(r"""tests_require=\[[\s\n]*['"](.*?)['"],?[\s\n]*\]""",
-                               contents, re.DOTALL).groups()[0].strip()
+    package_string = (
+        re.search(r"""tests_require=\[[\s\n]*['"](.*?)['"],?[\s\n]*\]""", contents, re.DOTALL)
+        .groups()[0]
+        .strip()
+    )
     for package in re.split(r"""['"],[\s\n]+['"]""", package_string):
         module, version = parse_package(package)
         if module in test_packages:
@@ -108,34 +114,43 @@ def main() -> int:
     if essential_duplicates:
         exit_code = 1
         for module in essential_duplicates:
-            print(f"  ✗ '{module}' appears more than once in 'install_requires' "
-                  f"section of setup.py")
+            print(
+                f"  ✗ '{module}' appears more than once in 'install_requires' "
+                f"section of setup.py"
+            )
 
     if test_duplicates:
         exit_code = 1
         for module in test_duplicates:
-            print(f"  ✗ '{module}' appears more than once in 'tests_require' "
-                  f"section of setup.py")
+            print(
+                f"  ✗ '{module}' appears more than once in 'tests_require' " f"section of setup.py"
+            )
 
     # Find all packages listed as essential in requirements.txt that differ
     # in or are absent from setup.py.
     for module, version in requirements_essential.items():
         if module not in setup_essential:
             exit_code = 1
-            print(f"  ✗ '{module}' listed as essential in requirements.txt "
-                  f"but is missing from 'install_requires' field of setup.py")
+            print(
+                f"  ✗ '{module}' listed as essential in requirements.txt "
+                f"but is missing from 'install_requires' field of setup.py"
+            )
         elif setup_essential[module] != version:
             exit_code = 1
-            print(f"  ✗ '{module}' has version '{version}' in requirements.txt but "
-                  f"'{setup_essential[module]}' in 'install_requires' field of setup.py")
+            print(
+                f"  ✗ '{module}' has version '{version}' in requirements.txt but "
+                f"'{setup_essential[module]}' in 'install_requires' field of setup.py"
+            )
 
     # Find all packages listed under 'install_requires' in setup.py that are not
     # listed as essential in requirements.txt.
     for module, version in setup_essential.items():
         if module in requirements_other:
             exit_code = 1
-            print(f"  ✗ '{module}' appears under 'install_requires' in setup.py but "
-                  f"is listed as non-essential in requirements.txt")
+            print(
+                f"  ✗ '{module}' appears under 'install_requires' in setup.py but "
+                f"is listed as non-essential in requirements.txt"
+            )
         elif module not in requirements_essential:
             exit_code = 1
             print(f"  ✗ '{module}' appears in setup.py but not in requirements.txt")
@@ -145,12 +160,16 @@ def main() -> int:
     for module, version in setup_test.items():
         if module not in requirements_all:
             exit_code = 1
-            print(f"  ✗ '{module}' appears under 'tests_require' in setup.py "
-                  f"but is missing from requirements.txt")
+            print(
+                f"  ✗ '{module}' appears under 'tests_require' in setup.py "
+                f"but is missing from requirements.txt"
+            )
         elif requirements_all[module] != version:
             exit_code = 1
-            print(f"  ✗ '{module}' has version '{version}' in 'tests_require' field of "
-                  f"setup.py but '{requirements_all[module]}' in requirements.txt")
+            print(
+                f"  ✗ '{module}' has version '{version}' in 'tests_require' field of "
+                f"setup.py but '{requirements_all[module]}' in requirements.txt"
+            )
 
     return exit_code
 

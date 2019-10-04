@@ -47,13 +47,13 @@ import logging
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 # If a function parameter has no default value specified,
 # this is what the inspect module returns.
-_NO_DEFAULT = inspect.Parameter.empty  # pylint: disable=invalid-name
+_NO_DEFAULT = inspect.Parameter.empty
 
 
 def takes_arg(obj, arg: str) -> bool:
@@ -85,8 +85,14 @@ def takes_kwargs(obj) -> bool:
         signature = inspect.signature(obj)
     else:
         raise ConfigurationError(f"object {obj} is not callable")
-    return bool(any([p.kind == inspect.Parameter.VAR_KEYWORD  # type: ignore
-                     for p in signature.parameters.values()]))
+    return bool(
+        any(
+            [
+                p.kind == inspect.Parameter.VAR_KEYWORD  # type: ignore
+                for p in signature.parameters.values()
+            ]
+        )
+    )
 
 
 def remove_optional(annotation: type):
@@ -95,12 +101,13 @@ def remove_optional(annotation: type):
     For our purposes, the "Optional" part is not interesting, so here we
     throw it away.
     """
-    origin = getattr(annotation, '__origin__', None)
-    args = getattr(annotation, '__args__', ())
-    if origin == Union and len(args) == 2 and args[1] == type(None):
+    origin = getattr(annotation, "__origin__", None)
+    args = getattr(annotation, "__args__", ())
+    if origin == Union and len(args) == 2 and args[1] == type(None):  # noqa
         return args[0]
     else:
         return annotation
+
 
 def create_kwargs(cls: Type[T], params: Params, **extras) -> Dict[str, Any]:
     """
@@ -136,8 +143,7 @@ def create_kwargs(cls: Type[T], params: Params, **extras) -> Dict[str, Any]:
     return kwargs
 
 
-def create_extras(cls: Type[T],
-                  extras: Dict[str, Any]) -> Dict[str, Any]:
+def create_extras(cls: Type[T], extras: Dict[str, Any]) -> Dict[str, Any]:
     """
     Given a dictionary of extra arguments, returns a dictionary of
     kwargs that actually are a part of the signature of the cls.from_params
@@ -161,17 +167,13 @@ def create_extras(cls: Type[T],
     else:
         # Otherwise, only supply the ones that are actual args; any additional ones
         # will cause a TypeError.
-        subextras = {k: v for k, v in extras.items()
-                     if takes_arg(from_params_method, k)}
+        subextras = {k: v for k, v in extras.items() if takes_arg(from_params_method, k)}
     return subextras
 
 
-def construct_arg(cls: Type[T], # pylint: disable=inconsistent-return-statements,too-many-return-statements
-                  param_name: str,
-                  annotation: Type,
-                  default: Any,
-                  params: Params,
-                  **extras) -> Any:
+def construct_arg(
+    cls: Type[T], param_name: str, annotation: Type, default: Any, params: Params, **extras
+) -> Any:
     """
     Does the work of actually constructing an individual argument for :func:`create_kwargs`.
 
@@ -191,8 +193,8 @@ def construct_arg(cls: Type[T], # pylint: disable=inconsistent-return-statements
     # `extras`, which isn't _that_ unlikely.  Now that we are inside the method, we can switch back
     # to using `name`.
     name = param_name
-    origin = getattr(annotation, '__origin__', None)
-    args = getattr(annotation, '__args__', [])
+    origin = getattr(annotation, "__origin__", None)
+    args = getattr(annotation, "__args__", [])
 
     # The parameter is optional if its default value is not the "no default" sentinel.
     optional = default != _NO_DEFAULT
@@ -202,19 +204,25 @@ def construct_arg(cls: Type[T], # pylint: disable=inconsistent-return-statements
     if name in extras:
         return extras[name]
     # Next case is when argument should be loaded from pretrained archive.
-    elif name in params and isinstance(params.get(name), Params) and "_pretrained" in params.get(name):
+    elif (
+        name in params
+        and isinstance(params.get(name), Params)
+        and "_pretrained" in params.get(name)
+    ):
         load_module_params = params.pop(name).pop("_pretrained")
         archive_file = load_module_params.pop("archive_file")
         module_path = load_module_params.pop("module_path")
         freeze = load_module_params.pop("freeze", True)
         archive = load_archive(archive_file)
-        result = archive.extract_module(module_path, freeze) # pylint: disable=no-member
+        result = archive.extract_module(module_path, freeze)
         if not isinstance(result, annotation):
-            raise ConfigurationError(f"The module from model at {archive_file} at path {module_path} "
-                                     f"was expected of type {annotation} but is of type {type(result)}")
+            raise ConfigurationError(
+                f"The module from model at {archive_file} at path {module_path} "
+                f"was expected of type {annotation} but is of type {type(result)}"
+            )
         return result
     # The next case is when the parameter type is itself constructible from_params.
-    elif hasattr(annotation, 'from_params'):
+    elif hasattr(annotation, "from_params"):
         if name in params:
             # Our params have an entry for this, so we use that.
             subparams = params.pop(name)
@@ -247,7 +255,7 @@ def construct_arg(cls: Type[T], # pylint: disable=inconsistent-return-statements
     # This is special logic for handling types like Dict[str, TokenIndexer],
     # List[TokenIndexer], Tuple[TokenIndexer, Tokenizer], and Set[TokenIndexer],
     # which it creates by instantiating each value from_params and returning the resulting structure.
-    elif origin in (Dict, dict) and len(args) == 2 and hasattr(args[-1], 'from_params'):
+    elif origin in (Dict, dict) and len(args) == 2 and hasattr(args[-1], "from_params"):
         value_cls = annotation.__args__[-1]
 
         value_dict = {}
@@ -258,7 +266,7 @@ def construct_arg(cls: Type[T], # pylint: disable=inconsistent-return-statements
 
         return value_dict
 
-    elif origin in (List, list) and len(args) == 1 and hasattr(args[0], 'from_params'):
+    elif origin in (List, list) and len(args) == 1 and hasattr(args[0], "from_params"):
         value_cls = annotation.__args__[0]
 
         value_list = []
@@ -269,7 +277,7 @@ def construct_arg(cls: Type[T], # pylint: disable=inconsistent-return-statements
 
         return value_list
 
-    elif origin in (Tuple, tuple) and all(hasattr(arg, 'from_params') for arg in args):
+    elif origin in (Tuple, tuple) and all(hasattr(arg, "from_params") for arg in args):
         value_list = []
 
         for value_cls, value_params in zip(annotation.__args__, params.pop(name, Params({}))):
@@ -278,7 +286,7 @@ def construct_arg(cls: Type[T], # pylint: disable=inconsistent-return-statements
 
         return tuple(value_list)
 
-    elif origin in (Set, set) and len(args) == 1 and hasattr(args[0], 'from_params'):
+    elif origin in (Set, set) and len(args) == 1 and hasattr(args[0], "from_params"):
         value_cls = annotation.__args__[0]
 
         value_set = set()
@@ -323,6 +331,7 @@ class FromParams:
     Mixin to give a from_params method to classes. We create a distinct base class for this
     because sometimes we want non-Registrable classes to be instantiatable from_params.
     """
+
     @classmethod
     def from_params(cls: Type[T], params: Params, **extras) -> T:
         """
@@ -334,11 +343,13 @@ class FromParams:
         If you need more complex logic in your from `from_params` method, you'll have to implement
         your own method that overrides this one.
         """
-        # pylint: disable=protected-access
+
         from allennlp.common.registrable import Registrable  # import here to avoid circular imports
 
-        logger.info(f"instantiating class {cls} from params {getattr(params, 'params', params)} "
-                    f"and extras {set(extras.keys())}")
+        logger.info(
+            f"instantiating class {cls} from params {getattr(params, 'params', params)} "
+            f"and extras {set(extras.keys())}"
+        )
 
         if params is None:
             return None
@@ -350,16 +361,17 @@ class FromParams:
 
         if registered_subclasses is not None:
             # We know ``cls`` inherits from Registrable, so we'll use a cast to make mypy happy.
-            # We have to use a disable to make pylint happy.
-            # pylint: disable=no-member
+
             as_registrable = cast(Type[Registrable], cls)
             default_to_first_choice = as_registrable.default_implementation is not None
-            choice = params.pop_choice("type",
-                                       choices=as_registrable.list_available(),
-                                       default_to_first_choice=default_to_first_choice)
+            choice = params.pop_choice(
+                "type",
+                choices=as_registrable.list_available(),
+                default_to_first_choice=default_to_first_choice,
+            )
             subclass = registered_subclasses[choice]
 
-            if hasattr(subclass, 'from_params'):
+            if hasattr(subclass, "from_params"):
                 # We want to call subclass.from_params
                 extras = create_extras(subclass, extras)
                 return subclass.from_params(params=params, **extras)

@@ -6,10 +6,11 @@ import logging
 
 from nltk import Tree
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
-TypedSpan = Tuple[int, Tuple[int, int]]  # pylint: disable=invalid-name
-TypedStringSpan = Tuple[str, Tuple[int, int]]  # pylint: disable=invalid-name
+TypedSpan = Tuple[int, Tuple[int, int]]
+TypedStringSpan = Tuple[str, Tuple[int, int]]
+
 
 class OntonotesSentence:
     """
@@ -52,19 +53,22 @@ class OntonotesSentence:
         Each element is a tuple composed of (cluster_id, (start_index, end_index)). Indices
         are `inclusive`.
     """
-    def __init__(self,
-                 document_id: str,
-                 sentence_id: int,
-                 words: List[str],
-                 pos_tags: List[str],
-                 parse_tree: Optional[Tree],
-                 predicate_lemmas: List[Optional[str]],
-                 predicate_framenet_ids: List[Optional[str]],
-                 word_senses: List[Optional[float]],
-                 speakers: List[Optional[str]],
-                 named_entities: List[str],
-                 srl_frames: List[Tuple[str, List[str]]],
-                 coref_spans: Set[TypedSpan]) -> None:
+
+    def __init__(
+        self,
+        document_id: str,
+        sentence_id: int,
+        words: List[str],
+        pos_tags: List[str],
+        parse_tree: Optional[Tree],
+        predicate_lemmas: List[Optional[str]],
+        predicate_framenet_ids: List[Optional[str]],
+        word_senses: List[Optional[float]],
+        speakers: List[Optional[str]],
+        named_entities: List[str],
+        srl_frames: List[Tuple[str, List[str]]],
+        coref_spans: Set[TypedSpan],
+    ) -> None:
 
         self.document_id = document_id
         self.sentence_id = sentence_id
@@ -173,6 +177,7 @@ class Ontonotes:
         Co-reference chain information encoded in a parenthesis structure. For documents that do
          not have co-reference annotations, each line is represented with a "-".
     """
+
     def dataset_iterator(self, file_path: str) -> Iterator[OntonotesSentence]:
         """
         An iterator over the entire dataset, yielding all sentences processed.
@@ -204,12 +209,12 @@ class Ontonotes:
         for conll data which has been preprocessed, such as the preprocessing which
         takes place for the 2012 CONLL Coreference Resolution task.
         """
-        with codecs.open(file_path, 'r', encoding='utf8') as open_file:
+        with codecs.open(file_path, "r", encoding="utf8") as open_file:
             conll_rows = []
             document: List[OntonotesSentence] = []
             for line in open_file:
                 line = line.strip()
-                if line != '' and not line.startswith('#'):
+                if line != "" and not line.startswith("#"):
                     # Non-empty line. Collect the annotation.
                     conll_rows.append(line)
                 else:
@@ -278,14 +283,14 @@ class Ontonotes:
                     parse_word = "-RRB-"
                 else:
                     parse_word = word
-                if pos_tag == '(':
-                    pos_tag = '-LRB-'
-                if pos_tag == ')':
-                    pos_tag = '-RRB-'
-                (left_brackets, right_hand_side) = parse_piece.split('*')
+                if pos_tag == "(":
+                    pos_tag = "-LRB-"
+                if pos_tag == ")":
+                    pos_tag = "-RRB-"
+                (left_brackets, right_hand_side) = parse_piece.split("*")
                 # only keep ')' if there are nested brackets with nothing in them.
-                right_brackets = right_hand_side.count(')') * ')'
-                parse_piece = f'{left_brackets} ({pos_tag} {parse_word}) {right_brackets}'
+                right_brackets = right_hand_side.count(")") * ")"
+                parse_piece = f"{left_brackets} ({pos_tag} {parse_word}) {right_brackets}"
             else:
                 # There are some bad annotations in the CONLL data.
                 # They contain no information, so to make this explicit,
@@ -309,9 +314,9 @@ class Ontonotes:
                 # sequence we are collecting.
                 current_span_labels = [None for _ in conll_components[10:-1]]
 
-            self._process_span_annotations_for_word(conll_components[10:-1],
-                                                    span_labels,
-                                                    current_span_labels)
+            self._process_span_annotations_for_word(
+                conll_components[10:-1], span_labels, current_span_labels
+            )
 
             # If any annotation marks this word as a verb predicate,
             # we need to record its index. This also has the side effect
@@ -321,10 +326,9 @@ class Ontonotes:
             if word_is_verbal_predicate:
                 verbal_predicates.append(word)
 
-            self._process_coref_span_annotations_for_word(conll_components[-1],
-                                                          index,
-                                                          clusters,
-                                                          coref_stacks)
+            self._process_coref_span_annotations_for_word(
+                conll_components[-1], index, clusters, coref_stacks
+            )
 
             sentence.append(word)
             pos_tags.append(pos_tag)
@@ -335,34 +339,39 @@ class Ontonotes:
             speakers.append(speaker if speaker != "-" else None)
 
         named_entities = span_labels[0]
-        srl_frames = [(predicate, labels) for predicate, labels
-                      in zip(verbal_predicates, span_labels[1:])]
+        srl_frames = [
+            (predicate, labels) for predicate, labels in zip(verbal_predicates, span_labels[1:])
+        ]
 
         if all(parse_pieces):
             parse_tree = Tree.fromstring("".join(parse_pieces))
         else:
             parse_tree = None
-        coref_span_tuples: Set[TypedSpan] = {(cluster_id, span)
-                                             for cluster_id, span_list in clusters.items()
-                                             for span in span_list}
-        return OntonotesSentence(document_id,
-                                 sentence_id,
-                                 sentence,
-                                 pos_tags,
-                                 parse_tree,
-                                 predicate_lemmas,
-                                 predicate_framenet_ids,
-                                 word_senses,
-                                 speakers,
-                                 named_entities,
-                                 srl_frames,
-                                 coref_span_tuples)
+        coref_span_tuples: Set[TypedSpan] = {
+            (cluster_id, span) for cluster_id, span_list in clusters.items() for span in span_list
+        }
+        return OntonotesSentence(
+            document_id,
+            sentence_id,
+            sentence,
+            pos_tags,
+            parse_tree,
+            predicate_lemmas,
+            predicate_framenet_ids,
+            word_senses,
+            speakers,
+            named_entities,
+            srl_frames,
+            coref_span_tuples,
+        )
 
     @staticmethod
-    def _process_coref_span_annotations_for_word(label: str,
-                                                 word_index: int,
-                                                 clusters: DefaultDict[int, List[Tuple[int, int]]],
-                                                 coref_stacks: DefaultDict[int, List[int]]) -> None:
+    def _process_coref_span_annotations_for_word(
+        label: str,
+        word_index: int,
+        clusters: DefaultDict[int, List[Tuple[int, int]]],
+        coref_stacks: DefaultDict[int, List[int]],
+    ) -> None:
         """
         For a given coref label, add it to a currently open span(s), complete a span(s) or
         ignore it, if it is outside of all spans. This method mutates the clusters and coref_stacks
@@ -408,9 +417,11 @@ class Ontonotes:
                     clusters[cluster_id].append((start, word_index))
 
     @staticmethod
-    def _process_span_annotations_for_word(annotations: List[str],
-                                           span_labels: List[List[str]],
-                                           current_span_labels: List[Optional[str]]) -> None:
+    def _process_span_annotations_for_word(
+        annotations: List[str],
+        span_labels: List[List[str]],
+        current_span_labels: List[Optional[str]],
+    ) -> None:
         """
         Given a sequence of different label types for a single word and the current
         span label we are inside, compute the BIO tag for each label and append to a list.

@@ -37,11 +37,14 @@ class InterleavingDatasetReader(DatasetReader):
         If this is true, ``instances()`` will return an object whose ``__iter__`` method
         reloads the dataset each time it's called. Otherwise, ``instances()`` returns a list.
     """
-    def __init__(self,
-                 readers: Dict[str, DatasetReader],
-                 dataset_field_name: str = "dataset",
-                 scheme: str = "round_robin",
-                 lazy: bool = False) -> None:
+
+    def __init__(
+        self,
+        readers: Dict[str, DatasetReader],
+        dataset_field_name: str = "dataset",
+        scheme: str = "round_robin",
+        lazy: bool = False,
+    ) -> None:
         super().__init__(lazy)
         self._readers = readers
         self._dataset_field_name = dataset_field_name
@@ -70,13 +73,14 @@ class InterleavingDatasetReader(DatasetReader):
                 instance.fields[self._dataset_field_name] = MetadataField(key)
                 yield instance
 
-
     def _read(self, file_path: str) -> Iterable[Instance]:
         try:
             file_paths = json.loads(file_path)
         except json.JSONDecodeError:
-            raise ConfigurationError("the file_path for the InterleavingDatasetReader "
-                                     "needs to be a JSON-serialized dictionary {reader_name -> file_path}")
+            raise ConfigurationError(
+                "the file_path for the InterleavingDatasetReader "
+                "needs to be a JSON-serialized dictionary {reader_name -> file_path}"
+            )
 
         if file_paths.keys() != self._readers.keys():
             raise ConfigurationError("mismatched keys")
@@ -92,5 +96,5 @@ class InterleavingDatasetReader(DatasetReader):
             raise RuntimeError("impossible to get here")
 
     def text_to_instance(self) -> Instance:  # type: ignore
-        # pylint: disable=arguments-differ
+
         raise RuntimeError("text_to_instance doesn't make sense here")

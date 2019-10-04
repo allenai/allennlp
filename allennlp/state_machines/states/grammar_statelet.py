@@ -2,7 +2,7 @@ from typing import Callable, Dict, Generic, List, TypeVar
 
 from allennlp.nn import util
 
-ActionRepresentation = TypeVar('ActionRepresentation')  # pylint: disable=invalid-name
+ActionRepresentation = TypeVar("ActionRepresentation")
 
 
 class GrammarStatelet(Generic[ActionRepresentation]):
@@ -43,11 +43,14 @@ class GrammarStatelet(Generic[ActionRepresentation]):
         giving us left-to-right production.  If this is ``False``, you will get right-to-left
         production.
     """
-    def __init__(self,
-                 nonterminal_stack: List[str],
-                 valid_actions: Dict[str, ActionRepresentation],
-                 is_nonterminal: Callable[[str], bool],
-                 reverse_productions: bool = True) -> None:
+
+    def __init__(
+        self,
+        nonterminal_stack: List[str],
+        valid_actions: Dict[str, ActionRepresentation],
+        is_nonterminal: Callable[[str], bool],
+        reverse_productions: bool = True,
+    ) -> None:
         self._nonterminal_stack = nonterminal_stack
         self._valid_actions = valid_actions
         self._is_nonterminal = is_nonterminal
@@ -67,7 +70,7 @@ class GrammarStatelet(Generic[ActionRepresentation]):
         """
         return self._valid_actions[self._nonterminal_stack[-1]]
 
-    def take_action(self, production_rule: str) -> 'GrammarStatelet':
+    def take_action(self, production_rule: str) -> "GrammarStatelet":
         """
         Takes an action in the current grammar state, returning a new grammar state with whatever
         updates are necessary.  The production rule is assumed to be formatted as "LHS -> RHS".
@@ -84,9 +87,11 @@ class GrammarStatelet(Generic[ActionRepresentation]):
         in their given order, which means that the first non-terminal in the production rule gets
         popped off the stack `last`.
         """
-        left_side, right_side = production_rule.split(' -> ')
-        assert self._nonterminal_stack[-1] == left_side, (f"Tried to expand {self._nonterminal_stack[-1]}"
-                                                          f"but got rule {left_side} -> {right_side}")
+        left_side, right_side = production_rule.split(" -> ")
+        assert self._nonterminal_stack[-1] == left_side, (
+            f"Tried to expand {self._nonterminal_stack[-1]}"
+            f"but got rule {left_side} -> {right_side}"
+        )
 
         new_stack = self._nonterminal_stack[:-1]
 
@@ -98,10 +103,12 @@ class GrammarStatelet(Generic[ActionRepresentation]):
             if self._is_nonterminal(production):
                 new_stack.append(production)
 
-        return GrammarStatelet(nonterminal_stack=new_stack,
-                               valid_actions=self._valid_actions,
-                               is_nonterminal=self._is_nonterminal,
-                               reverse_productions=self._reverse_productions)
+        return GrammarStatelet(
+            nonterminal_stack=new_stack,
+            valid_actions=self._valid_actions,
+            is_nonterminal=self._is_nonterminal,
+            reverse_productions=self._reverse_productions,
+        )
 
     @staticmethod
     def _get_productions_from_string(production_string: str) -> List[str]:
@@ -110,18 +117,20 @@ class GrammarStatelet(Generic[ActionRepresentation]):
         production strings that are not lists, like '<e,d>', we return a single-element list:
         ['<e,d>'].
         """
-        if production_string[0] == '[':
-            return production_string[1:-1].split(', ')
+        if production_string[0] == "[":
+            return production_string[1:-1].split(", ")
         else:
             return [production_string]
 
     def __eq__(self, other):
         if isinstance(self, other.__class__):
-            # pylint: disable=protected-access
-            return all([
+
+            return all(
+                [
                     self._nonterminal_stack == other._nonterminal_stack,
                     util.tensors_equal(self._valid_actions, other._valid_actions),
                     self._is_nonterminal == other._is_nonterminal,
                     self._reverse_productions == other._reverse_productions,
-                    ])
+                ]
+            )
         return NotImplemented

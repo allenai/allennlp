@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 from numpy.testing import assert_almost_equal
 import pytest
 import torch
@@ -13,39 +12,23 @@ from allennlp.common.testing import AllenNlpTestCase
 class TestMaxout(AllenNlpTestCase):
     def test_init_checks_output_dims_consistency(self):
         with pytest.raises(ConfigurationError):
-            Maxout(input_dim=2,
-                   num_layers=2,
-                   output_dims=[5, 4, 3],
-                   pool_sizes=4,
-                   dropout=0.0)
+            Maxout(input_dim=2, num_layers=2, output_dims=[5, 4, 3], pool_sizes=4, dropout=0.0)
 
     def test_init_checks_pool_sizes_consistency(self):
         with pytest.raises(ConfigurationError):
-            Maxout(input_dim=2,
-                   num_layers=2,
-                   output_dims=5,
-                   pool_sizes=[4, 5, 2],
-                   dropout=0.0)
+            Maxout(input_dim=2, num_layers=2, output_dims=5, pool_sizes=[4, 5, 2], dropout=0.0)
 
     def test_init_checks_dropout_consistency(self):
         with pytest.raises(ConfigurationError):
-            Maxout(input_dim=2,
-                   num_layers=3,
-                   output_dims=5,
-                   pool_sizes=4,
-                   dropout=[0.2, 0.3])
+            Maxout(input_dim=2, num_layers=3, output_dims=5, pool_sizes=4, dropout=[0.2, 0.3])
 
     def test_forward_gives_correct_output(self):
-        params = Params({
-                'input_dim': 2,
-                'output_dims': 3,
-                'pool_sizes': 4,
-                'dropout': 0.0,
-                'num_layers': 2
-                })
+        params = Params(
+            {"input_dim": 2, "output_dims": 3, "pool_sizes": 4, "dropout": 0.0, "num_layers": 2}
+        )
         maxout = Maxout.from_params(params)
 
-        constant_init = Initializer.from_params(Params({"type": "constant", "val": 1.}))
+        constant_init = Initializer.from_params(Params({"type": "constant", "val": 1.0}))
         initializer = InitializerApplicator([(".*", constant_init)])
         initializer(maxout)
 

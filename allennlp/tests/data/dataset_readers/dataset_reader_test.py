@@ -1,4 +1,3 @@
-# pylint: disable=invalid-name,no-self-use,protected-access
 import os
 import shutil
 
@@ -51,7 +50,7 @@ class DatasetReaderTest(AllenNlpTestCase):
         # The first read will create the cache.
         reader.read(snli_file)
         assert os.path.exists(cache_file)
-        with open(cache_file, 'r') as in_file:
+        with open(cache_file, "r") as in_file:
             cache_contents = in_file.read()
         # The second and all subsequent reads should _use_ the cache, not modify it.  I looked
         # into checking file modification times, but this test will probably be faster than the
@@ -60,7 +59,7 @@ class DatasetReaderTest(AllenNlpTestCase):
         reader.read(snli_file)
         reader.read(snli_file)
         reader.read(snli_file)
-        with open(cache_file, 'r') as in_file:
+        with open(cache_file, "r") as in_file:
             final_cache_contents = in_file.read()
         assert cache_contents == final_cache_contents
 

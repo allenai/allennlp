@@ -1,4 +1,3 @@
-
 cats/N are/V animals/N ./N
 
 

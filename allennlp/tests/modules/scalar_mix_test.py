@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 import torch
 
 import pytest
@@ -36,17 +35,16 @@ class TestScalarMix(AllenNlpTestCase):
 
     def test_scalar_mix_trainable_with_initial_scalar_parameters(self):
         initial_scalar_parameters = [1.0, 2.0, 3.0]
-        mixture = ScalarMix(3, initial_scalar_parameters=initial_scalar_parameters,
-                            trainable=False)
+        mixture = ScalarMix(3, initial_scalar_parameters=initial_scalar_parameters, trainable=False)
         for i, scalar_mix_parameter in enumerate(mixture.scalar_parameters):
             assert scalar_mix_parameter.requires_grad is False
             assert scalar_mix_parameter.item() == initial_scalar_parameters[i]
 
     def test_scalar_mix_layer_norm(self):
-        mixture = ScalarMix(3, do_layer_norm='scalar_norm_reg')
+        mixture = ScalarMix(3, do_layer_norm="scalar_norm_reg")
 
         tensors = [torch.randn([3, 4, 5]) for _ in range(3)]
-        numpy_mask = numpy.ones((3, 4), dtype='int32')
+        numpy_mask = numpy.ones((3, 4), dtype="int32")
         numpy_mask[1, 2:] = 0
         mask = torch.from_numpy(numpy_mask)
 
@@ -61,8 +59,8 @@ class TestScalarMix(AllenNlpTestCase):
         for k in range(3):
             mean = numpy.mean(tensors[k].data.numpy()[numpy_mask == 1])
             std = numpy.std(tensors[k].data.numpy()[numpy_mask == 1])
-            normed_tensor = (tensors[k].data.numpy() - mean) / (std + 1E-12)
-            expected_result += (normed_tensor * normed_weights[k])
+            normed_tensor = (tensors[k].data.numpy() - mean) / (std + 1e-12)
+            expected_result += normed_tensor * normed_weights[k]
         expected_result *= 0.5
 
         numpy.testing.assert_almost_equal(expected_result, result.data.numpy(), decimal=6)

@@ -5,7 +5,7 @@ import torch
 from allennlp.modules.language_model_heads.language_model_head import LanguageModelHead
 
 
-@LanguageModelHead.register('bert')
+@LanguageModelHead.register("bert")
 class BertLanguageModelHead(LanguageModelHead):
     """
     Loads just the LM head from ``pytorch_transformers.BertForMaskedLM``.  It was easiest to load
@@ -13,6 +13,7 @@ class BertLanguageModelHead(LanguageModelHead):
     but for practical use in a model, the few seconds of extra loading time is probably not a big
     deal.
     """
+
     def __init__(self, model_name: str) -> None:
         super().__init__()
         config = BertConfig.from_pretrained(model_name)
@@ -23,7 +24,7 @@ class BertLanguageModelHead(LanguageModelHead):
         # would only load the BERT weights once.  Though, it's not clear how to do that here, as we
         # need to load `BertForMaskedLM`, not just `BertModel`...
         bert_model = BertForMaskedLM.from_pretrained(model_name)
-        self.bert_lm_head = bert_model.cls  # pylint: disable=no-member
+        self.bert_lm_head = bert_model.cls
 
     @overrides
     def get_input_dim(self) -> int:

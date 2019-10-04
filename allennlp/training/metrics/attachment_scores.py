@@ -20,22 +20,25 @@ class AttachmentScores(Metric):
     ignore_classes : ``List[int]``, optional (default = None)
         A list of label ids to ignore when computing metrics.
     """
+
     def __init__(self, ignore_classes: List[int] = None) -> None:
-        self._labeled_correct = 0.
-        self._unlabeled_correct = 0.
-        self._exact_labeled_correct = 0.
-        self._exact_unlabeled_correct = 0.
-        self._total_words = 0.
-        self._total_sentences = 0.
+        self._labeled_correct = 0.0
+        self._unlabeled_correct = 0.0
+        self._exact_labeled_correct = 0.0
+        self._exact_unlabeled_correct = 0.0
+        self._total_words = 0.0
+        self._total_sentences = 0.0
 
         self._ignore_classes: List[int] = ignore_classes or []
 
-    def __call__(self, # type: ignore
-                 predicted_indices: torch.Tensor,
-                 predicted_labels: torch.Tensor,
-                 gold_indices: torch.Tensor,
-                 gold_labels: torch.Tensor,
-                 mask: Optional[torch.Tensor] = None):
+    def __call__(  # type: ignore
+        self,
+        predicted_indices: torch.Tensor,
+        predicted_labels: torch.Tensor,
+        gold_indices: torch.Tensor,
+        gold_labels: torch.Tensor,
+        mask: Optional[torch.Tensor] = None,
+    ):
         """
         Parameters
         ----------
@@ -50,8 +53,9 @@ class AttachmentScores(Metric):
         mask: ``torch.Tensor``, optional (default = None).
             A tensor of the same shape as ``predicted_indices``.
         """
-        unwrapped = self.unwrap_to_tensors(predicted_indices, predicted_labels,
-                                           gold_indices, gold_labels, mask)
+        unwrapped = self.unwrap_to_tensors(
+            predicted_indices, predicted_labels, gold_indices, gold_labels, mask
+        )
         predicted_indices, predicted_labels, gold_indices, gold_labels, mask = unwrapped
 
         mask = mask.long()
@@ -93,22 +97,24 @@ class AttachmentScores(Metric):
             unlabeled_attachment_score = float(self._unlabeled_correct) / float(self._total_words)
             labeled_attachment_score = float(self._labeled_correct) / float(self._total_words)
         if self._total_sentences > 0:
-            unlabeled_exact_match = float(self._exact_unlabeled_correct) / float(self._total_sentences)
+            unlabeled_exact_match = float(self._exact_unlabeled_correct) / float(
+                self._total_sentences
+            )
             labeled_exact_match = float(self._exact_labeled_correct) / float(self._total_sentences)
         if reset:
             self.reset()
         return {
-                "UAS": unlabeled_attachment_score,
-                "LAS": labeled_attachment_score,
-                "UEM": unlabeled_exact_match,
-                "LEM": labeled_exact_match
+            "UAS": unlabeled_attachment_score,
+            "LAS": labeled_attachment_score,
+            "UEM": unlabeled_exact_match,
+            "LEM": labeled_exact_match,
         }
 
     @overrides
     def reset(self):
-        self._labeled_correct = 0.
-        self._unlabeled_correct = 0.
-        self._exact_labeled_correct = 0.
-        self._exact_unlabeled_correct = 0.
-        self._total_words = 0.
-        self._total_sentences = 0.
+        self._labeled_correct = 0.0
+        self._unlabeled_correct = 0.0
+        self._exact_labeled_correct = 0.0
+        self._exact_unlabeled_correct = 0.0
+        self._total_words = 0.0
+        self._total_sentences = 0.0

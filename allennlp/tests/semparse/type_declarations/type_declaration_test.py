@@ -1,17 +1,17 @@
-# pylint: disable=no-self-use,invalid-name
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.semparse.type_declarations import type_declaration as types
 from allennlp.semparse.type_declarations.type_declaration import (
-        ANY_TYPE,
-        BinaryOpType,
-        ComplexType,
-        NamedBasicType,
-        UnaryOpType,
-        )
+    ANY_TYPE,
+    BinaryOpType,
+    ComplexType,
+    NamedBasicType,
+    UnaryOpType,
+)
 
 
-ROW_TYPE = NamedBasicType('row')
-CELL_TYPE = NamedBasicType('cell')
+ROW_TYPE = NamedBasicType("row")
+CELL_TYPE = NamedBasicType("cell")
+
 
 class TestTypeDeclaration(AllenNlpTestCase):
     def test_basic_types_conflict_on_names(self):
@@ -34,7 +34,9 @@ class TestTypeDeclaration(AllenNlpTestCase):
         resolution = unary_type.resolve(ComplexType(CELL_TYPE, ANY_TYPE))
         assert resolution == UnaryOpType(CELL_TYPE)
 
-        reverse_type = ComplexType(ComplexType(CELL_TYPE, ROW_TYPE), ComplexType(CELL_TYPE, ROW_TYPE))
+        reverse_type = ComplexType(
+            ComplexType(CELL_TYPE, ROW_TYPE), ComplexType(CELL_TYPE, ROW_TYPE)
+        )
         resolution = unary_type.resolve(reverse_type)
         assert resolution == UnaryOpType(ComplexType(CELL_TYPE, ROW_TYPE))
 
@@ -69,9 +71,11 @@ class TestTypeDeclaration(AllenNlpTestCase):
         type_r = NamedBasicType("R")
         type_d = NamedBasicType("D")
         type_e = NamedBasicType("E")
-        name_mapping = {'sample_function': 'F'}
+        name_mapping = {"sample_function": "F"}
         # <e,<r,<d,r>>>
-        type_signatures = {'F': ComplexType(type_e, ComplexType(type_r, ComplexType(type_d, type_r)))}
+        type_signatures = {
+            "F": ComplexType(type_e, ComplexType(type_r, ComplexType(type_d, type_r)))
+        }
         basic_types = {type_r, type_d, type_e}
         valid_actions = types.get_valid_actions(name_mapping, type_signatures, basic_types)
         assert len(valid_actions) == 3
@@ -83,9 +87,9 @@ class TestTypeDeclaration(AllenNlpTestCase):
         type_r = NamedBasicType("R")
         type_d = NamedBasicType("D")
         type_e = NamedBasicType("E")
-        name_mapping = {'sample_function': 'F'}
+        name_mapping = {"sample_function": "F"}
         # <#1,#1>
-        type_signatures = {'F': UnaryOpType()}
+        type_signatures = {"F": UnaryOpType()}
         basic_types = {type_r, type_d, type_e}
         valid_actions = types.get_valid_actions(name_mapping, type_signatures, basic_types)
         assert len(valid_actions) == 5
@@ -99,13 +103,13 @@ class TestTypeDeclaration(AllenNlpTestCase):
         type_r = NamedBasicType("R")
         type_d = NamedBasicType("D")
         type_e = NamedBasicType("E")
-        name_mapping = {'sample_function': 'F'}
+        name_mapping = {"sample_function": "F"}
         # The purpose of this test is to ensure that ANY_TYPE gets substituted by every possible basic type,
         # to simulate an intermediate step while getting actions for a placeholder type.
         # I do not foresee defining a function type with ANY_TYPE. We should just use a ``PlaceholderType``
         # instead.
         # <?,r>
-        type_signatures = {'F': ComplexType(ANY_TYPE, type_r)}
+        type_signatures = {"F": ComplexType(ANY_TYPE, type_r)}
         basic_types = {type_r, type_d, type_e}
         valid_actions = types.get_valid_actions(name_mapping, type_signatures, basic_types)
         assert len(valid_actions) == 5

@@ -31,32 +31,45 @@ import logging
 import os
 import json
 from allennlp.commands.subcommand import Subcommand
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
+logger = logging.getLogger(__name__)
 
 
 class PrintResults(Subcommand):
-    def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
-        # pylint: disable=protected-access
-        description = '''Print results from allennlp training runs in a helpful CSV format.'''
-        subparser = parser.add_parser(
-                name, description=description,
-                help='Print results from allennlp serialization directories to the console.')
-        subparser.add_argument('path',
-                               type=str,
-                               help='Path to recursively search for allennlp serialization directories.')
+    def add_subparser(
+        self, name: str, parser: argparse._SubParsersAction
+    ) -> argparse.ArgumentParser:
 
-        subparser.add_argument('-k', '--keys',
-                               type=str,
-                               nargs='+',
-                               help='Keys to print from metrics.json.'
-                                    'Keys not present in all metrics.json will result in "N/A"',
-                               default=None,
-                               required=False)
-        subparser.add_argument('-m', '--metrics-filename',
-                               type=str,
-                               help='Name of the metrics file to inspect.',
-                               default="metrics.json",
-                               required=False)
+        description = """Print results from allennlp training runs in a helpful CSV format."""
+        subparser = parser.add_parser(
+            name,
+            description=description,
+            help="Print results from allennlp serialization directories to the console.",
+        )
+        subparser.add_argument(
+            "path",
+            type=str,
+            help="Path to recursively search for allennlp serialization directories.",
+        )
+
+        subparser.add_argument(
+            "-k",
+            "--keys",
+            type=str,
+            nargs="+",
+            help="Keys to print from metrics.json."
+            'Keys not present in all metrics.json will result in "N/A"',
+            default=None,
+            required=False,
+        )
+        subparser.add_argument(
+            "-m",
+            "--metrics-filename",
+            type=str,
+            help="Name of the metrics file to inspect.",
+            default="metrics.json",
+            required=False,
+        )
 
         subparser.set_defaults(func=print_results_from_args)
         return subparser
@@ -77,7 +90,6 @@ def print_results_from_args(args: argparse.Namespace):
             full_name = os.path.join(root, metrics_name)
             metrics = json.load(open(full_name))
             results_dict[full_name] = metrics
-
 
     sorted_keys = sorted(list(results_dict.keys()))
     print(f"model_run, {', '.join(keys)}")

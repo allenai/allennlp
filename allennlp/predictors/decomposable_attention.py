@@ -10,7 +10,7 @@ from allennlp.predictors.predictor import Predictor
 from allennlp.data.fields import LabelField
 
 
-@Predictor.register('textual-entailment')
+@Predictor.register("textual-entailment")
 class DecomposableAttentionPredictor(Predictor):
     """
     Predictor for the :class:`~allennlp.models.bidaf.DecomposableAttention` model.
@@ -33,7 +33,7 @@ class DecomposableAttentionPredictor(Predictor):
         A dictionary where the key "label_probs" determines the probabilities of each of
         [entailment, contradiction, neutral].
         """
-        return self.predict_json({"premise" : premise, "hypothesis": hypothesis})
+        return self.predict_json({"premise": premise, "hypothesis": hypothesis})
 
     @overrides
     def _json_to_instance(self, json_dict: JsonDict) -> Instance:
@@ -45,11 +45,11 @@ class DecomposableAttentionPredictor(Predictor):
         return self._dataset_reader.text_to_instance(premise_text, hypothesis_text)
 
     @overrides
-    def predictions_to_labeled_instances(self,
-                                         instance: Instance,
-                                         outputs: Dict[str, numpy.ndarray]) -> List[Instance]:
+    def predictions_to_labeled_instances(
+        self, instance: Instance, outputs: Dict[str, numpy.ndarray]
+    ) -> List[Instance]:
         new_instance = deepcopy(instance)
-        label = numpy.argmax(outputs['label_logits'])
+        label = numpy.argmax(outputs["label_logits"])
         # Skip indexing, we have integer representations of the strings "entailment", etc.
-        new_instance.add_field('label', LabelField(int(label), skip_indexing=True))
+        new_instance.add_field("label", LabelField(int(label), skip_indexing=True))
         return [new_instance]

@@ -1,4 +1,3 @@
-# pylint: disable=invalid-name,arguments-differ,abstract-method
 import numpy as np
 import pytest
 
@@ -14,13 +13,20 @@ class TestUnidirectionalLanguageModel(ModelTestCase):
 
         self.expected_embedding_shape = (2, 8, 7)
         self.bidirectional = False
-        self.result_keys = {"loss", "forward_loss", "lm_embeddings",
-                            "noncontextual_token_embeddings", "mask", "batch_weight"}
+        self.result_keys = {
+            "loss",
+            "forward_loss",
+            "lm_embeddings",
+            "noncontextual_token_embeddings",
+            "mask",
+            "batch_weight",
+        }
 
-        self.set_up_model(self.FIXTURES_ROOT / 'language_model' / 'experiment_unidirectional.jsonnet',
-                          self.FIXTURES_ROOT / 'language_model' / 'sentences.txt')
+        self.set_up_model(
+            self.FIXTURES_ROOT / "language_model" / "experiment_unidirectional.jsonnet",
+            self.FIXTURES_ROOT / "language_model" / "sentences.txt",
+        )
 
-    # pylint: disable=no-member
     def test_unidirectional_language_model_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
 
@@ -42,8 +48,7 @@ class TestUnidirectionalLanguageModel(ModelTestCase):
         forward_loss = result["forward_loss"].item()
         if self.bidirectional:
             backward_loss = result["backward_loss"].item()
-            np.testing.assert_almost_equal(loss, (forward_loss + backward_loss) / 2,
-                                           decimal=3)
+            np.testing.assert_almost_equal(loss, (forward_loss + backward_loss) / 2, decimal=3)
         else:
             np.testing.assert_almost_equal(loss, forward_loss, decimal=3)
 
@@ -51,7 +56,7 @@ class TestUnidirectionalLanguageModel(ModelTestCase):
         params = Params.from_file(self.param_file)
         # Make the contextualizer unidirectionality wrong - it should be
         # False to match the language model.
-        params["model"]["contextualizer"]["bidirectional"] = (not self.bidirectional)
+        params["model"]["contextualizer"]["bidirectional"] = not self.bidirectional
         with pytest.raises(ConfigurationError):
             Model.from_params(vocab=self.vocab, params=params.get("model"))
 
@@ -60,12 +65,15 @@ class TestUnidirectionalLanguageModel(ModelTestCase):
         predictions = self.model.forward_on_instances(instances)
         assert predictions is not None
 
+
 class TestUnidirectionalLanguageModelUnsampled(TestUnidirectionalLanguageModel):
     def setUp(self):
         super().setUp()
-        self.set_up_model(self.FIXTURES_ROOT / 'language_model' /
-                          'experiment_unidirectional_unsampled.jsonnet',
-                          self.FIXTURES_ROOT / 'language_model' / 'sentences.txt')
+        self.set_up_model(
+            self.FIXTURES_ROOT / "language_model" / "experiment_unidirectional_unsampled.jsonnet",
+            self.FIXTURES_ROOT / "language_model" / "sentences.txt",
+        )
+
 
 class TestUnidirectionalLanguageModelTransformer(TestUnidirectionalLanguageModel):
     def setUp(self):
@@ -73,18 +81,22 @@ class TestUnidirectionalLanguageModelTransformer(TestUnidirectionalLanguageModel
 
         self.expected_embedding_shape = (2, 8, 20)
 
-        self.set_up_model(self.FIXTURES_ROOT / 'language_model' /
-                          'experiment_unidirectional_transformer.jsonnet',
-                          self.FIXTURES_ROOT / 'language_model' / 'sentences.txt')
+        self.set_up_model(
+            self.FIXTURES_ROOT / "language_model" / "experiment_unidirectional_transformer.jsonnet",
+            self.FIXTURES_ROOT / "language_model" / "sentences.txt",
+        )
 
-    # pylint: disable=no-member
     def test_unidirectional_language_model_can_train_save_and_load(self):
         # Ignore layer 0 feedforward layer norm parameters, since
         # they are not used.
         self.ensure_model_can_train_save_and_load(
-                self.param_file, gradients_to_ignore={
-                        "_contextualizer.feedforward_layer_norm_0.gamma",
-                        "_contextualizer.feedforward_layer_norm_0.beta"})
+            self.param_file,
+            gradients_to_ignore={
+                "_contextualizer.feedforward_layer_norm_0.gamma",
+                "_contextualizer.feedforward_layer_norm_0.beta",
+            },
+        )
+
 
 class TestBidirectionalLanguageModel(TestUnidirectionalLanguageModel):
     def setUp(self):
@@ -94,14 +106,20 @@ class TestBidirectionalLanguageModel(TestUnidirectionalLanguageModel):
         self.bidirectional = True
         self.result_keys.add("backward_loss")
 
-        self.set_up_model(self.FIXTURES_ROOT / 'language_model' / 'experiment.jsonnet',
-                          self.FIXTURES_ROOT / 'language_model' / 'sentences.txt')
+        self.set_up_model(
+            self.FIXTURES_ROOT / "language_model" / "experiment.jsonnet",
+            self.FIXTURES_ROOT / "language_model" / "sentences.txt",
+        )
+
 
 class TestBidirectionalLanguageModelUnsampled(TestBidirectionalLanguageModel):
     def setUp(self):
         super().setUp()
-        self.set_up_model(self.FIXTURES_ROOT / 'language_model' / 'experiment_unsampled.jsonnet',
-                          self.FIXTURES_ROOT / 'language_model' / 'sentences.txt')
+        self.set_up_model(
+            self.FIXTURES_ROOT / "language_model" / "experiment_unsampled.jsonnet",
+            self.FIXTURES_ROOT / "language_model" / "sentences.txt",
+        )
+
 
 class TestBidirectionalLanguageModelTransformer(TestBidirectionalLanguageModel):
     def setUp(self):
@@ -109,5 +127,7 @@ class TestBidirectionalLanguageModelTransformer(TestBidirectionalLanguageModel):
 
         self.expected_embedding_shape = (2, 8, 32)
 
-        self.set_up_model(self.FIXTURES_ROOT / 'language_model' / 'experiment_transformer.jsonnet',
-                          self.FIXTURES_ROOT / 'language_model' / 'sentences.txt')
+        self.set_up_model(
+            self.FIXTURES_ROOT / "language_model" / "experiment_transformer.jsonnet",
+            self.FIXTURES_ROOT / "language_model" / "sentences.txt",
+        )
