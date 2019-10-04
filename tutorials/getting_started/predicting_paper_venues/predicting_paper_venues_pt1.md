@@ -20,7 +20,7 @@ lines of code to get a very flexible classifier for academic papers.
 The first thing we need to do is specify AllenNLP as a dependency in our project.  We'll do this by
 creating a
 [`requirements.txt`](https://github.com/allenai/allennlp-as-a-library-example/blob/master/requirements.txt)
-file.  Then, after creating a python 3.6 environment, you install AllenNLP by running `pip install -r requirements.txt`.
+file.  Then, after creating a python 3.7 environment, you install AllenNLP by running `pip install -r requirements.txt`.
 
 ```bash
 pip install -r requirements.txt
