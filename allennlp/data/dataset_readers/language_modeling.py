@@ -1,5 +1,6 @@
 from typing import Dict
 import logging
+import warnings
 
 from overrides import overrides
 
@@ -16,6 +17,7 @@ from allennlp.data.token_indexers import SingleIdTokenIndexer
 
 logger = logging.getLogger(__name__)
 
+warnings.warn("LanguageModelingReader is deprecated and not used by any core AllenNLP models. You almost certainly want to use SimpleLanguageModelingDatasetReader. It will be removed after 2020/01/04 in the version 1.0.0 release or later.", DeprecationWarning)
 
 @DatasetReader.register("language_modeling")
 class LanguageModelingReader(DatasetReader):
