@@ -4,8 +4,8 @@ global defaults for certain tqdm parameters.
 """
 
 try:
-    SHELL = str(type(get_ipython())) # type:ignore
-except: # pylint: disable=bare-except
+    SHELL = str(type(get_ipython()))  # type:ignore
+except:  # pylint: disable=bare-except
     SHELL = ""
 
 if "zmqshell.ZMQInteractiveShell" in SHELL:
