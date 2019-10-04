@@ -19,5 +19,7 @@ from allennlp.predictors.simple_seq2seq import SimpleSeq2SeqPredictor
 from allennlp.predictors.wikitables_parser import WikiTablesParserPredictor
 from allennlp.predictors.nlvr_parser import NlvrParserPredictor
 
-warnings.warn("allennlp.service.predictors.* has been depreciated. "
-              "Please use allennlp.predictors.*", FutureWarning)
+warnings.warn(
+    "allennlp.service.predictors.* has been depreciated. " "Please use allennlp.predictors.*",
+    FutureWarning,
+)

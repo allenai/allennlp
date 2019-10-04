@@ -1,7 +1,12 @@
 """
 Defines all the types in the QuaRel domain.
 """
-from allennlp.semparse.type_declarations.type_declaration import ComplexType, NamedBasicType, NameMapper
+from allennlp.semparse.type_declarations.type_declaration import (
+    ComplexType,
+    NamedBasicType,
+    NameMapper,
+)
+
 
 class QuarelTypeDeclaration:
     def __init__(self, syntax: str) -> None:
@@ -18,15 +23,14 @@ class QuarelTypeDeclaration:
 
         if syntax == "quarel_friction":
             # attributes: <<QDIR, <WORLD, ATTR>>
-            attr_function_type = ComplexType(rdir_type,
-                                             ComplexType(world_type, attr_type))
+            attr_function_type = ComplexType(rdir_type, ComplexType(world_type, attr_type))
 
             and_function_type = ComplexType(attr_type, ComplexType(attr_type, attr_type))
 
             # infer: <ATTR, <ATTR, <ATTR, NUM>>>
-            infer_function_type = ComplexType(attr_type,
-                                              ComplexType(attr_type,
-                                                          ComplexType(attr_type, num_type)))
+            infer_function_type = ComplexType(
+                attr_type, ComplexType(attr_type, ComplexType(attr_type, num_type))
+            )
             self.name_mapper.map_name_with_signature("infer", infer_function_type)
             # Attributes
             self.name_mapper.map_name_with_signature("friction", attr_function_type)
@@ -41,21 +45,20 @@ class QuarelTypeDeclaration:
             self.name_mapper.map_name_with_signature("and", and_function_type)
 
             self.curried_functions = {
-                    attr_function_type: 2,
-                    infer_function_type: 3,
-                    and_function_type: 2
+                attr_function_type: 2,
+                infer_function_type: 3,
+                and_function_type: 2,
             }
         elif syntax in ("quarel_v1_attr_entities", "quarel_friction_attr_entities"):
             # attributes: <<QDIR, <WORLD, ATTR>>
-            attr_function_type = ComplexType(rdir_type,
-                                             ComplexType(world_type, attr_type))
+            attr_function_type = ComplexType(rdir_type, ComplexType(world_type, attr_type))
 
             and_function_type = ComplexType(attr_type, ComplexType(attr_type, attr_type))
 
             # infer: <ATTR, <ATTR, <ATTR, NUM>>>
-            infer_function_type = ComplexType(attr_type,
-                                              ComplexType(attr_type,
-                                                          ComplexType(attr_type, num_type)))
+            infer_function_type = ComplexType(
+                attr_type, ComplexType(attr_type, ComplexType(attr_type, num_type))
+            )
             self.name_mapper.map_name_with_signature("infer", infer_function_type)
             # TODO: Remove this?
             self.name_mapper.map_name_with_signature("placeholder", attr_function_type)
@@ -66,22 +69,21 @@ class QuarelTypeDeclaration:
             self.name_mapper.map_name_with_signature("and", and_function_type)
 
             self.curried_functions = {
-                    attr_function_type: 2,
-                    infer_function_type: 3,
-                    and_function_type: 2
+                attr_function_type: 2,
+                infer_function_type: 3,
+                and_function_type: 2,
             }
 
         elif syntax == "quarel_v1":
             # attributes: <<QDIR, <WORLD, ATTR>>
-            attr_function_type = ComplexType(rdir_type,
-                                             ComplexType(world_type, attr_type))
+            attr_function_type = ComplexType(rdir_type, ComplexType(world_type, attr_type))
 
             and_function_type = ComplexType(attr_type, ComplexType(attr_type, attr_type))
 
             # infer: <ATTR, <ATTR, <ATTR, NUM>>>
-            infer_function_type = ComplexType(attr_type,
-                                              ComplexType(attr_type,
-                                                          ComplexType(attr_type, num_type)))
+            infer_function_type = ComplexType(
+                attr_type, ComplexType(attr_type, ComplexType(attr_type, num_type))
+            )
             self.name_mapper.map_name_with_signature("infer", infer_function_type)
             # Attributes
             self.name_mapper.map_name_with_signature("friction", attr_function_type)
@@ -110,9 +112,9 @@ class QuarelTypeDeclaration:
             self.name_mapper.map_name_with_signature("and", and_function_type)
 
             self.curried_functions = {
-                    attr_function_type: 2,
-                    infer_function_type: 3,
-                    and_function_type: 2
+                attr_function_type: 2,
+                infer_function_type: 3,
+                and_function_type: 2,
             }
 
         else:

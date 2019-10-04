@@ -1,4 +1,3 @@
-# pylint: disable=abstract-method,no-self-use
 from typing import Dict
 
 from pytorch_pretrained_bert.modeling import BertConfig, BertModel
@@ -15,10 +14,12 @@ from allennlp.modules.token_embedders.bert_token_embedder import PretrainedBertM
 
 @DatasetReader.register("bert_classification_test")
 class BertClassificationTestReader(DatasetReader):
-    def __init__(self,
-                 lazy: bool = False,
-                 token_indexers: Dict[str, TokenIndexer] = None,
-                 tokenizer: WordTokenizer = None) -> None:
+    def __init__(
+        self,
+        lazy: bool = False,
+        token_indexers: Dict[str, TokenIndexer] = None,
+        tokenizer: WordTokenizer = None,
+    ) -> None:
         super().__init__(lazy)
         self._token_indexers = token_indexers or {}
         self.tokenizer = tokenizer or WordTokenizer()
@@ -34,10 +35,12 @@ class BertClassificationTestReader(DatasetReader):
         tokens2 = self.tokenizer.tokenize(sentence2)
         label2 = "negative"
 
-        instance1 = Instance({"tokens": TextField(tokens1, self._token_indexers),
-                              "label": LabelField(label1)})
-        instance2 = Instance({"tokens": TextField(tokens2, self._token_indexers),
-                              "label": LabelField(label2)})
+        instance1 = Instance(
+            {"tokens": TextField(tokens1, self._token_indexers), "label": LabelField(label1)}
+        )
+        instance2 = Instance(
+            {"tokens": TextField(tokens2, self._token_indexers), "label": LabelField(label2)}
+        )
 
         return [instance1, instance2]
 
@@ -48,22 +51,22 @@ class TestBertForClassification(ModelTestCase):
         self.monkeypatch = MonkeyPatch()
 
         # monkeypatch the PretrainedBertModel to return the tiny test fixture model
-        config_path = self.FIXTURES_ROOT / 'bert' / 'config.json'
+        config_path = self.FIXTURES_ROOT / "bert" / "config.json"
         config = BertConfig(str(config_path))
-        self.monkeypatch.setattr(BertModel, 'from_pretrained', lambda _: BertModel(config))
+        self.monkeypatch.setattr(BertModel, "from_pretrained", lambda _: BertModel(config))
 
     def tearDown(self):
         self.monkeypatch.undo()
         super().tearDown()
 
     def test_model_can_train_save_and_load(self):
-        param_file = self.FIXTURES_ROOT / 'bert' / 'bert_for_classification.jsonnet'
+        param_file = self.FIXTURES_ROOT / "bert" / "bert_for_classification.jsonnet"
 
         self.set_up_model(param_file, "")
         self.ensure_model_can_train_save_and_load(param_file)
 
     def test_decode(self):
-        param_file = self.FIXTURES_ROOT / 'bert' / 'bert_for_classification.jsonnet'
+        param_file = self.FIXTURES_ROOT / "bert" / "bert_for_classification.jsonnet"
         self.set_up_model(param_file, "")
         padding_lengths = self.dataset.get_padding_lengths()
         tensors = self.model(**self.dataset.as_tensor_dict(padding_lengths))
@@ -71,7 +74,7 @@ class TestBertForClassification(ModelTestCase):
         assert "label" in decoded
 
     def test_bert_pooler_can_train_save_and_load(self):
-        param_file = self.FIXTURES_ROOT / 'bert' / 'bert_pooler.jsonnet'
+        param_file = self.FIXTURES_ROOT / "bert" / "bert_pooler.jsonnet"
 
         self.set_up_model(param_file, "")
         self.ensure_model_can_train_save_and_load(param_file)

@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name,bad-continuation
 import json
 import os
 import re
@@ -13,9 +12,8 @@ from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestParams(AllenNlpTestCase):
-
     def test_load_from_file(self):
-        filename = self.FIXTURES_ROOT / 'bidaf' / 'experiment.json'
+        filename = self.FIXTURES_ROOT / "bidaf" / "experiment.json"
         params = Params.from_file(filename)
 
         assert "dataset_reader" in params
@@ -31,15 +29,17 @@ class TestParams(AllenNlpTestCase):
         assert params["c"]["d"] is None
 
     def test_bad_unicode_environment_variables(self):
-        filename = self.FIXTURES_ROOT / 'bidaf' / 'experiment.json'
-        os.environ['BAD_ENVIRONMENT_VARIABLE'] = "\udce2"
+        filename = self.FIXTURES_ROOT / "bidaf" / "experiment.json"
+        os.environ["BAD_ENVIRONMENT_VARIABLE"] = "\udce2"
         Params.from_file(filename)
-        del os.environ['BAD_ENVIRONMENT_VARIABLE']
+        del os.environ["BAD_ENVIRONMENT_VARIABLE"]
 
     def test_overrides(self):
-        filename = self.FIXTURES_ROOT / 'bidaf' / 'experiment.json'
-        overrides = '{ "train_data_path": "FOO", "model": { "type": "BAR" },'\
-                    '"model.text_field_embedder.tokens.type": "BAZ", "iterator.sorting_keys.0.0": "question"}'
+        filename = self.FIXTURES_ROOT / "bidaf" / "experiment.json"
+        overrides = (
+            '{ "train_data_path": "FOO", "model": { "type": "BAR" },'
+            '"model.text_field_embedder.tokens.type": "BAZ", "iterator.sorting_keys.0.0": "question"}'
+        )
         params = Params.from_file(filename, overrides)
 
         assert "dataset_reader" in params
@@ -54,22 +54,7 @@ class TestParams(AllenNlpTestCase):
     def test_unflatten(self):
         flattened = {"a.b.c": 1, "a.b.d": 0, "a.e.f.g.h": 2, "b": 3}
         unflattened = unflatten(flattened)
-        assert unflattened == {
-            "a": {
-                "b": {
-                    "c": 1,
-                    "d": 0
-                },
-                "e": {
-                    "f": {
-                        "g": {
-                            "h": 2
-                        }
-                    }
-                }
-            },
-            "b": 3
-        }
+        assert unflattened == {"a": {"b": {"c": 1, "d": 0}, "e": {"f": {"g": {"h": 2}}}}, "b": 3}
 
         # should do nothing to a non-flat dictionary
         assert unflatten(unflattened) == unflattened
@@ -99,49 +84,41 @@ class TestParams(AllenNlpTestCase):
         assert parse_overrides("{}") == {}
 
         override_dict = parse_overrides('{"train_data": "/train", "trainer.num_epochs": 10}')
-        assert override_dict == {
-            "train_data": "/train",
-            "trainer": {
-                "num_epochs": 10
-            }
-        }
+        assert override_dict == {"train_data": "/train", "trainer": {"num_epochs": 10}}
 
         params = with_fallback(
             preferred=override_dict,
             fallback={
                 "train_data": "/test",
                 "model": "bidaf",
-                "trainer": {"num_epochs": 100, "optimizer": "sgd"}
-            })
+                "trainer": {"num_epochs": 100, "optimizer": "sgd"},
+            },
+        )
 
         assert params == {
             "train_data": "/train",
             "model": "bidaf",
-            "trainer": {"num_epochs": 10, "optimizer": "sgd"}
+            "trainer": {"num_epochs": 10, "optimizer": "sgd"},
         }
 
     def test_as_flat_dict(self):
-        params = Params({
-                'a': 10,
-                'b': {
-                        'c': 20,
-                        'd': 'stuff'
-                }
-        }).as_flat_dict()
+        params = Params({"a": 10, "b": {"c": 20, "d": "stuff"}}).as_flat_dict()
 
-        assert params == {'a': 10, 'b.c': 20, 'b.d': 'stuff'}
+        assert params == {"a": 10, "b.c": 20, "b.d": "stuff"}
 
     def test_jsonnet_features(self):
-        config_file = self.TEST_DIR / 'config.jsonnet'
-        with open(config_file, 'w') as f:
-            f.write("""{
+        config_file = self.TEST_DIR / "config.jsonnet"
+        with open(config_file, "w") as f:
+            f.write(
+                """{
                             // This example is copied straight from the jsonnet docs
                             person1: {
                                 name: "Alice",
                                 welcome: "Hello " + self.name + "!",
                             },
                             person2: self.person1 { name: "Bob" },
-                        }""")
+                        }"""
+            )
 
         params = Params.from_file(config_file)
 
@@ -154,39 +131,39 @@ class TestParams(AllenNlpTestCase):
         params.assert_empty("TestParams")
 
     def test_regexes_with_backslashes(self):
-        bad_regex = self.TEST_DIR / 'bad_regex.jsonnet'
-        good_regex = self.TEST_DIR / 'good_regex.jsonnet'
+        bad_regex = self.TEST_DIR / "bad_regex.jsonnet"
+        good_regex = self.TEST_DIR / "good_regex.jsonnet"
 
-        with open(bad_regex, 'w') as f:
+        with open(bad_regex, "w") as f:
             f.write(r'{"myRegex": "a\.b"}')
 
-        with open(good_regex, 'w') as f:
+        with open(good_regex, "w") as f:
             f.write(r'{"myRegex": "a\\.b"}')
 
         with pytest.raises(RuntimeError):
             Params.from_file(bad_regex)
 
         params = Params.from_file(good_regex)
-        regex = params['myRegex']
+        regex = params["myRegex"]
 
         assert re.match(regex, "a.b")
         assert not re.match(regex, "a-b")
 
         # Check roundtripping
-        good_regex2 = self.TEST_DIR / 'good_regex2.jsonnet'
-        with open(good_regex2, 'w') as f:
+        good_regex2 = self.TEST_DIR / "good_regex2.jsonnet"
+        with open(good_regex2, "w") as f:
             f.write(json.dumps(params.as_dict()))
         params2 = Params.from_file(good_regex2)
 
         assert params.as_dict() == params2.as_dict()
 
     def test_env_var_substitution(self):
-        substitutor = self.TEST_DIR / 'substitutor.jsonnet'
-        key = 'TEST_ENV_VAR_SUBSTITUTION'
+        substitutor = self.TEST_DIR / "substitutor.jsonnet"
+        key = "TEST_ENV_VAR_SUBSTITUTION"
 
         assert os.environ.get(key) is None
 
-        with open(substitutor, 'w') as f:
+        with open(substitutor, "w") as f:
             f.write(f'{{"path": std.extVar("{key}")}}')
 
         # raises without environment variable set
@@ -196,12 +173,14 @@ class TestParams(AllenNlpTestCase):
         os.environ[key] = "PERFECT"
 
         params = Params.from_file(substitutor)
-        assert params['path'] == "PERFECT"
+        assert params["path"] == "PERFECT"
 
         del os.environ[key]
 
-    @pytest.mark.xfail(not os.path.exists(AllenNlpTestCase.PROJECT_ROOT / "training_config"),
-                       reason="Training configs not installed with pip")
+    @pytest.mark.xfail(
+        not os.path.exists(AllenNlpTestCase.PROJECT_ROOT / "training_config"),
+        reason="Training configs not installed with pip",
+    )
     def test_known_configs(self):
         configs = os.listdir(self.PROJECT_ROOT / "training_config")
 
@@ -209,25 +188,31 @@ class TestParams(AllenNlpTestCase):
         # will fail if we don't pass it correct environment variables.
         forced_variables = [
             # constituency parser
-            'PTB_TRAIN_PATH', 'PTB_DEV_PATH', 'PTB_TEST_PATH',
-
+            "PTB_TRAIN_PATH",
+            "PTB_DEV_PATH",
+            "PTB_TEST_PATH",
             # dependency parser
-            'PTB_DEPENDENCIES_TRAIN', 'PTB_DEPENDENCIES_VAL',
-
+            "PTB_DEPENDENCIES_TRAIN",
+            "PTB_DEPENDENCIES_VAL",
             # multilingual dependency parser
-            'TRAIN_PATHNAME', 'DEV_PATHNAME', 'TEST_PATHNAME',
-
+            "TRAIN_PATHNAME",
+            "DEV_PATHNAME",
+            "TEST_PATHNAME",
             # srl_elmo_5.5B
-            'SRL_TRAIN_DATA_PATH', 'SRL_VALIDATION_DATA_PATH',
-
+            "SRL_TRAIN_DATA_PATH",
+            "SRL_VALIDATION_DATA_PATH",
             # coref
-            'COREF_TRAIN_DATA_PATH', 'COREF_DEV_DATA_PATH', 'COREF_TEST_DATA_PATH',
-
+            "COREF_TRAIN_DATA_PATH",
+            "COREF_DEV_DATA_PATH",
+            "COREF_TEST_DATA_PATH",
             # ner
-            'NER_TRAIN_DATA_PATH', 'NER_TEST_A_PATH', 'NER_TEST_B_PATH',
-
+            "NER_TRAIN_DATA_PATH",
+            "NER_TEST_A_PATH",
+            "NER_TEST_B_PATH",
             # bidirectional lm
-            'BIDIRECTIONAL_LM_TRAIN_PATH', 'BIDIRECTIONAL_LM_VOCAB_PATH', 'BIDIRECTIONAL_LM_ARCHIVE_PATH'
+            "BIDIRECTIONAL_LM_TRAIN_PATH",
+            "BIDIRECTIONAL_LM_VOCAB_PATH",
+            "BIDIRECTIONAL_LM_ARCHIVE_PATH",
         ]
 
         for var in forced_variables:
@@ -249,8 +234,8 @@ class TestParams(AllenNlpTestCase):
         tempdir = tempfile.mkdtemp()
         my_file = os.path.join(tempdir, "my_file.txt")
         my_other_file = os.path.join(tempdir, "my_other_file.txt")
-        open(my_file, 'w').close()
-        open(my_other_file, 'w').close()
+        open(my_file, "w").close()
+        open(my_other_file, "w").close()
 
         # Some nested classes just to exercise the ``from_params``
         # and ``add_file_to_archive`` methods.
@@ -260,7 +245,7 @@ class TestParams(AllenNlpTestCase):
                 self.c_file = c_file
 
             @classmethod
-            def from_params(cls, params: Params) -> 'C':
+            def from_params(cls, params: Params) -> "C":
                 params.add_file_to_archive("c_file")
                 c_file = params.pop("c_file")
 
@@ -272,7 +257,7 @@ class TestParams(AllenNlpTestCase):
                 self.c_dict = {"here": c}
 
             @classmethod
-            def from_params(cls, params: Params) -> 'B':
+            def from_params(cls, params: Params) -> "B":
                 params.add_file_to_archive("filename")
 
                 filename = params.pop("filename")
@@ -286,28 +271,16 @@ class TestParams(AllenNlpTestCase):
                 self.b = b
 
             @classmethod
-            def from_params(cls, params: Params) -> 'A':
+            def from_params(cls, params: Params) -> "A":
                 b_params = params.pop("b")
                 return cls(B.from_params(b_params))
 
-        params = Params({
-                "a": {
-                        "b": {
-                                "filename": my_file,
-                                "c": {
-                                        "c_file": my_other_file
-                                }
-                        }
-                }
-        })
+        params = Params({"a": {"b": {"filename": my_file, "c": {"c_file": my_other_file}}}})
 
         # Construct ``A`` from params but then just throw it away.
         A.from_params(params.pop("a"))
 
-        assert params.files_to_archive == {
-                "a.b.filename": my_file,
-                "a.b.c.c_file": my_other_file
-        }
+        assert params.files_to_archive == {"a.b.filename": my_file, "a.b.c.c_file": my_other_file}
 
     def test_add_file_with_list_history_to_archive(self):
         # Creates actual files since add_file_to_archive will throw an exception
@@ -315,8 +288,8 @@ class TestParams(AllenNlpTestCase):
         tempdir = tempfile.mkdtemp()
         my_file = os.path.join(tempdir, "my_file.txt")
         my_other_file = os.path.join(tempdir, "my_other_file.txt")
-        open(my_file, 'w').close()
-        open(my_other_file, 'w').close()
+        open(my_file, "w").close()
+        open(my_other_file, "w").close()
 
         # Some nested classes just to exercise the ``from_params``
         # and ``add_file_to_archive`` methods.
@@ -326,7 +299,7 @@ class TestParams(AllenNlpTestCase):
                 self.c_file = c_file
 
             @classmethod
-            def from_params(cls, params: Params) -> 'C':
+            def from_params(cls, params: Params) -> "C":
                 params.add_file_to_archive("c_file")
                 c_file = params.pop("c_file")
 
@@ -338,7 +311,7 @@ class TestParams(AllenNlpTestCase):
                 self.c_dict = {"here": c}
 
             @classmethod
-            def from_params(cls, params: Params) -> 'B':
+            def from_params(cls, params: Params) -> "B":
                 params.add_file_to_archive("filename")
 
                 filename = params.pop("filename")
@@ -352,40 +325,42 @@ class TestParams(AllenNlpTestCase):
                 self.bs = bs
 
             @classmethod
-            def from_params(cls, params: Params) -> 'A':
+            def from_params(cls, params: Params) -> "A":
                 bs = params.pop("bs")
                 return cls(bs=[B.from_params(b_params) for b_params in bs])
 
-        params = Params({
-                "a": {
-                        "bs": [
-                                {
-                                    "filename": my_file,
-                                    "c": {
-                                            "c_file": my_other_file
-                                    },
-                                },
-                            ],
-                }
-        })
+        params = Params({"a": {"bs": [{"filename": my_file, "c": {"c_file": my_other_file}}]}})
 
         # Construct ``A`` from params but then just throw it away.
         A.from_params(params.pop("a"))
 
         assert params.files_to_archive == {
-                "a.bs.0.filename": my_file,
-                "a.bs.0.c.c_file": my_other_file
+            "a.bs.0.filename": my_file,
+            "a.bs.0.c.c_file": my_other_file,
         }
 
     def test_as_ordered_dict(self):
         # keyD > keyC > keyE; keyDA > keyDB; Next all other keys alphabetically
         preference_orders = [["keyD", "keyC", "keyE"], ["keyDA", "keyDB"]]
-        params = Params({"keyC": "valC", "keyB": "valB", "keyA": "valA", "keyE": "valE",
-                         "keyD": {"keyDB": "valDB", "keyDA": "valDA"}})
+        params = Params(
+            {
+                "keyC": "valC",
+                "keyB": "valB",
+                "keyA": "valA",
+                "keyE": "valE",
+                "keyD": {"keyDB": "valDB", "keyDA": "valDA"},
+            }
+        )
         ordered_params_dict = params.as_ordered_dict(preference_orders)
-        expected_ordered_params_dict = OrderedDict({'keyD': {'keyDA': 'valDA', 'keyDB': 'valDB'},
-                                                    'keyC': 'valC', 'keyE': 'valE',
-                                                    'keyA': 'valA', 'keyB': 'valB'})
+        expected_ordered_params_dict = OrderedDict(
+            {
+                "keyD": {"keyDA": "valDA", "keyDB": "valDB"},
+                "keyC": "valC",
+                "keyE": "valE",
+                "keyA": "valA",
+                "keyB": "valB",
+            }
+        )
         assert json.dumps(ordered_params_dict) == json.dumps(expected_ordered_params_dict)
 
     def test_to_file(self):
@@ -393,7 +368,7 @@ class TestParams(AllenNlpTestCase):
         params_dict = {"keyA": "valA", "keyB": "valB"}
         expected_ordered_params_dict = OrderedDict({"keyB": "valB", "keyA": "valA"})
         params = Params(params_dict)
-        file_path = self.TEST_DIR / 'config.jsonnet'
+        file_path = self.TEST_DIR / "config.jsonnet"
         # check with preference orders
         params.to_file(file_path, [["keyB", "keyA"]])
         with open(file_path, "r") as handle:
@@ -404,15 +379,15 @@ class TestParams(AllenNlpTestCase):
 
     def test_infer_and_cast(self):
         lots_of_strings = {
-                "a": ["10", "1.3", "true"],
-                "b": {"x": 10, "y": "20.1", "z": "other things"},
-                "c": "just a string"
+            "a": ["10", "1.3", "true"],
+            "b": {"x": 10, "y": "20.1", "z": "other things"},
+            "c": "just a string",
         }
 
         casted = {
-                "a": [10, 1.3, True],
-                "b": {"x": 10, "y": 20.1, "z": "other things"},
-                "c": "just a string"
+            "a": [10, 1.3, True],
+            "b": {"x": 10, "y": 20.1, "z": "other things"},
+            "c": "just a string",
         }
 
         assert infer_and_cast(lots_of_strings) == casted
@@ -428,9 +403,7 @@ class TestParams(AllenNlpTestCase):
 
     def test_duplicate_copies_all_params_state(self):
 
-        params = Params({},
-                        loading_from_archive=True,
-                        files_to_archive={"hey": "this is a path"})
+        params = Params({}, loading_from_archive=True, files_to_archive={"hey": "this is a path"})
 
         new_params = params.duplicate()
 
@@ -438,17 +411,17 @@ class TestParams(AllenNlpTestCase):
         assert new_params.files_to_archive == {"hey": "this is a path"}
 
     def test_pop_choice(self):
-        choices = ['my_model', 'other_model']
-        params = Params({'model': 'my_model'})
-        assert params.pop_choice('model', choices) == 'my_model'
+        choices = ["my_model", "other_model"]
+        params = Params({"model": "my_model"})
+        assert params.pop_choice("model", choices) == "my_model"
 
-        params = Params({'model': 'non_existent_model'})
+        params = Params({"model": "non_existent_model"})
         with pytest.raises(ConfigurationError):
-            params.pop_choice('model', choices)
+            params.pop_choice("model", choices)
 
-        params = Params({'model': 'module.submodule.ModelName'})
-        assert params.pop_choice('model', 'choices') == 'module.submodule.ModelName'
+        params = Params({"model": "module.submodule.ModelName"})
+        assert params.pop_choice("model", "choices") == "module.submodule.ModelName"
 
-        params = Params({'model': 'module.submodule.ModelName'})
+        params = Params({"model": "module.submodule.ModelName"})
         with pytest.raises(ConfigurationError):
-            params.pop_choice('model', choices, allow_class_names=False)
+            params.pop_choice("model", choices, allow_class_names=False)

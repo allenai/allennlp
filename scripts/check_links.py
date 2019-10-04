@@ -16,24 +16,20 @@ import requests
 
 
 OK_STATUS_CODES = (
-        200,
-        401,  # the resource exists but may require some sort of login.
-        403,  # ^ same
-        405,  # HEAD method not allowed.
-        406,  # the resource exists, but our default 'Accept-' header may not match what the server can provide.
+    200,
+    401,  # the resource exists but may require some sort of login.
+    403,  # ^ same
+    405,  # HEAD method not allowed.
+    406,  # the resource exists, but our default 'Accept-' header may not match what the server can provide.
 )
 
 THREADS = 10
 
-http_session = requests.Session()  # pylint: disable=invalid-name
+http_session = requests.Session()
 for resource_prefix in ("http://", "https://"):
     http_session.mount(
-            resource_prefix,
-            requests.adapters.HTTPAdapter(
-                    max_retries=5,
-                    pool_connections=20,
-                    pool_maxsize=THREADS,
-            )
+        resource_prefix,
+        requests.adapters.HTTPAdapter(max_retries=5, pool_connections=20, pool_maxsize=THREADS),
     )
 
 
@@ -47,7 +43,10 @@ def url_ok(match_tuple: MatchTuple) -> Tuple[bool, str]:
     """Check if a URL is reachable."""
     try:
         result = http_session.head(match_tuple.link, timeout=5, allow_redirects=True)
-        return result.ok or result.status_code in OK_STATUS_CODES, f"status code = {result.status_code}"
+        return (
+            result.ok or result.status_code in OK_STATUS_CODES,
+            f"status code = {result.status_code}",
+        )
     except (requests.ConnectionError, requests.Timeout):
         return False, "connection error"
 
@@ -72,17 +71,17 @@ def link_ok(match_tuple: MatchTuple) -> Tuple[MatchTuple, bool, Optional[str]]:
 def main():
     print("Finding all markdown files in the current directory...")
 
-    project_root = (pathlib.Path(__file__).parent / "..").resolve() # pylint: disable=no-member
-    markdown_files = project_root.glob('**/*.md')
+    project_root = (pathlib.Path(__file__).parent / "..").resolve()
+    markdown_files = project_root.glob("**/*.md")
 
     all_matches = set()
-    url_regex = re.compile(r'\[([^!][^\]]+)\]\(([^)(]+)\)')
+    url_regex = re.compile(r"\[([^!][^\]]+)\]\(([^)(]+)\)")
     for markdown_file in markdown_files:
         with open(markdown_file) as handle:
             for line in handle.readlines():
                 matches = url_regex.findall(line)
                 for name, link in matches:
-                    if 'localhost' not in link:
+                    if "localhost" not in link:
                         all_matches.add(MatchTuple(source=str(markdown_file), name=name, link=link))
 
     print(f"  {len(all_matches)} markdown files found")
@@ -90,7 +89,9 @@ def main():
 
     with Pool(processes=THREADS) as pool:
         results = pool.map(link_ok, [match for match in list(all_matches)])
-    unreachable_results = [(match_tuple, reason) for match_tuple, success, reason in results if not success]
+    unreachable_results = [
+        (match_tuple, reason) for match_tuple, success, reason in results if not success
+    ]
 
     if unreachable_results:
         print(f"Unreachable links ({len(unreachable_results)}):")

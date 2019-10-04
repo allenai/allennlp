@@ -1,9 +1,9 @@
-# pylint: disable=no-self-use,invalid-name
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.token_indexers.spacy_indexer import SpacyTokenIndexer
 from allennlp.data.fields.text_field import TextField
 from allennlp.common.util import get_spacy_model
 from allennlp.data.vocabulary import Vocabulary
+
 
 class TestSpacyTokenIndexer(AllenNlpTestCase):
     def test_as_array_produces_token_array(self):

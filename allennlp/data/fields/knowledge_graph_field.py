@@ -19,7 +19,7 @@ from allennlp.data.vocabulary import Vocabulary
 from allennlp.nn import util as nn_util
 from allennlp.semparse.contexts.knowledge_graph import KnowledgeGraph
 
-TokenList = List[TokenType]  # pylint: disable=invalid-name
+TokenList = List[TokenType]
 
 
 class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
@@ -84,22 +84,26 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
         total number of tokens, not a max cell text length, because the number of table entities
         varies.
     """
-    def __init__(self,
-                 knowledge_graph: KnowledgeGraph,
-                 utterance_tokens: List[Token],
-                 token_indexers: Dict[str, TokenIndexer],
-                 tokenizer: Tokenizer = None,
-                 feature_extractors: List[str] = None,
-                 entity_tokens: List[List[Token]] = None,
-                 linking_features: List[List[List[float]]] = None,
-                 include_in_vocab: bool = True,
-                 max_table_tokens: int = None) -> None:
+
+    def __init__(
+        self,
+        knowledge_graph: KnowledgeGraph,
+        utterance_tokens: List[Token],
+        token_indexers: Dict[str, TokenIndexer],
+        tokenizer: Tokenizer = None,
+        feature_extractors: List[str] = None,
+        entity_tokens: List[List[Token]] = None,
+        linking_features: List[List[List[float]]] = None,
+        include_in_vocab: bool = True,
+        max_table_tokens: int = None,
+    ) -> None:
 
         self.knowledge_graph = knowledge_graph
         self._tokenizer = tokenizer or WordTokenizer(word_splitter=SpacyWordSplitter(pos_tags=True))
         if not entity_tokens:
-            entity_texts = [knowledge_graph.entity_text[entity].lower()
-                            for entity in knowledge_graph.entities]
+            entity_texts = [
+                knowledge_graph.entity_text[entity].lower() for entity in knowledge_graph.entities
+            ]
             # TODO(mattg): Because we do tagging on each of these entities in addition to just
             # tokenizations, this is quite slow, and about half of our data processing time just
             # goes to this (~15 minutes when there are 7k instances).  The reason we do tagging is
@@ -115,23 +119,31 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
         self._indexed_entity_texts: Dict[str, TokenList] = None
         self._max_table_tokens = max_table_tokens
 
-        feature_extractors = feature_extractors if feature_extractors is not None else [
-                'number_token_match',
-                'exact_token_match',
-                'contains_exact_token_match',
-                'lemma_match',
-                'contains_lemma_match',
-                'edit_distance',
-                'related_column',
-                'related_column_lemma',
-                'span_overlap_fraction',
-                'span_lemma_overlap_fraction',
-                ]
-        self._feature_extractors: List[Callable[[str, List[Token], Token, int, List[Token]], float]] = []
+        feature_extractors = (
+            feature_extractors
+            if feature_extractors is not None
+            else [
+                "number_token_match",
+                "exact_token_match",
+                "contains_exact_token_match",
+                "lemma_match",
+                "contains_lemma_match",
+                "edit_distance",
+                "related_column",
+                "related_column_lemma",
+                "span_overlap_fraction",
+                "span_lemma_overlap_fraction",
+            ]
+        )
+        self._feature_extractors: List[
+            Callable[[str, List[Token], Token, int, List[Token]], float]
+        ] = []
         for feature_extractor_name in feature_extractors:
-            extractor = getattr(self, '_' + feature_extractor_name, None)
+            extractor = getattr(self, "_" + feature_extractor_name, None)
             if not extractor:
-                raise ConfigurationError(f"Invalid feature extractor name: {feature_extractor_name}")
+                raise ConfigurationError(
+                    f"Invalid feature extractor name: {feature_extractor_name}"
+                )
             self._feature_extractors.append(extractor)
 
         if not linking_features:
@@ -167,7 +179,9 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
             indexer_arrays: Dict[str, List] = defaultdict(list)
 
             for entity_text in self.entity_texts:
-                for index_name, indexed in indexer.tokens_to_indices(entity_text, vocab, indexer_name).items():
+                for index_name, indexed in indexer.tokens_to_indices(
+                    entity_text, vocab, indexer_name
+                ).items():
                     indexer_arrays[index_name].append(indexed)
 
             self._indexed_entity_texts.update(indexer_arrays)
@@ -184,20 +198,26 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
             if num_entities * num_entity_tokens > self._max_table_tokens:
                 num_entity_tokens = int(self._max_table_tokens / num_entities)
 
-        padding_lengths = {'num_entities': num_entities,
-                           'num_utterance_tokens': len(self.utterance_tokens)}
-        padding_lengths['num_entity_tokens'] = num_entity_tokens
+        padding_lengths = {
+            "num_entities": num_entities,
+            "num_utterance_tokens": len(self.utterance_tokens),
+        }
+        padding_lengths["num_entity_tokens"] = num_entity_tokens
         lengths = []
-        assert self._indexed_entity_texts is not None, ("This field is not indexed yet. Call "
-                                                        ".index(vocab) before determining padding "
-                                                        "lengths.")
+        assert self._indexed_entity_texts is not None, (
+            "This field is not indexed yet. Call "
+            ".index(vocab) before determining padding "
+            "lengths."
+        )
         for indexer_name, indexer in self._token_indexers.items():
             indexer_lengths = {}
 
             # This is a list of dicts, one for each token in the field.
-            entity_lengths = [indexer.get_padding_lengths(token)
-                              for entity_text in self._indexed_entity_texts[indexer_name]
-                              for token in entity_text]
+            entity_lengths = [
+                indexer.get_padding_lengths(token)
+                for entity_text in self._indexed_entity_texts[indexer_name]
+                for token in entity_text
+            ]
             # Iterate over the keys in the first element of the list.  This is fine as for a given
             # indexer, all entities will return the same keys, so we can just use the first one.
             for key in entity_lengths[0].keys():
@@ -213,33 +233,38 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
     @overrides
     def as_tensor(self, padding_lengths: Dict[str, int]) -> Dict[str, torch.Tensor]:
         tensors = {}
-        desired_num_entities = padding_lengths['num_entities']
-        desired_num_entity_tokens = padding_lengths['num_entity_tokens']
-        desired_num_utterance_tokens = padding_lengths['num_utterance_tokens']
+        desired_num_entities = padding_lengths["num_entities"]
+        desired_num_entity_tokens = padding_lengths["num_entity_tokens"]
+        desired_num_utterance_tokens = padding_lengths["num_utterance_tokens"]
         for indexer_name, indexer in self._token_indexers.items():
-            padded_entities = util.pad_sequence_to_length(self._indexed_entity_texts[indexer_name],
-                                                          desired_num_entities,
-                                                          default_value=lambda: [])
+            padded_entities = util.pad_sequence_to_length(
+                self._indexed_entity_texts[indexer_name],
+                desired_num_entities,
+                default_value=lambda: [],
+            )
             padded_tensors = []
             for padded_entity in padded_entities:
-                padded_tensor = indexer.as_padded_tensor({'key': padded_entity},
-                                                         {'key': desired_num_entity_tokens},
-                                                         padding_lengths)['key']
+                padded_tensor = indexer.as_padded_tensor(
+                    {"key": padded_entity}, {"key": desired_num_entity_tokens}, padding_lengths
+                )["key"]
                 padded_tensors.append(padded_tensor)
             tensor = torch.stack(padded_tensors)
             tensors[indexer_name] = tensor
-        padded_linking_features = util.pad_sequence_to_length(self.linking_features,
-                                                              desired_num_entities,
-                                                              default_value=lambda: [])
+        padded_linking_features = util.pad_sequence_to_length(
+            self.linking_features, desired_num_entities, default_value=lambda: []
+        )
         padded_linking_arrays = []
-        default_feature_value = lambda: [0.0] * len(self._feature_extractors)
+
+        def default_feature_value():
+            return [0.0] * len(self._feature_extractors)
+
         for linking_features in padded_linking_features:
-            padded_features = util.pad_sequence_to_length(linking_features,
-                                                          desired_num_utterance_tokens,
-                                                          default_value=default_feature_value)
+            padded_features = util.pad_sequence_to_length(
+                linking_features, desired_num_utterance_tokens, default_value=default_feature_value
+            )
             padded_linking_arrays.append(padded_features)
         linking_features_tensor = torch.FloatTensor(padded_linking_arrays)
-        return {'text': tensors, 'linking': linking_features_tensor}
+        return {"text": tensors, "linking": linking_features_tensor}
 
     def _compute_linking_features(self) -> List[List[List[float]]]:
         linking_features = []
@@ -248,29 +273,30 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
             for token_index, token in enumerate(self.utterance_tokens):
                 token_features = []
                 for feature_extractor in self._feature_extractors:
-                    token_features.append(feature_extractor(entity,
-                                                            entity_text,
-                                                            token,
-                                                            token_index,
-                                                            self.utterance_tokens))
+                    token_features.append(
+                        feature_extractor(
+                            entity, entity_text, token, token_index, self.utterance_tokens
+                        )
+                    )
                 entity_features.append(token_features)
             linking_features.append(entity_features)
         return linking_features
 
     @overrides
-    def empty_field(self) -> 'KnowledgeGraphField':
+    def empty_field(self) -> "KnowledgeGraphField":
         return KnowledgeGraphField(KnowledgeGraph(set(), {}), [], self._token_indexers)
 
     @overrides
     def batch_tensors(self, tensor_list: List[Dict[str, torch.Tensor]]) -> Dict[str, torch.Tensor]:
-        # pylint: disable=no-self-use
-        batched_text = nn_util.batch_tensor_dicts(tensor['text'] for tensor in tensor_list)  # type: ignore
-        batched_linking = torch.stack([tensor['linking'] for tensor in tensor_list])
-        return {'text': batched_text, 'linking': batched_linking}
+
+        batched_text = nn_util.batch_tensor_dicts(
+            tensor["text"] for tensor in tensor_list  # type: ignore
+        )
+        batched_linking = torch.stack([tensor["linking"] for tensor in tensor_list])
+        return {"text": batched_text, "linking": batched_linking}
 
     # Below here we have feature extractor functions.  To keep a consistent API for easy logic
     # above, some of these functions have unused arguments.
-    # pylint: disable=unused-argument,no-self-use
 
     # These feature extractors are generally pretty specific to the logical form language and
     # problem setting in WikiTableQuestions.  This whole notion of feature extraction should
@@ -291,12 +317,14 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
     # overlap feature value was calculated a little differently.  I'm guessing that doesn't make a
     # huge difference...
 
-    def _number_token_match(self,
-                            entity: str,
-                            entity_text: List[Token],
-                            token: Token,
-                            token_index: int,
-                            tokens: List[Token]) -> float:
+    def _number_token_match(
+        self,
+        entity: str,
+        entity_text: List[Token],
+        token: Token,
+        token_index: int,
+        tokens: List[Token],
+    ) -> float:
         # PNP had a "spanFeatures" function that said whether an entity was a-priori known to link
         # to a token or set of tokens in the question.  This was only used for numbers, and it's
         # not totally clear to me how this number feature overlapped with the token match features
@@ -314,79 +342,93 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
             return 0.0
         return self._contains_exact_token_match(entity, entity_text, token, token_index, tokens)
 
-    def _exact_token_match(self,
-                           entity: str,
-                           entity_text: List[Token],
-                           token: Token,
-                           token_index: int,
-                           tokens: List[Token]) -> float:
+    def _exact_token_match(
+        self,
+        entity: str,
+        entity_text: List[Token],
+        token: Token,
+        token_index: int,
+        tokens: List[Token],
+    ) -> float:
         if len(entity_text) != 1:
             return 0.0
         return self._contains_exact_token_match(entity, entity_text, token, token_index, tokens)
 
-    def _contains_exact_token_match(self,
-                                    entity: str,
-                                    entity_text: List[Token],
-                                    token: Token,
-                                    token_index: int,
-                                    tokens: List[Token]) -> float:
+    def _contains_exact_token_match(
+        self,
+        entity: str,
+        entity_text: List[Token],
+        token: Token,
+        token_index: int,
+        tokens: List[Token],
+    ) -> float:
         if token.text in self._entity_text_exact_text[entity]:
             return 1.0
         return 0.0
 
-    def _lemma_match(self,
-                     entity: str,
-                     entity_text: List[Token],
-                     token: Token,
-                     token_index: int,
-                     tokens: List[Token]) -> float:
+    def _lemma_match(
+        self,
+        entity: str,
+        entity_text: List[Token],
+        token: Token,
+        token_index: int,
+        tokens: List[Token],
+    ) -> float:
         if len(entity_text) != 1:
             return 0.0
         return self._contains_lemma_match(entity, entity_text, token, token_index, tokens)
 
-    def _contains_lemma_match(self,
-                              entity: str,
-                              entity_text: List[Token],
-                              token: Token,
-                              token_index: int,
-                              tokens: List[Token]) -> float:
+    def _contains_lemma_match(
+        self,
+        entity: str,
+        entity_text: List[Token],
+        token: Token,
+        token_index: int,
+        tokens: List[Token],
+    ) -> float:
         if token.text in self._entity_text_exact_text[entity]:
             return 1.0
         if token.lemma_ in self._entity_text_lemmas[entity]:
             return 1.0
         return 0.0
 
-    def _edit_distance(self,
-                       entity: str,
-                       entity_text: List[Token],
-                       token: Token,
-                       token_index: int,
-                       tokens: List[Token]) -> float:
-        edit_distance = float(editdistance.eval(' '.join(e.text for e in entity_text), token.text))
+    def _edit_distance(
+        self,
+        entity: str,
+        entity_text: List[Token],
+        token: Token,
+        token_index: int,
+        tokens: List[Token],
+    ) -> float:
+        edit_distance = float(editdistance.eval(" ".join(e.text for e in entity_text), token.text))
         return 1.0 - edit_distance / len(token.text)
 
-    def _related_column(self,
-                        entity: str,
-                        entity_text: List[Token],
-                        token: Token,
-                        token_index: int,
-                        tokens: List[Token]) -> float:
+    def _related_column(
+        self,
+        entity: str,
+        entity_text: List[Token],
+        token: Token,
+        token_index: int,
+        tokens: List[Token],
+    ) -> float:
         # Check if the entity is a column name in one of the two WikiTables languages.
-        if not entity.startswith('fb:row.row') and "_column:" not in entity:
+        if not entity.startswith("fb:row.row") and "_column:" not in entity:
             return 0.0
         for neighbor in self.knowledge_graph.neighbors[entity]:
             if token.text in self._entity_text_exact_text[neighbor]:
                 return 1.0
         return 0.0
 
-    def _related_column_lemma(self,
-                              entity: str,
-                              entity_text: List[Token],
-                              token: Token,
-                              token_index: int,
-                              tokens: List[Token]) -> float:
+    def _related_column_lemma(
+        self,
+        entity: str,
+        entity_text: List[Token],
+        token: Token,
+        token_index: int,
+        tokens: List[Token],
+    ) -> float:
         # Check if the entity is a column name in one of the two WikiTables languages.
-        if not entity.startswith('fb:row.row') and '_column:' not in entity:
+        if not entity.startswith("fb:row.row") and "_column:" not in entity:
             return 0.0
         for neighbor in self.knowledge_graph.neighbors[entity]:
             if token.text in self._entity_text_exact_text[neighbor]:
@@ -395,12 +437,14 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
                 return 1.0
         return 0.0
 
-    def _span_overlap_fraction(self,
-                               entity: str,
-                               entity_text: List[Token],
-                               token: Token,
-                               token_index: int,
-                               tokens: List[Token]) -> float:
+    def _span_overlap_fraction(
+        self,
+        entity: str,
+        entity_text: List[Token],
+        token: Token,
+        token_index: int,
+        tokens: List[Token],
+    ) -> float:
         entity_words = set(entity_token.text for entity_token in entity_text)
         if not entity_words:
             # Some tables have empty cells.
@@ -415,12 +459,14 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
             token_index_left -= 1
         return len(seen_entity_words) / len(entity_words)
 
-    def _span_lemma_overlap_fraction(self,
-                                     entity: str,
-                                     entity_text: List[Token],
-                                     token: Token,
-                                     token_index: int,
-                                     tokens: List[Token]) -> float:
+    def _span_lemma_overlap_fraction(
+        self,
+        entity: str,
+        entity_text: List[Token],
+        token: Token,
+        token_index: int,
+        tokens: List[Token],
+    ) -> float:
         entity_lemmas = set(entity_token.lemma_ for entity_token in entity_text)
         if not entity_lemmas:
             # Some tables have empty cells.
@@ -434,5 +480,3 @@ class KnowledgeGraphField(Field[Dict[str, torch.Tensor]]):
             seen_entity_lemmas.add(tokens[token_index_left].lemma_)
             token_index_left -= 1
         return len(seen_entity_lemmas) / len(entity_lemmas)
-
-    # pylint: enable=unused-argument,no-self-use

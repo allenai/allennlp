@@ -10,6 +10,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
     """
     Uses a pretrained model from ``pytorch-transformers`` as a ``TokenEmbedder``.
     """
+
     def __init__(self, model_name: str) -> None:
         super().__init__()
         self.transformer_model = AutoModel.from_pretrained(model_name)
@@ -22,5 +23,5 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         return self.output_dim
 
     def forward(self, token_ids: torch.LongTensor) -> torch.Tensor:  # type: ignore
-        # pylint: disable=arguments-differ
+
         return self.transformer_model(token_ids)[0]

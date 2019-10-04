@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 import sys
 from collections import OrderedDict
 
@@ -8,16 +7,23 @@ import torch
 from allennlp.common import util
 from allennlp.common.testing import AllenNlpTestCase
 
+
 class Unsanitizable:
     pass
+
 
 class Sanitizable:
     def to_json(self):
         return {"sanitizable": True}
 
+
 class TestCommonUtils(AllenNlpTestCase):
     def test_group_by_count(self):
-        assert util.group_by_count([1, 2, 3, 4, 5, 6, 7], 3, 20) == [[1, 2, 3], [4, 5, 6], [7, 20, 20]]
+        assert util.group_by_count([1, 2, 3, 4, 5, 6, 7], 3, 20) == [
+            [1, 2, 3],
+            [4, 5, 6],
+            [7, 20, 20],
+        ]
 
     def test_lazy_groups_of(self):
         xs = [1, 2, 3, 4, 5, 6, 7]
@@ -50,35 +56,34 @@ class TestCommonUtils(AllenNlpTestCase):
         assert util.sanitize(Sanitizable()) == {"sanitizable": True}
 
     def test_import_submodules(self):
-        # pylint: disable=no-member
-        (self.TEST_DIR / 'mymodule').mkdir()
-        (self.TEST_DIR / 'mymodule' / '__init__.py').touch()
-        (self.TEST_DIR / 'mymodule' / 'submodule').mkdir()
-        (self.TEST_DIR / 'mymodule' / 'submodule' / '__init__.py').touch()
-        (self.TEST_DIR / 'mymodule' / 'submodule' / 'subsubmodule.py').touch()
+
+        (self.TEST_DIR / "mymodule").mkdir()
+        (self.TEST_DIR / "mymodule" / "__init__.py").touch()
+        (self.TEST_DIR / "mymodule" / "submodule").mkdir()
+        (self.TEST_DIR / "mymodule" / "submodule" / "__init__.py").touch()
+        (self.TEST_DIR / "mymodule" / "submodule" / "subsubmodule.py").touch()
 
         sys.path.insert(0, str(self.TEST_DIR))
-        assert 'mymodule' not in sys.modules
-        assert 'mymodule.submodule' not in sys.modules
+        assert "mymodule" not in sys.modules
+        assert "mymodule.submodule" not in sys.modules
 
-        util.import_submodules('mymodule')
+        util.import_submodules("mymodule")
 
-        assert 'mymodule' in sys.modules
-        assert 'mymodule.submodule' in sys.modules
-        assert 'mymodule.submodule.subsubmodule' in sys.modules
+        assert "mymodule" in sys.modules
+        assert "mymodule.submodule" in sys.modules
+        assert "mymodule.submodule.subsubmodule" in sys.modules
 
         sys.path.remove(str(self.TEST_DIR))
 
-
     def test_get_frozen_and_tunable_parameter_names(self):
-        model = torch.nn.Sequential(OrderedDict([
-                ('conv', torch.nn.Conv1d(5, 5, 5)),
-                ('linear', torch.nn.Linear(5, 10)),
-                ]))
+        model = torch.nn.Sequential(
+            OrderedDict([("conv", torch.nn.Conv1d(5, 5, 5)), ("linear", torch.nn.Linear(5, 10))])
+        )
         named_parameters = dict(model.named_parameters())
-        named_parameters['linear.weight'].requires_grad_(False)
-        named_parameters['linear.bias'].requires_grad_(False)
-        frozen_parameter_names, tunable_parameter_names = \
-                       util.get_frozen_and_tunable_parameter_names(model)
-        assert set(frozen_parameter_names) == {'linear.weight', 'linear.bias'}
-        assert set(tunable_parameter_names) == {'conv.weight', 'conv.bias'}
+        named_parameters["linear.weight"].requires_grad_(False)
+        named_parameters["linear.bias"].requires_grad_(False)
+        frozen_parameter_names, tunable_parameter_names = util.get_frozen_and_tunable_parameter_names(
+            model
+        )
+        assert set(frozen_parameter_names) == {"linear.weight", "linear.bias"}
+        assert set(tunable_parameter_names) == {"conv.weight", "conv.bias"}

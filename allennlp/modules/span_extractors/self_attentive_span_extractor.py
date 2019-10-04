@@ -5,6 +5,7 @@ from allennlp.modules.span_extractors.span_extractor import SpanExtractor
 from allennlp.modules.time_distributed import TimeDistributed
 from allennlp.nn import util
 
+
 @SpanExtractor.register("self_attentive")
 class SelfAttentiveSpanExtractor(SpanExtractor):
     """
@@ -29,8 +30,8 @@ class SelfAttentiveSpanExtractor(SpanExtractor):
         in which the attention distribution differs over different spans is in the set of words
         over which they are normalized.
     """
-    def __init__(self,
-                 input_dim: int) -> None:
+
+    def __init__(self, input_dim: int) -> None:
         super().__init__()
         self._input_dim = input_dim
         self._global_attention = TimeDistributed(torch.nn.Linear(input_dim, 1))
@@ -42,11 +43,13 @@ class SelfAttentiveSpanExtractor(SpanExtractor):
         return self._input_dim
 
     @overrides
-    def forward(self,
-                sequence_tensor: torch.FloatTensor,
-                span_indices: torch.LongTensor,
-                sequence_mask: torch.LongTensor = None,
-                span_indices_mask: torch.LongTensor = None) -> torch.FloatTensor:
+    def forward(
+        self,
+        sequence_tensor: torch.FloatTensor,
+        span_indices: torch.LongTensor,
+        sequence_mask: torch.LongTensor = None,
+        span_indices_mask: torch.LongTensor = None,
+    ) -> torch.FloatTensor:
         # both of shape (batch_size, num_spans, 1)
         span_starts, span_ends = span_indices.split(1, dim=-1)
 
@@ -65,8 +68,9 @@ class SelfAttentiveSpanExtractor(SpanExtractor):
         global_attention_logits = self._global_attention(sequence_tensor)
 
         # Shape: (1, 1, max_batch_span_width)
-        max_span_range_indices = util.get_range_vector(max_batch_span_width,
-                                                       util.get_device_of(sequence_tensor)).view(1, 1, -1)
+        max_span_range_indices = util.get_range_vector(
+            max_batch_span_width, util.get_device_of(sequence_tensor)
+        ).view(1, 1, -1)
         # Shape: (batch_size, num_spans, max_batch_span_width)
         # This is a broadcasted comparison - for each span we are considering,
         # we are creating a range vector of size max_span_width, but masking values
@@ -84,15 +88,19 @@ class SelfAttentiveSpanExtractor(SpanExtractor):
         span_indices = torch.nn.functional.relu(raw_span_indices.float()).long()
 
         # Shape: (batch_size * num_spans * max_batch_span_width)
-        flat_span_indices = util.flatten_and_batch_shift_indices(span_indices, sequence_tensor.size(1))
+        flat_span_indices = util.flatten_and_batch_shift_indices(
+            span_indices, sequence_tensor.size(1)
+        )
 
         # Shape: (batch_size, num_spans, max_batch_span_width, embedding_dim)
-        span_embeddings = util.batched_index_select(sequence_tensor, span_indices, flat_span_indices)
+        span_embeddings = util.batched_index_select(
+            sequence_tensor, span_indices, flat_span_indices
+        )
 
         # Shape: (batch_size, num_spans, max_batch_span_width)
-        span_attention_logits = util.batched_index_select(global_attention_logits,
-                                                          span_indices,
-                                                          flat_span_indices).squeeze(-1)
+        span_attention_logits = util.batched_index_select(
+            global_attention_logits, span_indices, flat_span_indices
+        ).squeeze(-1)
         # Shape: (batch_size, num_spans, max_batch_span_width)
         span_attention_weights = util.masked_softmax(span_attention_logits, span_mask)
 

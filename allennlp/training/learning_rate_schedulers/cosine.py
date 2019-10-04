@@ -34,18 +34,22 @@ class CosineWithRestarts(LearningRateScheduler):
         The index of the last epoch. This is used when restarting.
     """
 
-    def __init__(self,
-                 optimizer: torch.optim.Optimizer,
-                 t_initial: int,
-                 t_mul: float = 1.,
-                 eta_min: float = 0.,
-                 eta_mul: float = 1.,
-                 last_epoch: int = -1) -> None:
+    def __init__(
+        self,
+        optimizer: torch.optim.Optimizer,
+        t_initial: int,
+        t_mul: float = 1.0,
+        eta_min: float = 0.0,
+        eta_mul: float = 1.0,
+        last_epoch: int = -1,
+    ) -> None:
         assert t_initial > 0
         assert eta_min >= 0
         if t_initial == 1 and t_mul == 1 and eta_mul == 1:
-            logger.warning("Cosine annealing scheduler will have no effect on the learning "
-                           "rate since t_initial = t_mul = eta_mul = 1.")
+            logger.warning(
+                "Cosine annealing scheduler will have no effect on the learning "
+                "rate since t_initial = t_mul = eta_mul = 1."
+            )
         self.t_initial = t_initial
         self.t_mul = t_mul
         self.eta_min = eta_min
@@ -69,14 +73,14 @@ class CosineWithRestarts(LearningRateScheduler):
             self._cycle_counter = 0
             self._last_restart = step
 
-        base_lrs = [lr * self.eta_mul**self._n_restarts for lr in self.base_values]
-        self._cycle_len = int(self.t_initial * self.t_mul**self._n_restarts)
+        base_lrs = [lr * self.eta_mul ** self._n_restarts for lr in self.base_values]
+        self._cycle_len = int(self.t_initial * self.t_mul ** self._n_restarts)
 
         lrs = [
-                self.eta_min + ((lr - self.eta_min) / 2) * (
-                        np.cos(np.pi * (self._cycle_counter % self._cycle_len) / self._cycle_len) + 1
-                )
-                for lr in base_lrs
+            self.eta_min
+            + ((lr - self.eta_min) / 2)
+            * (np.cos(np.pi * (self._cycle_counter % self._cycle_len) / self._cycle_len) + 1)
+            for lr in base_lrs
         ]
 
         return lrs

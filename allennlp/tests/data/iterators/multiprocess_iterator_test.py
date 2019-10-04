@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.dataset_readers import SequenceTaggingDatasetReader, MultiprocessDatasetReader
 from allennlp.data.iterators import BasicIterator, MultiprocessIterator
@@ -11,16 +10,16 @@ class TestMultiprocessIterator(IteratorTest):
         super().setUp()
 
         self.base_reader = SequenceTaggingDatasetReader(lazy=True)
-        base_file_path = AllenNlpTestCase.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv'
+        base_file_path = AllenNlpTestCase.FIXTURES_ROOT / "data" / "sequence_tagging.tsv"
 
         # Make 100 copies of the data
         raw_data = open(base_file_path).read()
         for i in range(100):
-            file_path = self.TEST_DIR / f'sequence_tagging_{i}.tsv'
-            with open(file_path, 'w') as f:
+            file_path = self.TEST_DIR / f"sequence_tagging_{i}.tsv"
+            with open(file_path, "w") as f:
                 f.write(raw_data)
 
-        self.glob = str(self.TEST_DIR / 'sequence_tagging_*.tsv')
+        self.glob = str(self.TEST_DIR / "sequence_tagging_*.tsv")
 
         # For some of the tests we need a vocab, we'll just use the base_reader for that.
         self.vocab = Vocabulary.from_instances(self.base_reader.read(str(base_file_path)))
@@ -32,9 +31,11 @@ class TestMultiprocessIterator(IteratorTest):
             iterator.index_with(self.vocab)
             batches = list(iterator(test_instances, num_epochs=1))
             # We just want to get the single-token array for the text field in the instance.
-            instances = [tuple(instance.detach().cpu().numpy())
-                         for batch in batches
-                         for instance in batch['text']["tokens"]]
+            instances = [
+                tuple(instance.detach().cpu().numpy())
+                for batch in batches
+                for instance in batch["text"]["tokens"]
+            ]
             assert len(instances) == 5
 
     def test_multiprocess_iterate_partial_does_not_hang(self):
@@ -61,5 +62,5 @@ class TestMultiprocessIterator(IteratorTest):
         instances = reader.read(self.glob)
 
         tensor_dicts = iterator(instances, num_epochs=1)
-        sizes = [len(tensor_dict['tags']) for tensor_dict in tensor_dicts]
+        sizes = [len(tensor_dict["tags"]) for tensor_dict in tensor_dicts]
         assert sum(sizes) == 400

@@ -33,15 +33,18 @@ class PearsonCorrelation(Metric):
 
     if predictions_variance or labels_variance is 0, r is 0
     """
+
     def __init__(self) -> None:
         self._predictions_labels_covariance = Covariance()
         self._predictions_variance = Covariance()
         self._labels_variance = Covariance()
 
-    def __call__(self,
-                 predictions: torch.Tensor,
-                 gold_labels: torch.Tensor,
-                 mask: Optional[torch.Tensor] = None):
+    def __call__(
+        self,
+        predictions: torch.Tensor,
+        gold_labels: torch.Tensor,
+        mask: Optional[torch.Tensor] = None,
+    ):
         """
         Parameters
         ----------
@@ -68,7 +71,7 @@ class PearsonCorrelation(Metric):
         labels_variance = self._labels_variance.get_metric(reset=reset)
         if reset:
             self.reset()
-        denominator = (math.sqrt(predictions_variance) * math.sqrt(labels_variance))
+        denominator = math.sqrt(predictions_variance) * math.sqrt(labels_variance)
         if np.around(denominator, decimals=5) == 0:
             pearson_r = 0
         else:

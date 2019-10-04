@@ -1,4 +1,3 @@
-# pylint: disable=invalid-name,protected-access
 from flaky import flaky
 import pytest
 
@@ -11,19 +10,23 @@ from allennlp.models import Model
 class CrfTaggerTest(ModelTestCase):
     def setUp(self):
         super().setUp()
-        self.set_up_model(self.FIXTURES_ROOT / 'crf_tagger' / 'experiment.json',
-                          self.FIXTURES_ROOT / 'data' / 'conll2003.txt')
+        self.set_up_model(
+            self.FIXTURES_ROOT / "crf_tagger" / "experiment.json",
+            self.FIXTURES_ROOT / "data" / "conll2003.txt",
+        )
 
     def test_simple_tagger_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
 
     def test_simple_tagger_can_train_save_and_load_ccgbank(self):
         self.ensure_model_can_train_save_and_load(
-                self.FIXTURES_ROOT / 'crf_tagger' / 'experiment_ccgbank.json')
+            self.FIXTURES_ROOT / "crf_tagger" / "experiment_ccgbank.json"
+        )
 
     def test_simple_tagger_can_train_save_and_conll2000(self):
         self.ensure_model_can_train_save_and_load(
-                self.FIXTURES_ROOT / 'crf_tagger' / 'experiment_conll2000.json')
+            self.FIXTURES_ROOT / "crf_tagger" / "experiment_conll2000.json"
+        )
 
     @flaky
     def test_batch_predictions_are_consistent(self):
@@ -32,14 +35,14 @@ class CrfTaggerTest(ModelTestCase):
     def test_forward_pass_runs_correctly(self):
         training_tensors = self.dataset.as_tensor_dict()
         output_dict = self.model(**training_tensors)
-        tags = output_dict['tags']
+        tags = output_dict["tags"]
         assert len(tags) == 2
         assert len(tags[0]) == 7
         assert len(tags[1]) == 7
         for example_tags in tags:
             for tag_id in example_tags:
                 tag = self.model.vocab.get_token_from_index(tag_id, namespace="labels")
-                assert tag in {'O', 'I-ORG', 'I-PER', 'I-LOC'}
+                assert tag in {"O", "I-ORG", "I-PER", "I-LOC"}
 
     def test_mismatching_dimensions_throws_configuration_error(self):
         params = Params.from_file(self.param_file)

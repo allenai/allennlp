@@ -15,7 +15,7 @@ from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.dataset_readers.dataset_utils import text2sql_utils
 
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @DatasetReader.register("template_text2sql")
@@ -38,13 +38,16 @@ class TemplateText2SqlDatasetReader(DatasetReader):
         Here, you can specify a integer corresponding to a split_{int}.json file not to include
         in the training set.
     """
-    def __init__(self,
-                 use_all_sql: bool = False,
-                 token_indexers: Dict[str, TokenIndexer] = None,
-                 cross_validation_split_to_exclude: int = None,
-                 lazy: bool = False) -> None:
+
+    def __init__(
+        self,
+        use_all_sql: bool = False,
+        token_indexers: Dict[str, TokenIndexer] = None,
+        cross_validation_split_to_exclude: int = None,
+        lazy: bool = False,
+    ) -> None:
         super().__init__(lazy)
-        self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
+        self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._use_all_sql = use_all_sql
         self._cross_validation_split_to_exclude = str(cross_validation_split_to_exclude)
 
@@ -63,8 +66,11 @@ class TemplateText2SqlDatasetReader(DatasetReader):
             some of the text2sql datasets require cross validation, which means they are split
             up into many small files, for which you only want to exclude one.
         """
-        files = [p for p in glob.glob(file_path)
-                 if self._cross_validation_split_to_exclude not in os.path.basename(p)]
+        files = [
+            p
+            for p in glob.glob(file_path)
+            if self._cross_validation_split_to_exclude not in os.path.basename(p)
+        ]
 
         for path in files:
             with open(cached_path(path), "r") as data_file:
@@ -75,11 +81,13 @@ class TemplateText2SqlDatasetReader(DatasetReader):
                 yield self.text_to_instance(sql_data.text, sql_data.variable_tags, template)
 
     @overrides
-    def text_to_instance(self,  # type: ignore
-                         query: List[str],
-                         slot_tags: List[str] = None,
-                         sql_template: str = None) -> Instance:
-        # pylint: disable=arguments-differ
+    def text_to_instance(
+        self,  # type: ignore
+        query: List[str],
+        slot_tags: List[str] = None,
+        sql_template: str = None,
+    ) -> Instance:
+
         fields: Dict[str, Field] = {}
         tokens = TextField([Token(t) for t in query], self._token_indexers)
         fields["tokens"] = tokens

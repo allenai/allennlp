@@ -1,5 +1,3 @@
-# pylint: disable=no-self-use,invalid-name,protected-access
-
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor
@@ -7,13 +5,16 @@ from allennlp.predictors import Predictor
 
 class TestSeq2SeqPredictor(AllenNlpTestCase):
     def test_uses_named_inputs_with_simple_seq2seq(self):
-        inputs = {
-                "source": "What kind of test succeeded on its first attempt?",
-        }
+        inputs = {"source": "What kind of test succeeded on its first attempt?"}
 
-        archive = load_archive(self.FIXTURES_ROOT / 'encoder_decoder' / 'simple_seq2seq' /
-                               'serialization' / 'model.tar.gz')
-        predictor = Predictor.from_archive(archive, 'seq2seq')
+        archive = load_archive(
+            self.FIXTURES_ROOT
+            / "encoder_decoder"
+            / "simple_seq2seq"
+            / "serialization"
+            / "model.tar.gz"
+        )
+        predictor = Predictor.from_archive(archive, "seq2seq")
 
         result = predictor.predict_json(inputs)
 
@@ -23,13 +24,16 @@ class TestSeq2SeqPredictor(AllenNlpTestCase):
         assert all(isinstance(x, str) for x in predicted_tokens)
 
     def test_uses_named_inputs_with_composed_seq2seq(self):
-        inputs = {
-                "source": "What kind of test succeeded on its first attempt?",
-        }
+        inputs = {"source": "What kind of test succeeded on its first attempt?"}
 
-        archive = load_archive(self.FIXTURES_ROOT / 'encoder_decoder' / 'composed_seq2seq' /
-                               'serialization' / 'model.tar.gz')
-        predictor = Predictor.from_archive(archive, 'seq2seq')
+        archive = load_archive(
+            self.FIXTURES_ROOT
+            / "encoder_decoder"
+            / "composed_seq2seq"
+            / "serialization"
+            / "model.tar.gz"
+        )
+        predictor = Predictor.from_archive(archive, "seq2seq")
 
         result = predictor.predict_json(inputs)
 
@@ -39,9 +43,14 @@ class TestSeq2SeqPredictor(AllenNlpTestCase):
         assert all(isinstance(x, str) for x in predicted_tokens)
 
     def test_copynet_predictions(self):
-        archive = load_archive(self.FIXTURES_ROOT / 'encoder_decoder' / 'copynet_seq2seq' /
-                               'serialization' / 'model.tar.gz')
-        predictor = Predictor.from_archive(archive, 'seq2seq')
+        archive = load_archive(
+            self.FIXTURES_ROOT
+            / "encoder_decoder"
+            / "copynet_seq2seq"
+            / "serialization"
+            / "model.tar.gz"
+        )
+        predictor = Predictor.from_archive(archive, "seq2seq")
         model = predictor._model
         end_token = model.vocab.get_token_from_index(model._end_index, model._target_namespace)
         output_dict = predictor.predict("these tokens should be copied over : hello world")

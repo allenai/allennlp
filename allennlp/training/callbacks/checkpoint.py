@@ -11,7 +11,7 @@ from allennlp.training.callbacks.events import Events
 from allennlp.training.moving_average import MovingAverage
 
 if TYPE_CHECKING:
-    from allennlp.training.callback_trainer import CallbackTrainer  # pylint:disable=unused-import
+    from allennlp.training.callback_trainer import CallbackTrainer
 
 
 @Callback.register("checkpoint")
@@ -34,42 +34,49 @@ class Checkpoint(Callback):
         The attributes of the Trainer state that should be persisted
         as-is at each checkpoint.
     """
-    def __init__(self,
-                 checkpointer: Checkpointer,
-                 model_save_interval: Optional[float] = None,
-                 state_dict_attrs: List[str] = None,
-                 other_attrs: List[str] = None) -> None:
+
+    def __init__(
+        self,
+        checkpointer: Checkpointer,
+        model_save_interval: Optional[float] = None,
+        state_dict_attrs: List[str] = None,
+        other_attrs: List[str] = None,
+    ) -> None:
         self.checkpointer = checkpointer
         self.model_save_interval = model_save_interval
-        self.state_dict_attrs = state_dict_attrs or ['optimizer']
-        self.other_attrs = other_attrs or ['batch_num_total']
+        self.state_dict_attrs = state_dict_attrs or ["optimizer"]
+        self.other_attrs = other_attrs or ["batch_num_total"]
         self.last_save_time = time.time()
 
         # `MovingAverage`s used by the trainer.
         self.moving_averages: List[MovingAverage] = []
 
     def _should_save_at_batch_end(self) -> bool:
-        return (self.model_save_interval is not None and
-                time.time() - self.last_save_time > self.model_save_interval)
+        return (
+            self.model_save_interval is not None
+            and time.time() - self.last_save_time > self.model_save_interval
+        )
 
     @handle_event(Events.TRAINING_START)
-    def collect_moving_averages(self, trainer: 'CallbackTrainer'):
-        self.moving_averages = [getattr(callback, 'moving_average')
-                                for callback in trainer.handler.callbacks()
-                                if hasattr(callback, 'moving_average')]
+    def collect_moving_averages(self, trainer: "CallbackTrainer"):
+        self.moving_averages = [
+            getattr(callback, "moving_average")
+            for callback in trainer.handler.callbacks()
+            if hasattr(callback, "moving_average")
+        ]
 
     @handle_event(Events.BATCH_END)
-    def save_model_at_batch_end(self, trainer: 'CallbackTrainer'):
+    def save_model_at_batch_end(self, trainer: "CallbackTrainer"):
         if self._should_save_at_batch_end():
             self.last_save_time = time.time()
             epoch = f"{trainer.epoch_number}.{training_util.time_to_str(int(self.last_save_time))}"
             self._save_checkpoint(epoch, trainer)
 
     @handle_event(Events.EPOCH_END, priority=1000)
-    def save_model_at_epoch_end(self, trainer: 'CallbackTrainer'):
+    def save_model_at_epoch_end(self, trainer: "CallbackTrainer"):
         self._save_checkpoint(f"{trainer.epoch_number}", trainer)
 
-    def _save_checkpoint(self, epoch: str, trainer: 'CallbackTrainer'):
+    def _save_checkpoint(self, epoch: str, trainer: "CallbackTrainer"):
         # If the trainer has MovingAverage objects, use their weights for checkpointing.
         for moving_average in self.moving_averages:
             moving_average.assign_average_value()
@@ -92,17 +99,18 @@ class Checkpoint(Callback):
 
         is_best_so_far = training_states.pop("is_best_so_far", True)
         self.checkpointer.save_checkpoint(
-                model_state=trainer.model.state_dict(),
-                epoch=epoch,
-                training_states=training_states,
-                is_best_so_far=is_best_so_far)
+            model_state=trainer.model.state_dict(),
+            epoch=epoch,
+            training_states=training_states,
+            is_best_so_far=is_best_so_far,
+        )
 
         # If the trainer has a moving average, restore.
         for moving_average in self.moving_averages:
             moving_average.restore()
 
     @handle_event(Events.TRAINING_START)
-    def restore_checkpoint(self, trainer: 'CallbackTrainer'):
+    def restore_checkpoint(self, trainer: "CallbackTrainer"):
         # Restores the model and training state from the last saved checkpoint.
         # This includes an epoch count and optimizer state, which is serialized separately
         # from model parameters. This function should only be used to continue training -
@@ -116,9 +124,11 @@ class Checkpoint(Callback):
             model_state, training_state = self.checkpointer.restore_checkpoint()
         except RuntimeError:
             traceback.print_exc()
-            raise ConfigurationError("Could not recover training from the checkpoint.  "
-                                     "Did you mean to output to a different serialization directory "
-                                     "or delete the existing serialization directory?")
+            raise ConfigurationError(
+                "Could not recover training from the checkpoint.  "
+                "Did you mean to output to a different serialization directory "
+                "or delete the existing serialization directory?"
+            )
 
         if not training_state:
             # No checkpoint to restore, start at 0
@@ -144,21 +154,23 @@ class Checkpoint(Callback):
         if isinstance(training_state["epoch"], int):
             trainer.epoch_number = training_state["epoch"] + 1
         else:
-            trainer.epoch_number = int(training_state["epoch"].split('.')[0]) + 1
+            trainer.epoch_number = int(training_state["epoch"].split(".")[0]) + 1
 
     @handle_event(Events.TRAINING_END)
-    def load_best_model_state(self, trainer: 'CallbackTrainer'):
+    def load_best_model_state(self, trainer: "CallbackTrainer"):
         # Load the best model state before returning
         best_model_state = self.checkpointer.best_model_state()
         if best_model_state:
             trainer.model.load_state_dict(best_model_state)
 
     @classmethod
-    def from_params(cls, params: Params, serialization_dir: str) -> 'Checkpoint':  # type: ignore
-        # pylint: disable=arguments-differ
+    def from_params(cls, params: Params, serialization_dir: str) -> "Checkpoint":  # type: ignore
+
         checkpointer_params = params.pop("checkpointer", None)
         if checkpointer_params:
-            checkpointer = Checkpointer.from_params(checkpointer_params, serialization_dir=serialization_dir)
+            checkpointer = Checkpointer.from_params(
+                checkpointer_params, serialization_dir=serialization_dir
+            )
         else:
             checkpointer = Checkpointer(serialization_dir=serialization_dir)
 

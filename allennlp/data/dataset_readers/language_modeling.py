@@ -14,7 +14,7 @@ from allennlp.data.fields import TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @DatasetReader.register("language_modeling")
@@ -41,11 +41,14 @@ class LanguageModelingReader(DatasetReader):
         a ``SingleIdTokenIndexer`` here, we use the first one you specify.  Otherwise, we create
         one with default parameters.
     """
-    def __init__(self,
-                 tokens_per_instance: int = None,
-                 tokenizer: Tokenizer = None,
-                 token_indexers: Dict[str, TokenIndexer] = None,
-                 lazy: bool = False) -> None:
+
+    def __init__(
+        self,
+        tokens_per_instance: int = None,
+        tokenizer: Tokenizer = None,
+        token_indexers: Dict[str, TokenIndexer] = None,
+        lazy: bool = False,
+    ) -> None:
         super().__init__(lazy)
         self._tokenizer = tokenizer or WordTokenizer()
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
@@ -78,20 +81,19 @@ class LanguageModelingReader(DatasetReader):
             tokenized_strings = []
             logger.info("Creating dataset from all text in file: %s", file_path)
             for index in Tqdm.tqdm(range(0, len(tokenized_text) - num_tokens, num_tokens - 1)):
-                tokenized_strings.append(tokenized_text[index:(index + num_tokens)])
+                tokenized_strings.append(tokenized_text[index : (index + num_tokens)])
         else:
             tokenized_strings = [self._tokenizer.tokenize(s) for s in instance_strings]
 
         for tokenized_string in tokenized_strings:
             input_field = TextField(tokenized_string[:-1], self._token_indexers)
             output_field = TextField(tokenized_string[1:], self._output_indexer)
-            yield Instance({'input_tokens': input_field,
-                            'output_tokens': output_field})
+            yield Instance({"input_tokens": input_field, "output_tokens": output_field})
 
     @overrides
     def text_to_instance(self, sentence: str) -> Instance:  # type: ignore
-        # pylint: disable=arguments-differ
+
         tokenized_string = self._tokenizer.tokenize(sentence)
         input_field = TextField(tokenized_string[:-1], self._token_indexers)
         output_field = TextField(tokenized_string[1:], self._output_indexer)
-        return Instance({'input_tokens': input_field, 'output_tokens': output_field})
+        return Instance({"input_tokens": input_field, "output_tokens": output_field})

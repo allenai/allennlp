@@ -9,7 +9,7 @@ from allennlp.state_machines.states import State
 from allennlp.state_machines.trainers.decoder_trainer import DecoderTrainer
 from allennlp.state_machines.transition_functions import TransitionFunction
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 class MaximumMarginalLikelihood(DecoderTrainer[Tuple[torch.Tensor, torch.Tensor]]):
@@ -37,19 +37,24 @@ class MaximumMarginalLikelihood(DecoderTrainer[Tuple[torch.Tensor, torch.Tensor]
         function, keeping only the top ``beam_size`` sequences according to the model.  If this is
         ``None``, we will keep all of the provided sequences in the loss computation.
     """
+
     def __init__(self, beam_size: int = None) -> None:
         self._beam_size = beam_size
 
-    def decode(self,
-               initial_state: State,
-               transition_function: TransitionFunction,
-               supervision: Tuple[torch.Tensor, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def decode(
+        self,
+        initial_state: State,
+        transition_function: TransitionFunction,
+        supervision: Tuple[torch.Tensor, torch.Tensor],
+    ) -> Dict[str, torch.Tensor]:
         targets, target_mask = supervision
         beam_search = ConstrainedBeamSearch(self._beam_size, targets, target_mask)
-        finished_states: Dict[int, List[State]] = beam_search.search(initial_state, transition_function)
+        finished_states: Dict[int, List[State]] = beam_search.search(
+            initial_state, transition_function
+        )
 
         loss = 0
         for instance_states in finished_states.values():
             scores = [state.score[0].view(-1) for state in instance_states]
             loss += -util.logsumexp(torch.cat(scores))
-        return {'loss': loss / len(finished_states)}
+        return {"loss": loss / len(finished_states)}

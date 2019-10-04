@@ -15,12 +15,12 @@ from allennlp.common import Params
 from allennlp.training.metrics import EvalbBracketingScorer
 
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 def train_fixture(config_prefix: str) -> None:
-    config_file = config_prefix + 'experiment.json'
-    serialization_dir = config_prefix + 'serialization'
+    config_file = config_prefix + "experiment.json"
+    serialization_dir = config_prefix + "serialization"
     # Train model doesn't like it if we have incomplete serialization
     # directories, so remove them if they exist.
     if os.path.exists(serialization_dir):
@@ -33,12 +33,17 @@ def train_fixture(config_prefix: str) -> None:
     shutil.rmtree(os.path.join(serialization_dir, "log"))
 
     for filename in glob.glob(os.path.join(serialization_dir, "*")):
-        if filename.endswith(".log") or filename.endswith(".json") or re.search(r"epoch_[0-9]+\.th$", filename):
+        if (
+            filename.endswith(".log")
+            or filename.endswith(".json")
+            or re.search(r"epoch_[0-9]+\.th$", filename)
+        ):
             os.remove(filename)
 
+
 def train_fixture_gpu(config_prefix: str) -> None:
-    config_file = config_prefix + 'experiment.json'
-    serialization_dir = config_prefix + 'serialization'
+    config_file = config_prefix + "experiment.json"
+    serialization_dir = config_prefix + "serialization"
     params = Params.from_file(config_file)
     params["trainer"]["cuda_device"] = 0
 
@@ -48,7 +53,9 @@ def train_fixture_gpu(config_prefix: str) -> None:
 
     # now copy back the weights and and archived model
     shutil.copy(os.path.join(tempdir, "best.th"), os.path.join(serialization_dir, "best_gpu.th"))
-    shutil.copy(os.path.join(tempdir, "model.tar.gz"), os.path.join(serialization_dir, "model_gpu.tar.gz"))
+    shutil.copy(
+        os.path.join(tempdir, "model.tar.gz"), os.path.join(serialization_dir, "model_gpu.tar.gz")
+    )
 
 
 if __name__ == "__main__":
@@ -60,26 +67,26 @@ if __name__ == "__main__":
         train_fixture_gpu("allennlp/tests/fixtures/srl/")
     else:
         models = [
-                'biaffine_dependency_parser',
-                'bidaf',
-                'dialog_qa',
-                'constituency_parser',
-                'coref',
-                'decomposable_attention',
-                'encoder_decoder/composed_seq2seq',
-                'encoder_decoder/simple_seq2seq',
-                'encoder_decoder/copynet_seq2seq',
-                'semantic_parsing/nlvr_coverage_semantic_parser',
-                'semantic_parsing/nlvr_direct_semantic_parser',
-                'semantic_parsing/wikitables',
-                'semantic_parsing/quarel',
-                'semantic_parsing/quarel/zeroshot',
-                'semantic_parsing/quarel/tagger',
-                'semantic_parsing/atis',
-                'srl',
+            "biaffine_dependency_parser",
+            "bidaf",
+            "dialog_qa",
+            "constituency_parser",
+            "coref",
+            "decomposable_attention",
+            "encoder_decoder/composed_seq2seq",
+            "encoder_decoder/simple_seq2seq",
+            "encoder_decoder/copynet_seq2seq",
+            "semantic_parsing/nlvr_coverage_semantic_parser",
+            "semantic_parsing/nlvr_direct_semantic_parser",
+            "semantic_parsing/wikitables",
+            "semantic_parsing/quarel",
+            "semantic_parsing/quarel/zeroshot",
+            "semantic_parsing/quarel/tagger",
+            "semantic_parsing/atis",
+            "srl",
         ]
         for model in models:
-            if model == 'constituency_parser':
+            if model == "constituency_parser":
                 EvalbBracketingScorer.compile_evalb()
             train_fixture(f"allennlp/tests/fixtures/{model}/")
     logger.info("Changing directory back to %s", initial_working_dir)

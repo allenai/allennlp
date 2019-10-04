@@ -11,7 +11,7 @@ from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
 from allennlp.data.tokenizers import Token, Tokenizer
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @DatasetReader.register("universal_dependencies")
@@ -30,13 +30,16 @@ class UniversalDependenciesDatasetReader(DatasetReader):
         A tokenizer to use to split the text. This is useful when the tokens that you pass
         into the model need to have some particular attribute. Typically it is not necessary.
     """
-    def __init__(self,
-                 token_indexers: Dict[str, TokenIndexer] = None,
-                 use_language_specific_pos: bool = False,
-                 tokenizer: Tokenizer = None,
-                 lazy: bool = False) -> None:
+
+    def __init__(
+        self,
+        token_indexers: Dict[str, TokenIndexer] = None,
+        use_language_specific_pos: bool = False,
+        tokenizer: Tokenizer = None,
+        lazy: bool = False,
+    ) -> None:
         super().__init__(lazy)
-        self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
+        self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         self.use_language_specific_pos = use_language_specific_pos
         self.tokenizer = tokenizer
 
@@ -45,7 +48,7 @@ class UniversalDependenciesDatasetReader(DatasetReader):
         # if `file_path` is a URL, redirect to the cache
         file_path = cached_path(file_path)
 
-        with open(file_path, 'r') as conllu_file:
+        with open(file_path, "r") as conllu_file:
             logger.info("Reading UD instances from conllu dataset at: %s", file_path)
 
             for annotation in parse_incr(conllu_file):
@@ -66,11 +69,13 @@ class UniversalDependenciesDatasetReader(DatasetReader):
                 yield self.text_to_instance(words, pos_tags, list(zip(tags, heads)))
 
     @overrides
-    def text_to_instance(self,  # type: ignore
-                         words: List[str],
-                         upos_tags: List[str],
-                         dependencies: List[Tuple[str, int]] = None) -> Instance:
-        # pylint: disable=arguments-differ
+    def text_to_instance(
+        self,  # type: ignore
+        words: List[str],
+        upos_tags: List[str],
+        dependencies: List[Tuple[str, int]] = None,
+    ) -> Instance:
+
         """
         Parameters
         ----------
@@ -101,12 +106,12 @@ class UniversalDependenciesDatasetReader(DatasetReader):
         if dependencies is not None:
             # We don't want to expand the label namespace with an additional dummy token, so we'll
             # always give the 'ROOT_HEAD' token a label of 'root'.
-            fields["head_tags"] = SequenceLabelField([x[0] for x in dependencies],
-                                                     text_field,
-                                                     label_namespace="head_tags")
-            fields["head_indices"] = SequenceLabelField([x[1] for x in dependencies],
-                                                        text_field,
-                                                        label_namespace="head_index_tags")
+            fields["head_tags"] = SequenceLabelField(
+                [x[0] for x in dependencies], text_field, label_namespace="head_tags"
+            )
+            fields["head_indices"] = SequenceLabelField(
+                [x[1] for x in dependencies], text_field, label_namespace="head_index_tags"
+            )
 
         fields["metadata"] = MetadataField({"words": words, "pos": upos_tags})
         return Instance(fields)

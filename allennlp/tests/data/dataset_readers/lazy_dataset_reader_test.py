@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name,abstract-method
 from typing import Iterable, List
 
 from allennlp.data.fields import TextField
@@ -27,22 +26,22 @@ class TestLazyDatasetReader(AllenNlpTestCase):
         super().setUp()
         token_indexer = {"tokens": SingleIdTokenIndexer()}
 
-        field1 = TextField([Token(t) for t in ["this", "is", "a", "sentence", "."]],
-                           token_indexer)
-        field2 = TextField([Token(t) for t in ["this", "is", "a", "different", "sentence", "."]],
-                           token_indexer)
-        field3 = TextField([Token(t) for t in ["here", "is", "a", "sentence", "."]],
-                           token_indexer)
-        field4 = TextField([Token(t) for t in ["this", "is", "short"]],
-                           token_indexer)
-        self.instances = [Instance({"text1": field1, "text2": field2}),
-                          Instance({"text1": field3, "text2": field4})]
+        field1 = TextField([Token(t) for t in ["this", "is", "a", "sentence", "."]], token_indexer)
+        field2 = TextField(
+            [Token(t) for t in ["this", "is", "a", "different", "sentence", "."]], token_indexer
+        )
+        field3 = TextField([Token(t) for t in ["here", "is", "a", "sentence", "."]], token_indexer)
+        field4 = TextField([Token(t) for t in ["this", "is", "short"]], token_indexer)
+        self.instances = [
+            Instance({"text1": field1, "text2": field2}),
+            Instance({"text1": field3, "text2": field4}),
+        ]
 
     def test_lazy(self):
         reader = LazyDatasetReader(self.instances, lazy=True)
         assert reader.num_reads == 0
 
-        instances = reader.read('path/to/file')
+        instances = reader.read("path/to/file")
 
         for _ in range(10):
             _instances = (i for i in instances)
@@ -54,7 +53,7 @@ class TestLazyDatasetReader(AllenNlpTestCase):
         reader = LazyDatasetReader(self.instances, lazy=False)
         assert reader.num_reads == 0
 
-        instances = reader.read('path/to/file')
+        instances = reader.read("path/to/file")
 
         for _ in range(10):
             _instances = (i for i in instances)

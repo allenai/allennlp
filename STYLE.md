@@ -27,7 +27,7 @@ the parameters and return values (when there is one) in the docstring.
 
 ## Code format
 
-We use pylint to enforce some basic consistency in formatting.  Those formatting guidelines roughly
+We use flake8 to enforce some basic consistency in formatting.  Those formatting guidelines roughly
 follow [Google's python style
 guide](https://google.github.io/styleguide/pyguide.html#Python_Style_Rules), with a few notable
 exceptions.  In particular, because we use type annotations and descriptive variable names, we use

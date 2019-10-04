@@ -10,6 +10,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(__file__, os.par
 
 JsonDict = Dict[str, Any]
 
+
 def process_dataset(data: JsonDict, split_type: str) -> Iterable[Tuple[str, JsonDict]]:
 
     splits = defaultdict(list)
@@ -76,8 +77,10 @@ def main(output_directory: int, data: str) -> None:
 
     for dataset in json_files:
         dataset_name = os.path.basename(dataset)[:-5]
-        print(f"Processing dataset: {dataset} into query and question "
-              f"splits at output path: {output_directory + '/' + dataset_name}")
+        print(
+            f"Processing dataset: {dataset} into query and question "
+            f"splits at output path: {output_directory + '/' + dataset_name}"
+        )
         full_dataset = json.load(open(dataset))
         if not isinstance(full_dataset, list):
             full_dataset = [full_dataset]
@@ -93,8 +96,10 @@ def main(output_directory: int, data: str) -> None:
 
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description="process text2sql data into a more readable format.")
-    parser.add_argument('--out', type=str, help='The serialization directory.')
-    parser.add_argument('--data', type=str, help='The path to the text2sql data directory.')
+    parser = argparse.ArgumentParser(
+        description="process text2sql data into a more readable format."
+    )
+    parser.add_argument("--out", type=str, help="The serialization directory.")
+    parser.add_argument("--data", type=str, help="The path to the text2sql data directory.")
     args = parser.parse_args()
     main(args.out, args.data)

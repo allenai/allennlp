@@ -7,8 +7,9 @@ import multiprocessing
 from multiprocessing import Process
 from allennlp.common.file_utils import cached_path
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 MULTIPROCESSING_LOGGER = multiprocessing.get_logger()
+
 
 class SqlExecutor:
     """
@@ -23,22 +24,21 @@ class SqlExecutor:
         self._connection = sqlite3.connect(self._database_file)
         self._cursor = self._connection.cursor()
 
-    def evaluate_sql_query(self,
-                           predicted_sql_query: str,
-                           sql_query_labels: List[str]) -> int:
+    def evaluate_sql_query(self, predicted_sql_query: str, sql_query_labels: List[str]) -> int:
         # We set the logging level for the subprocesses to warning, otherwise, it will
         # log every time a process starts and stops.
         MULTIPROCESSING_LOGGER.setLevel(logging.WARNING)
 
         # Since the query might hang, we run in another process and kill it if it
         # takes too long.
-        process = Process(target=self._evaluate_sql_query_subprocess,
-                          args=(predicted_sql_query, sql_query_labels))
+        process = Process(
+            target=self._evaluate_sql_query_subprocess, args=(predicted_sql_query, sql_query_labels)
+        )
         process.start()
 
         # If the query has not finished in 3 seconds then we will proceed.
         process.join(3)
-        denotation_correct = process.exitcode # type: ignore
+        denotation_correct = process.exitcode  # type: ignore
 
         if process.is_alive():
             logger.warning("Evaluating query took over 3 seconds, skipping query")
@@ -50,7 +50,9 @@ class SqlExecutor:
 
         return denotation_correct
 
-    def _evaluate_sql_query_subprocess(self, predicted_query: str, sql_query_labels: List[str]) -> int:
+    def _evaluate_sql_query_subprocess(
+        self, predicted_query: str, sql_query_labels: List[str]
+    ) -> int:
         """
         We evaluate here whether the predicted query and the query label evaluate to the
         exact same table. This method is only called by the subprocess, so we just exit with
@@ -63,7 +65,7 @@ class SqlExecutor:
             self._cursor.execute(postprocessed_predicted_query)
             predicted_rows = self._cursor.fetchall()
         except sqlite3.Error as error:
-            logger.warning(f'Error executing predicted: {error}')
+            logger.warning(f"Error executing predicted: {error}")
             sys.exit(0)
 
         # If predicted table matches any of the reference tables then it is counted as correct.
@@ -74,7 +76,7 @@ class SqlExecutor:
                 self._cursor.execute(postprocessed_sql_query_label)
                 target_rows = self._cursor.fetchall()
             except sqlite3.Error as error:
-                logger.warning(f'Error executing predicted: {error}')
+                logger.warning(f"Error executing predicted: {error}")
             if predicted_rows == target_rows:
                 sys.exit(1)
         sys.exit(0)
@@ -84,6 +86,6 @@ class SqlExecutor:
         # The dialect of SQL that SQLite takes is not exactly the same as the labeled data.
         # We strip off the parentheses that surround the entire query here.
         query = query.strip()
-        if query.startswith('('):
-            return query[1:query.rfind(')')] + ';'
+        if query.startswith("("):
+            return query[1 : query.rfind(")")] + ";"
         return query

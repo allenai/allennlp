@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name,arguments-differ,protected-access
 from typing import Dict
 
 import torch
@@ -9,26 +8,25 @@ from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.model import Model
 from allennlp.training.moving_average import MovingAverage, ExponentialMovingAverage
 
+
 class MovingAverageTest(AllenNlpTestCase):
     def test_from_params(self):
-        params = Params({
-                "type": "exponential",
-                "decay": 0.99
-        })
+        params = Params({"type": "exponential", "decay": 0.99})
 
         _ = MovingAverage.from_params(params, parameters=[])
 
     def test_exponential_moving_average_without_steps(self):
         param1 = torch.ones(5, 3)
         param2 = torch.ones(2)
-        moving_average = ExponentialMovingAverage([("param1", param1), ("param2", param2)],
-                                                  decay=0.9999)
+        moving_average = ExponentialMovingAverage(
+            [("param1", param1), ("param2", param2)], decay=0.9999
+        )
 
-        param1.data *= 5   # now all 5s
+        param1.data *= 5  # now all 5s
         param2.data *= 10  # now all 10s
         moving_average.apply()
 
-        param1.data *= 5   # now all 25s
+        param1.data *= 5  # now all 25s
         param2.data *= 10  # now all 100s
         moving_average.apply()
 
@@ -36,12 +34,10 @@ class MovingAverageTest(AllenNlpTestCase):
         moving_average.assign_average_value()
 
         np.testing.assert_array_almost_equal(
-                param1,
-                1 * .9999 ** 2 +  5 * .9999 * .0001 +  25 * 0.0001
+            param1, 1 * 0.9999 ** 2 + 5 * 0.9999 * 0.0001 + 25 * 0.0001
         )
         np.testing.assert_array_almost_equal(
-                param2,
-                1 * .9999 ** 2 + 10 * .9999 * .0001 + 100 * 0.0001
+            param2, 1 * 0.9999 ** 2 + 10 * 0.9999 * 0.0001 + 100 * 0.0001
         )
 
         # Restore original variables
@@ -52,14 +48,15 @@ class MovingAverageTest(AllenNlpTestCase):
     def test_exponential_moving_average_num_updates(self):
         param1 = torch.ones(5, 3)
         param2 = torch.ones(2)
-        moving_average = ExponentialMovingAverage([("param1", param1), ("param2", param2)],
-                                                  decay=0.9999)
+        moving_average = ExponentialMovingAverage(
+            [("param1", param1), ("param2", param2)], decay=0.9999
+        )
 
-        param1.data *= 5   # now all 5s
+        param1.data *= 5  # now all 5s
         param2.data *= 10  # now all 10s
         moving_average.apply(num_updates=100)  # 101 / 110 ~ 0.92 < 0.9999
 
-        param1.data *= 5   # now all 25s
+        param1.data *= 5  # now all 25s
         param2.data *= 10  # now all 100s
         moving_average.apply(num_updates=1_000_000)  # 1_000_001 / 1_000_010 ~ .999991 > .9999
 
@@ -67,13 +64,11 @@ class MovingAverageTest(AllenNlpTestCase):
         moving_average.assign_average_value()
 
         np.testing.assert_array_almost_equal(
-                param1,
-                1 * (101 / 110) * .9999 +  5 * (9 / 110) * .9999 +  25 * 0.0001
+            param1, 1 * (101 / 110) * 0.9999 + 5 * (9 / 110) * 0.9999 + 25 * 0.0001
         )
 
         np.testing.assert_array_almost_equal(
-                param2,
-                1 * (101 / 110) * .9999 + 10 * (9 / 110) * .9999 + 100 * 0.0001
+            param2, 1 * (101 / 110) * 0.9999 + 10 * (9 / 110) * 0.9999 + 100 * 0.0001
         )
 
         # Restore original variables

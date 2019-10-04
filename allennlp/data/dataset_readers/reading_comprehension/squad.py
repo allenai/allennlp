@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Dict, List, Tuple, Optional
+from typing import Any, Dict, List, Tuple, Optional
 
 from overrides import overrides
 
@@ -11,7 +11,7 @@ from allennlp.data.dataset_readers.reading_comprehension import util
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
 from allennlp.data.tokenizers import Token, Tokenizer, WordTokenizer
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @DatasetReader.register("squad")
@@ -52,16 +52,19 @@ class SquadReader(DatasetReader):
     skip_invalid_examples: ``bool``, optional (default=False)
         if this is true, we will skip those invalid examples
     """
-    def __init__(self,
-                 tokenizer: Tokenizer = None,
-                 token_indexers: Dict[str, TokenIndexer] = None,
-                 lazy: bool = False,
-                 passage_length_limit: int = None,
-                 question_length_limit: int = None,
-                 skip_invalid_examples: bool = False) -> None:
+
+    def __init__(
+        self,
+        tokenizer: Tokenizer = None,
+        token_indexers: Dict[str, TokenIndexer] = None,
+        lazy: bool = False,
+        passage_length_limit: int = None,
+        question_length_limit: int = None,
+        skip_invalid_examples: bool = False,
+    ) -> None:
         super().__init__(lazy)
         self._tokenizer = tokenizer or WordTokenizer()
-        self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
+        self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         self.passage_length_limit = passage_length_limit
         self.question_length_limit = question_length_limit
         self.skip_invalid_examples = skip_invalid_examples
@@ -74,34 +77,43 @@ class SquadReader(DatasetReader):
         logger.info("Reading file at %s", file_path)
         with open(file_path) as dataset_file:
             dataset_json = json.load(dataset_file)
-            dataset = dataset_json['data']
+            dataset = dataset_json["data"]
         logger.info("Reading the dataset")
         for article in dataset:
-            for paragraph_json in article['paragraphs']:
+            for paragraph_json in article["paragraphs"]:
                 paragraph = paragraph_json["context"]
                 tokenized_paragraph = self._tokenizer.tokenize(paragraph)
 
-                for question_answer in paragraph_json['qas']:
+                for question_answer in paragraph_json["qas"]:
                     question_text = question_answer["question"].strip().replace("\n", "")
-                    answer_texts = [answer['text'] for answer in question_answer['answers']]
-                    span_starts = [answer['answer_start'] for answer in question_answer['answers']]
-                    span_ends = [start + len(answer) for start, answer in zip(span_starts, answer_texts)]
-                    instance = self.text_to_instance(question_text,
-                                                     paragraph,
-                                                     zip(span_starts, span_ends),
-                                                     answer_texts,
-                                                     tokenized_paragraph)
+                    answer_texts = [answer["text"] for answer in question_answer["answers"]]
+                    span_starts = [answer["answer_start"] for answer in question_answer["answers"]]
+                    span_ends = [
+                        start + len(answer) for start, answer in zip(span_starts, answer_texts)
+                    ]
+                    additional_metadata = {"id": question_answer["id"]}
+                    instance = self.text_to_instance(
+                        question_text,
+                        paragraph,
+                        zip(span_starts, span_ends),
+                        answer_texts,
+                        tokenized_paragraph,
+                        additional_metadata,
+                    )
                     if instance is not None:
                         yield instance
 
     @overrides
-    def text_to_instance(self,  # type: ignore
-                         question_text: str,
-                         passage_text: str,
-                         char_spans: List[Tuple[int, int]] = None,
-                         answer_texts: List[str] = None,
-                         passage_tokens: List[Token] = None) -> Optional[Instance]:
-        # pylint: disable=arguments-differ
+    def text_to_instance(
+        self,  # type: ignore
+        question_text: str,
+        passage_text: str,
+        char_spans: List[Tuple[int, int]] = None,
+        answer_texts: List[str] = None,
+        passage_tokens: List[Token] = None,
+        additional_metadata: Dict[str, Any] = None,
+    ) -> Optional[Instance]:
+
         if not passage_tokens:
             passage_tokens = self._tokenizer.tokenize(passage_text)
         question_tokens = self._tokenizer.tokenize(question_text)
@@ -117,15 +129,16 @@ class SquadReader(DatasetReader):
         for char_span_start, char_span_end in char_spans:
             if char_span_end > passage_offsets[-1][1]:
                 continue
-            (span_start, span_end), error = util.char_span_to_token_span(passage_offsets,
-                                                                         (char_span_start, char_span_end))
+            (span_start, span_end), error = util.char_span_to_token_span(
+                passage_offsets, (char_span_start, char_span_end)
+            )
             if error:
                 logger.debug("Passage: %s", passage_text)
                 logger.debug("Passage tokens: %s", passage_tokens)
                 logger.debug("Question text: %s", question_text)
                 logger.debug("Answer span: (%d, %d)", char_span_start, char_span_end)
                 logger.debug("Token span: (%d, %d)", span_start, span_end)
-                logger.debug("Tokens in answer: %s", passage_tokens[span_start:span_end + 1])
+                logger.debug("Tokens in answer: %s", passage_tokens[span_start : span_end + 1])
                 logger.debug("Answer: %s", passage_text[char_span_start:char_span_end])
             token_spans.append((span_start, span_end))
         # The original answer is filtered out
@@ -134,9 +147,12 @@ class SquadReader(DatasetReader):
                 return None
             else:
                 token_spans.append((len(passage_tokens) - 1, len(passage_tokens) - 1))
-        return util.make_reading_comprehension_instance(question_tokens,
-                                                        passage_tokens,
-                                                        self._token_indexers,
-                                                        passage_text,
-                                                        token_spans,
-                                                        answer_texts)
+        return util.make_reading_comprehension_instance(
+            question_tokens,
+            passage_tokens,
+            self._token_indexers,
+            passage_text,
+            token_spans,
+            answer_texts,
+            additional_metadata,
+        )

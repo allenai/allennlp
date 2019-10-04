@@ -13,18 +13,24 @@ from parsimonious.exceptions import VisitationError, UndefinedLabel
 
 WHITESPACE_REGEX = re.compile(" wsp |wsp | wsp| ws |ws | ws")
 
+
 def format_grammar_string(grammar_dictionary: Dict[str, List[str]]) -> str:
     """
     Formats a dictionary of production rules into the string format expected
     by the Parsimonious Grammar class.
     """
-    grammar_string = '\n'.join([f"{nonterminal} = {' / '.join(right_hand_side)}"
-                                for nonterminal, right_hand_side in grammar_dictionary.items()])
+    grammar_string = "\n".join(
+        [
+            f"{nonterminal} = {' / '.join(right_hand_side)}"
+            for nonterminal, right_hand_side in grammar_dictionary.items()
+        ]
+    )
     return grammar_string.replace("\\", "\\\\")
 
 
-def initialize_valid_actions(grammar: Grammar,
-                             keywords_to_uppercase: List[str] = None) -> Dict[str, List[str]]:
+def initialize_valid_actions(
+    grammar: Grammar, keywords_to_uppercase: List[str] = None
+) -> Dict[str, List[str]]:
     """
     We initialize the valid actions with the global actions. These include the
     valid actions that result from the grammar and also those that result from
@@ -39,21 +45,30 @@ def initialize_valid_actions(grammar: Grammar,
         # Sequence represents a series of expressions that match pieces of the text in order.
         # Eg. A -> B C
         if isinstance(rhs, Sequence):
-            valid_actions[key].add(format_action(key, " ".join(rhs._unicode_members()), # pylint: disable=protected-access
-                                                 keywords_to_uppercase=keywords_to_uppercase))
+            valid_actions[key].add(
+                format_action(
+                    key,
+                    " ".join(rhs._unicode_members()),
+                    keywords_to_uppercase=keywords_to_uppercase,
+                )
+            )
 
         # OneOf represents a series of expressions, one of which matches the text.
         # Eg. A -> B / C
         elif isinstance(rhs, OneOf):
-            for option in rhs._unicode_members(): # pylint: disable=protected-access
-                valid_actions[key].add(format_action(key, option,
-                                                     keywords_to_uppercase=keywords_to_uppercase))
+            for option in rhs._unicode_members():
+                valid_actions[key].add(
+                    format_action(key, option, keywords_to_uppercase=keywords_to_uppercase)
+                )
 
         # A string literal, eg. "A"
         elif isinstance(rhs, Literal):
             if rhs.literal != "":
-                valid_actions[key].add(format_action(key, repr(rhs.literal),
-                                                     keywords_to_uppercase=keywords_to_uppercase))
+                valid_actions[key].add(
+                    format_action(
+                        key, repr(rhs.literal), keywords_to_uppercase=keywords_to_uppercase
+                    )
+                )
             else:
                 valid_actions[key] = set()
 
@@ -61,11 +76,13 @@ def initialize_valid_actions(grammar: Grammar,
     return valid_action_strings
 
 
-def format_action(nonterminal: str,
-                  right_hand_side: str,
-                  is_string: bool = False,
-                  is_number: bool = False,
-                  keywords_to_uppercase: List[str] = None) -> str:
+def format_action(
+    nonterminal: str,
+    right_hand_side: str,
+    is_string: bool = False,
+    is_number: bool = False,
+    keywords_to_uppercase: List[str] = None,
+) -> str:
     """
     This function formats an action as it appears in models. It
     splits productions based on the special `ws` and `wsp` rules,
@@ -97,7 +114,7 @@ def format_action(nonterminal: str,
         right_hand_side = right_hand_side.upper()
 
     if is_string:
-        return f'{nonterminal} -> ["\'{right_hand_side}\'"]'
+        return f"{nonterminal} -> [\"'{right_hand_side}'\"]"
 
     elif is_number:
         return f'{nonterminal} -> ["{right_hand_side}"]'
@@ -105,26 +122,27 @@ def format_action(nonterminal: str,
     else:
         right_hand_side = right_hand_side.lstrip("(").rstrip(")")
         child_strings = [token for token in WHITESPACE_REGEX.split(right_hand_side) if token]
-        child_strings = [tok.upper() if tok.upper() in keywords_to_uppercase else tok for tok in child_strings]
+        child_strings = [
+            tok.upper() if tok.upper() in keywords_to_uppercase else tok for tok in child_strings
+        ]
         return f"{nonterminal} -> [{', '.join(child_strings)}]"
+
 
 def action_sequence_to_sql(action_sequences: List[str]) -> str:
     # Convert an action sequence like ['statement -> [query, ";"]', ...] to the
     # SQL string.
     query = []
     for action in action_sequences:
-        nonterminal, right_hand_side = action.split(' -> ')
-        right_hand_side_tokens = right_hand_side[1:-1].split(', ')
-        if nonterminal == 'statement':
+        nonterminal, right_hand_side = action.split(" -> ")
+        right_hand_side_tokens = right_hand_side[1:-1].split(", ")
+        if nonterminal == "statement":
             query.extend(right_hand_side_tokens)
         else:
             for query_index, token in list(enumerate(query)):
                 if token == nonterminal:
-                    query = query[:query_index] + \
-                            right_hand_side_tokens + \
-                            query[query_index + 1:]
+                    query = query[:query_index] + right_hand_side_tokens + query[query_index + 1 :]
                     break
-    return ' '.join([token.strip('"') for token in query])
+    return " ".join([token.strip('"') for token in query])
 
 
 class SqlVisitor(NodeVisitor):
@@ -149,6 +167,7 @@ class SqlVisitor(NodeVisitor):
         Keywords in the grammar to uppercase. In the case of sql,
         this might be SELECT, MAX etc.
     """
+
     def __init__(self, grammar: Grammar, keywords_to_uppercase: List[str] = None) -> None:
         self.action_sequence: List[str] = []
         self.grammar: Grammar = grammar
@@ -157,7 +176,7 @@ class SqlVisitor(NodeVisitor):
     @overrides
     def generic_visit(self, node: Node, visited_children: List[None]) -> List[str]:
         self.add_action(node)
-        if node.expr.name == 'statement':
+        if node.expr.name == "statement":
             return self.action_sequence
         return []
 
@@ -165,8 +184,8 @@ class SqlVisitor(NodeVisitor):
         """
         For each node, we accumulate the rules that generated its children in a list.
         """
-        if node.expr.name and node.expr.name not in ['ws', 'wsp']:
-            nonterminal = f'{node.expr.name} -> '
+        if node.expr.name and node.expr.name not in ["ws", "wsp"]:
+            nonterminal = f"{node.expr.name} -> "
 
             if isinstance(node.expr, Literal):
                 right_hand_side = f'["{node.text}"]'
@@ -174,17 +193,19 @@ class SqlVisitor(NodeVisitor):
             else:
                 child_strings = []
                 for child in node.__iter__():
-                    if child.expr.name in ['ws', 'wsp']:
+                    if child.expr.name in ["ws", "wsp"]:
                         continue
-                    if child.expr.name != '':
+                    if child.expr.name != "":
                         child_strings.append(child.expr.name)
                     else:
-                        child_right_side_string = child.expr._as_rhs().lstrip("(").rstrip(")") # pylint: disable=protected-access
-                        child_right_side_list = [tok for tok in
-                                                 WHITESPACE_REGEX.split(child_right_side_string) if tok]
-                        child_right_side_list = [tok.upper() if tok.upper() in
-                                                 self.keywords_to_uppercase else tok
-                                                 for tok in child_right_side_list]
+                        child_right_side_string = child.expr._as_rhs().lstrip("(").rstrip(")")
+                        child_right_side_list = [
+                            tok for tok in WHITESPACE_REGEX.split(child_right_side_string) if tok
+                        ]
+                        child_right_side_list = [
+                            tok.upper() if tok.upper() in self.keywords_to_uppercase else tok
+                            for tok in child_right_side_list
+                        ]
                         child_strings.extend(child_right_side_list)
                 right_hand_side = "[" + ", ".join(child_strings) + "]"
             rule = nonterminal + right_hand_side
@@ -196,7 +217,7 @@ class SqlVisitor(NodeVisitor):
         See the ``NodeVisitor`` visit method. This just changes the order in which
         we visit nonterminals from right to left to left to right.
         """
-        method = getattr(self, 'visit_' + node.expr_name, self.generic_visit)
+        method = getattr(self, "visit_" + node.expr_name, self.generic_visit)
 
         # Call that method, and show where in the tree it failed if it blows
         # up.
@@ -208,7 +229,7 @@ class SqlVisitor(NodeVisitor):
             raise
         except self.unwrapped_exceptions:
             raise
-        except Exception: # pylint: disable=broad-except
+        except Exception:
             # Catch any exception, and tack on a parse tree so it's easier to
             # see where it went wrong.
             exc_class, exc, traceback = exc_info()

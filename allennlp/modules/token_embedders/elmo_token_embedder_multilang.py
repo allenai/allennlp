@@ -46,16 +46,18 @@ class ElmoTokenEmbedderMultiLang(TokenEmbedder):
         A dictionary of language identifier to a pth file with an alignment matrix.
     """
 
-    def __init__(self,
-                 options_files: Dict[str, str],
-                 weight_files: Dict[str, str],
-                 do_layer_norm: bool = False,
-                 dropout: float = 0.5,
-                 requires_grad: bool = False,
-                 projection_dim: int = None,
-                 vocab_to_cache: List[str] = None,
-                 scalar_mix_parameters: List[float] = None,
-                 aligning_files: Dict[str, str] = None) -> None:
+    def __init__(
+        self,
+        options_files: Dict[str, str],
+        weight_files: Dict[str, str],
+        do_layer_norm: bool = False,
+        dropout: float = 0.5,
+        requires_grad: bool = False,
+        projection_dim: int = None,
+        vocab_to_cache: List[str] = None,
+        scalar_mix_parameters: List[float] = None,
+        aligning_files: Dict[str, str] = None,
+    ) -> None:
         super().__init__()
 
         if options_files.keys() != weight_files.keys():
@@ -64,24 +66,25 @@ class ElmoTokenEmbedderMultiLang(TokenEmbedder):
         aligning_files = aligning_files or {}
         output_dim = None
         for lang in weight_files.keys():
-            name = 'elmo_%s' % lang
+            name = "elmo_%s" % lang
             elmo = Elmo(
-                    options_files[lang],
-                    weight_files[lang],
-                    num_output_representations=1,
-                    do_layer_norm=do_layer_norm,
-                    dropout=dropout,
-                    requires_grad=requires_grad,
-                    vocab_to_cache=vocab_to_cache,
-                    scalar_mix_parameters=scalar_mix_parameters)
+                options_files[lang],
+                weight_files[lang],
+                num_output_representations=1,
+                do_layer_norm=do_layer_norm,
+                dropout=dropout,
+                requires_grad=requires_grad,
+                vocab_to_cache=vocab_to_cache,
+                scalar_mix_parameters=scalar_mix_parameters,
+            )
             self.add_module(name, elmo)
 
             output_dim_tmp = elmo.get_output_dim()
             if output_dim is not None:
                 # Verify that all ELMo embedders have the same output dimension.
-                check_dimensions_match(output_dim_tmp, output_dim,
-                                       "%s output dim" % name,
-                                       "elmo output dim")
+                check_dimensions_match(
+                    output_dim_tmp, output_dim, "%s output dim" % name, "elmo output dim"
+                )
 
             output_dim = output_dim_tmp
 
@@ -94,24 +97,22 @@ class ElmoTokenEmbedderMultiLang(TokenEmbedder):
             self._projection = None
 
         for lang in weight_files.keys():
-            name = 'aligning_%s' % lang
+            name = "aligning_%s" % lang
             aligning_matrix = torch.eye(output_dim)
-            if lang in aligning_files and aligning_files[lang] != '':
+            if lang in aligning_files and aligning_files[lang] != "":
                 aligninig_path = cached_path(aligning_files[lang])
                 aligning_matrix = torch.FloatTensor(torch.load(aligninig_path))
 
             aligning = torch.nn.Linear(output_dim, output_dim, bias=False)
-            aligning.weight = torch.nn.Parameter(
-                    aligning_matrix, requires_grad=False)
+            aligning.weight = torch.nn.Parameter(aligning_matrix, requires_grad=False)
             self.add_module(name, aligning)
 
     def get_output_dim(self):
         return self.output_dim
 
-    def forward(self,  # pylint: disable=arguments-differ
-                inputs: torch.Tensor,
-                lang: str,
-                word_inputs: torch.Tensor = None) -> torch.Tensor:
+    def forward(
+        self, inputs: torch.Tensor, lang: str, word_inputs: torch.Tensor = None
+    ) -> torch.Tensor:
         """
         Parameters
         ----------
@@ -128,10 +129,10 @@ class ElmoTokenEmbedderMultiLang(TokenEmbedder):
         The ELMo representations for the given language for the input sequence, shape
         ``(batch_size, timesteps, embedding_dim)``
         """
-        elmo = getattr(self, 'elmo_{}'.format(lang))
+        elmo = getattr(self, "elmo_{}".format(lang))
         elmo_output = elmo(inputs, word_inputs)
-        elmo_representations = elmo_output['elmo_representations'][0]
-        aligning = getattr(self, 'aligning_{}'.format(lang))
+        elmo_representations = elmo_output["elmo_representations"][0]
+        aligning = getattr(self, "aligning_{}".format(lang))
         elmo_representations = aligning(elmo_representations)
         if self._projection:
             projection = self._projection
@@ -142,35 +143,36 @@ class ElmoTokenEmbedderMultiLang(TokenEmbedder):
 
     # Custom vocab_to_cache logic requires a from_params implementation.
     @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params # type: ignore
-                   ) -> 'ElmoTokenEmbedderMultiLang':
-        # pylint: disable=arguments-differ
-        options_files = params.pop('options_files')
-        weight_files = params.pop('weight_files')
+    def from_params(  # type: ignore
+        cls, vocab: Vocabulary, params: Params
+    ) -> "ElmoTokenEmbedderMultiLang":
+
+        options_files = params.pop("options_files")
+        weight_files = params.pop("weight_files")
         for lang in options_files.keys():
             options_files.add_file_to_archive(lang)
         for lang in weight_files.keys():
             weight_files.add_file_to_archive(lang)
-        requires_grad = params.pop('requires_grad', False)
-        do_layer_norm = params.pop_bool('do_layer_norm', False)
+        requires_grad = params.pop("requires_grad", False)
+        do_layer_norm = params.pop_bool("do_layer_norm", False)
         dropout = params.pop_float("dropout", 0.5)
         namespace_to_cache = params.pop("namespace_to_cache", None)
         if namespace_to_cache is not None:
-            vocab_to_cache = list(
-                    vocab.get_token_to_index_vocabulary(namespace_to_cache).keys())
+            vocab_to_cache = list(vocab.get_token_to_index_vocabulary(namespace_to_cache).keys())
         else:
             vocab_to_cache = None
         projection_dim = params.pop_int("projection_dim", None)
-        scalar_mix_parameters = params.pop('scalar_mix_parameters', None)
-        aligning_files = params.pop('aligning_files', {})
+        scalar_mix_parameters = params.pop("scalar_mix_parameters", None)
+        aligning_files = params.pop("aligning_files", {})
         params.assert_empty(cls.__name__)
         return cls(
-                options_files=options_files,
-                weight_files=weight_files,
-                do_layer_norm=do_layer_norm,
-                dropout=dropout,
-                requires_grad=requires_grad,
-                projection_dim=projection_dim,
-                vocab_to_cache=vocab_to_cache,
-                scalar_mix_parameters=scalar_mix_parameters,
-                aligning_files=aligning_files)
+            options_files=options_files,
+            weight_files=weight_files,
+            do_layer_norm=do_layer_norm,
+            dropout=dropout,
+            requires_grad=requires_grad,
+            projection_dim=projection_dim,
+            vocab_to_cache=vocab_to_cache,
+            scalar_mix_parameters=scalar_mix_parameters,
+            aligning_files=aligning_files,
+        )

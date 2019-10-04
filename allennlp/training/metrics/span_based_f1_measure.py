@@ -8,15 +8,15 @@ from allennlp.nn.util import get_lengths_from_binary_sequence_mask
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.training.metrics.metric import Metric
 from allennlp.data.dataset_readers.dataset_utils.span_utils import (
-        bio_tags_to_spans,
-        bioul_tags_to_spans,
-        iob1_tags_to_spans,
-        bmes_tags_to_spans,
-        TypedStringSpan
+    bio_tags_to_spans,
+    bioul_tags_to_spans,
+    iob1_tags_to_spans,
+    bmes_tags_to_spans,
+    TypedStringSpan,
 )
 
 
-TAGS_TO_SPANS_FUNCTION_TYPE = Callable[[List[str], Optional[List[str]]], List[TypedStringSpan]]  # pylint: disable=invalid-name
+TAGS_TO_SPANS_FUNCTION_TYPE = Callable[[List[str], Optional[List[str]]], List[TypedStringSpan]]
 
 
 @Metric.register("span_f1")
@@ -34,12 +34,15 @@ class SpanBasedF1Measure(Metric):
     simply "B", "I", "O" if using the "BIO" label encoding).
 
     """
-    def __init__(self,
-                 vocabulary: Vocabulary,
-                 tag_namespace: str = "tags",
-                 ignore_classes: List[str] = None,
-                 label_encoding: Optional[str] = "BIO",
-                 tags_to_spans_function: Optional[TAGS_TO_SPANS_FUNCTION_TYPE] = None) -> None:
+
+    def __init__(
+        self,
+        vocabulary: Vocabulary,
+        tag_namespace: str = "tags",
+        ignore_classes: List[str] = None,
+        label_encoding: Optional[str] = "BIO",
+        tags_to_spans_function: Optional[TAGS_TO_SPANS_FUNCTION_TYPE] = None,
+    ) -> None:
         """
         Parameters
         ----------
@@ -70,16 +73,18 @@ class SpanBasedF1Measure(Metric):
         """
         if label_encoding and tags_to_spans_function:
             raise ConfigurationError(
-                    'Both label_encoding and tags_to_spans_function are provided. '
-                    'Set "label_encoding=None" explicitly to enable tags_to_spans_function.'
-                    )
+                "Both label_encoding and tags_to_spans_function are provided. "
+                'Set "label_encoding=None" explicitly to enable tags_to_spans_function.'
+            )
         if label_encoding:
             if label_encoding not in ["BIO", "IOB1", "BIOUL", "BMES"]:
-                raise ConfigurationError("Unknown label encoding - expected 'BIO', 'IOB1', 'BIOUL', 'BMES'.")
+                raise ConfigurationError(
+                    "Unknown label encoding - expected 'BIO', 'IOB1', 'BIOUL', 'BMES'."
+                )
         elif tags_to_spans_function is None:
             raise ConfigurationError(
-                    'At least one of the (label_encoding, tags_to_spans_function) should be provided.'
-                    )
+                "At least one of the (label_encoding, tags_to_spans_function) should be provided."
+            )
 
         self._label_encoding = label_encoding
         self._tags_to_spans_function = tags_to_spans_function
@@ -91,11 +96,13 @@ class SpanBasedF1Measure(Metric):
         self._false_positives: Dict[str, int] = defaultdict(int)
         self._false_negatives: Dict[str, int] = defaultdict(int)
 
-    def __call__(self,
-                 predictions: torch.Tensor,
-                 gold_labels: torch.Tensor,
-                 mask: Optional[torch.Tensor] = None,
-                 prediction_map: Optional[torch.Tensor] = None):
+    def __call__(
+        self,
+        predictions: torch.Tensor,
+        gold_labels: torch.Tensor,
+        mask: Optional[torch.Tensor] = None,
+        prediction_map: Optional[torch.Tensor] = None,
+    ):
         """
         Parameters
         ----------
@@ -118,14 +125,16 @@ class SpanBasedF1Measure(Metric):
         if mask is None:
             mask = torch.ones_like(gold_labels)
 
-        predictions, gold_labels, mask, prediction_map = self.unwrap_to_tensors(predictions,
-                                                                                gold_labels,
-                                                                                mask, prediction_map)
+        predictions, gold_labels, mask, prediction_map = self.unwrap_to_tensors(
+            predictions, gold_labels, mask, prediction_map
+        )
 
         num_classes = predictions.size(-1)
         if (gold_labels >= num_classes).any():
-            raise ConfigurationError("A gold label passed to SpanBasedF1Measure contains an "
-                                     "id >= {}, the number of classes.".format(num_classes))
+            raise ConfigurationError(
+                "A gold label passed to SpanBasedF1Measure contains an "
+                "id >= {}, the number of classes.".format(num_classes)
+            )
 
         sequence_lengths = get_lengths_from_binary_sequence_mask(mask)
         argmax_predictions = predictions.max(-1)[1]
@@ -148,10 +157,14 @@ class SpanBasedF1Measure(Metric):
                 # completely padded. These contribute nothing, so we skip these rows.
                 continue
 
-            predicted_string_labels = [self._label_vocabulary[label_id]
-                                       for label_id in sequence_prediction[:length].tolist()]
-            gold_string_labels = [self._label_vocabulary[label_id]
-                                  for label_id in sequence_gold_label[:length].tolist()]
+            predicted_string_labels = [
+                self._label_vocabulary[label_id]
+                for label_id in sequence_prediction[:length].tolist()
+            ]
+            gold_string_labels = [
+                self._label_vocabulary[label_id]
+                for label_id in sequence_gold_label[:length].tolist()
+            ]
 
             tags_to_spans_function = None
             # `label_encoding` is empty and `tags_to_spans_function` is provided.
@@ -206,7 +219,9 @@ class SpanBasedF1Measure(Metric):
         A ``List[TypedStringSpan]`` with continued arguments replaced with a single span.
         """
         span_set: Set[TypedStringSpan] = set(spans)
-        continued_labels: List[str] = [label[2:] for (label, span) in span_set if label.startswith("C-")]
+        continued_labels: List[str] = [
+            label[2:] for (label, span) in span_set if label.startswith("C-")
+        ]
         for label in continued_labels:
             continued_spans = {span for span in span_set if label in span[0]}
 
@@ -237,9 +252,9 @@ class SpanBasedF1Measure(Metric):
         all_tags.update(self._false_negatives.keys())
         all_metrics = {}
         for tag in all_tags:
-            precision, recall, f1_measure = self._compute_metrics(self._true_positives[tag],
-                                                                  self._false_positives[tag],
-                                                                  self._false_negatives[tag])
+            precision, recall, f1_measure = self._compute_metrics(
+                self._true_positives[tag], self._false_positives[tag], self._false_negatives[tag]
+            )
             precision_key = "precision" + "-" + tag
             recall_key = "recall" + "-" + tag
             f1_key = "f1-measure" + "-" + tag
@@ -248,9 +263,11 @@ class SpanBasedF1Measure(Metric):
             all_metrics[f1_key] = f1_measure
 
         # Compute the precision, recall and f1 for all spans jointly.
-        precision, recall, f1_measure = self._compute_metrics(sum(self._true_positives.values()),
-                                                              sum(self._false_positives.values()),
-                                                              sum(self._false_negatives.values()))
+        precision, recall, f1_measure = self._compute_metrics(
+            sum(self._true_positives.values()),
+            sum(self._false_positives.values()),
+            sum(self._false_negatives.values()),
+        )
         all_metrics["precision-overall"] = precision
         all_metrics["recall-overall"] = recall
         all_metrics["f1-measure-overall"] = f1_measure
@@ -262,7 +279,7 @@ class SpanBasedF1Measure(Metric):
     def _compute_metrics(true_positives: int, false_positives: int, false_negatives: int):
         precision = float(true_positives) / float(true_positives + false_positives + 1e-13)
         recall = float(true_positives) / float(true_positives + false_negatives + 1e-13)
-        f1_measure = 2. * ((precision * recall) / (precision + recall + 1e-13))
+        f1_measure = 2.0 * ((precision * recall) / (precision + recall + 1e-13))
         return precision, recall, f1_measure
 
     def reset(self):

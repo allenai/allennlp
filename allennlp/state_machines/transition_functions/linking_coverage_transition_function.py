@@ -10,7 +10,9 @@ from allennlp.common.checks import check_dimensions_match
 from allennlp.modules import Attention, FeedForward
 from allennlp.nn import Activation
 from allennlp.state_machines.states import CoverageState, ChecklistStatelet
-from allennlp.state_machines.transition_functions.coverage_transition_function import CoverageTransitionFunction
+from allennlp.state_machines.transition_functions.coverage_transition_function import (
+    CoverageTransitionFunction,
+)
 
 
 class LinkingCoverageTransitionFunction(CoverageTransitionFunction):
@@ -38,36 +40,50 @@ class LinkingCoverageTransitionFunction(CoverageTransitionFunction):
         action vector in this case to account for that.
     dropout : ``float`` (optional, default=0.0)
     """
-    def __init__(self,
-                 encoder_output_dim: int,
-                 action_embedding_dim: int,
-                 input_attention: Attention,
-                 activation: Activation = Activation.by_name('relu')(),
-                 add_action_bias: bool = True,
-                 mixture_feedforward: FeedForward = None,
-                 dropout: float = 0.0) -> None:
-        super().__init__(encoder_output_dim=encoder_output_dim,
-                         action_embedding_dim=action_embedding_dim,
-                         input_attention=input_attention,
-                         activation=activation,
-                         add_action_bias=add_action_bias,
-                         dropout=dropout)
+
+    def __init__(
+        self,
+        encoder_output_dim: int,
+        action_embedding_dim: int,
+        input_attention: Attention,
+        activation: Activation = Activation.by_name("relu")(),
+        add_action_bias: bool = True,
+        mixture_feedforward: FeedForward = None,
+        dropout: float = 0.0,
+    ) -> None:
+        super().__init__(
+            encoder_output_dim=encoder_output_dim,
+            action_embedding_dim=action_embedding_dim,
+            input_attention=input_attention,
+            activation=activation,
+            add_action_bias=add_action_bias,
+            dropout=dropout,
+        )
         self._linked_checklist_multiplier = Parameter(torch.FloatTensor([1.0]))
         self._mixture_feedforward = mixture_feedforward
 
         if mixture_feedforward is not None:
-            check_dimensions_match(encoder_output_dim, mixture_feedforward.get_input_dim(),
-                                   "hidden state embedding dim", "mixture feedforward input dim")
-            check_dimensions_match(mixture_feedforward.get_output_dim(), 1,
-                                   "mixture feedforward output dim", "dimension for scalar value")
+            check_dimensions_match(
+                encoder_output_dim,
+                mixture_feedforward.get_input_dim(),
+                "hidden state embedding dim",
+                "mixture feedforward input dim",
+            )
+            check_dimensions_match(
+                mixture_feedforward.get_output_dim(),
+                1,
+                "mixture feedforward output dim",
+                "dimension for scalar value",
+            )
 
     @overrides
-    def _compute_action_probabilities(self,  # type: ignore
-                                      state: CoverageState,
-                                      hidden_state: torch.Tensor,
-                                      attention_weights: torch.Tensor,
-                                      predicted_action_embeddings: torch.Tensor
-                                     ) -> Dict[int, List[Tuple[int, Any, Any, Any, List[int]]]]:
+    def _compute_action_probabilities(
+        self,  # type: ignore
+        state: CoverageState,
+        hidden_state: torch.Tensor,
+        attention_weights: torch.Tensor,
+        predicted_action_embeddings: torch.Tensor,
+    ) -> Dict[int, List[Tuple[int, Any, Any, Any, List[int]]]]:
         # In this section we take our predicted action embedding and compare it to the available
         # actions in our current state (which might be different for each group element).  For
         # computing action scores, we'll forget about doing batched / grouped computation, as it
@@ -84,33 +100,39 @@ class LinkingCoverageTransitionFunction(CoverageTransitionFunction):
             predicted_action_embedding = predicted_action_embeddings[group_index]
             action_ids: List[int] = []
             if "global" in instance_actions:
-                action_embeddings, output_action_embeddings, embedded_actions = instance_actions['global']
+                action_embeddings, output_action_embeddings, embedded_actions = instance_actions[
+                    "global"
+                ]
 
                 # This embedding addition the only difference between the logic here and the
                 # corresponding logic in the super class.
-                embedding_addition = self._get_predicted_embedding_addition(state.checklist_state[group_index],
-                                                                            embedded_actions,
-                                                                            action_embeddings)
+                embedding_addition = self._get_predicted_embedding_addition(
+                    state.checklist_state[group_index], embedded_actions, action_embeddings
+                )
                 addition = embedding_addition * self._checklist_multiplier
                 predicted_action_embedding = predicted_action_embedding + addition
 
                 # This is just a matrix product between a (num_actions, embedding_dim) matrix and an
                 # (embedding_dim, 1) matrix.
-                embedded_action_logits = action_embeddings.mm(predicted_action_embedding.unsqueeze(-1)).squeeze(-1)
+                embedded_action_logits = action_embeddings.mm(
+                    predicted_action_embedding.unsqueeze(-1)
+                ).squeeze(-1)
                 action_ids += embedded_actions
             else:
                 embedded_action_logits = None
                 output_action_embeddings = None
 
-            if 'linked' in instance_actions:
-                linking_scores, type_embeddings, linked_actions = instance_actions['linked']
+            if "linked" in instance_actions:
+                linking_scores, type_embeddings, linked_actions = instance_actions["linked"]
                 action_ids += linked_actions
                 # (num_question_tokens, 1)
-                linked_action_logits = linking_scores.mm(attention_weights[group_index].unsqueeze(-1)).squeeze(-1)
+                linked_action_logits = linking_scores.mm(
+                    attention_weights[group_index].unsqueeze(-1)
+                ).squeeze(-1)
 
-                linked_logits_addition = self._get_linked_logits_addition(state.checklist_state[group_index],
-                                                                          linked_actions,
-                                                                          linked_action_logits)
+                linked_logits_addition = self._get_linked_logits_addition(
+                    state.checklist_state[group_index], linked_actions, linked_action_logits
+                )
 
                 addition = linked_logits_addition * self._linked_checklist_multiplier
                 linked_action_logits = linked_action_logits + addition
@@ -121,7 +143,9 @@ class LinkingCoverageTransitionFunction(CoverageTransitionFunction):
                 if output_action_embeddings is None:
                     output_action_embeddings = type_embeddings
                 else:
-                    output_action_embeddings = torch.cat([output_action_embeddings, type_embeddings], dim=0)
+                    output_action_embeddings = torch.cat(
+                        [output_action_embeddings, type_embeddings], dim=0
+                    )
 
                 if self._mixture_feedforward is not None:
                     # The linked and global logits are combined with a mixture weight to prevent the
@@ -131,18 +155,27 @@ class LinkingCoverageTransitionFunction(CoverageTransitionFunction):
                     mix1 = torch.log(mixture_weight)
                     mix2 = torch.log(1 - mixture_weight)
 
-                    entity_action_probs = torch.nn.functional.log_softmax(linked_action_logits, dim=-1) + mix1
+                    entity_action_probs = (
+                        torch.nn.functional.log_softmax(linked_action_logits, dim=-1) + mix1
+                    )
                     if embedded_action_logits is None:
                         current_log_probs = entity_action_probs
                     else:
-                        embedded_action_probs = torch.nn.functional.log_softmax(embedded_action_logits,
-                                                                                dim=-1) + mix2
-                        current_log_probs = torch.cat([embedded_action_probs, entity_action_probs], dim=-1)
+                        embedded_action_probs = (
+                            torch.nn.functional.log_softmax(embedded_action_logits, dim=-1) + mix2
+                        )
+                        current_log_probs = torch.cat(
+                            [embedded_action_probs, entity_action_probs], dim=-1
+                        )
                 else:
                     if embedded_action_logits is None:
-                        current_log_probs = torch.nn.functional.log_softmax(linked_action_logits, dim=-1)
+                        current_log_probs = torch.nn.functional.log_softmax(
+                            linked_action_logits, dim=-1
+                        )
                     else:
-                        action_logits = torch.cat([embedded_action_logits, linked_action_logits], dim=-1)
+                        action_logits = torch.cat(
+                            [embedded_action_logits, linked_action_logits], dim=-1
+                        )
                         current_log_probs = torch.nn.functional.log_softmax(action_logits, dim=-1)
             else:
                 current_log_probs = torch.nn.functional.log_softmax(embedded_action_logits, dim=-1)
@@ -151,17 +184,15 @@ class LinkingCoverageTransitionFunction(CoverageTransitionFunction):
             # sort by this later, so it's important that this is the total score, not just the
             # score for the current action.
             log_probs = state.score[group_index] + current_log_probs
-            batch_results[state.batch_indices[group_index]].append((group_index,
-                                                                    log_probs,
-                                                                    current_log_probs,
-                                                                    output_action_embeddings,
-                                                                    action_ids))
+            batch_results[state.batch_indices[group_index]].append(
+                (group_index, log_probs, current_log_probs, output_action_embeddings, action_ids)
+            )
         return batch_results
 
     @staticmethod
-    def _get_linked_logits_addition(checklist_state: ChecklistStatelet,
-                                    action_ids: List[int],
-                                    action_logits: torch.Tensor) -> torch.Tensor:
+    def _get_linked_logits_addition(
+        checklist_state: ChecklistStatelet, action_ids: List[int], action_logits: torch.Tensor
+    ) -> torch.Tensor:
         """
         Gets the logits of desired terminal actions yet to be produced by the decoder, and
         returns them for the decoder to add to the prior action logits, biasing the model towards

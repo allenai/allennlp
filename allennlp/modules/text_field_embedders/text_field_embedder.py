@@ -4,6 +4,7 @@ import torch
 
 from allennlp.common import Registrable
 
+
 class TextFieldEmbedder(torch.nn.Module, Registrable):
     """
     A ``TextFieldEmbedder`` is a ``Module`` that takes as input the
@@ -21,12 +22,12 @@ class TextFieldEmbedder(torch.nn.Module, Registrable):
     this if you want to construct a ``Linear`` layer using the output of this embedder, for
     instance.
     """
-    default_implementation = 'basic'
 
-    def forward(self,  # pylint: disable=arguments-differ
-                text_field_input: Dict[str, torch.Tensor],
-                num_wrapping_dims: int = 0,
-                **kwargs) -> torch.Tensor:
+    default_implementation = "basic"
+
+    def forward(
+        self, text_field_input: Dict[str, torch.Tensor], num_wrapping_dims: int = 0, **kwargs
+    ) -> torch.Tensor:
         """
         Parameters
         ----------

@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 import numpy
 import torch
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
@@ -10,9 +9,9 @@ from allennlp.common.testing import AllenNlpTestCase
 class TestStackedAlternatingLstm(AllenNlpTestCase):
     def test_stacked_alternating_lstm_completes_forward_pass(self):
         input_tensor = torch.rand(4, 5, 3)
-        input_tensor[1, 4:, :] = 0.
-        input_tensor[2, 2:, :] = 0.
-        input_tensor[3, 1:, :] = 0.
+        input_tensor[1, 4:, :] = 0.0
+        input_tensor[2, 2:, :] = 0.0
+        input_tensor[3, 1:, :] = 0.0
         input_tensor = pack_padded_sequence(input_tensor, [5, 4, 2, 1], batch_first=True)
         lstm = StackedAlternatingLstm(3, 7, 3)
         output, _ = lstm(input_tensor)

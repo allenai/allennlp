@@ -86,10 +86,10 @@ from allennlp.nn.util import remove_sentence_boundaries
 from allennlp.modules.elmo import _ElmoBiLm, batch_to_ids
 from allennlp.commands.subcommand import Subcommand
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
-DEFAULT_OPTIONS_FILE = "https://allennlp.s3.amazonaws.com/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json" # pylint: disable=line-too-long
-DEFAULT_WEIGHT_FILE = "https://allennlp.s3.amazonaws.com/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5" # pylint: disable=line-too-long
+DEFAULT_OPTIONS_FILE = "https://allennlp.s3.amazonaws.com/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json"  # noqa
+DEFAULT_WEIGHT_FILE = "https://allennlp.s3.amazonaws.com/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5"  # noqa
 DEFAULT_BATCH_SIZE = 64
 
 
@@ -101,50 +101,73 @@ class Elmo(Subcommand):
 
     See https://github.com/allenai/allennlp/blob/master/tutorials/how_to/elmo.md for more details.
     """
-    def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
-        # pylint: disable=protected-access
-        description = '''Create word vectors using ELMo.'''
-        subparser = parser.add_parser(
-                name, description=description, help='Create word vectors using a pretrained ELMo model.')
 
-        subparser.add_argument('input_file', type=argparse.FileType('r', encoding='utf-8'),
-                               help='The path to the input file.')
-        subparser.add_argument('output_file', type=str, help='The path to the output file.')
+    def add_subparser(
+        self, name: str, parser: argparse._SubParsersAction
+    ) -> argparse.ArgumentParser:
+
+        description = """Create word vectors using ELMo."""
+        subparser = parser.add_parser(
+            name, description=description, help="Create word vectors using a pretrained ELMo model."
+        )
+
+        subparser.add_argument(
+            "input_file",
+            type=argparse.FileType("r", encoding="utf-8"),
+            help="The path to the input file.",
+        )
+        subparser.add_argument("output_file", type=str, help="The path to the output file.")
 
         group = subparser.add_mutually_exclusive_group(required=True)
-        group.add_argument('--all', action='store_true', help='Output all three ELMo vectors.')
-        group.add_argument('--top', action='store_true', help='Output the top ELMo vector.')
-        group.add_argument('--average', action='store_true', help='Output the average of the ELMo vectors.')
+        group.add_argument("--all", action="store_true", help="Output all three ELMo vectors.")
+        group.add_argument("--top", action="store_true", help="Output the top ELMo vector.")
+        group.add_argument(
+            "--average", action="store_true", help="Output the average of the ELMo vectors."
+        )
 
-        subparser.add_argument('--vocab-path', type=str, help='A path to a vocabulary file to generate.')
         subparser.add_argument(
-                '--options-file',
-                type=str,
-                default=DEFAULT_OPTIONS_FILE,
-                help='The path to the ELMo options file.')
+            "--vocab-path", type=str, help="A path to a vocabulary file to generate."
+        )
         subparser.add_argument(
-                '--weight-file',
-                type=str,
-                default=DEFAULT_WEIGHT_FILE,
-                help='The path to the ELMo weight file.')
-        subparser.add_argument('--batch-size', type=int, default=DEFAULT_BATCH_SIZE, help='The batch size to use.')
-        subparser.add_argument('--file-friendly-logging', default=False, action='store_true',
-                               help='outputs tqdm status on separate lines and slows tqdm refresh rate.')
-        subparser.add_argument('--cuda-device', type=int, default=-1, help='The cuda_device to run on.')
+            "--options-file",
+            type=str,
+            default=DEFAULT_OPTIONS_FILE,
+            help="The path to the ELMo options file.",
+        )
         subparser.add_argument(
-                '--forget-sentences',
-                action='store_true',
-                help="If this flag is specified, and --use-sentence-keys is "
-                     "not, remove the string serialized JSON dictionary "
-                     "that associates sentences with their line number (its "
-                     "HDF5 key) that is normally placed in the "
-                     "\"sentence_to_index\" HDF5 key.")
+            "--weight-file",
+            type=str,
+            default=DEFAULT_WEIGHT_FILE,
+            help="The path to the ELMo weight file.",
+        )
         subparser.add_argument(
-                '--use-sentence-keys',
-                action='store_true',
-                help="Normally a sentence's line number is used as the "
-                     "HDF5 key for its embedding. If this flag is specified, "
-                     "the sentence itself will be used as the key.")
+            "--batch-size", type=int, default=DEFAULT_BATCH_SIZE, help="The batch size to use."
+        )
+        subparser.add_argument(
+            "--file-friendly-logging",
+            default=False,
+            action="store_true",
+            help="outputs tqdm status on separate lines and slows tqdm refresh rate.",
+        )
+        subparser.add_argument(
+            "--cuda-device", type=int, default=-1, help="The cuda_device to run on."
+        )
+        subparser.add_argument(
+            "--forget-sentences",
+            action="store_true",
+            help="If this flag is specified, and --use-sentence-keys is "
+            "not, remove the string serialized JSON dictionary "
+            "that associates sentences with their line number (its "
+            "HDF5 key) that is normally placed in the "
+            '"sentence_to_index" HDF5 key.',
+        )
+        subparser.add_argument(
+            "--use-sentence-keys",
+            action="store_true",
+            help="Normally a sentence's line number is used as the "
+            "HDF5 key for its embedding. If this flag is specified, "
+            "the sentence itself will be used as the key.",
+        )
 
         subparser.set_defaults(func=elmo_command)
 
@@ -154,11 +177,14 @@ class Elmo(Subcommand):
 def empty_embedding() -> numpy.ndarray:
     return numpy.zeros((3, 0, 1024))
 
-class ElmoEmbedder():
-    def __init__(self,
-                 options_file: str = DEFAULT_OPTIONS_FILE,
-                 weight_file: str = DEFAULT_WEIGHT_FILE,
-                 cuda_device: int = -1) -> None:
+
+class ElmoEmbedder:
+    def __init__(
+        self,
+        options_file: str = DEFAULT_OPTIONS_FILE,
+        weight_file: str = DEFAULT_WEIGHT_FILE,
+        cuda_device: int = -1,
+    ) -> None:
         """
         Parameters
         ----------
@@ -195,14 +221,15 @@ class ElmoEmbedder():
             character_ids = character_ids.cuda(device=self.cuda_device)
 
         bilm_output = self.elmo_bilm(character_ids)
-        layer_activations = bilm_output['activations']
-        mask_with_bos_eos = bilm_output['mask']
+        layer_activations = bilm_output["activations"]
+        mask_with_bos_eos = bilm_output["mask"]
 
         # without_bos_eos is a 3 element list of (activation, mask) tensor pairs,
         # each with size (batch_size, num_timesteps, dim and (batch_size, num_timesteps)
         # respectively.
-        without_bos_eos = [remove_sentence_boundaries(layer, mask_with_bos_eos)
-                           for layer in layer_activations]
+        without_bos_eos = [
+            remove_sentence_boundaries(layer, mask_with_bos_eos) for layer in layer_activations
+        ]
         # Converts a list of pairs (activation, mask) tensors to a single tensor of activations.
         activations = torch.cat([ele[0].unsqueeze(1) for ele in without_bos_eos], dim=1)
         # The mask is the same for each ELMo vector, so just take the first.
@@ -263,9 +290,9 @@ class ElmoEmbedder():
 
         return elmo_embeddings
 
-    def embed_sentences(self,
-                        sentences: Iterable[List[str]],
-                        batch_size: int = DEFAULT_BATCH_SIZE) -> Iterable[numpy.ndarray]:
+    def embed_sentences(
+        self, sentences: Iterable[List[str]], batch_size: int = DEFAULT_BATCH_SIZE
+    ) -> Iterable[numpy.ndarray]:
         """
         Computes the ELMo embeddings for a iterable of sentences.
 
@@ -286,13 +313,15 @@ class ElmoEmbedder():
         for batch in lazy_groups_of(iter(sentences), batch_size):
             yield from self.embed_batch(batch)
 
-    def embed_file(self,
-                   input_file: IO,
-                   output_file_path: str,
-                   output_format: str = "all",
-                   batch_size: int = DEFAULT_BATCH_SIZE,
-                   forget_sentences: bool = False,
-                   use_sentence_keys: bool = False) -> None:
+    def embed_file(
+        self,
+        input_file: IO,
+        output_file_path: str,
+        output_format: str = "all",
+        batch_size: int = DEFAULT_BATCH_SIZE,
+        forget_sentences: bool = False,
+        use_sentence_keys: bool = False,
+    ) -> None:
         """
         Computes ELMo embeddings from an input_file where each line contains a sentence tokenized by whitespace.
         The ELMo embeddings are written out in HDF5 format, where each sentence embedding
@@ -327,27 +356,34 @@ class ElmoEmbedder():
 
         blank_lines = [i for (i, line) in enumerate(sentences) if line == ""]
         if blank_lines:
-            raise ConfigurationError(f"Your input file contains empty lines at indexes "
-                                     f"{blank_lines}. Please remove them.")
+            raise ConfigurationError(
+                f"Your input file contains empty lines at indexes "
+                f"{blank_lines}. Please remove them."
+            )
         split_sentences = [sentence.split() for sentence in sentences]
         # Uses the sentence index as the key.
 
         if use_sentence_keys:
-            logger.warning("Using sentences as keys can fail if sentences "
-                           "contain forward slashes or colons. Use with caution.")
+            logger.warning(
+                "Using sentences as keys can fail if sentences "
+                "contain forward slashes or colons. Use with caution."
+            )
             embedded_sentences = zip(sentences, self.embed_sentences(split_sentences, batch_size))
         else:
-            embedded_sentences = ((str(i), x) for i, x in
-                                  enumerate(self.embed_sentences(split_sentences, batch_size)))
+            embedded_sentences = (
+                (str(i), x) for i, x in enumerate(self.embed_sentences(split_sentences, batch_size))
+            )
 
         sentence_to_index = {}
         logger.info("Processing sentences.")
-        with h5py.File(output_file_path, 'w') as fout:
+        with h5py.File(output_file_path, "w") as fout:
             for key, embeddings in Tqdm.tqdm(embedded_sentences):
                 if use_sentence_keys and key in fout.keys():
-                    raise ConfigurationError(f"Key already exists in {output_file_path}. "
-                                             f"To encode duplicate sentences, do not pass "
-                                             f"the --use-sentence-keys flag.")
+                    raise ConfigurationError(
+                        f"Key already exists in {output_file_path}. "
+                        f"To encode duplicate sentences, do not pass "
+                        f"the --use-sentence-keys flag."
+                    )
 
                 if not forget_sentences and not use_sentence_keys:
                     sentence = sentences[int(key)]
@@ -360,19 +396,15 @@ class ElmoEmbedder():
                 elif output_format == "average":
                     output = numpy.average(embeddings, axis=0)
 
-                fout.create_dataset(
-                        str(key),
-                        output.shape, dtype='float32',
-                        data=output
-                )
+                fout.create_dataset(str(key), output.shape, dtype="float32", data=output)
             if not forget_sentences and not use_sentence_keys:
                 sentence_index_dataset = fout.create_dataset(
-                        "sentence_to_index",
-                        (1,),
-                        dtype=h5py.special_dtype(vlen=str))
+                    "sentence_to_index", (1,), dtype=h5py.special_dtype(vlen=str)
+                )
                 sentence_index_dataset[0] = json.dumps(sentence_to_index)
 
         input_file.close()
+
 
 def elmo_command(args):
     elmo_embedder = ElmoEmbedder(args.options_file, args.weight_file, args.cuda_device)
@@ -384,13 +416,16 @@ def elmo_command(args):
     elif args.average:
         output_format = "average"
 
-    prepare_global_logging(os.path.realpath(os.path.dirname(args.output_file)), args.file_friendly_logging)
+    prepare_global_logging(
+        os.path.realpath(os.path.dirname(args.output_file)), args.file_friendly_logging
+    )
 
     with torch.no_grad():
         elmo_embedder.embed_file(
-                args.input_file,
-                args.output_file,
-                output_format,
-                args.batch_size,
-                args.forget_sentences,
-                args.use_sentence_keys)
+            args.input_file,
+            args.output_file,
+            output_format,
+            args.batch_size,
+            args.forget_sentences,
+            args.use_sentence_keys,
+        )
