@@ -116,7 +116,7 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
             # If we pre-specified a mapping explictly, use that.
             # make mypy happy
             tensors: Union[List[Any], Dict[str, Any]] = None
-            if self._embedder_to_indexer_map is not None:
+            if self._embedder_to_indexer_map is not None and key in self._embedder_to_indexer_map:
                 indexer_map = self._embedder_to_indexer_map[key]
                 if isinstance(indexer_map, list):
                     # If `indexer_key` is None, we map it to `None`.
