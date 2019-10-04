@@ -8,6 +8,7 @@ from allennlp.data.dataset_readers import LanguageModelingReader
 from allennlp.common.util import ensure_list
 from allennlp.common.testing import AllenNlpTestCase
 
+
 class TestLanguageModelingDatasetReader:
     @pytest.mark.parametrize("lazy", (True, False))
     def test_read_from_file(self, lazy):
