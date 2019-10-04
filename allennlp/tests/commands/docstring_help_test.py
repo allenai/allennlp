@@ -4,8 +4,6 @@ import io
 import pkgutil
 import re
 
-import pytest
-
 import allennlp
 from allennlp.commands import create_parser
 from allennlp.common.testing import AllenNlpTestCase
@@ -43,13 +41,6 @@ class TestDocstringHelp(AllenNlpTestCase):
                 str_call_subcommand_help = match.group(1)
                 subcommand = match.group(2)
                 actual_output = _subcommand_help_output(subcommand)
-
-                pytorch_pretrained_bert_warning = (
-                    "Better speed can be achieved with apex installed from"
-                    " https://www.github.com/nvidia/apex.\n"
-                )
-                if actual_output.startswith(pytorch_pretrained_bert_warning):
-                    actual_output = actual_output[len(pytorch_pretrained_bert_warning) :]
 
                 self.assertEqual(
                     expected_output,
