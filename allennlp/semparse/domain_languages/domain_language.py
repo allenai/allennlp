@@ -37,7 +37,7 @@ def is_generic(type_: Type) -> bool:
         return isinstance(type_, GenericMeta)  # type: ignore
     else:
 
-        from typing import _GenericAlias
+        from typing import _GenericAlias  # type: ignore
 
         return isinstance(type_, _GenericAlias)  # type: ignore
 
