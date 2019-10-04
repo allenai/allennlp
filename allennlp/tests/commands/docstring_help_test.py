@@ -1,19 +1,29 @@
+import argparse
 import importlib
+import io
 import pkgutil
 import re
-import subprocess
 
-import pytest
-
-import allennlp.commands
+import allennlp
+from allennlp.commands import create_parser
 from allennlp.common.testing import AllenNlpTestCase
 
 
-@pytest.mark.skip(
-    reason="This test is slow and somewhat fragile and doesn't need to run every commit."
-)
+def _subcommand_help_output(subcommand: str) -> str:
+    parser = create_parser("allennlp")
+    for action in parser._actions:
+        if isinstance(action, argparse._SubParsersAction):
+            file = io.StringIO()
+            action._name_parser_map[subcommand].print_help(file)
+            file.seek(0)
+            return file.read()
+    raise LookupError(
+        "The main program parser does not contain a argparse._SubParsersAction object"
+    )
+
+
 class TestDocstringHelp(AllenNlpTestCase):
-    RE_DOCSTRING_CALL_SUBCOMMAND_HELP = re.compile(r"^\s*\$ (allennlp \S+ --help)$", re.MULTILINE)
+    RE_DOCSTRING_CALL_SUBCOMMAND_HELP = re.compile(r"^\s*\$ (allennlp (\S+) --help)$", re.MULTILINE)
     RE_STARTS_WITH_INDENTATION = re.compile(r"^ {4}", re.MULTILINE)
 
     def test_docstring_help(self):
@@ -29,23 +39,8 @@ class TestDocstringHelp(AllenNlpTestCase):
                 )
 
                 str_call_subcommand_help = match.group(1)
-                str_call_from_python_subcommand_help = str_call_subcommand_help.replace(
-                    "allennlp", "python -m allennlp.run"
-                )
-
-                actual_output = subprocess.run(
-                    str_call_from_python_subcommand_help,
-                    check=True,
-                    shell=True,
-                    stdout=subprocess.PIPE,
-                ).stdout.decode()
-
-                pytorch_pretrained_bert_warning = (
-                    "Better speed can be achieved with apex installed from"
-                    " https://www.github.com/nvidia/apex.\n"
-                )
-                if actual_output.startswith(pytorch_pretrained_bert_warning):
-                    actual_output = actual_output[len(pytorch_pretrained_bert_warning) :]
+                subcommand = match.group(2)
+                actual_output = _subcommand_help_output(subcommand)
 
                 self.assertEqual(
                     expected_output,
