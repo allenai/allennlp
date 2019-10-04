@@ -1,7 +1,8 @@
 import pytest
 import warnings
 
-# The LanguageModelingReader is deprecated, but we don't want this test to fail before we remove it.
+# The LanguageModelingReader is deprecated, but we don't want this test to fail
+# before we remove it.
 warnings.simplefilter(action="ignore", category=DeprecationWarning)
 
 from allennlp.data.dataset_readers import LanguageModelingReader
