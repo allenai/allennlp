@@ -51,12 +51,14 @@ class ArgumentParserWithDefaults(argparse.ArgumentParser):
         super().add_argument(*args, **kwargs)
 
 
-def main(prog: str = None, subcommand_overrides: Dict[str, Subcommand] = {}) -> None:
+def create_parser(
+    prog: str = None, subcommand_overrides: Dict[str, Subcommand] = None
+) -> argparse.ArgumentParser:
     """
-    The :mod:`~allennlp.run` command only knows about the registered classes in the ``allennlp``
-    codebase. In particular, once you start creating your own ``Model`` s and so forth, it won't
-    work for them, unless you use the ``--include-package`` flag.
+    Creates the argument parser for the main program.
     """
+    if subcommand_overrides is None:
+        subcommand_overrides = {}
 
     parser = ArgumentParserWithDefaults(description="Run AllenNLP", usage="%(prog)s", prog=prog)
     parser.add_argument("--version", action="version", version="%(prog)s " + __version__)
@@ -93,6 +95,19 @@ def main(prog: str = None, subcommand_overrides: Dict[str, Subcommand] = {}) -> 
                 help="additional packages to include",
             )
 
+    return parser
+
+
+def main(prog: str = None, subcommand_overrides: Dict[str, Subcommand] = None) -> None:
+    """
+    The :mod:`~allennlp.run` command only knows about the registered classes in the ``allennlp``
+    codebase. In particular, once you start creating your own ``Model`` s and so forth, it won't
+    work for them, unless you use the ``--include-package`` flag.
+    """
+    if subcommand_overrides is None:
+        subcommand_overrides = {}
+
+    parser = create_parser(prog, subcommand_overrides)
     args = parser.parse_args()
 
     # If a subparser is triggered, it adds its work as `args.func`.
