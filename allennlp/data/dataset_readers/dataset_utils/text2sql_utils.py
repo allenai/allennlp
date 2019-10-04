@@ -1,4 +1,3 @@
-
 """
 Utility functions for reading the standardised text2sql datasets presented in
 `"Improving Text to SQL Evaluation Methodology" <https://arxiv.org/abs/1806.09029>`_
@@ -31,6 +30,7 @@ class SqlData(NamedTuple):
     sql_variables : ``Dict[str, Dict[str, str]]``
         A dictionary of variables and column references associated with the sql query.
     """
+
     text: List[str]
     text_with_variables: List[str]
     variable_tags: List[str]
@@ -38,10 +38,12 @@ class SqlData(NamedTuple):
     text_variables: Dict[str, str]
     sql_variables: Dict[str, Dict[str, str]]
 
+
 class TableColumn(NamedTuple):
     name: str
     column_type: str
     is_primary_key: bool
+
 
 def column_has_string_type(column: TableColumn) -> bool:
     if "varchar" in column.column_type:
@@ -53,6 +55,7 @@ def column_has_string_type(column: TableColumn) -> bool:
 
     return False
 
+
 def column_has_numeric_type(column: TableColumn) -> bool:
     if "int" in column.column_type:
         return True
@@ -62,8 +65,10 @@ def column_has_numeric_type(column: TableColumn) -> bool:
         return True
     return False
 
-def replace_variables(sentence: List[str],
-                      sentence_variables: Dict[str, str]) -> Tuple[List[str], List[str]]:
+
+def replace_variables(
+    sentence: List[str], sentence_variables: Dict[str, str]
+) -> Tuple[List[str], List[str]]:
     """
     Replaces abstract variables in text with their concrete counterparts.
     """
@@ -79,12 +84,14 @@ def replace_variables(sentence: List[str],
                 tags.append(token)
     return tokens, tags
 
+
 def split_table_and_column_names(table: str) -> Iterable[str]:
-    partitioned = [x for x in table.partition(".") if x != '']
+    partitioned = [x for x in table.partition(".") if x != ""]
     # Avoid splitting decimal strings.
     if partitioned[0].isnumeric() and partitioned[-1].isnumeric():
         return [table]
     return partitioned
+
 
 def clean_and_split_sql(sql: str) -> List[str]:
     """
@@ -101,16 +108,19 @@ def clean_and_split_sql(sql: str) -> List[str]:
             sql_tokens.extend(split_table_and_column_names(token))
     return sql_tokens
 
-def resolve_primary_keys_in_schema(sql_tokens: List[str],
-                                   schema: Dict[str, List[TableColumn]]) -> List[str]:
+
+def resolve_primary_keys_in_schema(
+    sql_tokens: List[str], schema: Dict[str, List[TableColumn]]
+) -> List[str]:
     """
     Some examples in the text2sql datasets use ID as a column reference to the
     column of a table which has a primary key. This causes problems if you are trying
     to constrain a grammar to only produce the column names directly, because you don't
     know what ID refers to. So instead of dealing with that, we just replace it.
     """
-    primary_keys_for_tables = {name: max(columns, key=lambda x: x.is_primary_key).name
-                               for name, columns in schema.items()}
+    primary_keys_for_tables = {
+        name: max(columns, key=lambda x: x.is_primary_key).name for name, columns in schema.items()
+    }
     resolved_tokens = []
     for i, token in enumerate(sql_tokens):
         if i > 2:
@@ -119,6 +129,7 @@ def resolve_primary_keys_in_schema(sql_tokens: List[str],
                 token = primary_keys_for_tables[table_name]
         resolved_tokens.append(token)
     return resolved_tokens
+
 
 def clean_unneeded_aliases(sql_tokens: List[str]) -> List[str]:
 
@@ -142,12 +153,14 @@ def clean_unneeded_aliases(sql_tokens: List[str]) -> List[str]:
         if new_token is not None and dealiased_tokens[-1] == "AS":
             dealiased_tokens.pop()
             continue
-        elif new_token is None:
+
+        if new_token is None:
             new_token = token
 
         dealiased_tokens.append(new_token)
 
     return dealiased_tokens
+
 
 def read_dataset_schema(schema_path: str) -> Dict[str, List[TableColumn]]:
     """
@@ -184,11 +197,13 @@ def read_dataset_schema(schema_path: str) -> Dict[str, List[TableColumn]]:
     return {**schema}
 
 
-def process_sql_data(data: List[JsonDict],
-                     use_all_sql: bool = False,
-                     use_all_queries: bool = False,
-                     remove_unneeded_aliases: bool = False,
-                     schema: Dict[str, List[TableColumn]] = None) -> Iterable[SqlData]:
+def process_sql_data(
+    data: List[JsonDict],
+    use_all_sql: bool = False,
+    use_all_queries: bool = False,
+    remove_unneeded_aliases: bool = False,
+    schema: Dict[str, List[TableColumn]] = None,
+) -> Iterable[SqlData]:
     """
     A utility function for reading in text2sql data. The blob is
     the result of loading the json from a file produced by the script
@@ -220,19 +235,19 @@ def process_sql_data(data: List[JsonDict],
     """
     for example in data:
         seen_sentences: Set[str] = set()
-        for sent_info in example['sentences']:
+        for sent_info in example["sentences"]:
             # Loop over the different sql statements with "equivalent" semantics
             for sql in example["sql"]:
-                text_with_variables = sent_info['text'].strip().split()
-                text_vars = sent_info['variables']
+                text_with_variables = sent_info["text"].strip().split()
+                text_vars = sent_info["variables"]
 
                 query_tokens, tags = replace_variables(text_with_variables, text_vars)
                 if not use_all_queries:
                     key = " ".join(query_tokens)
                     if key in seen_sentences:
                         continue
-                    else:
-                        seen_sentences.add(key)
+
+                    seen_sentences.add(key)
 
                 sql_tokens = clean_and_split_sql(sql)
                 if remove_unneeded_aliases:
@@ -241,15 +256,20 @@ def process_sql_data(data: List[JsonDict],
                     sql_tokens = resolve_primary_keys_in_schema(sql_tokens, schema)
 
                 sql_variables = {}
-                for variable in example['variables']:
-                    sql_variables[variable['name']] = {'text': variable['example'], 'type': variable['type']}
+                for variable in example["variables"]:
+                    sql_variables[variable["name"]] = {
+                        "text": variable["example"],
+                        "type": variable["type"],
+                    }
 
-                sql_data = SqlData(text=query_tokens,
-                                   text_with_variables=text_with_variables,
-                                   variable_tags=tags,
-                                   sql=sql_tokens,
-                                   text_variables=text_vars,
-                                   sql_variables=sql_variables)
+                sql_data = SqlData(
+                    text=query_tokens,
+                    text_with_variables=text_with_variables,
+                    variable_tags=tags,
+                    sql=sql_tokens,
+                    text_variables=text_vars,
+                    sql_variables=sql_variables,
+                )
                 yield sql_data
 
                 # Some questions might have multiple equivalent SQL statements.

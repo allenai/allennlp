@@ -13,7 +13,7 @@ from allennlp.data.fields import Field, TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @DatasetReader.register("next_token_lm")
@@ -38,10 +38,13 @@ class NextTokenLmReader(DatasetReader):
         We use this to define the input representation for the text, and to get ids for the mask
         targets.  See :class:`TokenIndexer`.
     """
-    def __init__(self,
-                 tokenizer: Tokenizer = None,
-                 token_indexers: Dict[str, TokenIndexer] = None,
-                 lazy: bool = False) -> None:
+
+    def __init__(
+        self,
+        tokenizer: Tokenizer = None,
+        token_indexers: Dict[str, TokenIndexer] = None,
+        lazy: bool = False,
+    ) -> None:
         super().__init__(lazy)
         self._tokenizer = tokenizer or WordTokenizer(word_splitter=JustSpacesWordSplitter())
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
@@ -49,26 +52,31 @@ class NextTokenLmReader(DatasetReader):
     @overrides
     def _read(self, file_path: str):
         import sys
+
         # You can call pytest with either `pytest` or `py.test`.
-        if 'test' not in sys.argv[0]:
-            logger.error('_read is only implemented for unit tests. You should not actually '
-                         'try to train or evaluate a language model with this code.')
+        if "test" not in sys.argv[0]:
+            logger.error(
+                "_read is only implemented for unit tests. You should not actually "
+                "try to train or evaluate a language model with this code."
+            )
         with open(file_path, "r") as text_file:
             for sentence in text_file:
                 tokens = self._tokenizer.tokenize(sentence)
-                target = 'the'
+                target = "the"
                 yield self.text_to_instance(sentence, tokens, target)
 
     @overrides
-    def text_to_instance(self,  # type: ignore
-                         sentence: str = None,
-                         tokens: List[Token] = None,
-                         target: str = None) -> Instance:
-        # pylint: disable=arguments-differ
+    def text_to_instance(
+        self,  # type: ignore
+        sentence: str = None,
+        tokens: List[Token] = None,
+        target: str = None,
+    ) -> Instance:
+
         if not tokens:
             tokens = self._tokenizer.tokenize(sentence)
         input_field = TextField(tokens, self._token_indexers)
-        fields: Dict[str, Field] = {'tokens': input_field}
+        fields: Dict[str, Field] = {"tokens": input_field}
         if target:
-            fields['target_ids'] = TextField([Token(target)], self._token_indexers)
+            fields["target_ids"] = TextField([Token(target)], self._token_indexers)
         return Instance(fields)

@@ -5,16 +5,17 @@ from allennlp.data import Instance
 from allennlp.predictors.predictor import Predictor
 
 
-@Predictor.register('seq2seq')
+@Predictor.register("seq2seq")
 class Seq2SeqPredictor(Predictor):
     """
     Predictor for sequence to sequence models, including
+    :class:`~allennlp.models.encoder_decoder.composed_seq2seq` and
     :class:`~allennlp.models.encoder_decoder.simple_seq2seq` and
     :class:`~allennlp.models.encoder_decoder.copynet_seq2seq`.
     """
 
     def predict(self, source: str) -> JsonDict:
-        return self.predict_json({"source" : source})
+        return self.predict_json({"source": source})
 
     @overrides
     def _json_to_instance(self, json_dict: JsonDict) -> Instance:

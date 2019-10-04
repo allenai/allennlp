@@ -14,6 +14,7 @@ from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_lo
 from allennlp.nn.util import get_lengths_from_binary_sequence_mask, viterbi_decode
 from allennlp.training.metrics.srl_eval_scorer import SrlEvalScorer, DEFAULT_SRL_EVAL_PATH
 
+
 @Model.register("srl_bert")
 class SrlBert(Model):
     """
@@ -36,16 +37,19 @@ class SrlBert(Model):
         The path to the srl-eval.pl script. By default, will use the srl-eval.pl included with allennlp,
         which is located at allennlp/tools/srl-eval.pl . If ``None``, srl-eval.pl is not used.
     """
-    def __init__(self,
-                 vocab: Vocabulary,
-                 bert_model: Union[str, BertModel],
-                 embedding_dropout: float = 0.0,
-                 initializer: InitializerApplicator = InitializerApplicator(),
-                 regularizer: Optional[RegularizerApplicator] = None,
-                 label_smoothing: float = None,
-                 ignore_span_metric: bool = False,
-                 srl_eval_path: str = DEFAULT_SRL_EVAL_PATH) -> None:
-        super(SrlBert, self).__init__(vocab, regularizer)
+
+    def __init__(
+        self,
+        vocab: Vocabulary,
+        bert_model: Union[str, BertModel],
+        embedding_dropout: float = 0.0,
+        initializer: InitializerApplicator = InitializerApplicator(),
+        regularizer: Optional[RegularizerApplicator] = None,
+        label_smoothing: float = None,
+        ignore_span_metric: bool = False,
+        srl_eval_path: str = DEFAULT_SRL_EVAL_PATH,
+    ) -> None:
+        super().__init__(vocab, regularizer)
 
         if isinstance(bert_model, str):
             self.bert_model = BertModel.from_pretrained(bert_model)
@@ -66,12 +70,14 @@ class SrlBert(Model):
         self.ignore_span_metric = ignore_span_metric
         initializer(self)
 
-    def forward(self, # type: ignore
-                tokens: Dict[str, torch.Tensor],
-                verb_indicator: torch.Tensor,
-                metadata: List[Any],
-                tags: torch.LongTensor = None):
-        # pylint: disable=arguments-differ
+    def forward(  # type: ignore
+        self,
+        tokens: Dict[str, torch.Tensor],
+        verb_indicator: torch.Tensor,
+        metadata: List[Any],
+        tags: torch.LongTensor = None,
+    ):
+
         """
         Parameters
         ----------
@@ -104,19 +110,21 @@ class SrlBert(Model):
             A scalar loss to be optimised.
         """
         mask = get_text_field_mask(tokens)
-        bert_embeddings, _ = self.bert_model(input_ids=tokens["tokens"],
-                                             token_type_ids=verb_indicator,
-                                             attention_mask=mask,
-                                             output_all_encoded_layers=False)
+        bert_embeddings, _ = self.bert_model(
+            input_ids=tokens["tokens"],
+            token_type_ids=verb_indicator,
+            attention_mask=mask,
+            output_all_encoded_layers=False,
+        )
 
         embedded_text_input = self.embedding_dropout(bert_embeddings)
         batch_size, sequence_length, _ = embedded_text_input.size()
         logits = self.tag_projection_layer(embedded_text_input)
 
         reshaped_log_probs = logits.view(-1, self.num_classes)
-        class_probabilities = F.softmax(reshaped_log_probs, dim=-1).view([batch_size,
-                                                                          sequence_length,
-                                                                          self.num_classes])
+        class_probabilities = F.softmax(reshaped_log_probs, dim=-1).view(
+            [batch_size, sequence_length, self.num_classes]
+        )
         output_dict = {"logits": logits, "class_probabilities": class_probabilities}
         # We need to retain the mask in the output dictionary
         # so that we can crop the sequences to remove padding
@@ -129,26 +137,33 @@ class SrlBert(Model):
         output_dict["wordpiece_offsets"] = list(offsets)
 
         if tags is not None:
-            loss = sequence_cross_entropy_with_logits(logits,
-                                                      tags,
-                                                      mask,
-                                                      label_smoothing=self._label_smoothing)
+            loss = sequence_cross_entropy_with_logits(
+                logits, tags, mask, label_smoothing=self._label_smoothing
+            )
             if not self.ignore_span_metric and self.span_metric is not None and not self.training:
-                batch_verb_indices = [example_metadata["verb_index"] for example_metadata in metadata]
+                batch_verb_indices = [
+                    example_metadata["verb_index"] for example_metadata in metadata
+                ]
                 batch_sentences = [example_metadata["words"] for example_metadata in metadata]
                 # Get the BIO tags from decode()
                 # TODO (nfliu): This is kind of a hack, consider splitting out part
                 # of decode() to a separate function.
                 batch_bio_predicted_tags = self.decode(output_dict).pop("tags")
-                batch_conll_predicted_tags = [convert_bio_tags_to_conll_format(tags) for
-                                              tags in batch_bio_predicted_tags]
-                batch_bio_gold_tags = [example_metadata["gold_tags"] for example_metadata in metadata]
-                batch_conll_gold_tags = [convert_bio_tags_to_conll_format(tags) for
-                                         tags in batch_bio_gold_tags]
-                self.span_metric(batch_verb_indices,
-                                 batch_sentences,
-                                 batch_conll_predicted_tags,
-                                 batch_conll_gold_tags)
+                batch_conll_predicted_tags = [
+                    convert_bio_tags_to_conll_format(tags) for tags in batch_bio_predicted_tags
+                ]
+                batch_bio_gold_tags = [
+                    example_metadata["gold_tags"] for example_metadata in metadata
+                ]
+                batch_conll_gold_tags = [
+                    convert_bio_tags_to_conll_format(tags) for tags in batch_bio_gold_tags
+                ]
+                self.span_metric(
+                    batch_verb_indices,
+                    batch_sentences,
+                    batch_conll_predicted_tags,
+                    batch_conll_gold_tags,
+                )
             output_dict["loss"] = loss
         return output_dict
 
@@ -171,11 +186,13 @@ class SrlBert(Model):
         is split into multiple word pieces, and then we take the last tag of the word, which might
         correspond to, e.g, I-V, which would not be allowed as it is not preceeded by a B tag.
         """
-        all_predictions = output_dict['class_probabilities']
+        all_predictions = output_dict["class_probabilities"]
         sequence_lengths = get_lengths_from_binary_sequence_mask(output_dict["mask"]).data.tolist()
 
         if all_predictions.dim() == 3:
-            predictions_list = [all_predictions[i].detach().cpu() for i in range(all_predictions.size(0))]
+            predictions_list = [
+                all_predictions[i].detach().cpu() for i in range(all_predictions.size(0))
+            ]
         else:
             predictions_list = [all_predictions]
         wordpiece_tags = []
@@ -184,18 +201,21 @@ class SrlBert(Model):
         start_transitions = self.get_start_transitions()
         # **************** Different ********************
         # We add in the offsets here so we can compute the un-wordpieced tags.
-        for predictions, length, offsets in zip(predictions_list,
-                                                sequence_lengths,
-                                                output_dict["wordpiece_offsets"]):
-            max_likelihood_sequence, _ = viterbi_decode(predictions[:length], transition_matrix,
-                                                        allowed_start_transitions=start_transitions)
-            tags = [self.vocab.get_token_from_index(x, namespace="labels")
-                    for x in max_likelihood_sequence]
+        for predictions, length, offsets in zip(
+            predictions_list, sequence_lengths, output_dict["wordpiece_offsets"]
+        ):
+            max_likelihood_sequence, _ = viterbi_decode(
+                predictions[:length], transition_matrix, allowed_start_transitions=start_transitions
+            )
+            tags = [
+                self.vocab.get_token_from_index(x, namespace="labels")
+                for x in max_likelihood_sequence
+            ]
 
             wordpiece_tags.append(tags)
             word_tags.append([tags[i] for i in offsets])
-        output_dict['wordpiece_tags'] = wordpiece_tags
-        output_dict['tags'] = word_tags
+        output_dict["wordpiece_tags"] = wordpiece_tags
+        output_dict["tags"] = word_tags
         return output_dict
 
     def get_metrics(self, reset: bool = False):
@@ -232,10 +252,9 @@ class SrlBert(Model):
             for j, label in all_labels.items():
                 # I labels can only be preceded by themselves or
                 # their corresponding B tag.
-                if i != j and label[0] == 'I' and not previous_label == 'B' + label[1:]:
+                if i != j and label[0] == "I" and not previous_label == "B" + label[1:]:
                     transition_matrix[i, j] = float("-inf")
         return transition_matrix
-
 
     def get_start_transitions(self):
         """

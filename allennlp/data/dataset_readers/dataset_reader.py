@@ -10,18 +10,22 @@ from allennlp.common import Tqdm, util
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.registrable import Registrable
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
+
 
 class _LazyInstances(Iterable):
     """
     An ``Iterable`` that just wraps a thunk for generating instances and calls it for
     each call to ``__iter__``.
     """
-    def __init__(self,
-                 instance_generator: Callable[[], Iterable[Instance]],
-                 cache_file: str = None,
-                 deserialize: Callable[[str], Instance] = None,
-                 serialize: Callable[[Instance], str] = None) -> None:
+
+    def __init__(
+        self,
+        instance_generator: Callable[[], Iterable[Instance]],
+        cache_file: str = None,
+        deserialize: Callable[[str], Instance] = None,
+        serialize: Callable[[Instance], str] = None,
+    ) -> None:
         super().__init__()
         self.instance_generator = instance_generator
         self.cache_file = cache_file
@@ -36,7 +40,7 @@ class _LazyInstances(Iterable):
                     yield self.deserialize(line)
         # Case 2: Need to cache instances
         elif self.cache_file is not None:
-            with open(self.cache_file, 'w') as data_file:
+            with open(self.cache_file, "w") as data_file:
                 for instance in self.instance_generator():
                     data_file.write(self.serialize(instance))
                     data_file.write("\n")
@@ -45,7 +49,9 @@ class _LazyInstances(Iterable):
         else:
             instances = self.instance_generator()
             if isinstance(instances, list):
-                raise ConfigurationError("For a lazy dataset reader, _read() must return a generator")
+                raise ConfigurationError(
+                    "For a lazy dataset reader, _read() must return a generator"
+                )
             yield from instances
 
 
@@ -65,6 +71,7 @@ class DatasetReader(Registrable):
         If this is true, ``instances()`` will return an object whose ``__iter__`` method
         reloads the dataset each time it's called. Otherwise, ``instances()`` returns a list.
     """
+
     def __init__(self, lazy: bool = False) -> None:
         self.lazy = lazy
         self._cache_directory: pathlib.Path = None
@@ -106,11 +113,13 @@ class DatasetReader(Registrable):
         over multiple times. It's unlikely you want to override this function,
         but if you do your result should likewise be repeatedly iterable.
         """
-        lazy = getattr(self, 'lazy', None)
+        lazy = getattr(self, "lazy", None)
 
         if lazy is None:
-            logger.warning("DatasetReader.lazy is not set, "
-                           "did you forget to call the superclass constructor?")
+            logger.warning(
+                "DatasetReader.lazy is not set, "
+                "did you forget to call the superclass constructor?"
+            )
 
         if self._cache_directory:
             cache_file = self._get_cache_location_for_file_path(file_path)
@@ -118,10 +127,12 @@ class DatasetReader(Registrable):
             cache_file = None
 
         if lazy:
-            return _LazyInstances(lambda: self._read(file_path),
-                                  cache_file,
-                                  self.deserialize_instance,
-                                  self.serialize_instance)
+            return _LazyInstances(
+                lambda: self._read(file_path),
+                cache_file,
+                self.deserialize_instance,
+                self.serialize_instance,
+            )
         else:
             # First we read the instances, either from a cache or from the original file.
             if cache_file and os.path.exists(cache_file):
@@ -133,8 +144,10 @@ class DatasetReader(Registrable):
             if not isinstance(instances, list):
                 instances = [instance for instance in Tqdm.tqdm(instances)]
             if not instances:
-                raise ConfigurationError("No instances were read from the given filepath {}. "
-                                         "Is the path correct?".format(file_path))
+                raise ConfigurationError(
+                    "No instances were read from the given filepath {}. "
+                    "Is the path correct?".format(file_path)
+                )
 
             # And finally we write to the cache if we need to.
             if cache_file and not os.path.exists(cache_file):
@@ -156,14 +169,14 @@ class DatasetReader(Registrable):
         raise NotImplementedError
 
     def _instances_from_cache_file(self, cache_filename: str) -> Iterable[Instance]:
-        with open(cache_filename, 'r') as cache_file:
+        with open(cache_filename, "r") as cache_file:
             for line in cache_file:
                 yield self.deserialize_instance(line.strip())
 
     def _instances_to_cache_file(self, cache_filename, instances) -> None:
-        with open(cache_filename, 'w') as cache:
+        with open(cache_filename, "w") as cache:
             for instance in Tqdm.tqdm(instances):
-                cache.write(self.serialize_instance(instance) + '\n')
+                cache.write(self.serialize_instance(instance) + "\n")
 
     def text_to_instance(self, *inputs) -> Instance:
         """
@@ -191,7 +204,7 @@ class DatasetReader(Registrable):
         The default implementation is to use ``jsonpickle``.  If you would like some other format
         for your pre-processed data, override this method.
         """
-        # pylint: disable=no-self-use
+
         return jsonpickle.dumps(instance)
 
     def deserialize_instance(self, string: str) -> Instance:
@@ -202,5 +215,5 @@ class DatasetReader(Registrable):
         The default implementation is to use ``jsonpickle``.  If you would like some other format
         for your pre-processed data, override this method.
         """
-        # pylint: disable=no-self-use
+
         return jsonpickle.loads(string)  # type: ignore

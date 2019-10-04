@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name,protected-access
 import torch
 from sklearn import metrics
 from numpy.testing import assert_almost_equal
@@ -25,8 +24,9 @@ class AucTest(AllenNlpTestCase):
 
         computed_auc_value = auc.get_metric(reset=True)
 
-        false_positive_rates, true_positive_rates, _ = metrics.roc_curve(torch.cat(all_labels, dim=0).numpy(),
-                                                                         torch.cat(all_predictions, dim=0).numpy())
+        false_positive_rates, true_positive_rates, _ = metrics.roc_curve(
+            torch.cat(all_labels, dim=0).numpy(), torch.cat(all_predictions, dim=0).numpy()
+        )
         real_auc_value = metrics.auc(false_positive_rates, true_positive_rates)
         assert_almost_equal(real_auc_value, computed_auc_value)
 
@@ -37,8 +37,9 @@ class AucTest(AllenNlpTestCase):
         auc(predictions, labels)
         computed_auc_value = auc.get_metric(reset=True)
 
-        false_positive_rates, true_positive_rates, _ = metrics.roc_curve(labels.numpy(),
-                                                                         predictions.numpy())
+        false_positive_rates, true_positive_rates, _ = metrics.roc_curve(
+            labels.numpy(), predictions.numpy()
+        )
         real_auc_value = metrics.auc(false_positive_rates, true_positive_rates)
         assert_almost_equal(real_auc_value, computed_auc_value)
 
@@ -52,9 +53,9 @@ class AucTest(AllenNlpTestCase):
         auc(predictions, labels)
         computed_auc_value = auc.get_metric(reset=True)
 
-        false_positive_rates, true_positive_rates, _ = metrics.roc_curve(labels.numpy(),
-                                                                         predictions.numpy(),
-                                                                         pos_label=4)
+        false_positive_rates, true_positive_rates, _ = metrics.roc_curve(
+            labels.numpy(), predictions.numpy(), pos_label=4
+        )
         real_auc_value = metrics.auc(false_positive_rates, true_positive_rates)
         assert_almost_equal(real_auc_value, computed_auc_value)
 
@@ -73,8 +74,9 @@ class AucTest(AllenNlpTestCase):
         auc(predictions, labels, mask)
         computed_auc_value = auc.get_metric(reset=True)
 
-        false_positive_rates, true_positive_rates, _ = metrics.roc_curve(labels[:4].numpy(),
-                                                                         predictions[:4].numpy())
+        false_positive_rates, true_positive_rates, _ = metrics.roc_curve(
+            labels[:4].numpy(), predictions[:4].numpy()
+        )
         real_auc_value = metrics.auc(false_positive_rates, true_positive_rates)
         assert_almost_equal(real_auc_value, computed_auc_value)
 

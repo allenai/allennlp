@@ -18,8 +18,9 @@ class DotProductSimilarity(SimilarityFunction):
         If ``True``, we will scale the output by ``math.sqrt(tensor.size(-1))``, to reduce the
         variance in the result.
     """
+
     def __init__(self, scale_output: bool = False) -> None:
-        super(DotProductSimilarity, self).__init__()
+        super().__init__()
         self._scale_output = scale_output
 
     @overrides

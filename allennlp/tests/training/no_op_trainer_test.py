@@ -12,12 +12,15 @@ from allennlp.training import NoOpTrainer
 
 class ConstantModel(Model):
     def forward(self, *inputs) -> Dict[str, torch.Tensor]:
-        return {"class": torch.tensor(98)} # pylint: disable=not-callable
+        return {"class": torch.tensor(98)}
+
 
 class TestNoOpTrainer(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
-        self.instances = SequenceTaggingDatasetReader().read(self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv')
+        self.instances = SequenceTaggingDatasetReader().read(
+            self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv"
+        )
         vocab = Vocabulary.from_instances(self.instances)
         self.vocab = vocab
         self.model = ConstantModel(vocab)

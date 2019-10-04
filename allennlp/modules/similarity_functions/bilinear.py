@@ -27,14 +27,12 @@ class BilinearSimilarity(SimilarityFunction):
         An activation function applied after the ``x^T W y + b`` calculation.  Default is no
         activation.
     """
-    def __init__(self,
-                 tensor_1_dim: int,
-                 tensor_2_dim: int,
-                 activation: Activation = None) -> None:
-        super(BilinearSimilarity, self).__init__()
+
+    def __init__(self, tensor_1_dim: int, tensor_2_dim: int, activation: Activation = None) -> None:
+        super().__init__()
         self._weight_matrix = Parameter(torch.Tensor(tensor_1_dim, tensor_2_dim))
         self._bias = Parameter(torch.Tensor(1))
-        self._activation = activation or Activation.by_name('linear')()
+        self._activation = activation or Activation.by_name("linear")()
         self.reset_parameters()
 
     def reset_parameters(self):

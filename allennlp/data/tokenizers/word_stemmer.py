@@ -15,7 +15,8 @@ class WordStemmer(Registrable):
     inflected language, or in a low-data setting, you might need it anyway.  The default
     ``WordStemmer`` does nothing, just returning the work token as-is.
     """
-    default_implementation = 'pass_through'
+
+    default_implementation = "pass_through"
 
     def stem_word(self, word: Token) -> Token:
         """
@@ -24,32 +25,36 @@ class WordStemmer(Registrable):
         raise NotImplementedError
 
 
-@WordStemmer.register('pass_through')
+@WordStemmer.register("pass_through")
 class PassThroughWordStemmer(WordStemmer):
     """
     Does not stem words; it's a no-op.  This is the default word stemmer.
     """
+
     @overrides
     def stem_word(self, word: Token) -> Token:
         return word
 
 
-@WordStemmer.register('porter')
+@WordStemmer.register("porter")
 class PorterStemmer(WordStemmer):
     """
     Uses NLTK's PorterStemmer to stem words.
     """
+
     def __init__(self):
         self.stemmer = NltkPorterStemmer()
 
     @overrides
     def stem_word(self, word: Token) -> Token:
         new_text = self.stemmer.stem(word.text)
-        return Token(text=new_text,
-                     idx=word.idx,
-                     lemma_=word.lemma_,
-                     pos_=word.pos_,
-                     tag_=word.tag_,
-                     dep_=word.dep_,
-                     ent_type_=word.ent_type_,
-                     text_id=getattr(word, 'text_id', None))
+        return Token(
+            text=new_text,
+            idx=word.idx,
+            lemma_=word.lemma_,
+            pos_=word.pos_,
+            tag_=word.tag_,
+            dep_=word.dep_,
+            ent_type_=word.ent_type_,
+            text_id=getattr(word, "text_id", None),
+        )

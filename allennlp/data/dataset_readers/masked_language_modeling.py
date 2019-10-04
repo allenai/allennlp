@@ -13,7 +13,7 @@ from allennlp.data.fields import IndexField, Field, ListField, TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @DatasetReader.register("masked_language_modeling")
@@ -42,10 +42,13 @@ class MaskedLanguageModelingReader(DatasetReader):
         We use this to define the input representation for the text, and to get ids for the mask
         targets.  See :class:`TokenIndexer`.
     """
-    def __init__(self,
-                 tokenizer: Tokenizer = None,
-                 token_indexers: Dict[str, TokenIndexer] = None,
-                 lazy: bool = False) -> None:
+
+    def __init__(
+        self,
+        tokenizer: Tokenizer = None,
+        token_indexers: Dict[str, TokenIndexer] = None,
+        lazy: bool = False,
+    ) -> None:
         super().__init__(lazy)
         self._tokenizer = tokenizer or WordTokenizer(word_splitter=JustSpacesWordSplitter())
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
@@ -53,22 +56,25 @@ class MaskedLanguageModelingReader(DatasetReader):
     @overrides
     def _read(self, file_path: str):
         import sys
+
         # You can call pytest with either `pytest` or `py.test`.
-        if 'test' not in sys.argv[0]:
-            logger.error('_read is only implemented for unit tests at the moment')
+        if "test" not in sys.argv[0]:
+            logger.error("_read is only implemented for unit tests at the moment")
         with open(file_path, "r") as text_file:
             for sentence in text_file:
                 tokens = self._tokenizer.tokenize(sentence)
                 target = tokens[0].text
-                tokens[0] = Token('[MASK]')
+                tokens[0] = Token("[MASK]")
                 yield self.text_to_instance(sentence, tokens, [target])
 
     @overrides
-    def text_to_instance(self,  # type: ignore
-                         sentence: str = None,
-                         tokens: List[Token] = None,
-                         targets: List[str] = None) -> Instance:
-        # pylint: disable=arguments-differ
+    def text_to_instance(
+        self,  # type: ignore
+        sentence: str = None,
+        tokens: List[Token] = None,
+        targets: List[str] = None,
+    ) -> Instance:
+
         """
         Parameters
         ----------
@@ -86,7 +92,7 @@ class MaskedLanguageModelingReader(DatasetReader):
         input_field = TextField(tokens, self._token_indexers)
         mask_positions = []
         for i, token in enumerate(tokens):
-            if token.text == '[MASK]':
+            if token.text == "[MASK]":
                 mask_positions.append(i)
         if not mask_positions:
             raise ValueError("No [MASK] tokens found!")
@@ -94,8 +100,8 @@ class MaskedLanguageModelingReader(DatasetReader):
             raise ValueError(f"Found {len(mask_positions)} mask tokens and {len(targets)} targets")
         mask_position_field = ListField([IndexField(i, input_field) for i in mask_positions])
         # TODO(mattg): there's a problem if the targets get split into multiple word pieces...
-        fields: Dict[str, Field] = {'tokens': input_field, 'mask_positions': mask_position_field}
+        fields: Dict[str, Field] = {"tokens": input_field, "mask_positions": mask_position_field}
         if targets is not None:
             target_field = TextField([Token(target) for target in targets], self._token_indexers)
-            fields['target_ids'] = target_field
+            fields["target_ids"] = target_field
         return Instance(fields)

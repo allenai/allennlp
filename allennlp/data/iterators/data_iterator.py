@@ -14,9 +14,9 @@ from allennlp.data.fields import MetadataField
 from allennlp.data.instance import Instance
 from allennlp.data.vocabulary import Vocabulary
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
-TensorDict = Dict[str, Union[torch.Tensor, Dict[str, torch.Tensor]]]  # pylint: disable=invalid-name
+TensorDict = Dict[str, Union[torch.Tensor, Dict[str, torch.Tensor]]]
 
 
 def add_epoch_number(batch: Batch, epoch: int) -> Batch:
@@ -24,7 +24,7 @@ def add_epoch_number(batch: Batch, epoch: int) -> Batch:
     Add the epoch number to the batch instances as a MetadataField.
     """
     for instance in batch.instances:
-        instance.fields['epoch_num'] = MetadataField(epoch)
+        instance.fields["epoch_num"] = MetadataField(epoch)
     return batch
 
 
@@ -55,15 +55,18 @@ class DataIterator(Registrable):
         moving excess instances to the next batch (as opposed to dividing a
         large batch evenly) and should result in a fairly tight packing.
     """
-    default_implementation = 'bucket'
 
-    def __init__(self,
-                 batch_size: int = 32,
-                 instances_per_epoch: int = None,
-                 max_instances_in_memory: int = None,
-                 cache_instances: bool = False,
-                 track_epoch: bool = False,
-                 maximum_samples_per_batch: Tuple[str, int] = None) -> None:
+    default_implementation = "bucket"
+
+    def __init__(
+        self,
+        batch_size: int = 32,
+        instances_per_epoch: int = None,
+        max_instances_in_memory: int = None,
+        cache_instances: bool = False,
+        track_epoch: bool = False,
+        maximum_samples_per_batch: Tuple[str, int] = None,
+    ) -> None:
         self.vocab: Vocabulary = None
 
         self._batch_size = batch_size
@@ -85,10 +88,9 @@ class DataIterator(Registrable):
         # we use their id() as the key.
         self._cursors: Dict[int, Iterator[Instance]] = {}
 
-    def __call__(self,
-                 instances: Iterable[Instance],
-                 num_epochs: int = None,
-                 shuffle: bool = True) -> Iterator[TensorDict]:
+    def __call__(
+        self, instances: Iterable[Instance], num_epochs: int = None, shuffle: bool = True
+    ) -> Iterator[TensorDict]:
         """
         Returns a generator that yields batches over the given dataset
         for the given number of epochs. If ``num_epochs`` is not specified,
@@ -131,7 +133,7 @@ class DataIterator(Registrable):
                     if self._track_epoch:
                         # The tensor_dict already has an "epoch_num" tensor,
                         # so just fill it with the right value.
-                        epoch_tensor: torch.Tensor = tensor_dict['epoch_num']
+                        epoch_tensor: torch.Tensor = tensor_dict["epoch_num"]
                         epoch_tensor.fill_(epoch)
                     yield tensor_dict
             else:
@@ -160,9 +162,9 @@ class DataIterator(Registrable):
             # Increment epoch tracker
             self._epochs[key] = epoch + 1
 
-    def _take_instances(self,
-                        instances: Iterable[Instance],
-                        max_instances: Optional[int] = None) -> Iterator[Instance]:
+    def _take_instances(
+        self, instances: Iterable[Instance], max_instances: Optional[int] = None
+    ) -> Iterator[Instance]:
         """
         Take the next `max_instances` instances from the given dataset.
         If `max_instances` is `None`, then just take all instances from the dataset.
@@ -191,8 +193,7 @@ class DataIterator(Registrable):
             # We may have a new iterator, so update the cursor.
             self._cursors[key] = iterator
 
-    def _memory_sized_lists(self,
-                            instances: Iterable[Instance]) -> Iterable[List[Instance]]:
+    def _memory_sized_lists(self, instances: Iterable[Instance]) -> Iterable[List[Instance]]:
         """
         Breaks the dataset into "memory-sized" lists of instances,
         which it yields up one at a time until it gets through a full epoch.
@@ -228,9 +229,8 @@ class DataIterator(Registrable):
             yield list(iterator)
 
     def _ensure_batch_is_sufficiently_small(
-            self,
-            batch_instances: Iterable[Instance],
-            excess: Deque[Instance]) -> List[List[Instance]]:
+        self, batch_instances: Iterable[Instance], excess: Deque[Instance]
+    ) -> List[List[Instance]]:
         """
         If self._maximum_samples_per_batch is specified, then split the batch
         into smaller sub-batches if it exceeds the maximum size.
@@ -272,15 +272,17 @@ class DataIterator(Registrable):
             field_lengths = instance.get_padding_lengths()
             for _, lengths in field_lengths.items():
                 try:
-                    padding_length = max(padding_length,
-                                         lengths[key])
+                    padding_length = max(padding_length, lengths[key])
                 except KeyError:
                     pass
 
             proposed_batch_size = len(batch) + 1
 
             # Adding the current instance would exceed the batch size or sample size.
-            if proposed_batch_size >= self._batch_size or padding_length * proposed_batch_size > limit:
+            if (
+                proposed_batch_size >= self._batch_size
+                or padding_length * proposed_batch_size > limit
+            ):
                 # Output the already existing batch
                 batches.append(batch)
 

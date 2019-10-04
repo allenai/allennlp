@@ -46,25 +46,30 @@ class ElmoTokenEmbedder(TokenEmbedder):
         weights. So, if you wanted to use only the 1st layer of a 2-layer ELMo,
         you can set this to [-9e10, 1, -9e10 ].
     """
-    def __init__(self,
-                 options_file: str,
-                 weight_file: str,
-                 do_layer_norm: bool = False,
-                 dropout: float = 0.5,
-                 requires_grad: bool = False,
-                 projection_dim: int = None,
-                 vocab_to_cache: List[str] = None,
-                 scalar_mix_parameters: List[float] = None) -> None:
-        super(ElmoTokenEmbedder, self).__init__()
 
-        self._elmo = Elmo(options_file,
-                          weight_file,
-                          1,
-                          do_layer_norm=do_layer_norm,
-                          dropout=dropout,
-                          requires_grad=requires_grad,
-                          vocab_to_cache=vocab_to_cache,
-                          scalar_mix_parameters=scalar_mix_parameters)
+    def __init__(
+        self,
+        options_file: str,
+        weight_file: str,
+        do_layer_norm: bool = False,
+        dropout: float = 0.5,
+        requires_grad: bool = False,
+        projection_dim: int = None,
+        vocab_to_cache: List[str] = None,
+        scalar_mix_parameters: List[float] = None,
+    ) -> None:
+        super().__init__()
+
+        self._elmo = Elmo(
+            options_file,
+            weight_file,
+            1,
+            do_layer_norm=do_layer_norm,
+            dropout=dropout,
+            requires_grad=requires_grad,
+            vocab_to_cache=vocab_to_cache,
+            scalar_mix_parameters=scalar_mix_parameters,
+        )
         if projection_dim:
             self._projection = torch.nn.Linear(self._elmo.get_output_dim(), projection_dim)
             self.output_dim = projection_dim
@@ -75,9 +80,7 @@ class ElmoTokenEmbedder(TokenEmbedder):
     def get_output_dim(self) -> int:
         return self.output_dim
 
-    def forward(self, # pylint: disable=arguments-differ
-                inputs: torch.Tensor,
-                word_inputs: torch.Tensor = None) -> torch.Tensor:
+    def forward(self, inputs: torch.Tensor, word_inputs: torch.Tensor = None) -> torch.Tensor:
         """
         Parameters
         ----------
@@ -93,7 +96,7 @@ class ElmoTokenEmbedder(TokenEmbedder):
         ``(batch_size, timesteps, embedding_dim)``
         """
         elmo_output = self._elmo(inputs, word_inputs)
-        elmo_representations = elmo_output['elmo_representations'][0]
+        elmo_representations = elmo_output["elmo_representations"][0]
         if self._projection:
             projection = self._projection
             for _ in range(elmo_representations.dim() - 2):
@@ -103,14 +106,14 @@ class ElmoTokenEmbedder(TokenEmbedder):
 
     # Custom vocab_to_cache logic requires a from_params implementation.
     @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> 'ElmoTokenEmbedder':  # type: ignore
-        # pylint: disable=arguments-differ
-        params.add_file_to_archive('options_file')
-        params.add_file_to_archive('weight_file')
-        options_file = params.pop('options_file')
-        weight_file = params.pop('weight_file')
-        requires_grad = params.pop('requires_grad', False)
-        do_layer_norm = params.pop_bool('do_layer_norm', False)
+    def from_params(cls, vocab: Vocabulary, params: Params) -> "ElmoTokenEmbedder":  # type: ignore
+
+        params.add_file_to_archive("options_file")
+        params.add_file_to_archive("weight_file")
+        options_file = params.pop("options_file")
+        weight_file = params.pop("weight_file")
+        requires_grad = params.pop("requires_grad", False)
+        do_layer_norm = params.pop_bool("do_layer_norm", False)
         dropout = params.pop_float("dropout", 0.5)
         namespace_to_cache = params.pop("namespace_to_cache", None)
         if namespace_to_cache is not None:
@@ -118,13 +121,15 @@ class ElmoTokenEmbedder(TokenEmbedder):
         else:
             vocab_to_cache = None
         projection_dim = params.pop_int("projection_dim", None)
-        scalar_mix_parameters = params.pop('scalar_mix_parameters', None)
+        scalar_mix_parameters = params.pop("scalar_mix_parameters", None)
         params.assert_empty(cls.__name__)
-        return cls(options_file=options_file,
-                   weight_file=weight_file,
-                   do_layer_norm=do_layer_norm,
-                   dropout=dropout,
-                   requires_grad=requires_grad,
-                   projection_dim=projection_dim,
-                   vocab_to_cache=vocab_to_cache,
-                   scalar_mix_parameters=scalar_mix_parameters)
+        return cls(
+            options_file=options_file,
+            weight_file=weight_file,
+            do_layer_norm=do_layer_norm,
+            dropout=dropout,
+            requires_grad=requires_grad,
+            projection_dim=projection_dim,
+            vocab_to_cache=vocab_to_cache,
+            scalar_mix_parameters=scalar_mix_parameters,
+        )

@@ -17,13 +17,15 @@ from allennlp.semparse.worlds import AtisWorld
 from allennlp.semparse.contexts.atis_sql_table_context import NUMERIC_NONTERMINALS
 from allennlp.semparse.contexts.sql_context_utils import action_sequence_to_sql
 from allennlp.state_machines.states import GrammarBasedState
-from allennlp.state_machines.transition_functions.linking_transition_function import LinkingTransitionFunction
+from allennlp.state_machines.transition_functions.linking_transition_function import (
+    LinkingTransitionFunction,
+)
 from allennlp.state_machines import BeamSearch
 from allennlp.state_machines.trainers import MaximumMarginalLikelihood
 from allennlp.state_machines.states import GrammarStatelet, RnnStatelet
 from allennlp.training.metrics import Average
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @Model.register("atis_parser")
@@ -59,20 +61,23 @@ class AtisSemanticParser(Model):
         The path of the SQLite database when evaluating SQL queries. SQLite is disk based, so we need
         the file location to connect to it.
     """
-    def __init__(self,
-                 vocab: Vocabulary,
-                 utterance_embedder: TextFieldEmbedder,
-                 action_embedding_dim: int,
-                 encoder: Seq2SeqEncoder,
-                 decoder_beam_search: BeamSearch,
-                 max_decoding_steps: int,
-                 input_attention: Attention,
-                 add_action_bias: bool = True,
-                 training_beam_size: int = None,
-                 decoder_num_layers: int = 1,
-                 dropout: float = 0.0,
-                 rule_namespace: str = 'rule_labels',
-                 database_file='/atis/atis.db') -> None:
+
+    def __init__(
+        self,
+        vocab: Vocabulary,
+        utterance_embedder: TextFieldEmbedder,
+        action_embedding_dim: int,
+        encoder: Seq2SeqEncoder,
+        decoder_beam_search: BeamSearch,
+        max_decoding_steps: int,
+        input_attention: Attention,
+        add_action_bias: bool = True,
+        training_beam_size: int = None,
+        decoder_num_layers: int = 1,
+        dropout: float = 0.0,
+        rule_namespace: str = "rule_labels",
+        database_file="/atis/atis.db",
+    ) -> None:
         # Atis semantic parser init
         super().__init__(vocab)
         self._utterance_embedder = utterance_embedder
@@ -96,39 +101,50 @@ class AtisSemanticParser(Model):
             input_action_dim = action_embedding_dim + 1
         else:
             input_action_dim = action_embedding_dim
-        self._action_embedder = Embedding(num_embeddings=num_actions, embedding_dim=input_action_dim)
-        self._output_action_embedder = Embedding(num_embeddings=num_actions, embedding_dim=action_embedding_dim)
-
+        self._action_embedder = Embedding(
+            num_embeddings=num_actions, embedding_dim=input_action_dim
+        )
+        self._output_action_embedder = Embedding(
+            num_embeddings=num_actions, embedding_dim=action_embedding_dim
+        )
 
         # This is what we pass as input in the first step of decoding, when we don't have a
         # previous action, or a previous utterance attention.
         self._first_action_embedding = torch.nn.Parameter(torch.FloatTensor(action_embedding_dim))
-        self._first_attended_utterance = torch.nn.Parameter(torch.FloatTensor(encoder.get_output_dim()))
+        self._first_attended_utterance = torch.nn.Parameter(
+            torch.FloatTensor(encoder.get_output_dim())
+        )
         torch.nn.init.normal_(self._first_action_embedding)
         torch.nn.init.normal_(self._first_attended_utterance)
 
         self._num_entity_types = 2  # TODO(kevin): get this in a more principled way somehow?
-        self._entity_type_decoder_embedding = Embedding(self._num_entity_types, action_embedding_dim)
+        self._entity_type_decoder_embedding = Embedding(
+            self._num_entity_types, action_embedding_dim
+        )
         self._decoder_num_layers = decoder_num_layers
 
         self._beam_search = decoder_beam_search
         self._decoder_trainer = MaximumMarginalLikelihood(training_beam_size)
-        self._transition_function = LinkingTransitionFunction(encoder_output_dim=self._encoder.get_output_dim(),
-                                                              action_embedding_dim=action_embedding_dim,
-                                                              input_attention=input_attention,
-                                                              add_action_bias=self._add_action_bias,
-                                                              dropout=dropout,
-                                                              num_layers=self._decoder_num_layers)
+        self._transition_function = LinkingTransitionFunction(
+            encoder_output_dim=self._encoder.get_output_dim(),
+            action_embedding_dim=action_embedding_dim,
+            input_attention=input_attention,
+            add_action_bias=self._add_action_bias,
+            dropout=dropout,
+            num_layers=self._decoder_num_layers,
+        )
 
     @overrides
-    def forward(self,  # type: ignore
-                utterance: Dict[str, torch.LongTensor],
-                world: List[AtisWorld],
-                actions: List[List[ProductionRule]],
-                linking_scores: torch.Tensor,
-                target_action_sequence: torch.LongTensor = None,
-                sql_queries: List[List[str]] = None) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
+    def forward(
+        self,  # type: ignore
+        utterance: Dict[str, torch.LongTensor],
+        world: List[AtisWorld],
+        actions: List[List[ProductionRule]],
+        linking_scores: torch.Tensor,
+        target_action_sequence: torch.LongTensor = None,
+        sql_queries: List[List[str]] = None,
+    ) -> Dict[str, torch.Tensor]:
+
         """
         We set up the initial state for the decoder, and pass that state off to either a DecoderTrainer,
         if we're training, or a BeamSearch for inference, if we're not.
@@ -169,37 +185,42 @@ class AtisSemanticParser(Model):
         if self.training:
             # target_action_sequence is of shape (batch_size, 1, sequence_length) here after we unsqueeze it for
             # the MML trainer.
-            return self._decoder_trainer.decode(initial_state,
-                                                self._transition_function,
-                                                (target_action_sequence.unsqueeze(1), target_mask.unsqueeze(1)))
+            return self._decoder_trainer.decode(
+                initial_state,
+                self._transition_function,
+                (target_action_sequence.unsqueeze(1), target_mask.unsqueeze(1)),
+            )
         else:
             # TODO(kevin) Move some of this functionality to a separate method for computing validation outputs.
             action_mapping = {}
             for batch_index, batch_actions in enumerate(actions):
                 for action_index, action in enumerate(batch_actions):
                     action_mapping[(batch_index, action_index)] = action[0]
-            outputs: Dict[str, Any] = {'action_mapping': action_mapping}
-            outputs['linking_scores'] = linking_scores
+            outputs: Dict[str, Any] = {"action_mapping": action_mapping}
+            outputs["linking_scores"] = linking_scores
             if target_action_sequence is not None:
-                outputs['loss'] = self._decoder_trainer.decode(initial_state,
-                                                               self._transition_function,
-                                                               (target_action_sequence.unsqueeze(1),
-                                                                target_mask.unsqueeze(1)))['loss']
+                outputs["loss"] = self._decoder_trainer.decode(
+                    initial_state,
+                    self._transition_function,
+                    (target_action_sequence.unsqueeze(1), target_mask.unsqueeze(1)),
+                )["loss"]
             num_steps = self._max_decoding_steps
             # This tells the state to start keeping track of debug info, which we'll pass along in
             # our output dictionary.
             initial_state.debug_info = [[] for _ in range(batch_size)]
-            best_final_states = self._beam_search.search(num_steps,
-                                                         initial_state,
-                                                         self._transition_function,
-                                                         keep_final_unfinished_states=False)
-            outputs['best_action_sequence'] = []
-            outputs['debug_info'] = []
-            outputs['entities'] = []
-            outputs['predicted_sql_query'] = []
-            outputs['sql_queries'] = []
-            outputs['utterance'] = []
-            outputs['tokenized_utterance'] = []
+            best_final_states = self._beam_search.search(
+                num_steps,
+                initial_state,
+                self._transition_function,
+                keep_final_unfinished_states=False,
+            )
+            outputs["best_action_sequence"] = []
+            outputs["debug_info"] = []
+            outputs["entities"] = []
+            outputs["predicted_sql_query"] = []
+            outputs["sql_queries"] = []
+            outputs["utterance"] = []
+            outputs["tokenized_utterance"] = []
 
             for i in range(batch_size):
                 # Decoding may not have terminated with any completed valid SQL queries, if `num_steps`
@@ -210,13 +231,14 @@ class AtisSemanticParser(Model):
                     self._denotation_accuracy(0)
                     self._valid_sql_query(0)
                     self._action_similarity(0)
-                    outputs['predicted_sql_query'].append('')
+                    outputs["predicted_sql_query"].append("")
                     continue
 
                 best_action_indices = best_final_states[i][0].action_history[0]
 
-                action_strings = [action_mapping[(i, action_index)]
-                                  for action_index in best_action_indices]
+                action_strings = [
+                    action_mapping[(i, action_index)] for action_index in best_action_indices
+                ]
                 predicted_sql_query = action_sequence_to_sql(action_strings)
 
                 if target_action_sequence is not None:
@@ -230,24 +252,31 @@ class AtisSemanticParser(Model):
                     self._action_similarity(similarity.ratio())
 
                 if sql_queries and sql_queries[i]:
-                    denotation_correct = self._executor.evaluate_sql_query(predicted_sql_query, sql_queries[i])
+                    denotation_correct = self._executor.evaluate_sql_query(
+                        predicted_sql_query, sql_queries[i]
+                    )
                     self._denotation_accuracy(denotation_correct)
-                    outputs['sql_queries'].append(sql_queries[i])
+                    outputs["sql_queries"].append(sql_queries[i])
 
-                outputs['utterance'].append(world[i].utterances[-1])
-                outputs['tokenized_utterance'].append([token.text
-                                                       for token in world[i].tokenized_utterances[-1]])
-                outputs['entities'].append(world[i].entities)
-                outputs['best_action_sequence'].append(action_strings)
-                outputs['predicted_sql_query'].append(sqlparse.format(predicted_sql_query, reindent=True))
-                outputs['debug_info'].append(best_final_states[i][0].debug_info[0])  # type: ignore
+                outputs["utterance"].append(world[i].utterances[-1])
+                outputs["tokenized_utterance"].append(
+                    [token.text for token in world[i].tokenized_utterances[-1]]
+                )
+                outputs["entities"].append(world[i].entities)
+                outputs["best_action_sequence"].append(action_strings)
+                outputs["predicted_sql_query"].append(
+                    sqlparse.format(predicted_sql_query, reindent=True)
+                )
+                outputs["debug_info"].append(best_final_states[i][0].debug_info[0])  # type: ignore
             return outputs
 
-    def _get_initial_state(self,
-                           utterance: Dict[str, torch.LongTensor],
-                           worlds: List[AtisWorld],
-                           actions: List[List[ProductionRule]],
-                           linking_scores: torch.Tensor) -> GrammarBasedState:
+    def _get_initial_state(
+        self,
+        utterance: Dict[str, torch.LongTensor],
+        worlds: List[AtisWorld],
+        actions: List[List[ProductionRule]],
+        linking_scores: torch.Tensor,
+    ) -> GrammarBasedState:
         embedded_utterance = self._utterance_embedder(utterance)
         utterance_mask = util.get_text_field_mask(utterance).float()
 
@@ -264,9 +293,9 @@ class AtisSemanticParser(Model):
         encoder_outputs = self._dropout(self._encoder(encoder_input, utterance_mask))
 
         # This will be our initial hidden state and memory cell for the decoder LSTM.
-        final_encoder_output = util.get_final_encoder_states(encoder_outputs,
-                                                             utterance_mask,
-                                                             self._encoder.is_bidirectional())
+        final_encoder_output = util.get_final_encoder_states(
+            encoder_outputs, utterance_mask, self._encoder.is_bidirectional()
+        )
         memory_cell = encoder_outputs.new_zeros(batch_size, self._encoder.get_output_dim())
         initial_score = embedded_utterance.data.new_zeros(batch_size)
 
@@ -281,40 +310,48 @@ class AtisSemanticParser(Model):
         initial_rnn_state = []
         for i in range(batch_size):
             if self._decoder_num_layers > 1:
-                initial_rnn_state.append(RnnStatelet(final_encoder_output[i].repeat(self._decoder_num_layers, 1),
-                                                     memory_cell[i].repeat(self._decoder_num_layers, 1),
-                                                     self._first_action_embedding,
-                                                     self._first_attended_utterance,
-                                                     encoder_output_list,
-                                                     utterance_mask_list))
+                initial_rnn_state.append(
+                    RnnStatelet(
+                        final_encoder_output[i].repeat(self._decoder_num_layers, 1),
+                        memory_cell[i].repeat(self._decoder_num_layers, 1),
+                        self._first_action_embedding,
+                        self._first_attended_utterance,
+                        encoder_output_list,
+                        utterance_mask_list,
+                    )
+                )
             else:
-                initial_rnn_state.append(RnnStatelet(final_encoder_output[i],
-                                                     memory_cell[i],
-                                                     self._first_action_embedding,
-                                                     self._first_attended_utterance,
-                                                     encoder_output_list,
-                                                     utterance_mask_list))
+                initial_rnn_state.append(
+                    RnnStatelet(
+                        final_encoder_output[i],
+                        memory_cell[i],
+                        self._first_action_embedding,
+                        self._first_attended_utterance,
+                        encoder_output_list,
+                        utterance_mask_list,
+                    )
+                )
 
+        initial_grammar_state = [
+            self._create_grammar_state(worlds[i], actions[i], linking_scores[i], entity_types[i])
+            for i in range(batch_size)
+        ]
 
-        initial_grammar_state = [self._create_grammar_state(worlds[i],
-                                                            actions[i],
-                                                            linking_scores[i],
-                                                            entity_types[i])
-                                 for i in range(batch_size)]
-
-        initial_state = GrammarBasedState(batch_indices=list(range(batch_size)),
-                                          action_history=[[] for _ in range(batch_size)],
-                                          score=initial_score_list,
-                                          rnn_state=initial_rnn_state,
-                                          grammar_state=initial_grammar_state,
-                                          possible_actions=actions,
-                                          debug_info=None)
+        initial_state = GrammarBasedState(
+            batch_indices=list(range(batch_size)),
+            action_history=[[] for _ in range(batch_size)],
+            score=initial_score_list,
+            rnn_state=initial_rnn_state,
+            grammar_state=initial_grammar_state,
+            possible_actions=actions,
+            debug_info=None,
+        )
         return initial_state
 
     @staticmethod
-    def _get_type_vector(worlds: List[AtisWorld],
-                         num_entities: int,
-                         tensor: torch.Tensor = None) -> Tuple[torch.LongTensor, Dict[int, int]]:
+    def _get_type_vector(
+        worlds: List[AtisWorld], num_entities: int, tensor: torch.Tensor = None
+    ) -> Tuple[torch.LongTensor, Dict[int, int]]:
         """
         Produces the encoding for each entity's type. In addition, a map from a flattened entity
         index to type is returned to combine entity type operations into one method.
@@ -337,16 +374,22 @@ class AtisSemanticParser(Model):
 
         for batch_index, world in enumerate(worlds):
             types = []
-            entities = [('number', entity)
-                        if any([entity.startswith(numeric_nonterminal)
-                                for numeric_nonterminal in NUMERIC_NONTERMINALS])
-                        else ('string', entity)
-                        for entity in world.entities]
+            entities = [
+                ("number", entity)
+                if any(
+                    [
+                        entity.startswith(numeric_nonterminal)
+                        for numeric_nonterminal in NUMERIC_NONTERMINALS
+                    ]
+                )
+                else ("string", entity)
+                for entity in world.entities
+            ]
 
             for entity_index, entity in enumerate(entities):
                 # We need numbers to be first, then strings, since our entities are going to be
                 # sorted. We do a split by type and then a merge later, and it relies on this sorting.
-                if entity[0] == 'number':
+                if entity[0] == "number":
                     entity_type = 1
                 else:
                     entity_type = 0
@@ -369,7 +412,7 @@ class AtisSemanticParser(Model):
         if len(predicted) > targets.size(0):
             return 0
         predicted_tensor = targets.new_tensor(predicted)
-        targets_trimmed = targets[:len(predicted)]
+        targets_trimmed = targets[: len(predicted)]
         # Return 1 if the predicted sequence is anywhere in the list of targets.
         return predicted_tensor.equal(targets_trimmed)
 
@@ -403,17 +446,19 @@ class AtisSemanticParser(Model):
             action sequence. This is basically a soft measure of exact_match.
         """
         return {
-                'exact_match': self._exact_match.get_metric(reset),
-                'denotation_acc': self._denotation_accuracy.get_metric(reset),
-                'valid_sql_query': self._valid_sql_query.get_metric(reset),
-                'action_similarity': self._action_similarity.get_metric(reset)
-                }
+            "exact_match": self._exact_match.get_metric(reset),
+            "denotation_acc": self._denotation_accuracy.get_metric(reset),
+            "valid_sql_query": self._valid_sql_query.get_metric(reset),
+            "action_similarity": self._action_similarity.get_metric(reset),
+        }
 
-    def _create_grammar_state(self,
-                              world: AtisWorld,
-                              possible_actions: List[ProductionRule],
-                              linking_scores: torch.Tensor,
-                              entity_types: torch.Tensor) -> GrammarStatelet:
+    def _create_grammar_state(
+        self,
+        world: AtisWorld,
+        possible_actions: List[ProductionRule],
+        linking_scores: torch.Tensor,
+        entity_types: torch.Tensor,
+    ) -> GrammarStatelet:
         """
         This method creates the GrammarStatelet object that's used for decoding.  Part of creating
         that is creating the `valid_actions` dictionary, which contains embedded representations of
@@ -448,7 +493,9 @@ class AtisSemanticParser(Model):
         for entity_index, entity in enumerate(entities):
             entity_map[entity] = entity_index
 
-        translated_valid_actions: Dict[str, Dict[str, Tuple[torch.Tensor, torch.Tensor, List[int]]]] = {}
+        translated_valid_actions: Dict[
+            str, Dict[str, Tuple[torch.Tensor, torch.Tensor, List[int]]]
+        ] = {}
         for key, action_strings in valid_actions.items():
             translated_valid_actions[key] = {}
             # `key` here is a non-terminal from the grammar, and `action_strings` are all the valid
@@ -467,28 +514,34 @@ class AtisSemanticParser(Model):
 
             if global_actions:
                 global_action_tensors, global_action_ids = zip(*global_actions)
-                global_action_tensor = torch.cat(global_action_tensors, dim=0).to(entity_types.device).long()
+                global_action_tensor = (
+                    torch.cat(global_action_tensors, dim=0).to(entity_types.device).long()
+                )
                 global_input_embeddings = self._action_embedder(global_action_tensor)
                 global_output_embeddings = self._output_action_embedder(global_action_tensor)
-                translated_valid_actions[key]['global'] = (global_input_embeddings,
-                                                           global_output_embeddings,
-                                                           list(global_action_ids))
+                translated_valid_actions[key]["global"] = (
+                    global_input_embeddings,
+                    global_output_embeddings,
+                    list(global_action_ids),
+                )
             if linked_actions:
                 linked_rules, linked_action_ids = zip(*linked_actions)
-                entities = linked_rules
+                entities = list(linked_rules)
                 entity_ids = [entity_map[entity] for entity in entities]
                 entity_linking_scores = linking_scores[entity_ids]
                 entity_type_tensor = entity_types[entity_ids]
-                entity_type_embeddings = (self._entity_type_decoder_embedding(entity_type_tensor)
-                                          .to(entity_types.device)
-                                          .float())
-                translated_valid_actions[key]['linked'] = (entity_linking_scores,
-                                                           entity_type_embeddings,
-                                                           list(linked_action_ids))
+                entity_type_embeddings = (
+                    self._entity_type_decoder_embedding(entity_type_tensor)
+                    .to(entity_types.device)
+                    .float()
+                )
+                translated_valid_actions[key]["linked"] = (
+                    entity_linking_scores,
+                    entity_type_embeddings,
+                    list(linked_action_ids),
+                )
 
-        return GrammarStatelet(['statement'],
-                               translated_valid_actions,
-                               self.is_nonterminal)
+        return GrammarStatelet(["statement"], translated_valid_actions, self.is_nonterminal)
 
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
@@ -500,26 +553,28 @@ class AtisSemanticParser(Model):
         This method trims the output predictions to the first end symbol, replaces indices with
         corresponding tokens, and adds a field called ``predicted_actions`` to the ``output_dict``.
         """
-        action_mapping = output_dict['action_mapping']
+        action_mapping = output_dict["action_mapping"]
         best_actions = output_dict["best_action_sequence"]
-        debug_infos = output_dict['debug_info']
+        debug_infos = output_dict["debug_info"]
         batch_action_info = []
-        for batch_index, (predicted_actions, debug_info) in enumerate(zip(best_actions, debug_infos)):
+        for batch_index, (predicted_actions, debug_info) in enumerate(
+            zip(best_actions, debug_infos)
+        ):
             instance_action_info = []
             for predicted_action, action_debug_info in zip(predicted_actions, debug_info):
                 action_info = {}
-                action_info['predicted_action'] = predicted_action
-                considered_actions = action_debug_info['considered_actions']
-                probabilities = action_debug_info['probabilities']
+                action_info["predicted_action"] = predicted_action
+                considered_actions = action_debug_info["considered_actions"]
+                probabilities = action_debug_info["probabilities"]
                 actions = []
                 for action, probability in zip(considered_actions, probabilities):
                     if action != -1:
                         actions.append((action_mapping[(batch_index, action)], probability))
                 actions.sort()
                 considered_actions, probabilities = zip(*actions)
-                action_info['considered_actions'] = considered_actions
-                action_info['action_probabilities'] = probabilities
-                action_info['utterance_attention'] = action_debug_info.get('question_attention', [])
+                action_info["considered_actions"] = considered_actions
+                action_info["action_probabilities"] = probabilities
+                action_info["utterance_attention"] = action_debug_info.get("question_attention", [])
                 instance_action_info.append(action_info)
             batch_action_info.append(instance_action_info)
         output_dict["predicted_actions"] = batch_action_info

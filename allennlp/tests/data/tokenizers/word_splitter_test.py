@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 import spacy
 
 from allennlp.common.testing import AllenNlpTestCase
@@ -9,30 +8,55 @@ from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
 from allennlp.data.tokenizers.word_splitter import OpenAISplitter
 from allennlp.data.tokenizers.word_splitter import BertBasicWordSplitter
 
+
 class TestSimpleWordSplitter(AllenNlpTestCase):
     def setUp(self):
-        super(TestSimpleWordSplitter, self).setUp()
+        super().setUp()
         self.word_splitter = SimpleWordSplitter()
 
     def test_tokenize_handles_complex_punctuation(self):
         sentence = "this (sentence) has 'crazy' \"punctuation\"."
-        expected_tokens = ["this", "(", "sentence", ")", "has", "'", "crazy", "'", '"',
-                           "punctuation", '"', "."]
+        expected_tokens = [
+            "this",
+            "(",
+            "sentence",
+            ")",
+            "has",
+            "'",
+            "crazy",
+            "'",
+            '"',
+            "punctuation",
+            '"',
+            ".",
+        ]
         tokens = [t.text for t in self.word_splitter.split_words(sentence)]
         assert tokens == expected_tokens
 
     def test_tokenize_handles_contraction(self):
         sentence = "it ain't joe's problem; would've been yesterday"
-        expected_tokens = ["it", "ai", "n't", "joe", "'s", "problem", ";", "would", "'ve", "been",
-                           "yesterday"]
+        expected_tokens = [
+            "it",
+            "ai",
+            "n't",
+            "joe",
+            "'s",
+            "problem",
+            ";",
+            "would",
+            "'ve",
+            "been",
+            "yesterday",
+        ]
         tokens = [t.text for t in self.word_splitter.split_words(sentence)]
         assert tokens == expected_tokens
 
     def test_batch_tokenization(self):
-        sentences = ["This is a sentence",
-                     "This isn't a sentence.",
-                     "This is the 3rd sentence."
-                     "Here's the 'fourth' sentence."]
+        sentences = [
+            "This is a sentence",
+            "This isn't a sentence.",
+            "This is the 3rd sentence." "Here's the 'fourth' sentence.",
+        ]
         batch_split = self.word_splitter.batch_split_words(sentences)
         separately_split = [self.word_splitter.split_words(sentence) for sentence in sentences]
         assert len(batch_split) == len(separately_split)
@@ -55,48 +79,107 @@ class TestSimpleWordSplitter(AllenNlpTestCase):
 
     def test_tokenize_handles_special_cases(self):
         sentence = "mr. and mrs. jones, etc., went to, e.g., the store"
-        expected_tokens = ["mr.", "and", "mrs.", "jones", ",", "etc.", ",", "went", "to", ",",
-                           "e.g.", ",", "the", "store"]
+        expected_tokens = [
+            "mr.",
+            "and",
+            "mrs.",
+            "jones",
+            ",",
+            "etc.",
+            ",",
+            "went",
+            "to",
+            ",",
+            "e.g.",
+            ",",
+            "the",
+            "store",
+        ]
         tokens = [t.text for t in self.word_splitter.split_words(sentence)]
         assert tokens == expected_tokens
 
 
 class TestLettersDigitsWordSplitter(AllenNlpTestCase):
     def setUp(self):
-        super(TestLettersDigitsWordSplitter, self).setUp()
+        super().setUp()
         self.word_splitter = LettersDigitsWordSplitter()
 
     def test_tokenize_handles_complex_punctuation(self):
         sentence = "this (sentence) has 'crazy' \"punctuation\"."
-        expected_tokens = ["this", "(", "sentence", ")", "has", "'", "crazy", "'", '"',
-                           "punctuation", '"', "."]
+        expected_tokens = [
+            "this",
+            "(",
+            "sentence",
+            ")",
+            "has",
+            "'",
+            "crazy",
+            "'",
+            '"',
+            "punctuation",
+            '"',
+            ".",
+        ]
         tokens = [t.text for t in self.word_splitter.split_words(sentence)]
         assert tokens == expected_tokens
 
     def test_tokenize_handles_unicode_letters(self):
         sentence = "HAL9000   and    Ångström"
-        expected_tokens = [Token("HAL", 0), Token("9000", 3), Token("and", 10), Token("Ångström", 17)]
+        expected_tokens = [
+            Token("HAL", 0),
+            Token("9000", 3),
+            Token("and", 10),
+            Token("Ångström", 17),
+        ]
         tokens = self.word_splitter.split_words(sentence)
         assert [t.text for t in tokens] == [t.text for t in expected_tokens]
         assert [t.idx for t in tokens] == [t.idx for t in expected_tokens]
 
     def test_tokenize_handles_splits_all_punctuation(self):
         sentence = "wouldn't.[have] -3.45(m^2)"
-        expected_tokens = ["wouldn", "'", "t", ".", "[", "have", "]", "-", "3",
-                           ".", "45", "(", "m", "^", "2", ")"]
+        expected_tokens = [
+            "wouldn",
+            "'",
+            "t",
+            ".",
+            "[",
+            "have",
+            "]",
+            "-",
+            "3",
+            ".",
+            "45",
+            "(",
+            "m",
+            "^",
+            "2",
+            ")",
+        ]
         tokens = [t.text for t in self.word_splitter.split_words(sentence)]
         assert tokens == expected_tokens
 
 
 class TestSpacyWordSplitter(AllenNlpTestCase):
     def setUp(self):
-        super(TestSpacyWordSplitter, self).setUp()
+        super().setUp()
         self.word_splitter = SpacyWordSplitter()
 
     def test_tokenize_handles_complex_punctuation(self):
         sentence = "this (sentence) has 'crazy' \"punctuation\"."
-        expected_tokens = ["this", "(", "sentence", ")", "has", "'", "crazy", "'", '"',
-                           "punctuation", '"', "."]
+        expected_tokens = [
+            "this",
+            "(",
+            "sentence",
+            ")",
+            "has",
+            "'",
+            "crazy",
+            "'",
+            '"',
+            "punctuation",
+            '"',
+            ".",
+        ]
         tokens = self.word_splitter.split_words(sentence)
         token_text = [t.text for t in tokens]
         assert token_text == expected_tokens
@@ -108,8 +191,18 @@ class TestSpacyWordSplitter(AllenNlpTestCase):
     def test_tokenize_handles_contraction(self):
         # note that "would've" is kept together, while "ain't" is not.
         sentence = "it ain't joe's problem; would been yesterday"
-        expected_tokens = ["it", "ai", "n't", "joe", "'s", "problem", ";", "would", "been",
-                           "yesterday"]
+        expected_tokens = [
+            "it",
+            "ai",
+            "n't",
+            "joe",
+            "'s",
+            "problem",
+            ";",
+            "would",
+            "been",
+            "yesterday",
+        ]
         tokens = [t.text for t in self.word_splitter.split_words(sentence)]
         assert tokens == expected_tokens
 
@@ -134,16 +227,32 @@ class TestSpacyWordSplitter(AllenNlpTestCase):
     def test_tokenize_handles_special_cases(self):
         # note that the etc. doesn't quite work --- we can special case this if we want.
         sentence = "Mr. and Mrs. Jones, etc., went to, e.g., the store"
-        expected_tokens = ["Mr.", "and", "Mrs.", "Jones", ",", "etc", ".", ",", "went", "to", ",",
-                           "e.g.", ",", "the", "store"]
+        expected_tokens = [
+            "Mr.",
+            "and",
+            "Mrs.",
+            "Jones",
+            ",",
+            "etc",
+            ".",
+            ",",
+            "went",
+            "to",
+            ",",
+            "e.g.",
+            ",",
+            "the",
+            "store",
+        ]
         tokens = [t.text for t in self.word_splitter.split_words(sentence)]
         assert tokens == expected_tokens
 
     def test_batch_tokenization(self):
-        sentences = ["This is     a sentence",
-                     "This isn't a sentence.",
-                     "This is the 3rd     sentence."
-                     "Here's the 'fourth' sentence."]
+        sentences = [
+            "This is     a sentence",
+            "This isn't a sentence.",
+            "This is the 3rd     sentence." "Here's the 'fourth' sentence.",
+        ]
         batch_split = self.word_splitter.batch_split_words(sentences)
         separately_split = [self.word_splitter.split_words(sentence) for sentence in sentences]
         assert len(batch_split) == len(separately_split)
@@ -168,19 +277,19 @@ class TestSpacyWordSplitter(AllenNlpTestCase):
 
 class TestOpenAiWordSplitter(AllenNlpTestCase):
     def setUp(self):
-        super(TestOpenAiWordSplitter, self).setUp()
+        super().setUp()
         self.word_splitter = OpenAISplitter()
 
     def test_tokenize_handles_complex_punctuation(self):
         sentence = "This sentence ?a!?!"
-        expected_tokens = ['This', 'sentence', '?', 'a', '!', '?', '!']
+        expected_tokens = ["This", "sentence", "?", "a", "!", "?", "!"]
         tokens = [t.text for t in self.word_splitter.split_words(sentence)]
         assert tokens == expected_tokens
 
 
 class TestBertBasicWordSplitter(AllenNlpTestCase):
     def setUp(self):
-        super(TestBertBasicWordSplitter, self).setUp()
+        super().setUp()
         self.word_splitter = BertBasicWordSplitter()
 
     def test_never_split(self):

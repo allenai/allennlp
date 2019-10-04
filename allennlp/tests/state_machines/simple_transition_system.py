@@ -14,12 +14,15 @@ import torch
 
 from allennlp.state_machines import State, TransitionFunction
 
-class SimpleState(State['SimpleState']):
-    def __init__(self,
-                 batch_indices: List[int],
-                 action_history: List[List[int]],
-                 score: List[torch.Tensor],
-                 start_values: List[int] = None) -> None:
+
+class SimpleState(State["SimpleState"]):
+    def __init__(
+        self,
+        batch_indices: List[int],
+        action_history: List[List[int]],
+        score: List[torch.Tensor],
+        start_values: List[int] = None,
+    ) -> None:
         super().__init__(batch_indices, action_history, score)
         self.start_values = start_values or [0] * len(batch_indices)
 
@@ -27,10 +30,11 @@ class SimpleState(State['SimpleState']):
         return self.action_history[0][-1] == 4
 
     @classmethod
-    def combine_states(cls, states) -> 'SimpleState':
+    def combine_states(cls, states) -> "SimpleState":
         batch_indices = [batch_index for state in states for batch_index in state.batch_indices]
-        action_histories = [action_history for state in states for action_history in
-                            state.action_history]
+        action_histories = [
+            action_history for state in states for action_history in state.action_history
+        ]
         scores = [score for state in states for score in state.score]
         start_values = [start_value for state in states for start_value in state.start_values]
         return SimpleState(batch_indices, action_histories, scores, start_values)
@@ -40,9 +44,9 @@ class SimpleState(State['SimpleState']):
 
 
 class SimpleTransitionFunction(TransitionFunction[SimpleState]):
-    def __init__(self,
-                 valid_actions: Set[int] = None,
-                 include_value_in_score: bool = False) -> None:
+    def __init__(
+        self, valid_actions: Set[int] = None, include_value_in_score: bool = False
+    ) -> None:
         # The default allowed actions are adding 1 or 2 to the last element.
         self._valid_actions = valid_actions or {1, 2}
         # If True, we will add a small multiple of the action take to the score, to encourage
@@ -50,18 +54,19 @@ class SimpleTransitionFunction(TransitionFunction[SimpleState]):
         self._include_value_in_score = include_value_in_score
 
     @overrides
-    def take_step(self,
-                  state: SimpleState,
-                  max_actions: int = None,
-                  allowed_actions: List[Set] = None) -> List[SimpleState]:
+    def take_step(
+        self, state: SimpleState, max_actions: int = None, allowed_actions: List[Set] = None
+    ) -> List[SimpleState]:
         indexed_next_states: Dict[int, List[SimpleState]] = defaultdict(list)
         if not allowed_actions:
             allowed_actions = [None] * len(state.batch_indices)
-        for batch_index, action_history, score, start_value, actions in zip(state.batch_indices,
-                                                                            state.action_history,
-                                                                            state.score,
-                                                                            state.start_values,
-                                                                            allowed_actions):
+        for batch_index, action_history, score, start_value, actions in zip(
+            state.batch_indices,
+            state.action_history,
+            state.score,
+            state.start_values,
+            allowed_actions,
+        ):
 
             prev_action = action_history[-1] if action_history else start_value
             for action in self._valid_actions:
@@ -73,9 +78,7 @@ class SimpleTransitionFunction(TransitionFunction[SimpleState]):
                 new_score = score - 1
                 if self._include_value_in_score:
                     new_score += 0.01 * next_item
-                new_state = SimpleState([batch_index],
-                                        [new_history],
-                                        [new_score])
+                new_state = SimpleState([batch_index], [new_history], [new_score])
                 indexed_next_states[batch_index].append(new_state)
         next_states: List[SimpleState] = []
         for batch_next_states in indexed_next_states.values():

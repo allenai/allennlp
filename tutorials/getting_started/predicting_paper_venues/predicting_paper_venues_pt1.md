@@ -246,7 +246,7 @@ from allennlp.common.testing import ModelTestCase
 
 class AcademicPaperClassifierTest(ModelTestCase):
     def setUp(self):
-        super(AcademicPaperClassifierTest, self).setUp()
+        super().setUp()
         self.set_up_model('tests/fixtures/academic_paper_classifier.json',
                           'tests/fixtures/s2_papers.jsonl')
 
@@ -292,7 +292,7 @@ class AcademicPaperClassifier(Model):
                  classifier_feedforward: FeedForward,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
-        super(AcademicPaperClassifier, self).__init__(vocab, regularizer)
+        super().__init__(vocab, regularizer)
 
         self.text_field_embedder = text_field_embedder
         self.num_classes = self.vocab.get_vocab_size("labels")

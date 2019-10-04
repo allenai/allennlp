@@ -8,8 +8,6 @@ and a second to sample uniform noise. We'll then adversarially train a generator
 to transform the noise into something that (hopefully) looks like the true distribution
 and a discriminator `Model` to (hopefully) distinguish between the "true" and generated data.
 """
-# pylint: disable=bad-continuation
-
 from typing import Dict, Iterable, Any
 
 import tqdm
@@ -34,24 +32,27 @@ class InputSampler(Registrable):
     """
     Abstract base class for sampling from a distribution.
     """
+
     def sample(self, *dims: int) -> np.ndarray:
         raise NotImplementedError
 
 
-@InputSampler.register('uniform')
+@InputSampler.register("uniform")
 class UniformSampler(InputSampler):
     """
     Sample from the uniform [0, 1] distribution.
     """
+
     def sample(self, *dims: int) -> np.ndarray:
         return np.random.uniform(0, 1, dims)
 
 
-@InputSampler.register('normal')
+@InputSampler.register("normal")
 class NormalSampler(InputSampler):
     """
     Sample from the normal distribution.
     """
+
     def __init__(self, mean: float = 0, stdev: float = 1.0) -> None:
         self.mean = mean
         self.stdev = stdev
@@ -65,6 +66,7 @@ class SamplingReader(DatasetReader):
     """
     A dataset reader that just samples from the provided sampler forever.
     """
+
     def __init__(self, sampler: InputSampler) -> None:
         super().__init__(lazy=True)
         self.sampler = sampler
@@ -75,7 +77,7 @@ class SamplingReader(DatasetReader):
             yield self.text_to_instance(example)
 
     def text_to_instance(self, example: np.ndarray) -> Instance:  # type: ignore
-        # pylint: disable=arguments-differ
+
         field = ArrayField(example)
         return Instance({"array": field})
 
@@ -90,11 +92,14 @@ class Generator(Model):
     it computes a loss based on the idea that it wants
     to trick the discriminator into predicting that its output is genuine.
     """
-    def __init__(self,
-                 input_dim: int,
-                 hidden_dim: int,
-                 output_dim: int,
-                 activation: Activation = torch.nn.Tanh()) -> None:
+
+    def __init__(
+        self,
+        input_dim: int,
+        hidden_dim: int,
+        output_dim: int,
+        activation: Activation = torch.nn.Tanh(),
+    ) -> None:
         super().__init__(None)
         self.linear1 = torch.nn.Linear(input_dim, hidden_dim)
         self.linear2 = torch.nn.Linear(hidden_dim, hidden_dim)
@@ -102,9 +107,10 @@ class Generator(Model):
         self.activation = activation
         self.loss = torch.nn.BCELoss()
 
-    def forward(self,  # type: ignore
-                inputs: torch.Tensor, discriminator: Model = None) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
+    def forward(  # type: ignore
+        self, inputs: torch.Tensor, discriminator: Model = None
+    ) -> Dict[str, torch.Tensor]:
+
         hidden1 = self.activation(self.linear1(inputs))
         hidden2 = self.activation(self.linear2(hidden1))
         output = self.linear3(hidden2)
@@ -118,6 +124,7 @@ class Generator(Model):
 
         return output_dict
 
+
 def get_moments(dist: torch.Tensor) -> torch.Tensor:
     """
     Returns the first 4 moments of the input data.
@@ -129,8 +136,10 @@ def get_moments(dist: torch.Tensor) -> torch.Tensor:
     std = torch.pow(var, 0.5)
     zscores = diffs / std
     skews = torch.mean(torch.pow(zscores, 3.0))
-    kurtoses = torch.mean(torch.pow(zscores, 4.0)) - 3.0  # excess kurtosis, should be 0 for Gaussian
-    final = torch.cat((mean.reshape(1,), std.reshape(1,), skews.reshape(1,), kurtoses.reshape(1,)))
+    kurtoses = (
+        torch.mean(torch.pow(zscores, 4.0)) - 3.0
+    )  # excess kurtosis, should be 0 for Gaussian
+    final = torch.cat((mean.reshape(1), std.reshape(1), skews.reshape(1), kurtoses.reshape(1)))
     return final
 
 
@@ -140,11 +149,14 @@ class Discriminator(Model):
     A model that takes a sample (input_dim,) and tries to predict 1
     if it's from the true distribution and 0 if it's from the generator.
     """
-    def __init__(self,
-                 input_dim: int,
-                 hidden_dim: int,
-                 activation: Activation = torch.nn.Sigmoid(),
-                 preprocessing: str = None) -> None:
+
+    def __init__(
+        self,
+        input_dim: int,
+        hidden_dim: int,
+        activation: Activation = torch.nn.Sigmoid(),
+        preprocessing: str = None,
+    ) -> None:
         super().__init__(None)
         if preprocessing is None:
             self.preprocess = lambda x: x
@@ -160,9 +172,10 @@ class Discriminator(Model):
         self.activation = activation
         self.loss = torch.nn.BCELoss()
 
-    def forward(self, # type: ignore
-                inputs: torch.Tensor, label: torch.Tensor = None) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
+    def forward(  # type: ignore
+        self, inputs: torch.Tensor, label: torch.Tensor = None
+    ) -> Dict[str, torch.Tensor]:
+
         inputs = inputs.squeeze(-1)
         hidden1 = self.activation(self.linear1(self.preprocess(inputs)))
         hidden2 = self.activation(self.linear2(hidden1))
@@ -173,20 +186,23 @@ class Discriminator(Model):
 
         return output_dict
 
+
 @TrainerBase.register("gan-test")
 class GanTestTrainer(TrainerBase):
-    def __init__(self,
-                 serialization_dir: str,
-                 data: Iterable[Instance],
-                 noise: Iterable[Instance],
-                 generator: Model,
-                 discriminator: Model,
-                 iterator: DataIterator,
-                 noise_iterator: DataIterator,
-                 generator_optimizer: torch.optim.Optimizer,
-                 discriminator_optimizer: torch.optim.Optimizer,
-                 batches_per_epoch: int,
-                 num_epochs: int) -> None:
+    def __init__(
+        self,
+        serialization_dir: str,
+        data: Iterable[Instance],
+        noise: Iterable[Instance],
+        generator: Model,
+        discriminator: Model,
+        iterator: DataIterator,
+        noise_iterator: DataIterator,
+        generator_optimizer: torch.optim.Optimizer,
+        discriminator_optimizer: torch.optim.Optimizer,
+        batches_per_epoch: int,
+        num_epochs: int,
+    ) -> None:
         super().__init__(serialization_dir, -1)
         self.data = data
         self.noise = noise
@@ -251,32 +267,36 @@ class GanTestTrainer(TrainerBase):
             self.generator_optimizer.step()
 
         return {
-                "generator_loss": generator_loss,
-                "discriminator_fake_loss": discriminator_fake_loss,
-                "discriminator_real_loss": discriminator_real_loss,
-                "mean": fake_mean / self.batches_per_epoch,
-                "stdev": fake_stdev / self.batches_per_epoch
+            "generator_loss": generator_loss,
+            "discriminator_fake_loss": discriminator_fake_loss,
+            "discriminator_real_loss": discriminator_real_loss,
+            "mean": fake_mean / self.batches_per_epoch,
+            "stdev": fake_stdev / self.batches_per_epoch,
         }
 
     def train(self) -> Dict[str, Any]:
         with tqdm.trange(self.num_epochs) as epochs:
             for _ in epochs:
                 metrics = self.train_one_epoch()
-                description = (f'gl: {metrics["generator_loss"]:.3f} '
-                               f'dfl: {metrics["discriminator_fake_loss"]:.3f} '
-                               f'drl: {metrics["discriminator_real_loss"]:.3f} '
-                               f'mean: {metrics["mean"]:.2f} '
-                               f'std: {metrics["stdev"]:.2f} ')
+                description = (
+                    f'gl: {metrics["generator_loss"]:.3f} '
+                    f'dfl: {metrics["discriminator_fake_loss"]:.3f} '
+                    f'drl: {metrics["discriminator_real_loss"]:.3f} '
+                    f'mean: {metrics["mean"]:.2f} '
+                    f'std: {metrics["stdev"]:.2f} '
+                )
                 epochs.set_description(description)
         return metrics
 
     @classmethod
-    def from_params(cls,   # type: ignore
-                    params: Params,
-                    serialization_dir: str,
-                    recover: bool = False,
-                    cache_directory: str = None,
-                    cache_prefix: str = None) -> 'GanTestTrainer':
+    def from_params(  # type: ignore
+        cls,
+        params: Params,
+        serialization_dir: str,
+        recover: bool = False,
+        cache_directory: str = None,
+        cache_prefix: str = None,
+    ) -> "GanTestTrainer":
         dataset_reader = DatasetReader.from_params(params.pop("data_reader"))
         data = dataset_reader.read("")
 
@@ -290,11 +310,13 @@ class GanTestTrainer(TrainerBase):
 
         generator_optimizer = Optimizer.from_params(
             [[n, p] for n, p in generator.named_parameters() if p.requires_grad],
-            params.pop("generator_optimizer"))
+            params.pop("generator_optimizer"),
+        )
 
         discriminator_optimizer = Optimizer.from_params(
             [[n, p] for n, p in discriminator.named_parameters() if p.requires_grad],
-            params.pop("discriminator_optimizer"))
+            params.pop("discriminator_optimizer"),
+        )
 
         num_epochs = params.pop_int("num_epochs")
         batches_per_epoch = params.pop_int("batches_per_epoch")
@@ -302,53 +324,48 @@ class GanTestTrainer(TrainerBase):
 
         params.assert_empty(__name__)
 
-        return cls(serialization_dir,
-                   data,
-                   noise,
-                   generator,
-                   discriminator,
-                   iterator,
-                   noise_iterator,
-                   generator_optimizer,
-                   discriminator_optimizer,
-                   batches_per_epoch,
-                   num_epochs)
+        return cls(
+            serialization_dir,
+            data,
+            noise,
+            generator,
+            discriminator,
+            iterator,
+            noise_iterator,
+            generator_optimizer,
+            discriminator_optimizer,
+            batches_per_epoch,
+            num_epochs,
+        )
 
 
 class GanTrainerTest(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
 
-        params = Params({
-            "trainer": {
-                "type": "gan-test"
-            },
-            "data_reader": {"type": "sampling", "sampler": {"type": "normal", "mean": 4.0, "stdev": 1.25}},
-            "noise_reader": {"type": "sampling", "sampler": {"type": "uniform"}},
-            "generator": {
-                "type": "generator-test",
-                "input_dim": 1,
-                "hidden_dim": 5,
-                "output_dim": 1
+        params = Params(
+            {
+                "trainer": {"type": "gan-test"},
+                "data_reader": {
+                    "type": "sampling",
+                    "sampler": {"type": "normal", "mean": 4.0, "stdev": 1.25},
                 },
-            "discriminator": {
-                "type": "discriminator-test",
-                "input_dim": 500,
-                "hidden_dim": 10
-            },
-            "iterator": {
-                "type": "basic",
-                "batch_size": 500
-            },
-            "noise_iterator": {
-                "type": "basic",
-                "batch_size": 500
-            },
-            "generator_optimizer": {"type": "sgd", "lr": 0.1},
-            "discriminator_optimizer": {"type": "sgd", "lr": 0.1},
-            "num_epochs": 5,
-            "batches_per_epoch": 2
-        })
+                "noise_reader": {"type": "sampling", "sampler": {"type": "uniform"}},
+                "generator": {
+                    "type": "generator-test",
+                    "input_dim": 1,
+                    "hidden_dim": 5,
+                    "output_dim": 1,
+                },
+                "discriminator": {"type": "discriminator-test", "input_dim": 500, "hidden_dim": 10},
+                "iterator": {"type": "basic", "batch_size": 500},
+                "noise_iterator": {"type": "basic", "batch_size": 500},
+                "generator_optimizer": {"type": "sgd", "lr": 0.1},
+                "discriminator_optimizer": {"type": "sgd", "lr": 0.1},
+                "num_epochs": 5,
+                "batches_per_epoch": 2,
+            }
+        )
 
         self.trainer = TrainerBase.from_params(params, self.TEST_DIR)
 
@@ -361,42 +378,40 @@ if __name__ == "__main__":
     #
     # python -m allennlp.tests.training.gan_trainer_test
     #
-    # pylint: disable=invalid-name
+
     sample_size = 500
 
-    params_ = Params({
-            "trainer": {
-                "type": "gan-test"
+    params_ = Params(
+        {
+            "trainer": {"type": "gan-test"},
+            "data_reader": {
+                "type": "sampling",
+                "sampler": {"type": "normal", "mean": 4.0, "stdev": 1.25},
             },
-            "data_reader": {"type": "sampling", "sampler": {"type": "normal", "mean": 4.0, "stdev": 1.25}},
             "noise_reader": {"type": "sampling", "sampler": {"type": "uniform"}},
             "generator": {
                 "type": "generator-test",
                 "input_dim": 1,
                 "hidden_dim": 5,
-                "output_dim": 1
-                },
+                "output_dim": 1,
+            },
             "discriminator": {
                 "type": "discriminator-test",
                 "input_dim": sample_size,
                 "hidden_dim": 10,
-                "preprocessing": "moments"
+                "preprocessing": "moments",
             },
-            "iterator": {
-                "type": "basic",
-                "batch_size": sample_size
-            },
-            "noise_iterator": {
-                "type": "basic",
-                "batch_size": sample_size
-            },
+            "iterator": {"type": "basic", "batch_size": sample_size},
+            "noise_iterator": {"type": "basic", "batch_size": sample_size},
             "generator_optimizer": {"type": "sgd", "lr": 0.1},
             "discriminator_optimizer": {"type": "sgd", "lr": 0.1},
             "num_epochs": 1000,
-            "batches_per_epoch": 2
-        })
+            "batches_per_epoch": 2,
+        }
+    )
 
     import tempfile
+
     serialization_dir_ = tempfile.mkdtemp()
     trainer_ = TrainerBase.from_params(params_, serialization_dir_)
     metrics_ = trainer_.train()

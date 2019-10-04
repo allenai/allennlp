@@ -45,13 +45,16 @@ class RnnStatelet:
         question tokens for each batch instance.  This is a list over batch elements, for the same
         reasons as above.
     """
-    def __init__(self,
-                 hidden_state: torch.Tensor,
-                 memory_cell: torch.Tensor,
-                 previous_action_embedding: torch.Tensor,
-                 attended_input: torch.Tensor,
-                 encoder_outputs: List[torch.Tensor],
-                 encoder_output_mask: List[torch.Tensor]) -> None:
+
+    def __init__(
+        self,
+        hidden_state: torch.Tensor,
+        memory_cell: torch.Tensor,
+        previous_action_embedding: torch.Tensor,
+        attended_input: torch.Tensor,
+        encoder_outputs: List[torch.Tensor],
+        encoder_output_mask: List[torch.Tensor],
+    ) -> None:
         self.hidden_state = hidden_state
         self.memory_cell = memory_cell
         self.previous_action_embedding = previous_action_embedding
@@ -61,13 +64,20 @@ class RnnStatelet:
 
     def __eq__(self, other):
         if isinstance(self, other.__class__):
-            return all([
+            return all(
+                [
                     util.tensors_equal(self.hidden_state, other.hidden_state, tolerance=1e-5),
                     util.tensors_equal(self.memory_cell, other.memory_cell, tolerance=1e-5),
-                    util.tensors_equal(self.previous_action_embedding, other.previous_action_embedding,
-                                       tolerance=1e-5),
+                    util.tensors_equal(
+                        self.previous_action_embedding,
+                        other.previous_action_embedding,
+                        tolerance=1e-5,
+                    ),
                     util.tensors_equal(self.attended_input, other.attended_input, tolerance=1e-5),
                     util.tensors_equal(self.encoder_outputs, other.encoder_outputs, tolerance=1e-5),
-                    util.tensors_equal(self.encoder_output_mask, other.encoder_output_mask, tolerance=1e-5),
-                    ])
+                    util.tensors_equal(
+                        self.encoder_output_mask, other.encoder_output_mask, tolerance=1e-5
+                    ),
+                ]
+            )
         return NotImplemented

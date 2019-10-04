@@ -37,28 +37,37 @@ from allennlp.common.util import prepare_environment
 from allennlp.data import Vocabulary
 from allennlp.training.util import datasets_from_params
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 class MakeVocab(Subcommand):
-    def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
-        # pylint: disable=protected-access
-        description = '''Create a vocabulary from the specified dataset.'''
-        subparser = parser.add_parser(
-                name, description=description, help='Create a vocabulary.')
-        subparser.add_argument('param_path',
-                               type=str,
-                               help='path to parameter file describing the model and its inputs')
+    def add_subparser(
+        self, name: str, parser: argparse._SubParsersAction
+    ) -> argparse.ArgumentParser:
 
-        subparser.add_argument('-s', '--serialization-dir',
-                               required=True,
-                               type=str,
-                               help='directory in which to save the vocabulary directory')
+        description = """Create a vocabulary from the specified dataset."""
+        subparser = parser.add_parser(name, description=description, help="Create a vocabulary.")
+        subparser.add_argument(
+            "param_path",
+            type=str,
+            help="path to parameter file describing the model and its inputs",
+        )
 
-        subparser.add_argument('-o', '--overrides',
-                               type=str,
-                               default="",
-                               help='a JSON structure used to override the experiment configuration')
+        subparser.add_argument(
+            "-s",
+            "--serialization-dir",
+            required=True,
+            type=str,
+            help="directory in which to save the vocabulary directory",
+        )
+
+        subparser.add_argument(
+            "-o",
+            "--overrides",
+            type=str,
+            default="",
+            help="a JSON structure used to override the experiment configuration",
+        )
 
         subparser.set_defaults(func=make_vocab_from_args)
 
@@ -86,8 +95,9 @@ def make_vocab_from_params(params: Params, serialization_dir: str):
     vocab_dir = os.path.join(serialization_dir, "vocabulary")
 
     if os.path.isdir(vocab_dir) and os.listdir(vocab_dir) is not None:
-        raise ConfigurationError("The 'vocabulary' directory in the provided "
-                                 "serialization directory is non-empty")
+        raise ConfigurationError(
+            "The 'vocabulary' directory in the provided " "serialization directory is non-empty"
+        )
 
     all_datasets = datasets_from_params(params)
     datasets_for_vocab_creation = set(params.pop("datasets_for_vocab_creation", all_datasets))
@@ -96,12 +106,17 @@ def make_vocab_from_params(params: Params, serialization_dir: str):
         if dataset not in all_datasets:
             raise ConfigurationError(f"invalid 'dataset_for_vocab_creation' {dataset}")
 
-    logger.info("From dataset instances, %s will be considered for vocabulary creation.",
-                ", ".join(datasets_for_vocab_creation))
+    logger.info(
+        "From dataset instances, %s will be considered for vocabulary creation.",
+        ", ".join(datasets_for_vocab_creation),
+    )
 
-    instances = (instance for key, dataset in all_datasets.items()
-                 for instance in dataset
-                 if key in datasets_for_vocab_creation)
+    instances = (
+        instance
+        for key, dataset in all_datasets.items()
+        for instance in dataset
+        if key in datasets_for_vocab_creation
+    )
 
     vocab = Vocabulary.from_params(vocab_params, instances)
 

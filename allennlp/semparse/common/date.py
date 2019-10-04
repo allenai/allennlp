@@ -19,7 +19,7 @@ class Date:
         return year_is_same and month_is_same and day_is_same
 
     def __gt__(self, other) -> bool:
-        # pylint: disable=too-many-return-statements
+
         # The logic below is tricky, and is based on some assumptions we make about date comparison.
         # Year, month or day being -1 means that we do not know its value. In those cases, the
         # we consider the comparison to be undefined, and return False if all the fields that are
@@ -64,7 +64,7 @@ class Date:
         return str(self)
 
     @classmethod
-    def make_date(cls, string: str) -> 'Date':
+    def make_date(cls, string: str) -> "Date":
         year_string, month_string, day_string = string.split("-")
         year = -1
         month = -1

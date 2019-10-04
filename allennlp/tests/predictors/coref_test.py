@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name,protected-access
 import spacy
 
 from allennlp.common.testing import AllenNlpTestCase
@@ -10,17 +9,34 @@ from allennlp.predictors import CorefPredictor
 
 class TestCorefPredictor(AllenNlpTestCase):
     def test_uses_named_inputs(self):
-        inputs = {"document": "This is a single string document about a test. Sometimes it "
-                              "contains coreferent parts."}
-        archive = load_archive(self.FIXTURES_ROOT / 'coref' / 'serialization' / 'model.tar.gz')
-        predictor = Predictor.from_archive(archive, 'coreference-resolution')
+        inputs = {
+            "document": "This is a single string document about a test. Sometimes it "
+            "contains coreferent parts."
+        }
+        archive = load_archive(self.FIXTURES_ROOT / "coref" / "serialization" / "model.tar.gz")
+        predictor = Predictor.from_archive(archive, "coreference-resolution")
 
         result = predictor.predict_json(inputs)
         self.assert_predict_result(result)
 
-        document = ['This', 'is', 'a', 'single', 'string',
-                    'document', 'about', 'a', 'test', '.', 'Sometimes',
-                    'it', 'contains', 'coreferent', 'parts', '.']
+        document = [
+            "This",
+            "is",
+            "a",
+            "single",
+            "string",
+            "document",
+            "about",
+            "a",
+            "test",
+            ".",
+            "Sometimes",
+            "it",
+            "contains",
+            "coreferent",
+            "parts",
+            ".",
+        ]
 
         result_doc_words = predictor.predict_tokenized(document)
         self.assert_predict_result(result_doc_words)
@@ -28,9 +44,24 @@ class TestCorefPredictor(AllenNlpTestCase):
     @staticmethod
     def assert_predict_result(result):
         document = result["document"]
-        assert document == ['This', 'is', 'a', 'single', 'string',
-                            'document', 'about', 'a', 'test', '.', 'Sometimes',
-                            'it', 'contains', 'coreferent', 'parts', '.']
+        assert document == [
+            "This",
+            "is",
+            "a",
+            "single",
+            "string",
+            "document",
+            "about",
+            "a",
+            "test",
+            ".",
+            "Sometimes",
+            "it",
+            "contains",
+            "coreferent",
+            "parts",
+            ".",
+        ]
         clusters = result["clusters"]
         assert isinstance(clusters, list)
         for cluster in clusters:
@@ -48,8 +79,8 @@ class TestCorefPredictor(AllenNlpTestCase):
         """Tests I/O of coref_resolved method"""
 
         document = "This is a test sentence."
-        archive = load_archive(self.FIXTURES_ROOT / 'coref' / 'serialization' / 'model.tar.gz')
-        predictor = Predictor.from_archive(archive, 'coreference-resolution')
+        archive = load_archive(self.FIXTURES_ROOT / "coref" / "serialization" / "model.tar.gz")
+        predictor = Predictor.from_archive(archive, "coreference-resolution")
         result = predictor.coref_resolved(document)
         assert isinstance(result, str)
 
@@ -60,28 +91,28 @@ class TestCorefPredictor(AllenNlpTestCase):
         nlp = spacy.load("en_core_web_sm")
 
         inputs = [
-                "This is a sentence with no coreferences.", # No coreferences
-                "Julie wants to buy fruit. That is what she loves.", # Single coreference / personal
-                "Charlie wants to buy a game, so he can play it with friends.", # Multiple coreferences / personal
-                "The woman reading a newspaper sat on the bench with her dog.", # Phrasal mention / possessive
-                "Canada stimulated the country's economy." # Phrasal coreference / possessive
-                ]
+            "This is a sentence with no coreferences.",  # No coreferences
+            "Julie wants to buy fruit. That is what she loves.",  # Single coreference / personal
+            "Charlie wants to buy a game, so he can play it with friends.",  # Multiple coreferences / personal
+            "The woman reading a newspaper sat on the bench with her dog.",  # Phrasal mention / possessive
+            "Canada stimulated the country's economy.",  # Phrasal coreference / possessive
+        ]
 
         expected_clusters = [
-                [],
-                [[[0, 0], [9, 9]]],
-                [[[0, 0], [8, 8]], [[4, 5], [11, 11]]],
-                [[[0, 4], [10, 10]]],
-                [[[0, 0], [2, 4]]]
-                ]
+            [],
+            [[[0, 0], [9, 9]]],
+            [[[0, 0], [8, 8]], [[4, 5], [11, 11]]],
+            [[[0, 4], [10, 10]]],
+            [[[0, 0], [2, 4]]],
+        ]
 
         expected_outputs = [
-                "This is a sentence with no coreferences.",
-                "Julie wants to buy fruit. That is what Julie loves.",
-                "Charlie wants to buy a game, so Charlie can play a game with friends.",
-                "The woman reading a newspaper sat on the bench with The woman reading a newspaper's dog.",
-                "Canada stimulated Canada's economy."
-                ]
+            "This is a sentence with no coreferences.",
+            "Julie wants to buy fruit. That is what Julie loves.",
+            "Charlie wants to buy a game, so Charlie can play a game with friends.",
+            "The woman reading a newspaper sat on the bench with The woman reading a newspaper's dog.",
+            "Canada stimulated Canada's economy.",
+        ]
 
         for i, text in enumerate(inputs):
             clusters = expected_clusters[i]
@@ -95,10 +126,12 @@ class TestCorefPredictor(AllenNlpTestCase):
             assert output == expected_outputs[i]
 
     def test_predictions_to_labeled_instances(self):
-        inputs = {"document": "This is a single string document about a test. Sometimes it "
-                              "contains coreferent parts."}
-        archive = load_archive(self.FIXTURES_ROOT / 'coref' / 'serialization' / 'model.tar.gz')
-        predictor = Predictor.from_archive(archive, 'coreference-resolution')
+        inputs = {
+            "document": "This is a single string document about a test. Sometimes it "
+            "contains coreferent parts."
+        }
+        archive = load_archive(self.FIXTURES_ROOT / "coref" / "serialization" / "model.tar.gz")
+        predictor = Predictor.from_archive(archive, "coreference-resolution")
 
         instance = predictor._json_to_instance(inputs)
         outputs = predictor._model.forward_on_instance(instance)
@@ -106,11 +139,11 @@ class TestCorefPredictor(AllenNlpTestCase):
         assert new_instances is not None
 
         for new_instance in new_instances:
-            assert 'span_labels' in new_instance
-            assert len(new_instance['span_labels']) == 60 # 7 words in input
-            true_top_spans = set(tuple(span) for span in outputs['top_spans'])
+            assert "span_labels" in new_instance
+            assert len(new_instance["span_labels"]) == 60  # 7 words in input
+            true_top_spans = set(tuple(span) for span in outputs["top_spans"])
             pred_clust_spans = set()
-            for i, span in enumerate(outputs['top_spans']):
-                if new_instance['span_labels'][i]:
+            for i, span in enumerate(outputs["top_spans"]):
+                if new_instance["span_labels"][i]:
                     pred_clust_spans.add(tuple(span))
             assert true_top_spans == pred_clust_spans

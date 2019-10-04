@@ -41,7 +41,7 @@ RUN pip install -r requirements.txt
 COPY scripts/ scripts/
 COPY allennlp/ allennlp/
 COPY pytest.ini pytest.ini
-COPY .pylintrc .pylintrc
+COPY .flake8 .flake8
 COPY tutorials/ tutorials/
 COPY training_config training_config/
 COPY setup.py setup.py

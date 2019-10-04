@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use, invalid-name
 from typing import Dict, Optional
 
 import pytest
@@ -9,14 +8,16 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.params import Params
 
+
 class _Net1(torch.nn.Module):
     def __init__(self):
         super().__init__()
         self.linear_1 = torch.nn.Linear(5, 10)
         self.linear_2 = torch.nn.Linear(10, 5)
 
-    def forward(self, inputs):  # pylint: disable=arguments-differ
+    def forward(self, inputs):
         pass
+
 
 class _Net2(torch.nn.Module):
     def __init__(self):
@@ -24,7 +25,7 @@ class _Net2(torch.nn.Module):
         self.linear_1 = torch.nn.Linear(5, 10)
         self.linear_3 = torch.nn.Linear(10, 5)
 
-    def forward(self, inputs):  # pylint: disable=arguments-differ
+    def forward(self, inputs):
         pass
 
 
@@ -37,22 +38,25 @@ class TestPretrainedModelInitializer(AllenNlpTestCase):
         torch.save(self.net2.state_dict(), self.temp_file)
 
     def _are_equal(self, linear1: torch.nn.Linear, linear2: torch.nn.Linear) -> bool:
-        return torch.equal(linear1.weight, linear2.weight) and \
-                torch.equal(linear1.bias, linear2.bias)
+        return torch.equal(linear1.weight, linear2.weight) and torch.equal(
+            linear1.bias, linear2.bias
+        )
 
-    def _get_applicator(self,
-                        regex: str,
-                        weights_file_path: str,
-                        parameter_name_overrides: Optional[Dict[str, str]] = None) -> InitializerApplicator:
+    def _get_applicator(
+        self,
+        regex: str,
+        weights_file_path: str,
+        parameter_name_overrides: Optional[Dict[str, str]] = None,
+    ) -> InitializerApplicator:
         parameter_name_overrides = parameter_name_overrides or {}
-        initializer_params = Params({
+        initializer_params = Params(
+            {
                 "type": "pretrained",
                 "weights_file_path": weights_file_path,
-                "parameter_name_overrides": parameter_name_overrides
-        })
-        params = Params({
-                "initializer": [(regex, initializer_params)]
-        })
+                "parameter_name_overrides": parameter_name_overrides,
+            }
+        )
+        params = Params({"initializer": [(regex, initializer_params)]})
         return InitializerApplicator.from_params(params["initializer"])
 
     def test_random_initialization(self):
@@ -69,11 +73,13 @@ class TestPretrainedModelInitializer(AllenNlpTestCase):
         assert initializer.parameter_name_overrides == {}
 
         name_overrides = {"a": "b", "c": "d"}
-        params = Params({
+        params = Params(
+            {
                 "type": "pretrained",
                 "weights_file_path": self.temp_file,
-                "parameter_name_overrides": name_overrides
-        })
+                "parameter_name_overrides": name_overrides,
+            }
+        )
         initializer = Initializer.from_params(params)
         assert initializer.weights
         assert initializer.parameter_name_overrides == name_overrides

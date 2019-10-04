@@ -32,7 +32,8 @@ from allennlp.common.util import import_submodules
 from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
+
 
 class ServerError(Exception):
     status_code = 400
@@ -46,15 +47,17 @@ class ServerError(Exception):
 
     def to_dict(self):
         error_dict = dict(self.payload or ())
-        error_dict['message'] = self.message
+        error_dict["message"] = self.message
         return error_dict
 
 
-def make_app(predictor: Predictor,
-             field_names: List[str] = None,
-             static_dir: str = None,
-             sanitizer: Callable[[JsonDict], JsonDict] = None,
-             title: str = "AllenNLP Demo") -> Flask:
+def make_app(
+    predictor: Predictor,
+    field_names: List[str] = None,
+    static_dir: str = None,
+    sanitizer: Callable[[JsonDict], JsonDict] = None,
+    title: str = "AllenNLP Demo",
+) -> Flask:
     """
     Creates a Flask app that serves up the provided ``Predictor``
     along with a front-end for interacting with it.
@@ -79,27 +82,29 @@ def make_app(predictor: Predictor,
             logger.error("app directory %s does not exist, aborting", static_dir)
             sys.exit(-1)
     elif static_dir is None and field_names is None:
-        print("Neither build_dir nor field_names passed. Demo won't render on this port.\n"
-              "You must use nodejs + react app to interact with the server.")
+        print(
+            "Neither build_dir nor field_names passed. Demo won't render on this port.\n"
+            "You must use nodejs + react app to interact with the server."
+        )
 
-    app = Flask(__name__)  # pylint: disable=invalid-name
+    app = Flask(__name__)
 
     @app.errorhandler(ServerError)
-    def handle_invalid_usage(error: ServerError) -> Response:  # pylint: disable=unused-variable
+    def handle_invalid_usage(error: ServerError) -> Response:
         response = jsonify(error.to_dict())
         response.status_code = error.status_code
         return response
 
-    @app.route('/')
-    def index() -> Response: # pylint: disable=unused-variable
+    @app.route("/")
+    def index() -> Response:
         if static_dir is not None:
-            return send_file(os.path.join(static_dir, 'index.html'))
+            return send_file(os.path.join(static_dir, "index.html"))
         else:
             html = _html(title, field_names)
             return Response(response=html, status=200)
 
-    @app.route('/predict', methods=['POST', 'OPTIONS'])
-    def predict() -> Response:  # pylint: disable=unused-variable
+    @app.route("/predict", methods=["POST", "OPTIONS"])
+    def predict() -> Response:
         """make a prediction using the specified model and return the results"""
         if request.method == "OPTIONS":
             return Response(response="", status=200)
@@ -115,8 +120,8 @@ def make_app(predictor: Predictor,
 
         return jsonify(prediction)
 
-    @app.route('/predict_batch', methods=['POST', 'OPTIONS'])
-    def predict_batch() -> Response:  # pylint: disable=unused-variable
+    @app.route("/predict_batch", methods=["POST", "OPTIONS"])
+    def predict_batch() -> Response:
         """make a prediction using the specified model and return the results"""
         if request.method == "OPTIONS":
             return Response(response="", status=200)
@@ -129,8 +134,8 @@ def make_app(predictor: Predictor,
 
         return jsonify(prediction)
 
-    @app.route('/<path:path>')
-    def static_proxy(path: str) -> Response: # pylint: disable=unused-variable
+    @app.route("/<path:path>")
+    def static_proxy(path: str) -> Response:
         if static_dir is not None:
             return send_from_directory(static_dir, path)
         else:
@@ -138,40 +143,57 @@ def make_app(predictor: Predictor,
 
     return app
 
+
 def _get_predictor(args: argparse.Namespace) -> Predictor:
     check_for_gpu(args.cuda_device)
-    archive = load_archive(args.archive_path,
-                           weights_file=args.weights_file,
-                           cuda_device=args.cuda_device,
-                           overrides=args.overrides)
+    archive = load_archive(
+        args.archive_path,
+        weights_file=args.weights_file,
+        cuda_device=args.cuda_device,
+        overrides=args.overrides,
+    )
 
     return Predictor.from_archive(archive, args.predictor)
+
 
 def main(args):
     # Executing this file with no extra options runs the simple service with the bidaf test fixture
     # and the machine-comprehension predictor. There's no good reason you'd want
     # to do this, except possibly to test changes to the stock HTML).
 
-    parser = argparse.ArgumentParser(description='Serve up a simple model')
+    parser = argparse.ArgumentParser(description="Serve up a simple model")
 
-    parser.add_argument('--archive-path', type=str, required=True, help='path to trained archive file')
-    parser.add_argument('--predictor', type=str, required=True, help='name of predictor')
-    parser.add_argument('--weights-file', type=str,
-                        help='a path that overrides which weights file to use')
-    parser.add_argument('--cuda-device', type=int, default=-1, help='id of GPU to use (if any)')
-    parser.add_argument('-o', '--overrides', type=str, default="",
-                        help='a JSON structure used to override the experiment configuration')
-    parser.add_argument('--static-dir', type=str, help='serve index.html from this directory')
-    parser.add_argument('--title', type=str, help='change the default page title', default="AllenNLP Demo")
-    parser.add_argument('--field-name', type=str, action='append',
-                        help='field names to include in the demo')
-    parser.add_argument('--port', type=int, default=8000, help='port to serve the demo on')
+    parser.add_argument(
+        "--archive-path", type=str, required=True, help="path to trained archive file"
+    )
+    parser.add_argument("--predictor", type=str, required=True, help="name of predictor")
+    parser.add_argument(
+        "--weights-file", type=str, help="a path that overrides which weights file to use"
+    )
+    parser.add_argument("--cuda-device", type=int, default=-1, help="id of GPU to use (if any)")
+    parser.add_argument(
+        "-o",
+        "--overrides",
+        type=str,
+        default="",
+        help="a JSON structure used to override the experiment configuration",
+    )
+    parser.add_argument("--static-dir", type=str, help="serve index.html from this directory")
+    parser.add_argument(
+        "--title", type=str, help="change the default page title", default="AllenNLP Demo"
+    )
+    parser.add_argument(
+        "--field-name", type=str, action="append", help="field names to include in the demo"
+    )
+    parser.add_argument("--port", type=int, default=8000, help="port to serve the demo on")
 
-    parser.add_argument('--include-package',
-                        type=str,
-                        action='append',
-                        default=[],
-                        help='additional packages to include')
+    parser.add_argument(
+        "--include-package",
+        type=str,
+        action="append",
+        default=[],
+        help="additional packages to include",
+    )
 
     args = parser.parse_args(args)
 
@@ -183,21 +205,23 @@ def main(args):
 
     field_names = args.field_name
 
-    app = make_app(predictor=predictor,
-                   field_names=field_names,
-                   static_dir=args.static_dir,
-                   title=args.title)
+    app = make_app(
+        predictor=predictor, field_names=field_names, static_dir=args.static_dir, title=args.title
+    )
     CORS(app)
 
-    http_server = WSGIServer(('0.0.0.0', args.port), app)
+    http_server = WSGIServer(("0.0.0.0", args.port), app)
     print(f"Model loaded, serving demo on port {args.port}")
     http_server.serve_forever()
+
 
 #
 # HTML and Templates for the default bare-bones app are below
 #
 
-_PAGE_TEMPLATE = Template("""
+
+_PAGE_TEMPLATE = Template(
+    """
 <html>
     <head>
         <title>
@@ -216,7 +240,9 @@ _PAGE_TEMPLATE = Template("""
                         <div class="model__content">
                             $inputs
                             <div class="form__field form__field--btn">
-                                <button type="button" class="btn btn--icon-disclosure" onclick="predict()">Predict</button>
+                                <button type="button" class="btn btn--icon-disclosure" onclick="predict()">
+                                    Predict
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -260,14 +286,17 @@ _PAGE_TEMPLATE = Template("""
     }
     </script>
 </html>
-""")
+"""
+)
 
-_SINGLE_INPUT_TEMPLATE = Template("""
+_SINGLE_INPUT_TEMPLATE = Template(
+    """
         <div class="form__field">
             <label for="input-$field_name">$field_name</label>
             <input type="text" id="input-$field_name" type="text" required value placeholder="input goes here">
         </div>
-""")
+"""
+)
 
 
 _CSS = """
@@ -738,21 +767,21 @@ h1 {
 }
 """
 
+
 def _html(title: str, field_names: List[str]) -> str:
     """
     Returns bare bones HTML for serving up an input form with the
     specified fields that can render predictions from the configured model.
     """
-    inputs = ''.join(_SINGLE_INPUT_TEMPLATE.substitute(field_name=field_name)
-                     for field_name in field_names)
+    inputs = "".join(
+        _SINGLE_INPUT_TEMPLATE.substitute(field_name=field_name) for field_name in field_names
+    )
 
     quoted_field_names = [f"'{field_name}'" for field_name in field_names]
     quoted_field_list = f"[{','.join(quoted_field_names)}]"
 
-    return _PAGE_TEMPLATE.substitute(title=title,
-                                     css=_CSS,
-                                     inputs=inputs,
-                                     qfl=quoted_field_list)
+    return _PAGE_TEMPLATE.substitute(title=title, css=_CSS, inputs=inputs, qfl=quoted_field_list)
+
 
 if __name__ == "__main__":
     main(sys.argv[1:])

@@ -6,7 +6,7 @@ Typically you might create a configuration file specifying the model and
 training parameters and then use :mod:`~allennlp.commands.train`
 rather than instantiating a ``Trainer`` yourself.
 """
-# pylint: disable=too-many-lines
+
 
 import logging
 from typing import Dict, List, Union, Any
@@ -24,18 +24,19 @@ class TrainerBase(Registrable):
     anything you want. Your subclass should implement ``train``
     and also probably ``from_params``.
     """
+
     default_implementation = "default"
 
-    def __init__(self,
-                 serialization_dir: str,
-                 cuda_device: Union[int, List] = -1) -> None:
+    def __init__(self, serialization_dir: str, cuda_device: Union[int, List] = -1) -> None:
         check_for_gpu(cuda_device)
 
         self._serialization_dir = serialization_dir
 
         # Configure GPUs:
         if not isinstance(cuda_device, int) and not isinstance(cuda_device, list):
-            raise ConfigurationError("Expected an int or list for cuda_device, got {}".format(cuda_device))
+            raise ConfigurationError(
+                "Expected an int or list for cuda_device, got {}".format(cuda_device)
+            )
 
         if isinstance(cuda_device, list):
             self._multiple_gpu = True
@@ -57,13 +58,15 @@ class TrainerBase(Registrable):
         raise NotImplementedError
 
     @classmethod
-    def from_params(cls,   # type: ignore
-                    params: Params,
-                    serialization_dir: str,
-                    recover: bool = False,
-                    cache_directory: str = None,
-                    cache_prefix: str = None):
-        # pylint: disable=arguments-differ
+    def from_params(  # type: ignore
+        cls,
+        params: Params,
+        serialization_dir: str,
+        recover: bool = False,
+        cache_directory: str = None,
+        cache_prefix: str = None,
+    ):
+
         typ3 = params.get("trainer", {}).pop("type", "default")
 
         if typ3 == "default":
@@ -71,17 +74,25 @@ class TrainerBase(Registrable):
             from allennlp.training.trainer import Trainer
             from allennlp.training.trainer_pieces import TrainerPieces
 
-            pieces = TrainerPieces.from_params(params, serialization_dir, recover, cache_directory, cache_prefix)  # pylint: disable=no-member
-            return Trainer.from_params(model=pieces.model,
-                                       serialization_dir=serialization_dir,
-                                       iterator=pieces.iterator,
-                                       train_data=pieces.train_dataset,
-                                       validation_data=pieces.validation_dataset,
-                                       params=pieces.params,
-                                       validation_iterator=pieces.validation_iterator)
+            pieces = TrainerPieces.from_params(
+                params, serialization_dir, recover, cache_directory, cache_prefix
+            )
+            return Trainer.from_params(
+                model=pieces.model,
+                serialization_dir=serialization_dir,
+                iterator=pieces.iterator,
+                train_data=pieces.train_dataset,
+                validation_data=pieces.validation_dataset,
+                params=pieces.params,
+                validation_iterator=pieces.validation_iterator,
+            )
         else:
             klass = TrainerBase.by_name(typ3)
             # Explicit check to prevent recursion.
-            is_overriden = klass.from_params.__func__ != TrainerBase.from_params.__func__ # type: ignore
+            is_overriden = (
+                klass.from_params.__func__ != TrainerBase.from_params.__func__  # type: ignore
+            )
             assert is_overriden, f"Class {klass.__name__} must override `from_params`."
-            return klass.from_params(params, serialization_dir, recover, cache_directory, cache_prefix)
+            return klass.from_params(
+                params, serialization_dir, recover, cache_directory, cache_prefix
+            )

@@ -18,11 +18,12 @@ class logger:
     to instantiate the stderr logger lazily only when it's needed
     (which is only when using the MultiprocessDatasetReader)
     """
+
     _logger = None
 
     @classmethod
     def info(cls, message: str) -> None:
-        # pylint: disable=no-self-use
+
         if cls._logger is None:
             cls._logger = log_to_stderr()
             cls._logger.setLevel(logging.INFO)
@@ -30,12 +31,14 @@ class logger:
         cls._logger.info(message)
 
 
-def _worker(reader: DatasetReader,
-            input_queue: Queue,
-            output_queue: Queue,
-            num_active_workers: Value,
-            num_inflight_items: Value,
-            worker_id: int) -> None:
+def _worker(
+    reader: DatasetReader,
+    input_queue: Queue,
+    output_queue: Queue,
+    num_active_workers: Value,
+    num_inflight_items: Value,
+    worker_id: int,
+) -> None:
     """
     A worker that pulls filenames off the input queue, uses the dataset reader
     to read them, and places the generated instances on the output queue.  When
@@ -76,6 +79,7 @@ class QIterable(Iterable[Instance]):
     You can't set attributes on Iterators, so this is just a dumb wrapper
     that exposes the output_queue.
     """
+
     def __init__(self, output_queue_size, epochs_per_read, num_workers, reader, file_path) -> None:
         self.output_queue = Queue(output_queue_size)
         self.epochs_per_read = epochs_per_read
@@ -129,14 +133,23 @@ class QIterable(Iterable[Instance]):
         for _ in range(self.num_workers):
             self.input_queue.put(None)
 
-
-        assert not self.processes, "Process list non-empty! You must call QIterable.join() before restarting."
-        self.num_active_workers = Value('i', self.num_workers)
-        self.num_inflight_items = Value('i', 0)
+        assert (
+            not self.processes
+        ), "Process list non-empty! You must call QIterable.join() before restarting."
+        self.num_active_workers = Value("i", self.num_workers)
+        self.num_inflight_items = Value("i", 0)
         for worker_id in range(self.num_workers):
-            process = Process(target=_worker,
-                              args=(self.reader, self.input_queue, self.output_queue,
-                                    self.num_active_workers, self.num_inflight_items, worker_id))
+            process = Process(
+                target=_worker,
+                args=(
+                    self.reader,
+                    self.input_queue,
+                    self.output_queue,
+                    self.num_active_workers,
+                    self.num_inflight_items,
+                    worker_id,
+                ),
+            )
             logger.info(f"starting worker {worker_id}")
             process.start()
             self.processes.append(process)
@@ -161,7 +174,7 @@ class QIterable(Iterable[Instance]):
             process.terminate()
 
 
-@DatasetReader.register('multiprocess')
+@DatasetReader.register("multiprocess")
 class MultiprocessDatasetReader(DatasetReader):
     """
     Wraps another dataset reader and uses it to read from multiple input files
@@ -189,11 +202,14 @@ class MultiprocessDatasetReader(DatasetReader):
         The size of the queue on which read instances are placed to be yielded.
         You might need to increase this if you're generating instances too quickly.
     """
-    def __init__(self,
-                 base_reader: DatasetReader,
-                 num_workers: int,
-                 epochs_per_read: int = 1,
-                 output_queue_size: int = 1000) -> None:
+
+    def __init__(
+        self,
+        base_reader: DatasetReader,
+        num_workers: int,
+        epochs_per_read: int = 1,
+        output_queue_size: int = 1000,
+    ) -> None:
         # Multiprocess reader is intrinsically lazy.
         super().__init__(lazy=True)
 
@@ -206,17 +222,16 @@ class MultiprocessDatasetReader(DatasetReader):
         """
         Just delegate to the base reader text_to_instance.
         """
-        # pylint: disable=arguments-differ
-        return self.reader.text_to_instance(*args, **kwargs)
+        return self.reader.text_to_instance(*args, **kwargs)  # type: ignore
 
     def _read(self, file_path: str) -> Iterable[Instance]:
         raise RuntimeError("Multiprocess reader implements read() directly.")
 
     def read(self, file_path: str) -> Iterable[Instance]:
         return QIterable(
-                output_queue_size=self.output_queue_size,
-                epochs_per_read=self.epochs_per_read,
-                num_workers=self.num_workers,
-                reader=self.reader,
-                file_path=file_path
+            output_queue_size=self.output_queue_size,
+            epochs_per_read=self.epochs_per_read,
+            num_workers=self.num_workers,
+            reader=self.reader,
+            file_path=file_path,
         )

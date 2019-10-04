@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name,protected-access
 from typing import Tuple
 
 import torch
@@ -67,6 +66,7 @@ class TestSampledSoftmaxLoss(AllenNlpTestCase):
 
         # fake out choice function
         FAKE_SAMPLES = [100, 200, 300, 400, 500, 600, 700, 800, 900, 9999]
+
         def fake_choice(num_words: int, num_samples: int) -> Tuple[np.ndarray, int]:
             assert (num_words, num_samples) == (10000, 10)
             return np.array(FAKE_SAMPLES), 12
