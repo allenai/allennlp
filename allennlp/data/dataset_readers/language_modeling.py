@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 # SimpleLanguageModelingDatasetReader. It will be removed after 2020/01/04 in
 # the version 1.0.0 release or later.
 
+
 @DatasetReader.register("language_modeling")
 class LanguageModelingReader(DatasetReader):
     """
