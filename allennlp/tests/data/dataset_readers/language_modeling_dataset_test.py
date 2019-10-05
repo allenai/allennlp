@@ -1,10 +1,6 @@
 import pytest
 import warnings
 
-# The LanguageModelingReader is deprecated, but we don't want this test to fail
-# before we remove it.
-warnings.simplefilter(action="ignore", category=DeprecationWarning)
-
 from allennlp.data.dataset_readers import LanguageModelingReader
 from allennlp.common.util import ensure_list
 from allennlp.common.testing import AllenNlpTestCase
@@ -13,6 +9,9 @@ from allennlp.common.testing import AllenNlpTestCase
 class TestLanguageModelingDatasetReader:
     @pytest.mark.parametrize("lazy", (True, False))
     def test_read_from_file(self, lazy):
+        # The LanguageModelingReader is deprecated, but we don't want this test to fail
+        # before we remove it.
+        warnings.simplefilter(action="ignore", category=DeprecationWarning)
         reader = LanguageModelingReader(tokens_per_instance=3, lazy=lazy)
 
         instances = ensure_list(
