@@ -50,7 +50,7 @@ local cuda_device = 0;
       "cut_frac": warmup_ratio,
       "num_steps_per_epoch": std.ceil(train_size / gradient_accumulation_batch_size),
     },
-    "validation_metric": "+accuracy",
+    "validation_metric": "+EM",
     "num_serialized_models_to_keep": 1,
     "should_log_learning_rate": true,
     "gradient_accumulation_steps": gradient_accumulation_batch_size,
