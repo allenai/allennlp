@@ -5,14 +5,17 @@ local num_epochs = 4;
 local learning_rate = 1e-5;
 local weight_decay = 0.1;
 local warmup_ratio = 0.06;
-local transformer_model = "xlnet-large-cased";
-//local transformer_model = "xlnet-base-cased";
+//local transformer_model = "xlnet-large-cased";
+local transformer_model = "xlnet-base-cased";
 local dataset_dir = "https://s3.amazonaws.com/commensenseqa/";
 
 {
   "dataset_reader": {
     "type": "transformer_mc_qa",
     "sample": -1,
+    "num_choices": 5,
+    "context_syntax": "q#a!",
+    "add_prefix": {"q": "Q: ", "a": "A: "},
     "pretrained_model": transformer_model,
     "max_pieces": 256
   },
@@ -45,7 +48,7 @@ local dataset_dir = "https://s3.amazonaws.com/commensenseqa/";
     "num_serialized_models_to_keep": 1,
     "should_log_learning_rate": true,
     "gradient_accumulation_steps": gradient_accumulation_batch_size,
-    "grad_clipping": 1.0,
+    //"grad_clipping": 1.0,
     "num_epochs": num_epochs,
     "cuda_device": 0
   }
