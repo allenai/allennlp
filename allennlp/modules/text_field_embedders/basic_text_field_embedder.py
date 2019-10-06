@@ -46,15 +46,18 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
         match those in ``token_embedders`` (useful if the mapping is specified
         via ``embedder_to_indexer_map``).
     """
-    def __init__(self,
-                 token_embedders: Dict[str, TokenEmbedder],
-                 embedder_to_indexer_map: Dict[str, Union[List[str], Dict[str, str]]] = None,
-                 allow_unmatched_keys: bool = False) -> None:
-        super(BasicTextFieldEmbedder, self).__init__()
+
+    def __init__(
+        self,
+        token_embedders: Dict[str, TokenEmbedder],
+        embedder_to_indexer_map: Dict[str, Union[List[str], Dict[str, str]]] = None,
+        allow_unmatched_keys: bool = False,
+    ) -> None:
+        super().__init__()
         self._token_embedders = token_embedders
         self._embedder_to_indexer_map = embedder_to_indexer_map
         for key, embedder in token_embedders.items():
-            name = 'token_embedder_%s' % key
+            name = "token_embedder_%s" % key
             self.add_module(name, embedder)
         self._allow_unmatched_keys = allow_unmatched_keys
 
@@ -65,9 +68,9 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
             output_dim += embedder.get_output_dim()
         return output_dim
 
-    def forward(self, text_field_input: Dict[str, torch.Tensor],
-                num_wrapping_dims: int = 0,
-                **kwargs) -> torch.Tensor:
+    def forward(
+        self, text_field_input: Dict[str, torch.Tensor], num_wrapping_dims: int = 0, **kwargs
+    ) -> torch.Tensor:
         embedder_keys = self._token_embedders.keys()
         input_keys = text_field_input.keys()
 
@@ -75,21 +78,25 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
         if not self._allow_unmatched_keys:
             if embedder_keys < input_keys:
                 # token embedder keys are a strict subset of text field input keys.
-                message = (f"Your text field is generating more keys ({list(input_keys)}) "
-                           f"than you have token embedders ({list(embedder_keys)}. "
-                           f"If you are using a token embedder that requires multiple keys "
-                           f"(for example, the OpenAI Transformer embedder or the BERT embedder) "
-                           f"you need to add allow_unmatched_keys = True "
-                           f"(and likely an embedder_to_indexer_map) to your "
-                           f"BasicTextFieldEmbedder configuration. "
-                           f"Otherwise, you should check that there is a 1:1 embedding "
-                           f"between your token indexers and token embedders.")
+                message = (
+                    f"Your text field is generating more keys ({list(input_keys)}) "
+                    f"than you have token embedders ({list(embedder_keys)}. "
+                    f"If you are using a token embedder that requires multiple keys "
+                    f"(for example, the OpenAI Transformer embedder or the BERT embedder) "
+                    f"you need to add allow_unmatched_keys = True "
+                    f"(and likely an embedder_to_indexer_map) to your "
+                    f"BasicTextFieldEmbedder configuration. "
+                    f"Otherwise, you should check that there is a 1:1 embedding "
+                    f"between your token indexers and token embedders."
+                )
                 raise ConfigurationError(message)
 
             elif self._token_embedders.keys() != text_field_input.keys():
                 # some other mismatch
-                message = "Mismatched token keys: %s and %s" % (str(self._token_embedders.keys()),
-                                                                str(text_field_input.keys()))
+                message = "Mismatched token keys: %s and %s" % (
+                    str(self._token_embedders.keys()),
+                    str(text_field_input.keys()),
+                )
                 raise ConfigurationError(message)
 
         embedded_representations = []
@@ -97,7 +104,7 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
         for key in keys:
             # Note: need to use getattr here so that the pytorch voodoo
             # with submodules works with multiple GPUs.
-            embedder = getattr(self, 'token_embedder_{}'.format(key))
+            embedder = getattr(self, "token_embedder_{}".format(key))
             forward_params = inspect.signature(embedder.forward).parameters
             forward_params_values = {}
             for param in forward_params.keys():
@@ -109,17 +116,18 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
             # If we pre-specified a mapping explictly, use that.
             # make mypy happy
             tensors: Union[List[Any], Dict[str, Any]] = None
-            if self._embedder_to_indexer_map is not None:
+            if self._embedder_to_indexer_map is not None and key in self._embedder_to_indexer_map:
                 indexer_map = self._embedder_to_indexer_map[key]
                 if isinstance(indexer_map, list):
                     # If `indexer_key` is None, we map it to `None`.
-                    tensors = [(text_field_input[indexer_key] if indexer_key is not None else None)
-                               for indexer_key in indexer_map]
+                    tensors = [
+                        (text_field_input[indexer_key] if indexer_key is not None else None)
+                        for indexer_key in indexer_map
+                    ]
                     token_vectors = embedder(*tensors, **forward_params_values)
                 elif isinstance(indexer_map, dict):
                     tensors = {
-                            name: text_field_input[argument]
-                            for name, argument in indexer_map.items()
+                        name: text_field_input[argument] for name, argument in indexer_map.items()
                     }
                     token_vectors = embedder(**tensors, **forward_params_values)
                 else:
@@ -134,9 +142,9 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
 
     # This is some unusual logic, it needs a custom from_params.
     @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> 'BasicTextFieldEmbedder':  # type: ignore
-        # pylint: disable=arguments-differ,bad-super-call
-
+    def from_params(  # type: ignore
+        cls, vocab: Vocabulary, params: Params
+    ) -> "BasicTextFieldEmbedder":
         # The original `from_params` for this class was designed in a way that didn't agree
         # with the constructor. The constructor wants a 'token_embedders' parameter that is a
         # `Dict[str, TokenEmbedder]`, but the original `from_params` implementation expected those
@@ -151,13 +159,13 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
             embedder_to_indexer_map = embedder_to_indexer_map.as_dict(quiet=True)
         allow_unmatched_keys = params.pop_bool("allow_unmatched_keys", False)
 
-        token_embedder_params = params.pop('token_embedders', None)
+        token_embedder_params = params.pop("token_embedders", None)
 
         if token_embedder_params is not None:
             # New way: explicitly specified, so use it.
             token_embedders = {
-                    name: TokenEmbedder.from_params(subparams, vocab=vocab)
-                    for name, subparams in token_embedder_params.items()
+                name: TokenEmbedder.from_params(subparams, vocab=vocab)
+                for name, subparams in token_embedder_params.items()
             }
 
         else:
@@ -165,7 +173,9 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
             keys = list(params.keys())
             for key in keys:
                 embedder_params = params.pop(key)
-                token_embedders[key] = TokenEmbedder.from_params(vocab=vocab, params=embedder_params)
+                token_embedders[key] = TokenEmbedder.from_params(
+                    vocab=vocab, params=embedder_params
+                )
 
         params.assert_empty(cls.__name__)
         return cls(token_embedders, embedder_to_indexer_map, allow_unmatched_keys)

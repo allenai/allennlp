@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name,protected-access
 import torch
 import pytest
 import numpy
@@ -7,11 +6,11 @@ from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.checks import ConfigurationError
 from allennlp.training.metrics import CategoricalAccuracy
 
+
 class CategoricalAccuracyTest(AllenNlpTestCase):
     def test_categorical_accuracy(self):
         accuracy = CategoricalAccuracy()
-        predictions = torch.Tensor([[0.35, 0.25, 0.1, 0.1, 0.2],
-                                    [0.1, 0.6, 0.1, 0.2, 0.0]])
+        predictions = torch.Tensor([[0.35, 0.25, 0.1, 0.1, 0.2], [0.1, 0.6, 0.1, 0.2, 0.0]])
         targets = torch.Tensor([0, 3])
         accuracy(predictions, targets)
         actual_accuracy = accuracy.get_metric()
@@ -19,8 +18,7 @@ class CategoricalAccuracyTest(AllenNlpTestCase):
 
     def test_top_k_categorical_accuracy(self):
         accuracy = CategoricalAccuracy(top_k=2)
-        predictions = torch.Tensor([[0.35, 0.25, 0.1, 0.1, 0.2],
-                                    [0.1, 0.6, 0.1, 0.2, 0.0]])
+        predictions = torch.Tensor([[0.35, 0.25, 0.1, 0.1, 0.2], [0.1, 0.6, 0.1, 0.2, 0.0]])
         targets = torch.Tensor([0, 3])
         accuracy(predictions, targets)
         actual_accuracy = accuracy.get_metric()
@@ -28,8 +26,7 @@ class CategoricalAccuracyTest(AllenNlpTestCase):
 
     def test_top_k_categorical_accuracy_accumulates_and_resets_correctly(self):
         accuracy = CategoricalAccuracy(top_k=2)
-        predictions = torch.Tensor([[0.35, 0.25, 0.1, 0.1, 0.2],
-                                    [0.1, 0.6, 0.1, 0.2, 0.0]])
+        predictions = torch.Tensor([[0.35, 0.25, 0.1, 0.1, 0.2], [0.1, 0.6, 0.1, 0.2, 0.0]])
         targets = torch.Tensor([0, 3])
         accuracy(predictions, targets)
         accuracy(predictions, targets)
@@ -42,9 +39,9 @@ class CategoricalAccuracyTest(AllenNlpTestCase):
 
     def test_top_k_categorical_accuracy_respects_mask(self):
         accuracy = CategoricalAccuracy(top_k=2)
-        predictions = torch.Tensor([[0.35, 0.25, 0.1, 0.1, 0.2],
-                                    [0.1, 0.6, 0.1, 0.2, 0.0],
-                                    [0.1, 0.2, 0.5, 0.2, 0.0]])
+        predictions = torch.Tensor(
+            [[0.35, 0.25, 0.1, 0.1, 0.2], [0.1, 0.6, 0.1, 0.2, 0.0], [0.1, 0.2, 0.5, 0.2, 0.0]]
+        )
         targets = torch.Tensor([0, 3, 0])
         mask = torch.Tensor([0, 1, 1])
         accuracy(predictions, targets, mask)
@@ -53,21 +50,19 @@ class CategoricalAccuracyTest(AllenNlpTestCase):
 
     def test_top_k_categorical_accuracy_works_for_sequences(self):
         accuracy = CategoricalAccuracy(top_k=2)
-        predictions = torch.Tensor([[[0.35, 0.25, 0.1, 0.1, 0.2],
-                                     [0.1, 0.6, 0.1, 0.2, 0.0],
-                                     [0.1, 0.6, 0.1, 0.2, 0.0]],
-                                    [[0.35, 0.25, 0.1, 0.1, 0.2],
-                                     [0.1, 0.6, 0.1, 0.2, 0.0],
-                                     [0.1, 0.6, 0.1, 0.2, 0.0]]])
-        targets = torch.Tensor([[0, 3, 4],
-                                [0, 1, 4]])
+        predictions = torch.Tensor(
+            [
+                [[0.35, 0.25, 0.1, 0.1, 0.2], [0.1, 0.6, 0.1, 0.2, 0.0], [0.1, 0.6, 0.1, 0.2, 0.0]],
+                [[0.35, 0.25, 0.1, 0.1, 0.2], [0.1, 0.6, 0.1, 0.2, 0.0], [0.1, 0.6, 0.1, 0.2, 0.0]],
+            ]
+        )
+        targets = torch.Tensor([[0, 3, 4], [0, 1, 4]])
         accuracy(predictions, targets)
         actual_accuracy = accuracy.get_metric(reset=True)
         numpy.testing.assert_almost_equal(actual_accuracy, 0.6666666)
 
         # Test the same thing but with a mask:
-        mask = torch.Tensor([[0, 1, 1],
-                             [1, 0, 1]])
+        mask = torch.Tensor([[0, 1, 1], [1, 0, 1]])
         accuracy(predictions, targets, mask)
         actual_accuracy = accuracy.get_metric(reset=True)
         numpy.testing.assert_almost_equal(actual_accuracy, 0.50)
@@ -81,32 +76,39 @@ class CategoricalAccuracyTest(AllenNlpTestCase):
 
     def test_tie_break_categorical_accuracy(self):
         accuracy = CategoricalAccuracy(tie_break=True)
-        predictions = torch.Tensor([[0.35, 0.25, 0.35, 0.35, 0.35],
-                                    [0.1, 0.6, 0.1, 0.2, 0.2],
-                                    [0.1, 0.0, 0.1, 0.2, 0.2]])
+        predictions = torch.Tensor(
+            [[0.35, 0.25, 0.35, 0.35, 0.35], [0.1, 0.6, 0.1, 0.2, 0.2], [0.1, 0.0, 0.1, 0.2, 0.2]]
+        )
         # Test without mask:
         targets = torch.Tensor([2, 1, 4])
         accuracy(predictions, targets)
-        assert accuracy.get_metric(reset=True) == (0.25 + 1 + 0.5)/3.0
+        assert accuracy.get_metric(reset=True) == (0.25 + 1 + 0.5) / 3.0
 
         # # # Test with mask
         mask = torch.Tensor([1, 0, 1])
         targets = torch.Tensor([2, 1, 4])
         accuracy(predictions, targets, mask)
-        assert accuracy.get_metric(reset=True) == (0.25 + 0.5)/2.0
+        assert accuracy.get_metric(reset=True) == (0.25 + 0.5) / 2.0
 
         # # Test tie-break with sequence
-        predictions = torch.Tensor([[[0.35, 0.25, 0.35, 0.35, 0.35],
-                                     [0.1, 0.6, 0.1, 0.2, 0.2],
-                                     [0.1, 0.0, 0.1, 0.2, 0.2]],
-                                    [[0.35, 0.25, 0.35, 0.35, 0.35],
-                                     [0.1, 0.6, 0.1, 0.2, 0.2],
-                                     [0.1, 0.0, 0.1, 0.2, 0.2]]])
-        targets = torch.Tensor([[0, 1, 3],  # 0.25 + 1 + 0.5
-                                [0, 3, 4]]) # 0.25 + 0 + 0.5 = 2.5
+        predictions = torch.Tensor(
+            [
+                [
+                    [0.35, 0.25, 0.35, 0.35, 0.35],
+                    [0.1, 0.6, 0.1, 0.2, 0.2],
+                    [0.1, 0.0, 0.1, 0.2, 0.2],
+                ],
+                [
+                    [0.35, 0.25, 0.35, 0.35, 0.35],
+                    [0.1, 0.6, 0.1, 0.2, 0.2],
+                    [0.1, 0.0, 0.1, 0.2, 0.2],
+                ],
+            ]
+        )
+        targets = torch.Tensor([[0, 1, 3], [0, 3, 4]])  # 0.25 + 1 + 0.5  # 0.25 + 0 + 0.5 = 2.5
         accuracy(predictions, targets)
         actual_accuracy = accuracy.get_metric(reset=True)
-        numpy.testing.assert_almost_equal(actual_accuracy, 2.5/6.0)
+        numpy.testing.assert_almost_equal(actual_accuracy, 2.5 / 6.0)
 
     def test_top_k_and_tie_break_together_catches_exceptions(self):
         with pytest.raises(ConfigurationError):

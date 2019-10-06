@@ -11,7 +11,7 @@ from allennlp.semparse.domain_languages.domain_language import nltk_tree_to_logi
 from allennlp.semparse import util as semparse_util
 from allennlp.semparse.common.errors import ParsingError
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 class World:
@@ -36,11 +36,14 @@ class World:
         nested lambdas do we need to worry about?  This is important when considering the space of
         all possible actions, which we need to enumerate a priori for the parser.
     """
-    def __init__(self,
-                 constant_type_prefixes: Dict[str, BasicType] = None,
-                 global_type_signatures: Dict[str, Type] = None,
-                 global_name_mapping: Dict[str, str] = None,
-                 num_nested_lambdas: int = 0) -> None:
+
+    def __init__(
+        self,
+        constant_type_prefixes: Dict[str, BasicType] = None,
+        global_type_signatures: Dict[str, Type] = None,
+        global_name_mapping: Dict[str, str] = None,
+        num_nested_lambdas: int = 0,
+    ) -> None:
         # NLTK has a naming convention for variable types. If the world has predicate or entity names beyond
         # what's defined in the COMMON_NAME_MAPPING, they need to be added to this dict.
         # We initialize this dict with common predicate names and update it as we process logical forms.
@@ -50,15 +53,20 @@ class World:
         self.global_name_mapping = global_name_mapping or {}
         self.global_type_signatures = global_type_signatures or {}
         # We keep a reverse map as well to put the terminals back in action sequences.
-        self.reverse_name_mapping = {mapped_name: name for name, mapped_name in self.global_name_mapping.items()}
+        self.reverse_name_mapping = {
+            mapped_name: name for name, mapped_name in self.global_name_mapping.items()
+        }
         type_prefixes = constant_type_prefixes or {}
         self._num_nested_lambdas = num_nested_lambdas
         if num_nested_lambdas > 3:
-            raise NotImplementedError("For ease of implementation, we currently only handle at "
-                                      "most three nested lambda expressions")
-        self._lambda_variables = set(['x', 'y', 'z'][:num_nested_lambdas])
-        self._logic_parser = types.DynamicTypeLogicParser(constant_type_prefixes=type_prefixes,
-                                                          type_signatures=self.global_type_signatures)
+            raise NotImplementedError(
+                "For ease of implementation, we currently only handle at "
+                "most three nested lambda expressions"
+            )
+        self._lambda_variables = set(["x", "y", "z"][:num_nested_lambdas])
+        self._logic_parser = types.DynamicTypeLogicParser(
+            constant_type_prefixes=type_prefixes, type_signatures=self.global_type_signatures
+        )
         self._right_side_indexed_actions: Dict[str, List[Tuple[str, str]]] = None
         # Caching this to avoid recompting it every time `get_valid_actions` is called.
         self._valid_actions: Dict[str, List[str]] = None
@@ -80,31 +88,33 @@ class World:
         if the given symbol is a terminal symbol.
         """
         # We special-case 'lambda' here because it behaves weirdly in action sequences.
-        return (symbol in self.global_name_mapping or
-                symbol in self.local_name_mapping or
-                'lambda' in symbol)
+        return (
+            symbol in self.global_name_mapping
+            or symbol in self.local_name_mapping
+            or "lambda" in symbol
+        )
 
     def get_valid_actions(self) -> Dict[str, List[str]]:
         if not self._valid_actions:
             multi_match_mapping = self.get_multi_match_mapping()
-            self._valid_actions = types.get_valid_actions(self.get_name_mapping(),
-                                                          self.get_type_signatures(),
-                                                          self.get_basic_types(),
-                                                          valid_starting_types=self.get_valid_starting_types(),
-                                                          num_nested_lambdas=self._num_nested_lambdas,
-                                                          multi_match_mapping=multi_match_mapping)
+            self._valid_actions = types.get_valid_actions(
+                self.get_name_mapping(),
+                self.get_type_signatures(),
+                self.get_basic_types(),
+                valid_starting_types=self.get_valid_starting_types(),
+                num_nested_lambdas=self._num_nested_lambdas,
+                multi_match_mapping=multi_match_mapping,
+            )
         return self._valid_actions
 
-    def get_paths_to_root(self,
-                          action: str,
-                          max_path_length: int = 20,
-                          beam_size: int = 30,
-                          max_num_paths: int = 10) -> List[List[str]]:
+    def get_paths_to_root(
+        self, action: str, max_path_length: int = 20, beam_size: int = 30, max_num_paths: int = 10
+    ) -> List[List[str]]:
         """
         For a given action, returns at most ``max_num_paths`` paths to the root (production with
         ``START_SYMBOL``) that are not longer than ``max_path_length``.
         """
-        action_left_side, _ = action.split(' -> ')
+        action_left_side, _ = action.split(" -> ")
         right_side_indexed_actions = self._get_right_side_indexed_actions()
         lists_to_expand: List[Tuple[str, List[str]]] = [(action_left_side, [action])]
         completed_paths = []
@@ -144,7 +154,7 @@ class World:
         for action_set in self.get_valid_actions().values():
             all_actions.update(action_set)
         for i in range(self._num_nested_lambdas):
-            lambda_var = chr(ord('x') + i)
+            lambda_var = chr(ord("x") + i)
             for basic_type in self.get_basic_types():
                 production = f"{basic_type} -> {lambda_var}"
                 all_actions.add(production)
@@ -158,14 +168,17 @@ class World:
             self._right_side_indexed_actions = defaultdict(list)
             all_actions = self.all_possible_actions()
             for possible_action in all_actions:
-                left_side, right_side = possible_action.split(' -> ')
-                if '[' not in right_side:
-                    self._right_side_indexed_actions[right_side].append((left_side, possible_action))
+                left_side, right_side = possible_action.split(" -> ")
+                if "[" not in right_side:
+                    self._right_side_indexed_actions[right_side].append(
+                        (left_side, possible_action)
+                    )
                 else:
-                    right_side_parts = right_side[1:-1].split(', ')
+                    right_side_parts = right_side[1:-1].split(", ")
                     for right_side_part in right_side_parts:
-                        self._right_side_indexed_actions[right_side_part].append((left_side,
-                                                                                  possible_action))
+                        self._right_side_indexed_actions[right_side_part].append(
+                            (left_side, possible_action)
+                        )
         return self._right_side_indexed_actions
 
     def get_basic_types(self) -> Set[Type]:
@@ -203,9 +216,7 @@ class World:
                     self._multi_match_mapping[basic_type] = matched_types
         return self._multi_match_mapping
 
-    def parse_logical_form(self,
-                           logical_form: str,
-                           remove_var_function: bool = True) -> Expression:
+    def parse_logical_form(self, logical_form: str, remove_var_function: bool = True) -> Expression:
         """
         Takes a logical form as a string, maps its tokens using the mapping and returns a parsed expression.
 
@@ -225,9 +236,9 @@ class World:
             logical_form = f"({logical_form})"
         if remove_var_function:
             # Replace "(x)" with "x"
-            logical_form = re.sub(r'\(([x-z])\)', r'\1', logical_form)
+            logical_form = re.sub(r"\(([x-z])\)", r"\1", logical_form)
             # Replace "(var x)" with "(x)"
-            logical_form = re.sub(r'\(var ([x-z])\)', r'(\1)', logical_form)
+            logical_form = re.sub(r"\(var ([x-z])\)", r"(\1)", logical_form)
         parsed_lisp = semparse_util.lisp_to_nested_expression(logical_form)
         translated_string = self._process_nested_expression(parsed_lisp)
         type_signature = self.local_type_signatures.copy()
@@ -239,12 +250,9 @@ class World:
         Returns the sequence of actions (as strings) that resulted in the given expression.
         """
         # Starting with the type of the whole expression
-        return self._get_transitions(expression,
-                                     [f"{types.START_TYPE} -> {expression.type}"])
+        return self._get_transitions(expression, [f"{types.START_TYPE} -> {expression.type}"])
 
-    def get_logical_form(self,
-                         action_sequence: List[str],
-                         add_var_function: bool = True) -> str:
+    def get_logical_form(self, action_sequence: List[str], add_var_function: bool = True) -> str:
         """
         Takes an action sequence and constructs a logical form from it. This is useful if you want
         to get a logical form from a decoded sequence of actions generated by a transition based
@@ -271,9 +279,9 @@ class World:
         tree = Tree(remaining_actions[0][1], [])
 
         try:
-            remaining_actions = self._construct_node_from_actions(tree,
-                                                                  remaining_actions[1:],
-                                                                  add_var_function)
+            remaining_actions = self._construct_node_from_actions(
+                tree, remaining_actions[1:], add_var_function
+            )
         except ParsingError:
             logger.error("Error parsing action sequence: %s", action_sequence)
             raise
@@ -284,10 +292,9 @@ class World:
             raise ParsingError("Extra actions in action sequence")
         return nltk_tree_to_logical_form(tree)
 
-    def _construct_node_from_actions(self,
-                                     current_node: Tree,
-                                     remaining_actions: List[List[str]],
-                                     add_var_function: bool) -> List[List[str]]:
+    def _construct_node_from_actions(
+        self, current_node: Tree, remaining_actions: List[List[str]], add_var_function: bool
+    ) -> List[List[str]]:
         """
         Given a current node in the logical form tree, and a list of actions in an action sequence,
         this method fills in the children of the current node from the action sequence, then
@@ -308,19 +315,24 @@ class World:
         left_side, right_side = remaining_actions.pop(0)
         if left_side != current_node.label():
             mismatch = True
-            multi_match_mapping = {str(key): [str(value) for value in values] for key,
-                                   values in self.get_multi_match_mapping().items()}
+            multi_match_mapping = {
+                str(key): [str(value) for value in values]
+                for key, values in self.get_multi_match_mapping().items()
+            }
             current_label = current_node.label()
-            if current_label in multi_match_mapping and left_side in multi_match_mapping[current_label]:
+            if (
+                current_label in multi_match_mapping
+                and left_side in multi_match_mapping[current_label]
+            ):
                 mismatch = False
             if mismatch:
                 logger.error("Current node: %s", current_node)
                 logger.error("Next action: %s -> %s", left_side, right_side)
                 logger.error("Remaining actions were: %s", remaining_actions)
                 raise ParsingError("Current node does not match next action")
-        if right_side[0] == '[':
+        if right_side[0] == "[":
             # This is a non-terminal expansion, with more than one child node.
-            for child_type in right_side[1:-1].split(', '):
+            for child_type in right_side[1:-1].split(", "):
                 if child_type.startswith("'lambda"):
                     # We need to special-case the handling of lambda here, because it's handled a
                     # bit weirdly in the action sequence.  This is stripping off the single quotes
@@ -329,23 +341,27 @@ class World:
                 child_node = Tree(child_type, [])
                 current_node.append(child_node)  # you add a child to an nltk.Tree with `append`
                 if not self.is_terminal(child_type):
-                    remaining_actions = self._construct_node_from_actions(child_node,
-                                                                          remaining_actions,
-                                                                          add_var_function)
+                    remaining_actions = self._construct_node_from_actions(
+                        child_node, remaining_actions, add_var_function
+                    )
         elif self.is_terminal(right_side):
             # The current node is a pre-terminal; we'll add a single terminal child.  We need to
             # check first for whether we need to add a (var _) around the terminal node, though.
             if add_var_function and right_side in self._lambda_variables:
                 right_side = f"(var {right_side})"
-            if add_var_function and right_side == 'var':
-                raise ParsingError('add_var_function was true, but action sequence already had var')
-            current_node.append(Tree(right_side, []))  # you add a child to an nltk.Tree with `append`
+            if add_var_function and right_side == "var":
+                raise ParsingError("add_var_function was true, but action sequence already had var")
+            current_node.append(
+                Tree(right_side, [])
+            )  # you add a child to an nltk.Tree with `append`
         else:
             # The only way this can happen is if you have a unary non-terminal production rule.
             # That is almost certainly not what you want with this kind of grammar, so we'll crash.
             # If you really do want this, open a PR with a valid use case.
-            raise ParsingError(f"Found a unary production rule: {left_side} -> {right_side}. "
-                               "Are you sure you want a unary production rule in your grammar?")
+            raise ParsingError(
+                f"Found a unary production rule: {left_side} -> {right_side}. "
+                "Are you sure you want a unary production rule in your grammar?"
+            )
         return remaining_actions
 
     @classmethod
@@ -358,7 +374,7 @@ class World:
             <e,<e,t>> -> 2
             <b,<<b,#1>,<#1,b>>> -> 3
         """
-        if not "<" in type_signature:
+        if "<" not in type_signature:
             return 0
         # We need to find the return type from the signature. We do that by removing the outer most
         # angular brackets and traversing the remaining substring till the angular brackets (if any)
@@ -368,15 +384,15 @@ class World:
         num_brackets = 0
         char_index = 0
         for char in type_signature:
-            if char == '<':
+            if char == "<":
                 num_brackets += 1
-            elif char == '>':
+            elif char == ">":
                 num_brackets -= 1
-            elif char == ',':
+            elif char == ",":
                 if num_brackets == 0:
                     break
             char_index += 1
-        return_type = type_signature[char_index+1:]
+        return_type = type_signature[char_index + 1 :]
         return 1 + cls._infer_num_arguments(return_type)
 
     def _process_nested_expression(self, nested_expression) -> str:
@@ -442,9 +458,7 @@ class World:
         if name_type:
             self.local_type_signatures[translated_name] = name_type
 
-    def _get_transitions(self,
-                         expression: Expression,
-                         current_transitions: List[str]) -> List[str]:
+    def _get_transitions(self, expression: Expression, current_transitions: List[str]) -> List[str]:
         # The way we handle curried functions in here is a bit of a mess, but it works.  For any
         # function that takes more than one argument, the NLTK Expression object will be curried,
         # and so the standard "visitor" pattern used by NLTK will result in action sequences that
@@ -485,7 +499,9 @@ class World:
                         # This is the initial application of a curried function.  We'll use this
                         # node in the expression to generate the action for this function, using
                         # all of its arguments.
-                        transformed_types = [function.type] + [argument.type for argument in arguments]
+                        transformed_types = [function.type] + [
+                            argument.type for argument in arguments
+                        ]
                     else:
                         # We're at an intermediate node.  We'll set `transformed_types` to `None`
                         # to indicate that we need to squelch this action.

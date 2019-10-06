@@ -18,7 +18,7 @@ from allennlp.data.dataset import Batch
 from allennlp.nn import util
 from allennlp.nn.regularizers import RegularizerApplicator
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 # When training a model, many sets of weights are saved. By default we want to
 # save/load this set of weights.
@@ -46,11 +46,10 @@ class Model(torch.nn.Module, Registrable):
     :class:`~allennlp.training.Trainer`. Metrics that begin with "_" will not be logged
     to the progress bar by :class:`~allennlp.training.Trainer`.
     """
+
     _warn_for_unseparable_batches: Set[str] = set()
 
-    def __init__(self,
-                 vocab: Vocabulary,
-                 regularizer: RegularizerApplicator = None) -> None:
+    def __init__(self, vocab: Vocabulary, regularizer: RegularizerApplicator = None) -> None:
         super().__init__()
         self.vocab = vocab
         self._regularizer = regularizer
@@ -65,14 +64,13 @@ class Model(torch.nn.Module, Registrable):
         else:
             return self._regularizer(self)
 
-    def get_parameters_for_histogram_tensorboard_logging( # pylint: disable=invalid-name
-            self) -> List[str]:
+    def get_parameters_for_histogram_tensorboard_logging(self) -> List[str]:
         """
         Returns the name of model parameters used for logging histograms to tensorboard.
         """
         return [name for name, _ in self.named_parameters()]
 
-    def forward(self, *inputs) -> Dict[str, torch.Tensor]:  # pylint: disable=arguments-differ
+    def forward(self, *inputs) -> Dict[str, torch.Tensor]:
         """
         Defines the forward pass of the model. In addition, to facilitate easy training,
         this method is designed to compute a loss function defined by a user.
@@ -123,8 +121,7 @@ class Model(torch.nn.Module, Registrable):
         """
         return self.forward_on_instances([instance])[0]
 
-    def forward_on_instances(self,
-                             instances: List[Instance]) -> List[Dict[str, numpy.ndarray]]:
+    def forward_on_instances(self, instances: List[Instance]) -> List[Dict[str, numpy.ndarray]]:
         """
         Takes a list of  :class:`~allennlp.data.instance.Instance`s, converts that text into
         arrays using this model's :class:`Vocabulary`, passes those arrays through
@@ -145,31 +142,33 @@ class Model(torch.nn.Module, Registrable):
         A list of the models output for each instance.
         """
         batch_size = len(instances)
-        with torch.no_grad():
-            cuda_device = self._get_prediction_device()
-            dataset = Batch(instances)
-            dataset.index_instances(self.vocab)
-            model_input = util.move_to_device(dataset.as_tensor_dict(), cuda_device)
-            outputs = self.decode(self(**model_input))
+        #with torch.no_grad():        
+        cuda_device = self._get_prediction_device()
+        dataset = Batch(instances)
+        dataset.index_instances(self.vocab)
+        model_input = util.move_to_device(dataset.as_tensor_dict(), cuda_device)
+        outputs = self.decode(self(**model_input))
 
-            instance_separated_output: List[Dict[str, numpy.ndarray]] = [{} for _ in dataset.instances]
-            for name, output in list(outputs.items()):
-                if isinstance(output, torch.Tensor):
-                    # NOTE(markn): This is a hack because 0-dim pytorch tensors are not iterable.
-                    # This occurs with batch size 1, because we still want to include the loss in that case.
-                    if output.dim() == 0:
-                        output = output.unsqueeze(0)
+        instance_separated_output: List[Dict[str, numpy.ndarray]] = [
+            {} for _ in dataset.instances
+        ]
+        for name, output in list(outputs.items()):
+            if isinstance(output, torch.Tensor):
+                # NOTE(markn): This is a hack because 0-dim pytorch tensors are not iterable.
+                # This occurs with batch size 1, because we still want to include the loss in that case.
+                if output.dim() == 0:
+                    output = output.unsqueeze(0)
 
-                    if output.size(0) != batch_size:
-                        self._maybe_warn_for_unseparable_batches(name)
-                        continue
-                    output = output.detach().cpu().numpy()
-                elif len(output) != batch_size:
+                if output.size(0) != batch_size:
                     self._maybe_warn_for_unseparable_batches(name)
                     continue
-                for instance_output, batch_element in zip(instance_separated_output, output):
-                    instance_output[name] = batch_element
-            return instance_separated_output
+                # output = output.detach().cpu().numpy()
+            elif len(output) != batch_size:
+                self._maybe_warn_for_unseparable_batches(name)
+                continue
+            for instance_output, batch_element in zip(instance_separated_output, output):
+                instance_output[name] = batch_element
+        return instance_separated_output
 
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
@@ -185,7 +184,7 @@ class Model(torch.nn.Module, Registrable):
         By default in the base class we do nothing.  If your model has some special decoding step,
         override this method.
         """
-        # pylint: disable=no-self-use
+
         return output_dict
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
@@ -200,7 +199,7 @@ class Model(torch.nn.Module, Registrable):
         :class:`~allennlp.training.Metric` handling the accumulation of the metric until this
         method is called.
         """
-        # pylint: disable=unused-argument,no-self-use
+
         return {}
 
     def _get_prediction_device(self) -> int:
@@ -229,19 +228,19 @@ class Model(torch.nn.Module, Registrable):
         by a class attribute ``_warn_for_unseperable_batches`` because it would be extremely verbose
         otherwise.
         """
-        if  output_key not in self._warn_for_unseparable_batches:
-            logger.warning(f"Encountered the {output_key} key in the model's return dictionary which "
-                           "couldn't be split by the batch size. Key will be ignored.")
+        if output_key not in self._warn_for_unseparable_batches:
+            logger.warning(
+                f"Encountered the {output_key} key in the model's return dictionary which "
+                "couldn't be split by the batch size. Key will be ignored."
+            )
             # We only want to warn once for this key,
             # so we set this to false so we don't warn again.
             self._warn_for_unseparable_batches.add(output_key)
 
     @classmethod
-    def _load(cls,
-              config: Params,
-              serialization_dir: str,
-              weights_file: str = None,
-              cuda_device: int = -1) -> 'Model':
+    def _load(
+        cls, config: Params, serialization_dir: str, weights_file: str = None, cuda_device: int = -1
+    ) -> "Model":
         """
         Instantiates an already-trained model, based on the experiment
         configuration and some optional overrides.
@@ -249,13 +248,13 @@ class Model(torch.nn.Module, Registrable):
         weights_file = weights_file or os.path.join(serialization_dir, _DEFAULT_WEIGHTS)
 
         # Load vocabulary from file
-        vocab_dir = os.path.join(serialization_dir, 'vocabulary')
+        vocab_dir = os.path.join(serialization_dir, "vocabulary")
         # If the config specifies a vocabulary subclass, we need to use it.
         vocab_params = config.get("vocabulary", Params({}))
         vocab_choice = vocab_params.pop_choice("type", Vocabulary.list_available(), True)
         vocab = Vocabulary.by_name(vocab_choice).from_files(vocab_dir)
 
-        model_params = config.get('model')
+        model_params = config.get("model")
 
         # The experiment config tells us how to _train_ a model, including where to get pre-trained
         # embeddings from.  We're now _loading_ the model, so those embeddings will already be
@@ -285,11 +284,9 @@ class Model(torch.nn.Module, Registrable):
         return model
 
     @classmethod
-    def load(cls,
-             config: Params,
-             serialization_dir: str,
-             weights_file: str = None,
-             cuda_device: int = -1) -> 'Model':
+    def load(
+        cls, config: Params, serialization_dir: str, weights_file: str = None, cuda_device: int = -1
+    ) -> "Model":
         """
         Instantiates an already-trained model, based on the experiment
         configuration and some optional overrides.
@@ -319,11 +316,13 @@ class Model(torch.nn.Module, Registrable):
         """
 
         # Peak at the class of the model.
-        model_type = config["model"] if isinstance(config["model"], str) else config["model"]["type"]
+        model_type = (
+            config["model"] if isinstance(config["model"], str) else config["model"]["type"]
+        )
 
         # Load using an overridable _load method.
         # This allows subclasses of Model to override _load.
-        # pylint: disable=protected-access
+
         return cls.by_name(model_type)._load(config, serialization_dir, weights_file, cuda_device)
 
     def extend_embedder_vocab(self, embedding_sources_mapping: Dict[str, str] = None) -> None:
@@ -347,17 +346,18 @@ class Model(torch.nn.Module, Registrable):
         # The path nesting is already separated by ".": eg. parent_module_name.child_module_name
         embedding_sources_mapping = embedding_sources_mapping or {}
         for model_path, module in self.named_modules():
-            if hasattr(module, 'extend_vocab'):
+            if hasattr(module, "extend_vocab"):
                 pretrained_file = embedding_sources_mapping.get(model_path, None)
-                module.extend_vocab(self.vocab,
-                                    extension_pretrained_file=pretrained_file,
-                                    model_path=model_path)
+                module.extend_vocab(
+                    self.vocab, extension_pretrained_file=pretrained_file, model_path=model_path
+                )
+
 
 def remove_pretrained_embedding_params(params: Params):
     if isinstance(params, Params):  # The model could possible be a string, for example.
         keys = params.keys()
-        if 'pretrained_file' in keys:
-            del params['pretrained_file']
+        if "pretrained_file" in keys:
+            del params["pretrained_file"]
         for value in params.values():
             if isinstance(value, Params):
                 remove_pretrained_embedding_params(value)

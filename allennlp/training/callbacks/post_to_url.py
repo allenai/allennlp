@@ -6,7 +6,7 @@ from allennlp.training.callbacks.callback import Callback, handle_event
 from allennlp.training.callbacks.events import Events
 
 if TYPE_CHECKING:
-    from allennlp.training.callback_trainer import CallbackTrainer  # pylint:disable=unused-import
+    from allennlp.training.callback_trainer import CallbackTrainer
 
 DEFAULT_MESSAGE = "Your experiment has finished running!"
 
@@ -26,14 +26,12 @@ class PostToUrl(Callback):
     key : str, optional (default = "text")
         The key to use in the JSON message blob.
     """
-    def __init__(self,
-                 url: str,
-                 message: str = DEFAULT_MESSAGE,
-                 key: str = "text") -> None:
+
+    def __init__(self, url: str, message: str = DEFAULT_MESSAGE, key: str = "text") -> None:
         self.url = url
         self.json = {key: message}
 
     @handle_event(Events.TRAINING_END)
-    def post_to_url(self, trainer: 'CallbackTrainer'):
-        # pylint: disable=unused-argument
+    def post_to_url(self, trainer: "CallbackTrainer"):
+
         requests.post(self.url, json=self.json)

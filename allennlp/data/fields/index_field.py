@@ -26,22 +26,25 @@ class IndexField(Field[torch.Tensor]):
     sequence_field : ``SequenceField``
         A field containing the sequence that this ``IndexField`` is a pointer into.
     """
+
     def __init__(self, index: int, sequence_field: SequenceField) -> None:
         self.sequence_index = index
         self.sequence_field = sequence_field
 
         if not isinstance(index, int):
-            raise ConfigurationError("IndexFields must be passed integer indices. "
-                                     "Found index: {} with type: {}.".format(index, type(index)))
+            raise ConfigurationError(
+                "IndexFields must be passed integer indices. "
+                "Found index: {} with type: {}.".format(index, type(index))
+            )
 
     @overrides
     def get_padding_lengths(self) -> Dict[str, int]:
-        # pylint: disable=no-self-use
+
         return {}
 
     @overrides
     def as_tensor(self, padding_lengths: Dict[str, int]) -> torch.Tensor:
-        # pylint: disable=unused-argument
+
         tensor = torch.LongTensor([self.sequence_index])
         return tensor
 

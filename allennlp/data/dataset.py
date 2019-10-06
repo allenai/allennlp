@@ -15,13 +15,15 @@ from allennlp.common.util import ensure_list
 from allennlp.data.instance import Instance
 from allennlp.data.vocabulary import Vocabulary
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
+
 
 class Batch(Iterable):
     """
     A batch of Instances. In addition to containing the instances themselves,
     it contains helper functions for converting the data into tensors.
     """
+
     def __init__(self, instances: Iterable[Instance]) -> None:
         """
         A Batch just takes an iterable of instances in its constructor and hangs onto them
@@ -36,9 +38,9 @@ class Batch(Iterable):
         """
         Check that all the instances have the same types.
         """
-        all_instance_fields_and_types: List[Dict[str, str]] = [{k: v.__class__.__name__
-                                                                for k, v in x.fields.items()}
-                                                               for x in self.instances]
+        all_instance_fields_and_types: List[Dict[str, str]] = [
+            {k: v.__class__.__name__ for k, v in x.fields.items()} for x in self.instances
+        ]
         # Check all the field names and Field types are the same for every instance.
         if not all([all_instance_fields_and_types[0] == x for x in all_instance_fields_and_types]):
             raise ConfigurationError("You cannot construct a Batch with non-homogeneous Instances.")
@@ -54,8 +56,9 @@ class Batch(Iterable):
         model parameters, etc.
         """
         padding_lengths: Dict[str, Dict[str, int]] = defaultdict(dict)
-        all_instance_lengths: List[Dict[str, Dict[str, int]]] = [instance.get_padding_lengths()
-                                                                 for instance in self.instances]
+        all_instance_lengths: List[Dict[str, Dict[str, int]]] = [
+            instance.get_padding_lengths() for instance in self.instances
+        ]
         if not all_instance_lengths:
             return {**padding_lengths}
         all_field_lengths: Dict[str, List[Dict[str, int]]] = defaultdict(list)
@@ -68,9 +71,9 @@ class Batch(Iterable):
                 padding_lengths[field_name][padding_key] = max_value
         return {**padding_lengths}
 
-    def as_tensor_dict(self,
-                       padding_lengths: Dict[str, Dict[str, int]] = None,
-                       verbose: bool = False) -> Dict[str, Union[torch.Tensor, Dict[str, torch.Tensor]]]:
+    def as_tensor_dict(
+        self, padding_lengths: Dict[str, Dict[str, int]] = None, verbose: bool = False
+    ) -> Dict[str, Union[torch.Tensor, Dict[str, torch.Tensor]]]:
         # This complex return type is actually predefined elsewhere as a DataArray,
         # but we can't use it because mypy doesn't like it.
         """
@@ -116,7 +119,9 @@ class Batch(Iterable):
         # given a max length for a particular field and padding key.  If we were, we use that
         # instead of the instance-based one.
         if verbose:
-            logger.info("Padding batch of size %d to lengths %s", len(self.instances), str(padding_lengths))
+            logger.info(
+                "Padding batch of size %d to lengths %s", len(self.instances), str(padding_lengths)
+            )
             logger.info("Getting max lengths from instances")
         instance_padding_lengths = self.get_padding_lengths()
         if verbose:
@@ -125,7 +130,9 @@ class Batch(Iterable):
         for field_name, instance_field_lengths in instance_padding_lengths.items():
             for padding_key in instance_field_lengths.keys():
                 if padding_key in padding_lengths[field_name]:
-                    lengths_to_use[field_name][padding_key] = padding_lengths[field_name][padding_key]
+                    lengths_to_use[field_name][padding_key] = padding_lengths[field_name][
+                        padding_key
+                    ]
                 else:
                     lengths_to_use[field_name][padding_key] = instance_field_lengths[padding_key]
 
@@ -159,8 +166,10 @@ class Batch(Iterable):
         sequence_field_lengths: Dict[str, List] = defaultdict(list)
         for instance in self.instances:
             if not instance.indexed:
-                raise ConfigurationError("Instances must be indexed with vocabulary "
-                                         "before asking to print dataset statistics.")
+                raise ConfigurationError(
+                    "Instances must be indexed with vocabulary "
+                    "before asking to print dataset statistics."
+                )
             for field, field_padding_lengths in instance.get_padding_lengths().items():
                 for key, value in field_padding_lengths.items():
                     sequence_field_lengths[f"{field}.{key}"].append(value)
@@ -168,8 +177,10 @@ class Batch(Iterable):
         print("\n\n----Dataset Statistics----\n")
         for name, lengths in sequence_field_lengths.items():
             print(f"Statistics for {name}:")
-            print(f"\tLengths: Mean: {numpy.mean(lengths)}, Standard Dev: {numpy.std(lengths)}, "
-                  f"Max: {numpy.max(lengths)}, Min: {numpy.min(lengths)}")
+            print(
+                f"\tLengths: Mean: {numpy.mean(lengths)}, Standard Dev: {numpy.std(lengths)}, "
+                f"Max: {numpy.max(lengths)}, Min: {numpy.min(lengths)}"
+            )
 
         print("\n10 Random instances: ")
         for i in list(numpy.random.randint(len(self.instances), size=10)):

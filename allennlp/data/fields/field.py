@@ -4,7 +4,7 @@ import torch
 
 from allennlp.data.vocabulary import Vocabulary
 
-DataArray = TypeVar("DataArray", torch.Tensor, Dict[str, torch.Tensor])  # pylint: disable=invalid-name
+DataArray = TypeVar("DataArray", torch.Tensor, Dict[str, torch.Tensor])
 
 
 class Field(Generic[DataArray]):
@@ -22,6 +22,7 @@ class Field(Generic[DataArray]):
     Once a vocabulary is computed and all fields are indexed, we will determine padding lengths,
     then intelligently batch together instances and pad them into actual tensors.
     """
+
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):
         """
         If there are strings in this field that need to be converted into integers through a
@@ -83,7 +84,7 @@ class Field(Generic[DataArray]):
         """
         raise NotImplementedError
 
-    def empty_field(self) -> 'Field':
+    def empty_field(self) -> "Field":
         """
         So that ``ListField`` can pad the number of fields in a list (e.g., the number of answer
         option ``TextFields``), we need a representation of an empty field of each type.  This
@@ -107,7 +108,7 @@ class Field(Generic[DataArray]):
         contained in ``self`` in order to perform the batching, so this is an instance method, not
         a class method.
         """
-        # pylint: disable=no-self-use
+
         return torch.stack(tensor_list)
 
     def __eq__(self, other) -> bool:

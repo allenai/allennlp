@@ -1,8 +1,8 @@
-
 import torch
 from overrides import overrides
 
 from allennlp.common.registrable import Registrable
+
 
 class SpanExtractor(torch.nn.Module, Registrable):
     """
@@ -15,12 +15,15 @@ class SpanExtractor(torch.nn.Module, Registrable):
     shape (batch_size, num_spans, ...), forming some representation of the
     spans.
     """
+
     @overrides
-    def forward(self, # pylint: disable=arguments-differ
-                sequence_tensor: torch.FloatTensor,
-                span_indices: torch.LongTensor,
-                sequence_mask: torch.LongTensor = None,
-                span_indices_mask: torch.LongTensor = None):
+    def forward(
+        self,
+        sequence_tensor: torch.FloatTensor,
+        span_indices: torch.LongTensor,
+        sequence_mask: torch.LongTensor = None,
+        span_indices_mask: torch.LongTensor = None,
+    ):
         """
         Given a sequence tensor, extract spans and return representations of
         them. Span representation can be computed in many different ways,

@@ -17,6 +17,7 @@ class Object:
     attributes : ``JsonDict``
         The dict for each object from the json file.
     """
+
     def __init__(self, attributes: JsonDict, box_id: str) -> None:
         object_color = attributes["color"].lower()
         # The dataset has a hex code only for blue for some reason.
@@ -58,14 +59,13 @@ class Box:
     box_id : ``int``
         An integer identifying the box index (0, 1 or 2).
     """
-    def __init__(self,
-                 objects_list: List[JsonDict],
-                 box_id: int) -> None:
+
+    def __init__(self, objects_list: List[JsonDict], box_id: int) -> None:
         self._name = f"box {box_id + 1}"
         self._objects_string = str([str(_object) for _object in objects_list])
-        self.objects = set([Object(object_dict, self._name) for object_dict in objects_list])
-        self.colors = set([obj.color for obj in self.objects])
-        self.shapes = set([obj.shape for obj in self.objects])
+        self.objects = {Object(object_dict, self._name) for object_dict in objects_list}
+        self.colors = {obj.color for obj in self.objects}
+        self.shapes = {obj.shape for obj in self.objects}
 
     def __str__(self):
         return self._objects_string
@@ -86,29 +86,28 @@ class Shape(NamedTuple):
 
 
 class NlvrLanguage(DomainLanguage):
-    # pylint: disable=no-self-use,too-many-public-methods
     def __init__(self, boxes: Set[Box]) -> None:
         self.boxes = boxes
         self.objects: Set[Object] = set()
         for box in self.boxes:
             self.objects.update(box.objects)
         allowed_constants = {
-                'color_blue': Color('blue'),
-                'color_black': Color('black'),
-                'color_yellow': Color('yellow'),
-                'shape_triangle': Shape('triangle'),
-                'shape_square': Shape('square'),
-                'shape_circle': Shape('circle'),
-                '1': 1,
-                '2': 2,
-                '3': 3,
-                '4': 4,
-                '5': 5,
-                '6': 6,
-                '7': 7,
-                '8': 8,
-                '9': 9,
-                }
+            "color_blue": Color("blue"),
+            "color_black": Color("black"),
+            "color_yellow": Color("yellow"),
+            "shape_triangle": Shape("triangle"),
+            "shape_square": Shape("square"),
+            "shape_circle": Shape("circle"),
+            "1": 1,
+            "2": 2,
+            "3": 3,
+            "4": 4,
+            "5": 5,
+            "6": 6,
+            "7": 7,
+            "8": 8,
+            "9": 9,
+        }
         super().__init__(start_types={bool}, allowed_constants=allowed_constants)
 
         # Mapping from terminal strings to productions that produce them.
@@ -176,7 +175,10 @@ class NlvrLanguage(DomainLanguage):
                 # We already dealt with top, bottom, touch_top and touch_bottom above.
                 continue
             if constant in sentence:
-                if "<Set[Object]:Set[Object]> ->" in production and "<Set[Box]:bool> -> box_exists" in agenda:
+                if (
+                    "<Set[Object]:Set[Object]> ->" in production
+                    and "<Set[Box]:bool> -> box_exists" in agenda
+                ):
                     if constant in ["square", "circle", "triangle"]:
                         agenda.append(self.terminal_productions[f"shape_{constant}"])
                     elif constant in ["yellow", "blue", "black"]:
@@ -205,8 +207,18 @@ class NlvrLanguage(DomainLanguage):
         """
         # The mapping here is very simple and limited, which also shouldn't be a problem
         # because numbers seem to be represented fairly regularly.
-        number_strings = {"one": "1", "two": "2", "three": "3", "four": "4", "five": "5", "six":
-                          "6", "seven": "7", "eight": "8", "nine": "9", "ten": "10"}
+        number_strings = {
+            "one": "1",
+            "two": "2",
+            "three": "3",
+            "four": "4",
+            "five": "5",
+            "six": "6",
+            "seven": "7",
+            "eight": "8",
+            "nine": "9",
+            "ten": "10",
+        }
         number_productions = []
         tokens = sentence.split()
         numbers = number_strings.values()
@@ -249,27 +261,27 @@ class NlvrLanguage(DomainLanguage):
 
     @predicate
     def black(self, objects: Set[Object]) -> Set[Object]:
-        return set([obj for obj in objects if obj.color == "black"])
+        return {obj for obj in objects if obj.color == "black"}
 
     @predicate
     def blue(self, objects: Set[Object]) -> Set[Object]:
-        return set([obj for obj in objects if obj.color == "blue"])
+        return {obj for obj in objects if obj.color == "blue"}
 
     @predicate
     def yellow(self, objects: Set[Object]) -> Set[Object]:
-        return set([obj for obj in objects if obj.color == "yellow"])
+        return {obj for obj in objects if obj.color == "yellow"}
 
     @predicate
     def circle(self, objects: Set[Object]) -> Set[Object]:
-        return set([obj for obj in objects if obj.shape == "circle"])
+        return {obj for obj in objects if obj.shape == "circle"}
 
     @predicate
     def square(self, objects: Set[Object]) -> Set[Object]:
-        return set([obj for obj in objects if obj.shape == "square"])
+        return {obj for obj in objects if obj.shape == "square"}
 
     @predicate
     def triangle(self, objects: Set[Object]) -> Set[Object]:
-        return set([obj for obj in objects if obj.shape == "triangle"])
+        return {obj for obj in objects if obj.shape == "triangle"}
 
     @predicate
     def same_color(self, objects: Set[Object]) -> Set[Object]:
@@ -297,33 +309,39 @@ class NlvrLanguage(DomainLanguage):
 
     @predicate
     def touch_bottom(self, objects: Set[Object]) -> Set[Object]:
-        return set([obj for obj in objects if obj.y_loc + obj.size == 100])
+        return {obj for obj in objects if obj.y_loc + obj.size == 100}
 
     @predicate
     def touch_left(self, objects: Set[Object]) -> Set[Object]:
-        return set([obj for obj in objects if obj.x_loc == 0])
+        return {obj for obj in objects if obj.x_loc == 0}
 
     @predicate
     def touch_top(self, objects: Set[Object]) -> Set[Object]:
-        return set([obj for obj in objects if obj.y_loc == 0])
+        return {obj for obj in objects if obj.y_loc == 0}
 
     @predicate
     def touch_right(self, objects: Set[Object]) -> Set[Object]:
-        return set([obj for obj in objects if obj.x_loc + obj.size == 100])
+        return {obj for obj in objects if obj.x_loc + obj.size == 100}
 
     @predicate
     def touch_wall(self, objects: Set[Object]) -> Set[Object]:
         return_set: Set[Object] = set()
-        return return_set.union(self.touch_top(objects), self.touch_left(objects),
-                                self.touch_right(objects), self.touch_bottom(objects))
+        return return_set.union(
+            self.touch_top(objects),
+            self.touch_left(objects),
+            self.touch_right(objects),
+            self.touch_bottom(objects),
+        )
 
     @predicate
     def touch_corner(self, objects: Set[Object]) -> Set[Object]:
         return_set: Set[Object] = set()
-        return return_set.union(self.touch_top(objects).intersection(self.touch_right(objects)),
-                                self.touch_top(objects).intersection(self.touch_left(objects)),
-                                self.touch_bottom(objects).intersection(self.touch_right(objects)),
-                                self.touch_bottom(objects).intersection(self.touch_left(objects)))
+        return return_set.union(
+            self.touch_top(objects).intersection(self.touch_right(objects)),
+            self.touch_top(objects).intersection(self.touch_left(objects)),
+            self.touch_bottom(objects).intersection(self.touch_right(objects)),
+            self.touch_bottom(objects).intersection(self.touch_left(objects)),
+        )
 
     @predicate
     def touch_object(self, objects: Set[Object]) -> Set[Object]:
@@ -350,7 +368,7 @@ class NlvrLanguage(DomainLanguage):
         return_set: Set[Object] = set()
         for _, box_objects in objects_per_box.items():
             min_y_loc = min([obj.y_loc for obj in box_objects])
-            return_set.update(set([obj for obj in box_objects if obj.y_loc == min_y_loc]))
+            return_set.update({obj for obj in box_objects if obj.y_loc == min_y_loc})
         return return_set
 
     @predicate
@@ -363,7 +381,7 @@ class NlvrLanguage(DomainLanguage):
         return_set: Set[Object] = set()
         for _, box_objects in objects_per_box.items():
             max_y_loc = max([obj.y_loc for obj in box_objects])
-            return_set.update(set([obj for obj in box_objects if obj.y_loc == max_y_loc]))
+            return_set.update({obj for obj in box_objects if obj.y_loc == max_y_loc})
         return return_set
 
     @predicate
@@ -402,15 +420,15 @@ class NlvrLanguage(DomainLanguage):
 
     @predicate
     def small(self, objects: Set[Object]) -> Set[Object]:
-        return set([obj for obj in objects if obj.size == 10])
+        return {obj for obj in objects if obj.size == 10}
 
     @predicate
     def medium(self, objects: Set[Object]) -> Set[Object]:
-        return set([obj for obj in objects if obj.size == 20])
+        return {obj for obj in objects if obj.size == 20}
 
     @predicate
     def big(self, objects: Set[Object]) -> Set[Object]:
-        return set([obj for obj in objects if obj.size == 30])
+        return {obj for obj in objects if obj.size == 30}
 
     @predicate
     def box_count_equals(self, boxes: Set[Box], count: int) -> bool:
@@ -486,183 +504,193 @@ class NlvrLanguage(DomainLanguage):
 
     @predicate
     def object_color_count_equals(self, objects: Set[Object], count: int) -> bool:
-        return len(set([obj.color for obj in objects])) == count
+        return len({obj.color for obj in objects}) == count
 
     @predicate
     def object_color_count_not_equals(self, objects: Set[Object], count: int) -> bool:
-        return len(set([obj.color for obj in objects])) != count
+        return len({obj.color for obj in objects}) != count
 
     @predicate
     def object_color_count_greater(self, objects: Set[Object], count: int) -> bool:
-        return len(set([obj.color for obj in objects])) > count
+        return len({obj.color for obj in objects}) > count
 
     @predicate
     def object_color_count_greater_equals(self, objects: Set[Object], count: int) -> bool:
-        return len(set([obj.color for obj in objects])) >= count
+        return len({obj.color for obj in objects}) >= count
 
     @predicate
     def object_color_count_lesser(self, objects: Set[Object], count: int) -> bool:
-        return len(set([obj.color for obj in objects])) < count
+        return len({obj.color for obj in objects}) < count
 
     @predicate
     def object_color_count_lesser_equals(self, objects: Set[Object], count: int) -> bool:
-        return len(set([obj.color for obj in objects])) <= count
+        return len({obj.color for obj in objects}) <= count
 
     @predicate
     def object_shape_count_equals(self, objects: Set[Object], count: int) -> bool:
-        return len(set([obj.shape for obj in objects])) == count
+        return len({obj.shape for obj in objects}) == count
 
     @predicate
     def object_shape_count_not_equals(self, objects: Set[Object], count: int) -> bool:
-        return len(set([obj.shape for obj in objects])) != count
+        return len({obj.shape for obj in objects}) != count
 
     @predicate
     def object_shape_count_greater(self, objects: Set[Object], count: int) -> bool:
-        return len(set([obj.shape for obj in objects])) > count
+        return len({obj.shape for obj in objects}) > count
 
     @predicate
     def object_shape_count_greater_equals(self, objects: Set[Object], count: int) -> bool:
-        return len(set([obj.shape for obj in objects])) >= count
+        return len({obj.shape for obj in objects}) >= count
 
     @predicate
     def object_shape_count_lesser(self, objects: Set[Object], count: int) -> bool:
-        return len(set([obj.shape for obj in objects])) < count
+        return len({obj.shape for obj in objects}) < count
 
     @predicate
     def object_shape_count_lesser_equals(self, objects: Set[Object], count: int) -> bool:
-        return len(set([obj.shape for obj in objects])) <= count
+        return len({obj.shape for obj in objects}) <= count
 
     @predicate
     def member_count_equals(self, boxes: Set[Box], count: int) -> Set[Box]:
-        return set([box for box in boxes if len(box.objects) == count])
+        return {box for box in boxes if len(box.objects) == count}
 
     @predicate
     def member_count_not_equals(self, boxes: Set[Box], count: int) -> Set[Box]:
-        return set([box for box in boxes if len(box.objects) != count])
+        return {box for box in boxes if len(box.objects) != count}
 
     @predicate
     def member_count_greater(self, boxes: Set[Box], count: int) -> Set[Box]:
-        return set([box for box in boxes if len(box.objects) > count])
+        return {box for box in boxes if len(box.objects) > count}
 
     @predicate
     def member_count_greater_equals(self, boxes: Set[Box], count: int) -> Set[Box]:
-        return set([box for box in boxes if len(box.objects) >= count])
+        return {box for box in boxes if len(box.objects) >= count}
 
     @predicate
     def member_count_lesser(self, boxes: Set[Box], count: int) -> Set[Box]:
-        return set([box for box in boxes if len(box.objects) < count])
+        return {box for box in boxes if len(box.objects) < count}
 
     @predicate
     def member_count_lesser_equals(self, boxes: Set[Box], count: int) -> Set[Box]:
-        return set([box for box in boxes if len(box.objects) <= count])
+        return {box for box in boxes if len(box.objects) <= count}
 
     @predicate
     def member_color_count_equals(self, boxes: Set[Box], count: int) -> Set[Box]:
-        return set([box for box in boxes if len(box.colors) == count])
+        return {box for box in boxes if len(box.colors) == count}
 
     @predicate
     def member_color_count_not_equals(self, boxes: Set[Box], count: int) -> Set[Box]:
-        return set([box for box in boxes if len(box.colors) != count])
+        return {box for box in boxes if len(box.colors) != count}
 
     @predicate
     def member_color_count_greater(self, boxes: Set[Box], count: int) -> Set[Box]:
-        return set([box for box in boxes if len(box.colors) > count])
+        return {box for box in boxes if len(box.colors) > count}
 
     @predicate
     def member_color_count_greater_equals(self, boxes: Set[Box], count: int) -> Set[Box]:
-        return set([box for box in boxes if len(box.colors) >= count])
+        return {box for box in boxes if len(box.colors) >= count}
 
     @predicate
     def member_color_count_lesser(self, boxes: Set[Box], count: int) -> Set[Box]:
-        return set([box for box in boxes if len(box.colors) < count])
+        return {box for box in boxes if len(box.colors) < count}
 
     @predicate
     def member_color_count_lesser_equals(self, boxes: Set[Box], count: int) -> Set[Box]:
-        return set([box for box in boxes if len(box.colors) <= count])
+        return {box for box in boxes if len(box.colors) <= count}
 
     @predicate
     def member_shape_count_equals(self, boxes: Set[Box], count: int) -> Set[Box]:
-        return set([box for box in boxes if len(box.shapes) == count])
+        return {box for box in boxes if len(box.shapes) == count}
 
     @predicate
     def member_shape_count_not_equals(self, boxes: Set[Box], count: int) -> Set[Box]:
-        return set([box for box in boxes if len(box.shapes) != count])
+        return {box for box in boxes if len(box.shapes) != count}
 
     @predicate
     def member_shape_count_greater(self, boxes: Set[Box], count: int) -> Set[Box]:
-        return set([box for box in boxes if len(box.shapes) > count])
+        return {box for box in boxes if len(box.shapes) > count}
 
     @predicate
     def member_shape_count_greater_equals(self, boxes: Set[Box], count: int) -> Set[Box]:
-        return set([box for box in boxes if len(box.shapes) >= count])
+        return {box for box in boxes if len(box.shapes) >= count}
 
     @predicate
     def member_shape_count_lesser(self, boxes: Set[Box], count: int) -> Set[Box]:
-        return set([box for box in boxes if len(box.shapes) < count])
+        return {box for box in boxes if len(box.shapes) < count}
 
     @predicate
     def member_shape_count_lesser_equals(self, boxes: Set[Box], count: int) -> Set[Box]:
-        return set([box for box in boxes if len(box.shapes) <= count])
+        return {box for box in boxes if len(box.shapes) <= count}
 
     @predicate
     def member_color_all_equals(self, boxes: Set[Box], color: Color) -> Set[Box]:
-        return set([box for box in boxes if self.object_color_all_equals(box.objects, color)])
+        return {box for box in boxes if self.object_color_all_equals(box.objects, color)}
 
     @predicate
     def member_color_any_equals(self, boxes: Set[Box], color: Color) -> Set[Box]:
-        return set([box for box in boxes if self.object_color_any_equals(box.objects, color)])
+        return {box for box in boxes if self.object_color_any_equals(box.objects, color)}
 
     @predicate
     def member_color_none_equals(self, boxes: Set[Box], color: Color) -> Set[Box]:
-        return set([box for box in boxes if self.object_color_none_equals(box.objects, color)])
+        return {box for box in boxes if self.object_color_none_equals(box.objects, color)}
 
     @predicate
     def member_shape_all_equals(self, boxes: Set[Box], shape: Shape) -> Set[Box]:
-        return set([box for box in boxes if self.object_shape_all_equals(box.objects, shape)])
+        return {box for box in boxes if self.object_shape_all_equals(box.objects, shape)}
 
     @predicate
     def member_shape_any_equals(self, boxes: Set[Box], shape: Shape) -> Set[Box]:
-        return set([box for box in boxes if self.object_shape_any_equals(box.objects, shape)])
+        return {box for box in boxes if self.object_shape_any_equals(box.objects, shape)}
 
     @predicate
     def member_shape_none_equals(self, boxes: Set[Box], shape: Shape) -> Set[Box]:
-        return set([box for box in boxes if self.object_shape_none_equals(box.objects, shape)])
+        return {box for box in boxes if self.object_shape_none_equals(box.objects, shape)}
 
     @predicate
     def member_shape_same(self, boxes: Set[Box]) -> Set[Box]:
-        return set([box for box in boxes if self.object_shape_count_equals(box.objects, 1)])
+        return {box for box in boxes if self.object_shape_count_equals(box.objects, 1)}
 
     @predicate
     def member_color_same(self, boxes: Set[Box]) -> Set[Box]:
-        return set([box for box in boxes if self.object_color_count_equals(box.objects, 1)])
+        return {box for box in boxes if self.object_color_count_equals(box.objects, 1)}
 
     @predicate
     def member_shape_different(self, boxes: Set[Box]) -> Set[Box]:
-        return set([box for box in boxes if self.object_shape_count_not_equals(box.objects, 1)])
+        return {box for box in boxes if self.object_shape_count_not_equals(box.objects, 1)}
 
     @predicate
     def member_color_different(self, boxes: Set[Box]) -> Set[Box]:
-        return set([box for box in boxes if self.object_color_count_not_equals(box.objects, 1)])
+        return {box for box in boxes if self.object_color_count_not_equals(box.objects, 1)}
 
     @predicate
-    def negate_filter(self, filter_function: Callable[[Set[Object]], Set[Object]]) -> Callable[[Set[Object]],
-                                                                                               Set[Object]]:
+    def negate_filter(
+        self, filter_function: Callable[[Set[Object]], Set[Object]]
+    ) -> Callable[[Set[Object]], Set[Object]]:
         def negated_filter(objects: Set[Object]) -> Set[Object]:
             return objects.difference(filter_function(objects))
+
         return negated_filter
 
     def _objects_touch_each_other(self, object1: Object, object2: Object) -> bool:
         """
         Returns true iff the objects touch each other.
         """
-        in_vertical_range = object1.y_loc <= object2.y_loc + object2.size and \
-                            object1.y_loc + object1.size >= object2.y_loc
-        in_horizantal_range = object1.x_loc <= object2.x_loc + object2.size and \
-                            object1.x_loc + object1.size >= object2.x_loc
-        touch_side = object1.x_loc + object1.size == object2.x_loc or \
-                     object2.x_loc + object2.size == object1.x_loc
-        touch_top_or_bottom = object1.y_loc + object1.size == object2.y_loc or \
-                              object2.y_loc + object2.size == object1.y_loc
+        in_vertical_range = (
+            object1.y_loc <= object2.y_loc + object2.size
+            and object1.y_loc + object1.size >= object2.y_loc
+        )
+        in_horizantal_range = (
+            object1.x_loc <= object2.x_loc + object2.size
+            and object1.x_loc + object1.size >= object2.x_loc
+        )
+        touch_side = (
+            object1.x_loc + object1.size == object2.x_loc
+            or object2.x_loc + object2.size == object1.x_loc
+        )
+        touch_top_or_bottom = (
+            object1.y_loc + object1.size == object2.y_loc
+            or object2.y_loc + object2.size == object1.y_loc
+        )
         return (in_vertical_range and touch_side) or (in_horizantal_range and touch_top_or_bottom)
 
     def _separate_objects_by_boxes(self, objects: Set[Object]) -> Dict[Box, List[Object]]:
@@ -676,9 +704,9 @@ class NlvrLanguage(DomainLanguage):
                     objects_per_box[box].append(object_)
         return objects_per_box
 
-    def _get_objects_with_same_attribute(self,
-                                         objects: Set[Object],
-                                         attribute_function: Callable[[Object], str]) -> Set[Object]:
+    def _get_objects_with_same_attribute(
+        self, objects: Set[Object], attribute_function: Callable[[Object], str]
+    ) -> Set[Object]:
         """
         Returns the set of objects for which the attribute function returns an attribute value that
         is most frequent in the initial set, if the frequency is greater than 1. If not, all
@@ -689,7 +717,9 @@ class NlvrLanguage(DomainLanguage):
             objects_of_attribute[attribute_function(entity)].add(entity)
         if not objects_of_attribute:
             return set()
-        most_frequent_attribute = max(objects_of_attribute, key=lambda x: len(objects_of_attribute[x]))
+        most_frequent_attribute = max(
+            objects_of_attribute, key=lambda x: len(objects_of_attribute[x])
+        )
         if len(objects_of_attribute[most_frequent_attribute]) <= 1:
             return set()
         return objects_of_attribute[most_frequent_attribute]

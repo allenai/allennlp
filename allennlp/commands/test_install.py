@@ -23,26 +23,33 @@ import argparse
 import logging
 import os
 import pathlib
+import sys
 
 import pytest
 
 import allennlp
 from allennlp.commands.subcommand import Subcommand
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
+
 
 class TestInstall(Subcommand):
-    def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
-        # pylint: disable=protected-access
-        description = '''Test that installation works by running the unit tests.'''
-        subparser = parser.add_parser(
-                name, description=description, help='Run the unit tests.')
+    def add_subparser(
+        self, name: str, parser: argparse._SubParsersAction
+    ) -> argparse.ArgumentParser:
 
-        subparser.add_argument('--run-all', action="store_true",
-                               help="By default, we skip tests that are slow "
-                               "or download large files. This flag will run all tests.")
-        subparser.add_argument('-k', type=str, default=None,
-                               help="Limit tests by setting pytest -k argument")
+        description = """Test that installation works by running the unit tests."""
+        subparser = parser.add_parser(name, description=description, help="Run the unit tests.")
+
+        subparser.add_argument(
+            "--run-all",
+            action="store_true",
+            help="By default, we skip tests that are slow "
+            "or download large files. This flag will run all tests.",
+        )
+        subparser.add_argument(
+            "-k", type=str, default=None, help="Limit tests by setting pytest -k argument"
+        )
 
         subparser.set_defaults(func=_run_test)
 
@@ -62,19 +69,19 @@ def _run_test(args: argparse.Namespace):
     logger.info("Running tests at %s", test_dir)
 
     if args.k:
-        pytest_k = ['-k', args.k]
-        pytest_m = ['-m', 'not java']
+        pytest_k = ["-k", args.k]
+        pytest_m = ["-m", "not java"]
         if args.run_all:
             logger.warning("the argument '-k' overwrites '--run-all'.")
     elif args.run_all:
         pytest_k = []
         pytest_m = []
     else:
-        pytest_k = ['-k', 'not sniff_test']
-        pytest_m = ['-m', 'not java']
+        pytest_k = ["-k", "not sniff_test"]
+        pytest_m = ["-m", "not java"]
 
-    exit_code = pytest.main([test_dir, '--color=no'] + pytest_k + pytest_m)
+    exit_code = pytest.main([test_dir, "--color=no"] + pytest_k + pytest_m)
 
     # Change back to original working directory after running tests
     os.chdir(initial_working_dir)
-    exit(exit_code)
+    sys.exit(exit_code)

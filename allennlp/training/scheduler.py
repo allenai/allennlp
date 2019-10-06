@@ -26,10 +26,9 @@ class Scheduler:
            scheduler.step(validation_metrics, epoch)
     """
 
-    def __init__(self,
-                 optimizer: torch.optim.Optimizer,
-                 param_group_field: str,
-                 last_epoch: int = -1) -> None:
+    def __init__(
+        self, optimizer: torch.optim.Optimizer, param_group_field: str, last_epoch: int = -1
+    ) -> None:
         self.optimizer = optimizer
         self.param_group_field = param_group_field
         self._initial_param_group_field = f"initial_{param_group_field}"
@@ -41,8 +40,12 @@ class Scheduler:
         else:
             for i, group in enumerate(self.optimizer.param_groups):
                 if self._initial_param_group_field not in group:
-                    raise KeyError(f"{self._initial_param_group_field} missing from param_groups[{i}]")
-        self.base_values = [group[self._initial_param_group_field] for group in self.optimizer.param_groups]
+                    raise KeyError(
+                        f"{self._initial_param_group_field} missing from param_groups[{i}]"
+                    )
+        self.base_values = [
+            group[self._initial_param_group_field] for group in self.optimizer.param_groups
+        ]
         self.step(epoch=last_epoch)
         self.last_epoch = last_epoch
 
@@ -50,7 +53,7 @@ class Scheduler:
         """
         Returns the state of the scheduler as a ``dict``.
         """
-        return {key: value for key, value in self.__dict__.items() if key != 'optimizer'}
+        return {key: value for key, value in self.__dict__.items() if key != "optimizer"}
 
     def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
         """
@@ -80,5 +83,5 @@ class Scheduler:
         By default, a scheduler is assumed to only update every epoch, not every batch.
         So this does nothing unless it's overriden.
         """
-        # pylint: disable=unused-argument,no-self-use
+
         return

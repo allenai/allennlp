@@ -1,6 +1,7 @@
 from typing import List, Iterator, Dict, Tuple, Any
 import json
 from contextlib import contextmanager
+
 import numpy
 from torch.utils.hooks import RemovableHandle
 from torch import Tensor
@@ -9,50 +10,52 @@ from allennlp.common import Registrable
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import DatasetReader, Instance
+from allennlp.data.dataset import Batch
 from allennlp.models import Model
 from allennlp.models.archival import Archive, load_archive
-from allennlp.modules.text_field_embedders import TextFieldEmbedder
-from allennlp.data.dataset import Batch
+from allennlp.nn import util
 
 # a mapping from model `type` to the default Predictor for that type
 DEFAULT_PREDICTORS = {
-        'atis_parser' : 'atis-parser',
-        'basic_classifier': 'text_classifier',
-        'biaffine_parser': 'biaffine-dependency-parser',
-        'bidaf': 'machine-comprehension',
-        'bidaf-ensemble': 'machine-comprehension',
-        'bimpm': 'textual-entailment',
-        'constituency_parser': 'constituency-parser',
-        'coref': 'coreference-resolution',
-        'crf_tagger': 'sentence-tagger',
-        'decomposable_attention': 'textual-entailment',
-        'dialog_qa': 'dialog_qa',
-        'event2mind': 'event2mind',
-        'naqanet': 'machine-comprehension',
-        'simple_tagger': 'sentence-tagger',
-        'srl': 'semantic-role-labeling',
-        'srl_bert': 'semantic-role-labeling',
-        'quarel_parser': 'quarel-parser',
-        'wikitables_mml_parser': 'wikitables-parser'
+    "atis_parser": "atis-parser",
+    "basic_classifier": "text_classifier",
+    "biaffine_parser": "biaffine-dependency-parser",
+    "bidaf": "machine-comprehension",
+    "bidaf-ensemble": "machine-comprehension",
+    "bimpm": "textual-entailment",
+    "constituency_parser": "constituency-parser",
+    "coref": "coreference-resolution",
+    "crf_tagger": "sentence-tagger",
+    "decomposable_attention": "textual-entailment",
+    "dialog_qa": "dialog_qa",
+    "event2mind": "event2mind",
+    "naqanet": "machine-comprehension",
+    "simple_tagger": "sentence-tagger",
+    "srl": "semantic-role-labeling",
+    "srl_bert": "semantic-role-labeling",
+    "quarel_parser": "quarel-parser",
+    "wikitables_mml_parser": "wikitables-parser",
 }
+
 
 class Predictor(Registrable):
     """
     a ``Predictor`` is a thin wrapper around an AllenNLP model that handles JSON -> JSON predictions
     that can be used for serving models through the web API or making predictions in bulk.
     """
+
     def __init__(self, model: Model, dataset_reader: DatasetReader) -> None:
         self._model = model
         self._dataset_reader = dataset_reader
 
-    def load_line(self, line: str) -> JsonDict:  # pylint: disable=no-self-use
+    def load_line(self, line: str) -> JsonDict:
         """
         If your inputs are not in JSON-lines format (e.g. you have a CSV)
         you can override this function to parse them correctly.
         """
         return json.loads(line)
 
-    def dump_line(self, outputs: JsonDict) -> str:  # pylint: disable=no-self-use
+    def dump_line(self, outputs: JsonDict) -> str:
         """
         If you don't want your outputs in JSON-lines format
         you can override this function to output them differently.
@@ -73,13 +76,13 @@ class Predictor(Registrable):
         List[instance]
         A list of :class:`~allennlp.data.instance.Instance`
         """
+
         instance = self._json_to_instance(inputs)
         outputs = self._model.forward_on_instance(instance)
         new_instances = self.predictions_to_labeled_instances(instance, outputs)
         return new_instances
 
-    def get_gradients(self,
-                      instances: List[Instance]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    def get_gradients(self, instances: List[Instance]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """
         Gets the gradients of the loss with respect to the model inputs.
 
@@ -107,19 +110,25 @@ class Predictor(Registrable):
 
         dataset = Batch(instances)
         dataset.index_instances(self._model.vocab)
-        outputs = self._model.decode(self._model.forward(**dataset.as_tensor_dict()))
+        outputs = self._model.decode(
+            self._model.forward(**dataset.as_tensor_dict())  # type: ignore
+        )
 
-        loss = outputs['loss']
+        loss = outputs["loss"]
         self._model.zero_grad()
-        loss.backward()
 
-        for hook in hooks:
-            hook.remove()
+        # grad, = torch.autograd.grad(loss, x, create_graph=True)
+    
+        loss.backward(retain_graph=True)        
+
+        # for hook in hooks:
+        #     hook.remove()
 
         grad_dict = dict()
         for idx, grad in enumerate(embedding_gradients):
-            key = 'grad_input_' + str(idx + 1)
-            grad_dict[key] = grad.squeeze_(0).detach().cpu().numpy()
+            key = "grad_input_" + str(idx + 1)
+            # grad_dict[key] = grad.detach().cpu().numpy()
+            grad_dict[key] = grad
 
         return grad_dict, outputs
 
@@ -133,14 +142,13 @@ class Predictor(Registrable):
         will be called multiple times. We append all the embeddings gradients
         to a list.
         """
-        def hook_layers(module, grad_in, grad_out): # pylint: disable=unused-argument
+
+        def hook_layers(module, grad_in, grad_out):
             embedding_gradients.append(grad_out[0])
 
         backward_hooks = []
-        for module in self._model.modules():
-            if isinstance(module, TextFieldEmbedder):
-                backward_hooks.append(module.register_backward_hook(hook_layers))
-
+        embedding_layer = util.find_embedding_layer(self._model)
+        backward_hooks.append(embedding_layer.register_backward_hook(hook_layers))
         return backward_hooks
 
     @contextmanager
@@ -163,6 +171,7 @@ class Predictor(Registrable):
         def add_output(idx: int):
             def _add_output(mod, _, outputs):
                 results[idx] = {"name": str(mod), "output": sanitize(outputs)}
+
             return _add_output
 
         for idx, module in enumerate(self._model.modules()):
@@ -179,11 +188,12 @@ class Predictor(Registrable):
 
     def predict_instance(self, instance: Instance) -> JsonDict:
         outputs = self._model.forward_on_instance(instance)
-        return sanitize(outputs)
+        return outputs
+        #return sanitize(outputs)        
 
-    def predictions_to_labeled_instances(self,
-                                         instance: Instance,
-                                         outputs: Dict[str, numpy.ndarray]) -> List[Instance]:
+    def predictions_to_labeled_instances(
+        self, instance: Instance, outputs: Dict[str, numpy.ndarray]
+    ) -> List[Instance]:
         """
         This function takes a model's outputs for an Instance, and it labels that instance according
         to the output. For example, in classification this function labels the instance according
@@ -192,9 +202,8 @@ class Predictor(Registrable):
         multiple predictions in the output (e.g., in NER a model predicts multiple spans). In this
         case, each instance in the returned list of Instances contains an individual
         entity prediction as the label.
-
         """
-        # pylint: disable=unused-argument,no-self-use
+
         raise RuntimeError("implement this method for model interpretations or attacks")
 
     def _json_to_instance(self, json_dict: JsonDict) -> Instance:
@@ -228,8 +237,13 @@ class Predictor(Registrable):
         return instances
 
     @classmethod
-    def from_path(cls, archive_path: str, predictor_name: str = None, cuda_device: int = -1,
-                  dataset_reader_to_load: str = "validation") -> 'Predictor':
+    def from_path(
+        cls,
+        archive_path: str,
+        predictor_name: str = None,
+        cuda_device: int = -1,
+        dataset_reader_to_load: str = "validation",
+    ) -> "Predictor":
         """
         Instantiate a :class:`Predictor` from an archive path.
 
@@ -254,12 +268,19 @@ class Predictor(Registrable):
         -------
         A Predictor instance.
         """
-        return Predictor.from_archive(load_archive(archive_path, cuda_device=cuda_device), predictor_name,
-                                      dataset_reader_to_load=dataset_reader_to_load)
+        return Predictor.from_archive(
+            load_archive(archive_path, cuda_device=cuda_device),
+            predictor_name,
+            dataset_reader_to_load=dataset_reader_to_load,
+        )
 
     @classmethod
-    def from_archive(cls, archive: Archive, predictor_name: str = None,
-                     dataset_reader_to_load: str = "validation") -> 'Predictor':
+    def from_archive(
+        cls,
+        archive: Archive,
+        predictor_name: str = None,
+        dataset_reader_to_load: str = "validation",
+    ) -> "Predictor":
         """
         Instantiate a :class:`Predictor` from an :class:`~allennlp.models.archival.Archive`;
         that is, from the result of training a model. Optionally specify which `Predictor`
@@ -272,9 +293,11 @@ class Predictor(Registrable):
 
         if not predictor_name:
             model_type = config.get("model").get("type")
-            if not model_type in DEFAULT_PREDICTORS:
-                raise ConfigurationError(f"No default predictor for model type {model_type}.\n"\
-                                         f"Please specify a predictor explicitly.")
+            if model_type not in DEFAULT_PREDICTORS:
+                raise ConfigurationError(
+                    f"No default predictor for model type {model_type}.\n"
+                    f"Please specify a predictor explicitly."
+                )
             predictor_name = DEFAULT_PREDICTORS[model_type]
 
         if dataset_reader_to_load == "validation" and "validation_dataset_reader" in config:

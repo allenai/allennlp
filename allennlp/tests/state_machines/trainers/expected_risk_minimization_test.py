@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,protected-access
 import torch
 import numpy as np
 from numpy.testing import assert_almost_equal
@@ -14,12 +13,13 @@ class TestExpectedRiskMinimization(AllenNlpTestCase):
         self.initial_state = SimpleState([0], [[0]], [torch.Tensor([0.0])])
         self.decoder_step = SimpleTransitionFunction()
         # Cost is the number of odd elements in the action history.
-        self.supervision = lambda state: torch.Tensor([sum([x%2 != 0 for x in
-                                                            state.action_history[0]])])
+        self.supervision = lambda state: torch.Tensor(
+            [sum([x % 2 != 0 for x in state.action_history[0]])]
+        )
         # High beam size ensures exhaustive search.
-        self.trainer = ExpectedRiskMinimization(beam_size=100,
-                                                normalize_by_length=False,
-                                                max_decoding_steps=10)
+        self.trainer = ExpectedRiskMinimization(
+            beam_size=100, normalize_by_length=False, max_decoding_steps=10
+        )
 
     def test_get_finished_states(self):
         finished_states = self.trainer._get_finished_states(self.initial_state, self.decoder_step)
@@ -36,7 +36,7 @@ class TestExpectedRiskMinimization(AllenNlpTestCase):
     def test_decode(self):
         decoded_info = self.trainer.decode(self.initial_state, self.decoder_step, self.supervision)
         # The best state corresponds to the shortest path.
-        best_state = decoded_info['best_final_states'][0][0]
+        best_state = decoded_info["best_final_states"][0][0]
         assert best_state.action_history[0] == [0, 2, 4]
         # The scores and costs corresponding to the finished states will be
         # [0, 2, 4] : -2, 0
@@ -47,6 +47,11 @@ class TestExpectedRiskMinimization(AllenNlpTestCase):
 
         # This is the normalization factor while re-normalizing probabilities on the beam
         partition = np.exp(-2) + np.exp(-3) + np.exp(-3) + np.exp(-3) + np.exp(-4)
-        expected_loss = ((np.exp(-2) * 0) + (np.exp(-3) * 1) + (np.exp(-3) * 2) +
-                         (np.exp(-3) * 1) + (np.exp(-4) * 2)) / partition
-        assert_almost_equal(decoded_info['loss'].data.numpy(), expected_loss)
+        expected_loss = (
+            (np.exp(-2) * 0)
+            + (np.exp(-3) * 1)
+            + (np.exp(-3) * 2)
+            + (np.exp(-3) * 1)
+            + (np.exp(-4) * 2)
+        ) / partition
+        assert_almost_equal(decoded_info["loss"].data.numpy(), expected_loss)

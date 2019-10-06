@@ -4,7 +4,7 @@ import torch
 
 from allennlp.state_machines.states import State
 
-StateType = TypeVar('StateType', bound=State)  # pylint: disable=invalid-name
+StateType = TypeVar("StateType", bound=State)
 
 
 class TransitionFunction(torch.nn.Module, Generic[StateType]):
@@ -20,10 +20,10 @@ class TransitionFunction(torch.nn.Module, Generic[StateType]):
     computations get done at each step of decoding, and how states are scored.  This subclass then
     gets passed to a ``DecoderTrainer`` to have its parameters trained.
     """
-    def take_step(self,
-                  state: StateType,
-                  max_actions: int = None,
-                  allowed_actions: List[Set] = None) -> List[StateType]:
+
+    def take_step(
+        self, state: StateType, max_actions: int = None, allowed_actions: List[Set] = None
+    ) -> List[StateType]:
         """
         The main method in the ``TransitionFunction`` API.  This function defines the computation
         done at each step of decoding and returns a ranked list of next states.

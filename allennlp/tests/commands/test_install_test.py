@@ -1,4 +1,3 @@
-# pylint: disable=invalid-name,no-self-use
 import os
 
 from allennlp.common.testing import AllenNlpTestCase

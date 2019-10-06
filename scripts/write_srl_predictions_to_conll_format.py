@@ -4,6 +4,7 @@ import sys
 import argparse
 
 import torch
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
 
 from allennlp.common.tqdm import Tqdm
@@ -11,15 +12,11 @@ from allennlp.common import Params
 from allennlp.models.archival import load_archive
 from allennlp.data.iterators import BasicIterator
 from allennlp.data import DatasetReader
-from allennlp.models import Model
 from allennlp.models.semantic_role_labeler import write_to_conll_eval_file
 from allennlp.nn.util import move_to_device
 
-def main(serialization_directory: int,
-         device: int,
-         data: str,
-         prefix: str,
-         domain: str = None):
+
+def main(serialization_directory: int, device: int, data: str, prefix: str, domain: str = None):
     """
     serialization_directory : str, required.
         The directory containing the serialized weights.
@@ -46,10 +43,12 @@ def main(serialization_directory: int,
     else:
         config["dataset_reader"].pop("domain_identifier", None)
 
-    dataset_reader = DatasetReader.from_params(config['dataset_reader'])
-    evaluation_data_path = data if data else config['validation_data_path']
+    dataset_reader = DatasetReader.from_params(config["dataset_reader"])
+    evaluation_data_path = data if data else config["validation_data_path"]
 
-    archive = load_archive(os.path.join(serialization_directory, "model.tar.gz"), cuda_device=device)
+    archive = load_archive(
+        os.path.join(serialization_directory, "model.tar.gz"), cuda_device=device
+    )
     model = archive.model
     model.eval()
 
@@ -79,19 +78,31 @@ def main(serialization_directory: int,
             verb_index = fields["metadata"]["verb_index"]
             gold_tags = fields["metadata"]["gold_tags"]
             sentence = fields["metadata"]["words"]
-            write_to_conll_eval_file(prediction_file, gold_file,
-                                     verb_index, sentence, prediction, gold_tags)
+            write_to_conll_eval_file(
+                prediction_file, gold_file, verb_index, sentence, prediction, gold_tags
+            )
         prediction_file.close()
         gold_file.close()
 
+
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description="write conll format srl predictions"
-                                                 " to file from a pretrained model.")
-    parser.add_argument('--path', type=str, help='the serialization directory.')
-    parser.add_argument('--device', type=int, default=-1, help='the device to load the model onto.')
-    parser.add_argument('--data', type=str, default=None, help='A directory containing a dataset to evaluate on.')
-    parser.add_argument('--prefix', type=str, default="", help='A prefix to distinguish model outputs.')
-    parser.add_argument('--domain', type=str, default=None, help='An optional domain to filter by for producing results.')
+    parser = argparse.ArgumentParser(
+        description="write conll format srl predictions" " to file from a pretrained model."
+    )
+    parser.add_argument("--path", type=str, help="the serialization directory.")
+    parser.add_argument("--device", type=int, default=-1, help="the device to load the model onto.")
+    parser.add_argument(
+        "--data", type=str, default=None, help="A directory containing a dataset to evaluate on."
+    )
+    parser.add_argument(
+        "--prefix", type=str, default="", help="A prefix to distinguish model outputs."
+    )
+    parser.add_argument(
+        "--domain",
+        type=str,
+        default=None,
+        help="An optional domain to filter by for producing results.",
+    )
     args = parser.parse_args()
     main(args.path, args.device, args.data, args.prefix, args.domain)

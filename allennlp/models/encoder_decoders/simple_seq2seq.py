@@ -69,19 +69,21 @@ class SimpleSeq2Seq(Model):
         If True, the BLEU metric will be calculated during validation.
     """
 
-    def __init__(self,
-                 vocab: Vocabulary,
-                 source_embedder: TextFieldEmbedder,
-                 encoder: Seq2SeqEncoder,
-                 max_decoding_steps: int,
-                 attention: Attention = None,
-                 attention_function: SimilarityFunction = None,
-                 beam_size: int = None,
-                 target_namespace: str = "tokens",
-                 target_embedding_dim: int = None,
-                 scheduled_sampling_ratio: float = 0.,
-                 use_bleu: bool = True) -> None:
-        super(SimpleSeq2Seq, self).__init__(vocab)
+    def __init__(
+        self,
+        vocab: Vocabulary,
+        source_embedder: TextFieldEmbedder,
+        encoder: Seq2SeqEncoder,
+        max_decoding_steps: int,
+        attention: Attention = None,
+        attention_function: SimilarityFunction = None,
+        beam_size: int = None,
+        target_namespace: str = "tokens",
+        target_embedding_dim: int = None,
+        scheduled_sampling_ratio: float = 0.0,
+        use_bleu: bool = True,
+    ) -> None:
+        super().__init__(vocab)
         self._target_namespace = target_namespace
         self._scheduled_sampling_ratio = scheduled_sampling_ratio
 
@@ -91,7 +93,9 @@ class SimpleSeq2Seq(Model):
         self._end_index = self.vocab.get_token_index(END_SYMBOL, self._target_namespace)
 
         if use_bleu:
-            pad_index = self.vocab.get_token_index(self.vocab._padding_token, self._target_namespace)  # pylint: disable=protected-access
+            pad_index = self.vocab.get_token_index(
+                self.vocab._padding_token, self._target_namespace
+            )
             self._bleu = BLEU(exclude_indices={pad_index, self._end_index, self._start_index})
         else:
             self._bleu = None
@@ -99,7 +103,9 @@ class SimpleSeq2Seq(Model):
         # At prediction time, we use a beam search to find the most likely sequence of target tokens.
         beam_size = beam_size or 1
         self._max_decoding_steps = max_decoding_steps
-        self._beam_search = BeamSearch(self._end_index, max_steps=max_decoding_steps, beam_size=beam_size)
+        self._beam_search = BeamSearch(
+            self._end_index, max_steps=max_decoding_steps, beam_size=beam_size
+        )
 
         # Dense embedding of source vocab tokens.
         self._source_embedder = source_embedder
@@ -112,8 +118,10 @@ class SimpleSeq2Seq(Model):
         # Attention mechanism applied to the encoder output for each step.
         if attention:
             if attention_function:
-                raise ConfigurationError("You can only specify an attention module or an "
-                                         "attention function, but not both.")
+                raise ConfigurationError(
+                    "You can only specify an attention module or an "
+                    "attention function, but not both."
+                )
             self._attention = attention
         elif attention_function:
             self._attention = LegacyAttention(attention_function)
@@ -147,9 +155,9 @@ class SimpleSeq2Seq(Model):
         # in order to get log probabilities of each target token, at each time step.
         self._output_projection_layer = Linear(self._decoder_output_dim, num_classes)
 
-    def take_step(self,
-                  last_predictions: torch.Tensor,
-                  state: Dict[str, torch.Tensor]) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
+    def take_step(
+        self, last_predictions: torch.Tensor, state: Dict[str, torch.Tensor]
+    ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
         """
         Take a decoding step. This is called by the beam search class.
 
@@ -189,10 +197,12 @@ class SimpleSeq2Seq(Model):
         return class_log_probabilities, state
 
     @overrides
-    def forward(self,  # type: ignore
-                source_tokens: Dict[str, torch.LongTensor],
-                target_tokens: Dict[str, torch.LongTensor] = None) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
+    def forward(
+        self,  # type: ignore
+        source_tokens: Dict[str, torch.LongTensor],
+        target_tokens: Dict[str, torch.LongTensor] = None,
+    ) -> Dict[str, torch.Tensor]:
+
         """
         Make foward pass with decoder logic for producing the entire target sequence.
 
@@ -256,9 +266,11 @@ class SimpleSeq2Seq(Model):
             indices = list(indices)
             # Collect indices till the first end_symbol
             if self._end_index in indices:
-                indices = indices[:indices.index(self._end_index)]
-            predicted_tokens = [self.vocab.get_token_from_index(x, namespace=self._target_namespace)
-                                for x in indices]
+                indices = indices[: indices.index(self._end_index)]
+            predicted_tokens = [
+                self.vocab.get_token_from_index(x, namespace=self._target_namespace)
+                for x in indices
+            ]
             all_predicted_tokens.append(predicted_tokens)
         output_dict["predicted_tokens"] = all_predicted_tokens
         return output_dict
@@ -270,28 +282,26 @@ class SimpleSeq2Seq(Model):
         source_mask = util.get_text_field_mask(source_tokens)
         # shape: (batch_size, max_input_sequence_length, encoder_output_dim)
         encoder_outputs = self._encoder(embedded_input, source_mask)
-        return {
-                "source_mask": source_mask,
-                "encoder_outputs": encoder_outputs,
-        }
+        return {"source_mask": source_mask, "encoder_outputs": encoder_outputs}
 
     def _init_decoder_state(self, state: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         batch_size = state["source_mask"].size(0)
         # shape: (batch_size, encoder_output_dim)
         final_encoder_output = util.get_final_encoder_states(
-                state["encoder_outputs"],
-                state["source_mask"],
-                self._encoder.is_bidirectional())
+            state["encoder_outputs"], state["source_mask"], self._encoder.is_bidirectional()
+        )
         # Initialize the decoder hidden state with the final output of the encoder.
         # shape: (batch_size, decoder_output_dim)
         state["decoder_hidden"] = final_encoder_output
         # shape: (batch_size, decoder_output_dim)
-        state["decoder_context"] = state["encoder_outputs"].new_zeros(batch_size, self._decoder_output_dim)
+        state["decoder_context"] = state["encoder_outputs"].new_zeros(
+            batch_size, self._decoder_output_dim
+        )
         return state
 
-    def _forward_loop(self,
-                      state: Dict[str, torch.Tensor],
-                      target_tokens: Dict[str, torch.LongTensor] = None) -> Dict[str, torch.Tensor]:
+    def _forward_loop(
+        self, state: Dict[str, torch.Tensor], target_tokens: Dict[str, torch.LongTensor] = None
+    ) -> Dict[str, torch.Tensor]:
         """
         Make forward pass during training or do greedy search during prediction.
 
@@ -372,22 +382,25 @@ class SimpleSeq2Seq(Model):
     def _forward_beam_search(self, state: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """Make forward pass during prediction using a beam search."""
         batch_size = state["source_mask"].size()[0]
-        start_predictions = state["source_mask"].new_full((batch_size,), fill_value=self._start_index)
+        start_predictions = state["source_mask"].new_full(
+            (batch_size,), fill_value=self._start_index
+        )
 
         # shape (all_top_k_predictions): (batch_size, beam_size, num_decoding_steps)
         # shape (log_probabilities): (batch_size, beam_size)
         all_top_k_predictions, log_probabilities = self._beam_search.search(
-                start_predictions, state, self.take_step)
+            start_predictions, state, self.take_step
+        )
 
         output_dict = {
-                "class_log_probabilities": log_probabilities,
-                "predictions": all_top_k_predictions,
+            "class_log_probabilities": log_probabilities,
+            "predictions": all_top_k_predictions,
         }
         return output_dict
 
-    def _prepare_output_projections(self,
-                                    last_predictions: torch.Tensor,
-                                    state: Dict[str, torch.Tensor]) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:  # pylint: disable=line-too-long
+    def _prepare_output_projections(
+        self, last_predictions: torch.Tensor, state: Dict[str, torch.Tensor]
+    ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
         """
         Decode current state and last prediction to produce produce projections
         into the target space, which can then be used to get probabilities of
@@ -412,7 +425,9 @@ class SimpleSeq2Seq(Model):
 
         if self._attention:
             # shape: (group_size, encoder_output_dim)
-            attended_input = self._prepare_attended_input(decoder_hidden, encoder_outputs, source_mask)
+            attended_input = self._prepare_attended_input(
+                decoder_hidden, encoder_outputs, source_mask
+            )
 
             # shape: (group_size, decoder_output_dim + target_embedding_dim)
             decoder_input = torch.cat((attended_input, embedded_input), -1)
@@ -423,8 +438,8 @@ class SimpleSeq2Seq(Model):
         # shape (decoder_hidden): (batch_size, decoder_output_dim)
         # shape (decoder_context): (batch_size, decoder_output_dim)
         decoder_hidden, decoder_context = self._decoder_cell(
-                decoder_input,
-                (decoder_hidden, decoder_context))
+            decoder_input, (decoder_hidden, decoder_context)
+        )
 
         state["decoder_hidden"] = decoder_hidden
         state["decoder_context"] = decoder_context
@@ -434,10 +449,12 @@ class SimpleSeq2Seq(Model):
 
         return output_projections, state
 
-    def _prepare_attended_input(self,
-                                decoder_hidden_state: torch.LongTensor = None,
-                                encoder_outputs: torch.LongTensor = None,
-                                encoder_outputs_mask: torch.LongTensor = None) -> torch.Tensor:
+    def _prepare_attended_input(
+        self,
+        decoder_hidden_state: torch.LongTensor = None,
+        encoder_outputs: torch.LongTensor = None,
+        encoder_outputs_mask: torch.LongTensor = None,
+    ) -> torch.Tensor:
         """Apply attention over encoder outputs and decoder state."""
         # Ensure mask is also a FloatTensor. Or else the multiplication within
         # attention will complain.
@@ -445,8 +462,7 @@ class SimpleSeq2Seq(Model):
         encoder_outputs_mask = encoder_outputs_mask.float()
 
         # shape: (batch_size, max_input_sequence_length)
-        input_weights = self._attention(
-                decoder_hidden_state, encoder_outputs, encoder_outputs_mask)
+        input_weights = self._attention(decoder_hidden_state, encoder_outputs, encoder_outputs_mask)
 
         # shape: (batch_size, encoder_output_dim)
         attended_input = util.weighted_sum(encoder_outputs, input_weights)
@@ -454,9 +470,9 @@ class SimpleSeq2Seq(Model):
         return attended_input
 
     @staticmethod
-    def _get_loss(logits: torch.LongTensor,
-                  targets: torch.LongTensor,
-                  target_mask: torch.LongTensor) -> torch.Tensor:
+    def _get_loss(
+        logits: torch.LongTensor, targets: torch.LongTensor, target_mask: torch.LongTensor
+    ) -> torch.Tensor:
         """
         Compute loss.
 

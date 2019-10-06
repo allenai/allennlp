@@ -43,18 +43,20 @@ class LinearAttention(Attention):
         activation.
     """
 
-    def __init__(self,
-                 tensor_1_dim: int,
-                 tensor_2_dim: int,
-                 combination: str = 'x,y',
-                 activation: Activation = None,
-                 normalize: bool = True) -> None:
+    def __init__(
+        self,
+        tensor_1_dim: int,
+        tensor_2_dim: int,
+        combination: str = "x,y",
+        activation: Activation = None,
+        normalize: bool = True,
+    ) -> None:
         super().__init__(normalize)
         self._combination = combination
         combined_dim = util.get_combined_dim(combination, [tensor_1_dim, tensor_2_dim])
         self._weight_vector = Parameter(torch.Tensor(combined_dim))
         self._bias = Parameter(torch.Tensor(1))
-        self._activation = activation or Activation.by_name('linear')()
+        self._activation = activation or Activation.by_name("linear")()
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -64,7 +66,7 @@ class LinearAttention(Attention):
 
     @overrides
     def _forward_internal(self, vector: torch.Tensor, matrix: torch.Tensor) -> torch.Tensor:
-        combined_tensors = util.combine_tensors_and_multiply(self._combination,
-                                                             [vector.unsqueeze(1), matrix],
-                                                             self._weight_vector)
+        combined_tensors = util.combine_tensors_and_multiply(
+            self._combination, [vector.unsqueeze(1), matrix], self._weight_vector
+        )
         return self._activation(combined_tensors.squeeze(1) + self._bias)

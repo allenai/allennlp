@@ -1,4 +1,3 @@
-# pylint: disable=invalid-name,no-self-use,protected-access
 import torch
 
 from allennlp.common.testing import AllenNlpTestCase
@@ -15,20 +14,32 @@ class TestConstrainedBeamSearch(AllenNlpTestCase):
         # front as "allowed", and use that to test the constrained beam search implementation.
         initial_state = SimpleState([0], [[]], [torch.Tensor([0.0])], [-3])
         beam_size = 3
-        # pylint: disable=bad-whitespace
-        allowed_sequences = torch.Tensor([[[-2, -1, 0, 1,  2,  3,  4],
-                                           [-2,  0, 2, 4, -1, -1, -1],
-                                           [-1,  1, 3, 4, -1, -1, -1],
-                                           [-2, -1, 0, 1,  2,  4, -1],
-                                           [-1,  0, 1, 2,  3,  4, -1],
-                                           [-1,  1, 2, 3,  4, -1, -1]]])
-        # pylint: enable=bad-whitespace
-        mask = torch.Tensor([[[1, 1, 1, 1, 1, 1, 1],
-                              [1, 1, 1, 1, 0, 0, 0],
-                              [1, 1, 1, 1, 0, 0, 0],
-                              [1, 1, 1, 1, 1, 1, 0],
-                              [1, 1, 1, 1, 1, 1, 0],
-                              [1, 1, 1, 1, 1, 0, 0]]])
+
+        allowed_sequences = torch.Tensor(
+            [
+                [
+                    [-2, -1, 0, 1, 2, 3, 4],
+                    [-2, 0, 2, 4, -1, -1, -1],
+                    [-1, 1, 3, 4, -1, -1, -1],
+                    [-2, -1, 0, 1, 2, 4, -1],
+                    [-1, 0, 1, 2, 3, 4, -1],
+                    [-1, 1, 2, 3, 4, -1, -1],
+                ]
+            ]
+        )
+
+        mask = torch.Tensor(
+            [
+                [
+                    [1, 1, 1, 1, 1, 1, 1],
+                    [1, 1, 1, 1, 0, 0, 0],
+                    [1, 1, 1, 1, 0, 0, 0],
+                    [1, 1, 1, 1, 1, 1, 0],
+                    [1, 1, 1, 1, 1, 1, 0],
+                    [1, 1, 1, 1, 1, 0, 0],
+                ]
+            ]
+        )
 
         beam_search = ConstrainedBeamSearch(beam_size, allowed_sequences, mask)
 

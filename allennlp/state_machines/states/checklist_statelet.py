@@ -34,12 +34,15 @@ class ChecklistStatelet:
         Mapping from batch action indices to indices in any of the four vectors above. If not
         provided, this mapping will be computed here.
     """
-    def __init__(self,
-                 terminal_actions: torch.Tensor,
-                 checklist_target: torch.Tensor,
-                 checklist_mask: torch.Tensor,
-                 checklist: torch.Tensor,
-                 terminal_indices_dict: Dict[int, int] = None) -> None:
+
+    def __init__(
+        self,
+        terminal_actions: torch.Tensor,
+        checklist_target: torch.Tensor,
+        checklist_mask: torch.Tensor,
+        checklist: torch.Tensor,
+        terminal_indices_dict: Dict[int, int] = None,
+    ) -> None:
         self.terminal_actions = terminal_actions
         self.checklist_target = checklist_target
         self.checklist_mask = checklist_mask
@@ -47,24 +50,26 @@ class ChecklistStatelet:
         if terminal_indices_dict is not None:
             self.terminal_indices_dict = terminal_indices_dict
         else:
-            self.terminal_indices_dict: Dict[int, int] = {}
+            self.terminal_indices_dict = {}
             for checklist_index, batch_action_index in enumerate(terminal_actions.detach().cpu()):
                 action_index = int(batch_action_index[0])
                 if action_index == -1:
                     continue
                 self.terminal_indices_dict[action_index] = checklist_index
 
-    def update(self, action: torch.Tensor) -> 'ChecklistStatelet':
+    def update(self, action: torch.Tensor) -> "ChecklistStatelet":
         """
         Takes an action index, updates checklist and returns an updated state.
         """
         checklist_addition = (self.terminal_actions == action).float()
         new_checklist = self.checklist + checklist_addition
-        new_checklist_state = ChecklistStatelet(terminal_actions=self.terminal_actions,
-                                                checklist_target=self.checklist_target,
-                                                checklist_mask=self.checklist_mask,
-                                                checklist=new_checklist,
-                                                terminal_indices_dict=self.terminal_indices_dict)
+        new_checklist_state = ChecklistStatelet(
+            terminal_actions=self.terminal_actions,
+            checklist_target=self.checklist_target,
+            checklist_mask=self.checklist_mask,
+            checklist=new_checklist,
+            terminal_indices_dict=self.terminal_indices_dict,
+        )
         return new_checklist_state
 
     def get_balance(self) -> torch.Tensor:
@@ -72,11 +77,13 @@ class ChecklistStatelet:
 
     def __eq__(self, other):
         if isinstance(self, other.__class__):
-            return all([
+            return all(
+                [
                     util.tensors_equal(self.terminal_actions, other.terminal_actions),
                     util.tensors_equal(self.checklist_target, other.checklist_target),
                     util.tensors_equal(self.checklist_mask, other.checklist_mask),
                     util.tensors_equal(self.checklist, other.checklist),
                     self.terminal_indices_dict == other.terminal_indices_dict,
-                    ])
+                ]
+            )
         return NotImplemented

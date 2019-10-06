@@ -8,7 +8,7 @@ from allennlp.common import Registrable
 from allennlp.data.tokenizers.token import Token
 from allennlp.data.vocabulary import Vocabulary
 
-TokenType = TypeVar("TokenType", int, List[int], numpy.ndarray)  # pylint: disable=invalid-name
+TokenType = TypeVar("TokenType", int, List[int], numpy.ndarray)
 
 
 class TokenIndexer(Generic[TokenType], Registrable):
@@ -31,11 +31,11 @@ class TokenIndexer(Generic[TokenType], Registrable):
         Note that if you set this for one TokenIndexer, you likely have to set it for all
         :class:`TokenIndexer` for the same field, otherwise you'll get mismatched tensor sizes.
     """
-    default_implementation = 'single_id'
+
+    default_implementation = "single_id"
     has_warned_for_as_padded_tensor = False
 
-    def __init__(self,
-                 token_min_padding_length: int = 0) -> None:
+    def __init__(self, token_min_padding_length: int = 0) -> None:
         self._token_min_padding_length: int = token_min_padding_length
 
     def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):
@@ -49,10 +49,9 @@ class TokenIndexer(Generic[TokenType], Registrable):
         """
         raise NotImplementedError
 
-    def tokens_to_indices(self,
-                          tokens: List[Token],
-                          vocabulary: Vocabulary,
-                          index_name: str) -> Dict[str, List[TokenType]]:
+    def tokens_to_indices(
+        self, tokens: List[Token], vocabulary: Vocabulary, index_name: str
+    ) -> Dict[str, List[TokenType]]:
         """
         Takes a list of tokens and converts them to one or more sets of indices.
         This could be just an ID for each token from the vocabulary.
@@ -62,7 +61,7 @@ class TokenIndexer(Generic[TokenType], Registrable):
         """
         raise NotImplementedError
 
-    def get_padding_token(self) -> TokenType: # pylint: disable=no-self-use
+    def get_padding_token(self) -> TokenType:
         """
         Deprecated. Please just implement the padding token in `as_padded_tensor` instead.
         TODO(Mark): remove in 1.0 release. This is only a concrete implementation to preserve
@@ -71,10 +70,13 @@ class TokenIndexer(Generic[TokenType], Registrable):
         When we need to add padding tokens, what should they look like?  This method returns a
         "blank" token of whatever type is returned by :func:`tokens_to_indices`.
         """
-        warnings.warn("Using a Field with get_padding_token as an inherited method,"
-                      " which will be depreciated in 1.0.0."
-                      "Please implement as_padded_tensor instead.", FutureWarning)
-        return 0 # type: ignore
+        warnings.warn(
+            "Using a Field with get_padding_token as an inherited method,"
+            " which will be depreciated in 1.0.0."
+            "Please implement as_padded_tensor instead.",
+            FutureWarning,
+        )
+        return 0  # type: ignore
 
     def get_padding_lengths(self, token: TokenType) -> Dict[str, int]:
         """
@@ -93,10 +95,12 @@ class TokenIndexer(Generic[TokenType], Registrable):
         """
         return self._token_min_padding_length
 
-    def as_padded_tensor(self,
-                         tokens: Dict[str, List[TokenType]],
-                         desired_num_tokens: Dict[str, int],
-                         padding_lengths: Dict[str, int]) -> Dict[str, torch.Tensor]:
+    def as_padded_tensor(
+        self,
+        tokens: Dict[str, List[TokenType]],
+        desired_num_tokens: Dict[str, int],
+        padding_lengths: Dict[str, int],
+    ) -> Dict[str, torch.Tensor]:
         """
         This method pads a list of tokens to ``desired_num_tokens`` and returns that padded list
         of input tokens as a torch Tensor. If the input token list is longer than ``desired_num_tokens``
@@ -109,17 +113,22 @@ class TokenIndexer(Generic[TokenType], Registrable):
         Note that this method should be abstract, but it is implemented to allow backward compatability.
         """
         if not self.has_warned_for_as_padded_tensor:
-            warnings.warn("Using a Field with pad_token_sequence, which will be depreciated in 1.0.0."
-                          "Please implement as_padded_tensor instead.", FutureWarning)
+            warnings.warn(
+                "Using a Field with pad_token_sequence, which will be depreciated in 1.0.0."
+                "Please implement as_padded_tensor instead.",
+                FutureWarning,
+            )
             self.has_warned_for_as_padded_tensor = True
 
         padded = self.pad_token_sequence(tokens, desired_num_tokens, padding_lengths)
         return {key: torch.LongTensor(array) for key, array in padded.items()}
 
-    def pad_token_sequence(self,
-                           tokens: Dict[str, List[TokenType]],
-                           desired_num_tokens: Dict[str, int],
-                           padding_lengths: Dict[str, int]) -> Dict[str, TokenType]:
+    def pad_token_sequence(
+        self,
+        tokens: Dict[str, List[TokenType]],
+        desired_num_tokens: Dict[str, int],
+        padding_lengths: Dict[str, int],
+    ) -> Dict[str, TokenType]:
         """
         Deprecated. Please use `as_padded_tensor` instead.
         TODO(Mark): remove in 1.0 release.
@@ -130,7 +139,7 @@ class TokenIndexer(Generic[TokenType], Registrable):
         """
         Return a list of the keys this indexer return from ``tokens_to_indices``.
         """
-        # pylint: disable=no-self-use
+
         return [index_name]
 
     def __eq__(self, other) -> bool:

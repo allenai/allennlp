@@ -15,7 +15,7 @@ from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
 from allennlp.data.tokenizers import Token
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 def get_file_paths(pathname: str, languages: List[str]):
@@ -38,7 +38,7 @@ def get_file_paths(pathname: str, languages: List[str]):
     paths = []
     for file_path in glob.glob(pathname):
         base = os.path.splitext(os.path.basename(file_path))[0]
-        lang_id = base.split('-')[0]
+        lang_id = base.split("-")[0]
         if lang_id in languages:
             paths.append((lang_id, file_path))
 
@@ -79,17 +79,20 @@ class UniversalDependenciesMultiLangDatasetReader(DatasetReader):
     instances_per_file : ``int``, optional (default = 32)
         The amount of consecutive cases to sample from each input file when alternating.
     """
-    def __init__(self,
-                 languages: List[str],
-                 token_indexers: Dict[str, TokenIndexer] = None,
-                 use_language_specific_pos: bool = False,
-                 lazy: bool = False,
-                 alternate: bool = True,
-                 is_first_pass_for_vocab: bool = True,
-                 instances_per_file: int = 32) -> None:
+
+    def __init__(
+        self,
+        languages: List[str],
+        token_indexers: Dict[str, TokenIndexer] = None,
+        use_language_specific_pos: bool = False,
+        lazy: bool = False,
+        alternate: bool = True,
+        is_first_pass_for_vocab: bool = True,
+        instances_per_file: int = 32,
+    ) -> None:
         super().__init__(lazy)
         self._languages = languages
-        self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
+        self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._use_language_specific_pos = use_language_specific_pos
 
         self._is_first_pass_for_vocab = is_first_pass_for_vocab
@@ -100,8 +103,10 @@ class UniversalDependenciesMultiLangDatasetReader(DatasetReader):
         self._iterators: List[Tuple[str, Iterator[Any]]] = None
 
     def _read_one_file(self, lang: str, file_path: str):
-        with open(file_path, 'r') as conllu_file:
-            logger.info("Reading UD instances for %s language from conllu dataset at: %s", lang, file_path)
+        with open(file_path, "r") as conllu_file:
+            logger.info(
+                "Reading UD instances for %s language from conllu dataset at: %s", lang, file_path
+            )
 
             for annotation in parse_incr(conllu_file):
                 # CoNLLU annotations sometimes add back in words that have been elided
@@ -124,16 +129,19 @@ class UniversalDependenciesMultiLangDatasetReader(DatasetReader):
     def _read(self, file_path: str):
         file_paths = get_file_paths(file_path, self._languages)
         if (self._is_first_pass and self._is_first_pass_for_vocab) or (not self._alternate):
-            iterators = [iter(self._read_one_file(lang, file_path))
-                         for (lang, file_path) in file_paths]
+            iterators = [
+                iter(self._read_one_file(lang, file_path)) for (lang, file_path) in file_paths
+            ]
             self._is_first_pass = False
             for inst in itertools.chain(*iterators):
                 yield inst
 
         else:
             if self._iterators is None:
-                self._iterators = [(lang, iter(self._read_one_file(lang, file_path)))
-                                   for (lang, file_path) in file_paths]
+                self._iterators = [
+                    (lang, iter(self._read_one_file(lang, file_path)))
+                    for (lang, file_path) in file_paths
+                ]
             num_files = len(file_paths)
             while True:
                 ind = np.random.randint(num_files)
@@ -148,12 +156,14 @@ class UniversalDependenciesMultiLangDatasetReader(DatasetReader):
                         yield lang_iter.__next__()
 
     @overrides
-    def text_to_instance(self,  # type: ignore
-                         lang: str,
-                         words: List[str],
-                         upos_tags: List[str],
-                         dependencies: List[Tuple[str, int]] = None) -> Instance:
-        # pylint: disable=arguments-differ
+    def text_to_instance(
+        self,  # type: ignore
+        lang: str,
+        words: List[str],
+        upos_tags: List[str],
+        dependencies: List[Tuple[str, int]] = None,
+    ) -> Instance:
+
         """
         Parameters
         ----------
@@ -181,12 +191,12 @@ class UniversalDependenciesMultiLangDatasetReader(DatasetReader):
         if dependencies is not None:
             # We don't want to expand the label namespace with an additional dummy token, so we'll
             # always give the 'ROOT_HEAD' token a label of 'root'.
-            fields["head_tags"] = SequenceLabelField([x[0] for x in dependencies],
-                                                     tokens,
-                                                     label_namespace="head_tags")
-            fields["head_indices"] = SequenceLabelField([int(x[1]) for x in dependencies],
-                                                        tokens,
-                                                        label_namespace="head_index_tags")
+            fields["head_tags"] = SequenceLabelField(
+                [x[0] for x in dependencies], tokens, label_namespace="head_tags"
+            )
+            fields["head_indices"] = SequenceLabelField(
+                [int(x[1]) for x in dependencies], tokens, label_namespace="head_index_tags"
+            )
 
         fields["metadata"] = MetadataField({"words": words, "pos": upos_tags, "lang": lang})
         return Instance(fields)

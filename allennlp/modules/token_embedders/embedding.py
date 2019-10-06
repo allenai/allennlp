@@ -11,6 +11,7 @@ from overrides import overrides
 import numpy
 import torch
 from torch.nn.functional import embedding
+
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=FutureWarning)
     import h5py
@@ -23,7 +24,7 @@ from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 from allennlp.modules.time_distributed import TimeDistributed
 from allennlp.nn import util
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @TokenEmbedder.register("embedding")
@@ -81,20 +82,23 @@ class Embedding(TokenEmbedder):
     -------
     An Embedding module.
     """
-    def __init__(self,
-                 num_embeddings: int,
-                 embedding_dim: int,
-                 projection_dim: int = None,
-                 weight: torch.FloatTensor = None,
-                 padding_index: int = None,
-                 trainable: bool = True,
-                 max_norm: float = None,
-                 norm_type: float = 2.,
-                 scale_grad_by_freq: bool = False,
-                 sparse: bool = False,
-                 vocab_namespace: str = None,
-                 pretrained_file: str = None) -> None:
-        super(Embedding, self).__init__()
+
+    def __init__(
+        self,
+        num_embeddings: int,
+        embedding_dim: int,
+        projection_dim: int = None,
+        weight: torch.FloatTensor = None,
+        padding_index: int = None,
+        trainable: bool = True,
+        max_norm: float = None,
+        norm_type: float = 2.0,
+        scale_grad_by_freq: bool = False,
+        sparse: bool = False,
+        vocab_namespace: str = None,
+        pretrained_file: str = None,
+    ) -> None:
+        super().__init__()
         self.num_embeddings = num_embeddings
         self.padding_index = padding_index
         self.max_norm = max_norm
@@ -112,7 +116,9 @@ class Embedding(TokenEmbedder):
             torch.nn.init.xavier_uniform_(self.weight)
         else:
             if weight.size() != (num_embeddings, embedding_dim):
-                raise ConfigurationError("A weight matrix was passed with contradictory embedding shapes.")
+                raise ConfigurationError(
+                    "A weight matrix was passed with contradictory embedding shapes."
+                )
             self.weight = torch.nn.Parameter(weight, requires_grad=trainable)
 
         if self.padding_index is not None:
@@ -128,7 +134,7 @@ class Embedding(TokenEmbedder):
         return self.output_dim
 
     @overrides
-    def forward(self, inputs):  # pylint: disable=arguments-differ
+    def forward(self, inputs):
         # inputs may have extra dimensions (batch_size, d1, ..., dn, sequence_length),
         # but embedding expects (batch_size, sequence_length), so pass inputs to
         # util.combine_initial_dims (which is a no-op if there are no extra dimensions).
@@ -136,12 +142,15 @@ class Embedding(TokenEmbedder):
         original_size = inputs.size()
         inputs = util.combine_initial_dims(inputs)
 
-        embedded = embedding(inputs, self.weight,
-                             padding_idx=self.padding_index,
-                             max_norm=self.max_norm,
-                             norm_type=self.norm_type,
-                             scale_grad_by_freq=self.scale_grad_by_freq,
-                             sparse=self.sparse)
+        embedded = embedding(
+            inputs,
+            self.weight,
+            padding_idx=self.padding_index,
+            max_norm=self.max_norm,
+            norm_type=self.norm_type,
+            scale_grad_by_freq=self.scale_grad_by_freq,
+            sparse=self.sparse,
+        )
 
         # Now (if necessary) add back in the extra dimensions.
         embedded = util.uncombine_initial_dims(embedded, original_size)
@@ -153,11 +162,13 @@ class Embedding(TokenEmbedder):
             embedded = projection(embedded)
         return embedded
 
-    def extend_vocab(self,  # pylint: disable=arguments-differ
-                     extended_vocab: Vocabulary,
-                     vocab_namespace: str = None,
-                     extension_pretrained_file: str = None,
-                     model_path: str = None):
+    def extend_vocab(
+        self,
+        extended_vocab: Vocabulary,
+        vocab_namespace: str = None,
+        extension_pretrained_file: str = None,
+        model_path: str = None,
+    ):
         """
         Extends the embedding matrix according to the extended vocabulary.
         If extension_pretrained_file is available, it will be used for initializing the new words
@@ -191,8 +202,10 @@ class Embedding(TokenEmbedder):
         vocab_namespace = vocab_namespace or self._vocab_namespace
         if not vocab_namespace:
             # It's not safe to default to "tokens" or any other namespace.
-            logging.info("Loading a model trained before embedding extension was implemented; "
-                         "pass an explicit vocab namespace if you want to extend the vocabulary.")
+            logging.info(
+                "Loading a model trained before embedding extension was implemented; "
+                "pass an explicit vocab namespace if you want to extend the vocabulary."
+            )
             return
 
         extended_num_embeddings = extended_vocab.get_vocab_size(vocab_namespace)
@@ -201,8 +214,10 @@ class Embedding(TokenEmbedder):
             return
 
         if extended_num_embeddings < self.num_embeddings:
-            raise ConfigurationError(f"Size of namespace, {vocab_namespace} for extended_vocab is smaller than "
-                                     f"embedding. You likely passed incorrect vocab or namespace for extension.")
+            raise ConfigurationError(
+                f"Size of namespace, {vocab_namespace} for extended_vocab is smaller than "
+                f"embedding. You likely passed incorrect vocab or namespace for extension."
+            )
 
         # Case 1: user passed extension_pretrained_file and it's available.
         if extension_pretrained_file and is_url_or_existing_file(extension_pretrained_file):
@@ -210,22 +225,29 @@ class Embedding(TokenEmbedder):
             pass
         # Case 2: user passed extension_pretrained_file and it's not available
         elif extension_pretrained_file:
-            raise ConfigurationError(f"You passed pretrained embedding file {extension_pretrained_file} "
-                                     f"for model_path {model_path} but it's not available.")
+            raise ConfigurationError(
+                f"You passed pretrained embedding file {extension_pretrained_file} "
+                f"for model_path {model_path} but it's not available."
+            )
         # Case 3: user didn't pass extension_pretrained_file, but pretrained_file attribute was
         # saved during training and is available.
         elif is_url_or_existing_file(self._pretrained_file):
             extension_pretrained_file = self._pretrained_file
         # Case 4: no file is available, hope that pretrained embeddings weren't used in the first place and warn
         else:
-            extra_info = (f"Originally pretrained_file was at "
-                          f"{self._pretrained_file}. " if self._pretrained_file else "")
+            extra_info = (
+                f"Originally pretrained_file was at " f"{self._pretrained_file}. "
+                if self._pretrained_file
+                else ""
+            )
             # It's better to warn here and not give error because there is no way to distinguish between
             # whether pretrained-file wasn't used during training or user forgot to pass / passed incorrect
             # mapping. Raising an error would prevent fine-tuning in the former case.
-            logging.warning(f"Embedding at model_path, {model_path} cannot locate the pretrained_file. "
-                            f"{extra_info} If you are fine-tuning and want to use using pretrained_file for "
-                            f"embedding extension, please pass the mapping by --embedding-sources argument.")
+            logging.warning(
+                f"Embedding at model_path, {model_path} cannot locate the pretrained_file. "
+                f"{extra_info} If you are fine-tuning and want to use using pretrained_file for "
+                f"embedding extension, please pass the mapping by --embedding-sources argument."
+            )
 
         embedding_dim = self.weight.data.shape[-1]
         if not extension_pretrained_file:
@@ -235,9 +257,10 @@ class Embedding(TokenEmbedder):
         else:
             # It's easiest to just reload the embeddings for the entire vocab,
             # then only keep the ones we need.
-            whole_weight = _read_pretrained_embeddings_file(extension_pretrained_file, embedding_dim,
-                                                            extended_vocab, vocab_namespace)
-            extra_weight = whole_weight[self.num_embeddings:, :]
+            whole_weight = _read_pretrained_embeddings_file(
+                extension_pretrained_file, embedding_dim, extended_vocab, vocab_namespace
+            )
+            extra_weight = whole_weight[self.num_embeddings :, :]
 
         device = self.weight.data.device
         extended_weight = torch.cat([self.weight.data, extra_weight.to(device)], dim=0)
@@ -245,7 +268,7 @@ class Embedding(TokenEmbedder):
 
     # Custom logic requires custom from_params.
     @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> 'Embedding':  # type: ignore
+    def from_params(cls, vocab: Vocabulary, params: Params) -> "Embedding":  # type: ignore
         """
         We need the vocabulary here to know how many items we need to embed, and we look for a
         ``vocab_namespace`` key in the parameter dictionary to know which vocabulary to use.  If
@@ -274,52 +297,52 @@ class Embedding(TokenEmbedder):
 
                     "(https://nlp.stanford.edu/data/glove.twitter.27B.zip)#glove.twitter.27B.200d.txt"
         """
-        # pylint: disable=arguments-differ
-        num_embeddings = params.pop_int('num_embeddings', None)
+
+        num_embeddings = params.pop_int("num_embeddings", None)
         # If num_embeddings is present, set default namespace to None so that extend_vocab
         # call doesn't misinterpret that some namespace was originally used.
         vocab_namespace = params.pop("vocab_namespace", None if num_embeddings else "tokens")
         if num_embeddings is None:
             num_embeddings = vocab.get_vocab_size(vocab_namespace)
-        embedding_dim = params.pop_int('embedding_dim')
+        embedding_dim = params.pop_int("embedding_dim")
         pretrained_file = params.pop("pretrained_file", None)
         projection_dim = params.pop_int("projection_dim", None)
         trainable = params.pop_bool("trainable", True)
-        padding_index = params.pop_int('padding_index', None)
-        max_norm = params.pop_float('max_norm', None)
-        norm_type = params.pop_float('norm_type', 2.)
-        scale_grad_by_freq = params.pop_bool('scale_grad_by_freq', False)
-        sparse = params.pop_bool('sparse', False)
+        padding_index = params.pop_int("padding_index", None)
+        max_norm = params.pop_float("max_norm", None)
+        norm_type = params.pop_float("norm_type", 2.0)
+        scale_grad_by_freq = params.pop_bool("scale_grad_by_freq", False)
+        sparse = params.pop_bool("sparse", False)
         params.assert_empty(cls.__name__)
 
         if pretrained_file:
             # If we're loading a saved model, we don't want to actually read a pre-trained
             # embedding file - the embeddings will just be in our saved weights, and we might not
             # have the original embedding file anymore, anyway.
-            weight = _read_pretrained_embeddings_file(pretrained_file,
-                                                      embedding_dim,
-                                                      vocab,
-                                                      vocab_namespace)
+            weight = _read_pretrained_embeddings_file(
+                pretrained_file, embedding_dim, vocab, vocab_namespace
+            )
         else:
             weight = None
 
-        return cls(num_embeddings=num_embeddings,
-                   embedding_dim=embedding_dim,
-                   projection_dim=projection_dim,
-                   weight=weight,
-                   padding_index=padding_index,
-                   trainable=trainable,
-                   max_norm=max_norm,
-                   norm_type=norm_type,
-                   scale_grad_by_freq=scale_grad_by_freq,
-                   sparse=sparse,
-                   vocab_namespace=vocab_namespace)
+        return cls(
+            num_embeddings=num_embeddings,
+            embedding_dim=embedding_dim,
+            projection_dim=projection_dim,
+            weight=weight,
+            padding_index=padding_index,
+            trainable=trainable,
+            max_norm=max_norm,
+            norm_type=norm_type,
+            scale_grad_by_freq=scale_grad_by_freq,
+            sparse=sparse,
+            vocab_namespace=vocab_namespace,
+        )
 
 
-def _read_pretrained_embeddings_file(file_uri: str,
-                                     embedding_dim: int,
-                                     vocab: Vocabulary,
-                                     namespace: str = "tokens") -> torch.FloatTensor:
+def _read_pretrained_embeddings_file(
+    file_uri: str, embedding_dim: int, vocab: Vocabulary, namespace: str = "tokens"
+) -> torch.FloatTensor:
     """
     Returns and embedding matrix for the given vocabulary using the pretrained embeddings
     contained in the given file. Embeddings for tokens not found in the pretrained embedding file
@@ -363,20 +386,15 @@ def _read_pretrained_embeddings_file(file_uri: str,
     the pretrained embedding file are initialized to the pretrained embedding value.
     """
     file_ext = get_file_extension(file_uri)
-    if file_ext in ['.h5', '.hdf5']:
-        return _read_embeddings_from_hdf5(file_uri,
-                                          embedding_dim,
-                                          vocab, namespace)
+    if file_ext in [".h5", ".hdf5"]:
+        return _read_embeddings_from_hdf5(file_uri, embedding_dim, vocab, namespace)
 
-    return _read_embeddings_from_text_file(file_uri,
-                                           embedding_dim,
-                                           vocab, namespace)
+    return _read_embeddings_from_text_file(file_uri, embedding_dim, vocab, namespace)
 
 
-def _read_embeddings_from_text_file(file_uri: str,
-                                    embedding_dim: int,
-                                    vocab: Vocabulary,
-                                    namespace: str = "tokens") -> torch.FloatTensor:
+def _read_embeddings_from_text_file(
+    file_uri: str, embedding_dim: int, vocab: Vocabulary, namespace: str = "tokens"
+) -> torch.FloatTensor:
     """
     Read pre-trained word vectors from an eventually compressed text file, possibly contained
     inside an archive with multiple files. The text file is assumed to be utf-8 encoded with
@@ -395,9 +413,9 @@ def _read_embeddings_from_text_file(file_uri: str,
 
     with EmbeddingsTextFile(file_uri) as embeddings_file:
         for line in Tqdm.tqdm(embeddings_file):
-            token = line.split(' ', 1)[0]
+            token = line.split(" ", 1)[0]
             if token in tokens_to_keep:
-                fields = line.rstrip().split(' ')
+                fields = line.rstrip().split(" ")
                 if len(fields) - 1 != embedding_dim:
                     # Sometimes there are funny unicode parsing problems that lead to different
                     # fields lengths (e.g., a word with a unicode space character that splits
@@ -406,17 +424,23 @@ def _read_embeddings_from_text_file(file_uri: str,
                     # skipped.  It's hard to check for that here; you just have to look in the
                     # embedding_misses_file and at the model summary to make sure things look
                     # like they are supposed to.
-                    logger.warning("Found line with wrong number of dimensions (expected: %d; actual: %d): %s",
-                                   embedding_dim, len(fields) - 1, line)
+                    logger.warning(
+                        "Found line with wrong number of dimensions (expected: %d; actual: %d): %s",
+                        embedding_dim,
+                        len(fields) - 1,
+                        line,
+                    )
                     continue
 
-                vector = numpy.asarray(fields[1:], dtype='float32')
+                vector = numpy.asarray(fields[1:], dtype="float32")
                 embeddings[token] = vector
 
     if not embeddings:
-        raise ConfigurationError("No embeddings of correct dimension found; you probably "
-                                 "misspecified your embedding_dim parameter, or didn't "
-                                 "pre-populate your Vocabulary")
+        raise ConfigurationError(
+            "No embeddings of correct dimension found; you probably "
+            "misspecified your embedding_dim parameter, or didn't "
+            "pre-populate your Vocabulary"
+        )
 
     all_embeddings = numpy.asarray(list(embeddings.values()))
     embeddings_mean = float(numpy.mean(all_embeddings))
@@ -424,8 +448,9 @@ def _read_embeddings_from_text_file(file_uri: str,
     # Now we initialize the weight matrix for an embedding layer, starting with random vectors,
     # then filling in the word vectors we just read.
     logger.info("Initializing pre-trained embedding layer")
-    embedding_matrix = torch.FloatTensor(vocab_size, embedding_dim).normal_(embeddings_mean,
-                                                                            embeddings_std)
+    embedding_matrix = torch.FloatTensor(vocab_size, embedding_dim).normal_(
+        embeddings_mean, embeddings_std
+    )
     num_tokens_found = 0
     index_to_token = vocab.get_index_to_token_vocabulary(namespace)
     for i in range(vocab_size):
@@ -437,35 +462,40 @@ def _read_embeddings_from_text_file(file_uri: str,
             embedding_matrix[i] = torch.FloatTensor(embeddings[token])
             num_tokens_found += 1
         else:
-            logger.debug("Token %s was not found in the embedding file. Initialising randomly.", token)
+            logger.debug(
+                "Token %s was not found in the embedding file. Initialising randomly.", token
+            )
 
-    logger.info("Pretrained embeddings were found for %d out of %d tokens",
-                num_tokens_found, vocab_size)
+    logger.info(
+        "Pretrained embeddings were found for %d out of %d tokens", num_tokens_found, vocab_size
+    )
 
     return embedding_matrix
 
 
-def _read_embeddings_from_hdf5(embeddings_filename: str,
-                               embedding_dim: int,
-                               vocab: Vocabulary,
-                               namespace: str = "tokens") -> torch.FloatTensor:
+def _read_embeddings_from_hdf5(
+    embeddings_filename: str, embedding_dim: int, vocab: Vocabulary, namespace: str = "tokens"
+) -> torch.FloatTensor:
     """
     Reads from a hdf5 formatted file. The embedding matrix is assumed to
     be keyed by 'embedding' and of size ``(num_tokens, embedding_dim)``.
     """
-    with h5py.File(embeddings_filename, 'r') as fin:
-        embeddings = fin['embedding'][...]
+    with h5py.File(embeddings_filename, "r") as fin:
+        embeddings = fin["embedding"][...]
 
     if list(embeddings.shape) != [vocab.get_vocab_size(namespace), embedding_dim]:
         raise ConfigurationError(
-                "Read shape {0} embeddings from the file, but expected {1}".format(
-                        list(embeddings.shape), [vocab.get_vocab_size(namespace), embedding_dim]))
+            "Read shape {0} embeddings from the file, but expected {1}".format(
+                list(embeddings.shape), [vocab.get_vocab_size(namespace), embedding_dim]
+            )
+        )
 
     return torch.FloatTensor(embeddings)
 
 
-def format_embeddings_file_uri(main_file_path_or_url: str,
-                               path_inside_archive: Optional[str] = None) -> str:
+def format_embeddings_file_uri(
+    main_file_path_or_url: str, path_inside_archive: Optional[str] = None
+) -> str:
     if path_inside_archive:
         return "({})#{}".format(main_file_path_or_url, path_inside_archive)
     return main_file_path_or_url
@@ -476,8 +506,8 @@ class EmbeddingsFileURI(NamedTuple):
     path_inside_archive: Optional[str] = None
 
 
-def parse_embeddings_file_uri(uri: str) -> 'EmbeddingsFileURI':
-    match = re.fullmatch(r'\((.*)\)#(.*)', uri)
+def parse_embeddings_file_uri(uri: str) -> "EmbeddingsFileURI":
+    match = re.fullmatch(r"\((.*)\)#(.*)", uri)
     if match:
         fields = cast(Tuple[str, str], match.groups())
         return EmbeddingsFileURI(*fields)
@@ -503,17 +533,17 @@ class EmbeddingsTextFile(Iterator[str]):
     encoding: str
     cache_dir: str
     """
-    DEFAULT_ENCODING = 'utf-8'
 
-    def __init__(self,
-                 file_uri: str,
-                 encoding: str = DEFAULT_ENCODING,
-                 cache_dir: str = None) -> None:
+    DEFAULT_ENCODING = "utf-8"
+
+    def __init__(
+        self, file_uri: str, encoding: str = DEFAULT_ENCODING, cache_dir: str = None
+    ) -> None:
 
         self.uri = file_uri
         self._encoding = encoding
         self._cache_dir = cache_dir
-        self._archive_handle: Any = None   # only if the file is inside an archive
+        self._archive_handle: Any = None  # only if the file is inside an archive
 
         main_file_uri, path_inside_archive = parse_embeddings_file_uri(file_uri)
         main_file_local_path = cached_path(main_file_uri, cache_dir=cache_dir)
@@ -526,7 +556,7 @@ class EmbeddingsTextFile(Iterator[str]):
 
         else:  # all the other supported formats, including uncompressed files
             if path_inside_archive:
-                raise ValueError('Unsupported archive format: %s' + main_file_uri)
+                raise ValueError("Unsupported archive format: %s" + main_file_uri)
 
             # All the python packages for compressed files share the same interface of io.open
             extension = get_file_extension(main_file_uri)
@@ -534,31 +564,39 @@ class EmbeddingsTextFile(Iterator[str]):
             # Some systems don't have support for all of these libraries, so we import them only
             # when necessary.
             package = None
-            if extension in ['.txt', '.vec']:
+            if extension in [".txt", ".vec"]:
                 package = io
-            elif extension == '.gz':
+            elif extension == ".gz":
                 import gzip
+
                 package = gzip
             elif extension == ".bz2":
                 import bz2
+
                 package = bz2
             elif extension == ".lzma":
                 import lzma
+
                 package = lzma
 
             if package is None:
-                logger.warning('The embeddings file has an unknown file extension "%s". '
-                               'We will assume the file is an (uncompressed) text file', extension)
+                logger.warning(
+                    'The embeddings file has an unknown file extension "%s". '
+                    "We will assume the file is an (uncompressed) text file",
+                    extension,
+                )
                 package = io
 
-            self._handle = package.open(main_file_local_path, 'rt', encoding=encoding)  # type: ignore
+            self._handle = package.open(  # type: ignore
+                main_file_local_path, "rt", encoding=encoding
+            )
 
         # To use this with tqdm we'd like to know the number of tokens. It's possible that the
         # first line of the embeddings file contains this: if it does, we want to start iteration
         # from the 2nd line, otherwise we want to start from the 1st.
         # Unfortunately, once we read the first line, we cannot move back the file iterator
         # because the underlying file may be "not seekable"; we use itertools.chain instead.
-        first_line = next(self._handle)     # this moves the iterator forward
+        first_line = next(self._handle)  # this moves the iterator forward
         self.num_tokens = EmbeddingsTextFile._get_num_tokens_from_first_line(first_line)
         if self.num_tokens:
             # the first line is a header line: start iterating from the 2nd line
@@ -569,29 +607,29 @@ class EmbeddingsTextFile(Iterator[str]):
 
     def _open_inside_zip(self, archive_path: str, member_path: Optional[str] = None) -> None:
         cached_archive_path = cached_path(archive_path, cache_dir=self._cache_dir)
-        archive = zipfile.ZipFile(cached_archive_path, 'r')
+        archive = zipfile.ZipFile(cached_archive_path, "r")
         if member_path is None:
             members_list = archive.namelist()
             member_path = self._get_the_only_file_in_the_archive(members_list, archive_path)
         member_path = cast(str, member_path)
-        member_file = archive.open(member_path, 'r')
+        member_file = archive.open(member_path, "r")
         self._handle = io.TextIOWrapper(member_file, encoding=self._encoding)
         self._archive_handle = archive
 
     def _open_inside_tar(self, archive_path: str, member_path: Optional[str] = None) -> None:
         cached_archive_path = cached_path(archive_path, cache_dir=self._cache_dir)
-        archive = tarfile.open(cached_archive_path, 'r')
+        archive = tarfile.open(cached_archive_path, "r")
         if member_path is None:
             members_list = archive.getnames()
             member_path = self._get_the_only_file_in_the_archive(members_list, archive_path)
         member_path = cast(str, member_path)
-        member = archive.getmember(member_path)   # raises exception if not present
+        member = archive.getmember(member_path)  # raises exception if not present
         member_file = cast(IO[bytes], archive.extractfile(member))
         self._handle = io.TextIOWrapper(member_file, encoding=self._encoding)
         self._archive_handle = archive
 
     def read(self) -> str:
-        return ''.join(self._iterator)
+        return "".join(self._iterator)
 
     def readline(self) -> str:
         return next(self._iterator)
@@ -601,13 +639,13 @@ class EmbeddingsTextFile(Iterator[str]):
         if self._archive_handle:
             self._archive_handle.close()
 
-    def __enter__(self) -> 'EmbeddingsTextFile':
+    def __enter__(self) -> "EmbeddingsTextFile":
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         self.close()
 
-    def __iter__(self) -> 'EmbeddingsTextFile':
+    def __iter__(self) -> "EmbeddingsTextFile":
         return self
 
     def __next__(self) -> str:
@@ -617,24 +655,30 @@ class EmbeddingsTextFile(Iterator[str]):
         """ Hack for tqdm: no need for explicitly passing ``total=file.num_tokens`` """
         if self.num_tokens:
             return self.num_tokens
-        raise AttributeError('an object of type EmbeddingsTextFile has "len()" only if the underlying '
-                             'text file declares the number of tokens (i.e. the number of lines following)'
-                             'in the first line. That is not the case of this particular instance.')
+        raise AttributeError(
+            'an object of type EmbeddingsTextFile has "len()" only if the underlying '
+            "text file declares the number of tokens (i.e. the number of lines following)"
+            "in the first line. That is not the case of this particular instance."
+        )
 
     @staticmethod
     def _get_the_only_file_in_the_archive(members_list: Sequence[str], archive_path: str) -> str:
         if len(members_list) > 1:
-            raise ValueError('The archive %s contains multiple files, so you must select '
-                             'one of the files inside providing a uri of the type: %s.'
-                             % (archive_path, format_embeddings_file_uri('path_or_url_to_archive',
-                                                                         'path_inside_archive')))
+            raise ValueError(
+                "The archive %s contains multiple files, so you must select "
+                "one of the files inside providing a uri of the type: %s."
+                % (
+                    archive_path,
+                    format_embeddings_file_uri("path_or_url_to_archive", "path_inside_archive"),
+                )
+            )
         return members_list[0]
 
     @staticmethod
     def _get_num_tokens_from_first_line(line: str) -> Optional[int]:
         """ This function takes in input a string and if it contains 1 or 2 integers, it assumes the
         largest one it the number of tokens. Returns None if the line doesn't match that pattern. """
-        fields = line.split(' ')
+        fields = line.split(" ")
         if 1 <= len(fields) <= 2:
             try:
                 int_fields = [int(x) for x in fields]
@@ -642,7 +686,9 @@ class EmbeddingsTextFile(Iterator[str]):
                 return None
             else:
                 num_tokens = max(int_fields)
-                logger.info('Recognized a header line in the embedding file with number of tokens: %d',
-                            num_tokens)
+                logger.info(
+                    "Recognized a header line in the embedding file with number of tokens: %d",
+                    num_tokens,
+                )
                 return num_tokens
         return None

@@ -9,7 +9,9 @@ from torch.nn import Parameter
 from allennlp.modules import Attention
 from allennlp.nn import Activation
 from allennlp.state_machines.states import CoverageState, ChecklistStatelet
-from allennlp.state_machines.transition_functions.basic_transition_function import BasicTransitionFunction
+from allennlp.state_machines.transition_functions.basic_transition_function import (
+    BasicTransitionFunction,
+)
 
 
 class CoverageTransitionFunction(BasicTransitionFunction):
@@ -37,29 +39,35 @@ class CoverageTransitionFunction(BasicTransitionFunction):
         action vector in this case to account for that.
     dropout : ``float`` (optional, default=0.0)
     """
-    def __init__(self,
-                 encoder_output_dim: int,
-                 action_embedding_dim: int,
-                 input_attention: Attention,
-                 activation: Activation = Activation.by_name('relu')(),
-                 add_action_bias: bool = True,
-                 dropout: float = 0.0) -> None:
-        super().__init__(encoder_output_dim=encoder_output_dim,
-                         action_embedding_dim=action_embedding_dim,
-                         input_attention=input_attention,
-                         activation=activation,
-                         add_action_bias=add_action_bias,
-                         dropout=dropout)
+
+    def __init__(
+        self,
+        encoder_output_dim: int,
+        action_embedding_dim: int,
+        input_attention: Attention,
+        activation: Activation = Activation.by_name("relu")(),
+        add_action_bias: bool = True,
+        dropout: float = 0.0,
+    ) -> None:
+        super().__init__(
+            encoder_output_dim=encoder_output_dim,
+            action_embedding_dim=action_embedding_dim,
+            input_attention=input_attention,
+            activation=activation,
+            add_action_bias=add_action_bias,
+            dropout=dropout,
+        )
         # See the class docstring for a description of what this does.
         self._checklist_multiplier = Parameter(torch.FloatTensor([1.0]))
 
     @overrides
-    def _compute_action_probabilities(self,  # type: ignore
-                                      state: CoverageState,
-                                      hidden_state: torch.Tensor,
-                                      attention_weights: torch.Tensor,
-                                      predicted_action_embeddings: torch.Tensor
-                                     ) -> Dict[int, List[Tuple[int, Any, Any, Any, List[int]]]]:
+    def _compute_action_probabilities(
+        self,  # type: ignore
+        state: CoverageState,
+        hidden_state: torch.Tensor,
+        attention_weights: torch.Tensor,
+        predicted_action_embeddings: torch.Tensor,
+    ) -> Dict[int, List[Tuple[int, Any, Any, Any, List[int]]]]:
         # In this section we take our predicted action embedding and compare it to the available
         # actions in our current state (which might be different for each group element).  For
         # computing action scores, we'll forget about doing batched / grouped computation, as it
@@ -74,36 +82,38 @@ class CoverageTransitionFunction(BasicTransitionFunction):
         for group_index in range(group_size):
             instance_actions = actions[group_index]
             predicted_action_embedding = predicted_action_embeddings[group_index]
-            action_embeddings, output_action_embeddings, action_ids = instance_actions['global']
+            action_embeddings, output_action_embeddings, action_ids = instance_actions["global"]
 
             # This embedding addition the only difference between the logic here and the
             # corresponding logic in the super class.
-            embedding_addition = self._get_predicted_embedding_addition(state.checklist_state[group_index],
-                                                                        action_ids,
-                                                                        action_embeddings)
+            embedding_addition = self._get_predicted_embedding_addition(
+                state.checklist_state[group_index], action_ids, action_embeddings
+            )
             addition = embedding_addition * self._checklist_multiplier
             predicted_action_embedding = predicted_action_embedding + addition
 
             # This is just a matrix product between a (num_actions, embedding_dim) matrix and an
             # (embedding_dim, 1) matrix.
-            action_logits = action_embeddings.mm(predicted_action_embedding.unsqueeze(-1)).squeeze(-1)
+            action_logits = action_embeddings.mm(predicted_action_embedding.unsqueeze(-1)).squeeze(
+                -1
+            )
             current_log_probs = torch.nn.functional.log_softmax(action_logits, dim=-1)
 
             # This is now the total score for each state after taking each action.  We're going to
             # sort by this later, so it's important that this is the total score, not just the
             # score for the current action.
             log_probs = state.score[group_index] + current_log_probs
-            batch_results[state.batch_indices[group_index]].append((group_index,
-                                                                    log_probs,
-                                                                    current_log_probs,
-                                                                    output_action_embeddings,
-                                                                    action_ids))
+            batch_results[state.batch_indices[group_index]].append(
+                (group_index, log_probs, current_log_probs, output_action_embeddings, action_ids)
+            )
         return batch_results
 
-    def _get_predicted_embedding_addition(self,
-                                          checklist_state: ChecklistStatelet,
-                                          action_ids: List[int],
-                                          action_embeddings: torch.Tensor) -> torch.Tensor:
+    def _get_predicted_embedding_addition(
+        self,
+        checklist_state: ChecklistStatelet,
+        action_ids: List[int],
+        action_embeddings: torch.Tensor,
+    ) -> torch.Tensor:
         """
         Gets the embeddings of desired terminal actions yet to be produced by the decoder, and
         returns their sum for the decoder to add it to the predicted embedding to bias the
@@ -135,9 +145,9 @@ class CoverageTransitionFunction(BasicTransitionFunction):
 
         # Shape: (action_embedding_dim,).  This is the sum of the action embeddings that we want
         # the model to prefer.
-        embedding_addition = torch.sum(action_embeddings * actions_to_encourage.unsqueeze(1),
-                                       dim=0,
-                                       keepdim=False)
+        embedding_addition = torch.sum(
+            action_embeddings * actions_to_encourage.unsqueeze(1), dim=0, keepdim=False
+        )
 
         if self._add_action_bias:
             # If we're adding an action bias, the last dimension of the action embedding is a bias

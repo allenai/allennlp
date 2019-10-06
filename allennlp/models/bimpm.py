@@ -58,21 +58,25 @@ class BiMpm(Model):
     regularizer : ``RegularizerApplicator``, optional (default=``None``)
         If provided, will be used to calculate the regularization penalty during training.
     """
-    def __init__(self, vocab: Vocabulary,
-                 text_field_embedder: TextFieldEmbedder,
-                 matcher_word: BiMpmMatching,
-                 encoder1: Seq2SeqEncoder,
-                 matcher_forward1: BiMpmMatching,
-                 matcher_backward1: BiMpmMatching,
-                 encoder2: Seq2SeqEncoder,
-                 matcher_forward2: BiMpmMatching,
-                 matcher_backward2: BiMpmMatching,
-                 aggregator: Seq2VecEncoder,
-                 classifier_feedforward: FeedForward,
-                 dropout: float = 0.1,
-                 initializer: InitializerApplicator = InitializerApplicator(),
-                 regularizer: Optional[RegularizerApplicator] = None) -> None:
-        super(BiMpm, self).__init__(vocab, regularizer)
+
+    def __init__(
+        self,
+        vocab: Vocabulary,
+        text_field_embedder: TextFieldEmbedder,
+        matcher_word: BiMpmMatching,
+        encoder1: Seq2SeqEncoder,
+        matcher_forward1: BiMpmMatching,
+        matcher_backward1: BiMpmMatching,
+        encoder2: Seq2SeqEncoder,
+        matcher_forward2: BiMpmMatching,
+        matcher_backward2: BiMpmMatching,
+        aggregator: Seq2VecEncoder,
+        classifier_feedforward: FeedForward,
+        dropout: float = 0.1,
+        initializer: InitializerApplicator = InitializerApplicator(),
+        regularizer: Optional[RegularizerApplicator] = None,
+    ) -> None:
+        super().__init__(vocab, regularizer)
 
         self.text_field_embedder = text_field_embedder
 
@@ -88,12 +92,20 @@ class BiMpm(Model):
 
         self.aggregator = aggregator
 
-        matching_dim = self.matcher_word.get_output_dim() + \
-                       self.matcher_forward1.get_output_dim() + self.matcher_backward1.get_output_dim() + \
-                       self.matcher_forward2.get_output_dim() + self.matcher_backward2.get_output_dim()
+        matching_dim = (
+            self.matcher_word.get_output_dim()
+            + self.matcher_forward1.get_output_dim()
+            + self.matcher_backward1.get_output_dim()
+            + self.matcher_forward2.get_output_dim()
+            + self.matcher_backward2.get_output_dim()
+        )
 
-        check_dimensions_match(matching_dim, self.aggregator.get_input_dim(),
-                               "sum of dim of all matching layers", "aggregator input dim")
+        check_dimensions_match(
+            matching_dim,
+            self.aggregator.get_input_dim(),
+            "sum of dim of all matching layers",
+            "aggregator input dim",
+        )
 
         self.classifier_feedforward = classifier_feedforward
 
@@ -106,13 +118,13 @@ class BiMpm(Model):
         initializer(self)
 
     @overrides
-    def forward(self,  # type: ignore
-                premise: Dict[str, torch.LongTensor],
-                hypothesis: Dict[str, torch.LongTensor],
-                label: torch.LongTensor = None,
-                metadata: List[Dict[str, Any]] = None  # pylint:disable=unused-argument
-               ) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
+    def forward(
+        self,  # type: ignore
+        premise: Dict[str, torch.LongTensor],
+        hypothesis: Dict[str, torch.LongTensor],
+        label: torch.LongTensor = None,
+        metadata: List[Dict[str, Any]] = None,
+    ) -> Dict[str, torch.Tensor]:
         """
 
         Parameters
@@ -154,41 +166,57 @@ class BiMpm(Model):
 
         def add_matching_result(matcher, encoded_premise, encoded_hypothesis):
             # utility function to get matching result and add to the result list
-            matching_result = matcher(encoded_premise, mask_premise, encoded_hypothesis, mask_hypothesis)
+            matching_result = matcher(
+                encoded_premise, mask_premise, encoded_hypothesis, mask_hypothesis
+            )
             matching_vector_premise.extend(matching_result[0])
             matching_vector_hypothesis.extend(matching_result[1])
 
         # calculate matching vectors from word embedding, first layer encoding, and second layer encoding
         add_matching_result(self.matcher_word, embedded_premise, embedded_hypothesis)
         half_hidden_size_1 = self.encoder1.get_output_dim() // 2
-        add_matching_result(self.matcher_forward1,
-                            encoded_premise1[:, :, :half_hidden_size_1],
-                            encoded_hypothesis1[:, :, :half_hidden_size_1])
-        add_matching_result(self.matcher_backward1,
-                            encoded_premise1[:, :, half_hidden_size_1:],
-                            encoded_hypothesis1[:, :, half_hidden_size_1:])
+        add_matching_result(
+            self.matcher_forward1,
+            encoded_premise1[:, :, :half_hidden_size_1],
+            encoded_hypothesis1[:, :, :half_hidden_size_1],
+        )
+        add_matching_result(
+            self.matcher_backward1,
+            encoded_premise1[:, :, half_hidden_size_1:],
+            encoded_hypothesis1[:, :, half_hidden_size_1:],
+        )
 
         half_hidden_size_2 = self.encoder2.get_output_dim() // 2
-        add_matching_result(self.matcher_forward2,
-                            encoded_premise2[:, :, :half_hidden_size_2],
-                            encoded_hypothesis2[:, :, :half_hidden_size_2])
-        add_matching_result(self.matcher_backward2,
-                            encoded_premise2[:, :, half_hidden_size_2:],
-                            encoded_hypothesis2[:, :, half_hidden_size_2:])
+        add_matching_result(
+            self.matcher_forward2,
+            encoded_premise2[:, :, :half_hidden_size_2],
+            encoded_hypothesis2[:, :, :half_hidden_size_2],
+        )
+        add_matching_result(
+            self.matcher_backward2,
+            encoded_premise2[:, :, half_hidden_size_2:],
+            encoded_hypothesis2[:, :, half_hidden_size_2:],
+        )
 
         # concat the matching vectors
         matching_vector_cat_premise = self.dropout(torch.cat(matching_vector_premise, dim=2))
         matching_vector_cat_hypothesis = self.dropout(torch.cat(matching_vector_hypothesis, dim=2))
 
         # aggregate the matching vectors
-        aggregated_premise = self.dropout(self.aggregator(matching_vector_cat_premise, mask_premise))
-        aggregated_hypothesis = self.dropout(self.aggregator(matching_vector_cat_hypothesis, mask_hypothesis))
+        aggregated_premise = self.dropout(
+            self.aggregator(matching_vector_cat_premise, mask_premise)
+        )
+        aggregated_hypothesis = self.dropout(
+            self.aggregator(matching_vector_cat_hypothesis, mask_hypothesis)
+        )
 
         # the final forward layer
-        logits = self.classifier_feedforward(torch.cat([aggregated_premise, aggregated_hypothesis], dim=-1))
+        logits = self.classifier_feedforward(
+            torch.cat([aggregated_premise, aggregated_hypothesis], dim=-1)
+        )
         probs = torch.nn.functional.softmax(logits, dim=-1)
 
-        output_dict = {'logits': logits, "probs": probs}
+        output_dict = {"logits": logits, "probs": probs}
         if label is not None:
             loss = self.loss(logits, label)
             for metric in self.metrics.values():
@@ -204,11 +232,12 @@ class BiMpm(Model):
         """
         predictions = output_dict["probs"].cpu().data.numpy()
         argmax_indices = numpy.argmax(predictions, axis=-1)
-        labels = [self.vocab.get_token_from_index(x, namespace="labels")
-                  for x in argmax_indices]
-        output_dict['label'] = labels
+        labels = [self.vocab.get_token_from_index(x, namespace="labels") for x in argmax_indices]
+        output_dict["label"] = labels
         return output_dict
 
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
-        return {metric_name: metric.get_metric(reset) for metric_name, metric in self.metrics.items()}
+        return {
+            metric_name: metric.get_metric(reset) for metric_name, metric in self.metrics.items()
+        }

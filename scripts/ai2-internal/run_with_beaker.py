@@ -12,9 +12,11 @@ import sys
 
 # This has to happen before we import spacy (even indirectly), because for some crazy reason spacy
 # thought it was a good idea to set the random seed on import...
-random_int = random.randint(0, 2**32)
+random_int = random.randint(0, 2 ** 32)
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(os.path.join(__file__, os.pardir), os.pardir))))
+sys.path.insert(
+    0, os.path.dirname(os.path.abspath(os.path.join(os.path.join(__file__, os.pardir), os.pardir)))
+)
 
 from allennlp.common.params import Params
 
@@ -22,7 +24,7 @@ from allennlp.common.params import Params
 def main(param_file: str, args: argparse.Namespace):
     commit = subprocess.check_output(["git", "rev-parse", "HEAD"], universal_newlines=True).strip()
     docker_image = f"allennlp/allennlp:{commit}"
-    overrides = ""
+    overrides = args.overrides
 
     # Reads params and sets environment.
     ext_vars = {}
@@ -32,14 +34,20 @@ def main(param_file: str, args: argparse.Namespace):
         ext_vars[key] = value
 
     params = Params.from_file(param_file, overrides, ext_vars)
+
+    # Write params as json. Otherwise Jsonnet's import feature breaks.
+    compiled_params_path = tempfile.mkstemp(".json", "config")[1]
+    params.to_file(compiled_params_path)
+    print(f"Compiled jsonnet config written to {compiled_params_path}.")
+
     flat_params = params.as_flat_dict()
     env = {}
     for k, v in flat_params.items():
-        k = str(k).replace('.', '_')
+        k = str(k).replace(".", "_")
         env[k] = str(v)
 
     # If the git repository is dirty, add a random hash.
-    result = subprocess.run('git diff-index --quiet HEAD --', shell=True)
+    result = subprocess.run("git diff-index --quiet HEAD --", shell=True)
     if result.returncode != 0:
         dirty_hash = "%x" % random_int
         docker_image += "-" + dirty_hash
@@ -49,36 +57,36 @@ def main(param_file: str, args: argparse.Namespace):
         print(f"Using the specified image: {image}")
     else:
         print(f"Building the Docker image ({docker_image})...")
-        subprocess.run(f'docker build -t {docker_image} .', shell=True, check=True)
+        subprocess.run(f"docker build -t {docker_image} .", shell=True, check=True)
 
         print(f"Create a Beaker image...")
-        image = subprocess.check_output(f'beaker image create --quiet {docker_image}', shell=True,
-                                        universal_newlines=True).strip()
+        image = subprocess.check_output(
+            f"beaker image create --quiet {docker_image}", shell=True, universal_newlines=True
+        ).strip()
         print(f"  Image created: {docker_image}")
 
-    config_dataset_id = subprocess.check_output(f'beaker dataset create --quiet {param_file}', shell=True, universal_newlines=True).strip()
+    config_dataset_id = subprocess.check_output(
+        f"beaker dataset create --quiet {compiled_params_path}", shell=True, universal_newlines=True
+    ).strip()
 
-    allennlp_command = [
-            "python",
-            "-m",
-            "allennlp.run",
-            "train",
-            "/config.json",
-            "-s",
-            "/output",
-            "--file-friendly-logging"
-        ]
-
+    # Arguments that differ between preemptible and regular machine execution.
     if args.preemptible:
-        allennlp_command = [ "/stage/allennlp/resumable_train.sh", "/output", "/config.json", "--file-friendly-logging"  ]
+        allennlp_prefix = ["/stage/allennlp/resumable_train.sh", "/output", "/config.json"]
+    else:
+        allennlp_prefix = ["python", "-m", "allennlp.run", "train", "/config.json", "-s", "/output"]
+
+    # All other arguments
+    allennlp_suffix = ["--file-friendly-logging"]
+    for package_name in args.include_package:
+        allennlp_suffix.append("--include-package")
+        allennlp_suffix.append(package_name)
+
+    allennlp_command = allennlp_prefix + allennlp_suffix
 
     dataset_mounts = []
     for source in args.source + [f"{config_dataset_id}:/config.json"]:
         datasetId, containerPath = source.split(":")
-        dataset_mounts.append({
-            "datasetId": datasetId,
-            "containerPath": containerPath
-        })
+        dataset_mounts.append({"datasetId": datasetId, "containerPath": containerPath})
 
     for var in args.env:
         key, value = var.split("=")
@@ -100,16 +108,17 @@ def main(param_file: str, args: argparse.Namespace):
         "args": allennlp_command,
         "datasetMounts": dataset_mounts,
         "requirements": requirements,
-        "env": env
+        "env": env,
     }
     config_task = {"spec": config_spec, "name": "training"}
 
-    config = {
-        "tasks": [config_task]
-    }
+    config = {"tasks": [config_task]}
 
-    output_path = args.spec_output_path if args.spec_output_path else tempfile.mkstemp(".yaml",
-            "beaker-config-")[1]
+    output_path = (
+        args.spec_output_path
+        if args.spec_output_path
+        else tempfile.mkstemp(".yaml", "beaker-config-")[1]
+    )
     with open(output_path, "w") as output:
         output.write(json.dumps(config, indent=4))
     print(f"Beaker spec written to {output_path}.")
@@ -127,21 +136,56 @@ def main(param_file: str, args: argparse.Namespace):
         print(f"    " + " ".join(experiment_command))
         subprocess.run(experiment_command)
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('param_file', type=str, help='The model configuration file.')
-    parser.add_argument('--name', type=str, help='A name for the experiment.')
-    parser.add_argument('--spec_output_path', type=str, help='The destination to write the experiment spec.')
-    parser.add_argument('--dry-run', action='store_true', help='If specified, an experiment will not be created.')
-    parser.add_argument('--image', type=str, help='The image to use (if unspecified one will be built)')
-    parser.add_argument('--desc', type=str, help='A description for the experiment.')
-    parser.add_argument('--env', action='append', default=[], help='Set environment variables (e.g. NAME=value or NAME)')
-    parser.add_argument('--source', action='append', default=[], help='Bind a remote data source (e.g. source-id:/target/path)')
-    parser.add_argument('--cpu', help='CPUs to reserve for this experiment (e.g., 0.5)')
-    parser.add_argument('--gpu-count', default=1, help='GPUs to use for this experiment (e.g., 1 (default))')
-    parser.add_argument('--memory', help='Memory to reserve for this experiment (e.g., 1GB)')
-    parser.add_argument('--preemptible', action='store_true', help='Allow task to run on preemptible hardware')
+    parser.add_argument("param_file", type=str, help="The model configuration file.")
+    parser.add_argument("--name", type=str, help="A name for the experiment.")
+    parser.add_argument(
+        "--spec_output_path", type=str, help="The destination to write the experiment spec."
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true", help="If specified, an experiment will not be created."
+    )
+    parser.add_argument(
+        "--image", type=str, help="The image to use (if unspecified one will be built)"
+    )
+    parser.add_argument("--desc", type=str, help="A description for the experiment.")
+    parser.add_argument(
+        "--env",
+        action="append",
+        default=[],
+        help="Set environment variables (e.g. NAME=value or NAME)",
+    )
+    parser.add_argument(
+        "--source",
+        action="append",
+        default=[],
+        help="Bind a remote data source (e.g. source-id:/target/path)",
+    )
+    parser.add_argument("--cpu", help="CPUs to reserve for this experiment (e.g., 0.5)")
+    parser.add_argument(
+        "--gpu-count", default=1, help="GPUs to use for this experiment (e.g., 1 (default))"
+    )
+    parser.add_argument("--memory", help="Memory to reserve for this experiment (e.g., 1GB)")
+    parser.add_argument(
+        "--preemptible", action="store_true", help="Allow task to run on preemptible hardware"
+    )
+    parser.add_argument(
+        "--include-package",
+        type=str,
+        action="append",
+        default=[],
+        help="Additional packages to include",
+    )
+    parser.add_argument(
+        "-o",
+        "--overrides",
+        type=str,
+        default="",
+        help="a JSON structure used to override the experiment configuration",
+    )
 
     args = parser.parse_args()
 

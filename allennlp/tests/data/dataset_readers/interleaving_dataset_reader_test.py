@@ -20,18 +20,14 @@ class PlainTextReader(DatasetReader):
                 yield self.text_to_instance(line)
 
     def text_to_instance(self, line: str) -> Instance:  # type: ignore
-        # pylint: disable=arguments-differ
+
         tokens = self._tokenizer.tokenize(line)
         return Instance({"line": TextField(tokens, self._token_indexers)})
 
 
 class TestInterleavingDatasetReader(AllenNlpTestCase):
     def test_round_robin(self):
-        readers = {
-                "a": PlainTextReader(),
-                "b": PlainTextReader(),
-                "c": PlainTextReader()
-        }
+        readers = {"a": PlainTextReader(), "b": PlainTextReader(), "c": PlainTextReader()}
 
         reader = InterleavingDatasetReader(readers)
         data_dir = self.FIXTURES_ROOT / "data"
@@ -50,13 +46,11 @@ class TestInterleavingDatasetReader(AllenNlpTestCase):
         assert next_three_keys == {"a", "b", "c"}
 
     def test_all_at_once(self):
-        readers = {
-                "f": PlainTextReader(),
-                "g": PlainTextReader(),
-                "h": PlainTextReader()
-        }
+        readers = {"f": PlainTextReader(), "g": PlainTextReader(), "h": PlainTextReader()}
 
-        reader = InterleavingDatasetReader(readers, dataset_field_name="source", scheme="all_at_once")
+        reader = InterleavingDatasetReader(
+            readers, dataset_field_name="source", scheme="all_at_once"
+        )
         data_dir = self.FIXTURES_ROOT / "data"
 
         file_path = f"""{{

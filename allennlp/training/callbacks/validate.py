@@ -14,7 +14,7 @@ from allennlp.training.callbacks.events import Events
 from allennlp.training.moving_average import MovingAverage
 
 if TYPE_CHECKING:
-    from allennlp.training.callback_trainer import CallbackTrainer  # pylint:disable=unused-import
+    from allennlp.training.callback_trainer import CallbackTrainer
 
 logger = logging.getLogger(__name__)
 
@@ -32,9 +32,10 @@ class Validate(Callback):
     validation_iterator : ``DataIterator``
         The iterator to use in the evaluation.
     """
-    def __init__(self,
-                 validation_data: Iterable[Instance],
-                 validation_iterator: DataIterator) -> None:
+
+    def __init__(
+        self, validation_data: Iterable[Instance], validation_iterator: DataIterator
+    ) -> None:
         self.instances = validation_data
         self.iterator = validation_iterator
 
@@ -42,18 +43,20 @@ class Validate(Callback):
         self.moving_averages: List[MovingAverage] = []
 
     @handle_event(Events.TRAINING_START)
-    def set_validate(self, trainer: 'CallbackTrainer'):
-        # pylint: disable=no-self-use
+    def set_validate(self, trainer: "CallbackTrainer"):
+
         trainer.validate = True
 
     @handle_event(Events.TRAINING_START)
-    def collect_moving_averages(self, trainer: 'CallbackTrainer'):
-        self.moving_averages = [getattr(callback, 'moving_average')
-                                for callback in trainer.handler.callbacks()
-                                if hasattr(callback, 'moving_average')]
+    def collect_moving_averages(self, trainer: "CallbackTrainer"):
+        self.moving_averages = [
+            getattr(callback, "moving_average")
+            for callback in trainer.handler.callbacks()
+            if hasattr(callback, "moving_average")
+        ]
 
     @handle_event(Events.VALIDATE)
-    def validate(self, trainer: 'CallbackTrainer'):
+    def validate(self, trainer: "CallbackTrainer"):
         # If the trainer has MovingAverage objects, use their weights for validation.
         for moving_average in self.moving_averages:
             moving_average.assign_average_value()
@@ -64,16 +67,14 @@ class Validate(Callback):
 
             trainer.model.eval()
 
-            num_gpus = len(trainer._cuda_devices)  # pylint: disable=protected-access
+            num_gpus = len(trainer._cuda_devices)
 
-            raw_val_generator = self.iterator(self.instances,
-                                              num_epochs=1,
-                                              shuffle=False)
+            raw_val_generator = self.iterator(self.instances, num_epochs=1, shuffle=False)
             val_generator = lazy_groups_of(raw_val_generator, num_gpus)
             num_validation_batches = math.ceil(
-                    self.iterator.get_num_batches(self.instances) / num_gpus)
-            val_generator_tqdm = Tqdm.tqdm(val_generator,
-                                           total=num_validation_batches)
+                self.iterator.get_num_batches(self.instances) / num_gpus
+            )
+            val_generator_tqdm = Tqdm.tqdm(val_generator, total=num_validation_batches)
 
             batches_this_epoch = 0
             val_loss = 0
@@ -94,10 +95,9 @@ class Validate(Callback):
                 description = training_util.description_from_metrics(val_metrics)
                 val_generator_tqdm.set_description(description, refresh=False)
 
-            trainer.val_metrics = training_util.get_metrics(trainer.model,
-                                                            val_loss,
-                                                            batches_this_epoch,
-                                                            reset=True)
+            trainer.val_metrics = training_util.get_metrics(
+                trainer.model, val_loss, batches_this_epoch, reset=True
+            )
 
         # If the trainer has a moving average, restore
         for moving_average in self.moving_averages:

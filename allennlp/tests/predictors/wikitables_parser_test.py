@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name,protected-access
 import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
@@ -9,14 +8,17 @@ from allennlp.predictors import Predictor
 @pytest.mark.java
 class TestWikiTablesParserPredictor(AllenNlpTestCase):
     def test_uses_named_inputs(self):
-        inputs = {
-                "question": "names",
-                "table": "name\tdate\nmatt\t2017\npradeep\t2018"
-        }
+        inputs = {"question": "names", "table": "name\tdate\nmatt\t2017\npradeep\t2018"}
 
-        archive_path = self.FIXTURES_ROOT / 'semantic_parsing' / 'wikitables' / 'serialization' / 'model.tar.gz'
+        archive_path = (
+            self.FIXTURES_ROOT
+            / "semantic_parsing"
+            / "wikitables"
+            / "serialization"
+            / "model.tar.gz"
+        )
         archive = load_archive(archive_path)
-        predictor = Predictor.from_archive(archive, 'wikitables-parser')
+        predictor = Predictor.from_archive(archive, "wikitables-parser")
 
         result = predictor.predict_json(inputs)
 
@@ -35,13 +37,19 @@ class TestWikiTablesParserPredictor(AllenNlpTestCase):
 
     def test_answer_present(self):
         inputs = {
-                "question": "Who is 18 years old?",
-                "table": "Name\tAge\nShallan\t16\nKaladin\t18"
+            "question": "Who is 18 years old?",
+            "table": "Name\tAge\nShallan\t16\nKaladin\t18",
         }
 
-        archive_path = self.FIXTURES_ROOT / 'semantic_parsing' / 'wikitables' / 'serialization' / 'model.tar.gz'
+        archive_path = (
+            self.FIXTURES_ROOT
+            / "semantic_parsing"
+            / "wikitables"
+            / "serialization"
+            / "model.tar.gz"
+        )
         archive = load_archive(archive_path)
-        predictor = Predictor.from_archive(archive, 'wikitables-parser')
+        predictor = Predictor.from_archive(archive, "wikitables-parser")
 
         result = predictor.predict_json(inputs)
         answer = result.get("answer")
@@ -49,28 +57,36 @@ class TestWikiTablesParserPredictor(AllenNlpTestCase):
 
     def test_interactive_beam_search(self):
         inputs = {
-                "question": "Who is 18 years old?",
-                "table": "Name\tAge\nShallan\t16\nKaladin\t18"
+            "question": "Who is 18 years old?",
+            "table": "Name\tAge\nShallan\t16\nKaladin\t18",
         }
 
-        archive_path = self.FIXTURES_ROOT / 'semantic_parsing' / 'wikitables' / 'serialization' / 'model.tar.gz'
+        archive_path = (
+            self.FIXTURES_ROOT
+            / "semantic_parsing"
+            / "wikitables"
+            / "serialization"
+            / "model.tar.gz"
+        )
         archive = load_archive(archive_path)
-        predictor = Predictor.from_archive(archive, 'wikitables-parser')
+        predictor = Predictor.from_archive(archive, "wikitables-parser")
 
         # This is not the start of the best sequence, but it will be once we force it.
-        initial_tokens = ['@start@ -> Number',
-                          'Number -> [<List[Row],NumberColumn:Number>, List[Row], NumberColumn]']
+        initial_tokens = [
+            "@start@ -> Number",
+            "Number -> [<List[Row],NumberColumn:Number>, List[Row], NumberColumn]",
+        ]
 
         # First let's try an unforced one. Its initial tokens should not be ours.
         result = predictor.predict_json(inputs)
-        best_action_sequence = result['best_action_sequence']
+        best_action_sequence = result["best_action_sequence"]
         assert best_action_sequence
         assert best_action_sequence[:2] != initial_tokens
 
         # Now let's try forcing it down the path of `initial_sequence`
         inputs["initial_sequence"] = initial_tokens
         result = predictor.predict_json(inputs)
-        best_action_sequence = result['best_action_sequence']
+        best_action_sequence = result["best_action_sequence"]
         assert best_action_sequence[:2] == initial_tokens
 
         # Should get choices back from beam search
@@ -92,14 +108,19 @@ class TestWikiTablesParserPredictor(AllenNlpTestCase):
             assert any(sequence[-1] == action for _, sequence in beam)
 
     def test_answer_present_with_batch_predict(self):
-        inputs = [{
-                "question": "Who is 18 years old?",
-                "table": "Name\tAge\nShallan\t16\nKaladin\t18"
-        }]
+        inputs = [
+            {"question": "Who is 18 years old?", "table": "Name\tAge\nShallan\t16\nKaladin\t18"}
+        ]
 
-        archive_path = self.FIXTURES_ROOT / 'semantic_parsing' / 'wikitables' / 'serialization' / 'model.tar.gz'
+        archive_path = (
+            self.FIXTURES_ROOT
+            / "semantic_parsing"
+            / "wikitables"
+            / "serialization"
+            / "model.tar.gz"
+        )
         archive = load_archive(archive_path)
-        predictor = Predictor.from_archive(archive, 'wikitables-parser')
+        predictor = Predictor.from_archive(archive, "wikitables-parser")
 
         result = predictor.predict_batch_json(inputs)
         answer = result[0].get("answer")

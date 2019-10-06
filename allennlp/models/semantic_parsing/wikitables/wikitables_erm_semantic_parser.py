@@ -10,8 +10,16 @@ from allennlp.data import Vocabulary
 from allennlp.data.fields.production_rule_field import ProductionRule
 from allennlp.models.archival import load_archive, Archive
 from allennlp.models.model import Model
-from allennlp.models.semantic_parsing.wikitables.wikitables_semantic_parser import WikiTablesSemanticParser
-from allennlp.modules import Attention, FeedForward, Seq2SeqEncoder, Seq2VecEncoder, TextFieldEmbedder
+from allennlp.models.semantic_parsing.wikitables.wikitables_semantic_parser import (
+    WikiTablesSemanticParser,
+)
+from allennlp.modules import (
+    Attention,
+    FeedForward,
+    Seq2SeqEncoder,
+    Seq2VecEncoder,
+    TextFieldEmbedder,
+)
 from allennlp.state_machines import BeamSearch
 from allennlp.state_machines.states import CoverageState, ChecklistStatelet
 from allennlp.state_machines.trainers import ExpectedRiskMinimization
@@ -20,7 +28,7 @@ from allennlp.training.metrics import Average
 from allennlp.semparse.domain_languages import WikiTablesLanguage
 
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @Model.register("wikitables_erm_parser")
@@ -83,49 +91,57 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         If you want to initialize this model using weights from another model trained using MML,
         pass the path to the ``model.tar.gz`` file of that model here.
     """
-    def __init__(self,
-                 vocab: Vocabulary,
-                 question_embedder: TextFieldEmbedder,
-                 action_embedding_dim: int,
-                 encoder: Seq2SeqEncoder,
-                 entity_encoder: Seq2VecEncoder,
-                 attention: Attention,
-                 decoder_beam_size: int,
-                 decoder_num_finished_states: int,
-                 max_decoding_steps: int,
-                 mixture_feedforward: FeedForward = None,
-                 add_action_bias: bool = True,
-                 normalize_beam_score_by_length: bool = False,
-                 checklist_cost_weight: float = 0.6,
-                 use_neighbor_similarity_for_linking: bool = False,
-                 dropout: float = 0.0,
-                 num_linking_features: int = 10,
-                 rule_namespace: str = 'rule_labels',
-                 mml_model_file: str = None) -> None:
+
+    def __init__(
+        self,
+        vocab: Vocabulary,
+        question_embedder: TextFieldEmbedder,
+        action_embedding_dim: int,
+        encoder: Seq2SeqEncoder,
+        entity_encoder: Seq2VecEncoder,
+        attention: Attention,
+        decoder_beam_size: int,
+        decoder_num_finished_states: int,
+        max_decoding_steps: int,
+        mixture_feedforward: FeedForward = None,
+        add_action_bias: bool = True,
+        normalize_beam_score_by_length: bool = False,
+        checklist_cost_weight: float = 0.6,
+        use_neighbor_similarity_for_linking: bool = False,
+        dropout: float = 0.0,
+        num_linking_features: int = 10,
+        rule_namespace: str = "rule_labels",
+        mml_model_file: str = None,
+    ) -> None:
         use_similarity = use_neighbor_similarity_for_linking
-        super().__init__(vocab=vocab,
-                         question_embedder=question_embedder,
-                         action_embedding_dim=action_embedding_dim,
-                         encoder=encoder,
-                         entity_encoder=entity_encoder,
-                         max_decoding_steps=max_decoding_steps,
-                         add_action_bias=add_action_bias,
-                         use_neighbor_similarity_for_linking=use_similarity,
-                         dropout=dropout,
-                         num_linking_features=num_linking_features,
-                         rule_namespace=rule_namespace)
+        super().__init__(
+            vocab=vocab,
+            question_embedder=question_embedder,
+            action_embedding_dim=action_embedding_dim,
+            encoder=encoder,
+            entity_encoder=entity_encoder,
+            max_decoding_steps=max_decoding_steps,
+            add_action_bias=add_action_bias,
+            use_neighbor_similarity_for_linking=use_similarity,
+            dropout=dropout,
+            num_linking_features=num_linking_features,
+            rule_namespace=rule_namespace,
+        )
         # Not sure why mypy needs a type annotation for this!
-        self._decoder_trainer: ExpectedRiskMinimization = \
-                ExpectedRiskMinimization(beam_size=decoder_beam_size,
-                                         normalize_by_length=normalize_beam_score_by_length,
-                                         max_decoding_steps=self._max_decoding_steps,
-                                         max_num_finished_states=decoder_num_finished_states)
-        self._decoder_step = LinkingCoverageTransitionFunction(encoder_output_dim=self._encoder.get_output_dim(),
-                                                               action_embedding_dim=action_embedding_dim,
-                                                               input_attention=attention,
-                                                               add_action_bias=self._add_action_bias,
-                                                               mixture_feedforward=mixture_feedforward,
-                                                               dropout=dropout)
+        self._decoder_trainer: ExpectedRiskMinimization = ExpectedRiskMinimization(
+            beam_size=decoder_beam_size,
+            normalize_by_length=normalize_beam_score_by_length,
+            max_decoding_steps=self._max_decoding_steps,
+            max_num_finished_states=decoder_num_finished_states,
+        )
+        self._decoder_step = LinkingCoverageTransitionFunction(
+            encoder_output_dim=self._encoder.get_output_dim(),
+            action_embedding_dim=action_embedding_dim,
+            input_attention=attention,
+            add_action_bias=self._add_action_bias,
+            mixture_feedforward=mixture_feedforward,
+            dropout=dropout,
+        )
         self._checklist_cost_weight = checklist_cost_weight
         self._agenda_coverage = Average()
         # We don't need a separate beam search since the trainer does that already. But we're defining one just to
@@ -144,19 +160,25 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                 # A model file is passed, but it does not exist. This is expected to happen when
                 # you're using a trained ERM model to decode. But it may also happen if the path to
                 # the file is really just incorrect. So throwing a warning.
-                logger.warning("MML model file for initializing weights is passed, but does not exist."
-                               " This is fine if you're just decoding.")
+                logger.warning(
+                    "MML model file for initializing weights is passed, but does not exist."
+                    " This is fine if you're just decoding."
+                )
 
     def _initialize_weights_from_archive(self, archive: Archive) -> None:
         logger.info("Initializing weights from MML model.")
         model_parameters = dict(self.named_parameters())
         archived_parameters = dict(archive.model.named_parameters())
         question_embedder_weight = "_question_embedder.token_embedder_tokens.weight"
-        if question_embedder_weight not in archived_parameters or \
-           question_embedder_weight not in model_parameters:
-            raise RuntimeError("When initializing model weights from an MML model, we need "
-                               "the question embedder to be a TokenEmbedder using namespace called "
-                               "tokens.")
+        if (
+            question_embedder_weight not in archived_parameters
+            or question_embedder_weight not in model_parameters
+        ):
+            raise RuntimeError(
+                "When initializing model weights from an MML model, we need "
+                "the question embedder to be a TokenEmbedder using namespace called "
+                "tokens."
+            )
         for name, weights in archived_parameters.items():
             if name in model_parameters:
                 if name == question_embedder_weight:
@@ -169,8 +191,11 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                     new_weights = model_parameters[name].data.clone()
                     for index, archived_index in vocab_index_mapping:
                         new_weights[index] = archived_embedding_weights[archived_index]
-                    logger.info("Copied embeddings of %d out of %d tokens",
-                                len(vocab_index_mapping), new_weights.size()[0])
+                    logger.info(
+                        "Copied embeddings of %d out of %d tokens",
+                        len(vocab_index_mapping),
+                        new_weights.size()[0],
+                    )
                 else:
                     new_weights = weights.data
                 logger.info("Copying parameter %s", name)
@@ -178,27 +203,32 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
 
     def _get_vocab_index_mapping(self, archived_vocab: Vocabulary) -> List[Tuple[int, int]]:
         vocab_index_mapping: List[Tuple[int, int]] = []
-        for index in range(self.vocab.get_vocab_size(namespace='tokens')):
-            token = self.vocab.get_token_from_index(index=index, namespace='tokens')
-            archived_token_index = archived_vocab.get_token_index(token, namespace='tokens')
+        for index in range(self.vocab.get_vocab_size(namespace="tokens")):
+            token = self.vocab.get_token_from_index(index=index, namespace="tokens")
+            archived_token_index = archived_vocab.get_token_index(token, namespace="tokens")
             # Checking if we got the UNK token index, because we don't want all new token
             # representations initialized to UNK token's representation. We do that by checking if
             # the two tokens are the same. They will not be if the token at the archived index is
             # UNK.
-            if archived_vocab.get_token_from_index(archived_token_index, namespace="tokens") == token:
+            if (
+                archived_vocab.get_token_from_index(archived_token_index, namespace="tokens")
+                == token
+            ):
                 vocab_index_mapping.append((index, archived_token_index))
         return vocab_index_mapping
 
     @overrides
-    def forward(self,  # type: ignore
-                question: Dict[str, torch.LongTensor],
-                table: Dict[str, torch.LongTensor],
-                world: List[WikiTablesLanguage],
-                actions: List[List[ProductionRule]],
-                agenda: torch.LongTensor,
-                target_values: List[List[str]] = None,
-                metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
+    def forward(
+        self,  # type: ignore
+        question: Dict[str, torch.LongTensor],
+        table: Dict[str, torch.LongTensor],
+        world: List[WikiTablesLanguage],
+        actions: List[List[ProductionRule]],
+        agenda: torch.LongTensor,
+        target_values: List[List[str]] = None,
+        metadata: List[Dict[str, Any]] = None,
+    ) -> Dict[str, torch.Tensor]:
+
         """
         Parameters
         ----------
@@ -231,47 +261,53 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         # Each instance's agenda is of size (agenda_size, 1)
         agenda_list = [agenda[i] for i in range(batch_size)]
         checklist_states = []
-        all_terminal_productions = [set(instance_world.terminal_productions.values())
-                                    for instance_world in world]
+        all_terminal_productions = [
+            set(instance_world.terminal_productions.values()) for instance_world in world
+        ]
         max_num_terminals = max([len(terminals) for terminals in all_terminal_productions])
-        for instance_actions, instance_agenda, terminal_productions in zip(actions,
-                                                                           agenda_list,
-                                                                           all_terminal_productions):
-            checklist_info = self._get_checklist_info(instance_agenda,
-                                                      instance_actions,
-                                                      terminal_productions,
-                                                      max_num_terminals)
+        for instance_actions, instance_agenda, terminal_productions in zip(
+            actions, agenda_list, all_terminal_productions
+        ):
+            checklist_info = self._get_checklist_info(
+                instance_agenda, instance_actions, terminal_productions, max_num_terminals
+            )
             checklist_target, terminal_actions, checklist_mask = checklist_info
             initial_checklist = checklist_target.new_zeros(checklist_target.size())
-            checklist_states.append(ChecklistStatelet(terminal_actions=terminal_actions,
-                                                      checklist_target=checklist_target,
-                                                      checklist_mask=checklist_mask,
-                                                      checklist=initial_checklist))
+            checklist_states.append(
+                ChecklistStatelet(
+                    terminal_actions=terminal_actions,
+                    checklist_target=checklist_target,
+                    checklist_mask=checklist_mask,
+                    checklist=initial_checklist,
+                )
+            )
         outputs: Dict[str, Any] = {}
-        rnn_state, grammar_state = self._get_initial_rnn_and_grammar_state(question,
-                                                                           table,
-                                                                           world,
-                                                                           actions,
-                                                                           outputs)
+        rnn_state, grammar_state = self._get_initial_rnn_and_grammar_state(
+            question, table, world, actions, outputs
+        )
 
         batch_size = len(rnn_state)
         initial_score = rnn_state[0].hidden_state.new_zeros(batch_size)
         initial_score_list = [initial_score[i] for i in range(batch_size)]
-        initial_state = CoverageState(batch_indices=list(range(batch_size)),  # type: ignore
-                                      action_history=[[] for _ in range(batch_size)],
-                                      score=initial_score_list,
-                                      rnn_state=rnn_state,
-                                      grammar_state=grammar_state,
-                                      checklist_state=checklist_states,
-                                      possible_actions=actions,
-                                      extras=target_values,
-                                      debug_info=None)
+        initial_state = CoverageState(
+            batch_indices=list(range(batch_size)),  # type: ignore
+            action_history=[[] for _ in range(batch_size)],
+            score=initial_score_list,
+            rnn_state=rnn_state,
+            grammar_state=grammar_state,
+            checklist_state=checklist_states,
+            possible_actions=actions,
+            extras=target_values,
+            debug_info=None,
+        )
 
         if target_values is not None:
             logger.warning(f"TARGET VALUES: {target_values}")
-            trainer_outputs = self._decoder_trainer.decode(initial_state,  # type: ignore
-                                                           self._decoder_step,
-                                                           partial(self._get_state_cost, world))
+            trainer_outputs = self._decoder_trainer.decode(
+                initial_state,  # type: ignore
+                self._decoder_step,
+                partial(self._get_state_cost, world),
+            )
             outputs.update(trainer_outputs)
         else:
             initial_state.debug_info = [[] for _ in range(batch_size)]
@@ -281,10 +317,12 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
             for batch_index, batch_actions in enumerate(actions):
                 for action_index, action in enumerate(batch_actions):
                     action_mapping[(batch_index, action_index)] = action[0]
-            best_final_states = self._beam_search.search(self._max_decoding_steps,
-                                                         initial_state,
-                                                         self._decoder_step,
-                                                         keep_final_unfinished_states=False)
+            best_final_states = self._beam_search.search(
+                self._max_decoding_steps,
+                initial_state,
+                self._decoder_step,
+                keep_final_unfinished_states=False,
+            )
             for i in range(batch_size):
                 in_agenda_ratio = 0.0
                 # Decoding may not have terminated with any completed logical forms, if `num_steps`
@@ -292,7 +330,9 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                 # infinite action loop).
                 if i in best_final_states:
                     action_sequence = best_final_states[i][0].action_history[0]
-                    action_strings = [action_mapping[(i, action_index)] for action_index in action_sequence]
+                    action_strings = [
+                        action_mapping[(i, action_index)] for action_index in action_sequence
+                    ]
                     instance_possible_actions = actions[i]
                     agenda_actions = []
                     for rule_id in agenda_indices[i]:
@@ -308,19 +348,18 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                         in_agenda_ratio = sum(actions_in_agenda) / len(actions_in_agenda)
                 self._agenda_coverage(in_agenda_ratio)
 
-            self._compute_validation_outputs(actions,
-                                             best_final_states,
-                                             world,
-                                             target_values,
-                                             metadata,
-                                             outputs)
+            self._compute_validation_outputs(
+                actions, best_final_states, world, target_values, metadata, outputs
+            )
         return outputs
 
     @staticmethod
-    def _get_checklist_info(agenda: torch.LongTensor,
-                            all_actions: List[ProductionRule],
-                            terminal_productions: Set[str],
-                            max_num_terminals: int) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def _get_checklist_info(
+        agenda: torch.LongTensor,
+        all_actions: List[ProductionRule],
+        terminal_productions: Set[str],
+        max_num_terminals: int,
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Takes an agenda, a list of all actions, a set of terminal productions in the corresponding
         world, and a length to pad the checklist vectors to, and returns a target checklist against
@@ -364,7 +403,9 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         checklist_mask = (target_checklist != 0).float()
         return target_checklist, terminal_actions, checklist_mask
 
-    def _get_state_cost(self, worlds: List[WikiTablesLanguage], state: CoverageState) -> torch.Tensor:
+    def _get_state_cost(
+        self, worlds: List[WikiTablesLanguage], state: CoverageState
+    ) -> torch.Tensor:
         if not state.is_finished():
             raise RuntimeError("_get_state_cost() is not defined for unfinished states!")
         world = worlds[state.batch_indices[0]]
@@ -384,8 +425,9 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
         action_strings = [state.possible_actions[batch_index][i][0] for i in action_history]
         target_values = state.extras[batch_index]
         evaluation = False
-        executor_logger = \
-                logging.getLogger('allennlp.semparse.domain_languages.wikitables_language')
+        executor_logger = logging.getLogger(
+            "allennlp.semparse.domain_languages.wikitables_language"
+        )
         executor_logger.setLevel(logging.ERROR)
         evaluation = world.evaluate_action_sequence(action_strings, target_values)
         if evaluation:

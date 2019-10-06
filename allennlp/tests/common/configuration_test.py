@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 from typing import Dict
 
 import pytest
@@ -15,47 +14,47 @@ class TestConfiguration(AllenNlpTestCase):
         assert config == BASE_CONFIG
 
     def test_abstract_base_class(self):
-        config = choices('allennlp.data.dataset_readers.dataset_reader.DatasetReader')
+        config = choices("allennlp.data.dataset_readers.dataset_reader.DatasetReader")
 
         assert isinstance(config, list)
-        assert 'allennlp.data.dataset_readers.snli.SnliReader' in config
+        assert "allennlp.data.dataset_readers.snli.SnliReader" in config
 
     def test_specific_subclass(self):
-        config = configure('allennlp.data.dataset_readers.semantic_role_labeling.SrlReader')
+        config = configure("allennlp.data.dataset_readers.semantic_role_labeling.SrlReader")
         assert isinstance(config, Config)
 
         items = {item.name: item for item in config.items}
 
         assert len(items) == 4
 
-        assert 'token_indexers' in items
-        token_indexers = items['token_indexers']
+        assert "token_indexers" in items
+        token_indexers = items["token_indexers"]
         assert token_indexers.default_value is None
 
-        assert 'domain_identifier' in items
-        domain_identifier = items['domain_identifier']
+        assert "domain_identifier" in items
+        domain_identifier = items["domain_identifier"]
         assert domain_identifier.annotation == str
         assert domain_identifier.default_value is None
 
-        assert 'bert_model_name' in items
-        domain_identifier = items['bert_model_name']
+        assert "bert_model_name" in items
+        domain_identifier = items["bert_model_name"]
         assert domain_identifier.annotation == str
         assert domain_identifier.default_value is None
 
-        assert 'lazy' in items
-        lazy = items['lazy']
+        assert "lazy" in items
+        lazy = items["lazy"]
         assert lazy.annotation == bool
         assert not lazy.default_value
 
     def test_errors(self):
         with pytest.raises(ModuleNotFoundError):
-            configure('allennlp.non_existent_module.SomeClass')
+            configure("allennlp.non_existent_module.SomeClass")
 
         with pytest.raises(AttributeError):
-            configure('allennlp.data.dataset_readers.NonExistentDatasetReader')
+            configure("allennlp.data.dataset_readers.NonExistentDatasetReader")
 
     def test_vocab_workaround(self):
-        config = configure('allennlp.data.vocabulary.Vocabulary')
+        config = configure("allennlp.data.vocabulary.Vocabulary")
         assert isinstance(config, Config)
 
         items = {item.name: item for item in config.items}
@@ -68,10 +67,4 @@ class TestConfiguration(AllenNlpTestCase):
         annotation = Dict[str, Activation]
         ja = json_annotation(annotation)
 
-        assert ja == {
-                "origin": "Dict",
-                "args": [
-                        {"origin": "str"},
-                        {"origin": "str"}
-                ]
-        }
+        assert ja == {"origin": "Dict", "args": [{"origin": "str"}, {"origin": "str"}]}

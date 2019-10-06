@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use, invalid-name
 import json
 import logging
 import math
@@ -14,14 +13,15 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.params import Params
 
+
 class TestInitializers(AllenNlpTestCase):
     def setUp(self):
-        super(TestInitializers, self).setUp()
-        logging.getLogger('allennlp.nn.initializers').disabled = False
+        super().setUp()
+        logging.getLogger("allennlp.nn.initializers").disabled = False
 
     def tearDown(self):
-        super(TestInitializers, self).tearDown()
-        logging.getLogger('allennlp.nn.initializers').disabled = True
+        super().tearDown()
+        logging.getLogger("allennlp.nn.initializers").disabled = True
 
     def test_from_params_string(self):
         Initializer.from_params(params="eye")
@@ -32,12 +32,12 @@ class TestInitializers(AllenNlpTestCase):
     def test_regex_matches_are_initialized_correctly(self):
         class Net(torch.nn.Module):
             def __init__(self):
-                super(Net, self).__init__()
+                super().__init__()
                 self.linear_1_with_funky_name = torch.nn.Linear(5, 10)
                 self.linear_2 = torch.nn.Linear(10, 5)
                 self.conv = torch.nn.Conv1d(5, 5, 5)
 
-            def forward(self, inputs):  # pylint: disable=arguments-differ
+            def forward(self, inputs):
                 pass
 
         # Make sure we handle regexes properly
@@ -47,7 +47,7 @@ class TestInitializers(AllenNlpTestCase):
         ]}
         """
         params = Params(json.loads(_jsonnet.evaluate_snippet("", json_params)))
-        initializers = InitializerApplicator.from_params(params['initializer'])
+        initializers = InitializerApplicator.from_params(params["initializer"])
         model = Net()
         initializers(model)
 
@@ -64,8 +64,10 @@ class TestInitializers(AllenNlpTestCase):
 
         def test_block_is_orthogonal(block) -> None:
             matrix_product = block.T @ block
-            numpy.testing.assert_array_almost_equal(matrix_product,
-                                                    numpy.eye(matrix_product.shape[-1]), 6)
+            numpy.testing.assert_array_almost_equal(
+                matrix_product, numpy.eye(matrix_product.shape[-1]), 6
+            )
+
         test_block_is_orthogonal(tensor[:5, :3])
         test_block_is_orthogonal(tensor[:5, 3:])
         test_block_is_orthogonal(tensor[5:, 3:])
@@ -80,26 +82,26 @@ class TestInitializers(AllenNlpTestCase):
         tensor = torch.zeros([10, 6])
         uniform_unit_scaling(tensor, "linear")
 
-        assert tensor.data.max() < math.sqrt(3/10)
-        assert tensor.data.min() > -math.sqrt(3/10)
+        assert tensor.data.max() < math.sqrt(3 / 10)
+        assert tensor.data.min() > -math.sqrt(3 / 10)
 
         # Check that it gets the scaling correct for relu (1.43).
         uniform_unit_scaling(tensor, "relu")
-        assert tensor.data.max() < math.sqrt(3/10) * 1.43
-        assert tensor.data.min() > -math.sqrt(3/10) * 1.43
+        assert tensor.data.max() < math.sqrt(3 / 10) * 1.43
+        assert tensor.data.min() > -math.sqrt(3 / 10) * 1.43
 
     def test_regex_match_prevention_prevents_and_overrides(self):
-
         class Net(torch.nn.Module):
             def __init__(self):
-                super(Net, self).__init__()
+                super().__init__()
                 self.linear_1 = torch.nn.Linear(5, 10)
                 self.linear_2 = torch.nn.Linear(10, 5)
                 # typical actual usage: modules loaded from allenlp.model.load(..)
                 self.linear_3_transfer = torch.nn.Linear(5, 10)
                 self.linear_4_transfer = torch.nn.Linear(10, 5)
                 self.pretrained_conv = torch.nn.Conv1d(5, 5, 5)
-            def forward(self, inputs):  # pylint: disable=arguments-differ
+
+            def forward(self, inputs):
                 pass
 
         json_params = """{"initializer": [
@@ -110,18 +112,20 @@ class TestInitializers(AllenNlpTestCase):
         ]}
         """
         params = Params(json.loads(_jsonnet.evaluate_snippet("", json_params)))
-        initializers = InitializerApplicator.from_params(params['initializer'])
+        initializers = InitializerApplicator.from_params(params["initializer"])
         model = Net()
         initializers(model)
 
         for module in [model.linear_1, model.linear_2]:
             for parameter in module.parameters():
-                assert torch.equal(parameter.data, torch.ones(parameter.size())*10)
+                assert torch.equal(parameter.data, torch.ones(parameter.size()) * 10)
 
-        transfered_modules = [model.linear_3_transfer,
-                              model.linear_4_transfer,
-                              model.pretrained_conv]
+        transfered_modules = [
+            model.linear_3_transfer,
+            model.linear_4_transfer,
+            model.pretrained_conv,
+        ]
 
         for module in transfered_modules:
             for parameter in module.parameters():
-                assert not torch.equal(parameter.data, torch.ones(parameter.size())*10)
+                assert not torch.equal(parameter.data, torch.ones(parameter.size()) * 10)

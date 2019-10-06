@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 import torch
 
 from pytorch_pretrained_bert.modeling import BertConfig, BertModel
@@ -18,10 +17,10 @@ class TestBertEmbedder(ModelTestCase):
     def setUp(self):
         super().setUp()
 
-        vocab_path = self.FIXTURES_ROOT / 'bert' / 'vocab.txt'
+        vocab_path = self.FIXTURES_ROOT / "bert" / "vocab.txt"
         self.token_indexer = PretrainedBertIndexer(str(vocab_path))
 
-        config_path = self.FIXTURES_ROOT / 'bert' / 'config.json'
+        config_path = self.FIXTURES_ROOT / "bert" / "config.json"
         config = BertConfig(str(config_path))
         self.bert_model = BertModel(config)
         self.token_embedder = BertEmbedder(self.bert_model)
@@ -64,11 +63,15 @@ class TestBertEmbedder(ModelTestCase):
         tokens = tensor_dict["tokens"]
 
         # 16 = [CLS], 17 = [SEP]
-        assert tokens["bert"].tolist() == [[16, 2, 3, 4, 3, 5, 6, 8, 9, 2, 14, 12, 17, 0],
-                                           [16, 2, 3, 5, 6, 8, 9, 2, 15, 10, 11, 14, 1, 17]]
+        assert tokens["bert"].tolist() == [
+            [16, 2, 3, 4, 3, 5, 6, 8, 9, 2, 14, 12, 17, 0],
+            [16, 2, 3, 5, 6, 8, 9, 2, 15, 10, 11, 14, 1, 17],
+        ]
 
-        assert tokens["bert-offsets"].tolist() == [[1, 3, 4, 5, 6, 7, 8, 9, 10, 11],
-                                                   [1, 2, 3, 4, 5, 6, 7, 10, 11, 12]]
+        assert tokens["bert-offsets"].tolist() == [
+            [1, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+            [1, 2, 3, 4, 5, 6, 7, 10, 11, 12],
+        ]
 
         # No offsets, should get 14 vectors back ([CLS] + 12 token wordpieces + [SEP])
         bert_vectors = self.token_embedder(tokens["bert"])
@@ -109,39 +112,49 @@ class TestBertEmbedder(ModelTestCase):
         assert tokens["bert-offsets"].tolist() == [[1, 2, 3, 4, 5, 6, 7, 8, 9]]
 
     def test_squad_with_unwordpieceable_passage(self):
-        # pylint: disable=line-too-long
+
         tokenizer = WordTokenizer()
 
         token_indexer = PretrainedBertIndexer("bert-base-uncased")
 
-        passage1 = ("There were four major HDTV systems tested by SMPTE in the late 1970s, "
-                    "and in 1979 an SMPTE study group released A Study of High Definition Television Systems:")
+        passage1 = (
+            "There were four major HDTV systems tested by SMPTE in the late 1970s, "
+            "and in 1979 an SMPTE study group released A Study of High Definition Television Systems:"
+        )
         question1 = "Who released A Study of High Definition Television Systems?"
 
-        passage2 = ("Broca, being what today would be called a neurosurgeon, "
-                    "had taken an interest in the pathology of speech. He wanted "
-                    "to localize the difference between man and the other animals, "
-                    "which appeared to reside in speech. He discovered the speech "
-                    "center of the human brain, today called Broca's area after him. "
-                    "His interest was mainly in Biological anthropology, but a German "
-                    "philosopher specializing in psychology, Theodor Waitz, took up the "
-                    "theme of general and social anthropology in his six-volume work, "
-                    "entitled Die Anthropologie der Naturvölker, 1859–1864. The title was "
-                    """soon translated as "The Anthropology of Primitive Peoples". """
-                    "The last two volumes were published posthumously.")
+        passage2 = (
+            "Broca, being what today would be called a neurosurgeon, "
+            "had taken an interest in the pathology of speech. He wanted "
+            "to localize the difference between man and the other animals, "
+            "which appeared to reside in speech. He discovered the speech "
+            "center of the human brain, today called Broca's area after him. "
+            "His interest was mainly in Biological anthropology, but a German "
+            "philosopher specializing in psychology, Theodor Waitz, took up the "
+            "theme of general and social anthropology in his six-volume work, "
+            "entitled Die Anthropologie der Naturvölker, 1859–1864. The title was "
+            """soon translated as "The Anthropology of Primitive Peoples". """
+            "The last two volumes were published posthumously."
+        )
         question2 = "What did Broca discover in the human brain?"
 
-        from allennlp.data.dataset_readers.reading_comprehension.util import make_reading_comprehension_instance
+        from allennlp.data.dataset_readers.reading_comprehension.util import (
+            make_reading_comprehension_instance,
+        )
 
-        instance1 = make_reading_comprehension_instance(tokenizer.tokenize(question1),
-                                                        tokenizer.tokenize(passage1),
-                                                        {"bert": token_indexer},
-                                                        passage1)
+        instance1 = make_reading_comprehension_instance(
+            tokenizer.tokenize(question1),
+            tokenizer.tokenize(passage1),
+            {"bert": token_indexer},
+            passage1,
+        )
 
-        instance2 = make_reading_comprehension_instance(tokenizer.tokenize(question2),
-                                                        tokenizer.tokenize(passage2),
-                                                        {"bert": token_indexer},
-                                                        passage2)
+        instance2 = make_reading_comprehension_instance(
+            tokenizer.tokenize(question2),
+            tokenizer.tokenize(passage2),
+            {"bert": token_indexer},
+            passage2,
+        )
 
         vocab = Vocabulary()
 
@@ -235,10 +248,12 @@ class TestBertEmbedder(ModelTestCase):
 
         vocab = Vocabulary()
 
-        vocab_path = self.FIXTURES_ROOT / 'bert' / 'vocab.txt'
-        token_indexer = PretrainedBertIndexer(str(vocab_path), truncate_long_sequences=False, max_pieces=8)
+        vocab_path = self.FIXTURES_ROOT / "bert" / "vocab.txt"
+        token_indexer = PretrainedBertIndexer(
+            str(vocab_path), truncate_long_sequences=False, max_pieces=8
+        )
 
-        config_path = self.FIXTURES_ROOT / 'bert' / 'config.json'
+        config_path = self.FIXTURES_ROOT / "bert" / "config.json"
         config = BertConfig(str(config_path))
         bert_model = BertModel(config)
         token_embedder = BertEmbedder(bert_model, max_pieces=8)
@@ -254,23 +269,22 @@ class TestBertEmbedder(ModelTestCase):
 
         # 16 = [CLS], 17 = [SEP]
         # 1 full window + 1 half window with start/end tokens
-        assert tokens["bert"].tolist() == [[16, 2, 3, 4, 3, 5, 6, 17,
-                                            16, 3, 5, 6, 8, 9, 2, 17,
-                                            16, 8, 9, 2, 14, 12, 17]]
+        assert tokens["bert"].tolist() == [
+            [16, 2, 3, 4, 3, 5, 6, 17, 16, 3, 5, 6, 8, 9, 2, 17, 16, 8, 9, 2, 14, 12, 17]
+        ]
         assert tokens["bert-offsets"].tolist() == [[1, 3, 4, 5, 6, 7, 8, 9, 10, 11]]
 
         bert_vectors = token_embedder(tokens["bert"])
         assert list(bert_vectors.shape) == [1, 13, 12]
 
         # Testing without token_type_ids
-        bert_vectors = token_embedder(tokens["bert"],
-                                      offsets=tokens["bert-offsets"])
+        bert_vectors = token_embedder(tokens["bert"], offsets=tokens["bert-offsets"])
         assert list(bert_vectors.shape) == [1, 10, 12]
 
         # Testing with token_type_ids
-        bert_vectors = token_embedder(tokens["bert"],
-                                      offsets=tokens["bert-offsets"],
-                                      token_type_ids=tokens["bert-type-ids"])
+        bert_vectors = token_embedder(
+            tokens["bert"], offsets=tokens["bert-offsets"], token_type_ids=tokens["bert-type-ids"]
+        )
         assert list(bert_vectors.shape) == [1, 10, 12]
 
     def test_sliding_window_with_batch(self):
@@ -281,16 +295,20 @@ class TestBertEmbedder(ModelTestCase):
 
         vocab = Vocabulary()
 
-        vocab_path = self.FIXTURES_ROOT / 'bert' / 'vocab.txt'
-        token_indexer = PretrainedBertIndexer(str(vocab_path), truncate_long_sequences=False, max_pieces=8)
+        vocab_path = self.FIXTURES_ROOT / "bert" / "vocab.txt"
+        token_indexer = PretrainedBertIndexer(
+            str(vocab_path), truncate_long_sequences=False, max_pieces=8
+        )
 
-        config_path = self.FIXTURES_ROOT / 'bert' / 'config.json'
+        config_path = self.FIXTURES_ROOT / "bert" / "config.json"
         config = BertConfig(str(config_path))
         bert_model = BertModel(config)
         token_embedder = BertEmbedder(bert_model, max_pieces=8)
 
         instance = Instance({"tokens": TextField(tokens, {"bert": token_indexer})})
-        instance2 = Instance({"tokens": TextField(tokens + tokens + tokens, {"bert": token_indexer})})
+        instance2 = Instance(
+            {"tokens": TextField(tokens + tokens + tokens, {"bert": token_indexer})}
+        )
 
         batch = Batch([instance, instance2])
         batch.index_instances(vocab)
@@ -300,12 +318,11 @@ class TestBertEmbedder(ModelTestCase):
         tokens = tensor_dict["tokens"]
 
         # Testing without token_type_ids
-        bert_vectors = token_embedder(tokens["bert"],
-                                      offsets=tokens["bert-offsets"])
+        bert_vectors = token_embedder(tokens["bert"], offsets=tokens["bert-offsets"])
         assert bert_vectors is not None
 
         # Testing with token_type_ids
-        bert_vectors = token_embedder(tokens["bert"],
-                                      offsets=tokens["bert-offsets"],
-                                      token_type_ids=tokens["bert-type-ids"])
+        bert_vectors = token_embedder(
+            tokens["bert"], offsets=tokens["bert-offsets"], token_type_ids=tokens["bert-type-ids"]
+        )
         assert bert_vectors is not None

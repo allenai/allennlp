@@ -20,22 +20,25 @@ class NoOpTrainer(TrainerBase):
         self.model = model
 
     @classmethod
-    def from_params(cls,   # type: ignore
-                    params: Params,
-                    serialization_dir: str,
-                    recover: bool = False,
-                    cache_directory: str = None,
-                    cache_prefix: str = None):
-        # pylint: disable=arguments-differ
-        pieces = TrainerPieces.from_params(params, serialization_dir, recover, cache_directory, cache_prefix)  # pylint: disable=no-member
+    def from_params(  # type: ignore
+        cls,
+        params: Params,
+        serialization_dir: str,
+        recover: bool = False,
+        cache_directory: str = None,
+        cache_prefix: str = None,
+    ):
+
+        pieces = TrainerPieces.from_params(
+            params, serialization_dir, recover, cache_directory, cache_prefix
+        )
         return NoOpTrainer(serialization_dir, pieces.model)
 
     def train(self) -> Dict[str, Any]:
         self.model.vocab.save_to_files(os.path.join(self._serialization_dir, "vocabulary"))
 
         checkpointer = Checkpointer(self._serialization_dir)
-        checkpointer.save_checkpoint(epoch=0,
-                                     model_state=self.model.state_dict(),
-                                     training_states={},
-                                     is_best_so_far=True)
+        checkpointer.save_checkpoint(
+            epoch=0, model_state=self.model.state_dict(), training_states={}, is_best_so_far=True
+        )
         return {}
