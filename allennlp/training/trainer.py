@@ -38,36 +38,6 @@ except NameError:
 
 @TrainerBase.register("default")
 class Trainer(TrainerBase):
-<<<<<<< HEAD
-    def __init__(self,
-                 model: Model,
-                 optimizer: torch.optim.Optimizer,
-                 iterator: DataIterator,
-                 train_dataset: Iterable[Instance],
-                 validation_dataset: Optional[Iterable[Instance]] = None,
-                 patience: Optional[int] = None,
-                 validation_metric: str = "-loss",
-                 validation_iterator: DataIterator = None,
-                 shuffle: bool = True,
-                 num_epochs: int = 20,
-                 gradient_accumulation_steps: int = 1,
-                 serialization_dir: Optional[str] = None,
-                 num_serialized_models_to_keep: int = 20,
-                 keep_serialized_model_every_num_seconds: int = None,
-                 checkpointer: Checkpointer = None,
-                 model_save_interval: float = None,
-                 cuda_device: Union[int, List] = -1,
-                 grad_norm: Optional[float] = None,
-                 grad_clipping: Optional[float] = None,
-                 learning_rate_scheduler: Optional[LearningRateScheduler] = None,
-                 momentum_scheduler: Optional[MomentumScheduler] = None,
-                 summary_interval: int = 100,
-                 histogram_interval: int = None,
-                 should_log_parameter_statistics: bool = True,
-                 should_log_learning_rate: bool = False,
-                 log_batch_size_period: Optional[int] = None,
-                 moving_average: Optional[MovingAverage] = None) -> None:
-=======
     def __init__(
         self,
         model: Model,
@@ -96,8 +66,8 @@ class Trainer(TrainerBase):
         should_log_learning_rate: bool = False,
         log_batch_size_period: Optional[int] = None,
         moving_average: Optional[MovingAverage] = None,
+        gradient_accumulation_steps: int = 1,
     ) -> None:
->>>>>>> upstream/master
         """
         A trainer for doing supervised learning. It just takes a labeled dataset
         and a ``DataIterator``, and uses the supplied ``Optimizer`` to learn the weights
@@ -578,16 +548,11 @@ class Trainer(TrainerBase):
             if self._validation_data is not None:
                 with torch.no_grad():
                     # We have a validation set, so compute all the metrics on it.
-<<<<<<< HEAD
+
                     val_loss, num_batches, val_metrics = self._validation_loss()
-                    # Alon get metrics from validation loss
-                    #val_metrics = training_util.get_metrics(self.model, val_loss, num_batches, reset=True)
-=======
-                    val_loss, num_batches = self._validation_loss()
                     val_metrics = training_util.get_metrics(
                         self.model, val_loss, num_batches, reset=True
                     )
->>>>>>> upstream/master
 
                     # Check validation metric for early stopping
                     this_epoch_val_metric = val_metrics[self._validation_metric]
@@ -858,30 +823,7 @@ class Trainer(TrainerBase):
         log_batch_size_period = params.pop_int("log_batch_size_period", None)
 
         params.assert_empty(cls.__name__)
-<<<<<<< HEAD
-        return cls(model, optimizer, iterator,
-                   train_data, validation_data,
-                   patience=patience,
-                   validation_metric=validation_metric,
-                   validation_iterator=validation_iterator,
-                   shuffle=shuffle,
-                   num_epochs=num_epochs,
-                   gradient_accumulation_steps=gradient_accumulation_steps,
-                   serialization_dir=serialization_dir,
-                   cuda_device=cuda_device,
-                   grad_norm=grad_norm,
-                   grad_clipping=grad_clipping,
-                   learning_rate_scheduler=lr_scheduler,
-                   momentum_scheduler=momentum_scheduler,
-                   checkpointer=checkpointer,
-                   model_save_interval=model_save_interval,
-                   summary_interval=summary_interval,
-                   histogram_interval=histogram_interval,
-                   should_log_parameter_statistics=should_log_parameter_statistics,
-                   should_log_learning_rate=should_log_learning_rate,
-                   log_batch_size_period=log_batch_size_period,
-                   moving_average=moving_average)
-=======
+
         return cls(
             model,
             optimizer,
@@ -908,4 +850,4 @@ class Trainer(TrainerBase):
             log_batch_size_period=log_batch_size_period,
             moving_average=moving_average,
         )
->>>>>>> upstream/master
+

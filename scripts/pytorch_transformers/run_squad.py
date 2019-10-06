@@ -24,6 +24,8 @@ import random
 import glob
 
 from allennlp.common.elastic_logger import ElasticLogger
+from pytorch_transformers.file_utils import cached_path
+import tarfile
 
 import numpy as np
 import torch
@@ -43,7 +45,8 @@ from pytorch_transformers import (WEIGHTS_NAME, BertConfig,
 
 from pytorch_transformers import AdamW, WarmupLinearSchedule
 
-from scripts.pytorch_transformers.utils_squad import (read_squad_examples, convert_examples_to_features,
+
+from utils_squad import (read_squad_examples, convert_examples_to_features,
                          RawResult, write_predictions,
                          RawResultExtended, write_predictions_extended)
 
@@ -514,6 +517,16 @@ def main():
 
     args.model_type = args.model_type.lower()
     config_class, model_class, tokenizer_class = MODEL_CLASSES[args.model_type]
+    # ALON if model_name_or_path is an s3 directory and gzipped, then downlaod it to cache and unzip it.
+    if args.model_name_or_path.find('s3') > -1 and args.model_name_or_path.endswith('.gz'):
+        logger.info("MultiQA: Downloading %s and unzipping it", args.model_name_or_path)
+        cached_dir = cached_path(args.model_name_or_path)
+        tar = tarfile.open(cached_dir)
+        args.model_name_or_path = args.output_dir + '/' + tar.firstmember.name
+        tar.extractall(path=args.output_dir)
+        args.output_dir = args.model_name_or_path
+        tar.close()
+
     config = config_class.from_pretrained(args.config_name if args.config_name else args.model_name_or_path)
     tokenizer = tokenizer_class.from_pretrained(args.tokenizer_name if args.tokenizer_name else args.model_name_or_path, do_lower_case=args.do_lower_case)
     model = model_class.from_pretrained(args.model_name_or_path, from_tf=bool('.ckpt' in args.model_name_or_path), config=config)

@@ -119,7 +119,9 @@ class AllenNLP_Job_Dispatcher():
                     --include-package allennlp.models.reading_comprehension.multiqa_bert \
                     --include-package allennlp.data.dataset_readers.multiqa_reader_old \
                     --include-package allennlp.data.dataset_readers.multiqa_reader_new \
-                    --include-package allennlp.data.dataset_readers.multiqa_reader '
+                    --include-package allennlp.data.dataset_readers.multiqa_reader  \
+                    --include-package allennlp.data.dataset_readers.transformer_mc_qa \
+                    --include-package allennlp.models.roberta_mc_qa'
 
     def read_config(self, filename):
         if filename.find('jsonnet') > -1:
@@ -259,7 +261,7 @@ class AllenNLP_Job_Dispatcher():
         return experiments
 
     def build_run_script_bash_command(self, exp_config, run_name):
-        bash_command = exp_config['bash_command']
+        bash_command = exp_config['bash_command'].replace('[RUN_NAME]',run_name)
         return bash_command
 
     def build_evaluate_bash_command(self, exp_config, run_name):
@@ -638,7 +640,7 @@ allennlp_dispatcher = AllenNLP_Job_Dispatcher(experiment_name)
 #experiment_name = '065_BERT_train_mix_MRQA'
 #experiment_name = '066_CSQA_BERT_train'
 #experiment_name = '067_CSQA_BERTbase_grid_train'
-#experiment_name = '068_beatbert_train'
+experiment_name = '068_beatbert_train'
 #experiment_name = '069_BERTLarge_train_mix_MRQA'
 #experiment_name = '070_CSQA_BERTLarge_train'
 #experiment_name = '071_BERT_preproc_rlcwq'
@@ -655,13 +657,16 @@ allennlp_dispatcher = AllenNLP_Job_Dispatcher(experiment_name)
 #experiment_name = '081_MultiQA_build_datasets'
 #experiment_name = '082_git_pull'
 experiment_name = '083_CSQA_RoBERTaLarge_samechunk_train'
+#experiment_name = '085_MultiQA_convert_to_SQuAD2.0'
+#experiment_name = '087_Pytorch_Transformers_train'
 
 #if experiment_name.find('BERTLarge') > -1 and experiment_name.find('evaluate') == -1:
 #queue = '4GPUs'
 #queue = 'V100'
 queue = 'gamir'
-#queue = 'rack-gamir-g07'
-#queue = 'rack-jonathan-g08'
+#queue = 'rack-gamir-g05'
+#queue = 'pc-jonathan1'
+#queue = 'rack-jonathan-g07'
 #queue = 'savant'
 
 FORCE_RUN = True
