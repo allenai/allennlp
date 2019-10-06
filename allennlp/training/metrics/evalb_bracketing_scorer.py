@@ -126,7 +126,7 @@ class EvalbBracketingScorer(Metric):
             "-p",
             self._evalb_param_path,
             "-e",
-            self._evalb_num_errors_to_kill,
+            str(self._evalb_num_errors_to_kill),
             gold_path,
             predicted_path,
         ]
