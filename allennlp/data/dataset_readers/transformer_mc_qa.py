@@ -5,6 +5,7 @@ import logging
 import numpy
 import os
 import re
+import gzip
 
 from overrides import overrides
 
@@ -124,188 +125,195 @@ class TransformerMCQAReader(DatasetReader):
 
     def _read_internal(self, file_path: str):
         # if `file_path` is a URL, redirect to the cache
-        file_path = cached_path(file_path)
+        cached_file_path = cached_path(file_path)
         counter = self._sample + 1
         debug = 5
         offset_tracker = None
         if self._skip_and_offset is not None:
             offset_tracker = self._skip_and_offset[1]
 
-        with open(file_path, 'r') as data_file:
-            logger.info("Reading QA instances from jsonl dataset at: %s", file_path)
-            for line in data_file:
-                item_json = json.loads(line.strip())
+        if file_path.endswith('.gz'):
+            data_file = gzip.open(cached_file_path, 'rb')
+        else:
+            data_file = open(cached_file_path, 'r')
 
-                item_id = item_json["id"]
-                if self._skip_id_regex and re.match(self._skip_id_regex, item_id):
+
+        logger.info("Reading QA instances from jsonl dataset at: %s", file_path)
+        for line in data_file:
+            item_json = json.loads(line.strip())
+
+            item_id = item_json["id"]
+            if self._skip_id_regex and re.match(self._skip_id_regex, item_id):
+                continue
+
+            counter -= 1
+            debug -= 1
+            if counter == 0:
+                break
+            if offset_tracker is not None:
+                if offset_tracker == 0:
+                    offset_tracker = self._skip_and_offset[0] - 1
                     continue
+                else:
+                    offset_tracker -= 1
 
-                counter -= 1
-                debug -= 1
-                if counter == 0:
-                    break
-                if offset_tracker is not None:
-                    if offset_tracker == 0:
-                        offset_tracker = self._skip_and_offset[0] - 1
-                        continue
-                    else:
-                        offset_tracker -= 1
+            if debug > 0:
+                logger.info(item_json)
 
+            if self._syntax == 'quarel' or self._syntax == 'quarel_preamble':
+                item_json = self._normalize_mc(item_json)
+                if debug > 0:
+                    logger.info(item_json)
+            elif self._syntax == 'vcr':
+                item_json = self._normalize_vcr(item_json)
                 if debug > 0:
                     logger.info(item_json)
 
-                if self._syntax == 'quarel' or self._syntax == 'quarel_preamble':
-                    item_json = self._normalize_mc(item_json)
-                    if debug > 0:
-                        logger.info(item_json)
-                elif self._syntax == 'vcr':
-                    item_json = self._normalize_vcr(item_json)
-                    if debug > 0:
-                        logger.info(item_json)
+            context = item_json.get("para")
 
-                context = item_json.get("para")
+            question_text = item_json["question"]["stem"]
 
-                question_text = item_json["question"]["stem"]
+            if (context is None or self._override_context) and self._context_format is not None:
+                choice_text_list = [c['text'] for c in item_json['question']['choices']]
+                context = self._get_q_context(question_text, choice_text_list)
+                if context is not None:
+                    item_json['para'] = context
+            if self._ignore_context:
+                context = None
+            context_annotations = None
+            if context is not None and self._annotation_tags is not None:
+                para_tagging = item_json.get("para_tagging")
+                context_annotations = self._get_tagged_spans(para_tagging)
+            question_tagging = item_json.get("question_tagging")
+            question_stem_annotations = None
+            if question_tagging is not None and self._annotation_tags is not None:
+                question_stem_annotations = self._get_tagged_spans(question_tagging.get("stem"))
 
-                if (context is None or self._override_context) and self._context_format is not None:
-                    choice_text_list = [c['text'] for c in item_json['question']['choices']]
-                    context = self._get_q_context(question_text, choice_text_list)
-                    if context is not None:
-                        item_json['para'] = context
+            if self._context_strip_sep is not None and context is not None:
+                split = context.split(self._context_strip_sep, 1)
+                if len(split) > 1:
+                    context = split[1]
+
+            if self._syntax == 'quarel_preamble':
+                context, question_text = question_text.split(". ", 1)
+
+            if self._answer_only:
+                question_text = ""
+
+            choice_label_to_id = {}
+            choice_text_list = []
+            choice_context_list = []
+            choice_label_list = []
+            choice_annotations_list = []
+
+            any_correct = False
+            choice_id_correction = 0
+            choice_tagging = None
+            if question_tagging is not None and self._annotation_tags is not None:
+                choice_tagging = question_tagging['choices']
+
+            for choice_id, choice_item in enumerate(item_json["question"]["choices"]):
+
+                if self._restrict_num_choices and len(choice_text_list) == self._restrict_num_choices:
+                    if not any_correct:
+                        choice_text_list.pop(-1)
+                        choice_context_list.pop(-1)
+                        choice_id_correction += 1
+                    else:
+                        break
+
+                choice_label = choice_item["label"]
+                choice_label_to_id[choice_label] = choice_id - choice_id_correction
+
+                choice_text = choice_item["text"]
+                choice_context = choice_item.get("para")
+                if ((choice_context is None and context is None) or self._override_context) \
+                        and self._context_format is not None:
+                    choice_context = self._get_qa_context(question_text, choice_text)
+                    if choice_context is not None:
+                        choice_item['para'] = choice_context
+
                 if self._ignore_context:
-                    context = None
-                context_annotations = None
-                if context is not None and self._annotation_tags is not None:
-                    para_tagging = item_json.get("para_tagging")
-                    context_annotations = self._get_tagged_spans(para_tagging)
-                question_tagging = item_json.get("question_tagging")
-                question_stem_annotations = None
-                if question_tagging is not None and self._annotation_tags is not None:
-                    question_stem_annotations = self._get_tagged_spans(question_tagging.get("stem"))
+                    choice_context = None
 
-                if self._context_strip_sep is not None and context is not None:
-                    split = context.split(self._context_strip_sep, 1)
-                    if len(split) > 1:
-                        context = split[1]
+                choice_annotations = []
+                if choice_tagging is not None and self._annotation_tags is not None:
+                    choice_annotations = self._get_tagged_spans(choice_tagging[choice_label])
 
-                if self._syntax == 'quarel_preamble':
-                    context, question_text = question_text.split(". ", 1)
+                choice_text_list.append(choice_text)
+                choice_context_list.append(choice_context)
+                choice_label_list.append(choice_label)
+                choice_annotations_list.append(choice_annotations)
 
-                if self._answer_only:
-                    question_text = ""
+                is_correct = 0
+                if item_json.get('answerKey') == choice_label:
+                    is_correct = 1
+                    if any_correct:
+                        raise ValueError("More than one correct answer found for {item_json}!")
+                    any_correct = True
 
-                choice_label_to_id = {}
-                choice_text_list = []
-                choice_context_list = []
-                choice_label_list = []
-                choice_annotations_list = []
+                if self._restrict_num_choices \
+                        and len(choice_text_list) == self._restrict_num_choices \
+                        and not any_correct:
+                    continue
 
-                any_correct = False
-                choice_id_correction = 0
-                choice_tagging = None
-                if question_tagging is not None and self._annotation_tags is not None:
-                    choice_tagging = question_tagging['choices']
+                if self._instance_per_choice:
+                    yield self.text_to_instance_per_choice(
+                        str(item_id)+'-'+str(choice_label),
+                        question_text,
+                        choice_text,
+                        is_correct,
+                        context,
+                        choice_context,
+                        debug)
 
-                for choice_id, choice_item in enumerate(item_json["question"]["choices"]):
+            if self._dataset_cache is not None:
+                self._dataset_cache.append(item_json)
 
-                    if self._restrict_num_choices and len(choice_text_list) == self._restrict_num_choices:
-                        if not any_correct:
-                            choice_text_list.pop(-1)
-                            choice_context_list.pop(-1)
-                            choice_id_correction += 1
-                        else:
-                            break
+            if not any_correct and 'answerKey' in item_json:
+                raise ValueError("No correct answer found for {item_json}!")
 
-                    choice_label = choice_item["label"]
-                    choice_label_to_id[choice_label] = choice_id - choice_id_correction
-
-                    choice_text = choice_item["text"]
-                    choice_context = choice_item.get("para")
-                    if ((choice_context is None and context is None) or self._override_context) \
-                            and self._context_format is not None:
-                        choice_context = self._get_qa_context(question_text, choice_text)
-                        if choice_context is not None:
-                            choice_item['para'] = choice_context
-
-                    if self._ignore_context:
-                        choice_context = None
-
-                    choice_annotations = []
-                    if choice_tagging is not None and self._annotation_tags is not None:
-                        choice_annotations = self._get_tagged_spans(choice_tagging[choice_label])
-
-                    choice_text_list.append(choice_text)
-                    choice_context_list.append(choice_context)
-                    choice_label_list.append(choice_label)
-                    choice_annotations_list.append(choice_annotations)
-
-                    is_correct = 0
-                    if item_json.get('answerKey') == choice_label:
-                        is_correct = 1
-                        if any_correct:
-                            raise ValueError("More than one correct answer found for {item_json}!")
-                        any_correct = True
-
-                    if self._restrict_num_choices \
-                            and len(choice_text_list) == self._restrict_num_choices \
-                            and not any_correct:
+            if not self._instance_per_choice:
+                answer_id = choice_label_to_id.get(item_json.get("answerKey"))
+                # Pad choices with empty strings if not right number
+                if len(choice_text_list) != self._num_choices:
+                    choice_text_list = (choice_text_list + self._num_choices * [''])[:self._num_choices]
+                    choice_context_list = (choice_context_list + self._num_choices * [None])[:self._num_choices]
+                    if answer_id is not None and answer_id >= self._num_choices:
+                        logging.warning(f"Skipping question with more than {self._num_choices} answers: {item_json}")
                         continue
 
-                    if self._instance_per_choice:
-                        yield self.text_to_instance_per_choice(
-                            str(item_id)+'-'+str(choice_label),
-                            question_text,
-                            choice_text,
-                            is_correct,
-                            context,
-                            choice_context,
-                            debug)
+                # Custom hack for splitting question instances
+                if self._context_format is not None and choice_context_list is not None \
+                        and self._context_format['mode'] == "split-q-per-sent":
+                    instances = self._split_instance_per_context(
+                        item_id=item_id,
+                        question=question_text,
+                        choice_list=choice_text_list,
+                        answer_id=answer_id,
+                        context=context,
+                        choice_context_list=choice_context_list,
+                        context_annotations=context_annotations,
+                        question_stem_annotations=question_stem_annotations,
+                        choice_annotations_list=choice_annotations_list,
+                        debug=debug)
+                    for instance in instances:
+                        yield instance
 
-                if self._dataset_cache is not None:
-                    self._dataset_cache.append(item_json)
+                else:
+                    yield self.text_to_instance(
+                        item_id=item_id,
+                        question=question_text,
+                        choice_list=choice_text_list,
+                        answer_id=answer_id,
+                        context=context,
+                        choice_context_list=choice_context_list,
+                        context_annotations=context_annotations,
+                        question_stem_annotations=question_stem_annotations,
+                        choice_annotations_list=choice_annotations_list,
+                        debug=debug)
 
-                if not any_correct and 'answerKey' in item_json:
-                    raise ValueError("No correct answer found for {item_json}!")
-
-                if not self._instance_per_choice:
-                    answer_id = choice_label_to_id.get(item_json.get("answerKey"))
-                    # Pad choices with empty strings if not right number
-                    if len(choice_text_list) != self._num_choices:
-                        choice_text_list = (choice_text_list + self._num_choices * [''])[:self._num_choices]
-                        choice_context_list = (choice_context_list + self._num_choices * [None])[:self._num_choices]
-                        if answer_id is not None and answer_id >= self._num_choices:
-                            logging.warning(f"Skipping question with more than {self._num_choices} answers: {item_json}")
-                            continue
-
-                    # Custom hack for splitting question instances
-                    if self._context_format is not None and choice_context_list is not None \
-                            and self._context_format['mode'] == "split-q-per-sent":
-                        instances = self._split_instance_per_context(
-                            item_id=item_id,
-                            question=question_text,
-                            choice_list=choice_text_list,
-                            answer_id=answer_id,
-                            context=context,
-                            choice_context_list=choice_context_list,
-                            context_annotations=context_annotations,
-                            question_stem_annotations=question_stem_annotations,
-                            choice_annotations_list=choice_annotations_list,
-                            debug=debug)
-                        for instance in instances:
-                            yield instance
-
-                    else:
-                        yield self.text_to_instance(
-                            item_id=item_id,
-                            question=question_text,
-                            choice_list=choice_text_list,
-                            answer_id=answer_id,
-                            context=context,
-                            choice_context_list=choice_context_list,
-                            context_annotations=context_annotations,
-                            question_stem_annotations=question_stem_annotations,
-                            choice_annotations_list=choice_annotations_list,
-                            debug=debug)
+        data_file.close()
 
     @overrides
     def text_to_instance(self,  # type: ignore
