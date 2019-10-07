@@ -585,6 +585,8 @@ class Trainer(TrainerBase):
 
             # Alon, in the last epoch write the results to the
             if epoch == self._num_epochs - 1:
+                if 'validation/EM' in elastic_val_metrics:
+                    elastic_val_metrics['EM'] = elastic_val_metrics.pop('validation/EM')
                 ElasticLogger().write_log('INFO', 'last_epoch_eval', context_dict=elastic_val_metrics)
 
                 # saving a results file:
