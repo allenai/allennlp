@@ -6,6 +6,7 @@ import datetime
 import traceback
 from typing import Dict, Optional, List, Tuple, Union, Iterable, Any
 from allennlp.common.elastic_logger import ElasticLogger
+import json
 
 import torch
 import torch.optim.lr_scheduler
@@ -579,6 +580,15 @@ class Trainer(TrainerBase):
             elastic_val_metrics.pop('optimizer', None)
             elastic_val_metrics.pop('schedule', None)
             ElasticLogger().write_log('INFO', 'val_metric', context_dict=elastic_val_metrics)
+
+            # Alon, in the last epoch write the results to the
+            if epoch == self._num_epochs - 1:
+                ElasticLogger().write_log('INFO', 'last_epoch_eval', context_dict=elastic_val_metrics)
+
+                # saving a results file:
+                with open(os.path.join(elastic_val_metrics['serialization_dir'], 'last_epoch_validation_results.json'), 'w') as f:
+                    json.dump(elastic_val_metrics, f)
+
 
 
             # Create overall metrics dict
