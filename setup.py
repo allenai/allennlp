@@ -105,7 +105,7 @@ setup(
         "jsonnet>=0.10.0 ; sys.platform != 'win32'",
         "overrides",
         "nltk",
-        "spacy>=2.1.0,<2.2",
+        "spacy>=2.2.0,<2.3",
         "numpy",
         "tensorboardX>=1.2",
         "boto3",
