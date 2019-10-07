@@ -45,6 +45,7 @@ class AllenNLP_Job_Dispatcher():
         all_objects = s3.list_objects(Bucket='multiqa', Prefix='data/')
         #all_objects = s3.list_objects(Bucket='multiqa', Prefix='preproc/')
         all_objects['Contents'] += s3.list_objects(Bucket='commensenseqa', Prefix='crowdsense/')['Contents']
+        all_objects['Contents'] += s3.list_objects(Bucket='olmpics', Prefix='challenge/')['Contents']
         #all_objects['Cotents'] += s3.list_objects(Bucket='multiqa', Prefix='data/')['Contents']
         #all_objects['Contents'] += s3.list_objects(Bucket='mrqa', Prefix='data/')['Contents']
         all_objects['Contents'] += s3.list_objects(Bucket='beatbert', Prefix='data/')['Contents']
@@ -121,6 +122,7 @@ class AllenNLP_Job_Dispatcher():
                     --include-package allennlp.data.dataset_readers.multiqa_reader_new \
                     --include-package allennlp.data.dataset_readers.multiqa_reader  \
                     --include-package allennlp.data.dataset_readers.transformer_mc_qa \
+                    --include-package allennlp.models.xlnet_mc_qa \
                     --include-package allennlp.models.roberta_mc_qa'
 
     def read_config(self, filename):
@@ -466,6 +468,21 @@ class AllenNLP_Job_Dispatcher():
                 if exp_config['override_config']['trainer']['cuda_device'] == '[GPU_ID4]':
                     exp_config['override_config']['trainer']['optimizer']['t_total'] /= 4
 
+            if 'slanted_triangular_num_steps_per_epoch' in config:
+                bert_t_tatal_calc_train_size = float(self.replace_one_field_tags(config['bert_t_tatal_calc_train_size'], params))
+                exp_config['override_config']['iterator']['batch_size'] = \
+                    self.replace_one_field_tags(exp_config['override_config']['iterator']['batch_size'], params)
+                exp_config['override_config']['trainer']['num_epochs'] = \
+                    self.replace_one_field_tags(exp_config['override_config']['trainer']['num_epochs'], params)
+                exp_config['override_config']['trainer']['gradient_accumulation_steps'] = \
+                    self.replace_one_field_tags(exp_config['override_config']['trainer']['gradient_accumulation_steps'], params)
+                exp_config['override_config']['trainer']['learning_rate_scheduler']['num_steps_per_epoch'] = \
+                    int(bert_t_tatal_calc_train_size / float(exp_config['override_config']['iterator']['batch_size']) \
+                        / float(exp_config['override_config']['trainer']['gradient_accumulation_steps']))
+
+                if exp_config['override_config']['trainer']['cuda_device'] == '[GPU_ID4]':
+                    exp_config['override_config']['trainer']['learning_rate_scheduler']['num_steps_per_epoch'] /= 4
+
             # Building command
 
             runner_config = {}
@@ -640,7 +657,7 @@ allennlp_dispatcher = AllenNLP_Job_Dispatcher(experiment_name)
 #experiment_name = '065_BERT_train_mix_MRQA'
 #experiment_name = '066_CSQA_BERT_train'
 #experiment_name = '067_CSQA_BERTbase_grid_train'
-experiment_name = '068_beatbert_train'
+experiment_name = '068_oLMpics_LearningCurves'
 #experiment_name = '069_BERTLarge_train_mix_MRQA'
 #experiment_name = '070_CSQA_BERTLarge_train'
 #experiment_name = '071_BERT_preproc_rlcwq'
@@ -656,7 +673,7 @@ experiment_name = '068_beatbert_train'
 #experiment_name = '080_MultiQA_BERT_predict_eval'
 #experiment_name = '081_MultiQA_build_datasets'
 #experiment_name = '082_git_pull'
-experiment_name = '083_CSQA_RoBERTaLarge_samechunk_train'
+#experiment_name = '083_CSQA_RoBERTaLarge_samechunk_train'
 #experiment_name = '085_MultiQA_convert_to_SQuAD2.0'
 #experiment_name = '087_Pytorch_Transformers_train'
 

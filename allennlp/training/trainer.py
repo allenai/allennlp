@@ -351,10 +351,12 @@ class Trainer(TrainerBase):
 
             # This does nothing if batch_num_total is None or you are using a
             # scheduler which doesn't update per batch.
-            if self._learning_rate_scheduler:
-                self._learning_rate_scheduler.step_batch(batch_num_total)
-            if self._momentum_scheduler:
-                self._momentum_scheduler.step_batch(batch_num_total)
+            # TODO Alon changing the trainer following this post https://github.com/allenai/allennlp/issues/2112
+            if batch_num_total % self._gradient_accumulation_steps == 0:
+                if self._learning_rate_scheduler:
+                    self._learning_rate_scheduler.step_batch(batch_num_total)
+                if self._momentum_scheduler:
+                    self._momentum_scheduler.step_batch(batch_num_total)
 
             if self._tensorboard.should_log_histograms_this_batch():
                 # get the magnitude of parameter updates for logging
@@ -859,5 +861,6 @@ class Trainer(TrainerBase):
             should_log_learning_rate=should_log_learning_rate,
             log_batch_size_period=log_batch_size_period,
             moving_average=moving_average,
+            gradient_accumulation_steps=gradient_accumulation_steps,
         )
 

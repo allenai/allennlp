@@ -48,10 +48,7 @@ class PretrainedTransformerIndexer(TokenIndexer[int]):
         elif model_name.endswith("-uncased") and not do_lowercase:
             logger.warning("Your pretrained model appears to be uncased, "
                            "but your indexer is not lowercasing tokens.")
-        if 'roberta' in model_name:
-            self.tokenizer = RobertaTokenizer.from_pretrained(model_name, do_lower_case=do_lowercase)
-        else:
-            self.tokenizer = AutoTokenizer.from_pretrained(model_name, do_lower_case=do_lowercase)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name, do_lower_case=do_lowercase)
         self._namespace = namespace
         self._added_to_vocabulary = False
         self._padding_value = self.tokenizer.convert_tokens_to_ids([self.tokenizer.pad_token])[0]

@@ -22,7 +22,6 @@ local dataset_dir = "https://s3.amazonaws.com/commensenseqa/";
   "datasets_for_vocab_creation": [],
   "train_data_path": dataset_dir + "train_rand_split.jsonl",
   "validation_data_path": dataset_dir + "dev_rand_split.jsonl",
-  //"test_data_path": dataset_dir + "test.jsonl",
   "model": {
     "type": "xlnet_mc_qa",
     "pretrained_model": transformer_model
