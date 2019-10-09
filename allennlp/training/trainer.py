@@ -60,7 +60,7 @@ class Trainer(TrainerBase):
         should_log_learning_rate: bool = False,
         log_batch_size_period: Optional[int] = None,
         moving_average: Optional[MovingAverage] = None,
-        num_gradient_accumulation_steps: int = 1
+        gradient_accumulation_batch_size: int = 1
     ) -> None:
         """
         A trainer for doing supervised learning. It just takes a labeled dataset
@@ -232,7 +232,7 @@ class Trainer(TrainerBase):
         self._learning_rate_scheduler = learning_rate_scheduler
         self._momentum_scheduler = momentum_scheduler
         self._moving_average = moving_average
-        self._num_gradient_accumulation_steps = num_gradient_accumulation_steps
+        self._gradient_accumulation_batch_size = gradient_accumulation_batch_size
         # We keep the total batch number as an instance variable because it
         # is used inside a closure for the hook which logs activations in
         # ``_enable_activation_logging``.
@@ -328,10 +328,10 @@ class Trainer(TrainerBase):
             accumulated_batch_sizes.append(cur_batch)
             effective_batch_size = sum(accumulated_batch_sizes)
 
-            if self.gradient_accumulation_batch_size is None:
+            if self._gradient_accumulation_batch_size is None:
                 do_update_grads = True
             else:
-                if effective_batch_size >= self.gradient_accumulation_batch_size:
+                if effective_batch_size >= self._gradient_accumulation_batch_size:
                     do_update_grads = True
                 else:
                     do_update_grads = False
