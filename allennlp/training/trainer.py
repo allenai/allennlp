@@ -325,6 +325,7 @@ class Trainer(TrainerBase):
 
         for batch_group in train_generator_tqdm:
             accumulated_batches.append(batch_group)
+            cur_batch = sum([training_util.get_batch_size(batch) for batch in batch_group])
             accumulated_batch_sizes.append(cur_batch)
             effective_batch_size = sum(accumulated_batch_sizes)
 
