@@ -127,7 +127,8 @@ class LinkingTransitionFunction(BasicTransitionFunction):
             if "linked" in instance_actions:
                 linking_scores, type_embeddings, linked_actions = instance_actions["linked"]
                 action_ids = embedded_actions + linked_actions
-                # (num_question_tokens, 1)
+                # linking_scores: (num_entities, num_question_tokens)
+                # linked_action_logits: (num_entities, 1)
                 linked_action_logits = linking_scores.mm(
                     attention_weights[group_index].unsqueeze(-1)
                 ).squeeze(-1)
