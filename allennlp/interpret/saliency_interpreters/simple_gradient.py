@@ -2,7 +2,6 @@ import math
 
 from typing import List
 import numpy
-import torch
 
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.interpret.saliency_interpreters.saliency_interpreter import SaliencyInterpreter
@@ -59,14 +58,3 @@ class SimpleGradient(SaliencyInterpreter):
         handle = embedding_layer.register_forward_hook(forward_hook)
 
         return handle
-
-    def saliency_interpret_from_instances(self, labeled_instances) -> JsonDict:
-        grads, outputs = self.predictor.get_gradients(labeled_instances)
-        # we only handle when we have 1 input at the moment, so this loop does nothing
-        for key, grad in grads.items():
-            grads_summed_across_batch = torch.sum(grad, axis=0)
-            summed_across_embedding_dim = torch.sum(grads_summed_across_batch, axis=1)
-            joe_bob_position = 0 # TODO, hardcoded position
-            final_loss = summed_across_embedding_dim[joe_bob_position]
-            final_loss.requires_grad_()
-            return final_loss

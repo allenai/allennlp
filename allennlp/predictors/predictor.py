@@ -116,19 +116,15 @@ class Predictor(Registrable):
 
         loss = outputs["loss"]
         self._model.zero_grad()
+        loss.backward()
 
-        # grad, = torch.autograd.grad(loss, x, create_graph=True)
-    
-        loss.backward(retain_graph=True)        
-
-        # for hook in hooks:
-        #     hook.remove()
+        for hook in hooks:
+            hook.remove()
 
         grad_dict = dict()
         for idx, grad in enumerate(embedding_gradients):
             key = "grad_input_" + str(idx + 1)
-            # grad_dict[key] = grad.detach().cpu().numpy()
-            grad_dict[key] = grad
+            grad_dict[key] = grad.detach().cpu().numpy()
 
         return grad_dict, outputs
 
@@ -188,8 +184,7 @@ class Predictor(Registrable):
 
     def predict_instance(self, instance: Instance) -> JsonDict:
         outputs = self._model.forward_on_instance(instance)
-        return outputs
-        #return sanitize(outputs)        
+        return sanitize(outputs)
 
     def predictions_to_labeled_instances(
         self, instance: Instance, outputs: Dict[str, numpy.ndarray]
