@@ -60,6 +60,7 @@ class Trainer(TrainerBase):
         should_log_learning_rate: bool = False,
         log_batch_size_period: Optional[int] = None,
         moving_average: Optional[MovingAverage] = None,
+        num_gradient_accumulation_steps: int = 1
     ) -> None:
         """
         A trainer for doing supervised learning. It just takes a labeled dataset
@@ -231,7 +232,7 @@ class Trainer(TrainerBase):
         self._learning_rate_scheduler = learning_rate_scheduler
         self._momentum_scheduler = momentum_scheduler
         self._moving_average = moving_average
-
+        self._num_gradient_accumulation_steps = num_gradient_accumulation_steps
         # We keep the total batch number as an instance variable because it
         # is used inside a closure for the hook which logs activations in
         # ``_enable_activation_logging``.
@@ -318,24 +319,49 @@ class Trainer(TrainerBase):
         logger.info("Training")
         train_generator_tqdm = Tqdm.tqdm(train_generator, total=num_training_batches)
         cumulative_batch_size = 0
+
+        accumulated_batches = []
+        accumulated_batch_sizes = []
+
         for batch_group in train_generator_tqdm:
+            accumulated_batches.append(batch_group)
+            accumulated_batch_sizes.append(cur_batch)
+            effective_batch_size = sum(accumulated_batch_sizes)
+
+            if self.gradient_accumulation_batch_size is None:
+                do_update_grads = True
+            else:
+                if effective_batch_size >= self.gradient_accumulation_batch_size:
+                    do_update_grads = True
+                else:
+                    do_update_grads = False
+
+            if not do_update_grads:
+                # get another batch from the generator
+                continue
+
             batches_this_epoch += 1
             self._batch_num_total += 1
             batch_num_total = self._batch_num_total
-
+            
             self.optimizer.zero_grad()
+            
+            for this_batch, this_batch_size in zip(
+                    accumulated_batches, accumulated_batch_sizes
+            ):
+                loss = self.batch_loss(this_batch, for_training=True)
+                loss = loss * (this_batch_size / float(effective_batch_size))
 
-            loss = self.batch_loss(batch_group, for_training=True)
+                if torch.isnan(loss):
+                    raise ValueError("nan loss encountered")
+                loss.backward()
 
-            if torch.isnan(loss):
-                raise ValueError("nan loss encountered")
-
-            loss.backward()
-
-            train_loss += loss.item()
+                train_loss += loss.item()
+        
+            accumulated_batches = []
+            accumulated_batch_sizes = []
 
             batch_grad_norm = self.rescale_gradients()
-
             # This does nothing if batch_num_total is None or you are using a
             # scheduler which doesn't update per batch.
             if self._learning_rate_scheduler:
@@ -697,6 +723,7 @@ class Trainer(TrainerBase):
         grad_clipping = params.pop_float("grad_clipping", None)
         lr_scheduler_params = params.pop("learning_rate_scheduler", None)
         momentum_scheduler_params = params.pop("momentum_scheduler", None)
+        gradient_accumulation_batch_size = params.pop_int("gradient_accumulation_batch_size", None)
 
         if isinstance(cuda_device, list):
             model_device = cuda_device[0]
@@ -779,4 +806,6 @@ class Trainer(TrainerBase):
             should_log_learning_rate=should_log_learning_rate,
             log_batch_size_period=log_batch_size_period,
             moving_average=moving_average,
+            gradient_accumulation_batch_size=gradient_accumulation_batch_size,
+
         )
