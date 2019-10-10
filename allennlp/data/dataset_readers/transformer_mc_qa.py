@@ -144,8 +144,9 @@ class TransformerMCQAReader(DatasetReader):
         for line in data_file:
             item_jsons.append(json.loads(line.strip()))
 
-        item_jsons = random.sample(item_jsons, self._sample)
-        logger.info("Sampling %d examples", self._sample)
+        if self._sample != -1:
+            item_jsons = random.sample(item_jsons, self._sample)
+            logger.info("Sampling %d examples", self._sample)
 
         for item_json in Tqdm.tqdm(item_jsons,total=len(item_jsons)):
             item_id = item_json["id"]
