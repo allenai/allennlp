@@ -16,12 +16,8 @@ allennlp.predictors
 * :ref:`ConstituencyParserPredictor<constituency-parser>`
 * :ref:`BiaffineDependencyParserPredictor<biaffine-dependency-parser>`
 * :ref:`SimpleSeq2SeqPredictor<simple-seq2seq>`
-* :ref:`WikiTablesParserPredictor<wikitables-parser>`
-* :ref:`NlvrParserPredictor<nlvr-parser>`
-* :ref:`QuarelParserPredictor<quarel-parser>`
 * :ref:`OpenIePredictor<open-information-extraction>`
 * :ref:`Event2MindPredictor<event2mind>`
-* :ref:`AtisParserPredictor<atis-parser>`
 * :ref:`TextClassifierPredictor<text_classifier>`
 * :ref:`MaskedLanguageModelPredictor<masked-language-model>`
 * :ref:`NextTokenLMPredictor<next-token-lm>`
@@ -86,24 +82,6 @@ allennlp.predictors
    :undoc-members:
    :show-inheritance:
 
-.. _wikitables-parser:
-.. automodule:: allennlp.predictors.wikitables_parser
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. _nlvr-parser:
-.. automodule:: allennlp.predictors.nlvr_parser
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. _quarel-parser:
-.. automodule:: allennlp.predictors.quarel_parser
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 .. _biaffine-dependency-parser:
 .. automodule:: allennlp.predictors.biaffine_dependency_parser
    :members:
@@ -118,12 +96,6 @@ allennlp.predictors
 
 .. _event2mind:
 .. automodule:: allennlp.predictors.event2mind
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. _atis-parser:
-.. automodule:: allennlp.predictors.atis_parser
    :members:
    :undoc-members:
    :show-inheritance:

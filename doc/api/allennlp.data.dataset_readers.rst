@@ -26,7 +26,6 @@ allennlp.data.dataset_readers
   allennlp.data.dataset_readers.quora_paraphrase
   allennlp.data.dataset_readers.reading_comprehension
   allennlp.data.dataset_readers.semantic_dependency_parsing
-  allennlp.data.dataset_readers.semantic_parsing
   allennlp.data.dataset_readers.semantic_role_labeling
   allennlp.data.dataset_readers.seq2seq
   allennlp.data.dataset_readers.sequence_tagging

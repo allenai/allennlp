@@ -1,7 +1,0 @@
-row	col	id	content	tokens	lemmaTokens	posTags	nerTags	nerValues	number	date	num2	list	listId
--1	0	fb:row.row.name_in_english	Name in English	name|in|english	name|in|English	VB|IN|NNP	O|O|MISC	||					
--1	1	fb:row.row.location_in_english	Location in English	location|in|english	location|in|English	NN|IN|NNP	O|O|MISC	||						
-0	0	fb:cell.lake_gala	Lake Gala	lake|gala	Lake|Gala	NNP|NNP	LOCATION|LOCATION	|					
-0	1	fb:cell.edirne	Edirne	edirne	Edirne	NNP	LOCATION					Edirne	fb:part.edirne
-1	0	fb:cell.paradeniz	Paradeniz	paradeniz	paradeniz	NN	LOCATION						
-1	1	fb:cell.mersin	Mersin	mersin	Mersin	NNP	LOCATION					Mersin	fb:part.mersin

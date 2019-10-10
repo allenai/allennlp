@@ -23,10 +23,8 @@ class TestPredict(AllenNlpTestCase):
         super().setUp()
         self.bidaf_model_path = self.FIXTURES_ROOT / "bidaf" / "serialization" / "model.tar.gz"
         self.bidaf_data_path = self.FIXTURES_ROOT / "data" / "squad.json"
-        self.atis_model_path = (
-            self.FIXTURES_ROOT / "semantic_parsing" / "atis" / "serialization" / "model.tar.gz"
-        )
-        self.atis_data_path = self.FIXTURES_ROOT / "data" / "atis" / "sample.json"
+        self.naqanet_model_path = self.FIXTURES_ROOT / "naqanet" / "serialization" / "model.tar.gz"
+        self.naqanet_data_path = self.FIXTURES_ROOT / "data" / "drop.json"
         self.tempdir = pathlib.Path(tempfile.mkdtemp())
         self.infile = self.tempdir / "inputs.txt"
         self.outfile = self.tempdir / "outputs.txt"
@@ -142,25 +140,27 @@ class TestPredict(AllenNlpTestCase):
         shutil.rmtree(self.tempdir)
 
     def test_uses_correct_dataset_reader(self):
-
-        # The ATIS archive has both a training and validation ``DatasetReader``
-        # with different values for ``keep_if_unparseable`` (``True`` for validation
-        # and ``False`` for training). We create a new ``Predictor`` class that
+        # The NAQANET archive has both a training and validation ``DatasetReader``
+        # with different values for ``passage_length_limit`` (``1000`` for validation
+        # and ``400`` for training). We create a new ``Predictor`` class that
         # outputs this value so we can test which ``DatasetReader`` was used.
         @Predictor.register("test-predictor")
         class _TestPredictor(Predictor):
             def dump_line(self, outputs: JsonDict) -> str:
                 data = {
-                    "keep_if_unparseable": self._dataset_reader._keep_if_unparseable  # type: ignore
+                    "passage_length_limit": self._dataset_reader.passage_length_limit  # type: ignore
                 }
                 return json.dumps(data) + "\n"
+
+            def load_line(self, line: str) -> JsonDict:
+                raise NotImplementedError
 
         # --use-dataset-reader argument only should use validation
         sys.argv = [
             "run.py",  # executable
             "predict",  # command
-            str(self.atis_model_path),
-            str(self.atis_data_path),  # input_file
+            str(self.naqanet_model_path),
+            str(self.naqanet_data_path),  # input_file
             "--output-file",
             str(self.outfile),
             "--silent",
@@ -172,14 +172,14 @@ class TestPredict(AllenNlpTestCase):
         assert os.path.exists(self.outfile)
         with open(self.outfile, "r") as f:
             results = [json.loads(line) for line in f]
-            assert results[0]["keep_if_unparseable"] is True
+            assert results[0]["passage_length_limit"] == 1000
 
         # --use-dataset-reader, override with train
         sys.argv = [
             "run.py",  # executable
             "predict",  # command
-            str(self.atis_model_path),
-            str(self.atis_data_path),  # input_file
+            str(self.naqanet_model_path),
+            str(self.naqanet_data_path),  # input_file
             "--output-file",
             str(self.outfile),
             "--silent",
@@ -193,14 +193,14 @@ class TestPredict(AllenNlpTestCase):
         assert os.path.exists(self.outfile)
         with open(self.outfile, "r") as f:
             results = [json.loads(line) for line in f]
-            assert results[0]["keep_if_unparseable"] is False
+            assert results[0]["passage_length_limit"] == 400
 
         # --use-dataset-reader, override with train
         sys.argv = [
             "run.py",  # executable
             "predict",  # command
-            str(self.atis_model_path),
-            str(self.atis_data_path),  # input_file
+            str(self.naqanet_model_path),
+            str(self.naqanet_data_path),  # input_file
             "--output-file",
             str(self.outfile),
             "--silent",
@@ -214,15 +214,15 @@ class TestPredict(AllenNlpTestCase):
         assert os.path.exists(self.outfile)
         with open(self.outfile, "r") as f:
             results = [json.loads(line) for line in f]
-            assert results[0]["keep_if_unparseable"] is True
+            assert results[0]["passage_length_limit"] == 1000
 
         # No --use-dataset-reader flag, fails because the loading logic
         # is not implemented in the testing predictor
         sys.argv = [
             "run.py",  # executable
             "predict",  # command
-            str(self.atis_model_path),
-            str(self.atis_data_path),  # input_file
+            str(self.naqanet_model_path),
+            str(self.naqanet_data_path),  # input_file
             "--output-file",
             str(self.outfile),
             "--silent",
