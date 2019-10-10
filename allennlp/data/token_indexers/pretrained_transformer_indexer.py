@@ -26,7 +26,7 @@ class PretrainedTransformerIndexer(TokenIndexer[int]):
     ----------
     model_name : ``str``
         The name of the ``pytorch_transformers`` model to use.
-    do_lowercase : ``str``
+    do_lowercase : ``bool``
         Whether to lowercase the tokens (this should match the casing of the model name that you
         pass)
     namespace : ``str``, optional (default=``tags``)
