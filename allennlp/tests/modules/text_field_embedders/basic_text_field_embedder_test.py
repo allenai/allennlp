@@ -175,6 +175,34 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
         }
         token_embedder(inputs)
 
+    def test_forward_runs_with_bijective_and_non_bijective_mapping(self):
+        params = Params(
+            {
+                "token_embedders": {
+                    "bert": {"type": "bert-pretrained", "pretrained_model": "bert-base-uncased"},
+                    "token_characters": {
+                        "type": "character_encoding",
+                        "embedding": {"embedding_dim": 5},
+                        "encoder": {
+                            "type": "cnn",
+                            "embedding_dim": 5,
+                            "num_filters": 5,
+                            "ngram_filter_sizes": [5],
+                        },
+                    },
+                },
+                "embedder_to_indexer_map": {"bert": ["bert", "bert-offsets"]},
+                "allow_unmatched_keys": True,
+            }
+        )
+        token_embedder = BasicTextFieldEmbedder.from_params(self.vocab, params)
+        inputs = {
+            "bert": (torch.rand(3, 5) * 10).long(),
+            "bert-offsets": (torch.rand(3, 5) * 1).long(),
+            "token_characters": (torch.rand(3, 5, 5) * 1).long(),
+        }
+        token_embedder(inputs)
+
     def test_old_from_params_new_from_params(self):
         old_params = Params(
             {
