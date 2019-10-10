@@ -369,7 +369,8 @@ class FromParams:
                 choices=as_registrable.list_available(),
                 default_to_first_choice=default_to_first_choice,
             )
-            subclass = registered_subclasses[choice]
+
+            subclass = as_registrable.by_name(choice)
 
             if hasattr(subclass, "from_params"):
                 # We want to call subclass.from_params
