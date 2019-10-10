@@ -6,6 +6,7 @@ import numpy
 import os
 import re
 import gzip
+import random
 
 from overrides import overrides
 
@@ -126,7 +127,7 @@ class TransformerMCQAReader(DatasetReader):
     def _read_internal(self, file_path: str):
         # if `file_path` is a URL, redirect to the cache
         cached_file_path = cached_path(file_path)
-        counter = self._sample + 1
+        #counter = self._sample + 1
         debug = 5
         offset_tracker = None
         if self._skip_and_offset is not None:
@@ -139,17 +140,22 @@ class TransformerMCQAReader(DatasetReader):
 
 
         logger.info("Reading QA instances from jsonl dataset at: %s", file_path)
+        item_jsons = []
         for line in data_file:
-            item_json = json.loads(line.strip())
+            item_jsons.append(json.loads(line.strip()))
 
+        item_jsons = random.sample(item_jsons, self._sample)
+        logger.info("Sampling %d examples", self._sample)
+
+        for item_json in Tqdm.tqdm(item_jsons,total=len(item_jsons)):
             item_id = item_json["id"]
             if self._skip_id_regex and re.match(self._skip_id_regex, item_id):
                 continue
 
-            counter -= 1
+            #counter -= 1
             debug -= 1
-            if counter == 0:
-                break
+            #if counter == 0:
+            #   break
             if offset_tracker is not None:
                 if offset_tracker == 0:
                     offset_tracker = self._skip_and_offset[0] - 1
@@ -283,25 +289,7 @@ class TransformerMCQAReader(DatasetReader):
                         logging.warning(f"Skipping question with more than {self._num_choices} answers: {item_json}")
                         continue
 
-                # Custom hack for splitting question instances
-                if self._context_format is not None and choice_context_list is not None \
-                        and self._context_format['mode'] == "split-q-per-sent":
-                    instances = self._split_instance_per_context(
-                        item_id=item_id,
-                        question=question_text,
-                        choice_list=choice_text_list,
-                        answer_id=answer_id,
-                        context=context,
-                        choice_context_list=choice_context_list,
-                        context_annotations=context_annotations,
-                        question_stem_annotations=question_stem_annotations,
-                        choice_annotations_list=choice_annotations_list,
-                        debug=debug)
-                    for instance in instances:
-                        yield instance
-
-                else:
-                    yield self.text_to_instance(
+                yield self.text_to_instance(
                         item_id=item_id,
                         question=question_text,
                         choice_list=choice_text_list,
