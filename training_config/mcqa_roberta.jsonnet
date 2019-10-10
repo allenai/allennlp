@@ -13,7 +13,16 @@ local cuda_device = 0;
   "dataset_reader": {
     "type": "transformer_mc_qa",
     "sample": -1,
-    "num_choices": 5,
+    "num_choices": 3,
+    "context_syntax": "q#a!",
+    "add_prefix": {"q": "Q: ", "a": "A: "},
+    "pretrained_model": transformer_model,
+    "max_pieces": 256
+  },
+  "validation_dataset_reader": {
+    "type": "transformer_mc_qa",
+    "sample": -1,
+    "num_choices": 3,
     "context_syntax": "q#a!",
     "add_prefix": {"q": "Q: ", "a": "A: "},
     "pretrained_model": transformer_model,
@@ -22,14 +31,9 @@ local cuda_device = 0;
   "datasets_for_vocab_creation": [],
   "train_data_path": dataset_dir + "train_rand_split.jsonl",
   "validation_data_path": dataset_dir + "dev_rand_split.jsonl",
-  //"test_data_path": dataset_dir + "test_rand_split_no_answers.jsonl",
-  //"evaluate_on_test": true,
-  //"evaluate_custom": {
-  //    "metadata_fields": "id,question_text,choice_text_list,correct_answer_index,answer_index,label_logits,label_probs"
-  //},
+
   "model": {
     "type": "roberta_mc_qa",
-    // "transformer_weights_model": transformer_weights_model,
     "pretrained_model": transformer_model
   },
   "iterator": {

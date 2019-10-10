@@ -13,7 +13,16 @@ local dataset_dir = "https://s3.amazonaws.com/commensenseqa/";
   "dataset_reader": {
     "type": "transformer_mc_qa",
     "sample": -1,
-    "num_choices": 5,
+    "num_choices": 3,
+    "context_syntax": "q#a!",
+    "add_prefix": {"q": "Q: ", "a": "A: "},
+    "pretrained_model": transformer_model,
+    "max_pieces": 256
+  },
+  "validation_dataset_reader": {
+    "type": "transformer_mc_qa",
+    "sample": -1,
+    "num_choices": 3,
     "context_syntax": "q#a!",
     "add_prefix": {"q": "Q: ", "a": "A: "},
     "pretrained_model": transformer_model,
