@@ -20,12 +20,11 @@ from allennlp.predictors import Predictor, BidafPredictor
 
 class TestPredict(AllenNlpTestCase):
     def setUp(self):
-        super(TestPredict, self).setUp()
-        self.bidaf_model_path = (self.FIXTURES_ROOT / "bidaf" /
-                                 "serialization" / "model.tar.gz")
-        self.bidaf_data_path = self.FIXTURES_ROOT / 'data' / 'squad.json'
+        super().setUp()
+        self.bidaf_model_path = self.FIXTURES_ROOT / "bidaf" / "serialization" / "model.tar.gz"
+        self.bidaf_data_path = self.FIXTURES_ROOT / "data" / "squad.json"
         self.naqanet_model_path = self.FIXTURES_ROOT / "naqanet" / "serialization" / "model.tar.gz"
-        self.naqanet_data_path = self.FIXTURES_ROOT / 'data' / 'drop.json'
+        self.naqanet_data_path = self.FIXTURES_ROOT / "data" / "drop.json"
         self.tempdir = pathlib.Path(tempfile.mkdtemp())
         self.infile = self.tempdir / "inputs.txt"
         self.outfile = self.tempdir / "outputs.txt"
@@ -141,7 +140,6 @@ class TestPredict(AllenNlpTestCase):
         shutil.rmtree(self.tempdir)
 
     def test_uses_correct_dataset_reader(self):
-        # pylint: disable=protected-access
         # The NAQANET archive has both a training and validation ``DatasetReader``
         # with different values for ``passage_length_limit`` (``1000`` for validation
         # and ``400`` for training). We create a new ``Predictor`` class that
@@ -149,68 +147,88 @@ class TestPredict(AllenNlpTestCase):
         @Predictor.register("test-predictor")
         class _TestPredictor(Predictor):
             def dump_line(self, outputs: JsonDict) -> str:
-                data = {'passage_length_limit': self._dataset_reader.passage_length_limit}  # type: ignore
-                return json.dumps(data) + '\n'
+                data = {
+                    "passage_length_limit": self._dataset_reader.passage_length_limit  # type: ignore
+                }
+                return json.dumps(data) + "\n"
 
             def load_line(self, line: str) -> JsonDict:
                 raise NotImplementedError
 
         # --use-dataset-reader argument only should use validation
-        sys.argv = ["run.py",      # executable
-                    "predict",     # command
-                    str(self.naqanet_model_path),
-                    str(self.naqanet_data_path),     # input_file
-                    "--output-file", str(self.outfile),
-                    "--silent",
-                    "--predictor", "test-predictor",
-                    "--use-dataset-reader"]
+        sys.argv = [
+            "run.py",  # executable
+            "predict",  # command
+            str(self.naqanet_model_path),
+            str(self.naqanet_data_path),  # input_file
+            "--output-file",
+            str(self.outfile),
+            "--silent",
+            "--predictor",
+            "test-predictor",
+            "--use-dataset-reader",
+        ]
         main()
         assert os.path.exists(self.outfile)
         with open(self.outfile, "r") as f:
             results = [json.loads(line) for line in f]
-            assert results[0]['passage_length_limit'] == 1000
+            assert results[0]["passage_length_limit"] == 1000
 
         # --use-dataset-reader, override with train
-        sys.argv = ["run.py",      # executable
-                    "predict",     # command
-                    str(self.naqanet_model_path),
-                    str(self.naqanet_data_path),     # input_file
-                    "--output-file", str(self.outfile),
-                    "--silent",
-                    "--predictor", "test-predictor",
-                    "--use-dataset-reader",
-                    "--dataset-reader-choice", "train"]
+        sys.argv = [
+            "run.py",  # executable
+            "predict",  # command
+            str(self.naqanet_model_path),
+            str(self.naqanet_data_path),  # input_file
+            "--output-file",
+            str(self.outfile),
+            "--silent",
+            "--predictor",
+            "test-predictor",
+            "--use-dataset-reader",
+            "--dataset-reader-choice",
+            "train",
+        ]
         main()
         assert os.path.exists(self.outfile)
         with open(self.outfile, "r") as f:
             results = [json.loads(line) for line in f]
-            assert results[0]['passage_length_limit'] == 400
+            assert results[0]["passage_length_limit"] == 400
 
         # --use-dataset-reader, override with train
-        sys.argv = ["run.py",      # executable
-                    "predict",     # command
-                    str(self.naqanet_model_path),
-                    str(self.naqanet_data_path),     # input_file
-                    "--output-file", str(self.outfile),
-                    "--silent",
-                    "--predictor", "test-predictor",
-                    "--use-dataset-reader",
-                    "--dataset-reader-choice", "validation"]
+        sys.argv = [
+            "run.py",  # executable
+            "predict",  # command
+            str(self.naqanet_model_path),
+            str(self.naqanet_data_path),  # input_file
+            "--output-file",
+            str(self.outfile),
+            "--silent",
+            "--predictor",
+            "test-predictor",
+            "--use-dataset-reader",
+            "--dataset-reader-choice",
+            "validation",
+        ]
         main()
         assert os.path.exists(self.outfile)
         with open(self.outfile, "r") as f:
             results = [json.loads(line) for line in f]
-            assert results[0]['passage_length_limit'] == 1000
+            assert results[0]["passage_length_limit"] == 1000
 
         # No --use-dataset-reader flag, fails because the loading logic
         # is not implemented in the testing predictor
-        sys.argv = ["run.py",      # executable
-                    "predict",     # command
-                    str(self.naqanet_model_path),
-                    str(self.naqanet_data_path),     # input_file
-                    "--output-file", str(self.outfile),
-                    "--silent",
-                    "--predictor", "test-predictor"]
+        sys.argv = [
+            "run.py",  # executable
+            "predict",  # command
+            str(self.naqanet_model_path),
+            str(self.naqanet_data_path),  # input_file
+            "--output-file",
+            str(self.outfile),
+            "--silent",
+            "--predictor",
+            "test-predictor",
+        ]
         with self.assertRaises(NotImplementedError):
             main()
 
