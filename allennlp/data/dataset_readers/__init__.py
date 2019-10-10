@@ -43,7 +43,7 @@ from allennlp.data.dataset_readers.stanford_sentiment_tree_bank import (
 )
 from allennlp.data.dataset_readers.quora_paraphrase import QuoraParaphraseDatasetReader
 from allennlp.data.dataset_readers.simple_language_modeling import (
-        SimpleLanguageModelingDatasetReader,
+    SimpleLanguageModelingDatasetReader,
 )
 from allennlp.data.dataset_readers.babi import BabiReader
 from allennlp.data.dataset_readers.copynet_seq2seq import CopyNetDatasetReader

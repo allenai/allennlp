@@ -145,13 +145,13 @@ class TestTrainer(AllenNlpTestCase):
             cuda_device=[0, 1],
         )
         metrics = trainer.train()
-        assert 'peak_cpu_memory_MB' in metrics
-        assert isinstance(metrics['peak_cpu_memory_MB'], float)
-        assert metrics['peak_cpu_memory_MB'] > 0
-        assert 'peak_gpu_0_memory_MB' in metrics
-        assert isinstance(metrics['peak_gpu_0_memory_MB'], int)
-        assert 'peak_gpu_1_memory_MB' in metrics
-        assert isinstance(metrics['peak_gpu_1_memory_MB'], int)
+        assert "peak_cpu_memory_MB" in metrics
+        assert isinstance(metrics["peak_cpu_memory_MB"], float)
+        assert metrics["peak_cpu_memory_MB"] > 0
+        assert "peak_gpu_0_memory_MB" in metrics
+        assert isinstance(metrics["peak_gpu_0_memory_MB"], int)
+        assert "peak_gpu_1_memory_MB" in metrics
+        assert isinstance(metrics["peak_gpu_1_memory_MB"], int)
 
     def test_trainer_can_resume_training(self):
         trainer = Trainer(
