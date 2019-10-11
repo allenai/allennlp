@@ -15,16 +15,15 @@ from allennlp.common.util import JsonDict
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.commands import main
 from allennlp.commands.predict import Predict
-from allennlp.predictors import Predictor, BidafPredictor
+from allennlp.data.dataset_readers import DatasetReader, TextClassificationJsonReader
+from allennlp.predictors import Predictor, TextClassifierPredictor
 
 
 class TestPredict(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
-        self.bidaf_model_path = self.FIXTURES_ROOT / "bidaf" / "serialization" / "model.tar.gz"
-        self.bidaf_data_path = self.FIXTURES_ROOT / "data" / "squad.json"
-        self.naqanet_model_path = self.FIXTURES_ROOT / "naqanet" / "serialization" / "model.tar.gz"
-        self.naqanet_data_path = self.FIXTURES_ROOT / "data" / "drop.json"
+        self.classifier_model_path = self.FIXTURES_ROOT / "basic_classifier" / "serialization" / "model.tar.gz"
+        self.classifier_data_path = self.FIXTURES_ROOT / "data" / "text_classification_json" / "imdb_corpus.jsonl"
         self.tempdir = pathlib.Path(tempfile.mkdtemp())
         self.infile = self.tempdir / "inputs.txt"
         self.outfile = self.tempdir / "outputs.txt"
@@ -59,18 +58,16 @@ class TestPredict(AllenNlpTestCase):
     def test_works_with_known_model(self):
         with open(self.infile, "w") as f:
             f.write(
-                """{"passage": "the seahawks won the super bowl in 2016", """
-                """ "question": "when did the seahawks win the super bowl?"}\n"""
+                """{"sentence": "the seahawks won the super bowl in 2016"}\n"""
             )
             f.write(
-                """{"passage": "the mariners won the super bowl in 2037", """
-                """ "question": "when did the mariners win the super bowl?"}\n"""
+                """{"sentence": "the mariners won the super bowl in 2037"}\n"""
             )
 
         sys.argv = [
             "run.py",  # executable
             "predict",  # command
-            str(self.bidaf_model_path),
+            str(self.classifier_model_path),
             str(self.infile),  # input_file
             "--output-file",
             str(self.outfile),
@@ -87,16 +84,9 @@ class TestPredict(AllenNlpTestCase):
         assert len(results) == 2
         for result in results:
             assert set(result.keys()) == {
-                "span_start_logits",
-                "span_end_logits",
-                "passage_question_attention",
-                "question_tokens",
-                "passage_tokens",
-                "span_start_probs",
-                "span_end_probs",
-                "best_span",
-                "best_span_str",
-                "token_offsets",
+                "label",
+                "logits",
+                "probs",
             }
 
         shutil.rmtree(self.tempdir)
@@ -106,8 +96,8 @@ class TestPredict(AllenNlpTestCase):
         sys.argv = [
             "run.py",  # executable
             "predict",  # command
-            str(self.bidaf_model_path),
-            str(self.bidaf_data_path),  # input_file
+            str(self.classifier_model_path),
+            str(self.classifier_data_path),  # input_file
             "--output-file",
             str(self.outfile),
             "--silent",
@@ -121,48 +111,46 @@ class TestPredict(AllenNlpTestCase):
         with open(self.outfile, "r") as f:
             results = [json.loads(line) for line in f]
 
-        assert len(results) == 5
+        assert len(results) == 3
         for result in results:
             assert set(result.keys()) == {
-                "span_start_logits",
-                "span_end_logits",
-                "passage_question_attention",
-                "question_tokens",
-                "passage_tokens",
-                "span_start_probs",
-                "span_end_probs",
-                "best_span",
-                "best_span_str",
-                "token_offsets",
+                "label",
+                "logits",
                 "loss",
+                "probs",
             }
 
         shutil.rmtree(self.tempdir)
 
     def test_uses_correct_dataset_reader(self):
-        # The NAQANET archive has both a training and validation ``DatasetReader``
-        # with different values for ``passage_length_limit`` (``1000`` for validation
-        # and ``400`` for training). We create a new ``Predictor`` class that
-        # outputs this value so we can test which ``DatasetReader`` was used.
+        # We're going to use a fake predictor for this test, just checking that we loaded the
+        # correct dataset reader.  We'll also create a fake dataset reader that subclasses the
+        # expected one, and specify that one for validation.
         @Predictor.register("test-predictor")
         class _TestPredictor(Predictor):
             def dump_line(self, outputs: JsonDict) -> str:
                 data = {
-                    "passage_length_limit": self._dataset_reader.passage_length_limit  # type: ignore
+                    "dataset_reader_type": type(self._dataset_reader).__name__  # type: ignore
                 }
                 return json.dumps(data) + "\n"
 
             def load_line(self, line: str) -> JsonDict:
                 raise NotImplementedError
 
+        @DatasetReader.register("fake-reader")
+        class FakeDatasetReader(TextClassificationJsonReader):
+            pass
+
         # --use-dataset-reader argument only should use validation
         sys.argv = [
             "run.py",  # executable
             "predict",  # command
-            str(self.naqanet_model_path),
-            str(self.naqanet_data_path),  # input_file
+            str(self.classifier_model_path),
+            str(self.classifier_data_path),  # input_file
             "--output-file",
             str(self.outfile),
+            "--overrides",
+            '{"validation_dataset_reader": {"type": "fake-reader"}}',
             "--silent",
             "--predictor",
             "test-predictor",
@@ -172,16 +160,18 @@ class TestPredict(AllenNlpTestCase):
         assert os.path.exists(self.outfile)
         with open(self.outfile, "r") as f:
             results = [json.loads(line) for line in f]
-            assert results[0]["passage_length_limit"] == 1000
+            assert results[0]["dataset_reader_type"] == 'FakeDatasetReader'
 
         # --use-dataset-reader, override with train
         sys.argv = [
             "run.py",  # executable
             "predict",  # command
-            str(self.naqanet_model_path),
-            str(self.naqanet_data_path),  # input_file
+            str(self.classifier_model_path),
+            str(self.classifier_data_path),  # input_file
             "--output-file",
             str(self.outfile),
+            "--overrides",
+            '{"validation_dataset_reader": {"type": "fake-reader"}}',
             "--silent",
             "--predictor",
             "test-predictor",
@@ -193,16 +183,18 @@ class TestPredict(AllenNlpTestCase):
         assert os.path.exists(self.outfile)
         with open(self.outfile, "r") as f:
             results = [json.loads(line) for line in f]
-            assert results[0]["passage_length_limit"] == 400
+            assert results[0]["dataset_reader_type"] == 'TextClassificationJsonReader'
 
-        # --use-dataset-reader, override with train
+        # --use-dataset-reader, override with validation
         sys.argv = [
             "run.py",  # executable
             "predict",  # command
-            str(self.naqanet_model_path),
-            str(self.naqanet_data_path),  # input_file
+            str(self.classifier_model_path),
+            str(self.classifier_data_path),  # input_file
             "--output-file",
             str(self.outfile),
+            "--overrides",
+            '{"validation_dataset_reader": {"type": "fake-reader"}}',
             "--silent",
             "--predictor",
             "test-predictor",
@@ -214,17 +206,19 @@ class TestPredict(AllenNlpTestCase):
         assert os.path.exists(self.outfile)
         with open(self.outfile, "r") as f:
             results = [json.loads(line) for line in f]
-            assert results[0]["passage_length_limit"] == 1000
+            assert results[0]["dataset_reader_type"] == 'FakeDatasetReader'
 
         # No --use-dataset-reader flag, fails because the loading logic
         # is not implemented in the testing predictor
         sys.argv = [
             "run.py",  # executable
             "predict",  # command
-            str(self.naqanet_model_path),
-            str(self.naqanet_data_path),  # input_file
+            str(self.classifier_model_path),
+            str(self.classifier_data_path),  # input_file
             "--output-file",
             str(self.outfile),
+            "--overrides",
+            '{"validation_dataset_reader": {"type": "fake-reader"}}',
             "--silent",
             "--predictor",
             "test-predictor",
@@ -235,18 +229,16 @@ class TestPredict(AllenNlpTestCase):
     def test_batch_prediction_works_with_known_model(self):
         with open(self.infile, "w") as f:
             f.write(
-                """{"passage": "the seahawks won the super bowl in 2016", """
-                """ "question": "when did the seahawks win the super bowl?"}\n"""
+                """{"sentence": "the seahawks won the super bowl in 2016"}\n"""
             )
             f.write(
-                """{"passage": "the mariners won the super bowl in 2037", """
-                """ "question": "when did the mariners win the super bowl?"}\n"""
+                """{"sentence": "the mariners won the super bowl in 2037"}\n"""
             )
 
         sys.argv = [
             "run.py",  # executable
             "predict",  # command
-            str(self.bidaf_model_path),
+            str(self.classifier_model_path),
             str(self.infile),  # input_file
             "--output-file",
             str(self.outfile),
@@ -264,16 +256,9 @@ class TestPredict(AllenNlpTestCase):
         assert len(results) == 2
         for result in results:
             assert set(result.keys()) == {
-                "span_start_logits",
-                "span_end_logits",
-                "passage_question_attention",
-                "question_tokens",
-                "passage_tokens",
-                "span_start_probs",
-                "span_end_probs",
-                "best_span",
-                "best_span_str",
-                "token_offsets",
+                "label",
+                "logits",
+                "probs",
             }
 
         shutil.rmtree(self.tempdir)
@@ -291,9 +276,9 @@ class TestPredict(AllenNlpTestCase):
         assert cm.exception.code == 2  # argparse code for incorrect usage
 
     def test_can_specify_predictor(self):
-        @Predictor.register("bidaf-explicit")
-        class Bidaf3Predictor(BidafPredictor):
-            """same as bidaf predictor but with an extra field"""
+        @Predictor.register("classification-explicit")
+        class ExplicitPredictor(TextClassifierPredictor):
+            """same as classifier predictor but with an extra field"""
 
             def predict_json(self, inputs: JsonDict) -> JsonDict:
                 result = super().predict_json(inputs)
@@ -302,23 +287,21 @@ class TestPredict(AllenNlpTestCase):
 
         with open(self.infile, "w") as f:
             f.write(
-                """{"passage": "the seahawks won the super bowl in 2016", """
-                """ "question": "when did the seahawks win the super bowl?"}\n"""
+                """{"sentence": "the seahawks won the super bowl in 2016"}\n"""
             )
             f.write(
-                """{"passage": "the mariners won the super bowl in 2037", """
-                """ "question": "when did the mariners win the super bowl?"}\n"""
+                """{"sentence": "the mariners won the super bowl in 2037"}\n"""
             )
 
         sys.argv = [
             "run.py",  # executable
             "predict",  # command
-            str(self.bidaf_model_path),
+            str(self.classifier_model_path),
             str(self.infile),  # input_file
             "--output-file",
             str(self.outfile),
             "--predictor",
-            "bidaf-explicit",
+            "classification-explicit",
             "--silent",
         ]
 
@@ -332,17 +315,10 @@ class TestPredict(AllenNlpTestCase):
         # Overridden predictor should output extra field
         for result in results:
             assert set(result.keys()) == {
-                "span_start_logits",
-                "span_end_logits",
-                "passage_question_attention",
-                "question_tokens",
-                "passage_tokens",
-                "span_start_probs",
-                "span_end_probs",
-                "best_span",
-                "best_span_str",
-                "token_offsets",
+                "label",
+                "logits",
                 "explicit",
+                "probs",
             }
 
         shutil.rmtree(self.tempdir)
@@ -357,11 +333,11 @@ class TestPredict(AllenNlpTestCase):
         sys.path.insert(0, str(self.TEST_DIR))
 
         # Write out a duplicate predictor there, but registered under a different name.
-        from allennlp.predictors import bidaf
+        from allennlp.predictors import text_classifier
 
-        with open(bidaf.__file__) as f:
+        with open(text_classifier.__file__) as f:
             code = f.read().replace(
-                """@Predictor.register("machine-comprehension")""",
+                """@Predictor.register("text_classifier")""",
                 """@Predictor.register("duplicate-test-predictor")""",
             )
 
@@ -373,18 +349,16 @@ class TestPredict(AllenNlpTestCase):
 
         with open(self.infile, "w") as f:
             f.write(
-                """{"passage": "the seahawks won the super bowl in 2016", """
-                """ "question": "when did the seahawks win the super bowl?"}\n"""
+                """{"sentence": "the seahawks won the super bowl in 2016"}\n"""
             )
             f.write(
-                """{"passage": "the mariners won the super bowl in 2037", """
-                """ "question": "when did the mariners win the super bowl?"}\n"""
+                """{"sentence": "the mariners won the super bowl in 2037"}\n"""
             )
 
         sys.argv = [
             "run.py",  # executable
             "predict",  # command
-            str(self.bidaf_model_path),
+            str(self.classifier_model_path),
             str(self.infile),  # input_file
             "--output-file",
             str(self.outfile),
@@ -410,38 +384,29 @@ class TestPredict(AllenNlpTestCase):
         # Overridden predictor should output extra field
         for result in results:
             assert set(result.keys()) == {
-                "span_start_logits",
-                "span_end_logits",
-                "passage_question_attention",
-                "question_tokens",
-                "passage_tokens",
-                "span_start_probs",
-                "span_end_probs",
-                "best_span",
-                "token_offsets",
-                "best_span_str",
+                "label",
+                "logits",
+                "probs",
             }
 
         sys.path.remove(str(self.TEST_DIR))
 
     def test_alternative_file_formats(self):
-        @Predictor.register("bidaf-csv")
-        class BidafCsvPredictor(BidafPredictor):
-            """same as bidaf predictor but using CSV inputs and outputs"""
+        @Predictor.register("classification-csv")
+        class CsvPredictor(TextClassifierPredictor):
+            """same as classification predictor but using CSV inputs and outputs"""
 
             def load_line(self, line: str) -> JsonDict:
                 reader = csv.reader([line])
-                passage, question = next(reader)
-                return {"passage": passage, "question": question}
+                sentence, label = next(reader)
+                return {"sentence": sentence, "label": label}
 
             def dump_line(self, outputs: JsonDict) -> str:
                 output = io.StringIO()
                 writer = csv.writer(output)
                 row = [
-                    outputs["span_start_probs"][0],
-                    outputs["span_end_probs"][0],
-                    *outputs["best_span"],
-                    outputs["best_span_str"],
+                    outputs["label"],
+                    *outputs["probs"],
                 ]
 
                 writer.writerow(row)
@@ -452,25 +417,25 @@ class TestPredict(AllenNlpTestCase):
             writer.writerow(
                 [
                     "the seahawks won the super bowl in 2016",
-                    "when did the seahawks win the super bowl?",
+                    "pos",
                 ]
             )
             writer.writerow(
                 [
                     "the mariners won the super bowl in 2037",
-                    "when did the mariners win the super bowl?",
+                    "neg",
                 ]
             )
 
         sys.argv = [
             "run.py",  # executable
             "predict",  # command
-            str(self.bidaf_model_path),
+            str(self.classifier_model_path),
             str(self.infile),  # input_file
             "--output-file",
             str(self.outfile),
             "--predictor",
-            "bidaf-csv",
+            "classification-csv",
             "--silent",
         ]
 
@@ -483,11 +448,10 @@ class TestPredict(AllenNlpTestCase):
 
         assert len(results) == 2
         for row in results:
-            assert len(row) == 5
-            start_prob, end_prob, span_start, span_end, span = row
-            for prob in (start_prob, end_prob):
+            assert len(row) == 3  # label and 2 class probabilities
+            label, *probs = row
+            for prob in probs:
                 assert 0 <= float(prob) <= 1
-            assert 0 <= int(span_start) <= int(span_end) <= 8
-            assert span != ""
+            assert label != ""
 
         shutil.rmtree(self.tempdir)
