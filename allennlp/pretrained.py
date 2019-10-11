@@ -46,16 +46,6 @@ def bert_srl_shi_2019() -> predictors.SemanticRoleLabelerPredictor:
         return model.predictor()  # type: ignore
 
 
-def naqanet_dua_2019() -> predictors.BidafPredictor:
-    with warnings.catch_warnings():
-        warnings.simplefilter(action="ignore", category=DeprecationWarning)
-        model = PretrainedModel(
-            "https://allennlp.s3.amazonaws.com/models/naqanet-2019.04.29-fixed-weight-names.tar.gz",
-            "machine-comprehension",
-        )
-        return model.predictor()  # type: ignore
-
-
 def open_information_extraction_stanovsky_2018() -> predictors.OpenIePredictor:
     model = PretrainedModel(
         "https://allennlp.s3.amazonaws.com/models/openie-model.2018-08-20.tar.gz",
