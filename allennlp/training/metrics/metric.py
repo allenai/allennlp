@@ -9,10 +9,10 @@ class Metric(Registrable):
     A very general abstract class representing a metric which can be
     accumulated.
     """
-    def __call__(self,
-                 predictions: torch.Tensor,
-                 gold_labels: torch.Tensor,
-                 mask: Optional[torch.Tensor]):
+
+    def __call__(
+        self, predictions: torch.Tensor, gold_labels: torch.Tensor, mask: Optional[torch.Tensor]
+    ):
         """
         Parameters
         ----------
@@ -26,7 +26,9 @@ class Metric(Registrable):
         """
         raise NotImplementedError
 
-    def get_metric(self, reset: bool) -> Union[float, Tuple[float, ...], Dict[str, float], Dict[str, List[float]]]:
+    def get_metric(
+        self, reset: bool
+    ) -> Union[float, Tuple[float, ...], Dict[str, float], Dict[str, List[float]]]:
         """
         Compute and return the metric. Optionally also call :func:`self.reset`.
         """

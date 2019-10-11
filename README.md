@@ -80,7 +80,7 @@ environment you want to use, you can skip to the 'installing via pip' section.
 3.  Activate the Conda environment. You will need to activate the Conda environment in each terminal in which you want to use AllenNLP.
 
     ```bash
-    source activate allennlp
+    conda activate allennlp
     ```
 
 #### Installing the library and dependencies
@@ -143,7 +143,7 @@ the full suite of tests used by our continuous build environment.
 Once you've installed AllenNLP, you can run the command-line interface either
 with the `allennlp` command (if you installed via `pip`) or `allennlp` (if you installed via source).
 
-```bash
+```
 $ allennlp
 Run AllenNLP
 
@@ -212,7 +212,7 @@ Pull requests (PRs) must have one approving review and no requested changes befo
 
 If you use AllenNLP in your research, please cite [AllenNLP: A Deep Semantic Natural Language Processing Platform](https://www.semanticscholar.org/paper/AllenNLP%3A-A-Deep-Semantic-Natural-Language-Platform-Gardner-Grus/a5502187140cdd98d76ae711973dbcdaf1fef46d).
 
-```
+```bibtex
 @inproceedings{Gardner2017AllenNLP,
   title={AllenNLP: A Deep Semantic Natural Language Processing Platform},
   author={Matt Gardner and Joel Grus and Mark Neumann and Oyvind Tafjord

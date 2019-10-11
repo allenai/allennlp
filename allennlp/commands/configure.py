@@ -27,18 +27,23 @@ from allennlp.service.config_explorer import make_app
 
 
 class Configure(Subcommand):
-    def add_subparser(self, name: str, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
+    def add_subparser(
+        self, name: str, parser: argparse._SubParsersAction
+    ) -> argparse.ArgumentParser:
 
-        description = '''Run the configuration wizard'''
+        description = """Run the configuration wizard"""
         subparser = parser.add_parser(
-                name, description=description, help='Run the configuration wizard.')
+            name, description=description, help="Run the configuration wizard."
+        )
 
-        subparser.add_argument('--port', type=int, default=8123, help='port to serve the wizard on')
-        subparser.add_argument('--include-package',
-                               type=str,
-                               action='append',
-                               default=[],
-                               help='additional packages to include')
+        subparser.add_argument("--port", type=int, default=8123, help="port to serve the wizard on")
+        subparser.add_argument(
+            "--include-package",
+            type=str,
+            action="append",
+            default=[],
+            help="additional packages to include",
+        )
         subparser.set_defaults(func=_run_wizard)
 
         return subparser
@@ -48,6 +53,6 @@ def _run_wizard(args: argparse.Namespace) -> None:
     app = make_app(args.include_package)
     CORS(app)
 
-    http_server = WSGIServer(('0.0.0.0', args.port), app)
+    http_server = WSGIServer(("0.0.0.0", args.port), app)
     print(f"serving Config Explorer at http://localhost:{args.port}")
     http_server.serve_forever()

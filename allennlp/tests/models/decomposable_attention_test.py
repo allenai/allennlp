@@ -12,8 +12,10 @@ from allennlp.models import DecomposableAttention, Model
 class TestDecomposableAttention(ModelTestCase):
     def setUp(self):
         super().setUp()
-        self.set_up_model(self.FIXTURES_ROOT / 'decomposable_attention' / 'experiment.json',
-                          self.FIXTURES_ROOT / 'data' / 'snli.jsonl')
+        self.set_up_model(
+            self.FIXTURES_ROOT / "decomposable_attention" / "experiment.json",
+            self.FIXTURES_ROOT / "data" / "snli.jsonl",
+        )
 
     def test_forward_pass_runs_correctly(self):
         training_tensors = self.dataset.as_tensor_dict()
@@ -29,9 +31,11 @@ class TestDecomposableAttention(ModelTestCase):
         self.ensure_batch_predictions_are_consistent()
 
     def test_model_load(self):
-        params = Params.from_file(self.FIXTURES_ROOT / 'decomposable_attention' / 'experiment.json')
-        model = Model.load(params, serialization_dir=self.FIXTURES_ROOT /
-                           'decomposable_attention' / 'serialization')
+        params = Params.from_file(self.FIXTURES_ROOT / "decomposable_attention" / "experiment.json")
+        model = Model.load(
+            params,
+            serialization_dir=self.FIXTURES_ROOT / "decomposable_attention" / "serialization",
+        )
 
         assert isinstance(model, DecomposableAttention)
 

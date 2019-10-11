@@ -17,7 +17,8 @@ class WordFilter(Registrable):
     Word removal happens `before` stemming, so keep that in mind if you're designing a list of
     words to be removed.
     """
-    default_implementation = 'pass_through'
+
+    default_implementation = "pass_through"
 
     def filter_words(self, words: List[Token]) -> List[Token]:
         """
@@ -26,17 +27,18 @@ class WordFilter(Registrable):
         raise NotImplementedError
 
 
-@WordFilter.register('pass_through')
+@WordFilter.register("pass_through")
 class PassThroughWordFilter(WordFilter):
     """
     Does not filter words; it's a no-op.  This is the default word filter.
     """
+
     @overrides
     def filter_words(self, words: List[Token]) -> List[Token]:
         return words
 
 
-@WordFilter.register('regex')
+@WordFilter.register("regex")
 class RegexFilter(WordFilter):
     """
     A ``RegexFilter`` removes words according to supplied regex patterns.
@@ -46,19 +48,18 @@ class RegexFilter(WordFilter):
     patterns : ``List[str]``
         Words matching these regex patterns will be removed as stopwords.
     """
-    def __init__(self,
-                 patterns: List[str]) -> None:
+
+    def __init__(self, patterns: List[str]) -> None:
         self._patterns = patterns
         self._joined_pattern = re.compile("|".join(self._patterns))
 
     @overrides
     def filter_words(self, words: List[Token]) -> List[Token]:
-        stopwords = [word for word in words
-                     if not self._joined_pattern.match(word.text)]
+        stopwords = [word for word in words if not self._joined_pattern.match(word.text)]
         return stopwords
 
 
-@WordFilter.register('stopwords')
+@WordFilter.register("stopwords")
 class StopwordFilter(WordFilter):
     """
     A ``StopwordFilter`` uses a list of stopwords to filter.
@@ -72,9 +73,8 @@ class StopwordFilter(WordFilter):
     tokens_to_add : ``List[str]``, optional
         A list of tokens to additionally filter out.
     """
-    def __init__(self,
-                 stopword_file: str = None,
-                 tokens_to_add: List[str] = None) -> None:
+
+    def __init__(self, stopword_file: str = None, tokens_to_add: List[str] = None) -> None:
         self._tokens_to_add = tokens_to_add or []
         if stopword_file is not None:
             self.stopwords = {token.lower() for token in read_set_from_file(stopword_file)}

@@ -9,11 +9,7 @@ from allennlp.tests.data.dataset_readers.interleaving_dataset_reader_test import
 
 class TestHomogeneousBatchIterator(AllenNlpTestCase):
     def test_batches(self):
-        readers = {
-                "a": PlainTextReader(),
-                "b": PlainTextReader(),
-                "c": PlainTextReader()
-        }
+        readers = {"a": PlainTextReader(), "b": PlainTextReader(), "c": PlainTextReader()}
 
         reader = InterleavingDatasetReader(readers)
         data_dir = self.FIXTURES_ROOT / "data"
@@ -27,8 +23,9 @@ class TestHomogeneousBatchIterator(AllenNlpTestCase):
         instances = list(reader.read(file_path))
         vocab = Vocabulary.from_instances(instances)
 
-        actual_instance_type_counts = Counter(instance.fields["dataset"].metadata
-                                              for instance in instances)
+        actual_instance_type_counts = Counter(
+            instance.fields["dataset"].metadata for instance in instances
+        )
 
         iterator = HomogeneousBatchIterator(batch_size=3)
         iterator.index_with(vocab)
@@ -45,11 +42,7 @@ class TestHomogeneousBatchIterator(AllenNlpTestCase):
         assert observed_instance_type_counts == actual_instance_type_counts
 
     def test_skip_smaller_batches(self):
-        readers = {
-                "a": PlainTextReader(),
-                "b": PlainTextReader(),
-                "c": PlainTextReader()
-        }
+        readers = {"a": PlainTextReader(), "b": PlainTextReader(), "c": PlainTextReader()}
 
         reader = InterleavingDatasetReader(readers)
         data_dir = self.FIXTURES_ROOT / "data"

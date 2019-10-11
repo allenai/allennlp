@@ -12,7 +12,7 @@ from allennlp.models import Model
 from allennlp.predictors.predictor import Predictor
 
 
-@Predictor.register('sentence-tagger')
+@Predictor.register("sentence-tagger")
 class SentenceTaggerPredictor(Predictor):
     """
     Predictor for any model that takes in a sentence and returns
@@ -21,7 +21,10 @@ class SentenceTaggerPredictor(Predictor):
     and also
     the :class:`~allennlp.models.simple_tagger.SimpleTagger` model.
     """
-    def __init__(self, model: Model, dataset_reader: DatasetReader, language: str = 'en_core_web_sm') -> None:
+
+    def __init__(
+        self, model: Model, dataset_reader: DatasetReader, language: str = "en_core_web_sm"
+    ) -> None:
         super().__init__(model, dataset_reader)
         self._tokenizer = SpacyWordSplitter(language=language, pos_tags=True)
 
@@ -39,9 +42,9 @@ class SentenceTaggerPredictor(Predictor):
         return self._dataset_reader.text_to_instance(tokens)
 
     @overrides
-    def predictions_to_labeled_instances(self,
-                                         instance: Instance,
-                                         outputs: Dict[str, numpy.ndarray]) -> List[Instance]:
+    def predictions_to_labeled_instances(
+        self, instance: Instance, outputs: Dict[str, numpy.ndarray]
+    ) -> List[Instance]:
         """
         This function currently only handles BIOUL tags.
 
@@ -64,25 +67,27 @@ class SentenceTaggerPredictor(Predictor):
         Mary  went to Seattle to visit Microsoft Research
         O      O    O    O     O   O     B-Org     L-Org
         """
-        predicted_tags = outputs['tags']
+        predicted_tags = outputs["tags"]
         predicted_spans = []
 
         i = 0
         while i < len(predicted_tags):
             tag = predicted_tags[i]
             # if its a U, add it to the list
-            if tag[0] == 'U':
-                current_tags = [t if idx == i else 'O' for idx, t in enumerate(predicted_tags)]
+            if tag[0] == "U":
+                current_tags = [t if idx == i else "O" for idx, t in enumerate(predicted_tags)]
                 predicted_spans.append(current_tags)
             # if its a B, keep going until you hit an L.
-            elif tag[0] == 'B':
+            elif tag[0] == "B":
                 begin_idx = i
-                while tag[0] != 'L':
+                while tag[0] != "L":
                     i += 1
                     tag = predicted_tags[i]
                 end_idx = i
-                current_tags = [t if begin_idx <= idx <= end_idx else 'O'
-                                for idx, t in enumerate(predicted_tags)]
+                current_tags = [
+                    t if begin_idx <= idx <= end_idx else "O"
+                    for idx, t in enumerate(predicted_tags)
+                ]
                 predicted_spans.append(current_tags)
             i += 1
 
@@ -90,8 +95,10 @@ class SentenceTaggerPredictor(Predictor):
         instances = []
         for labels in predicted_spans:
             new_instance = deepcopy(instance)
-            text_field: TextField = instance['tokens']  # type: ignore
-            new_instance.add_field('tags', SequenceLabelField(labels, text_field), self._model.vocab)
+            text_field: TextField = instance["tokens"]  # type: ignore
+            new_instance.add_field(
+                "tags", SequenceLabelField(labels, text_field), self._model.vocab
+            )
             instances.append(new_instance)
         instances.reverse()  # NER tags are in the opposite order as desired for the interpret UI
 

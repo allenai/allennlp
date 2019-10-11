@@ -43,17 +43,20 @@ class MultiLabelField(Field[torch.Tensor]):
         If ``skip_indexing=False``, `num_labels` is not required.
 
     """
+
     # It is possible that users want to use this field with a namespace which uses OOV/PAD tokens.
     # This warning will be repeated for every instantiation of this class (i.e for every data
     # instance), spewing a lot of warnings so this class variable is used to only log a single
     # warning per namespace.
     _already_warned_namespaces: Set[str] = set()
 
-    def __init__(self,
-                 labels: Sequence[Union[str, int]],
-                 label_namespace: str = 'labels',
-                 skip_indexing: bool = False,
-                 num_labels: Optional[int] = None) -> None:
+    def __init__(
+        self,
+        labels: Sequence[Union[str, int]],
+        label_namespace: str = "labels",
+        skip_indexing: bool = False,
+        num_labels: Optional[int] = None,
+    ) -> None:
         self.labels = labels
         self._label_namespace = label_namespace
         self._label_ids = None
@@ -62,29 +65,37 @@ class MultiLabelField(Field[torch.Tensor]):
 
         if skip_indexing and self.labels:
             if not all(isinstance(label, int) for label in labels):
-                raise ConfigurationError("In order to skip indexing, your labels must be integers. "
-                                         "Found labels = {}".format(labels))
+                raise ConfigurationError(
+                    "In order to skip indexing, your labels must be integers. "
+                    "Found labels = {}".format(labels)
+                )
             if not num_labels:
                 raise ConfigurationError("In order to skip indexing, num_labels can't be None.")
 
             if not all(cast(int, label) < num_labels for label in labels):
-                raise ConfigurationError("All labels should be < num_labels. "
-                                         "Found num_labels = {} and labels = {} ".format(num_labels, labels))
+                raise ConfigurationError(
+                    "All labels should be < num_labels. "
+                    "Found num_labels = {} and labels = {} ".format(num_labels, labels)
+                )
 
             self._label_ids = labels
         else:
             if not all(isinstance(label, str) for label in labels):
-                raise ConfigurationError("MultiLabelFields expects string labels if skip_indexing=False. "
-                                         "Found labels: {}".format(labels))
+                raise ConfigurationError(
+                    "MultiLabelFields expects string labels if skip_indexing=False. "
+                    "Found labels: {}".format(labels)
+                )
 
     def _maybe_warn_for_namespace(self, label_namespace: str) -> None:
         if not (label_namespace.endswith("labels") or label_namespace.endswith("tags")):
             if label_namespace not in self._already_warned_namespaces:
-                logger.warning("Your label namespace was '%s'. We recommend you use a namespace "
-                               "ending with 'labels' or 'tags', so we don't add UNK and PAD tokens by "
-                               "default to your vocabulary.  See documentation for "
-                               "`non_padded_namespaces` parameter in Vocabulary.",
-                               self._label_namespace)
+                logger.warning(
+                    "Your label namespace was '%s'. We recommend you use a namespace "
+                    "ending with 'labels' or 'tags', so we don't add UNK and PAD tokens by "
+                    "default to your vocabulary.  See documentation for "
+                    "`non_padded_namespaces` parameter in Vocabulary.",
+                    self._label_namespace,
+                )
                 self._already_warned_namespaces.add(label_namespace)
 
     @overrides
@@ -96,8 +107,10 @@ class MultiLabelField(Field[torch.Tensor]):
     @overrides
     def index(self, vocab: Vocabulary):
         if self._label_ids is None:
-            self._label_ids = [vocab.get_token_index(label, self._label_namespace)  # type: ignore
-                               for label in self.labels]
+            self._label_ids = [
+                vocab.get_token_index(label, self._label_namespace)  # type: ignore
+                for label in self.labels
+            ]
         if not self._num_labels:
             self._num_labels = vocab.get_vocab_size(self._label_namespace)
 
@@ -118,4 +131,6 @@ class MultiLabelField(Field[torch.Tensor]):
         return MultiLabelField([], self._label_namespace, skip_indexing=True)
 
     def __str__(self) -> str:
-        return f"MultiLabelField with labels: {self.labels} in namespace: '{self._label_namespace}'.'"
+        return (
+            f"MultiLabelField with labels: {self.labels} in namespace: '{self._label_namespace}'.'"
+        )

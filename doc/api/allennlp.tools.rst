@@ -24,11 +24,6 @@ tasks for which we build models.
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: allennlp.tools.wikitables_evaluator
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 .. automodule:: allennlp.tools.archive_surgery
    :members:
    :undoc-members:

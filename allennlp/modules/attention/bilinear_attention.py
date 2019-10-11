@@ -30,15 +30,18 @@ class BilinearAttention(Attention):
         If true, we normalize the computed similarities with a softmax, to return a probability
         distribution for your attention.  If false, this is just computing a similarity score.
     """
-    def __init__(self,
-                 vector_dim: int,
-                 matrix_dim: int,
-                 activation: Activation = None,
-                 normalize: bool = True) -> None:
+
+    def __init__(
+        self,
+        vector_dim: int,
+        matrix_dim: int,
+        activation: Activation = None,
+        normalize: bool = True,
+    ) -> None:
         super().__init__(normalize)
         self._weight_matrix = Parameter(torch.Tensor(vector_dim, matrix_dim))
         self._bias = Parameter(torch.Tensor(1))
-        self._activation = activation or Activation.by_name('linear')()
+        self._activation = activation or Activation.by_name("linear")()
         self.reset_parameters()
 
     def reset_parameters(self):

@@ -10,8 +10,3 @@ allennlp.data.dataset_readers.dataset_utils
    :members:
    :undoc-members:
    :show-inheritance:
-
-.. automodule:: allennlp.data.dataset_readers.dataset_utils.text2sql_utils
-   :members:
-   :undoc-members:
-   :show-inheritance:

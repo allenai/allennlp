@@ -5,7 +5,7 @@ from allennlp.data import Vocabulary
 from allennlp.modules.language_model_heads.language_model_head import LanguageModelHead
 
 
-@LanguageModelHead.register('linear')
+@LanguageModelHead.register("linear")
 class LinearLanguageModelHead(LanguageModelHead):
     """
     Uses ``torch.nn.Linear`` as a language model head.  Does nothing else fancy.  This was intended
@@ -14,10 +14,8 @@ class LinearLanguageModelHead(LanguageModelHead):
     input embedding, or an adaptive softmax, or something.  But, if you find this class useful for
     something you're doing and want it moved into the repo, open an issue on github.
     """
-    def __init__(self,
-                 vocab: Vocabulary,
-                 input_dim: int,
-                 vocab_namespace: str) -> None:
+
+    def __init__(self, vocab: Vocabulary, input_dim: int, vocab_namespace: str) -> None:
         super().__init__()
         self.input_dim = input_dim
         self.output_dim = vocab.get_vocab_size(vocab_namespace)

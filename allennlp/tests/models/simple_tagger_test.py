@@ -15,8 +15,10 @@ from allennlp.training import Trainer
 class SimpleTaggerTest(ModelTestCase):
     def setUp(self):
         super().setUp()
-        self.set_up_model(self.FIXTURES_ROOT / 'simple_tagger' / 'experiment.json',
-                          self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv')
+        self.set_up_model(
+            self.FIXTURES_ROOT / "simple_tagger" / "experiment.json",
+            self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv",
+        )
 
     def test_simple_tagger_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
@@ -29,7 +31,7 @@ class SimpleTaggerTest(ModelTestCase):
         training_tensors = self.dataset.as_tensor_dict()
         output_dict = self.model(**training_tensors)
         output_dict = self.model.decode(output_dict)
-        class_probs = output_dict['class_probabilities'][0].data.numpy()
+        class_probs = output_dict["class_probabilities"][0].data.numpy()
         numpy.testing.assert_almost_equal(numpy.sum(class_probs, -1), numpy.array([1, 1, 1, 1]))
 
     def test_forward_on_instances_ignores_loss_key_when_batched(self):
@@ -54,10 +56,7 @@ class SimpleTaggerTest(ModelTestCase):
         assert penalty == 0
 
         iterator = BasicIterator(batch_size=32)
-        trainer = Trainer(self.model,
-                          None,  # optimizer,
-                          iterator,
-                          self.instances)
+        trainer = Trainer(self.model, None, iterator, self.instances)  # optimizer,
 
         # You get a RuntimeError if you call `model.forward` twice on the same inputs.
         # The data and config are such that the whole dataset is one batch.
@@ -74,8 +73,10 @@ class SimpleTaggerTest(ModelTestCase):
 class SimpleTaggerSpanF1Test(ModelTestCase):
     def setUp(self):
         super().setUp()
-        self.set_up_model(self.FIXTURES_ROOT / 'simple_tagger' / 'experiment_with_span_f1.json',
-                          self.FIXTURES_ROOT / 'data' / 'conll2003.txt')
+        self.set_up_model(
+            self.FIXTURES_ROOT / "simple_tagger" / "experiment_with_span_f1.json",
+            self.FIXTURES_ROOT / "data" / "conll2003.txt",
+        )
 
     def test_simple_tagger_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
@@ -88,19 +89,13 @@ class SimpleTaggerSpanF1Test(ModelTestCase):
 class SimpleTaggerRegularizationTest(ModelTestCase):
     def setUp(self):
         super().setUp()
-        param_file = self.FIXTURES_ROOT / 'simple_tagger' / 'experiment_with_regularization.json'
-        self.set_up_model(param_file,
-                          self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv')
+        param_file = self.FIXTURES_ROOT / "simple_tagger" / "experiment_with_regularization.json"
+        self.set_up_model(param_file, self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv")
         params = Params.from_file(param_file)
-        self.reader = DatasetReader.from_params(params['dataset_reader'])
-        self.iterator = DataIterator.from_params(params['iterator'])
+        self.reader = DatasetReader.from_params(params["dataset_reader"])
+        self.iterator = DataIterator.from_params(params["iterator"])
         self.trainer = Trainer.from_params(
-                self.model,
-                self.TEST_DIR,
-                self.iterator,
-                self.dataset,
-                None,
-                params.get('trainer')
+            self.model, self.TEST_DIR, self.iterator, self.dataset, None, params.get("trainer")
         )
 
     def test_regularization(self):

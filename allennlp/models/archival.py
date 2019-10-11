@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 class Archive(NamedTuple):
     """ An archive comprises a Model and its experimental config"""
+
     model: Model
     config: Params
 
@@ -66,11 +67,15 @@ class Archive(NamedTuple):
         module = modules_dict.get(path, None)
 
         if not module:
-            raise ConfigurationError(f"You asked to transfer module at path {path} from "
-                                     f"the model {type(self.model)}. But it's not present.")
+            raise ConfigurationError(
+                f"You asked to transfer module at path {path} from "
+                f"the model {type(self.model)}. But it's not present."
+            )
         if not isinstance(module, Module):
-            raise ConfigurationError(f"The transferred object from model {type(self.model)} at path "
-                                     f"{path} is not a PyTorch Module.")
+            raise ConfigurationError(
+                f"The transferred object from model {type(self.model)} at path "
+                f"{path} is not a PyTorch Module."
+            )
 
         for parameter in module.parameters():  # type: ignore
             parameter.requires_grad_(not freeze)
@@ -89,10 +94,12 @@ _WEIGHTS_NAME = "weights.th"
 _FTA_NAME = "files_to_archive.json"
 
 
-def archive_model(serialization_dir: str,
-                  weights: str = _DEFAULT_WEIGHTS,
-                  files_to_archive: Dict[str, str] = None,
-                  archive_path: str = None) -> None:
+def archive_model(
+    serialization_dir: str,
+    weights: str = _DEFAULT_WEIGHTS,
+    files_to_archive: Dict[str, str] = None,
+    archive_path: str = None,
+) -> None:
     """
     Archive the model weights, its training configuration, and its
     vocabulary to `model.tar.gz`. Include the additional ``files_to_archive``
@@ -126,7 +133,7 @@ def archive_model(serialization_dir: str,
     # so that we can use it during de-archiving.
     if files_to_archive:
         fta_filename = os.path.join(serialization_dir, _FTA_NAME)
-        with open(fta_filename, 'w') as fta_file:
+        with open(fta_filename, "w") as fta_file:
             fta_file.write(json.dumps(files_to_archive))
 
     if archive_path is not None:
@@ -136,11 +143,10 @@ def archive_model(serialization_dir: str,
     else:
         archive_file = os.path.join(serialization_dir, "model.tar.gz")
     logger.info("archiving weights and vocabulary to %s", archive_file)
-    with tarfile.open(archive_file, 'w:gz') as archive:
+    with tarfile.open(archive_file, "w:gz") as archive:
         archive.add(config_file, arcname=CONFIG_NAME)
         archive.add(weights_file, arcname=_WEIGHTS_NAME)
-        archive.add(os.path.join(serialization_dir, "vocabulary"),
-                    arcname="vocabulary")
+        archive.add(os.path.join(serialization_dir, "vocabulary"), arcname="vocabulary")
 
         # If there are supplemental files to archive:
         if files_to_archive:
@@ -151,10 +157,9 @@ def archive_model(serialization_dir: str,
                 archive.add(filename, arcname=f"fta/{key}")
 
 
-def load_archive(archive_file: str,
-                 cuda_device: int = -1,
-                 overrides: str = "",
-                 weights_file: str = None) -> Archive:
+def load_archive(
+    archive_file: str, cuda_device: int = -1, overrides: str = "", weights_file: str = None
+) -> Archive:
     """
     Instantiates an Archive from an archived `tar.gz` file.
 
@@ -184,7 +189,7 @@ def load_archive(archive_file: str,
         # Extract archive to temp dir
         tempdir = tempfile.mkdtemp()
         logger.info(f"extracting archive file {resolved_archive_file} to temp dir {tempdir}")
-        with tarfile.open(resolved_archive_file, 'r:gz') as archive:
+        with tarfile.open(resolved_archive_file, "r:gz") as archive:
             archive.extractall(tempdir)
         # Postpone cleanup until exit in case the unarchived contents are needed outside
         # this function.
@@ -195,7 +200,7 @@ def load_archive(archive_file: str,
     # Check for supplemental files in archive
     fta_filename = os.path.join(serialization_dir, _FTA_NAME)
     if os.path.exists(fta_filename):
-        with open(fta_filename, 'r') as fta_file:
+        with open(fta_filename, "r") as fta_file:
             files_to_archive = json.loads(fta_file.read())
 
         # Add these replacements to overrides
@@ -205,13 +210,17 @@ def load_archive(archive_file: str,
             if os.path.exists(replacement_filename):
                 replacements_dict[key] = replacement_filename
             else:
-                logger.warning(f"Archived file {replacement_filename} not found! At train time "
-                               f"this file was located at {original_filename}. This may be "
-                               "because you are loading a serialization directory. Attempting to "
-                               "load the file from its train-time location.")
+                logger.warning(
+                    f"Archived file {replacement_filename} not found! At train time "
+                    f"this file was located at {original_filename}. This may be "
+                    "because you are loading a serialization directory. Attempting to "
+                    "load the file from its train-time location."
+                )
 
         overrides_dict = parse_overrides(overrides)
-        combined_dict = with_fallback(preferred=overrides_dict, fallback=unflatten(replacements_dict))
+        combined_dict = with_fallback(
+            preferred=overrides_dict, fallback=unflatten(replacements_dict)
+        )
         overrides = json.dumps(combined_dict)
 
     # Load config
@@ -227,10 +236,12 @@ def load_archive(archive_file: str,
             weights_path = os.path.join(serialization_dir, _DEFAULT_WEIGHTS)
 
     # Instantiate model. Use a duplicate of the config, as it will get consumed.
-    model = Model.load(config.duplicate(),
-                       weights_file=weights_path,
-                       serialization_dir=serialization_dir,
-                       cuda_device=cuda_device)
+    model = Model.load(
+        config.duplicate(),
+        weights_file=weights_path,
+        serialization_dir=serialization_dir,
+        cuda_device=cuda_device,
+    )
 
     return Archive(model=model, config=config)
 

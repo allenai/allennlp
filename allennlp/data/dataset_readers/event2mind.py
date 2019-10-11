@@ -62,14 +62,17 @@ class Event2MindDatasetReader(DatasetReader):
         command as the instances generated will be nonsensical outside the
         context of vocabulary generation.
     """
-    def __init__(self,
-                 source_tokenizer: Tokenizer = None,
-                 target_tokenizer: Tokenizer = None,
-                 source_token_indexers: Dict[str, TokenIndexer] = None,
-                 target_token_indexers: Dict[str, TokenIndexer] = None,
-                 source_add_start_token: bool = True,
-                 dummy_instances_for_vocab_generation: bool = False,
-                 lazy: bool = False) -> None:
+
+    def __init__(
+        self,
+        source_tokenizer: Tokenizer = None,
+        target_tokenizer: Tokenizer = None,
+        source_token_indexers: Dict[str, TokenIndexer] = None,
+        target_token_indexers: Dict[str, TokenIndexer] = None,
+        source_add_start_token: bool = True,
+        dummy_instances_for_vocab_generation: bool = False,
+        lazy: bool = False,
+    ) -> None:
         super().__init__(lazy)
         self._source_tokenizer = source_tokenizer or WordTokenizer()
         self._target_tokenizer = target_tokenizer or self._source_tokenizer
@@ -88,8 +91,10 @@ class Event2MindDatasetReader(DatasetReader):
 
             for (line_num, line_parts) in enumerate(reader):
                 if len(line_parts) != 7:
-                    line = ','.join([str(s) for s in line_parts])
-                    raise ConfigurationError("Invalid line format: %s (line number %d)" % (line, line_num + 1))
+                    line = ",".join([str(s) for s in line_parts])
+                    raise ConfigurationError(
+                        "Invalid line format: %s (line number %d)" % (line, line_num + 1)
+                    )
                 source_sequence = line_parts[1]
                 xintents = json.loads(line_parts[2])
                 xreacts = json.loads(line_parts[3])
@@ -101,7 +106,7 @@ class Event2MindDatasetReader(DatasetReader):
                         for xreact in xreacts:
                             for oreact in oreacts:
                                 yield self.text_to_instance(
-                                        source_sequence, xintent, xreact, oreact
+                                    source_sequence, xintent, xreact, oreact
                                 )
                 # Generate instances where each token of input appears once.
                 else:
@@ -134,9 +139,9 @@ class Event2MindDatasetReader(DatasetReader):
             # tokenize the string, reformat PersonY if mentioned for consistency
             words_with_persony = []
             skip = False
-            for i in range(0, len(words)-1):
+            for i in range(0, len(words) - 1):
                 # TODO(brendanr): Why not handle person x too?
-                if words[i] == "person" and words[i+1] == "y":
+                if words[i] == "person" and words[i + 1] == "y":
                     words_with_persony.append("persony")
                     skip = True
                 elif skip:
@@ -168,11 +173,13 @@ class Event2MindDatasetReader(DatasetReader):
         return TextField(tokenized_target, self._target_token_indexers)
 
     @overrides
-    def text_to_instance(self,  # type: ignore
-                         source_string: str,
-                         xintent_string: str = None,
-                         xreact_string: str = None,
-                         oreact_string: str = None) -> Instance:
+    def text_to_instance(
+        self,  # type: ignore
+        source_string: str,
+        xintent_string: str = None,
+        xreact_string: str = None,
+        oreact_string: str = None,
+    ) -> Instance:
 
         processed = self._preprocess_string(self._source_tokenizer, source_string)
         tokenized_source = self._source_tokenizer.tokenize(processed)
@@ -185,11 +192,13 @@ class Event2MindDatasetReader(DatasetReader):
                 raise Exception("missing xreact")
             if oreact_string is None:
                 raise Exception("missing oreact")
-            return Instance({
+            return Instance(
+                {
                     "source": source_field,
                     "xintent": self._build_target_field(xintent_string),
                     "xreact": self._build_target_field(xreact_string),
                     "oreact": self._build_target_field(oreact_string),
-            })
+                }
+            )
         else:
-            return Instance({'source': source_field})
+            return Instance({"source": source_field})

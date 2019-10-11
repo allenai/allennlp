@@ -5,7 +5,7 @@ import torch
 from allennlp.modules.language_model_heads.language_model_head import LanguageModelHead
 
 
-@LanguageModelHead.register('bert')
+@LanguageModelHead.register("bert")
 class BertLanguageModelHead(LanguageModelHead):
     """
     Loads just the LM head from ``pytorch_transformers.BertForMaskedLM``.  It was easiest to load
@@ -13,6 +13,7 @@ class BertLanguageModelHead(LanguageModelHead):
     but for practical use in a model, the few seconds of extra loading time is probably not a big
     deal.
     """
+
     def __init__(self, model_name: str) -> None:
         super().__init__()
         config = BertConfig.from_pretrained(model_name)
