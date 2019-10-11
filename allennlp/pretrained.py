@@ -46,16 +46,6 @@ def bert_srl_shi_2019() -> predictors.SemanticRoleLabelerPredictor:
         return model.predictor()  # type: ignore
 
 
-def bidirectional_attention_flow_seo_2017() -> predictors.BidafPredictor:
-    with warnings.catch_warnings():
-        warnings.simplefilter(action="ignore", category=DeprecationWarning)
-        model = PretrainedModel(
-            "https://allennlp.s3.amazonaws.com/models/bidaf-model-2017.09.15-charpad.tar.gz",
-            "machine-comprehension",
-        )
-        return model.predictor()  # type: ignore
-
-
 def naqanet_dua_2019() -> predictors.BidafPredictor:
     with warnings.catch_warnings():
         warnings.simplefilter(action="ignore", category=DeprecationWarning)
