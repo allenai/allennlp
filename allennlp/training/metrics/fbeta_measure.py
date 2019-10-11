@@ -63,7 +63,7 @@ class FBetaMeasure(Metric):
         if beta <= 0:
             raise ConfigurationError("`beta` should be >0 in the F-beta score.")
         if labels is not None and len(labels) == 0:
-            raise ConfigurationError('`labels` cannot be an empty list ')
+            raise ConfigurationError("`labels` cannot be an empty list ")
         self._beta = beta
         self._average = average
         self._labels = labels

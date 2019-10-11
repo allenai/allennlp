@@ -172,7 +172,7 @@ class FBetaMeasureTest(AllenNlpTestCase):
 
     def test_fbeta_multiclass_with_macro_average(self):
         labels = [0, 1]
-        fbeta = FBetaMeasure(average='macro', labels=labels)
+        fbeta = FBetaMeasure(average="macro", labels=labels)
         fbeta(self.predictions, self.targets)
         metric = fbeta.get_metric()
         precisions = metric["precision"]
@@ -190,7 +190,7 @@ class FBetaMeasureTest(AllenNlpTestCase):
 
     def test_fbeta_multiclass_with_micro_average(self):
         labels = [1, 3]
-        fbeta = FBetaMeasure(average='micro', labels=labels)
+        fbeta = FBetaMeasure(average="micro", labels=labels)
         fbeta(self.predictions, self.targets)
         metric = fbeta.get_metric()
         precisions = metric["precision"]
