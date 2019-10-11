@@ -48,7 +48,6 @@ gevent>=1.3.6
 
 # For text normalization
 ftfy
-word2number>=1.1
 
 # To use the BERT model
 pytorch-pretrained-bert>=0.6.0
@@ -68,14 +67,8 @@ requests>=2.18
 # progress bars in data cleaning scripts
 tqdm>=4.19
 
-# In SQuAD eval script, we use this to see if we likely have some tokenization problem.
-editdistance
-
 # For pretrained model weights
 h5py
-
-# For timezone utilities
-pytz>=2017.3
 
 # Reads Universal Dependencies files.
 conllu==1.3.1
