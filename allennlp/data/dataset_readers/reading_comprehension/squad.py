@@ -91,7 +91,7 @@ class SquadReader(DatasetReader):
                     span_ends = [
                         start + len(answer) for start, answer in zip(span_starts, answer_texts)
                     ]
-                    additional_metadata = {"id": question_answer["id"]}
+                    additional_metadata = {"id": question_answer.get("id", None)}
                     instance = self.text_to_instance(
                         question_text,
                         paragraph,

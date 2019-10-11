@@ -12,24 +12,23 @@ class TestPredictor(AllenNlpTestCase):
         Predictor.from_archive(archive, "machine-comprehension")
 
     def test_loads_correct_dataset_reader(self):
+        # The NAQANET archive has both a training and validation ``DatasetReader``
+        # with different values for ``passage_length_limit`` (``1000`` for validation
+        # and ``400`` for training).
+        archive = load_archive(self.FIXTURES_ROOT / "naqanet" / "serialization" / "model.tar.gz")
 
-        # The ATIS archive has both training and validation ``DatasetReaders``. The
-        # ``keep_if_unparseable`` argument has a different value in each of them
-        # (``True`` for validation, ``False`` for training).
-        archive = load_archive(
-            self.FIXTURES_ROOT / "semantic_parsing" / "atis" / "serialization" / "model.tar.gz"
-        )
-
-        predictor = Predictor.from_archive(archive, "atis-parser")
-        assert predictor._dataset_reader._keep_if_unparseable is True
-
-        predictor = Predictor.from_archive(archive, "atis-parser", dataset_reader_to_load="train")
-        assert predictor._dataset_reader._keep_if_unparseable is False
+        predictor = Predictor.from_archive(archive, "machine-comprehension")
+        assert predictor._dataset_reader.passage_length_limit == 1000
 
         predictor = Predictor.from_archive(
-            archive, "atis-parser", dataset_reader_to_load="validation"
+            archive, "machine-comprehension", dataset_reader_to_load="train"
         )
-        assert predictor._dataset_reader._keep_if_unparseable is True
+        assert predictor._dataset_reader.passage_length_limit == 400
+
+        predictor = Predictor.from_archive(
+            archive, "machine-comprehension", dataset_reader_to_load="validation"
+        )
+        assert predictor._dataset_reader.passage_length_limit == 1000
 
     def test_get_gradients(self):
         inputs = {
