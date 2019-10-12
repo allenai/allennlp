@@ -46,13 +46,11 @@ def parse_filename(filename):
     logger.error('could not find any parsing for the format %s',filename)
     return
 
-def process_results(filename, type, source_dataset, \
-                        target_dataset, eval_set, split_type, model, target_size, \
-                    experiment, full_experiments_name, predictions_file, eval_path):
+def process_results(args):
     # for BERTlarge we process a precdiction file ...
-    if predictions_file is not None:
+    if args.predictions_file is not None:
         instance_list = []
-        with open(predictions_file, 'r') as f:
+        with open(args.predictions_file, 'r') as f:
             for line in f:
                 try:
                     instance_list.append(json.loads(line))
@@ -75,10 +73,10 @@ def process_results(filename, type, source_dataset, \
         results_dict['f1'] *= instance_list[0]['qas_used_fraction']
 
         # sanity test:
-        if eval_path == '-1':
+        if args.eval_path == '-1':
             pass
-        elif eval_path is None:
-            single_file_path = cached_path('s3://multiqa/datasets/' + eval_set  + '_' + split_type + '.jsonl.zip')
+        elif args.eval_path is None:
+            single_file_path = cached_path('s3://multiqa/datasets/' + args.eval_set  + '_' + args.split_type + '.jsonl.zip')
             all_question_ids = []
             with zipfile.ZipFile(single_file_path, 'r') as myzip:
                 if myzip.namelist()[0].find('jsonl') > 0:
@@ -94,7 +92,7 @@ def process_results(filename, type, source_dataset, \
             results_dict['qids_missing_frac'] = len(set(all_question_ids) - set(predictions_question_ids)) / len(set(all_question_ids))
 
         else:
-            single_file_path = cached_path(eval_path)
+            single_file_path = cached_path(args.eval_path)
             all_question_ids = []
             contexts = []
             with gzip.open(single_file_path) as myfile:
@@ -114,30 +112,21 @@ def process_results(filename, type, source_dataset, \
 
     else:
         # computing
-        with open(filename, 'r') as f:
+        with open(args.eval_res_file, 'r') as f:
             results_dict = json.load(f)
 
-    results_dict['type'] = type
-    if 'source_dataset' is not None:
-        results_dict['source_dataset'] = source_dataset
-    results_dict['target_dataset'] = target_dataset
-    results_dict['eval_set'] = eval_set
-    results_dict['split_type'] = split_type
-    results_dict['model'] = model
-    results_dict['experiment'] = experiment
-    results_dict['full_experiments_name'] = full_experiments_name
-    if 'target_size' is not None:
-        results_dict['target_size'] = target_size
+    for field in args._get_kwargs():
+        results_dict[field[0]] = field[1]
     ElasticLogger().write_log('INFO', 'EvalResults', context_dict=results_dict)
 
-    if predictions_file is not None:
-        if eval_path is not None:
+    if args.predictions_file is not None:
+        if args.eval_path is not None:
             # uploading to cloud
-            command = "aws s3 cp " + predictions_file + " s3://mrqa/predictions/" + predictions_file.split('/')[-1] + " --acl public-read"
+            command = "aws s3 cp " + args.predictions_file + " s3://mrqa/predictions/" + args.predictions_file.split('/')[-1] + " --acl public-read"
             Popen(command, shell=True, preexec_fn=os.setsid)
         else:
             # uploading to cloud
-            command = "aws s3 cp " + predictions_file + " s3://multiqa/predictions/" + predictions_file.split('/')[-1] + " --acl public-read"
+            command = "aws s3 cp " + args.predictions_file + " s3://multiqa/predictions/" + args.predictions_file.split('/')[-1] + " --acl public-read"
             Popen(command, shell=True, preexec_fn=os.setsid)
 
 def main():
@@ -150,6 +139,11 @@ def main():
     parse.add_argument("--split_type", default='dev', type=str)
     parse.add_argument("--model", default=None, type=str)
     parse.add_argument("--target_size", default=None, type=str)
+    parse.add_argument("--seed", default=None, type=str)
+    parse.add_argument("--num_of_epochs", default=None, type=int)
+    parse.add_argument("--batch_size", default=None, type=int)
+    parse.add_argument("--learning_rate", default=None, type=float)
+    parse.add_argument("--gas", default=None, type=int)
     parse.add_argument("--experiment", default=None, type=str)
     parse.add_argument("--full_experiments_name", default=None, type=str)
     parse.add_argument("--predictions_file", default=None, type=str)
@@ -158,9 +152,7 @@ def main():
 
 
     if args.eval_res_file is not None:
-        process_results(args.eval_res_file, args.type, args.source_dataset, \
-                        args.target_dataset, args.eval_set, args.split_type, args.model ,args.target_size, \
-                        args.experiment, args.full_experiments_name, args.predictions_file, args.eval_path)
+        process_results(args)
     else:
         logger.error('No input provided')
 
