@@ -634,7 +634,6 @@ class TransformerMCQAReader(DatasetReader):
 
         return tokens, segment_ids
 
-
     def bert_features_from_qa(self, question: str, answer: str, context: str = None):
         cls_token = Token("[CLS]")
         sep_token = Token("[SEP]")

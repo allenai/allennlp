@@ -34,7 +34,7 @@ class AllenNLP_Job_Dispatcher():
 
         all_objects = s3.list_objects(Bucket='multiqa', Prefix='models/')
         #all_objects['Contents'] += s3.list_objects(Bucket='mrqa', Prefix='models/')['Contents']
-        all_objects['Contents'] += s3.list_objects(Bucket='beatbert', Prefix='models/')['Contents']
+        #all_objects['Contents'] += s3.list_objects(Bucket='beatbert', Prefix='models/')['Contents']
         #all_objects['Contents'] += s3.list_objects(Bucket='multiqa', Prefix='models_new/')['Contents']
         all_objects['Contents'] += s3.list_objects(Bucket='multiqa', Prefix='data/')['Contents']
         if 'Contents' in all_objects:
@@ -48,7 +48,7 @@ class AllenNLP_Job_Dispatcher():
         all_objects['Contents'] += s3.list_objects(Bucket='olmpics', Prefix='challenge/')['Contents']
         #all_objects['Cotents'] += s3.list_objects(Bucket='multiqa', Prefix='data/')['Contents']
         #all_objects['Contents'] += s3.list_objects(Bucket='mrqa', Prefix='data/')['Contents']
-        all_objects['Contents'] += s3.list_objects(Bucket='beatbert', Prefix='data/')['Contents']
+        #all_objects['Contents'] += s3.list_objects(Bucket='beatbert', Prefix='data/')['Contents']
         #all_objects['Contents'] += s3.list_objects(Bucket='multiqa', Prefix='allennlp_preproc/')['Contents']
         if 'Contents' in all_objects:
             self.s3_preproc = [obj['Key'] for obj in all_objects['Contents']]
@@ -98,7 +98,7 @@ class AllenNLP_Job_Dispatcher():
         all_objects = s3.list_objects(Bucket='multiqa',Prefix=prefix)
         #all_objects += s3.list_objects(Bucket='mrqa', Prefix=prefix)
         all_objects += s3.list_objects(Bucket='commensenseqa', Prefix=prefix)
-        all_objects += s3.list_objects(Bucket='beatbert', Prefix=prefix)
+        #all_objects += s3.list_objects(Bucket='beatbert', Prefix=prefix)
         all_keys = []
         if 'Contents' in all_objects:
             for obj in all_objects['Contents']:
@@ -469,7 +469,7 @@ class AllenNLP_Job_Dispatcher():
                     exp_config['override_config']['trainer']['optimizer']['t_total'] /= 4
 
             if 'slanted_triangular_num_steps_per_epoch' in config:
-                bert_t_tatal_calc_train_size = float(self.replace_one_field_tags(config['bert_t_tatal_calc_train_size'], params))
+                bert_t_tatal_calc_train_size = float(self.replace_one_field_tags(config['slanted_triangular_num_steps_per_epoch'], params))
                 exp_config['override_config']['iterator']['batch_size'] = \
                     self.replace_one_field_tags(exp_config['override_config']['iterator']['batch_size'], params)
                 exp_config['override_config']['trainer']['num_epochs'] = \
@@ -657,12 +657,12 @@ allennlp_dispatcher = AllenNLP_Job_Dispatcher(experiment_name)
 #experiment_name = '065_BERT_train_mix_MRQA'
 #experiment_name = '066_CSQA_BERT_train'
 #experiment_name = '067_CSQA_BERTbase_grid_train'
-experiment_name = '068_oLMpics_LearningCurves'
+#experiment_name = '068_oLMpics_LearningCurves'
 #experiment_name = '069_BERTLarge_train_mix_MRQA'
 #experiment_name = '070_CSQA_BERTLarge_train'
 #experiment_name = '071_BERT_preproc_rlcwq'
 #experiment_name = '072_BERT_evaluate_crowdsense'
-#experiment_name = '073_beatbert_nettrain_large'
+experiment_name = '073_oLMpics_HP_GridSearch'
 #experiment_na#me = '074_CSQA_BERTLarge_samechunk_train'
 #experiment_name = '075_CSQA_BERT_samechunk_train'
 #experiment_name = '076_beatbert_predict'
@@ -680,7 +680,7 @@ experiment_name = '068_oLMpics_LearningCurves'
 #if experiment_name.find('BERTLarge') > -1 and experiment_name.find('evaluate') == -1:
 #queue = '4GPUs'
 #queue = 'V100'
-queue = 'gamir'
+#queue = 'gamir'
 #queue = 'rack-gamir-g05'
 #queue = 'pc-jonathan1'
 #queue = 'rack-jonathan-g07'

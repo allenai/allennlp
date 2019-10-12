@@ -2,8 +2,11 @@ from typing import Dict, Optional, List, Any
 
 import logging
 from overrides import overrides
-from pytorch_transformers.modeling_xlnet import XLNetConfig, XLNetModel, gelu
+from pytorch_transformers.modeling_roberta import RobertaClassificationHead, RobertaConfig, RobertaModel
+from pytorch_transformers.modeling_xlnet import XLNetConfig, XLNetModel
+from pytorch_transformers.modeling_bert import BertConfig, BertModel
 from pytorch_transformers.modeling_utils import SequenceSummary
+from pytorch_transformers.tokenization_gpt2 import bytes_to_unicode
 import re
 import torch
 from torch.nn.modules.linear import Linear
@@ -13,13 +16,15 @@ from allennlp.common.params import Params
 from allennlp.data import Vocabulary
 from allennlp.models.archival import load_archive
 from allennlp.models.model import Model
+from allennlp.models.reading_comprehension.util import get_best_span
 from allennlp.nn import RegularizerApplicator, util
-from allennlp.training.metrics import BooleanAccuracy, CategoricalAccuracy
+from allennlp.training.metrics import BooleanAccuracy, CategoricalAccuracy, SquadEmAndF1
 
 
-@Model.register("xlnet_mc_qa")
-class XLNetMCQAModel(Model):
+@Model.register("transformer_mc_qa")
+class TransformerMCQAModel(Model):
     """
+
     """
     def __init__(self,
                  vocab: Vocabulary,
@@ -35,17 +40,20 @@ class XLNetMCQAModel(Model):
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
         super().__init__(vocab, regularizer)
 
-        if on_load:
-            logging.info(f"Skipping loading of initial Transformer weights")
-            transformer_config = XLNetConfig.from_pretrained(pretrained_model)
-            self._transformer_model = XLNetModel(transformer_config)
-
-        elif transformer_weights_model:
-            logging.info(f"Loading XLNet weights model from {transformer_weights_model}")
-            transformer_model_loaded = load_archive(transformer_weights_model)
-            self._transformer_model = transformer_model_loaded.model._transformer_model
-        else:
+        self._pretrained_model = pretrained_model
+        if 'roberta' in pretrained_model:
+            self._padding_value = 1  # The index of the RoBERTa padding token
+            self._transformer_model = RobertaModel.from_pretrained(pretrained_model)
+        elif 'xlnet' in pretrained_model:
+            self._padding_value = 5  # The index of the XLNet padding token
             self._transformer_model = XLNetModel.from_pretrained(pretrained_model)
+            self.sequence_summary = SequenceSummary(self._transformer_model.config)
+        elif 'bert' in pretrained_model:
+            self._transformer_model = BertModel.from_pretrained(pretrained_model)
+            self._padding_value = 0  # The index of the BERT padding token
+            self._dropout = torch.nn.Dropout(self._transformer_model.config.hidden_dropout_prob)
+        else:
+            assert (ValueError)
 
         for name, param in self._transformer_model.named_parameters():
             grad = requires_grad
@@ -54,28 +62,17 @@ class XLNetMCQAModel(Model):
             param.requires_grad = grad
 
         transformer_config = self._transformer_model.config
-        self.sequence_summary = SequenceSummary(transformer_config)
+        transformer_config.num_labels = 1
+        self._output_dim = self._transformer_model.config.hidden_size
 
-        self._output_dim = transformer_config.d_model
-        classifier_input_dim = self._output_dim
-        classifier_output_dim = 1
-        self._classifier = None
-        if not on_load and transformer_weights_model \
-                and hasattr(transformer_model_loaded.model, "_classifier") \
-                and not reset_classifier:
-            self._classifier = transformer_model_loaded.model._classifier
-            old_dims = (self._classifier.in_features, self._classifier.out_features)
-            new_dims = (classifier_input_dim, classifier_output_dim)
-            if old_dims != new_dims:
-                logging.info(f"NOT copying Transformer classifier weights, incompatible dims: {old_dims} vs {new_dims}")
-                self._classifier = None
-        if self._classifier is None:
-            self._classifier = Linear(classifier_input_dim, classifier_output_dim)
-            #self._classifier.apply(self._transformer_model.init_weights)
+        if 'roberta' in pretrained_model:
+            self._classifier = RobertaClassificationHead(transformer_config)
+        else:
+            self._classifier = Linear(self._output_dim, 1)
+            # self._classifier.apply(self._transformer_model.init_weights)
 
         self._accuracy = CategoricalAccuracy()
         self._loss = torch.nn.CrossEntropyLoss()
-
         self._debug = 2
 
     def forward(self,
@@ -101,19 +98,34 @@ class XLNetMCQAModel(Model):
             print(f"segment_ids = {segment_ids}")
             print(f"label = {label}")
 
-        transformer_outputs = self._transformer_model(input_ids=util.combine_initial_dims(input_ids),
-                                                     token_type_ids=util.combine_initial_dims(segment_ids),
-                                                     attention_mask=util.combine_initial_dims(question_mask))
+        # Segment ids are not used by RoBERTa
+        if 'roberta' in self._pretrained_model:
+            transformer_outputs = self._transformer_model(input_ids=util.combine_initial_dims(input_ids),
+                                                      # token_type_ids=util.combine_initial_dims(segment_ids),
+                                                      attention_mask=util.combine_initial_dims(question_mask))
+            cls_output = transformer_outputs[0]
+        elif 'xlnet' in self._pretrained_model:
+            transformer_outputs = self._transformer_model(input_ids=util.combine_initial_dims(input_ids),
+                                                         token_type_ids=util.combine_initial_dims(segment_ids),
+                                                          attention_mask=util.combine_initial_dims(question_mask))
+            cls_output = self.sequence_summary(transformer_outputs[0])
 
-        pooled_output = self.sequence_summary(transformer_outputs[0])
+        elif 'bert' in self._pretrained_model:
+            last_layer, pooled_output = self._transformer_model(input_ids=util.combine_initial_dims(input_ids),
+                                                          token_type_ids=util.combine_initial_dims(segment_ids),
+                                                          attention_mask=util.combine_initial_dims(question_mask))
+            cls_output = self._dropout(pooled_output)
+        else:
+            assert (ValueError)
+
+
+
+
 
         if self._debug > 0:
-            print(f"pooled_output = {pooled_output}")
+            print(f"cls_output = {cls_output}")
 
-        # dropout handled in sequence_summary
-        # pooled_output = self._dropout(pooled_output)
-
-        label_logits = self._classifier(pooled_output)
+        label_logits = self._classifier(cls_output)
         label_logits = label_logits.view(-1, num_choices)
 
         output_dict = {}
@@ -152,3 +164,5 @@ class XLNetMCQAModel(Model):
                              weights_file=weights_file,
                              cuda_device=cuda_device,
                              **kwargs)
+
+

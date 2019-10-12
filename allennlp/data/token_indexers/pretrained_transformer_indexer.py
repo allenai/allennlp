@@ -3,7 +3,6 @@ import logging
 
 from overrides import overrides
 from pytorch_transformers.tokenization_auto import AutoTokenizer
-from pytorch_transformers.tokenization_roberta import RobertaTokenizer
 import torch
 
 from allennlp.common.util import pad_sequence_to_length
