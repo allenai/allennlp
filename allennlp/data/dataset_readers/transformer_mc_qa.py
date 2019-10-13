@@ -128,7 +128,7 @@ class TransformerMCQAReader(DatasetReader):
         # if `file_path` is a URL, redirect to the cache
         cached_file_path = cached_path(file_path)
         #counter = self._sample + 1
-        debug = 5
+        debug = -1
         offset_tracker = None
         if self._skip_and_offset is not None:
             offset_tracker = self._skip_and_offset[1]
