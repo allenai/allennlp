@@ -209,8 +209,9 @@ def main(args) -> None:
     if args.action is Action.install:
         create_table(connection)
         current_crontab = subprocess.check_output(["crontab", "-l"], universal_newlines=True)
+        full_path = os.path.abspath(__file__)
         # Execute this script every ten minutes.
-        cron_line = f"*/10 * * * * {__file__} --action=resume --random-delay-seconds=60\n"
+        cron_line = f"*/10 * * * * {full_path} --action=resume --random-delay-seconds=60\n"
         new_crontab = current_crontab + cron_line
         subprocess.run(["crontab", "-"], input=new_crontab, encoding="utf-8")
     elif args.action is Action.start:
