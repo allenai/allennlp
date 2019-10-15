@@ -37,20 +37,25 @@ class PretrainedTransformerTokenizer(Tokenizer):
     def __init__(
         self,
         model_name: str,
-        do_lowercase: bool,
+        do_lowercase: bool = None,
         start_tokens: List[str] = None,
         end_tokens: List[str] = None,
     ) -> None:
-        if model_name.endswith("-cased") and do_lowercase:
-            logger.warning(
-                "Your pretrained model appears to be cased, "
-                "but your tokenizer is lowercasing tokens."
-            )
-        elif model_name.endswith("-uncased") and not do_lowercase:
-            logger.warning(
-                "Your pretrained model appears to be uncased, "
-                "but your tokenizer is not lowercasing tokens."
-            )
+        name_do_lowercase = "-uncased" in model_name
+        if do_lowercase is not None and do_lowercase != name_do_lowercase:
+            if do_lowercase:
+                logger.warning(
+                    "Your pretrained model appears to be cased, "
+                    "but your tokenizer is lowercasing tokens."
+                )
+            else:
+                logger.warning(
+                    "Your pretrained model appears to be uncased, "
+                    "but your tokenizer is not lowercasing tokens."
+                )
+        else:
+            do_lowercase = name_do_lowercase
+
         self._tokenizer = AutoTokenizer.from_pretrained(model_name, do_lower_case=do_lowercase)
         default_start_tokens, default_end_tokens = _guess_start_and_end_token_defaults(model_name)
         self._start_tokens = start_tokens if start_tokens is not None else default_start_tokens
