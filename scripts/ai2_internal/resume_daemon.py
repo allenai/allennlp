@@ -1,16 +1,24 @@
 #! /usr/bin/env python
 
-# Tool to automatically resume preemptible beaker experiments.
+# Tool to automatically resume preemptible beaker experiments created with run_with_beaker.py.
+#
+# To install the local DB and modify your crontab use:
+# resume_daemon.py --action=install
+#
+# Subsequently, you can ensure an experiment will be resumed with:
+# resume_daemon.py --action=start --experiment-id=$YOUR_EXPERIMENT_ID
 
-from sqlite3 import Connection
 from enum import Enum
+from logging.handlers import RotatingFileHandler
+from sqlite3 import Connection
 import argparse
 import json
 import logging
 import os
+import random
 import sqlite3
 import subprocess
-from logging.handlers import RotatingFileHandler
+import time
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 logger.setLevel(logging.DEBUG)
@@ -20,7 +28,7 @@ handler = RotatingFileHandler(
         backupCount=10)
 logger.addHandler(handler)
 
-BEAKER_QUERY_INTERVAL_SECONDS = 1
+BEAKER_QUERY_INTERVAL_SECONDS = 1.0
 
 # See https://github.com/beaker/client/blob/master/api/task_status.go
 class BeakerStatus(Enum):
@@ -55,59 +63,65 @@ class BeakerStatus(Enum):
 class BeakerWrapper:
 
     def get_status(self, experiment_id: str) -> BeakerStatus:
-        #brendanr.local ➜  ~ beaker experiment inspect ex_g7knlblsjxxk
-        #[
-        #    {
-        #        "id": "ex_g7knlblsjxxk",
-        #        "owner": {
-        #            "id": "us_a4hw8yvr3xut",
-        #            "name": "ai2",
-        #            "displayName": "AI2"
-        #        },
-        #        "author": {
-        #            "id": "us_hl8x796649u9",
-        #            "name": "brendanr",
-        #            "displayName": "Brendan Roof"
-        #        },
-        #        "workspace": "",
-        #        "user": {
-        #            "id": "",
-        #            "name": "",
-        #            "displayName": ""
-        #        },
-        #        "nodes": [
-        #            {
-        #                "name": "training",
-        #                "task_id": "",
-        #                "taskId": "tk_64wm85lc3f0m",
-        #                "result_id": "",
-        #                "resultId": "ds_du02un92r57b",
-        #                "status": "initializing",
-        #                "child_task_ids": null,
-        #                "childTaskIds": [],
-        #                "parent_task_ids": null,
-        #                "parentTaskIds": []
-        #            }
-        #        ],
-        #        "created": "2019-09-25T02:03:30.820437Z",
-        #        "archived": false
-        #    }
-        #]
-
         command = ["beaker", "experiment", "inspect", experiment_id]
         experiment_json = subprocess.check_output(command)
+
+        # Example output from beaker.
+        # brendanr.local ➜  ~ beaker experiment inspect ex_g7knlblsjxxk
+        # [
+        #     {
+        #         "id": "ex_g7knlblsjxxk",
+        #         "owner": {
+        #             "id": "us_a4hw8yvr3xut",
+        #             "name": "ai2",
+        #             "displayName": "AI2"
+        #         },
+        #         "author": {
+        #             "id": "us_hl8x796649u9",
+        #             "name": "brendanr",
+        #             "displayName": "Brendan Roof"
+        #         },
+        #         "workspace": "",
+        #         "user": {
+        #             "id": "",
+        #             "name": "",
+        #             "displayName": ""
+        #         },
+        #         "nodes": [
+        #             {
+        #                 "name": "training",
+        #                 "task_id": "",
+        #                 "taskId": "tk_64wm85lc3f0m",
+        #                 "result_id": "",
+        #                 "resultId": "ds_du02un92r57b",
+        #                 "status": "initializing",
+        #                 "child_task_ids": null,
+        #                 "childTaskIds": [],
+        #                 "parent_task_ids": null,
+        #                 "parentTaskIds": []
+        #             }
+        #         ],
+        #         "created": "2019-09-25T02:03:30.820437Z",
+        #         "archived": false
+        #     }
+        # ]
+
         experiment_data = json.loads(experiment_json)
-        # TODO(brendanr): Are these constraints ever actually violated?
-        assert len(experiment_data) == 1
-        assert len(experiment_data[0]["nodes"]) == 1
+        # Beaker lets there be multiple tasks in a single experiment. Here we
+        # just try to handle the simple case of single task experiments like
+        # those created by run_with_beaker.py.
+        assert len(experiment_data) == 1, "Experiment not created with run_with_beaker.py"
+        assert len(experiment_data[0]["nodes"]) == 1, "Experiment not created with run_with_beaker.py"
         status = BeakerStatus(experiment_data[0]["nodes"][0]["status"])
+        # Small delay to avoid thrashing Beaker.
+        time.sleep(BEAKER_QUERY_INTERVAL_SECONDS)
         return status
-        # sleep 1 (help avoid thrashing beaker)
 
     def resume(self, experiment_id: str) -> str:
         command = ["beaker", "experiment", "resume", f"--experiment-name={experiment_id}"]
+        # Small delay to avoid thrashing Beaker.
+        time.sleep(BEAKER_QUERY_INTERVAL_SECONDS)
         return subprocess.check_output(command, universal_newlines=True).strip()
-        # sleep 1 (help avoid thrashing beaker)
 
 def create_table(connection: Connection) -> None:
     cursor = connection.cursor()
@@ -179,21 +193,25 @@ class Action(Enum):
 
 
 def main(args) -> None:
+    # Smooth load from potentially many daemons on different machines.
+    time.sleep(random.randint(0, args.random_delay_seconds))
+
     db_path = os.environ["HOME"] + "/.allennlp/resume.db"
     connection = sqlite3.connect(db_path)
 
     # TODO(brendanr): Just do this automatically?
     if args.action is Action.install:
         create_table(connection)
-        # TODO(brendanr): Put resume_daemon.py --action=resume in the users
-        # crontab. You'll need to copy the exist one with `crontab -l` or
-        # similar into a temp file, then append that line and reinstall with
-        # `crontab file` Also grep for resume_daemon.py in the crontab.
-        return
-
-    if args.action is Action.start:
+        current_crontab = subprocess.check_output(["crontab", "-l"], universal_newlines=True)
+        # Execute this script every ten minutes.
+        cron_line = f"*/10 * * * * {__file__} --action=resume --random-delay-seconds=60\n"
+        new_crontab = current_crontab + cron_line
+        subprocess.run(["crontab", "-"], input=new_crontab, encoding='utf-8')
+    elif args.action is Action.start:
+        assert args.experiment_id
         start_autoresume(connection, args.experiment_id, args.max_resumes)
     elif args.action is Action.stop:
+        assert args.experiment_id
         stop_autoresume(connection, args.experiment_id)
     elif args.action is Action.resume:
         beaker = BeakerWrapper()
@@ -206,8 +224,9 @@ def main(args) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--action", type=Action, choices=list(Action), required=True)
-    parser.add_argument("--experiment-id", type=str, required=True)
+    parser.add_argument("--experiment-id", type=str)
     parser.add_argument("--max-resumes", type=int, default=10)
+    parser.add_argument("--random-delay-seconds", type=int, default=0)
     args = parser.parse_args()
 
     try:
