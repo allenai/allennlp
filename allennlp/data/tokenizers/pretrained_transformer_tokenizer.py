@@ -46,12 +46,12 @@ class PretrainedTransformerTokenizer(Tokenizer):
             if do_lowercase:
                 logger.warning(
                     "Your pretrained model appears to be cased, "
-                    "but your tokenizer is lowercasing tokens."
+                    "it will ignore do_lowercase option."
                 )
             else:
                 logger.warning(
                     "Your pretrained model appears to be uncased, "
-                    "but your tokenizer is not lowercasing tokens."
+                    "it will ignore do_lowercase option."
                 )
         else:
             do_lowercase = name_do_lowercase
