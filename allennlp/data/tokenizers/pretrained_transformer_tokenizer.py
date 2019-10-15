@@ -41,21 +41,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
         start_tokens: List[str] = None,
         end_tokens: List[str] = None,
     ) -> None:
-        name_do_lowercase = "-uncased" in model_name
-        if do_lowercase is not None and do_lowercase != name_do_lowercase:
-            if do_lowercase:
-                logger.warning(
-                    "Your pretrained model appears to be cased, "
-                    "it will ignore do_lowercase option."
-                )
-            else:
-                logger.warning(
-                    "Your pretrained model appears to be uncased, "
-                    "it will ignore do_lowercase option."
-                )
-        else:
-            do_lowercase = name_do_lowercase
-
+        do_lowercase = _get_casing(model_name, do_lowercase)
         self._tokenizer = AutoTokenizer.from_pretrained(model_name, do_lower_case=do_lowercase)
         default_start_tokens, default_end_tokens = _guess_start_and_end_token_defaults(model_name)
         self._start_tokens = start_tokens if start_tokens is not None else default_start_tokens
@@ -74,3 +60,20 @@ def _guess_start_and_end_token_defaults(model_name: str) -> Tuple[List[str], Lis
         return (["[CLS]"], ["[SEP]"])
     else:
         return ([], [])
+
+
+def _get_casing(model_name: str, do_lowercase: bool) -> bool:
+    guessed_do_lowercase = "-uncased" in model_name
+    if do_lowercase is None:
+        return guessed_do_lowercase
+    if do_lowercase:
+        logger.warning(
+            "Your pretrained model appears to be cased, "
+            "it will ignore do_lowercase option."
+        )
+    else:
+        logger.warning(
+            "Your pretrained model appears to be uncased, "
+            "it will ignore do_lowercase option."
+        )
+    return do_lowercase
