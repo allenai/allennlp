@@ -1,5 +1,6 @@
 from typing import Iterator
 import re
+import warnings
 
 import torch
 import torch.nn.functional as F
@@ -64,6 +65,7 @@ class DropConnect(torch.nn.Module):
         for match in self._matches:
             self.register_parameter(match.raw_parameter_name, match.parameter)
             delattr(match.module, match.parameter_name)
+            self._prepare_matched_parameters(match)
 
     def _search_parameters(self, regex: str) -> Iterator[_Match]:
         """
@@ -75,6 +77,18 @@ class DropConnect(torch.nn.Module):
                 if re.search(regex, parameter_name):
                     yield _Match(submodule_name, submodule, parameter_name, parameter)
 
+    def _prepare_matched_parameters(self, match: _Match):
+        """
+        Apply non-training dropout to all of matched parameters otherwise PyTorch will raise
+        `AttributeError`: '`LSTM`' object has no attribute '`_flat_weights`'.
+        The `forward()` method, however, will still warn against fragmented memory usages of
+        non-flatten parameters. A corresponding workaround is in `forward()`.
+        """
+        raw_parameter = getattr(self, match.raw_parameter_name)
+        match.module._parameters[match.parameter_name] = F.dropout(
+            raw_parameter, p=self._dropout, training=False
+        )
+
     def forward(self, *args):
         # Apply dropout to all of the matching parameters, and force them into their original
         # parent module's _parameter dictionary
@@ -83,8 +97,15 @@ class DropConnect(torch.nn.Module):
             match.module._parameters[match.parameter_name] = F.dropout(
                 raw_parameter, p=self._dropout, training=self.training
             )
-        # Call the top-level module on the inputs.
-        output = self._module(*args)
+        # Avoid the warning of
+        # `/pytorch/aten/src/ATen/native/cudnn/RNN.cpp`:1238:
+        # `UserWarning`: RNN module weights are not part of single contiguous chunk of memory.
+        # This means they need to be compacted at every call, possibly greatly increasing memory
+        # usage. To compact weights again call `flatten_parameters()`.
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            # Call the top-level module on the inputs.
+            output = self._module.forward(*args)
         # Lastly, remove the dropped out parameters from their parent module's _parameter
         # dictionary. If not PyTorch might raise errors due to using non-leaf tensors as
         # parameters.
@@ -101,3 +122,4 @@ class DropConnect(torch.nn.Module):
         for match in self._matches:
             self.register_parameter(match.raw_parameter_name, match.parameter)
             delattr(match.module, match.parameter_name)
+            self._prepare_matched_parameters(match)
