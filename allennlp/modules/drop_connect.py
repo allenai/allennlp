@@ -103,7 +103,7 @@ class DropConnect(torch.nn.Module):
         # This means they need to be compacted at every call, possibly greatly increasing memory
         # usage. To compact weights again call `flatten_parameters()`.
         with warnings.catch_warnings():
-            warnings.simplefilter('ignore')
+            warnings.simplefilter("ignore")
             # Call the top-level module on the inputs.
             output = self._module.forward(*args)
         # Lastly, remove the dropped out parameters from their parent module's _parameter
