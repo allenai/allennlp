@@ -68,7 +68,8 @@ import argparse
 import json
 import logging
 import os
-from typing import IO, List, Iterable, Tuple
+from pathlib import Path
+from typing import IO, List, Iterable, Tuple, Union
 import warnings
 
 with warnings.catch_warnings():
@@ -181,8 +182,8 @@ def empty_embedding() -> numpy.ndarray:
 class ElmoEmbedder:
     def __init__(
         self,
-        options_file: str = DEFAULT_OPTIONS_FILE,
-        weight_file: str = DEFAULT_WEIGHT_FILE,
+        options_file: Union[str, Path] = DEFAULT_OPTIONS_FILE,
+        weight_file: Union[str, Path] = DEFAULT_WEIGHT_FILE,
         cuda_device: int = -1,
     ) -> None:
         """

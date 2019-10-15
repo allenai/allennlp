@@ -1,5 +1,6 @@
 import json
 import logging
+from pathlib import Path
 from typing import Union, List, Dict, Any
 import warnings
 
@@ -316,7 +317,12 @@ class _ElmoCharacterEncoder(torch.nn.Module):
             }
     """
 
-    def __init__(self, options_file: str, weight_file: str, requires_grad: bool = False) -> None:
+    def __init__(
+        self,
+        options_file: Union[str, Path],
+        weight_file: Union[str, Path],
+        requires_grad: bool = False,
+    ) -> None:
         super().__init__()
 
         with open(cached_path(options_file), "r") as fin:
@@ -528,8 +534,8 @@ class _ElmoBiLm(torch.nn.Module):
 
     def __init__(
         self,
-        options_file: str,
-        weight_file: str,
+        options_file: Union[str, Path],
+        weight_file: Union[str, Path],
         requires_grad: bool = False,
         vocab_to_cache: List[str] = None,
     ) -> None:

@@ -1,7 +1,8 @@
 """
 A stacked bidirectional LSTM with skip connections between layers.
 """
-from typing import Optional, Tuple, List
+from pathlib import Path
+from typing import Optional, Tuple, List, Union
 import warnings
 
 import torch
@@ -258,7 +259,7 @@ class ElmoLstm(_EncoderBase):
         )
         return stacked_sequence_outputs, final_state_tuple
 
-    def load_weights(self, weight_file: str) -> None:
+    def load_weights(self, weight_file: Union[str, Path]) -> None:
         """
         Load the pre-trained weights from the file.
         """
