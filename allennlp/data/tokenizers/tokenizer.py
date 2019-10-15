@@ -11,12 +11,10 @@ class Tokenizer(Registrable):
     here, though you could imagine wanting to do other kinds of tokenization for structured or
     other inputs.
 
-    As part of tokenization, concrete implementations of this API will also handle stemming,
-    stopword filtering, adding start and end tokens, or other kinds of things you might want to do
-    to your tokens.  See the parameters to, e.g., :class:`~.WordTokenizer`, or whichever tokenizer
+    See the parameters to, e.g., :class:`~.SpacyWordTokenizer`, or whichever tokenizer
     you want to use.
 
-    If the base input to your model is words, you should use a :class:`~.WordTokenizer`, even if
+    If the base input to your model is words, you should use a :class:`~.SpacyWordTokenizer`, even if
     you also want to have a character-level encoder to get an additional vector for each word
     token.  Splitting word tokens into character arrays is handled separately, in the
     :class:`..token_representations.TokenRepresentation` class.
