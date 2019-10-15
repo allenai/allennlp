@@ -3,12 +3,9 @@
     "type": "seq2seq",
     "source_tokenizer": {
       "type": "word",
-      "word_splitter": {
-        "type": "spacy",
-        "pos_tags": true,
-        "parse": true,
-        "ner": true
-      }
+      "pos_tags": true,
+      "parse": true,
+      "ner": true
     },
     "target_tokenizer": {
       "type": "word"

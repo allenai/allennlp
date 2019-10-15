@@ -8,12 +8,12 @@ import ftfy
 
 from pytorch_pretrained_bert.tokenization import BasicTokenizer as BertTokenizer
 
-from allennlp.common import Registrable, Params
+from allennlp.common import Params
 from allennlp.common.util import get_spacy_model
-from allennlp.data.tokenizers.token import Token
 from allennlp.data.tokenizers.token import Token
 from allennlp.data.tokenizers.tokenizer import Tokenizer
 from allennlp.data.token_indexers.openai_transformer_byte_pair_indexer import text_standardize
+
 
 @Tokenizer.register("word")
 class SpacyWordTokenizer(Tokenizer):
@@ -21,7 +21,36 @@ class SpacyWordTokenizer(Tokenizer):
     A ``Tokenizer`` that uses spaCy's tokenizer.  It's fast and reasonable - this is the
     recommended ``Tokenizer``. By default it will return allennlp Tokens,
     which are small, efficient NamedTuples (and are serializable). If you want
-    to keep the original spaCy tokens, pass keep_spacy_tokens=True.
+    to keep the original spaCy tokens, pass keep_spacy_tokens=True.  Note that we leave one particular piece of
+    post-processing for later: the decision of whether or not to lowercase the token.  This is for
+    two reasons: (1) if you want to make two different casing decisions for whatever reason, you
+    won't have to run the tokenizer twice, and more importantly (2) if you want to lowercase words
+    for your word embedding, but retain capitalization in a character-level representation, we need
+    to retain the capitalization here.
+
+    Parameters
+    ----------
+    language : ``str``, optional, (default="en_core_web_sm")
+        Spacy model name.
+    pos_tags : ``bool``, optional, (default=False)
+        If ``True``, performs POS tagging with spacy model on the tokens.
+        Generally used in conjunction with :class:`~allennlp.data.token_indexers.pos_tag_indexer.PosTagIndexer`.
+    parse : ``bool``, optional, (default=False)
+        If ``True``, performs dependency parsing with spacy model on the tokens.
+        Generally used in conjunction with :class:`~allennlp.data.token_indexers.pos_tag_indexer.DepLabelIndexer`.
+    ner : ``bool``, optional, (default=False)
+        If ``True``, performs dependency parsing with spacy model on the tokens.
+        Generally used in conjunction with :class:`~allennlp.data.token_indexers.ner_tag_indexer.NerTagIndexer`.
+    keep_spacy_tokens : ``bool``, optional, (default=False)
+        If ``True``, will preserve spacy token objects, We copy spacy tokens into our own class by default instead
+        because spacy Cython Tokens can't be pickled.
+    split_on_spaces : ``bool``, optional, (default=False)
+        If ``True``, will split by spaces without performing tokenization.
+        Used when your data is already tokenized, but you want to perform pos, ner or parsing on the tokens.
+    start_tokens : ``List[str]``, optional
+        If given, these tokens will be added to the beginning of every string we tokenize.
+    end_tokens : ``List[str]``, optional
+        If given, these tokens will be added to the end of every string we tokenize.
     """
 
     def __init__(
@@ -32,22 +61,27 @@ class SpacyWordTokenizer(Tokenizer):
         ner: bool = False,
         keep_spacy_tokens: bool = False,
         split_on_spaces: bool = False,
+        start_tokens: List[str] = None,
+        end_tokens: List[str] = None,
     ) -> None:
         self.spacy = get_spacy_model(language, pos_tags, parse, ner)
         if split_on_spaces:
-            self.spacy.tokenizer = WhitespaceSpacyTokenizer(self.spacy.vocab)
+            self.spacy.tokenizer = _WhitespaceSpacyTokenizer(self.spacy.vocab)
 
         self._keep_spacy_tokens = keep_spacy_tokens
+        self._start_tokens = start_tokens or []
+        # We reverse the tokens here because we're going to insert them with `insert(0)` later;
+        # this makes sure they show up in the right order.
+        self._start_tokens.reverse()
+        self._end_tokens = end_tokens or []
 
     def _sanitize(self, tokens: List[spacy.tokens.Token]) -> List[Token]:
         """
         Converts spaCy tokens to allennlp tokens. Is a no-op if
         keep_spacy_tokens is True
         """
-        if self._keep_spacy_tokens:
-            return tokens
-        else:
-            return [
+        if not self._keep_spacy_tokens:
+            tokens = [
                 Token(
                     token.text,
                     token.idx,
@@ -59,6 +93,11 @@ class SpacyWordTokenizer(Tokenizer):
                 )
                 for token in tokens
             ]
+        for start_token in self._start_tokens:
+            tokens.insert(0, Token(start_token, 0))
+        for end_token in self._end_tokens:
+            tokens.append(Token(end_token, -1))
+        return tokens
 
     @overrides
     def batch_tokenize(self, texts: List[str]) -> List[List[Token]]:
@@ -71,23 +110,27 @@ class SpacyWordTokenizer(Tokenizer):
     def tokenize(self, text: str) -> List[Token]:
         # This works because our Token class matches spacy's.
         return self._sanitize(_remove_spaces(self.spacy(text)))
-    
+
     @classmethod
     def from_params(cls, params: Params) -> "SpacyWordTokenizer":  # type: ignore
 
         # Backwards compatibility for legacy "word" Tokenizer
         # which provided constructor arguments inside "word_splitter" key.
-        word_splitter_params = params.get('word_splitter')
-        if word_splitter_params:
+        word_splitter_params = params.get("word_splitter")
+        if isinstance(word_splitter_params, Params) and word_splitter_params.pop("type") == "spacy":
             params = word_splitter_params
-        
+        elif isinstance(word_splitter_params, str) and word_splitter_params == "spacy":
+            params = Params({})  # Empty
+
         language = params.pop("language", "en_core_web_sm")
         pos_tags = params.pop_bool("pos_tags", False)
         parse = params.pop_bool("parse", False)
         ner = params.pop_bool("ner", False)
         keep_spacy_tokens = params.pop_bool("keep_spacy_tokens", False)
         split_on_spaces = params.pop_bool("split_on_spaces", False)
-        
+        start_tokens = params.pop("start_tokens", None)
+        end_tokens = params.pop("end_tokens", None)
+
         params.assert_empty(cls.__name__)
 
         return cls(
@@ -96,12 +139,14 @@ class SpacyWordTokenizer(Tokenizer):
             parse=parse,
             ner=ner,
             keep_spacy_tokens=keep_spacy_tokens,
-            split_on_spaces=split_on_spaces
+            split_on_spaces=split_on_spaces,
+            start_tokens=start_tokens,
+            end_tokens=end_tokens,
         )
 
 
 @Tokenizer.register("simple")
-class SimpleWordTokenizer(Tokenizer):
+class SimpleSpacyWordTokenizer(Tokenizer):
     """
     Does really simple tokenization.  NLTK was too slow, so we wrote our own simple tokenizer
     instead.  This just does an initial split(), followed by some heuristic filtering of each
@@ -179,7 +224,7 @@ class SimpleWordTokenizer(Tokenizer):
 
 
 @Tokenizer.register("letters_digits")
-class LettersDigitsTokenizer(Tokenizer):
+class LettersDigitsSpacyWordTokenizer(Tokenizer):
     """
     A ``Tokenizer`` which keeps runs of (unicode) letters and runs of digits together, while
     every other non-whitespace character becomes a separate word.
@@ -188,9 +233,7 @@ class LettersDigitsTokenizer(Tokenizer):
     @overrides
     def tokenize(self, text: str) -> List[Token]:
         # We use the [^\W\d_] pattern as a trick to match unicode letters
-        tokens = [
-            Token(m.group(), idx=m.start()) for m in re.finditer(r"[^\W\d_]+|\d+|\S", sentence)
-        ]
+        tokens = [Token(m.group(), idx=m.start()) for m in re.finditer(r"[^\W\d_]+|\d+|\S", text)]
         return tokens
 
 
@@ -211,32 +254,8 @@ class JustSpacesTokenizer(Tokenizer):
         return [Token(t) for t in text.split()]
 
 
-def _remove_spaces(tokens: List[spacy.tokens.Token]) -> List[spacy.tokens.Token]:
-    return [token for token in tokens if not token.is_space]
-
-
-class WhitespaceSpacyTokenizer:
-    """
-    Spacy doesn't assume that text is tokenised. Sometimes this
-    is annoying, like when you have gold data which is pre-tokenised,
-    but Spacy's tokenisation doesn't match the gold. This can be used
-    as follows:
-    nlp = spacy.load("en_core_web_md")
-    # hack to replace tokenizer with a whitespace tokenizer
-    nlp.tokenizer = WhitespaceSpacyTokenizer(nlp.vocab)
-    ... use nlp("here is some text") as normal.
-    """
-
-    def __init__(self, vocab):
-        self.vocab = vocab
-
-    def __call__(self, text):
-        words = text.split(" ")
-        spaces = [True] * len(words)
-        return Doc(self.vocab, words=words, spaces=spaces)
-
 @Tokenizer.register("openai")
-class OpenAITokenizer(Tokenizer):
+class OpenAISpacyWordTokenizer(Tokenizer):
     """
     For OpenAI transformer
     """
@@ -259,7 +278,7 @@ class OpenAITokenizer(Tokenizer):
     @overrides
     def tokenize(self, text: str) -> List[Token]:
         # This works because our Token class matches spacy's.
-        return _remove_spaces(self.spacy(self._standardize(sentence)))
+        return _remove_spaces(self.spacy(self._standardize(text)))
 
 
 @Tokenizer.register("bert-basic")
@@ -282,72 +301,26 @@ class BertBasicTokenizer(Tokenizer):
         return [Token(text) for text in self.basic_tokenizer.tokenize(text)]
 
 
+def _remove_spaces(tokens: List[spacy.tokens.Token]) -> List[spacy.tokens.Token]:
+    return [token for token in tokens if not token.is_space]
 
-@Tokenizer.register("word")
-class WordTokenizer(Tokenizer):
+
+class _WhitespaceSpacyTokenizer:
     """
-    A ``WordTokenizer`` handles the splitting of strings into words as well as any desired
-    post-processing (e.g., stemming, filtering, etc.).  Note that we leave one particular piece of
-    post-processing for later: the decision of whether or not to lowercase the token.  This is for
-    two reasons: (1) if you want to make two different casing decisions for whatever reason, you
-    won't have to run the tokenizer twice, and more importantly (2) if you want to lowercase words
-    for your word embedding, but retain capitalization in a character-level representation, we need
-    to retain the capitalization here.
-
-    Parameters
-    ----------
-    word_splitter : ``Tokenizer``, optional
-        The :class:`Tokenizer` to use for splitting text strings into word tokens.  The default
-        is to use the ``SpacyTokenizer`` with default parameters.
-    word_filter : ``WordFilter``, optional
-        The :class:`WordFilter` to use for, e.g., removing stopwords.  Default is to do no
-        filtering.
-    word_stemmer : ``WordStemmer``, optional
-        The :class:`WordStemmer` to use.  Default is no stemming.
-    start_tokens : ``List[str]``, optional
-        If given, these tokens will be added to the beginning of every string we tokenize.
-    end_tokens : ``List[str]``, optional
-        If given, these tokens will be added to the end of every string we tokenize.
+    Spacy doesn't assume that text is tokenised. Sometimes this
+    is annoying, like when you have gold data which is pre-tokenised,
+    but Spacy's tokenisation doesn't match the gold. This can be used
+    as follows:
+    nlp = spacy.load("en_core_web_md")
+    # hack to replace tokenizer with a whitespace tokenizer
+    nlp.tokenizer = _WhitespaceSpacyTokenizer(nlp.vocab)
+    ... use nlp("here is some text") as normal.
     """
 
-    def __init__(
-        self,
-        word_splitter: Tokenizer = None,
-        word_filter: WordFilter = PassThroughWordFilter(),
-        word_stemmer: WordStemmer = PassThroughWordStemmer(),
-        start_tokens: List[str] = None,
-        end_tokens: List[str] = None,
-    ) -> None:
-        self._word_splitter = word_splitter or SpacyTokenizer()
-        self._word_filter = word_filter
-        self._word_stemmer = word_stemmer
-        self._start_tokens = start_tokens or []
-        # We reverse the tokens here because we're going to insert them with `insert(0)` later;
-        # this makes sure they show up in the right order.
-        self._start_tokens.reverse()
-        self._end_tokens = end_tokens or []
+    def __init__(self, vocab):
+        self.vocab = vocab
 
-    @overrides
-    def tokenize(self, text: str) -> List[Token]:
-        """
-        Does whatever processing is required to convert a string of text into a sequence of tokens.
-
-        At a minimum, this uses a ``Tokenizer`` to split words into text.  It may also do
-        stemming or stopword removal, depending on the parameters given to the constructor.
-        """
-        words = self._word_splitter.split_words(text)
-        return self._filter_and_stem(words)
-
-    @overrides
-    def batch_tokenize(self, texts: List[str]) -> List[List[Token]]:
-        batched_words = self._word_splitter.batch_split_words(texts)
-        return [self._filter_and_stem(words) for words in batched_words]
-
-    def _filter_and_stem(self, words: List[Token]) -> List[Token]:
-        filtered_words = self._word_filter.filter_words(words)
-        stemmed_words = [self._word_stemmer.stem_word(word) for word in filtered_words]
-        for start_token in self._start_tokens:
-            stemmed_words.insert(0, Token(start_token, 0))
-        for end_token in self._end_tokens:
-            stemmed_words.append(Token(end_token, -1))
-        return stemmed_words
+    def __call__(self, text):
+        words = text.split(" ")
+        spaces = [True] * len(words)
+        return Doc(self.vocab, words=words, spaces=spaces)

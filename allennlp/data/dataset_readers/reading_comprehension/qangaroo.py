@@ -9,7 +9,7 @@ from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.instance import Instance
 from allennlp.data.fields import Field, TextField, ListField, MetadataField, IndexField
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
-from allennlp.data.tokenizers import Tokenizer, WordTokenizer
+from allennlp.data.tokenizers import Tokenizer, SpacyWordTokenizer
 
 logger = logging.getLogger(__name__)
 
@@ -24,9 +24,9 @@ class QangarooReader(DatasetReader):
 
     Parameters
     ----------
-    tokenizer : ``Tokenizer``, optional (default=``WordTokenizer()``)
+    tokenizer : ``Tokenizer``, optional (default=``SpacyWordTokenizer()``)
         We use this ``Tokenizer`` for both the question and the passage.  See :class:`Tokenizer`.
-        Default is ```WordTokenizer()``.
+        Default is ```SpacyWordTokenizer()``.
     token_indexers : ``Dict[str, TokenIndexer]``, optional
         We similarly use this for both the question and the passage.  See :class:`TokenIndexer`.
         Default is ``{"tokens": SingleIdTokenIndexer()}``.
@@ -40,7 +40,7 @@ class QangarooReader(DatasetReader):
     ) -> None:
 
         super().__init__(lazy)
-        self._tokenizer = tokenizer or WordTokenizer()
+        self._tokenizer = tokenizer or SpacyWordTokenizer()
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
 
     @overrides
