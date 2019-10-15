@@ -23,9 +23,8 @@ import time
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 logger.setLevel(logging.DEBUG)
 handler = RotatingFileHandler(
-        f"{os.environ['HOME']}/.allennlp/resume.log",
-        maxBytes=1024*1024,
-        backupCount=10)
+    f"{os.environ['HOME']}/.allennlp/resume.log", maxBytes=1024 * 1024, backupCount=10
+)
 logger.addHandler(handler)
 
 BEAKER_QUERY_INTERVAL_SECONDS = 1.0
@@ -60,8 +59,8 @@ class BeakerStatus(Enum):
         else:
             return False
 
-class BeakerWrapper:
 
+class BeakerWrapper:
     def get_status(self, experiment_id: str) -> BeakerStatus:
         command = ["beaker", "experiment", "inspect", experiment_id]
         experiment_json = subprocess.check_output(command)
@@ -111,7 +110,9 @@ class BeakerWrapper:
         # just try to handle the simple case of single task experiments like
         # those created by run_with_beaker.py.
         assert len(experiment_data) == 1, "Experiment not created with run_with_beaker.py"
-        assert len(experiment_data[0]["nodes"]) == 1, "Experiment not created with run_with_beaker.py"
+        assert (
+            len(experiment_data[0]["nodes"]) == 1
+        ), "Experiment not created with run_with_beaker.py"
         status = BeakerStatus(experiment_data[0]["nodes"][0]["status"])
         # Small delay to avoid thrashing Beaker.
         time.sleep(BEAKER_QUERY_INTERVAL_SECONDS)
@@ -122,6 +123,7 @@ class BeakerWrapper:
         # Small delay to avoid thrashing Beaker.
         time.sleep(BEAKER_QUERY_INTERVAL_SECONDS)
         return subprocess.check_output(command, universal_newlines=True).strip()
+
 
 def create_table(connection: Connection) -> None:
     cursor = connection.cursor()
@@ -136,21 +138,18 @@ def create_table(connection: Connection) -> None:
 def start_autoresume(connection: Connection, experiment_id: str, max_resumes: int) -> None:
     cursor = connection.cursor()
     cursor.execute(
-            "INSERT INTO active_experiments VALUES (?, ?, ?, ?)",
-            (experiment_id, experiment_id, max_resumes, 0))
+        "INSERT INTO active_experiments VALUES (?, ?, ?, ?)",
+        (experiment_id, experiment_id, max_resumes, 0),
+    )
     connection.commit()
 
 
 def stop_autoresume(connection: Connection, experiment_id: str) -> None:
     cursor = connection.cursor()
-    cursor.execute(
-            "SELECT * FROM active_experiments WHERE experiment_id = ?",
-            (experiment_id,))
+    cursor.execute("SELECT * FROM active_experiments WHERE experiment_id = ?", (experiment_id,))
     result = cursor.fetchall()
-    assert result, f'Experiment {experiment_id} not found!'
-    cursor.execute(
-            'DELETE FROM active_experiments WHERE experiment_id = ?',
-            (experiment_id,))
+    assert result, f"Experiment {experiment_id} not found!"
+    cursor.execute("DELETE FROM active_experiments WHERE experiment_id = ?", (experiment_id,))
     connection.commit()
 
 
@@ -166,20 +165,27 @@ def resume(connection: Connection, beaker: BeakerWrapper) -> None:
             stop_autoresume(connection, experiment_id)
             if status is BeakerStatus.preempted:
                 if current_resume >= max_resumes:
-                    logger.info(f"Experiment {experiment_id} preempted too many times "
-                            f"({max_resumes}). Original experiment: {original_id}")
+                    logger.info(
+                        f"Experiment {experiment_id} preempted too many times "
+                        f"({max_resumes}). Original experiment: {original_id}"
+                    )
                 else:
                     new_experiment_id = beaker.resume(experiment_id)
-                    logger.info(f"Experiment {experiment_id} preempted "
-                            f"({current_resume}/{max_resumes}). Resuming as: "
-                            f"{new_experiment_id} Original experiment: {original_id}")
+                    logger.info(
+                        f"Experiment {experiment_id} preempted "
+                        f"({current_resume}/{max_resumes}). Resuming as: "
+                        f"{new_experiment_id} Original experiment: {original_id}"
+                    )
                     cursor.execute(
-                            "INSERT INTO active_experiments VALUES (?, ?, ?, ?)",
-                            (new_experiment_id, original_id, max_resumes, current_resume + 1))
+                        "INSERT INTO active_experiments VALUES (?, ?, ?, ?)",
+                        (new_experiment_id, original_id, max_resumes, current_resume + 1),
+                    )
                     connection.commit()
             else:
-                logger.info(f"Experiment {experiment_id} completed with status: "
-                        f"{status}. Original experiment: {original_id}")
+                logger.info(
+                    f"Experiment {experiment_id} completed with status: "
+                    f"{status}. Original experiment: {original_id}"
+                )
 
 
 class Action(Enum):
@@ -206,7 +212,7 @@ def main(args) -> None:
         # Execute this script every ten minutes.
         cron_line = f"*/10 * * * * {__file__} --action=resume --random-delay-seconds=60\n"
         new_crontab = current_crontab + cron_line
-        subprocess.run(["crontab", "-"], input=new_crontab, encoding='utf-8')
+        subprocess.run(["crontab", "-"], input=new_crontab, encoding="utf-8")
     elif args.action is Action.start:
         assert args.experiment_id
         start_autoresume(connection, args.experiment_id, args.max_resumes)
