@@ -22,8 +22,9 @@ import time
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 logger.setLevel(logging.DEBUG)
-formatter = logging.Formatter(fmt='%(asctime)s %(levelname)-8s %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S')
+formatter = logging.Formatter(
+    fmt="%(asctime)s %(levelname)-8s %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+)
 handler = RotatingFileHandler(
     f"{os.environ['HOME']}/.allennlp/resume.log", maxBytes=1024 * 1024, backupCount=10
 )
@@ -217,7 +218,9 @@ def main(args) -> None:
         full_path = os.path.abspath(__file__)
         # Execute this script every ten minutes. We use bash's login option so
         # we have a chance at getting the user's python3.
-        cron_line = f"*/10 * * * * bash -lc '{full_path} --action=resume --random-delay-seconds=60'\n"
+        cron_line = (
+            f"*/10 * * * * bash -lc '{full_path} --action=resume --random-delay-seconds=60'\n"
+        )
         new_crontab = current_crontab + cron_line
         subprocess.run(["crontab", "-"], input=new_crontab, encoding="utf-8")
     elif args.action is Action.start:
