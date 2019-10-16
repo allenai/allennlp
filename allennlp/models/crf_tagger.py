@@ -61,7 +61,7 @@ class CrfTagger(Model):
         Used to initialize the model parameters.
     regularizer : ``RegularizerApplicator``, optional (default=``None``)
         If provided, will be used to calculate the regularization penalty during training.
-    top_k : ``int``, optional (default=``None``)
+    top_k : ``int``, optional (default=``1``)
         If provided, the number of parses to return from the crf in output_dict['top_k_tags'].
         Top k parses are returned as a list of dicts, where each dictionary is of the form:
         {"tags": List, "score": float}.
