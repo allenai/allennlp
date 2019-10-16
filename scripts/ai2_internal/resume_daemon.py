@@ -216,10 +216,11 @@ def main(args) -> None:
         create_table(connection)
         current_crontab = subprocess.check_output(["crontab", "-l"], universal_newlines=True)
         full_path = os.path.abspath(__file__)
-        # Execute this script every ten minutes. We use bash's login option so
-        # we have a chance at getting the user's python3.
+        # Execute this script every ten minutes. We set the PATH to that used
+        # to run this install step to make sure that we have access to python3
+        # and beaker.
         cron_line = (
-            f"*/10 * * * * bash -lc '{full_path} --action=resume --random-delay-seconds=60'\n"
+            f"*/10 * * * * bash -c 'export PATH={os.environ['PATH']}; {full_path} --action=resume --random-delay-seconds=60'\n"
         )
         new_crontab = current_crontab + cron_line
         subprocess.run(["crontab", "-"], input=new_crontab, encoding="utf-8")
