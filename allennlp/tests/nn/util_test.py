@@ -691,7 +691,7 @@ class TestNnUtil(AllenNlpTestCase):
                 [0, 0, 0, 3, 4],
                 [0, 0, 0, 3, 4],
                 [0, 0, 0, 3, 4],
-                [0, 0, 0, 3, 4]
+                [0, 0, 0, 3, 4],
             ]
         )
         # The same tags shouldn't appear sequentially.
@@ -710,7 +710,7 @@ class TestNnUtil(AllenNlpTestCase):
                 [0, 0, 0, 4, 4],
                 [0, 0, 0, 4, 4],
                 [0, 0, 0, 4, 4],
-                [0, 0, 0, 4, 0]
+                [0, 0, 0, 4, 0],
             ]
         )
         # The 5th tag has a penalty for appearing sequentially
@@ -722,13 +722,7 @@ class TestNnUtil(AllenNlpTestCase):
         indices, _ = util.viterbi_decode(sequence_logits, transition_matrix, top_k=5)
         assert indices[0] == [3, 3, 3, 3, 3, 3]
 
-        sequence_logits = torch.FloatTensor(
-            [
-                [1, 0, 0, 4],
-                [1, 0, 6, 2],
-                [0, 3, 0, 4]
-            ]
-        )
+        sequence_logits = torch.FloatTensor([[1, 0, 0, 4], [1, 0, 6, 2], [0, 3, 0, 4]])
         # Best path would normally be [3, 2, 3] but we add a
         # potential from 2 -> 1, making [3, 2, 1] the best path.
         transition_matrix = torch.zeros([4, 4])
@@ -739,9 +733,7 @@ class TestNnUtil(AllenNlpTestCase):
         assert value[0] == 18
 
         def _brute_decode(
-                tag_sequence: torch.Tensor,
-                transition_matrix: torch.Tensor,
-                top_k: int = 5,
+            tag_sequence: torch.Tensor, transition_matrix: torch.Tensor, top_k: int = 5
         ) -> Any:
             """
             Top-k decoder that uses brute search instead of the Viterbi Decode dynamic programing algorithm
@@ -761,8 +753,12 @@ class TestNnUtil(AllenNlpTestCase):
             scored_sequences = []  # type: ignore
             for sequence in sequences:
                 emission_score = sum([tag_sequence[i, j] for i, j in enumerate(sequence)])
-                transition_score = sum([transition_matrix[sequence[i - 1], sequence[i]]
-                                        for i in range(1, len(sequence))])
+                transition_score = sum(
+                    [
+                        transition_matrix[sequence[i - 1], sequence[i]]
+                        for i in range(1, len(sequence))
+                    ]
+                )
                 score = emission_score + transition_score
                 scored_sequences.append((score, sequence))
 
@@ -779,9 +775,15 @@ class TestNnUtil(AllenNlpTestCase):
             k = random.randint(1, 5)
             sequence_logits = torch.rand([seq_len, num_tags])
             transition_matrix = torch.rand([num_tags, num_tags])
-            viterbi_paths_v1, viterbi_scores_v1 = util.viterbi_decode(sequence_logits, transition_matrix, top_k=k)
-            viterbi_path_brute, viterbi_score_brute = _brute_decode(sequence_logits, transition_matrix, top_k=k)
-            numpy.testing.assert_almost_equal(list(viterbi_score_brute), viterbi_scores_v1.tolist(), decimal=3)
+            viterbi_paths_v1, viterbi_scores_v1 = util.viterbi_decode(
+                sequence_logits, transition_matrix, top_k=k
+            )
+            viterbi_path_brute, viterbi_score_brute = _brute_decode(
+                sequence_logits, transition_matrix, top_k=k
+            )
+            numpy.testing.assert_almost_equal(
+                list(viterbi_score_brute), viterbi_scores_v1.tolist(), decimal=3
+            )
             numpy.testing.assert_equal(sanitize(viterbi_paths_v1), viterbi_path_brute)
 
     def test_sequence_cross_entropy_with_logits_masks_loss_correctly(self):
